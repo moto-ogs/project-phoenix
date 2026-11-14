@@ -32,7 +32,7 @@ import { StaffProofModal, type StaffProofTarget } from "./staff-proof-modal";
 const logger = createLogger({ component: "TraegerStaffProofsCard" });
 
 /** The line under the kind: what moto knows of the proof. */
-export function staffProofDetail(proof: StaffProof): string {
+function staffProofDetail(proof: StaffProof): string {
   if (!proof.held) {
     return proof.mandatory
       ? "Pflicht · noch nicht eingetragen"

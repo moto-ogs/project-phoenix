@@ -291,7 +291,7 @@ function useProofListView(
     actions: (
       <ExportMenu
         ariaLabel="Ablaufliste herunterladen"
-        tooltip="Lädt alle Nachweise als Tabelle herunter. Das steht im Zugriffsprotokoll der Schulen."
+        tooltip="Speichert alle Nachweise als Tabelle. Das steht im Zugriffsprotokoll der Schulen."
         options={EXPORT_FORMATS}
         busyKey={exporting ? "csv" : null}
         unavailable={list.entries.length === 0}

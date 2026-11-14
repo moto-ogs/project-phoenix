@@ -77,7 +77,7 @@ export interface StaffProofEntry {
   readonly expiresOn: string;
 }
 
-export interface StaffProofCounts {
+interface StaffProofCounts {
   readonly expired: number;
   readonly expiringSoon: number;
   readonly missing: number;
@@ -91,7 +91,7 @@ export interface StaffProofList {
   readonly counts: StaffProofCounts;
 }
 
-export interface SchoolProofKind {
+interface SchoolProofKind {
   readonly schoolTypeId: string;
   readonly name: string;
   readonly proofTypeId: string | null;
@@ -236,12 +236,6 @@ function typeBody(input: StaffProofTypeInput) {
     mandatory: input.mandatory,
     archived: input.archived,
   };
-}
-
-export async function fetchStaffProofTypes(): Promise<StaffProofType[]> {
-  return (
-    (await traegerRequest<BackendType[] | null>(`${BASE}/types`)) ?? []
-  ).map(mapType);
 }
 
 export async function saveStaffProofType(
