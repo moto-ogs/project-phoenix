@@ -89,15 +89,27 @@ test.describe("Planung navigation", () => {
     test.setTimeout(60_000);
     const sidebar = page.locator("aside");
 
-    // Die Gruppe Planung (#2826) ist beim ersten Besuch zu; die Gruppenzeile
-    // klappt sie auf, ohne zu navigieren.
+    // Für die Leitung steht die Gruppe Planung (#2826) beim ersten Besuch
+    // offen (#6670); die Gruppenzeile klappt sie zu und wieder auf, ohne zu
+    // navigieren.
     const planung = sidebar.getByRole("button", { name: "Planung" });
+    const betreuungsplan = sidebar.getByRole("link", {
+      name: "Betreuungsplan",
+      exact: true,
+    });
     await expect(planung).toBeVisible({ timeout: 30_000 });
+    await expect(planung).toHaveAttribute("aria-expanded", "true");
+    await betreuungsplan.scrollIntoViewIfNeeded();
+    await expect(betreuungsplan).toBeInViewport();
+    await planung.click();
     await expect(planung).toHaveAttribute("aria-expanded", "false");
+    // Die animierte Gruppe bleibt im DOM; ihr Inhalt wird abgeschnitten.
+    await expect(betreuungsplan).not.toBeInViewport();
     await planung.click();
     await expect(planung).toHaveAttribute("aria-expanded", "true");
 
-    await expect(sidebar.getByText("Betreuungsplan")).toBeVisible();
+    await betreuungsplan.scrollIntoViewIfNeeded();
+    await expect(betreuungsplan).toBeInViewport();
     // exact: "Mein Dienstplan" (Gruppe Team) enthält "Dienstplan" ebenfalls.
     await expect(
       sidebar.getByText("Dienstplan", { exact: true }),
@@ -114,7 +126,7 @@ test.describe("Planung navigation", () => {
       sidebar.getByText("Vertretungen", { exact: true }),
     ).toHaveCount(0);
 
-    await sidebar.getByText("Betreuungsplan").click();
+    await betreuungsplan.click();
     await page.waitForURL((url) => url.pathname.endsWith("/betreuungsplan"));
 
     await sidebar.getByText("Dienstplan", { exact: true }).click();
@@ -220,7 +232,11 @@ test.describe("Planung navigation", () => {
       name: "Planung",
       exact: true,
     });
+    // Wie in der Seitenleiste steht Planung für die Leitung offen (#6670).
+    await expect(planung).toHaveAttribute("aria-expanded", "true");
+    await planung.click();
     await expect(planung).toHaveAttribute("aria-expanded", "false");
+    await expect(drawer.getByText("Betreuungsplan")).toHaveCount(0);
     await planung.click();
     await expect(planung).toHaveAttribute("aria-expanded", "true");
 

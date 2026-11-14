@@ -4,6 +4,7 @@ import (
 	context "context"
 	errors "errors"
 	http "net/http"
+	slices "slices"
 	strings "strings"
 
 	common "github.com/moto-ogs/project-phoenix/api/common"
@@ -40,6 +41,9 @@ type EnrollmentAnswerOptionResponse struct {
 	Label      string  `json:"label"`
 	Count      int     `json:"count"`
 	StudentIDs []int64 `json:"-"`
+	// Given marks the "Angabe vorhanden" option of a text, number or date
+	// question (#7012); the other options of such a question are its answers.
+	Given bool `json:"-"`
 }
 
 // errEnrollmentAnswerFilter refuses an enrollment_answer value that is not
@@ -196,11 +200,26 @@ func countListedAnswers(filters []EnrollmentAnswerFilterResponse, listed map[int
 			}
 		}
 		if total > 0 {
-			filter.Options = options
+			filter.Options = listedFreeAnswers(options)
 			out = append(out, filter)
 		}
 	}
 	return out
+}
+
+// listedFreeAnswers orders the answers of a free question by the children
+// the list shows, after "Angabe vorhanden" (#7012). Enrollment chose them over
+// every linked child; one answer left would only repeat "Angabe vorhanden".
+func listedFreeAnswers(options []EnrollmentAnswerOptionResponse) []EnrollmentAnswerOptionResponse {
+	if len(options) == 0 || !options[0].Given {
+		return options
+	}
+	answers := options[1:]
+	if len(answers) < 2 {
+		return options[:1]
+	}
+	slices.SortStableFunc(answers, func(a, b EnrollmentAnswerOptionResponse) int { return b.Count - a.Count })
+	return options
 }
 
 // countListed is the number of ids the list shows.
