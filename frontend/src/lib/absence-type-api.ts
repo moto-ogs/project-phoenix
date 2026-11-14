@@ -56,11 +56,6 @@ export interface AbsenceType {
   readonly schoolLimitDays: number | null;
 }
 
-/** In der Auswahl neuer Abwesenheiten: aktiv und an dieser Schule angeboten. */
-export function isSelectableAbsenceType(type: AbsenceType): boolean {
-  return type.isActive && type.offered;
-}
-
 function mapAbsenceType(data: BackendAbsenceType): AbsenceType {
   return {
     id: data.id,

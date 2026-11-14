@@ -139,14 +139,7 @@ func (s *staffAbsenceService) ApproveAbsence(ctx context.Context, absenceID int6
 	if err := s.rejectVacationBeforeOpening(ctx, absence); err != nil {
 		return nil, err
 	}
-	// Other open requests are judged at their own approval; only what is
-	// already spent must leave room for this one.
-	if absence.AbsenceType == AbsenceTypeVacation {
-		if err := s.ensureVacationFits(ctx, absence, absence.ID, false); err != nil {
-			return nil, err
-		}
-	}
-	if err := s.recheckRequestedType(ctx, absence); err != nil {
+	if err := s.ensureApprovalFits(ctx, absence); err != nil {
 		return nil, err
 	}
 	fromStatus := absence.Status
@@ -178,6 +171,18 @@ func (s *staffAbsenceService) ApproveAbsence(ctx context.Context, absenceID int6
 	}
 	s.broadcastTimeTrackingChanged(ctx)
 	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
+}
+
+// ensureApprovalFits checks the request against what is spent now: other
+// open requests are judged at their own approval, so only what is already
+// spent must leave room for this one.
+func (s *staffAbsenceService) ensureApprovalFits(ctx context.Context, absence *StaffAbsence) error {
+	if absence.AbsenceType == AbsenceTypeVacation {
+		if err := s.ensureVacationFits(ctx, absence, absence.ID, false); err != nil {
+			return err
+		}
+	}
+	return s.recheckRequestedType(ctx, absence)
 }
 
 // recheckRequestedType applies what changed at the school since the request

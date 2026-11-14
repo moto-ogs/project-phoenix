@@ -212,11 +212,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/workforce/internal/application/Service.AllowanceSummary",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/workforce/internal/application/Service.ClosedMonthSnapshots",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

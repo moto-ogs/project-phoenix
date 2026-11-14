@@ -460,14 +460,21 @@ func checkSchoolDeviation(existing workforce.StaffAbsenceType, input workforce.U
 		(input.CarryoverUntil != nil && *input.CarryoverUntil != existing.CarryoverUntil) {
 		return workforce.ErrAbsenceTypeKeptByTraeger
 	}
-	if input.SchoolLimit != nil && input.SchoolLimit.Days != nil {
-		if !existing.AllowanceEnabled {
-			return &workforce.InvalidAbsenceTypeError{Reason: "Eine Grenze gibt es nur bei einer Art mit Kontingent."}
-		}
-		days := *input.SchoolLimit.Days
-		if days < 0 || days > 366 || days*2 != float64(int(days*2)) {
-			return &workforce.InvalidAbsenceTypeError{Reason: "Die Grenze braucht ganze oder halbe Tage zwischen 0 und 366."}
-		}
+	return checkSchoolLimit(existing, input.SchoolLimit)
+}
+
+// checkSchoolLimit accepts a limit only on a type with a Kontingent, in
+// whole or half days.
+func checkSchoolLimit(existing workforce.StaffAbsenceType, limit *workforce.SchoolLimitPatch) error {
+	if limit == nil || limit.Days == nil {
+		return nil
+	}
+	if !existing.AllowanceEnabled {
+		return &workforce.InvalidAbsenceTypeError{Reason: "Eine Grenze gibt es nur bei einer Art mit Kontingent."}
+	}
+	days := *limit.Days
+	if days < 0 || days > 366 || days*2 != float64(int(days*2)) {
+		return &workforce.InvalidAbsenceTypeError{Reason: "Die Grenze braucht ganze oder halbe Tage zwischen 0 und 366."}
 	}
 	return nil
 }
