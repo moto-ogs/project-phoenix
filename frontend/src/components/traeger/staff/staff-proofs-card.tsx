@@ -7,6 +7,7 @@
 // sich entfernen.
 
 import { ArrowClockwiseIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -27,7 +28,14 @@ import {
   STAFF_PROOF_STATUS,
   type StaffProof,
 } from "~/lib/traeger-staff-proofs-api";
-import { StaffProofModal, type StaffProofTarget } from "./staff-proof-modal";
+import type { StaffProofTarget } from "./staff-proof-modal";
+
+// The form with its date pickers loads only when someone opens it, so the
+// record page stays light.
+const StaffProofModal = dynamic(
+  () => import("./staff-proof-modal").then((module) => module.StaffProofModal),
+  { ssr: false },
+);
 
 const logger = createLogger({ component: "TraegerStaffProofsCard" });
 
@@ -185,14 +193,16 @@ export function StaffProofsCard({
           description="Legen Sie die Nachweisarten unter „Personalnachweise“ an."
         />
       )}
-      <StaffProofModal
-        target={target}
-        onClose={() => setTarget(null)}
-        onSaved={(next) => {
-          setTarget(null);
-          onChanged(next);
-        }}
-      />
+      {target ? (
+        <StaffProofModal
+          target={target}
+          onClose={() => setTarget(null)}
+          onSaved={(next) => {
+            setTarget(null);
+            onChanged(next);
+          }}
+        />
+      ) : null}
       <ConfirmDeleteModal
         isOpen={removing !== null}
         onClose={() => {
