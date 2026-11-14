@@ -14,9 +14,9 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// New builds the search over Enrollment's answer search, which the root binds.
-func New(answers schoolsearchview.StudentAnswerSearch) (schoolsearchview.Search, error) {
-	return application.New(postgres.New(schoolTransaction), answers)
+// New builds the search over the answer, note and activity ports the root binds.
+func New(answers schoolsearchview.StudentAnswerSearch, notes schoolsearchview.StudentNoteSearch, activities schoolsearchview.ActivityEnrollments) (schoolsearchview.Search, error) {
+	return application.New(postgres.New(schoolTransaction), answers, notes, activities)
 }
 
 // schoolTransaction resolves the tenant transaction of the request and its

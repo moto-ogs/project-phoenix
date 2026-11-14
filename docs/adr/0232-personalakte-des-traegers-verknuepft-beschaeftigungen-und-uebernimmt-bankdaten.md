@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Personalakte des Trägers verknüpft Beschäftigungen und übernimmt Bankdaten

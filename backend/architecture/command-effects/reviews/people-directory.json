@@ -14399,6 +14399,17 @@
     },
     {
       "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.SearchStudentNotes",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentNoteSearch.SearchStudentNotes",
+      "reason": "Platform protocol participation (scope): people-directory reaches tenant.RequireTransaction (tenant-runtime) through *modules/peopledirectory/internal/application.Service.SearchStudentNotes. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). New read of the note search, in the caller's school unit like ListSchoolSharedNotes (ADR 0234).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RequireTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentNoteTeamService.InformStudentNoteTeam",
       "classification": "platform",
       "effect": "scope",

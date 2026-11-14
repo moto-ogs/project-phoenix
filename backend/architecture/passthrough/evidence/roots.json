@@ -1423,6 +1423,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (a schoolSearchActivities) ActivityGroupIDs(ctx context.Context, studentIDs []int64, onDate calendar.Date) (map[int64][]int64, error) {\n\tbyStudent, err := a.enrollments.ActiveEnrollmentGroups(ctx, studentIDs, onDate)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tout := make(map[int64][]int64, len(byStudent))\n\tfor studentID, groups := range byStudent {\n\t\tfor _, group := range groups {\n\t\t\tout[studentID] = append(out[studentID], group.ID)\n\t\t}\n\t}\n\treturn out, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/schoolSearchActivities.ActivityGroupIDs",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (handler *serveHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {\n\tr = normalizeCalDAVMethodForRouting(r)\n\tr = WithWeekendPlan(r, handler.settings)\n\thandler.router.ServeHTTP(w, r)\n}",
       "form": "unclassified-evidence",
       "id": "api/serveHandler.ServeHTTP",

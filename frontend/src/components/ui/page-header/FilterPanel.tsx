@@ -321,6 +321,7 @@ export function FilterPanel({
             value={filter.value as string}
             onChange={(next) => filter.onChange(next)}
             className="font-medium"
+            wrapLabels={filter.wrapLabels}
             options={filter.options.map((option) => ({
               value: option.value,
               label:

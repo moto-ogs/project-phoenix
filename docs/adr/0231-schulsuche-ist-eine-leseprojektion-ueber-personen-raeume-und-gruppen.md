@@ -193,6 +193,8 @@ Gesundheitsangaben liegen versiegelt in der Kinderakte (#5472) und sind ohne
 Entschlüsseln aller Kinder nicht durchsuchbar. Notizkarten haben pro Kind
 eine eigene Zielgruppe (Gruppe, Aktivität, Klasse des Lesenden). Beide sind
 nicht Teil dieser Suche; eine Erweiterung braucht eine eigene Entscheidung.
+Die Notizkarten und den Filter für Freitext-Angaben entscheidet
+[ADR 0234](0234-schulsuche-findet-notizkarten-mit-der-zielgruppe-der-kinderakte.md).
 
 ## Nachweis
 

@@ -526,7 +526,9 @@ func composeServeRoot(
 			return mountDemoAccess(router, authAPI.ComposedDemoAccess(identity.DemoAccess()), viper.GetString("app_env"), config.FrontendURL, viper.GetString("tenant_domain"))
 		},
 		func() error { return mountRequestFeed(router, tenant, db, logger, config.FrontendURL) },
-		func() error { return mountModuleRoutes(tenant, settings.Service, caller, studentAnswers) },
+		func() error {
+			return mountModuleRoutes(tenant, settings.Service, caller, studentAnswers, persons.StudentNotes, activities)
+		},
 		func() error {
 			return mountStudentRoutes(tenant, db, logger, deviceAuth, studentPresence, persons, services, membership, caller, reviewPolicy,
 				settings.Service, hub, carePlan, carePlanRows.Companions, schedules, requests, planning, emitter, activities,
