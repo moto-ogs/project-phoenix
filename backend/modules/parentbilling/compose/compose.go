@@ -82,9 +82,9 @@ func NewCareNoticeLetters(letterheads parentbilling.BillingLetterheads, contract
 	return application.NewCareNoticeLetters(postgres.NewStore(), application.CareNoticeLetterPorts{Letterheads: letterheads, Recipients: contracts, Post: post, NoticePost: noticePost}, rendering.NewRenderer(), rendering.NewRenderer())
 }
 
-// NewSEPAMandates builds the SEPA mandates and the creditor of the Träger (#4695, ADR 0171) over the contracts and the field cipher the root binds.
-func NewSEPAMandates(contracts parentbilling.CareContracts, cipher parentbilling.BankDataCipher, formats parentbilling.DebtorNumberFormats) parentbilling.SEPAMandates {
-	return application.NewSEPAMandates(postgres.NewStore(), contracts, cipher, formats, calendar.TodayDate)
+// NewSEPAMandates builds the SEPA mandates and the creditor of the Träger (#4695, ADR 0171) over the contracts, the field cipher and the day clock the root binds; the import judges a mandate's lapse on that day.
+func NewSEPAMandates(contracts parentbilling.CareContracts, cipher parentbilling.BankDataCipher, formats parentbilling.DebtorNumberFormats, today func() calendar.Date) parentbilling.SEPAMandates {
+	return application.NewSEPAMandates(postgres.NewStore(), contracts, cipher, formats, today)
 }
 
 // NewContractImportNumbers builds the debtor numbers of an import of care contracts (#4723) over the format of the Träger's numbers the root binds.

@@ -9,7 +9,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
+
+// sepaImportDay is the day the SEPA mandate import of these tests judges a
+// mandate's lapse on: a first debit signed on 15 August 2024 and never
+// collected holds for 36 months, until 14 August 2027.
+func sepaImportDay() calendar.Date { return calendar.NewDate(2026, 11, 2) }
 
 // The import takes the column "kinder-Debitorennummer" of OGS Connect over
 // per family (#4693, decision E-c): a family whose rows carry one number gets
@@ -17,7 +24,7 @@ import (
 // family with another number keeps it.
 func TestSEPAMandateImportTakesOverDebtorNumbersPerFamily(t *testing.T) {
 	t.Parallel()
-	f := newCareBillingFixture(t, "Träger Debitorenimport")
+	f := newCareBillingFixtureOn(t, "Träger Debitorenimport", sepaImportDay)
 	school := f.office.schools[0]
 	mia := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
 	noah := careContract(t, f.db, f.office.organization, school, "Noah", careMonth, sjrServices()...)

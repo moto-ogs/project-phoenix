@@ -48,10 +48,19 @@ type traegerPortalHandler struct {
 // back the Identity & Access owner and runtime it was composed over.
 func newTraegerPortal(t *testing.T) (*bun.DB, *traegerPortalHandler, identityaccess.Owner, tenant.UnitOfWork) {
 	t.Helper()
+	return newTraegerPortalOn(t, calendar.TodayDate)
+}
+
+// newTraegerPortalOn is newTraegerPortal whose day-bound services read today.
+func newTraegerPortalOn(t *testing.T, today func() calendar.Date) (*bun.DB, *traegerPortalHandler, identityaccess.Owner, tenant.UnitOfWork) {
+	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	unit := testpkg.TenantRuntime(t, db)
-	portal, identity := traegerPortalOn(t, db, unit)
-	return db, portal, identity, unit
+	mail := testpkg.NewCapturingMailer()
+	auth, err := NewAuthTestModule(testpkg.NewDatabase(t, db), unit, WithAuthTestMailer(mail))
+	require.NoError(t, err)
+	routes := traegerPortalRoutesOn(t, db, auth.Auth, unit, owners.HolidayTestSchoolCalendar{}, today)
+	return db, &traegerPortalHandler{Handler: testpkg.SessionVerifier(routes), mail: mail}, auth.Auth, unit
 }
 
 // traegerPortalOn composes Identity & Access over db with a capturing
@@ -92,6 +101,13 @@ func traegerPortalRouterWithDays(t *testing.T, db *bun.DB, identity TraegerPorta
 // a test can mount the serving root's family check between the two.
 func traegerPortalRoutes(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar) http.Handler {
 	t.Helper()
+	return traegerPortalRoutesOn(t, db, identity, unit, days, calendar.TodayDate)
+}
+
+// traegerPortalRoutesOn is traegerPortalRoutes whose day-bound services read
+// today, the day clock the serving root binds to its real clock.
+func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date) http.Handler {
+	t.Helper()
 	database := testpkg.NewDatabase(t, db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
@@ -122,7 +138,7 @@ func traegerPortalRoutes(t *testing.T, db *bun.DB, identity TraegerPortalIdentit
 	require.NoError(t, err)
 	bankCipher, err := BankDataCipher(testpkg.TestBankDataKeys, "")
 	require.NoError(t, err)
-	mountParentBillingRoutes(router, router, organizations, settings, schoolSettings.Settings, presence, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, testHealthCipher(), bankCipher, days, slog.Default())
+	mountParentBillingRoutes(router, router, organizations, settings, schoolSettings.Settings, presence, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, testHealthCipher(), bankCipher, days, today, slog.Default())
 	mountTraegerClosingDayRoutes(router, owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings), organizations,
 		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{})
 	mountHolidayClosureNotificationRoutes(router, router, organizations,
