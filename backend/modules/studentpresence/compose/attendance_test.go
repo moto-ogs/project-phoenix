@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -63,8 +64,11 @@ func TestAttendanceFacadeKeepsCompletedStaysAndRetriesExplicitActions(t *testing
 	require.NoError(t, err)
 	student := testpkg.CreateTestStudent(t, db, "Owner", "Attendance", "3a")
 	device := testpkg.CreateTestDevice(t, db, "owner-attendance")
-	at := time.Now()
-	input := studentpresence.Attendance{StudentID: student.ID, Date: testpkg.TodayDate().String(), CheckInTime: at, DeviceID: device.ID}
+	// A fixed Wednesday: the facade stores the given day and never reads the
+	// clock, and the day after must stay outside the range (Rule 14).
+	day := calendar.NewDate(2026, time.March, 18)
+	at := day.BerlinMidnight().Add(9 * time.Hour)
+	input := studentpresence.Attendance{StudentID: student.ID, Date: day.String(), CheckInTime: at, DeviceID: device.ID}
 	first, inserted, err := module.EnsureAttendance(ctx, input)
 	require.NoError(t, err)
 	require.True(t, inserted)
@@ -111,7 +115,7 @@ func TestAttendanceFacadeKeepsCompletedStaysAndRetriesExplicitActions(t *testing
 	require.NoError(t, err)
 	assert.Equal(t, []studentpresence.AttendanceDay{{StudentID: student.ID, Date: input.Date}}, days,
 		"multiple stays on one calendar day count once")
-	nextDay := testpkg.TodayDate().AddDays(1).String()
+	nextDay := day.AddDays(1).String()
 	days, err = module.ListAttendanceDays(ctx, nextDay, nextDay)
 	require.NoError(t, err)
 	assert.Empty(t, days, "the range excludes days before its inclusive start")
