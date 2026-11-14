@@ -20,15 +20,17 @@ import (
 type StudentAnswers interface {
 	// StudentAnswerFilters lists the questions with at least one answer:
 	// yes/no and choice questions with the answers given, text, number and
-	// date questions with the one answer AnswerGivenValue (#7012), each with
-	// the children who gave them. The newest form version names a question and its options. The
+	// date questions with AnswerGivenValue and, when the children gave only
+	// a few different answers, each answer under a key of its text (#7012),
+	// each with the children who gave them. The newest form version names a question and its options. The
 	// children are every linked child, also one who has left the school: the
 	// caller counts the ones its list shows.
 	StudentAnswerFilters(ctx context.Context) ([]StudentAnswerFilter, error)
 	// StudentsWithAnswer returns the children whose newest answer to the
 	// question key equals value ("true"/"false" for yes/no, the option value
 	// for a choice, AnswerGivenValue for any answer to a text, number or date
-	// question). An unknown key or value finds none.
+	// question, or the value a filter option named for one such answer). An
+	// unknown key or value finds none.
 	StudentsWithAnswer(ctx context.Context, key, value string) ([]int64, error)
 	// SearchStudentAnswers finds children whose answer or question matches
 	// text, folded like a name search, newest registrations first. A

@@ -74,6 +74,17 @@ Kinder und ohne Export.
    `AnswerGivenValue` (`*`), `StudentsWithAnswer` liest sie als „die neueste
    Antwort sagt etwas“. Eine geleerte Antwort ersetzt eine ältere wie bisher.
    Liste, Zählung und Export nutzen den bestehenden Pfad ohne Änderung.
+   - **Wenige verschiedene Antworten werden Auswahl.** In der Seed-Schule
+     schrieben fast alle Familien bei „Allergien“ „keine“; „Angabe
+     vorhanden“ allein zeigt dann fast alle Kinder. Gibt es zu einer Frage
+     zwei bis zwölf verschiedene Antworten (gefaltet wie die Suche, also
+     „keine“ = „ Keine “), steht jede als eigene Option darunter, die
+     häufigste zuerst, benannt nach ihrer häufigsten Schreibweise, gekürzt
+     auf 60 Zeichen. Ihr Wert ist ein Schlüssel der gefalteten Antwort
+     (`~` und 16 Hex-Zeichen von SHA-256), nie der Text: Der Filter steht in
+     der Adresse, und Antworten wie „Laktoseintoleranz“ gehören nicht in
+     Zugriffslogs. Mehr als zwölf verschiedene Antworten sind ein Text, keine
+     Auswahl; dann bleibt „Angabe vorhanden“.
    - **Kein „enthält …“:** Der Filter steht in der Adresse der Liste
      (`enrollment_answer`), ein Suchtext darf dort nicht stehen (ADR 0231
      Punkt 5). Nach Inhalten sucht „Überall suchen“.
@@ -82,7 +93,8 @@ Kinder und ohne Export.
      würde das als „leer gelassen“ lesen lassen.
    - „Angabe vorhanden“ zählt jede eingetragene Antwort, auch „keine“. Die
      Hilfe sagt das; eine Liste von Wörtern, die „nichts“ bedeuten, wäre eine
-     Vermutung über fremden Text.
+     Vermutung über fremden Text. Die aufgelisteten Antworten zeigen
+     stattdessen, wie viele „keine“ geschrieben haben.
 5. **Keine neue Regel.** Die Ports der Projektion (`StudentNoteSearch`,
    `ActivityEnrollments`, `NoteAudience`) nennen eigene Werte. Die Root
    übersetzt sie in People Directorys und Timetables Werte
@@ -110,5 +122,6 @@ echte Tabelle: Zielgruppen, Löschung, Mandant, neueste Notiz, LIKE-Zeichen.
 `TestNoteHitsFollowTheDirectHitsBeforeTheAnswers` prüfen Reihenfolge,
 Rückfall und die eine Angebotslesung, `TestSchoolSearchNoteAudienceAsksTheCardsRule`
 die Root-Bindung an die Regel und `TestNoteCardsOpenWithTheChildDetails`, dass
-nur `ChildDetails` Notizen öffnet. Enrollments Tests prüfen „Angabe vorhanden“ mit
+nur `ChildDetails` Notizen öffnet. `TestFreeAnswerFiltersListFewDistinctAnswers`
+prüft die aufgelisteten Antworten, ihre Schlüssel und die Grenze. Enrollments Tests prüfen „Angabe vorhanden“ mit
 geleerten und geerbten Antworten.

@@ -360,6 +360,38 @@ describe("FilterPanel", () => {
       ).toBeInTheDocument();
     });
 
+    it("wraps long option labels with wrapLabels instead of cutting them", () => {
+      const long =
+        "Allergien und Unverträglichkeiten: Laktoseintoleranz. Bitte keine Milchprodukte";
+      render(
+        <FilterPanel
+          isOpen={true}
+          onClose={mockOnClose}
+          filters={[
+            {
+              id: "answer",
+              label: "Angabe aus der Anmeldung",
+              type: "dropdown",
+              value: "all",
+              onChange: mockOnChange,
+              wrapLabels: true,
+              options: [
+                { value: "all", label: "Alle Angaben" },
+                { value: "long", label: long, count: 1 },
+              ],
+            },
+          ]}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId("filter-answer"));
+      const option = screen.getByRole("option", { name: `${long} (1)` });
+      expect(option.querySelector(".truncate")).toBeNull();
+      expect(option.querySelector(".whitespace-normal")).toHaveTextContent(
+        `${long} (1)`,
+      );
+    });
+
     it("includes counts in single-select option labels", () => {
       render(
         <FilterPanel

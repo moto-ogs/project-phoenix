@@ -8909,6 +8909,7 @@ export const studentSearchTopic = function studentSearchTopic(
           "Wählen Sie rechts neben der Suche das Filtersymbol.",
           "Wählen Sie unter `Anmeldung` bei `Angabe aus der Anmeldung` eine Antwort, zum Beispiel eine Frage mit `Ja`.",
           "Bei Fragen mit freiem Text, Zahl oder Datum wählen Sie `Angabe vorhanden`. Dann sehen Sie alle Kinder, bei denen die Eltern etwas eingetragen haben. Auch „keine“ zählt als Angabe.",
+          "Haben die Eltern nur wenige verschiedene Antworten gegeben, steht jede Antwort darunter, zum Beispiel `keine`. So sehen Sie, wie viele Kinder welche Antwort haben.",
           "Die Zahl in Klammern nennt, wie viele Kinder die Liste dann zeigt. Kinder, die die Schule verlassen haben, zählen nicht.",
           "`Alle Angaben` hebt den Filter wieder auf.",
         ],

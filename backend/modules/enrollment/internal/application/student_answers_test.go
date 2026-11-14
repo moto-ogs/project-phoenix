@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -121,6 +122,58 @@ func TestStudentsWithAnswerGivenFindsEveryFilledFreeAnswer(t *testing.T) {
 	choice, err := reads.StudentsWithAnswer(context.Background(), "club", enrollment.AnswerGivenValue)
 	require.NoError(t, err)
 	require.Empty(t, choice, "a choice filters by its options only")
+}
+
+// TestFreeAnswerFiltersListFewDistinctAnswers lists the answers of a text,
+// number or date question as options when the school's children gave only a
+// few different ones (#7012): "keine" and "Nüsse" become choices, written
+// any way. The option value is a key of the answer, never its text: the
+// filter travels in the list's address.
+func TestFreeAnswerFiltersListFewDistinctAnswers(t *testing.T) {
+	t.Parallel()
+	schema := &enrollment.FormSchema{ID: 7, Fields: []enrollment.FormField{
+		{Key: "allergies", Label: "Allergien", Type: enrollment.FormFieldTextarea, AppliesToCh: true},
+	}}
+	given := map[int64]string{11: "keine", 12: " Keine ", 13: "Nüsse", 14: "keine"}
+	records := studentAnswerRecords{schemas: map[int64]*enrollment.FormSchema{7: schema}}
+	for id := int64(11); id <= 14; id++ {
+		records.rows = append(records.rows, enrollment.LinkedChildAnswers{StudentID: id, SchemaID: 7, CustomData: answers(map[string]any{"allergies": given[id]})})
+	}
+	reads := NewStudentAnswers(records)
+	filters, err := reads.StudentAnswerFilters(context.Background())
+	require.NoError(t, err)
+	require.Len(t, filters, 1)
+	options := filters[0].Options
+	require.Len(t, options, 3)
+	require.Equal(t, enrollment.StudentAnswerOption{Value: enrollment.AnswerGivenValue, Label: "Angabe vorhanden", StudentIDs: []int64{11, 12, 13, 14}}, options[0])
+	require.Equal(t, "keine", options[1].Label, "the most frequent spelling names the answer")
+	require.Equal(t, []int64{11, 12, 14}, options[1].StudentIDs, "case and spaces do not split an answer")
+	require.Equal(t, "Nüsse", options[2].Label)
+	require.Equal(t, "Laktoseintoleranz. Bitte keine Milchprodukte beim …",
+		(&freeAnswer{first: []string{"Laktoseintoleranz. Bitte keine Milchprodukte beim Mittagessen."}, spellings: map[string]int{}}).label(),
+		"a long answer is cut at a word")
+	require.Equal(t, []int64{13}, options[2].StudentIDs)
+	for _, option := range options[1:] {
+		require.NotContains(t, option.Value, option.Label, "the value carries no answer text")
+		ids, err := reads.StudentsWithAnswer(context.Background(), "allergies", option.Value)
+		require.NoError(t, err)
+		require.Equal(t, option.StudentIDs, ids)
+	}
+
+	for id := int64(20); id < 20+maxListedFreeAnswers; id++ {
+		records.rows = append(records.rows, enrollment.LinkedChildAnswers{StudentID: id, SchemaID: 7, CustomData: answers(map[string]any{"allergies": fmt.Sprintf("Allergie %d", id)})})
+	}
+	many, err := NewStudentAnswers(records).StudentAnswerFilters(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, []string{enrollment.AnswerGivenValue}, optionValues(many[0].Options), "many different answers leave only \"Angabe vorhanden\"")
+}
+
+func optionValues(options []enrollment.StudentAnswerOption) []string {
+	out := make([]string, 0, len(options))
+	for _, option := range options {
+		out = append(out, option.Value)
+	}
+	return out
 }
 
 func TestSearchStudentAnswersMatchesStatedAnswersOnly(t *testing.T) {

@@ -74,6 +74,12 @@ export interface FilterConfig {
    * `{n} {label} gewählt`.
    */
   readonly summaryLabel?: (count: number) => string;
+  /**
+   * A single-choice dropdown in the quiet `FilterPanel` wraps long option
+   * labels instead of cutting them, so a phone still shows the end of a
+   * label and its count ("Allergien und Unverträglichkeiten: keine (72)").
+   */
+  readonly wrapLabels?: boolean;
   readonly className?: string;
   /**
    * For `type: "custom"` — the control rendered in place of the option

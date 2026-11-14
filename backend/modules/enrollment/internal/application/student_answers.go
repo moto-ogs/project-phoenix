@@ -2,11 +2,14 @@ package application
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -53,6 +56,31 @@ func (a studentAnswer) filterValue() string {
 		return enrollment.AnswerGivenValue
 	}
 	return a.value
+}
+
+// maxListedFreeAnswers bounds the free answers a filter question lists as
+// options of their own: a few answers ("keine", "Nüsse") are choices, many
+// different ones are a text, and only "Angabe vorhanden" stays.
+const maxListedFreeAnswers = 12
+
+// maxFreeAnswerLabelRunes bounds an answer as an option label.
+const maxFreeAnswerLabelRunes = 60
+
+// freeAnswerKey is the filter value of one free answer: a key of the answer
+// folded like a search, so "keine" and " Keine " are one answer. It carries
+// no answer text, because the filter travels in the list's address.
+func freeAnswerKey(text string) string {
+	sum := sha256.Sum256([]byte(collation.FoldForSearch(strings.TrimSpace(text))))
+	return "~" + hex.EncodeToString(sum[:8])
+}
+
+// matchesFilter reports whether the answer is the filter value: its own
+// value, AnswerGivenValue for any free answer, or the key of its free text.
+func (a studentAnswer) matchesFilter(value string) bool {
+	if a.filterValue() == value {
+		return true
+	}
+	return freeTypes[a.field.Type] && strings.HasPrefix(value, "~") && freeAnswerKey(a.text) == value
 }
 
 // studentAnswer is a child's newest answer to one question.
@@ -210,6 +238,7 @@ func (s *StudentAnswers) StudentAnswerFilters(ctx context.Context) ([]enrollment
 		return nil, err
 	}
 	students := map[string]map[string][]int64{}
+	free := map[string]*freeAnswers{}
 	for _, answer := range set.answers {
 		value := answer.filterValue()
 		if value == "" {
@@ -220,12 +249,22 @@ func (s *StudentAnswers) StudentAnswerFilters(ctx context.Context) ([]enrollment
 			students[key] = map[string][]int64{}
 		}
 		students[key][value] = append(students[key][value], answer.studentID)
+		if value == enrollment.AnswerGivenValue {
+			if free[key] == nil {
+				free[key] = &freeAnswers{byKey: map[string]*freeAnswer{}}
+			}
+			free[key].add(answer)
+		}
 	}
 	filters := make([]enrollment.StudentAnswerFilter, 0, len(students))
 	for key, byValue := range students {
 		question := set.questions[key]
+		options := filterOptions(question, byValue)
+		if answers := free[key]; answers != nil {
+			options = append(options, answers.options()...)
+		}
 		filters = append(filters, enrollment.StudentAnswerFilter{
-			Key: key, Label: question.Label, Type: question.Type, Options: filterOptions(question, byValue),
+			Key: key, Label: question.Label, Type: question.Type, Options: options,
 		})
 	}
 	slices.SortFunc(filters, func(a, b enrollment.StudentAnswerFilter) int {
@@ -276,6 +315,75 @@ func filterOptions(question enrollment.FormField, students map[string][]int64) [
 	return options
 }
 
+// freeAnswers are the different answers to one free question, in the order
+// they were first seen (newest registration first).
+type freeAnswers struct {
+	order []string
+	byKey map[string]*freeAnswer
+}
+
+// freeAnswer is one answer and its spellings, with the children who gave it.
+type freeAnswer struct {
+	spellings map[string]int
+	first     []string
+	students  []int64
+}
+
+func (f *freeAnswers) add(answer studentAnswer) {
+	key := freeAnswerKey(answer.text)
+	entry := f.byKey[key]
+	if entry == nil {
+		entry = &freeAnswer{spellings: map[string]int{}}
+		f.byKey[key] = entry
+		f.order = append(f.order, key)
+	}
+	text := strings.TrimSpace(answer.text)
+	if entry.spellings[text] == 0 {
+		entry.first = append(entry.first, text)
+	}
+	entry.spellings[text]++
+	entry.students = append(entry.students, answer.studentID)
+}
+
+// label is the most frequent spelling of the answer, the newest on a tie,
+// cut at a word to at most maxFreeAnswerLabelRunes.
+func (a *freeAnswer) label() string {
+	best := a.first[0]
+	for _, spelling := range a.first[1:] {
+		if a.spellings[spelling] > a.spellings[best] {
+			best = spelling
+		}
+	}
+	if utf8.RuneCountInString(best) <= maxFreeAnswerLabelRunes {
+		return best
+	}
+	cut := string([]rune(best)[:maxFreeAnswerLabelRunes-1])
+	if space := strings.LastIndex(cut, " "); space > len(cut)/2 {
+		cut = cut[:space]
+	}
+	return strings.TrimRight(cut, " .,;:") + " …"
+}
+
+// options lists the different answers after "Angabe vorhanden", most
+// children first, when there are two to maxListedFreeAnswers of them. One
+// answer would only repeat "Angabe vorhanden".
+func (f *freeAnswers) options() []enrollment.StudentAnswerOption {
+	if len(f.order) < 2 || len(f.order) > maxListedFreeAnswers {
+		return nil
+	}
+	options := make([]enrollment.StudentAnswerOption, 0, len(f.order))
+	for _, key := range f.order {
+		entry := f.byKey[key]
+		ids := append([]int64{}, entry.students...)
+		slices.Sort(ids)
+		options = append(options, enrollment.StudentAnswerOption{Value: key, Label: entry.label(), StudentIDs: ids})
+	}
+	slices.SortStableFunc(options, func(a, b enrollment.StudentAnswerOption) int {
+		return len(b.StudentIDs) - len(a.StudentIDs)
+	})
+	return options
+}
+
 // StudentsWithAnswer returns the children whose newest answer to key is value.
 func (s *StudentAnswers) StudentsWithAnswer(ctx context.Context, key, value string) ([]int64, error) {
 	if key == "" || value == "" {
@@ -287,7 +395,7 @@ func (s *StudentAnswers) StudentsWithAnswer(ctx context.Context, key, value stri
 	}
 	ids := make([]int64, 0)
 	for _, answer := range set.answers {
-		if answer.field.Key == key && answer.filterValue() == value {
+		if answer.field.Key == key && answer.matchesFilter(value) {
 			ids = append(ids, answer.studentID)
 		}
 	}
