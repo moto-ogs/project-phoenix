@@ -22,8 +22,8 @@ fehlenden Erfolg seit 26 Stunden und Fehler der letzten 30 Minuten. Fehlerausgab
 werden nicht weitergegeben, weil sie SQL, Dateinamen oder Secrets enthalten
 können. Die Abschlusszeile benennt nur den fehlgeschlagenen Schritt.
 
-**Lokal getestet:** `devbox run -- node --test scripts/daily-backup.integration.test.mjs`
-nutzt einen isolierten PostgreSQL-17-Cluster ohne Netzwerk, ein lokales
+**Lokal getestet:** `devbox run -- node --test scripts/daily-backup.integration.test.mjs scripts/daily-backup-roles-*.integration.test.mjs`
+(Hauptablauf und die Rollen-Matrix, je Rollenprofil eine Datei) nutzt einen isolierten PostgreSQL-17-Cluster ohne Netzwerk, ein lokales
 rclone-Ziel und ein zur Laufzeit erzeugtes Wegwerf-Schlüsselpaar. Es prüft
 Wiederherstellung nach Volume-Verlust, Rollen-Dumps ohne Passwörter, anschließend
 SCRAM-Anmeldung mit neu gesetzten Passwörtern aller drei LOGIN-Rollen, Mandantentrennung

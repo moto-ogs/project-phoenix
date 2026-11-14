@@ -1016,6 +1016,11 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0234",
+      "id": "api/schoolSearchActivities.ActivityGroupIDs",
+      "reason": "Owner-edge translation at the root (ADR 0075 floor shape): reduces the note card's enrollment read (studentActiveEnrollments) to the activity IDs the school search projection's care team question needs (ADR 0234)."
+    },
+    {
       "decision": "0090",
       "id": "api/serveHandler.ServeHTTP",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."

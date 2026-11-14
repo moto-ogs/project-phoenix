@@ -78,6 +78,9 @@ func TestEnrollmentSubmissionAnswersTheQuestionsAboutTheChild(t *testing.T) {
 
 	assert.Equal(t, map[string]any{"allergies": "keine", "swimming_permission": false}, seedEnrollmentChildAnswers("Emma", "Klein"))
 	assert.Equal(t, map[string]any{"allergies": "keine", "swimming_permission": true}, seedEnrollmentChildAnswers("Oskar", "Wolf"))
+	// The registration answer filter lists a few different answers as choices (#7012).
+	assert.Equal(t, "Nüsse", seedEnrollmentChildAnswers("Zofia", "Kowalczyk")["allergies"])
+	assert.Equal(t, "NÜSSE", seedEnrollmentChildAnswers("Felix", "Schneider")["allergies"])
 }
 
 // The sick note of the third family is for a day the child stays at home,

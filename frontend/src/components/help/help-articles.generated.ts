@@ -945,9 +945,9 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         steps: [
           "`Tagesbetrieb`: alles für den laufenden Betreuungstag. Diese Gruppe ist schon aufgeklappt.",
           "`Eltern`: was Sie mit den Familien austauschen.",
-          "`Team`: Ihre Arbeitszeit, Ihr Kalender und Ihre Kolleginnen und Kollegen.",
-          "`Planung`: die Pläne Ihrer OGS.",
-          "`Verwaltung`: Stammdaten, Auswertungen und Dateien.",
+          "`Team`: Ihr Dienstplan, Ihr Kalender, Ihre Arbeitszeit, Ihre Kolleginnen und Kollegen und die gemeinsamen Dateien. Wer nicht plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
+          "`Planung`: die Pläne Ihrer OGS. Wer plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
+          "`Verwaltung`: Stammdaten, Auswertungen und die Lohnabrechnung.",
           "In jeder Gruppe steht oben, was im Alltag am häufigsten gebraucht wird.",
           "Sie sehen nur Gruppen, in denen etwas für Sie dabei ist.",
           "Ganz unten stehen `Notfall` und `Hilfe`. Wer die OGS verwaltet, findet dort auch `Einstellungen`.",
@@ -2242,9 +2242,9 @@ export const editStudentTopic = function editStudentTopic(): HelpTopic {
 } satisfies typeof authored_editStudentTopic;
 
 /**
- * Die Zustellhinweise (#5934). Sie stehen an fünf Stellen: Einladung der Eltern,
- * Elternbrief, Einladung ins Personal, Anmeldung und, für den Träger, im Versand
- * der Schreiben. Hier steht, was jedes Wort bedeutet und wer als Nächstes handelt.
+ * Die Zustellhinweise (#5934). Sie stehen an sechs Stellen: Einladung der Eltern,
+ * Elternbrief, Einladung ins Personal, Einladung des Caterers (#5960), Anmeldung
+ * und, für den Träger, im Versand der Schreiben. Hier steht, was jedes Wort bedeutet und wer als Nächstes handelt.
  * `Versendet` heißt nur: Die Mail ist raus. `Zugestellt` meldet erst der
  * Mail-Dienst, und ohne ihn (Strato, Brevo, Notweg) bleibt es bei `Versendet`.
  */
@@ -2275,19 +2275,20 @@ export const emailDeliveryTopic = function emailDeliveryTopic(): HelpTopic {
           "`Gesperrt`: Diese Adresse ist gesperrt. Eine neue Mail hilft nicht. Der moto-Support muss das klären.",
           "`Stand unklar`: Ob die Adresse gesperrt ist, lässt sich gerade nicht prüfen. Versuchen Sie es später noch einmal.",
           "`Nicht versendet`: Es gab keine Mail, zum Beispiel weil die Adresse fehlt.",
-          "`Fehlgeschlagen`: Das Senden hat nicht geklappt. Bitte senden Sie neu.",
+          "`Fehlgeschlagen`: Das Senden hat nicht geklappt. Besteht keine aktuelle Sperre, können Sie neu senden.",
           "`Ergebnis unbekannt`: Ob die Mail rausging, ist nicht bekannt.",
           "`Abgebrochen`: Die Mail wurde nicht mehr gesendet.",
           "`Abgemeldet`: Die Person hat sich von den Mails abgemeldet. Sprechen Sie sie direkt an.",
           "`Alte Adresse abgemeldet` oder `Alte Adresse gesperrt`: Die Person hat inzwischen eine neue Adresse. Eine neue Mail an diese Adresse ist möglich.",
           "`Adresse prüfen`: An diese Adresse geht keine Mail mehr raus, weil sie gesperrt ist.",
           "`Versand gestoppt`: Ihre Schule hat die Mails an diese Person gestoppt. Nutzt noch jemand diese Adresse, gehen Mails an die Adresse weiter raus.",
+          "`Kein Kind in Betreuung`: Die Familie bekommt keine Elternbriefe, Nachrichten, Termine und Einladungen mehr. Das frühere Versandergebnis bleibt daneben stehen.",
         ],
       },
       {
         title: "Einen Elternbrief neu senden",
         description:
-          "Das geht für Mails, die nicht ankamen. Gesperrte Adressen und gestoppte Personen bekommen keine neue Mail.",
+          "Das geht für Mails, die nicht ankamen. Gesperrte Adressen, gestoppte Personen und Familien ohne Kind in Betreuung bekommen keine neue Mail.",
         steps: [
           "Öffnen Sie den Elternbrief und sehen Sie sich den Status an.",
           "Steht bei einer Person `Adresse prüfen`? Prüfen Sie zuerst die Adresse wie unten beschrieben.",
@@ -2320,11 +2321,12 @@ export const emailDeliveryTopic = function emailDeliveryTopic(): HelpTopic {
     notes: [
       "Anmeldecodes und Mails zum Passwort kommen auch an eine gesperrte Adresse.",
       "Abrechnungsbriefe des Trägers gehen auch an gesperrte Adressen und gestoppte Personen.",
+      "Wird kein Kind einer Person mehr betreut, bekommt sie keine Elternbriefe, Nachrichten, Termine und Einladungen mehr. Im Briefstatus steht die aktuelle Sperre getrennt vom früheren Versandergebnis. Verträge, Abrechnungsbriefe und Mails zu einer neuen Anmeldung kommen weiter an.",
       "Mails an das Team hält eine Sperre nicht zurück. Die Einladung zeigt den Hinweis trotzdem.",
     ],
     troubleshootingDetails: [
       "Hat die Person eine Mail als unerwünscht gemeldet? Dann können Sie die Sperre nicht aufheben. Sprechen Sie die Person direkt an. Eine andere Adresse tragen Sie unter `Bearbeiten` ein.",
-      "`Erneut einladen` fehlt? Dann ist die Adresse gesperrt oder die letzte Mail noch unterwegs. Der Hinweis bei der Person sagt, was davon zutrifft.",
+      "`Erneut einladen` fehlt? Dann ist die Adresse gesperrt, die letzte Mail noch unterwegs oder kein Kind mehr in Betreuung. Der Hinweis bei der Person nennt den Grund.",
       "Steht bei der Person `Gesperrt`? Die Schule kann das nicht aufheben. Wenden Sie sich an den moto-Support. Die Sperre lässt sich nicht weiter zuordnen.",
       "Hat sich die Person abgemeldet oder eine Mail als unerwünscht gemeldet? An dieselbe Adresse geht kein Elternbrief mehr. Hat sie eine andere Adresse? Tragen Sie diese unter `Bearbeiten` ein. Dann können Sie den Brief neu senden.",
       "Ist die Adresse in einem Elternbrief geändert? Die Zeile nennt die Adresse, an die die Mail ging, und darunter die aktuelle Adresse. Das Ergebnis gehört zur ersten.",
@@ -3319,7 +3321,7 @@ export const holidayGuestGroupTopic =
         "Es gibt eine Gruppe für die Ferienwoche, zum Beispiel `Feriengruppe`. Eine neue Gruppe legen Sie unter `Gruppen` an.",
       ],
       steps: [
-        "Klappen Sie in der Seitenleiste `Verwaltung` auf.",
+        "Klappen Sie in der Seitenleiste `Eltern` auf.",
         "Öffnen Sie `Ferienwochen`.",
         "Richtet Ihre OGS mehrere Wochen aus, wählen Sie oben die Woche.",
         "Wählen Sie unter `Feriengruppe` die Gruppe.",
@@ -3482,7 +3484,7 @@ export const holidayWeeksTopic = function holidayWeeksTopic(): HelpTopic {
       "Der Träger hat Anmeldungen für diese Woche bestätigt.",
     ],
     steps: [
-      "Klappen Sie in der Seitenleiste `Verwaltung` auf.",
+      "Klappen Sie in der Seitenleiste `Eltern` auf.",
       "Öffnen Sie `Ferienwochen`.",
       "Richtet Ihre OGS mehrere Wochen aus, wählen Sie oben die Woche.",
       "Lesen Sie unter `Je Zeitmodell` und `Je Heimatschule` die Zahlen.",
@@ -4667,7 +4669,7 @@ export const mealCatererTopic = function mealCatererTopic(): HelpTopic {
       "Die Lieferliste bekommen Sie bei `Bestellung` über das Menü mit den drei Punkten. Wählen Sie unter `Lieferliste der Woche` `PDF`, `Excel` oder `CSV`. Die Woche wählen Sie oben unter dem Titel. Es ist dieselbe Liste, die Ihr Caterer sieht, ohne Namen.",
     ],
     troubleshootingDetails: [
-      "Kam keine E-Mail an? Widerrufen Sie die Einladung unter `Offene Einladungen` im Menü mit den drei Punkten mit `Widerrufen`. Senden Sie dann eine neue.",
+      "Kam keine E-Mail an? Unter `Offene Einladungen` steht bei der Adresse, was aus der Mail wurde, zum Beispiel `Zugestellt` oder `Nicht zustellbar`. Stimmt die Adresse nicht, widerrufen Sie die Einladung im Menü mit den drei Punkten mit `Widerrufen`. Senden Sie dann eine neue.",
       "Fehlt die Karte `Caterer`? Dann ist `Anmeldung zum Mittagessen` aus, oder Ihr Konto darf den Speiseplan nicht bearbeiten.",
       "Steht auf der Karte nur „Einen Caterer einladen können nur Admins Ihrer Schule.“? Dann bitten Sie einen Admin Ihrer Schule um die Einladung.",
       "Kommt Ihr Caterer nicht mehr an den Code für die Zwei-Faktor-Anmeldung? Dann meldet er sich beim moto-Team. Sie als Schule können sie nicht zurücksetzen, weil ein Caterer mehrere Schulen beliefern kann.",
@@ -5691,6 +5693,7 @@ export const parentCalendarTopic = function parentCalendarTopic(): HelpTopic {
       "Ein Termin ist eine `Betreuungszeit`, eine `Einladung` oder ein `Termin`.",
       "Bei einer Einladung antworten Sie mit `Zusagen` oder `Absagen`.",
       "Danach steht am Termin `Zugesagt` oder `Abgesagt`.",
+      "Für einen abgesagten Termin bekommen Sie keine Erinnerung. Am Termin steht dann `Keine Erinnerung`.",
       "Wiederholt sich ein Termin, wählen Sie unter `Ihre Antwort gilt für` zwischen `Nur am …` und `Alle Termine`. So sagen Sie zum Beispiel einem einzelnen Termin ab.",
       "Eine Antwort ändern Sie im geöffneten Termin mit `Antwort ändern`.",
       "Unter `Rückmeldungen` sehen Sie, wie viele zugesagt und abgesagt haben. Namen anderer Eltern sehen Sie nicht.",
@@ -7556,7 +7559,7 @@ export const payrollTopic = function payrollTopic(): HelpTopic {
       {
         title: "Lohnarten und DATEV eintragen",
         steps: [
-          "Klappen Sie in der Seitenleiste `Planung` auf.",
+          "Klappen Sie in der Seitenleiste `Verwaltung` auf.",
           "Öffnen Sie `Abrechnung`.",
           "Prüfen Sie oben unter `Vollständigkeit`, was noch fehlt.",
           "Tragen Sie unter `Feste Lohnarten` die Nummern Ihres Lohnsystems ein.",
@@ -7939,7 +7942,7 @@ export const roomsTopic = function roomsTopic(
   };
 } satisfies typeof authored_roomsTopic;
 
-// Die Suche über die ganze Schul-App (#6954, ADR 0231). Was jemand findet,
+// Die Suche über die ganze Schul-App (#6954, ADR 0231; Notizen #7012, ADR 0234). Was jemand findet,
 // entscheidet der Server nach den Rechten des Kontos; der Artikel nennt nur,
 // was die Person dann anders sieht.
 export const schoolSearchTopic = function schoolSearchTopic(): HelpTopic {
@@ -7984,20 +7987,30 @@ export const schoolSearchTopic = function schoolSearchTopic(): HelpTopic {
         ],
       },
       {
+        title: "In Notizen suchen",
+        steps: [
+          "Geben Sie ein Wort aus einer Notiz ein, zum Beispiel `Ausflug`.",
+          "Sie sehen die Kinder mit einer passenden Notiz. Darunter steht der Teil der Notiz mit Ihrem Wort.",
+          "Wählen Sie den Treffer. moto öffnet beim Kind den Reiter `Notizen`.",
+        ],
+      },
+      {
         title: "Nach Angaben aus der Anmeldung suchen",
         steps: [
           "Geben Sie einen Begriff aus dem Anmeldeformular ein, zum Beispiel `schwimmen`.",
           "Sie sehen die Kinder, bei denen die Eltern dazu etwas angegeben haben. Darunter steht die Frage und die Antwort.",
           "Eine ganze Liste brauchen Sie? Öffnen Sie `Alle Kinder` und wählen Sie das Filtersymbol. Unter `Anmeldung` wählen Sie eine Antwort aus `Angabe aus der Anmeldung`.",
+          "Bei Fragen mit freiem Text, Zahl oder Datum wählen Sie dort `Angabe vorhanden`. Was genau drinsteht, finden Sie hier in der Suche.",
         ],
       },
     ],
     result:
       "Sie landen direkt beim Kind, bei der Person, im Raum oder auf der Seite.",
     differences: [
-      "Sie finden nur, was Sie auch ohne Suche sehen dürfen. Telefonnummern, E-Mail-Adressen, Elternnotizen und Angaben aus der Anmeldung finden nur Konten, die Kontaktdaten sehen dürfen.",
+      "Sie finden nur, was Sie auch ohne Suche sehen dürfen. Telefonnummern, E-Mail-Adressen, Elternnotizen, Einträge aus dem Reiter `Notizen` und Angaben aus der Anmeldung finden nur Konten, die Kontaktdaten sehen dürfen.",
+      "Eine Notiz finden Sie nur, wenn Sie sie auch im Reiter `Notizen` sehen. Eine Notiz für das Betreuungsteam findet nur, wer das Kind betreut. Eine Notiz für die Leitung findet nur die Leitung der genannten Gruppe.",
       "Ein Gruppen-Treffer öffnet `Alle Kinder` mit den Kindern dieser Gruppe.",
-      "Gesundheitsangaben und Notizen aus dem Reiter `Notizen` durchsucht die Suche nicht. Öffnen Sie dafür das Kind.",
+      "Gesundheitsangaben durchsucht die Suche nicht. Öffnen Sie dafür das Kind.",
     ],
     notes: [
       "Ohne Eingabe zeigt die Suche die Seiten, die Sie öffnen dürfen.",
@@ -8024,7 +8037,7 @@ export const schoolTraegerDocumentsTopic =
       icon: "Download",
       requirements: ["Sie dürfen die Dateien Ihrer Schule verwalten."],
       steps: [
-        "Klappen Sie in der Seitenleiste `Verwaltung` auf und öffnen Sie `Dateien`.",
+        "Klappen Sie in der Seitenleiste `Team` auf und öffnen Sie `Dateien`.",
         "Oben steht die Karte `Vom Träger`.",
         "Unter jedem Titel steht, für wen der Träger das Dokument freigegeben hat.",
         "Wählen Sie `Herunterladen`.",
@@ -8148,6 +8161,7 @@ export const settingsGuideTopic = function settingsGuideTopic(): HelpTopic {
           "Vor dem Einschalten prüft die Schule die Rechtsgrundlage. Sie ist für die Nutzung verantwortlich.",
           "`Nutzungsanalyse`: moto erhält Nutzungsstatistiken Ihrer Schule, aber keine eingegebenen Inhalte.",
           "Löschfristen wie `Anwesenheit aufbewahren (Tage)`: Wie lange moto Daten behält. Sie können sie nur lesen.",
+          "`Erziehungsberechtigte ohne Kind aufbewahren (Tage)`: Diese Frist stellen Sie selbst ein. Sie beginnt erst, wenn das letzte Kind der Person gelöscht ist.",
         ],
       },
       {
@@ -8222,6 +8236,7 @@ export const settingsTopic = function settingsTopic(): HelpTopic {
       "Damit enden auch Sitzungsaufzeichnungen. Die Fehlerdiagnose bleibt davon getrennt.",
       "Unter `Datenschutz` sehen Sie die Löschfristen. Sie zeigen, wie lange moto Daten aufbewahrt.",
       "moto legt die Löschfristen mit Ihrer Schule fest. Sie können sie nur lesen.",
+      "Eine Ausnahme ist `Erziehungsberechtigte ohne Kind aufbewahren (Tage)`. Diese Frist stellen Sie selbst ein, zwischen 30 und 365 Tagen. Sie beginnt erst, wenn das letzte Kind der Person gelöscht ist.",
       "Unter `Betrieb` steht das `Bundesland` Ihrer Schule. Danach richten sich die gesetzlichen Feiertage. Ändern kann es nur das moto-Team.",
       "Wer Blöcke starten oder beenden darf, legen Sie unter `Betrieb` fest: bei `Wer darf Blöcke starten?` und `Wer darf Blöcke beenden?`.",
       "`Das ganze Team` geht dort nur, wenn das Team alle Gruppen und Blöcke sieht.",
@@ -8260,7 +8275,7 @@ export const sharedFilesTopic = function sharedFilesTopic(): HelpTopic {
       {
         title: "Eine Datei öffnen",
         steps: [
-          "Klappen Sie in der Seitenleiste `Verwaltung` auf und öffnen Sie `Dateien`.",
+          "Klappen Sie in der Seitenleiste `Team` auf und öffnen Sie `Dateien`.",
           "Wählen Sie links unter `Ordner` den passenden aus.",
           "Suchen Sie die Datei in der Liste.",
           // Live geprueft: die Aktionen liegen im Zeilenmenue und heissen
@@ -8301,19 +8316,19 @@ export const sharedFilesTopic = function sharedFilesTopic(): HelpTopic {
 export const staffNoticesTopic = function staffNoticesTopic(): HelpTopic {
   return {
     id: HELP_TOPICS.leadStaffNotices,
-    title: "Tagesinformationen an das Team schreiben",
+    title: "Hinweise der Leitung an das Team schreiben",
     question: "Wie erreiche ich das ganze Team mit einem Hinweis?",
-    summary: "Eine Tagesinformation sehen alle, die heute arbeiten.",
+    summary: "Einen Hinweis der Leitung sehen alle, die heute arbeiten.",
     group: "planung",
     audience: "lead",
     icon: "Megaphone",
     image: "/help/screens/tagesinformationen-anlegen.webp",
     imageAlt:
-      "Das Fenster für eine neue Tagesinformation mit Titel, Hinweis, Empfängern und Wochentagen.",
+      "Das Fenster für einen neuen Hinweis mit Titel, Hinweis, Empfängern und Wochentagen.",
     steps: [
       "Klappen Sie in der Seitenleiste `Team` auf.",
-      "Öffnen Sie `Tagesinformationen`.",
-      "Wählen Sie `Neue Tagesinformation`.",
+      "Öffnen Sie `Hinweise der Leitung`.",
+      "Wählen Sie `Neuer Hinweis`.",
       "Tragen Sie `Titel` und `Hinweis` ein.",
       "Wählen Sie bei `Für wen` `Alle`, `Nur Betreuung` oder `Nur Lehrkräfte`.",
       "Wählen Sie bei `Wichtigkeit`, wie dringend der Hinweis ist.",
@@ -8886,12 +8901,15 @@ export const studentSearchTopic = function studentSearchTopic(
       },
       {
         // #6954: der Filter steht im Filterfeld unter `Anmeldung`, nur mit
-        // Zugriff auf die Angaben der Kinderakte und nur bei eigenen
-        // Ja/Nein- oder Auswahlfragen der Online-Anmeldung.
+        // Zugriff auf die Angaben der Kinderakte und nur bei eigenen Fragen
+        // der Online-Anmeldung. Freitext, Zahl und Datum: `Angabe vorhanden`
+        // (#7012).
         title: "Nach Angaben aus der Anmeldung filtern",
         steps: [
           "Wählen Sie rechts neben der Suche das Filtersymbol.",
           "Wählen Sie unter `Anmeldung` bei `Angabe aus der Anmeldung` eine Antwort, zum Beispiel eine Frage mit `Ja`.",
+          "Bei Fragen mit freiem Text, Zahl oder Datum wählen Sie `Angabe vorhanden`. Dann sehen Sie alle Kinder, bei denen die Eltern etwas eingetragen haben. Auch „keine“ zählt als Angabe.",
+          "Haben die Eltern nur wenige verschiedene Antworten gegeben, steht jede Antwort darunter, zum Beispiel `keine`. So sehen Sie, wie viele Kinder welche Antwort haben.",
           "Die Zahl in Klammern nennt, wie viele Kinder die Liste dann zeigt. Kinder, die die Schule verlassen haben, zählen nicht.",
           "`Alle Angaben` hebt den Filter wieder auf.",
         ],
@@ -8905,7 +8923,7 @@ export const studentSearchTopic = function studentSearchTopic(
       // Einstellung „Kinder nur über ‚Alle Kinder‘ finden“ (#1321).
       "Fehlen `Gruppen` und `Aktuelle Aufsicht` in der Navigation? Dann wählen Sie in `Alle Kinder` oben `Meine Gruppe` oder `Meine Aufsicht`.",
       "Einige Bereiche brauchen zusätzliche Rechte: `Betreuungsplan`, `Dokumente` und `Änderungsprotokoll`. Fehlt ein Bereich? Fragen Sie Ihre Leitung.",
-      "Fehlt im Filter `Anmeldung`? Den Filter sehen nur Mitarbeitende, die auch die Angaben aus der Anmeldung beim Kind sehen. Er erscheint erst, wenn die Online-Anmeldung eigene Fragen mit Ja/Nein oder zur Auswahl hat.",
+      "Fehlt im Filter `Anmeldung`? Den Filter sehen nur Mitarbeitende, die auch die Angaben aus der Anmeldung beim Kind sehen. Er erscheint erst, wenn Eltern in der Online-Anmeldung eigene Fragen der Schule beantwortet haben.",
       ...(presenceDifference ? [presenceDifference] : []),
     ],
     ...(transitNotes.length > 0 ? { notes: transitNotes } : {}),
@@ -9981,14 +9999,14 @@ export const teacherNoClassesTopic =
 export const teacherNoticesTopic = function teacherNoticesTopic(): HelpTopic {
   return {
     id: HELP_TOPICS.teacherNotices,
-    title: "Tagesinformationen lesen",
+    title: "Hinweise der Leitung lesen",
     question: "Wo stehen die Hinweise der OGS-Leitung?",
-    summary: "Unter `Tagesinformationen` steht, was für heute gilt.",
+    summary: "Unter `Hinweise der Leitung` steht, was für heute gilt.",
     group: "nachrichten",
     audience: "teacher",
     icon: "Megaphone",
     steps: [
-      "Öffnen Sie `Tagesinformationen`.",
+      "Öffnen Sie `Hinweise der Leitung`.",
       "Lesen Sie die Hinweise für heute.",
       "Wählen Sie bei Bedarf `Zur Kenntnis nehmen`.",
     ],
@@ -13719,6 +13737,7 @@ export const traegerSettingsTopic = function traegerSettingsTopic(): HelpTopic {
       "Ebenfalls unter `Ferienbetreuung` schreiben Sie bei `Zahlungstext im Schreiben` einen eigenen Satz, der um die Zahlung bittet. Erlaubte Platzhalter sind {Betrag}, {Zahlungsfrist}, {Rechnungsnummer} und {Debitorennummer}. Darunter zeigt die `Vorschau des Zahlungstexts` den Satz mit Beispielwerten. Ist das Feld leer, steht im Schreiben der eingebaute Satz.",
       "Der eigene Zahlungstext gilt für die Schreiben, die Sie danach erstellen. Fertige Schreiben bleiben, wie sie sind.",
       "Unter `Ferienbetreuung` legen Sie bei `Ferienanmeldungen löschen nach (Tagen)` fest, wie lange moto Ferienanmeldungen aufbewahrt. Möglich sind 92 bis 1095 Tage, der Standard ist 365 Tage. Die Frist steht im Einwilligungstext für die Eltern. Eine Änderung gilt nur für Anmeldungen, die danach eingehen.",
+      "Unter `Datenschutz` legen Sie bei `Erziehungsberechtigte ohne Kind aufbewahren (Tage)` fest, wie lange moto Eltern ohne Kind aufbewahrt. Möglich sind 30 bis 365 Tage, der Standard ist 90 Tage. Eine Schule kann einen eigenen Wert eintragen.",
       "Im Bereich `Dashboard` legen Sie fest, ab wann das Dashboard eine Schule unter `Auffälligkeiten` zeigt: bei zu wenig Personal, bei vielen Krankmeldungen und bei offenen Anmeldungen. 0 schaltet einen Hinweis aus.",
       "Unter `Ferienbetreuung` legen Sie bei `Ferienbeitrag` auch fest, welches Kind das erste Kind ist und was ein Kostenträger bezahlt. Mehr dazu steht im Artikel `Ferienbeitrag festlegen`.",
     ],
@@ -14144,7 +14163,7 @@ export const weekProtocolTopic = function weekProtocolTopic(
     result:
       "Das Protokoll ist abgeschlossen und ändert sich nicht mehr. Mit `PDF herunterladen` laden Sie es als PDF.",
     notes: [
-      "Jeden Abend hält moto fest, wer da war, wer fehlte und warum, welche Blöcke gelaufen oder ausgefallen sind und welche Tagesinformationen galten.",
+      "Jeden Abend hält moto fest, wer da war, wer fehlte und warum, welche Blöcke gelaufen oder ausgefallen sind und welche Hinweise der Leitung galten.",
       "Gesundheitsangaben stehen nicht im Protokoll. Bei einem fehlenden Kind steht nur der Grund, wie in der Tagesauswertung.",
       "Ältere Protokolle bleiben in der Liste. moto löscht sie nach der Frist für die Anwesenheit Ihrer Schule.",
     ],

@@ -2436,6 +2436,9 @@ function SearchPageContent() {
               id: "enrollmentAnswer",
               label: "Angabe aus der Anmeldung",
               type: "dropdown" as const,
+              // "Frage: Antwort (Zahl)" is long; on a phone the answer and
+              // its count must stay visible (#7012).
+              wrapLabels: true,
               value: effectiveEnrollmentAnswer || "all",
               onChange: (value: string | string[]) =>
                 updateEnrollmentAnswerFilter(value as string),
