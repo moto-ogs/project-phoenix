@@ -73,7 +73,7 @@ const CHANNEL_LABELS = {
 } as const;
 
 /** The card's `id`, so notices on the contract page lead to it (#7054). */
-export const CONTRACT_NOTICE_SECTION_ID = "vertrag-beenden";
+const CONTRACT_NOTICE_SECTION_ID = "vertrag-beenden";
 
 /** For a notice elsewhere on the contract page that names this card. */
 export function NoticeCardJump() {
