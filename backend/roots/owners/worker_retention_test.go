@@ -447,6 +447,14 @@ func TestNightlyRetentionDeletesParentMessagesAfterTheirWindow(t *testing.T) {
 	assert.Empty(t, suite.loggedDeletions(t, otherSchool, auditModels.DeletionTypeParentMessageRetention))
 }
 
+// threeYearsBackUTC is the boundary of a three-year protocol window as the
+// Audit Platform and the database guards of 1.15.606 compute it: the same
+// UTC clock time three years back (auditModels.RetentionYearsCutoff). In a
+// Berlin session three years back from 1 March 00:30 is 1 March, a day after
+// the UTC boundary of 29 February 23:30, so a Berlin "3 years 1 day" row would
+// sit on the boundary itself.
+const threeYearsBackUTC = `((CURRENT_TIMESTAMP AT TIME ZONE 'UTC' - INTERVAL '3 years') AT TIME ZONE 'UTC')`
+
 func TestNightlyRetentionDeletesExpiredAuditLedgerRows(t *testing.T) {
 	t.Parallel()
 	suite := newRetentionSuite(t)
@@ -467,7 +475,7 @@ func TestNightlyRetentionDeletesExpiredAuditLedgerRows(t *testing.T) {
 	keptAccess := suite.insertID(t, insertAccess, school, account, 1)
 
 	const insertDeletion = `INSERT INTO audit.data_deletions (tenant_id, deletion_type, records_deleted, deleted_by, deleted_at)
-		VALUES (?, 'unregistered_tag_scan_retention', 1, 'system', CURRENT_TIMESTAMP - make_interval(years => 3, days => ?)) RETURNING id`
+		VALUES (?, 'unregistered_tag_scan_retention', 1, 'system', ` + threeYearsBackUTC + ` - make_interval(days => ?)) RETURNING id`
 	expiredDeletion := suite.insertID(t, insertDeletion, school, 1)
 	keptDeletion := suite.insertID(t, insertDeletion, school, -1)
 
@@ -781,34 +789,38 @@ type retentionProtocol struct {
 	table         string
 	seed          string
 	followingYear bool
+	// berlinYears: the function subtracts its three years on the Berlin
+	// session clock (config.delete_expired_setting_audit), not in UTC like
+	// the Audit Platform's protocols (1.15.606).
+	berlinYears bool
 }
 
 var retentionProtocols = []retentionProtocol{
 	{"student_deletion_log_retention", "audit.student_deletions", `INSERT INTO audit.student_deletions (tenant_id, student_id, actor_account_id, reason, counts, deleted_at)
-		VALUES (?0, ?1, ?1, 'privacy_request', '{}'::jsonb, %s) RETURNING id`, false},
+		VALUES (?0, ?1, ?1, 'privacy_request', '{}'::jsonb, %s) RETURNING id`, false, false},
 	{"enrollment_deletion_log_retention", "audit.enrollment_deletions", `INSERT INTO audit.enrollment_deletions (tenant_id, request_id, actor_account_id, actor_type, scope, reason, counts, deleted_at)
-		VALUES (?0, ?1, ?1, 'admin', 'request', 'Doppelte Anmeldung', '{}'::jsonb, %s) RETURNING id`, false},
+		VALUES (?0, ?1, ?1, 'admin', 'request', 'Doppelte Anmeldung', '{}'::jsonb, %s) RETURNING id`, false, false},
 	{"enrollment_restoration_log_retention", "audit.enrollment_restorations", `INSERT INTO audit.enrollment_restorations (tenant_id, request_id, child_ids, actor_account_id, restored_at)
-		VALUES (?0, ?1, '[]'::jsonb, ?1, %s) RETURNING id`, false},
+		VALUES (?0, ?1, '[]'::jsonb, ?1, %s) RETURNING id`, false, false},
 	{"time_tracking_deletion_log_retention", "audit.time_tracking_deletions", `INSERT INTO audit.time_tracking_deletions (tenant_id, staff_id, source, source_id, deleted_by, payload, note, occurred_at)
-		VALUES (?0, ?1, 'balance_adjustment', ?1, ?1, '{}'::jsonb, 'Korrektur', %s) RETURNING id`, false},
+		VALUES (?0, ?1, 'balance_adjustment', ?1, ?1, '{}'::jsonb, 'Korrektur', %s) RETURNING id`, false, false},
 	{"staff_master_data_change_retention", "audit.staff_master_data_changes", `INSERT INTO audit.staff_master_data_changes (tenant_id, staff_id, changed_by, section, field_name, note, occurred_at)
-		VALUES (?0, ?1, ?1, 'contact', 'phone', 'Neue Nummer', %s) RETURNING id`, false},
+		VALUES (?0, ?1, ?1, 'contact', 'phone', 'Neue Nummer', %s) RETURNING id`, false, false},
 	{"personnel_number_change_retention", "audit.personnel_number_changes", `INSERT INTO audit.personnel_number_changes (tenant_id, staff_id, changed_by, new_value, occurred_at)
-		VALUES (?0, ?1, ?1, '4711', %s) RETURNING id`, false},
+		VALUES (?0, ?1, ?1, '4711', %s) RETURNING id`, false, false},
 	{"guardian_financial_change_retention", "audit.guardian_financial_changes", `INSERT INTO audit.guardian_financial_changes (tenant_id, guardian_profile_id, student_id, changed_by, field_name, occurred_at)
-		VALUES (?0, ?1, ?1, ?1, 'iban', %s) RETURNING id`, false},
+		VALUES (?0, ?1, ?1, ?1, 'iban', %s) RETURNING id`, false, false},
 	{"class_list_change_retention", "audit.class_list_entry_changes", `INSERT INTO audit.class_list_entry_changes (tenant_id, entry_id, action, matched_student_id, changed_by, occurred_at)
-		VALUES (?0, ?1, 'assigned', ?1, ?1, %s) RETURNING id`, true},
+		VALUES (?0, ?1, 'assigned', ?1, ?1, %s) RETURNING id`, true, false},
 	{"substitution_change_retention", "audit.substitution_changes", `INSERT INTO audit.substitution_changes (tenant_id, substitution_id, target_type, action, group_id, target_staff_id, actor_account_id, start_date, end_date, created_at)
-		VALUES (?0, ?1, 'group_handover', 'assigned', ?1, ?1, ?1, CURRENT_DATE, CURRENT_DATE, %s) RETURNING id`, true},
+		VALUES (?0, ?1, 'group_handover', 'assigned', ?1, ?1, ?1, CURRENT_DATE, CURRENT_DATE, %s) RETURNING id`, true, false},
 	{"file_event_retention", "audit.file_events", `INSERT INTO audit.file_events (tenant_id, action, actor_account_id, actor_name, detail, created_at)
-		VALUES (?0, 'file_uploaded', ?1, 'Testkraft', 'elternbrief.pdf', %s) RETURNING id`, true},
+		VALUES (?0, 'file_uploaded', ?1, 'Testkraft', 'elternbrief.pdf', %s) RETURNING id`, true, false},
 	{"export_transfer_retention", "audit.export_transfers", `INSERT INTO audit.export_transfers (tenant_id, actor_account_id, actor_name, export_kind, export_format, filename,
 			byte_size, target_host, target_port, target_directory, status, created_at)
-		VALUES (?0, ?1, 'Testkraft', 'staff_time_tracking', 'csv', 'zeiten.csv', 1, 'sftp.example.org', 22, '/', 'success', %s) RETURNING id`, true},
+		VALUES (?0, ?1, 'Testkraft', 'staff_time_tracking', 'csv', 'zeiten.csv', 1, 'sftp.example.org', 22, '/', 'success', %s) RETURNING id`, true, false},
 	{"setting_audit_retention", "config.setting_audit", `INSERT INTO config.setting_audit (tenant_id, setting_key, new_value, action, changed_by, changed_at)
-		VALUES (?0, 'gdpr.data_cleanup_time', '"03:00"'::jsonb, 'set', ?1, %s) RETURNING id`, false},
+		VALUES (?0, 'gdpr.data_cleanup_time', '"03:00"'::jsonb, 'set', ?1, %s) RETURNING id`, false, true},
 }
 
 func TestNightlyRetentionDeletesExpiredProtocolRows(t *testing.T) {
@@ -822,7 +834,11 @@ func TestNightlyRetentionDeletesExpiredProtocolRows(t *testing.T) {
 	type seeded struct{ expired, kept, other int64 }
 	rows := map[string]seeded{}
 	for _, protocol := range retentionProtocols {
-		expired, kept := "CURRENT_TIMESTAMP - INTERVAL '3 years 1 day'", "CURRENT_TIMESTAMP - INTERVAL '3 years' + INTERVAL '1 day'"
+		threeYearsBack := threeYearsBackUTC
+		if protocol.berlinYears {
+			threeYearsBack = "(CURRENT_TIMESTAMP - INTERVAL '3 years')"
+		}
+		expired, kept := threeYearsBack+" - INTERVAL '1 day'", threeYearsBack+" + INTERVAL '1 day'"
 		if protocol.followingYear {
 			expired, kept = lastYearStart+" - INTERVAL '1 day'", lastYearStart+" + INTERVAL '1 day'"
 		}
