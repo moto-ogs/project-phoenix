@@ -13,6 +13,7 @@ import {
   schoolCount,
   staffChangeText,
 } from "~/components/traeger/staff/staff-record-format";
+import { StaffProofsCard } from "~/components/traeger/staff/staff-proofs-card";
 import { Button } from "~/components/ui/button";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -487,6 +488,17 @@ export default function TraegerStaffRecordPage() {
               </FramedList>
             </SectionCard>
           </div>
+
+          <StaffProofsCard
+            recordId={record.id}
+            personName={staffName(record)}
+            proofs={record.proofs}
+            onChanged={(proofs) =>
+              setRecord((current) =>
+                current ? { ...current, proofs } : current,
+              )
+            }
+          />
 
           <FinancialCard record={record} onSaved={() => void load()} />
 

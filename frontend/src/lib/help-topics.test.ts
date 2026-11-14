@@ -774,6 +774,7 @@ describe("getParentHelpTopicForPath", () => {
       HELP_TOPICS.traegerExportHandover,
       HELP_TOPICS.traegerDatevExport,
       HELP_TOPICS.traegerStaffRecords,
+      HELP_TOPICS.traegerStaffProofs,
       HELP_TOPICS.traegerSharedDocuments,
       HELP_TOPICS.traegerCareTimeOverruns,
       HELP_TOPICS.traegerAccessLog,

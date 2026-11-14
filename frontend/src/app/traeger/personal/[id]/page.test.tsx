@@ -51,6 +51,32 @@ const RECORD: StaffRecordDetail = {
       occurredAt: "2026-11-14T10:00:00Z",
     },
   ],
+  proofs: [
+    {
+      typeId: "7",
+      typeName: "Erweitertes Führungszeugnis",
+      mandatory: true,
+      policeCertificate: true,
+      held: true,
+      status: "expiring_soon",
+      presentedOn: "2021-11-20",
+      issuedOn: "2021-11-02",
+      noRelevantEntry: true,
+      expiresOn: "2026-11-02",
+    },
+    {
+      typeId: "8",
+      typeName: "Masernschutz",
+      mandatory: true,
+      policeCertificate: false,
+      held: false,
+      status: "missing",
+      presentedOn: "",
+      issuedOn: "",
+      noRelevantEntry: false,
+      expiresOn: "",
+    },
+  ],
 };
 
 function renderPage() {
@@ -74,6 +100,35 @@ describe("TraegerStaffRecordPage", () => {
     expect(screen.getByText("•••• 3000")).toBeInTheDocument();
     expect(
       screen.getByText("Nachname „Sommer“ von OGS Nord nicht übernommen"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows each proof with its status and only the result of the certificate", async () => {
+    renderPage();
+    const card = (
+      await screen.findByText("Nachweise", { selector: "h2" })
+    ).closest("section");
+    expect(card).not.toBeNull();
+    expect(within(card!).getByText("2 offen")).toBeInTheDocument();
+    expect(within(card!).getByText("Läuft bald ab")).toBeInTheDocument();
+    expect(within(card!).getByText("Fehlt")).toBeInTheDocument();
+    expect(
+      within(card!).getByText(
+        "Eingesehen am 20.11.2021 · ausgestellt am 02.11.2021 · keine einschlägige Eintragung · gültig bis 02.11.2026",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(card!).getByRole("button", { name: "Masernschutz eintragen" }),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      within(card!).getByRole("button", {
+        name: "Erweitertes Führungszeugnis erneuern",
+      }),
+    );
+    expect(
+      await screen.findByText(
+        "Das Führungszeugnis hat keine einschlägige Eintragung.",
+      ),
     ).toBeInTheDocument();
   });
 

@@ -26,6 +26,7 @@ import { staffQualificationService } from "~/lib/staff-qualification-api";
 import {
   mergeQualificationEntries,
   QualificationEntryList,
+  TraegerProofStatusList,
 } from "~/components/staff/qualification-entry-list";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import {
@@ -156,6 +157,12 @@ export function StammdatenTab({
   } = useSWRAuth(
     canViewSections ? staffQualificationKeys.entries(staffId) : null,
     () => staffQualificationService.staffEntries(staffId),
+  );
+  // Was der Träger für die Person an Nachweisen führt (#4707); leer für
+  // jede Person ohne Personalakte des Trägers.
+  const { data: traegerProofs } = useSWRAuth(
+    canViewSections ? staffQualificationKeys.traeger(staffId) : null,
+    () => staffQualificationService.traegerProofs(staffId),
   );
   const {
     data: qualificationTypes,
@@ -740,12 +747,19 @@ export function StammdatenTab({
                 <DataFieldSkeleton />
                 <DataFieldSkeleton />
               </DataGrid>
-            ) : qualificationList.length === 0 ? (
-              <p className="text-sm text-gray-400">
-                Keine Qualifikationen hinterlegt.
-              </p>
             ) : (
-              <QualificationEntryList entries={qualificationList} />
+              <div className="space-y-4">
+                {traegerProofs && traegerProofs.length > 0 ? (
+                  <TraegerProofStatusList proofs={traegerProofs} />
+                ) : null}
+                {qualificationList.length === 0 ? (
+                  <p className="text-sm text-gray-400">
+                    Keine Qualifikationen hinterlegt.
+                  </p>
+                ) : (
+                  <QualificationEntryList entries={qualificationList} />
+                )}
+              </div>
             )}
           </SectionCard>
         </>
