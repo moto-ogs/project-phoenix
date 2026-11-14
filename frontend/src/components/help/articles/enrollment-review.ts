@@ -28,6 +28,8 @@ export function enrollmentReviewTopic(): HelpTopic {
       "Sie entscheiden je Kind. Eine Anmeldung kann mehrere Kinder enthalten.",
       // #6053, #6148 (manuelle Anmeldung)
       "Ist schon ein Kind mit diesem Namen und Geburtsdatum angemeldet, fragt moto beim `Bestätigen` nach. Wählen Sie `Bestehendes Kind verwenden`, verlängert moto nur die Anmeldung dieses Kindes. Die Eltern aus der Anmeldung bekommen dadurch keinen Zugang. Ist es ein anderes Kind, wählen Sie `Als neues Kind anlegen`. Dieselbe Frage kommt, wenn Sie ein Kind selbst mit `Kind anlegen und freigeben` anmelden.",
+      // #6247: dasselbe Kind von beiden Eltern angemeldet.
+      "Haben zwei Eltern dasselbe Kind angemeldet? Dann steht bei der zweiten Anmeldung `ist in dieser Phase schon angemeldet`. Mit `Anmeldung öffnen` sehen Sie die erste Anmeldung. Ist es dasselbe Kind, wählen Sie `Als doppelt ablehnen`. Die Eltern lesen dann nur, dass ihr Kind schon angemeldet ist. Tragen Sie den zweiten Elternteil danach in der Akte des Kindes ein.",
       // #6837
       "Haben Sie ein Angebot nach der Anmeldung geändert, etwa Preis oder Tage? Dann steht beim Angebot `Seit der Anmeldung geändert` mit der Wahl der Eltern. Beim `Bestätigen` fragt moto nach. Mit `Neue Angaben bestätigen` gelten die neuen Angaben. Informieren Sie die Familie über die Änderung.",
       // #6041

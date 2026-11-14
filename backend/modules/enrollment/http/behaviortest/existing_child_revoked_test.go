@@ -97,7 +97,10 @@ func TestExistingChild_RevokedRelationshipOfficeMayCreateNew(t *testing.T) {
 	require.NotNil(t, child.MatchedStudentID)
 	env.revokeGuardianLinks(t, existing.ID)
 
-	require.NoError(t, env.decide(t, enrollmentAPI.DecideInput{RequestID: res.Request.ID, ChildID: child.ID, CreateNewStudent: true}))
+	require.NoError(t, env.decide(t, enrollmentAPI.DecideInput{
+		RequestID: res.Request.ID, ChildID: child.ID,
+		CreateNewStudent: true, ShownCandidateIDs: []int64{existing.ID},
+	}))
 	created := env.child(t, child.ID)
 	require.NotNil(t, created.CreatedStudentID)
 	assert.NotEqual(t, existing.ID, *created.CreatedStudentID, "the office's choice creates a new child")

@@ -72,11 +72,17 @@ type DecideInput struct {
 	SuppressParentEmail        bool
 	SuppressGuardianInvitation bool
 	// ExistingStudentID and CreateNewStudent are the office's answer when the
-	// child of an open or linked_parents phase may already be enrolled
-	// (#6053): renew that student, or create a new child. At most one is set,
-	// and only for an approval.
+	// child of an open, linked_parents or new_students phase may already be
+	// enrolled (#6053, #6247): renew that student, or create a new child. At
+	// most one is set, and only for an approval.
 	ExistingStudentID *int64
 	CreateNewStudent  bool
+	// ShownCandidateIDs are the enrolled children the office saw when it
+	// chose CreateNewStudent. The approval reads the candidates again under
+	// the child's identity lock and refuses with ErrChildPossiblyEnrolled when
+	// one is missing from this list, e.g. a child another approval created
+	// meanwhile (#6247).
+	ShownCandidateIDs []int64
 	// AcceptOfferingChanges is the office's confirmation that the approval
 	// books the offerings' current catalog terms although price, days or
 	// activity changed since the parents submitted (#6837). Without it such
@@ -133,6 +139,20 @@ type ExistingChildCandidate struct {
 	LastName    string
 	DateOfBirth *Date
 	SchoolClass string
+	// PhaseRequest is the other active request of the same phase that
+	// already created or renews the candidate, nil when none does. The
+	// office cannot renew such a candidate a second time in the phase; the
+	// enrollment is a duplicate of that request (#6247).
+	PhaseRequest *CandidatePhaseRequest
+}
+
+// CandidatePhaseRequest names the active request of a phase that holds an
+// enrolled child: which request, whose, and how far it got.
+type CandidatePhaseRequest struct {
+	RequestID         int64
+	ChildStatus       string
+	GuardianFirstName string
+	GuardianLastName  string
 }
 
 // ChildOfferingRow is one care-offering selection for a child, as

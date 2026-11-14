@@ -245,11 +245,12 @@ func (m manualEnrollmentRouter) postManualEnrollment(t *testing.T, child enrollm
 
 // postManualEnrollmentChoosing posts one manual enrollment of the child with
 // the office's answer to an already enrolled child (#6148).
-func (m manualEnrollmentRouter) postManualEnrollmentChoosing(t *testing.T, child enrollmentAPI.SubmitChildRequest, existingStudentID string, createNewStudent bool) *httptest.ResponseRecorder {
+func (m manualEnrollmentRouter) postManualEnrollmentChoosing(t *testing.T, child enrollmentAPI.SubmitChildRequest, existingStudentID string, createNewStudent bool, shownStudentIDs ...string) *httptest.ResponseRecorder {
 	t.Helper()
 	payload, err := json.Marshal(enrollmentAPI.AdminManualApprovedEnrollmentRequest{
-		ExistingStudentID: existingStudentID,
-		CreateNewStudent:  createNewStudent,
+		ExistingStudentID:       existingStudentID,
+		CreateNewStudent:        createNewStudent,
+		ShownExistingStudentIDs: shownStudentIDs,
 		SubmitEnrollmentRequest: enrollmentAPI.SubmitEnrollmentRequest{
 			GuardianFirstName: "Anna", GuardianLastName: "Beispiel",
 			GuardianEmail: fmt.Sprintf("manuell-%d@example.test", testpkg.Tenant(t)),

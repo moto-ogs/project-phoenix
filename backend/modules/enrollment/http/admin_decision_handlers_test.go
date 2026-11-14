@@ -718,6 +718,50 @@ func TestDecideAdminChildHandler_MapsCommandFailuresWithoutRetrying(t *testing.T
 	}
 }
 
+// The detail page asks the office again with the candidates of the refusal,
+// so the decide route names them like the manual enrollment (#6247), with the
+// request of the phase that already holds a candidate.
+func TestDecideAdminChildHandler_PossiblyEnrolledNamesTheCandidates(t *testing.T) {
+	t.Parallel()
+
+	dob := capability.Date("2018-04-15")
+	mock := &mockDecisionService{decideErr: capability.NewChildPossiblyEnrolledError("child 99 has 1 candidates", []capability.ExistingChildCandidate{{
+		StudentID: 501, FirstName: "Finn", LastName: "Zweimal", DateOfBirth: &dob, SchoolClass: "1a",
+		PhaseRequest: &capability.CandidatePhaseRequest{RequestID: 77, ChildStatus: capability.ChildStatusApproved, GuardianFirstName: "Eva", GuardianLastName: "Bestand"},
+	}})}
+	router := buildAdminDecisionRouter(mock)
+	w := executeAdminJSON(t, router, http.MethodPost,
+		"/enrollment/admin/requests/1234/children/99/decide",
+		map[string]any{"status": "approved", "create_new_student": true, "shown_existing_student_ids": []string{"500"}})
+
+	require.Equal(t, http.StatusConflict, w.Code, w.Body.String())
+	assert.Equal(t, []int64{500}, mock.decideInput.ShownCandidateIDs)
+	var body struct {
+		Code    string `json:"code"`
+		Details struct {
+			Candidates []AdminExistingChildCandidate `json:"candidates"`
+		} `json:"details"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.Equal(t, "enrollment.child_possibly_enrolled", body.Code)
+	require.Len(t, body.Details.Candidates, 1)
+	assert.Equal(t, "501", body.Details.Candidates[0].StudentID)
+	require.NotNil(t, body.Details.Candidates[0].PhaseRequest)
+	assert.Equal(t, AdminCandidatePhaseRequest{RequestID: "77", ChildStatus: "approved", GuardianFirstName: "Eva", GuardianLastName: "Bestand"}, *body.Details.Candidates[0].PhaseRequest)
+}
+
+func TestDecideAdminChildHandler_RejectsInvalidShownStudentIDs(t *testing.T) {
+	t.Parallel()
+
+	mock := &mockDecisionService{}
+	router := buildAdminDecisionRouter(mock)
+	w := executeAdminJSON(t, router, http.MethodPost,
+		"/enrollment/admin/requests/1234/children/99/decide",
+		map[string]any{"status": "approved", "create_new_student": true, "shown_existing_student_ids": []string{"abc"}})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Zero(t, mock.decideCalls)
+}
+
 func TestDecideAdminChildHandler_ChildNotFoundMapsTo404(t *testing.T) {
 	t.Parallel()
 

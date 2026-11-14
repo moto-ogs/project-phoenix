@@ -70,11 +70,15 @@ import {
   useRequestMails,
 } from "~/components/enrollment/request-mail-status";
 import {
+  DUPLICATE_ENROLLMENT_REASON,
   existingChildChoiceDescription,
+  existingChildChoiceOf,
   existingChildChoiceOptions,
-  existingChildHintMessage,
   needsExistingChildChoice,
+  possiblyEnrolledCandidates,
+  REJECT_DUPLICATE_CHOICE,
 } from "~/components/enrollment/existing-child-choice";
+import { ExistingChildNotice } from "~/components/enrollment/existing-child-notice";
 import { ActionHint } from "~/components/ui/action-hint";
 import { DECISION_HINTS } from "~/components/enrollment/decision-hints";
 import { Button, buttonClassName } from "~/components/ui/button";
@@ -178,6 +182,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
       status: DecisionStatus,
       existingChildChoice?: ExistingChildChoice,
       acceptOfferingChanges?: boolean,
+      reasonOverride?: string,
     ) => Promise<void>
   >(async () => undefined);
   const latestRestoreRef = useRef<() => Promise<void>>(async () => undefined);
@@ -286,9 +291,10 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
     status: DecisionStatus,
     existingChildChoice?: ExistingChildChoice,
     acceptOfferingChanges?: boolean,
+    reasonOverride?: string,
   ) => {
     if (!data) return;
-    const reason = (reasons[childId] ?? "").trim();
+    const reason = reasonOverride ?? (reasons[childId] ?? "").trim();
     setBusyChildId(childId);
     decisionErrors.clear();
     setDecisionErrorChildId(childId);
@@ -318,6 +324,30 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
       }
       saved = true;
     } catch (err) {
+      // Another approval enrolled the child meanwhile, or the office never
+      // saw a candidate (#6247): ask again with the current candidates
+      // instead of failing on a stale list.
+      const candidates =
+        status === "approved" ? possiblyEnrolledCandidates(err) : null;
+      const refused = data.children.find((child) => child.id === childId);
+      if (candidates && refused) {
+        const refreshed: AdminRequestChild = {
+          ...refused,
+          possible_existing_children: candidates,
+        };
+        setData((current) =>
+          current
+            ? {
+                ...current,
+                children: current.children.map((child) =>
+                  child.id === childId ? refreshed : child,
+                ),
+              }
+            : current,
+        );
+        setExistingChildChoiceChild(refreshed);
+        return;
+      }
       logger.error("admin_enrollment_decide_failed", {
         error: err instanceof Error ? err.message : "unknown",
         request_id: requestId,
@@ -332,6 +362,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
             status,
             existingChildChoice,
             acceptOfferingChanges,
+            reasonOverride,
           ),
       });
     } finally {
@@ -447,6 +478,20 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
     );
   };
 
+  // A duplicate of another enrollment of the phase is refused with a reason
+  // that names no other family, unless the office wrote its own (#6247).
+  const canRejectDuplicate = availableActions.some(
+    (action) => action.status === "rejected",
+  );
+  const rejectDuplicate = (child: AdminRequestChild) =>
+    void handleDecide(
+      child.id,
+      "rejected",
+      undefined,
+      undefined,
+      (reasons[child.id] ?? "").trim() || DUPLICATE_ENROLLMENT_REASON,
+    );
+
   const submittedAt = formatDateTime(data.submitted_at, {
     day: "2-digit",
     month: "long",
@@ -554,18 +599,23 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
               title="Ist das Kind schon angemeldet?"
               description={existingChildChoiceDescription(
                 existingChildChoiceChild,
+                { canRejectDuplicate },
               )}
-              options={existingChildChoiceOptions(existingChildChoiceChild)}
+              options={existingChildChoiceOptions(existingChildChoiceChild, {
+                canRejectDuplicate,
+              })}
               onClose={() => setExistingChildChoiceChild(null)}
               onSelect={(value) => {
                 const child = existingChildChoiceChild;
                 setExistingChildChoiceChild(null);
+                if (value === REJECT_DUPLICATE_CHOICE) {
+                  rejectDuplicate(child);
+                  return;
+                }
                 requestDecision(
                   child,
                   "approved",
-                  value === "new"
-                    ? { createNewStudent: true }
-                    : { existingStudentId: value },
+                  existingChildChoiceOf(value, child),
                 );
               }}
             />
@@ -674,6 +724,12 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
                     setReasons((prev) => ({ ...prev, [child.id]: value }))
                   }
                   onDecide={(status) => requestDecision(child, status)}
+                  requestGuardian={`${data.guardian_first_name} ${data.guardian_last_name}`}
+                  onRejectDuplicate={
+                    canRejectDuplicate
+                      ? () => rejectDuplicate(child)
+                      : undefined
+                  }
                   onOfferingsChanged={() => void load({ quiet: true })}
                   onDataCorrected={handleDataCorrected}
                   onDelete={() =>
@@ -781,10 +837,12 @@ function ChildInformationCard({
   onDataCorrected,
   onOfferingsChanged,
   onReasonChange,
+  onRejectDuplicate,
   onDelete,
   phaseId,
   phaseName,
   reason,
+  requestGuardian,
   requestId,
   schemaFields,
   weeklyPlanToday,
@@ -801,13 +859,14 @@ function ChildInformationCard({
   onDataCorrected: (correctedChild: AdminRequestChild) => void;
   onOfferingsChanged: () => void;
   onReasonChange: (value: string) => void;
+  onRejectDuplicate?: () => void;
+  requestGuardian: string;
   onDelete: () => void;
   reason: string;
   schemaFields?: AdminRequestSchemaField[];
   weeklyPlanToday: string | null;
 }>) {
   const terminal = isTerminalChildStatus(child.status);
-  const existingChildHint = terminal ? null : existingChildHintMessage(child);
   const canDeleteFromEnrollment =
     terminal && child.created_student_id === undefined;
   const tenantPath = useTenantAwarePath();
@@ -880,9 +939,14 @@ function ChildInformationCard({
             message="Beim Schuljahreswechsel war das Kinderkontingent voll. Darum wurde dieses Kind nicht automatisch verlängert. Bitte entscheiden Sie selbst."
           />
         ) : null}
-        {existingChildHint ? (
-          <Alert type="warning" announce="off" message={existingChildHint} />
-        ) : null}
+        {terminal ? null : (
+          <ExistingChildNotice
+            child={child}
+            requestGuardian={requestGuardian}
+            onRejectDuplicate={onRejectDuplicate}
+            busy={busy}
+          />
+        )}
         {child.status_reason ? (
           <InsetPanel
             framed

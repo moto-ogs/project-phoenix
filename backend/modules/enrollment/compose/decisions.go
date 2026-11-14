@@ -101,7 +101,7 @@ type Decisions = application.Decisions
 
 // NewDecisions composes the decision flow in the ambient tenant transaction.
 func NewDecisions(deps DecisionDependencies) *Decisions {
-	deps.Runtime = tenantRuntime()
+	deps.Runtime, deps.PhaseHolders = tenantRuntime(), newStore()
 	return application.NewDecisions(deps)
 }
 

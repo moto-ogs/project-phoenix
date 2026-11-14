@@ -165,6 +165,18 @@ export interface CorrectAdminChildDataInput {
   reason: string;
 }
 
+/**
+ * The other active enrollment of the same phase that already created or
+ * renews a candidate (#6247). The phase takes the child only once, so the
+ * enrollment at hand duplicates that one.
+ */
+export interface AdminCandidatePhaseRequest {
+  request_id: string;
+  child_status: ChildStatus;
+  guardian_first_name: string;
+  guardian_last_name: string;
+}
+
 /** An enrolled child that may be the child of an enrollment (#6053). */
 export interface AdminExistingChildCandidate {
   student_id: string;
@@ -172,20 +184,33 @@ export interface AdminExistingChildCandidate {
   last_name: string;
   date_of_birth?: string;
   school_class?: string;
+  phase_request?: AdminCandidatePhaseRequest;
 }
 
-/** The office's answer for a child that may already be enrolled (#6053). */
+/**
+ * The office's answer for a child that may already be enrolled (#6053). A new
+ * child names the candidates the office saw: the backend refuses it again
+ * when another one turned up meanwhile (#6247).
+ */
 export type ExistingChildChoice =
-  { existingStudentId: string } | { createNewStudent: true };
+  | { existingStudentId: string }
+  | { createNewStudent: true; shownStudentIds: readonly string[] };
 
 /** The choice in the wire fields the decision and the manual enrollment take. */
 export function existingChildChoiceFields(
   choice: ExistingChildChoice | undefined,
-): { existing_student_id?: string; create_new_student?: true } {
+): {
+  existing_student_id?: string;
+  create_new_student?: true;
+  shown_existing_student_ids?: string[];
+} {
   if (!choice) return {};
   return "existingStudentId" in choice
     ? { existing_student_id: choice.existingStudentId }
-    : { create_new_student: true };
+    : {
+        create_new_student: true,
+        shown_existing_student_ids: [...choice.shownStudentIds],
+      };
 }
 
 export interface AdminRequestChild {
@@ -649,6 +674,7 @@ export interface CreateManualApprovedEnrollmentInput extends SubmitEnrollmentPay
   /** The office's answer when the child may already be enrolled (#6148). */
   existing_student_id?: string;
   create_new_student?: true;
+  shown_existing_student_ids?: string[];
 }
 
 export async function createManualApprovedEnrollment(
