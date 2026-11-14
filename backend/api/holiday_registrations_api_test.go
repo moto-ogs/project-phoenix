@@ -398,8 +398,14 @@ func TestHolidayRegistrationNameAndBirthDateUnlockNoChild(t *testing.T) {
 	registration["guardian"] = map[string]any{"first_name": "Fremde", "last_name": "Person", "email": "fremd@example.org", "phone": "0170 1"}
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), registration)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	assert.NotContains(t, rec.Body.String(), "2a", "no class of the student")
-	assert.NotContains(t, rec.Body.String(), "Lia", "no name comes back")
+	// Random status tokens can contain class or name fragments by chance.
+	receipt := decodeSchoolPortalData[struct {
+		StatusToken string `json:"status_token"`
+	}](t, rec.Body.Bytes())
+	require.Len(t, receipt.StatusToken, 43, "32 random bytes, URL-safe")
+	withoutToken := strings.ReplaceAll(rec.Body.String(), receipt.StatusToken, "")
+	assert.NotContains(t, withoutToken, "2a", "no class of the student")
+	assert.NotContains(t, withoutToken, "Lia", "no name comes back")
 	assert.Equal(t, before, countSchoolRows(), "the registration writes no enrollment request and no guardian at the school")
 
 	offerAgain := publicJSON(t, f.public, http.MethodGet, registrationPath(period.PublicToken), nil)

@@ -69,14 +69,17 @@ func (m siblingMember) chainMember() holidayMember {
 		registered[child.ID] = child
 	}
 	children := make([]parentbilling.HolidayChild, len(m.frozen.Children))
+	lunchChildren := make([]parentbilling.HolidayChild, len(m.frozen.Children))
 	for i, child := range m.frozen.Children {
 		children[i] = parentbilling.HolidayChild{ID: child.ChildID, Position: child.Position, BirthDate: registered[child.ChildID].BirthDate,
 			Bookings: frozenHolidayBookings(child.Lines, registered[child.ChildID].Bookings)}
+		lunchChildren[i] = parentbilling.HolidayChild{ID: child.ChildID, Position: child.Position,
+			Bookings: frozenHolidayLunchBookings(child.Lines, registered[child.ChildID].Bookings)}
 	}
 	if m.movedUp {
 		children = withMovedUpBookings(children, m.registration.Children)
 	}
-	member := holidayMember{children: children, exemption: m.frozen.BenefitsExemption}
+	member := holidayMember{children: children, lunchChildren: lunchChildren, exemption: m.frozen.BenefitsExemption}
 	if m.frozen.CostBearerID != nil {
 		member.bearer = &parentbilling.CostBearer{ID: *m.frozen.CostBearerID, Name: m.frozen.CostBearerName}
 	}
@@ -86,10 +89,16 @@ func (m siblingMember) chainMember() holidayMember {
 // frozenHolidayBookings are the bookings the base lines of a frozen
 // contribution price. A line of a week by days takes the days of the
 // current booking of its week, so the rules see the first booked day
-// (#4701).
+// (#4701). The meal line of the week gives the booking its frozen lunch,
+// and the current booking of the week decides whether it still has one
+// (#5631).
 func frozenHolidayBookings(lines []parentbilling.HolidayContributionLine, current []parentbilling.HolidayBooking) []parentbilling.HolidayBooking {
 	var bookings []parentbilling.HolidayBooking
 	for _, line := range lines {
+		if line.Kind == parentbilling.LineMeal {
+			withFrozenLunch(bookings, line)
+			continue
+		}
 		if line.Kind != parentbilling.LineBase || line.WeekStartsOn == nil || line.WeekEndsOn == nil {
 			continue
 		}
@@ -106,7 +115,70 @@ func frozenHolidayBookings(lines []parentbilling.HolidayContributionLine, curren
 		}
 		bookings = append(bookings, booking)
 	}
+	return withCurrentLunch(bookings, current)
+}
+
+// frozenHolidayLunchBookings reconciles lunch independently of the frozen
+// care weeks. A direct cross-week replacement keeps its care price, but
+// newly selected lunch must be billed even without a base line for its week.
+// Meal lines without a matching base line still freeze their own selection,
+// count and amount on subsequent recalculations.
+func frozenHolidayLunchBookings(lines []parentbilling.HolidayContributionLine, current []parentbilling.HolidayBooking) []parentbilling.HolidayBooking {
+	var bookings []parentbilling.HolidayBooking
+	for _, line := range lines {
+		if line.Kind != parentbilling.LineMeal || line.WeekStartsOn == nil || line.WeekEndsOn == nil || line.BookedDays == nil {
+			continue
+		}
+		bookings = append(bookings, parentbilling.HolidayBooking{
+			WeekID: line.WeekID, WeekStartsOn: *line.WeekStartsOn, WeekEndsOn: *line.WeekEndsOn,
+			Lunch: true, LunchDays: *line.BookedDays, LunchCents: line.AmountCents,
+		})
+	}
+	bookings = withCurrentLunch(bookings, current)
+	for _, booking := range current {
+		if booking.Waitlisted || !booking.Lunch || slices.ContainsFunc(bookings, func(frozen parentbilling.HolidayBooking) bool {
+			return pricesHolidayWeek(frozen, booking.WeekID, booking.WeekStartsOn, booking.WeekEndsOn)
+		}) {
+			continue
+		}
+		bookings = append(bookings, booking)
+	}
 	return bookings
+}
+
+// withCurrentLunch lets the lunch of each frozen week follow the booking the
+// registration has for that week now (#5631, ADR 0235): booked means
+// billed, so a lunch the Träger-Büro took off after the confirmation goes
+// and one it added costs the price of today. A lunch that stays keeps its
+// frozen lunches and price, and a week the registration no longer books
+// keeps what it froze, like its care.
+func withCurrentLunch(bookings, current []parentbilling.HolidayBooking) []parentbilling.HolidayBooking {
+	for i, frozen := range bookings {
+		k := slices.IndexFunc(current, func(b parentbilling.HolidayBooking) bool {
+			return !b.Waitlisted && pricesHolidayWeek(b, frozen.WeekID, frozen.WeekStartsOn, frozen.WeekEndsOn)
+		})
+		if k < 0 || (frozen.Lunch && current[k].Lunch) {
+			continue
+		}
+		bookings[i].Lunch = current[k].Lunch
+		bookings[i].LunchDays, bookings[i].LunchCents = current[k].LunchDays, current[k].LunchCents
+	}
+	return bookings
+}
+
+// withFrozenLunch gives the frozen booking of the meal line's week its
+// lunches and their price (#5631). The meal lines stand after the base
+// lines, so the booking is there already.
+func withFrozenLunch(bookings []parentbilling.HolidayBooking, line parentbilling.HolidayContributionLine) {
+	if line.WeekStartsOn == nil || line.WeekEndsOn == nil || line.BookedDays == nil {
+		return
+	}
+	if i := slices.IndexFunc(bookings, func(b parentbilling.HolidayBooking) bool {
+		return !b.Lunch && pricesHolidayWeek(b, line.WeekID, *line.WeekStartsOn, *line.WeekEndsOn)
+	}); i >= 0 {
+		bookings[i].Lunch = true
+		bookings[i].LunchDays, bookings[i].LunchCents = *line.BookedDays, line.AmountCents
+	}
 }
 
 // ListHolidaySiblingGroups lists the groups of the period. They name only
@@ -405,7 +477,7 @@ func (h *HolidayContributions) refreeze(ctx context.Context, reviewer parentbill
 			member.registration.Status != parentbilling.HolidayRegistrationConfirmed {
 			continue
 		}
-		changed, err := refrozen(*member.frozen, next, keepExemptions)
+		next, changed, err := refrozen(*member.frozen, next, keepExemptions)
 		if err != nil {
 			return err
 		}
@@ -419,17 +491,56 @@ func (h *HolidayContributions) refreeze(ctx context.Context, reviewer parentbill
 	return nil
 }
 
-// refrozen reports whether next is a new version of the frozen
-// contribution: other amounts or other chain settings (#5664). A frozen exemption no rule allows any more refuses, or with
-// keepExemptions keeps the frozen contribution.
-func refrozen(frozen, next parentbilling.HolidayContribution, keepExemptions bool) (bool, error) {
+// refrozen returns the next version of the frozen contribution and whether
+// it is one: other amounts or other chain settings (#5664). A frozen
+// exemption no rule allows any more refuses; with keepExemptions the care
+// stays as frozen and only the lunch follows, which stands outside the
+// chain (#5631).
+func refrozen(frozen, next parentbilling.HolidayContribution, keepExemptions bool) (parentbilling.HolidayContribution, bool, error) {
 	if frozen.BenefitsExemption && !next.BenefitsExemption {
-		if keepExemptions {
-			return false, nil
+		if !keepExemptions {
+			return next, false, parentbilling.ErrBenefitsExemptionUnavailable
 		}
-		return false, parentbilling.ErrBenefitsExemptionUnavailable
+		next = withFrozenCare(frozen, next)
 	}
-	return !sameContribution(frozen, next) || frozen.Chain != next.Chain, nil
+	return next, !sameContribution(frozen, next) || frozen.Chain != next.Chain, nil
+}
+
+// withFrozenCare is the frozen contribution with the meal lines of next:
+// every line of the chain and the chain settings stay as frozen.
+func withFrozenCare(frozen, next parentbilling.HolidayContribution) parentbilling.HolidayContribution {
+	kept := frozen
+	kept.Children = make([]parentbilling.HolidayChildContribution, len(frozen.Children))
+	kept.TotalCents = 0
+	for i, child := range frozen.Children {
+		lines := slices.DeleteFunc(slices.Clone(child.Lines), isMealLine)
+		total := child.TotalCents - mealCents(child.Lines)
+		if k := slices.IndexFunc(next.Children, func(c parentbilling.HolidayChildContribution) bool { return c.ChildID == child.ChildID }); k >= 0 {
+			for _, line := range next.Children[k].Lines {
+				if isMealLine(line) {
+					lines = append(lines, line)
+				}
+			}
+			total += mealCents(next.Children[k].Lines)
+		}
+		kept.Children[i] = parentbilling.HolidayChildContribution{ChildID: child.ChildID, Position: child.Position, Lines: lines, TotalCents: total}
+		kept.TotalCents += total
+	}
+	return kept
+}
+
+func isMealLine(line parentbilling.HolidayContributionLine) bool {
+	return line.Kind == parentbilling.LineMeal
+}
+
+func mealCents(lines []parentbilling.HolidayContributionLine) int64 {
+	var cents int64
+	for _, line := range lines {
+		if isMealLine(line) {
+			cents += line.AmountCents
+		}
+	}
+	return cents
 }
 
 // shareDebtorNumber gives every confirmed registration of the group that no

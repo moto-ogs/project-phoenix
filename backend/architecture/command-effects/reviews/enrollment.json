@@ -2329,6 +2329,56 @@
       "target_owner": "security-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostCalendar.HostedHolidayNoCareDays",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostCalendar.HostedHolidayNoCareDays",
+      "reason": "Reads the federal state of the hosting school from the resolved settings snapshot in memory (#5631).",
+      "source_owner": "enrollment",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsSnapshot.String",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostCalendar.HostedHolidayNoCareDays",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostCalendar.HostedHolidayNoCareDays",
+      "reason": "ADR 0235: reads the closing days of the hosting school in context, those its Träger planned for it included, in the tenant transaction the caller already holds; no write, lock or scope change.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListClosingDays",
+      "target_owner": "school-calendar"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostCalendar.HostedHolidayNoCareDays",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostCalendar.HostedHolidayNoCareDays",
+      "reason": "Computes the statutory holidays of the hosting school's federal state locally, without database or network access (#5631).",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListHolidays",
+      "target_owner": "school-calendar"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostCalendar.HostedHolidayNoCareDays",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostCalendar.HostedHolidayNoCareDays",
+      "reason": "Checks the federal state against the known regions in memory (#5631).",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ValidHolidayRegion",
+      "target_owner": "school-calendar"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostCalendar.HostedHolidayNoCareDays",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostCalendar.HostedHolidayNoCareDays",
+      "reason": "Resolves the federal state setting of the hosting school in context; read-only, no write or lock (#5631).",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveManyForTenants",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostSchoolNames.HolidayHostSchoolNames",
       "classification": "query",
       "effect": "query",
@@ -2594,7 +2644,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidaySchoolCalendar.HolidayNoCareDays",
-      "reason": "Reads the host school's closing days, those its Träger planned for it included, in a school transaction of its own detached from the caller's Träger transaction (ADR 0105, #4702); no write. Since #6457 it also names each closing day's ID and source, so a changed Träger closing day leaves its stored version out; still read only.",
+      "reason": "Reads host-school and Träger closing days in a school transaction detached from the caller's Träger transaction (ADR 0105, #4702). For #5631, schoolClosingDays now delegates range expansion to closingNoCareDays, shared with the host-school lunch calendar. This helper retains each closing day's ID and source (#6457) and performs no writes.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListClosingDays",
       "target_owner": "school-calendar"
@@ -2634,7 +2684,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidaySchoolCalendar.HolidayNoCareDays",
-      "reason": "Read-only platform helper: validates the host school ID before its school transaction is opened (#4702). Unchanged since #6457, which only adds the closing day sources to the result.",
+      "reason": "Validates the host school ID before opening its school transaction (#4702). For #5631, schoolClosingDays now delegates only the closing-range expansion to closingNoCareDays; tenant ID validation and the authorized host-school boundary (ADR 0194) are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.NewTenantID",
       "target_owner": "tenant-runtime"
@@ -2645,7 +2695,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidaySchoolCalendar.HolidayNoCareDays",
-      "reason": "Platform protocol participation (scope): opens a read-only school transaction of each host school, detached from the caller's Träger transaction, to read its closing days (ADR 0105, #4702). Unchanged since #6457, which only adds the closing day sources to the result.",
+      "reason": "Platform protocol participation (scope): reads each authorized host school's closing days in its own school transaction, detached from the caller's Träger transaction (ADR 0105, #4702). For #5631, schoolClosingDays delegates range expansion to closingNoCareDays after this transaction returns; the helper adds no writes or scope transitions and preserves closing-day sources (#6457).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
       "target_owner": "tenant-runtime"

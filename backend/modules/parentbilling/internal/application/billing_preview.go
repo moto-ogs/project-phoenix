@@ -1,6 +1,7 @@
 package application
 
 import (
+	"slices"
 	"sort"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
@@ -188,7 +189,7 @@ func draftDocument(run parentbilling.BillingRun, registration parentbilling.Holi
 		if billed.Corrections == nil {
 			billed.Corrections = []parentbilling.BillingCorrection{}
 		}
-		for _, line := range lines.Lines {
+		for _, line := range billedLines(lines.Lines) {
 			billed.Positions = append(billed.Positions, billingPosition(line))
 			from, until = widen(from, until, line.WeekStartsOn, line.WeekEndsOn)
 		}
@@ -235,11 +236,26 @@ func widen(from, until calendar.Date, starts, ends *calendar.Date) (calendar.Dat
 	return from, until
 }
 
+// billedLines are the lines the invoice has a position for. A selected
+// lunch without lunches only freezes the selection (#5631) and bills
+// nothing.
+func billedLines(lines []parentbilling.HolidayContributionLine) []parentbilling.HolidayContributionLine {
+	return slices.DeleteFunc(slices.Clone(lines), func(line parentbilling.HolidayContributionLine) bool {
+		return line.Kind == parentbilling.LineMeal && (line.BookedDays == nil || *line.BookedDays == 0)
+	})
+}
+
 // billingPosition is a line of the frozen contribution as a position of the
 // invoice; the week it prices names its host school at the release (#6624).
+// Only a meal position names its number of lunches (#5631).
 func billingPosition(line parentbilling.HolidayContributionLine) parentbilling.BillingPosition {
+	var lunches *int
+	if line.Kind == parentbilling.LineMeal {
+		lunches = line.BookedDays
+	}
 	return parentbilling.BillingPosition{
-		Kind: line.Kind, AmountCents: line.AmountCents, WeekStartsOn: line.WeekStartsOn, WeekEndsOn: line.WeekEndsOn,
+		BookedDays: lunches,
+		Kind:       line.Kind, AmountCents: line.AmountCents, WeekStartsOn: line.WeekStartsOn, WeekEndsOn: line.WeekEndsOn,
 		TimeModelName: line.TimeModelName, ChildRank: line.ChildRank, DiscountBasisPoints: line.DiscountBasisPoints,
 		DiscountCents: line.DiscountCents, Note: line.Note, CostBearerID: line.CostBearerID, CostBearerName: line.CostBearerName,
 		WeekID: line.WeekID,
