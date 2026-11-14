@@ -99,23 +99,31 @@ func qualificationContact(row *peopleValues.StaffWithRoleInfo) workforce.Qualifi
 	return workforce.QualificationStaffMember{StaffID: row.StaffID, FirstName: row.FirstName, LastName: row.LastName, AccountID: row.AccountID, Email: row.Email}
 }
 
-// BuildQualificationReminders composes the Nachweis reminders of the Worker.
+// BuildQualificationReminders composes the Nachweis reminders of the Worker
+// and the warnings before a proof of a Träger's Personalstamm expires
+// (#4707): the Leitung of each Einsatzort and the person get them in the
+// school's tenant transaction.
 func BuildQualificationReminders(
 	db transactionruntime.Database, notifications DeliveryNotifications, staff QualificationStaffRows,
 	outbox OutboxEnqueuer, mailFrom email.Email, mailIdentity email.ReplyToResolver,
 	schools organizationtenancy.Query, frontendURL string, logger *slog.Logger,
-) (workforce.QualificationReminders, error) {
+) (workforce.QualificationReminders, workforce.TraegerProofReminders, error) {
 	if notifications.Notifier == nil || notifications.Preferences == nil || staff == nil || outbox.Runtime == nil || schools == nil {
-		return nil, errors.New("qualification reminders: notifications, staff, delivery and schools are required")
+		return nil, nil, errors.New("qualification reminders: notifications, staff, delivery and schools are required")
 	}
 	logger = logger.With("service", "qualification_reminders")
-	return workforceCompose.NewQualifications(db.Pool(), NewQualificationStaff(staff, false), workforce.QualificationReminderPorts{
+	qualifications, err := workforceCompose.NewQualifications(db.Pool(), NewQualificationStaff(staff, false), workforce.QualificationReminderPorts{
 		Staff:       NewQualificationStaff(staff, false),
 		Notify:      qualificationNotifier(notifications, logger),
 		Mail:        qualificationMailOutbox{outbox: outbox, from: mailFrom, identity: mailIdentity, logger: logger},
 		Schools:     payrollSchools{schools: schools},
 		FrontendURL: frontendURL, Logger: logger,
+		Traeger: careContractTraeger{organizations: schools}.ActiveTraegerIDs, TraegerRuntime: CareContractRuntime{},
 	}, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	return qualifications, qualifications.TraegerProofs, nil
 }
 
 // qualificationNotifier sends a reminder to the recipients who did not
@@ -198,38 +206,8 @@ func (w *WorkforcePlanning) WithQualificationReminders(
 		return built
 	}
 	var err error
-	w.QualificationReminders, err = BuildQualificationReminders(db, notifications, staff, outbox, mailFrom, mailIdentity, schools, env.Links.FrontendURL, env.Logger)
-	if err != nil {
-		return err
-	}
-	w.TraegerProofReminders, err = BuildTraegerProofReminders(db, notifications, staff, outbox, mailFrom, mailIdentity, schools, env.Links.FrontendURL, env.Logger)
+	w.QualificationReminders, w.TraegerProofReminders, err = BuildQualificationReminders(db, notifications, staff, outbox, mailFrom, mailIdentity, schools, env.Links.FrontendURL, env.Logger)
 	return err
-}
-
-// BuildTraegerProofReminders composes the warnings before a proof of a
-// Träger's Personalstamm expires (#4707) over the ports of the Nachweis
-// reminders: the Leitung of each Einsatzort and the person get them in the
-// school's tenant transaction.
-func BuildTraegerProofReminders(
-	db transactionruntime.Database, notifications DeliveryNotifications, staff QualificationStaffRows,
-	outbox OutboxEnqueuer, mailFrom email.Email, mailIdentity email.ReplyToResolver,
-	schools organizationtenancy.Query, frontendURL string, logger *slog.Logger,
-) (workforce.TraegerProofReminders, error) {
-	if notifications.Notifier == nil || notifications.Preferences == nil || staff == nil || outbox.Runtime == nil || schools == nil {
-		return nil, errors.New("traeger proof reminders: notifications, staff, delivery and schools are required")
-	}
-	logger = logger.With("service", "traeger_proof_reminders")
-	return workforceCompose.NewTraegerProofReminders(db.Pool(), workforce.TraegerProofReminderPorts{
-		Traeger: careContractTraeger{organizations: schools}.ActiveTraegerIDs,
-		Runtime: CareContractRuntime{},
-		Reminders: workforce.QualificationReminderPorts{
-			Staff:       NewQualificationStaff(staff, false),
-			Notify:      qualificationNotifier(notifications, logger),
-			Mail:        qualificationMailOutbox{outbox: outbox, from: mailFrom, identity: mailIdentity, logger: logger},
-			Schools:     payrollSchools{schools: schools},
-			FrontendURL: frontendURL, Logger: logger,
-		},
-	}, nil)
 }
 
 // traegerProofRemindersJob binds the Worker's job over the unit of work the

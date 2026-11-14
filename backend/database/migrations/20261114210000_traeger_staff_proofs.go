@@ -140,13 +140,13 @@ CREATE POLICY traeger_isolation_workforce_staff_proof_type_mappings ON workforce
 -- kind that is mandatory or held, the kind's name, whether a proof exists
 -- and until when it holds, and the school kinds mapped onto it. Nothing of
 -- the proof itself (days presented, result) and nothing of another school
--- leaves. The school's role reads no Träger table, so the function runs as
+-- leaves. The expiry travels as YYYY-MM-DD text. The school's role reads no Träger table, so the function runs as
 -- its owner and filters on the school of the tenant transaction.
 CREATE FUNCTION workforce.school_traeger_proof_status()
 RETURNS TABLE (membership_id BIGINT, proof_type_id BIGINT, type_name VARCHAR, mandatory BOOLEAN, held BOOLEAN,
-	expires_on DATE, reminder_lead_weeks INTEGER, school_type_ids BIGINT[])
+	expires_on TEXT, reminder_lead_weeks INTEGER, school_type_ids BIGINT[])
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
-	SELECT link.membership_id, kind.id, kind.name, kind.mandatory, proof.id IS NOT NULL, proof.expires_on,
+	SELECT link.membership_id, kind.id, kind.name, kind.mandatory, proof.id IS NOT NULL, proof.expires_on::text,
 		kind.reminder_lead_weeks,
 		COALESCE((SELECT array_agg(mapping.school_type_id ORDER BY mapping.school_type_id)
 			FROM workforce.staff_proof_type_mappings AS mapping

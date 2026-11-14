@@ -10512,6 +10512,18 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0236",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Qualifications.StaffTraegerProofs",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffQualificationOverview.StaffTraegerProofs",
+      "reason": "The Nachweise of the Personalstamm (#4707) read the calendar day through Workforce's own clock adapter to give each proof its status and due reminder; the clock writes nothing.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
       "approval_adr": "0176",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Qualifications.UpdateQualificationType",
       "classification": "unresolved",
@@ -11444,6 +11456,69 @@
       "target_owner": "document-rendering"
     },
     {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerProofReminders.RunDue",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerProofReminders.RunDue",
+      "reason": "The warning before a proof of the Personalstamm expires (#4707) goes to the Leitung of each Einsatzort and the person through Delivery's notifier, in the school's tenant transaction, with an idempotency key per proof, expiry date, stage and school.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerProofReminders.RunDue",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerProofReminders.RunDue",
+      "reason": "The warning before a proof of the Personalstamm expires (#4707) honors the recipients' notification preferences like the school's Nachweis reminders; the filter only reads.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerProofReminders.RunDue",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerProofReminders.RunDue",
+      "reason": "The warning before a proof of the Personalstamm expires (#4707) honors the recipients' notification preferences like the school's Nachweis reminders; the filter only reads.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerProofReminders.RunDue",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerProofReminders.RunDue",
+      "reason": "The warning job lists the active Träger and then checks each one's release „Personal beim Träger“ in its Träger transaction (#4707); the listing only reads.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListOrganizations",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerProofReminders.RunDue",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerProofReminders.RunDue",
+      "reason": "The warning job lists the active Träger and then checks each one's release „Personal beim Träger“ in its Träger transaction (#4707); the listing only reads.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListOrganizations",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0236",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerProofReminders.RunDue",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerProofReminders.RunDue",
+      "reason": "The Nachweise of the Personalstamm (#4707) read the calendar day through Workforce's own clock adapter to give each proof its status and due reminder; the clock writes nothing.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerSchoolEmployments.SchoolEmployments",
       "classification": "query",
       "effect": "query",
@@ -11518,6 +11593,78 @@
       "target_owner": "audit-platform"
     },
     {
+      "adr": "0083",
+      "approval_adr": "0236",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.DeleteProof",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffProofs.DeleteProof",
+      "reason": "The Nachweise of the Personalstamm (#4707) read the calendar day through Workforce's own clock adapter to give each proof its status and due reminder; the clock writes nothing.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0236",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.ProofList",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffProofs.ProofList",
+      "reason": "The Nachweise of the Personalstamm (#4707) read the calendar day through Workforce's own clock adapter to give each proof its status and due reminder; the clock writes nothing.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0236",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.SaveProof",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffProofs.SaveProof",
+      "reason": "The Nachweise of the Personalstamm (#4707) read the calendar day through Workforce's own clock adapter to give each proof its status and due reminder; the clock writes nothing.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0236",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.Link",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.Link",
+      "reason": "The Nachweise of the Personalstamm (#4707) read the calendar day through Workforce's own clock adapter to give each proof its status and due reminder; the clock writes nothing.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0236",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.Record",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.Record",
+      "reason": "The Nachweise of the Personalstamm (#4707) read the calendar day through Workforce's own clock adapter to give each proof its status and due reminder; the clock writes nothing.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0236",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.UpdatePersonnelNumber",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.UpdatePersonnelNumber",
+      "reason": "The Nachweise of the Personalstamm (#4707) read the calendar day through Workforce's own clock adapter to give each proof its status and due reminder; the clock writes nothing.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinSchool",
       "classification": "query",
       "effect": "query",
@@ -11539,12 +11686,44 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractRuntime.WithinSchool",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRuntime.WithinSchool",
+      "reason": "The Nachweis warnings and reads (#4707) validate the school ID of an Einsatzort before opening its tenant transaction; no effect.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.NewTenantID",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractRuntime.WithinSchool",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRuntime.WithinSchool",
+      "reason": "The Nachweis warnings (#4707) send in the tenant transaction of each Einsatzort, never inside the Träger transaction (ADR 0105).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinTraeger",
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRuntime.WithinTraeger",
       "reason": "Platform protocol participation (scope): workforce reaches tenant.WithinTraeger (tenant-runtime) through api.traegerDocumentRuntime.WithinTraeger (#4705). The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTraeger",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractRuntime.WithinTraeger",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRuntime.WithinTraeger",
+      "reason": "The Nachweis warnings (#4707) read the due proofs and claim the sent ones in the Träger transaction of each released Träger (ADR 0089 section 7, ADR 0105).",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTraeger",
       "target_owner": "tenant-runtime"

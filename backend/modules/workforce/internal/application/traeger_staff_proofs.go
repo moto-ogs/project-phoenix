@@ -1,7 +1,6 @@
 package application
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"slices"
@@ -140,32 +139,22 @@ func (t *TraegerStaff) saveProofType(ctx context.Context, actor workforce.Traege
 // returns the record's proofs. The answer shows the record, so every
 // Einsatzort gets the access entry.
 func (t *TraegerStaff) SaveProof(ctx context.Context, actor workforce.TraegerStaffActor, recordID, typeID int64, input workforce.TraegerStaffProofInput) ([]workforce.TraegerStaffProof, error) {
-	return t.changeProof(ctx, actor, recordID, func(ctx context.Context, kinds []domain.TraegerProofType) error {
-		kind, ok := liveProofKind(kinds, typeID)
-		if !ok {
-			return domain.ErrTraegerProofTypeMissing
-		}
-		proof, err := domain.PrepareProof(domain.TraegerProof{
-			OrganizationID: actor.OrganizationID, RecordID: recordID, TypeID: typeID, PresentedOn: strings.TrimSpace(input.PresentedOn),
-			IssuedOn: strings.TrimSpace(input.IssuedOn), NoRelevantEntry: input.NoRelevantEntry, ExpiresOn: strings.TrimSpace(input.ExpiresOn),
-			RecordedByAccountID: actor.AccountID,
-		}, kind, t.today())
-		if err != nil {
-			return err
-		}
-		return t.store.SaveProof(ctx, proof)
-	})
+	return t.changeProof(ctx, actor, recordID, typeID, &input)
 }
 
 // DeleteProof removes the proof of a kind from a record, for an entry made
 // by mistake; a renewal replaces the proof instead.
 func (t *TraegerStaff) DeleteProof(ctx context.Context, actor workforce.TraegerStaffActor, recordID, typeID int64) ([]workforce.TraegerStaffProof, error) {
-	return t.changeProof(ctx, actor, recordID, func(ctx context.Context, _ []domain.TraegerProofType) error {
-		return t.store.DeleteProof(ctx, actor.OrganizationID, recordID, typeID)
-	})
+	if typeID <= 0 {
+		return nil, workforce.ErrTraegerProofNotFound
+	}
+	return t.changeProof(ctx, actor, recordID, typeID, nil)
 }
 
-func (t *TraegerStaff) changeProof(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, change func(context.Context, []domain.TraegerProofType) error) ([]workforce.TraegerStaffProof, error) {
+// changeProof saves input as the proof of a kind at a locked record, or
+// without input deletes it, and returns the record's proofs after the
+// access entry at every Einsatzort.
+func (t *TraegerStaff) changeProof(ctx context.Context, actor workforce.TraegerStaffActor, recordID, typeID int64, input *workforce.TraegerStaffProofInput) ([]workforce.TraegerStaffProof, error) {
 	var record domain.TraegerStaffRecord
 	var states []workforce.TraegerStaffProof
 	err := t.released(ctx, actor, func(ctx context.Context) error {
@@ -177,7 +166,7 @@ func (t *TraegerStaff) changeProof(ctx context.Context, actor workforce.TraegerS
 		if err != nil {
 			return err
 		}
-		if err := change(ctx, kinds); err != nil {
+		if err := t.writeProof(ctx, actor, recordID, typeID, kinds, input); err != nil {
 			return err
 		}
 		proofs, err := t.store.ListProofs(ctx, actor.OrganizationID, []int64{recordID})
@@ -191,6 +180,25 @@ func (t *TraegerStaff) changeProof(ctx context.Context, actor workforce.TraegerS
 		return nil, err
 	}
 	return states, nil
+}
+
+func (t *TraegerStaff) writeProof(ctx context.Context, actor workforce.TraegerStaffActor, recordID, typeID int64, kinds []domain.TraegerProofType, input *workforce.TraegerStaffProofInput) error {
+	if input == nil {
+		return t.store.DeleteProof(ctx, actor.OrganizationID, recordID, typeID)
+	}
+	kind, ok := liveProofKind(kinds, typeID)
+	if !ok {
+		return domain.ErrTraegerProofTypeMissing
+	}
+	proof, err := domain.PrepareProof(domain.TraegerProof{
+		OrganizationID: actor.OrganizationID, RecordID: recordID, TypeID: typeID, PresentedOn: strings.TrimSpace(input.PresentedOn),
+		IssuedOn: strings.TrimSpace(input.IssuedOn), NoRelevantEntry: input.NoRelevantEntry, ExpiresOn: strings.TrimSpace(input.ExpiresOn),
+		RecordedByAccountID: actor.AccountID,
+	}, kind, t.today())
+	if err != nil {
+		return err
+	}
+	return t.store.SaveProof(ctx, proof)
 }
 
 // logRecords writes the access entry of a view at every Einsatzort of the
@@ -305,8 +313,8 @@ var proofStatusRank = map[string]int{
 // compareProofEntries puts the most urgent first: by status, then the
 // earliest expiry (none last), then by name.
 func compareProofEntries(a, b workforce.TraegerStaffProofEntry) int {
-	if order := cmp.Compare(proofStatusRank[a.Status], proofStatusRank[b.Status]); order != 0 {
-		return order
+	if a.Status != b.Status {
+		return proofStatusRank[a.Status] - proofStatusRank[b.Status]
 	}
 	if a.ExpiresOn != b.ExpiresOn {
 		switch {
@@ -317,11 +325,19 @@ func compareProofEntries(a, b workforce.TraegerStaffProofEntry) int {
 		}
 		return strings.Compare(a.ExpiresOn, b.ExpiresOn)
 	}
-	return cmp.Or(
-		strings.Compare(strings.ToLower(a.LastName), strings.ToLower(b.LastName)),
-		strings.Compare(strings.ToLower(a.FirstName), strings.ToLower(b.FirstName)),
-		cmp.Compare(a.RecordID, b.RecordID),
-	)
+	if order := strings.Compare(strings.ToLower(a.LastName), strings.ToLower(b.LastName)); order != 0 {
+		return order
+	}
+	if order := strings.Compare(strings.ToLower(a.FirstName), strings.ToLower(b.FirstName)); order != 0 {
+		return order
+	}
+	switch {
+	case a.RecordID < b.RecordID:
+		return -1
+	case a.RecordID > b.RecordID:
+		return 1
+	}
+	return 0
 }
 
 // SchoolProofKinds lists the live kinds of every school of the Träger with

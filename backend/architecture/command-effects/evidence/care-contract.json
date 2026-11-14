@@ -465,6 +465,14 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.careContractTraeger.ActiveTraegerIDs",
+      "binding_digest": "15aaf3bca36bf448936a981535b10dd4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.TraegerOrganizations.ActiveTraegerIDs",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListOrganizations",
+      "target_owner": "organization-tenancy"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractSchools.TraegerSchools",
       "binding_digest": "2f82bb7b68d86a13cd7a2f415381e2a0",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.TraegerSchools.TraegerSchools",

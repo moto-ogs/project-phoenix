@@ -16,15 +16,49 @@ import (
 type QualificationList struct {
 	records qualificationRecords
 	staff   workforce.QualificationStaff
+	// keptByTraeger reads the Träger's proofs (#4707); nil reads none.
+	keptByTraeger schoolTraegerProofs
+}
+
+// StaffTraegerProofs lists what the school sees of the Träger's proofs of
+// one of its employments: per kind the status and the expiry date, nothing
+// of the proof itself (ADR 0089 section 7). An employment the Träger does
+// not keep has none.
+func (o *QualificationList) StaffTraegerProofs(ctx context.Context, staffID int64) ([]workforce.SchoolTraegerProof, error) {
+	result := []workforce.SchoolTraegerProof{}
+	if o.keptByTraeger == nil || staffID <= 0 {
+		return result, nil
+	}
+	statuses, err := o.keptByTraeger.SchoolTraegerProofStatus(ctx)
+	if err != nil {
+		return nil, err
+	}
+	today := o.records.today()
+	for _, status := range statuses {
+		if status.StaffID != staffID {
+			continue
+		}
+		kind := domain.TraegerProofType{Mandatory: status.Mandatory, ReminderLeadWeeks: status.ReminderLeadWeeks}
+		var proof *domain.TraegerProof
+		if status.Held {
+			proof = &domain.TraegerProof{ExpiresOn: status.ExpiresOn}
+		}
+		result = append(result, workforce.SchoolTraegerProof{
+			TypeName: status.TypeName, Status: domain.TraegerProofStatus(kind, proof, today), ExpiresOn: status.ExpiresOn,
+		})
+	}
+	return result, nil
 }
 
 // NewQualificationList builds the Nachweise read over the records and
 // the staff directory.
-func NewQualificationList(store ports.Store, clock ports.Clock, staff workforce.QualificationStaff) *QualificationList {
+// keptByTraeger reads the Träger's proofs of the school's employments
+// (#4707); nil reads none.
+func NewQualificationList(store ports.Store, clock ports.Clock, staff workforce.QualificationStaff, keptByTraeger schoolTraegerProofs) *QualificationList {
 	if staff == nil {
 		panic("qualification overview: staff is required")
 	}
-	return &QualificationList{records: newQualificationRecords(store, clock), staff: staff}
+	return &QualificationList{records: newQualificationRecords(store, clock), staff: staff, keptByTraeger: keptByTraeger}
 }
 
 // QualificationOverview lists the live staff by name, each with their

@@ -74,6 +74,7 @@ func requiredWorkerJobIDs() []ports.JobID {
 		"care-contract-conclusion",
 		"staff-qualification-reminders",
 		"care-contract-reminders",
+		"traeger-staff-proof-reminders",
 		"holiday-closure-notifications",
 		"holiday-closure-watchdog",
 		"week-protocols",

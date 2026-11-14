@@ -2,11 +2,13 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 )
 
@@ -119,6 +121,7 @@ func (s *TraegerStaffStore) SaveProofType(ctx context.Context, kind domain.Traeg
 }
 
 type staffProofRow struct {
+	bun.BaseModel       `bun:"table:workforce.staff_proofs,alias:staff_proof"`
 	ID                  int64          `bun:"id"`
 	OrganizationID      int64          `bun:"organization_id"`
 	RecordID            int64          `bun:"staff_record_id"`
@@ -151,6 +154,13 @@ func optionalDate(value string) (*calendar.Date, error) {
 	return &day, nil
 }
 
+func textOrEmpty(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
 func (r staffProofRow) toDomain() domain.TraegerProof {
 	return domain.TraegerProof{
 		ID: r.ID, OrganizationID: r.OrganizationID, RecordID: r.RecordID, TypeID: r.TypeID,
@@ -168,15 +178,17 @@ func (s *TraegerStaffStore) ListProofs(ctx context.Context, organizationID int64
 		return nil, err
 	}
 	var rows []staffProofRow
-	query := `SELECT id, organization_id, staff_record_id, type_id, presented_on, issued_on, no_relevant_entry, expires_on,
-		lead_reminded_for, expiry_reminded_for, recorded_by_account_id, updated_at
-		FROM workforce.staff_proofs WHERE organization_id = ?`
-	args := []any{organizationID}
-	if recordIDs != nil {
-		query += ` AND staff_record_id = ANY(?)`
-		args = append(args, pgdialect.Array(recordIDs))
+	if recordIDs == nil {
+		err = db.NewRaw(`SELECT id, organization_id, staff_record_id, type_id, presented_on, issued_on, no_relevant_entry, expires_on,
+			lead_reminded_for, expiry_reminded_for, recorded_by_account_id, updated_at
+			FROM workforce.staff_proofs WHERE organization_id = ? ORDER BY staff_record_id, type_id`, organizationID).Scan(ctx, &rows)
+	} else {
+		err = db.NewRaw(`SELECT id, organization_id, staff_record_id, type_id, presented_on, issued_on, no_relevant_entry, expires_on,
+			lead_reminded_for, expiry_reminded_for, recorded_by_account_id, updated_at
+			FROM workforce.staff_proofs WHERE organization_id = ? AND staff_record_id = ANY(?) ORDER BY staff_record_id, type_id`,
+			organizationID, pgdialect.Array(recordIDs)).Scan(ctx, &rows)
 	}
-	if err := db.NewRaw(query+` ORDER BY staff_record_id, type_id`, args...).Scan(ctx, &rows); err != nil {
+	if err != nil {
 		return nil, fmt.Errorf("workforce postgres: list proofs: %w", err)
 	}
 	proofs := make([]domain.TraegerProof, 0, len(rows))
@@ -247,13 +259,16 @@ func (s *TraegerStaffStore) ClaimProofReminder(ctx context.Context, organization
 	if err != nil {
 		return false, fmt.Errorf("workforce postgres: proof reminder expiry: %w", err)
 	}
-	column := "lead_reminded_for"
+	var result sql.Result
 	if stage == domain.QualificationReminderExpiry {
-		column = "expiry_reminded_for"
+		result, err = db.ExecContext(ctx, `UPDATE workforce.staff_proofs SET expiry_reminded_for = ?
+			WHERE organization_id = ? AND id = ? AND expires_on = ? AND expiry_reminded_for IS DISTINCT FROM ?`,
+			expiry, organizationID, proofID, expiry, expiry)
+	} else {
+		result, err = db.ExecContext(ctx, `UPDATE workforce.staff_proofs SET lead_reminded_for = ?
+			WHERE organization_id = ? AND id = ? AND expires_on = ? AND lead_reminded_for IS DISTINCT FROM ?`,
+			expiry, organizationID, proofID, expiry, expiry)
 	}
-	result, err := db.ExecContext(ctx, `UPDATE workforce.staff_proofs SET `+column+` = ?
-		WHERE organization_id = ? AND id = ? AND expires_on = ? AND `+column+` IS DISTINCT FROM ?`,
-		expiry, organizationID, proofID, expiry, expiry)
 	if err != nil {
 		return false, fmt.Errorf("workforce postgres: claim proof reminder: %w", err)
 	}
@@ -330,14 +345,14 @@ func (s *TraegerStaffStore) SchoolTraegerProofStatus(ctx context.Context) ([]dom
 		return nil, err
 	}
 	var rows []struct {
-		MembershipID      int64          `bun:"membership_id"`
-		ProofTypeID       int64          `bun:"proof_type_id"`
-		TypeName          string         `bun:"type_name"`
-		Mandatory         bool           `bun:"mandatory"`
-		Held              bool           `bun:"held"`
-		ExpiresOn         *calendar.Date `bun:"expires_on,type:date"`
-		ReminderLeadWeeks int            `bun:"reminder_lead_weeks"`
-		SchoolTypeIDs     []int64        `bun:"school_type_ids,array"`
+		MembershipID      int64   `bun:"membership_id"`
+		ProofTypeID       int64   `bun:"proof_type_id"`
+		TypeName          string  `bun:"type_name"`
+		Mandatory         bool    `bun:"mandatory"`
+		Held              bool    `bun:"held"`
+		ExpiresOn         *string `bun:"expires_on"`
+		ReminderLeadWeeks int     `bun:"reminder_lead_weeks"`
+		SchoolTypeIDs     []int64 `bun:"school_type_ids,array"`
 	}
 	if err := db.NewRaw(`SELECT membership_id, proof_type_id, type_name, mandatory, held, expires_on, reminder_lead_weeks, school_type_ids
 		FROM workforce.school_traeger_proof_status()`).Scan(ctx, &rows); err != nil {
@@ -347,7 +362,7 @@ func (s *TraegerStaffStore) SchoolTraegerProofStatus(ctx context.Context) ([]dom
 	for _, row := range rows {
 		result = append(result, domain.SchoolTraegerProofStatus{
 			StaffID: row.MembershipID, ProofTypeID: row.ProofTypeID, TypeName: row.TypeName, Mandatory: row.Mandatory, Held: row.Held,
-			ExpiresOn: dateText(row.ExpiresOn), ReminderLeadWeeks: row.ReminderLeadWeeks, SchoolTypeIDs: row.SchoolTypeIDs,
+			ExpiresOn: textOrEmpty(row.ExpiresOn), ReminderLeadWeeks: row.ReminderLeadWeeks, SchoolTypeIDs: row.SchoolTypeIDs,
 		})
 	}
 	return result, nil

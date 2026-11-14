@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -29,30 +30,22 @@ type TraegerProofReminders struct {
 	traeger   func(ctx context.Context) ([]int64, error)
 }
 
-// NewTraegerProofReminders builds the reminders over the Personalstamm's
-// store and the school reminders' ports; traeger lists the active Träger.
-func NewTraegerProofReminders(store ports.TraegerStaffStore, clock ports.Clock, runtime workforce.TraegerStaffRuntime,
-	traeger func(ctx context.Context) ([]int64, error), schoolStore ports.Store, bound workforce.QualificationReminderPorts,
-) (*TraegerProofReminders, error) {
-	if store == nil || clock == nil || runtime == nil || traeger == nil {
-		return nil, errors.New("traeger proof reminders: store, clock, runtime and the Träger list are required")
+func newTraegerProofReminders(store ports.TraegerStaffStore, clock ports.Clock, reminders *QualificationReminders, bound workforce.QualificationReminderPorts) (*TraegerProofReminders, error) {
+	if store == nil || bound.TraegerRuntime == nil || bound.Traeger == nil {
+		return nil, errors.New("traeger proof reminders: store, runtime and the Träger list are required")
 	}
-	reminders, err := NewQualificationReminders(schoolStore, clock, bound)
-	if err != nil {
-		return nil, err
-	}
-	staff := &TraegerStaff{store: store, ports: workforce.TraegerStaffPorts{Runtime: runtime}, clock: clock}
-	return &TraegerProofReminders{staff: staff, reminders: reminders, traeger: traeger}, nil
+	staff := &TraegerStaff{store: store, ports: workforce.TraegerStaffPorts{Runtime: bound.TraegerRuntime}, clock: clock}
+	return &TraegerProofReminders{staff: staff, reminders: reminders, traeger: bound.Traeger}, nil
 }
 
 // dueProof is one proof whose reminder stage is due, with the record's
-// Einsatzorte.
+// Einsatzorte; held is set when a notice was held back somewhere.
 type dueProof struct {
-	proof  domain.TraegerProof
-	kind   domain.TraegerProofType
-	stage  string
-	links  []domain.TraegerStaffLink
-	failed bool
+	proof domain.TraegerProof
+	kind  domain.TraegerProofType
+	stage string
+	links []domain.TraegerStaffLink
+	held  bool
 }
 
 // RunDue sends what is due today at every released Träger. A Träger that
@@ -80,40 +73,57 @@ func (r *TraegerProofReminders) runTraeger(ctx context.Context, organizationID i
 	if err != nil {
 		return err
 	}
-	bySchool := map[int64][]*dueProof{}
-	var schools []int64
-	for _, item := range due {
-		for _, link := range item.links {
-			if _, ok := bySchool[link.SchoolID]; !ok {
-				schools = append(schools, link.SchoolID)
-			}
-			bySchool[link.SchoolID] = append(bySchool[link.SchoolID], item)
-		}
-	}
 	// The person gets their own notice at one Einsatzort only: the first
 	// that runs for them.
 	ownSent := map[int64]bool{}
-	for _, schoolID := range schools {
-		if err := r.sendAtSchool(ctx, schoolID, bySchool[schoolID], ownSent); err != nil {
+	for _, school := range proofsBySchool(due) {
+		if err := r.sendAtSchool(ctx, school.id, school.proofs, ownSent); err != nil {
 			return err
 		}
 	}
 	return r.staff.released(ctx, actor, func(ctx context.Context) error {
-		for _, item := range due {
-			if item.failed {
-				continue
-			}
-			if _, err := r.staff.store.ClaimProofReminder(ctx, organizationID, item.proof.ID, item.stage, item.proof.ExpiresOn); err != nil {
-				return err
-			}
-		}
-		return nil
+		return r.claim(ctx, organizationID, due)
 	})
+}
+
+func (r *TraegerProofReminders) claim(ctx context.Context, organizationID int64, due []*dueProof) error {
+	for _, item := range due {
+		if item.held {
+			continue
+		}
+		if _, err := r.staff.store.ClaimProofReminder(ctx, organizationID, item.proof.ID, item.stage, item.proof.ExpiresOn); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type schoolProofs struct {
+	id     int64
+	proofs []*dueProof
+}
+
+// proofsBySchool groups the due proofs by Einsatzort, in the order the
+// schools first appear.
+func proofsBySchool(due []*dueProof) []schoolProofs {
+	index := map[int64]int{}
+	var schools []schoolProofs
+	for _, item := range due {
+		for _, link := range item.links {
+			i, ok := index[link.SchoolID]
+			if !ok {
+				i = len(schools)
+				index[link.SchoolID] = i
+				schools = append(schools, schoolProofs{id: link.SchoolID})
+			}
+			schools[i].proofs = append(schools[i].proofs, item)
+		}
+	}
+	return schools
 }
 
 func (r *TraegerProofReminders) dueProofs(ctx context.Context, actor workforce.TraegerStaffActor) ([]*dueProof, error) {
 	var due []*dueProof
-	today := r.staff.today()
 	err := r.staff.released(ctx, actor, func(ctx context.Context) error {
 		kinds, err := r.staff.proofKinds(ctx, actor.OrganizationID)
 		if err != nil {
@@ -124,25 +134,53 @@ func (r *TraegerProofReminders) dueProofs(ctx context.Context, actor workforce.T
 			return err
 		}
 		proofs, err := r.staff.store.ListProofs(ctx, actor.OrganizationID, nil)
-		if err != nil {
-			return err
-		}
-		links := make(map[int64][]domain.TraegerStaffLink, len(records))
-		for _, record := range records {
-			links[record.ID] = record.Links
-		}
-		for _, proof := range proofs {
-			kind, ok := liveProofKind(kinds, proof.TypeID)
-			if !ok {
-				continue
-			}
-			if stage, ok := domain.DueTraegerProofReminder(proof, kind.ReminderLeadWeeks, today); ok {
-				due = append(due, &dueProof{proof: proof, kind: kind, stage: stage, links: links[proof.RecordID]})
-			}
-		}
-		return nil
+		due = dueOf(kinds, records, proofs, r.staff.today())
+		return err
 	})
 	return due, err
+}
+
+func dueOf(kinds []domain.TraegerProofType, records []domain.TraegerStaffRecord, proofs []domain.TraegerProof, today calendar.Date) []*dueProof {
+	links := make(map[int64][]domain.TraegerStaffLink, len(records))
+	for _, record := range records {
+		links[record.ID] = record.Links
+	}
+	var due []*dueProof
+	for _, proof := range proofs {
+		kind, ok := liveProofKind(kinds, proof.TypeID)
+		if !ok {
+			continue
+		}
+		if stage, ok := domain.DueTraegerProofReminder(proof, kind.ReminderLeadWeeks, today); ok {
+			due = append(due, &dueProof{proof: proof, kind: kind, stage: stage, links: links[proof.RecordID]})
+		}
+	}
+	return due
+}
+
+// schoolRecipients are the live staff and the Leitung of one school.
+type schoolRecipients struct {
+	school   workforce.PayrollSchool
+	live     map[int64]bool
+	managers []workforce.QualificationStaffMember
+}
+
+func (r *TraegerProofReminders) recipients(ctx context.Context) (schoolRecipients, error) {
+	members, err := r.reminders.ports.Staff.ListStaffMembers(ctx)
+	if err != nil {
+		return schoolRecipients{}, fmt.Errorf("list staff for proof reminders: %w", err)
+	}
+	result := schoolRecipients{live: make(map[int64]bool, len(members))}
+	for _, member := range members {
+		result.live[member.StaffID] = true
+	}
+	if result.managers, err = r.reminders.ports.Staff.StammdatenManagers(ctx); err != nil {
+		return schoolRecipients{}, fmt.Errorf("list proof reminder recipients: %w", err)
+	}
+	if result.school, err = r.reminders.ports.Schools.School(ctx, tenant.FromContext(ctx)); err != nil {
+		return schoolRecipients{}, fmt.Errorf("read school for proof reminders: %w", err)
+	}
+	return result, nil
 }
 
 // sendAtSchool sends the due proofs of the school's employments to its
@@ -150,42 +188,27 @@ func (r *TraegerProofReminders) dueProofs(ctx context.Context, actor workforce.T
 // nothing there. A notice the window holds back keeps its proof unclaimed.
 func (r *TraegerProofReminders) sendAtSchool(ctx context.Context, schoolID int64, due []*dueProof, ownSent map[int64]bool) error {
 	return r.staff.ports.Runtime.WithinSchool(ctx, schoolID, func(ctx context.Context) error {
-		members, err := r.reminders.ports.Staff.ListStaffMembers(ctx)
+		to, err := r.recipients(ctx)
 		if err != nil {
-			return fmt.Errorf("list staff for proof reminders: %w", err)
+			return err
 		}
-		live := make(map[int64]bool, len(members))
-		for _, member := range members {
-			live[member.StaffID] = true
-		}
-		managers, err := r.reminders.ports.Staff.StammdatenManagers(ctx)
-		if err != nil {
-			return fmt.Errorf("list proof reminder recipients: %w", err)
-		}
-		school, err := r.reminders.ports.Schools.School(ctx, tenant.FromContext(ctx))
-		if err != nil {
-			return fmt.Errorf("read school for proof reminders: %w", err)
-		}
+		today := r.staff.today().String()
 		for _, item := range due {
 			staffID := linkAt(item.links, schoolID)
-			if !live[staffID] {
+			if !to.live[staffID] {
 				continue
 			}
 			reminder := dueReminder{
 				qualification: domain.StaffQualification{ID: item.proof.ID, StaffID: staffID, ExpiresOn: item.proof.ExpiresOn},
-				name:          item.kind.Name, stage: item.stage, lapsed: item.proof.ExpiresOn < r.staff.today().String(),
+				name:          item.kind.Name, stage: item.stage, lapsed: item.proof.ExpiresOn < today,
 			}
 			key := fmt.Sprintf("traeger-staff-proof-%d-%s-%s-school-%d", item.proof.ID, item.proof.ExpiresOn, item.stage, schoolID)
-			own := !ownSent[item.proof.ID]
-			sent, err := r.reminders.send(ctx, schoolID, school, managers, reminder, key, own)
+			sent, err := r.reminders.send(ctx, schoolID, to.school, to.managers, reminder, key, !ownSent[item.proof.ID])
 			if err != nil {
 				return err
 			}
-			if !sent {
-				item.failed = true
-				continue
-			}
-			ownSent[item.proof.ID] = true
+			item.held = item.held || !sent
+			ownSent[item.proof.ID] = ownSent[item.proof.ID] || sent
 		}
 		return nil
 	})

@@ -38,19 +38,15 @@ type schoolTraegerProofs interface {
 	SchoolTraegerProofStatus(ctx context.Context) ([]domain.SchoolTraegerProofStatus, error)
 }
 
-// WithTraegerProofs lets the reminders leave out a qualification whose kind
-// the school mapped onto a kind of its Träger, for an employment the Träger
-// keeps in a record: the Träger's proof reminds instead (decision E4 of
-// 13.11.2026). A school without such a Träger reads no row and keeps every
-// reminder.
-func (r *QualificationReminders) WithTraegerProofs(proofs schoolTraegerProofs) *QualificationReminders {
-	r.keptByTraeger = proofs
-	return r
-}
-
 // NewQualificationReminders builds the reminders; every port but Logger is
 // required.
-func NewQualificationReminders(store ports.Store, clock ports.Clock, bound workforce.QualificationReminderPorts) (*QualificationReminders, error) {
+//
+// keptByTraeger, when set, lets the reminders leave out a qualification
+// whose kind the school mapped onto a kind of its Träger, for an employment
+// the Träger keeps in a record: the Träger's proof reminds instead
+// (decision E4 of 13.11.2026, #4707). A school without such a Träger reads
+// no row and keeps every reminder.
+func NewQualificationReminders(store ports.Store, clock ports.Clock, bound workforce.QualificationReminderPorts, keptByTraeger schoolTraegerProofs) (*QualificationReminders, error) {
 	if bound.Staff == nil || bound.Notify == nil || bound.Mail == nil || bound.Schools == nil {
 		return nil, fmt.Errorf("qualification reminders: staff, notify, mail and schools are required")
 	}
@@ -58,7 +54,7 @@ func NewQualificationReminders(store ports.Store, clock ports.Clock, bound workf
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &QualificationReminders{records: newQualificationRecords(store, clock), ports: bound, logger: logger.With("service", "qualification_reminders")}, nil
+	return &QualificationReminders{records: newQualificationRecords(store, clock), ports: bound, logger: logger.With("service", "qualification_reminders"), keptByTraeger: keptByTraeger}, nil
 }
 
 // dueReminder is one reminder the snapshot found due.

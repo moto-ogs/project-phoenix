@@ -89,7 +89,8 @@ var workerJobScopes = map[ports.JobID]jobScope{
 	"staff-qualification-reminders": jobScopeBasis,
 	// The care contracts (#4679) belong to the Träger, not to a booked
 	// module of a school; the job runs per Träger.
-	"care-contract-reminders": jobScopeBasis,
+	"care-contract-reminders":       jobScopeBasis,
+	"traeger-staff-proof-reminders": jobScopeBasis,
 	// The notices of changed school closing days (ADR 0196) belong to the
 	// holiday care of the Träger; the job runs per Träger.
 	"holiday-closure-notifications": jobScopeBasis,

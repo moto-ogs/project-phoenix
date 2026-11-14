@@ -461,12 +461,6 @@ func (a *StaffAdmin) TraegerStaffRecords(collaborators workforce.TraegerStaffPor
 	return NewTraegerStaff(a.traeger, collaborators, a.subjects, a.audit, a.bank, a.clock)
 }
 
-// TraegerStaffProofs composes the Nachweise of the Personalstamm (#4707)
-// over the same records.
-func (a *StaffAdmin) TraegerStaffProofs(collaborators workforce.TraegerStaffPorts) workforce.TraegerStaffProofs {
-	return NewTraegerStaff(a.traeger, collaborators, a.subjects, a.audit, a.bank, a.clock)
-}
-
 func (a *StaffAdmin) keptByTraeger(ctx context.Context, staffID int64) (bool, error) {
 	kept, err := a.traeger.KeptStaffIDs(ctx, []int64{staffID})
 	return len(kept) > 0, err

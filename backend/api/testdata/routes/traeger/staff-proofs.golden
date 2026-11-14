@@ -1,0 +1,9 @@
+DELETE /traeger/staff-proofs/records/{id}/{typeId}
+GET /traeger/staff-proofs/
+GET /traeger/staff-proofs/export
+GET /traeger/staff-proofs/school-kinds
+GET /traeger/staff-proofs/types
+POST /traeger/staff-proofs/types
+PUT /traeger/staff-proofs/records/{id}/{typeId}
+PUT /traeger/staff-proofs/school-kinds
+PUT /traeger/staff-proofs/types/{id}

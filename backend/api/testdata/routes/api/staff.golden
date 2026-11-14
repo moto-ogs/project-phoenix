@@ -49,6 +49,7 @@ GET /api/staff/{id}/time-tracking/history
 GET /api/staff/{id}/time-tracking/month-summary
 GET /api/staff/{id}/time-tracking/schedule-targets
 GET /api/staff/{id}/time-tracking/sessions/{sessionId}/edits
+GET /api/staff/{id}/traeger-proofs
 GET /api/staff/{id}/vacation/quota
 POST /api/staff/
 POST /api/staff/absences/{absenceId}/approve

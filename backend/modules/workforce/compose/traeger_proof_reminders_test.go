@@ -9,7 +9,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,8 +23,11 @@ import (
 // schoolStaffFake answers the staff reads per school of the transaction.
 type schoolStaffFake map[int64]qualificationStaffFake
 
+type proofSchoolKey struct{}
+
 func (f schoolStaffFake) of(ctx context.Context) qualificationStaffFake {
-	return f[tenant.FromContext(ctx)]
+	school, _ := ctx.Value(proofSchoolKey{}).(int64)
+	return f[school]
 }
 
 func (f schoolStaffFake) ListStaffMembers(ctx context.Context) ([]workforce.QualificationStaffMember, error) {
@@ -43,15 +45,11 @@ func (f schoolStaffFake) StammdatenManagers(ctx context.Context) ([]workforce.Qu
 type proofRuntime struct{}
 
 func (proofRuntime) WithinSchool(ctx context.Context, schoolID int64, fn func(context.Context) error) error {
-	school, err := tenant.NewTenantID(schoolID)
-	if err != nil {
-		return err
-	}
-	return tenant.WithinTenant(ctx, school, fn)
+	return testpkg.WithinCurrentTenant(context.WithValue(testpkg.ContextForTenant(ctx, schoolID), proofSchoolKey{}, schoolID), fn)
 }
 
 func (proofRuntime) WithinTraeger(ctx context.Context, organizationID int64, fn func(context.Context) error) error {
-	return tenant.WithinTraeger(ctx, organizationID, fn)
+	return testpkg.WithinTraeger(ctx, organizationID, fn)
 }
 
 type proofFixture struct {
@@ -96,7 +94,7 @@ func TestTraegerProofRemindersWarnEveryEinsatzortOnce(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	f := newProofFixture(t, db)
-	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, db))
+	ctx := testpkg.ContextWithTenantRuntime(context.Background(), testpkg.TenantRuntime(t, db))
 	directory := schoolStaffFake{
 		f.north: {
 			members:  []workforce.QualificationStaffMember{{StaffID: f.mira[0], FirstName: "Mira", LastName: "Sommer", AccountID: 901, Email: "mira@example.com"}},
@@ -110,19 +108,18 @@ func TestTraegerProofRemindersWarnEveryEinsatzortOnce(t *testing.T) {
 	deliveries := &qualificationDeliveries{}
 	var mu sync.Mutex
 	today := calendar.NewDate(2026, 11, 7)
-	reminders, err := NewTraegerProofReminders(db, workforce.TraegerProofReminderPorts{
-		Traeger: func(context.Context) ([]int64, error) { return []int64{f.organization}, nil },
-		Runtime: proofRuntime{},
-		Reminders: workforce.QualificationReminderPorts{
-			Staff: directory, Notify: deliveries.notify, Mail: deliveries, Schools: qualificationSchoolFake{},
-			FrontendURL: "https://moto.example.com",
-		},
+	composed, err := NewQualifications(db, directory, workforce.QualificationReminderPorts{
+		Notify: deliveries.notify, Mail: deliveries, Schools: qualificationSchoolFake{},
+		FrontendURL:    "https://moto.example.com",
+		Traeger:        func(context.Context) ([]int64, error) { return []int64{f.organization}, nil },
+		TraegerRuntime: proofRuntime{},
 	}, func() time.Time {
 		mu.Lock()
 		defer mu.Unlock()
 		return today.BerlinMidnight().Add(12 * time.Hour)
 	})
 	require.NoError(t, err)
+	reminders := composed.TraegerProofs
 	setToday := func(day calendar.Date) {
 		mu.Lock()
 		defer mu.Unlock()
@@ -199,4 +196,21 @@ func TestSchoolRemindersLeaveKindsTheTraegerKeepsToItsProofs(t *testing.T) {
 	notices, _ = deliveries.counts()
 	assert.Equal(t, 3, notices, "a mapped kind of a person the Träger keeps reminds through the Träger; the others stay")
 	assert.Equal(t, other, deliveries.notices[2].StaffID)
+
+	proofs, err := within(t, school, func(ctx context.Context) ([]workforce.SchoolTraegerProof, error) {
+		return reminders.StaffTraegerProofs(ctx, f.mira[0])
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []workforce.SchoolTraegerProof{{TypeName: "Erweitertes Führungszeugnis", Status: workforce.TraegerProofStatusValid, ExpiresOn: "2027-01-31"}}, proofs,
+		"the school sees the status of the Träger's proof, nothing of the proof itself")
+	none, err := within(t, school, func(ctx context.Context) ([]workforce.SchoolTraegerProof, error) {
+		return reminders.StaffTraegerProofs(ctx, other)
+	})
+	require.NoError(t, err)
+	assert.Empty(t, none, "a person the Träger does not keep has no Träger proofs")
+	southView, err := within(t, testpkg.TenantContext(f.south), func(ctx context.Context) ([]workforce.SchoolTraegerProof, error) {
+		return reminders.StaffTraegerProofs(ctx, f.mira[0])
+	})
+	require.NoError(t, err)
+	assert.Empty(t, southView, "another school does not read north's employment")
 }

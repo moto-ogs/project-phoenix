@@ -49,6 +49,7 @@ GET /api/staff/{id}/time-tracking/history -> zeiterfassung
 GET /api/staff/{id}/time-tracking/month-summary -> zeiterfassung
 GET /api/staff/{id}/time-tracking/schedule-targets -> zeiterfassung
 GET /api/staff/{id}/time-tracking/sessions/{sessionId}/edits -> zeiterfassung
+GET /api/staff/{id}/traeger-proofs -> basis
 GET /api/staff/{id}/vacation/quota -> zeiterfassung
 POST /api/staff/ -> basis
 POST /api/staff/absences/{absenceId}/approve -> zeiterfassung

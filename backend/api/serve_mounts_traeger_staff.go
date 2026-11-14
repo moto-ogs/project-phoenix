@@ -39,8 +39,12 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 	requireStaff := common.RequiresPermission(identityaccess.TraegerRightStaffManage)
 	resource := traegerstaff.NewRecordsResource(records, requireStaff)
 	root.Mount("/traeger/staff-records", resource.TraegerRouter(ProtectedTraegerRoutes))
-	proofs := traegerstaff.NewProofsResource(staffAdmin.TraegerStaffProofs(collaborators), requireStaff)
-	root.Mount("/traeger/staff-proofs", proofs.TraegerRouter(ProtectedTraegerRoutes))
+	// The Personalstamm serves its Nachweise over the same records (#4707).
+	proofs, ok := records.(workforce.TraegerStaffProofs)
+	if !ok {
+		return errors.New("traeger staff records: the Personalstamm serves no Nachweise")
+	}
+	root.Mount("/traeger/staff-proofs", traegerstaff.NewProofsResource(proofs, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
 	return nil
 }
 
