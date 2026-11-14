@@ -1,5 +1,5 @@
 /**
- * Personalakte des Trägers über alle Schulen (#4705, ADR 0089, ADR 0232).
+ * Personalakte des Trägers über alle Schulen (#4705, ADR 0089, ADR 0233).
  *
  * Die Personalverwaltung führt eine Person mit einer Akte über alle Schulen:
  * moto schlägt vor, welche Beschäftigungen eine Person sind, die

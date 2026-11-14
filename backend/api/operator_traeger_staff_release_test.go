@@ -1,6 +1,6 @@
 // The moto team grants the release „Personal beim Träger“ with the statement
 // the Träger confirmed and withdraws it in the Operator portal (#4705, ADR
-// 0089 section 2, ADR 0232). Every read and change is in the operator audit;
+// 0089 section 2, ADR 0233). Every read and change is in the operator audit;
 // a withdrawal waits until the Träger keeps no record.
 package api
 

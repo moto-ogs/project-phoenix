@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "0dd800a55e0e90f5f2f4003ed4e3d8d337950bb65a158777cd32aa84256152a5",
+  "catalogSHA256": "b254626938456796d1da0e2a7b19e844657c182c66c528f10f95edf3ed9ff448",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -15848,7 +15848,7 @@
           "name": "request_child_id",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "student_id",
@@ -15915,6 +15915,12 @@
           "type": "boolean",
           "udt": "bool",
           "nullable": false
+        },
+        {
+          "name": "import_origin",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
         }
       ],
       "relationships": [

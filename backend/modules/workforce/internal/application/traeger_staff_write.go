@@ -120,7 +120,7 @@ func (t *TraegerStaff) replacedValues(actor workforce.TraegerStaffActor, recordI
 // tenant transaction: the record's personnel number on the employment, and
 // no bank row of the school, because the record keeps the values (decision
 // E1). Every write of the record repeats it, so a school that failed before
-// catches up (ADR 0232 section 6).
+// catches up (ADR 0233 section 6).
 func (t *TraegerStaff) handOver(ctx context.Context, actor workforce.TraegerStaffActor, record domain.TraegerStaffRecord) error {
 	for _, link := range record.Links {
 		err := t.ports.Runtime.WithinSchool(ctx, link.SchoolID, func(ctx context.Context) error {
@@ -232,7 +232,7 @@ func (t *TraegerStaff) UpdatePersonnelNumber(ctx context.Context, actor workforc
 
 // numberFreeAtSchools refuses a number another live employment of one of the
 // record's schools holds, before anything changes (ADR 0089 section 5, ADR
-// 0232 section 5): the school keeps one number per employment. It reads only
+// 0233 section 5): the school keeps one number per employment. It reads only
 // the employments' numbers, no person.
 func (t *TraegerStaff) numberFreeAtSchools(ctx context.Context, links []domain.TraegerStaffLink, number string) error {
 	for _, link := range links {

@@ -150,7 +150,7 @@ CREATE POLICY traeger_isolation_workforce_staff_record_changes ON workforce.staf
 	USING (organization_id = NULLIF(current_setting('app.current_org_id', true), '')::bigint)
 	WITH CHECK (organization_id = NULLIF(current_setting('app.current_org_id', true), '')::bigint);
 
--- The Träger's personnel number is the one of every Einsatzort (ADR 0232
+-- The Träger's personnel number is the one of every Einsatzort (ADR 0233
 -- section 5): a school's profile of a linked employment takes no other
 -- number, whatever path writes it (staff admin, import, membership). The
 -- function reads the record the school's role cannot see, so it runs as its
