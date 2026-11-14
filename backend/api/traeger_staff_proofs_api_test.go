@@ -183,10 +183,7 @@ func TestTraegerStaffProofsWarnBeforeExpiry(t *testing.T) {
 
 		rec = traegerJSON(t, router, office.token, http.MethodGet, fmt.Sprintf("/traeger/staff-records/%d", miraRecord.ID), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		var detail struct {
-			Proofs []workforce.TraegerStaffProof `json:"proofs"`
-		}
-		detail = decode[struct {
+		detail := decode[struct {
 			Proofs []workforce.TraegerStaffProof `json:"proofs"`
 		}](t, rec)
 		require.Len(t, detail.Proofs, 3, "the record shows every live kind; the archived own kind it does not hold stays out")
