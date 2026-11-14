@@ -48,6 +48,9 @@ import { traegerPath } from "~/lib/traeger-url";
 import { createLogger } from "~/lib/logger";
 import { TERMINATION_KIND_LABELS } from "./care-contract-format";
 
+/** The settings area with the texts of the contract mails. */
+const CONTRACT_SETTINGS_PATH = "/traeger/einstellungen?bereich=vertraege";
+
 /** No answer arrived, or a gateway gave up: the request may have run. */
 function connectionLost(err: unknown): boolean {
   return (
@@ -445,10 +448,8 @@ export function RecordNoticeModal({
             // letter template „Bestätigung der Kündigung“. A new tab keeps
             // this dialog and its entries.
             <ButtonLink
-              href={traegerPath("/traeger/einstellungen?bereich=vertraege")}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Text der E-Mail ansehen, neuer Tab"
+              href={traegerPath(CONTRACT_SETTINGS_PATH)}
+              newTab
               variant="ghost_tone"
               size="compact"
               tooltip="Öffnet die Einstellungen mit dem Text der E-Mail in einem neuen Tab."
@@ -666,10 +667,8 @@ export function RejectReasonModal({
           action={
             // A new tab keeps this dialog open (#7054).
             <ButtonLink
-              href={traegerPath("/traeger/einstellungen?bereich=vertraege")}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Zur Einstellung, neuer Tab"
+              href={traegerPath(CONTRACT_SETTINGS_PATH)}
+              newTab
               variant="surface"
               size="compact"
               tooltip="Öffnet den Text der Mitteilung in den Einstellungen in einem neuen Tab."

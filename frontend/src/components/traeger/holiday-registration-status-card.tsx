@@ -796,9 +796,9 @@ export function HolidayRegistrationStatusCard({
             type="warning"
             message={`Vielleicht doppelt angemeldet: ${duplicateNames.join(", ")}. Die andere Anmeldung öffnen Sie beim Kind.`}
             action={
-              // Only while the registration can still change: a frozen or
-              // cancelled one offers no step here, its child card keeps the link.
-              firstDuplicate && open && !registration.frozen ? (
+              // The child cards render in every state, frozen and cancelled
+              // too, so the way to them is always there (#7054).
+              firstDuplicate ? (
                 <JumpButton
                   targetId={holidayRegistrationChildCardId(firstDuplicate.id)}
                   tooltip="Springt zum Kind mit dem Link zur anderen Anmeldung."

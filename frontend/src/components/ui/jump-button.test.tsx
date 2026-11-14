@@ -63,4 +63,29 @@ describe("JumpButton", () => {
     expect(jumpTo("parents")).toBe(false);
     expect(button).toHaveFocus();
   });
+
+  it("reports a hidden target instead of focusing something unseen", () => {
+    page(
+      <section id="parents" hidden>
+        <h2>Eltern</h2>
+      </section>,
+    );
+
+    expect(jumpTo("parents")).toBe(false);
+  });
+
+  it("moves the focus to the card heading when the field is disabled", () => {
+    page(
+      <section id="card">
+        <h2>Ansprechperson</h2>
+        <input id="parents" aria-label="Telefon" disabled />
+      </section>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Zu den Eltern" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Ansprechperson" }),
+    ).toHaveFocus();
+  });
 });

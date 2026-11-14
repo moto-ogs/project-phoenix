@@ -425,6 +425,9 @@ describe("TraegerVertragPage", () => {
       expect(await screen.findByText(label)).toBeInTheDocument();
       expect(screen.getByText(text)).toBeInTheDocument();
       expect(screen.queryByText("Gesendet")).toBeNull();
+      // The notice names „Versand“ for another address and leads there.
+      fireEvent.click(screen.getByRole("button", { name: "Zum Versand" }));
+      expect(screen.getByRole("heading", { name: "Versand" })).toHaveFocus();
     },
   );
 

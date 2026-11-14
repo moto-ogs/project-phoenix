@@ -620,10 +620,14 @@ describe("HolidayRegistrationStatusCard", () => {
     renderCard({ ...HOLIDAY_REGISTRATION, status: "confirmed", frozen: true });
 
     expect(screen.getByText(/Sie ist eingefroren\./)).toBeInTheDocument();
+    // Besides reopening only the way to the double-registered child (#7054).
     expect(
       screen.getByRole("button", { name: "Wieder öffnen" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(
+      screen.getByRole("button", { name: "Zum Kind" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(2);
   });
 
   it("freezes an open registration", async () => {
@@ -645,7 +649,11 @@ describe("HolidayRegistrationStatusCard", () => {
         "Diese Anmeldung ist storniert. Sie lässt sich nicht mehr ändern.",
       ),
     ).toBeInTheDocument();
-    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    // Nothing changes it; only the way to the double-registered child stays.
+    expect(
+      screen.getByRole("button", { name: "Zum Kind" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
   it("shows a refused change as an error message", async () => {

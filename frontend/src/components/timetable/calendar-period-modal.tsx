@@ -498,9 +498,7 @@ export function CalendarPeriodModal({
                     linkClosingDays ? (
                       <ButtonLink
                         href={tenantPath("/calendar-periods")}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Zu den Schließtagen, neuer Tab"
+                        newTab
                         variant="surface"
                         size="compact"
                         tooltip="Öffnet „Schuljahr und Kalender“ mit den Schließtagen in einem neuen Tab."

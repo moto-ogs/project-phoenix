@@ -289,9 +289,7 @@ export function CourseWaitlistSummary({
             requestsHref ? (
               <ButtonLink
                 href={requestsHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Zu den Anfragen, neuer Tab"
+                newTab
                 variant="surface"
                 size="compact"
                 tooltip="Öffnet die Anfragen in einem neuen Tab."

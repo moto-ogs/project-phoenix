@@ -113,9 +113,7 @@ export function MissingTargetDialogNotice({
         canSetTarget ? (
           <ButtonLink
             href={tenantPath(workTimeModelPath(staffId))}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Zum Arbeitszeitmodell, neuer Tab"
+            newTab
             variant="surface"
             size="compact"
             tooltip="Öffnet das Arbeitszeitmodell dieser Person in einem neuen Tab."

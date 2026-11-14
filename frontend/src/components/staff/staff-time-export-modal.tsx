@@ -454,9 +454,7 @@ export function StaffTimeExportModal({
             settingsHref && !transferErrors.error && canOpenSettings ? (
               <ButtonLink
                 href={tenantPath(settingsHref)}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Zu den Einstellungen, neuer Tab"
+                newTab
                 variant="surface"
                 size="compact"
                 tooltip="Öffnet die Übertragung der Zeitkonten in den Einstellungen in einem neuen Tab."

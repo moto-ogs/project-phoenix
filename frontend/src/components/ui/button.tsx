@@ -85,6 +85,11 @@ type ButtonLinkProps = Omit<NavigationLinkProps, "className"> &
     readonly variant?: ButtonVariant;
     readonly size?: ButtonSize;
     readonly className?: string;
+    /**
+     * Opens the target in a new tab, for a link out of a dialog that must
+     * keep its input (#7054). Screen readers hear „neuer Tab“ after the text.
+     */
+    readonly newTab?: boolean;
   };
 
 export function Button({
@@ -207,6 +212,8 @@ export function ButtonLink({
   noTooltip: _noTooltip,
   disabled,
   disabledReason,
+  newTab = false,
+  children,
   ...linkProps
 }: Readonly<ButtonLinkProps>) {
   if (disabled) {
@@ -215,7 +222,9 @@ export function ButtonLink({
         {...linkProps}
         className={buttonClassName({ variant, size, className })}
         iconOnly={size === "icon"}
-      />,
+      >
+        {children}
+      </BlockedLink>,
       disabledReason,
       true,
     );
@@ -223,15 +232,28 @@ export function ButtonLink({
   const link = (
     <NavigationLink
       {...linkProps}
+      {...(newTab ? newTabProps(children, linkProps["aria-label"]) : {})}
       className={buttonClassName({ variant, size, className })}
       // Kennzeichen für die Bedienhöhe der Kopfkarte (`TenantPage`): sie
       // erfasst Knöpfe über `button`, Links in Button-Optik über dieses
       // Attribut (#5531).
       data-button-link=""
       {...iconOnlyMarker(size === "icon")}
-    />
+    >
+      {children}
+    </NavigationLink>
   );
   return withHint(link, tooltip, false);
+}
+
+/** A link into a new tab says so in its name: „Zu den Anfragen, neuer Tab“. */
+function newTabProps(children: React.ReactNode, ariaLabel: string | undefined) {
+  const name = ariaLabel ?? (typeof children === "string" ? children : null);
+  return {
+    target: "_blank",
+    rel: "noopener noreferrer",
+    ...(name ? { "aria-label": `${name}, neuer Tab` } : {}),
+  };
 }
 
 /**

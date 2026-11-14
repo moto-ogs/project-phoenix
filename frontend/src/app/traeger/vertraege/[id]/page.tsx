@@ -836,8 +836,11 @@ function contractSendBlockedReason(
 
 // The reason and the next step as they are now. "Prüfen Sie die Adresse" only
 // fits a mail that came back; a stop or a block has another way out.
+const OTHER_ADDRESS_HINT =
+  "Unter „Versand“ können Sie eine andere Adresse verwenden.";
+
 function contractHoldNotice(mailing: ContractMailing): string | null {
-  const other = "Unter „Versand“ können Sie eine andere Adresse verwenden.";
+  const other = OTHER_ADDRESS_HINT;
   switch (mailing.sendBlock) {
     case "stopped":
       return "Die Schule hat die Mails an diese Person gestoppt. Klären Sie das mit der Schule, oder geben Sie den Vertrag anders weiter.";
@@ -897,7 +900,16 @@ function StatusNotice({
   if (contract.signature && last?.state !== "failed") return null;
   const held = last ? contractHoldNotice(last) : null;
   if (held) {
-    return <Alert type="warning" message={held} />;
+    return (
+      <Alert
+        type="warning"
+        message={held}
+        // The blocked or refused address can be swapped under „Versand“.
+        action={
+          held.includes(OTHER_ADDRESS_HINT) ? <DeliveryJump /> : undefined
+        }
+      />
+    );
   }
   if (last?.state === "failed") {
     return (

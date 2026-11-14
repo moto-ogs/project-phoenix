@@ -647,9 +647,7 @@ export function StepPersonalKinder({
                     canManageOfferings ? (
                       <ButtonLink
                         href={tenantPath("/care-offerings")}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Zu den Angeboten, neuer Tab"
+                        newTab
                         variant="surface"
                         size="compact"
                         tooltip="Öffnet die Angebote in einem neuen Tab."

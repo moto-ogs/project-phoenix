@@ -22,16 +22,36 @@ const FOCUSABLE =
  */
 export function jumpTo(id: string): boolean {
   const target = globalThis.document?.getElementById(id);
-  if (!target) return false;
+  if (!target || isHidden(target)) return false;
   target.classList.add(JUMP_TARGET_CLASS);
   // happy-dom and older WebKit builds ship no scrollIntoView on every node.
   target.scrollIntoView?.({ block: "start" });
-  const focusTarget = target.matches(FOCUSABLE)
-    ? target
-    : (target.querySelector<HTMLElement>("h1, h2, h3, h4") ?? target);
+  const focusTarget = focusTargetOf(target);
   if (!focusTarget.matches(FOCUSABLE)) focusTarget.tabIndex = -1;
   focusTarget.focus({ preventScroll: true });
   return true;
+}
+
+/** A collapsed, `hidden` or `display: none` place cannot take the focus. */
+function isHidden(target: HTMLElement): boolean {
+  if (target.closest("[hidden], [inert]")) return true;
+  return target.checkVisibility?.() === false;
+}
+
+/**
+ * A field takes the focus itself. A disabled one cannot: the heading of the
+ * nearest card or section around it does. Anything else focuses its own
+ * heading, else itself.
+ */
+function focusTargetOf(target: HTMLElement): HTMLElement {
+  const heading = (node: Element | null) =>
+    node?.querySelector<HTMLElement>("h1, h2, h3, h4") ?? null;
+  if (!target.matches(FOCUSABLE)) return heading(target) ?? target;
+  if (!target.matches(":disabled")) return target;
+  return (
+    heading(target.closest("section, [id]:not(input, select, textarea)")) ??
+    target
+  );
 }
 
 /**
