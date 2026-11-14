@@ -286,7 +286,7 @@ func traegerSteps(seeder *Seeder) []Step {
 	// the visitor, whose name must not reach a record of the Träger
 	// (ADR 0233 point 9).
 	steps = append(steps, traegerCareSteps(seeder)...)
-	return append(steps, traegerSerial(seedTraegerStaffStep{})...)
+	return append(steps, traegerSerial(seedTraegerStaffStep{}, seedTraegerStaffProofStep{})...)
 }
 
 // traegerSetupSteps prepare the Träger: office, holidays, settings and
