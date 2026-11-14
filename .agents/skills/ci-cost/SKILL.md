@@ -219,6 +219,13 @@ Proven here (#5700, #5762, #5770) or in pingdotgg/t3code (#14025, #19587,
   "selection"; the release restore (41-43 s) left "restore" (230-281 s) as
   "release-restore". Split suites start on the same condition
   (`scripts/backend-affected-packages_test.sh`).
+- A long test of many small `docker compose exec` calls is slow by count,
+  not by load: the daily backup test ran 2030 docker calls, 1392 of them
+  `compose exec` at 0.11 s. Its role matrix (64 cases, a backup and a
+  restore each) took about 250 of 295 s locally and 145-244 s on hosted
+  runners. One test file per role profile, run side by side by
+  `node --test`: 79 s locally, same cases (#6962). A docker shim on PATH that
+  logs each call with its duration shows such a profile.
 - History for a merge base needs no file contents: `git fetch --unshallow
   --filter=blob:none` took 13 s against 58 s locally and gave the same
   merge base; git loads a base file on demand (two reads 2.8 s). A job that
