@@ -131,6 +131,18 @@ func januaryHolidays(office traegerOffice) holidayPeriodBody {
 	}
 }
 
+// julyHolidays2099 is januaryHolidays with its weeks in July 2099. The host
+// school reads a week only until its last day has passed by PostgreSQL's
+// clock (enrollment.holiday_host_week), so a test that reads the host
+// school's side needs weeks that lie ahead on every day the suite runs.
+func julyHolidays2099(office traegerOffice) holidayPeriodBody {
+	body := januaryHolidays(office)
+	body.Name = "Sommerferien 2099"
+	body.Weeks[0].StartsOn, body.Weeks[0].EndsOn = "2099-07-06", "2099-07-10"
+	body.Weeks[1].StartsOn, body.Weeks[1].EndsOn = "2099-07-13", "2099-07-17"
+	return body
+}
+
 func createHolidayPeriod(t *testing.T, router http.Handler, office traegerOffice, body holidayPeriodBody) holidayPeriodBody {
 	t.Helper()
 	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/holiday-periods/", body)
