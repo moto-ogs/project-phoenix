@@ -89,7 +89,8 @@ export function appointmentMailNote(
     const list = new Intl.ListFormat("de", { type: "conjunction" }).format(
       names,
     );
-    return `Nicht angekommen bei ${list}. Bitte informieren Sie sie direkt. ${CHECK_ADDRESS_AT_GUARDIAN}`;
+    const families = names.length === 1 ? "der Familie" : "den Familien";
+    return `Nicht angekommen bei ${list}. Bitte sagen Sie ${families} direkt Bescheid. ${CHECK_ADDRESS_AT_GUARDIAN}`;
   }
   const total = sumMailOutcomeCounts(Object.values(mails.kinds));
   const missing = mailsNotArrived(total);

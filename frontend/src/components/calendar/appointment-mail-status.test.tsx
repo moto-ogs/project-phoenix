@@ -50,7 +50,7 @@ describe("AppointmentMailStatus", () => {
     ]);
     expect(
       within(section).getByText(
-        "Nicht angekommen bei Bernd Beispiel. Bitte informieren Sie sie direkt. Korrigieren Sie die Adresse beim Kind unter „Erziehungsberechtigte“.",
+        "Nicht angekommen bei Bernd Beispiel. Bitte sagen Sie der Familie direkt Bescheid. Korrigieren Sie die Adresse beim Kind unter „Erziehungsberechtigte“.",
       ),
     ).toBeInTheDocument();
   });
@@ -107,7 +107,7 @@ describe("appointmentMailNote", () => {
         },
       }),
     ).toBe(
-      "Nicht angekommen bei Anna Muster und Özlem Yılmaz. Bitte informieren Sie sie direkt. Korrigieren Sie die Adresse beim Kind unter „Erziehungsberechtigte“.",
+      "Nicht angekommen bei Anna Muster und Özlem Yılmaz. Bitte sagen Sie den Familien direkt Bescheid. Korrigieren Sie die Adresse beim Kind unter „Erziehungsberechtigte“.",
     );
   });
 
