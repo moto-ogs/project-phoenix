@@ -1,6 +1,7 @@
 package application
 
 import (
+	"slices"
 	"sort"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
@@ -188,7 +189,7 @@ func draftDocument(run parentbilling.BillingRun, registration parentbilling.Holi
 		if billed.Corrections == nil {
 			billed.Corrections = []parentbilling.BillingCorrection{}
 		}
-		for _, line := range lines.Lines {
+		for _, line := range billedLines(lines.Lines) {
 			billed.Positions = append(billed.Positions, billingPosition(line))
 			from, until = widen(from, until, line.WeekStartsOn, line.WeekEndsOn)
 		}
@@ -233,6 +234,15 @@ func widen(from, until calendar.Date, starts, ends *calendar.Date) (calendar.Dat
 		until = *ends
 	}
 	return from, until
+}
+
+// billedLines are the lines the invoice has a position for. A selected
+// lunch without lunches only freezes the selection (#5631) and bills
+// nothing.
+func billedLines(lines []parentbilling.HolidayContributionLine) []parentbilling.HolidayContributionLine {
+	return slices.DeleteFunc(slices.Clone(lines), func(line parentbilling.HolidayContributionLine) bool {
+		return line.Kind == parentbilling.LineMeal && (line.BookedDays == nil || *line.BookedDays == 0)
+	})
 }
 
 // billingPosition is a line of the frozen contribution as a position of the

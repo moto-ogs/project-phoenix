@@ -394,3 +394,29 @@ func TestHolidayFrozenLunchSurvivesAClosingDayAndRebooking(t *testing.T) {
 	contribution := decodeSchoolPortalData[lunchContributionBody](t, rec.Body.Bytes())
 	assert.Equal(t, int64(1500+430), contribution.TotalCents, "keeping lunch selected preserves the frozen lunch even when its only day has closed")
 }
+
+// A lunch selected for a day the school then closes is confirmed without a
+// lunch. The selection stays frozen: when the day opens again, rebooking the
+// same selection adds no charge to the confirmed contribution.
+func TestHolidayLunchSelectedOnAClosedDayGainsNoChargeWhenTheDayOpensAgain(t *testing.T) {
+	t.Parallel()
+	l := newLunchFixture(t, "Mittagessen wieder offen")
+	receipt := l.submit(t, l.registration("offen.essen@example.org", "Tom", l.booking(0, true, dayWednesday)))
+	closed := parentBillingCalendarRouter(t, l.review, owners.HolidayTestSchoolCalendar{
+		{Date: calendar.NewDate(2027, 1, 6), Kind: enrollment.HolidayNoCareClosingDay, Name: "Betriebsausflug"},
+	})
+	rec := traegerJSON(t, closed, l.office.token, http.MethodPost, holidayConfirmPath(l.period.ID, receipt.ID), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	read := func() lunchContributionBody {
+		rec := traegerJSON(t, l.traeger, l.office.token, http.MethodGet, holidayContributionPath(l.period.ID, receipt.ID), nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		return decodeSchoolPortalData[lunchContributionBody](t, rec.Body.Bytes())
+	}
+	confirmed := read().TotalCents
+
+	// The day is open again; the Büro saves the unchanged booking.
+	rec = traegerJSON(t, l.traeger, l.office.token, http.MethodPut, holidayRebookPath(l.period.ID, receipt.ID, l.childOf(t, receipt.ID)),
+		map[string]any{"bookings": []map[string]any{l.booking(0, true, dayWednesday)}})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, confirmed, read().TotalCents, "an unchanged selection adds no lunch to the confirmed contribution")
+}

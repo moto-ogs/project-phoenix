@@ -68,7 +68,12 @@ ALTER TABLE parent_billing.holiday_contribution_lines
 	DROP CONSTRAINT chk_holiday_contribution_lines_discount,
 	ADD CONSTRAINT chk_holiday_contribution_lines_discount CHECK (kind IN ('base', 'meal') OR amount_cents <= 0),
 	ADD CONSTRAINT chk_holiday_contribution_lines_meal CHECK (kind <> 'meal' OR (
-		amount_cents >= 0 AND week_starts_on IS NOT NULL AND week_ends_on IS NOT NULL AND booked_days IS NOT NULL));
+		amount_cents >= 0 AND week_starts_on IS NOT NULL AND week_ends_on IS NOT NULL AND booked_days IS NOT NULL)),
+	-- A meal line without lunches freezes a selected lunch whose care days
+	-- are all closed, so a day that opens again adds no charge.
+	DROP CONSTRAINT chk_holiday_contribution_lines_booked_days,
+	ADD CONSTRAINT chk_holiday_contribution_lines_booked_days
+		CHECK (booked_days IS NULL OR booked_days BETWEEN 1 AND 7 OR (kind = 'meal' AND booked_days = 0));
 
 ALTER TABLE parent_billing.document_positions
 	ADD COLUMN booked_days SMALLINT,
@@ -116,6 +121,9 @@ ALTER TABLE parent_billing.document_positions
 
 ALTER TABLE parent_billing.holiday_contribution_lines
 	DROP CONSTRAINT chk_holiday_contribution_lines_meal,
+	DROP CONSTRAINT chk_holiday_contribution_lines_booked_days,
+	ADD CONSTRAINT chk_holiday_contribution_lines_booked_days
+		CHECK (booked_days IS NULL OR booked_days BETWEEN 1 AND 7),
 	DROP CONSTRAINT chk_holiday_contribution_lines_discount,
 	ADD CONSTRAINT chk_holiday_contribution_lines_discount CHECK (kind = 'base' OR amount_cents <= 0),
 	DROP CONSTRAINT chk_holiday_contribution_lines_kind,

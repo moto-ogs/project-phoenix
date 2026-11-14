@@ -59,7 +59,13 @@ Ferientage nicht.
    bleibt, behält Zahl und Preis der Bestätigung, und eine nachgerückte
    Woche wird mit ihrem Essen neu berechnet. Eine ausgestellte Rechnung
    bleibt, wie sie ist; den Unterschied zum neuen Beitrag berechnet das
-   Träger-Büro als Korrektur des Laufs (ADR 0119).
+   Träger-Büro als Korrektur des Laufs (ADR 0119). Ein gewähltes Essen,
+   dessen Betreuungstage bei der Bestätigung alle geschlossen sind, wird als
+   Zeile ohne Essen und ohne Betrag festgehalten: Öffnet ein Tag wieder,
+   kostet die unveränderte Auswahl nichts dazu. Die Rechnung bekommt dafür
+   keine Position. Hat eine festgehaltene Befreiung keine gültige Regel
+   mehr, bleibt die Betreuung wie festgehalten, und nur das Essen folgt der
+   Umbuchung.
 5. **Rechnung und Exporte.** Es bleibt eine Rechnung je Anmeldung oder Kind.
    Die Position `meal` nennt Woche, Zahl der Essen und Preis für ein Essen
    (`document_positions.booked_days`). Sie bucht auf die Kostenstelle ihrer

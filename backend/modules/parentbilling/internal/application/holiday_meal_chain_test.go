@@ -256,3 +256,54 @@ func TestFrozenLunchSurvivesWhenAllBookedDaysClose(t *testing.T) {
 	again := computeHolidayContribution([]parentbilling.HolidayChild{{ID: 1, Position: 1, Bookings: frozen}}, holidayRules{}, false, nil)
 	assert.True(t, sameContribution(first, again), "a later closing day does not deselect lunch or change its frozen amount")
 }
+
+// A lunch selected for a week whose care days are all closed is frozen with
+// no lunches. When a day opens again, the unchanged selection must not gain
+// a charge: only a selection the Träger-Büro changes follows the booking.
+func TestASelectedLunchWithoutLunchesStaysFrozenWhenADayOpensAgain(t *testing.T) {
+	t.Parallel()
+	closed := chainChild(1, 1, 6500)
+	closed.Bookings[0].Lunch = true
+	first := computeHolidayContribution([]parentbilling.HolidayChild{closed}, holidayRules{}, false, nil)
+	meals := mealLines(first.Children[0])
+	require.Len(t, meals, 1, "the selection is frozen even without a lunch")
+	assert.Zero(t, *meals[0].BookedDays)
+	assert.Zero(t, meals[0].AmountCents)
+	assert.Equal(t, int64(6500), first.TotalCents)
+
+	current := withLunch(chainChild(1, 1, 6500), 1).Bookings
+	frozen := frozenHolidayBookings(first.Children[0].Lines, current)
+	require.Len(t, frozen, 1)
+	assert.True(t, frozen[0].Lunch)
+	assert.Zero(t, frozen[0].LunchDays, "the reopened day adds no lunch to the confirmed contribution")
+	assert.Zero(t, frozen[0].LunchCents)
+	again := computeHolidayContribution([]parentbilling.HolidayChild{{ID: 1, Position: 1, Bookings: frozen}}, holidayRules{}, false, nil)
+	assert.True(t, sameContribution(first, again))
+}
+
+// A frozen exemption no rule allows any more keeps the care as frozen, but
+// the lunch stands outside the chain: a rebooked lunch still changes it.
+func TestALostExemptionKeepsTheCareAndStillFollowsTheLunch(t *testing.T) {
+	t.Parallel()
+	exemption := &parentbilling.ContributionRule{}
+	frozen := computeHolidayContribution([]parentbilling.HolidayChild{withLunch(chainChild(1, 1, 6500), 5)}, holidayRules{exemption: exemption}, true, nil)
+	require.True(t, frozen.BenefitsExemption)
+	require.Equal(t, int64(2150), frozen.TotalCents, "the exempt family pays only the lunch")
+
+	// The rule is gone and the Büro took the lunch off.
+	next := computeHolidayContribution([]parentbilling.HolidayChild{chainChild(1, 1, 6500)}, holidayRules{}, false, nil)
+	_, _, err := refrozen(frozen, next, false)
+	require.ErrorIs(t, err, parentbilling.ErrBenefitsExemptionUnavailable)
+	kept, changed, err := refrozen(frozen, next, true)
+	require.NoError(t, err)
+	assert.True(t, changed, "the lunch change is a new version")
+	assert.True(t, kept.BenefitsExemption, "the care stays exempt")
+	assert.Empty(t, mealLines(kept.Children[0]))
+	assert.Zero(t, kept.TotalCents)
+
+	// Nothing changed about the lunch: the frozen contribution stays.
+	same := computeHolidayContribution([]parentbilling.HolidayChild{withLunch(chainChild(1, 1, 6500), 5)}, holidayRules{}, false, nil)
+	_, changed, err = refrozen(frozen, same, true)
+	require.NoError(t, err)
+	assert.False(t, changed)
+}

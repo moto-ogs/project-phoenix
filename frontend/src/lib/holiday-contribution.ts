@@ -143,19 +143,23 @@ export function contributionFromBackend(
       childId: child.child_id ? String(child.child_id) : "",
       position: child.position,
       totalCents: child.total_cents,
-      lines: (child.lines ?? []).map((line) => ({
-        kind: line.kind,
-        amountCents: line.amount_cents,
-        weekStartsOn: line.week_starts_on,
-        weekEndsOn: line.week_ends_on,
-        timeModelName: line.time_model_name,
-        childRank: line.child_rank,
-        discountBasisPoints: line.discount_basis_points,
-        discountCents: line.discount_cents,
-        note: line.note,
-        costBearerName: line.cost_bearer_name ?? "",
-        bookedDays: line.booked_days ?? null,
-      })),
+      // A meal line without lunches only records the selection of a week
+      // whose care days are all closed (#5631); it shows nothing.
+      lines: (child.lines ?? [])
+        .filter((line) => line.kind !== "meal" || (line.booked_days ?? 0) > 0)
+        .map((line) => ({
+          kind: line.kind,
+          amountCents: line.amount_cents,
+          weekStartsOn: line.week_starts_on,
+          weekEndsOn: line.week_ends_on,
+          timeModelName: line.time_model_name,
+          childRank: line.child_rank,
+          discountBasisPoints: line.discount_basis_points,
+          discountCents: line.discount_cents,
+          note: line.note,
+          costBearerName: line.cost_bearer_name ?? "",
+          bookedDays: line.booked_days ?? null,
+        })),
     })),
     totalCents: contribution.total_cents,
     exemptionAvailable: contribution.exemption_available,

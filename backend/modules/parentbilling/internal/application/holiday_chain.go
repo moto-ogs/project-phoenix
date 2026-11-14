@@ -146,12 +146,14 @@ func finishHolidayContribution(result *parentbilling.HolidayContribution, rules 
 // the order of the weeks, after every line of the chain: the lunch is no
 // part of the chain, so the family pays it in full whatever the chain left
 // of the care (ADR 0115 addendum, #5631). A booking on the waiting list has
-// no lunch yet; child holds placed bookings only.
+// no lunch yet; child holds placed bookings only. A selected lunch whose
+// care days are all closed is a line without lunches and without an amount:
+// it freezes the selection, so a day that opens again adds no charge.
 func addHolidayMealLines(contribution *parentbilling.HolidayChildContribution, child parentbilling.HolidayChild) {
 	bookings := slices.Clone(child.Bookings)
 	slices.SortStableFunc(bookings, func(a, b parentbilling.HolidayBooking) int { return a.WeekStartsOn.Compare(b.WeekStartsOn) })
 	for _, booking := range bookings {
-		if booking.LunchDays <= 0 {
+		if !booking.Lunch && booking.LunchDays <= 0 {
 			continue
 		}
 		startsOn, endsOn, lunches := booking.WeekStartsOn, booking.WeekEndsOn, booking.LunchDays

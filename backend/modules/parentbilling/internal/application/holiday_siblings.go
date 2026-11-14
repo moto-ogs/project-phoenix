@@ -143,7 +143,7 @@ func withFrozenLunch(bookings []parentbilling.HolidayBooking, line parentbilling
 		return
 	}
 	if i := slices.IndexFunc(bookings, func(b parentbilling.HolidayBooking) bool {
-		return b.LunchDays == 0 && pricesHolidayWeek(b, line.WeekID, *line.WeekStartsOn, *line.WeekEndsOn)
+		return !b.Lunch && pricesHolidayWeek(b, line.WeekID, *line.WeekStartsOn, *line.WeekEndsOn)
 	}); i >= 0 {
 		bookings[i].Lunch = true
 		bookings[i].LunchDays, bookings[i].LunchCents = *line.BookedDays, line.AmountCents
@@ -446,7 +446,7 @@ func (h *HolidayContributions) refreeze(ctx context.Context, reviewer parentbill
 			member.registration.Status != parentbilling.HolidayRegistrationConfirmed {
 			continue
 		}
-		changed, err := refrozen(*member.frozen, next, keepExemptions)
+		next, changed, err := refrozen(*member.frozen, next, keepExemptions)
 		if err != nil {
 			return err
 		}
@@ -460,17 +460,56 @@ func (h *HolidayContributions) refreeze(ctx context.Context, reviewer parentbill
 	return nil
 }
 
-// refrozen reports whether next is a new version of the frozen
-// contribution: other amounts or other chain settings (#5664). A frozen exemption no rule allows any more refuses, or with
-// keepExemptions keeps the frozen contribution.
-func refrozen(frozen, next parentbilling.HolidayContribution, keepExemptions bool) (bool, error) {
+// refrozen returns the next version of the frozen contribution and whether
+// it is one: other amounts or other chain settings (#5664). A frozen
+// exemption no rule allows any more refuses; with keepExemptions the care
+// stays as frozen and only the lunch follows, which stands outside the
+// chain (#5631).
+func refrozen(frozen, next parentbilling.HolidayContribution, keepExemptions bool) (parentbilling.HolidayContribution, bool, error) {
 	if frozen.BenefitsExemption && !next.BenefitsExemption {
-		if keepExemptions {
-			return false, nil
+		if !keepExemptions {
+			return next, false, parentbilling.ErrBenefitsExemptionUnavailable
 		}
-		return false, parentbilling.ErrBenefitsExemptionUnavailable
+		next = withFrozenCare(frozen, next)
 	}
-	return !sameContribution(frozen, next) || frozen.Chain != next.Chain, nil
+	return next, !sameContribution(frozen, next) || frozen.Chain != next.Chain, nil
+}
+
+// withFrozenCare is the frozen contribution with the meal lines of next:
+// every line of the chain and the chain settings stay as frozen.
+func withFrozenCare(frozen, next parentbilling.HolidayContribution) parentbilling.HolidayContribution {
+	kept := frozen
+	kept.Children = make([]parentbilling.HolidayChildContribution, len(frozen.Children))
+	kept.TotalCents = 0
+	for i, child := range frozen.Children {
+		lines := slices.DeleteFunc(slices.Clone(child.Lines), isMealLine)
+		total := child.TotalCents - mealCents(child.Lines)
+		if k := slices.IndexFunc(next.Children, func(c parentbilling.HolidayChildContribution) bool { return c.ChildID == child.ChildID }); k >= 0 {
+			for _, line := range next.Children[k].Lines {
+				if isMealLine(line) {
+					lines = append(lines, line)
+				}
+			}
+			total += mealCents(next.Children[k].Lines)
+		}
+		kept.Children[i] = parentbilling.HolidayChildContribution{ChildID: child.ChildID, Position: child.Position, Lines: lines, TotalCents: total}
+		kept.TotalCents += total
+	}
+	return kept
+}
+
+func isMealLine(line parentbilling.HolidayContributionLine) bool {
+	return line.Kind == parentbilling.LineMeal
+}
+
+func mealCents(lines []parentbilling.HolidayContributionLine) int64 {
+	var cents int64
+	for _, line := range lines {
+		if isMealLine(line) {
+			cents += line.AmountCents
+		}
+	}
+	return cents
 }
 
 // shareDebtorNumber gives every confirmed registration of the group that no
