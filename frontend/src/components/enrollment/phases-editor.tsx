@@ -74,6 +74,10 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { RolloverForm } from "./rollover-form";
+import {
+  extendsRunningPhase,
+  PhaseExtensionHint,
+} from "./phase-extension-hint";
 import { useTenant } from "~/lib/tenant-context";
 import { supportedGradeLevelMax } from "~/lib/grade-level";
 import {
@@ -126,7 +130,6 @@ import {
   ManualApprovedEnrollmentModal,
 } from "~/components/enrollment/phase-enrollment-actions";
 import {
-  CREATE_SUCCESSOR_HINT,
   PhaseExpiryWarnings,
   useRefreshPhaseExpiryWarnings,
 } from "~/components/enrollment/phase-expiry-warnings";
@@ -1055,6 +1058,11 @@ export function PhasesEditor() {
                     schemaSource={schemaSource}
                     setSchemaSource={setSchemaSource}
                     editing={editingId !== "new"}
+                    savedPhase={phases.find((p) => p.id === editingId)}
+                    hasSuccessor={phases.some(
+                      (p) => p.rollover_source_phase_id === editingId,
+                    )}
+                    onCreateSuccessor={startRollover}
                     saving={saving}
                     highlightFormSection={highlightFormSection}
                     gradeLevelMax={gradeLevelMax}
@@ -1225,6 +1233,11 @@ interface PhaseFormProps {
   readonly schemaSource: SchemaSource;
   readonly setSchemaSource: React.Dispatch<React.SetStateAction<SchemaSource>>;
   readonly editing: boolean;
+  /** The stored phase while editing; its dates decide the extension hint. */
+  readonly savedPhase?: Phase;
+  readonly onCreateSuccessor: (phase: Phase) => void;
+  /** A follow-up phase exists; the backend refuses a second one. */
+  readonly hasSuccessor: boolean;
   readonly saving: boolean;
   readonly highlightFormSection: boolean;
   /** Tenant grade cap; null when unresolved — the grade picker then hides. */
@@ -1490,7 +1503,8 @@ function PhaseActions({
           size={16}
         />
       ),
-      description: CREATE_SUCCESSOR_HINT,
+      description:
+        "Für das nächste Halbjahr oder Schuljahr. Übernimmt die Anmeldungen, Eltern können dabei umbuchen. Noch ohne E-Mail an Eltern.",
       disabled: saving || rolloverActive,
       onClick: onRollover,
     },
@@ -1576,6 +1590,9 @@ function PhaseForm(props: PhaseFormProps) {
     schemaSource,
     setSchemaSource,
     editing,
+    savedPhase,
+    onCreateSuccessor,
+    hasSuccessor,
     saving,
     highlightFormSection,
     gradeLevelMax,
@@ -1755,6 +1772,19 @@ function PhaseForm(props: PhaseFormProps) {
             />
           </div>
         </div>
+        {savedPhase &&
+        extendsRunningPhase(
+          savedPhase,
+          draft.service_end_date,
+          berlinTodayISO(),
+        ) ? (
+          <PhaseExtensionHint
+            saving={saving}
+            onCreateSuccessor={
+              hasSuccessor ? undefined : () => onCreateSuccessor(savedPhase)
+            }
+          />
+        ) : null}
       </FormFieldset>
 
       <FormFieldset legend="Anmeldefenster (optional)">

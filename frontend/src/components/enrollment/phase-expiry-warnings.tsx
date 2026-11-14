@@ -85,7 +85,7 @@ function warningCopy(warning: PhaseExpiryWarning): {
 }
 
 // Erstellt noch nichts: Die E-Mail an die Eltern geht erst beim Absenden.
-export const CREATE_SUCCESSOR_HINT =
+const CREATE_SUCCESSOR_HINT =
   "Öffnet das Formular für die Anschlussphase, noch ohne E-Mail an Eltern.";
 
 function WarningAction({

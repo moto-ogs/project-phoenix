@@ -2814,7 +2814,8 @@ export const enrollmentSetupTopic = function enrollmentSetupTopic(): HelpTopic {
     id: HELP_TOPICS.leadEnrollmentSetup,
     title: "Eine Anmeldung vorbereiten",
     question: "Wie öffne ich die Anmeldung für das nächste Schuljahr?",
-    summary: "Drei Schritte: Phase anlegen, Angebote pflegen, Formular prüfen.",
+    summary:
+      "Drei Schritte: Phase anlegen, Angebote pflegen, Formular prüfen. Zum neuen Halbjahr folgt eine Anschlussphase.",
     group: "anmeldeverwaltung",
     audience: "lead",
     icon: "CalendarPlus",
@@ -2855,6 +2856,22 @@ export const enrollmentSetupTopic = function enrollmentSetupTopic(): HelpTopic {
           "Hat das Menü `Elternlink kopieren`? Geben Sie diesen Link an die Eltern. Sonst läuft die Anmeldung über das Elternportal.",
         ],
       },
+      {
+        title: "Halbjahres- oder Schuljahreswechsel",
+        description:
+          "Die Anmeldungen sollen weiterlaufen, und Eltern sollen umbuchen können? Dann legen Sie eine Anschlussphase an. Verlängern Sie dafür nicht die alte Phase. Bei Kindern, die schon betreut werden, bliebe das Betreuungsende sonst, wie es ist.",
+        steps: [
+          "Öffnen Sie `Anmeldephasen`.",
+          "Öffnen Sie bei der laufenden Phase das Menü mit den drei Punkten.",
+          "Wählen Sie `Anschlussphase erstellen`.",
+          "Tragen Sie bei `Betreuung von` und `Betreuung bis` den neuen Zeitraum ein. Ein zweites Halbjahr beginnt zum Beispiel am 01.02.",
+          "Wählen Sie den `Modus`. Bei `Anmeldungen laufen weiter (Opt-Out)` müssen Eltern nichts tun. Bei `Eltern bestätigen neu (Opt-In)` bestätigen Eltern bis zur Frist. Ohne Bestätigung wird die Anmeldung zurückgezogen. Bestätigte Anmeldungen prüfen Sie danach.",
+          "Wählen Sie die `Frist für die Eltern-Antwort`.",
+          "Für ein Halbjahr nehmen Sie den Haken bei `Klassenstufe automatisch um 1 erhöhen` weg. Für ein neues Schuljahr lassen Sie ihn.",
+          "Nur bei `Anmeldungen laufen weiter (Opt-Out)`: Sollen die Anmeldungen nach der Frist ohne Ihre Prüfung gelten? Dann setzen Sie den Haken bei `Vorgemerkte Anmeldungen automatisch genehmigen`.",
+          "Wählen Sie unten `Anschlussphase erstellen`.",
+        ],
+      },
     ],
     result:
       "Eltern melden sich über den Link oder im Elternportal an. Eingänge sehen Sie im `Überblick`.",
@@ -2865,7 +2882,9 @@ export const enrollmentSetupTopic = function enrollmentSetupTopic(): HelpTopic {
       "Ihre Betreuung heißt nicht OGS, sondern zum Beispiel GTS? Öffnen Sie `Einstellungen`, dann den Bereich `Anmeldung`. Wählen Sie bei `Name der Betreuung in Texten für Eltern` den passenden Namen.",
       "Das `Basisformular` fragt Elternteil, Kind, Klassenstufe und das gewünschte Betreuungsangebot ab. Brauchen Sie mehr, legen Sie eine eigene Vorlage an.",
       "Eine Phase lässt sich mit einem Kalenderzeitraum verknüpfen. Dann passen die Daten automatisch.",
-      "Ändern Sie später `Beginn` oder `Ende` der Phase, ziehen die Buchungen der Kinder mit. Ein Angebotswechsel ab einem bestimmten Tag behält diesen Tag.",
+      "Ändern Sie später `Beginn` oder `Ende` der Phase, ziehen die Buchungen der Kinder mit. Das Betreuungsende von Kindern, die schon betreut werden, zieht aber nicht mit. Ein Angebotswechsel ab einem bestimmten Tag behält diesen Tag.",
+      "Sie verlängern das `Ende` einer laufenden Phase? Dann endet die Betreuung schon betreuter Kinder trotzdem nicht später. Für einen neuen Zeitraum nehmen Sie eine Anschlussphase.",
+      "Nach dem Erstellen der Anschlussphase bekommen die Eltern eine E-Mail. Darüber passen sie Angebote und Wochentage für die neue Phase an. Oder sie beenden die Betreuung zum Ende der laufenden Phase.",
       "Sie ziehen das `Ende` der Phase vor? Dann nennt moto nach dem Speichern die Kinder, die schon betreut werden. Ihre Betreuung bleibt eingetragen, bis Sie sie beenden. Wählen Sie dafür `Betreuung beenden`. moto schlägt das neue Ende der Phase als letzten Betreuungstag vor. Bei mehr als 500 Kindern bestätigen Sie mehrere Gruppen einzeln. Die übrigen Kinder bleiben bis dahin in der Liste.",
       "Bei `Betreuungsangebote` steht in der Spalte `Belegt`, wie viele Plätze gebucht sind. Bei Angeboten mit Kapazität steht auch, wie viele Plätze frei sind. Ein volles Angebot ist mit `Voll` markiert.",
       "Sie haben Varianten wie „bis 13 Uhr“ und „bis 17 Uhr“? Geben Sie ihnen bei `Pflichtauswahl` dieselbe `Gruppe (optional)` und die `Regel` `Höchstens eines pro Tag`. Dann mischen Eltern die Varianten über die Woche, aber wählen pro Tag nur eine.",

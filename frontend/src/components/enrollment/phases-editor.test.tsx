@@ -757,6 +757,103 @@ describe("PhasesEditor", () => {
     expect(mocks.createPhase).not.toHaveBeenCalled();
   });
 
+  // #6831: Ein späteres Ende verlängert nicht die Betreuung aktiver Kinder.
+  // Der Hinweis am Feld führt zur Anschlussphase.
+  it("points a later end of a running phase to the follow-up phase", async () => {
+    mocks.listPhases.mockResolvedValue([phase()]);
+    mocks.listSchemas.mockResolvedValue([schema()]);
+    render(<PhasesEditor />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Schuljahr 2026/27",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    const endInput = await waitForInputByName("service_end_date");
+    // Anker: das unveränderte Ende zeigt den Hinweis nicht.
+    expect(endInput).toHaveValue("2027-07-31");
+    expect(
+      screen.queryByText(/bleibt das Betreuungsende, wie es ist/),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(endInput, { target: { value: "2027-08-31" } });
+
+    expect(
+      await screen.findByText(/bleibt das Betreuungsende, wie es ist/),
+    ).toBeVisible();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Anschlussphase erstellen" }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Anmeldephase übertragen" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Rollover abbrechen" }),
+    ).toBeVisible();
+    expect(inputByName("service_end_date")).toBeNull();
+    expect(mocks.updatePhase).not.toHaveBeenCalled();
+  });
+
+  it("names an existing follow-up phase instead of offering a second one", async () => {
+    mocks.listPhases.mockResolvedValue([
+      phase(),
+      phase({
+        id: "11",
+        name: "Schuljahr 2027/28",
+        service_start_date: "2027-08-01",
+        service_end_date: "2028-07-31",
+        rollover_source_phase_id: "10",
+      }),
+    ]);
+    mocks.listSchemas.mockResolvedValue([schema()]);
+    render(<PhasesEditor />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Schuljahr 2026/27",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    const endInput = await waitForInputByName("service_end_date");
+    fireEvent.change(endInput, { target: { value: "2027-08-31" } });
+
+    expect(
+      await screen.findByText(/gibt es schon eine Anschlussphase/),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Anschlussphase erstellen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the follow-up hint off a phase that has not started", async () => {
+    mocks.listPhases.mockResolvedValue([
+      phase({
+        service_start_date: "2026-10-01",
+        service_end_date: "2027-07-31",
+      }),
+    ]);
+    mocks.listSchemas.mockResolvedValue([schema()]);
+    render(<PhasesEditor />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Schuljahr 2026/27",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    const endInput = await waitForInputByName("service_end_date");
+    fireEvent.change(endInput, { target: { value: "2027-08-31" } });
+    // Anker: das Feld hat den neuen Wert übernommen.
+    await waitFor(() => expect(endInput).toHaveValue("2027-08-31"));
+    expect(
+      screen.queryByText(/bleibt das Betreuungsende, wie es ist/),
+    ).not.toBeInTheDocument();
+  });
+
   it("does not save a phase without both service dates", async () => {
     mocks.listPhases.mockResolvedValue([]);
     mocks.listSchemas.mockResolvedValue([schema()]);
