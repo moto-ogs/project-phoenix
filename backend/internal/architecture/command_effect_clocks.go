@@ -7,7 +7,7 @@ const calendarPackagePath = "github.com/moto-ogs/project-phoenix/sharedkernel/ca
 // effectFreeClock reports whether a callable is an injected clock: no
 // parameters and one result, an instant (time.Time) or a calendar day
 // (calendar.Date). A clock reads the time and writes nothing, so calling it
-// is no command effect, whatever closure the root binds (ADR 0098 addendum,
+// is no command effect, whatever closure the root binds (ADR 0239,
 // #4027). Without this every clock a composition passes through, as Rule 14
 // asks, surfaced as an unresolved binding that needed an approval ADR.
 func effectFreeClock(callable types.Type) bool {

@@ -219,19 +219,6 @@ unchanged.
 ## Addendum 2026-11-15: injected clocks are no command effect (#4027)
 
 A callable without parameters whose single result is `time.Time` or
-`calendar.Date` is a clock. The scan no longer resolves or diagnoses calls of
-such a callable, whether a parameter, a variable or a field
-(`effectFreeClock`, `backend/internal/architecture/command_effect_clocks.go`).
-A clock reads the time and writes nothing; which closure the root binds
-(`time.Now`, `calendar.TodayDate`, a test's fixed day) changes no effect the
-inventory records.
-
-Before, every clock a composition passed in surfaced as an `unresolved`
-binding (`unresolved:callable:api.now`, `…Dependencies.Now`, `…Today`), and
-each new one needed an approval ADR. Rule 14 and `TestModuleLiveClockRatchet`
-now ask production code to take its clock from the composition, so that cost
-would have fallen on exactly the wanted change. The regenerated inventory
-drops 686 reviewed `unresolved` rows, all of them clocks, and adds none.
-
-A closure bound to a clock type that does write is outside this rule and
-breaks the convention the type states; review catches it, the scan does not.
+`calendar.Date` is a clock; the scan neither resolves nor diagnoses it
+(`effectFreeClock`). Rationale and the re-approved bindings:
+[ADR 0239](0239-owner-beziehen-ihre-uhr-aus-der-komposition.md).
