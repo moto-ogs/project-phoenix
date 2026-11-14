@@ -36,7 +36,7 @@ func newPublicFeedRig(t *testing.T) publicFeedRig {
 	db, module := setupCalendarModule(t)
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
-	router.Mount("/calendar", calendarHTTP.NewResource(module.Calendar, slog.Default()).Router(rootAPI.TenantSessionChain))
+	router.Mount("/calendar", calendarHTTP.NewResource(module.Calendar, nil, slog.Default()).Router(rootAPI.TenantSessionChain))
 	router.With(rootAPI.RequestSettingsCacheMiddleware, rootAPI.RequestIdentityCacheMiddleware).Mount("/parent", module.ParentCalendarRouter())
 	router.Get("/public/calendar/{token}", calendarHTTP.PublicFeed(module.Calendar))
 	return publicFeedRig{db: db, router: router, module: module}

@@ -275,3 +275,117 @@ export function invitationMailNote(
       ?.explanation ?? null
   );
 }
+
+/** The mails of one message to several families, counted by outcome (#7058). */
+export type MailOutcomeCounts = Readonly<Partial<Record<MailOutcome, number>>>;
+
+/** One group of mails with the same result, as a message's summary shows it. */
+export interface MailOutcomeGroup {
+  readonly count: number;
+  /** „12 zugestellt“, „1 nicht zustellbar“. */
+  readonly label: string;
+  readonly tone: MailStatusCopy["tone"];
+}
+
+// The word after a count. Results a school treats alike share a word, so a
+// summary never lists two kinds of „nicht gesendet“ side by side.
+const COUNT_WORDS: Record<MailOutcome, readonly [one: string, many: string]> = {
+  queued: ["wird gesendet", "werden gesendet"],
+  accepted: ["versendet", "versendet"],
+  delivered: ["zugestellt", "zugestellt"],
+  delayed: ["verzögert", "verzögert"],
+  overdue: ["überfällig", "überfällig"],
+  undeliverable: ["nicht zustellbar", "nicht zustellbar"],
+  blocked: ["nicht gesendet", "nicht gesendet"],
+  provider_blocked: ["nicht gesendet", "nicht gesendet"],
+  held_by_stop: ["nicht gesendet", "nicht gesendet"],
+  held_by_departure: ["nicht gesendet", "nicht gesendet"],
+  unsubscribed: ["abgemeldet", "abgemeldet"],
+  complained: ["als unerwünscht gemeldet", "als unerwünscht gemeldet"],
+  send_failed: ["fehlgeschlagen", "fehlgeschlagen"],
+  unknown: ["Ergebnis unbekannt", "Ergebnis unbekannt"],
+  cancelled: ["abgebrochen", "abgebrochen"],
+};
+
+const TONE_RANK: Record<MailStatusCopy["tone"], number> = {
+  red: 0,
+  warning: 1,
+  gray: 2,
+  blue: 3,
+  green: 4,
+};
+
+/**
+ * The mails of a message grouped by result, the one that needs attention
+ * first: „1 nicht zustellbar · 11 zugestellt“. Unknown outcomes are left out;
+ * an empty list means no mail went out.
+ */
+export function mailOutcomeGroups(
+  counts: MailOutcomeCounts | undefined,
+): MailOutcomeGroup[] {
+  const groups = new Map<
+    string,
+    {
+      count: number;
+      tone: MailStatusCopy["tone"];
+      words: readonly [string, string];
+    }
+  >();
+  for (const [outcome, count] of Object.entries(counts ?? {})) {
+    const words = COUNT_WORDS[outcome as MailOutcome];
+    const copy = OUTCOME_COPY[outcome as MailOutcome];
+    if (!words || !copy || !count) continue;
+    const group = groups.get(words[1]);
+    if (group) {
+      group.count += count;
+      if (TONE_RANK[copy.tone] < TONE_RANK[group.tone]) group.tone = copy.tone;
+    } else {
+      groups.set(words[1], { count, tone: copy.tone, words });
+    }
+  }
+  return [...groups.values()]
+    .map(({ count, tone, words }) => ({
+      count,
+      tone,
+      label: `${count} ${count === 1 ? words[0] : words[1]}`,
+    }))
+    .sort((a, b) => TONE_RANK[a.tone] - TONE_RANK[b.tone] || b.count - a.count);
+}
+
+// Results of a mail that never reached the family and will not by itself:
+// refused, given up on, held for a blocked address or days late. The backend
+// names the guardians of these results (#7058).
+const NOT_ARRIVED_OUTCOMES: readonly MailOutcome[] = [
+  "undeliverable",
+  "send_failed",
+  "blocked",
+  "provider_blocked",
+  "overdue",
+];
+
+/** How many of the counted mails did not reach their family. */
+export function mailsNotArrived(counts: MailOutcomeCounts | undefined): number {
+  return NOT_ARRIVED_OUTCOMES.reduce(
+    (sum, outcome) => sum + (counts?.[outcome] ?? 0),
+    0,
+  );
+}
+
+/** The counts of several mailings added up, outcome by outcome. */
+export function sumMailOutcomeCounts(
+  all: readonly MailOutcomeCounts[],
+): MailOutcomeCounts {
+  const total: Partial<Record<MailOutcome, number>> = {};
+  for (const counts of all) {
+    for (const [outcome, count] of Object.entries(counts)) {
+      const key = outcome as MailOutcome;
+      total[key] = (total[key] ?? 0) + (count ?? 0);
+    }
+  }
+  return total;
+}
+
+/** Whether a mail's result asks the school to act: it did not arrive. */
+export function mailNeedsAttention(copy: MailStatusCopy | null): boolean {
+  return copy?.tone === "red" || copy?.tone === "warning";
+}

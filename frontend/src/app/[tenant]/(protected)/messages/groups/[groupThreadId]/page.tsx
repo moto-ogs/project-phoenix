@@ -19,7 +19,10 @@ import { useOptimisticAction } from "~/lib/swr/optimistic";
 import { Alert } from "~/components/ui/alert";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { EmptyState } from "~/components/ui/empty-state";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { formErrorMessage } from "~/components/ui/form-error";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -30,6 +33,11 @@ import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSwitchedOffWhileOpen } from "~/lib/hooks/use-switched-off-while-open";
 import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
+import { useGroupThreadMails } from "~/lib/hooks/use-message-mails";
+import {
+  GroupMessageMailBadges,
+  groupMessageMailNote,
+} from "~/components/messaging/message-mail-status";
 import { createLogger } from "~/lib/logger";
 import {
   type GroupThreadDetail,
@@ -97,7 +105,13 @@ function GroupMessageContent() {
 
   // Group-thread broadcasts deliberately omit the thread id from staff events,
   // so refetch any open group detail. This view does not advance a read cursor.
-  const refreshThread = useCallback(() => void mutate(), [mutate]);
+  // The e-mails of each message, one per family (#7058).
+  const groupMails = useGroupThreadMails(threadId);
+  const refreshMails = groupMails.refresh;
+  const refreshThread = useCallback(() => {
+    void mutate();
+    void refreshMails();
+  }, [mutate, refreshMails]);
   useMessagesActivity({
     onMatch: refreshThread,
     debounceMs: 500,
@@ -172,6 +186,7 @@ function GroupMessageContent() {
       },
     });
     sendArrived.current = outcome.status !== "failed";
+    if (outcome.status !== "failed") void refreshMails();
     if (outcome.status === "done") {
       attempt.complete(clientMessageId);
       sentFiles.current = [];
@@ -315,9 +330,14 @@ function GroupMessageContent() {
               pending={sendAction.stateOf(message.id)}
               attachments={message.attachments}
               attachmentUrl={PARENT_MESSAGE_ATTACHMENTS.downloadUrl}
+              mailStatus={
+                <GroupMessageMailBadges counts={groupMails.mails[message.id]} />
+              }
+              mailNote={groupMessageMailNote(groupMails.mails[message.id])}
             />
           ))}
         </div>
+        <LoadErrorAlert error={groupMails.loadError} className="mt-3" />
         <p className="mt-4 text-sm text-gray-500" data-testid="group-readers">
           {data?.readers ? `${groupRecipientsLabel(data.readers)} ` : null}
           Eltern antworten nur der OGS. Ihre Antworten finden Sie in der

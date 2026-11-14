@@ -9,6 +9,7 @@ import (
 	announcement "github.com/moto-ogs/project-phoenix/modules/communication"
 	delivery "github.com/moto-ogs/project-phoenix/modules/delivery/runtime"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	calendarService "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -157,4 +158,79 @@ func (a enrollmentDeliveryAdapter) CancelRelatedEmails(ctx context.Context, rela
 		return 0, err
 	}
 	return a.module.Cancel(ctx, tenantID.Int64(), deliveryContract.TransportEmail, deliveryContract.RelatedEntity{Type: relatedType, ID: relatedID}, reason)
+}
+
+// ParentMessageMails reads what became of the e-mails that told guardians
+// about OGS messages (#7058), in the caller's tenant transaction.
+type ParentMessageMails struct{ Outcomes delivery.EmailOutcomes }
+
+// ParentMessageMailOutcomes reports the one mail of each conversation message.
+func (m ParentMessageMails) ParentMessageMailOutcomes(ctx context.Context, messageIDs []int64) (map[int64]string, error) {
+	reports, err := m.read(ctx, announcement.MailRelatedTypeParentMessage, messageIDs)
+	if err != nil {
+		return nil, err
+	}
+	outcomes := make(map[int64]string, len(reports))
+	for _, report := range reports {
+		outcomes[report.RelatedID] = string(report.Outcome)
+	}
+	return outcomes, nil
+}
+
+// ParentGroupMessageMailOutcomes counts the mails of each group message by outcome.
+func (m ParentMessageMails) ParentGroupMessageMailOutcomes(ctx context.Context, messageIDs []int64) (map[int64]map[string]int, error) {
+	reports, err := m.read(ctx, announcement.MailRelatedTypeParentGroupMessage, messageIDs)
+	if err != nil {
+		return nil, err
+	}
+	counts := make(map[int64]map[string]int)
+	for _, report := range reports {
+		if counts[report.RelatedID] == nil {
+			counts[report.RelatedID] = map[string]int{}
+		}
+		counts[report.RelatedID][string(report.Outcome)]++
+	}
+	return counts, nil
+}
+
+func (m ParentMessageMails) read(ctx context.Context, relatedType string, ids []int64) ([]deliveryContract.EmailOutcomeReport, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	tenantID, err := tenant.TenantFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return m.Outcomes.EmailOutcomes(ctx, tenantID.Int64(), deliveryContract.EmailOutcomeQuery{
+		RelatedType: relatedType, RelatedIDs: ids, Kinds: []string{announcement.MailKindParentMessage},
+	})
+}
+
+// CalendarAppointmentMails reads what became of the guardian e-mails of a
+// calendar appointment (#7058), in the caller's tenant transaction.
+type CalendarAppointmentMails struct{ Outcomes delivery.EmailOutcomes }
+
+// calendarMailKinds are the four mails an appointment sends its guardians.
+var calendarMailKinds = []string{
+	calendarService.EmailKindAppointmentPublished, calendarService.EmailKindAppointmentUpdated,
+	calendarService.EmailKindAppointmentCancelled, calendarService.EmailKindAppointmentReminder,
+}
+
+// AppointmentMails reports the appointment's mails oldest first.
+func (m CalendarAppointmentMails) AppointmentMails(ctx context.Context, appointmentID int64) ([]calendarService.AppointmentMail, error) {
+	tenantID, err := tenant.TenantFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	reports, err := m.Outcomes.EmailOutcomes(ctx, tenantID.Int64(), deliveryContract.EmailOutcomeQuery{
+		RelatedType: calendarService.EmailRelatedTypeAppointment, RelatedIDs: []int64{appointmentID}, Kinds: calendarMailKinds,
+	})
+	if err != nil {
+		return nil, err
+	}
+	mails := make([]calendarService.AppointmentMail, 0, len(reports))
+	for _, report := range reports {
+		mails = append(mails, calendarService.AppointmentMail{ID: report.MailID, Kind: report.Kind, Address: report.Address, Outcome: string(report.Outcome)})
+	}
+	return mails, nil
 }

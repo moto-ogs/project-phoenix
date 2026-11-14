@@ -133,6 +133,10 @@ type Config struct {
 	// Without it every leadership read fails as misconfigured; team
 	// conversations do not need it.
 	Leaders deliveryPorts.ParentMessageLeaderDirectory
+
+	// Mails reads what became of the e-mails of OGS messages (#7058).
+	// Without it no message carries a mail status.
+	Mails deliveryPorts.ParentMessageMails
 }
 
 // NewService wires a staff messaging service.

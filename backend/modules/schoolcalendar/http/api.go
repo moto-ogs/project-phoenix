@@ -25,12 +25,15 @@ import (
 
 type Resource struct {
 	service       calendarService.FullService
+	mails         calendarService.StaffAppointmentMails
 	logger        *slog.Logger
 	calDAVHandler http.Handler
 }
 
-func NewResource(service calendarService.FullService, logger *slog.Logger) *Resource {
-	resource := &Resource{service: service, logger: logger}
+// NewResource wires the calendar routes. mails says what became of an
+// appointment's guardian e-mails (#7058); nil leaves its route unmounted.
+func NewResource(service calendarService.FullService, mails calendarService.StaffAppointmentMails, logger *slog.Logger) *Resource {
+	resource := &Resource{service: service, mails: mails, logger: logger}
 	resource.calDAVHandler = mustNewStaffCalDAVHandler(service, logger)
 	return resource
 }
@@ -50,6 +53,10 @@ func (rs *Resource) Router(configureSession func(chi.Router)) chi.Router {
 		r.With(own, withTx).Get("/appointments/{appointmentId}/ics", rs.appointmentICS)
 		r.With(manage, withTx).Post("/appointments", rs.createAppointment)
 		r.With(manage, withTx).Get("/appointments/{appointmentId}", rs.getAppointmentDetail)
+		if rs.mails != nil {
+			// A read of its own, so the detail polls it without reloading.
+			r.With(manage, withTx).Get("/appointments/{appointmentId}/mails", rs.getAppointmentMails)
+		}
 		r.With(manage, withTx).Put("/appointments/{appointmentId}", rs.updateAppointment)
 		r.With(manage, withTx).Delete("/appointments/{appointmentId}", rs.deleteAppointment)
 		r.With(manage, withTx).Post("/appointments/{appointmentId}/cancel", rs.cancelAppointment)
@@ -257,6 +264,19 @@ func (rs *Resource) getAppointmentDetail(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	common.Respond(w, r, http.StatusOK, detail, "Appointment detail retrieved")
+}
+
+func (rs *Resource) getAppointmentMails(w http.ResponseWriter, r *http.Request) {
+	appointmentID, ok := common.ParsePositiveInt64IDWithError(w, r, "appointmentId", "invalid appointment ID")
+	if !ok {
+		return
+	}
+	mails, err := rs.mails.StaffAppointmentMails(r.Context(), appointmentID)
+	if err != nil {
+		renderCalendarError(w, r, err)
+		return
+	}
+	common.Respond(w, r, http.StatusOK, mails, "Appointment mails retrieved")
 }
 
 func (rs *Resource) updateAppointment(w http.ResponseWriter, r *http.Request) {

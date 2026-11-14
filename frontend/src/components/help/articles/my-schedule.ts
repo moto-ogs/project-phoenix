@@ -55,6 +55,7 @@ export function myScheduleTopic(): HelpTopic {
       "`Teilnehmer` zeigt bei einer Reihe die Antworten für den geöffneten Termin.",
       "Beim Anlegen und Bearbeiten wählen Sie unter `Wer sieht die Teilnehmerübersicht?`, wer die Antworten sieht. Bei `Alle Eingeladenen` sehen Eltern nur, wie viele zugesagt und abgesagt haben, keine Namen.",
       "Legen Sie einen Termin an und wählen Sie `Alle Lehrkräfte`. Dann sehen die Lehrkräfte ihn in moto schule.",
+      "Ging zu Ihrem Termin eine E-Mail an Eltern, sehen Sie im geöffneten Termin unter `E-Mails an die Eltern`, ob sie angekommen ist. Kam eine Mail nicht an, steht dort, bei wem.",
     ],
     differences: [
       "Das Kalender-Abo ist nur zum Lesen. Änderungen in Ihrem persönlichen Kalender werden nicht an moto übertragen.",

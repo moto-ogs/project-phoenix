@@ -72,6 +72,33 @@ type StaffCalendar interface {
 	RecipientOptions(ctx context.Context, query string, limit int) (*RecipientOptions, error)
 }
 
+// StaffAppointmentMails tells the organizer of an appointment what became
+// of its e-mails to the guardians (#7058). It checks access like
+// GetStaffAppointmentDetail and stands apart from it, so the detail can poll
+// the status without reloading.
+type StaffAppointmentMails interface {
+	StaffAppointmentMails(ctx context.Context, appointmentID int64) (*AppointmentMails, error)
+}
+
+// AppointmentMails counts the guardian e-mails of an appointment by kind and
+// outcome. Each guardian address counts once per kind, with its newest mail:
+// a second change or the reminder of a later date replaces the earlier one.
+// NotArrived names, per kind, the guardians whose newest mail did not reach
+// them, as far as their current address still matches; it carries no
+// address. A kind without a mail is absent.
+type AppointmentMails struct {
+	Kinds      map[string]map[string]int `json:"kinds"`
+	NotArrived map[string][]string       `json:"not_arrived"`
+}
+
+// AppointmentMail is one guardian e-mail of an appointment as Delivery
+// reports it (#7058): its kind, the recipient address in normalized form
+// (lower case, trimmed) and the outcome.
+type AppointmentMail struct {
+	ID                     int64
+	Kind, Address, Outcome string
+}
+
 // StaffCalendarFeeds issues and rotates the current staff member's
 // subscription feed URLs.
 type StaffCalendarFeeds interface {

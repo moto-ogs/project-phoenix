@@ -27,7 +27,7 @@ func setupParentCalendarRoute(t *testing.T) (*bun.DB, chi.Router) {
 	t.Helper()
 	db, factory := setupCalendarModule(t)
 
-	staffResource := calendarAPI.NewResource(factory.Calendar, slog.Default())
+	staffResource := calendarAPI.NewResource(factory.Calendar, factory.Calendar, slog.Default())
 
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))

@@ -107,10 +107,15 @@ export function parentMessageTopic(): HelpTopic {
       "Schreiben Sie persönliche Angaben nur in die Unterhaltung der richtigen Bezugsperson.",
       "Mit `Nur ungelesen` sehen Sie nur neue Unterhaltungen.",
       "Eine als ungelesen markierte Unterhaltung bleibt für alle ungelesen, bis jemand aus dem Team sie öffnet oder antwortet.",
+      "Unter Ihrer Nachricht steht hinter `E-Mail`, was aus der Mail an die Eltern wurde, zum Beispiel `Zugestellt` oder `Nicht zustellbar`. Kam sie nicht an, steht darunter, was Sie tun können.",
       "Die Eltern sehen `Gelesen` erst, wenn jemand aus dem Team die Unterhaltung öffnet.",
       "Die Nachrichten stehen immer im Posteingang, auch wenn Ihre Zahl sie nicht zählt.",
       "Über `Zum Kinderprofil` wechseln Sie direkt zu den Angaben des Kindes.",
     ],
-    related: [HELP_TOPICS.parentRequests, HELP_TOPICS.studentSearch],
+    related: [
+      HELP_TOPICS.parentRequests,
+      HELP_TOPICS.studentSearch,
+      HELP_TOPICS.leadEmailDelivery,
+    ],
   };
 }

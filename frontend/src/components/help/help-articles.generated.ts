@@ -4989,6 +4989,7 @@ export const myScheduleTopic = function myScheduleTopic(): HelpTopic {
       "`Teilnehmer` zeigt bei einer Reihe die Antworten für den geöffneten Termin.",
       "Beim Anlegen und Bearbeiten wählen Sie unter `Wer sieht die Teilnehmerübersicht?`, wer die Antworten sieht. Bei `Alle Eingeladenen` sehen Eltern nur, wie viele zugesagt und abgesagt haben, keine Namen.",
       "Legen Sie einen Termin an und wählen Sie `Alle Lehrkräfte`. Dann sehen die Lehrkräfte ihn in moto schule.",
+      "Ging zu Ihrem Termin eine E-Mail an Eltern, sehen Sie im geöffneten Termin unter `E-Mails an die Eltern`, ob sie angekommen ist. Kam eine Mail nicht an, steht dort, bei wem.",
     ],
     differences: [
       "Das Kalender-Abo ist nur zum Lesen. Änderungen in Ihrem persönlichen Kalender werden nicht an moto übertragen.",
@@ -6507,9 +6508,14 @@ export const parentGroupMessageTopic =
         "Keine Familie sieht, wer die Nachricht noch bekommt oder wer geantwortet hat.",
         "moto ermittelt die Empfänger bei jeder Nachricht neu. Wer später in die Gruppe kommt, liest nur die neuen Nachrichten.",
         "Unter `Gelesen` sehen Sie für jedes Kind, ob die Eltern die neueste Nachricht gelesen haben.",
+        "Unter jeder Nachricht steht hinter `E-Mails`, was aus den Mails an die Familien wurde, zum Beispiel `10 zugestellt` und `1 nicht zustellbar`. Welche Adresse betroffen ist, sehen Sie beim Kind unter `Erziehungsberechtigte`.",
         "Über dem Schreibfeld steht bei `Ging an:`, an wen die Nachricht ging und wie viele Familien sie bekommen haben.",
       ],
-      related: [HELP_TOPICS.parentMessage, HELP_TOPICS.leadParentAnnouncement],
+      related: [
+        HELP_TOPICS.parentMessage,
+        HELP_TOPICS.leadParentAnnouncement,
+        HELP_TOPICS.leadEmailDelivery,
+      ],
     };
   } satisfies typeof authored_parentGroupMessageTopic;
 
@@ -7045,11 +7051,16 @@ export const parentMessageTopic = function parentMessageTopic(): HelpTopic {
       "Schreiben Sie persönliche Angaben nur in die Unterhaltung der richtigen Bezugsperson.",
       "Mit `Nur ungelesen` sehen Sie nur neue Unterhaltungen.",
       "Eine als ungelesen markierte Unterhaltung bleibt für alle ungelesen, bis jemand aus dem Team sie öffnet oder antwortet.",
+      "Unter Ihrer Nachricht steht hinter `E-Mail`, was aus der Mail an die Eltern wurde, zum Beispiel `Zugestellt` oder `Nicht zustellbar`. Kam sie nicht an, steht darunter, was Sie tun können.",
       "Die Eltern sehen `Gelesen` erst, wenn jemand aus dem Team die Unterhaltung öffnet.",
       "Die Nachrichten stehen immer im Posteingang, auch wenn Ihre Zahl sie nicht zählt.",
       "Über `Zum Kinderprofil` wechseln Sie direkt zu den Angaben des Kindes.",
     ],
-    related: [HELP_TOPICS.parentRequests, HELP_TOPICS.studentSearch],
+    related: [
+      HELP_TOPICS.parentRequests,
+      HELP_TOPICS.studentSearch,
+      HELP_TOPICS.leadEmailDelivery,
+    ],
   };
 } satisfies typeof authored_parentMessageTopic;
 

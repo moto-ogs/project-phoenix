@@ -132,6 +132,11 @@ export const messageKeys = {
     `message-thread-${encodeURIComponent(id ?? "")}`,
   groupMessage: (id: string | undefined) =>
     `group-message-${encodeURIComponent(id ?? "")}`,
+  /** What became of the e-mails of a conversation's OGS messages (#7058). */
+  messageThreadMails: (id: string | undefined) =>
+    `message-thread-mails-${encodeURIComponent(id ?? "")}`,
+  groupMessageMails: (id: string | undefined) =>
+    `group-message-mails-${encodeURIComponent(id ?? "")}`,
 } as const;
 
 /**

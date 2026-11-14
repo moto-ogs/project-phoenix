@@ -17,11 +17,13 @@ import { catalogText } from "~/test/error-catalog-text";
 // Echtes SWR: Senden, Verwerfen und Zurücknehmen laufen über den Cache.
 vi.unmock("swr");
 
-const { mockFetchThread, mockPostMessage, tenantFlags } = vi.hoisted(() => ({
-  mockFetchThread: vi.fn(),
-  mockPostMessage: vi.fn(),
-  tenantFlags: { messagingEnabled: true },
-}));
+const { mockFetchThread, mockFetchThreadMails, mockPostMessage, tenantFlags } =
+  vi.hoisted(() => ({
+    mockFetchThread: vi.fn(),
+    mockFetchThreadMails: vi.fn(),
+    mockPostMessage: vi.fn(),
+    tenantFlags: { messagingEnabled: true },
+  }));
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ threadId: "t1" }),
@@ -79,6 +81,7 @@ vi.mock("~/components/ui/tenant-page", () => ({
 vi.mock("~/lib/parent-messages-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-messages-api")>()),
   fetchThread: mockFetchThread,
+  fetchThreadMails: mockFetchThreadMails,
   postMessage: mockPostMessage,
 }));
 
@@ -131,6 +134,7 @@ async function typeAndSend(text: string) {
 describe("Eltern-Nachricht senden: Ablehnung je Code", () => {
   beforeEach(() => {
     mockFetchThread.mockReset().mockResolvedValue(thread);
+    mockFetchThreadMails.mockReset().mockResolvedValue({});
     mockPostMessage.mockReset();
     tenantFlags.messagingEnabled = true;
   });
@@ -278,5 +282,46 @@ describe("Eltern-Nachricht senden: Ablehnung je Code", () => {
     expect(await screen.findByText("Nicht gesendet")).toBeInTheDocument();
     expect(screen.getByText("Hallo")).toBeInTheDocument();
     expect(screen.getByLabelText("Nachricht")).toHaveValue("Bis morgen");
+  });
+});
+
+// Was aus der E-Mail an die Familie wurde (#7058).
+describe("E-Mail-Status unter der eigenen Nachricht", () => {
+  beforeEach(() => {
+    mockPostMessage.mockReset();
+    tenantFlags.messagingEnabled = true;
+    mockFetchThread.mockReset().mockResolvedValue({
+      ...thread,
+      messages: [
+        ...thread.messages,
+        {
+          id: "m2",
+          sender_kind: "staff",
+          sender_name: "Olivia Berg",
+          body: "Bitte Turnbeutel mitgeben",
+          created_at: "2026-09-09T10:05:00Z",
+          kind: "message",
+        },
+      ],
+    });
+  });
+
+  it("zeigt eine zugestellte Mail still neben der Uhrzeit", async () => {
+    mockFetchThreadMails.mockReset().mockResolvedValue({ m2: "delivered" });
+    render(<MessageThreadPage />, { wrapper: Fresh });
+    expect(await screen.findByText("Zugestellt")).toBeInTheDocument();
+    expect(mockFetchThreadMails).toHaveBeenCalledWith("t1");
+    expect(screen.queryByText(/Korrigieren Sie die Adresse/)).toBeNull();
+  });
+
+  it("nennt den nächsten Schritt, wenn die Mail nicht ankam", async () => {
+    mockFetchThreadMails.mockReset().mockResolvedValue({ m2: "undeliverable" });
+    render(<MessageThreadPage />, { wrapper: Fresh });
+    expect(await screen.findByText("Nicht zustellbar")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Die Mail kam nicht an. Korrigieren Sie die Adresse beim Kind unter „Erziehungsberechtigte“.",
+      ),
+    ).toBeInTheDocument();
   });
 });

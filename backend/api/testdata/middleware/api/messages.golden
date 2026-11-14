@@ -9,7 +9,9 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /api/messages/group-threads
 	GET /api/messages/group-threads/audience
 	GET /api/messages/group-threads/{groupThreadId}
+	GET /api/messages/group-threads/{groupThreadId}/mails
 	GET /api/messages/reachable-students
+	GET /api/messages/threads/{threadId}/mails
 	POST /api/messages/group-threads
 	POST /api/messages/group-threads/{groupThreadId}/close
 	POST /api/messages/group-threads/{groupThreadId}/messages

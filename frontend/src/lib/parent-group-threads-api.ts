@@ -7,6 +7,7 @@
  * Backend int64 ids arrive already stringified.
  */
 
+import type { MailOutcomeCounts } from "./email-delivery-status";
 import type { MessageAttachment } from "~/lib/message-attachments";
 import { ApiError, apiErrorFromText, transportFetch } from "~/lib/api-error";
 
@@ -154,6 +155,20 @@ export function fetchGroupThread(id: string): Promise<GroupThreadDetail> {
     `${BASE}/${encodeURIComponent(id)}`,
     "Gruppennachricht konnte nicht geladen werden",
   );
+}
+
+/**
+ * The e-mails of each group message, counted by result (#7058), keyed by
+ * message id. A message without a mail has no key.
+ */
+export async function fetchGroupThreadMails(
+  id: string,
+): Promise<Readonly<Record<string, MailOutcomeCounts>>> {
+  const data = await request<{ messages?: Record<string, MailOutcomeCounts> }>(
+    `${BASE}/${encodeURIComponent(id)}/mails`,
+    "Der Stand der E-Mails konnte nicht geladen werden",
+  );
+  return data.messages ?? {};
 }
 
 export function postGroupMessage(

@@ -83,7 +83,7 @@ func NewCalendarTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	calendarConfig.Appointments = appointments
 	calendarConfig.Runtime = calendarCompose.NewTenantRuntime(db.Pool())
 	calendarConfig.CalendarRenderer = calendarCompose.NewCalendarRenderer(schoolCalendar)
-	calendarConfig.Outbox = owners.NewCalendarOutbox(delivery.EmailOutbox)
+	calendarConfig.Outbox, calendarConfig.Mails = owners.NewCalendarOutbox(delivery.EmailOutbox), owners.CalendarAppointmentMails{Outcomes: delivery.Runtime.EmailOutcomes}
 	calendarConfig.PushOutbox = deliveryCompose.NewDurablePushOutbox(delivery.Runtime.Module)
 	calendarConfig.Settings = settings.Settings
 	calendarConfig.StaffFeedTombstoneRepo = NewCalendarFeedTestTombstones(db)

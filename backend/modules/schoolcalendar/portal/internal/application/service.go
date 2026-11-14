@@ -99,6 +99,10 @@ type Config struct {
 	// window from. Nil means the real day; tests pin it to fixed dates.
 	Today func() appointmentcap.Date
 
+	// Mails reads what became of the guardian e-mails of an appointment
+	// (#7058). Without it an appointment reports no mail.
+	Mails ports.AppointmentMails
+
 	// Notifier and Preferences drive the guardian push/in-app notification that
 	// accompanies the appointment e-mails (#1671). Both optional and both
 	// required together: without consent there is nobody to address, so a nil

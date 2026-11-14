@@ -4,6 +4,7 @@ import {
   unavailableApiError,
 } from "~/lib/api-error";
 import { toISODate } from "~/lib/date-helpers";
+import type { MailOutcomeCounts } from "~/lib/email-delivery-status";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "personal-calendar-api" });
@@ -362,6 +363,23 @@ export function getStaffAppointmentOverview(
 ) {
   return fetchJSON<CalendarAppointmentOverview>(
     `/api/calendar/appointments/${encodeURIComponent(appointmentId)}/overview${occurrenceQuery(occurrenceDate)}`,
+  );
+}
+
+/**
+ * What became of an appointment's e-mails to the guardians (#7058), by mail
+ * kind. Each guardian counts once per kind, with the newest mail.
+ * `not_arrived` names the guardians whose mail did not reach them, never an
+ * address. A kind without a mail is absent.
+ */
+export interface CalendarAppointmentMails {
+  readonly kinds: Readonly<Record<string, MailOutcomeCounts>>;
+  readonly not_arrived?: Readonly<Record<string, readonly string[]>>;
+}
+
+export function getStaffAppointmentMails(appointmentId: string) {
+  return fetchJSON<CalendarAppointmentMails>(
+    `/api/calendar/appointments/${encodeURIComponent(appointmentId)}/mails`,
   );
 }
 

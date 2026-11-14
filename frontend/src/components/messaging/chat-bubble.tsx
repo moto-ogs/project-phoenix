@@ -9,6 +9,7 @@
  * decides which side a bubble sits on, not the component.
  */
 
+import type { ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import { ChecksIcon } from "@phosphor-icons/react/ssr";
 
@@ -31,6 +32,8 @@ export function ChatBubble({
   senderName,
   createdAt,
   readReceiptLabel,
+  mailStatus,
+  mailNote,
   deliveryStatus,
   deliveryStatusLabel,
   pending,
@@ -56,6 +59,13 @@ export function ChatBubble({
   // Shown after the timestamp on an own message the other side has read, e.g.
   // "Gelesen". Omit to show no read receipt.
   readReceiptLabel?: string;
+  /**
+   * What became of the e-mail that told the other side (#7058), a small pill
+   * after time and read receipt. Staff view only.
+   */
+  mailStatus?: ReactNode;
+  /** The next step under the bubble when that e-mail did not arrive. */
+  mailNote?: string | null;
   /** Parent-chat receipt. A saved message is sent, a staff read cursor makes it read. */
   deliveryStatus?: "sent" | "read";
   deliveryStatusLabel?: string;
@@ -178,17 +188,35 @@ export function ChatBubble({
           ) : null}
         </div>
       ) : (
-        <p className="mt-1 px-1 text-xs text-gray-400">
-          {hideName ? "" : `${senderName} · `}
-          {pendingText !== null ? (
-            <span className={pendingClass}>{pendingText}</span>
-          ) : (
-            <>
-              {formatChatTime(createdAt, locale)}
-              {readReceiptLabel ? ` · ${readReceiptLabel}` : ""}
-            </>
-          )}
-        </p>
+        <>
+          <p
+            className={`mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 px-1 text-xs text-gray-400 ${
+              own ? "justify-end" : ""
+            }`}
+          >
+            <span>
+              {hideName ? "" : `${senderName} · `}
+              {pendingText !== null ? (
+                <span className={pendingClass}>{pendingText}</span>
+              ) : (
+                <>
+                  {formatChatTime(createdAt, locale)}
+                  {readReceiptLabel ? ` · ${readReceiptLabel}` : ""}
+                </>
+              )}
+            </span>
+            {pendingText === null && mailStatus ? mailStatus : null}
+          </p>
+          {pendingText === null && mailNote ? (
+            <p
+              className={`mt-0.5 max-w-[84%] px-1 text-xs text-gray-600 sm:max-w-[72%] lg:max-w-[38rem] ${
+                own ? "text-right" : ""
+              }`}
+            >
+              {mailNote}
+            </p>
+          ) : null}
+        </>
       )}
     </div>
   );

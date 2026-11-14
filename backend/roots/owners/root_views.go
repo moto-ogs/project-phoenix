@@ -92,6 +92,7 @@ func BuildCalendarApp(
 	cfg.ParentConferences = BuildServeParentConferences(db)
 	cfg.Runtime, cfg.CalendarRenderer = calendarCompose.NewTenantRuntime(db.Pool()), calendarCompose.NewCalendarRenderer(calendar)
 	cfg.Outbox, cfg.PushOutbox = NewCalendarOutbox(delivery.Outbox), deliveryCompose.NewDurablePushOutbox(delivery.Runtime.Module)
+	cfg.Mails = CalendarAppointmentMails{Outcomes: delivery.Runtime.EmailOutcomes}
 	cfg.Settings, cfg.CalDAVPolicy = settings, NewCalendarCalDAVPolicy(settings)
 	cfg.StaffFeedTombstoneRepo = schoolCalendarCompose.NewFeedHistory(db.Pool())
 	cfg.ParentsURL, cfg.FrontendURL, cfg.CalDAVURL = links.ParentsURL, links.FrontendURL, links.PublicAPIURL

@@ -3033,6 +3033,30 @@
       "target_owner": "identity-access"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CalendarAppointmentMails.AppointmentMails",
+      "binding_digest": "0857f501798045d0d0a6e80d81fa5bfb",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports.AppointmentMails.AppointmentMails",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CalendarAppointmentMails.AppointmentMails",
+      "binding_digest": "88c600cdb96b77e90afdaf42f08e5541",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports.AppointmentMails.AppointmentMails",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CalendarAppointmentMails.AppointmentMails",
+      "binding_digest": "e57d323cdc10880604746f066e70738f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports.AppointmentMails.AppointmentMails",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.calendarAssignmentPort.FindByStaffAndDateRange",
       "binding_digest": "3c20e802ca12778694178523704064c1",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports.Assignments.FindByStaffAndDateRange",

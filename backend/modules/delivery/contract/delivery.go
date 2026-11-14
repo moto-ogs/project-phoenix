@@ -294,14 +294,17 @@ type Observation struct {
 // it goes to a family of one of its schools. A Träger's billing letter does not,
 // and neither does mail to staff. An unlisted template goes out.
 var parentMailTemplates = map[string]bool{
-	"guardian_invitation":                true,
-	"guardian_welcome":                   true,
-	"parent_announcement":                true,
-	"parent_message":                     true,
-	"enrollment_submitted":               true,
-	"enrollment_approved":                true,
-	"enrollment_waitlisted":              true,
-	"enrollment_rejected":                true,
+	"guardian_invitation":   true,
+	"guardian_welcome":      true,
+	"parent_announcement":   true,
+	"parent_message":        true,
+	"enrollment_submitted":  true,
+	"enrollment_approved":   true,
+	"enrollment_waitlisted": true,
+	"enrollment_rejected":   true,
+	// The digest names the decisions on several children of one request: the
+	// same news to the same family as the three mails above (#7058).
+	"enrollment_decision_digest":         true,
 	"enrollment_rollover_opt_in":         true,
 	"enrollment_rollover_opt_out":        true,
 	"enrollment_change_request_question": true,
