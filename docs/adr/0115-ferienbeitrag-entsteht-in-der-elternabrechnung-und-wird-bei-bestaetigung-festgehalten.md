@@ -315,4 +315,4 @@ Bissendorf einstellt, nicht diesen Code.
 
 Das Mittagessen der Ferienbetreuung ist eine eigene Zeilenart `meal` nach der
 Regelkette und außerhalb von ihr. Die Entscheidung steht in
-[ADR 0232](0232-ferien-mittagessen-ist-eine-eigene-position-ausserhalb-der-regelkette.md).
+[ADR 0235](0235-ferien-mittagessen-ist-eine-eigene-position-ausserhalb-der-regelkette.md).

@@ -2343,7 +2343,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostCalendar.HostedHolidayNoCareDays",
-      "reason": "ADR 0232: reads the closing days of the hosting school in context, those its Träger planned for it included, in the tenant transaction the caller already holds; no write, lock or scope change.",
+      "reason": "ADR 0235: reads the closing days of the hosting school in context, those its Träger planned for it included, in the tenant transaction the caller already holds; no write, lock or scope change.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListClosingDays",
       "target_owner": "school-calendar"

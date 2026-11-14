@@ -442,7 +442,7 @@ function RebookingEditor({
   error: Parameters<typeof FormErrorAlert>[0]["message"];
 }>) {
   const lunchId = useId();
-  // Booked means billed (ADR 0232): the confirmed contribution follows a
+  // Booked means billed (ADR 0235): the confirmed contribution follows a
   // lunch added or taken off; an invoice already issued needs a correction.
   const lunchChanged = period.weeks.some(
     (week) =>

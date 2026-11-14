@@ -82,7 +82,7 @@ func (w *Workflow) RebookHolidayChild(ctx context.Context, reviewer enrollment.H
 		var err error
 		detail, err = w.ports.Places.RebookHolidayChild(ctx, reviewer, periodID, registrationID, childID, bookings)
 		// The rebooked registration is computed again as well: its lunch
-		// is billed as booked (#5631, ADR 0232).
+		// is billed as booked (#5631, ADR 0235).
 		return append(promoted(detail.Promotions), registrationID), err
 	})
 	if err != nil {

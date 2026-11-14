@@ -147,7 +147,7 @@ func frozenHolidayLunchBookings(lines []parentbilling.HolidayContributionLine, c
 }
 
 // withCurrentLunch lets the lunch of each frozen week follow the booking the
-// registration has for that week now (#5631, ADR 0232): booked means
+// registration has for that week now (#5631, ADR 0235): booked means
 // billed, so a lunch the Träger-Büro took off after the confirmation goes
 // and one it added costs the price of today. A lunch that stays keeps its
 // frozen lunches and price, and a week the registration no longer books
