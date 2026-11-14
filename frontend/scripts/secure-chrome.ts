@@ -18,9 +18,24 @@ export function secureLaunchOptions(
   return { ...options, channel: "chrome", chromiumSandbox: true };
 }
 
-/** `use`-Block für Playwright-Configs; ergänzt vorhandene `launchOptions`. */
+/**
+ * Zeitzone und Sprache jedes Browser-Kontexts (#4027): Die Schule rechnet in
+ * Berliner Zeit. Ohne `timezoneId` übernimmt Chrome die Zone des Rechners, und
+ * ein Test sieht in CI (UTC) um Mitternacht einen anderen Tag als die Schule.
+ * Ein Test, der eine andere Zone prüft, setzt sie mit `test.use`.
+ */
+const BROWSER_CONTEXT_LOCALE = {
+  locale: "de-DE",
+  timezoneId: "Europe/Berlin",
+} as const;
+
+/**
+ * `use`-Block für Playwright-Configs: Chrome mit Sandbox, deutsche Sprache und
+ * Berliner Zeit. Ergänzt vorhandene `launchOptions`.
+ */
 export function secureChromeUse(launchOptions: LaunchOptions = {}) {
   return {
+    ...BROWSER_CONTEXT_LOCALE,
     channel: "chrome",
     launchOptions: secureLaunchOptions(launchOptions),
   } as const;

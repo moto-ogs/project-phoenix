@@ -37,8 +37,6 @@ const stableContext = {
       "--font-render-hinting=none",
     ],
   }),
-  locale: "de-DE",
-  timezoneId: "Europe/Berlin",
   reducedMotion: "reduce",
   colorScheme: "light",
   serviceWorkers: "block",

@@ -28,7 +28,6 @@ export default defineConfig({
   outputDir: "test-results/network",
   use: {
     ...devices["Desktop Chrome"],
-    locale: "de-DE",
     serviceWorkers: "block",
     // Never save credentials, form contents, session cookies or raw requests.
     trace: "off",
