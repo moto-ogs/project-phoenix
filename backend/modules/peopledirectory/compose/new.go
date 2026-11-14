@@ -87,6 +87,9 @@ type Directory struct {
 	PersonWrites     peoplePorts.PersonWriter
 	StudentDirectory peoplePorts.StudentDirectoryAccess
 	StudentNoteTeam  peopledirectory.StudentNoteTeamNotices // #6854, beside the owner's facade
+	// StudentNotes searches every child's note card (#7012), beside the
+	// owner's facade like StudentNoteTeam.
+	StudentNotes peopledirectory.StudentNoteSearch
 }
 
 // New composes the public capability and native same-owner operations. The
@@ -141,6 +144,7 @@ func New(dependencies Dependencies, memberships GuardianMembershipQuery) (*Direc
 		PersonWrites:     application.NewPersonRows(service),
 		StudentDirectory: application.NewStudentDirectoryRows(students, studentPhotos),
 		StudentNoteTeam:  application.NewStudentNoteTeam(noteStore, noteStore, noteStudents, postgres.New(database), transaction{}, observe),
+		StudentNotes:     service,
 	}, nil
 }
 

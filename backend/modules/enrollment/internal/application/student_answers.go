@@ -39,6 +39,22 @@ var answerableTypes = map[enrollment.FormFieldType]bool{
 	enrollment.FormFieldNumber: true, enrollment.FormFieldDate: true,
 }
 
+// freeTypes are the question types without values of their own: the filter
+// offers whether an answer was given (#7012).
+var freeTypes = map[enrollment.FormFieldType]bool{
+	enrollment.FormFieldText: true, enrollment.FormFieldTextarea: true,
+	enrollment.FormFieldNumber: true, enrollment.FormFieldDate: true,
+}
+
+// filterValue is the value an answer is filtered by: its own for yes/no and
+// a choice, AnswerGivenValue for any free answer.
+func (a studentAnswer) filterValue() string {
+	if freeTypes[a.field.Type] {
+		return enrollment.AnswerGivenValue
+	}
+	return a.value
+}
+
 // studentAnswer is a child's newest answer to one question.
 type studentAnswer struct {
 	studentID int64
@@ -186,7 +202,8 @@ func optionLabel(field *enrollment.FormField, value string) string {
 	return value
 }
 
-// StudentAnswerFilters lists the yes/no and choice questions with answers.
+// StudentAnswerFilters lists the questions with answers: yes/no and choice
+// by their answers, text, number and date by whether one was given.
 func (s *StudentAnswers) StudentAnswerFilters(ctx context.Context) ([]enrollment.StudentAnswerFilter, error) {
 	set, err := s.load(ctx)
 	if err != nil {
@@ -194,14 +211,15 @@ func (s *StudentAnswers) StudentAnswerFilters(ctx context.Context) ([]enrollment
 	}
 	students := map[string]map[string][]int64{}
 	for _, answer := range set.answers {
-		if answer.value == "" {
+		value := answer.filterValue()
+		if value == "" {
 			continue
 		}
 		key := answer.field.Key
 		if students[key] == nil {
 			students[key] = map[string][]int64{}
 		}
-		students[key][answer.value] = append(students[key][answer.value], answer.studentID)
+		students[key][value] = append(students[key][value], answer.studentID)
 	}
 	filters := make([]enrollment.StudentAnswerFilter, 0, len(students))
 	for key, byValue := range students {
@@ -220,7 +238,9 @@ func (s *StudentAnswers) StudentAnswerFilters(ctx context.Context) ([]enrollment
 }
 
 // filterOptions lists the answers in the question's order: yes before no, a
-// choice in the order of the newest form, answers no longer offered last.
+// choice in the order of the newest form, answers no longer offered last. A
+// question that changed its type between form versions keeps every answer
+// it was given; "given" comes last.
 func filterOptions(question enrollment.FormField, students map[string][]int64) []enrollment.StudentAnswerOption {
 	options := []enrollment.StudentAnswerOption{}
 	listed := map[string]bool{}
@@ -242,13 +262,16 @@ func filterOptions(question enrollment.FormField, students map[string][]int64) [
 	}
 	rest := make([]string, 0)
 	for value := range students {
-		if !listed[value] {
+		if !listed[value] && value != enrollment.AnswerGivenValue {
 			rest = append(rest, value)
 		}
 	}
 	slices.Sort(rest)
 	for _, value := range rest {
 		add(value, value)
+	}
+	if len(students[enrollment.AnswerGivenValue]) > 0 {
+		add(enrollment.AnswerGivenValue, enrollment.AnswerGivenLabel)
 	}
 	return options
 }
@@ -264,7 +287,7 @@ func (s *StudentAnswers) StudentsWithAnswer(ctx context.Context, key, value stri
 	}
 	ids := make([]int64, 0)
 	for _, answer := range set.answers {
-		if answer.field.Key == key && answer.value == value {
+		if answer.field.Key == key && answer.filterValue() == value {
 			ids = append(ids, answer.studentID)
 		}
 	}

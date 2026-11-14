@@ -2,6 +2,7 @@ package compose_test
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolsearchview"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsearchview/compose"
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime/protocol"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -31,18 +33,61 @@ func (a *answerSearch) SearchStudentAnswers(_ context.Context, _ string, limit i
 	return a.matches, nil
 }
 
+// noteSearch is People Directory's note search as the root binds it: it
+// returns its hits in order and records the request.
+type noteSearch struct {
+	hits     []schoolsearchview.NoteHit
+	requests []schoolsearchview.NoteSearch
+}
+
+func (n *noteSearch) SearchNotes(_ context.Context, request schoolsearchview.NoteSearch) ([]schoolsearchview.NoteHit, error) {
+	n.requests = append(n.requests, request)
+	return n.hits, nil
+}
+
+// activityEnrollments are today's activities per child, recording the
+// children asked about.
+type activityEnrollments struct {
+	groups map[int64][]int64
+	asked  [][]int64
+}
+
+func (a *activityEnrollments) ActivityGroupIDs(_ context.Context, ids []int64, _ calendar.Date) (map[int64][]int64, error) {
+	a.asked = append(a.asked, ids)
+	return a.groups, nil
+}
+
 var fullScope = schoolsearchview.Scope{Children: true, ChildDetails: true, Contacts: true, Staff: true, Rooms: true, Groups: true}
+
+// owners are the bound ports of one search; a nil port answers nothing.
+type owners struct {
+	answers    *answerSearch
+	notes      *noteSearch
+	activities *activityEnrollments
+	reader     *schoolsearchview.NoteReader
+}
 
 func search(t *testing.T, db *bun.DB, tenantID int64, answers *answerSearch, text string, scope schoolsearchview.Scope) schoolsearchview.Result {
 	t.Helper()
-	if answers == nil {
-		answers = &answerSearch{}
+	return searchWith(t, db, tenantID, owners{answers: answers}, text, scope)
+}
+
+func searchWith(t *testing.T, db *bun.DB, tenantID int64, ports owners, text string, scope schoolsearchview.Scope) schoolsearchview.Result {
+	t.Helper()
+	if ports.answers == nil {
+		ports.answers = &answerSearch{}
 	}
-	searcher, err := compose.New(answers)
+	if ports.notes == nil {
+		ports.notes = &noteSearch{}
+	}
+	if ports.activities == nil {
+		ports.activities = &activityEnrollments{}
+	}
+	searcher, err := compose.New(ports.answers, ports.notes, ports.activities)
 	require.NoError(t, err)
 	var result schoolsearchview.Result
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), db, tenantID, func(ctx context.Context, _ bun.Tx) error {
-		result, err = searcher.SearchSchool(ctx, schoolsearchview.Query{Text: text, Scope: scope})
+		result, err = searcher.SearchSchool(ctx, schoolsearchview.Query{Text: text, Scope: scope, Notes: ports.reader})
 		return err
 	}))
 	return result
@@ -417,4 +462,100 @@ func TestEveryStatementWithTheTypedTextIsMarkedForTheLog(t *testing.T) {
 			require.True(t, strings.HasPrefix(statement, protocol.RedactLiteralsInLog), "unmarked statement: %.120s", statement)
 		}
 	}
+}
+
+// TestNoteHitsFollowTheDirectHitsBeforeTheAnswers finds children by their
+// note cards (ADR 0234): after the direct hits, before the registration
+// answers, with the part of the note around the match, and only for a reader
+// of the note cards.
+func TestNoteHitsFollowTheDirectHitsBeforeTheAnswers(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	tenantID := testpkg.Tenant(t)
+	named := testpkg.CreateTestStudent(t, db, "Kalle", "Ausflug", "2a")
+	noted := testpkg.CreateTestStudent(t, db, "Romy", "Becker", "2a")
+	answered := testpkg.CreateTestStudent(t, db, "Theo", "Kranz", "3b")
+	body := strings.Repeat("Heute ruhig im Freispiel. ", 8) + "Beim Ausflug zum Zoo hatte sie Heimweh. " + strings.Repeat("Mittag gut gegessen. ", 8)
+	ports := owners{
+		answers: &answerSearch{matches: []enrollment.StudentAnswerMatch{
+			{StudentID: answered.ID, Label: "Wunsch", Answer: "Ausflug ins Museum"},
+			{StudentID: noted.ID, Label: "Wunsch", Answer: "Ausflug"},
+		}},
+		notes:      &noteSearch{hits: []schoolsearchview.NoteHit{{StudentID: named.ID, Body: "Ausflug"}, {StudentID: noted.ID, Body: body}}},
+		activities: &activityEnrollments{},
+		reader:     &schoolsearchview.NoteReader{AccountID: 7, LedEducationGroupIDs: []int64{3}},
+	}
+
+	result := searchWith(t, db, tenantID, ports, "ausflug", fullScope)
+	ids := []int64{}
+	for _, child := range result.Children {
+		ids = append(ids, child.ID)
+	}
+	require.Equal(t, []int64{named.ID, noted.ID, answered.ID}, ids, "direct hit, then the note, then the answer")
+	require.Equal(t, schoolsearchview.MatchName, result.Children[0].Match.Field, "a direct hit keeps its own reason")
+	note := result.Children[1].Match
+	require.Equal(t, schoolsearchview.MatchStudentNote, note.Field)
+	require.Contains(t, note.Text, "Beim Ausflug zum Zoo hatte sie Heimweh.")
+	require.LessOrEqual(t, len([]rune(note.Text)), schoolsearchview.MaxMatchTextRunes)
+	require.Equal(t, []schoolsearchview.NoteSearch{{Text: "ausflug", ReaderAccountID: 7, LedEducationGroupIDs: []int64{3}}},
+		ports.notes.requests, "the reader's audience goes to People Directory as resolved")
+	require.Empty(t, ports.activities.asked, "no note needed the care team")
+
+	ports.notes.requests = nil
+	ports.reader = nil
+	require.NotContains(t, func() []int64 {
+		out := []int64{}
+		for _, child := range searchWith(t, db, tenantID, ports, "ausflug", schoolsearchview.Scope{Children: true}).Children {
+			out = append(out, child.ID)
+		}
+		return out
+	}(), noted.ID)
+	require.Empty(t, ports.notes.requests, "without access to the note cards the search asks for no note")
+}
+
+// TestCareTeamNotesReachOnlyTheCareTeam asks the card's care team rule for a
+// note that reaches the reader only through it, with the child's group,
+// class and today's activities read once for all such children. A child
+// outside the care team keeps its answer hit, or is no hit.
+func TestCareTeamNotesReachOnlyTheCareTeam(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	tenantID := testpkg.Tenant(t)
+	group := testpkg.CreateTestEducationGroup(t, db, "Füchse")
+	mine := testpkg.CreateTestStudent(t, db, "Ada", "Fuchs", "1a")
+	_, err := db.ExecContext(testpkg.Ctx(t), `UPDATE users.student_school_memberships SET group_id = ? WHERE student_profile_id = ?`, group.ID, mine.ID)
+	require.NoError(t, err)
+	byActivity := testpkg.CreateTestStudent(t, db, "Bo", "Werk", "4c")
+	stranger := testpkg.CreateTestStudent(t, db, "Cem", "Ober", "4c")
+	answered := testpkg.CreateTestStudent(t, db, "Dana", "Ufer", "4c")
+	asked := []schoolsearchview.NoteChild{}
+	ports := owners{
+		answers: &answerSearch{matches: []enrollment.StudentAnswerMatch{{StudentID: answered.ID, Label: "Hobby", Answer: "Zaubern"}}},
+		notes: &noteSearch{hits: []schoolsearchview.NoteHit{
+			{StudentID: mine.ID, Body: "Zaubert gern", CareTeamOnly: true},
+			{StudentID: byActivity.ID, Body: "Zaubert gern", CareTeamOnly: true},
+			{StudentID: stranger.ID, Body: "Zaubert gern", CareTeamOnly: true},
+			{StudentID: answered.ID, Body: "Zaubert gern", CareTeamOnly: true},
+		}},
+		activities: &activityEnrollments{groups: map[int64][]int64{byActivity.ID: {41}}},
+		reader: &schoolsearchview.NoteReader{AccountID: 7, HasChild: func(child schoolsearchview.NoteChild) bool {
+			asked = append(asked, child)
+			return (child.GroupID != nil && *child.GroupID == group.ID) || slices.Contains(child.ActivityGroupIDs, 41)
+		}},
+	}
+
+	result := searchWith(t, db, tenantID, ports, "zauber", fullScope)
+	matches := map[int64]schoolsearchview.MatchField{}
+	for _, child := range result.Children {
+		matches[child.ID] = child.Match.Field
+	}
+	require.Equal(t, map[int64]schoolsearchview.MatchField{
+		mine.ID:       schoolsearchview.MatchStudentNote,
+		byActivity.ID: schoolsearchview.MatchStudentNote,
+		answered.ID:   schoolsearchview.MatchEnrollmentAnswer,
+	}, matches, "the stranger's note stays hidden; the answer stays a reason")
+	require.Len(t, ports.activities.asked, 1, "one activity read for all care team notes")
+	require.ElementsMatch(t, []int64{mine.ID, byActivity.ID, stranger.ID, answered.ID}, ports.activities.asked[0])
+	require.Len(t, asked, 4)
+	require.Contains(t, asked, schoolsearchview.NoteChild{GroupID: &group.ID, SchoolClass: "1a"}, "group and class travel with the child")
 }

@@ -18,15 +18,17 @@ import (
 // text, and the structured types belong to their targets. Every read runs in
 // the caller's tenant transaction. Callers check users:read first.
 type StudentAnswers interface {
-	// StudentAnswerFilters lists the yes/no and choice questions with at
-	// least one answer, each with the answers given and the children who gave
-	// them. The newest form version names a question and its options. The
+	// StudentAnswerFilters lists the questions with at least one answer:
+	// yes/no and choice questions with the answers given, text, number and
+	// date questions with the one answer AnswerGivenValue (#7012), each with
+	// the children who gave them. The newest form version names a question and its options. The
 	// children are every linked child, also one who has left the school: the
 	// caller counts the ones its list shows.
 	StudentAnswerFilters(ctx context.Context) ([]StudentAnswerFilter, error)
 	// StudentsWithAnswer returns the children whose newest answer to the
 	// question key equals value ("true"/"false" for yes/no, the option value
-	// for a choice). An unknown key or value finds none.
+	// for a choice, AnswerGivenValue for any answer to a text, number or date
+	// question). An unknown key or value finds none.
 	StudentsWithAnswer(ctx context.Context, key, value string) ([]int64, error)
 	// SearchStudentAnswers finds children whose answer or question matches
 	// text, folded like a name search, newest registrations first. A
@@ -36,6 +38,14 @@ type StudentAnswers interface {
 	// school.
 	SearchStudentAnswers(ctx context.Context, text string, limit int) ([]StudentAnswerMatch, error)
 }
+
+// AnswerGivenValue is the filter value of a text, number or date question:
+// the child's newest answer says something (#7012). No option value is "*":
+// a choice's values are the slugs of its labels.
+const AnswerGivenValue = "*"
+
+// AnswerGivenLabel names AnswerGivenValue in the filter.
+const AnswerGivenLabel = "Angabe vorhanden"
 
 // StudentAnswerFilter is one question a list can filter by.
 type StudentAnswerFilter struct {

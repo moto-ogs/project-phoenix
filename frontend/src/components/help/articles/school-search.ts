@@ -1,7 +1,7 @@
 import type { HelpTopic } from "../help-types";
 import { HELP_TOPICS } from "~/lib/help-topics";
 
-// Die Suche über die ganze Schul-App (#6954, ADR 0231). Was jemand findet,
+// Die Suche über die ganze Schul-App (#6954, ADR 0231; Notizen #7012, ADR 0234). Was jemand findet,
 // entscheidet der Server nach den Rechten des Kontos; der Artikel nennt nur,
 // was die Person dann anders sieht.
 export function schoolSearchTopic(): HelpTopic {
@@ -46,20 +46,30 @@ export function schoolSearchTopic(): HelpTopic {
         ],
       },
       {
+        title: "In Notizen suchen",
+        steps: [
+          "Geben Sie ein Wort aus einer Notiz ein, zum Beispiel `Ausflug`.",
+          "Sie sehen die Kinder mit einer passenden Notiz. Darunter steht der Teil der Notiz mit Ihrem Wort.",
+          "Wählen Sie den Treffer. moto öffnet beim Kind den Reiter `Notizen`.",
+        ],
+      },
+      {
         title: "Nach Angaben aus der Anmeldung suchen",
         steps: [
           "Geben Sie einen Begriff aus dem Anmeldeformular ein, zum Beispiel `schwimmen`.",
           "Sie sehen die Kinder, bei denen die Eltern dazu etwas angegeben haben. Darunter steht die Frage und die Antwort.",
           "Eine ganze Liste brauchen Sie? Öffnen Sie `Alle Kinder` und wählen Sie das Filtersymbol. Unter `Anmeldung` wählen Sie eine Antwort aus `Angabe aus der Anmeldung`.",
+          "Bei Fragen mit freiem Text, Zahl oder Datum wählen Sie dort `Angabe vorhanden`. Was genau drinsteht, finden Sie hier in der Suche.",
         ],
       },
     ],
     result:
       "Sie landen direkt beim Kind, bei der Person, im Raum oder auf der Seite.",
     differences: [
-      "Sie finden nur, was Sie auch ohne Suche sehen dürfen. Telefonnummern, E-Mail-Adressen, Elternnotizen und Angaben aus der Anmeldung finden nur Konten, die Kontaktdaten sehen dürfen.",
+      "Sie finden nur, was Sie auch ohne Suche sehen dürfen. Telefonnummern, E-Mail-Adressen, Elternnotizen, Notizen und Angaben aus der Anmeldung finden nur Konten, die Kontaktdaten sehen dürfen.",
+      "Eine Notiz finden Sie nur, wenn Sie sie auch im Reiter `Notizen` sehen. Eine Notiz für das Betreuungsteam findet nur, wer das Kind betreut. Eine Notiz für die Leitung findet nur die Leitung der genannten Gruppe.",
       "Ein Gruppen-Treffer öffnet `Alle Kinder` mit den Kindern dieser Gruppe.",
-      "Gesundheitsangaben und Notizen aus dem Reiter `Notizen` durchsucht die Suche nicht. Öffnen Sie dafür das Kind.",
+      "Gesundheitsangaben durchsucht die Suche nicht. Öffnen Sie dafür das Kind.",
     ],
     notes: [
       "Ohne Eingabe zeigt die Suche die Seiten, die Sie öffnen dürfen.",

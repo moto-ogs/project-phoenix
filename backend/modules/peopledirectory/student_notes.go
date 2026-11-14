@@ -204,6 +204,45 @@ type StudentNoteQuery interface {
 	ListSchoolSharedNotes(ctx context.Context, studentID int64) ([]StudentNote, error)
 }
 
+// StudentNoteSearchRequest searches the note cards of every child of the
+// school for a text (#7012). The caller resolves the reader as for one card:
+// this owner applies every part of the audience it can answer without the
+// child, and marks the hits whose answer depends on the child.
+type StudentNoteSearchRequest struct {
+	// Text is compared folded like a name search, as a part of the note.
+	Text string
+	// ReaderAccountID always finds its own notes.
+	ReaderAccountID int64
+	// Admin finds every note of every child.
+	Admin bool
+	// LedActivityGroupIDs and LedEducationGroupIDs unlock the group_leads
+	// notes that refer to a group the reader leads.
+	LedActivityGroupIDs  []int64
+	LedEducationGroupIDs []int64
+}
+
+// StudentNoteSearchHit is the newest matching note of one child.
+type StudentNoteSearchHit struct {
+	StudentID int64
+	NoteID    int64
+	Body      string
+	// CareTeamOnly says the note reaches the reader only as a member of the
+	// child's care team (a care_team note somebody else wrote). The caller
+	// answers that per child with the rule of the card and drops the hit
+	// otherwise. A child with a note that reaches the reader without it comes
+	// with that note instead.
+	CareTeamOnly bool
+}
+
+// StudentNoteSearch finds children by the text of their notes (#7012).
+type StudentNoteSearch interface {
+	// SearchStudentNotes returns one hit per child, newest note first, the
+	// children ordered by their hit's note, newest first. It runs in the
+	// caller's school transaction; the children may include ones who have
+	// left the school.
+	SearchStudentNotes(context.Context, StudentNoteSearchRequest) ([]StudentNoteSearchHit, error)
+}
+
 // StudentNoteCommand writes a child's note card. Deciding WHO may write, edit
 // or delete stays with the caller; this owner decides what a valid note is and
 // that only its author may reword one.

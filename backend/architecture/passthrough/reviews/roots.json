@@ -1016,6 +1016,11 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0234",
+      "id": "api/schoolSearchNotes.SearchNotes",
+      "reason": "Owner-edge translation at the root (ADR 0075 floor shape): maps the school search projection's note search onto People Directory's public StudentNoteSearch and its hits back (ADR 0234)."
+    },
+    {
       "decision": "0090",
       "id": "api/serveHandler.ServeHTTP",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."

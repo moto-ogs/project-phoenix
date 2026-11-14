@@ -12,6 +12,7 @@ export type SchoolSearchMatchField =
   | "class"
   | "group"
   | "parent_note"
+  | "student_note"
   | "enrollment_answer"
   | "phone"
   | "email"
@@ -21,7 +22,10 @@ export interface SchoolSearchMatch {
   readonly field: SchoolSearchMatchField;
   /** The registration question of an answer hit. */
   readonly label?: string;
-  /** The matched value as stored: a number, an address, a note. */
+  /**
+   * The matched value as stored: a number, an address; a note or a long
+   * answer as the part around the match.
+   */
   readonly text?: string;
 }
 

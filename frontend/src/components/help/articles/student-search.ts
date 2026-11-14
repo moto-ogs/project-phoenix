@@ -110,12 +110,14 @@ export function studentSearchTopic(
       },
       {
         // #6954: der Filter steht im Filterfeld unter `Anmeldung`, nur mit
-        // Zugriff auf die Angaben der Kinderakte und nur bei eigenen
-        // Ja/Nein- oder Auswahlfragen der Online-Anmeldung.
+        // Zugriff auf die Angaben der Kinderakte und nur bei eigenen Fragen
+        // der Online-Anmeldung. Freitext, Zahl und Datum: `Angabe vorhanden`
+        // (#7012).
         title: "Nach Angaben aus der Anmeldung filtern",
         steps: [
           "Wählen Sie rechts neben der Suche das Filtersymbol.",
           "Wählen Sie unter `Anmeldung` bei `Angabe aus der Anmeldung` eine Antwort, zum Beispiel eine Frage mit `Ja`.",
+          "Bei Fragen mit freiem Text, Zahl oder Datum wählen Sie `Angabe vorhanden`. Dann sehen Sie alle Kinder, bei denen die Eltern etwas eingetragen haben. Auch „keine“ zählt als Angabe.",
           "Die Zahl in Klammern nennt, wie viele Kinder die Liste dann zeigt. Kinder, die die Schule verlassen haben, zählen nicht.",
           "`Alle Angaben` hebt den Filter wieder auf.",
         ],
@@ -129,7 +131,7 @@ export function studentSearchTopic(
       // Einstellung „Kinder nur über ‚Alle Kinder‘ finden“ (#1321).
       "Fehlen `Gruppen` und `Aktuelle Aufsicht` in der Navigation? Dann wählen Sie in `Alle Kinder` oben `Meine Gruppe` oder `Meine Aufsicht`.",
       "Einige Bereiche brauchen zusätzliche Rechte: `Betreuungsplan`, `Dokumente` und `Änderungsprotokoll`. Fehlt ein Bereich? Fragen Sie Ihre Leitung.",
-      "Fehlt im Filter `Anmeldung`? Den Filter sehen nur Mitarbeitende, die auch die Angaben aus der Anmeldung beim Kind sehen. Er erscheint erst, wenn die Online-Anmeldung eigene Fragen mit Ja/Nein oder zur Auswahl hat.",
+      "Fehlt im Filter `Anmeldung`? Den Filter sehen nur Mitarbeitende, die auch die Angaben aus der Anmeldung beim Kind sehen. Er erscheint erst, wenn Eltern in der Online-Anmeldung eigene Fragen der Schule beantwortet haben.",
       ...(presenceDifference ? [presenceDifference] : []),
     ],
     ...(transitNotes.length > 0 ? { notes: transitNotes } : {}),

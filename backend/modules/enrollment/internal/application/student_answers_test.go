@@ -71,13 +71,19 @@ func TestStudentAnswerFiltersNameTheChildrenOfTheNewestAnswer(t *testing.T) {
 	filters, err := NewStudentAnswers(answerFixture()).StudentAnswerFilters(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, []enrollment.StudentAnswerFilter{
+		{Key: "allergies", Label: "Allergien", Type: enrollment.FormFieldTextarea, Options: []enrollment.StudentAnswerOption{
+			{Value: enrollment.AnswerGivenValue, Label: "Angabe vorhanden", StudentIDs: []int64{11}},
+		}},
+		{Key: "since", Label: "Schwimmt seit", Type: enrollment.FormFieldDate, Options: []enrollment.StudentAnswerOption{
+			{Value: enrollment.AnswerGivenValue, Label: "Angabe vorhanden", StudentIDs: []int64{11}},
+		}},
 		{Key: "seepferdchen", Label: "Seepferdchen vorhanden", Type: enrollment.FormFieldBoolean, Options: []enrollment.StudentAnswerOption{
 			{Value: "true", Label: "Ja", StudentIDs: []int64{11, 12}}, {Value: "false", Label: "Nein", StudentIDs: []int64{13}},
 		}},
 		{Key: "club", Label: "Wunsch-AG", Type: enrollment.FormFieldSelect, Options: []enrollment.StudentAnswerOption{
 			{Value: "chor", Label: "Chor", StudentIDs: []int64{12}}, {Value: "fussball", Label: "Fußball", StudentIDs: []int64{11}},
 		}},
-	}, filters, "newest labels; text, date, targeted and guardian questions are no filters")
+	}, filters, "newest labels; a text, number or date question filters by a given answer (#7012); targeted and guardian questions are no filters")
 }
 
 func TestStudentsWithAnswerUsesEachChildsNewestAnswer(t *testing.T) {
@@ -94,6 +100,27 @@ func TestStudentsWithAnswerUsesEachChildsNewestAnswer(t *testing.T) {
 	require.Empty(t, none, "a targeted question is read on the child record, not here")
 	_, err = reads.StudentsWithAnswer(context.Background(), "seepferdchen", "")
 	require.Error(t, err)
+}
+
+// TestStudentsWithAnswerGivenFindsEveryFilledFreeAnswer reads the "answer
+// given" value of a text, number or date question (#7012): every child whose
+// newest answer says something. It means nothing for a yes/no or choice
+// question, whose answers are their own values.
+func TestStudentsWithAnswerGivenFindsEveryFilledFreeAnswer(t *testing.T) {
+	t.Parallel()
+	records := answerFixture()
+	day := time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
+	records.rows = append(records.rows,
+		enrollment.LinkedChildAnswers{StudentID: 14, SchemaID: 7, SubmittedAt: day, CustomData: answers(map[string]any{"allergies": "  "})},
+		enrollment.LinkedChildAnswers{StudentID: 15, SchemaID: 7, SubmittedAt: day, CustomData: answers(map[string]any{"allergies": "Laktose"})},
+	)
+	reads := NewStudentAnswers(records)
+	given, err := reads.StudentsWithAnswer(context.Background(), "allergies", enrollment.AnswerGivenValue)
+	require.NoError(t, err)
+	require.Equal(t, []int64{11, 15}, given, "a blank answer is no answer")
+	choice, err := reads.StudentsWithAnswer(context.Background(), "club", enrollment.AnswerGivenValue)
+	require.NoError(t, err)
+	require.Empty(t, choice, "a choice filters by its options only")
 }
 
 func TestSearchStudentAnswersMatchesStatedAnswersOnly(t *testing.T) {
@@ -181,10 +208,10 @@ func TestStudentAnswersClearedValuesDoNotReviveOlderAnswers(t *testing.T) {
 		{name: "boolean null", fieldType: enrollment.FormFieldBoolean, older: true, value: "true"},
 		{name: "select empty", fieldType: enrollment.FormFieldSelect, cleared: "", older: "chor", value: "chor"},
 		{name: "select null", fieldType: enrollment.FormFieldSelect, older: "chor", value: "chor"},
-		{name: "text empty", fieldType: enrollment.FormFieldText, cleared: "", older: "Chor"},
-		{name: "textarea whitespace", fieldType: enrollment.FormFieldTextarea, cleared: " \t", older: "Chor"},
-		{name: "number empty", fieldType: enrollment.FormFieldNumber, cleared: "", older: float64(12)},
-		{name: "date empty", fieldType: enrollment.FormFieldDate, cleared: "", older: "2026-09-01"},
+		{name: "text empty", fieldType: enrollment.FormFieldText, cleared: "", older: "Chor", value: enrollment.AnswerGivenValue},
+		{name: "textarea whitespace", fieldType: enrollment.FormFieldTextarea, cleared: " \t", older: "Chor", value: enrollment.AnswerGivenValue},
+		{name: "number empty", fieldType: enrollment.FormFieldNumber, cleared: "", older: float64(12), value: enrollment.AnswerGivenValue},
+		{name: "date empty", fieldType: enrollment.FormFieldDate, cleared: "", older: "2026-09-01", value: enrollment.AnswerGivenValue},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			reads := NewStudentAnswers(studentAnswerRecords{
@@ -203,10 +230,6 @@ func TestStudentAnswersClearedValuesDoNotReviveOlderAnswers(t *testing.T) {
 			require.Equal(t, []int64{12}, studentIDsOf(matches), "cleared suppresses the old answer; absent still inherits it")
 			filters, err := reads.StudentAnswerFilters(context.Background())
 			require.NoError(t, err)
-			if tc.value == "" {
-				require.Empty(t, filters)
-				return
-			}
 			require.Len(t, filters, 1)
 			require.Equal(t, []int64{12}, filters[0].Options[0].StudentIDs)
 			ids, err := reads.StudentsWithAnswer(context.Background(), "question", tc.value)

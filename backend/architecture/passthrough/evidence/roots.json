@@ -1423,6 +1423,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (n schoolSearchNotes) SearchNotes(ctx context.Context, search schoolsearchview.NoteSearch) ([]schoolsearchview.NoteHit, error) {\n\thits, err := n.notes.SearchStudentNotes(ctx, peopleOwner.StudentNoteSearchRequest{Text: search.Text, ReaderAccountID: search.ReaderAccountID, Admin: search.Admin, LedActivityGroupIDs: search.LedActivityGroupIDs, LedEducationGroupIDs: search.LedEducationGroupIDs})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tout := make([]schoolsearchview.NoteHit, 0, len(hits))\n\tfor _, hit := range hits {\n\t\tout = append(out, schoolsearchview.NoteHit{StudentID: hit.StudentID, Body: hit.Body, CareTeamOnly: hit.CareTeamOnly})\n\t}\n\treturn out, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/schoolSearchNotes.SearchNotes",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (handler *serveHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {\n\tr = normalizeCalDAVMethodForRouting(r)\n\tr = WithWeekendPlan(r, handler.settings)\n\thandler.router.ServeHTTP(w, r)\n}",
       "form": "unclassified-evidence",
       "id": "api/serveHandler.ServeHTTP",

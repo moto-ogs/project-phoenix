@@ -6,8 +6,8 @@
 // The caller decides what the account may read and passes it as a Scope. The
 // projection searches only the kinds and fields the Scope opens: an account
 // without contact access gets no contact hit and no child found through a
-// phone number, e-mail or registration answer, and the answer shape stays the
-// same either way.
+// phone number, e-mail, registration answer or note, and the answer shape
+// stays the same either way.
 package schoolsearchview
 
 import (
@@ -18,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // Limits of one search. A result list stops at its limit; the dialog shows a
@@ -48,7 +49,7 @@ const (
 	ContactLimit = 8
 	OtherLimit   = 5
 	// MaxMatchTextRunes bounds the text a hit shows for its reason: a long
-	// parent note or registration answer comes as the part around the
+	// parent note, note or registration answer comes as the part around the
 	// match, with "…" where it was cut.
 	MaxMatchTextRunes = 120
 )
@@ -62,8 +63,9 @@ type Scope struct {
 	// Children opens names, class and group (users:read or students:read,
 	// tenant staff or admin).
 	Children bool `json:"children"`
-	// ChildDetails opens the parent notes and the registration answers of a
-	// child (users:read, tenant staff or admin).
+	// ChildDetails opens the parent notes, the registration answers and the
+	// note cards of a child (users:read, tenant staff or admin). A note card
+	// is searched only as far as Query.Notes reaches (#7012).
 	ChildDetails bool `json:"child_details"`
 	// Contacts opens the contact persons with their phone numbers and e-mail
 	// addresses (users:read, tenant staff or admin).
@@ -81,6 +83,32 @@ type Scope struct {
 type Query struct {
 	Text  string
 	Scope Scope
+	// Notes is the reader of the note cards (#7012); nil searches no note.
+	Notes *NoteReader
+}
+
+// NoteReader is the caller as the note card sees them, resolved by the route
+// with the card's own rule (Security Runtime's ResolveStudentNoteAudience).
+// The search applies the parts that hold for every child in its read and asks
+// HasChild only for a note whose audience is the child's care team.
+type NoteReader struct {
+	AccountID int64
+	// Admin reads every note of every child.
+	Admin bool
+	// LedActivityGroupIDs and LedEducationGroupIDs unlock the leadership
+	// notes of the groups the caller leads.
+	LedActivityGroupIDs  []int64
+	LedEducationGroupIDs []int64
+	// HasChild answers whether the caller is in the child's care team. Nil
+	// answers no.
+	HasChild func(NoteChild) bool
+}
+
+// NoteChild is a child as the care team question needs it.
+type NoteChild struct {
+	GroupID          *int64
+	SchoolClass      string
+	ActivityGroupIDs []int64
 }
 
 // MatchField names where a hit matched, so the dialog can say why a row is
@@ -93,6 +121,7 @@ const (
 	MatchGroup            MatchField = "group"
 	MatchParentNote       MatchField = "parent_note"
 	MatchEnrollmentAnswer MatchField = "enrollment_answer"
+	MatchStudentNote      MatchField = "student_note"
 	MatchPhone            MatchField = "phone"
 	MatchEmail            MatchField = "email"
 	MatchContact          MatchField = "contact"
@@ -116,6 +145,9 @@ type Child struct {
 	SchoolClass string `json:"school_class"`
 	GroupName   string `json:"group_name,omitempty"`
 	Match       Match  `json:"match"`
+	// GroupID is the child's OGS group for the care team question of a note
+	// hit; it stays on the server.
+	GroupID *int64 `json:"-"`
 }
 
 // ContactChild is a child a contact person belongs to.
@@ -178,6 +210,46 @@ type Search interface {
 // the school's children (enrollment.StudentAnswers). The root binds it.
 type StudentAnswerSearch interface {
 	SearchStudentAnswers(ctx context.Context, text string, limit int) ([]enrollment.StudentAnswerMatch, error)
+}
+
+// NoteSearch is one search over the note cards, with the parts of the
+// reader's audience that hold for every child (NoteReader).
+type NoteSearch struct {
+	Text                 string
+	ReaderAccountID      int64
+	Admin                bool
+	LedActivityGroupIDs  []int64
+	LedEducationGroupIDs []int64
+}
+
+// NoteHit is the newest matching note of one child. CareTeamOnly says it
+// reaches the reader only as a member of the child's care team.
+type NoteHit struct {
+	StudentID    int64
+	Body         string
+	CareTeamOnly bool
+}
+
+// StudentNoteSearch is the consumer-owned port to People Directory's search
+// over the note cards (#7012, ADR 0234): one hit per child, newest first.
+// The root binds it.
+type StudentNoteSearch interface {
+	SearchNotes(ctx context.Context, search NoteSearch) ([]NoteHit, error)
+}
+
+// ActivityEnrollments is the consumer-owned port to the activities children
+// are enrolled in on a day (Timetable & Activities): the note card counts a
+// child's activity leader into its care team. The root binds it.
+type ActivityEnrollments interface {
+	ActivityGroupIDs(ctx context.Context, studentIDs []int64, onDate calendar.Date) (map[int64][]int64, error)
+}
+
+// NoteAudience is the consumer-owned port that resolves the caller for the
+// note cards with the card's own rule (Security Runtime's
+// ResolveStudentNoteAudience over the caller's groups, activities and
+// classes). The root binds it.
+type NoteAudience interface {
+	NoteReader(ctx context.Context) (*NoteReader, error)
 }
 
 // ValidateQueryText trims the query and checks its length.

@@ -10073,6 +10073,22 @@
       "target_owner": ""
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.SearchStudentNotes",
+      "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentNoteSearch.SearchStudentNotes",
+      "source_owner": "people-directory",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.SearchStudentNotes",
+      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentNoteSearch.SearchStudentNotes",
+      "source_owner": "people-directory",
+      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
+      "target_owner": ""
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentNoteTeamService.InformStudentNoteTeam",
       "binding_digest": "0ff8abd9a3c0d09cf2dc596cc841da34",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentNoteTeamNotices.InformStudentNoteTeam",

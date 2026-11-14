@@ -1206,6 +1206,11 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0234",
+      "id": "modules/peopledirectory/internal/application/StudentNoteService.Search",
+      "reason": "Transaction and observation wrapper (ADR 0075 floor shape): validates the search and runs the store read inside the owner's observed read unit, like List (ADR 0234)."
+    },
+    {
       "decision": "0090",
       "id": "modules/peopledirectory/internal/application/StudentRecords.CountByGroupIDs",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."

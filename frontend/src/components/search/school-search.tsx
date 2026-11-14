@@ -180,6 +180,7 @@ function scopeHint(scope: SchoolSearchScope | null): string {
     return `Ab ${SCHOOL_SEARCH_MIN_LENGTH} Zeichen sucht moto in der Schule.`;
   const extras = [
     scope.contacts && "Telefonnummern",
+    scope.childDetails && "Notizen",
     scope.childDetails && "Anmeldeangaben",
     scope.staff && "Mitarbeitende",
   ].filter((name): name is string => Boolean(name));
@@ -204,6 +205,9 @@ function childSubtitle(child: SchoolSearchChild): string {
   if (match.field === "parent_note" && match.text) {
     parts.push(`Elternnotiz: ${match.text}`);
   }
+  if (match.field === "student_note" && match.text) {
+    parts.push(`Notiz: ${match.text}`);
+  }
   if (match.field === "enrollment_answer") {
     // "Mein Kind darf schwimmen." / "Seepferdchen?" lose their own end mark
     // before the answer follows.
@@ -211,6 +215,15 @@ function childSubtitle(child: SchoolSearchChild): string {
     parts.push(`Anmeldung: ${question}: ${match.text ?? ""}`);
   }
   return parts.join(" · ");
+}
+
+/**
+ * Where a child hit leads: a note hit opens the child's "Notizen" tab, where
+ * the note stands; every other hit the child's page.
+ */
+function childHref(child: SchoolSearchChild): string {
+  const page = `/students/${encodeURIComponent(child.id)}`;
+  return child.match.field === "student_note" ? `${page}?tab=notizen` : page;
 }
 
 function contactItems(
@@ -279,7 +292,7 @@ function buildGroups(
             <CommandPaletteHighlight text={subtitle} query={query} />
           ) : undefined,
           leading: <ConceptIconTile concept={childrenConcept} size="xs" />,
-          onSelect: () => open(`/students/${encodeURIComponent(child.id)}`),
+          onSelect: () => open(childHref(child)),
         };
       }),
     },

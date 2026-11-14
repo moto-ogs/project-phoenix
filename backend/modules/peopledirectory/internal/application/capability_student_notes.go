@@ -120,3 +120,22 @@ func (s *Service) ListSchoolSharedNotes(ctx context.Context, studentID int64) ([
 	}
 	return result, nil
 }
+
+// SearchStudentNotes finds children by the text of their notes (#7012), one
+// hit per child, newest first.
+func (s *Service) SearchStudentNotes(ctx context.Context, request peopledirectory.StudentNoteSearchRequest) ([]peopledirectory.StudentNoteSearchHit, error) {
+	hits, err := s.studentNotes.Search(ctx, domain.StudentNoteSearch{
+		Text: strings.TrimSpace(request.Text), ReaderAccountID: request.ReaderAccountID, Admin: request.Admin,
+		LedActivityGroupIDs: request.LedActivityGroupIDs, LedEducationGroupIDs: request.LedEducationGroupIDs,
+	})
+	if err != nil {
+		return nil, MapError(err)
+	}
+	result := make([]peopledirectory.StudentNoteSearchHit, 0, len(hits))
+	for _, hit := range hits {
+		result = append(result, peopledirectory.StudentNoteSearchHit{
+			StudentID: hit.StudentID, NoteID: hit.NoteID, Body: hit.Body, CareTeamOnly: hit.CareTeamOnly,
+		})
+	}
+	return result, nil
+}
