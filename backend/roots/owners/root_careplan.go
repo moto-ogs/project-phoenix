@@ -183,7 +183,7 @@ func buildCarePlanPlans(db transactionruntime.Database, logger *slog.Logger, car
 		return CarePlanSchedules{}, err
 	}
 	pickups, err := carePlanCompose.NewPickupSchedules(db.Pool(), carePlan, schedules.PickupBaselines, excusal,
-		rows.PickupStudents, logger.With("service", "pickup-schedule"))
+		rows.PickupStudents, logger.With("service", "pickup-schedule"), nil)
 	if err != nil {
 		return CarePlanSchedules{}, err
 	}

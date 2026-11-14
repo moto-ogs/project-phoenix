@@ -83,7 +83,7 @@ func TestNativeBulkPickupRollsBackTheWholeSelection(t *testing.T) {
 				directory.nameFailure = second.ID
 				want = directory.err
 			}
-			service, err := compose.NewPickupSchedules(db, owner, excusalBaseline{}, nil, directory, nil)
+			service, err := compose.NewPickupSchedules(db, owner, excusalBaseline{}, nil, directory, nil, nil)
 			require.NoError(t, err)
 			result, err := service.BulkUpsertPickupSchedules(ctx, filter, []careplan.PickupScheduleInput{{Weekday: 1, PickupTime: "16:00"}}, staff.ID)
 			require.ErrorIs(t, err, want)

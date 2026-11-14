@@ -10,7 +10,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
-	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 const bulkPickupOperation = "bulk upsert pickup schedules"
@@ -82,7 +81,7 @@ func parseBulkPickups(ids []int64, inputs []careplan.PickupScheduleInput) (map[i
 }
 
 func (s *pickupScheduleService) selectPickupStudents(ctx context.Context, ids []int64) ([]ports.PickupBulkStudent, error) {
-	byID, err := s.students.FindByIDs(ctx, ids, calendar.TodayDate())
+	byID, err := s.students.FindByIDs(ctx, ids, s.today())
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +100,7 @@ func (s *pickupScheduleService) selectPickupStudents(ctx context.Context, ids []
 func (s *pickupScheduleService) lockPickupStudents(ctx context.Context, students []ports.PickupBulkStudent, authorize func(context.Context, careplan.ScheduleStudent) (bool, error)) ([]ports.PickupBulkStudent, error) {
 	locked := make([]ports.PickupBulkStudent, 0, len(students))
 	for _, selected := range students {
-		fresh, err := s.students.LockByID(ctx, selected.ID, calendar.TodayDate())
+		fresh, err := s.students.LockByID(ctx, selected.ID, s.today())
 		if errors.Is(err, careplan.ErrBulkStudentNotFound) || err == nil && !fresh.Eligible {
 			return nil, fmt.Errorf("%w: student %d", careplan.ErrBulkStudentNotFound, selected.ID)
 		}
@@ -123,7 +122,7 @@ func (s *pickupScheduleService) patchPickupWeek(ctx context.Context, student por
 	var before careplan.WeeklyPickupSnapshot
 	if s.autoExcusal != nil {
 		var err error
-		before, err = s.autoExcusal.SnapshotWeeklyPickups(ctx, student.ID, calendar.TodayDate())
+		before, err = s.autoExcusal.SnapshotWeeklyPickups(ctx, student.ID, s.today())
 		if err != nil {
 			return err
 		}
@@ -151,7 +150,7 @@ func (s *pickupScheduleService) patchPickupWeek(ctx context.Context, student por
 		if err := s.autoExcusal.ResyncFutureExceptions(ctx, []int64{student.ID}); err != nil {
 			return err
 		}
-		return s.autoExcusal.RecordWeeklyPickupChanges(ctx, student.ID, calendar.TodayDate(), before)
+		return s.autoExcusal.RecordWeeklyPickupChanges(ctx, student.ID, s.today(), before)
 	}
 	return nil
 }

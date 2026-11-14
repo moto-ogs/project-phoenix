@@ -281,7 +281,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return fail(err)
 	}
-	pickups, err := careplanCompose.NewPickupSchedules(db.Pool(), carePlan, pickup, autoExcusal, pickupStudents, logger)
+	pickups, err := careplanCompose.NewPickupSchedules(db.Pool(), carePlan, pickup, autoExcusal, pickupStudents, logger, nil)
 	if err != nil {
 		return fail(err)
 	}

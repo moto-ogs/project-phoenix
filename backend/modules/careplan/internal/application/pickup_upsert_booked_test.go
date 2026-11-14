@@ -108,7 +108,7 @@ func TestUpsertStudentPickupScheduleKeepsBookedTimeAProjection(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			rows := &recordingPickupRows{rows: tc.stored}
-			service := NewPickupSchedules(rows, nil, nil, passThroughTransaction{}, bookedPickup{clock: tc.booked}, nil, nil, nil, nil)
+			service := NewPickupSchedules(rows, nil, nil, passThroughTransaction{}, bookedPickup{clock: tc.booked}, nil, nil, nil, nil, nil)
 
 			require.NoError(t, service.UpsertStudentPickupSchedule(context.Background(), tc.row))
 
@@ -130,7 +130,7 @@ func TestUpsertStudentPickupScheduleValidatesBeforeRemovingAnOverride(t *testing
 	rows := &recordingPickupRows{rows: []*careplan.PickupSchedule{
 		{ID: 11, StudentID: 7, Weekday: 1, PickupTime: wallClock("15:15"), Source: careplan.ScheduleSourceStaff},
 	}}
-	service := NewPickupSchedules(rows, nil, nil, passThroughTransaction{}, bookedPickup{clock: "14:30"}, nil, nil, nil, nil)
+	service := NewPickupSchedules(rows, nil, nil, passThroughTransaction{}, bookedPickup{clock: "14:30"}, nil, nil, nil, nil, nil)
 
 	err := service.UpsertStudentPickupSchedule(context.Background(),
 		&careplan.PickupSchedule{StudentID: 7, Weekday: 1, PickupTime: wallClock("14:30")})
