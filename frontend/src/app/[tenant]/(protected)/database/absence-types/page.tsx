@@ -191,11 +191,21 @@ const config: CatalogConfig<AbsenceType> = {
   emptyDescription:
     "Legen Sie eine eigene Art an, zum Beispiel Regenerationstag oder Krank-Urlaubstag. Urlaub, Krank, Fortbildung, Sonstige und Freizeitausgleich gibt es immer.",
   stats: (types) => {
-    const inactive = types.filter((type) => !type.isActive).length;
+    const inactive = types.filter(
+      (type) => !type.isActive || !type.offered,
+    ).length;
     const active = types.length - inactive;
-    return inactive > 0
-      ? `${formatCount(active)} in der Auswahl · ${formatCount(inactive)} ausgeschaltet`
-      : `${formatCount(active)} eigene ${active === 1 ? "Art" : "Arten"}`;
+    const fromTraeger = types.filter((type) => type.keptByTraeger).length;
+    const parts =
+      inactive > 0
+        ? [
+            `${formatCount(active)} in der Auswahl`,
+            `${formatCount(inactive)} ausgeschaltet`,
+          ]
+        : [`${formatCount(active)} ${active === 1 ? "Art" : "Arten"}`];
+    // Arten des Trägers (#4710) zählen mit, aber erkennbar.
+    if (fromTraeger > 0) parts.push(`${formatCount(fromTraeger)} vom Träger`);
+    return parts.join(" · ");
   },
   toRow: (type) => ({
     name: type.name,

@@ -1852,6 +1852,14 @@ export const ERROR_CATALOG = {
         "An diesen Tagen ist schon eine Abwesenheit eingetragen. Bitte wählen Sie andere Tage.",
       "workforce.absence_type_inactive":
         "Diese Abwesenheitsart ist ausgeschaltet. Bitte wählen Sie eine andere.",
+      "workforce.absence_type_kept_by_traeger":
+        "Diese Abwesenheitsart legt Ihr Träger fest. Ihre Schule ändert nur, ob sie die Art anbietet und wie viele Tage hier höchstens gehen.",
+      "workforce.absence_type_not_offered":
+        "Ihre Schule bietet diese Abwesenheitsart nicht an. Bitte wählen Sie eine andere Art.",
+      "workforce.absence_type_not_requestable":
+        "Diese Abwesenheitsart trägt nur die Leitung ein. Bitte sprechen Sie mit Ihrer Leitung.",
+      "workforce.absence_type_school_limit_exceeded":
+        "An dieser Schule sind für diese Art nicht mehr Tage erlaubt. Die Grenze legt die Schule fest.",
       "workforce.adjustment_in_closed_month":
         "Dieser Monat ist schon abgeschlossen. Bitte wählen Sie ein Datum im offenen Monat. Oder öffnen Sie den Monat wieder.",
       "workforce.already_checked_in":
@@ -1975,6 +1983,16 @@ export const ERROR_CATALOG = {
         "Das Ende liegt vor dem Anfang. Bitte prüfen Sie den Zeitraum.",
       "workforce.target_override_too_long":
         "Der Zeitraum ist zu lang. Erlaubt sind höchstens {max_days} Tage.",
+      "workforce.traeger_absence_allowance_invalid":
+        "Der Anspruch reicht nicht. An den Schulen sind schon mehr Tage eingetragen oder beantragt.",
+      "workforce.traeger_absence_type_in_use":
+        "Eine Schule hat diese Art schon gebucht. Der Name bleibt deshalb, wie er ist.",
+      "workforce.traeger_absence_type_invalid":
+        "Die Abwesenheitsart konnte nicht gespeichert werden. Bitte prüfen Sie Name und Tage.",
+      "workforce.traeger_absence_type_name_taken":
+        "Eine Abwesenheitsart mit diesem Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
+      "workforce.traeger_absence_type_not_found":
+        "Diese Abwesenheitsart gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "workforce.traeger_staff_already_linked":
         "Eine dieser Personen hat schon eine Personalakte. Bitte laden Sie die Seite neu.",
       "workforce.traeger_staff_link_invalid":

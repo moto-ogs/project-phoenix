@@ -77,9 +77,12 @@ function decisionNoteLabel(status: string): string {
   return "Anmerkung der Leitung:";
 }
 
-/** Urlaub und jeder Antrag einer beantragbaren Art (#4710). */
+/** Urlaub und jeder Antrag einer beantragbaren eigenen Art (#4710). */
 function isRequestFlowAbsence(absence: StaffAbsence): boolean {
-  return absence.absenceType === "vacation" || absence.status !== "reported";
+  return (
+    absence.absenceType === "vacation" ||
+    (Boolean(absence.absenceTypeId) && absence.status !== "reported")
+  );
 }
 
 export function LeaveRequestsCard() {

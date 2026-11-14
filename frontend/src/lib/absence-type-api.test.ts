@@ -76,6 +76,7 @@ describe("absenceTypeService allowances", () => {
         body: JSON.stringify({
           name: "Regenerationstag",
           allowance_enabled: true,
+          requestable: false,
         }),
       }),
     );
@@ -153,6 +154,8 @@ describe("absenceTypeService allowances", () => {
         }),
       ],
       blocked: true,
+      // Ohne Angabe des Servers sperrt das Kontingent (#4710).
+      blockedBy: "allowance",
     });
     expect(global.fetch).toHaveBeenCalledWith(
       "/api/staff/absence-types/12/allowances/42/preview?date_start=2027-01-11&date_end=2027-01-12&half_day=false",

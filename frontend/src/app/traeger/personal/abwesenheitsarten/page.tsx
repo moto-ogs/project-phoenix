@@ -307,7 +307,7 @@ function AbsenceTypeCard({
               return (
                 <li
                   key={school.schoolId}
-                  className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                  className="flex items-center justify-between gap-3 px-4 py-3"
                 >
                   <span className="min-w-0 truncate text-sm font-medium text-gray-900">
                     {school.schoolName}

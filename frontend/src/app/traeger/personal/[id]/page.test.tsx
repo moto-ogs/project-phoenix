@@ -18,6 +18,11 @@ vi.mock("~/lib/traeger-staff-api", async (original) => ({
   ...(await original<typeof import("~/lib/traeger-staff-api")>()),
   ...api,
 }));
+// Die Kontingente (#4710) haben ihren eigenen Test.
+vi.mock("~/lib/traeger-absence-api", () => ({
+  fetchTraegerAbsenceAccounts: vi.fn().mockResolvedValue([]),
+  setTraegerAbsenceAllowance: vi.fn(),
+}));
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
 }));

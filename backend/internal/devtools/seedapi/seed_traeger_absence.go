@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -61,6 +62,9 @@ func seedTraegerAbsences(ctx context.Context, rt *Runtime, auth AuthRef) error {
 			return fmt.Errorf("deviate from a type of the Träger: %w", err)
 		}
 	}
+	if err := seedTraegerConversionBooking(rt, records, schoolTypes[seedTraegerConversion]); err != nil {
+		return err
+	}
 	requested, err := seedTraegerAbsenceRequest(ctx, rt, records, schoolTypes[seedTraegerRegeneration])
 	if err != nil {
 		return err
@@ -113,6 +117,7 @@ type seedTraegerStaffRecord struct {
 	LastName    string `json:"last_name"`
 	Employments []struct {
 		SchoolID int64 `json:"school_id"`
+		StaffID  int64 `json:"staff_id"`
 		Active   bool  `json:"active"`
 	} `json:"employments"`
 }
@@ -201,4 +206,33 @@ func seedNextWeekday(day time.Time) time.Time {
 		day = day.AddDate(0, 0, 1)
 	}
 	return day
+}
+
+// seedTraegerConversionBooking books an Umwandlungstag three weeks ago for
+// the person who works at most schools, as the Leitung of this school does,
+// so the Kontingent of the Personalakte shows a booking.
+func seedTraegerConversionBooking(rt *Runtime, records []seedTraegerStaffRecord, typeID string) error {
+	if typeID == "" || len(records) == 0 {
+		return nil
+	}
+	chosen := records[0]
+	for _, record := range records {
+		if len(record.Employments) > len(chosen.Employments) {
+			chosen = record
+		}
+	}
+	id, err := strconv.ParseInt(typeID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("parse the school's Umwandlungstag: %w", err)
+	}
+	for _, employment := range chosen.Employments {
+		if employment.SchoolID != rt.Bootstrap.SchoolID {
+			continue
+		}
+		day := seedNextWeekday(time.Now().AddDate(0, 0, -21))
+		if err := postStaffAbsence(rt, employment.StaffID, day, "other", "Umwandlung Überstunden", &id); err != nil {
+			return fmt.Errorf("book an Umwandlungstag: %w", err)
+		}
+	}
+	return nil
 }

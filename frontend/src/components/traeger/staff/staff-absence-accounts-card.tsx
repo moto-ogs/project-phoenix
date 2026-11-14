@@ -23,6 +23,7 @@ import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { NumberStepper } from "~/components/ui/number-stepper";
+import { ProgressBar } from "~/components/ui/progress-bar";
 import { SectionCard } from "~/components/ui/section-card";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import {
@@ -74,27 +75,40 @@ function schoolLine(school: TraegerAbsenceSchoolUse): string {
 function SchoolShares({
   account,
 }: Readonly<{ account: TraegerAbsenceAccount }>) {
-  if (account.schools.length === 0) return null;
+  const used = account.takenDays + account.reservedDays;
   return (
-    <ul className="space-y-1 border-t border-gray-100 pt-3 text-xs">
-      {account.schools.map((school) => (
-        <li
-          key={school.schoolId}
-          className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4"
-        >
-          <span className="font-medium text-gray-700">{school.schoolName}</span>
-          <span className="text-gray-600 tabular-nums">
-            {schoolLine(school)}
-          </span>
-        </li>
-      ))}
-      {account.expiredDays > 0 ? (
-        <li className="text-moto-red-strong">
-          {formatDayCount(account.expiredDays)} am{" "}
-          {formatDate(account.expiresOn)} verfallen
-        </li>
+    <div className="space-y-3">
+      <ProgressBar
+        size="sm"
+        value={used}
+        max={Math.max(account.entitledDays, used)}
+        tone={account.remainingDays <= 0 ? "orange" : "green"}
+        label={`${formatDayCount(used)} von ${formatDayCount(account.entitledDays)} genutzt oder beantragt`}
+      />
+      {account.schools.length > 0 ? (
+        <ul className="space-y-1 border-t border-gray-100 pt-3 text-xs">
+          {account.schools.map((school) => (
+            <li
+              key={school.schoolId}
+              className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4"
+            >
+              <span className="font-medium text-gray-700">
+                {school.schoolName}
+              </span>
+              <span className="text-gray-600 tabular-nums">
+                {schoolLine(school)}
+              </span>
+            </li>
+          ))}
+          {account.expiredDays > 0 ? (
+            <li className="text-moto-red-strong">
+              {formatDayCount(account.expiredDays)} am{" "}
+              {formatDate(account.expiresOn)} verfallen
+            </li>
+          ) : null}
+        </ul>
       ) : null}
-    </ul>
+    </div>
   );
 }
 
