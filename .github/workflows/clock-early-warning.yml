@@ -20,6 +20,9 @@ name: Clock early warning
 # time only runs tests.
 
 on:
+  # TEMPORARY verification of #4027, removed before review.
+  push:
+    branches: [t3/issue-4027-open-items]
   schedule:
     # Sunday morning, outside the nightly (Mon-Fri 02:00) and perf runs.
     - cron: "17 4 * * 0"
@@ -51,6 +54,13 @@ env:
 jobs:
   backend:
     name: Backend tests at moved clocks
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - times: "2026-11-15T00:30 UTC-Tag;2026-11-21T00:30 Samstag;2026-11-22T23:30 Sonntagabend;2026-12-12T00:30 Samstag Flow E;2026-12-24T12:00 Heiligabend;2026-12-25T00:30 Feiertag;2027-01-01T00:30 Neujahr;2027-01-04T00:30 Montag nach Neujahr"
+          - times: "2027-02-15T00:30 nach 14.02.;2027-03-01T00:30 Maerz;2027-03-25T12:00 vor Karfreitag;2027-03-28T00:30 Zeitumstellung Ostern;2027-03-29T00:30 Ostermontag;2027-04-20T00:30 nach 2027-04-19;2027-05-06T00:30 Himmelfahrt;2027-05-17T00:30 Pfingstmontag"
+          - times: "2027-05-27T00:30 Fronleichnam;2027-06-29T00:30 Phasenende;2027-07-28T00:30 Phasenende;2027-08-01T00:30 nach 2027-07-31;2027-09-01T00:30 Rollover;2027-10-31T00:30 Zeitumstellung;2027-11-01T00:30 Allerheiligen;2027-11-13T00:30 Samstag in einem Jahr"
     runs-on: blacksmith-8vcpu-ubuntu-2404
     # About thirteen times at 4-6 min each plus one cold compile.
     timeout-minutes: 180
@@ -115,7 +125,7 @@ jobs:
           TRAEGER_URL: http://traeger.localhost:3000
           NEXT_PUBLIC_OPERATOR_HOSTNAME: operator.localhost:3000
           TENANT_DOMAIN: localhost
-          FAKE_CLOCK_TIMES: ${{ inputs.times }}
+          FAKE_CLOCK_TIMES: ${{ inputs.times || matrix.times }}
         run: |
           # Any 32+ characters: the MFA service keys trusted-device cookies with it.
           AUTH_JWT_SECRET=$(openssl rand -hex 32)
@@ -132,7 +142,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: clock-results
+          name: clock-results-${{ strategy.job-index }}
           path: ${{ runner.temp }}/clock-results/
           if-no-files-found: ignore
           retention-days: 30
