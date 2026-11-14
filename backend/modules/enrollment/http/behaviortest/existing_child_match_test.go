@@ -310,7 +310,10 @@ func TestExistingChild_AnonymousExactMatchNeedsOfficeChoiceBothWays(t *testing.T
 	namesake := env.submit(t, existingChildSubmission{email: "namesake@example.com", children: []enrollmentAPI.SubmitChild{
 		submitChild("Paul", "Offen", existingChildBirthday),
 	}})
-	require.NoError(t, env.decide(t, enrollmentAPI.DecideInput{RequestID: namesake.Request.ID, ChildID: namesake.Children[0].ID, CreateNewStudent: true}))
+	require.NoError(t, env.decide(t, enrollmentAPI.DecideInput{
+		RequestID: namesake.Request.ID, ChildID: namesake.Children[0].ID,
+		CreateNewStudent: true, ShownCandidateIDs: []int64{existing.ID},
+	}))
 	created := env.child(t, namesake.Children[0].ID)
 	require.NotNil(t, created.CreatedStudentID)
 	assert.NotEqual(t, existing.ID, *created.CreatedStudentID)
@@ -373,18 +376,95 @@ func TestExistingChild_OtherSchoolsChildNeverMatches(t *testing.T) {
 	assert.NotEqual(t, foreign.ID, *created.CreatedStudentID)
 }
 
-// new_students and existing_students keep their submit-time rules; their
-// approvals take no choice.
-func TestExistingChild_OtherAudiencesTakeNoChoice(t *testing.T) {
+// A new_students child without an enrolled namesake is approved without a
+// choice, as before #6247.
+func TestExistingChild_NewStudentsPhaseWithoutCandidateNeedsNoChoice(t *testing.T) {
 	t.Parallel()
 	env := setupExistingChildTest(t, enrollmentNative.PhaseAudienceNewStudents)
 
 	res := env.submit(t, existingChildSubmission{children: []enrollmentAPI.SubmitChild{
 		submitChild("Jona", "Neu", existingChildBirthday),
 	}})
-	err := env.decide(t, enrollmentAPI.DecideInput{RequestID: res.Request.ID, ChildID: res.Children[0].ID, CreateNewStudent: true})
-	require.ErrorIs(t, err, enrollmentNative.ErrExistingChildChoiceInvalid)
+	assert.Empty(t, env.candidates(t, res.Request.ID, res.Children[0].ID))
 	require.NoError(t, env.decide(t, enrollmentAPI.DecideInput{RequestID: res.Request.ID, ChildID: res.Children[0].ID}))
+	assert.Equal(t, 1, studentsNamed(t, env.db, "Jona", "Neu"))
+}
+
+// Two parents with different addresses enroll the same new child in a
+// new_students phase. Both submissions pass, because the child is enrolled
+// only once the first is approved. The second approval must not create the
+// child again: it asks the office, names the first request, and refuses to
+// renew the child a second time in the phase (#6247).
+func TestExistingChild_NewStudentsPhaseTwoRequestsCreateTheChildOnce(t *testing.T) {
+	t.Parallel()
+	env := setupExistingChildTest(t, enrollmentNative.PhaseAudienceNewStudents)
+	first := env.submit(t, existingChildSubmission{email: "mother@example.com", children: []enrollmentAPI.SubmitChild{
+		submitChild("Finn", "Zweimal", existingChildBirthday),
+	}})
+	second := env.submit(t, existingChildSubmission{email: "father@example.com", children: []enrollmentAPI.SubmitChild{
+		submitChild("Finn", "Zweimal", existingChildBirthday),
+	}})
+	secondChild := second.Children[0]
+
+	require.NoError(t, env.decide(t, enrollmentAPI.DecideInput{RequestID: first.Request.ID, ChildID: first.Children[0].ID}))
+	created := env.child(t, first.Children[0].ID).CreatedStudentID
+	require.NotNil(t, created)
+
+	candidates := env.candidates(t, second.Request.ID, secondChild.ID)
+	require.Len(t, candidates, 1, "the child the first approval created is a candidate of the second")
+	assert.Equal(t, *created, candidates[0].StudentID)
+	require.NotNil(t, candidates[0].PhaseRequest, "the candidate names the request of the phase that holds it")
+	assert.Equal(t, first.Request.ID, candidates[0].PhaseRequest.RequestID)
+	assert.Equal(t, enrollmentNative.ChildStatusApproved, candidates[0].PhaseRequest.ChildStatus)
+	assert.Equal(t, "Eva", candidates[0].PhaseRequest.GuardianFirstName)
+
+	err := env.decide(t, enrollmentAPI.DecideInput{RequestID: second.Request.ID, ChildID: secondChild.ID})
+	var refusal *enrollmentNative.ChildPossiblyEnrolledError
+	require.ErrorAs(t, err, &refusal, "the second approval asks the office")
+	require.Len(t, refusal.Candidates, 1)
+	require.NotNil(t, refusal.Candidates[0].PhaseRequest, "the refusal names the holding request too")
+	err = env.decide(t, enrollmentAPI.DecideInput{RequestID: second.Request.ID, ChildID: secondChild.ID, ExistingStudentID: created})
+	require.ErrorIs(t, err, enrollmentNative.ErrExistingStudentAlreadyRequested, "the phase renews the child only once")
+	assert.Equal(t, enrollmentNative.ChildStatusSubmitted, env.child(t, secondChild.ID).Status)
+	assert.Equal(t, 1, studentsNamed(t, env.db, "Finn", "Zweimal"), "exactly one child after both approvals")
+
+	require.NoError(t, env.decide(t, enrollmentAPI.DecideInput{
+		RequestID: second.Request.ID, ChildID: secondChild.ID, Status: enrollmentNative.DecisionRejected,
+	}), "the office refuses the duplicate")
+	assert.Equal(t, 1, studentsNamed(t, env.db, "Finn", "Zweimal"))
+}
+
+// The office's "create new" holds only for the candidates it saw. A child
+// another approval created after the office read the list is a candidate it
+// never weighed: the approval is refused with the current list (#6247).
+func TestExistingChild_NewChildChoiceRechecksTheCandidates(t *testing.T) {
+	t.Parallel()
+	for _, audience := range []string{enrollmentNative.PhaseAudienceOpen, enrollmentNative.PhaseAudienceNewStudents} {
+		t.Run(audience, func(t *testing.T) {
+			testpkg.OwnTenant(t)
+			env := setupExistingChildTest(t, audience)
+			res := env.submit(t, existingChildSubmission{children: []enrollmentAPI.SubmitChild{
+				submitChild("Lina", "Spaeter", existingChildBirthday),
+			}})
+			child := res.Children[0]
+			assert.Empty(t, env.candidates(t, res.Request.ID, child.ID), "the office sees no candidate")
+
+			appeared := enrolledChild(t, env.db, "Lina", "Spaeter", existingChildBirthday)
+			err := env.decide(t, enrollmentAPI.DecideInput{RequestID: res.Request.ID, ChildID: child.ID, CreateNewStudent: true})
+			var refusal *enrollmentNative.ChildPossiblyEnrolledError
+			require.ErrorAs(t, err, &refusal, "a candidate the office did not see refuses the new child")
+			require.Len(t, refusal.Candidates, 1)
+			assert.Equal(t, appeared.ID, refusal.Candidates[0].StudentID)
+			assert.Equal(t, enrollmentNative.ChildStatusSubmitted, env.child(t, child.ID).Status)
+			assert.Equal(t, 1, studentsNamed(t, env.db, "Lina", "Spaeter"))
+
+			require.NoError(t, env.decide(t, enrollmentAPI.DecideInput{
+				RequestID: res.Request.ID, ChildID: child.ID,
+				CreateNewStudent: true, ShownCandidateIDs: []int64{appeared.ID},
+			}), "the office weighed the candidate and still creates a new child")
+			assert.Equal(t, 2, studentsNamed(t, env.db, "Lina", "Spaeter"))
+		})
+	}
 }
 
 // A student created by an earlier approval already has an active request,

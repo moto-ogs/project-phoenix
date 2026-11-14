@@ -16,7 +16,19 @@ interface DecideBody {
   reason?: string;
   existing_student_id?: string | number;
   create_new_student?: boolean;
+  shown_existing_student_ids?: unknown;
   accept_offering_changes?: boolean;
+}
+
+/** The candidates the office saw before it chose a new child (#6247). */
+function shownStudentIds(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value
+        .filter((id): id is string | number =>
+          ["string", "number"].includes(typeof id),
+        )
+        .map(String)
+    : [];
 }
 
 export const POST = tenant.route(async (request) => {
@@ -30,7 +42,14 @@ export const POST = tenant.route(async (request) => {
       ...(body.existing_student_id != null
         ? { existing_student_id: String(body.existing_student_id) }
         : {}),
-      ...(body.create_new_student === true ? { create_new_student: true } : {}),
+      ...(body.create_new_student === true
+        ? {
+            create_new_student: true,
+            shown_existing_student_ids: shownStudentIds(
+              body.shown_existing_student_ids,
+            ),
+          }
+        : {}),
       // The office confirmed offering changes since the submission (#6837).
       ...(body.accept_offering_changes === true
         ? { accept_offering_changes: true }

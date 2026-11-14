@@ -48,6 +48,7 @@ import {
 import { PublicLinkCopyButton } from "~/components/enrollment/public-link-copy-button";
 import {
   existingChildChoiceDescription,
+  existingChildChoiceOf,
   existingChildChoiceOptions,
   renewedChildNameOf,
   sendWithExistingChildChoice,
@@ -518,9 +519,7 @@ export function ManualApprovedEnrollmentModal({
           onClose={() => answerExistingChildQuestion(null)}
           onSelect={(value) =>
             answerExistingChildQuestion(
-              value === "new"
-                ? { createNewStudent: true }
-                : { existingStudentId: value },
+              existingChildChoiceOf(value, existingChildQuestion.subject),
             )
           }
         />

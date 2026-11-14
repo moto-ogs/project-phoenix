@@ -5,15 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The already-enrolled check of open and linked_parents phases (#6053).
-// An existing_students phase pins the renewed student at submission and a
-// new_students phase refuses an enrolled child; the other two audiences
-// accept any child. Submission pins a child only through the signed-in
+// The already-enrolled check of open, linked_parents and new_students phases
+// (#6053, #6247). An existing_students phase pins the renewed student at
+// submission. A new_students phase refuses an enrolled child at submission,
+// but two open requests for the same child, e.g. from two parents with
+// different addresses, both pass that check; the first approval creates the
+// child, so every approval asks again. Submission pins a child only through the signed-in
 // parent's own authorized relationship to it. Name and birthday alone never
 // pin: every other enrolled child with the submitted name and birthday is a
 // candidate the office sees, and an approval without the office's choice is
@@ -22,9 +25,10 @@ import (
 // request's guardians and applies none of its form data, since the family
 // holds no authorized relationship to that child.
 
-// audienceChecksEnrolledChildren reports whether approvals of the phase ask
-// the office about an already enrolled child. A phase stored before the
-// audience column reads as open.
+// audienceChecksEnrolledChildren reports whether submissions of the phase
+// look for an enrolled child the parent may pin: open and linked_parents. A
+// new_students submission refuses an enrolled child instead. A phase stored
+// before the audience column reads as open.
 func audienceChecksEnrolledChildren(phase *enrollmentNative.Phase) bool {
 	if phase == nil {
 		return false
@@ -37,11 +41,20 @@ func audienceChecksEnrolledChildren(phase *enrollmentNative.Phase) bool {
 	}
 }
 
+// approvalAsksAboutEnrolledChildren reports whether approvals of the phase
+// ask the office about an already enrolled child: every audience except
+// existing_students, which pins its enrolled child at submission. A
+// new_students phase asks too, since the child may have been enrolled after
+// the submission (#6247).
+func approvalAsksAboutEnrolledChildren(phase *enrollmentNative.Phase) bool {
+	return phase != nil && phase.Audience != enrollmentNative.PhaseAudienceExistingStudents
+}
+
 // childAwaitsExistingChildChoice reports whether the child's approval still
 // decides between an enrolled child and a new one: its phase asks, and no
 // pin, rollover source or created student settles the student already.
 func childAwaitsExistingChildChoice(phase *enrollmentNative.Phase, child *enrollmentNative.RequestChild) bool {
-	return audienceChecksEnrolledChildren(phase) && child != nil &&
+	return approvalAsksAboutEnrolledChildren(phase) && child != nil &&
 		child.MatchedStudentID == nil && child.RolloverSourceChildID == nil && child.CreatedStudentID == nil
 }
 
@@ -166,7 +179,8 @@ func validateExistingChildChoice(input enrollmentNative.DecideInput) error {
 // writes anything. It runs on the locked decision target.
 //
 //   - a child whose student is settled takes no choice;
-//   - "create new" approves a fresh child;
+//   - "create new" approves a fresh child while every current candidate is
+//     one the office saw (ShownCandidateIDs);
 //   - "use existing" must name one of the current candidates, which is
 //     then pinned exactly like an existing_students match, so the approval
 //     renews it — under the same phase-wide uniqueness guard;
@@ -206,18 +220,28 @@ func (d *Decisions) resolveExistingChildChoice(ctx context.Context, target *deci
 		)
 	}
 	if input.CreateNewStudent {
-		if !enrollmentNative.OfficeMayCreateNewChild(phase) {
-			return fmt.Errorf("%w: phase %d renews enrolled children only", enrollmentNative.ErrExistingChildChoiceInvalid, phase.ID)
-		}
-		d.logger().Info("decision: office chose a new child despite possible enrolled match",
-			slog.Int64("request_child_id", child.ID),
-		)
-		if lapsed {
-			return d.dropLapsedPin(ctx, target)
-		}
-		return nil
+		return d.applyNewChildChoice(ctx, target, phase, input.ShownCandidateIDs, lapsed)
 	}
 	return d.applyEnrolledChildChoice(ctx, target, phase, input.ExistingStudentID, lapsed)
+}
+
+// applyNewChildChoice handles the office's "create new": refused in a phase
+// that renews enrolled children only, and again while a candidate the office
+// did not see exists; a lapsed parent pin is dropped.
+func (d *Decisions) applyNewChildChoice(ctx context.Context, target *decisionTarget, phase *enrollmentNative.Phase, shown []int64, lapsed bool) error {
+	if !enrollmentNative.OfficeMayCreateNewChild(phase) {
+		return fmt.Errorf("%w: phase %d renews enrolled children only", enrollmentNative.ErrExistingChildChoiceInvalid, phase.ID)
+	}
+	if err := d.recheckNewChildChoice(ctx, target, phase, shown); err != nil {
+		return err
+	}
+	d.logger().Info("decision: office chose a new child despite possible enrolled match",
+		slog.Int64("request_child_id", target.child.ID),
+	)
+	if lapsed {
+		return d.dropLapsedPin(ctx, target)
+	}
+	return nil
 }
 
 // applyEnrolledChildChoice handles an approval that asks the office and did
@@ -226,22 +250,13 @@ func (d *Decisions) resolveExistingChildChoice(ctx context.Context, target *deci
 // enrollment-only renewal.
 func (d *Decisions) applyEnrolledChildChoice(ctx context.Context, target *decisionTarget, phase *enrollmentNative.Phase, chosen *int64, lapsed bool) error {
 	child := target.child
-	// Two approvals of the same new child each read no candidate before the
-	// other committed and both created it (#6170). The lock serializes them
-	// per school and identity; the candidates are read after it, so a waiting
-	// approval sees the child the holder created. It is a leaf lock: the
-	// gates and the request rows are held already, and the holder waits on
-	// no row another approval locked before this point.
-	if err := d.deps.Requests.AcquireChildIdentityLock(ctx, child.FirstName, child.LastName, calendar.Date(child.DateOfBirth)); err != nil {
-		return fmt.Errorf("decision: lock child identity of child %d: %w", child.ID, err)
-	}
-	candidates, err := d.existingChildCandidates(ctx, child)
+	candidates, err := d.lockedChildCandidates(ctx, child, phase)
 	if err != nil {
 		return err
 	}
 	if chosen == nil {
 		if lapsed || len(candidates) > 0 {
-			return enrollmentNative.NewChildPossiblyEnrolledError(fmt.Sprintf("child %d has %d candidates", child.ID, len(candidates)), candidates)
+			return possiblyEnrolled(child, candidates)
 		}
 		return nil
 	}
@@ -249,6 +264,79 @@ func (d *Decisions) applyEnrolledChildChoice(ctx context.Context, target *decisi
 		return fmt.Errorf("%w: student %d is no candidate of child %d", enrollmentNative.ErrExistingChildChoiceInvalid, *chosen, child.ID)
 	}
 	return d.pinChosenStudent(ctx, target, phase, *chosen)
+}
+
+// recheckNewChildChoice holds the office's "create new" to the candidates it
+// saw. Another approval may have created the same child after the office
+// read the list (#6247); that child is a candidate the office never weighed,
+// so the approval is refused with the current candidates and asks again.
+func (d *Decisions) recheckNewChildChoice(ctx context.Context, target *decisionTarget, phase *enrollmentNative.Phase, shown []int64) error {
+	candidates, err := d.lockedChildCandidates(ctx, target.child, phase)
+	if err != nil {
+		return err
+	}
+	for _, candidate := range candidates {
+		if !slices.Contains(shown, candidate.StudentID) {
+			return possiblyEnrolled(target.child, candidates)
+		}
+	}
+	return nil
+}
+
+// lockedChildCandidates takes the child's identity lock and reads its
+// candidates after it. Two approvals of the same new child each read no
+// candidate before the other committed and both created it (#6170). The lock
+// serializes them per school and identity, so a waiting approval sees the
+// child the holder created. It is a leaf lock: the gates and the request rows
+// are held already, and the holder waits on no row another approval locked
+// before this point.
+func (d *Decisions) lockedChildCandidates(ctx context.Context, child *enrollmentNative.RequestChild, phase *enrollmentNative.Phase) ([]enrollmentNative.ExistingChildCandidate, error) {
+	if err := d.deps.Requests.AcquireChildIdentityLock(ctx, child.FirstName, child.LastName, calendar.Date(child.DateOfBirth)); err != nil {
+		return nil, fmt.Errorf("decision: lock child identity of child %d: %w", child.ID, err)
+	}
+	candidates, err := d.existingChildCandidates(ctx, child)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.attachPhaseRequests(ctx, phase, []int64{child.ID}, candidates); err != nil {
+		return nil, err
+	}
+	return candidates, nil
+}
+
+func possiblyEnrolled(child *enrollmentNative.RequestChild, candidates []enrollmentNative.ExistingChildCandidate) error {
+	return enrollmentNative.NewChildPossiblyEnrolledError(fmt.Sprintf("child %d has %d candidates", child.ID, len(candidates)), candidates)
+}
+
+// attachPhaseRequests marks, in one read for all lists, every candidate an
+// active request child of the phase other than the asking ones already
+// created or renews (#6247). The lists are updated in place.
+func (d *Decisions) attachPhaseRequests(ctx context.Context, phase *enrollmentNative.Phase, askingChildIDs []int64, lists ...[]enrollmentNative.ExistingChildCandidate) error {
+	var ids []int64
+	for _, candidates := range lists {
+		for _, candidate := range candidates {
+			ids = append(ids, candidate.StudentID)
+		}
+	}
+	if phase == nil || len(ids) == 0 {
+		return nil
+	}
+	holders := d.deps.PhaseHolders
+	if holders == nil {
+		return errors.New("decision: phase holders of enrolled-child candidates are not configured")
+	}
+	held, err := holders.PhaseRequestsHoldingStudents(ctx, phase.ID, ids, askingChildIDs)
+	if err != nil {
+		return fmt.Errorf("decision: phase requests of enrolled-child candidates: %w", err)
+	}
+	for _, candidates := range lists {
+		for i := range candidates {
+			if request, ok := held[candidates[i].StudentID]; ok {
+				candidates[i].PhaseRequest = &request
+			}
+		}
+	}
+	return nil
 }
 
 // pinChosenStudent pins the office's chosen student on the child, after the
@@ -345,5 +433,10 @@ func (d *Decisions) attachExistingChildCandidates(ctx context.Context, request *
 		}
 		summary.ExistingChildCandidates[child.ID] = candidates
 	}
-	return nil
+	asking := make([]int64, 0, len(summary.ExistingChildCandidates))
+	lists := make([][]enrollmentNative.ExistingChildCandidate, 0, len(summary.ExistingChildCandidates))
+	for childID, candidates := range summary.ExistingChildCandidates {
+		asking, lists = append(asking, childID), append(lists, candidates)
+	}
+	return d.attachPhaseRequests(ctx, summary.Phase, asking, lists...)
 }

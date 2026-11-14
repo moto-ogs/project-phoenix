@@ -89,11 +89,35 @@ func TestCreateManualApprovedEnrollment_OfficeCreatesANewChild(t *testing.T) {
 	m := setupManualEnrollmentRouter(t)
 	existing := enrolledChild(t, m.db, "Mara", "Papier", calendar.NewDate(2019, 3, 1))
 
-	rec := m.postManualEnrollmentChoosing(t, manualPaperChild(), "", true)
+	rec := m.postManualEnrollmentChoosing(t, manualPaperChild(), "", true, strconv.FormatInt(existing.ID, 10))
 
 	body := requireManualEnrollmentCreated(t, rec)
 	assert.NotEqual(t, strconv.FormatInt(existing.ID, 10), body.Data.StudentID)
 	assert.Equal(t, 2, studentsNamed(t, m.db, "Mara", "Papier"))
+}
+
+// "create new" names the candidates the office saw. A candidate outside
+// that list, such as a child enrolled meanwhile, refuses it again with the
+// current candidates (#6247).
+func TestCreateManualApprovedEnrollment_NewChildChoiceRechecksTheCandidates(t *testing.T) {
+	t.Parallel()
+	m := setupManualEnrollmentRouter(t)
+	existing := enrolledChild(t, m.db, "Mara", "Papier", calendar.NewDate(2019, 3, 1))
+
+	rec := m.postManualEnrollmentChoosing(t, manualPaperChild(), "", true)
+
+	require.Equal(t, http.StatusConflict, rec.Code, "Body: %s", rec.Body.String())
+	var body struct {
+		Code    string `json:"code"`
+		Details struct {
+			Candidates []enrollmentAPI.AdminExistingChildCandidate `json:"candidates"`
+		} `json:"details"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	assert.Equal(t, "enrollment.child_possibly_enrolled", body.Code)
+	require.Len(t, body.Details.Candidates, 1)
+	assert.Equal(t, strconv.FormatInt(existing.ID, 10), body.Details.Candidates[0].StudentID)
+	assert.Equal(t, 1, studentsNamed(t, m.db, "Mara", "Papier"))
 }
 
 func TestCreateManualApprovedEnrollment_RefusesAChoiceThatIsNoCandidate(t *testing.T) {

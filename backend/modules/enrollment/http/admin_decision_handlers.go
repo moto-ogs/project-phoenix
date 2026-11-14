@@ -172,6 +172,19 @@ type AdminExistingChildCandidate struct {
 	LastName    string  `json:"last_name"`
 	DateOfBirth *string `json:"date_of_birth,omitempty"`
 	SchoolClass string  `json:"school_class,omitempty"`
+	// PhaseRequest is the other active request of the same phase that
+	// already created or renews this child (#6247). The office cannot renew
+	// it again in the phase; the enrollment duplicates that request.
+	PhaseRequest *AdminCandidatePhaseRequest `json:"phase_request,omitempty"`
+}
+
+// AdminCandidatePhaseRequest names the request of the phase that holds a
+// candidate.
+type AdminCandidatePhaseRequest struct {
+	RequestID         string `json:"request_id"`
+	ChildStatus       string `json:"child_status"`
+	GuardianFirstName string `json:"guardian_first_name"`
+	GuardianLastName  string `json:"guardian_last_name"`
 }
 
 type AdminOfferingAdjustment struct {
@@ -447,6 +460,12 @@ func newAdminExistingChildCandidate(candidate capability.ExistingChildCandidate)
 		dob := string(*candidate.DateOfBirth)
 		out.DateOfBirth = &dob
 	}
+	if held := candidate.PhaseRequest; held != nil {
+		out.PhaseRequest = &AdminCandidatePhaseRequest{
+			RequestID: strconv.FormatInt(held.RequestID, 10), ChildStatus: held.ChildStatus,
+			GuardianFirstName: held.GuardianFirstName, GuardianLastName: held.GuardianLastName,
+		}
+	}
 	return out
 }
 
@@ -515,11 +534,14 @@ func toAdminSchemaMetadata(fs *capability.FormSchema) ([]AdminRequestSchemaField
 // AdminDecideRequest is the body of POST .../children/{childId}/decide.
 // ExistingStudentID and CreateNewStudent answer an approval whose child may
 // already be enrolled (#6053): renew that child, or create a new one.
+// ShownExistingStudentIDs lists the candidates the office saw when it chose a
+// new child; a candidate outside it refuses the approval again (#6247).
 type AdminDecideRequest struct {
-	Status            string `json:"status"` // approved | waitlisted | rejected | under_review
-	Reason            string `json:"reason,omitempty"`
-	ExistingStudentID string `json:"existing_student_id,omitempty"`
-	CreateNewStudent  bool   `json:"create_new_student,omitempty"`
+	Status                  string   `json:"status"` // approved | waitlisted | rejected | under_review
+	Reason                  string   `json:"reason,omitempty"`
+	ExistingStudentID       string   `json:"existing_student_id,omitempty"`
+	CreateNewStudent        bool     `json:"create_new_student,omitempty"`
+	ShownExistingStudentIDs []string `json:"shown_existing_student_ids,omitempty"`
 	// AcceptOfferingChanges confirms booking the offerings' current terms
 	// although they changed since the submission (#6837).
 	AcceptOfferingChanges bool `json:"accept_offering_changes,omitempty"`
@@ -530,6 +552,20 @@ func (req *AdminDecideRequest) Bind(_ *http.Request) error { return nil }
 // existingStudentID parses the chosen enrolled child, nil when none is chosen.
 func (req *AdminDecideRequest) existingStudentID() (*int64, error) {
 	return parseExistingStudentID(req.ExistingStudentID)
+}
+
+// parseShownStudentIDs reads the candidates the office saw before it chose a
+// new child.
+func parseShownStudentIDs(values []string) ([]int64, error) {
+	ids := make([]int64, 0, len(values))
+	for _, value := range values {
+		id, err := parseExistingStudentID(value)
+		if err != nil || id == nil {
+			return nil, errors.New("invalid shown_existing_student_ids")
+		}
+		ids = append(ids, *id)
+	}
+	return ids, nil
 }
 
 // parseExistingStudentID reads the office's chosen enrolled child of a
@@ -570,6 +606,11 @@ func (rs *Resource) decideAdminChild(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	shownStudentIDs, err := parseShownStudentIDs(body.ShownExistingStudentIDs)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
 
 	claims := sessiontoken.ClaimsFromCtx(r.Context())
 	// The command opens the tenant unit and owns its retry and the guardian
@@ -582,6 +623,7 @@ func (rs *Resource) decideAdminChild(w http.ResponseWriter, r *http.Request) {
 		ReviewedBy:            int64(claims.ID),
 		ExistingStudentID:     existingStudentID,
 		CreateNewStudent:      body.CreateNewStudent,
+		ShownCandidateIDs:     shownStudentIDs,
 		AcceptOfferingChanges: body.AcceptOfferingChanges,
 	})
 	if err != nil {
@@ -695,7 +737,9 @@ func (rs *Resource) decideErrorRules(r *http.Request) []common.ErrorRule {
 			return common.ErrorConflictWithCode(err, common.CodeEnrollmentGuardianAccountMismatch)
 		}},
 		{Target: capability.ErrChildPossiblyEnrolled, Render: func(err error) render.Renderer {
-			return common.ErrorConflictWithCode(err, common.CodeEnrollmentChildPossiblyEnrolled)
+			// The refusal names the current candidates, so the detail page
+			// asks the office again with them instead of a stale list (#6247).
+			return common.ErrorConflictWithDetails(err, common.CodeEnrollmentChildPossiblyEnrolled, possiblyEnrolledDetails(err))
 		}},
 		{Target: capability.ErrExistingChildChoiceInvalid, Render: func(err error) render.Renderer {
 			return common.ErrorConflictWithCode(err, common.CodeEnrollmentExistingChildChoiceInvalid)

@@ -25,6 +25,9 @@ interface ChoiceModalOption {
    *  load. Keeping the option visible explains what exists; hiding it would
    *  make the dialog silently different from one attempt to the next. */
   disabled?: boolean;
+  /** Why a disabled option cannot be chosen; shown on hover, focus and tap
+   *  like every blocked kit button. */
+  disabledReason?: string;
   /** Highlights the option the user most likely wants, e.g. the choice a
    *  series already has, so an edit does not flip it by accident. */
   primary?: boolean;
@@ -96,6 +99,7 @@ export function ChoiceModal({
             variant={option.primary ? "primary" : "outline"}
             size="md"
             disabled={isBusy || option.disabled}
+            disabledReason={option.disabled ? option.disabledReason : undefined}
             onClick={() => onSelect(option.value)}
             noTooltip="Jede Wahl nennt ihre Folge selbst, in Beschriftung und Beschreibung."
             className="w-full"

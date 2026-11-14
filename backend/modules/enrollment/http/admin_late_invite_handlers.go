@@ -103,26 +103,33 @@ type AdminManualApprovedEnrollmentRequest struct {
 	SendNotification         bool   `json:"send_notification"`
 	// ExistingStudentID and CreateNewStudent answer a refusal with
 	// enrollment.child_possibly_enrolled (#6148): renew that enrolled child,
-	// or create a new one. At most one is set.
-	ExistingStudentID string `json:"existing_student_id,omitempty"`
-	CreateNewStudent  bool   `json:"create_new_student,omitempty"`
+	// or create a new one. At most one is set. ShownExistingStudentIDs are
+	// the candidates the office saw before it chose a new child (#6247).
+	ExistingStudentID       string   `json:"existing_student_id,omitempty"`
+	CreateNewStudent        bool     `json:"create_new_student,omitempty"`
+	ShownExistingStudentIDs []string `json:"shown_existing_student_ids,omitempty"`
 }
 
 func (req *AdminManualApprovedEnrollmentRequest) Bind(r *http.Request) error {
 	return req.SubmitEnrollmentRequest.Bind(r)
 }
 
-// existingChildChoice parses the office's answer, nil when it chose no
-// enrolled child.
-func (req *AdminManualApprovedEnrollmentRequest) existingChildChoice() (*int64, error) {
+// existingChildChoice parses the office's answer into the input's choice
+// fields: the chosen enrolled child, or a new child with the candidates the
+// office saw (#6148, #6247).
+func (req *AdminManualApprovedEnrollmentRequest) existingChildChoice() (ManualApprovedEnrollmentInput, error) {
 	existing, err := parseExistingStudentID(req.ExistingStudentID)
 	if err != nil {
-		return nil, err
+		return ManualApprovedEnrollmentInput{}, err
 	}
 	if existing != nil && req.CreateNewStudent {
-		return nil, errors.New("existing_student_id and create_new_student exclude each other")
+		return ManualApprovedEnrollmentInput{}, errors.New("existing_student_id and create_new_student exclude each other")
 	}
-	return existing, nil
+	shown, err := parseShownStudentIDs(req.ShownExistingStudentIDs)
+	if err != nil {
+		return ManualApprovedEnrollmentInput{}, err
+	}
+	return ManualApprovedEnrollmentInput{ExistingStudentID: existing, CreateNewStudent: req.CreateNewStudent, ShownCandidateIDs: shown}, nil
 }
 
 type AdminManualApprovedEnrollmentResponse struct {
@@ -152,7 +159,7 @@ func (rs *Resource) createManualApprovedEnrollment(w http.ResponseWriter, r *htt
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	existingStudentID, err := body.existingChildChoice()
+	input, err := body.existingChildChoice()
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -170,16 +177,10 @@ func (rs *Resource) createManualApprovedEnrollment(w http.ResponseWriter, r *htt
 		return
 	}
 
+	input.Request, input.Reason, input.SendNotification, input.ActorID = serviceReq, reason, body.SendNotification, actorID
 	var result *ManualApprovedEnrollmentResult
 	err = rs.runInTenantTx(r, func(ctx context.Context) error {
-		out, createErr := rs.RequestService.CreateManualApprovedEnrollment(ctx, ManualApprovedEnrollmentInput{
-			Request:           serviceReq,
-			Reason:            reason,
-			SendNotification:  body.SendNotification,
-			ActorID:           actorID,
-			ExistingStudentID: existingStudentID,
-			CreateNewStudent:  body.CreateNewStudent,
-		})
+		out, createErr := rs.RequestService.CreateManualApprovedEnrollment(ctx, input)
 		if createErr != nil {
 			return createErr
 		}
