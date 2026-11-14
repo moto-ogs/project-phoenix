@@ -22,15 +22,16 @@ type TraegerStaff struct {
 	subjects ports.StaffSubjects
 	audit    ports.StaffAdminAudit
 	bank     workforce.BankDataCipher
+	clock    ports.Clock
 }
 
 // NewTraegerStaff composes the Personalstamm; every collaborator is required.
-func NewTraegerStaff(store ports.TraegerStaffStore, collaborators workforce.TraegerStaffPorts, subjects ports.StaffSubjects, audit ports.StaffAdminAudit, bank workforce.BankDataCipher) *TraegerStaff {
+func NewTraegerStaff(store ports.TraegerStaffStore, collaborators workforce.TraegerStaffPorts, subjects ports.StaffSubjects, audit ports.StaffAdminAudit, bank workforce.BankDataCipher, clock ports.Clock) *TraegerStaff {
 	if store == nil || collaborators.Schools == nil || collaborators.Employments == nil || collaborators.Persons == nil || collaborators.Access == nil ||
-		collaborators.Runtime == nil || subjects == nil || audit == nil || bank == nil {
+		collaborators.Runtime == nil || subjects == nil || audit == nil || bank == nil || clock == nil {
 		panic("workforce traeger staff: all dependencies are required")
 	}
-	return &TraegerStaff{store: store, ports: collaborators, subjects: subjects, audit: audit, bank: bank}
+	return &TraegerStaff{store: store, ports: collaborators, subjects: subjects, audit: audit, bank: bank, clock: clock}
 }
 
 // changeTrailLimit bounds the trail a record detail shows.
@@ -206,11 +207,15 @@ func (t *TraegerStaff) Record(ctx context.Context, actor workforce.TraegerStaffA
 	}
 	var record domain.TraegerStaffRecord
 	var changes []domain.TraegerStaffChange
+	var proofs []workforce.TraegerStaffProof
 	err = t.released(ctx, actor, func(ctx context.Context) error {
 		if record, err = t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, false); err != nil {
 			return err
 		}
-		changes, err = t.store.ListStaffChanges(ctx, actor.OrganizationID, recordID, changeTrailLimit)
+		if changes, err = t.store.ListStaffChanges(ctx, actor.OrganizationID, recordID, changeTrailLimit); err != nil {
+			return err
+		}
+		proofs, err = t.recordProofs(ctx, actor.OrganizationID, recordID)
 		return err
 	})
 	if err != nil {
@@ -225,6 +230,7 @@ func (t *TraegerStaff) Record(ctx context.Context, actor workforce.TraegerStaffA
 		TraegerStaffRecordSummary: summarize(record, names, reads),
 		Financial:                 maskedRecordFinancial(record),
 		Changes:                   make([]workforce.TraegerStaffChange, 0, len(changes)),
+		Proofs:                    proofs,
 	}
 	for _, change := range changes {
 		detail.Changes = append(detail.Changes, publicChange(change, names))

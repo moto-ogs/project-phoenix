@@ -1975,6 +1975,16 @@ export const ERROR_CATALOG = {
         "Das Ende liegt vor dem Anfang. Bitte prüfen Sie den Zeitraum.",
       "workforce.target_override_too_long":
         "Der Zeitraum ist zu lang. Erlaubt sind höchstens {max_days} Tage.",
+      "workforce.traeger_proof_invalid":
+        "Der Nachweis lässt sich so nicht speichern. Bitte prüfen Sie das markierte Feld.",
+      "workforce.traeger_proof_mapping_invalid":
+        "Diese Nachweisart gibt es an der Schule nicht mehr. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_proof_not_found":
+        "Diesen Nachweis gibt es nicht mehr. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_proof_type_name_taken":
+        "Eine Nachweisart mit diesem Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
+      "workforce.traeger_proof_type_not_found":
+        "Diese Nachweisart gibt es nicht mehr oder sie ist archiviert. Bitte laden Sie die Seite neu.",
       "workforce.traeger_staff_already_linked":
         "Eine dieser Personen hat schon eine Personalakte. Bitte laden Sie die Seite neu.",
       "workforce.traeger_staff_link_invalid":

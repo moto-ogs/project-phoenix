@@ -398,6 +398,27 @@ type TraegerStaffStore interface {
 	CountStaffRecords(ctx context.Context, organizationID int64) (int, error)
 	InsertRelease(ctx context.Context, release domain.TraegerStaffRelease) (domain.TraegerStaffRelease, error)
 	DeleteRelease(ctx context.Context, organizationID int64) (bool, error)
+
+	TraegerProofStore
+}
+
+// TraegerProofStore is the persistence of the Nachweise (#4707): kinds,
+// proofs, mappings and reminder claims in the Träger transaction, the
+// school's kinds and the status it sees in its tenant transaction, the
+// released Träger in the administrative transaction.
+type TraegerProofStore interface {
+	EnsureStandardProofTypes(ctx context.Context, organizationID int64, kinds []domain.TraegerProofType) error
+	ListProofTypes(ctx context.Context, organizationID int64) ([]domain.TraegerProofType, error)
+	SaveProofType(ctx context.Context, kind domain.TraegerProofType) (domain.TraegerProofType, error)
+	ListProofs(ctx context.Context, organizationID int64, recordIDs []int64) ([]domain.TraegerProof, error)
+	SaveProof(ctx context.Context, proof domain.TraegerProof) error
+	DeleteProof(ctx context.Context, organizationID, recordID, typeID int64) error
+	ClaimProofReminder(ctx context.Context, organizationID, proofID int64, stage, expiresOn string) (bool, error)
+	ListProofTypeMappings(ctx context.Context, organizationID int64) ([]domain.TraegerProofTypeMapping, error)
+	SaveProofTypeMapping(ctx context.Context, organizationID, accountID int64, mapping domain.TraegerProofTypeMapping) error
+	SchoolProofKinds(ctx context.Context) ([]domain.QualificationType, error)
+	SchoolTraegerProofStatus(ctx context.Context) ([]domain.SchoolTraegerProofStatus, error)
+	ReleasedOrganizationIDs(ctx context.Context) ([]int64, error)
 }
 
 // TraegerStaffKeep tells the school which of its employments a record of

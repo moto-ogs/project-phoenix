@@ -73,6 +73,11 @@ const CodeWorkforceTargetOverrideHoursInvalid = "workforce.target_override_hours
 const CodeWorkforceTargetOverrideOverlap = "workforce.target_override_overlap"
 const CodeWorkforceTargetOverrideRangeInvalid = "workforce.target_override_range_invalid"
 const CodeWorkforceTargetOverrideTooLong = "workforce.target_override_too_long"
+const CodeWorkforceTraegerProofInvalid = "workforce.traeger_proof_invalid"
+const CodeWorkforceTraegerProofMappingInvalid = "workforce.traeger_proof_mapping_invalid"
+const CodeWorkforceTraegerProofNotFound = "workforce.traeger_proof_not_found"
+const CodeWorkforceTraegerProofTypeNameTaken = "workforce.traeger_proof_type_name_taken"
+const CodeWorkforceTraegerProofTypeNotFound = "workforce.traeger_proof_type_not_found"
 const CodeWorkforceTraegerStaffAlreadyLinked = "workforce.traeger_staff_already_linked"
 const CodeWorkforceTraegerStaffLinkInvalid = "workforce.traeger_staff_link_invalid"
 const CodeWorkforceTraegerStaffNotReleased = "workforce.traeger_staff_not_released"
@@ -163,6 +168,11 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforceTargetOverrideOverlap, "business_rejection"},
 	{CodeWorkforceTargetOverrideRangeInvalid, "input"},
 	{CodeWorkforceTargetOverrideTooLong, "input"},
+	{CodeWorkforceTraegerProofInvalid, "input"},
+	{CodeWorkforceTraegerProofMappingInvalid, "input"},
+	{CodeWorkforceTraegerProofNotFound, "input"},
+	{CodeWorkforceTraegerProofTypeNameTaken, "business_rejection"},
+	{CodeWorkforceTraegerProofTypeNotFound, "input"},
 	{CodeWorkforceTraegerStaffAlreadyLinked, "business_rejection"},
 	{CodeWorkforceTraegerStaffLinkInvalid, "input"},
 	{CodeWorkforceTraegerStaffNotReleased, "business_rejection"},

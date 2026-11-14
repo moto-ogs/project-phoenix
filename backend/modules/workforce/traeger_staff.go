@@ -253,11 +253,14 @@ type TraegerStaffChange struct {
 }
 
 // TraegerStaffRecordDetail is one record with its masked bank and tax
-// section and its trail.
+// section, its trail and its proofs.
 type TraegerStaffRecordDetail struct {
 	TraegerStaffRecordSummary
 	Financial TraegerStaffFinancial `json:"financial"`
 	Changes   []TraegerStaffChange  `json:"changes"`
+	// Proofs is the state of every live kind of the Träger at the record
+	// (#4707).
+	Proofs []TraegerStaffProof `json:"proofs"`
 }
 
 // TraegerStaffRecords is the Personalstamm in the Träger-Portal. Every

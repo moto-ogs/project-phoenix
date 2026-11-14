@@ -458,6 +458,36 @@
       "legacy": "workforce.target_override_too_long"
     },
     {
+      "code": "workforce.traeger_proof_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_proof_invalid"
+    },
+    {
+      "code": "workforce.traeger_proof_mapping_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_proof_mapping_invalid"
+    },
+    {
+      "code": "workforce.traeger_proof_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_proof_not_found"
+    },
+    {
+      "code": "workforce.traeger_proof_type_name_taken",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_proof_type_name_taken"
+    },
+    {
+      "code": "workforce.traeger_proof_type_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_proof_type_not_found"
+    },
+    {
       "code": "workforce.traeger_staff_already_linked",
       "class": "business_rejection",
       "parameters": [],

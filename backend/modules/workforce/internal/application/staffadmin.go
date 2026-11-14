@@ -458,7 +458,13 @@ func (a *StaffAdmin) StaffKeptByTraeger(ctx context.Context, staffID int64) (boo
 // record: a link writes the school's number and bank hand-over into the
 // school's own trail.
 func (a *StaffAdmin) TraegerStaffRecords(collaborators workforce.TraegerStaffPorts) workforce.TraegerStaffRecords {
-	return NewTraegerStaff(a.traeger, collaborators, a.subjects, a.audit, a.bank)
+	return NewTraegerStaff(a.traeger, collaborators, a.subjects, a.audit, a.bank, a.clock)
+}
+
+// TraegerStaffProofs composes the Nachweise of the Personalstamm (#4707)
+// over the same records.
+func (a *StaffAdmin) TraegerStaffProofs(collaborators workforce.TraegerStaffPorts) workforce.TraegerStaffProofs {
+	return NewTraegerStaff(a.traeger, collaborators, a.subjects, a.audit, a.bank, a.clock)
 }
 
 func (a *StaffAdmin) keptByTraeger(ctx context.Context, staffID int64) (bool, error) {

@@ -19,23 +19,28 @@ import (
 )
 
 // mountTraegerStaffRoutes serves the Personalstamm of ADR 0089 (#4705) at
-// /traeger/staff-records behind the Träger right „Personal“, over the
-// personnel record staffAdmin the root built for the schools.
+// /traeger/staff-records and its Nachweise (#4707) at /traeger/staff-proofs
+// behind the Träger right „Personal“, over the personnel record staffAdmin
+// the root built for the schools.
 func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, organizations HolidayOrganizations,
 	persons TraegerPersons, membership TraegerStaff, accessLog owners.DataAccessAppender,
 ) error {
 	if staffAdmin == nil {
 		return errors.New("traeger staff records: the personnel record is required")
 	}
-	records := staffAdmin.TraegerStaffRecords(workforce.TraegerStaffPorts{
+	collaborators := workforce.TraegerStaffPorts{
 		Schools:     traegerStaffSchools{organizations: organizations},
 		Employments: traegerSchoolEmployments{staff: membership},
 		Persons:     traegerSchoolPersons{persons: persons},
 		Access:      traegerStaffAccessLog{log: accessLog},
 		Runtime:     traegerDocumentRuntime{},
-	})
-	resource := traegerstaff.NewRecordsResource(records, common.RequiresPermission(identityaccess.TraegerRightStaffManage))
+	}
+	records := staffAdmin.TraegerStaffRecords(collaborators)
+	requireStaff := common.RequiresPermission(identityaccess.TraegerRightStaffManage)
+	resource := traegerstaff.NewRecordsResource(records, requireStaff)
 	root.Mount("/traeger/staff-records", resource.TraegerRouter(ProtectedTraegerRoutes))
+	proofs := traegerstaff.NewProofsResource(staffAdmin.TraegerStaffProofs(collaborators), requireStaff)
+	root.Mount("/traeger/staff-proofs", proofs.TraegerRouter(ProtectedTraegerRoutes))
 	return nil
 }
 
