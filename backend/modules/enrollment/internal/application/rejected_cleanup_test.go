@@ -8,6 +8,7 @@ import (
 	"time"
 
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,7 +45,7 @@ func (s *cleanupRequestStub) FullyRejectedRequestsBefore(_ context.Context, cuto
 	s.cutoff = cutoff
 	return s.ids, s.listErr
 }
-func (s *cleanupRequestStub) SettledRequestsBefore(_ context.Context, withdrawnCutoff, _ time.Time) ([]int64, error) {
+func (s *cleanupRequestStub) SettledRequestsBefore(_ context.Context, withdrawnCutoff, _ time.Time, _ calendar.Date) ([]int64, error) {
 	s.cutoff = withdrawnCutoff
 	return s.ids, s.listErr
 }

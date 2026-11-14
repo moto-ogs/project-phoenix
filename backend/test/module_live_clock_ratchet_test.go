@@ -55,7 +55,7 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/devicefleet":                  34,
 	"modules/devicescan":                   6,
 	"modules/documentrendering":            1,
-	"modules/enrollment":                   64,
+	"modules/enrollment":                   63,
 	"modules/facilities":                   16,
 	"modules/feedback":                     8,
 	"modules/filestorage":                  34,

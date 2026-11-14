@@ -26,6 +26,7 @@ import (
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/workflows/studentdeletion"
 	studentdeletioncompose "github.com/moto-ogs/project-phoenix/workflows/studentdeletion/compose"
@@ -133,6 +134,11 @@ func (unreachableObjects) RemovePrivate(context.Context, string, int64, string) 
 	return errors.New("retention test: no object store")
 }
 
+// retentionTestEnrollmentDay is the school day of the settled enrollment
+// cleanup in the retention tests: the school year 2026-09-01 to 2027-07-31
+// of their enrollment fixture runs on it, the year 2024/25 has ended.
+var retentionTestEnrollmentDay = calendar.NewDate(2027, 1, 15)
+
 // newSettledEnrollmentTestRetention composes the cleanup of settled
 // enrollments as the service graph does: the Enrollment deletion module over
 // the owner, the People Directory guardians, the audited adjustments and
@@ -159,6 +165,7 @@ func newSettledEnrollmentTestRetention(db transactionruntime.Database, settings 
 		Audit:                 reposAudit.EnrollmentDeletionAudit,
 		Delivery:              enrollmentDeliveryAdapter{module: deliveries},
 		Settings:              settings,
+		Today:                 func() calendar.Date { return retentionTestEnrollmentDay },
 	}).Cleanup, nil
 }
 
