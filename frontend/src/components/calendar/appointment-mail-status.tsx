@@ -39,7 +39,7 @@ const APPOINTMENT_MAIL_KINDS = [
 const POLL_MS = 15_000;
 
 /** The mails of the appointment, refreshed while the page is visible. */
-export function useAppointmentMails(appointmentId: string) {
+function useAppointmentMails(appointmentId: string) {
   const [mails, setMails] = useState<CalendarAppointmentMails | null>(null);
   const load = useApiLoadError();
   const { show: showLoadError, clear: clearLoadError } = load;
