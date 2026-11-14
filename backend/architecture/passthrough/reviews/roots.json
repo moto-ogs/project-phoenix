@@ -1017,8 +1017,8 @@
     },
     {
       "decision": "0234",
-      "id": "api/schoolSearchNotes.SearchNotes",
-      "reason": "Owner-edge translation at the root (ADR 0075 floor shape): maps the school search projection's note search onto People Directory's public StudentNoteSearch and its hits back (ADR 0234)."
+      "id": "api/schoolSearchActivities.ActivityGroupIDs",
+      "reason": "Owner-edge translation at the root (ADR 0075 floor shape): reduces the note card's enrollment read (studentActiveEnrollments) to the activity IDs the school search projection's care team question needs (ADR 0234)."
     },
     {
       "decision": "0090",

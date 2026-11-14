@@ -74,7 +74,8 @@ func (s *Search) SearchSchool(ctx context.Context, query schoolsearchview.Query)
 }
 
 // detailHit is the reason a child is found beyond its own row: its newest
-// visible note or its registration answer. A note that reaches the caller
+// matching note the reader reaches (one that needs no care team first) or its
+// registration answer. A note that reaches the caller
 // only through the child's care team keeps the answer as a fallback.
 type detailHit struct {
 	match        schoolsearchview.Match
@@ -158,16 +159,27 @@ func (s *Search) withDetailHits(ctx context.Context, text string, children []sch
 	if err := s.resolveCareTeam(ctx, rows, found.hits, notes); err != nil {
 		return nil, err
 	}
-	for _, row := range rows {
-		if len(children) == schoolsearchview.ChildLimit {
-			break
-		}
-		if hit := found.hits[row.ID]; hit != nil {
+	return found.appendTo(children, rows), nil
+}
+
+// appendTo fills the free places with the rows that kept a reason: note hits
+// first, then answer hits, each in the order they were found. A child whose
+// care team note fell back to its answer moves to the answers.
+func (d *detailHits) appendTo(children, rows []schoolsearchview.Child) []schoolsearchview.Child {
+	for _, notes := range []bool{true, false} {
+		for _, row := range rows {
+			if len(children) == schoolsearchview.ChildLimit {
+				return children
+			}
+			hit := d.hits[row.ID]
+			if hit == nil || (hit.match.Field == schoolsearchview.MatchStudentNote) != notes {
+				continue
+			}
 			row.Match = hit.match
 			children = append(children, row)
 		}
 	}
-	return children, nil
+	return children
 }
 
 // findNotes asks People Directory for the notes the reader's audience

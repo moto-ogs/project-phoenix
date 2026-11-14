@@ -7,19 +7,21 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	studentsAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/students"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsearchview"
 	"github.com/stretchr/testify/require"
 )
 
 // noteAudienceCaller is a member of staff with their own groups, activities
-// and classes, as the note card's routes read them.
+// and classes, as the note card's routes read them. The rest of the caller
+// context is not read.
 type noteAudienceCaller struct {
+	studentsAPI.CallerContext
 	groups, led, activities []int64
 	classes                 []string
 	err                     error
 }
 
-func (noteAudienceCaller) HasCurrentStaff(context.Context) (bool, error) { return true, nil }
 func (c noteAudienceCaller) MyGroupIDs(context.Context) ([]int64, error) { return c.groups, c.err }
 func (c noteAudienceCaller) MyTeacherGroupIDs(context.Context) ([]int64, error) {
 	return c.led, nil

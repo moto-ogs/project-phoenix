@@ -127,8 +127,10 @@ func (s *Service) ListSchoolSharedNotes(ctx context.Context, studentID int64) ([
 // hit leads to the child's card, which reads the note with its author again.
 func (s *Service) SearchStudentNotes(ctx context.Context, request peopledirectory.StudentNoteSearchRequest) ([]peopledirectory.StudentNoteSearchHit, error) {
 	search := domain.StudentNoteSearch{
-		Text: strings.TrimSpace(request.Text), ReaderAccountID: request.ReaderAccountID, Admin: request.Admin,
-		LedActivityGroupIDs: request.LedActivityGroupIDs, LedEducationGroupIDs: request.LedEducationGroupIDs,
+		Text: strings.TrimSpace(request.Text), Visibilities: request.Audience.Visibilities,
+		LedActivityGroupIDs:  request.Audience.LedActivityGroupIDs,
+		LedEducationGroupIDs: request.Audience.LedEducationGroupIDs,
+		ReaderAccountID:      request.Audience.ReaderAccountID,
 	}
 	if search.Text == "" || search.ReaderAccountID <= 0 {
 		return nil, peopledirectory.ErrStudentNoteInvalid

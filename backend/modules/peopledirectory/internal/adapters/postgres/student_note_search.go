@@ -10,21 +10,22 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// searchNotesSQL: care_team, admin, reader, text, tenant, visibilities,
-// reader, group_leads, led activities, group_leads, led groups.
+// searchNotesSQL: care_team, reader, text, tenant, visibilities, reader,
+// group_leads, led activities, group_leads, led groups.
 //
-// It is applyAudience for every child at once, with the care_team audience
-// granted to all of them: whether the reader has a child follows from
-// groups, activities and classes of other owners, so the caller answers it
-// for the hits that need it (care_team_only). Per child the statement keeps
-// the newest note, one that needs no care team before one that does, so a
-// child the reader reaches anyway is never dropped by that answer.
+// It is applyAudience for every child at once, with the caller's filter for a
+// reader in every child's care team: whether the reader has a child follows
+// from groups, activities and classes of other owners, so the caller answers
+// it for the hits that need it (care_team_only, a care_team note somebody
+// else wrote). Per child the statement keeps the newest note, one that needs
+// no care team before one that does, so a child the reader reaches anyway is
+// never dropped by that answer.
 //
 // The statement carries the typed text, so it opens with the marker that
 // keeps its literals out of the query log (ADR 0231 point 5).
 const searchNotesSQL = collation.RedactLiteralsInLog + `SELECT hit.student_id, hit.id, hit.body, hit.care_team_only FROM (
 	SELECT DISTINCT ON (note.student_id) note.student_id, note.id, note.body, note.created_at,
-		(note.visibility = ? AND NOT ? AND note.author_account_id IS DISTINCT FROM ?) AS care_team_only
+		(note.visibility = ? AND note.author_account_id IS DISTINCT FROM ?) AS care_team_only
 	FROM users.student_notes AS note
 	CROSS JOIN (SELECT '%' || ` + collation.UnaccentLikePatternSQL + ` || '%' AS p) AS q
 	WHERE note.tenant_id = ? AND note.deleted_at IS NULL
@@ -51,16 +52,17 @@ func (s *StudentNoteStore) Search(ctx context.Context, search domain.StudentNote
 	if err != nil {
 		return nil, domain.OperationStats{}, err
 	}
-	visibilities := []string{domain.StudentNoteVisibilityAllStaff, domain.StudentNoteVisibilityCareTeam}
-	if search.Admin {
-		visibilities = append(visibilities, domain.StudentNoteVisibilityGroupLeads)
+	if len(search.Visibilities) == 0 {
+		// The card always grants the team-wide notes; an empty filter is a
+		// caller error, never "no note matches".
+		return nil, domain.OperationStats{}, domain.ErrStudentNoteInvalid
 	}
 	var rows []noteSearchRow
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	err = db.NewRaw(searchNotesSQL,
-		domain.StudentNoteVisibilityCareTeam, search.Admin, search.ReaderAccountID,
-		search.Text, scope.TenantID, bun.List(visibilities), search.ReaderAccountID,
+		domain.StudentNoteVisibilityCareTeam, search.ReaderAccountID,
+		search.Text, scope.TenantID, bun.List(search.Visibilities), search.ReaderAccountID,
 		domain.StudentNoteVisibilityGroupLeads, bun.List(idsOrNone(search.LedActivityGroupIDs)),
 		domain.StudentNoteVisibilityGroupLeads, bun.List(idsOrNone(search.LedEducationGroupIDs)),
 	).Scan(ctx, &rows)

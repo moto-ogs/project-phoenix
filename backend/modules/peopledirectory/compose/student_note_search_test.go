@@ -76,24 +76,38 @@ func TestStudentNoteSearchAppliesTheCardsAudience(t *testing.T) {
 		return byChild
 	}
 
-	colleague := hits(peopledirectory.StudentNoteSearchRequest{ReaderAccountID: reader})
+	// The filter the note card builds for a reader in every care team
+	// (studentsAPI.ModuleNoteAudience with CareTeam).
+	careTeam := []string{peopledirectory.StudentNoteVisibilityAllStaff, peopledirectory.StudentNoteVisibilityCareTeam}
+	audience := func(admin bool, led ...int64) peopledirectory.StudentNoteAudience {
+		visibilities := careTeam
+		if admin {
+			visibilities = append(append([]string{}, careTeam...), peopledirectory.StudentNoteVisibilityGroupLeads)
+		}
+		return peopledirectory.StudentNoteAudience{Visibilities: visibilities, LedEducationGroupIDs: led, ReaderAccountID: reader}
+	}
+	colleague := hits(peopledirectory.StudentNoteSearchRequest{Audience: audience(false)})
 	assert.ElementsMatch(t, []int64{team.ID, care.ID, own.ID}, keys(colleague), "no leadership note, no deleted note, no other school")
 	assert.Equal(t, newest, colleague[team.ID].NoteID, "the newest matching note, folded like a name search")
 	assert.False(t, colleague[team.ID].CareTeamOnly)
 	assert.True(t, colleague[care.ID].CareTeamOnly, "a care team note waits for the caller's care team answer")
 	assert.False(t, colleague[own.ID].CareTeamOnly, "an own note needs no care team")
 
-	leader := hits(peopledirectory.StudentNoteSearchRequest{ReaderAccountID: reader, LedEducationGroupIDs: []int64{group.ID}})
+	leader := hits(peopledirectory.StudentNoteSearchRequest{Audience: audience(false, group.ID)})
 	assert.Contains(t, leader, lead.ID, "the lead of the referenced group finds its note")
 
-	admin := hits(peopledirectory.StudentNoteSearchRequest{ReaderAccountID: reader, Admin: true})
-	assert.ElementsMatch(t, []int64{team.ID, care.ID, lead.ID, own.ID}, keys(admin))
-	assert.False(t, admin[care.ID].CareTeamOnly, "an administrator is in every care team")
+	admin := hits(peopledirectory.StudentNoteSearchRequest{Audience: audience(true)})
+	assert.ElementsMatch(t, []int64{team.ID, care.ID, lead.ID, own.ID}, keys(admin), "an administrator reaches every note")
 
-	assert.Empty(t, searchNotes(t, db, search, peopledirectory.StudentNoteSearchRequest{Text: "%", ReaderAccountID: reader, Admin: true}),
+	assert.Empty(t, searchNotes(t, db, search, peopledirectory.StudentNoteSearchRequest{Text: "%", Audience: audience(true)}),
 		"a LIKE metacharacter is a character")
-	_, err = search.SearchStudentNotes(ctx, peopledirectory.StudentNoteSearchRequest{Text: "zoo", ReaderAccountID: reader})
+	_, err = search.SearchStudentNotes(ctx, peopledirectory.StudentNoteSearchRequest{Text: "zoo", Audience: audience(false)})
 	assert.Error(t, err, "the search runs in the caller's school transaction and opens none of its own")
+	require.NoError(t, testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(ctx context.Context, _ bun.Tx) error {
+		_, err := search.SearchStudentNotes(ctx, peopledirectory.StudentNoteSearchRequest{Text: "zoo", Audience: peopledirectory.StudentNoteAudience{ReaderAccountID: reader}})
+		assert.Error(t, err, "an empty audience is a caller error, never an empty result")
+		return nil
+	}))
 }
 
 // searchNotes runs the search inside the school transaction of a request.

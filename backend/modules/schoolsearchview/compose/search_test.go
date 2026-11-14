@@ -532,10 +532,10 @@ func TestCareTeamNotesReachOnlyTheCareTeam(t *testing.T) {
 	ports := owners{
 		answers: &answerSearch{matches: []enrollment.StudentAnswerMatch{{StudentID: answered.ID, Label: "Hobby", Answer: "Zaubern"}}},
 		notes: &noteSearch{hits: []schoolsearchview.NoteHit{
+			{StudentID: answered.ID, Body: "Zaubert gern", CareTeamOnly: true},
 			{StudentID: mine.ID, Body: "Zaubert gern", CareTeamOnly: true},
 			{StudentID: byActivity.ID, Body: "Zaubert gern", CareTeamOnly: true},
 			{StudentID: stranger.ID, Body: "Zaubert gern", CareTeamOnly: true},
-			{StudentID: answered.ID, Body: "Zaubert gern", CareTeamOnly: true},
 		}},
 		activities: &activityEnrollments{groups: map[int64][]int64{byActivity.ID: {41}}},
 		reader: &schoolsearchview.NoteReader{AccountID: 7, HasChild: func(child schoolsearchview.NoteChild) bool {
@@ -554,6 +554,7 @@ func TestCareTeamNotesReachOnlyTheCareTeam(t *testing.T) {
 		byActivity.ID: schoolsearchview.MatchStudentNote,
 		answered.ID:   schoolsearchview.MatchEnrollmentAnswer,
 	}, matches, "the stranger's note stays hidden; the answer stays a reason")
+	require.Equal(t, answered.ID, result.Children[2].ID, "a note that fell back to its answer sorts with the answers")
 	require.Len(t, ports.activities.asked, 1, "one activity read for all care team notes")
 	require.ElementsMatch(t, []int64{mine.ID, byActivity.ID, stranger.ID, answered.ID}, ports.activities.asked[0])
 	require.Len(t, asked, 4)

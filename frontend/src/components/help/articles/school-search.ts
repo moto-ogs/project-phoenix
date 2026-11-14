@@ -66,7 +66,7 @@ export function schoolSearchTopic(): HelpTopic {
     result:
       "Sie landen direkt beim Kind, bei der Person, im Raum oder auf der Seite.",
     differences: [
-      "Sie finden nur, was Sie auch ohne Suche sehen dürfen. Telefonnummern, E-Mail-Adressen, Elternnotizen, Notizen und Angaben aus der Anmeldung finden nur Konten, die Kontaktdaten sehen dürfen.",
+      "Sie finden nur, was Sie auch ohne Suche sehen dürfen. Telefonnummern, E-Mail-Adressen, Elternnotizen, Einträge aus dem Reiter `Notizen` und Angaben aus der Anmeldung finden nur Konten, die Kontaktdaten sehen dürfen.",
       "Eine Notiz finden Sie nur, wenn Sie sie auch im Reiter `Notizen` sehen. Eine Notiz für das Betreuungsteam findet nur, wer das Kind betreut. Eine Notiz für die Leitung findet nur die Leitung der genannten Gruppe.",
       "Ein Gruppen-Treffer öffnet `Alle Kinder` mit den Kindern dieser Gruppe.",
       "Gesundheitsangaben durchsucht die Suche nicht. Öffnen Sie dafür das Kind.",

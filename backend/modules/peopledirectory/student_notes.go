@@ -205,20 +205,15 @@ type StudentNoteQuery interface {
 }
 
 // StudentNoteSearchRequest searches the note cards of every child of the
-// school for a text (#7012). The caller resolves the reader as for one card:
-// this owner applies every part of the audience it can answer without the
-// child, and marks the hits whose answer depends on the child.
+// school for a text (#7012). Audience is the card's filter for a reader who
+// is in every child's care team: whether the reader is in a child's care team
+// follows from groups, activities and classes of other owners, so a hit that
+// reaches the reader only that way says so, and the caller answers it per
+// child.
 type StudentNoteSearchRequest struct {
 	// Text is compared folded like a name search, as a part of the note.
-	Text string
-	// ReaderAccountID always finds its own notes.
-	ReaderAccountID int64
-	// Admin finds every note of every child.
-	Admin bool
-	// LedActivityGroupIDs and LedEducationGroupIDs unlock the group_leads
-	// notes that refer to a group the reader leads.
-	LedActivityGroupIDs  []int64
-	LedEducationGroupIDs []int64
+	Text     string
+	Audience StudentNoteAudience
 }
 
 // StudentNoteSearchHit is the newest matching note of one child.

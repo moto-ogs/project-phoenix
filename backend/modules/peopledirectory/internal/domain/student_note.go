@@ -423,15 +423,15 @@ type SchoolDayHintFilter struct {
 }
 
 // StudentNoteSearch is a text search over the note cards of every child of
-// the school (#7012). It carries the parts of the audience that do not depend
-// on the child; whether the reader is in a child's care team is the caller's
-// question, so a hit that needs it says so.
+// the school (#7012): the card's audience filter for a reader in every
+// child's care team. A care_team note somebody else wrote comes back marked;
+// whether the reader has that child is the caller's question.
 type StudentNoteSearch struct {
 	Text                 string
-	ReaderAccountID      int64
-	Admin                bool
+	Visibilities         []string
 	LedActivityGroupIDs  []int64
 	LedEducationGroupIDs []int64
+	ReaderAccountID      int64
 }
 
 // StudentNoteSearchHit is the newest matching note of one child.

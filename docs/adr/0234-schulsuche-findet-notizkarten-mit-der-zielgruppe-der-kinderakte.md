@@ -41,16 +41,19 @@ Kinder und ohne Export.
    Betreuungsteam erreichbar ist, geht vor.
    - Den Leser bestimmt der Port `NoteAudience` der Projektion. Die Root
      bindet ihn wie `NewParentGuardianPolicy` an die kanonische Regel:
-     Security Runtimes `ResolveStudentNoteAudience`, aus denselben Fakten wie
-     die Notizrouten (eigene und vertretene Gruppen, geleitete Gruppen,
-     Angebote, Klassen aus `CallerRows`). Für jede `CareTeamOnly`-Notiz fragt
+     Security Runtimes `ResolveStudentNoteAudience`, mit den Helfern der
+     Notizrouten selbst (`ResolveNoteReader` für eigene und vertretene
+     Gruppen, geleitete Gruppen, Angebote und Klassen, `NoteChild` für das
+     Kind, `ModuleNoteAudience` für den Filter der Notizkarte). Ändert sich
+     die Regel der Notizkarte, ändert sie sich für die Suche mit. Für jede `CareTeamOnly`-Notiz fragt
      die Projektion dieselbe Regel mit Gruppe und Klasse des Kindes und seinen
      Angeboten von heute. Die Angebote aller dieser Kinder kommen in einer
      Lesung von Timetable & Activities (`ActivityEnrollments`, über dieselbe
      Lesung `GetActiveStudentEnrollmentsByStudentIDs` wie bei den
      Notizrouten).
    - Ein Kind außerhalb des Betreuungsteams bleibt Treffer, wenn seine
-     Anmeldeantwort passt, sonst ist es keiner.
+     Anmeldeantwort passt, und steht dann bei den Antworttreffern; sonst ist
+     es keiner.
    - Notizen brauchen denselben Scope wie Elternnotizen und Anmeldeantworten
      (`ChildDetails`: `users:read` und ein Personaleintrag der Schule, oder
      Admin), wie die Notizrouten selbst.
@@ -74,6 +77,9 @@ Kinder und ohne Export.
    `AnswerGivenValue` (`*`), `StudentsWithAnswer` liest sie als „die neueste
    Antwort sagt etwas“. Eine geleerte Antwort ersetzt eine ältere wie bisher.
    Liste, Zählung und Export nutzen den bestehenden Pfad ohne Änderung.
+   Die Kinderliste zählt die Antworten über die Kinder, die sie zeigt, und
+   sortiert sie danach; bleibt nur eine Antwort übrig, fällt sie weg, weil
+   sie „Angabe vorhanden“ nur wiederholen würde.
    - **Wenige verschiedene Antworten werden Auswahl.** In der Seed-Schule
      schrieben fast alle Familien bei „Allergien“ „keine“; „Angabe
      vorhanden“ allein zeigt dann fast alle Kinder. Gibt es zu einer Frage
