@@ -1181,7 +1181,7 @@ func TestSweepDropsStaleTemplatesButKeepsTheCurrentOne(t *testing.T) {
 	// ...until its last use falls behind the idle threshold.
 	maint := openSQL(cfg.MaintenanceDSN())
 	defer func() { _ = maint.Close() }()
-	backdated := time.Now().Add(-templateMaxIdleAge - time.Hour).Unix()
+	backdated := realNow().Add(-templateMaxIdleAge - time.Hour).Unix()
 	_, err = maint.ExecContext(ctx, fmt.Sprintf(`COMMENT ON DATABASE %s IS %s`,
 		quoteIdentifier(stale.TemplateName()),
 		quoteLiteral(fmt.Sprintf("%sold-branch%s%d", hashCommentPrefix, touchedCommentKey, backdated))))
