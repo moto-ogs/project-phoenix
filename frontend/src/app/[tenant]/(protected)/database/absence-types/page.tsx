@@ -50,8 +50,14 @@ function carryoverOptions(type: AbsenceType | null) {
 }
 
 // Was der Träger an seiner Art festlegt (#4710), als Anzeige im Formular.
-function TraegerKeptSummary({ value }: { value: unknown }) {
-  const type = value as AbsenceType;
+// `componentProps` bringt die Art; das Formular kennt nur Feldwerte.
+function TraegerKeptSummary({
+  absenceType: type,
+}: {
+  readonly absenceType?: AbsenceType;
+  readonly value: unknown;
+}) {
+  if (!type) return null;
   return (
     <InsetPanel tone="muted" padding="md" className="space-y-2">
       <DataGrid columns={2}>
@@ -60,7 +66,7 @@ function TraegerKeptSummary({ value }: { value: unknown }) {
             ? "Je Person über alle Schulen"
             : "Ohne Kontingent"}
         </DataField>
-        <DataField label="Rest">
+        <DataField label="Verfall">
           {type.allowanceEnabled
             ? carryoverRuleLabel(type.carryoverUntil)
             : "–"}
@@ -90,6 +96,7 @@ function traegerSections(type: AbsenceType): SectionConfig[] {
           type: "custom",
           colSpan: 2,
           component: TraegerKeptSummary,
+          componentProps: { absenceType: type },
         },
       ],
     },
@@ -215,7 +222,7 @@ const config: CatalogConfig<AbsenceType> = {
   sections,
   toFormValues: (type) =>
     type.keptByTraeger
-      ? { kept: type, schoolLimitDays: type.schoolLimitDays ?? "" }
+      ? { schoolLimitDays: type.schoolLimitDays ?? "" }
       : {
           name: type.name,
           allowanceEnabled: type.allowanceEnabled,

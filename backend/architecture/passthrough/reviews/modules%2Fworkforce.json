@@ -106,9 +106,9 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
-      "decision": "0235",
+      "decision": "0236",
       "id": "modules/workforce/StaffAdmin.TraegerAbsenceTypes",
-      "reason": "ADR 0235 (#4710): the public facade composes the Träger's Abwesenheitsarten and Kontingente over the same Personalstamm; the root binds only the collaborators."
+      "reason": "ADR 0236 (#4710): the public facade composes the Träger's Abwesenheitsarten and Kontingente over the same Personalstamm; the root binds only the collaborators."
     },
     {
       "decision": "0233",

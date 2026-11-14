@@ -1,6 +1,6 @@
 "use client";
 
-// Abwesenheitsarten des Trägers (#4710, ADR 0089 §10 mit Nachtrag, ADR 0235).
+// Abwesenheitsarten des Trägers (#4710, ADR 0089 §10 mit Nachtrag, ADR 0236).
 // Die Personalverwaltung legt Arten wie Regenerationstag an, mit Kontingent je
 // Person und Jahr über alle Schulen. moto trägt jede Art in jede Schule; eine
 // Schule darf nur für ihre Einsätze abweichen. Die Karte jeder Art zeigt

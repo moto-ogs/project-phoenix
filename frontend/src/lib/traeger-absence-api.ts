@@ -1,6 +1,6 @@
 /**
  * Abwesenheitsarten und Kontingente des Trägers (#4710, ADR 0089 §10 mit
- * Nachtrag, ADR 0235).
+ * Nachtrag, ADR 0236).
  *
  * Die Personalverwaltung legt Arten wie Regenerationstag an. moto trägt jede
  * Art in jede Schule des Trägers. Eine Schule darf abweichen, nur für ihre

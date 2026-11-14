@@ -404,7 +404,7 @@ Die Vorrangregel lautet:
    Eine Buchung braucht den Rest im Kontingent und, wenn die Schule eine
    Grenze setzt, den Rest unter dieser Grenze. Über das Kontingent bleibt sie
    gesperrt. Personen ohne Akte buchen wie bisher gegen die Kontingente ihrer
-   Schule. Technik: [ADR 0235](0235-abwesenheitsarten-des-traegers-gehen-in-die-schulen-und-eine-datenbankfunktion-prueft-das-kontingent.md).
+   Schule. Technik: [ADR 0236](0236-abwesenheitsarten-des-traegers-gehen-in-die-schulen-und-eine-datenbankfunktion-prueft-das-kontingent.md).
 5. **Prüfung in der Schule ohne Träger-Transaktion.** Die gebuchte
    Abwesenheit bleibt in der Schule (§3). Eine Datenbankfunktion des Owners
    Workforce liest für die Prüfung die Buchungen dieser Art an allen
