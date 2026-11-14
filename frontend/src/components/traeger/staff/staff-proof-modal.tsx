@@ -165,7 +165,7 @@ export function StaffProofModal({
             <Alert
               type="info"
               size="compact"
-              message="moto speichert vom Führungszeugnis nur den Tag der Einsicht, das Ausstellungsdatum und das Ergebnis. Laden Sie keine Kopie hoch und geben Sie das Zeugnis der Person zurück (§ 72a Abs. 5 SGB VIII)."
+              message="moto speichert nur Tag der Einsicht, Ausstellungsdatum und Ergebnis. Behalten Sie keine Kopie. Geben Sie das Zeugnis der Person zurück (§ 72a Abs. 5 SGB VIII)."
             />
           ) : null}
           <div className="grid gap-4 sm:grid-cols-2">

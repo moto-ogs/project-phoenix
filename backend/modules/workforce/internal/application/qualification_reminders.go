@@ -140,12 +140,23 @@ func (r *QualificationReminders) dueReminders(ctx context.Context, today calenda
 // takenOverByTraeger names the employment and school kind pairs whose
 // reminder the Träger's proof sends.
 func (r *QualificationReminders) takenOverByTraeger(ctx context.Context) (map[[2]int64]bool, error) {
-	if r.keptByTraeger == nil {
-		return nil, nil
-	}
-	statuses, err := r.keptByTraeger.SchoolTraegerProofStatus(ctx)
+	pairs, err := takenOverByTraeger(ctx, r.keptByTraeger)
 	if err != nil {
 		return nil, fmt.Errorf("read the Träger's proofs for qualification reminders: %w", err)
+	}
+	return pairs, nil
+}
+
+// takenOverByTraeger reads which school kinds of which employments the
+// Träger's proofs cover: the kinds mapped onto a Träger kind, for the
+// employments a record keeps (decision E4, #4707). Nil reads none.
+func takenOverByTraeger(ctx context.Context, reader schoolTraegerProofs) (map[[2]int64]bool, error) {
+	if reader == nil {
+		return nil, nil
+	}
+	statuses, err := reader.SchoolTraegerProofStatus(ctx)
+	if err != nil {
+		return nil, err
 	}
 	pairs := map[[2]int64]bool{}
 	for _, status := range statuses {

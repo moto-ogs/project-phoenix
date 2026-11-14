@@ -170,7 +170,10 @@ export function StaffProofsCard({
                       },
                     ]}
                   />
-                ) : null}
+                ) : (
+                  // Keeps the buttons of every row in one column.
+                  <span className="size-8 shrink-0" aria-hidden="true" />
+                )}
               </div>
             </ResponsiveActionRow>
           ))}

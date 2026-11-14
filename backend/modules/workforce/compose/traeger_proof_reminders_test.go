@@ -168,8 +168,8 @@ func TestSchoolRemindersLeaveKindsTheTraegerKeepsToItsProofs(t *testing.T) {
 	f := newProofFixture(t, db)
 	school := testpkg.TenantContext(f.north)
 	capability := buildWorkforce(t, db)
-	schoolKind := exec(t, db, `INSERT INTO users.staff_qualification_types (tenant_id, standard_key, name, validity_months)
-		VALUES (?, 'extended_police_certificate', 'Erweitertes Führungszeugnis', 60) RETURNING id`, f.north)
+	schoolKind := exec(t, db, `INSERT INTO users.staff_qualification_types (tenant_id, standard_key, name, validity_months, mandatory)
+		VALUES (?, 'extended_police_certificate', 'Erweitertes Führungszeugnis', 60, TRUE) RETURNING id`, f.north)
 	other := testpkg.CreateTestStaffForTenant(t, db, f.north, "Jonas", "Keller").ID
 	for _, staffID := range []int64{f.mira[0], other} {
 		_, err := capability.ReplaceStaffQualifications(school, staffID, []workforce.StaffQualification{{TypeID: &schoolKind, ExpiresOn: "2026-12-28"}})
@@ -213,4 +213,28 @@ func TestSchoolRemindersLeaveKindsTheTraegerKeepsToItsProofs(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Empty(t, southView, "another school does not read north's employment")
+
+	for _, staffID := range []int64{f.mira[0], other} {
+		_, err = capability.ReplaceStaffQualifications(school, staffID, nil)
+		require.NoError(t, err)
+	}
+	missing := func(staffID int64) bool {
+		entries, err := within(t, school, func(ctx context.Context) ([]workforce.QualificationEntry, error) {
+			return reminders.StaffQualificationStatus(ctx, staffID)
+		})
+		require.NoError(t, err)
+		for _, entry := range entries {
+			if entry.Status == workforce.QualificationStatusMissing && entry.TypeID != nil && *entry.TypeID == schoolKind {
+				return true
+			}
+		}
+		return false
+	}
+	assert.False(t, missing(f.mira[0]), "the school shows no own „Fehlt“ for a kind the Träger's proof covers")
+	assert.True(t, missing(other), "a person the Träger does not keep still lacks the school's mandatory kind")
+	overview, err := within(t, school, reminders.QualificationOverview)
+	require.NoError(t, err)
+	for _, row := range overview {
+		assert.False(t, row.StaffID == f.mira[0] && row.Status == workforce.QualificationStatusMissing, "the list agrees with the person's view")
+	}
 }

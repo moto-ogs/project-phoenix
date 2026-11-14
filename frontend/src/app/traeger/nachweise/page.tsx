@@ -514,9 +514,6 @@ function SchoolKinds({
                 <p className="text-sm font-semibold wrap-anywhere text-gray-900">
                   {kind.name}
                 </p>
-                <p className="mt-0.5 text-sm text-gray-600">
-                  Nachweisart der Schule
-                </p>
               </div>
               <div className="sm:w-72">
                 <CustomSelect
