@@ -16,8 +16,9 @@ func (s *Store) DeleteFinishedStaffDocumentFileCleanups(ctx context.Context, win
 		return 0, err
 	}
 	var deleted int64
-	// Match the function's calendar-day guard across 23/25-hour days.
-	if err := db.NewRaw(`SELECT users.delete_finished_staff_document_file_cleanups(?, statement_timestamp() - (? * INTERVAL '1 day'))`, scope.TenantID, window.Hours()/24).Scan(ctx, &deleted); err != nil {
+	// The function's guard runs in UTC (1.15.606): subtract the same elapsed
+	// 24-hour days, not Berlin calendar days of 23 or 25 hours.
+	if err := db.NewRaw(`SELECT users.delete_finished_staff_document_file_cleanups(?, statement_timestamp() - (? * INTERVAL '1 second'))`, scope.TenantID, window.Seconds()).Scan(ctx, &deleted); err != nil {
 		return 0, fmt.Errorf("workforce postgres: delete finished staff document file cleanups: %w", err)
 	}
 	return int(deleted), nil

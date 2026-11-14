@@ -51,9 +51,11 @@ func TestNightlyRetentionCleanupCutoffsAcrossDST(t *testing.T) {
 			now := time.Date(2026, month, day, 12, 0, 0, 0, calendar.Berlin)
 			var actual time.Time
 			require.NoError(t, suite.admin.NewRaw("SELECT "+cutoff, now).Scan(context.Background(), &actual))
-			// The SECURITY DEFINER guards use clock_timestamp() - INTERVAL
-			// '30 days': keep the same local clock across 23/25-hour days.
-			require.True(t, now.AddDate(0, 0, -30).Equal(actual), "%s at %s: got %s", function, now, actual)
+			// The SECURITY DEFINER guards evaluate clock_timestamp() - INTERVAL
+			// '30 days' in UTC (1.15.606), 30 times 24 hours also across a
+			// 23/25-hour Berlin day: a Berlin calendar-day cutoff one hour
+			// younger is refused after the spring clock change.
+			require.True(t, now.Add(-30*24*time.Hour).Equal(actual), "%s at %s: got %s", function, now, actual)
 		}
 	}
 	for table, days := range map[string]int{"users.staff_offboarding_cleanup": 30, "users.care_withdrawal_completions": 365} {
