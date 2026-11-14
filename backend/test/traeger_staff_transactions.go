@@ -7,16 +7,18 @@ import "maps"
 // records in the Träger transaction of the session's Träger after it read
 // each school in that school's own tenant transaction, never both at once
 // (ADR 0105); the moto team grants and withdraws the release in one
-// administrative transaction with its operator audit entry. A further site
-// needs its own decision.
+// administrative transaction with its operator audit entry. The
+// Abwesenheitsarten of the Träger (#4710) follow the same order. A further
+// site needs its own decision.
 var traegerStaffTransactionSites = map[string]map[string]string{
 	"admin": {
 		"modules/workforce/http/traegerstaff/release.go:*ReleaseResource.State:tenant.WithinAdmin#1": "ADR 0089 section 2: the operator's view of the release „Personal beim Träger“ of the one Träger in the route reads the release and the number of its staff records; the read is in the operator audit and writes nothing.",
 		"modules/workforce/http/traegerstaff/release.go:*ReleaseResource.write:tenant.WithinAdmin#1": "ADR 0089 section 2: an operator's grant of the release with the statement the Träger confirmed, or its withdrawal, commits together with its operator audit entry; the records' foreign key refuses a withdrawal while the Träger keeps records.",
 	},
 	"commands": {
-		"modules/workforce/internal/application/traeger_staff.go:*TraegerStaff.Overview:t.ports.Runtime.WithinTraeger#1": "ADR 0089 sections 3 and 5: the overview reads the release and the staff records of the session's Träger in its Träger transaction before each school's employments are read and logged in that school's tenant transaction; no transaction carries both and it writes nothing.",
-		"modules/workforce/internal/application/traeger_staff.go:*TraegerStaff.released:t.ports.Runtime.WithinTraeger#1": "ADR 0089 sections 3, 5 and 6: a read or write of one staff record of the session's Träger runs in its Träger transaction after the release check; a write locks the record, its links and its trail commit together, and the schools are read or brought up to date only in their own tenant transactions before or after it.",
+		"modules/workforce/internal/application/traeger_absence.go:*TraegerStaff.ListAbsenceTypes:t.ports.Runtime.WithinTraeger#1": "ADR 0089 section 10 with its addendum of 14.11.2026 (#4710): the list reads the release and the Abwesenheitsarten of the session's Träger in its Träger transaction before each school's carried types are read in that school's tenant transaction; no transaction carries both and it writes nothing.",
+		"modules/workforce/internal/application/traeger_staff.go:*TraegerStaff.Overview:t.ports.Runtime.WithinTraeger#1":           "ADR 0089 sections 3 and 5: the overview reads the release and the staff records of the session's Träger in its Träger transaction before each school's employments are read and logged in that school's tenant transaction; no transaction carries both and it writes nothing.",
+		"modules/workforce/internal/application/traeger_staff.go:*TraegerStaff.released:t.ports.Runtime.WithinTraeger#1":           "ADR 0089 sections 3, 5 and 6: a read or write of one staff record of the session's Träger runs in its Träger transaction after the release check; a write locks the record, its links and its trail commit together, and the schools are read or brought up to date only in their own tenant transactions before or after it.",
 	},
 }
 

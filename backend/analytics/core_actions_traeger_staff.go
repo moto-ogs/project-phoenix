@@ -16,6 +16,10 @@ var traegerStaffCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPut, "/traeger/staff-records/{id}/personnel-number"}:  notCaptured,
 	{http.MethodPost, "/traeger/staff-records/{id}/financial/reveal"}: notCaptured,
 	{http.MethodPut, "/traeger/staff-records/{id}/financial"}:         notCaptured,
+	// The Abwesenheitsarten and Kontingente of the Träger (#4710).
+	{http.MethodPost, "/traeger/absence-types/"}:                              notCaptured,
+	{http.MethodPut, "/traeger/absence-types/{id}"}:                           notCaptured,
+	{http.MethodPut, "/traeger/staff-records/{id}/absence-accounts/{typeId}"}: notCaptured,
 }
 
 func init() {

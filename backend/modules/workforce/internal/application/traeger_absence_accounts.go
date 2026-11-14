@@ -147,19 +147,8 @@ func (p recordPool) schoolUses(typeID int64, year int, names map[int64]string, d
 			}
 		}
 		for _, use := range p.uses {
-			if use.TraegerTypeID != typeID || use.SchoolID != link.SchoolID {
-				continue
-			}
-			days, _ := AllowanceUses(use.Absence)
-			for _, day := range days {
-				if dayYear, err := strconv.Atoi(day.Day[:4]); err != nil || dayYear != year {
-					continue
-				}
-				if day.Pending {
-					entry.ReservedDays += day.Days
-				} else {
-					entry.TakenDays += day.Days
-				}
+			if use.TraegerTypeID == typeID && use.SchoolID == link.SchoolID {
+				addYearDays(&entry, use.Absence, year)
 			}
 		}
 		result = append(result, entry)
@@ -168,6 +157,22 @@ func (p recordPool) schoolUses(typeID int64, year int, names map[int64]string, d
 		return strings.Compare(a.SchoolName, b.SchoolName)
 	})
 	return result
+}
+
+// addYearDays adds what the absence takes in the calendar year to entry,
+// requested days apart from booked ones.
+func addYearDays(entry *workforce.TraegerAbsenceSchoolUse, absence domain.StaffAbsence, year int) {
+	days, _ := AllowanceUses(absence)
+	prefix := strconv.Itoa(year)
+	for _, day := range days {
+		switch {
+		case !strings.HasPrefix(day.Day, prefix):
+		case day.Pending:
+			entry.ReservedDays += day.Days
+		default:
+			entry.TakenDays += day.Days
+		}
+	}
 }
 
 // recordSchoolTypes writes the access log entry of the accounts view at

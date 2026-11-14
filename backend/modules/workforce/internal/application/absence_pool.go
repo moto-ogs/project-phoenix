@@ -85,29 +85,37 @@ func (s *Service) poolAccounts(types []domain.StaffAbsenceType, claims map[int64
 		if !ok || !claim.AllowanceEnabled {
 			continue
 		}
-		absenceType.CarryoverUntil = claim.CarryoverUntil
-		accounts := allowanceAccounts{
-			absenceType:  absenceType,
-			entitlements: claim.Entitlements(claim.WindowStart(firstYear), lastYear+1),
-			pooled:       true,
-			local:        map[int64]bool{},
-		}
-		for _, use := range uses {
-			if use.TraegerTypeID != claim.TraegerTypeID {
-				continue
-			}
-			days, err := s.allowanceUses(use.Absence)
-			if err != nil {
-				return nil, err
-			}
-			accounts.uses = append(accounts.uses, days...)
-			if use.SchoolID != 0 {
-				accounts.local[use.Absence.ID] = true
-			}
+		accounts, err := s.poolAccount(absenceType, claim, uses, firstYear, lastYear)
+		if err != nil {
+			return nil, err
 		}
 		result[absenceType.ID] = accounts
 	}
 	return result, nil
+}
+
+func (s *Service) poolAccount(absenceType domain.StaffAbsenceType, claim domain.AbsencePoolType, uses []domain.AbsencePoolUse, firstYear, lastYear int) (allowanceAccounts, error) {
+	absenceType.CarryoverUntil = claim.CarryoverUntil
+	accounts := allowanceAccounts{
+		absenceType:  absenceType,
+		entitlements: claim.Entitlements(claim.WindowStart(firstYear), lastYear+1),
+		pooled:       true,
+		local:        map[int64]bool{},
+	}
+	for _, use := range uses {
+		if use.TraegerTypeID != claim.TraegerTypeID {
+			continue
+		}
+		days, err := s.allowanceUses(use.Absence)
+		if err != nil {
+			return allowanceAccounts{}, err
+		}
+		accounts.uses = append(accounts.uses, days...)
+		if use.SchoolID != 0 {
+			accounts.local[use.Absence.ID] = true
+		}
+	}
+	return accounts, nil
 }
 
 // localDays is what the bookings at this school, plus extra, take per

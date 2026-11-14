@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
 
@@ -28,6 +29,7 @@ type traegerAbsenceTypeRow struct {
 	Requestable      bool      `bun:"requestable"`
 	IsActive         bool      `bun:"is_active"`
 	CreatedAt        time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	UpdatedAt        time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
 }
 
 func (r traegerAbsenceTypeRow) toDomain() domain.TraegerAbsenceType {
@@ -67,6 +69,9 @@ func (s *TraegerStaffStore) FindTraegerAbsenceType(ctx context.Context, organiza
 	var rows []traegerAbsenceTypeRow
 	query := db.NewSelect().Model(&rows).Where("organization_id = ? AND id = ?", organizationID, id)
 	if forUpdate {
+		if err := tenant.OrderLock(ctx, tenant.LockLeaf, "workforce.absence_types"); err != nil {
+			return domain.TraegerAbsenceType{}, err
+		}
 		query = query.For("UPDATE")
 	}
 	if err := query.Scan(ctx); err != nil {
@@ -91,7 +96,7 @@ func (s *TraegerStaffStore) SaveTraegerAbsenceType(ctx context.Context, value do
 		Requestable: value.Requestable, IsActive: value.IsActive,
 	}
 	if value.ID == 0 {
-		_, err = db.NewInsert().Model(row).ExcludeColumn("id", "created_at").Returning("*").Exec(ctx)
+		_, err = db.NewInsert().Model(row).ExcludeColumn("id", "created_at", "updated_at").Returning("*").Exec(ctx)
 	} else {
 		_, err = db.NewUpdate().Model(row).
 			Column("name", "allowance_enabled", "standard_days", "carryover_until", "requestable", "is_active").

@@ -54,20 +54,26 @@ func readAbsencePoolClaims(ctx context.Context, db bun.IDB, recordID int64, type
 		if row.Year != nil && row.EntitledDays != nil {
 			value.Individual[*row.Year] = *row.EntitledDays
 		} else {
-			value.AllowanceEnabled = row.AllowanceEnabled != nil && *row.AllowanceEnabled
-			if row.StandardDays != nil {
-				value.StandardDays = *row.StandardDays
-			}
-			if row.CarryoverUntil != nil {
-				value.CarryoverUntil = *row.CarryoverUntil
-			}
-			if row.FirstYear != nil {
-				value.FirstYear = *row.FirstYear
-			}
+			row.applyType(&value)
 		}
 		result[row.TraegerTypeID] = value
 	}
 	return result, nil
+}
+
+// applyType copies the type's row (year NULL) onto value.
+func (row absencePoolClaimRow) applyType(value *domain.AbsencePoolType) {
+	value.AllowanceEnabled = row.AllowanceEnabled != nil && *row.AllowanceEnabled
+	value.StandardDays = valueOr(row.StandardDays, 0)
+	value.CarryoverUntil = valueOr(row.CarryoverUntil, "")
+	value.FirstYear = valueOr(row.FirstYear, 0)
+}
+
+func valueOr[T any](value *T, fallback T) T {
+	if value == nil {
+		return fallback
+	}
+	return *value
 }
 
 func readAbsencePoolUses(ctx context.Context, db bun.IDB, recordID int64, typeIDs []int64, from, to string) ([]domain.AbsencePoolUse, error) {

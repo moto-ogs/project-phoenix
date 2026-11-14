@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.absence_types",
+  "max": 8,
+  "exact": true,
+  "description": "modules/workforce — GET /traeger/absence-types/ (#4710) at a Träger with two\nschools: the Träger's schools, the binding of the Träger transaction, its\nrelease and the types in one statement each; then per school the binding of\nits tenant transaction and its absence types in one statement. Flat in the\nnumber of types; one tenant transaction per school (ADR 0235).",
+  "route": "GET /traeger/absence-types/"
+}

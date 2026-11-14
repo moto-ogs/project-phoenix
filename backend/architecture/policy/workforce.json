@@ -313,6 +313,18 @@
       "write_owner": "workforce"
     },
     {
+      "name": "workforce.absence_allowance_changes",
+      "write_owner": "workforce"
+    },
+    {
+      "name": "workforce.absence_allowances",
+      "write_owner": "workforce"
+    },
+    {
+      "name": "workforce.absence_types",
+      "write_owner": "workforce"
+    },
+    {
       "name": "workforce.staff_record_changes",
       "write_owner": "workforce"
     },

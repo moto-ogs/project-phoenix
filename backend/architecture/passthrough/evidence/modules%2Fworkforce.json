@@ -149,6 +149,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (a *StaffAdmin) TraegerAbsenceTypes(collaborators TraegerStaffPorts) TraegerAbsenceTypes {\n\treturn a.traeger.TraegerAbsenceTypes(collaborators)\n}",
+      "form": "unchanged-forward-evidence",
+      "id": "modules/workforce/StaffAdmin.TraegerAbsenceTypes",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
       "evidence": "func (a *StaffAdmin) TraegerStaffRecords(collaborators TraegerStaffPorts) TraegerStaffRecords {\n\treturn a.traeger.TraegerStaffRecords(collaborators)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/workforce/StaffAdmin.TraegerStaffRecords",

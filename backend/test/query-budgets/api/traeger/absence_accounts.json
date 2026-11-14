@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.absence_accounts",
+  "max": 12,
+  "exact": true,
+  "description": "modules/workforce — GET /traeger/staff-records/{id}/absence-accounts (#4710)\nfor a record with two Einsatzorte: the Träger's schools, the binding of the\nTräger transaction, its release, the record with its links, the types, the\nclaims and the bookings at every Einsatzort in one statement each; then per\nEinsatzort the binding of its tenant transaction, the access log entry and\nits absence types. Flat in the number of types and bookings (ADR 0235).",
+  "route": "GET /traeger/staff-records/{id}/absence-accounts"
+}
