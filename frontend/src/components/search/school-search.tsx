@@ -446,7 +446,7 @@ export function SchoolSearchDialog({
         description={
           isPhone && scope && !scope.contacts
             ? "Telefonnummern finden nur Konten, die Kontaktdaten sehen dürfen."
-            : `Suchen Sie nach ${scope?.contacts ? "Name, Klasse, Gruppe, Telefonnummer oder E-Mail" : "Name, Klasse, Gruppe oder Seite"}.`
+            : `Suchen Sie nach ${scope?.contacts ? "Name, Klasse, Gruppe, Notiz, Telefonnummer oder E-Mail" : "Name, Klasse, Gruppe oder Seite"}.`
         }
       />
     );
