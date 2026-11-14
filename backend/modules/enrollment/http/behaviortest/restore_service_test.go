@@ -209,6 +209,8 @@ func newRestoreDecisionServiceForRequestEnv(t *testing.T, env *requestTestEnv) e
 		Offerings:    enrollmentCompose.NewCareOfferingRecords(repoFactoryCare.CarePlan),
 		Restorations: owners.EnrollmentDecisionRestorations(repoFactoryAudit.EnrollmentRestorationAudit),
 		Logger:       slog.Default(),
+		// The day the request env's capacity gate counts from (#4027).
+		Today: func() calendar.Date { return requestTestToday },
 	}, nil)
 }
 

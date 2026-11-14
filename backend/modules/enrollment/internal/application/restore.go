@@ -231,7 +231,7 @@ func (d *Decisions) restoreCapacityWaitlist(ctx context.Context, phase *enrollme
 	if err != nil {
 		return nil, fmt.Errorf("restore: load offering selections: %w", err)
 	}
-	claims, anyClaim := restoreClaims(phase, rows, withdrawn)
+	claims, anyClaim := restoreClaims(phase, rows, withdrawn, d.todayDate())
 	if !anyClaim {
 		return nil, nil
 	}
@@ -253,8 +253,8 @@ func (d *Decisions) restoreCapacityWaitlist(ctx context.Context, phase *enrollme
 // restoreClaims collects the capacity claims per withdrawn child. ValidUntil
 // is exclusive: an interval ending on or before the window start holds no
 // remaining slot.
-func restoreClaims(phase *enrollmentNative.Phase, rows []*enrollmentNative.RequestChildOfferingRecord, withdrawn []*enrollmentNative.RequestChild) ([][]enrollmentNative.OfferingClaim, bool) {
-	capacityFrom := calendar.TodayDate()
+func restoreClaims(phase *enrollmentNative.Phase, rows []*enrollmentNative.RequestChildOfferingRecord, withdrawn []*enrollmentNative.RequestChild, today calendar.Date) ([][]enrollmentNative.OfferingClaim, bool) {
+	capacityFrom := today
 	if calendar.Date(phase.ServiceStartDate).After(capacityFrom) {
 		capacityFrom = calendar.Date(phase.ServiceStartDate)
 	}

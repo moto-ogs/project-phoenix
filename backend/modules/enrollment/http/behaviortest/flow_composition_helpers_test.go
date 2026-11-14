@@ -156,7 +156,7 @@ func newTestRequestService(cfg owners.EnrollmentIntakeSources) enrollmentAPI.Req
 	}
 	if cfg.Capacity == nil {
 		offerings, _ := cfg.CareOfferingRepo.(capacityOfferings)
-		cfg.Capacity = owners.NewEnrollmentOfferingCapacity(offerings, cfg.Children, cfg.Settings)
+		cfg.Capacity = owners.NewEnrollmentOfferingCapacity(offerings, cfg.Children, cfg.Settings, nil)
 	}
 	return requestFixtureRoot{enrollmentAPI.NewRequestService(owners.NewEnrollmentIntake(cfg))}
 }
@@ -170,7 +170,7 @@ func newTestChangeRequestService(cfg owners.EnrollmentChangeRequestSources) enro
 	}
 	if cfg.Capacity == nil {
 		offerings, _ := cfg.CareOfferingRepo.(capacityOfferings)
-		cfg.Capacity = owners.NewEnrollmentOfferingCapacity(offerings, cfg.Children, cfg.Settings)
+		cfg.Capacity = owners.NewEnrollmentOfferingCapacity(offerings, cfg.Children, cfg.Settings, nil)
 	}
 	return enrollmentAPI.NewChangeRequestService(owners.NewEnrollmentChangeRequests(cfg))
 }

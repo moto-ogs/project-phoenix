@@ -57,6 +57,8 @@ func newChangeRequestServiceForTestWithAuthorizer(
 		FrontendURL:         "http://localhost:3000",
 		ParentsURL:          "http://parents.localhost:3000",
 		Logger:              slog.Default(),
+		// The request env's gate: same sources, window from requestTestToday.
+		Capacity: env.config.Capacity,
 	})
 }
 

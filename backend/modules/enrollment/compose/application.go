@@ -76,8 +76,7 @@ func NewResyncingPhases(deps PhaseDependencies) (*Phases, error) {
 		Settings:  deps.Settings,
 		Responses: responses,
 		Runtime:   tenantRuntime(), TraegerCopies: newStore(),
-		Logger: deps.Logger,
-		Today:  deps.Today,
+		Logger: deps.Logger, Today: deps.Today,
 	})
 }
 

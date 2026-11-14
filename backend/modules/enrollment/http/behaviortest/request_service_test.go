@@ -267,6 +267,20 @@ type requestTestEnv struct {
 	reposSchools *api.OrganizationTestRows
 }
 
+// requestTestToday is a school day inside setupRequestTest's phase
+// (2026-09-01 .. 2027-07-31).
+var requestTestToday = calendar.NewDate(2026, 11, 16)
+
+// requestTestCapacity is the owner's capacity gate over cfg's offerings,
+// children and settings, with its window starting on requestTestToday instead
+// of the real day, which lies after the phase from 2027-08-01 on (#4027). A
+// test that swaps one of those sources rebuilds the gate with this.
+func requestTestCapacity(cfg owners.EnrollmentIntakeSources) enrollmentNative.OfferingCapacity {
+	offerings, _ := cfg.CareOfferingRepo.(capacityOfferings)
+	return owners.NewEnrollmentOfferingCapacity(offerings, cfg.Children, cfg.Settings,
+		func() calendar.Date { return requestTestToday })
+}
+
 func setupRequestTest(t *testing.T) *requestTestEnv {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
@@ -286,12 +300,13 @@ func setupRequestTest(t *testing.T) *requestTestEnv {
 	settings.intValues[settingKeyStatusTokenTTLDays] = 365
 
 	outbox := &recordingOutbox{}
+	careOfferings := enrollmentCompose.NewCareOfferingRecords(repoFactoryCare.CarePlan)
 	config := owners.EnrollmentIntakeSources{
 		Requests:         repoFactory.Enrollment(),
 		Children:         repoFactory.Enrollment(),
 		Bookings:         requestTestBookingCommands(),
 		Guardians:        repoFactory.Enrollment(),
-		CareOfferingRepo: enrollmentCompose.NewCareOfferingRecords(repoFactoryCare.CarePlan),
+		CareOfferingRepo: careOfferings,
 		Catalog:          repoFactory.Enrollment(),
 		SchoolRepo:       factorySchools{repos: repoFactorySchools},
 		RateLimitRepo:    repoFactory.Enrollment(),
@@ -302,6 +317,7 @@ func setupRequestTest(t *testing.T) *requestTestEnv {
 		FrontendURL:      "http://localhost:3000",
 		Logger:           slog.Default(),
 	}
+	config.Capacity = requestTestCapacity(config)
 	svc := newTestRequestService(config)
 
 	ctx := testpkg.Ctx(t)
@@ -2319,10 +2335,12 @@ func TestRequestService_Submit_UsesCapacityFromLockedOfferings(t *testing.T) {
 	lockedCapacity := 0
 	lockedOffering.Capacity = &lockedCapacity
 	config := env.config
-	config.CareOfferingRepo = &lockedCareOfferingRepo{
+	locked := &lockedCareOfferingRepo{
 		careOfferingReads: config.CareOfferingRepo.(careOfferingReads),
 		lockedOfferings:   []*offeringContract.CareOfferingRecord{&lockedOffering},
 	}
+	config.CareOfferingRepo = locked
+	config.Capacity = requestTestCapacity(config)
 	svc := newTestRequestService(config)
 
 	request := validSubmission(t, env.phaseID)

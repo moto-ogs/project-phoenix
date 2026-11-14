@@ -186,6 +186,7 @@ func newEnrollmentGrowthFixture(t *testing.T) *enrollmentGrowthFixture {
 	}
 	cfg := env.config
 	cfg.Settings = settings.Settings
+	cfg.Capacity = requestTestCapacity(cfg)
 	requests := newTestRequestService(cfg)
 	catalog := enrollmentHTTP.NewCareOfferingCatalog(api.NewEnrollmentCareOfferingValues(newCareOfferingCatalog(t, env.db).Catalog))
 	phases := NewTestPhases(TestPhaseDependencies{Records: env.repos.Enrollment(), Offerings: phaseOfferings{rows: newCareOfferingFixtures(env.reposCare.CarePlan)}, LockTemplateRecurrence: func(context.Context) error { return nil }, Resyncer: &recordingSourcedTemplateResyncer{}, Settings: collectionSettings{settings: settings.Settings}})

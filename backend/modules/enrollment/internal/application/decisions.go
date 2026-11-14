@@ -51,7 +51,7 @@ func NewDecisions(deps DecisionDependencies) *Decisions {
 	d := &Decisions{deps: deps}
 	d.capacity = NewOfferingCapacity(deps.Offerings, deps.Children, func(ctx context.Context) (bool, error) {
 		return d.waitlistEnabled(ctx)
-	})
+	}, deps.Today)
 	return d
 }
 
