@@ -99,6 +99,7 @@ const sourceTestExceptions = [
     'TestModuleFacadeMethodSetCatchesCompositeGrowth',
     'TestModuleFacadeMethodSetRejectsUnresolvedEmbeddings',
   ]),
+  ...fixtureExceptions('module_live_clock_ratchet_test.go', ['TestModuleLiveClockRatchetCountsCallsNotReferences']),
   ...fixtureExceptions('module_source_ratchet_test.go', [
     'TestModuleRootSourceRatchetsRejectNewViolations',
   ]),
