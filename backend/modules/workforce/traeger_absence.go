@@ -116,15 +116,24 @@ type TraegerAbsenceAccount struct {
 	EntitledDays    float64 `json:"entitled_days"`
 	// Individual is true when the Personalverwaltung set the days for this
 	// person; otherwise the type's standard applies.
-	Individual    bool                       `json:"individual"`
-	StandardDays  float64                    `json:"standard_days"`
-	TakenDays     float64                    `json:"taken_days"`
-	ReservedDays  float64                    `json:"reserved_days"`
-	RemainingDays float64                    `json:"remaining_days"`
-	ExpiresOn     string                     `json:"expires_on"`
-	ExpiredDays   float64                    `json:"expired_days"`
-	CarriedIn     *AbsenceTypeAllowanceCarry `json:"carried_in"`
-	Schools       []TraegerAbsenceSchoolUse  `json:"schools"`
+	Individual    bool                      `json:"individual"`
+	StandardDays  float64                   `json:"standard_days"`
+	TakenDays     float64                   `json:"taken_days"`
+	ReservedDays  float64                   `json:"reserved_days"`
+	RemainingDays float64                   `json:"remaining_days"`
+	ExpiresOn     string                    `json:"expires_on"`
+	ExpiredDays   float64                   `json:"expired_days"`
+	CarriedIn     *TraegerAbsenceCarry      `json:"carried_in"`
+	Schools       []TraegerAbsenceSchoolUse `json:"schools"`
+}
+
+// TraegerAbsenceCarry is the previous year's rest still usable in the
+// account's year.
+type TraegerAbsenceCarry struct {
+	Year          int     `json:"year"`
+	RemainingDays float64 `json:"remaining_days"`
+	ExpiredDays   float64 `json:"expired_days"`
+	ExpiresOn     string  `json:"expires_on"`
 }
 
 // TraegerAbsenceAccounts lists the accounts of one Personalakte in one year.

@@ -288,6 +288,7 @@ export const HELP_TOPIC_AUDIENCE = {
   [HELP_TOPICS.traegerCareTimeOverruns]: "traeger",
   [HELP_TOPICS.traegerSharedDocuments]: "traeger",
   [HELP_TOPICS.traegerStaffRecords]: "traeger",
+  [HELP_TOPICS.traegerAbsenceTypes]: "traeger",
   [HELP_TOPICS.schoolTraegerDocuments]: "lead",
   [HELP_TOPICS.traegerSchoolSwitch]: "traeger",
   [HELP_TOPICS.traegerSchoolView]: "traeger",

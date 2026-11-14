@@ -54,9 +54,22 @@ function isBillingAreaActive(href: string, pathname: string): boolean | null {
   );
 }
 
+/** Die Abwesenheitsarten (#4710) liegen unter /personal, sind aber keine Akte. */
+const STAFF_ABSENCE_TYPES = "/traeger/personal/abwesenheitsarten";
+
+function isStaffAbsenceTypesPath(pathname: string): boolean {
+  return (
+    matchesPath(STAFF_ABSENCE_TYPES, pathname) ||
+    matchesPath(STAFF_ABSENCE_TYPES.slice("/traeger".length), pathname)
+  );
+}
+
 export function isTraegerNavActive(href: string, pathname: string): boolean {
   const billing = isBillingAreaActive(href, pathname);
   if (billing !== null) return billing;
+  if (href === "/traeger/personal" && isStaffAbsenceTypesPath(pathname)) {
+    return false;
+  }
   if (href === "/traeger") {
     // „Schulen" ist die Startseite; ihre Unterseiten liegen unter /schulen.
     return (

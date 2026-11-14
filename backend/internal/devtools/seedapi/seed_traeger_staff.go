@@ -11,7 +11,8 @@ import (
 // through the routes the people use: the moto team grants the release
 // „Personal beim Träger“ in the Operator portal, then the Personalverwaltung
 // confirms the proposals of the overview, choosing the first value where the
-// schools disagree, and keeps an invented IBAN for the first record. Several
+// schools disagree, and keeps an invented IBAN for the first record; then
+// the Abwesenheitsarten and Kontingente of the Träger (#4710). Several
 // demo schools seed the same Träger; a release or link another school's run
 // made is no error.
 type seedTraegerStaffStep struct{}
@@ -32,7 +33,7 @@ const (
 // seedTraegerStaffIBAN is an invented IBAN with a valid checksum.
 const seedTraegerStaffIBAN = "DE02120300000000202051"
 
-func (seedTraegerStaffStep) Run(_ context.Context, rt *Runtime) error {
+func (seedTraegerStaffStep) Run(ctx context.Context, rt *Runtime) error {
 	if rt == nil || rt.Client == nil || rt.Bootstrap == nil || rt.Bootstrap.OrganizationID <= 0 {
 		return fmt.Errorf("the Träger staff seed prerequisites are not available")
 	}
@@ -57,7 +58,7 @@ func (seedTraegerStaffStep) Run(_ context.Context, rt *Runtime) error {
 		}
 	}
 	fmt.Printf("  Träger staff records: %d linked\n", linked)
-	return nil
+	return seedTraegerAbsences(ctx, rt, auth)
 }
 
 // seedTraegerStaffLinkAll confirms up to seedTraegerStaffLinks proposals and

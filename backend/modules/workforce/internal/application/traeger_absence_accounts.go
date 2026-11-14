@@ -128,7 +128,7 @@ func (p recordPool) account(value domain.TraegerAbsenceType, year int, today str
 		ExpiredDays: summary.ExpiredDays,
 	}
 	if carried := summary.CarriedIn; carried != nil {
-		account.CarriedIn = &workforce.AbsenceTypeAllowanceCarry{
+		account.CarriedIn = &workforce.TraegerAbsenceCarry{
 			Year: carried.Year, RemainingDays: carried.RemainingDays, ExpiredDays: carried.ExpiredDays, ExpiresOn: carried.ExpiresOn,
 		}
 	}

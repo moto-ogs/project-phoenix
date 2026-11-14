@@ -20,6 +20,10 @@ interface BackendAbsenceType {
   is_active: boolean;
   allowance_enabled: boolean;
   carryover_until?: string | null;
+  requestable?: boolean;
+  kept_by_traeger?: boolean;
+  offered?: boolean;
+  school_limit_days?: number | null;
 }
 
 export interface AbsenceType {
@@ -39,6 +43,22 @@ export interface AbsenceType {
    * when the rest expires on 31.12. (#3257).
    */
   readonly carryoverUntil: string | null;
+  /** Mitarbeitende beantragen die Art, die Leitung entscheidet (#4710). */
+  readonly requestable: boolean;
+  /**
+   * Eine Art des Trägers (#4710): Name, Kontingent, Verfall und
+   * „beantragbar" legt der Träger fest. Die Schule weicht nur mit `offered`
+   * und `schoolLimitDays` ab, und nur für Einsätze an dieser Schule.
+   */
+  readonly keptByTraeger: boolean;
+  readonly offered: boolean;
+  /** Höchstens so viele Tage je Person und Jahr an dieser Schule. */
+  readonly schoolLimitDays: number | null;
+}
+
+/** In der Auswahl neuer Abwesenheiten: aktiv und an dieser Schule angeboten. */
+export function isSelectableAbsenceType(type: AbsenceType): boolean {
+  return type.isActive && type.offered;
 }
 
 function mapAbsenceType(data: BackendAbsenceType): AbsenceType {
@@ -49,6 +69,10 @@ function mapAbsenceType(data: BackendAbsenceType): AbsenceType {
     isActive: data.is_active,
     allowanceEnabled: data.allowance_enabled,
     carryoverUntil: data.carryover_until ?? null,
+    requestable: data.requestable ?? false,
+    keptByTraeger: data.kept_by_traeger ?? false,
+    offered: data.offered ?? true,
+    schoolLimitDays: data.school_limit_days ?? null,
   };
 }
 
@@ -91,6 +115,7 @@ class AbsenceTypeService {
     config: {
       allowanceEnabled: boolean;
       carryoverUntil?: string | null;
+      requestable?: boolean;
     },
   ): Promise<AbsenceType> {
     const response = await sessionFetch("/api/staff/absence-types", {
@@ -99,6 +124,7 @@ class AbsenceTypeService {
       body: JSON.stringify({
         name,
         allowance_enabled: config.allowanceEnabled,
+        requestable: config.requestable ?? false,
         ...(config.carryoverUntil !== undefined
           ? { carryover_until: config.carryoverUntil ?? "" }
           : {}),
@@ -107,7 +133,11 @@ class AbsenceTypeService {
     return readOne(response);
   }
 
-  /** Renames and/or (de)activates. Omitted fields stay as they are. */
+  /**
+   * Renames and/or (de)activates. Omitted fields stay as they are. A type of
+   * the Träger takes only `offered` and `schoolLimitDays` (null removes the
+   * limit).
+   */
   async updateAbsenceType(
     id: string,
     changes: {
@@ -115,6 +145,9 @@ class AbsenceTypeService {
       isActive?: boolean;
       allowanceEnabled?: boolean;
       carryoverUntil?: string | null;
+      requestable?: boolean;
+      offered?: boolean;
+      schoolLimitDays?: number | null;
     },
   ): Promise<AbsenceType> {
     const response = await sessionFetch(`/api/staff/absence-types/${id}`, {
@@ -130,6 +163,13 @@ class AbsenceTypeService {
           : {}),
         ...(changes.carryoverUntil !== undefined
           ? { carryover_until: changes.carryoverUntil ?? "" }
+          : {}),
+        ...(changes.requestable !== undefined
+          ? { requestable: changes.requestable }
+          : {}),
+        ...(changes.offered !== undefined ? { offered: changes.offered } : {}),
+        ...(changes.schoolLimitDays !== undefined
+          ? { school_limit_days: changes.schoolLimitDays }
           : {}),
       }),
     });
@@ -174,11 +214,15 @@ class AbsenceTypeService {
       data: {
         years: BackendAbsenceTypeAllowanceSummary[] | null;
         blocked: boolean;
+        blocked_by?: "allowance" | "school_limit";
       };
     };
     return {
       years: (json.data.years ?? []).map(mapAllowance),
       blocked: json.data.blocked,
+      blockedBy: json.data.blocked
+        ? (json.data.blocked_by ?? "allowance")
+        : null,
     };
   }
 
@@ -233,6 +277,11 @@ interface AbsenceTypeAllowanceCarry {
 export interface AbsenceTypeAllowancePreview {
   readonly years: readonly AbsenceTypeAllowanceSummary[];
   readonly blocked: boolean;
+  /**
+   * Why the booking is refused: the Kontingent, or the school's limit for a
+   * type of its Träger (#4710).
+   */
+  readonly blockedBy: "allowance" | "school_limit" | null;
 }
 
 export interface AbsenceTypeAllowanceSummary {

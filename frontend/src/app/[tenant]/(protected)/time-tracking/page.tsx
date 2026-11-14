@@ -157,6 +157,10 @@ import {
   useCatalogRefreshOnFocus,
 } from "~/components/database/catalog/catalog-manage-link";
 import { useAbsenceTypeSelect } from "~/components/staff/use-absence-type-select";
+import {
+  STANDARD_ABSENCE_OPTIONS,
+  useAbsenceTypeOptions,
+} from "~/components/staff/use-absence-type-options";
 import { absenceRequestFor, selectValueFor } from "~/lib/absence-type-select";
 import { formatWeekLabel } from "~/lib/timetable-helpers";
 import { createLogger } from "~/lib/logger";
@@ -2957,6 +2961,16 @@ function CreateAbsenceModal({
     onChange: setAbsenceType,
     canManage: canManageAbsenceTypes,
   });
+  // Eine beantragbare Art (#4710) geht als Antrag an die Leitung; der
+  // Dialog sagt das, bevor gespeichert wird.
+  const { options: absenceTypeOptions } = useAbsenceTypeOptions(
+    canManageAbsenceTypes,
+    STANDARD_ABSENCE_OPTIONS,
+    absenceType,
+  );
+  const isRequest =
+    absenceTypeOptions.find((option) => option.value === absenceType)
+      ?.requestable === true;
   const tenantMutate = useTenantMutate();
   const refreshAbsenceTypes = useCallback(async () => {
     await tenantMutate("staff-absence-types");
@@ -3022,8 +3036,20 @@ function CreateAbsenceModal({
         <ModalActions
           onCancel={onClose}
           onConfirm={handleSave}
-          confirmLabel={saving ? "Speichern…" : "Speichern"}
-          confirmTooltip="Trägt die Abwesenheit sofort in Ihre Zeiterfassung ein."
+          confirmLabel={
+            isRequest
+              ? saving
+                ? "Wird beantragt…"
+                : "Beantragen"
+              : saving
+                ? "Speichern…"
+                : "Speichern"
+          }
+          confirmTooltip={
+            isRequest
+              ? "Schickt den Antrag an die Leitung. Sie entscheidet."
+              : "Trägt die Abwesenheit sofort in Ihre Zeiterfassung ein."
+          }
           confirmDisabled={saving || !dateStart || !dateEnd}
           confirmDisabledReason={saving ? undefined : ABSENCE_RANGE_MISSING}
         />
@@ -3054,6 +3080,12 @@ function CreateAbsenceModal({
             ariaLabelledBy="absence-type-label"
             testId="absence-type-select"
           />
+          {isRequest && (
+            <p className="mt-2 text-sm text-gray-600">
+              Diese Art beantragen Sie. Die Leitung entscheidet. Bis dahin sind
+              die Tage für Sie vorgemerkt.
+            </p>
+          )}
         </div>
 
         {/* Date range */}
@@ -3909,7 +3941,7 @@ function TimeTrackingContent() {
       half_day?: boolean;
       note?: string;
     }) => {
-      await timeTrackingService.createAbsence({
+      const created = await timeTrackingService.createAbsence({
         absence_type: req.absence_type,
         absence_type_id: req.absence_type_id,
         date_start: req.date_start,
@@ -3921,7 +3953,12 @@ function TimeTrackingContent() {
       await Promise.all([mutateAbsences(), refreshTableData()]);
       // Eine eigene Art mit Kontingent ändert die Kontingente (#4971).
       dispatchAbsencesRefresh();
-      toast.success("Die Abwesenheit ist eingetragen.");
+      // Eine beantragbare Art kommt als Antrag zurück (#4710).
+      toast.success(
+        created.status === "requested"
+          ? "Der Antrag ist bei der Leitung."
+          : "Die Abwesenheit ist eingetragen.",
+      );
     },
     [mutateAbsences, refreshTableData, toast],
   );
