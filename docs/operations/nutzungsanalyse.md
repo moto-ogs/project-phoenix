@@ -91,8 +91,9 @@ Cookies, Tokens, Namen oder Formulareingaben werden gespeichert.
 Screenshots, Videos, Traces und automatische DOM-Fehlerabbilder sind aus.
 Für die Portale gibt es getrennte Dateien vor der Anmeldung und für den
 Sitzungsübergang samt geschützter Seite sowie eine gemeinsame Aufzeichnung.
-**PR-CI, nicht nur lokal:** Der separate Workflow **Frontend E2E**
-(`.github/workflows/e2e.yml`) führt im Job **Playwright network evidence**
+**Nächtlich in CI, nicht nur lokal:** Der separate Workflow **Frontend E2E**
+(`.github/workflows/e2e.yml`, werktags 05:00 UTC und per `workflow_dispatch`,
+nicht auf PRs) führt im Job **Playwright network evidence**
 den Schritt **Run portal network evidence** mit `pnpm run test:network` aus.
 Dieser Schritt verwendet den oben beschriebenen gesperrten Node-Resolver.
 Danach folgt **Upload sanitized network evidence**. Die geseedeten Tests
