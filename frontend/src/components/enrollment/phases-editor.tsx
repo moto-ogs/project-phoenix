@@ -1779,6 +1779,7 @@ function PhaseForm(props: PhaseFormProps) {
           berlinTodayISO(),
         ) ? (
           <PhaseExtensionHint
+            saving={saving}
             onCreateSuccessor={
               hasSuccessor ? undefined : () => onCreateSuccessor(savedPhase)
             }

@@ -110,7 +110,7 @@ function rolloverResult(name: string): RolloverResult {
   };
 }
 
-async function startEditSave() {
+async function startEditSave(serviceEnd?: string) {
   const answer = deferred<Phase>();
   mocks.updatePhase.mockReturnValue(answer.promise);
   const view = render(<PhasesEditor />);
@@ -123,6 +123,14 @@ async function startEditSave() {
   fireEvent.change(inputByName("name"), {
     target: { value: "Schuljahr 2026/27 neu" },
   });
+  if (serviceEnd) {
+    fireEvent.change(inputByName("service_end_date"), {
+      target: { value: serviceEnd },
+    });
+    expect(
+      screen.getByRole("button", { name: "Anschlussphase erstellen" }),
+    ).toBeEnabled();
+  }
   fireEvent.click(await screen.findByRole("button", { name: "Speichern" }));
   await screen.findByRole("button", { name: "Speichert…" });
   return { ...view, answer };
@@ -147,7 +155,13 @@ describe("PhasesEditor: Speichern sperrt das Panel (#6593)", () => {
   });
 
   it("locks the panel while saving a phase and unlocks it with the error after a failure", async () => {
-    const { answer } = await startEditSave();
+    const { answer } = await startEditSave("2027-08-31");
+
+    const createSuccessor = screen.getByRole("button", {
+      name: "Anschlussphase erstellen",
+    });
+    expect(createSuccessor).toBeDisabled();
+    fireEvent.click(createSuccessor);
 
     expectSlideOverSaveLocked(EDIT_TITLE, ["Abbrechen", "Speichert…"]);
 
@@ -162,6 +176,8 @@ describe("PhasesEditor: Speichern sperrt das Panel (#6593)", () => {
     ).toBeVisible();
     expectSlideOverUnlocked(EDIT_TITLE);
     expect(inputByName("name")).toHaveValue("Schuljahr 2026/27 neu");
+    expect(inputByName("service_end_date")).toHaveValue("2027-08-31");
+    expect(createSuccessor).toBeEnabled();
   });
 
   it("closes the panel after the phase is saved", async () => {

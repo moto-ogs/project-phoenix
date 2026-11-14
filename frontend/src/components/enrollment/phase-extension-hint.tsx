@@ -30,7 +30,8 @@ const CARE_END_STAYS =
  */
 export function PhaseExtensionHint({
   onCreateSuccessor,
-}: Readonly<{ onCreateSuccessor?: () => void }>) {
+  saving,
+}: Readonly<{ onCreateSuccessor?: () => void; saving: boolean }>) {
   if (!onCreateSuccessor) {
     return (
       <Alert
@@ -56,6 +57,7 @@ export function PhaseExtensionHint({
           variant="surface"
           size="compact"
           onClick={onCreateSuccessor}
+          disabled={saving}
           tooltip="Öffnet das Formular für die Anschlussphase. Ihre Änderungen hier werden nicht gespeichert."
         >
           Anschlussphase erstellen
