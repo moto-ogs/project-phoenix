@@ -130,7 +130,7 @@ describe("appointmentMailNote", () => {
         kinds: { appointment_published: { complained: 1, delivered: 3 } },
       }),
     ).toBe(
-      "Eine Familie hat die Mail als unerwünscht gemeldet. Bitte sprechen Sie sie direkt an.",
+      "Eine Mail wurde als unerwünscht gemeldet. Sprechen Sie die Person direkt an.",
     );
   });
 

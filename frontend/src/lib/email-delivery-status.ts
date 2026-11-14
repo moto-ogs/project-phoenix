@@ -414,19 +414,25 @@ export function undeliveredMailNote(
   }
 }
 
-/** The same line for the mails of one occasion, counted by outcome. */
+/**
+ * The same line for the mails of one occasion, counted by outcome. A complaint
+ * is no mail that did not arrive (#6999): it gets its own words.
+ */
 export function undeliveredMailsNote(
   counts: MailOutcomeCounts | null | undefined,
   nextStep: string,
 ): string | null {
-  const refused =
-    (counts?.undeliverable ?? 0) +
-    (counts?.send_failed ?? 0) +
-    (counts?.complained ?? 0);
-  if (refused > 0) {
-    return `${refused === 1 ? "Eine Mail kam" : `${refused} Mails kamen`} nicht an. ${nextStep}`;
+  const missing = mailsNotArrived(counts ?? undefined);
+  if (missing > 0) {
+    return `${missing === 1 ? "Eine Mail kam" : `${missing} Mails kamen`} nicht an. ${nextStep}`;
   }
-  if (counts?.overdue) return undeliveredMailNote("overdue", nextStep);
-  if (counts?.delayed) return undeliveredMailNote("delayed", nextStep);
+  const complained = counts?.complained ?? 0;
+  if (complained > 0) {
+    return `${complained === 1 ? "Eine Mail wurde" : `${complained} Mails wurden`} als unerwünscht gemeldet. Sprechen Sie die Person direkt an.`;
+  }
+  const late = counts?.delayed ?? 0;
+  if (late > 0) {
+    return `${late === 1 ? "Eine Mail kommt" : `${late} Mails kommen`} später an. moto versucht es weiter.`;
+  }
   return null;
 }

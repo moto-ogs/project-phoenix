@@ -16,7 +16,7 @@ import { SectionLabel } from "~/components/ui/section-label";
 import { useApiLoadError } from "~/contexts/ToastContext";
 import {
   CHECK_ADDRESS_AT_GUARDIAN,
-  mailsNotArrived,
+  undeliveredMailsNote,
   sumMailOutcomeCounts,
   type MailOutcomeCounts,
 } from "~/lib/email-delivery-status";
@@ -69,10 +69,6 @@ function useAppointmentMails(appointmentId: string) {
   return { mails, loadError: load.error };
 }
 
-function plural(count: number, one: string, many: string): string {
-  return count === 1 ? one : `${count} ${many}`;
-}
-
 /**
  * The next step under the mails, or null while every mail is fine. A named
  * guardian is whom to call; without a name the guardian's card shows which
@@ -92,20 +88,10 @@ export function appointmentMailNote(
     const families = names.length === 1 ? "der Familie" : "den Familien";
     return `Nicht angekommen bei ${list}. Bitte sagen Sie ${families} direkt Bescheid. ${CHECK_ADDRESS_AT_GUARDIAN}`;
   }
-  const total = sumMailOutcomeCounts(Object.values(mails.kinds));
-  const missing = mailsNotArrived(total);
-  if (missing > 0) {
-    return `${plural(missing, "Eine Mail kam", "Mails kamen")} nicht an. Welche Adresse betroffen ist, sehen Sie beim Kind unter „Erziehungsberechtigte“.`;
-  }
-  const complained = total.complained ?? 0;
-  if (complained > 0) {
-    return `${plural(complained, "Eine Familie hat", "Familien haben")} die Mail als unerwünscht gemeldet. Bitte sprechen Sie sie direkt an.`;
-  }
-  const late = total.delayed ?? 0;
-  if (late > 0) {
-    return `${plural(late, "Eine Mail kommt", "Mails kommen")} später an. moto versucht es weiter.`;
-  }
-  return null;
+  return undeliveredMailsNote(
+    sumMailOutcomeCounts(Object.values(mails.kinds)),
+    "Welche Adresse betroffen ist, sehen Sie beim Kind unter „Erziehungsberechtigte“.",
+  );
 }
 
 function hasMails(counts: MailOutcomeCounts | undefined): boolean {

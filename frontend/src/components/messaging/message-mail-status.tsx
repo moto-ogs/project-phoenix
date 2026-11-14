@@ -14,9 +14,10 @@ import { EnvelopeSimpleIcon } from "@phosphor-icons/react/ssr";
 import { StatusBadge } from "~/components/ui/status-badge";
 import {
   CHECK_ADDRESS_AT_GUARDIAN,
-  mailNeedsAttention,
   mailOutcomeGroups,
   mailStatusCopy,
+  undeliveredMailNote,
+  undeliveredMailsNote,
   type MailOutcome,
   type MailOutcomeCounts,
 } from "~/lib/email-delivery-status";
@@ -99,14 +100,23 @@ export function MessageMailBadge({ outcome }: { outcome?: MailOutcome }) {
   );
 }
 
-/** The next step when the mail of a conversation message did not arrive. */
+/** Where the school fixes an address a mail to a family ran into. */
+const ADDRESS_AT_GUARDIAN =
+  "Welche Adresse betroffen ist, sehen Sie beim Kind unter „Erziehungsberechtigte“.";
+
+/**
+ * The next step when the mail of a conversation message did not arrive. The
+ * chat sends no mail again: a refused address is fixed at the guardian, any
+ * other failure leaves the message itself where the family reads it.
+ */
 export function messageMailNote(outcome?: MailOutcome): string | null {
-  const copy = mailStatusCopy(outcome);
-  if (!mailNeedsAttention(copy) || !copy?.explanation) return null;
   if (outcome === "undeliverable" || outcome === "complained") {
-    return `${copy.explanation} ${CHECK_ADDRESS_AT_GUARDIAN}`;
+    return undeliveredMailNote(outcome, CHECK_ADDRESS_AT_GUARDIAN);
   }
-  return copy.explanation;
+  return undeliveredMailNote(
+    outcome,
+    "Die Nachricht selbst steht in der Eltern-App.",
+  );
 }
 
 /** The mails of one group message, one per family, in the bubble's meta line. */
@@ -132,12 +142,5 @@ export function GroupMessageMailBadges({
 export function groupMessageMailNote(
   counts?: MailOutcomeCounts,
 ): string | null {
-  const refused = (counts?.undeliverable ?? 0) + (counts?.complained ?? 0);
-  if (refused > 0) {
-    return `${refused === 1 ? "Eine Mail kam" : `${refused} Mails kamen`} nicht an. Welche Adresse betroffen ist, sehen Sie beim Kind unter „Erziehungsberechtigte“.`;
-  }
-  for (const outcome of ["send_failed", "overdue", "delayed"] as const) {
-    if (counts?.[outcome]) return mailStatusCopy(outcome)?.explanation ?? null;
-  }
-  return null;
+  return undeliveredMailsNote(counts, ADDRESS_AT_GUARDIAN);
 }

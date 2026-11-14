@@ -7,8 +7,23 @@ import { messageKeys } from "~/lib/swr/portal-keys";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 
 // A mail leaves within seconds and its provider reports within minutes; the
-// open chat follows without a reload. SWR pauses while the tab is hidden.
+// open chat follows without a reload while a mail is still on its way. A
+// settled chat asks no more; a new message or a live refresh asks again. SWR
+// pauses while the tab is hidden.
 const MAIL_STATUS_REFRESH_MS = 15_000;
+
+const ON_ITS_WAY: ReadonlySet<string> = new Set([
+  "queued",
+  "accepted",
+  "delayed",
+]);
+
+function refreshWhileOnItsWay(outcomes: Iterable<string>): number {
+  for (const outcome of outcomes) {
+    if (ON_ITS_WAY.has(outcome)) return MAIL_STATUS_REFRESH_MS;
+  }
+  return 0;
+}
 
 const MAIL_STATUS_OBJECT = "der Stand der E-Mails";
 
@@ -17,7 +32,11 @@ export function useThreadMails(threadId: string | undefined) {
   const { data, error, mutate } = useSWRAuth(
     threadId ? messageKeys.messageThreadMails(threadId) : null,
     () => fetchThreadMails(threadId ?? ""),
-    { refreshInterval: MAIL_STATUS_REFRESH_MS, revalidateOnFocus: true },
+    {
+      refreshInterval: (mails) =>
+        refreshWhileOnItsWay(Object.values(mails ?? {})),
+      revalidateOnFocus: true,
+    },
   );
   const loadError = useSwrLoadError(error, MAIL_STATUS_OBJECT, mutate);
   return { mails: data ?? {}, loadError, refresh: mutate };
@@ -28,7 +47,13 @@ export function useGroupThreadMails(groupThreadId: string | undefined) {
   const { data, error, mutate } = useSWRAuth(
     groupThreadId ? messageKeys.groupMessageMails(groupThreadId) : null,
     () => fetchGroupThreadMails(groupThreadId ?? ""),
-    { refreshInterval: MAIL_STATUS_REFRESH_MS, revalidateOnFocus: true },
+    {
+      refreshInterval: (mails) =>
+        refreshWhileOnItsWay(
+          Object.values(mails ?? {}).flatMap((counts) => Object.keys(counts)),
+        ),
+      revalidateOnFocus: true,
+    },
   );
   const loadError = useSwrLoadError(error, MAIL_STATUS_OBJECT, mutate);
   return { mails: data ?? {}, loadError, refresh: mutate };

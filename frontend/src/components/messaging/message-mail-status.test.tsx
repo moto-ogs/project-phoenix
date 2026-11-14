@@ -33,8 +33,17 @@ describe("messageMailNote", () => {
     );
   });
 
-  it("asks for no second mail while the server still tries", () => {
-    expect(messageMailNote("delayed")).toMatch(/nicht noch einmal/);
+  it("says that moto keeps trying a late mail, the chat sends none again", () => {
+    expect(messageMailNote("delayed")).toBe(
+      "Die Mail kommt später an. moto versucht es weiter.",
+    );
+  });
+
+  it("never asks to send again: the message stays in the parents' app", () => {
+    for (const outcome of ["send_failed", "overdue"] as const) {
+      expect(messageMailNote(outcome)).toMatch(/Eltern-App\.$/);
+      expect(messageMailNote(outcome)).not.toMatch(/neu|noch einmal senden/);
+    }
   });
 
   it("says nothing when the mail is fine or only on its way", () => {
