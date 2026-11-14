@@ -93,15 +93,23 @@ test.describe("Planung navigation", () => {
     // offen (#6670); die Gruppenzeile klappt sie zu und wieder auf, ohne zu
     // navigieren.
     const planung = sidebar.getByRole("button", { name: "Planung" });
+    const betreuungsplan = sidebar.getByRole("link", {
+      name: "Betreuungsplan",
+      exact: true,
+    });
     await expect(planung).toBeVisible({ timeout: 30_000 });
     await expect(planung).toHaveAttribute("aria-expanded", "true");
+    await betreuungsplan.scrollIntoViewIfNeeded();
+    await expect(betreuungsplan).toBeInViewport();
     await planung.click();
     await expect(planung).toHaveAttribute("aria-expanded", "false");
-    await expect(sidebar.getByText("Betreuungsplan")).toHaveCount(0);
+    // Die animierte Gruppe bleibt im DOM; ihr Inhalt wird abgeschnitten.
+    await expect(betreuungsplan).not.toBeInViewport();
     await planung.click();
     await expect(planung).toHaveAttribute("aria-expanded", "true");
 
-    await expect(sidebar.getByText("Betreuungsplan")).toBeVisible();
+    await betreuungsplan.scrollIntoViewIfNeeded();
+    await expect(betreuungsplan).toBeInViewport();
     // exact: "Mein Dienstplan" (Gruppe Team) enthält "Dienstplan" ebenfalls.
     await expect(
       sidebar.getByText("Dienstplan", { exact: true }),
@@ -118,7 +126,7 @@ test.describe("Planung navigation", () => {
       sidebar.getByText("Vertretungen", { exact: true }),
     ).toHaveCount(0);
 
-    await sidebar.getByText("Betreuungsplan").click();
+    await betreuungsplan.click();
     await page.waitForURL((url) => url.pathname.endsWith("/betreuungsplan"));
 
     await sidebar.getByText("Dienstplan", { exact: true }).click();
