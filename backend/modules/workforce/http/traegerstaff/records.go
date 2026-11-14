@@ -21,16 +21,18 @@ import (
 // itself (ADR 0105).
 type RecordsResource struct {
 	records      workforce.TraegerStaffRecords
+	absences     workforce.TraegerAbsenceTypes
 	requireStaff common.Middleware
 }
 
 // NewRecordsResource builds the resource; the root binds requireStaff to
-// the Träger right traeger_staff:manage (ADR 0084 section 4).
-func NewRecordsResource(records workforce.TraegerStaffRecords, requireStaff common.Middleware) *RecordsResource {
-	if records == nil || requireStaff == nil {
-		panic("workforce traeger staff: the records and the right check are required")
+// the Träger right traeger_staff:manage (ADR 0084 section 4). absences
+// serves the Kontingente of a record (#4710).
+func NewRecordsResource(records workforce.TraegerStaffRecords, absences workforce.TraegerAbsenceTypes, requireStaff common.Middleware) *RecordsResource {
+	if records == nil || absences == nil || requireStaff == nil {
+		panic("workforce traeger staff: the records, the Kontingente and the right check are required")
 	}
-	return &RecordsResource{records: records, requireStaff: requireStaff}
+	return &RecordsResource{records: records, absences: absences, requireStaff: requireStaff}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/staff-records.
@@ -48,6 +50,8 @@ func (rs *RecordsResource) TraegerRouter(protectedTraegerRoutes func(chi.Router,
 		staff.Get("/{id}/financial", rs.financial)
 		staff.Post("/{id}/financial/reveal", rs.revealFinancial)
 		staff.Put("/{id}/financial", rs.updateFinancial)
+		staff.Get("/{id}/absence-accounts", rs.absenceAccounts)
+		staff.Put("/{id}/absence-accounts/{typeId}", rs.setAbsenceAllowance)
 	})
 	return r
 }

@@ -103,10 +103,10 @@ func blocksAbsenceRange(status string) bool {
 	return slices.Contains(workforce.RangeBlockingAbsenceStatuses(), status)
 }
 
+// isVacationWorkflowAbsence reports whether the absence runs through the
+// request flow. Besides vacation that is every request of a requestable
+// type (#4710): only reported absences are booked directly.
 func isVacationWorkflowAbsence(absence *StaffAbsence) bool {
-	if absence.AbsenceType != AbsenceTypeVacation {
-		return false
-	}
 	return absence.Status == AbsenceStatusRequested ||
 		absence.Status == AbsenceStatusQuestion ||
 		absence.Status == AbsenceStatusApproved ||

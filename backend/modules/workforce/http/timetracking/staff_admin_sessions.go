@@ -577,6 +577,9 @@ var adminAbsenceErrorRules = []common.ErrorRule{
 	{Target: workforce.ErrAbsenceTypeAllowanceExceeded, Render: func(err error) render.Renderer {
 		return common.ErrorConflictWithCode(err, common.CodeWorkforceAbsenceAllowanceExceeded)
 	}},
+	// The school's deviation from a type of its Träger (#4710).
+	{Target: workforce.ErrAbsenceTypeNotOffered, Render: conflictWithCode(common.CodeWorkforceAbsenceTypeNotOffered)},
+	{Target: workforce.ErrAbsenceTypeSchoolLimitExceeded, Render: conflictWithCode(common.CodeWorkforceAbsenceTypeSchoolLimitExceeded)},
 	{Target: workforce.ErrVacationQuotaExceeded, Render: func(err error) render.Renderer {
 		return common.ErrorConflictWithCode(err, common.CodeWorkforceVacationQuotaExceeded)
 	}},

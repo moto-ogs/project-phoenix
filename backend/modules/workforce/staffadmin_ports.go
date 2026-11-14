@@ -103,6 +103,7 @@ type staffAdminEngine interface {
 type staffAdminTraeger interface {
 	StaffTraegerKeep
 	TraegerStaffRecords(collaborators TraegerStaffPorts) TraegerStaffRecords
+	TraegerAbsenceTypes(collaborators TraegerStaffPorts) TraegerAbsenceTypes
 }
 
 // StaffTraegerKeep tells the school whether its Träger keeps an employment
@@ -237,4 +238,10 @@ func (a *StaffAdmin) StaffKeptByTraeger(ctx context.Context, staffID int64) (boo
 // 0089) over this personnel record; the root binds the collaborators.
 func (a *StaffAdmin) TraegerStaffRecords(collaborators TraegerStaffPorts) TraegerStaffRecords {
 	return a.traeger.TraegerStaffRecords(collaborators)
+}
+
+// TraegerAbsenceTypes is the Träger's Abwesenheitsarten and Kontingente
+// (#4710, ADR 0089 section 10) over the same collaborators.
+func (a *StaffAdmin) TraegerAbsenceTypes(collaborators TraegerStaffPorts) TraegerAbsenceTypes {
+	return a.traeger.TraegerAbsenceTypes(collaborators)
 }

@@ -50,6 +50,10 @@ func (r absenceTypeReader) ResolveForAbsence(ctx context.Context, id int64) (*St
 	if !value.IsActive {
 		return nil, mapNativeAbsenceTypeError(workforce.ErrAbsenceTypeInactive)
 	}
+	// The school's deviation from a type of its Träger (#4710).
+	if !value.Offered {
+		return nil, workforce.ErrAbsenceTypeNotOffered
+	}
 	return legacyAbsenceType(value), nil
 }
 
@@ -91,7 +95,7 @@ func legacyAllowancePreviews(values []workforce.AbsenceTypeAllowanceSummary, err
 func legacyAbsenceType(value workforce.StaffAbsenceType) *StaffAbsenceType {
 	result := &StaffAbsenceType{
 		Name: value.Name, BaseType: value.BaseType, IsActive: value.IsActive,
-		AllowanceEnabled: value.AllowanceEnabled,
+		AllowanceEnabled: value.AllowanceEnabled, Requestable: value.Requestable,
 	}
 	result.ID, result.TenantID = value.ID, value.TenantID
 	result.CreatedAt, result.UpdatedAt = value.CreatedAt, value.UpdatedAt

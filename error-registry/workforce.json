@@ -55,6 +55,30 @@
       "legacy": "absence_type_inactive"
     },
     {
+      "code": "workforce.absence_type_kept_by_traeger",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.absence_type_kept_by_traeger"
+    },
+    {
+      "code": "workforce.absence_type_not_offered",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.absence_type_not_offered"
+    },
+    {
+      "code": "workforce.absence_type_not_requestable",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.absence_type_not_requestable"
+    },
+    {
+      "code": "workforce.absence_type_school_limit_exceeded",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.absence_type_school_limit_exceeded"
+    },
+    {
       "code": "workforce.adjustment_in_closed_month",
       "class": "input",
       "parameters": [],
@@ -456,6 +480,36 @@
         "max_days"
       ],
       "legacy": "workforce.target_override_too_long"
+    },
+    {
+      "code": "workforce.traeger_absence_allowance_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_absence_allowance_invalid"
+    },
+    {
+      "code": "workforce.traeger_absence_type_in_use",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_absence_type_in_use"
+    },
+    {
+      "code": "workforce.traeger_absence_type_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_absence_type_invalid"
+    },
+    {
+      "code": "workforce.traeger_absence_type_name_taken",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_absence_type_name_taken"
+    },
+    {
+      "code": "workforce.traeger_absence_type_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_absence_type_not_found"
     },
     {
       "code": "workforce.traeger_staff_already_linked",

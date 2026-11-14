@@ -46,6 +46,8 @@ type StaffAbsenceType struct {
 	// It never changes the standard vacation account, and a booking above it
 	// is always rejected (#3256).
 	AllowanceEnabled bool `bun:"allowance_enabled,notnull" json:"allowance_enabled"`
+	// Requestable lets staff request the type; the Leitung decides (#4710).
+	Requestable bool `bun:"requestable,notnull" json:"requestable"`
 }
 
 // Validate normalizes and checks the absence type: it trims the name, rejects
