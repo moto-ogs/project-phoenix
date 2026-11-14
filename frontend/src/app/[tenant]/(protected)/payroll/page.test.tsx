@@ -341,7 +341,10 @@ describe("PayrollPage Versand an das Lohnbüro (#4805)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Zu den Einstellungen" }),
-    ).toHaveAttribute("href", "/settings?tab=system&highlight=sftp.enabled");
+    ).toHaveAttribute(
+      "href",
+      "/test-tenant/settings?tab=system&highlight=sftp.enabled",
+    );
   });
 
   it("drops the SFTP hint without an error when the status is forbidden", () => {
@@ -373,6 +376,44 @@ describe("PayrollPage Versand an das Lohnbüro (#4805)", () => {
         "Für DATEV fehlen noch Angaben. Was fehlt, steht oben unter Vollständigkeit. Fehlt beim Monatsabschluss etwas, sendet moto keine Datei.",
       ),
     ).toBeInTheDocument();
+
+    // The notice leads to the card it names (#7054).
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zur Vollständigkeit" }),
+    );
+    expect(
+      screen.getByRole("heading", { name: "Vollständigkeit" }),
+    ).toHaveFocus();
+  });
+
+  it("leads a failed SFTP dispatch to the setting its reason names", () => {
+    swrData["payroll-dispatch"] = {
+      data: {
+        year: 2026,
+        month: 8,
+        correction: false,
+        channel: "sftp",
+        format: "datev_lodas",
+        recipient: null,
+        state: "failed",
+        reason: "authentication_rejected",
+        attempts: 4,
+        filename: null,
+        createdAt: "2026-09-01T08:00:00Z",
+        finishedAt: "2026-09-01T08:00:05Z",
+        downloadExpiresAt: null,
+        downloadedAt: null,
+      },
+    };
+
+    render(<PayrollPage />);
+
+    expect(
+      screen.getByRole("link", { name: "Zu den Einstellungen" }),
+    ).toHaveAttribute(
+      "href",
+      "/test-tenant/settings?tab=system&highlight=sftp.username",
+    );
   });
 
   it("shows a blocked latest dispatch with its reason", () => {

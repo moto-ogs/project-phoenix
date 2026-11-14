@@ -122,7 +122,7 @@ describe("FilesPage upload permission summary", () => {
     });
     expect(settingsLink).toHaveAttribute(
       "href",
-      "/settings?tab=operations&highlight=files.staff_upload_enabled",
+      "/test-tenant/settings?tab=operations&highlight=files.staff_upload_enabled",
     );
     expect(settingsLink).toHaveClass("text-xs", "underline");
   });

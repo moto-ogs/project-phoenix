@@ -12,6 +12,7 @@ import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { NoticeCardJump } from "~/components/traeger/care-contract-notice-card";
 import { OfferingRequestChanges } from "~/components/students/offering-request-changes";
 import {
   describeAdjustment,
@@ -227,6 +228,7 @@ function PendingChange({
         <Alert
           type="warning"
           message="Die Eltern melden damit die ganze Betreuung ab. Das ist eine Kündigung. Tragen Sie sie unter „Vertrag beenden“ ein. Hier können Sie den Wunsch nur ablehnen."
+          action={<NoticeCardJump />}
         />
       ) : null}
       <OfferingRequestChanges row={contractChangeReview(request)} />

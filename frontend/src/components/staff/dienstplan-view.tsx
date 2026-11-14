@@ -687,6 +687,7 @@ function DienstplanContent() {
       )}
       {periodModalOpen && (
         <CalendarPeriodModal
+          linkClosingDays
           isOpen
           initial={null}
           onClose={() => setPeriodModalOpen(false)}

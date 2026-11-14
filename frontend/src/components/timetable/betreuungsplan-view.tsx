@@ -2302,6 +2302,7 @@ function TimetablesContent() {
         canManagePlanningTracks={canManageSchedules}
         canCreateExternalCaregiver={canCreateExternalCaregiver}
         canGrantExternalView={canGrantExternalView}
+        canManageOfferings={hasPermission(session, "config:manage")}
         isOpen={eventModalOpen}
         onClose={() => {
           setEventModalOpen(false);
@@ -2389,6 +2390,7 @@ function TimetablesContent() {
       )}
 
       <CalendarPeriodModal
+        linkClosingDays
         isOpen={periodModalOpen}
         onClose={() => setPeriodModalOpen(false)}
         initial={null}

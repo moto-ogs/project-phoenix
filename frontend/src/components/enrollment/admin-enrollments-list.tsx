@@ -642,7 +642,7 @@ function EnrollmentSetupGuide({
       title: "Online-Anmeldung einschalten",
       description:
         "Schaltet den Link für Eltern frei. Sie finden ihn dann in den Einstellungen.",
-      href: "/settings?tab=enrollment&highlight=enrollment.enabled",
+      href: tenantPath("/settings?tab=enrollment&highlight=enrollment.enabled"),
       action: enrollmentEnabled ? "Einstellungen prüfen" : "Einschalten",
       hint: "Öffnet die Einstellungen zur Online-Anmeldung.",
       status: enrollmentEnabled ? "done" : "todo",
@@ -669,7 +669,7 @@ function EnrollmentSetupGuide({
     {
       title: "Betreuungsangebote ergänzen",
       description: "Eltern wählen daraus die passende Betreuung je Kind.",
-      href: "/care-offerings",
+      href: tenantPath("/care-offerings"),
       action:
         careOfferingCount > 0
           ? "Betreuungsangebote prüfen"

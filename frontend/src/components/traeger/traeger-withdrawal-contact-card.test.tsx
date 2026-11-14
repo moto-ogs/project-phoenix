@@ -101,6 +101,16 @@ describe("TraegerWithdrawalContactCard", () => {
       "Es fehlt: Telefonnummer und E-Mail-Adresse.",
     );
     expect(preview().getAllByText("Fehlt")).toHaveLength(2);
+    // The notice leads to the contact person's phone (#7054).
+    const phone = document.createElement("input");
+    phone.id = "traeger-contact-phone";
+    phone.setAttribute("aria-label", "Telefon der Ansprechperson");
+    document.body.append(phone);
+    fireEvent.click(screen.getByRole("button", { name: "Zur Ansprechperson" }));
+    expect(
+      screen.getByRole("textbox", { name: "Telefon der Ansprechperson" }),
+    ).toHaveFocus();
+    phone.remove();
   });
 
   it("saves and shows the values as the backend keeps them", async () => {

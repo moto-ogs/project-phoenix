@@ -25,7 +25,7 @@ import {
 import { FamilyChildrenModal } from "~/components/traeger/family-children-modal";
 import { ChevronDown, ChevronUp, Trash2, TriangleAlert } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -46,6 +46,7 @@ import {
 import { parentsConcept } from "~/lib/concepts/parents";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { traegerPath } from "~/lib/traeger-url";
 import {
   type FamilyChildren,
   type FamilyChildrenSet,
@@ -399,6 +400,16 @@ export default function TraegerKinderzahlPage() {
         <Alert
           type="info"
           message="Noch keine Geschwisterregel zählt diese Zahl. Schalten Sie das bei der Regel unter „Ermäßigungen“ ein."
+          action={
+            <ButtonLink
+              href={traegerPath("/traeger/abrechnung/ermaessigungen")}
+              variant="surface"
+              size="compact"
+              tooltip="Öffnet die Ermäßigungen mit den Geschwisterregeln."
+            >
+              Zu den Ermäßigungen
+            </ButtonLink>
+          }
         />
       ) : null}
       {data && toCheck.length > 0 ? (

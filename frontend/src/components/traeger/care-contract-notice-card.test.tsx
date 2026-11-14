@@ -459,6 +459,16 @@ describe("CareContractNoticeCard (#4682)", () => {
     );
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("Neues Vertragsende31.12.2026");
+    // The text of the notice is set in the settings; a new tab keeps the
+    // dialog (#7054).
+    const settings = within(dialog).getByRole("link", {
+      name: "Zur Einstellung, neuer Tab",
+    });
+    expect(settings).toHaveAttribute(
+      "href",
+      expect.stringContaining("einstellungen?bereich=vertraege"),
+    );
+    expect(settings).toHaveAttribute("target", "_blank");
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Grund nicht anerkennen" }),
     );

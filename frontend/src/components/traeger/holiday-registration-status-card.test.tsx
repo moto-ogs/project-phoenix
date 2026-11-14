@@ -278,6 +278,14 @@ describe("HolidayRegistrationStatusCard", () => {
         "Vielleicht doppelt angemeldet: Lia Muster. Die andere Anmeldung öffnen Sie beim Kind.",
       ),
     ).toBeInTheDocument();
+    // „Zum Kind“ leads to Lia's card on the page (#7054).
+    const childCard = document.createElement("section");
+    childCard.id = "holiday-registration-child-9";
+    childCard.innerHTML = "<h2>Lia Muster</h2>";
+    document.body.append(childCard);
+    fireEvent.click(screen.getByRole("button", { name: "Zum Kind" }));
+    expect(screen.getByRole("heading", { name: "Lia Muster" })).toHaveFocus();
+    childCard.remove();
   });
 
   it("locks confirmation until the post-write read settles", async () => {
@@ -612,10 +620,14 @@ describe("HolidayRegistrationStatusCard", () => {
     renderCard({ ...HOLIDAY_REGISTRATION, status: "confirmed", frozen: true });
 
     expect(screen.getByText(/Sie ist eingefroren\./)).toBeInTheDocument();
+    // Besides reopening only the way to the double-registered child (#7054).
     expect(
       screen.getByRole("button", { name: "Wieder öffnen" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(
+      screen.getByRole("button", { name: "Zum Kind" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(2);
   });
 
   it("freezes an open registration", async () => {
@@ -637,7 +649,11 @@ describe("HolidayRegistrationStatusCard", () => {
         "Diese Anmeldung ist storniert. Sie lässt sich nicht mehr ändern.",
       ),
     ).toBeInTheDocument();
-    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    // Nothing changes it; only the way to the double-registered child stays.
+    expect(
+      screen.getByRole("button", { name: "Zum Kind" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
   it("shows a refused change as an error message", async () => {

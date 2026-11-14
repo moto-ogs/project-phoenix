@@ -160,6 +160,8 @@ interface TimetableEventModalProps {
   canCreateExternalCaregiver?: boolean;
   /** Offer „Nur ansehen“ for an external person (users:manage, ADR 0091). */
   canGrantExternalView?: boolean;
+  /** config:manage: the step „Personal und Kinder“ links to „Angebote“. */
+  canManageOfferings?: boolean;
   /**
    * OGS-Schließtage des Tenants (#2032). Fällt das gewählte Datum auf einen
    * davon, fragt das Speichern einmal nach — angelegt wird trotzdem, sobald
@@ -196,6 +198,7 @@ export function TimetableEventModal({
   canManagePlanningTracks = false,
   canCreateExternalCaregiver = false,
   canGrantExternalView = false,
+  canManageOfferings = false,
   closingDayRanges,
   closingDaysLoading = false,
 }: TimetableEventModalProps) {
@@ -515,6 +518,10 @@ export function TimetableEventModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fieldErrors]);
 
+  // Ein Dienst (#3822) hat nur Personal.
+  const personalStepLabel =
+    form.type === "duty" ? "Personal" : "Personal und Kinder";
+
   if (scopeSelectionRequired && initialInstance) {
     return (
       <ChoiceModal
@@ -727,6 +734,7 @@ export function TimetableEventModal({
                 addStaffOption={addStaffOption}
                 canCreateExternalCaregiver={canCreateExternalCaregiver}
                 canGrantExternalView={canGrantExternalView}
+                canManageOfferings={canManageOfferings}
                 loadingRefs={loadingRefs}
                 loadingStudents={loadingStudents}
                 studentLoadFailed={studentLoadFailed}
@@ -823,8 +831,21 @@ export function TimetableEventModal({
                   {coverageWarningCount > 0 && (
                     <Alert
                       type="warning"
-                      message={`${coverageWarningCount} Dienstplan-${coverageWarningCount === 1 ? "Lücke" : "Lücken"} gefunden. Details im Schritt „${form.type === "duty" ? "Personal" : "Personal und Kinder"}“. Speichern ist weiterhin möglich.`}
+                      message={`${coverageWarningCount} Dienstplan-${coverageWarningCount === 1 ? "Lücke" : "Lücken"} gefunden. Details im Schritt „${personalStepLabel}“. Speichern ist weiterhin möglich.`}
                       announce="off"
+                      action={
+                        // The details sit in another step of this form
+                        // (#7054): the button opens that step.
+                        <Button
+                          type="button"
+                          variant="surface"
+                          size="compact"
+                          tooltip={`Springt zum Schritt „${personalStepLabel}“ mit den Lücken.`}
+                          onClick={() => setStep(LAST_STEP)}
+                        >
+                          Zu den Lücken
+                        </Button>
+                      }
                     />
                   )}
                   {coverageCheckFailed && (

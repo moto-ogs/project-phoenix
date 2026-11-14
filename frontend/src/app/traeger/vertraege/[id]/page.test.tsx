@@ -425,6 +425,9 @@ describe("TraegerVertragPage", () => {
       expect(await screen.findByText(label)).toBeInTheDocument();
       expect(screen.getByText(text)).toBeInTheDocument();
       expect(screen.queryByText("Gesendet")).toBeNull();
+      // The notice names „Versand“ for another address and leads there.
+      fireEvent.click(screen.getByRole("button", { name: "Zum Versand" }));
+      expect(screen.getByRole("heading", { name: "Versand" })).toHaveFocus();
     },
   );
 
@@ -473,6 +476,9 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.getByText(/Die Mail wartet auf den Versand/),
     ).toBeInTheDocument();
+    // The notice leads to the card it names (#7054).
+    fireEvent.click(screen.getByRole("button", { name: "Zum Versand" }));
+    expect(screen.getByRole("heading", { name: "Versand" })).toHaveFocus();
     // Checking the delivery sits with the mail history in „Versand“.
     fireEvent.click(
       screen.getByRole("button", { name: "Versand aktualisieren" }),
@@ -682,6 +688,8 @@ describe("TraegerVertragPage", () => {
         "Ab 01.03.2027 gilt Version 2. Eine Änderung der Betreuung ist freigegeben. Was sich ändert, steht unten unter „Versionen“.",
       ),
     ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Zu den Versionen" }));
+    expect(screen.getByRole("heading", { name: "Versionen" })).toHaveFocus();
     expect(screen.getByText("Gilt jetzt")).toBeInTheDocument();
     expect(screen.getByText("Gilt ab 01.03.2027")).toBeInTheDocument();
     expect(

@@ -76,6 +76,30 @@ export function transferFailureMessage(reason: string | undefined): string {
   return FAILURE_MESSAGES[reason] ?? FAILURE_MESSAGES.internal_error!;
 }
 
+/** The SFTP settings of the school, opened at one entry (`?highlight=`). */
+export function sftpSettingsHref(key = "sftp.enabled"): string {
+  return `/settings?tab=system&highlight=${key}`;
+}
+
+/**
+ * The settings entry a failure reason sends the person to (#7054); `null`
+ * when the text names no setting (unreachable, too large, unknown).
+ */
+const FAILURE_SETTING_KEYS: Record<string, string> = {
+  not_configured: "sftp.enabled",
+  host_key_mismatch: "sftp.host_key_fingerprint",
+  authentication_rejected: "sftp.username",
+  upload_failed: "sftp.remote_directory",
+};
+
+/** Link to the setting a failure reason names, or `null`. */
+export function transferFailureSettingsHref(
+  reason: string | undefined,
+): string | null {
+  const key = reason ? FAILURE_SETTING_KEYS[reason] : undefined;
+  return key ? sftpSettingsHref(key) : null;
+}
+
 export async function fetchSFTPStatus(): Promise<SFTPStatus> {
   const response = await sessionFetch(
     "/api/staff/time-tracking/export/sftp-status",

@@ -10,7 +10,7 @@
 import { createContext, useContext, useMemo } from "react";
 
 import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
@@ -254,10 +254,16 @@ export function RequestWaitlistPlaces({
 export function CourseWaitlistSummary({
   waitlist,
   participantNames,
+  requestsHref,
 }: Readonly<{
   waitlist: CourseWaitlist;
   /** Kinder, die heute in der AG sind; fehlt die Liste, bleibt sie weg. */
   participantNames?: readonly string[];
+  /**
+   * Die Seite „Anfragen“, wenn die Person sie öffnen darf (#7054). Öffnet in
+   * einem neuen Tab: die Übersicht steht in einem Fenster mit Eingaben.
+   */
+  requestsHref?: string;
 }>) {
   const limit = waitlist.participantLimit;
   const occupancy =
@@ -279,6 +285,19 @@ export function CourseWaitlistSummary({
         <Alert
           type="info"
           message={`${freeSlotSentence(waitlist)} Geben Sie die Anfrage unter „Anfragen“ frei.`}
+          action={
+            requestsHref ? (
+              <ButtonLink
+                href={requestsHref}
+                newTab
+                variant="surface"
+                size="compact"
+                tooltip="Öffnet die Anfragen in einem neuen Tab."
+              >
+                Zu den Anfragen
+              </ButtonLink>
+            ) : undefined
+          }
         />
       )}
       {waitlist.entries.length === 0 ? (

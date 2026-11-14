@@ -20,6 +20,7 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FieldLabel } from "~/components/ui/field-label";
+import { JumpButton } from "~/components/ui/jump-button";
 import {
   FormErrorAlert,
   LoadErrorAlert,
@@ -52,6 +53,7 @@ import {
   type RefreshAfterWrite,
 } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
+import { holidayRegistrationChildCardId } from "./holiday-registration-child-card";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   cancelHolidayRegistration,
@@ -663,6 +665,7 @@ export function HolidayRegistrationStatusCard({
   const duplicateChildren = registration.children.filter(
     (child) => child.duplicateRegistrationIds.length > 0,
   );
+  const firstDuplicate = duplicateChildren[0];
   const duplicateNames = duplicateChildren.map((child) =>
     `${child.firstName} ${child.lastName}`.trim(),
   );
@@ -792,6 +795,18 @@ export function HolidayRegistrationStatusCard({
           <Alert
             type="warning"
             message={`Vielleicht doppelt angemeldet: ${duplicateNames.join(", ")}. Die andere Anmeldung öffnen Sie beim Kind.`}
+            action={
+              // The child cards render in every state, frozen and cancelled
+              // too, so the way to them is always there (#7054).
+              firstDuplicate ? (
+                <JumpButton
+                  targetId={holidayRegistrationChildCardId(firstDuplicate.id)}
+                  tooltip="Springt zum Kind mit dem Link zur anderen Anmeldung."
+                >
+                  Zum Kind
+                </JumpButton>
+              ) : undefined
+            }
           />
         ) : null}
         {registration.status === "received" ? (

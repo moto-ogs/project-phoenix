@@ -15,6 +15,15 @@ const { api, mockPush, mockReplace, route } = vi.hoisted(() => ({
 }));
 
 vi.mock("~/lib/traeger-billing-api", () => api);
+const { session } = vi.hoisted(() => ({
+  session: { permissions: [] as string[] },
+}));
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { permissions: session.permissions } },
+    status: "authenticated",
+  }),
+}));
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
 }));
@@ -57,6 +66,7 @@ function renderPage() {
 
 describe("TraegerAbrechnungPage", () => {
   beforeEach(() => {
+    session.permissions = [];
     for (const fn of Object.values(api)) fn.mockReset();
     mockPush.mockReset();
     mockReplace.mockReset();
@@ -131,6 +141,16 @@ describe("TraegerAbrechnungPage", () => {
     expect(
       screen.getByRole("button", { name: /Lauf starten/ }),
     ).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("leads to the holiday periods only with the right to create them", async () => {
+    api.fetchBillingPeriods.mockResolvedValue([]);
+    session.permissions = ["traeger_enrollment:manage"];
+    renderPage();
+
+    expect(
+      await screen.findByRole("link", { name: "Zur Ferienbetreuung" }),
+    ).toHaveAttribute("href", "/ferien");
   });
 
   describe("filtered to a holiday period (#5688)", () => {

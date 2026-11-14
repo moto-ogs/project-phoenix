@@ -425,5 +425,39 @@ describe("StaffTimeExportModal", () => {
       );
       expect(screen.queryByText(/wurde übertragen/)).not.toBeInTheDocument();
     });
+
+    it("führt einen Admin zum Fingerabdruck in den Einstellungen", async () => {
+      fetchSFTPStatusMock.mockResolvedValue(readyStatus);
+      transferMock.mockResolvedValue({
+        transferred: false,
+        filename: "zeitkonten-2026-06.csv",
+        reason: "host_key_mismatch",
+      });
+      render(
+        <StaffTimeExportModal
+          isOpen={true}
+          onClose={() => undefined}
+          year={2026}
+          month={6}
+          canOpenSettings
+        />,
+      );
+
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: "An die Gegenstelle übertragen",
+        }),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Übertragen" }));
+
+      expect(
+        await screen.findByRole("link", {
+          name: "Zu den Einstellungen, neuer Tab",
+        }),
+      ).toHaveAttribute(
+        "href",
+        "/test-tenant/settings?tab=system&highlight=sftp.host_key_fingerprint",
+      );
+    });
   });
 });

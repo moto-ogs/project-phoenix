@@ -69,6 +69,11 @@ import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
 const logger = createLogger({ component: "HolidayRegistrationChildCard" });
 
+/** The `id` of a child's card; the status card jumps to it (#7054). */
+export function holidayRegistrationChildCardId(childId: string): string {
+  return `holiday-registration-child-${childId}`;
+}
+
 export function HolidayRegistrationChildCard({
   period,
   registration,
@@ -178,6 +183,7 @@ export function HolidayRegistrationChildCard({
 
   return (
     <SectionCard
+      id={holidayRegistrationChildCardId(child.id)}
       leading={<ConceptIconTile concept={childrenConcept} />}
       title={`${child.firstName} ${child.lastName}`}
       description={`Geboren am ${formatDate(child.birthDate)}, ${childSchoolLabel(child, names)}`}

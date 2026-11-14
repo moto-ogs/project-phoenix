@@ -100,6 +100,9 @@ function destinationChanged(recipient: ExportRecipient, draft: Draft) {
 const PASSWORD_AGAIN =
   "Bitte geben Sie das Passwort noch einmal ein. moto schickt es nur an die Adresse, für die Sie es eingegeben haben.";
 
+/** The card with address and password; notices on the page jump here (#7054). */
+export const EXPORT_RECIPIENT_ACCESS_ID = "export-recipient-access";
+
 /**
  * The form of one recipient: its name and its access. Without a recipient
  * it adds a new one; removing is offered only for a saved one.
@@ -204,6 +207,7 @@ export function ExportRecipientFormCard({
 
   return (
     <SectionCard
+      id={EXPORT_RECIPIENT_ACCESS_ID}
       title="Zugang zum Empfänger"
       description="Diese Angaben bekommen Sie von der Stelle, die die Dateien annimmt, zum Beispiel von Ihrer Kämmerei."
       icon={KeyRound}

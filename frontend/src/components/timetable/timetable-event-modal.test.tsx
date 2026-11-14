@@ -4590,6 +4590,27 @@ describe("TimetableEventModal", () => {
     expect(screen.queryAllByRole("alert")).toHaveLength(0);
   });
 
+  it("leads from the coverage hint of an earlier step to the gaps (#7054)", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockCheckShiftCoverage.mockResolvedValue({
+      coverageWarnings: [],
+      coverageWarningCount: 2,
+    });
+    renderModal();
+
+    await waitFor(() => expect(screen.getByLabelText("Raum")).toBeEnabled());
+    await goToStep(3);
+    fireEvent.click(screen.getByRole("checkbox", { name: /Ada Staff/ }));
+    await act(() => vi.advanceTimersByTimeAsync(500));
+    await goToStep(1);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Zu den Lücken" }),
+    );
+
+    expect(currentStep()).toBe(3);
+  });
+
   it("aborts a hanging one-off pre-save coverage check and still writes", async () => {
     renderModal({
       initialInstance: {

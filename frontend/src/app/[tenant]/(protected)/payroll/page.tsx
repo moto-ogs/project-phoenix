@@ -21,6 +21,7 @@ import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
 import { FieldLabel } from "~/components/ui/field-label";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
+import { JumpButton } from "~/components/ui/jump-button";
 import NavigationLink from "~/components/ui/navigation-link";
 import { SectionCard } from "~/components/ui/section-card";
 import { SegmentedControl } from "~/components/ui/segmented-control";
@@ -30,6 +31,7 @@ import {
   type StatusBadgeTone,
 } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { formatChatDateTime } from "~/lib/date-helpers";
 import { errorStatus } from "~/lib/expected-failure";
@@ -65,7 +67,12 @@ import {
   ResponsiveActionList,
   ResponsiveActionRow,
 } from "~/components/ui/responsive-action-list";
-import { fetchSFTPStatus, type SFTPStatus } from "~/lib/sftp-export-api";
+import {
+  fetchSFTPStatus,
+  sftpSettingsHref,
+  transferFailureSettingsHref,
+  type SFTPStatus,
+} from "~/lib/sftp-export-api";
 import {
   archiveSurchargeRule,
   archiveWageType,
@@ -530,6 +537,7 @@ function ReadinessCard({
 
   return (
     <SectionCard
+      id={PAYROLL_READINESS_SECTION_ID}
       title="Vollständigkeit"
       titleBadge={
         open > 0 ? (
@@ -834,8 +842,12 @@ const DISPATCH_FORMAT_OPTIONS = (
   Object.keys(PAYROLL_DISPATCH_FORMAT_LABELS) as PayrollDispatchFormat[]
 ).map((value) => ({ value, label: PAYROLL_DISPATCH_FORMAT_LABELS[value] }));
 
-/** Die Gegenstelle liegt in den Einstellungen bei „Zeitkonten übertragen“. */
-const SFTP_SETTINGS_HREF = "/settings?tab=system&highlight=sftp.enabled";
+/** Die Karte, auf die der DATEV-Hinweis beim Versand zeigt (#7054). */
+const PAYROLL_READINESS_SECTION_ID = "payroll-readiness";
+
+/** Was ein Klick zu den SFTP-Einstellungen tut. */
+const SFTP_SETTINGS_TOOLTIP =
+  "Öffnet die Übertragung der Zeitkonten in den Einstellungen.";
 
 /**
  * Fehlt etwas, das die DATEV-Prüfung beim Versand verlangt? Dieselben Zahlen
@@ -895,6 +907,7 @@ function LohnbueroCard({
     });
   };
 
+  const tenantPath = useTenantAwarePath();
   const [email, setEmail] = useState(status.dispatch.email);
   useEffect(() => setEmail(status.dispatch.email), [status.dispatch.email]);
   const trimmedEmail = email.trim();
@@ -998,18 +1011,28 @@ function LohnbueroCard({
             type="warning"
             message={sftpHint}
             action={
-              <NavigationLink
-                href={SFTP_SETTINGS_HREF}
-                className="text-sm font-medium underline underline-offset-2"
+              <ButtonLink
+                href={tenantPath(sftpSettingsHref())}
+                variant="surface"
+                size="compact"
+                tooltip={SFTP_SETTINGS_TOOLTIP}
               >
                 Zu den Einstellungen
-              </NavigationLink>
+              </ButtonLink>
             }
           />
         )}
         {datevIncomplete(status, rules, current.format) && (
           <Alert
             type="warning"
+            action={
+              <JumpButton
+                targetId={PAYROLL_READINESS_SECTION_ID}
+                tooltip="Springt zur Liste, was für den Versand noch fehlt."
+              >
+                Zur Vollständigkeit
+              </JumpButton>
+            }
             message="Für DATEV fehlen noch Angaben. Was fehlt, steht oben unter Vollständigkeit. Fehlt beim Monatsabschluss etwas, sendet moto keine Datei."
           />
         )}
@@ -1065,9 +1088,15 @@ function LatestDispatch({
 }: {
   readonly dispatch: PayrollDispatchView;
 }) {
+  const tenantPath = useTenantAwarePath();
   const badge = dispatchStateBadge(dispatch);
   const reason = payrollDispatchReasonText(dispatch);
   const isEmail = dispatch.channel === "email";
+  // Names the text a setting of the transfer, the notice leads there (#7054).
+  const settingsHref =
+    dispatch.state === "failed" && dispatch.channel === "sftp"
+      ? transferFailureSettingsHref(dispatch.reason ?? undefined)
+      : null;
 
   return (
     <div className="space-y-3">
@@ -1115,7 +1144,23 @@ function LatestDispatch({
       {reason && (
         // Ein Hinweis zum Stand, kein Fehlschlag dieser Seite: darum
         // „warning“; die rote Plakette trägt das Scheitern.
-        <Alert type="warning" announce="polite" message={reason} />
+        <Alert
+          type="warning"
+          announce="polite"
+          message={reason}
+          action={
+            settingsHref ? (
+              <ButtonLink
+                href={tenantPath(settingsHref)}
+                variant="surface"
+                size="compact"
+                tooltip={SFTP_SETTINGS_TOOLTIP}
+              >
+                Zu den Einstellungen
+              </ButtonLink>
+            ) : undefined
+          }
+        />
       )}
     </div>
   );

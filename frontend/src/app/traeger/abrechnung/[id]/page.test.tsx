@@ -489,6 +489,10 @@ describe("TraegerBillingRunPage", () => {
   });
 
   it("warns before the release when the payment text needs missing debtor numbers (#5622)", async () => {
+    session.permissions = [
+      "traeger_billing:manage",
+      "traeger_enrollment:manage",
+    ];
     const run = {
       ...PREVIEW,
       missingDebtorNumbers: 3,
@@ -507,6 +511,13 @@ describe("TraegerBillingRunPage", () => {
     expect(
       screen.queryByText(/3 Anmeldungen haben noch keine Debitorennummer/),
     ).not.toBeInTheDocument();
+    // The notice leads to the registrations where the numbers go (#7054).
+    expect(
+      within(warning.closest('[role="alert"]') as HTMLElement).getByRole(
+        "link",
+        { name: "Zu den Anmeldungen" },
+      ),
+    ).toHaveAttribute("href", "/ferien/5/anmeldungen");
 
     fireEvent.click(screen.getByRole("button", { name: "Lauf freigeben" }));
     const dialog = await screen.findByRole("dialog");
@@ -535,6 +546,13 @@ describe("TraegerBillingRunPage", () => {
         "1 Rechnung mit Betrag hat keine Debitorennummer. Ihr Zahlungstext nennt aber die Debitorennummer. Nach dem Freigeben können Sie sie nicht mehr eintragen. Schreiben gehen dann nur ohne den Platzhalter im Zahlungstext. Tragen Sie die Nummern vor dem Freigeben bei den Anmeldungen ein. Das Feld dafür erscheint, wenn in den Einstellungen unter „Allgemein“ im Bereich „Ferienbetreuung“ „Debitorennummer beim Bestätigen abfragen“ an ist.",
       ),
     ).toBeInTheDocument();
+    // Without the right to the registrations only the settings link (#7054).
+    expect(
+      screen.getByRole("link", { name: "Zur Einstellung" }),
+    ).toHaveAttribute("href", "/einstellungen?bereich=ferien");
+    expect(
+      screen.queryByRole("link", { name: "Zu den Anmeldungen" }),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Lauf freigeben" }));
     expect(
       await screen.findByRole("button", { name: "Trotzdem freigeben" }),

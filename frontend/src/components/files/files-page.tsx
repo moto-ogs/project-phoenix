@@ -9,6 +9,7 @@
 import { SectionLabel } from "~/components/ui/section-label";
 import { FileText, FolderOpen, Lock, Users } from "lucide-react";
 import Link from "~/components/ui/navigation-link";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useSession } from "next-auth/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
@@ -145,6 +146,7 @@ export function FilesPage() {
   );
   const showsTraegerCard = traegerDocuments.shown;
   const canUpload = overview?.canUpload ?? false;
+  const tenantPath = useTenantAwarePath();
   const canChangeUploadPermission =
     hasPermission(session, "config:read") &&
     hasPermission(session, "config:update");
@@ -310,7 +312,9 @@ export function FilesPage() {
                       {canChangeUploadPermission && (
                         <span className="mt-1 block">
                           <Link
-                            href="/settings?tab=operations&highlight=files.staff_upload_enabled"
+                            href={tenantPath(
+                              "/settings?tab=operations&highlight=files.staff_upload_enabled",
+                            )}
                             className="inline-flex min-h-6 items-center text-xs font-medium text-gray-500 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-800 hover:decoration-gray-500 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-1 focus-visible:outline-none"
                           >
                             Berechtigung ändern

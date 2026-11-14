@@ -20,6 +20,11 @@ interface FormErrorAlertProps {
    *  for a one-shot message. */
   readonly message: FormErrorInput;
   readonly className?: string;
+  /**
+   * Leads to the place where the person fixes the error (#7054), such as a
+   * settings entry the message names. Stands before retry and request ID.
+   */
+  readonly action?: ReactNode;
 }
 
 /**
@@ -35,7 +40,11 @@ interface FormErrorAlertProps {
  * reads the field's own hint, or else the alert itself. A toast cannot do
  * that job: it fades before anyone has found the field it names.
  */
-export function FormErrorAlert({ message, className }: FormErrorAlertProps) {
+export function FormErrorAlert({
+  message,
+  className,
+  action: placeAction,
+}: FormErrorAlertProps) {
   const ref = useRef<HTMLDivElement>(null);
   const text = formErrorMessage(message);
   const attempt = formErrorAttempt(message);
@@ -67,7 +76,16 @@ export function FormErrorAlert({ message, className }: FormErrorAlertProps) {
     );
   }
 
-  const action = errorAlertActions(detail);
+  const errorActions = errorAlertActions(detail);
+  const action =
+    placeAction && errorActions ? (
+      <span className="flex flex-wrap items-center gap-2">
+        {placeAction}
+        {errorActions}
+      </span>
+    ) : (
+      (placeAction ?? errorActions)
+    );
 
   return (
     <div ref={ref} className={className}>

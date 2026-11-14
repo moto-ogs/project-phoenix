@@ -1,9 +1,11 @@
 "use client";
 
 import { FramedList } from "~/components/ui/framed-list";
+import { JumpButton } from "~/components/ui/jump-button";
 import {
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -124,6 +126,8 @@ export function LetterStatusPanel({
 }) {
   const [status, setStatus] = useState<LetterStatus | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  // The list „Empfänger“, which the mail notice points to (#7054).
+  const recipientsId = useId();
   const latestRequest = useRef(0);
   const loadError = useApiLoadError();
   const showLoadError = loadError.show;
@@ -402,6 +406,17 @@ export function LetterStatusPanel({
           ]
             .filter(Boolean)
             .join(" ")}
+          action={
+            (s.emails_provider_blocked ?? 0) > 0 &&
+            status.recipients.length > 0 ? (
+              <JumpButton
+                targetId={recipientsId}
+                tooltip="Springt zur Liste der Empfänger mit dem Grund je Adresse."
+              >
+                Zu den Empfängern
+              </JumpButton>
+            ) : undefined
+          }
         />
       )}
 
@@ -479,7 +494,7 @@ export function LetterStatusPanel({
         )}
       </section>
 
-      <section>
+      <section id={recipientsId}>
         <h3 className="mb-2 text-sm font-semibold text-gray-900">Empfänger</h3>
         {status.recipients.length === 0 ? (
           <p className="text-sm text-gray-500">Noch keine Empfänger erfasst.</p>

@@ -25,6 +25,11 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
+// Who may open „Anfragen“ is the hook's own business (#7054).
+vi.mock("~/lib/hooks/use-change-request-access", () => ({
+  useChangeRequestAccess: () => ({ canOpenRequestsPage: true }),
+}));
+
 vi.mock("~/lib/swr", () => ({
   useSWRAuth: (key: string | null) => {
     state.keys.push(key);

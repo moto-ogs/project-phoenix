@@ -945,6 +945,7 @@ function StaffPageContent() {
             onClose={() => setShowExportModal(false)}
             year={accounts?.year ?? monthAnchor.year}
             month={accounts?.month ?? monthAnchor.month}
+            canOpenSettings={hasPermission(session, "config:manage")}
           />
         </>
       }

@@ -17,6 +17,7 @@ import {
   type EvidenceTarget,
 } from "~/components/traeger/care-evidence-modal";
 import { Alert } from "~/components/ui/alert";
+import { ButtonLink } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -30,6 +31,7 @@ import {
 } from "~/contexts/ToastContext";
 import { berlinTodayISO, formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { traegerPath } from "~/lib/traeger-url";
 import {
   type CareEvidence,
   type CareEvidenceContract,
@@ -334,6 +336,16 @@ export default function TraegerNachweisePage() {
         <Alert
           type="info"
           message="Für Einkommensstufen legen Sie zuerst Stufen unter „Ermäßigungen“ an."
+          action={
+            <ButtonLink
+              href={traegerPath("/traeger/abrechnung/ermaessigungen")}
+              variant="surface"
+              size="compact"
+              tooltip="Öffnet die Ermäßigungen, um Einkommensstufen anzulegen."
+            >
+              Zu den Ermäßigungen
+            </ButtonLink>
+          }
         />
       ) : null}
       {data && data.contracts.length > 0 ? (

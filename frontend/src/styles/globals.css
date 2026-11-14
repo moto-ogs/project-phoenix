@@ -551,6 +551,12 @@
   }
 }
 
+/* A place a notice jumps to (`jumpTo`, #7054) stops below the sticky page
+   header (48 px on a phone, 64 px from lg on) with room to spare. */
+.moto-jump-target {
+  scroll-margin-top: 6rem;
+}
+
 .moto-content-surface {
   border-color: var(--color-gray-200);
   background: var(--color-white);
