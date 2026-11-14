@@ -237,9 +237,19 @@ func TestTraegerStaffProofsWarnBeforeExpiry(t *testing.T) {
 
 	t.Run("no role without the right and no other Träger reaches the proofs", func(t *testing.T) {
 		readOnly := newTraegerOffice(t, db, portal, "Träger Lesen", identityaccess.TraegerRoleReadOnly)
-		for _, path := range []string{"/traeger/staff-proofs/", "/traeger/staff-proofs/export", "/traeger/staff-proofs/types"} {
+		for _, path := range []string{"/traeger/staff-proofs/", "/traeger/staff-proofs/export", "/traeger/staff-proofs/types", "/traeger/staff-proofs/school-kinds"} {
 			rec := traegerJSON(t, router, readOnly.token, http.MethodGet, path, nil)
 			assert.Equal(t, http.StatusForbidden, rec.Code, path)
+		}
+		for _, write := range []struct{ method, path string }{
+			{http.MethodPost, "/traeger/staff-proofs/types"},
+			{http.MethodPut, fmt.Sprintf("/traeger/staff-proofs/types/%d", police.ID)},
+			{http.MethodPut, "/traeger/staff-proofs/school-kinds"},
+			{http.MethodPut, proofPath(miraRecord, police)},
+			{http.MethodDelete, proofPath(miraRecord, measles)},
+		} {
+			rec := traegerJSON(t, router, readOnly.token, write.method, write.path, map[string]any{"name": "x", "presented_on": "2026-11-02"})
+			assert.Equal(t, http.StatusForbidden, rec.Code, write.method+" "+write.path)
 		}
 		other := newTraegerOffice(t, db, portal, "Träger Fremd", identityaccess.TraegerRolePersonnel)
 		staffRelease(t, db, other.organization)
@@ -315,4 +325,39 @@ func TestTraegerStaffProofListQueryBudget(t *testing.T) {
 	add(2)
 	assert.Len(t, read().Statements, len(few.Statements), "the list loads set-based")
 	querybudgets.AssertQueryBudget(t, "api.traeger.staff_proofs", few)
+}
+
+// TestTraegerStaffProofKindsQueryBudget pins the kinds and the school kinds:
+// flat in the number of kinds, one tenant transaction per school.
+func TestTraegerStaffProofKindsQueryBudget(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	router, _, _, _, office := newTraegerStaffFixture(t, db)
+	staffRelease(t, db, office.organization)
+	read := func(path string) testpkg.QueryMeasurement {
+		counter := testpkg.CaptureQueriesForContext(t, db)
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		req.Header.Set("Authorization", "Bearer "+office.token)
+		rec := httptest.NewRecorder()
+		testpkg.MeasuredHTTPRequest(counter, router, rec, req.WithContext(counter.Context(req.Context())))
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		return counter.Measurement(counter.Selects(""))
+	}
+	add := func(from, to int) {
+		for i := from; i < to; i++ {
+			rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-proofs/types", map[string]any{"name": fmt.Sprintf("Art %d", i)})
+			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+			for _, school := range office.schools {
+				_, err := db.ExecContext(context.Background(), `INSERT INTO users.staff_qualification_types (tenant_id, name) VALUES (?, ?)`, school, fmt.Sprintf("Schulart %d", i))
+				require.NoError(t, err)
+			}
+		}
+	}
+	add(0, 1)
+	types, schoolKinds := read("/traeger/staff-proofs/types"), read("/traeger/staff-proofs/school-kinds")
+	add(1, 4)
+	assert.Len(t, read("/traeger/staff-proofs/types").Statements, len(types.Statements), "the kinds load set-based")
+	assert.Len(t, read("/traeger/staff-proofs/school-kinds").Statements, len(schoolKinds.Statements), "the school kinds load set-based per school")
+	querybudgets.AssertQueryBudget(t, "api.traeger.staff_proof_types", types)
+	querybudgets.AssertQueryBudget(t, "api.traeger.staff_proof_school_kinds", schoolKinds)
 }

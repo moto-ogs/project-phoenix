@@ -89,18 +89,18 @@ export function StaffProofTypeModal({
     formErrors.clear();
     const fieldErrors: Record<string, string> = {};
     const name = draft.name.trim();
-    if (!name) fieldErrors.name = "Bitte einen Namen eintragen.";
+    if (!name) fieldErrors.name = "Bitte tragen Sie einen Namen ein.";
     const validity =
       draft.validityMonths.trim() === ""
         ? null
         : wholeNumber(draft.validityMonths, 1, 240);
     if (draft.validityMonths.trim() !== "" && validity === null) {
       fieldErrors.validity_months =
-        "Bitte 1 bis 240 Monate eintragen, oder leer lassen.";
+        "Bitte tragen Sie 1 bis 240 Monate ein, oder lassen Sie das Feld leer.";
     }
     const lead = wholeNumber(draft.reminderLeadWeeks, 0, 52);
     if (lead === null) {
-      fieldErrors.reminder_lead_weeks = "Bitte 0 bis 52 Wochen eintragen.";
+      fieldErrors.reminder_lead_weeks = "Bitte tragen Sie 0 bis 52 Wochen ein.";
     }
     if (Object.keys(fieldErrors).length > 0 || lead === null) {
       formErrors.invalid(

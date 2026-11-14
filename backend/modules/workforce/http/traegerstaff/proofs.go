@@ -168,7 +168,7 @@ func (req *proofTypeRequest) Bind(*http.Request) error {
 }
 
 func (req *proofTypeRequest) toInput() workforce.TraegerStaffProofTypeInput {
-	lead := 8
+	lead := workforce.DefaultQualificationReminderLeadWeeks
 	if req.ReminderLeadWeeks != nil {
 		lead = *req.ReminderLeadWeeks
 	}

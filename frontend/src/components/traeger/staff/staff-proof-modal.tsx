@@ -82,11 +82,11 @@ export function StaffProofModal({
     const fieldErrors: Record<string, string> = {};
     if (!draft.presentedOn) {
       fieldErrors.presented_on = police
-        ? "Bitte den Tag der Einsicht wählen."
-        : "Bitte den Tag wählen, an dem der Nachweis vorlag.";
+        ? "Bitte wählen Sie den Tag der Einsicht."
+        : "Bitte wählen Sie den Tag, an dem der Nachweis vorlag.";
     }
     if (police && !draft.issuedOn) {
-      fieldErrors.issued_on = "Bitte das Ausstellungsdatum wählen.";
+      fieldErrors.issued_on = "Bitte wählen Sie das Ausstellungsdatum.";
     } else if (police && draft.issuedOn > draft.presentedOn) {
       fieldErrors.issued_on =
         "Das Führungszeugnis kann nicht nach der Einsicht ausgestellt sein.";
@@ -214,7 +214,7 @@ export function StaffProofModal({
               checked={draft.noRelevantEntry}
               onChange={(checked) => set({ noRelevantEntry: checked })}
               label="Das Führungszeugnis hat keine einschlägige Eintragung."
-              description="Gemeint sind Straftaten nach § 72a Abs. 1 SGB VIII. Hat das Zeugnis eine solche Eintragung, tragen Sie hier nichts ein."
+              description="Gemeint sind Straftaten, die eine Arbeit mit Kindern ausschließen. Hat das Zeugnis eine solche Eintragung, tragen Sie hier nichts ein."
               error={formErrors.fieldError("no_relevant_entry")}
             />
           ) : null}

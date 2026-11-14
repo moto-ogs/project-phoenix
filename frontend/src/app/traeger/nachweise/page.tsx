@@ -82,7 +82,7 @@ const EXPORT_FORMATS: readonly ExportMenuOption[] = exportFormatOptions([
 const NO_MAPPING = "";
 
 const INFO =
-  "Hier sehen Sie für alle Personalakten, welcher Nachweis fehlt, abgelaufen ist oder bald abläuft. Den Nachweis tragen Sie in der Personalakte ein. Vor dem Ablauf warnt moto die Leitung jedes Einsatzorts und die Person per Nachricht und E-Mail, so viele Wochen vorher, wie die Nachweisart sagt. Vom Führungszeugnis speichert moto nur Einsicht, Ausstellungsdatum und Ergebnis, nie eine Kopie. Jedes Anzeigen dieser Liste steht im Zugriffsprotokoll der Schulen.";
+  "Hier sehen Sie, welcher Nachweis fehlt, abgelaufen ist oder bald abläuft. Den Nachweis tragen Sie in der Personalakte ein. Vor dem Ablauf warnt moto die Leitung jedes Einsatzorts und die Person. Wie früh, legen Sie je Nachweisart fest. Vom Führungszeugnis speichert moto keine Kopie. Jedes Anzeigen dieser Liste steht im Zugriffsprotokoll der Schulen.";
 
 const errorMessage = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
@@ -448,7 +448,7 @@ function SchoolKinds({
 
   const options = useMemo(
     () => [
-      { value: NO_MAPPING, label: "Keine – die Schule erinnert selbst" },
+      { value: NO_MAPPING, label: "Keine Zuordnung, die Schule erinnert" },
       ...types
         .filter((type) => !type.archived)
         .map((type) => ({ value: type.id, label: type.name })),
@@ -536,7 +536,7 @@ function SchoolKinds({
         <EmptyState
           variant="compact"
           title="Die Schule hat noch keine Nachweisarten."
-          description="Legt die Schule Nachweisarten an, ordnen Sie sie hier zu."
+          description="Sobald die Schule Nachweisarten anlegt, ordnen Sie sie hier zu."
         />
       )}
     </SectionCard>

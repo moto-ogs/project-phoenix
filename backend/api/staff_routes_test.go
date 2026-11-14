@@ -69,6 +69,7 @@ var staffRouteSurface = []string{
 	"GET /{id}/stammdaten",
 	"GET /{id}/stammdaten/bank-steuer",
 	"GET /{id}/target-overrides",
+	"GET /{id}/traeger-proofs",
 	"GET /{id}/time-tracking/adjustments",
 	"GET /{id}/time-tracking/comp-time-preview",
 	"GET /{id}/time-tracking/export",
