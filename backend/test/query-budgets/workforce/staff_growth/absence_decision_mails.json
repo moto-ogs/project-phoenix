@@ -1,0 +1,7 @@
+{
+  "scenario": "workforce.staff_growth.absence_decision_mails",
+  "max": 6,
+  "exact": true,
+  "description": "Mail status of the decisions (#7058): full route-sized request with JWT/permission middleware and tenant transaction, positive N=3/N=8 decided requests with real outbox mails; ONE outcome read per decision mail type. Fixtures outside capture.",
+  "route": "GET /api/staff/absences/mails"
+}

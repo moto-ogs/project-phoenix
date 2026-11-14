@@ -1,0 +1,7 @@
+{
+  "scenario": "workforce.workforce20.own_absence_mails",
+  "max": 8,
+  "exact": true,
+  "description": "Mail status of the own waiting requests (#7058): full protected own Resource request, positive N=3/N=8 requests with real outbox notices; the caller's person and staff resolution, ONE read of the waiting requests and ONE outcome read per notice mail type. Fixtures outside capture.",
+  "route": "GET /api/time-tracking/absences/mails"
+}

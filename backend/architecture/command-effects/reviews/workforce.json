@@ -5804,6 +5804,36 @@
       "target_owner": ""
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.WorkforceMails.MailOutcomes",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
+      "reason": "Read-only delivery state: workforce reads what became of its payroll and absence mails through runtime.EmailOutcomes.EmailOutcomes in its tenant transaction (#7058). No persistent, lock or scope effect.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.WorkforceMails.MailOutcomes",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
+      "reason": "Read-only delivery state: workforce reads what became of its payroll and absence mails through tenant.TenantFromContext in its tenant transaction (#7058). No persistent, lock or scope effect.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.WorkforceMails.MailOutcomes",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
+      "reason": "Read-only delivery state: workforce reads what became of its payroll and absence mails through tenant.TenantID.Int64 in its tenant transaction (#7058). No persistent, lock or scope effect.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "adr": "0083",
       "approval_adr": "0176",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.monthClosingCapability.CloseMonth",

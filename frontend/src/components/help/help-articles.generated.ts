@@ -7689,7 +7689,8 @@ export const payrollTopic = function payrollTopic(): HelpTopic {
       "Der Export erzeugt keine Datei? Dann fehlt oben unter `Vollständigkeit` noch etwas.",
       "Ein Krankheitstag zählt 0 Stunden? Dann fehlt das Soll. `Vollständigkeit` zählt bei `Soll (Arbeitszeit)` alle Personen ohne Soll im laufenden Monat.",
       "`Zuschlagsregel anlegen` lässt sich nicht tippen? Dann fehlt noch eine eigene Lohnart.",
-      "Unter `Letzter Versand` steht `Nicht gesendet` oder `Fehlgeschlagen`? Darunter steht der Grund. Wer die Zeiterfassung des Teams verwaltet, bekommt dazu eine E-Mail.",
+      "Unter `Letzter Versand` steht `Nicht gesendet` oder `Fehlgeschlagen`? Darunter steht der Grund. Wer die Zeiterfassung des Teams verwaltet, bekommt dazu eine E-Mail. Ob sie ankam, steht bei `Hinweis an die Leitung`.",
+      "Unter `Letzter Versand` steht `Nicht zustellbar`? Die Mail mit dem Link kam beim Lohnbüro nicht an. Prüfen Sie die `E-Mail-Adresse des Lohnbüros`. `Versendet` heißt: Die Mail ist raus, eine Meldung aus dem Postfach fehlt noch.",
       "Der `Versandweg` `SFTP` braucht die Gegenstelle aus den Einstellungen unter `Kalender und Export` bei `Zeitkonten übertragen`.",
     ],
     related: [
@@ -14406,6 +14407,7 @@ export const vacationTopic = function vacationTopic(): HelpTopic {
       "Ist der Antrag genehmigt, fallen Ihre Schichten an den ganzen Urlaubstagen aus. Im Betreuungsplan stehen Sie dann als abwesend. Das Team sieht dort nur `Abwesenheit`.",
       "Stornieren Sie einen genehmigten Antrag, plant moto Sie an diesen Tagen wieder ein.",
       "Bei einer `Rückfrage` schreiben Sie eine Antwort und wählen `Antwort senden & erneut einreichen`.",
+      "Unter einem offenen Antrag steht `Mail an die Leitung`, wenn die Schule die Leitung per Mail informiert. Kam eine Mail nicht an, sagen Sie der Leitung direkt Bescheid.",
     ],
     related: [HELP_TOPICS.ownAbsence, HELP_TOPICS.correctWorkTime],
   };
@@ -14703,6 +14705,7 @@ export const workTimeReviewTopic = function workTimeReviewTopic(): HelpTopic {
       "`Team` → `Zeiterfassung` zeigt nur Ihre eigene Stempeluhr, nicht die des Teams.",
       "Mit `Monat abschließen` frieren Sie den Stand ein. Das geht ab dem 1. des Folgemonats.",
       "Ist unter `Abrechnung` der `Versand an das Lohnbüro` eingeschaltet, geht die Monatsdatei danach von selbst an das Lohnbüro.",
+      "Unter einer Rückfrage und in der Historie steht, ob die Mail dazu bei der Person ankam. Kam sie nicht an, sagen Sie der Person direkt Bescheid.",
     ],
     differences: [
       "Fehlt der Reiter `Mitarbeitende`? Dann dürfen Sie keine Anträge entscheiden.",

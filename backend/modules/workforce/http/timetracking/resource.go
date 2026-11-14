@@ -44,6 +44,9 @@ type Resource struct {
 	identity         IdentityFunc
 	withinTenant     TenantTransaction
 	shiftResponses   ShiftResponses
+	// absenceMails says whether the approvers got the notice of a waiting
+	// request by mail (#7058); nil leaves the route away.
+	absenceMails workforce.AbsenceMailStatus
 }
 
 // Dependencies are the collaborators of the time-tracking resource.
@@ -65,6 +68,9 @@ type Dependencies struct {
 	Identity         IdentityFunc
 	WithinTenant     TenantTransaction
 	ShiftResponses   ShiftResponses
+	// AbsenceMails serves the mail status of the own requests (#7058);
+	// optional.
+	AbsenceMails workforce.AbsenceMailStatus
 }
 
 // NewResource creates a new time-tracking resource.
@@ -90,5 +96,6 @@ func NewResource(deps Dependencies) *Resource {
 		identity:               deps.Identity,
 		withinTenant:           deps.WithinTenant,
 		shiftResponses:         deps.ShiftResponses,
+		absenceMails:           deps.AbsenceMails,
 	}
 }

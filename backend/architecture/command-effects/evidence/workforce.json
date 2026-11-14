@@ -4161,6 +4161,30 @@
       "target_owner": ""
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.WorkforceMails.MailOutcomes",
+      "binding_digest": "62bdbbd69e68e5fa2331a5e6554d83af",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.WorkforceMails.MailOutcomes",
+      "binding_digest": "98267df5e11be362f17c48190fc9281b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.WorkforceMails.MailOutcomes",
+      "binding_digest": "d245d08f804a70941b32798e3be8de61",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.monthClosingCapability.CloseMonth",
       "binding_digest": "a4203d183cd9c0f618bb13f73d8c59af",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MonthClosing.CloseMonth",

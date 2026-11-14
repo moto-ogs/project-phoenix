@@ -119,7 +119,7 @@ func toStaffHTTPRoleRows(rows []StaffRoleRow) []staffHTTP.StaffWithRoleResponse 
 // adapter bound over it.
 func newStaffComposition(
 	module schoolMembershipModule.Capability, workforce workforceModule.Capability, users peoplePorts.PersonDirectory,
-	documents *workforceModule.StaffAdmin, timeTracking *workforceCompose.TimeTracking, payroll workforceModule.PayrollDispatch, absenceWrites timeTrackingHTTP.AdminAbsenceWrites, education schoolstructure.GroupManagement,
+	documents *workforceModule.StaffAdmin, timeTracking *workforceCompose.TimeTracking, payroll workforceModule.PayrollDispatch, absenceMails workforceModule.AbsenceMailStatus, absenceWrites timeTrackingHTTP.AdminAbsenceWrites, education schoolstructure.GroupManagement,
 	people peopleModule.Capability, settings settingsCompose.SettingsService, hub *realtime.Hub,
 	identity identityaccess.Owner, appEnv string, db transactionruntime.Database, logger *slog.Logger,
 ) (*staffHTTP.Resource, *timeTrackingHTTP.StaffAdminResource, error) {
@@ -132,7 +132,7 @@ func newStaffComposition(
 		return nil, nil, err
 	}
 	capabilities := owners.NewWorkforceAdminCapabilities(users, documents, timeTracking)
-	staffAdmin := newStaffAdminResource(capabilities, absenceWrites, workforce, staffTimeTrackingNotifier(hub), exportTransfer, payroll, payrollRules, users.StaffRows(), db, logger)
+	staffAdmin := newStaffAdminResource(capabilities, absenceWrites, workforce, staffTimeTrackingNotifier(hub), exportTransfer, payroll, absenceMails, payrollRules, users.StaffRows(), db, logger)
 	resource, err := newStaffResource(module, people, identity, appEnv, func(hooks StaffMembershipHooks) StaffMembershipRuntime {
 		return NewStaffMembershipRuntime(users, education, timeTracking.StaffDay, hub, db, identity, logger, hooks)
 	}, staffAdmin, logger)

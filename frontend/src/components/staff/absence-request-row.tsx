@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { Avatar } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
@@ -36,6 +38,7 @@ export function AbsenceRequestRow<
   onApprove,
   onDeny,
   onQuestion,
+  mailStatus,
 }: {
   readonly row: T;
   readonly staffName?: string;
@@ -44,6 +47,8 @@ export function AbsenceRequestRow<
   readonly onApprove: (row: T) => void;
   readonly onDeny: (row: T) => void;
   readonly onQuestion: (row: T) => void;
+  /** What became of the mail to the person (#7058), under the request. */
+  readonly mailStatus?: ReactNode;
 }) {
   const isQuestioned = row.status === "question";
   const statusMeta = absenceStatusMeta(row.status);
@@ -108,6 +113,7 @@ export function AbsenceRequestRow<
                 Eingegangen {formatAbsenceDate(row.requested_at)}
               </p>
             )}
+            {mailStatus}
           </div>
         </div>
         {showActions && (

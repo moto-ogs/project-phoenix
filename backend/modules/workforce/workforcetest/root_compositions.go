@@ -84,4 +84,16 @@ var (
 	// ComposePayrollRules composes the wage type maintenance of /payroll
 	// over db with the root's settings audit (#4807).
 	ComposePayrollRules func(t *testing.T, db *bun.DB) workforce.PayrollRules
+	// ComposeMailOutbox composes Delivery's real outbox over db as the root
+	// binds it for Workforce's mails (#7058).
+	ComposeMailOutbox func(t *testing.T, db *bun.DB) MailOutbox
 )
+
+// MailOutbox is Delivery's outbox for the absence request mails (#7058).
+type MailOutbox struct {
+	// Status reads what became of the absence request mails.
+	Status workforce.AbsenceMailStatus
+	// Enqueue puts one absence mail into the outbox the way the absence
+	// notifications do, for the school of ctx and in its transaction.
+	Enqueue func(ctx context.Context, relatedType string, absenceID int64, address string) error
+}

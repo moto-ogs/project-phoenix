@@ -41,6 +41,12 @@ func init() {
 		require.NoError(t, err)
 		return capability
 	}
+	workforcetest.ComposeMailOutbox = func(t *testing.T, db *bun.DB) workforcetest.MailOutbox {
+		t.Helper()
+		status, enqueue, err := api.WorkforceMailOutboxForTests(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
+		require.NoError(t, err)
+		return workforcetest.MailOutbox{Status: status, Enqueue: enqueue}
+	}
 	workforcetest.ComposePayrollRules = func(t *testing.T, db *bun.DB) workforce.PayrollRules {
 		t.Helper()
 		membership, err := owners.NewSchoolMembership(testpkg.NewDatabase(t, db))

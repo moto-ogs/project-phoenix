@@ -19,6 +19,11 @@ import {
   DenyAbsenceModal,
   QuestionAbsenceModal,
 } from "~/components/staff/absence-decision-modals";
+import {
+  AbsenceDecisionMail,
+  AbsenceDecisionMailWarning,
+  useAbsenceDecisionMails,
+} from "~/components/staff/absence-mail-status";
 import { AbsenceRequestRow } from "~/components/staff/absence-request-row";
 import {
   RequestReviewCard,
@@ -65,6 +70,11 @@ const HISTORY_STATUS: Record<string, string> = {
   declined: "rejected",
   canceled: "withdrawn",
 };
+
+// Diese Status hat die Leitung der Person per Mail mitgeteilt (#7058).
+const MAILED_STATUSES = new Set(["question", "approved", "declined"]);
+// So viele Zeilen fragt eine Liste höchstens nach ihren Mails.
+const MAX_MAIL_ROWS = 200;
 
 function staffLabel(row: StaffAbsenceRequestRow): string {
   return row.staff_name.trim() || "Unbekannt";
@@ -149,6 +159,18 @@ export function StaffAbsenceRequestList({
     const seen = new Set<string>();
     return shown.filter((row) => !seen.has(row.id) && seen.add(row.id));
   }, [data, overlays]);
+  // Ob die Mail zur Entscheidung oder Rückfrage ankam (#7058): nur für die
+  // Zeilen, zu denen moto der Person geschrieben hat.
+  const mailedIds = useMemo(
+    () =>
+      (rows ?? [])
+        .filter((row) => MAILED_STATUSES.has(row.status))
+        .slice(0, MAX_MAIL_ROWS)
+        .map((row) => row.id),
+    [rows],
+  );
+  const { mails, loadError: mailLoadError } =
+    useAbsenceDecisionMails(mailedIds);
   const revalidateLists = useTenantMutateMatching([family]);
   const loadError = useSwrLoadError(error, "die Liste der Anträge", () =>
     mutate(),
@@ -230,8 +252,18 @@ export function StaffAbsenceRequestList({
   }
 
   // Ein gescheiterter Abgleich im Hintergrund: die Liste bleibt stehen, der
-  // Fehler steht mit „Wiederholen“ darüber.
-  const revalidationError = <LoadErrorAlert error={loadError} />;
+  // Fehler steht mit „Wiederholen“ darüber. Ebenso ein fehlender Stand der
+  // E-Mails.
+  const revalidationError = (
+    <>
+      <LoadErrorAlert error={loadError} />
+      <LoadErrorAlert
+        error={mailLoadError}
+        actionLayout="responsive"
+        className="mb-4"
+      />
+    </>
+  );
 
   if (rows.length === 0) {
     return (
@@ -269,6 +301,11 @@ export function StaffAbsenceRequestList({
               childName={staffLabel(row)}
               summary={formatAbsenceRange(row.date_start, row.date_end)}
               submittedAt={row.requested_at}
+              historyBadge={
+                row.status === "canceled" ? undefined : (
+                  <AbsenceDecisionMailWarning outcome={mails[row.id]} />
+                )
+              }
               history={{
                 status: HISTORY_STATUS[row.status] ?? row.status,
                 decidedAt:
@@ -283,6 +320,9 @@ export function StaffAbsenceRequestList({
                 <p className="text-sm text-gray-700">
                   <span className="font-medium">Notiz:</span> {row.note}
                 </p>
+              )}
+              {row.status !== "canceled" && (
+                <AbsenceDecisionMail outcome={mails[row.id]} question={false} />
               )}
             </RequestReviewCard>
           ))}
@@ -303,6 +343,11 @@ export function StaffAbsenceRequestList({
               staffName={staffLabel(row)}
               isBusy={busyId === row.id}
               showActions
+              mailStatus={
+                row.status === "question" ? (
+                  <AbsenceDecisionMail outcome={mails[row.id]} question />
+                ) : undefined
+              }
               onApprove={() => {
                 void handleApprove(row);
               }}

@@ -7,6 +7,7 @@ import {
   apiErrorFromResponse,
   apiErrorFromText,
 } from "~/lib/api-error";
+import type { MailOutcome } from "~/lib/email-delivery-status";
 
 const logger = createLogger({ component: "StaffAPI" });
 
@@ -1538,6 +1539,29 @@ class StaffAbsenceService {
       data: StaffAbsenceRequestRow[] | null;
     };
     return json.data ?? [];
+  }
+
+  // Ob die Mails zu Entscheidungen und Rückfragen bei der Person ankamen
+  // (#7058): je Antrag das Ergebnis der neuesten Mail. Ein Antrag ohne Mail
+  // fehlt.
+  async decisionMails(
+    absenceIds: readonly string[],
+  ): Promise<Record<string, MailOutcome>> {
+    if (absenceIds.length === 0) return {};
+    const params = new URLSearchParams({ ids: absenceIds.join(",") });
+    const response = await sessionFetch(
+      `/api/staff/absences/mails?${params.toString()}`,
+    );
+    if (!response.ok) {
+      throw await apiErrorFromResponse(
+        response,
+        `Failed to fetch absence mails: ${response.statusText}`,
+      );
+    }
+    const json = (await response.json()) as {
+      data: { absences?: Record<string, MailOutcome> | null } | null;
+    };
+    return json.data?.absences ?? {};
   }
 
   // Rückfrage: moves a requested absence into status "question" with a

@@ -108,6 +108,9 @@ func NewTimeTrackingCleanup(deps TimeTrackingCleanupDependencies) (TimeTrackingC
 type WorkSessionSide struct {
 	timetracking.WorkSessionSide
 	PayrollDispatch workforce.PayrollDispatch // #4805, composed by the root
+	// AbsenceMails reads what became of the absence request mails (#7058),
+	// composed by the root over Delivery's outcomes.
+	AbsenceMails workforce.AbsenceMailStatus
 }
 type TimeTracking timetracking.TimeTracking
 type AutoCheckIn interface {

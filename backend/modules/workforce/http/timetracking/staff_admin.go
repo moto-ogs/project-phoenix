@@ -66,6 +66,9 @@ type StaffAdminResource struct {
 	// qualificationTypes and qualifications serve the Nachweise (#4808).
 	qualificationTypes workforce.StaffQualificationTypes
 	qualifications     workforce.StaffQualificationOverview
+	// absenceMails says what became of the decision mails (#7058); nil
+	// leaves the route away.
+	absenceMails workforce.AbsenceMailStatus
 
 	logger *slog.Logger
 }
@@ -108,6 +111,9 @@ type StaffAdminDependencies struct {
 	// both are required.
 	QualificationTypes workforce.StaffQualificationTypes
 	Qualifications     workforce.StaffQualificationOverview
+	// AbsenceMails serves the mail status of the decisions (#7058);
+	// optional.
+	AbsenceMails workforce.AbsenceMailStatus
 
 	Logger *slog.Logger
 }
@@ -167,6 +173,7 @@ func NewStaffAdminResource(deps StaffAdminDependencies) *StaffAdminResource {
 		identity:             deps.Identity,
 		qualificationTypes:   deps.QualificationTypes,
 		qualifications:       deps.Qualifications,
+		absenceMails:         deps.AbsenceMails,
 		logger:               logger,
 	}
 }
@@ -319,6 +326,10 @@ func (rs *StaffAdminResource) registerAbsenceRoutes(r chi.Router, withTx common.
 	r.With(vacation, withTx).Post("/absences/{absenceId}/approve", rs.approveAbsence)
 	r.With(vacation, withTx).Post("/absences/{absenceId}/deny", rs.denyAbsence)
 	r.With(vacation, withTx).Post("/absences/{absenceId}/question", rs.questionAbsence)
+	// Whether the decision mails reached the applicants (#7058).
+	if rs.absenceMails != nil {
+		r.With(vacation, withTx).Get("/absences/mails", rs.getAbsenceDecisionMails)
+	}
 	// Absences in force whose shifts and blocks still lack their effect, and
 	// the take-over of one of them (#7021). Both permissions cascade absences
 	// into the plans (approval, booking), so either reaches them. One absence

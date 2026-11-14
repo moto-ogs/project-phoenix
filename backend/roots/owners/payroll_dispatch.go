@@ -68,7 +68,8 @@ func BuildPayrollDispatch(
 		Transfer: payrollTransfer{module: transfer},
 		Mail:     payrollMailOutbox{outbox: outbox, from: mailFrom, identity: mailIdentity, logger: logger},
 		Schools:  payrollSchools{schools: schools}, Managers: payrollManagers{staff: staff},
-		Tokens: payrollTokens{}, FrontendURL: frontendURL, Logger: logger,
+		Tokens: payrollTokens{}, MailOutcomes: WorkforceMails{Outcomes: outbox.Runtime.EmailOutcomes},
+		FrontendURL: frontendURL, Logger: logger,
 	})
 }
 

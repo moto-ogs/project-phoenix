@@ -245,6 +245,8 @@ describe("fetchPayrollDispatch", () => {
               created_at: "2026-10-01T08:00:00Z",
               finished_at: "2026-10-01T08:01:00Z",
               download_expires_at: "2026-10-15T08:00:00Z",
+              link_mail: "delivered",
+              notice_mails: { queued: 2 },
             },
           },
         }),
@@ -270,6 +272,8 @@ describe("fetchPayrollDispatch", () => {
       finishedAt: "2026-10-01T08:01:00Z",
       downloadExpiresAt: "2026-10-15T08:00:00Z",
       downloadedAt: null,
+      linkMail: "delivered",
+      noticeMails: { queued: 2 },
     });
   });
 

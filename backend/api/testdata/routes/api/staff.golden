@@ -8,6 +8,7 @@ DELETE /api/staff/{id}/target-overrides/{overrideId}
 DELETE /api/staff/{id}/time-tracking/adjustments/{adjustmentId}
 DELETE /api/staff/{id}/vacation/opening
 GET /api/staff/
+GET /api/staff/absences/mails
 GET /api/staff/absences/pending
 GET /api/staff/absences/plan-gaps
 GET /api/staff/absences/requests

@@ -52,13 +52,14 @@ const clearDefaultCache = () =>
     await mutate(() => true, undefined, { revalidate: false });
   });
 
-const { listRequests, approve } = vi.hoisted(() => ({
+const { listRequests, approve, decisionMails } = vi.hoisted(() => ({
   listRequests: vi.fn(),
   approve: vi.fn(),
+  decisionMails: vi.fn(),
 }));
 
 vi.mock("~/lib/staff-api", () => ({
-  staffAbsenceService: { listRequests, approve },
+  staffAbsenceService: { listRequests, approve, decisionMails },
 }));
 
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
@@ -99,6 +100,7 @@ function decidedRow(): StaffAbsenceRequestRow {
 describe("StaffAbsenceRequestList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    decisionMails.mockResolvedValue({});
   });
 
   it("zeigt offene Anträge mit Namen und Entscheidungs-Schaltflächen", async () => {
@@ -161,6 +163,50 @@ describe("StaffAbsenceRequestList", () => {
     ).toBeInTheDocument();
     // Entschiedene Anträge sind read-only.
     expect(screen.queryByRole("button", { name: "Genehmigen" })).toBeNull();
+  });
+
+  // #7058: ob die Mail zur Entscheidung bei der Person ankam.
+  it("zeigt eine nicht zugestellte Mail zur Entscheidung schon in der zugeklappten Zeile", async () => {
+    listRequests.mockResolvedValue([decidedRow()]);
+    decisionMails.mockResolvedValue({ "18": "undeliverable" });
+
+    render(
+      <StaffAbsenceRequestList
+        view="history"
+        filters={{ search: "", types: [] }}
+      />,
+    );
+
+    expect(await screen.findByText("Nicht zustellbar")).toBeInTheDocument();
+    expect(decisionMails).toHaveBeenCalledWith(["18"]);
+    fireEvent.click(screen.getByRole("button"));
+    expect(screen.getByText("Mail zur Entscheidung")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Die Mail kam nicht an. Sagen Sie der Person direkt Bescheid.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt unter einer Rückfrage, dass die Mail ankam, ohne weiteren Schritt", async () => {
+    listRequests.mockResolvedValue([
+      openRow(),
+      { ...openRow(), id: "19", status: "question", decision_note: "Wer?" },
+    ]);
+    decisionMails.mockResolvedValue({ "19": "delivered" });
+
+    render(
+      <StaffAbsenceRequestList
+        view="open"
+        filters={{ search: "", types: [] }}
+      />,
+    );
+
+    expect(await screen.findByText("Mail zur Rückfrage")).toBeInTheDocument();
+    expect(screen.getByText("Zugestellt")).toBeInTheDocument();
+    // Nur die Rückfrage ging per Mail an die Person, der offene Antrag nicht.
+    expect(decisionMails).toHaveBeenCalledWith(["19"]);
+    expect(screen.queryByText(/Bescheid/)).not.toBeInTheDocument();
   });
 
   it("zeigt die eigene Abwesenheitsart in der Historie", async () => {

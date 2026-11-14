@@ -389,3 +389,44 @@ export function sumMailOutcomeCounts(
 export function mailNeedsAttention(copy: MailStatusCopy | null): boolean {
   return copy?.tone === "red" || copy?.tone === "warning";
 }
+
+/**
+ * The line under a mail nobody can send again from the screen (#7058): what
+ * happened and who acts next, never „senden Sie neu“. Null while the mail
+ * needs nothing, so a delivered or accepted mail stays quiet.
+ */
+export function undeliveredMailNote(
+  outcome: MailOutcome | null | undefined,
+  nextStep: string,
+): string | null {
+  switch (outcome) {
+    case "undeliverable":
+    case "send_failed":
+      return `Die Mail kam nicht an. ${nextStep}`;
+    case "complained":
+      return `Die Mail wurde als unerwünscht gemeldet. ${nextStep}`;
+    case "overdue":
+      return `Die Mail ist seit Tagen verzögert. ${nextStep}`;
+    case "delayed":
+      return "Die Mail kommt später an. moto versucht es weiter.";
+    default:
+      return null;
+  }
+}
+
+/** The same line for the mails of one occasion, counted by outcome. */
+export function undeliveredMailsNote(
+  counts: MailOutcomeCounts | null | undefined,
+  nextStep: string,
+): string | null {
+  const refused =
+    (counts?.undeliverable ?? 0) +
+    (counts?.send_failed ?? 0) +
+    (counts?.complained ?? 0);
+  if (refused > 0) {
+    return `${refused === 1 ? "Eine Mail kam" : `${refused} Mails kamen`} nicht an. ${nextStep}`;
+  }
+  if (counts?.overdue) return undeliveredMailNote("overdue", nextStep);
+  if (counts?.delayed) return undeliveredMailNote("delayed", nextStep);
+  return null;
+}

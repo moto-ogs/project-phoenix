@@ -3,7 +3,7 @@ import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
 restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ABSENCES_REFRESH_EVENT } from "~/lib/absence-helpers";
 import { ApiError } from "~/lib/api-error";
@@ -20,6 +20,14 @@ const mocks = vi.hoisted(() => ({
   resubmitAbsence: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
+  useOwnAbsenceRequestMails: vi.fn(
+    (
+      _waitingIds: readonly string[],
+    ): {
+      mails: Record<string, Record<string, number>>;
+      loadError: null;
+    } => ({ mails: {}, loadError: null }),
+  ),
 }));
 
 vi.mock("~/components/ui/modal", () => ({
@@ -66,6 +74,15 @@ vi.mock("~/lib/time-tracking-api", () => ({
 
 vi.mock("./vacation-request-modal", () => ({
   VacationRequestModal: () => null,
+}));
+
+// The mail status of the waiting requests (#7058) comes from its own hook;
+// the card decides which requests ask for it and where it shows.
+vi.mock("~/components/staff/absence-mail-status", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/components/staff/absence-mail-status")
+  >()),
+  useOwnAbsenceRequestMails: mocks.useOwnAbsenceRequestMails,
 }));
 
 function resubmittedVacation(): StaffAbsence {
@@ -313,4 +330,63 @@ describe("LeaveRequestsCard resubmitted requests", () => {
       );
     },
   );
+});
+
+describe("LeaveRequestsCard mail to the Leitung (#7058)", () => {
+  beforeEach(() => {
+    mocks.getAbsences.mockReset();
+    mocks.getQuestionedAbsences.mockReset();
+    mocks.getVacationQuota.mockReset();
+    mocks.getAbsences.mockResolvedValue([
+      resubmittedVacation(),
+      { ...resubmittedVacation(), id: "18", status: "approved" },
+    ]);
+    mocks.getQuestionedAbsences.mockResolvedValue([]);
+    mocks.getVacationQuota.mockResolvedValue({
+      staff_id: 42,
+      year: 2027,
+      entitled_days: 20,
+      carryover_days: 0,
+      taken_days: 0,
+      reserved_days: 2,
+      remaining_days: 18,
+    });
+    // The status the server sends once the waiting request 17 is known; the
+    // decided request 18 never shows one, even when the answer names it.
+    mocks.useOwnAbsenceRequestMails.mockImplementation(
+      (waitingIds: readonly string[]) => {
+        const mails: Record<
+          string,
+          Record<string, number>
+        > = waitingIds.includes("17")
+          ? {
+              "17": { undeliverable: 1, delivered: 1 },
+              "18": { delivered: 1 },
+            }
+          : {};
+        return { mails, loadError: null };
+      },
+    );
+  });
+  afterEach(() => {
+    mocks.useOwnAbsenceRequestMails.mockReset();
+    mocks.useOwnAbsenceRequestMails.mockReturnValue({
+      mails: {},
+      loadError: null,
+    });
+  });
+
+  it("shows under the waiting request whether the Leitung got the mail", async () => {
+    render(<LeaveRequestsCard />);
+
+    expect(await screen.findByText("Mail an die Leitung")).toBeInTheDocument();
+    expect(mocks.useOwnAbsenceRequestMails).toHaveBeenLastCalledWith(["17"]);
+    expect(screen.getByText("1 nicht zustellbar")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Eine Mail kam nicht an. Sagen Sie der Leitung direkt Bescheid.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getAllByTestId("absence-mail-status")).toHaveLength(1);
+  });
 });
