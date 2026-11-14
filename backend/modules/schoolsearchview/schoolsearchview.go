@@ -104,6 +104,12 @@ type NoteReader struct {
 	HasChild func(NoteChild) bool
 }
 
+// HasChildOf answers the care team question for one child; a nil reader or
+// one without HasChild answers no.
+func (r *NoteReader) HasChildOf(child NoteChild) bool {
+	return r != nil && r.HasChild != nil && r.HasChild(child)
+}
+
 // NoteChild is a child as the care team question needs it.
 type NoteChild struct {
 	GroupID          *int64

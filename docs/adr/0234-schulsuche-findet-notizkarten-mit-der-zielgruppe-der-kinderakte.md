@@ -81,9 +81,10 @@ Kinder und ohne Export.
      „keine“ = „ Keine “), steht jede als eigene Option darunter, die
      häufigste zuerst, benannt nach ihrer häufigsten Schreibweise, gekürzt
      auf 60 Zeichen. Ihr Wert ist ein Schlüssel der gefalteten Antwort
-     (`~` und 16 Hex-Zeichen von SHA-256), nie der Text: Der Filter steht in
-     der Adresse, und Antworten wie „Laktoseintoleranz“ gehören nicht in
-     Zugriffslogs. Mehr als zwölf verschiedene Antworten sind ein Text, keine
+     (`~` und FNV-64a), nie der Text: Der Filter steht in der Adresse, und
+     Antworten wie „Laktoseintoleranz“ gehören nicht lesbar in Zugriffslogs.
+     Der Schlüssel ist kein Geheimnis; wer eine kurze Antwort rät, kann ihn
+     nachrechnen. Mehr als zwölf verschiedene Antworten sind ein Text, keine
      Auswahl; dann bleibt „Angabe vorhanden“.
    - **Kein „enthält …“:** Der Filter steht in der Adresse der Liste
      (`enrollment_answer`), ein Suchtext darf dort nicht stehen (ADR 0231
@@ -111,6 +112,13 @@ Eine Suche mit `ChildDetails` liest zusätzlich die Zuordnungen des Lesers
 genau zwei eigenen Anweisungen (Query-Budget `modules.schoolsearchview.search`).
 Wie bei den Anmeldeantworten wächst die Zahl der Notiztreffer mit der Schule;
 die Anweisung liefert höchstens eine Zeile je Kind.
+
+`modules/peopledirectory/compose` stellt die Suche neben der Fassade bereit,
+wie `StudentNoteTeam` (#6854); ihr Budget in
+`backend/test/module_legacy_budget_ratchet_test.go` steigt um 2 Zeilen auf
+999 und nennt diese Entscheidung. Die Suche läuft wie `ListSchoolSharedNotes` in der
+Schul-Transaktion der Anfrage und öffnet keine eigene; das Register der
+Transaktionsgrenzen wächst nicht.
 
 Gesundheitsangaben bleiben versiegelt und nicht durchsuchbar (ADR 0231).
 

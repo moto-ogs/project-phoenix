@@ -266,19 +266,3 @@ func (s *StudentNoteService) run(
 ) error {
 	return observeRun(ctx, s.observe, operation, run, fn)
 }
-
-// Search finds the newest matching note of every child the search audience
-// reaches (#7012). It resolves no names: a hit leads to the child's card,
-// which reads the note with its author again.
-func (s *StudentNoteService) Search(ctx context.Context, search domain.StudentNoteSearch) (result []domain.StudentNoteSearchHit, err error) {
-	if strings.TrimSpace(search.Text) == "" || search.ReaderAccountID <= 0 {
-		return nil, domain.ErrStudentNoteInvalid
-	}
-	err = s.run(ctx, "search_student_notes", s.tx.RunRead, func(txCtx context.Context, stats *domain.OperationStats) error {
-		hits, queryStats, searchErr := s.store.Search(txCtx, search)
-		stats.Add(queryStats)
-		result = hits
-		return searchErr
-	})
-	return result, err
-}

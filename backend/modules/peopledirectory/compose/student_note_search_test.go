@@ -1,6 +1,7 @@
 package compose
 
 import (
+	"context"
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
@@ -8,6 +9,7 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 )
 
 // TestStudentNoteSearchAppliesTheCardsAudience searches every child's note
@@ -65,8 +67,7 @@ func TestStudentNoteSearchAppliesTheCardsAudience(t *testing.T) {
 	hits := func(request peopledirectory.StudentNoteSearchRequest) map[int64]peopledirectory.StudentNoteSearchHit {
 		t.Helper()
 		request.Text = "zoo"
-		found, err := search.SearchStudentNotes(ctx, request)
-		require.NoError(t, err)
+		found := searchNotes(t, db, search, request)
 		byChild := map[int64]peopledirectory.StudentNoteSearchHit{}
 		for _, hit := range found {
 			require.NotContains(t, byChild, hit.StudentID, "one hit per child")
@@ -89,9 +90,22 @@ func TestStudentNoteSearchAppliesTheCardsAudience(t *testing.T) {
 	assert.ElementsMatch(t, []int64{team.ID, care.ID, lead.ID, own.ID}, keys(admin))
 	assert.False(t, admin[care.ID].CareTeamOnly, "an administrator is in every care team")
 
-	wildcard, err := search.SearchStudentNotes(ctx, peopledirectory.StudentNoteSearchRequest{Text: "%", ReaderAccountID: reader, Admin: true})
-	require.NoError(t, err)
-	assert.Empty(t, wildcard, "a LIKE metacharacter is a character")
+	assert.Empty(t, searchNotes(t, db, search, peopledirectory.StudentNoteSearchRequest{Text: "%", ReaderAccountID: reader, Admin: true}),
+		"a LIKE metacharacter is a character")
+	_, err = search.SearchStudentNotes(ctx, peopledirectory.StudentNoteSearchRequest{Text: "zoo", ReaderAccountID: reader})
+	assert.Error(t, err, "the search runs in the caller's school transaction and opens none of its own")
+}
+
+// searchNotes runs the search inside the school transaction of a request.
+func searchNotes(t *testing.T, db *testpkg.DB, search peopledirectory.StudentNoteSearch, request peopledirectory.StudentNoteSearchRequest) []peopledirectory.StudentNoteSearchHit {
+	t.Helper()
+	var found []peopledirectory.StudentNoteSearchHit
+	require.NoError(t, testpkg.WithTenantTx(t, testpkg.Ctx(t), db, testpkg.Tenant(t), func(ctx context.Context, _ bun.Tx) error {
+		var err error
+		found, err = search.SearchStudentNotes(ctx, request)
+		return err
+	}))
+	return found
 }
 
 func keys(hits map[int64]peopledirectory.StudentNoteSearchHit) []int64 {

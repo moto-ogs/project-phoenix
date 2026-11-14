@@ -14,8 +14,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// New builds the search over Enrollment's answer search, People Directory's
-// note search and the activity enrollments, which the root binds.
+// New builds the search over the answer, note and activity ports the root binds.
 func New(answers schoolsearchview.StudentAnswerSearch, notes schoolsearchview.StudentNoteSearch, activities schoolsearchview.ActivityEnrollments) (schoolsearchview.Search, error) {
 	return application.New(postgres.New(schoolTransaction), answers, notes, activities)
 }

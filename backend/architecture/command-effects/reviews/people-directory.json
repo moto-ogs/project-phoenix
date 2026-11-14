@@ -14403,22 +14403,10 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentNoteSearch.SearchStudentNotes",
-      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/peopledirectory/internal/application.Service.SearchStudentNotes. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). New read of the note search (ADR 0234).",
+      "reason": "Platform protocol participation (scope): people-directory reaches tenant.RequireTransaction (tenant-runtime) through *modules/peopledirectory/internal/application.Service.SearchStudentNotes. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). New read of the note search, in the caller's school unit like ListSchoolSharedNotes (ADR 0234).",
       "source_owner": "people-directory",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RequireTransaction",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0234",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.SearchStudentNotes",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentNoteSearch.SearchStudentNotes",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Same observation wrapper as ListStudentNotes; new read of the note search (ADR 0234).",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
     },
     {
       "adr": "0098",

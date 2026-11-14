@@ -82,6 +82,50 @@ type detailHit struct {
 	fallback     *schoolsearchview.Match
 }
 
+// detailHits are the children found through a note or an answer, in the
+// order they were found, without the children the direct hits name.
+type detailHits struct {
+	found map[int64]bool
+	hits  map[int64]*detailHit
+	order []int64
+}
+
+func newDetailHits(children []schoolsearchview.Child) *detailHits {
+	found := make(map[int64]bool, len(children))
+	for _, child := range children {
+		found[child.ID] = true
+	}
+	return &detailHits{found: found, hits: map[int64]*detailHit{}}
+}
+
+// addNote takes a child's newest note; the first note of a child counts.
+func (d *detailHits) addNote(hit schoolsearchview.NoteHit, text string) {
+	if d.found[hit.StudentID] || d.hits[hit.StudentID] != nil {
+		return
+	}
+	d.hits[hit.StudentID] = &detailHit{
+		match:        schoolsearchview.Match{Field: schoolsearchview.MatchStudentNote, Text: matchSnippet(hit.Body, text)},
+		careTeamOnly: hit.CareTeamOnly,
+	}
+	d.order = append(d.order, hit.StudentID)
+}
+
+// addAnswer takes a child's answer: as its reason, or as the fallback of a
+// note that waits for the care team.
+func (d *detailHits) addAnswer(studentID int64, match schoolsearchview.Match) {
+	if d.found[studentID] {
+		return
+	}
+	if hit := d.hits[studentID]; hit != nil {
+		if hit.careTeamOnly && hit.fallback == nil {
+			hit.fallback = &match
+		}
+		return
+	}
+	d.hits[studentID] = &detailHit{match: match}
+	d.order = append(d.order, studentID)
+}
+
 // withDetailHits appends the children found through a note or a
 // registration answer after the direct hits, up to the child limit: notes
 // first, newest first, then answers, newest registrations first. A child
@@ -90,75 +134,59 @@ type detailHit struct {
 // keeps the first ones still at the school: former pupils never leave a free
 // place empty.
 func (s *Search) withDetailHits(ctx context.Context, text string, children []schoolsearchview.Child, notes *schoolsearchview.NoteReader) ([]schoolsearchview.Child, error) {
-	free := schoolsearchview.ChildLimit - len(children)
-	if free <= 0 {
+	if len(children) >= schoolsearchview.ChildLimit {
 		return children, nil
 	}
-	found := make(map[int64]bool, len(children))
-	for _, child := range children {
-		found[child.ID] = true
-	}
-	hits := map[int64]*detailHit{}
-	order := make([]int64, 0)
-	if notes != nil {
-		noteHits, err := s.notes.SearchNotes(ctx, schoolsearchview.NoteSearch{
-			Text: text, ReaderAccountID: notes.AccountID, Admin: notes.Admin,
-			LedActivityGroupIDs: notes.LedActivityGroupIDs, LedEducationGroupIDs: notes.LedEducationGroupIDs,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("school search: notes: %w", err)
-		}
-		for _, hit := range noteHits {
-			if found[hit.StudentID] || hits[hit.StudentID] != nil {
-				continue
-			}
-			hits[hit.StudentID] = &detailHit{
-				match:        schoolsearchview.Match{Field: schoolsearchview.MatchStudentNote, Text: matchSnippet(hit.Body, text)},
-				careTeamOnly: hit.CareTeamOnly,
-			}
-			order = append(order, hit.StudentID)
-		}
+	found := newDetailHits(children)
+	if err := s.findNotes(ctx, text, notes, found); err != nil {
+		return nil, err
 	}
 	answers, err := s.answers.SearchStudentAnswers(ctx, text, 0)
 	if err != nil {
 		return nil, fmt.Errorf("school search: registration answers: %w", err)
 	}
 	for _, answer := range answers {
-		if found[answer.StudentID] {
-			continue
-		}
-		match := schoolsearchview.Match{Field: schoolsearchview.MatchEnrollmentAnswer, Label: answer.Label, Text: matchSnippet(answer.Answer, text)}
-		if hit := hits[answer.StudentID]; hit != nil {
-			if hit.careTeamOnly && hit.fallback == nil {
-				hit.fallback = &match
-			}
-			continue
-		}
-		hits[answer.StudentID] = &detailHit{match: match}
-		order = append(order, answer.StudentID)
+		found.addAnswer(answer.StudentID, schoolsearchview.Match{Field: schoolsearchview.MatchEnrollmentAnswer, Label: answer.Label, Text: matchSnippet(answer.Answer, text)})
 	}
-	if len(order) == 0 {
+	if len(found.order) == 0 {
 		return children, nil
 	}
-	rows, err := s.reader.ChildrenByID(ctx, order, len(order))
+	rows, err := s.reader.ChildrenByID(ctx, found.order, len(found.order))
 	if err != nil {
 		return nil, fmt.Errorf("school search: detail children: %w", err)
 	}
-	if err := s.resolveCareTeam(ctx, rows, hits, notes); err != nil {
+	if err := s.resolveCareTeam(ctx, rows, found.hits, notes); err != nil {
 		return nil, err
 	}
 	for _, row := range rows {
-		hit := hits[row.ID]
-		if hit == nil {
-			continue
-		}
-		row.Match = hit.match
-		children = append(children, row)
 		if len(children) == schoolsearchview.ChildLimit {
 			break
 		}
+		if hit := found.hits[row.ID]; hit != nil {
+			row.Match = hit.match
+			children = append(children, row)
+		}
 	}
 	return children, nil
+}
+
+// findNotes asks People Directory for the notes the reader's audience
+// reaches; nil reads no note.
+func (s *Search) findNotes(ctx context.Context, text string, notes *schoolsearchview.NoteReader, found *detailHits) error {
+	if notes == nil {
+		return nil
+	}
+	hits, err := s.notes.SearchNotes(ctx, schoolsearchview.NoteSearch{
+		Text: text, ReaderAccountID: notes.AccountID, Admin: notes.Admin,
+		LedActivityGroupIDs: notes.LedActivityGroupIDs, LedEducationGroupIDs: notes.LedEducationGroupIDs,
+	})
+	if err != nil {
+		return fmt.Errorf("school search: notes: %w", err)
+	}
+	for _, hit := range hits {
+		found.addNote(hit, text)
+	}
+	return nil
 }
 
 // resolveCareTeam answers the care team question for the children found only
@@ -186,14 +214,13 @@ func (s *Search) resolveCareTeam(ctx context.Context, rows []schoolsearchview.Ch
 			continue
 		}
 		child := schoolsearchview.NoteChild{GroupID: row.GroupID, SchoolClass: row.SchoolClass, ActivityGroupIDs: activities[row.ID]}
-		if notes != nil && notes.HasChild != nil && notes.HasChild(child) {
-			continue
-		}
-		if hit.fallback == nil {
+		switch {
+		case notes.HasChildOf(child):
+		case hit.fallback != nil:
+			hits[row.ID] = &detailHit{match: *hit.fallback}
+		default:
 			delete(hits, row.ID)
-			continue
 		}
-		hits[row.ID] = &detailHit{match: *hit.fallback}
 	}
 	return nil
 }

@@ -2,10 +2,9 @@ package application
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"slices"
 	"strconv"
 	"strings"
@@ -68,10 +67,13 @@ const maxFreeAnswerLabelRunes = 60
 
 // freeAnswerKey is the filter value of one free answer: a key of the answer
 // folded like a search, so "keine" and " Keine " are one answer. It carries
-// no answer text, because the filter travels in the list's address.
+// no answer text, because the filter travels in the list's address and so in
+// access logs. It hides the text from a reader of a log, not from someone
+// who guesses a short answer; it is no secret.
 func freeAnswerKey(text string) string {
-	sum := sha256.Sum256([]byte(collation.FoldForSearch(strings.TrimSpace(text))))
-	return "~" + hex.EncodeToString(sum[:8])
+	sum := fnv.New64a()
+	_, _ = sum.Write([]byte(collation.FoldForSearch(strings.TrimSpace(text))))
+	return "~" + strconv.FormatUint(sum.Sum64(), 36)
 }
 
 // matchesFilter reports whether the answer is the filter value: its own
@@ -237,25 +239,7 @@ func (s *StudentAnswers) StudentAnswerFilters(ctx context.Context) ([]enrollment
 	if err != nil {
 		return nil, err
 	}
-	students := map[string]map[string][]int64{}
-	free := map[string]*freeAnswers{}
-	for _, answer := range set.answers {
-		value := answer.filterValue()
-		if value == "" {
-			continue
-		}
-		key := answer.field.Key
-		if students[key] == nil {
-			students[key] = map[string][]int64{}
-		}
-		students[key][value] = append(students[key][value], answer.studentID)
-		if value == enrollment.AnswerGivenValue {
-			if free[key] == nil {
-				free[key] = &freeAnswers{byKey: map[string]*freeAnswer{}}
-			}
-			free[key].add(answer)
-		}
-	}
+	students, free := groupFilterAnswers(set.answers)
 	filters := make([]enrollment.StudentAnswerFilter, 0, len(students))
 	for key, byValue := range students {
 		question := set.questions[key]
@@ -274,6 +258,32 @@ func (s *StudentAnswers) StudentAnswerFilters(ctx context.Context) ([]enrollment
 		return strings.Compare(a.Key, b.Key)
 	})
 	return filters, nil
+}
+
+// groupFilterAnswers groups the answers per question by their filter value,
+// and the free answers per question by their text.
+func groupFilterAnswers(answers []studentAnswer) (map[string]map[string][]int64, map[string]*freeAnswers) {
+	students := map[string]map[string][]int64{}
+	free := map[string]*freeAnswers{}
+	for _, answer := range answers {
+		value := answer.filterValue()
+		if value == "" {
+			continue
+		}
+		key := answer.field.Key
+		if students[key] == nil {
+			students[key] = map[string][]int64{}
+		}
+		students[key][value] = append(students[key][value], answer.studentID)
+		if value != enrollment.AnswerGivenValue {
+			continue
+		}
+		if free[key] == nil {
+			free[key] = &freeAnswers{byKey: map[string]*freeAnswer{}}
+		}
+		free[key].add(answer)
+	}
+	return students, free
 }
 
 // filterOptions lists the answers in the question's order: yes before no, a

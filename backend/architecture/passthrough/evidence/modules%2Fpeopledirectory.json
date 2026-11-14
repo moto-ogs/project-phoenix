@@ -1689,13 +1689,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *StudentNoteService) Search(ctx context.Context, search domain.StudentNoteSearch) (result []domain.StudentNoteSearchHit, err error) {\n\tif strings.TrimSpace(search.Text) == \"\" || search.ReaderAccountID \u003c= 0 {\n\t\treturn nil, domain.ErrStudentNoteInvalid\n\t}\n\terr = s.run(ctx, \"search_student_notes\", s.tx.RunRead, func(txCtx context.Context, stats *domain.OperationStats) error {\n\t\thits, queryStats, searchErr := s.store.Search(txCtx, search)\n\t\tstats.Add(queryStats)\n\t\tresult = hits\n\t\treturn searchErr\n\t})\n\treturn result, err\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/StudentNoteService.Search",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
       "evidence": "func (r *StudentRecords) CountByGroupIDs(ctx context.Context, groupIDs []int64) (map[int64]int, error) {\n\tgroupIDs = peopleModule.PositiveIDs(groupIDs)\n\tif len(groupIDs) == 0 {\n\t\treturn map[int64]int{}, nil\n\t}\n\tcounts, err := r.directory.CountByGroups(ctx, groupIDs)\n\tif err != nil {\n\t\treturn nil, RetainedStudentReadError(\"count by group ids\", MapError(err))\n\t}\n\treturn counts, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/StudentRecords.CountByGroupIDs",

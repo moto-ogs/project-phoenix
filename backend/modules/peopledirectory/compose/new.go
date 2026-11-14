@@ -87,9 +87,7 @@ type Directory struct {
 	PersonWrites     peoplePorts.PersonWriter
 	StudentDirectory peoplePorts.StudentDirectoryAccess
 	StudentNoteTeam  peopledirectory.StudentNoteTeamNotices // #6854, beside the owner's facade
-	// StudentNotes searches every child's note card (#7012), beside the
-	// owner's facade like StudentNoteTeam.
-	StudentNotes peopledirectory.StudentNoteSearch
+	StudentNotes     peopledirectory.StudentNoteSearch      // #7012, the note search, beside it too
 }
 
 // New composes the public capability and native same-owner operations. The
