@@ -76,7 +76,7 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/staffannouncementaudience":    4,
 	"modules/statistics":                   6,
 	"modules/studentpresence":              207,
-	"modules/timetable":                    159,
+	"modules/timetable":                    155,
 	"modules/traegerview":                  1,
 	"modules/transactionruntime":           1,
 	"modules/workforce":                    118,

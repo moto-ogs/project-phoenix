@@ -194,7 +194,9 @@ func TestDeviationHistoryPopulatedQueryBudget(t *testing.T) {
 	writeRouter := s.WriteRouter
 	router := s.Router(s.Context)
 	counter := testpkg.CaptureQueries(t, s.DB)
-	date := calendar.NewDate(2027, 4, 19)
+	// The day after the fixture clock (2030-08-26, buildDevModule): the
+	// deviation writes refuse days before it.
+	date := calendar.NewDate(2030, 8, 27)
 	created, small := 0, 0
 	for _, n := range []int{3, 8} {
 		for created < n {
