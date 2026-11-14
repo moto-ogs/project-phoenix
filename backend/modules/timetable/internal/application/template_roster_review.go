@@ -342,7 +342,7 @@ func (s *TemplateService) reviewedTemplate(ctx context.Context, templateID int64
 // template update; the Care Plan resync joins the same unit.
 func (r *templateRosterReview) ConnectOfferingSource(ctx context.Context, cmd timetable.ConnectOfferingSourceCommand) (timetable.ConnectOfferingSourceResult, error) {
 	s := r.templates
-	if err := validateConnectOfferingSource(cmd, calendar.TodayDate()); err != nil {
+	if err := validateConnectOfferingSource(cmd, s.deps.Today()); err != nil {
 		return timetable.ConnectOfferingSourceResult{}, err
 	}
 	if _, ok := tenant.TransactionFromContext(ctx); !ok || tenant.FromContext(ctx) <= 0 {

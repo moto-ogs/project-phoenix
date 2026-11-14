@@ -269,7 +269,7 @@ func BuildServeTimetable(db transactionruntime.Database, persons peopledirectory
 			observation.Stats.DuplicatePreventionConflicts, observation.Stats.StatementDuration,
 			timetable.ErrorCode(observation.Err), observation.Err,
 		)
-	})
+	}, nil)
 }
 
 // observeTimetableActivities records one Timetable activities operation of

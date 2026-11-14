@@ -260,7 +260,7 @@ func (s *TemplateService) lockRecurrence(ctx context.Context, op string) error {
 // newRosterReconciler builds the roster maintenance the template writes use
 // to align already-materialized occurrences.
 func (s *TemplateService) newRosterReconciler() *RosterReconciler {
-	return NewRosterReconciler(s.deps.ActivityInstanceRepo, s.deps.InstanceStudentRepo, s.deps.StudentEnrollmentRepo, s.deps.Directories, s.deps.Logger)
+	return newRosterReconcilerOn(s.deps.ActivityInstanceRepo, s.deps.InstanceStudentRepo, s.deps.StudentEnrollmentRepo, s.deps.Directories, s.deps.Logger, calendar.Now, s.deps.Today)
 }
 
 // OrDefaultLogger falls back to slog.Default for services a test builds

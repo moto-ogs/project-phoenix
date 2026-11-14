@@ -1,5 +1,4 @@
-// Package compose wires the Timetable & Activities module over the shared
-// tenant runtime and Bun database.
+// Package compose wires the Timetable & Activities module over the tenant runtime and Bun.
 package compose
 
 import (
@@ -11,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/application"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/ports"
 	nativeports "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
@@ -21,14 +21,13 @@ type Dependencies struct {
 	DB       *bun.DB
 	Students nativeports.StudentDirectory
 	Rooms    timetable.RoomDirectory
-	// Sessions answers which planned rows Student Presence already executed
-	// or observed; Timetable never reads that owner's tables itself (#2762).
+	// Sessions: which planned rows Student Presence executed or observed (#2762).
 	Sessions timetable.SessionFacts
-	// LockStaffAssignments locks and validates live Membership staff in the
-	// ambient transaction before creating or reassigning an operational link.
+	// LockStaffAssignments locks live Membership staff before linking them.
 	LockStaffAssignments func(context.Context, []int64) error
 	Observe              func(Observation)
 	Provenance           postgres.EnrollmentProvenance
+	Today                func() calendar.Date // the owner's school day; nil is the Berlin day
 }
 
 func New(dependencies Dependencies) (timetable.Owner, error) {
@@ -37,7 +36,7 @@ func New(dependencies Dependencies) (timetable.Owner, error) {
 	}
 	store := postgres.New(postgres.DatabaseRuntime(dependencies.DB))
 	return application.New(store, transaction{}, application.NewStudentDirectory(dependencies.Students), application.NewRoomDirectory(dependencies.Rooms), dependencies.Sessions,
-		dependencies.LockStaffAssignments, application.NewToday(), dependencies.Observe, postgres.NewProvenanceStore(store, dependencies.Provenance)), nil
+		dependencies.LockStaffAssignments, application.NewToday(dependencies.Today), dependencies.Observe, postgres.NewProvenanceStore(store, dependencies.Provenance)), nil
 }
 
 type transaction struct{}

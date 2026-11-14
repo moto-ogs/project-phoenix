@@ -56,7 +56,7 @@ func (s *RosterReconciler) loadSourcedInstanceBatch(ctx context.Context, inputs 
 			from = in.From
 		}
 	}
-	if today := calendar.TodayDate(); from.Before(today) {
+	if today := s.today(); from.Before(today) {
 		from = today
 	}
 	fromText := from.String()
