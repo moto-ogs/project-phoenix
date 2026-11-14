@@ -404,6 +404,8 @@ import type { traegerSettingsTopic as authored_traegerSettingsTopic } from "./ar
 
 import type { traegerSharedDocumentsTopic as authored_traegerSharedDocumentsTopic } from "./articles/traeger-shared-documents";
 
+import type { traegerStaffRecordsTopic as authored_traegerStaffRecordsTopic } from "./articles/traeger-staff-records";
+
 import type { traegerTestSystemTopic as authored_traegerTestSystemTopic } from "./articles/traeger-test-system";
 
 import type { transferGroupTopic as authored_transferGroupTopic } from "./articles/transfer-group";
@@ -945,9 +947,9 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         steps: [
           "`Tagesbetrieb`: alles für den laufenden Betreuungstag. Diese Gruppe ist schon aufgeklappt.",
           "`Eltern`: was Sie mit den Familien austauschen.",
-          "`Team`: Ihre Arbeitszeit, Ihr Kalender und Ihre Kolleginnen und Kollegen.",
-          "`Planung`: die Pläne Ihrer OGS.",
-          "`Verwaltung`: Stammdaten, Auswertungen und Dateien.",
+          "`Team`: Ihr Dienstplan, Ihr Kalender, Ihre Arbeitszeit, Ihre Kolleginnen und Kollegen und die gemeinsamen Dateien. Wer nicht plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
+          "`Planung`: die Pläne Ihrer OGS. Wer plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
+          "`Verwaltung`: Stammdaten, Auswertungen und die Lohnabrechnung.",
           "In jeder Gruppe steht oben, was im Alltag am häufigsten gebraucht wird.",
           "Sie sehen nur Gruppen, in denen etwas für Sie dabei ist.",
           "Ganz unten stehen `Notfall` und `Hilfe`. Wer die OGS verwaltet, findet dort auch `Einstellungen`.",
@@ -3321,7 +3323,7 @@ export const holidayGuestGroupTopic =
         "Es gibt eine Gruppe für die Ferienwoche, zum Beispiel `Feriengruppe`. Eine neue Gruppe legen Sie unter `Gruppen` an.",
       ],
       steps: [
-        "Klappen Sie in der Seitenleiste `Verwaltung` auf.",
+        "Klappen Sie in der Seitenleiste `Eltern` auf.",
         "Öffnen Sie `Ferienwochen`.",
         "Richtet Ihre OGS mehrere Wochen aus, wählen Sie oben die Woche.",
         "Wählen Sie unter `Feriengruppe` die Gruppe.",
@@ -3484,7 +3486,7 @@ export const holidayWeeksTopic = function holidayWeeksTopic(): HelpTopic {
       "Der Träger hat Anmeldungen für diese Woche bestätigt.",
     ],
     steps: [
-      "Klappen Sie in der Seitenleiste `Verwaltung` auf.",
+      "Klappen Sie in der Seitenleiste `Eltern` auf.",
       "Öffnen Sie `Ferienwochen`.",
       "Richtet Ihre OGS mehrere Wochen aus, wählen Sie oben die Woche.",
       "Lesen Sie unter `Je Zeitmodell` und `Je Heimatschule` die Zahlen.",
@@ -5693,6 +5695,7 @@ export const parentCalendarTopic = function parentCalendarTopic(): HelpTopic {
       "Ein Termin ist eine `Betreuungszeit`, eine `Einladung` oder ein `Termin`.",
       "Bei einer Einladung antworten Sie mit `Zusagen` oder `Absagen`.",
       "Danach steht am Termin `Zugesagt` oder `Abgesagt`.",
+      "Für einen abgesagten Termin bekommen Sie keine Erinnerung. Am Termin steht dann `Keine Erinnerung`.",
       "Wiederholt sich ein Termin, wählen Sie unter `Ihre Antwort gilt für` zwischen `Nur am …` und `Alle Termine`. So sagen Sie zum Beispiel einem einzelnen Termin ab.",
       "Eine Antwort ändern Sie im geöffneten Termin mit `Antwort ändern`.",
       "Unter `Rückmeldungen` sehen Sie, wie viele zugesagt und abgesagt haben. Namen anderer Eltern sehen Sie nicht.",
@@ -6946,6 +6949,18 @@ export const parentMessageTopic = function parentMessageTopic(): HelpTopic {
         ],
       },
       {
+        title: "Neues von den Eltern direkt an der Kinderkachel bearbeiten",
+        description:
+          "Das geht nur, wenn die Schule unter `Einstellungen` den Schalter `Neue Elternnachrichten auf der Kinderkachel` eingeschaltet hat. Die blaue Zahl oben rechts an der Kachel zählt neue Nachrichten und offene Anfragen der Eltern.",
+        steps: [
+          "Tippen Sie auf die blaue Zahl an der Kinderkachel, zum Beispiel in Ihrer Gruppe.",
+          "Lesen Sie die Elternnachrichten. Auch frühere Nachrichten sind sichtbar.",
+          "Wählen Sie `Als gelesen bestätigen`. Dann sieht das ganze Team die Nachricht nicht mehr als neu.",
+          "Oder wählen Sie `Antworten`. moto öffnet dann die Unterhaltung.",
+          "Eine offene Anfrage geben Sie unten im selben Fenster frei oder lehnen sie ab.",
+        ],
+      },
+      {
         title: "Eine Unterhaltung wieder als ungelesen markieren",
         description:
           "So sieht das ganze Team: Hier ist noch etwas offen. Die Eltern merken davon nichts.",
@@ -6984,6 +6999,7 @@ export const parentMessageTopic = function parentMessageTopic(): HelpTopic {
       "Sehen Sie `Nachrichten` nicht? Vielleicht ist die Funktion ausgeschaltet.",
       "Schaltet die Schule Eltern-Nachrichten während einer offenen Unterhaltung aus? Der Verlauf bleibt lesbar. Statt des Schreibfelds erscheint ein Hinweis. Sie können nicht mehr antworten.",
       "Möglicherweise fehlt Ihnen auch der Zugriff auf die betroffenen Kinder.",
+      "Zählt die blaue Zahl an der Kinderkachel keine Anfragen? Dann dürfen Sie Anfragen für dieses Kind nicht entscheiden. Sie sehen dort nur die Nachrichten.",
       "Fehlen bei einer Anfrage `Anfrage ansehen` oder `Anfrage bearbeiten`? Dann dürfen Sie die Anfrage für dieses Kind nicht prüfen.",
       "Steht beim Kind `Kein Eltern-Zugang`? Dann kann niemand die Nachricht in der Eltern-App lesen. Den Zugang der Eltern legen Sie beim Kind fest.",
       "Steht bei einer Unterhaltung `Nur Leitung`? Dann lesen sie nur die Bezugsperson und die Leitung. Begonnen hat sie die Bezugsperson oder jemand aus der Leitung. Ohne das Recht `Vertrauliche Elternnachrichten lesen` sehen Sie solche Unterhaltungen nicht.",
@@ -7558,7 +7574,7 @@ export const payrollTopic = function payrollTopic(): HelpTopic {
       {
         title: "Lohnarten und DATEV eintragen",
         steps: [
-          "Klappen Sie in der Seitenleiste `Planung` auf.",
+          "Klappen Sie in der Seitenleiste `Verwaltung` auf.",
           "Öffnen Sie `Abrechnung`.",
           "Prüfen Sie oben unter `Vollständigkeit`, was noch fehlt.",
           "Tragen Sie unter `Feste Lohnarten` die Nummern Ihres Lohnsystems ein.",
@@ -7622,6 +7638,7 @@ export const payrollTopic = function payrollTopic(): HelpTopic {
       "`Soll (Arbeitszeit)` prüft den Vormonat, bis er abgeschlossen ist. Danach prüft es den laufenden Monat.",
       "Eine Kategorie oder eigene Lohnart ohne Lohnartnummer wird nicht exportiert. `Vollständigkeit` nennt sie.",
       "Dieselbe Nummer bei mehreren Kategorien ist erlaubt, führt aber meist zu doppelten Stunden. moto warnt davor.",
+      "Führt Ihr Träger eine Person in seiner Personalakte, kommt ihre Personalnummer vom Träger. Ändern kann sie nur die Personalverwaltung des Trägers.",
     ],
     troubleshootingDetails: [
       "Der Export erzeugt keine Datei? Dann fehlt oben unter `Vollständigkeit` noch etwas.",
@@ -7941,7 +7958,7 @@ export const roomsTopic = function roomsTopic(
   };
 } satisfies typeof authored_roomsTopic;
 
-// Die Suche über die ganze Schul-App (#6954, ADR 0231). Was jemand findet,
+// Die Suche über die ganze Schul-App (#6954, ADR 0231; Notizen #7012, ADR 0234). Was jemand findet,
 // entscheidet der Server nach den Rechten des Kontos; der Artikel nennt nur,
 // was die Person dann anders sieht.
 export const schoolSearchTopic = function schoolSearchTopic(): HelpTopic {
@@ -7986,20 +8003,30 @@ export const schoolSearchTopic = function schoolSearchTopic(): HelpTopic {
         ],
       },
       {
+        title: "In Notizen suchen",
+        steps: [
+          "Geben Sie ein Wort aus einer Notiz ein, zum Beispiel `Ausflug`.",
+          "Sie sehen die Kinder mit einer passenden Notiz. Darunter steht der Teil der Notiz mit Ihrem Wort.",
+          "Wählen Sie den Treffer. moto öffnet beim Kind den Reiter `Notizen`.",
+        ],
+      },
+      {
         title: "Nach Angaben aus der Anmeldung suchen",
         steps: [
           "Geben Sie einen Begriff aus dem Anmeldeformular ein, zum Beispiel `schwimmen`.",
           "Sie sehen die Kinder, bei denen die Eltern dazu etwas angegeben haben. Darunter steht die Frage und die Antwort.",
           "Eine ganze Liste brauchen Sie? Öffnen Sie `Alle Kinder` und wählen Sie das Filtersymbol. Unter `Anmeldung` wählen Sie eine Antwort aus `Angabe aus der Anmeldung`.",
+          "Bei Fragen mit freiem Text, Zahl oder Datum wählen Sie dort `Angabe vorhanden`. Was genau drinsteht, finden Sie hier in der Suche.",
         ],
       },
     ],
     result:
       "Sie landen direkt beim Kind, bei der Person, im Raum oder auf der Seite.",
     differences: [
-      "Sie finden nur, was Sie auch ohne Suche sehen dürfen. Telefonnummern, E-Mail-Adressen, Elternnotizen und Angaben aus der Anmeldung finden nur Konten, die Kontaktdaten sehen dürfen.",
+      "Sie finden nur, was Sie auch ohne Suche sehen dürfen. Telefonnummern, E-Mail-Adressen, Elternnotizen, Einträge aus dem Reiter `Notizen` und Angaben aus der Anmeldung finden nur Konten, die Kontaktdaten sehen dürfen.",
+      "Eine Notiz finden Sie nur, wenn Sie sie auch im Reiter `Notizen` sehen. Eine Notiz für das Betreuungsteam findet nur, wer das Kind betreut. Eine Notiz für die Leitung findet nur die Leitung der genannten Gruppe.",
       "Ein Gruppen-Treffer öffnet `Alle Kinder` mit den Kindern dieser Gruppe.",
-      "Gesundheitsangaben und Notizen aus dem Reiter `Notizen` durchsucht die Suche nicht. Öffnen Sie dafür das Kind.",
+      "Gesundheitsangaben durchsucht die Suche nicht. Öffnen Sie dafür das Kind.",
     ],
     notes: [
       "Ohne Eingabe zeigt die Suche die Seiten, die Sie öffnen dürfen.",
@@ -8026,7 +8053,7 @@ export const schoolTraegerDocumentsTopic =
       icon: "Download",
       requirements: ["Sie dürfen die Dateien Ihrer Schule verwalten."],
       steps: [
-        "Klappen Sie in der Seitenleiste `Verwaltung` auf und öffnen Sie `Dateien`.",
+        "Klappen Sie in der Seitenleiste `Team` auf und öffnen Sie `Dateien`.",
         "Oben steht die Karte `Vom Träger`.",
         "Unter jedem Titel steht, für wen der Träger das Dokument freigegeben hat.",
         "Wählen Sie `Herunterladen`.",
@@ -8264,7 +8291,7 @@ export const sharedFilesTopic = function sharedFilesTopic(): HelpTopic {
       {
         title: "Eine Datei öffnen",
         steps: [
-          "Klappen Sie in der Seitenleiste `Verwaltung` auf und öffnen Sie `Dateien`.",
+          "Klappen Sie in der Seitenleiste `Team` auf und öffnen Sie `Dateien`.",
           "Wählen Sie links unter `Ordner` den passenden aus.",
           "Suchen Sie die Datei in der Liste.",
           // Live geprueft: die Aktionen liegen im Zeilenmenue und heissen
@@ -8305,19 +8332,19 @@ export const sharedFilesTopic = function sharedFilesTopic(): HelpTopic {
 export const staffNoticesTopic = function staffNoticesTopic(): HelpTopic {
   return {
     id: HELP_TOPICS.leadStaffNotices,
-    title: "Tagesinformationen an das Team schreiben",
+    title: "Hinweise der Leitung an das Team schreiben",
     question: "Wie erreiche ich das ganze Team mit einem Hinweis?",
-    summary: "Eine Tagesinformation sehen alle, die heute arbeiten.",
+    summary: "Einen Hinweis der Leitung sehen alle, die heute arbeiten.",
     group: "planung",
     audience: "lead",
     icon: "Megaphone",
     image: "/help/screens/tagesinformationen-anlegen.webp",
     imageAlt:
-      "Das Fenster für eine neue Tagesinformation mit Titel, Hinweis, Empfängern und Wochentagen.",
+      "Das Fenster für einen neuen Hinweis mit Titel, Hinweis, Empfängern und Wochentagen.",
     steps: [
       "Klappen Sie in der Seitenleiste `Team` auf.",
-      "Öffnen Sie `Tagesinformationen`.",
-      "Wählen Sie `Neue Tagesinformation`.",
+      "Öffnen Sie `Hinweise der Leitung`.",
+      "Wählen Sie `Neuer Hinweis`.",
       "Tragen Sie `Titel` und `Hinweis` ein.",
       "Wählen Sie bei `Für wen` `Alle`, `Nur Betreuung` oder `Nur Lehrkräfte`.",
       "Wählen Sie bei `Wichtigkeit`, wie dringend der Hinweis ist.",
@@ -8555,6 +8582,7 @@ export const staffRecordTopic = function staffRecordTopic(): HelpTopic {
       "Ändern Sie eine Vorlage, wirkt das künftig auf alle Personen mit dieser Zuordnung.",
       "Den Bereich `Klassen` gibt es nur bei Lehrkräften.",
       "Bankverbindung und Steuernummer sind verborgen. Jeder Abruf wird festgehalten.",
+      "Bei `Personalnummer` oder `Bank & Steuer` steht: „führt der Träger in seiner Personalakte“. Dann pflegt die Personalverwaltung des Trägers diese Werte. Sie sehen die Personalnummer und ändern sie nicht.",
     ],
     troubleshootingDetails: [
       "Ein Krankheitstag zählt 0 Stunden? Dann fehlt das Soll. Tragen Sie es unter `Arbeitszeitmodell` ein.",
@@ -8890,12 +8918,15 @@ export const studentSearchTopic = function studentSearchTopic(
       },
       {
         // #6954: der Filter steht im Filterfeld unter `Anmeldung`, nur mit
-        // Zugriff auf die Angaben der Kinderakte und nur bei eigenen
-        // Ja/Nein- oder Auswahlfragen der Online-Anmeldung.
+        // Zugriff auf die Angaben der Kinderakte und nur bei eigenen Fragen
+        // der Online-Anmeldung. Freitext, Zahl und Datum: `Angabe vorhanden`
+        // (#7012).
         title: "Nach Angaben aus der Anmeldung filtern",
         steps: [
           "Wählen Sie rechts neben der Suche das Filtersymbol.",
           "Wählen Sie unter `Anmeldung` bei `Angabe aus der Anmeldung` eine Antwort, zum Beispiel eine Frage mit `Ja`.",
+          "Bei Fragen mit freiem Text, Zahl oder Datum wählen Sie `Angabe vorhanden`. Dann sehen Sie alle Kinder, bei denen die Eltern etwas eingetragen haben. Auch „keine“ zählt als Angabe.",
+          "Haben die Eltern nur wenige verschiedene Antworten gegeben, steht jede Antwort darunter, zum Beispiel `keine`. So sehen Sie, wie viele Kinder welche Antwort haben.",
           "Die Zahl in Klammern nennt, wie viele Kinder die Liste dann zeigt. Kinder, die die Schule verlassen haben, zählen nicht.",
           "`Alle Angaben` hebt den Filter wieder auf.",
         ],
@@ -8909,7 +8940,7 @@ export const studentSearchTopic = function studentSearchTopic(
       // Einstellung „Kinder nur über ‚Alle Kinder‘ finden“ (#1321).
       "Fehlen `Gruppen` und `Aktuelle Aufsicht` in der Navigation? Dann wählen Sie in `Alle Kinder` oben `Meine Gruppe` oder `Meine Aufsicht`.",
       "Einige Bereiche brauchen zusätzliche Rechte: `Betreuungsplan`, `Dokumente` und `Änderungsprotokoll`. Fehlt ein Bereich? Fragen Sie Ihre Leitung.",
-      "Fehlt im Filter `Anmeldung`? Den Filter sehen nur Mitarbeitende, die auch die Angaben aus der Anmeldung beim Kind sehen. Er erscheint erst, wenn die Online-Anmeldung eigene Fragen mit Ja/Nein oder zur Auswahl hat.",
+      "Fehlt im Filter `Anmeldung`? Den Filter sehen nur Mitarbeitende, die auch die Angaben aus der Anmeldung beim Kind sehen. Er erscheint erst, wenn Eltern in der Online-Anmeldung eigene Fragen der Schule beantwortet haben.",
       ...(presenceDifference ? [presenceDifference] : []),
     ],
     ...(transitNotes.length > 0 ? { notes: transitNotes } : {}),
@@ -9985,14 +10016,14 @@ export const teacherNoClassesTopic =
 export const teacherNoticesTopic = function teacherNoticesTopic(): HelpTopic {
   return {
     id: HELP_TOPICS.teacherNotices,
-    title: "Tagesinformationen lesen",
+    title: "Hinweise der Leitung lesen",
     question: "Wo stehen die Hinweise der OGS-Leitung?",
-    summary: "Unter `Tagesinformationen` steht, was für heute gilt.",
+    summary: "Unter `Hinweise der Leitung` steht, was für heute gilt.",
     group: "nachrichten",
     audience: "teacher",
     icon: "Megaphone",
     steps: [
-      "Öffnen Sie `Tagesinformationen`.",
+      "Öffnen Sie `Hinweise der Leitung`.",
       "Lesen Sie die Hinweise für heute.",
       "Wählen Sie bei Bedarf `Zur Kenntnis nehmen`.",
     ],
@@ -10985,7 +11016,8 @@ export const traegerBriefkopfTopic =
  * Vertrag gilt, Vertragsbedingungen je Angebot festlegen, Entwürfe aus
  * angenommenen Anmeldungen erstellen, prüfen und senden; die Unterschrift
  * der Eltern und den Papiervertrag erfassen; Versionen nach einer Änderung;
- * Kündigung und Widerruf (#4682); Änderungswünsche der Eltern freigeben (#5979).
+ * Kündigung und Widerruf (#4682); Änderungswünsche der Eltern freigeben (#5979);
+ * Kinder und bestehende Verträge aus einer Datei importieren (#4723).
  */
 export const traegerCareContractsTopic =
   function traegerCareContractsTopic(): HelpTopic {
@@ -11080,6 +11112,25 @@ export const traegerCareContractsTopic =
           ],
         },
         {
+          title: "Kinder und bestehende Verträge importieren",
+          description:
+            "Haben Sie Kinder und Verträge schon in einem anderen Programm, zum Beispiel OGS Connect? Dann übernehmen Sie alle auf einmal aus einer CSV-Datei. Jeder Vertrag gilt sofort als abgeschlossen. Die Eltern bekommen keine Mail. moto bewahrt die Datei nicht auf.",
+          steps: [
+            "Tragen Sie zuerst die `Vertragsbedingungen` für jedes Modul ein. Ohne Bedingungen übernimmt moto keinen Vertrag für das Modul.",
+            "Speichern Sie die Kinder im anderen Programm als CSV-Datei. Die erste Zeile enthält die Überschriften, jede weitere Zeile ein Kind.",
+            "Wählen Sie in der Navigation `Verträge` und oben `Verträge importieren`.",
+            "Sie kennen den Aufbau noch nicht? Wählen Sie `Beispieldatei`. Sie zeigt alle Spalten, die moto von selbst erkennt.",
+            "Ziehen Sie die Datei in das Feld oder wählen Sie `Datei wählen`.",
+            "Prüfen Sie unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Pflicht sind Vorname und Nachname des Kindes.",
+            "Hat Ihre Datei keine Spalte für die Schule, das Modul oder den Vertragsbeginn? Dann wählen Sie `Schule für alle Zeilen`, `Modul für alle Zeilen` und `Vertragsbeginn für alle Zeilen`.",
+            "Nennt eine Zeile keine Eltern? moto übernimmt den Vertrag trotzdem. Er hat dann keinen Vertragspartner.",
+            "Steht die `Debitorennummer` in der Datei? Ordnen Sie die Spalte zu. moto trägt die Nummer beim Zahler oder beim Kind ein, je nach Ihrer Einstellung. Fehlt die `E-Mail der Eltern`, gehört die Nummer zu diesem einen Vertrag. Geschwister erkennt moto nur über dieselbe E-Mail.",
+            "Prüfen Sie die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. `Schon vorhanden` heißt: Das Kind hat an der Schule schon einen Vertrag. Bei `Fehlerhaft` steht der Grund in der Spalte `Hinweis`.",
+            "Wählen Sie unten `übernehmen`. Die Verträge stehen danach in der Liste mit dem Status `Aktiv`.",
+            "Fehler in der Datei? Korrigieren Sie die Datei und laden Sie sie noch einmal. moto legt kein Kind doppelt an.",
+          ],
+        },
+        {
           title: "Änderungswunsch der Eltern freigeben",
           steps: [
             "Die Eltern beantragen in der Eltern-App andere Tage oder Module. Sie oder die Schule entscheiden.",
@@ -11118,6 +11169,7 @@ export const traegerCareContractsTopic =
       result:
         "Die Eltern bekommen den Vertrag als PDF per Mail. Haben sie ein Konto in der Eltern-App, liegt er dort auch unter `Dokumente`. Wer dort `Neues Dokument vom Träger` eingeschaltet hat, bekommt dazu eine Nachricht aufs Handy. Gilt der Vertrag bei der Annahme, ist sein Status `Aktiv`. Sonst wird er `Versendet`: Der Versand ist beauftragt. Ob die Mail gesendet wurde, sehen Sie unter `Versand`.",
       notes: [
+        "Ein importierter Vertrag beginnt frühestens mit dem Schuljahr seines Moduls. Er endet auch mit diesem Schuljahr, wenn das Modul ein Ende hat und die Datei kein früheres nennt. Lief der Vertrag schon vorher, steht der frühere Tag unter `Abgeschlossen`. Der Vertrag ist mit keinem Kind aus den `Kinderdaten` der Schule verknüpft: moto gleicht Kinder nicht über den Namen ab. Unter `Versionen` steht bei ihm `Aus einer Datei importiert`.",
         "Die Suche und die Filter gelten für alle Verträge. Mit `Weitere Verträge laden` zeigen Sie ältere Treffer an.",
         "Beim ersten Senden hält moto das PDF fest. Ändern Sie danach Bedingungen oder Brieftext, bleibt der versendete Vertrag gleich.",
         "Unter `Versand` sehen Sie, ob die Mail gesendet wurde. Mit `Versand aktualisieren` prüfen Sie den neuen Stand. Mit `Erneut senden` geht dasselbe PDF noch einmal an die Eltern; moto fragt vorher. Bei einem aktiven Vertrag steht `Erneut senden` im Menü mit den drei Punkten oben rechts. Eine zweite Nachricht aufs Handy gibt es dabei nicht. Nur eine korrigierte Mail-Adresse bekommt eine eigene Nachricht.",
@@ -11144,6 +11196,9 @@ export const traegerCareContractsTopic =
         "Sie sehen `Verträge` nicht in der Navigation? Ihnen fehlt das Recht `Verträge verwalten`. Wenden Sie sich an eine Person mit der Rolle `Leitung`.",
       ],
       troubleshootingDetails: [
+        "Beim Import steht `Für das Modul fehlen die Vertragsbedingungen`? Tragen Sie unter `Vertragsbedingungen` Laufzeit und Frist für das Modul ein. Wählen Sie danach im Import `Erneut prüfen` oder laden Sie die Datei noch einmal.",
+        "Beim Import steht `Dieses Modul gibt es an der Schule nicht`? Der Name in der Datei muss so heißen wie das Angebot der Schule. Ändern Sie den Namen in der Datei, oder wählen Sie `Modul für alle Zeilen`.",
+        "Ein importierter Vertrag ist falsch? Einen übernommenen Vertrag können Sie nicht löschen und nicht noch einmal importieren. Tragen Sie für ihn eine Kündigung ein. Prüfen Sie die Vorschau deshalb, bevor Sie übernehmen.",
         "In `Vertrag beenden` steht `Die Mitteilung zum Vertragsende ging nicht raus`? Der Hinweis nennt den Grund: Der Vertrag ist mit keinem Kind aus den `Kinderdaten` der Schule verknüpft. Oder keine Adresse des Vertrags gehört noch einer Bezugsperson, die für das Kind handeln darf. Bei älteren Entscheidungen kennt moto den Grund nicht. Die Entscheidung gilt trotzdem. Schicken Sie den Eltern die Mitteilung per Brief. Sie steht darunter als `Mitteilung zum Vertragsende (nicht verschickt)`.",
         "`Vertragsende festlegen` oder `Grund nicht anerkennen` meldet, dass kein Ende mehr offen ist? Eine andere Person hat schon entschieden. Laden Sie die Seite neu. Die Entscheidung steht in `Vertrag beenden`.",
         "Bei einem Änderungswunsch fehlt `Freigeben`? Die Eltern melden damit die ganze Betreuung ab. Das ist eine Kündigung. Tragen Sie sie unter `Vertrag beenden` ein, oder lehnen Sie den Wunsch ab.",
@@ -13607,7 +13662,7 @@ export const traegerSepaMandatesTopic =
             "Haben Sie die Mandate schon in einem anderen Programm, zum Beispiel OGS Connect? Dann übernehmen Sie alle auf einmal aus einer CSV-Datei. Referenz und Datum der Unterschrift bleiben gleich. moto bewahrt die Datei nicht auf.",
           steps: [
             "Speichern Sie die Mandate im anderen Programm als CSV-Datei. Die erste Zeile enthält die Überschriften.",
-            "Aus OGS Connect nehmen Sie den Export der Stammdaten. Er hat eine Zeile je Kind. moto schlägt dort die Spalte `Debitor-Nr.` als Zahler vor. Dafür muss moto die Debitorennummern schon kennen, zum Beispiel aus dem Reiter `Familien`.",
+            "Aus OGS Connect nehmen Sie den Export der Stammdaten. Er hat eine Zeile je Kind. moto schlägt dort die Spalte `Debitor-Nr.` als Zahler vor. Dafür muss moto die Debitorennummern schon kennen, zum Beispiel aus `Verträge importieren` oder aus dem Reiter `Familien`.",
             "Öffnen Sie unter `Abrechnung` den Reiter `Lastschrift` und wählen Sie `Mandate importieren`.",
             "Ziehen Sie die Datei in das Feld oder wählen Sie `Datei wählen`.",
             "Prüfen Sie unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. moto schlägt passende Spalten vor.",
@@ -13798,6 +13853,98 @@ export const traegerSharedDocumentsTopic =
       ],
     };
   } satisfies typeof authored_traegerSharedDocumentsTopic;
+
+/**
+ * `/traeger/personal` (#4705, ADR 0089): eine Personalakte über alle
+ * Schulen. Vorschläge prüfen und verknüpfen, Personalnummer und Bank- und
+ * Steuerdaten pflegen, eine Akte auflösen. Nur mit der Rolle Personal und
+ * nach der Freigabe „Personal beim Träger“.
+ */
+export const traegerStaffRecordsTopic =
+  function traegerStaffRecordsTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerStaffRecords,
+      title: "Personalakten über alle Schulen",
+      question: "Wie führe ich eine Person mit einer Akte über alle Schulen?",
+      summary:
+        "Arbeitet eine Person an mehreren Schulen, führen Sie sie mit einer Akte. Die Akte hat eine Personalnummer und die Bank- und Steuerdaten.",
+      group: "personal",
+      audience: "traeger",
+      icon: "UsersThree",
+      requirements: [
+        "Sie haben die Rolle `Personal`.",
+        "Das moto-Team hat `Personal beim Träger` für Ihren Träger freigeschaltet. Dafür bestätigt Ihr Träger: Es gibt eine Vereinbarung mit Betriebsrat oder Mitarbeitervertretung, oder es gibt keine Vertretung.",
+      ],
+      instructionGroups: [
+        {
+          title: "Einen Vorschlag verknüpfen",
+          description:
+            "moto schlägt vor, welche Beschäftigungen dieselbe Person sind: zuerst gleiches Konto, dann gleiche Personalnummer, dann gleicher Name und Geburtstag.",
+          steps: [
+            "Wählen Sie in der Navigation `Personalakten`.",
+            "Öffnen Sie den Reiter `Vorschläge`.",
+            "Wählen Sie einen Vorschlag.",
+            "Prüfen Sie, ob es wirklich dieselbe Person ist.",
+            "Wählen Sie bei `Welcher Wert gilt?` für jedes Feld den richtigen Wert.",
+            "Wählen Sie `Akte anlegen`.",
+          ],
+        },
+        {
+          title: "Eine Akte für eine Person anlegen",
+          steps: [
+            "Öffnen Sie den Reiter `Ohne Akte`.",
+            "Wählen Sie die Person.",
+            "Prüfen Sie die Werte. Wählen Sie `Akte anlegen`.",
+          ],
+        },
+        {
+          title: "Personalnummer eintragen",
+          steps: [
+            "Öffnen Sie die Akte im Reiter `Akten`.",
+            "Wählen Sie bei `Personalnummer` den Knopf `Ändern`.",
+            "Tragen Sie die Nummer aus Ihrem Lohnsystem ein. Wählen Sie `Speichern`.",
+          ],
+        },
+        {
+          title: "Bank- und Steuerdaten ändern",
+          steps: [
+            "Öffnen Sie die Akte.",
+            "Wählen Sie bei `Bank und Steuer` den Knopf `Ändern`.",
+            "Tragen Sie IBAN, Steuer-ID oder Sozialversicherungsnummer ein. Wählen Sie `Speichern`.",
+          ],
+        },
+        {
+          title: "Akte auflösen",
+          description:
+            "Zum Beispiel, wenn zwei verschiedene Personen verknüpft wurden.",
+          steps: [
+            "Öffnen Sie die Akte.",
+            "Wählen Sie oben rechts das Menü mit den drei Punkten. Wählen Sie `Akte auflösen`.",
+            "Bestätigen Sie zweimal.",
+          ],
+        },
+      ],
+      steps: [],
+      result:
+        "Die Akte gilt für alle Schulen der Person. Jede Schule sieht die Personalnummer des Trägers und kann sie nicht mehr ändern. Die Bank- und Steuerdaten ziehen von den Schulen in die Akte. Die Schulen sehen nur noch: „führt der Träger“. Planung, Zeiten und Abwesenheiten bleiben an jeder Schule wie bisher.",
+      notes: [
+        "Ein Wert, den Sie beim Verknüpfen nicht wählen, bleibt mit seiner Schule im `Verlauf` der Akte.",
+        "Jede Schule sieht weiter nur ihr eigenes Personal. Sie sieht keine Akte und keine anderen Schulen.",
+        "Jedes Anzeigen der Bank- und Steuerdaten steht im Zugriffsprotokoll jeder Schule der Person.",
+        "Lehrkräfte des Landes und Kräfte anderer Träger bekommen keine Akte. Verknüpfen Sie nur Personen, die Ihr Träger beschäftigt.",
+        "Die Verarbeitung stützt sich auf Art. 6 Abs. 1 lit. b und c DSGVO: Ihr Träger ist der Arbeitgeber.",
+      ],
+      differences: [
+        "Sie sehen nur einen Hinweis, dass Personal beim Träger noch nicht freigeschaltet ist: Bitten Sie das moto-Team um die Freigabe.",
+        "Sie sehen `Personalakten` nicht in der Navigation: Ihnen fehlt die Rolle `Personal`.",
+      ],
+      troubleshootingDetails: [
+        "„Diese Personalnummer ist schon vergeben“: Eine andere Akte oder eine andere Person an einer der Schulen hat die Nummer. Ändern Sie zuerst die andere Nummer.",
+        "„Eine dieser Personen hat schon eine Personalakte“: Laden Sie die Seite neu. Vielleicht hat jemand den Vorschlag gerade verknüpft.",
+      ],
+      related: [HELP_TOPICS.traegerAccounts, HELP_TOPICS.traegerAccessLog],
+    };
+  } satisfies typeof authored_traegerStaffRecordsTopic;
 
 /** Hinweis `Testsystem` im Träger-Portal (#4658): erfundene Beispielkinder. */
 export const traegerTestSystemTopic =
@@ -14125,7 +14272,7 @@ export const weekProtocolTopic = function weekProtocolTopic(
     result:
       "Das Protokoll ist abgeschlossen und ändert sich nicht mehr. Mit `PDF herunterladen` laden Sie es als PDF.",
     notes: [
-      "Jeden Abend hält moto fest, wer da war, wer fehlte und warum, welche Blöcke gelaufen oder ausgefallen sind und welche Tagesinformationen galten.",
+      "Jeden Abend hält moto fest, wer da war, wer fehlte und warum, welche Blöcke gelaufen oder ausgefallen sind und welche Hinweise der Leitung galten.",
       "Gesundheitsangaben stehen nicht im Protokoll. Bei einem fehlenden Kind steht nur der Grund, wie in der Tagesauswertung.",
       "Ältere Protokolle bleiben in der Liste. moto löscht sie nach der Frist für die Anwesenheit Ihrer Schule.",
     ],

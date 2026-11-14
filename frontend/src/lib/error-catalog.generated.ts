@@ -58,6 +58,12 @@ export const ERROR_CATALOG = {
         "Dieser Vertrag ist schon unterschrieben oder wartet nicht auf eine Unterschrift. Bitte laden Sie die Seite neu.",
       "care_contract.field_invalid":
         "Einige Angaben stimmen nicht. Bitte prüfen Sie Ihre Eingaben.",
+      "care_contract.import_changed":
+        "Seit der Vorschau hat sich etwas geändert. Bitte prüfen Sie die Vorschau noch einmal und übernehmen Sie dann.",
+      "care_contract.import_file_invalid":
+        "Die Datei lässt sich nicht lesen. Bitte wählen Sie eine CSV-Datei mit Überschriften in der ersten Zeile.",
+      "care_contract.import_file_too_large":
+        "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
       "care_contract.letterhead_too_long":
         "Absender oder Fußzeile sind zu lang für den Vertrag. Bitte kürzen Sie sie unter „Briefkopf und Vorlagen“.",
       "care_contract.notice_end_not_open":
@@ -298,7 +304,7 @@ export const ERROR_CATALOG = {
       "communication.staff_messaging_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "communication.staff_notice_outdated":
-        "Diese Tagesinformation hat sich inzwischen geändert. Bitte laden Sie die Seite neu.",
+        "Dieser Hinweis hat sich inzwischen geändert. Bitte laden Sie die Seite neu.",
       "communication.survey_already_answered":
         "Sie haben an dieser Umfrage schon teilgenommen. Die Antwort lässt sich nicht mehr ändern.",
       "communication.survey_anonymous":
@@ -1953,6 +1959,8 @@ export const ERROR_CATALOG = {
         "Diese Dienstart wurde entfernt. Bitte wählen Sie eine andere.",
       "workforce.shift_type_inactive":
         "Diese Dienstart ist ausgeschaltet. Bitte wählen Sie eine andere.",
+      "workforce.staff_kept_by_traeger":
+        "Diesen Wert führt der Träger in seiner Personalakte. Bitte wenden Sie sich an die Personalverwaltung des Trägers.",
       "workforce.staff_profile_missing":
         "Für Ihr Konto gibt es keinen Personaldatensatz. Diese Einstellung gilt nur für Personal.",
       "workforce.stammdaten_invalid":
@@ -1965,6 +1973,22 @@ export const ERROR_CATALOG = {
         "Das Ende liegt vor dem Anfang. Bitte prüfen Sie den Zeitraum.",
       "workforce.target_override_too_long":
         "Der Zeitraum ist zu lang. Erlaubt sind höchstens {max_days} Tage.",
+      "workforce.traeger_staff_already_linked":
+        "Eine dieser Personen hat schon eine Personalakte. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_staff_link_invalid":
+        "Die Personen lassen sich so nicht verknüpfen. Bitte prüfen Sie Ihre Auswahl.",
+      "workforce.traeger_staff_not_released":
+        "Personal beim Träger ist für Ihren Träger noch nicht freigeschaltet. Das moto-Team schaltet es frei.",
+      "workforce.traeger_staff_record_not_found":
+        "Diese Personalakte gibt es nicht mehr. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_staff_release_exists":
+        "Personal beim Träger ist für diesen Träger schon freigeschaltet.",
+      "workforce.traeger_staff_release_in_use":
+        "Der Träger führt noch Personalakten. Er muss sie zuerst auflösen.",
+      "workforce.traeger_staff_release_invalid":
+        "Bitte wählen Sie eine der beiden Erklärungen des Trägers.",
+      "workforce.traeger_staff_release_not_found":
+        "Personal beim Träger ist für diesen Träger nicht freigeschaltet.",
       "workforce.vacation_opening_absences_before_cutoff":
         "Vor dem Stichtag ist schon Urlaub eingetragen. Diese Tage würden doppelt zählen. Bitte wählen Sie einen früheren Stichtag.",
       "workforce.vacation_opening_already_exists":

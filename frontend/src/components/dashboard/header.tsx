@@ -119,7 +119,7 @@ function schoolTitleForPath(pathname: string): string | null {
     pathname === "/tagesinformationen" ||
     pathname === "/school/tagesinformationen"
   ) {
-    return "Tagesinformationen";
+    return "Hinweise der Leitung";
   }
   // Kalender in moto schule (#4798).
   if (pathname === "/kalender" || pathname === "/school/kalender") {
@@ -161,6 +161,7 @@ const TRAEGER_PAGE_TITLES: ReadonlyArray<
   ["/schliesstage", "Schließtage"],
   ["/zeitvergleich", "Länger als gebucht"],
   ["/dokumente", "Dokumente"],
+  ["/personal", "Personalakten"],
   // Die drei Bereiche der Abrechnung (#5145): die genaueren Adressen zuerst,
   // denn der erste Treffer gewinnt.
   ["/abrechnung/familien", "Familien und Zahlung"],

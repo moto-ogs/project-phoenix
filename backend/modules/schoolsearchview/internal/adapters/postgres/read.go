@@ -123,10 +123,11 @@ child_hits AS (
 	LIMIT ?)`
 
 // childrenByIDSQL: ids, school, limit. The first children of the list that
-// are still at the school, in the order of the list. The list can name every
+// are still at the school, in the order of the list, with their OGS group for
+// the care team question of a note hit (ADR 0234). The list can name every
 // child of the school (an answer nearly all gave), so its place comes from
 // the ordinality of the list and not from a search through it per child.
-const childrenByIDSQL = `SELECT student.id, person.first_name, person.last_name, membership.school_class, COALESCE(grp.name, '') AS group_name
+const childrenByIDSQL = `SELECT student.id, person.first_name, person.last_name, membership.school_class, COALESCE(grp.name, '') AS group_name, membership.group_id
 	FROM unnest(ARRAY[?]::bigint[]) WITH ORDINALITY AS wanted(id, place)
 	JOIN users.student_profiles AS student ON student.id = wanted.id ` + liveChildJoins + `
 	WHERE student.tenant_id = ?
@@ -416,10 +417,11 @@ type childRow struct {
 	LastName    string `bun:"last_name"`
 	SchoolClass string `bun:"school_class"`
 	GroupName   string `bun:"group_name"`
+	GroupID     *int64 `bun:"group_id"`
 }
 
 // ChildrenByID reads the first limit children of ids that are still at the
-// school, in the order of ids.
+// school, in the order of ids, with their OGS group.
 func (r *Reader) ChildrenByID(ctx context.Context, ids []int64, limit int) ([]schoolsearchview.Child, error) {
 	if len(ids) == 0 || limit <= 0 {
 		return []schoolsearchview.Child{}, nil
@@ -434,7 +436,7 @@ func (r *Reader) ChildrenByID(ctx context.Context, ids []int64, limit int) ([]sc
 	}
 	out := make([]schoolsearchview.Child, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, schoolsearchview.Child{ID: row.ID, FirstName: row.FirstName, LastName: row.LastName, SchoolClass: row.SchoolClass, GroupName: row.GroupName})
+		out = append(out, schoolsearchview.Child{ID: row.ID, FirstName: row.FirstName, LastName: row.LastName, SchoolClass: row.SchoolClass, GroupName: row.GroupName, GroupID: row.GroupID})
 	}
 	return out, nil
 }

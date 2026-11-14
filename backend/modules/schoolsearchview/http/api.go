@@ -30,14 +30,15 @@ type StaffCheck interface {
 type Resource struct {
 	search schoolsearchview.Search
 	staff  StaffCheck
+	notes  schoolsearchview.NoteAudience
 }
 
-// NewResource builds the resource; both dependencies are required.
-func NewResource(search schoolsearchview.Search, staff StaffCheck) *Resource {
-	if search == nil || staff == nil {
-		panic("school search view http: search and staff check are required")
+// NewResource builds the resource; every dependency is required.
+func NewResource(search schoolsearchview.Search, staff StaffCheck, notes schoolsearchview.NoteAudience) *Resource {
+	if search == nil || staff == nil || notes == nil {
+		panic("school search view http: search, staff check and note audience are required")
 	}
-	return &Resource{search: search, staff: staff}
+	return &Resource{search: search, staff: staff, notes: notes}
 }
 
 // Router mounts POST / inside the protected tenant routes. The route needs no
@@ -73,7 +74,17 @@ func (rs *Resource) searchSchool(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("failed to resolve search scope", err))
 		return
 	}
-	result, err := rs.search.SearchSchool(r.Context(), schoolsearchview.Query{Text: req.Query, Scope: scope})
+	// The note cards open with the child details (ADR 0234). A reach that
+	// cannot be read fails the search: the wide audience would leak, the
+	// empty one would hide notes without saying so.
+	var notes *schoolsearchview.NoteReader
+	if scope.ChildDetails {
+		if notes, err = rs.notes.NoteReader(r.Context()); err != nil {
+			common.RenderError(w, r, common.ErrorInternalServerWrap("failed to resolve note audience", err))
+			return
+		}
+	}
+	result, err := rs.search.SearchSchool(r.Context(), schoolsearchview.Query{Text: req.Query, Scope: scope, Notes: notes})
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("failed to search", err))
 		return

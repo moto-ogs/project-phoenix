@@ -33,12 +33,14 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/tokenprimitives"
 	mealplanModule "github.com/moto-ogs/project-phoenix/modules/mealplan"
+	peopleOwner "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	birthdaysAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/birthdays"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	schoolSetupCompose "github.com/moto-ogs/project-phoenix/modules/schoolsetup/compose"
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	statisticsAPI "github.com/moto-ogs/project-phoenix/modules/statistics/http"
+	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
@@ -108,7 +110,9 @@ func renderEmailWebhookFailure(w http.ResponseWriter, r *http.Request, err error
 }
 
 // mountModuleRoutes mounts the route groups modules serve themselves.
-func mountModuleRoutes(tenant chi.Router, settings settingsCompose.SettingsService, caller *owners.CallerRows, answers enrollmentOwner.StudentAnswers) error {
+func mountModuleRoutes(tenant chi.Router, settings settingsCompose.SettingsService, caller *owners.CallerRows, answers enrollmentOwner.StudentAnswers,
+	notes peopleOwner.StudentNoteSearch, activities activityContract.ActivityService,
+) error {
 	schoolSetup, err := newSchoolSetupRoute(schoolSetupCompose.Dependencies{
 		Settings: SchoolSetupSettings{Settings: settings},
 	})
@@ -122,7 +126,7 @@ func mountModuleRoutes(tenant chi.Router, settings settingsCompose.SettingsServi
 	for _, module := range []moduleRoute{schoolSetup, staffOnboarding} {
 		tenant.Mount(module.pattern, module.router)
 	}
-	return mountSchoolSearch(tenant, caller, answers)
+	return mountSchoolSearch(tenant, caller, answers, notes, activities)
 }
 
 // mountPeopleRoutes serves the people directory, guardians, statistics,
@@ -160,7 +164,7 @@ func mountCommunicationRoutes(
 	}
 	// Fotos und Dateien in den Nachrichten an Eltern (#6685), hinter demselben Recht wie die Nachrichten.
 	attachments := newMessageAttachmentRoutes(chat.ParentAttachments, logger.With("handler", "message-attachments"), apiCommon.RequiresPermission(permissions.UsersRead))
-	tenant.Mount("/messages", messagingAPI.NewResource(chat.Messaging, chat.GroupThreads).Router(ProtectedTenantRoutesWith(attachments.Register)))
+	tenant.Mount("/messages", messagingAPI.NewResource(chat.Messaging, chat.GroupThreads, chat.TeamHandling).Router(ProtectedTenantRoutesWith(attachments.Register)))
 	tenant.Mount("/parent-announcements", announcementAPI.NewResource(announcements, newDeclarationReports()).Router(ProtectedTenantRoutes))
 	// Umfragen an Eltern oder Mitarbeitende (#4781).
 	tenant.Mount("/surveys", announcementAPI.NewSurveyResource(surveys, newDeclarationReports()).Router(ProtectedTenantRoutes))

@@ -3,6 +3,7 @@ package database
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"strings"
@@ -110,7 +111,19 @@ func TestMarkedStatementsLoseTheirTypedTextInTheLog(t *testing.T) {
 		query:     protocol.RedactLiteralsInLog + `SELECT 1 FROM education.groups AS grp CROSS JOIN (SELECT '%' || public.f_unaccent('O''Brien 0170 1234567') || '%' AS p) AS q`,
 		started:   time.Now().Add(-10 * time.Millisecond),
 	})
-	logged := buf.String()
+	// Every field but the clock values: a duration of 10000170 ns or a
+	// timestamp holds the digits of the typed text by chance (#6962).
+	var entry map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
+		t.Fatalf("log %q is not one JSON entry: %v", buf.String(), err)
+	}
+	delete(entry, "time")
+	delete(entry, "duration")
+	fields, err := json.Marshal(entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logged := string(fields)
 	for _, typed := range []string{"Brien", "0170", "1234567"} {
 		if strings.Contains(logged, typed) {
 			t.Fatalf("log %q still names the typed text %q", logged, typed)
