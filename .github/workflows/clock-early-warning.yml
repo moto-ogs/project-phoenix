@@ -11,7 +11,7 @@ name: Clock early warning
 # The runner clock stays real: the runner talks TLS to GitHub, and a clock
 # months ahead fails the certificates (the seed smoke moves it at most five
 # days for that reason). Go moves through scripts/fake-clock.sh, PostgreSQL
-# through libfaketime in its own container (scripts/fake-clock-postgres.sh).
+# through a clock shim in its own container (scripts/fake-clock-postgres.sh).
 # File modification times stay real.
 #
 # Its own workflow, not a job in nightly.yml: the nightly run starts the

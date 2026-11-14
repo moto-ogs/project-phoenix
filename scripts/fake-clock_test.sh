@@ -40,16 +40,21 @@ func main() {
 }
 GO
 fail() { echo "FAIL: $*" >&2; exit 1; }
-mkdir -p "$fixture/postgres"
+# A stand-in for the container of scripts/fake-clock-postgres.sh: docker exec
+# reads the mounted offset file.
+mkdir -p "$fixture/postgres" "$fixture/bin"
+echo probe-postgres > "$fixture/postgres/container"
+printf '#!/usr/bin/env bash\n[ "$1 $2 $3 $4" = "exec probe-postgres cat /fake-clock/offset" ] && exec cat "%s/postgres/offset"\nexit 1\n' "$fixture" > "$fixture/bin/docker"
+chmod +x "$fixture/bin/docker"
 
-out=$(cd "$fixture" && PHX_FAKE_CLOCK_POSTGRES_DIR="$fixture/postgres" "$fake_clock" 2027-04-20T00:30 go run . 2> "$fixture/stderr")
+out=$(cd "$fixture" && PATH="$fixture/bin:$PATH" PHX_FAKE_CLOCK_POSTGRES_DIR="$fixture/postgres" "$fake_clock" 2027-04-20T00:30 go run . 2> "$fixture/stderr")
 mapfile -t lines <<< "$out"
 [ "${lines[0]}" = 2027-04-20T00:30 ] || fail "moved clock printed ${lines[0]}, want 2027-04-20T00:30"
 [ "${lines[1]}" = true ] || fail "time.Since did not measure the real 20 ms sleep"
 [ "${lines[2]}" = 2000 ] || fail "synctest bubble started in ${lines[2]}, want 2000"
 grep -q 'Go clock at 2027-04-20T00:30' "$fixture/stderr" || fail "no notice on stderr"
 offset=$(cat "$fixture/postgres/offset")
-[[ "$offset" =~ ^\+[0-9]+$ ]] || fail "Postgres offset file holds '$offset'"
+[[ "$offset" =~ ^\+[0-9]{19}$ ]] || fail "Postgres offset file holds '$offset', want a fixed-width offset"
 
 past=$(cd "$fixture" && "$fake_clock" 2026-01-02T08:00 go run . 2> /dev/null | head -n 1)
 [ "$past" = 2026-01-02T08:00 ] || fail "a time in the past printed $past"

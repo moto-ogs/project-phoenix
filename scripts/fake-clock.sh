@@ -77,10 +77,22 @@ fi
 
 PHX_CLOCK_OFFSET_SECONDS=$((target_seconds - $(date +%s)))
 export PHX_CLOCK_OFFSET_SECONDS
-# A server from scripts/fake-clock-postgres.sh moves with Go. libfaketime
-# rereads the file about once a second.
+# A server from scripts/fake-clock-postgres.sh moves with Go. Its clock shim
+# rereads the file about once a second. Fixed width: a Docker Desktop bind
+# mount can show new content with the old length for a few seconds, so wait
+# until the container reads the new value.
 if [[ -n "${PHX_FAKE_CLOCK_POSTGRES_DIR:-}" ]]; then
-  printf '%+d\n' "$PHX_CLOCK_OFFSET_SECONDS" > "$PHX_FAKE_CLOCK_POSTGRES_DIR/offset"
+  offset_line=$(printf '%+020d' "$PHX_CLOCK_OFFSET_SECONDS")
+  echo "$offset_line" > "$PHX_FAKE_CLOCK_POSTGRES_DIR/offset"
+  container=$(cat "$PHX_FAKE_CLOCK_POSTGRES_DIR/container")
+  for _ in $(seq 1 60); do
+    [[ "$(docker exec "$container" cat /fake-clock/offset 2> /dev/null)" == "$offset_line" ]] && break
+    sleep 1
+  done
+  if [[ "$(docker exec "$container" cat /fake-clock/offset 2> /dev/null)" != "$offset_line" ]]; then
+    echo "fake-clock: PostgreSQL container $container does not see the new offset" >&2
+    exit 1
+  fi
   sleep 2
 fi
 export GOFLAGS="${GOFLAGS:+$GOFLAGS }-overlay=$overlay_dir/overlay.json"

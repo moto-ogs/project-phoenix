@@ -10,9 +10,10 @@
 # Without it only Go moves: now(), CURRENT_DATE and column defaults stay on
 # the real day, and tests that mix both fail for no reason a real day would
 # produce. The server is the CI test server (image, max_connections,
-# scram_iterations, tmpfs) plus libfaketime, which reads the offset from
-# DIR/offset about once a second, so one server serves several times in a
-# row. It listens on 127.0.0.1:PORT only, has a generated password in
+# scram_iterations, tmpfs) plus scripts/fake-clock/postgres_clock.c, a
+# preload shim compiled at start that adds the seconds in DIR/offset to the
+# wall clock and rereads them about once a second, so one server serves
+# several times in a row. It listens on 127.0.0.1:PORT only, has a generated password in
 # DIR/dsn (mode 600), carries no Compose labels (the test harness never stops
 # or reuses it) and loses its data on stop. Never point it at the shared
 # test server's port.
@@ -31,24 +32,26 @@ case "${1:-}" in
     name=$2 port=$3 dir=$4
     mkdir -p "$dir"
     dir=$(cd "$dir" && pwd)
-    echo "+0" > "$dir/offset"
+    printf '%+020d\n' 0 > "$dir/offset"
+    echo "$name" > "$dir/container"
     password=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
-    # libfaketime comes from Alpine's community repository at start: the
-    # pinned image stays the one CI tests with. Monotonic clocks stay real.
+    source_dir=$(cd "$(dirname -- "${BASH_SOURCE[0]}")/fake-clock" && pwd)
+    # The compiler comes from Alpine at start: the pinned image stays the one
+    # CI tests with.
     docker run -d --rm --name "$name" \
       -p "127.0.0.1:$port:5432" \
       --tmpfs /var/lib/postgresql/data:rw,size=4g \
-      -v "$dir:/faketime:ro" \
+      -v "$dir:/fake-clock:ro" -v "$source_dir:/fake-clock-src:ro" \
       -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD="$password" -e POSTGRES_DB=phoenix_test \
       -e TZ=Europe/Berlin \
       -e POSTGRES_INITDB_ARGS="--set max_connections=300 --set scram_iterations=1" \
       --entrypoint sh "$IMAGE" -c '
-        apk add --no-cache libfaketime > /dev/null
-        export LD_PRELOAD=/usr/lib/faketime/libfaketime.so.1 \
-          FAKETIME_TIMESTAMP_FILE=/faketime/offset FAKETIME_CACHE_DURATION=1 \
-          FAKETIME_DONT_FAKE_MONOTONIC=1
+        set -e
+        apk add --no-cache gcc musl-dev > /dev/null
+        gcc -O2 -Wall -Werror -shared -fPIC -o /usr/local/lib/phx_fake_clock.so /fake-clock-src/postgres_clock.c
+        export LD_PRELOAD=/usr/local/lib/phx_fake_clock.so PHX_FAKE_CLOCK_FILE=/fake-clock/offset
         exec docker-entrypoint.sh postgres' > /dev/null
-    for _ in $(seq 1 120); do
+    for _ in $(seq 1 180); do
       if docker exec "$name" pg_isready -U postgres -h 127.0.0.1 > /dev/null 2>&1; then
         # The entrypoint restarts the server once after initdb.
         sleep 1
