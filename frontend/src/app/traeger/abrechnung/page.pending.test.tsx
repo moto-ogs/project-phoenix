@@ -29,6 +29,13 @@ const { api, mockPush } = vi.hoisted(() => ({
   },
   mockPush: vi.fn(),
 }));
+// The page reads the session for the link to the holiday care (#7054).
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { permissions: [] } },
+    status: "authenticated",
+  }),
+}));
 vi.mock("~/lib/traeger-billing-api", () => api);
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
