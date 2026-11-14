@@ -25,8 +25,9 @@ func init() {
 // users.student_profiles removes the status days after the child row is
 // gone, so a "cleared now" row would reference a missing child and fail the
 // history's foreign key, and the same cascade removes the child's history
-// anyway. The check reads the child under the same tenant RLS as the history
-// insert, so it never hides a child the insert could still reference.
+// anyway. A direct status day delete under the tenant role reads the child
+// through the same tenant policy that checks the history insert, so the
+// check skips no clearing that insert could still store.
 const repeatableScheduleRecordMealSicknessStatusSQL = `CREATE OR REPLACE FUNCTION schedule.record_meal_sickness_status()
 	RETURNS TRIGGER AS $$
 	DECLARE

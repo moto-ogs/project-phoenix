@@ -42,28 +42,30 @@ func TestStudentDeletionHandlers_DeletesChildWithStatusDaysAndMealHistory(t *tes
 	`, foreignTenant, foreign.ID, sick).Exec(ctx)
 	require.NoError(t, err)
 
-	require.Equal(t, 3, mealHistoryRows(t, tc, target.ID), "sick open, excused open and excused cleared")
-	require.Equal(t, 1, mealHistoryRows(t, tc, spared.ID))
-	require.Equal(t, 1, mealHistoryRows(t, tc, foreign.ID))
+	require.Equal(t, 3, studentRows(t, tc, "schedule.meal_sickness_status_history", target.ID), "sick open, excused open and excused cleared")
+	require.Equal(t, 1, studentRows(t, tc, "schedule.meal_sickness_status_history", spared.ID))
+	require.Equal(t, 1, studentRows(t, tc, "schedule.meal_sickness_status_history", foreign.ID))
 
 	actor := testpkg.CreateTestAccount(t, tc.db, "status-day-delete@example.com")
 	claims := testutil.AdminTestClaims(int(actor.ID))
 	preview := previewStudentDeletion(t, tc, claims, target.ID)
-	counts, ok := preview["counts"].(map[string]any)
-	require.True(t, ok, "preview counts: %v", preview)
-	assert.InDelta(t, 2, counts["attendance_records"], 0, "both status days are shown as attendance records")
+	encodedCounts, err := json.Marshal(preview["counts"])
+	require.NoError(t, err)
+	var previewCounts studentdeletion.Counts
+	require.NoError(t, json.Unmarshal(encodedCounts, &previewCounts))
+	assert.Equal(t, studentdeletion.Counts{AttendanceRecords: 2}, previewCounts, "both status days are shown, nothing else is linked")
 
 	response := confirmStudentDeletion(t, tc, claims, target.ID, preview)
 	require.Equal(t, http.StatusOK, response.Code, "Body: %s", response.Body.String())
 
 	assert.Zero(t, studentDeletionRowCount(t, tc, "users.student_profiles", target.ID))
-	assert.Zero(t, statusDayRows(t, tc, target.ID), "the status days leave with the child")
-	assert.Zero(t, mealHistoryRows(t, tc, target.ID), "no history survives, and none is recorded for the deleted child")
+	assert.Zero(t, studentRows(t, tc, "active.student_status_days", target.ID), "the status days leave with the child")
+	assert.Zero(t, studentRows(t, tc, "schedule.meal_sickness_status_history", target.ID), "no history survives, and none is recorded for the deleted child")
 
-	assert.Equal(t, 1, statusDayRows(t, tc, spared.ID), "another child's status day stays")
-	assert.Equal(t, 1, mealHistoryRows(t, tc, spared.ID), "another child's history stays")
-	assert.Equal(t, 1, statusDayRows(t, tc, foreign.ID), "another school's status day stays")
-	assert.Equal(t, 1, mealHistoryRows(t, tc, foreign.ID), "another school's history stays")
+	assert.Equal(t, 1, studentRows(t, tc, "active.student_status_days", spared.ID), "another child's status day stays")
+	assert.Equal(t, 1, studentRows(t, tc, "schedule.meal_sickness_status_history", spared.ID), "another child's history stays")
+	assert.Equal(t, 1, studentRows(t, tc, "active.student_status_days", foreign.ID), "another school's status day stays")
+	assert.Equal(t, 1, studentRows(t, tc, "schedule.meal_sickness_status_history", foreign.ID), "another school's history stays")
 
 	var audit struct {
 		Reason string          `bun:"reason"`
@@ -76,21 +78,14 @@ func TestStudentDeletionHandlers_DeletesChildWithStatusDaysAndMealHistory(t *tes
 	assert.Equal(t, studentdeletion.ReasonTestData, audit.Reason)
 	var auditCounts studentdeletion.Counts
 	require.NoError(t, json.Unmarshal(audit.Counts, &auditCounts))
-	assert.Equal(t, 2, auditCounts.AttendanceRecords, "the audit records the status days the preview showed")
+	assert.Equal(t, previewCounts, auditCounts, "the audit records exactly what the preview showed")
 }
 
-func statusDayRows(t *testing.T, tc *testContext, studentID int64) int {
+// studentRows counts a table's rows of one child by student_id.
+func studentRows(t *testing.T, tc *testContext, table string, studentID int64) int {
 	t.Helper()
 	var count int
-	require.NoError(t, tc.db.NewRaw(`SELECT COUNT(*) FROM active.student_status_days WHERE student_id = ?`, studentID).
-		Scan(testpkg.Ctx(t), &count))
-	return count
-}
-
-func mealHistoryRows(t *testing.T, tc *testContext, studentID int64) int {
-	t.Helper()
-	var count int
-	require.NoError(t, tc.db.NewRaw(`SELECT COUNT(*) FROM schedule.meal_sickness_status_history WHERE student_id = ?`, studentID).
-		Scan(testpkg.Ctx(t), &count))
+	require.NoError(t, tc.db.NewSelect().TableExpr(table).ColumnExpr("COUNT(*)").
+		Where("student_id = ?", studentID).Scan(testpkg.Ctx(t), &count))
 	return count
 }
