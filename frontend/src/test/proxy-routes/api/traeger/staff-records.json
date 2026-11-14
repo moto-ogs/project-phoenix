@@ -7,6 +7,12 @@
     "DELETE traeger /traeger/staff-records/id%2F1",
     "GET traeger /traeger/staff-records/id%2F1"
   ],
+  "api/traeger/staff-records/[id]/absence-accounts": [
+    "GET traeger /traeger/staff-records/id%2F1/absence-accounts query=year"
+  ],
+  "api/traeger/staff-records/[id]/absence-accounts/[typeId]": [
+    "PUT traeger /traeger/staff-records/id%2F1/absence-accounts/typeId%2F1"
+  ],
   "api/traeger/staff-records/[id]/financial": [
     "GET traeger /traeger/staff-records/id%2F1/financial",
     "PUT traeger /traeger/staff-records/id%2F1/financial"
