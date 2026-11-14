@@ -241,14 +241,6 @@
       "target_owner": "workforce"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionBoundary.Assign",
-      "binding_digest": "e210d410ddf9beec5a17bda537e0d201",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.SubstitutionModule.Assign",
-      "source_owner": "school-structure",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.SubstitutionDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionModule.Assign",
       "binding_digest": "279893b3fb23c4dab3ef8499ee064d27",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.SubstitutionModule.Assign",
@@ -297,14 +289,6 @@
       "target_owner": "workforce"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionModule.Assign",
-      "binding_digest": "e210d410ddf9beec5a17bda537e0d201",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.SubstitutionModule.Assign",
-      "source_owner": "school-structure",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.SubstitutionDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionBoundary.End",
       "binding_digest": "279893b3fb23c4dab3ef8499ee064d27",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.SubstitutionModule.End",
@@ -313,28 +297,12 @@
       "target_owner": "security-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionBoundary.End",
-      "binding_digest": "e210d410ddf9beec5a17bda537e0d201",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.SubstitutionModule.End",
-      "source_owner": "school-structure",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.SubstitutionDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionModule.End",
       "binding_digest": "279893b3fb23c4dab3ef8499ee064d27",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.SubstitutionModule.End",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/auth/authorize/permissions.Principal.HasPermission",
       "target_owner": "security-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionModule.End",
-      "binding_digest": "e210d410ddf9beec5a17bda537e0d201",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.SubstitutionModule.End",
-      "source_owner": "school-structure",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.SubstitutionDependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionBoundary.Overview",
@@ -369,14 +337,6 @@
       "target_owner": "workforce"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionBoundary.Overview",
-      "binding_digest": "e210d410ddf9beec5a17bda537e0d201",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.SubstitutionModule.Overview",
-      "source_owner": "school-structure",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.SubstitutionDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionModule.Overview",
       "binding_digest": "279893b3fb23c4dab3ef8499ee064d27",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.SubstitutionModule.Overview",
@@ -407,14 +367,6 @@
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/workforce.CanSeeAllSubstitutions",
       "target_owner": "workforce"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.substitutionModule.Overview",
-      "binding_digest": "e210d410ddf9beec5a17bda537e0d201",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract.SubstitutionModule.Overview",
-      "source_owner": "school-structure",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.SubstitutionDependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.GetMyGroups",

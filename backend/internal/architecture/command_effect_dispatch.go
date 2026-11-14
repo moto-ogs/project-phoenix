@@ -30,6 +30,9 @@ func (c *effectCapture) add(target, owner string, trail []string) {
 // unresolved diagnostic when any of its values cannot be followed. Both carry
 // the callable's assignment evidence.
 func (s *effectScanner) resolveOrDiagnose(port, binding string, callable types.Object, diagnostic string, trail []string) {
+	if effectFreeClock(callable.Type()) {
+		return
+	}
 	evidence := s.callableTrail(callable, trail)
 	if !s.resolveCallableOnce(port, binding, callable, evidence) {
 		s.record(port, binding, diagnostic, "", evidence)

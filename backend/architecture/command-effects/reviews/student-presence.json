@@ -8488,18 +8488,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListSupervisedLiveGroups",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListSupervisedLiveGroups",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.ListSupervisedLiveGroups",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
@@ -10482,18 +10470,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0101",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ChangeClassHandover",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ChangeClassHandover",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.now. Class handover operation ChangeClassHandover of #4794 stamping its moment with the module's clock, approved by ADR 0101; a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.now",
-      "target_owner": ""
     },
     {
       "adr": "0083",
@@ -12680,18 +12656,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListSupervisedLiveGroups",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ListSupervisedLiveGroups",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListSupervisedLiveGroups",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
@@ -14586,78 +14550,6 @@
       "target_owner": "timetable-activities"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.ApplyAttendanceLogSetting",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.ApplyAttendanceLogSetting",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.ApplyAttendanceLogSetting",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.ApplyAttendanceLogSetting",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:roots/owners.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.CleanupExpiredVisits",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.CleanupExpiredVisits",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.CleanupExpiredVisits",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.CleanupExpiredVisits",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:roots/owners.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.CleanupStaleAttendance",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.CleanupStaleAttendance",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.CleanupStaleAttendance",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.CleanupStaleAttendance",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:roots/owners.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.now",
-      "target_owner": ""
-    },
-    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.CleanupStaleSupervisors",
       "classification": "platform",
@@ -14680,30 +14572,6 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.CleanupStaleSupervisors",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.CleanupStaleSupervisors",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.CleanupStaleSupervisors",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.CleanupStaleSupervisors",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:roots/owners.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
       "approval_adr": "0176",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.CleanupStaleSupervisors",
       "classification": "unresolved",
@@ -14712,78 +14580,6 @@
       "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through *modules/studentpresence/internal/application/presence.cleanupService.CleanupStaleSupervisors; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.GetRetentionStatistics",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.GetRetentionStatistics",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.GetRetentionStatistics",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.GetRetentionStatistics",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:roots/owners.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.PreviewAttendanceCleanup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.PreviewAttendanceCleanup",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.PreviewAttendanceCleanup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.PreviewAttendanceCleanup",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:roots/owners.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.PreviewCleanup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.PreviewCleanup",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.PreviewCleanup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.PreviewCleanup",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:roots/owners.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.now",
       "target_owner": ""
     },
     {
@@ -14806,30 +14602,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.PreviewSupervisorCleanup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.PreviewSupervisorCleanup",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.cleanupService.PreviewSupervisorCleanup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.PresenceCleanup.PreviewSupervisorCleanup",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:roots/owners.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.now",
-      "target_owner": ""
     },
     {
       "adr": "0083",
@@ -15913,18 +15685,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0139",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.service.CareTimeOverruns",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatisticsReports.CareTimeOverruns",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/statistics.Config.Now. The same clock the reviewed Statistik bindings reach; approved for Soll und Ist by ADR 0139 (#4774). A changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.Config.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.service.CareTimeOverrunsForExport",
       "classification": "query",
       "effect": "query",
@@ -15943,18 +15703,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0139",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.service.CareTimeOverrunsForExport",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatisticsReports.CareTimeOverrunsForExport",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/statistics.Config.Now. The same clock the reviewed Statistik bindings reach; approved for Soll und Ist by ADR 0139 (#4774). A changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.Config.Now",
-      "target_owner": ""
     },
     {
       "adr": "0098",
@@ -15997,18 +15745,6 @@
       "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through *modules/studentpresence/internal/application/statistics.service.Report; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.service.Report",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatisticsReports.Report",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/statistics.Config.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.Config.Now",
       "target_owner": ""
     },
     {
@@ -16055,18 +15791,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.service.ReportForExport",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatisticsReports.ReportForExport",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/statistics.Config.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.Config.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.service.StudentCareTimes",
       "classification": "query",
       "effect": "query",
@@ -16085,18 +15809,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0139",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.service.StudentCareTimes",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatisticsReports.StudentCareTimes",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/statistics.Config.Now. The same clock the reviewed Statistik bindings reach; approved for Soll und Ist by ADR 0139 (#4774). A changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/statistics.Config.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.StudentStatusDayRepository.FindActiveByStudentAndDateRange",
@@ -16333,18 +16045,6 @@
     {
       "adr": "0083",
       "approval_adr": "0102",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.statusDays.BulkCreateForDates",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatusDays.BulkCreateForDates",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.StudentStatusDayService.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR. #4799 binds the status-day write for moto schule class trips in buildClassDayViews; the effect is unchanged (ADR 0102).",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentStatusDayService.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0102",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.statusDays.CreateForDates",
       "classification": "debt",
       "effect": "lock",
@@ -16367,18 +16067,6 @@
       "target_owner": "care-plan"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0102",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.statusDays.CreateForDates",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatusDays.CreateForDates",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.StudentStatusDayService.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR. #4799 binds the status-day write for moto schule class trips in buildClassDayViews; the effect is unchanged (ADR 0102).",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentStatusDayService.now",
-      "target_owner": ""
-    },
-    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.statusDays.DeleteStatusDay",
       "classification": "leaf",
@@ -16399,18 +16087,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Owner.LockExceptionDay",
       "target_owner": "care-plan"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0102",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.statusDays.DeleteStatusDay",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StatusDays.DeleteStatusDay",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.StudentStatusDayService.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR. #4799 binds the status-day write for moto schule class trips in buildClassDayViews; the effect is unchanged (ADR 0102).",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StudentStatusDayService.now",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.statusDays.FindActiveByStudentAndDateRange",
@@ -18959,18 +18635,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AdmitVisit",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AdmitVisit",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.AdmitVisit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AmendSupervision",
       "classification": "platform",
@@ -19001,18 +18665,6 @@
       "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.AmendSupervision; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AmendSupervision",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AmendSupervision",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.AmendSupervision; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
       "target_owner": ""
     },
     {
@@ -19069,18 +18721,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AssignSupervision",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AssignSupervision",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.AssignSupervision; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AssignTransitStudents",
       "classification": "platform",
@@ -19121,18 +18761,6 @@
       "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.AssignTransitStudents; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.AssignTransitStudents",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.AssignTransitStudents",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.AssignTransitStudents; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
       "target_owner": ""
     },
     {
@@ -19179,18 +18807,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0226",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.CheckInStudentsToSessionAuthorized",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.CheckInStudentsToSessionAuthorized",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.CheckInStudentsToSessionAuthorized; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR. #6953: check-in into a session through the promoted service method; same unit and guards as the move.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.CheckOutStudent",
       "classification": "query",
       "effect": "query",
@@ -19209,18 +18825,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
       "target_owner": "device-fleet"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.ClaimSupervision",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.ClaimSupervision",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.ClaimSupervision; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0098",
@@ -19256,18 +18860,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.DashboardAnalytics",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.DashboardAnalytics",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.DashboardAnalytics; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.DeleteGroupSupervisor",
       "classification": "platform",
@@ -19298,18 +18890,6 @@
       "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.DeleteGroupSupervisor; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.EndActiveGroupSession",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.EndActiveGroupSession",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
       "target_owner": ""
     },
     {
@@ -19389,30 +18969,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.MoveStudentsToSession",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.MoveStudentsToSession",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.MoveStudentsToSession; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.MoveStudentsToTransit",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.MoveStudentsToTransit",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.MoveStudentsToTransit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.ReviseSession",
       "classification": "query",
       "effect": "query",
@@ -19421,42 +18977,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
       "target_owner": "device-fleet"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.StudentAttendanceStatus",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.StudentAttendanceStatus",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.StudentAttendanceStatus; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.StudentsAttendanceStatuses",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.StudentsAttendanceStatuses",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.StudentsAttendanceStatuses; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.PresenceOperations.UnclaimedSessions",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.PresenceOperations.UnclaimedSessions",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Reached through modules/studentpresence/internal/application/presence.PresenceOperations.UnclaimedSessions; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0098",
@@ -21713,18 +21233,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.AssignTransitStudentsToActiveGroup",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroupAuthorized",
       "classification": "platform",
@@ -21768,18 +21276,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroupAuthorized",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.AssignTransitStudentsToActiveGroupAuthorized",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.CheckInStudent",
       "classification": "query",
       "effect": "query",
@@ -21788,18 +21284,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
       "target_owner": "device-fleet"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.CheckInStudent",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.CheckInStudent",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0098",
@@ -21842,18 +21326,6 @@
       "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through *modules/studentpresence/internal/application/presence.service.CheckInStudentsToOpenRoomSessionAuthorized; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR. #6953: check-in into a session; same unit and guards as the move it extends.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0226",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.CheckInStudentsToOpenRoomSessionAuthorized",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.CheckInStudentsToOpenRoomSessionAuthorized",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR. #6953: check-in into a session; same unit and guards as the move it extends.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
       "target_owner": ""
     },
     {
@@ -21900,18 +21372,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0226",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.CheckInStudentsToSessionAuthorized",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.CheckInStudentsToSessionAuthorized",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR. #6953: check-in into a session; same unit and guards as the move it extends.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.CheckOutStudent",
       "classification": "query",
       "effect": "query",
@@ -21952,30 +21412,6 @@
       "target_owner": "device-fleet"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.ClaimActiveGroup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.ClaimActiveGroup",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.CleanupAbandonedSessions",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.CleanupAbandonedSessions",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.ConfirmDailyCheckout",
       "classification": "query",
       "effect": "query",
@@ -21984,18 +21420,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
       "target_owner": "device-fleet"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.ConfirmDailyCheckout",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.ConfirmDailyCheckout",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0098",
@@ -22041,18 +21465,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.CreateGroupSupervisor",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.CreateGroupSupervisor",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.CreateVisit",
       "classification": "query",
       "effect": "query",
@@ -22071,18 +21483,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.CreateVisit",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.CreateVisit",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0098",
@@ -22118,30 +21518,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.EndActiveGroupSession",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.EndActiveGroupSession",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.EndActivitySession",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.EndActivitySession",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.EndDailySessions",
       "classification": "platform",
@@ -22172,18 +21548,6 @@
       "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through *modules/studentpresence/internal/application/presence.service.EndDailySessions; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.EndDailySessions",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.EndDailySessions",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
       "target_owner": ""
     },
     {
@@ -22253,18 +21617,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.ForceStartActivitySessionWithSupervisors",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.ForceStartActivitySessionWithSupervisors",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.GetDashboardAnalytics",
       "classification": "platform",
@@ -22295,78 +21647,6 @@
       "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through *modules/studentpresence/internal/application/presence.service.GetDashboardAnalytics; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.GetDashboardAnalytics",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.GetDashboardAnalytics",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.GetStudentAttendanceStatus",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.GetStudentAttendanceStatus",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.GetStudentsAttendanceStatuses",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.GetStudentsAttendanceStatuses",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.GetUnclaimedActiveGroups",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.GetUnclaimedActiveGroups",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.ListStudentsInTransit",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.ListStudentsInTransit",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.ListStudentsPresentToday",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.ListStudentsPresentToday",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
       "target_owner": ""
     },
     {
@@ -22413,30 +21693,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.MoveStudentsToActiveGroupAuthorized",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.MoveStudentsToActiveGroupAuthorized",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.MoveStudentsToTransitAuthorized",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.MoveStudentsToTransitAuthorized",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.ProcessSchoolCheckinBatch",
       "classification": "query",
       "effect": "query",
@@ -22445,30 +21701,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
       "target_owner": "device-fleet"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.ProcessSchoolCheckinBatch",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.ProcessSchoolCheckinBatch",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.ProcessSessionTimeout",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.ProcessSessionTimeout",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0098",
@@ -22545,18 +21777,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth.AttendanceContext",
       "target_owner": "device-fleet"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.ToggleStudentAttendance",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.ToggleStudentAttendance",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.UpdateActiveGroup",
@@ -22642,18 +21862,6 @@
       "reason": "ADR 0138 approves this exact observation callback boundary for PrepareVisitWrites. The existing owner observation function remains unresolved by binding-flow analysis; this is not a query or approved cross-owner mutation. Target: studentpresence/internal/application.Service.observe. A changed closure requires fresh evidence. Reached through *modules/studentpresence/internal/application/presence.service.UpdateGroupSupervisor; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "student-presence",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.UpdateGroupSupervisor",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.Service.UpdateGroupSupervisor",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application/presence.ServiceDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.ServiceDependencies.Now",
       "target_owner": ""
     },
     {

@@ -657,14 +657,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.birthdayView.Overview",
-      "binding_digest": "621facab8065be725bad2915045e78b7",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Birthdays.Overview",
-      "source_owner": "people-directory",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.BirthdayService.now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.AddGuardianPhone",
       "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.AddGuardianPhone",

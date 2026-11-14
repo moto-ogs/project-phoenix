@@ -330,14 +330,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.AdjustOfferings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.AdjustOfferings",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.AdjustOfferings",
       "binding_digest": "b5abd65e7197474bb2e2e1365c0d3311",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.AdjustOfferings",
       "source_owner": "care-plan",
@@ -350,14 +342,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.AdjustOfferings",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.ResyncPickupAutoExcusals",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.AdjustOfferings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.AdjustOfferings",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
       "target_owner": ""
     },
     {
@@ -474,14 +458,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.AdjustOfferings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.AdjustOfferings",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.AdjustOfferings",
       "binding_digest": "b5abd65e7197474bb2e2e1365c0d3311",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.AdjustOfferings",
       "source_owner": "care-plan",
@@ -497,52 +473,12 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.AdjustOfferings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.AdjustOfferings",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.CombinedOfferingSourceCounts",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.CombinedOfferingSourceCounts",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.CombinedOfferingSourceCounts",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.CombinedOfferingSourceCounts",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.CombinedOfferingSourceCounts",
       "binding_digest": "3e7486453180d227fa84642c63b97072",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.CombinedOfferingSourceCounts",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.CombinedOfferingSourceCounts",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.CombinedOfferingSourceCounts",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.CombinedOfferingSourceCounts",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.CombinedOfferingSourceCounts",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.DetachTemplatesSourcedFromOffering",
@@ -561,44 +497,12 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.ListOfferingSourceOptions",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ListOfferingSourceOptions",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.ListOfferingSourceOptions",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ListOfferingSourceOptions",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.ListOfferingSourceOptions",
       "binding_digest": "3e7486453180d227fa84642c63b97072",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ListOfferingSourceOptions",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.ListOfferingSourceOptions",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ListOfferingSourceOptions",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.ListOfferingSourceOptions",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ListOfferingSourceOptions",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.LockOfferingDerivedWrites",
@@ -650,26 +554,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.MaterializeApprovedBookings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.MaterializeApprovedBookings",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.MaterializeApprovedBookings",
       "binding_digest": "b5abd65e7197474bb2e2e1365c0d3311",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.MaterializeApprovedBookings",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.LockTemplateRecurrence",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.MaterializeApprovedBookings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.MaterializeApprovedBookings",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
       "target_owner": ""
     },
     {
@@ -690,26 +578,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.MaterializeApprovedBookings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.MaterializeApprovedBookings",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.MaterializeApprovedBookings",
       "binding_digest": "b5abd65e7197474bb2e2e1365c0d3311",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.MaterializeApprovedBookings",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.LockTemplateRecurrence",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.MaterializeApprovedBookings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.MaterializeApprovedBookings",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
       "target_owner": ""
     },
     {
@@ -1258,14 +1130,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.ResetStudentPickupDayToOffering",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ResetStudentPickupDayToOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.ResetStudentPickupDayToOffering",
       "binding_digest": "9ed427327df459f47dfa753d337426cc",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ResetStudentPickupDayToOffering",
       "source_owner": "care-plan",
@@ -1286,14 +1150,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ResetStudentPickupDayToOffering",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.ResyncPickupAutoExcusals",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.ResetStudentPickupDayToOffering",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ResetStudentPickupDayToOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
       "target_owner": ""
     },
     {
@@ -1418,14 +1274,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.ResetStudentPickupDayToOffering",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ResetStudentPickupDayToOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.ResetStudentPickupDayToOffering",
       "binding_digest": "9ed427327df459f47dfa753d337426cc",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ResetStudentPickupDayToOffering",
       "source_owner": "care-plan",
@@ -1446,14 +1294,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ResetStudentPickupDayToOffering",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.ResyncPickupAutoExcusals",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.bookingCommands.ResetStudentPickupDayToOffering",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ResetStudentPickupDayToOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
       "target_owner": ""
     },
     {
@@ -2978,14 +2818,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.AdjustOfferings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.AdjustOfferings",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.AdjustOfferings",
       "binding_digest": "b5abd65e7197474bb2e2e1365c0d3311",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.AdjustOfferings",
       "source_owner": "care-plan",
@@ -2998,14 +2830,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.AdjustOfferings",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.ResyncPickupAutoExcusals",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.AdjustOfferings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.AdjustOfferings",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
       "target_owner": ""
     },
     {
@@ -3121,14 +2945,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.Apply",
-      "binding_digest": "a6211a5f170babeb2c76e75a2b59f68f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Apply",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.ApplyBulkExceptions",
       "binding_digest": "d31c24c0bf100f0d565a66aeac94c590",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ApplyBulkExceptions",
@@ -3233,62 +3049,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.ApplyBulkExceptions",
-      "binding_digest": "a6211a5f170babeb2c76e75a2b59f68f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ApplyBulkExceptions",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.ApplyDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ApplyDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.ApplyDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ApplyDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.Catalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Catalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.Catalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Catalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.CatalogAt",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.CatalogAt",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.CatalogAt",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.CatalogAt",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.Clone",
       "binding_digest": "6672f74a483f7c0bc5142a33e3143ad2",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Clone",
@@ -3329,38 +3089,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.CombinedOfferingSourceCounts",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.CombinedOfferingSourceCounts",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.CombinedOfferingSourceCounts",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.CombinedOfferingSourceCounts",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.CourseCatalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.CourseCatalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.CourseCatalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.CourseCatalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.CourseWaitlists",
       "binding_digest": "a4d271b90eddff927cfd0e0ab9b4bfb9",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.CourseWaitlists",
@@ -3391,22 +3119,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.CreateCourseRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.CreateCourseRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.CreateCourseRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.CreateCourseRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.CreateOffering",
@@ -3450,26 +3162,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.Decide",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.Decide",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Decide",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.Decide",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -3498,26 +3194,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.DecideConflictRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.DecideConflictRequest",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.DecideConflictRequest",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.DecideConflictRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -3530,26 +3210,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.DeleteOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.DeleteOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.DeleteOffering",
       "binding_digest": "e42d8f6078f80c284a8c706354b25709",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.DeleteOffering",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.LockTemplateRecurrence",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.DeleteOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.DeleteOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.Today",
       "target_owner": ""
     },
     {
@@ -3561,92 +3225,12 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.EarliestEffectiveFrom",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.EarliestEffectiveFrom",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.EarliestEffectiveFrom",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.EarliestEffectiveFrom",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.Edit",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Edit",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.Edit",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Edit",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.GetForStudent",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.GetForStudent",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.GetForStudent",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.GetForStudent",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.ListBookingStats",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ListBookingStats",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.ListBookingStats",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ListBookingStats",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.ListOfferingSourceOptions",
       "binding_digest": "3e7486453180d227fa84642c63b97072",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ListOfferingSourceOptions",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.ListOfferingSourceOptions",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ListOfferingSourceOptions",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.ListOfferingSourceOptions",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ListOfferingSourceOptions",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.LockOfferingDerivedWrites",
@@ -3690,26 +3274,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.MarkDone",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.MarkDone",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.MarkDone",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.MarkDone",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.MarkDone",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.MarkDone",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -3730,42 +3298,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.MaterializeApprovedBookings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.MaterializeApprovedBookings",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.MaterializeApprovedBookings",
       "binding_digest": "b5abd65e7197474bb2e2e1365c0d3311",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.MaterializeApprovedBookings",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.LockTemplateRecurrence",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.MaterializeApprovedBookings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.MaterializeApprovedBookings",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.PrepareDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.PrepareDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.PrepareDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.PrepareDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -3817,14 +3353,6 @@
       "target_owner": "student-presence"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.Preview",
-      "binding_digest": "a6211a5f170babeb2c76e75a2b59f68f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Preview",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.PreviewDecision",
       "binding_digest": "a4d271b90eddff927cfd0e0ab9b4bfb9",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.PreviewDecision",
@@ -3842,42 +3370,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.PreviewDecision",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.PreviewDecision",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.PreviewDecision",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.PreviewDecision",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.PreviewDecision",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.PreviewDecision",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.PreviewDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.PreviewDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.PreviewDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.PreviewDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -4226,14 +3722,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.ResetStudentPickupDayToOffering",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ResetStudentPickupDayToOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.ResetStudentPickupDayToOffering",
       "binding_digest": "9ed427327df459f47dfa753d337426cc",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ResetStudentPickupDayToOffering",
       "source_owner": "care-plan",
@@ -4254,14 +3742,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ResetStudentPickupDayToOffering",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.ResyncPickupAutoExcusals",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.ResetStudentPickupDayToOffering",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ResetStudentPickupDayToOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
       "target_owner": ""
     },
     {
@@ -4329,22 +3809,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.SubmitOfferingChange",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.SubmitOfferingChange",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.SubmitOfferingChange",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.SubmitOfferingChange",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.TemplateRosterMaintenanceFeeds",
       "binding_digest": "3e7486453180d227fa84642c63b97072",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.TemplateRosterMaintenanceFeeds",
@@ -4370,58 +3834,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.UpdateOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.UpdateOffering",
       "binding_digest": "e42d8f6078f80c284a8c706354b25709",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.LockTemplateRecurrence",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.UpdateOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.WithdrawCourseRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.WithdrawCourseRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.WithdrawCourseRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.WithdrawCourseRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.WriteStaffValue",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferings.WriteStaffValue",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -4466,42 +3882,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.DeleteOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.DeleteOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.DeleteOffering",
       "binding_digest": "e42d8f6078f80c284a8c706354b25709",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.DeleteOffering",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.LockTemplateRecurrence",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.DeleteOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.DeleteOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ListBookingStats",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.ListBookingStats",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ListBookingStats",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.ListBookingStats",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.Today",
       "target_owner": ""
     },
     {
@@ -4522,26 +3906,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
       "binding_digest": "e42d8f6078f80c284a8c706354b25709",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.LockTemplateRecurrence",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.Today",
       "target_owner": ""
     },
     {
@@ -4602,42 +3970,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalog.DeleteOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalogCapability.DeleteOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalog.DeleteOffering",
       "binding_digest": "e42d8f6078f80c284a8c706354b25709",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalogCapability.DeleteOffering",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.LockTemplateRecurrence",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalog.DeleteOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalogCapability.DeleteOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalog.ListBookingStats",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalogCapability.ListBookingStats",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalog.ListBookingStats",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalogCapability.ListBookingStats",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.Today",
       "target_owner": ""
     },
     {
@@ -4658,26 +3994,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalog.UpdateOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalogCapability.UpdateOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalog.UpdateOffering",
       "binding_digest": "e42d8f6078f80c284a8c706354b25709",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalogCapability.UpdateOffering",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.LockTemplateRecurrence",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalog.UpdateOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalogCapability.UpdateOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.Today",
       "target_owner": ""
     },
     {
@@ -5001,54 +4321,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.ApplyDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.DirectOfferingAdjustments.ApplyDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.ApplyDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.DirectOfferingAdjustments.ApplyDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PrepareDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.DirectOfferingAdjustments.PrepareDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PrepareDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.DirectOfferingAdjustments.PrepareDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.DirectOfferingAdjustments.PreviewDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.DirectOfferingAdjustments.PreviewDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareLifecycle.HistoricalParticipatingStudentIDsByDate",
       "binding_digest": "a41edf3442a2c6a817a2c10cee7e45f6",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.HistoricalCareParticipation.HistoricalParticipatingStudentIDsByDate",
@@ -5225,134 +4497,6 @@
       "target_owner": "identity-access"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.ApplyDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.ApplyDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.ApplyDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.ApplyDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.ApplyDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.ApplyDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.ApplyDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.ApplyDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.Catalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Catalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.Catalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Catalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.Catalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Catalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.Catalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Catalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.CatalogAt",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CatalogAt",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.CatalogAt",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CatalogAt",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.CatalogAt",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CatalogAt",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.CatalogAt",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CatalogAt",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.CourseCatalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CourseCatalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.CourseCatalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CourseCatalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.CourseCatalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CourseCatalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.CourseCatalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CourseCatalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.CourseWaitlists",
       "binding_digest": "a4d271b90eddff927cfd0e0ab9b4bfb9",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CourseWaitlists",
@@ -5409,44 +4553,12 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.CreateCourseRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CreateCourseRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.CreateCourseRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CreateCourseRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.CreateCourseRequest",
       "binding_digest": "dcd12a407d7f701d5b78d459d304d5a1",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CreateCourseRequest",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.CreateCourseRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CreateCourseRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.CreateCourseRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CreateCourseRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.Decide",
@@ -5474,26 +4586,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.Decide",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.Decide",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Decide",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.Decide",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -5522,26 +4618,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.Decide",
-      "binding_digest": "fcf48a54d9c5d0fd21ef9ae283459102",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.Decide",
       "binding_digest": "346cbd657d84255577ab4eb70755864b",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Decide",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.Decide",
-      "binding_digest": "fcf48a54d9c5d0fd21ef9ae283459102",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -5570,26 +4650,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.DecideConflictRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.DecideConflictRequest",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.DecideConflictRequest",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.DecideConflictRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -5618,122 +4682,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.DecideConflictRequest",
-      "binding_digest": "409bfd14520d643b57d7d01664c39e94",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.DecideConflictRequest",
       "binding_digest": "b32d95a372f746159dfb1800fc499fd1",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.DecideConflictRequest",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.DecideConflictRequest",
-      "binding_digest": "409bfd14520d643b57d7d01664c39e94",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.EarliestEffectiveFrom",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.EarliestEffectiveFrom",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.EarliestEffectiveFrom",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.EarliestEffectiveFrom",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.EarliestEffectiveFrom",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.EarliestEffectiveFrom",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.EarliestEffectiveFrom",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.EarliestEffectiveFrom",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.Edit",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Edit",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.Edit",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Edit",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.Edit",
-      "binding_digest": "3a2e624f8e83d5db850e15c37a2c6f75",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Edit",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.Edit",
-      "binding_digest": "3a2e624f8e83d5db850e15c37a2c6f75",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Edit",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.GetForStudent",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.GetForStudent",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.GetForStudent",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.GetForStudent",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.GetForStudent",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.GetForStudent",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.GetForStudent",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.GetForStudent",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -5762,26 +4714,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.MarkDone",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.MarkDone",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.MarkDone",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.MarkDone",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.MarkDone",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.MarkDone",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -5810,14 +4746,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.MarkDone",
-      "binding_digest": "4b9829f1a3f3e12371360aa70ec0d853",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.MarkDone",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.MarkDone",
       "binding_digest": "939e67bd6cb35fc1e65e847e28d0341e",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.MarkDone",
       "source_owner": "care-plan",
@@ -5825,46 +4753,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.MarkDone",
-      "binding_digest": "4b9829f1a3f3e12371360aa70ec0d853",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.MarkDone",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.PrepareDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PrepareDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.PrepareDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PrepareDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.PrepareDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PrepareDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.PrepareDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PrepareDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.PreviewDecision",
       "binding_digest": "a4d271b90eddff927cfd0e0ab9b4bfb9",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDecision",
@@ -5882,26 +4770,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.PreviewDecision",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDecision",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.PreviewDecision",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDecision",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.PreviewDecision",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDecision",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -5922,14 +4794,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.PreviewDecision",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDecision",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.PreviewDecision",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDecision",
       "source_owner": "care-plan",
@@ -5937,46 +4801,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.PreviewDecision",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDecision",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.PreviewDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.PreviewDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.PreviewDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.PreviewDirectOfferingAdjustment",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDirectOfferingAdjustment",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.SubmitOfferingChange",
       "binding_digest": "dcd12a407d7f701d5b78d459d304d5a1",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.SubmitOfferingChange",
@@ -5985,108 +4809,12 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.SubmitOfferingChange",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.SubmitOfferingChange",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.SubmitOfferingChange",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.SubmitOfferingChange",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.SubmitOfferingChange",
       "binding_digest": "dcd12a407d7f701d5b78d459d304d5a1",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.SubmitOfferingChange",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.SubmitOfferingChange",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.SubmitOfferingChange",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.SubmitOfferingChange",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.SubmitOfferingChange",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.WithdrawCourseRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.WithdrawCourseRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.WithdrawCourseRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.WithdrawCourseRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.WithdrawCourseRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.WithdrawCourseRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.WithdrawCourseRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.WithdrawCourseRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.WriteStaffValue",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChanges.WriteStaffValue",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.WriteStaffValue",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeLifecycle.WriteStaffValue",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.DecideConflictRequest",
@@ -6114,106 +4842,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.DecideConflictRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeConflicts.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.DecideConflictRequest",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeConflicts.DecideConflictRequest",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.DecideConflictRequest",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeConflicts.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.WriteStaffValue",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeConflicts.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.WriteStaffValue",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeConflicts.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Catalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.Catalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Catalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.Catalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Catalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.Catalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Catalog",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.Catalog",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.CatalogAt",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.CatalogAt",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.CatalogAt",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.CatalogAt",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CatalogAt",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.CatalogAt",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.CatalogAt",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.CatalogAt",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -6290,26 +4922,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Decide",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Decide",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.Decide",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Decide",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -6338,122 +4954,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Decide",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Decide",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.Decide",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Decide",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.EarliestEffectiveFrom",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.EarliestEffectiveFrom",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.EarliestEffectiveFrom",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.EarliestEffectiveFrom",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.EarliestEffectiveFrom",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.EarliestEffectiveFrom",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.EarliestEffectiveFrom",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.EarliestEffectiveFrom",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Edit",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.Edit",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Edit",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.Edit",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Edit",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.Edit",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.Edit",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.Edit",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.GetForStudent",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.GetForStudent",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.GetForStudent",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.GetForStudent",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.GetForStudent",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.GetForStudent",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.GetForStudent",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.GetForStudent",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -6482,26 +4986,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.MarkDone",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.MarkDone",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.MarkDone",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.MarkDone",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.MarkDone",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.MarkDone",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -6530,26 +5018,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.MarkDone",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.MarkDone",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.MarkDone",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.MarkDone",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.MarkDone",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.MarkDone",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -6570,26 +5042,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.PreviewDecision",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.PreviewDecision",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.PreviewDecision",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.PreviewDecision",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.PreviewDecision",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.PreviewDecision",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -6610,26 +5066,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDecision",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.PreviewDecision",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDecision",
       "binding_digest": "babf6e4848ca86deeacb748171fb7bd4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.PreviewDecision",
       "source_owner": "care-plan",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.s",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.PreviewDecision",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.PreviewDecision",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
       "target_owner": ""
     },
     {
@@ -6641,44 +5081,12 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.SubmitOfferingChange",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.SubmitOfferingChange",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.SubmitOfferingChange",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.SubmitOfferingChange",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.SubmitOfferingChange",
       "binding_digest": "dcd12a407d7f701d5b78d459d304d5a1",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.SubmitOfferingChange",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.SubmitOfferingChange",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.SubmitOfferingChange",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeCapability.SubmitOfferingChange",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingChangeRequests.SubmitOfferingChange",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ReconcileOfferingPickupForOffering",
@@ -7026,14 +5434,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ResetStudentPickupDayToOffering",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingPickupTimes.ResetStudentPickupDayToOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ResetStudentPickupDayToOffering",
       "binding_digest": "9ed427327df459f47dfa753d337426cc",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingPickupTimes.ResetStudentPickupDayToOffering",
       "source_owner": "care-plan",
@@ -7054,14 +5454,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingPickupTimes.ResetStudentPickupDayToOffering",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.ResyncPickupAutoExcusals",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ResetStudentPickupDayToOffering",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingPickupTimes.ResetStudentPickupDayToOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
       "target_owner": ""
     },
     {
@@ -7329,14 +5721,6 @@
       "target_owner": "identity-access"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingReviews.ListHistory",
-      "binding_digest": "8a6d2bb4c8c818ab0bb17b095b07d0bd",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingReviewQuery.ListHistory",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.today",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingReviews.ListPending",
       "binding_digest": "d3edd7712fc12cbacc6b64b029893ecb",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingReviewQuery.ListPending",
@@ -7351,14 +5735,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.PermissionsFromCtx",
       "target_owner": "identity-access"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingReviews.ListPending",
-      "binding_digest": "8a6d2bb4c8c818ab0bb17b095b07d0bd",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingReviewQuery.ListPending",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.today",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingReviews.PendingCount",
@@ -7385,44 +5761,12 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.CombinedOfferingSourceCounts",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingSourceEditor.CombinedOfferingSourceCounts",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.CombinedOfferingSourceCounts",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingSourceEditor.CombinedOfferingSourceCounts",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.CombinedOfferingSourceCounts",
       "binding_digest": "3e7486453180d227fa84642c63b97072",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingSourceEditor.CombinedOfferingSourceCounts",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.CombinedOfferingSourceCounts",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingSourceEditor.CombinedOfferingSourceCounts",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.CombinedOfferingSourceCounts",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingSourceEditor.CombinedOfferingSourceCounts",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ListOfferingSourceOptions",
@@ -7433,44 +5777,12 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ListOfferingSourceOptions",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingSourceEditor.ListOfferingSourceOptions",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.ListOfferingSourceOptions",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingSourceEditor.ListOfferingSourceOptions",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ListOfferingSourceOptions",
       "binding_digest": "3e7486453180d227fa84642c63b97072",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingSourceEditor.ListOfferingSourceOptions",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ListOfferingSourceOptions",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingSourceEditor.ListOfferingSourceOptions",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ListOfferingSourceOptions",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.OfferingSourceEditor.ListOfferingSourceOptions",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.TemplateRosterMaintenanceFeeds",
@@ -8361,14 +6673,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.Apply",
-      "binding_digest": "a6211a5f170babeb2c76e75a2b59f68f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupAdjustments.Apply",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Apply",
       "binding_digest": "d31c24c0bf100f0d565a66aeac94c590",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupAdjustments.Apply",
@@ -8481,14 +6785,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Apply",
-      "binding_digest": "a6211a5f170babeb2c76e75a2b59f68f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupAdjustments.Apply",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.ApplyBulkExceptions",
       "binding_digest": "d31c24c0bf100f0d565a66aeac94c590",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupAdjustments.ApplyBulkExceptions",
@@ -8591,14 +6887,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.ApplyBulkExceptions",
-      "binding_digest": "a6211a5f170babeb2c76e75a2b59f68f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupAdjustments.ApplyBulkExceptions",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ApplyBulkExceptions",
@@ -8705,14 +6993,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.ApplyBulkExceptions",
-      "binding_digest": "a6211a5f170babeb2c76e75a2b59f68f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupAdjustments.ApplyBulkExceptions",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.Preview",
       "binding_digest": "d31c24c0bf100f0d565a66aeac94c590",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupAdjustments.Preview",
@@ -8761,14 +7041,6 @@
       "target_owner": "student-presence"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.Preview",
-      "binding_digest": "a6211a5f170babeb2c76e75a2b59f68f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupAdjustments.Preview",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Preview",
       "binding_digest": "d31c24c0bf100f0d565a66aeac94c590",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupAdjustments.Preview",
@@ -8815,14 +7087,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http.TenantSettings.ResolveBool",
       "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.Preview",
-      "binding_digest": "a6211a5f170babeb2c76e75a2b59f68f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupAdjustments.Preview",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAutoExcusalSyncer.Preview",
@@ -10410,26 +8674,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.TraegerOfferingCopies.ApplyTraegerOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.TraegerOfferingCopies.ApplyTraegerOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.TraegerOfferingCopies.ApplyTraegerOffering",
       "binding_digest": "e42d8f6078f80c284a8c706354b25709",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.TraegerOfferingCopies.ApplyTraegerOffering",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.LockTemplateRecurrence",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.TraegerOfferingCopies.ApplyTraegerOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.TraegerOfferingCopies.ApplyTraegerOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.Today",
       "target_owner": ""
     },
     {
@@ -10466,34 +8714,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.TraegerOfferingCopies.WithdrawTraegerOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.TraegerOfferingCopies.WithdrawTraegerOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.TraegerOfferingCopies.WithdrawTraegerOffering",
       "binding_digest": "e42d8f6078f80c284a8c706354b25709",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.TraegerOfferingCopies.WithdrawTraegerOffering",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.LockTemplateRecurrence",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.TraegerOfferingCopies.WithdrawTraegerOffering",
-      "binding_digest": "32f56fd40f4212de1cfb5c52ca999030",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.TraegerOfferingCopies.WithdrawTraegerOffering",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.Today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.RequestConflicts.WriteStaffValue",
-      "binding_digest": "4b51e42af2defce59b2804b2b90caa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Conflicts.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
       "target_owner": ""
     },
     {
@@ -10503,62 +8727,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.RequestDecisions.Decide",
-      "binding_digest": "4552f3e6f227d35d1f7c1de15058e480",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Decisions.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Service.Decide",
-      "binding_digest": "de376a6ac29085efa11d7f5189c986a7",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Decisions.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.RequestDecisions.MarkDone",
-      "binding_digest": "4552f3e6f227d35d1f7c1de15058e480",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Decisions.MarkDone",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Service.MarkDone",
-      "binding_digest": "0a4ec1421dc22541b85aba3af12c1663",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Decisions.MarkDone",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.RequestEdits.EditRequest",
-      "binding_digest": "4b51e42af2defce59b2804b2b90caa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Edits.EditRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.RequestEdits.EditRequest",
-      "binding_digest": "6a4fff33df00cb59185f7b9272448fc5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Edits.EditRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.SameDayCutoff.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupApprovals.ApplyPickupApproval",
-      "binding_digest": "4552f3e6f227d35d1f7c1de15058e480",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.PickupApprovals.ApplyPickupApproval",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.pickupPermissionApprovalAdapter.ApplyPickupPermission",
@@ -10593,44 +8761,12 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CareScheduleRequestService.CreatePickupChange",
-      "binding_digest": "443ff0aff520f76e9b8893a41cf344ba",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Service.CreatePickupChange",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CareScheduleRequestService.CreatePickupChange",
-      "binding_digest": "d80f5c02a7882bb09936879ff586bfdf",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Service.CreatePickupChange",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.SameDayCutoff.now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CareScheduleRequestService.CreatePickupChangeRequest",
       "binding_digest": "eec4a97ddc444c36d59580dc4fe0229b",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Service.CreatePickupChangeRequest",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CareScheduleRequestService.CreatePickupChangeRequest",
-      "binding_digest": "c1010a5deb755939f81ee0cddc27564b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Service.CreatePickupChangeRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CareScheduleRequestService.CreatePickupChangeRequest",
-      "binding_digest": "d2018785f750f564fefeed4e831b6824",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Service.CreatePickupChangeRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.SameDayCutoff.now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CareScheduleRequestService.CreatePickupPermission",
@@ -10649,60 +8785,12 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CareScheduleRequestService.Decide",
-      "binding_digest": "de376a6ac29085efa11d7f5189c986a7",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Service.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CareScheduleRequestService.EditRequest",
-      "binding_digest": "9f49d41aadfac0738b85bb150c9c21a7",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Service.EditRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CareScheduleRequestService.EditRequest",
-      "binding_digest": "f5e88cd28f7dd313fe94a9d5e59fc650",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Service.EditRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.SameDayCutoff.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CareScheduleRequestService.MarkDone",
-      "binding_digest": "0a4ec1421dc22541b85aba3af12c1663",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Service.MarkDone",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.RequestSubmissions.CreatePickupChange",
       "binding_digest": "77add71d04c5db7d3c556faebcab04d4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Submissions.CreatePickupChange",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.RequestSubmissions.CreatePickupChange",
-      "binding_digest": "4b51e42af2defce59b2804b2b90caa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Submissions.CreatePickupChange",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.RequestSubmissions.CreatePickupChange",
-      "binding_digest": "6a4fff33df00cb59185f7b9272448fc5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Submissions.CreatePickupChange",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.SameDayCutoff.now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.RequestSubmissions.CreatePickupPermission",
@@ -10802,22 +8890,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.ConflictCandidate",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.ConflictCandidate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.ConflictCandidate",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.ConflictCandidate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.ConflictCandidate",
       "binding_digest": "82358590ef28f5b87b7e1c259fab5194",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.ConflictCandidate",
       "source_owner": "care-plan",
@@ -10871,22 +8943,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.Decide",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.Decide",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.Decide",
@@ -10954,22 +9010,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.DecideConflictRequest",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.DecideConflictRequest",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.DecideConflictRequest",
       "binding_digest": "951372e3c9d58576ab0c47f86942b1cb",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.DecideConflictRequest",
       "source_owner": "care-plan",
@@ -11001,22 +9041,6 @@
       "target_owner": "timetable-activities"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.FollowBulkClassChanges",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.FollowBulkClassChanges",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.FollowBulkClassChanges",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.FollowBulkClassChanges",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.GetBulkCandidate",
       "binding_digest": "61d103e23a03b8153bacffc5c2b1ba5e",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.GetBulkCandidate",
@@ -11031,22 +9055,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.PermissionsFromCtx",
       "target_owner": "identity-access"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.GetBulkCandidate",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.GetBulkCandidate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.GetBulkCandidate",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.GetBulkCandidate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.GetBulkCandidate",
@@ -11121,22 +9129,6 @@
       "target_owner": "timetable-activities"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.WriteStaffValue",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.MasterDataDecisions.WriteStaffValue",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.ExcusedAbsenceRequests.ListHistory",
       "binding_digest": "9baa2582c6bf096c8ea39f1e6f02b49a",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.ReviewQuery.ListHistory",
@@ -11202,14 +9194,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.ExcusedAbsenceRequests.ListPending",
-      "binding_digest": "0df0d07b83b9b243b451be8c4360e753",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.ReviewQuery.ListPending",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/compose.ExcusedAbsenceRequests.ListPending",
       "binding_digest": "1323158f10670923be89bcc8d08e23b8",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.ReviewQuery.ListPending",
       "source_owner": "care-plan",
@@ -11231,14 +9215,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.PermissionsFromCtx",
       "target_owner": "identity-access"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.ListPending",
-      "binding_digest": "0df0d07b83b9b243b451be8c4360e753",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.ReviewQuery.ListPending",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.ListPending",
@@ -11274,14 +9250,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.ApproveExcusedBulk",
-      "binding_digest": "0df0d07b83b9b243b451be8c4360e753",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.ApproveExcusedBulk",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.ApproveExcusedBulk",
       "binding_digest": "1323158f10670923be89bcc8d08e23b8",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.ApproveExcusedBulk",
       "source_owner": "care-plan",
@@ -11311,14 +9279,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.Correct",
-      "binding_digest": "0df0d07b83b9b243b451be8c4360e753",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.Correct",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.Correct",
@@ -11370,14 +9330,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.Decide",
-      "binding_digest": "0df0d07b83b9b243b451be8c4360e753",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.Decide",
       "binding_digest": "1323158f10670923be89bcc8d08e23b8",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.Decide",
       "source_owner": "care-plan",
@@ -11407,14 +9359,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.DecideConflictRequest",
-      "binding_digest": "0df0d07b83b9b243b451be8c4360e753",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.DecideConflictRequest",
@@ -11450,14 +9394,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.GetExcusedBulkCandidate",
-      "binding_digest": "0df0d07b83b9b243b451be8c4360e753",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.GetExcusedBulkCandidate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.GetExcusedBulkCandidate",
       "binding_digest": "1323158f10670923be89bcc8d08e23b8",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.GetExcusedBulkCandidate",
       "source_owner": "care-plan",
@@ -11503,14 +9439,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.PermissionsFromCtx",
       "target_owner": "identity-access"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.ListPending",
-      "binding_digest": "0df0d07b83b9b243b451be8c4360e753",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.ListPending",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.ListPending",
@@ -11546,14 +9474,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.MarkDone",
-      "binding_digest": "0df0d07b83b9b243b451be8c4360e753",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.MarkDone",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.MarkDone",
       "binding_digest": "1323158f10670923be89bcc8d08e23b8",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.MarkDone",
       "source_owner": "care-plan",
@@ -11575,14 +9495,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.PermissionsFromCtx",
       "target_owner": "identity-access"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.PendingByStudentForDate",
-      "binding_digest": "0df0d07b83b9b243b451be8c4360e753",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.PendingByStudentForDate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.PendingByStudentForDate",
@@ -12514,14 +10426,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.ApproveExcusedBulk",
-      "binding_digest": "0df0d07b83b9b243b451be8c4360e753",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedCrossKindRequests.ApproveExcusedBulk",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.ApproveExcusedBulk",
       "binding_digest": "1323158f10670923be89bcc8d08e23b8",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedCrossKindRequests.ApproveExcusedBulk",
       "source_owner": "care-plan",
@@ -12554,14 +10458,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.DecideConflictRequest",
-      "binding_digest": "0df0d07b83b9b243b451be8c4360e753",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedCrossKindRequests.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.DecideConflictRequest",
       "binding_digest": "1323158f10670923be89bcc8d08e23b8",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedCrossKindRequests.DecideConflictRequest",
       "source_owner": "care-plan",
@@ -12583,14 +10479,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.PermissionsFromCtx",
       "target_owner": "identity-access"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.GetExcusedBulkCandidate",
-      "binding_digest": "0df0d07b83b9b243b451be8c4360e753",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedCrossKindRequests.GetExcusedBulkCandidate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.GetExcusedBulkCandidate",
@@ -12810,26 +10698,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.ReconcileOfferingPickupForOfferings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.traegerBatchPickup.ReconcileOfferingPickupForOfferings",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.ReconcileOfferingPickupForOfferings",
       "binding_digest": "b44f927181f890dd9b403293b6fc09ed",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.traegerBatchPickup.ReconcileOfferingPickupForOfferings",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.ResyncPickupAutoExcusals",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterialization.ReconcileOfferingPickupForOfferings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.traegerBatchPickup.ReconcileOfferingPickupForOfferings",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
       "target_owner": ""
     },
     {
@@ -15066,22 +12938,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.ConflictCandidate",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.ConflictCandidate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.ConflictCandidate",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.ConflictCandidate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.ConflictCandidate",
       "binding_digest": "82358590ef28f5b87b7e1c259fab5194",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.ConflictCandidate",
       "source_owner": "care-plan",
@@ -15103,22 +12959,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.PermissionsFromCtx",
       "target_owner": "identity-access"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.ConflictCandidate",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.ConflictCandidate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.ConflictCandidate",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.ConflictCandidate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.ConflictCandidate",
@@ -15175,22 +13015,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.DecideConflictRequest",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.DecideConflictRequest",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.DecideConflictRequest",
@@ -15255,22 +13079,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.DecideConflictRequest",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.DecideConflictRequest",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.DecideConflictRequest",
@@ -15314,14 +13122,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeConflictPort.DecideConflictRequest",
-      "binding_digest": "95f764981156730173f0f2fe7b56376c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeConflictPort.DecideConflictRequest",
       "binding_digest": "ca068f8ae3985f54d472e75a57f8eef9",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.DecideConflictRequest",
       "source_owner": "care-plan",
@@ -15329,14 +13129,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeConflictPort.DecideConflictRequest",
-      "binding_digest": "95f764981156730173f0f2fe7b56376c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.DecideConflictRequest",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.LockConflictRequest",
       "binding_digest": "d3567216f8c99a54f2896660e1e7cbfc",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.LockConflictRequest",
@@ -15385,30 +13177,6 @@
       "target_owner": "timetable-activities"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.WriteStaffValue",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.WriteStaffValue",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CareScheduleRequestService.WriteStaffValue",
-      "binding_digest": "9cb54415159deb4c0c2745a8a05e8799",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.WriteStaffValue",
       "binding_digest": "abdd84705434edbdc2afc8c0460712ae",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.WriteStaffValue",
@@ -15423,38 +13191,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.CohortRosters.FollowCohortChanges",
       "target_owner": "timetable-activities"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.WriteStaffValue",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.WriteStaffValue",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeConflictPort.WriteStaffValue",
-      "binding_digest": "2ae5f1f97a27b5e084fc25be9300bd4d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeConflictPort.WriteStaffValue",
-      "binding_digest": "2ae5f1f97a27b5e084fc25be9300bd4d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.ConflictPort.WriteStaffValue",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.OfferingChangeDependencies.Today",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.excusalTransaction.LockStudentAndExceptionDay",
@@ -15818,22 +13554,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.Decide",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.Decide",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.Decide",
       "binding_digest": "951372e3c9d58576ab0c47f86942b1cb",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.Decide",
       "source_owner": "care-plan",
@@ -15898,22 +13618,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.Decide",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.Decide",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.Decide",
       "binding_digest": "951372e3c9d58576ab0c47f86942b1cb",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.Decide",
       "source_owner": "care-plan",
@@ -15945,22 +13649,6 @@
       "target_owner": "timetable-activities"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.FollowBulkClassChanges",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.FollowBulkClassChanges",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.FollowBulkClassChanges",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.FollowBulkClassChanges",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.FollowBulkClassChanges",
       "binding_digest": "abdd84705434edbdc2afc8c0460712ae",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.FollowBulkClassChanges",
@@ -15977,22 +13665,6 @@
       "target_owner": "timetable-activities"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.FollowBulkClassChanges",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.FollowBulkClassChanges",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.FollowBulkClassChanges",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.FollowBulkClassChanges",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.GetBulkCandidate",
       "binding_digest": "61d103e23a03b8153bacffc5c2b1ba5e",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.GetBulkCandidate",
@@ -16007,22 +13679,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.PermissionsFromCtx",
       "target_owner": "identity-access"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.GetBulkCandidate",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.GetBulkCandidate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.GetBulkCandidate",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.GetBulkCandidate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.GetBulkCandidate",
@@ -16047,22 +13703,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.PermissionsFromCtx",
       "target_owner": "identity-access"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.GetBulkCandidate",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.GetBulkCandidate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.GetBulkCandidate",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.MasterDataBulkPort.GetBulkCandidate",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.ParentRequestMasterData.GetBulkCandidate",
@@ -16378,14 +14018,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.AdjustOfferings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.OfferingChangeBookings.AdjustOfferings",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.AdjustOfferings",
       "binding_digest": "b5abd65e7197474bb2e2e1365c0d3311",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.OfferingChangeBookings.AdjustOfferings",
       "source_owner": "care-plan",
@@ -16398,14 +14030,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.OfferingChangeBookings.AdjustOfferings",
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.ResyncPickupAutoExcusals",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.AdjustOfferings",
-      "binding_digest": "24fb9588b6e9e37450a3d904c616f37d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.OfferingChangeBookings.AdjustOfferings",
-      "source_owner": "care-plan",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.BookingMaterializationDependencies.Today",
       "target_owner": ""
     },
     {
@@ -17937,14 +15561,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.requestConflictPlans.SaveApprovedException",
-      "binding_digest": "c70a74824e9e106b59dfdffe7cfcb41c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestConflictPlans.SaveApprovedException",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.requestConflictPlans.Sync",
       "binding_digest": "481a5222df4e25080060998679f4fd7a",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestConflictPlans.Sync",
@@ -18137,14 +15753,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.requestDecisionAdapter.ApplyPickup",
-      "binding_digest": "3e2174c5233ffce00224d35e7f564dd4",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestCorrectionPlans.ApplyPickup",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.requestDecisionAdapter.ApplyPickupPermission",
       "binding_digest": "1772f6961295260f4821143fe9fa7c4f",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestCorrectionPlans.ApplyPickupPermission",
@@ -18287,14 +15895,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.MissingStudentError",
       "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.requestDecisionAdapter.ApplyPickup",
-      "binding_digest": "3e2174c5233ffce00224d35e7f564dd4",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestDecisionPlans.ApplyPickup",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.requestDecisionAdapter.ApplyPickupPermission",
@@ -19170,22 +16770,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.Correct",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests.Decisions.Correct",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.Correct",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests.Decisions.Correct",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.Correct",
       "binding_digest": "951372e3c9d58576ab0c47f86942b1cb",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests.Decisions.Correct",
       "source_owner": "care-plan",
@@ -19247,22 +16831,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.Decide",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests.Decisions.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.Decide",
-      "binding_digest": "3d6f0a2b2aba42acb9cff62cb22d68f5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests.Decisions.Decide",
-      "source_owner": "care-plan",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.today",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.MasterDataDecisions.Decide",
