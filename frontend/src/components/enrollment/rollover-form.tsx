@@ -369,8 +369,8 @@ export function RolloverForm({
               label="Modus"
               hint={
                 draft.rollover_mode === "opt_out"
-                  ? "Anmeldungen werden automatisch übernommen. Ohne aktive Abmeldung bis zur Frist landet die Anmeldung in der Prüfung."
-                  : "Eltern müssen aktiv bestätigen. Ohne Bestätigung bis zur Frist wird die Anmeldung zurückgezogen."
+                  ? "Eltern müssen nichts tun. Bis zur Frist können sie Angebote und Tage ändern oder abmelden. Danach prüfen Sie die Anmeldungen."
+                  : "Eltern bestätigen bis zur Frist und können dabei Angebote und Tage ändern. Ohne Bestätigung wird die Anmeldung zurückgezogen."
               }
               value={draft.rollover_mode}
               onChange={(value) =>
@@ -379,11 +379,11 @@ export function RolloverForm({
               options={[
                 {
                   value: "opt_out",
-                  label: "Opt-Out: Eltern müssen abmelden",
+                  label: "Anmeldungen laufen weiter (Opt-Out)",
                 },
                 {
                   value: "opt_in",
-                  label: "Opt-In: Eltern müssen aktiv bestätigen",
+                  label: "Eltern bestätigen neu (Opt-In)",
                 },
               ]}
             />
@@ -413,13 +413,13 @@ export function RolloverForm({
             checked={draft.rollover_bumps_grade ?? true}
             onChange={(checked) => update("rollover_bumps_grade", checked)}
             label="Klassenstufe automatisch um 1 erhöhen"
-            hint="Für jährliche Anmeldephasen aktivieren. Für Halbjahre oder Zeiträume innerhalb eines Schuljahres deaktivieren."
+            hint="Für ein neues Schuljahr einschalten. Für ein neues Halbjahr ausschalten."
           />
           <CheckboxCard
             checked={draft.rollover_auto_approve}
             onChange={(checked) => update("rollover_auto_approve", checked)}
             label="Vorgemerkte Anmeldungen automatisch genehmigen"
-            hint="Nur für Opt-Out sinnvoll. Nach Ablauf der Frist werden vorgemerkte Anmeldungen direkt bestätigt."
+            hint="Nur bei „Anmeldungen laufen weiter“. Nach der Frist sind die Anmeldungen ohne Ihre Prüfung bestätigt."
           />
         </div>
 
