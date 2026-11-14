@@ -364,7 +364,7 @@ const NOT_ARRIVED_OUTCOMES: readonly MailOutcome[] = [
 ];
 
 /** How many of the counted mails did not reach their family. */
-export function mailsNotArrived(counts: MailOutcomeCounts | undefined): number {
+function mailsNotArrived(counts: MailOutcomeCounts | undefined): number {
   return NOT_ARRIVED_OUTCOMES.reduce(
     (sum, outcome) => sum + (counts?.[outcome] ?? 0),
     0,
@@ -383,11 +383,6 @@ export function sumMailOutcomeCounts(
     }
   }
   return total;
-}
-
-/** Whether a mail's result asks the school to act: it did not arrive. */
-export function mailNeedsAttention(copy: MailStatusCopy | null): boolean {
-  return copy?.tone === "red" || copy?.tone === "warning";
 }
 
 /**
