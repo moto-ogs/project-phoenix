@@ -181,6 +181,15 @@ describe("CourseWaitlistSummary", () => {
     expect(list.textContent).toBe("1.Lina Amini2.Mia Berg");
   });
 
+  it("leads to the requests when the person may open them", () => {
+    render(
+      <CourseWaitlistSummary waitlist={freeTheater} requestsHref="/anfragen" />,
+    );
+    expect(
+      screen.getByRole("link", { name: "Zu den Anfragen, neuer Tab" }),
+    ).toHaveAttribute("href", "/anfragen");
+  });
+
   it("says when nobody waits", () => {
     render(
       <CourseWaitlistSummary

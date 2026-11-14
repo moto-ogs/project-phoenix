@@ -2,7 +2,7 @@
 
 import { Alert } from "~/components/ui/alert";
 import { InsetPanel } from "~/components/ui/inset-panel";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
 import type { FormError } from "~/components/ui/form-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -54,6 +54,7 @@ import type {
   OfferingSuggestion,
 } from "~/lib/offering-suggestion";
 import { useState } from "react";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 import { ExternalCaregiverEntry } from "~/components/staff/external-caregiver-entry";
 import type { Staff } from "~/lib/staff-api";
 
@@ -68,6 +69,11 @@ const TARGET_GROUP_OPTIONS: Array<{ value: TargetGroupType; label: string }> = [
 
 export interface StepPersonalKinderProps {
   form: EventFormState;
+  /**
+   * config:manage, the right of the page „Angebote“: the hint about the
+   * offering's own Regeltermin field links there (#7054).
+   */
+  canManageOfferings?: boolean;
   update: <K extends keyof EventFormState>(
     key: K,
     value: EventFormState[K],
@@ -164,6 +170,7 @@ export interface StepPersonalKinderProps {
  */
 export function StepPersonalKinder({
   form,
+  canManageOfferings = false,
   update,
   changeTargetGroupType,
   fieldErrors,
@@ -226,6 +233,7 @@ export function StepPersonalKinder({
 }: Readonly<StepPersonalKinderProps>) {
   // Ein Dienst (#3822) hat nur Personal: keine Zielgruppe, keine Kinder.
   const isDuty = form.type === "duty";
+  const tenantPath = useTenantAwarePath();
   // „Angebot übernehmen“ (#5104): die Kinder vor dem Wechsel, gegen die die
   // Vorschau eines neuen Regeltermins vergleicht.
   const [suggestedRoster, setSuggestedRoster] = useState<DraftRoster | null>(
@@ -634,6 +642,22 @@ export function StepPersonalKinder({
                 <Alert
                   type="info"
                   message="Mit Angeboten als Quelle übernimmt der Regeltermin die angemeldeten Kinder automatisch, auch bei späteren An- und Abmeldungen. Ohne Quelle gilt weiterhin die Verknüpfung, die unter „Angebote“ beim jeweiligen Angebot gepflegt wird (Feld „Regeltermin“)."
+                  action={
+                    // A new tab keeps this form and its entries (#7054).
+                    canManageOfferings ? (
+                      <ButtonLink
+                        href={tenantPath("/care-offerings")}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Zu den Angeboten, neuer Tab"
+                        variant="surface"
+                        size="compact"
+                        tooltip="Öffnet die Angebote in einem neuen Tab."
+                      >
+                        Zu den Angeboten
+                      </ButtonLink>
+                    ) : undefined
+                  }
                 />
               )}
               {/* Gate on the FORM selection, matching hasOfferingSource: a

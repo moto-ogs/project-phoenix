@@ -13,7 +13,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -42,6 +42,7 @@ import {
   formatShiftSeriesCount,
 } from "~/lib/calendar-period-helpers";
 import { createLogger } from "~/lib/logger";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 import { FormFieldset } from "~/components/ui/form-fieldset";
 import {
   useFormModalPending,
@@ -63,6 +64,12 @@ interface CalendarPeriodModalProps {
   onDeleted?: (period: CalendarPeriod) => void;
   /** Pass an existing period to enter edit mode. Omit/null for create. */
   initial?: CalendarPeriod | null;
+  /**
+   * Opened outside „Schuljahr und Kalender“: the closing-day hint links
+   * there in a new tab, which keeps this dialog (#7054). Whoever may write
+   * a period may open that page (schedules:manage).
+   */
+  linkClosingDays?: boolean;
   /** Optional defaults used when creating from a visible planner week. */
   createDefaults?: Partial<FormState>;
   /**
@@ -144,6 +151,7 @@ function formFromPeriod(p: CalendarPeriod): FormState {
 export function CalendarPeriodModal({
   isOpen,
   onClose,
+  linkClosingDays = false,
   onSaved,
   onDeleted,
   initial,
@@ -152,6 +160,7 @@ export function CalendarPeriodModal({
   phaseLink,
 }: CalendarPeriodModalProps) {
   const { success: toastSuccess } = useToast();
+  const tenantPath = useTenantAwarePath();
   const [form, setForm] = useState<FormState>(emptyForm);
   // Speichern und Löschen sperren das Panel, bis der Server antwortet
   // (#6593); `pendingAction` sagt, welche der beiden Aktionen läuft.
@@ -482,7 +491,25 @@ export function CalendarPeriodModal({
               {/* #3594: „Ferien“ als Zeitraum sagt keine Termine ab und setzt
                 kein Soll auf null; das tut nur ein Schließtag. */}
               {form.periodType === "holiday" && (
-                <Alert type="info" message={HOLIDAY_CLOSING_DAY_HINT} />
+                <Alert
+                  type="info"
+                  message={HOLIDAY_CLOSING_DAY_HINT}
+                  action={
+                    linkClosingDays ? (
+                      <ButtonLink
+                        href={tenantPath("/calendar-periods")}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Zu den Schließtagen, neuer Tab"
+                        variant="surface"
+                        size="compact"
+                        tooltip="Öffnet „Schuljahr und Kalender“ mit den Schließtagen in einem neuen Tab."
+                      >
+                        Zu den Schließtagen
+                      </ButtonLink>
+                    ) : undefined
+                  }
+                />
               )}
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

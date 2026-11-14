@@ -83,6 +83,7 @@ import {
   releaseBillingRun,
   startBillingRun,
 } from "~/lib/traeger-billing-api";
+import { TRAEGER_HOLIDAY_TAB } from "~/lib/traeger-payment-text";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
@@ -144,6 +145,46 @@ function paymentTextWarning(run: BillingRunDetail): string {
       ? "Tragen Sie die Nummern vor dem Freigeben bei den Anmeldungen ein."
       : "Tragen Sie die Nummern vor dem Freigeben bei den Anmeldungen ein. Das Feld dafür erscheint, wenn in den Einstellungen unter „Allgemein“ im Bereich „Ferienbetreuung“ „Debitorennummer beim Bestätigen abfragen“ an ist.";
   return `${invoicesWithoutDebtorNumber(run.paymentTextMissingDebtorNumbers)} Ihr Zahlungstext nennt aber die Debitorennummer. Nach dem Freigeben können Sie sie nicht mehr eintragen. Schreiben gehen dann nur ohne den Platzhalter im Zahlungstext. ${where}`;
+}
+
+/**
+ * The places the payment text warning names (#7054): the registrations,
+ * where the numbers go, only with the right to open them; and the holiday
+ * settings while the field there is still off.
+ */
+function PaymentTextWarningLinks({
+  run,
+  canOpenPeriod,
+}: Readonly<{ run: BillingRunDetail; canOpenPeriod: boolean }>) {
+  const fieldOff = run.missingDebtorNumbers === 0;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {canOpenPeriod ? (
+        <ButtonLink
+          href={traegerPath(
+            `/traeger/ferien/${encodeURIComponent(run.holidayPeriodId)}/anmeldungen`,
+          )}
+          variant="surface"
+          size="compact"
+          tooltip="Öffnet die Anmeldungen dieses Ferienzeitraums."
+        >
+          Zu den Anmeldungen
+        </ButtonLink>
+      ) : null}
+      {fieldOff ? (
+        <ButtonLink
+          href={traegerPath(
+            `/traeger/einstellungen?bereich=${TRAEGER_HOLIDAY_TAB}`,
+          )}
+          variant="surface"
+          size="compact"
+          tooltip="Öffnet die Ferienbetreuung in den Einstellungen."
+        >
+          Zur Einstellung
+        </ButtonLink>
+      ) : null}
+    </div>
+  );
 }
 
 export default function TraegerBillingRunPage() {
@@ -663,6 +704,15 @@ export default function TraegerBillingRunPage() {
               type="warning"
               title="Schreiben brauchen die Debitorennummer"
               message={paymentTextWarning(run)}
+              actionLayout="stacked"
+              action={
+                canOpenPeriod || run.missingDebtorNumbers === 0 ? (
+                  <PaymentTextWarningLinks
+                    run={run}
+                    canOpenPeriod={canOpenPeriod}
+                  />
+                ) : undefined
+              }
             />
           ) : null}
           {preview && run.missingDebtorNumbers > 0 && paymentTextGaps === 0 ? (

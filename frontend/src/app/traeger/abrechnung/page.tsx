@@ -9,6 +9,7 @@
 // zu den Rechnungen und Beträgen je Familie (#4691).
 
 import { Plus, Receipt } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { BillingRunStartModal } from "~/components/traeger/billing-run-start-modal";
@@ -27,7 +28,7 @@ import {
 } from "~/components/traeger/care-billing-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { formatDateRange } from "~/components/traeger/holiday-period-format";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Alert } from "~/components/ui/alert";
@@ -39,6 +40,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ListSkeleton } from "~/components/ui/page-skeletons";
 import { useApiLoadError } from "~/contexts/ToastContext";
+import { hasPermission } from "~/lib/auth-utils";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import {
@@ -254,6 +256,13 @@ function BillingRunsPage() {
   };
 
   const noPeriod = data !== null && data.periods.length === 0;
+  // The periods open with their own right; without it the notice names who
+  // creates them and carries no link (#7054).
+  const { data: session } = useSession();
+  const canOpenPeriods = hasPermission(
+    session ?? null,
+    "traeger_enrollment:manage",
+  );
   const options = data ? periodOptions(data) : [];
   const filterName = options.find(
     (option) => option.value === periodFilter,
@@ -379,6 +388,18 @@ function BillingRunsPage() {
               id="billing-run-needs-period"
               type="info"
               message="Es gibt noch keinen veröffentlichten Ferienzeitraum. Ein Lauf braucht einen. Ferienzeiträume legt die Verwaltung unter „Ferienbetreuung“ an."
+              action={
+                canOpenPeriods ? (
+                  <ButtonLink
+                    href={traegerPath("/traeger/ferien")}
+                    variant="surface"
+                    size="compact"
+                    tooltip="Öffnet die Ferienzeiträume zum Anlegen und Veröffentlichen."
+                  >
+                    Zur Ferienbetreuung
+                  </ButtonLink>
+                ) : undefined
+              }
             />
           ) : null}
           <DataTable

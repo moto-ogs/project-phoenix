@@ -13,7 +13,9 @@ import {
   activityWaitlistKeys,
   courseWaitlistKeys,
 } from "~/lib/swr/course-waitlist-keys";
+import { useChangeRequestAccess } from "~/lib/hooks/use-change-request-access";
 import { useSWRAuth } from "~/lib/swr";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 
 /**
  * Plätze und Warteliste einer AG (#4767), im Fenster der Aktivität. Nur zur
@@ -26,6 +28,8 @@ export function ActivityWaitlistSection({
   const { data: session } = useSession();
   const allowed = hasPermission(session, "users:update");
   const mayReadParticipants = hasPermission(session, "activities:read");
+  const { canOpenRequestsPage } = useChangeRequestAccess();
+  const tenantPath = useTenantAwarePath();
   const swr = useSWRAuth(
     allowed ? courseWaitlistKeys.activity(activityId) : null,
     () => fetchCourseWaitlists(activityId),
@@ -68,6 +72,9 @@ export function ActivityWaitlistSection({
           <CourseWaitlistSummary
             waitlist={waitlist}
             participantNames={participantNames}
+            requestsHref={
+              canOpenRequestsPage ? tenantPath("/anfragen") : undefined
+            }
           />
         )
       )}

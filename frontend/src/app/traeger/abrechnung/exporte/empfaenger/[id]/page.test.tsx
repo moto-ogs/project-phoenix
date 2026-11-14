@@ -179,6 +179,11 @@ it("names what is missing while the recipient is not complete", async () => {
     ),
   ).toBeInTheDocument();
   expect(screen.getByText("Noch keine Übergabe.")).toBeInTheDocument();
+  // The notice leads to the fields it names (#7054).
+  fireEvent.click(screen.getByRole("button", { name: "Zum Zugang" }));
+  expect(
+    screen.getByRole("heading", { name: "Zugang zum Empfänger" }),
+  ).toHaveFocus();
 });
 
 it("removes the recipient only after the question and names what goes back to the download", async () => {
@@ -238,4 +243,8 @@ it("keeps a failed last handover in view until the next one", async () => {
   expect(
     screen.queryByText("Der Empfänger ist bereit"),
   ).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Zu den Exporten" })).toHaveAttribute(
+    "href",
+    "/traeger/abrechnung/exporte",
+  );
 });

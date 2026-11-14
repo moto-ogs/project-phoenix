@@ -14,6 +14,7 @@ import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { JumpButton } from "~/components/ui/jump-button";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { CareContractStatus } from "~/lib/traeger-care-contracts-api";
@@ -71,6 +72,21 @@ const CHANNEL_LABELS = {
   traeger_buero: "Vom Träger-Büro eingetragen",
 } as const;
 
+/** The card's `id`, so notices on the contract page lead to it (#7054). */
+export const CONTRACT_NOTICE_SECTION_ID = "vertrag-beenden";
+
+/** For a notice elsewhere on the contract page that names this card. */
+export function NoticeCardJump() {
+  return (
+    <JumpButton
+      targetId={CONTRACT_NOTICE_SECTION_ID}
+      tooltip="Springt zur Kündigung der Eltern."
+    >
+      Zu „Vertrag beenden“
+    </JumpButton>
+  );
+}
+
 export function CareContractNoticeCard({
   contractId,
   status,
@@ -114,6 +130,7 @@ export function CareContractNoticeCard({
 
   return (
     <SectionCard
+      id={CONTRACT_NOTICE_SECTION_ID}
       icon={CalendarX2}
       title="Vertrag beenden"
       description={

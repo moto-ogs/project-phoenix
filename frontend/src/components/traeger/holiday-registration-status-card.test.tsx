@@ -278,6 +278,14 @@ describe("HolidayRegistrationStatusCard", () => {
         "Vielleicht doppelt angemeldet: Lia Muster. Die andere Anmeldung öffnen Sie beim Kind.",
       ),
     ).toBeInTheDocument();
+    // „Zum Kind“ leads to Lia's card on the page (#7054).
+    const childCard = document.createElement("section");
+    childCard.id = "holiday-registration-child-9";
+    childCard.innerHTML = "<h2>Lia Muster</h2>";
+    document.body.append(childCard);
+    fireEvent.click(screen.getByRole("button", { name: "Zum Kind" }));
+    expect(screen.getByRole("heading", { name: "Lia Muster" })).toHaveFocus();
+    childCard.remove();
   });
 
   it("locks confirmation until the post-write read settles", async () => {

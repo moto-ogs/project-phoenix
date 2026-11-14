@@ -260,6 +260,10 @@ describe("CareContractChangeCard (#5979)", () => {
     expect(
       await screen.findByText(/Das ist eine Kündigung/),
     ).toBeInTheDocument();
+    // It leads to the card where the notice is entered (#7054).
+    expect(
+      screen.getByRole("button", { name: "Zu „Vertrag beenden“" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ablehnen" })).toBeEnabled();
     expect(
       screen.getAllByRole("button").map((button) => button.textContent),

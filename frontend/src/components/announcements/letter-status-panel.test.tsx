@@ -207,6 +207,10 @@ describe("LetterStatusPanel mail state (#5934)", () => {
     renderPanel();
     expect(await screen.findByText(/moto-Support/)).toBeInTheDocument();
     expect(screen.queryByText(/neue Adresse ist möglich/)).toBeNull();
+
+    // The notice names the recipient; its button lands there (#7054).
+    fireEvent.click(screen.getByRole("button", { name: "Zu den Empfängern" }));
+    expect(screen.getByRole("heading", { name: "Empfänger" })).toHaveFocus();
   });
 
   it("names the support for a block at the provider and offers no resend", async () => {

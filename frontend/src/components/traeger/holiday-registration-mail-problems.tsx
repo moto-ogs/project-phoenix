@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 
 import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
+import { JumpButton } from "~/components/ui/jump-button";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { MailOutcome } from "~/lib/email-delivery-status";
 import { createLogger } from "~/lib/logger";
@@ -126,21 +126,6 @@ function holidayMailProblemText(
 }
 
 /**
- * Brings a card of the page into view and moves the focus to its heading, so
- * a keyboard or screen reader user lands there too. Without the card (the
- * parents are being edited) nothing happens: the editor is already open.
- */
-function showSection(id: string) {
-  const section = globalThis.document?.getElementById(id);
-  if (!section) return;
-  section.scrollIntoView?.({ block: "start" });
-  const heading = section.querySelector<HTMLElement>("h2, h3");
-  if (!heading) return;
-  heading.tabIndex = -1;
-  heading.focus({ preventScroll: true });
-}
-
-/**
  * The notice in the registration: every mail with a problem and what to do.
  * It is the one place for the next step; the list of mails below only shows
  * each mail's status (#6999).
@@ -165,15 +150,12 @@ export function HolidayRegistrationMailProblemsAlert({
   return (
     <Alert
       action={
-        <Button
-          type="button"
-          variant="surface"
-          size="compact"
+        <JumpButton
+          targetId={parentsSectionId}
           tooltip="Springt zu Telefon und E-Mail-Adresse der Eltern."
-          onClick={() => showSection(parentsSectionId)}
         >
           Zu den Eltern
-        </Button>
+        </JumpButton>
       }
       type="warning"
       title={

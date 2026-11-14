@@ -663,6 +663,20 @@ export function RejectReasonModal({
         <Alert
           type="info"
           message="Die Eltern bekommen eine Mitteilung mit dem neuen Vertragsende per E-Mail und in der Eltern-App. Den Text legen Sie unter Einstellungen › Allgemein › Betreuungsverträge fest."
+          action={
+            // A new tab keeps this dialog open (#7054).
+            <ButtonLink
+              href={traegerPath("/traeger/einstellungen?bereich=vertraege")}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Zur Einstellung, neuer Tab"
+              variant="surface"
+              size="compact"
+              tooltip="Öffnet den Text der Mitteilung in den Einstellungen in einem neuen Tab."
+            >
+              Zur Einstellung
+            </ButtonLink>
+          }
         />
         <Alert
           type="warning"

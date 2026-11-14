@@ -178,6 +178,9 @@ export function plannedVersion(
     .sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom))[0];
 }
 
+/** The card's `id`, so a notice on the contract page leads to it (#7054). */
+export const CONTRACT_VERSIONS_SECTION_ID = "vertrag-versionen";
+
 export function CareContractVersions({
   contractId,
   versions,
@@ -216,6 +219,7 @@ export function CareContractVersions({
 
   return (
     <SectionCard
+      id={CONTRACT_VERSIONS_SECTION_ID}
       title="Versionen"
       concept={changeHistoryConcept}
       titleBadge={

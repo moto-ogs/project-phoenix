@@ -616,7 +616,6 @@ export default function TraegerHolidayRegistrationPage() {
           ) : (
             <SectionCard
               id={PARENTS_SECTION_ID}
-              className="scroll-mt-24"
               leading={<ConceptIconTile concept={parentsConcept} />}
               title="Eltern"
               description={cancelled ? CANCELLED_EDIT_TEXT : undefined}

@@ -16,11 +16,13 @@ import {
   missingFieldsText,
 } from "~/components/traeger/export-handover-format";
 import {
+  EXPORT_RECIPIENT_ACCESS_ID,
   ExportHandoverHistoryCard,
   ExportRecipientFormCard,
 } from "~/components/traeger/export-recipient-cards";
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
+import { JumpButton } from "~/components/ui/jump-button";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiLoadError } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
@@ -34,6 +36,9 @@ import {
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerExportRecipientPage" });
+
+/** Where a failed handover is sent again. */
+const EXPORTS_PATH = "/traeger/abrechnung/exporte";
 
 /** Whether the recipient can take a file, and what to do if not. */
 function RecipientStateNotice({
@@ -49,12 +54,21 @@ function RecipientStateNotice({
       Dateien zuordnen
     </ButtonLink>
   );
+  const toAccess = (
+    <JumpButton
+      targetId={EXPORT_RECIPIENT_ACCESS_ID}
+      tooltip="Springt zu Adresse, Zugang und Schalter der Übergabe."
+    >
+      Zum Zugang
+    </JumpButton>
+  );
   if (!recipient.enabled) {
     return (
       <Alert
         type="info"
         title="Die Übergabe ist ausgeschaltet"
         message="Schalten Sie sie unten ein, wenn moto Dateien an diesen Empfänger übergeben soll."
+        action={toAccess}
       />
     );
   }
@@ -64,6 +78,7 @@ function RecipientStateNotice({
         type="warning"
         title="Es fehlen noch Angaben"
         message={`Bis alles ausgefüllt ist, übergibt moto nichts. Es fehlen: ${missingFieldsText(recipient.missingFields)}.`}
+        action={toAccess}
       />
     );
   }
@@ -91,6 +106,22 @@ function RecipientStateNotice({
           last.state === "failed"
             ? `${handoverReasonText(last.reason)} Prüfen Sie die Angaben unten und übergeben Sie die Datei bei den Exporten noch einmal.`
             : HANDOVER_UNKNOWN_TEXT
+        }
+        actionLayout={last.state === "failed" ? "stacked" : undefined}
+        action={
+          last.state === "failed" ? (
+            <div className="flex flex-wrap gap-2">
+              {toAccess}
+              <ButtonLink
+                href={traegerPath(EXPORTS_PATH)}
+                variant="surface"
+                size="compact"
+                tooltip="Öffnet die Exporte, dort übergeben Sie die Datei noch einmal."
+              >
+                Zu den Exporten
+              </ButtonLink>
+            </div>
+          ) : undefined
         }
       />
     );

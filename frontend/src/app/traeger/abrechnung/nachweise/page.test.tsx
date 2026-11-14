@@ -67,6 +67,13 @@ function renderPage() {
 }
 
 describe("TraegerNachweisePage", () => {
+  it("leads to the reductions when no income level exists yet", async () => {
+    renderPage();
+    expect(
+      await screen.findByRole("link", { name: "Zu den Ermäßigungen" }),
+    ).toHaveAttribute("href", "/abrechnung/ermaessigungen");
+  });
+
   it("shows every period and makes expired and future evidence editable", async () => {
     renderPage();
     for (const id of ["old", "now", "next", "later"]) {

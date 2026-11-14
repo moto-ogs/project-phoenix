@@ -431,6 +431,21 @@ describe("CalendarPeriodModal", () => {
     ).toBeInTheDocument();
   });
 
+  it("links the closing-day hint from another page in a new tab (#7054)", () => {
+    render(
+      <CalendarPeriodModal
+        isOpen
+        linkClosingDays
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        createDefaults={{ name: "Herbstferien", periodType: "holiday" }}
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "Zu den Schließtagen, neuer Tab" }),
+    ).toHaveAttribute("target", "_blank");
+  });
+
   it("hides the phase link section in create mode", () => {
     render(
       <CalendarPeriodModal

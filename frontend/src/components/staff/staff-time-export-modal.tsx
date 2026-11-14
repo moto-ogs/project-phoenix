@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import type { FormErrorInput } from "~/components/ui/form-error";
 import {
   FormErrorAlert,
@@ -21,10 +21,12 @@ import {
   fetchSFTPStatus,
   transferExportViaSFTP,
   transferFailureMessage,
+  transferFailureSettingsHref,
   type SFTPStatus,
   type TransferOutcome,
 } from "~/lib/sftp-export-api";
 import { createLogger } from "~/lib/logger";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 import { Loading } from "~/components/ui/loading";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
@@ -63,6 +65,9 @@ interface Props {
   /** Der in der Tabelle angezeigte Monat — Vorauswahl des Zeitraums. */
   readonly year: number;
   readonly month: number;
+  /** May the viewer change the settings? Then a failed transfer links
+   *  to the setting it names (#7054). */
+  readonly canOpenSettings?: boolean;
 }
 
 // Chip-Gruppe im Stil der Saldo-Presets der Zeitkonten-Tabelle: sichtbare
@@ -197,6 +202,12 @@ function transferFailure(state: TransferState): string | null {
   return transferFailureMessage(state.outcome.reason);
 }
 
+// The setting a failed transfer names (#7054); `null` without one.
+function transferSettingsHref(state: TransferState): string | null {
+  if (state.status !== "done" || state.outcome.transferred) return null;
+  return transferFailureSettingsHref(state.outcome.reason);
+}
+
 // Ergebnis der Übertragung. Jeder Fehlschlag, der Anfrage selbst wie der
 // Übertragung, steht im Fehlerkasten des Dialogs.
 function TransferResultPanel({ state }: { readonly state: TransferState }) {
@@ -223,7 +234,13 @@ function TransferResultPanel({ state }: { readonly state: TransferState }) {
 //
 // Die Übertragung an die Gegenstelle (#3050) nutzt dieselbe Auswahl und
 // dieselbe Datei; sie erzeugt keinen zweiten Export.
-export function StaffTimeExportModal({ isOpen, onClose, year, month }: Props) {
+export function StaffTimeExportModal({
+  isOpen,
+  onClose,
+  year,
+  month,
+  canOpenSettings = false,
+}: Props) {
   const [scope, setScope] = useState<Scope>("month");
   const [granularity, setGranularity] = useState<Granularity>("month");
   const [format, setFormat] = useState<FileFormat>("csv");
@@ -234,6 +251,8 @@ export function StaffTimeExportModal({ isOpen, onClose, year, month }: Props) {
     status: "idle",
   });
   const transferErrors = useApiFormError();
+  const tenantPath = useTenantAwarePath();
+  const settingsHref = transferSettingsHref(transferState);
   const reportLoad = useApiLoadError();
   const showReportError = reportLoad.show;
   const clearReportError = reportLoad.clear;
@@ -429,6 +448,23 @@ export function StaffTimeExportModal({ isOpen, onClose, year, month }: Props) {
       <div className="space-y-4">
         <FormErrorAlert
           message={transferErrors.error ?? transferFailure(transferState)}
+          action={
+            // Only someone who may change the settings gets the link; a
+            // new tab keeps this dialog and its choices.
+            settingsHref && !transferErrors.error && canOpenSettings ? (
+              <ButtonLink
+                href={tenantPath(settingsHref)}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Zu den Einstellungen, neuer Tab"
+                variant="surface"
+                size="compact"
+                tooltip="Öffnet die Übertragung der Zeitkonten in den Einstellungen in einem neuen Tab."
+              >
+                Zu den Einstellungen
+              </ButtonLink>
+            ) : undefined
+          }
         />
         <p className="text-sm text-gray-600">
           Export für alle Mitarbeitenden. Die Werte entsprechen der

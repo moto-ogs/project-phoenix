@@ -10,6 +10,7 @@ import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { parseISODate } from "~/lib/date-helpers";
 import { useStaffHasTarget } from "~/lib/hooks/use-staff-has-target";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 
 /** Reiter der Personalakte, in dem das Soll gepflegt wird. */
 export function workTimeModelPath(staffId: string): string {
@@ -71,10 +72,10 @@ export function SetTargetAction({
  * Hinweis in „Krank melden" und „Abwesenheit eintragen": die Person hat im
  * Startmonat kein Soll. Die Aussage gilt nur für diesen Monat, nicht für
  * den gesamten, möglicherweise monatsübergreifenden Zeitraum.
- * Ohne Link, weil ein Seitenwechsel den
- * Dialog samt Eingaben verwerfen würde; der Eintrag bleibt richtig und zählt
- * nach, sobald ein Soll ab diesem Tag gilt (die Gutschrift wird live
- * berechnet, nicht gespeichert).
+ * Der Link öffnet das Arbeitszeitmodell in einem neuen Tab (#7054): ein
+ * Seitenwechsel würde den Dialog samt Eingaben verwerfen. Der Eintrag bleibt
+ * richtig und zählt nach, sobald ein Soll ab diesem Tag gilt (die Gutschrift
+ * wird live berechnet, nicht gespeichert).
  */
 export function MissingTargetDialogNotice({
   staffId,
@@ -92,6 +93,7 @@ export function MissingTargetDialogNotice({
   readonly canSetTarget: boolean;
 }) {
   const hasTarget = useStaffHasTarget(staffId, date, true);
+  const tenantPath = useTenantAwarePath();
   if (hasTarget !== false) return null;
   const monthLabel = parseISODate(date).toLocaleDateString("de-DE", {
     month: "long",
@@ -107,6 +109,21 @@ export function MissingTargetDialogNotice({
           ? "Das Soll legen Sie in der Personalakte unter „Arbeitszeitmodell“ fest."
           : MISSING_TARGET_OWNER
       }`}
+      action={
+        canSetTarget ? (
+          <ButtonLink
+            href={tenantPath(workTimeModelPath(staffId))}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Zum Arbeitszeitmodell, neuer Tab"
+            variant="surface"
+            size="compact"
+            tooltip="Öffnet das Arbeitszeitmodell dieser Person in einem neuen Tab."
+          >
+            Zum Arbeitszeitmodell
+          </ButtonLink>
+        ) : undefined
+      }
     />
   );
 }
