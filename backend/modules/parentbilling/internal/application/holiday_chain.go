@@ -82,9 +82,11 @@ func computeHolidayContribution(children []parentbilling.HolidayChild, rules hol
 // sees it: its children, whether its exemption applies and the cost bearer
 // that takes over its contribution (#5627).
 type holidayMember struct {
-	children  []parentbilling.HolidayChild
-	exemption bool
-	bearer    *parentbilling.CostBearer
+	children []parentbilling.HolidayChild
+	// lunchChildren, when set, prices lunch independently of frozen care weeks.
+	lunchChildren []parentbilling.HolidayChild
+	exemption     bool
+	bearer        *parentbilling.CostBearer
 }
 
 // computeHolidaySiblings runs the chain over the registrations of a sibling
@@ -115,7 +117,11 @@ func computeHolidaySiblings(members []holidayMember, rules holidayRules) []paren
 	}
 	applySiblingRule(ranked, rules.sibling, chain.SiblingRank)
 	for m, member := range members {
-		finishHolidayContribution(&results[m], rules, member.bearer, placedHolidayChildren(member.children))
+		children := member.children
+		if member.lunchChildren != nil {
+			children = member.lunchChildren
+		}
+		finishHolidayContribution(&results[m], rules, member.bearer, placedHolidayChildren(children))
 	}
 	return results
 }

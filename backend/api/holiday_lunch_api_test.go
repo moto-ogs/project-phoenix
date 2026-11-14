@@ -264,6 +264,51 @@ func TestHolidayLunchRebookedAfterTheConfirmationChangesThePosition(t *testing.T
 	assert.Equal(t, int64(4500+2150), rebook(true), "the lunch the Büro added is billed again")
 }
 
+// A cross-week replacement keeps the care contribution frozen but bills
+// lunch selected for the new week, through to the invoice.
+func TestHolidayLunchAddedByCrossWeekRebookingIsBilled(t *testing.T) {
+	t.Parallel()
+	l := newLunchFixture(t, "Mittagessen Wochenwechsel")
+	receipt := l.submit(t, l.registration("wochenwechsel.essen@example.org", "Tom", l.booking(2, false)))
+	assert.Equal(t, int64(4500), l.confirm(t, receipt.ID).TotalCents)
+
+	rec := traegerJSON(t, l.traeger, l.office.token, http.MethodPut, holidayRebookPath(l.period.ID, receipt.ID, l.childOf(t, receipt.ID)),
+		map[string]any{"bookings": []map[string]any{l.booking(0, true, dayMonday, dayWednesday)}})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	rec = traegerJSON(t, l.traeger, l.office.token, http.MethodGet, holidayContributionPath(l.period.ID, receipt.ID), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	contribution := decodeSchoolPortalData[lunchContributionBody](t, rec.Body.Bytes())
+	require.Len(t, contribution.Children, 1)
+	lines := contribution.Children[0].Lines
+	require.Len(t, lines, 2, "the new week's lunch is billed beside the frozen care")
+	assert.Equal(t, []string{"base", "meal"}, lunchKinds(lines))
+	assert.Equal(t, int64(4500), lines[0].AmountCents, "the care keeps its old price, not the new week's 3000 cents")
+	assert.Equal(t, dayMonday, *lines[1].WeekStartsOn)
+	assert.Equal(t, 2, *lines[1].BookedDays)
+	assert.Equal(t, int64(860), lines[1].AmountCents)
+	assert.Equal(t, int64(5360), contribution.TotalCents)
+
+	billing := traegerColleague(t, l.review, identityaccess.TraegerRoleBilling)
+	setNumberRange(t, l.review, billing, "FE-{NNNN}")
+	run := billingRun(t, l.review, billing, startBillingRun(t, l.review, billing, l.period.ID).ID)
+	assert.Equal(t, int64(5360), run.PreviewCents)
+	rec = traegerJSON(t, l.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var issued []struct {
+		Kind        string `bun:"kind"`
+		AmountCents int64  `bun:"amount_cents"`
+		BookedDays  *int   `bun:"booked_days"`
+	}
+	require.NoError(t, l.db.NewRaw(`SELECT position.kind, position.amount_cents, position.booked_days
+		FROM parent_billing.document_positions AS position
+		JOIN parent_billing.documents AS document ON document.id = position.document_id
+		WHERE document.holiday_registration_id = ? ORDER BY position.position`, receipt.ID).Scan(context.Background(), &issued))
+	require.Len(t, issued, 2)
+	assert.Equal(t, "meal", issued[1].Kind)
+	assert.Equal(t, int64(860), issued[1].AmountCents)
+	assert.Equal(t, 2, *issued[1].BookedDays)
+}
+
 // The hosting school sees which confirmed child eats lunch and how many
 // lunches each care day needs, never a price. The Träger-Büro can take the
 // lunch off a booking again.

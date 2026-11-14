@@ -158,6 +158,43 @@ func TestARebookedLunchChangesTheFrozenContribution(t *testing.T) {
 	assert.Equal(t, int64(1720), frozen[0].LunchCents)
 }
 
+// A directly placed replacement keeps the old care price, but its lunch
+// must be billed even though no frozen base line names the new week.
+func TestACrossWeekRebookingBillsNewLunchWithoutChangingFrozenCare(t *testing.T) {
+	t.Parallel()
+	original := chainChild(1, 1, 6500)
+	first := computeHolidayContribution([]parentbilling.HolidayChild{original}, holidayRules{}, false, nil)
+	current := withLunch(chainChild(1, 1, 9900, 9900), 5)
+	current.Bookings = current.Bookings[1:]
+	member := siblingMember{
+		registration: parentbilling.HolidayRegistration{Children: []parentbilling.HolidayChild{current}},
+		frozen:       &first, movedUp: true,
+	}
+	recompute := func() parentbilling.HolidayContribution {
+		return computeHolidaySiblings([]holidayMember{member.chainMember()}, holidayRules{})[0]
+	}
+	next := recompute()
+	require.Len(t, next.Children, 1)
+	require.Len(t, next.Children[0].Lines, 2, "one frozen care line and the newly selected lunch")
+	assert.Equal(t, first.Children[0].Lines[0], next.Children[0].Lines[0], "the care price and week stay frozen")
+	meal := next.Children[0].Lines[1]
+	assert.Equal(t, parentbilling.LineMeal, meal.Kind)
+	assert.Equal(t, current.Bookings[0].WeekID, meal.WeekID)
+	assert.Equal(t, 5, *meal.BookedDays)
+	assert.Equal(t, int64(2150), meal.AmountCents)
+	assert.Equal(t, int64(6500+2150), next.TotalCents)
+
+	// Further recalculations must also find this meal without a base line
+	// for its week, keeping the frozen price and allowing deselection.
+	member.frozen = &next
+	current.Bookings[0].LunchCents = 2500
+	member.registration.Children = []parentbilling.HolidayChild{current}
+	assert.True(t, sameContribution(next, recompute()), "an unchanged lunch selection keeps its frozen amount")
+	current.Bookings[0].Lunch = false
+	current.Bookings[0].LunchDays, current.Bookings[0].LunchCents = 0, 0
+	assert.True(t, sameContribution(first, recompute()), "taking off the new week's lunch removes only its meal line")
+}
+
 func TestQuoteCountsOneLunchPerCareDay(t *testing.T) {
 	t.Parallel()
 	price := int64(430)
