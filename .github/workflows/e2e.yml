@@ -12,10 +12,13 @@ name: Frontend E2E
 # gegen ihr synthetisches Backend. Das Repository ist öffentlich, die
 # GitHub-Runner kosten nichts; jeder Shard kostet nur seinen Aufbau an Zeit.
 #
-# Kein Required Check: die Flows hängen am echten Heute und an den Seed-Daten.
-# Nachts prüft der Lauf den development-Stand gegen UI-Drift; Änderungen an
-# den Specs, ihrer Konfiguration, den Abhängigkeiten oder diesem Workflow laufen
-# einmal auf dem PR.
+# Kein Required Check und kein PR-Lauf: die Flows hängen am echten Heute und
+# an den Seed-Daten. Auf PRs dauerten sie 9-11 min und fanden in einer Woche
+# (7.-14.11.2026, 27 rote von 178 Läufen) nur Testdrift und Flakes, keinen
+# Produktfehler. Nachts prüft der Lauf den development-Stand; ein roter
+# Nachtlauf öffnet ein Issue oder kommentiert das offene (Job `report`).
+# Vor einem Merge, der Specs oder Touren ändert: workflow_dispatch auf dem
+# Branch oder lokal (docs/agents/operations.md).
 #
 # Alle Werte unten sind Wegwerfwerte für den CI-Stack, keine Secrets.
 
@@ -25,53 +28,9 @@ on:
     # Berliner Werktag (Wochenraster Mo-Fr).
     - cron: "0 5 * * 1-5"
   workflow_dispatch:
-  pull_request:
-    branches: [development]
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - ".github/workflows/e2e.yml"
-      - "frontend/e2e/**"
-      - "!frontend/e2e/layout/**"
-      - "frontend/playwright.config.ts"
-      - "frontend/playwright.network.config.ts"
-      - "frontend/playwright.tenant-switch.config.ts"
-      - "frontend/scripts/secure-chrome.ts"
-      - "frontend/scripts/secure-chrome.setup.ts"
-      - "frontend/scripts/seed-state.ts"
-      - "frontend/package.json"
-      - "frontend/pnpm-lock.yaml"
-      - "frontend/pnpm-workspace.yaml"
-      # Die geführten Touren (e2e/onboarding-tours.spec.ts): Definitionen,
-      # Hook, Sprechblase und jede Datei, die eine `data-setup-tour`-Stelle
-      # rendert. src/components/school-setup/setup-tour-targets.test.ts
-      # schlägt fehl, wenn hier eine solche Datei fehlt.
-      - "frontend/src/components/school-setup/**"
-      - "frontend/src/components/staff-onboarding/**"
-      - "frontend/src/components/ui/coach-mark.tsx"
-      - "frontend/src/components/ui/page-header/OverflowMenu.tsx"
-      - "frontend/src/components/database/database-form.tsx"
-      - "frontend/src/components/database/database-create-action.tsx"
-      - "frontend/src/components/dashboard/sidebar*.tsx"
-      - "frontend/src/components/ui/sidebar-*.tsx"
-      - "frontend/src/components/dashboard/mobile-bottom-nav.tsx"
-      - "frontend/src/components/admin/invitation-form.tsx"
-      - "frontend/src/components/active-supervisions/planned-now-section.tsx"
-      - "frontend/src/components/active-supervisions/states.tsx"
-      - "frontend/src/components/guardians/guardian-form-modal.tsx"
-      - "frontend/src/components/guardians/guardian-list.tsx"
-      - "frontend/src/components/guardians/student-guardian-manager.tsx"
-      - "frontend/src/components/students/student-card.tsx"
-      - "frontend/src/components/students/student-create-modal.tsx"
-      - "frontend/src/components/students/students-list.tsx"
-      - "frontend/src/app/**/database/personal/page.tsx"
-      - "frontend/src/app/**/database/students/page.tsx"
-      - "frontend/src/app/**/database/students/import/page.tsx"
-      - "frontend/src/app/**/ogs-groups/overview/page.tsx"
-      - "frontend/src/app/**/students/search/page.tsx"
-      - "frontend/src/app/**/time-tracking/page.tsx"
 
 concurrency:
-  group: e2e-${{ github.head_ref || github.run_id }}
+  group: e2e-${{ github.ref }}
   cancel-in-progress: true
 
 permissions: {}
@@ -87,7 +46,6 @@ jobs:
   # Synthetic localhost backend, no database or seed (e2e/network/server.mjs).
   network:
     name: Playwright ${{ matrix.suite }}
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -149,7 +107,6 @@ jobs:
 
   flows:
     name: Playwright E2E flows (${{ matrix.part }})
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -384,3 +341,30 @@ jobs:
       - name: Stop backend
         if: always()
         run: kill "$(cat "${RUNNER_TEMP}/server.pid")" 2>/dev/null || true
+
+  # Ein roter Nachtlauf soll auffallen, ohne PRs zu blockieren: ein offenes
+  # Issue sammelt die roten Läufe als Kommentare, bis jemand es schließt.
+  report:
+    name: Report red nightly run
+    needs: [network, flows]
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Open or comment on the E2E issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TITLE: "Nächtliche E2E-Flows rot"
+        run: |
+          body="Roter Nachtlauf auf development (${GITHUB_SHA::10}): ${RUN_URL}"
+          number=$(gh issue list --state open --label dev-ops --search "in:title \"${TITLE}\"" \
+            --json number,title --jq "map(select(.title == \"${TITLE}\"))[0].number // empty")
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "$body"
+          else
+            gh issue create --title "$TITLE" --label dev-ops --label needs-triage --body "$body"
+          fi
