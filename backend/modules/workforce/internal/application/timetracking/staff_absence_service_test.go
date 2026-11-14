@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/tenant/tenanttest"
 	"github.com/stretchr/testify/assert"
@@ -721,9 +722,15 @@ func absSetupService() (*staffAbsenceService, *absStaffAbsenceRepoMock, *absWork
 		// the absence repo.
 		deletionRepo:    noopDeletionAuditRepo{},
 		shiftPlanSyncer: noopShiftPlanSyncer{},
+		// Requests and cancellations judge "in the past" by this day, so the
+		// fixed 2027 fixture dates stay in the future (#4027).
+		todayFunc: func() Date { return absTestToday },
 	}
 	return svc, absRepo, workRepo
 }
+
+// absTestToday is the service's day in absSetupService: a Monday.
+var absTestToday = NewDate(2026, time.November, 16)
 
 // noopShiftPlanSyncer is the sick cascade of a service without shift plans.
 type noopShiftPlanSyncer struct{}
@@ -1741,7 +1748,7 @@ func TestAbsHasAbsenceOnDate_NotFound(t *testing.T) {
 		return nil, nil
 	}
 
-	has, absence, err := svc.HasAbsenceOnDate(context.Background(), 1, TodayDate())
+	has, absence, err := svc.HasAbsenceOnDate(context.Background(), 1, absTestToday)
 	require.NoError(t, err)
 	assert.False(t, has)
 	assert.Nil(t, absence)
@@ -1756,7 +1763,7 @@ func TestAbsHasAbsenceOnDate_RepoError(t *testing.T) {
 		return nil, errors.New("database error")
 	}
 
-	has, absence, err := svc.HasAbsenceOnDate(context.Background(), 1, TodayDate())
+	has, absence, err := svc.HasAbsenceOnDate(context.Background(), 1, absTestToday)
 	require.Error(t, err)
 	assert.False(t, has)
 	assert.Nil(t, absence)
@@ -1983,6 +1990,7 @@ func TestAbsCancelAbsence_WritesAudit(t *testing.T) {
 		absenceRepo:     absRepo,
 		auditRepo:       auditRepo,
 		shiftPlanSyncer: syncer,
+		todayFunc:       func() Date { return absTestToday },
 	}
 	staffID := int64(4002)
 	absenceID := int64(1002)
@@ -2023,12 +2031,16 @@ func TestAbsCancelAbsence_WritesAudit(t *testing.T) {
 func TestAbsVacationCutoffUsesBerlinCalendarDay(t *testing.T) {
 	t.Parallel()
 
+	// 00:30 Berlin is still the previous day in UTC.
 	now := time.Date(2026, 6, 7, 0, 30, 0, 0, Berlin)
-	yesterday := NewDate(2026, 6, 6)
-	today := NewDate(2026, 6, 7)
+	svc, absRepo, _ := absSetupService()
+	svc.todayFunc = calendar.CalendarDateClock(func() time.Time { return now })
+	absRepo.createFunc = func(context.Context, *StaffAbsence) error { return nil }
 
-	assert.True(t, isBeforeLocalToday(yesterday, now))
-	assert.False(t, isBeforeLocalToday(today, now))
+	_, err := svc.RequestVacation(context.Background(), 100, RequestVacationRequest{DateStart: "2026-06-06", DateEnd: "2026-06-08"})
+	assert.ErrorIs(t, err, workforce.ErrVacationRequestInPast)
+	_, err = svc.RequestVacation(context.Background(), 100, RequestVacationRequest{DateStart: "2026-06-07", DateEnd: "2026-06-08"})
+	require.NoError(t, err, "a request starting on the Berlin day of 00:30 is not in the past")
 }
 
 func TestAbsGetVacationQuotaSummary_SplitsCrossYearVacation(t *testing.T) {
@@ -3282,6 +3294,7 @@ func newAbsEmailTestService(t *testing.T, absRepo *absStaffAbsenceRepoMock, enab
 	svc := &staffAbsenceService{
 		absenceRepo: absRepo,
 		auditRepo:   &absStaffAbsenceAuditRepoMock{},
+		todayFunc:   func() Date { return absTestToday },
 	}
 	svc.emailDeps = &AbsenceEmailDeps{
 		Settings:    absSettingsMock{enabled: enabled},
@@ -3503,7 +3516,7 @@ func TestAbsCreateAbsenceFor_AllowsCompTimeWithinBalance(t *testing.T) {
 		return nil
 	}
 
-	start := TodayDate().AddDays(1)
+	start := absTestToday.AddDays(1)
 	result, err := svc.CreateAbsenceFor(context.Background(), 100, 200, nil, CreateAbsenceRequest{
 		AbsenceType: AbsenceTypeCompTime,
 		DateStart:   start.String(),
@@ -3530,7 +3543,7 @@ func TestAbsCreateAbsenceFor_AllowsWorkedHalfCoveredByAccruedBalance(t *testing.
 		return nil
 	}
 
-	today := TodayDate()
+	today := absTestToday
 	result, err := svc.CreateAbsenceFor(context.Background(), 100, 200, nil, CreateAbsenceRequest{
 		AbsenceType: AbsenceTypeCompTime,
 		DateStart:   today.String(),
@@ -3558,7 +3571,7 @@ func TestAbsCreateAbsenceFor_AllowsFullDayCoveredByAccruedBalance(t *testing.T) 
 		return nil
 	}
 
-	today := TodayDate()
+	today := absTestToday
 	result, err := svc.CreateAbsenceFor(context.Background(), 100, 200, nil, CreateAbsenceRequest{
 		AbsenceType: AbsenceTypeCompTime,
 		DateStart:   today.String(),
@@ -3767,7 +3780,7 @@ func TestAbsCreateAbsenceFor_RejectsFarFutureCompTime(t *testing.T) {
 		return nil
 	}
 
-	start := TodayDate().AddDays(420)
+	start := absTestToday.AddDays(420)
 	_, err := svc.CreateAbsenceFor(context.Background(), 100, 200, nil, CreateAbsenceRequest{
 		AbsenceType: AbsenceTypeCompTime,
 		DateStart:   start.String(),

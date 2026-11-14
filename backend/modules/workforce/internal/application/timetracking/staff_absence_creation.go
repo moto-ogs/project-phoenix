@@ -50,7 +50,7 @@ func (s *staffAbsenceService) requestAbsence(ctx context.Context, staffID int64,
 	if err != nil {
 		return nil, err
 	}
-	if isBeforeLocalToday(dateStart, time.Now()) {
+	if dateStart.Before(s.today()) {
 		return nil, workforce.ErrVacationRequestInPast
 	}
 	// Gates first, then the type's row, as every booking takes them (#6702).
