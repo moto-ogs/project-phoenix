@@ -44,6 +44,7 @@ export function targetOverrideTopic(): HelpTopic {
     troubleshootingDetails: [
       "Es gibt in dem Zeitraum schon eine Sonderarbeitszeit? Löschen Sie diese zuerst.",
       "Der Monat ist abgeschlossen? Öffnen Sie ihn zuerst wieder im Reiter `Zeiterfassung`.",
+      "`Sonderarbeitszeit anlegen` fehlt und eine Zeile zeigt „vom Träger“? Der Träger führt das Soll dieser Person, auch in den Ferien. Wenden Sie sich an die Personalverwaltung des Trägers.",
     ],
     related: [
       HELP_TOPICS.leadStaffRecord,

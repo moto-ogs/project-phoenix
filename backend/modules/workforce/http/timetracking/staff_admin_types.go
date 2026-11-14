@@ -37,6 +37,9 @@ type ScheduleResponse struct {
 	Entries            []ScheduleEntryResponse `json:"entries"`
 	WeeklyTotals       []int                   `json:"weekly_totals"`
 	ValidFrom          string                  `json:"valid_from,omitempty"`
+	// KeptByTraeger is true while a contract of the Träger governs the Soll
+	// (#4706): the school reads it but does not change it.
+	KeptByTraeger bool `json:"kept_by_traeger"`
 }
 
 // scheduleUpdateRequest is the union body for PUT /api/staff/{id}/schedule.

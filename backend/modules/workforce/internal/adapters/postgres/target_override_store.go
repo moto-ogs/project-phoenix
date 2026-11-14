@@ -23,11 +23,13 @@ type staffTargetOverrideRow struct {
 	EndDate       calendarDate `bun:"end_date,notnull,type:date"`
 	// DailyMinutes and WeekdayMinutes are exclusive (#3745): a row has one
 	// target for every weekday or one per weekday, Monday to Friday.
-	DailyMinutes   *int      `bun:"daily_minutes"`
-	WeekdayMinutes []int     `bun:"weekday_minutes,array"`
-	CreatedBy      *int64    `bun:"created_by"`
-	CreatedAt      time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt      time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	DailyMinutes   *int   `bun:"daily_minutes"`
+	WeekdayMinutes []int  `bun:"weekday_minutes,array"`
+	CreatedBy      *int64 `bun:"created_by"`
+	// TraegerContractID marks the Ferien-Soll the Träger mirrors (#4706).
+	TraegerContractID *int64    `bun:"traeger_contract_id"`
+	CreatedAt         time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	UpdatedAt         time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
 }
 
 func (s *Store) ListStaffTargetOverrides(ctx context.Context, query domain.TargetOverrideQuery) ([]domain.StaffTargetOverride, domain.OperationStats, error) {
@@ -114,7 +116,7 @@ func staffTargetOverrideFromDomain(value domain.StaffTargetOverride) *staffTarge
 	row := &staffTargetOverrideRow{
 		ID: value.ID, TenantID: value.TenantID, StaffID: value.StaffID,
 		StartDate: calendarDate(value.StartDate), EndDate: calendarDate(value.EndDate),
-		WeekdayMinutes: value.WeekdayMinutes, CreatedBy: value.CreatedBy,
+		WeekdayMinutes: value.WeekdayMinutes, CreatedBy: value.CreatedBy, TraegerContractID: value.TraegerContractID,
 		CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
 	if value.WeekdayMinutes == nil {
@@ -128,7 +130,7 @@ func staffTargetOverrideToDomain(row staffTargetOverrideRow) domain.StaffTargetO
 	value := domain.StaffTargetOverride{
 		ID: row.ID, TenantID: row.TenantID, StaffID: row.StaffID,
 		StartDate: string(row.StartDate), EndDate: string(row.EndDate),
-		WeekdayMinutes: row.WeekdayMinutes, CreatedBy: row.CreatedBy,
+		WeekdayMinutes: row.WeekdayMinutes, CreatedBy: row.CreatedBy, TraegerContractID: row.TraegerContractID,
 		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 	}
 	if row.DailyMinutes != nil {

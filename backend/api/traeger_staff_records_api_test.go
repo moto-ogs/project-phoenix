@@ -16,6 +16,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/spf13/viper"
@@ -36,6 +37,13 @@ import (
 // serving root does and returns them with the school side they write into.
 func newTraegerStaffFixture(t *testing.T, db *bun.DB) (http.Handler, *traegerPortalHandler, *workforce.StaffAdmin, tenant.UnitOfWork, traegerOffice) {
 	t.Helper()
+	return newTraegerStaffFixtureAt(t, db, nil)
+}
+
+// newTraegerStaffFixtureAt is newTraegerStaffFixture on a pinned clock; nil
+// is the wall clock.
+func newTraegerStaffFixtureAt(t *testing.T, db *bun.DB, now func() time.Time) (http.Handler, *traegerPortalHandler, *workforce.StaffAdmin, tenant.UnitOfWork, traegerOffice) {
+	t.Helper()
 	unit := testpkg.TenantRuntime(t, db)
 	portal, _ := traegerPortalOn(t, db, unit)
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, db))
@@ -47,6 +55,7 @@ func newTraegerStaffFixture(t *testing.T, db *bun.DB) (http.Handler, *traegerPor
 	audits := owners.NewTestAuditPersistence(testpkg.MustDatabase(db), nil)
 	admin, err := NewStaffAdmin(testpkg.MustDatabase(db), repos.Staff, repos.Person, membership, StaffAdminDependencies{
 		MasterDataAudit: audits.StaffMasterDataChange, PersonnelNumber: audits.PersonnelNumberChange, DataAccessLog: audits.DataAccessLog,
+		Now: now,
 	})
 	require.NoError(t, err)
 	tenantAudit, err := auditCompose.NewTenantPersistence(db)

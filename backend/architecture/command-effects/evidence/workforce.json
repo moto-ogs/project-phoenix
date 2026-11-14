@@ -8177,6 +8177,14 @@
       "target_owner": "document-rendering"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce.StaffAdmin.StaffSollKeptByTraeger",
+      "binding_digest": "452496d0cc039b020bd63597559a571b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffTraegerKeep.StaffSollKeptByTraeger",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerSchoolEmployments.SchoolEmployments",
       "binding_digest": "b25e9b7efe136a6b676049cfa6f5e00a",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerSchoolEmployments.SchoolEmployments",
@@ -8231,6 +8239,78 @@
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
       "target_owner": "audit-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.AddHolidayWeeks",
+      "binding_digest": "452496d0cc039b020bd63597559a571b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffContracts.AddHolidayWeeks",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.ChangeContractSoll",
+      "binding_digest": "452496d0cc039b020bd63597559a571b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffContracts.ChangeContractSoll",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.CreateContract",
+      "binding_digest": "452496d0cc039b020bd63597559a571b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffContracts.CreateContract",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.DeleteContract",
+      "binding_digest": "452496d0cc039b020bd63597559a571b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffContracts.DeleteContract",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.DeleteHolidayWeek",
+      "binding_digest": "452496d0cc039b020bd63597559a571b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffContracts.DeleteHolidayWeek",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.UpdateContract",
+      "binding_digest": "452496d0cc039b020bd63597559a571b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffContracts.UpdateContract",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.Link",
+      "binding_digest": "452496d0cc039b020bd63597559a571b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.Link",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.Record",
+      "binding_digest": "452496d0cc039b020bd63597559a571b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.Record",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.UpdatePersonnelNumber",
+      "binding_digest": "452496d0cc039b020bd63597559a571b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.UpdatePersonnelNumber",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinSchool",
@@ -9062,6 +9142,14 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.staffAdminEngine.UpdateStaffStammdatenPerson",
       "source_owner": "workforce",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
+      "target_owner": ""
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.StaffAdmin.StaffSollKeptByTraeger",
+      "binding_digest": "452496d0cc039b020bd63597559a571b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.staffAdminTraeger.StaffSollKeptByTraeger",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
       "target_owner": ""
     },
     {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // Store is the persistence port over config.work_time_models,
@@ -389,6 +390,8 @@ type TraegerStaffStore interface {
 	ListStaffChanges(ctx context.Context, organizationID, recordID int64, limit int) ([]domain.TraegerStaffChange, error)
 	DeleteStaffRecord(ctx context.Context, organizationID, recordID int64) error
 
+	TraegerStaffContractStore
+
 	TraegerStaffKeep
 	SchoolFinancialRows(ctx context.Context, staffIDs []int64) ([]domain.StaffFinancialData, error)
 	DeleteSchoolFinancialRow(ctx context.Context, staffID int64) error
@@ -398,6 +401,27 @@ type TraegerStaffStore interface {
 	CountStaffRecords(ctx context.Context, organizationID int64) (int, error)
 	InsertRelease(ctx context.Context, release domain.TraegerStaffRelease) (domain.TraegerStaffRelease, error)
 	DeleteRelease(ctx context.Context, organizationID int64) (bool, error)
+}
+
+// TraegerStaffContractStore persists the Arbeitsverträge of a record (#4706)
+// in the Träger transaction and mirrors their Soll into one school's time
+// tracking in that school's tenant transaction.
+type TraegerStaffContractStore interface {
+	ListStaffContracts(ctx context.Context, organizationID, recordID int64) ([]domain.TraegerStaffContract, error)
+	InsertStaffContract(ctx context.Context, contract domain.TraegerStaffContract, accountID int64) (int64, error)
+	UpdateStaffContractTerms(ctx context.Context, contract domain.TraegerStaffContract) error
+	ReplaceContractTargetsFrom(ctx context.Context, organizationID, contractID, accountID int64, validFrom calendar.Date, targets []domain.ContractTarget) error
+	InsertContractHolidayWeeks(ctx context.Context, organizationID, contractID, accountID int64, weeks []domain.ContractHolidayWeek) error
+	DeleteContractHolidayWeek(ctx context.Context, organizationID, contractID, schoolID int64, weekStart calendar.Date) (bool, error)
+	DeleteStaffContract(ctx context.Context, organizationID, contractID int64) error
+
+	SchoolClosedMonths(ctx context.Context, staffIDs []int64) (map[int64][]*domain.StaffMonthBalanceSnapshot, error)
+	SchoolOwnTargetOverrides(ctx context.Context, staffID int64, from calendar.Date) ([]domain.StaffTargetOverride, error)
+	SollKeptStaffIDs(ctx context.Context, staffIDs []int64, day calendar.Date) ([]int64, error)
+	KeepTemplateHistory(ctx context.Context, staffID int64, until calendar.Date) error
+	ReleaseMirror(ctx context.Context, staffID int64, from calendar.Date) error
+	MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule) error
+	MirrorStaffHolidayWeeks(ctx context.Context, staffID int64, from calendar.Date, overrides []domain.StaffTargetOverride) error
 }
 
 // TraegerStaffKeep tells the school which of its employments a record of

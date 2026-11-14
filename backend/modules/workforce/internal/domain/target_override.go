@@ -91,8 +91,11 @@ type StaffTargetOverride struct {
 	DailyMinutes   int
 	WeekdayMinutes []int
 	CreatedBy      *int64
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	// TraegerContractID names the contract of the Träger whose holiday
+	// week this range mirrors (#4706); nil for the school's own range.
+	TraegerContractID *int64
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // MinutesOn returns the target the range sets on a Monday to Friday.

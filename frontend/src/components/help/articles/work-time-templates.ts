@@ -60,6 +60,7 @@ export function workTimeTemplatesTopic(): HelpTopic {
     ],
     differences: [
       "Sie sehen `Arbeitszeitmodelle` nicht? Dann hat Ihre Schule die Zeiterfassung nicht gebucht, oder Ihnen fehlt das Recht dafür.",
+      "Bei einer Person steht „Das Soll führt der Träger im Arbeitsvertrag“ und `Bearbeiten` fehlt: Der Träger führt ihr Soll. Änderungen macht die Personalverwaltung des Trägers.",
     ],
     related: [
       HELP_TOPICS.leadStaffRecord,

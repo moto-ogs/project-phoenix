@@ -62,7 +62,7 @@ func schedulesToPublic(values []domain.StaffWorkSchedule) []workforce.StaffWorkS
 			WeekIndex: value.WeekIndex, RotationLength: value.RotationLength,
 			DayOfWeek: value.DayOfWeek, TargetMinutes: value.TargetMinutes,
 			StartTime: value.StartTime, RotationAnchorDate: value.RotationAnchorDate,
-			ValidFrom: value.ValidFrom, ValidUntil: value.ValidUntil,
+			ValidFrom: value.ValidFrom, ValidUntil: value.ValidUntil, KeptByTraeger: value.KeptByTraeger,
 		})
 	}
 	return result

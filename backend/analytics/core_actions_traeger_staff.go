@@ -16,6 +16,13 @@ var traegerStaffCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPut, "/traeger/staff-records/{id}/personnel-number"}:  notCaptured,
 	{http.MethodPost, "/traeger/staff-records/{id}/financial/reveal"}: notCaptured,
 	{http.MethodPut, "/traeger/staff-records/{id}/financial"}:         notCaptured,
+	// The Arbeitsverträge of a record (#4706).
+	{http.MethodPost, "/traeger/staff-records/{id}/contracts"}:                                                     notCaptured,
+	{http.MethodPut, "/traeger/staff-records/{id}/contracts/{contractId}"}:                                         notCaptured,
+	{http.MethodDelete, "/traeger/staff-records/{id}/contracts/{contractId}"}:                                      notCaptured,
+	{http.MethodPost, "/traeger/staff-records/{id}/contracts/{contractId}/soll"}:                                   notCaptured,
+	{http.MethodPost, "/traeger/staff-records/{id}/contracts/{contractId}/holiday-weeks"}:                          notCaptured,
+	{http.MethodDelete, "/traeger/staff-records/{id}/contracts/{contractId}/holiday-weeks/{schoolId}/{weekStart}"}: notCaptured,
 }
 
 func init() {
