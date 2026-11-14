@@ -51,22 +51,12 @@ export function messageMailNote(outcome?: MailOutcome): string | null {
   return copy.explanation;
 }
 
-/** The mails of one group message, one per family, grouped by result. */
-export function GroupMessageMailBadges({
-  counts,
-}: {
-  counts?: MailOutcomeCounts;
-}) {
+/** Mails counted by result as pills, the one that needs attention first. */
+export function MailOutcomeBadges({ counts }: { counts?: MailOutcomeCounts }) {
   const groups = mailOutcomeGroups(counts);
   if (groups.length === 0) return null;
   return (
-    <span
-      className="inline-flex flex-wrap items-center gap-1"
-      data-testid="group-message-mails"
-    >
-      <span aria-hidden="true">·</span>
-      <Envelope className="h-3.5 w-3.5 text-gray-400" />
-      <span>E-Mails</span>
+    <span className="inline-flex flex-wrap items-center gap-1">
       {groups.map((group) => (
         <StatusBadge
           key={group.label}
@@ -75,6 +65,26 @@ export function GroupMessageMailBadges({
           size="xs"
         />
       ))}
+    </span>
+  );
+}
+
+/** The mails of one group message, one per family, in the bubble's meta line. */
+export function GroupMessageMailBadges({
+  counts,
+}: {
+  counts?: MailOutcomeCounts;
+}) {
+  if (mailOutcomeGroups(counts).length === 0) return null;
+  return (
+    <span
+      className="inline-flex flex-wrap items-center gap-1"
+      data-testid="group-message-mails"
+    >
+      <span aria-hidden="true">·</span>
+      <Envelope className="h-3.5 w-3.5 text-gray-400" />
+      <span>E-Mails</span>
+      <MailOutcomeBadges counts={counts} />
     </span>
   );
 }

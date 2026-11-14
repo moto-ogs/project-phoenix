@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { GroupMessageMailBadges } from "~/components/messaging/message-mail-status";
+import { MailOutcomeBadges } from "~/components/messaging/message-mail-status";
 import { FramedList } from "~/components/ui/framed-list";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionLabel } from "~/components/ui/section-label";
@@ -139,7 +139,7 @@ export function AppointmentMailStatus({
               className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 px-3 py-2"
             >
               <span className="text-sm font-medium text-gray-900">{label}</span>
-              <GroupMessageMailBadges counts={mails?.kinds[kind]} />
+              <MailOutcomeBadges counts={mails?.kinds[kind]} />
             </li>
           ))}
         </FramedList>

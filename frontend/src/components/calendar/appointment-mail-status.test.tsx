@@ -45,8 +45,8 @@ describe("AppointmentMailStatus", () => {
     ).toBeInTheDocument();
     const rows = within(section).getAllByRole("listitem");
     expect(rows.map((row) => row.textContent)).toEqual([
-      "Neuer TerminE-Mails an die Familien: 1 nicht zustellbar11 zugestellt",
-      "Termin geändertE-Mails an die Familien: 12 zugestellt",
+      "Neuer Termin1 nicht zustellbar11 zugestellt",
+      "Termin geändert12 zugestellt",
     ]);
     expect(
       within(section).getByText(
