@@ -92,50 +92,6 @@ async function waitForSignedInRedirect(page: Page): Promise<void> {
   });
 }
 
-/** Längste Zeit, die eine kalte Seite zum Bauen und Hochfahren bekommt. */
-const WARM_PAGE_TIMEOUT = 60_000;
-
-/**
- * Baut Seiten auf dem Next-Dev-Server vor, bevor ein Test sie misst. Der Server
- * baut eine Seite beim ersten Aufruf; auf dem kalten Server eines CI-Shards
- * (seit #6937) kostet das je Seite viele Sekunden und belegt die CPU, die der
- * Browser für Klicks braucht. Fertig ist eine Seite, wenn ihr Code im Browser
- * läuft: Sie stellt ihre erste Anfrage an `/api/…` (wie warmTourPages in
- * onboarding-tours.spec.ts). Aufrufen in einem `beforeAll` mit eigenem Budget.
- */
-export async function warmPages(
-  page: Page,
-  paths: readonly string[],
-  base = tenantBase,
-): Promise<void> {
-  for (const path of paths) {
-    const running = page.waitForRequest(
-      (request) => {
-        const url = new URL(request.url());
-        if (
-          !url.pathname.startsWith("/api/") ||
-          url.pathname === "/api/logs" ||
-          !["fetch", "xhr"].includes(request.resourceType())
-        ) {
-          return false;
-        }
-        try {
-          return new URL(request.frame().url()).pathname === path;
-        } catch {
-          // Anfragen eines Service Workers haben keinen Frame.
-          return false;
-        }
-      },
-      { timeout: WARM_PAGE_TIMEOUT },
-    );
-    await page.goto(`${base}${path}`, {
-      waitUntil: "domcontentloaded",
-      timeout: WARM_PAGE_TIMEOUT,
-    });
-    await running;
-  }
-}
-
 /**
  * Klappt eine Gruppe der Desktop-Seitenleiste auf (etwa "Planung", #2826).
  * Die Gruppen stellen ihren gemerkten Zustand erst nach der Hydration her; ein
