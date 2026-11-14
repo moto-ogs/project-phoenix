@@ -15,7 +15,13 @@ func TestDemoHeartbeatRefreshesTheFileOnEveryBeat(t *testing.T) {
 	if err := writeDemoHeartbeat(path); err != nil {
 		t.Fatalf("first beat: %v", err)
 	}
-	stale := time.Now().Add(-time.Hour)
+	// Measured against the file system's own clock, which the healthcheck
+	// compares with too, not against time.Now().
+	first, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stale := first.ModTime().Add(-time.Hour)
 	if err := os.Chtimes(path, stale, stale); err != nil {
 		t.Fatal(err)
 	}
@@ -26,8 +32,8 @@ func TestDemoHeartbeatRefreshesTheFileOnEveryBeat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if time.Since(info.ModTime()) > time.Minute {
-		t.Fatalf("heartbeat stayed stale: %v", info.ModTime())
+	if info.ModTime().Before(first.ModTime()) {
+		t.Fatalf("heartbeat stayed stale: %v, first beat %v", info.ModTime(), first.ModTime())
 	}
 }
 
