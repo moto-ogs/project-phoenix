@@ -1812,6 +1812,7 @@ export const dataManagementTopic = function dataManagementTopic(): HelpTopic {
       "In der Seitenleiste erreichen Sie jeden Bereich auch direkt unter `Datenverwaltung`.",
       "Der Info-Knopf neben dem Seitennamen erklärt kurz, was hierher gehört.",
       "Die Kacheln `Terminkategorien`, `Planungsspuren`, `Dienstarten` und `Abwesenheitsarten` sind kurze Stammdaten-Listen.",
+      "Unter `Abwesenheitsarten` stehen Arten mit `Vom Träger`. Name, Kontingent und Verfall legt Ihr Träger fest. Ihre Schule kann so eine Art mit `Nicht mehr anbieten` ausschalten. Oder sie erlaubt hier weniger Tage je Person und Jahr.",
     ],
     differences: [
       "Sie sehen weniger Kacheln als eine Kollegin? Jede Kachel hängt an einem eigenen Recht.",
@@ -5435,6 +5436,7 @@ export const ownAbsenceTopic = function ownAbsenceTopic(): HelpTopic {
       "Die Abwesenheit ist eingetragen und erscheint in Ihrer Zeiterfassung.",
     differences: [
       "Ihre OGS kann zusätzliche Abwesenheitsarten anbieten.",
+      "Manche Arten beantragen Sie, zum Beispiel einen Regenerationstag. Dann heißt der Knopf `Beantragen`. Ihre Leitung gibt frei oder lehnt ab. Den Stand sehen Sie in der Karte `Urlaub` unter `Meine Anträge`.",
       "Urlaub beantragen Sie in der Karte `Urlaub` und nicht über diese Aktion.",
       "Freizeitausgleich trägt nur ein, wer die Zeiten des Teams verwalten darf.",
       SIMPLE_NAV_DIFFERENCE,
@@ -5445,6 +5447,7 @@ export const ownAbsenceTopic = function ownAbsenceTopic(): HelpTopic {
       "Bei einem halben Tag bleiben Ihre Schichten stehen. Ihre Leitung ändert sie bei Bedarf.",
       "Ihre Abwesenheit steht danach in der Tabelle `Zeiterfassung` unter `Status`. Über das Stift-Symbol am Ende der Zeile öffnen Sie den Tag.",
       "Hat eine Art Ihrer OGS feste Tage, sehen Sie den Stand in der Karte `Kontingente`. Den Anspruch trägt Ihre Leitung ein.",
+      "Arbeiten Sie an mehreren Schulen Ihres Trägers, zählen die Tage einer Art des Trägers an allen Schulen zusammen. Den Anspruch legt dann Ihr Träger fest.",
     ],
     related: [HELP_TOPICS.vacation, HELP_TOPICS.trackWorkTime],
   };

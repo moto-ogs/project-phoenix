@@ -327,6 +327,9 @@ type AbsenceTypeAllowanceSummary struct {
 	BookingDays float64
 	// CarriedIn is the previous year's rest still usable in this year.
 	CarriedIn *AbsenceTypeAllowanceCarry
+	// KeptByTraeger is true when the Träger keeps this account: a type of
+	// the Träger for a person with a Personalakte, over all schools (#4710).
+	KeptByTraeger bool
 }
 
 // AbsenceTypeAllowanceAccount is one active school-defined type with an

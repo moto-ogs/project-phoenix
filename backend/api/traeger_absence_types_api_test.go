@@ -142,6 +142,10 @@ func TestTraegerAbsenceTypesShareOneKontingentOverAllSchools(t *testing.T) {
 			assert.Equal(t, 2.0, previews[0].EntitledDays)
 			assert.Equal(t, 1.0, previews[0].BookingDays)
 			assert.Equal(t, 2.0, previews[0].TakenDays, "the other school's day counts with the previewed one")
+			summary, err := school.AllowanceSummary(ctx, miraSouth.ID, southType, 2027)
+			require.NoError(t, err)
+			assert.True(t, summary.KeptByTraeger, "the school reads that the Träger keeps the account")
+			assert.Equal(t, 1.0, summary.TakenDays)
 			return nil
 		}))
 		bookAbsence(t, db, south, miraSouth.ID, southType, "2027-04-05", "2027-04-05", "requested")

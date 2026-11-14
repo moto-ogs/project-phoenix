@@ -264,6 +264,7 @@ export interface BackendAbsenceTypeAllowanceSummary {
     expired_days: number;
     expires_on: string;
   } | null;
+  kept_by_traeger?: boolean;
 }
 
 /** The previous year's rest as seen from the year it is carried into. */
@@ -299,6 +300,11 @@ export interface AbsenceTypeAllowanceSummary {
   /** On previews: what the booking takes from this year. */
   readonly bookingDays: number;
   readonly carriedIn: AbsenceTypeAllowanceCarry | null;
+  /**
+   * Der Träger führt dieses Konto über alle Schulen der Person (#4710); die
+   * Schule liest es nur.
+   */
+  readonly keptByTraeger: boolean;
 }
 
 export function mapAllowance(
@@ -323,6 +329,7 @@ export function mapAllowance(
           expiresOn: data.carried_in.expires_on,
         }
       : null,
+    keptByTraeger: data.kept_by_traeger ?? false,
   };
 }
 

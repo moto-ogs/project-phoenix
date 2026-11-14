@@ -319,7 +319,9 @@ func (s *Service) AllowanceSummary(ctx context.Context, staffID, absenceTypeID i
 	if err != nil {
 		return allowanceSummaryToPublic(domain.AbsenceTypeAllowanceSummary{}), MapError(err)
 	}
-	return allowanceSummaryToPublic(accounts.ledger(s.clock.Today()).Summary(staffID, absenceTypeID, year)), MapError(nil)
+	summary := allowanceSummaryToPublic(accounts.ledger(s.clock.Today()).Summary(staffID, absenceTypeID, year))
+	summary.KeptByTraeger = accounts.pooled
+	return summary, MapError(nil)
 }
 
 // AllowanceAccounts is AllowanceSummary for every active type with an
@@ -385,10 +387,9 @@ func (s *Service) allowanceAccountsFor(
 				return nil, MapError(err)
 			}
 		}
-		result = append(result, workforce.AbsenceTypeAllowanceAccount{
-			AbsenceType: absenceType,
-			Summary:     allowanceSummaryToPublic(accounts.ledger(today).Summary(staffID, absenceType.ID, year)),
-		})
+		summary := allowanceSummaryToPublic(accounts.ledger(today).Summary(staffID, absenceType.ID, year))
+		summary.KeptByTraeger = accounts.pooled
+		result = append(result, workforce.AbsenceTypeAllowanceAccount{AbsenceType: absenceType, Summary: summary})
 	}
 	return result, nil
 }

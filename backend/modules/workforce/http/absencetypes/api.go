@@ -170,6 +170,9 @@ type AllowanceSummaryResponse struct {
 	// BookingDays is set on previews: what the booking takes from this year.
 	BookingDays float64                 `json:"booking_days"`
 	CarriedIn   *AllowanceCarryResponse `json:"carried_in"`
+	// KeptByTraeger: the Träger keeps this account over all schools of the
+	// person (#4710); the school reads it and does not change it.
+	KeptByTraeger bool `json:"kept_by_traeger"`
 }
 
 // AllowanceCarryResponse is the previous year's rest still usable in the
@@ -210,6 +213,7 @@ func toAllowanceSummaryResponse(summary workforce.AbsenceTypeAllowanceSummary) A
 		ExpiresOn:     summary.ExpiresOn,
 		ExpiredDays:   summary.ExpiredDays,
 		BookingDays:   summary.BookingDays,
+		KeptByTraeger: summary.KeptByTraeger,
 	}
 	if carried := summary.CarriedIn; carried != nil {
 		response.CarriedIn = &AllowanceCarryResponse{
