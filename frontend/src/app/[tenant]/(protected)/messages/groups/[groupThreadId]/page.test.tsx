@@ -190,7 +190,7 @@ describe("Gruppennachricht: Objektseite", () => {
     state.mails = { "1": { delivered: 1, undeliverable: 1 } };
     render(<GroupMessagePage />);
     expect(screen.getByTestId("group-message-mails")).toHaveTextContent(
-      "·E-Mails1 nicht zustellbar1 zugestellt",
+      "E-Mails1 nicht zustellbar1 zugestellt",
     );
     expect(
       screen.getByText(

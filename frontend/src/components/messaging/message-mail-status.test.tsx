@@ -51,7 +51,7 @@ describe("GroupMessageMailBadges", () => {
       <GroupMessageMailBadges counts={{ delivered: 11, undeliverable: 1 }} />,
     );
     const pills = screen.getByTestId("group-message-mails");
-    expect(pills).toHaveTextContent("·E-Mails1 nicht zustellbar11 zugestellt");
+    expect(pills).toHaveTextContent("E-Mails1 nicht zustellbar11 zugestellt");
   });
 
   it("names a refused mail and where to find the address", () => {
