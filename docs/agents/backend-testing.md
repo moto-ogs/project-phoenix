@@ -117,6 +117,29 @@ That register holds environment opt-ins (`environment: …`, such as `-short` or
 a missing `TEST_DB_DSN`) and quarantined flakes with their tracking issue
 (`quarantine #1234: …`). It is shrink-only like the other ratchet registers.
 
+## Clock-dependent tests
+
+`clock-early-warning.yml` runs the full suite every Sunday at the coming
+boundary days of `scripts/clock-boundaries.mjs` (weekend, ISO week, clock
+change, new year, NRW holidays, today plus 30, 90 and 365 days) and opens or
+comments on one issue per red run. To reproduce a finding or test a day
+yourself, move Go and a private PostgreSQL there:
+
+```bash
+name=phx-clock-$(basename "$PWD")   # one server per worktree on the shared machine
+scripts/fake-clock-postgres.sh start "$name" <free port> "/tmp/$name"
+TEST_DB_DSN=$(cat "/tmp/$name/dsn") PHX_FAKE_CLOCK_POSTGRES_DIR="/tmp/$name" \
+  scripts/run-go-toolchain.sh scripts/fake-clock.sh 2027-04-20T00:30 \
+  scripts/test-backend.sh -count=1 ./modules/timetable/http -run '^TestName$'
+scripts/fake-clock-postgres.sh stop "$name" && rm -r "/tmp/$name"
+```
+
+The first run compiles the backend once with the patched `time.Now`. Without
+the private server only Go moves, and tests that compare with `now()` or
+`CURRENT_DATE` fail for that reason alone. File modification times always
+stay real. A test red at a moved day gets the cause fixed (an injected clock,
+fixed dates), never a skip.
+
 ## Credential fixtures
 
 Use `testpkg.NewTestPassword()` for a valid password in authentication,
