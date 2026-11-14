@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -31,7 +33,9 @@ func TestStudentPresenceMigrationRuntime(t *testing.T) {
 	activity := testpkg.CreateTestActivityGroup(t, db, "Presence runtime")
 	room := testpkg.CreateTestRoom(t, db, "Presence runtime")
 	group := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
-	day := testpkg.TodayDate()
+	// A fixed school day: midnight plus eight hours is 07:00 or 09:00 on a
+	// clock-change day (#4027).
+	day := calendar.NewDate(2026, 3, 18)
 	at := day.BerlinMidnight().Add(8 * time.Hour)
 	var observations []compose.Observation
 	var measuring bool

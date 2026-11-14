@@ -3,8 +3,6 @@ package test
 import (
 	"fmt"
 	"go/ast"
-	"go/token"
-	"io/fs"
 	"path/filepath"
 	"strings"
 )
@@ -13,29 +11,23 @@ func discoverCalendarPackageHelpers(root string) (calendarPackageHelpers, error)
 	result := calendarPackageHelpers{
 		dates: map[string]map[string]bool{}, instants: map[string]map[string]bool{}, scalars: map[string]map[string]bool{}, weekly: map[string]map[string]bool{}, weekdays: map[string]map[string]bool{},
 		candidates: map[string]map[string][]calendarHelperCandidate{}, effectiveParams: map[string]map[string]map[int]bool{},
+		shifted: map[string]map[string]bool{}, shiftSinks: map[string]map[string]map[int]bool{}, shiftPassthrough: map[string]map[string]map[int]bool{},
+		imports: map[string]map[string]string{},
 	}
-	candidates := map[string][]calendarHelperCandidate{}
-	fset := sharedGoFileSet
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() {
-			if skipCalendarFixtureDir(entry) {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !strings.HasSuffix(path, "_test.go") {
-			return nil
-		}
-		return addCalendarHelperCandidates(path, fset, candidates, result)
-	})
+	discovery := calendarHelperDiscovery{
+		root: root, helpers: result, candidates: map[string][]calendarHelperCandidate{},
+		packageNames: map[string]string{}, imports: map[string][]calendarSupportImport{},
+	}
+	err := walkCalendarScannedFiles(root, discovery.addFile)
 	if err != nil {
 		return calendarPackageHelpers{}, err
 	}
+	candidates := discovery.candidates
+	discovery.resolveImports()
 	indexCalendarHelperCandidates(candidates, result)
+	linkCalendarImportedCandidates(result)
 	propagateCalendarHelpers(candidates, result)
+	discoverCalendarShiftHelpers(candidates, result)
 	return result, nil
 }
 
@@ -54,7 +46,9 @@ func indexCalendarHelperCandidates(candidates map[string][]calendarHelperCandida
 	}
 }
 
-func addCalendarHelperCandidates(path string, fset *token.FileSet, candidates map[string][]calendarHelperCandidate, helpers calendarPackageHelpers) error {
+// addFile records the helper candidates, package name and test-support
+// imports of one scanned file.
+func (d *calendarHelperDiscovery) addFile(path string) error {
 	source, err := readGoSource(path)
 	if err != nil {
 		return fmt.Errorf("read %s while finding calendar helpers: %w", path, err)
@@ -64,22 +58,44 @@ func addCalendarHelperCandidates(path string, fset *token.FileSet, candidates ma
 		return fmt.Errorf("parse %s while finding calendar helpers: %w", path, err)
 	}
 	key := calendarPackageKey(path, file.Name.Name)
+	if !strings.HasSuffix(path, "_test.go") {
+		d.packageNames[filepath.Clean(filepath.Dir(path))] = file.Name.Name
+	}
+	d.recordImports(key, file)
 	timePackages, timezonePackages := timeImportNames(file)
-	for _, fn := range declaredFunctions(file) {
+	valuePackages := calendarValuePackageNames(file)
+	functions := append(declaredFunctions(file), calendarFunctionValueAliases(file)...)
+	for _, fn := range functions {
 		if !isTestFunction(fn) {
-			candidates[key] = append(candidates[key], calendarHelperCandidate{
+			d.candidates[key] = append(d.candidates[key], calendarHelperCandidate{
 				name: fn.Name.Name, receiver: calendarReceiverName(fn), resultType: calendarResultType(fn),
 				fn:           fn,
-				timePackages: timePackages, timezonePackages: timezonePackages,
+				timePackages: timePackages, timezonePackages: timezonePackages, valuePackages: valuePackages,
 			})
 		}
 	}
-	helpers.dates[key] = map[string]bool{}
-	helpers.instants[key] = map[string]bool{}
-	helpers.scalars[key] = map[string]bool{}
-	helpers.weekly[key] = map[string]bool{}
-	helpers.weekdays[key] = map[string]bool{}
+	d.helpers.ensurePackage(key)
 	return nil
+}
+
+// ensurePackage creates the empty helper registers of one package key
+// without resetting registers another file of the package already filled.
+func (h calendarPackageHelpers) ensurePackage(key string) {
+	for _, flags := range h.flagRegisters() {
+		if flags[key] == nil {
+			flags[key] = map[string]bool{}
+		}
+	}
+	for _, positions := range []map[string]map[string]map[int]bool{h.shiftSinks, h.shiftPassthrough} {
+		if positions[key] == nil {
+			positions[key] = map[string]map[int]bool{}
+		}
+	}
+}
+
+// flagRegisters lists every boolean helper register for cross-package sync.
+func (h calendarPackageHelpers) flagRegisters() []map[string]map[string]bool {
+	return []map[string]map[string]bool{h.dates, h.instants, h.scalars, h.weekly, h.weekdays, h.shifted}
 }
 
 func effectiveStructFieldIndexes(structure *ast.StructType) map[int]bool {
@@ -212,6 +228,7 @@ func calendarPackageKey(path, packageName string) string {
 func propagateCalendarHelpers(candidates map[string][]calendarHelperCandidate, helpers calendarPackageHelpers) {
 	for changed := true; changed; {
 		changed = false
+		syncCalendarImportedHelpers(helpers)
 		for key, packageCandidates := range candidates {
 			syncCalendarMethodAliases(packageCandidates, helpers, key)
 			for _, candidate := range packageCandidates {
@@ -221,7 +238,7 @@ func propagateCalendarHelpers(candidates map[string][]calendarHelperCandidate, h
 				dateVars := currentCalendarDateVariables(candidate.fn.Body, helpers.dates[key], candidate.timezonePackages)
 				weeklyVars := currentCalendarInstantVariables(candidate.fn.Body, helpers.weekly[key], candidate.timePackages, candidate.timezonePackages, weeklyFixtureInstantField)
 				weekdayVars := currentCalendarInstantVariables(candidate.fn.Body, helpers.weekdays[key], candidate.timePackages, candidate.timezonePackages, nil)
-				if !helpers.dates[key][identity] && functionReturnsLiveDate(candidate.fn, dateVars, instantVars, helpers.dates[key], helpers.instants[key], candidate.timePackages, candidate.timezonePackages) {
+				if !helpers.dates[key][identity] && !calendarIdentifierResult(candidate.resultType) && functionReturnsLiveDate(candidate.fn, dateVars, instantVars, helpers.dates[key], helpers.instants[key], candidate.timePackages, candidate.timezonePackages) {
 					helpers.dates[key][identity], changed = true, true
 				}
 				if !helpers.instants[key][identity] && functionReturnsLiveInstant(candidate.fn, instantVars, helpers.instants[key], candidate.timePackages, candidate.timezonePackages) {
@@ -313,4 +330,15 @@ func returnedResults(statement *ast.ReturnStmt, ok bool) []ast.Expr {
 		return nil
 	}
 	return statement.Results
+}
+
+// calendarIdentifierResult is a helper that returns a row ID or a flag: a
+// fixture inserted on a live day still returns no date.
+func calendarIdentifierResult(resultType string) bool {
+	switch resultType {
+	case "bool", "error", "int", "int32", "int64", "uint", "uint64":
+		return true
+	default:
+		return false
+	}
 }

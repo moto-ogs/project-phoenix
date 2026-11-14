@@ -45,6 +45,15 @@ type calendarPackageHelpers struct {
 	weekdays        map[string]map[string]bool
 	candidates      map[string]map[string][]calendarHelperCandidate
 	effectiveParams map[string]map[string]map[int]bool
+	// shifted marks helpers that return a live date or instant moved by
+	// whole days; shiftSinks and shiftPassthrough hold the parameter
+	// positions that reach code under test or the helper's result.
+	shifted          map[string]map[string]bool
+	shiftSinks       map[string]map[string]map[int]bool
+	shiftPassthrough map[string]map[string]map[int]bool
+	// imports maps a package key and an import name to the key of the
+	// test-support package it names.
+	imports map[string]map[string]string
 }
 
 //nolint:staticcheck // The scanner deliberately relies on parser-resolved local bindings.
@@ -59,6 +68,7 @@ type calendarHelperCandidate struct {
 	fn               *ast.FuncDecl
 	timePackages     map[string]bool
 	timezonePackages map[string]bool
+	valuePackages    map[string]bool
 }
 
 func scanCalendarFixtureClockRisks(root string) ([]calendarClockFinding, error) {
@@ -68,19 +78,7 @@ func scanCalendarFixtureClockRisks(root string) ([]calendarClockFinding, error) 
 	}
 	fset := sharedGoFileSet
 	var findings []calendarClockFinding
-	err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() {
-			if skipCalendarFixtureDir(entry) {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !strings.HasSuffix(path, "_test.go") {
-			return nil
-		}
+	err = walkCalendarScannedFiles(root, func(path string) error {
 		found, err := scanCalendarFixtureFile(root, path, fset, helpers)
 		findings = append(findings, found...)
 		return err
@@ -162,12 +160,15 @@ func scanCalendarFixtureFunctions(rel string, fset *token.FileSet, file *ast.Fil
 		}
 		findings = append(findings, scan.findings()...)
 	}
+	valuePackages := calendarValuePackageNames(file)
 	for _, fn := range declaredFunctions(file) {
 		dateVars := currentCalendarDateVariables(fn.Body, helpers.dates[key], timezonePackages)
 		findings = append(findings, findLiveEffectiveBoundaries(
 			fn, rel, fset, dateVars, helpers.dates[key], timezonePackages,
 			helpers.effectiveParams[key],
 		)...)
+		scope := newCalendarShiftScope(fn, key, helpers, timePackages, timezonePackages, valuePackages, nil)
+		findings = append(findings, scope.findings(rel, fset)...)
 	}
 	return findings
 }
@@ -348,6 +349,11 @@ func calendarCalledHelper(call *ast.CallExpr, receiverTypes map[*calendarObject]
 	case *ast.Ident:
 		return function.Name
 	case *ast.SelectorExpr:
+		if qualifier, ok := function.X.(*ast.Ident); ok && qualifier.Obj == nil {
+			// An unresolved name is an import or a package-level value of
+			// another file: pkg.Function resolves through the imports.
+			return qualifier.Name + "." + function.Sel.Name
+		}
 		receiver := calendarExpressionType(function.X, receiverTypes)
 		return calendarHelperIdentity(receiver, function.Sel.Name)
 	default:

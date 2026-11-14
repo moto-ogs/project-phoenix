@@ -27,6 +27,11 @@ func TestCalendarFixtureClockRatchet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	findings, debtProblems := applyCalendarShiftDebt(findings, calendarFixtureShiftedLiveDateDebt)
+	if len(debtProblems) > 0 {
+		t.Errorf("calendarFixtureShiftedLiveDateDebt is out of date (shrink-only, see its header):\n  %s",
+			strings.Join(debtProblems, "\n  "))
+	}
 	if len(findings) == 0 {
 		return
 	}

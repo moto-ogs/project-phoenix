@@ -229,7 +229,7 @@ func expressionUsesTodayDate(expr ast.Expr, dateVars calendarVariables, dateHelp
 		return expressionUsesTodayDate(value.Key, dateVars, dateHelpers, timezonePackages) ||
 			expressionUsesTodayDate(value.Value, dateVars, dateHelpers, timezonePackages)
 	case *ast.SelectorExpr:
-		return expressionUsesTodayDate(value.X, dateVars, dateHelpers, timezonePackages)
+		return selectorUsesTodayDate(value, dateVars, dateHelpers, timezonePackages)
 	case *ast.BinaryExpr:
 		return expressionUsesTodayDate(value.X, dateVars, dateHelpers, timezonePackages) ||
 			expressionUsesTodayDate(value.Y, dateVars, dateHelpers, timezonePackages)
@@ -243,6 +243,15 @@ func expressionUsesTodayDate(expr ast.Expr, dateVars calendarVariables, dateHelp
 	default:
 		return false
 	}
+}
+
+// selectorUsesTodayDate reads a field of a live date value. A fixture row
+// created on the live day is such a value; its ID field is not.
+func selectorUsesTodayDate(selector *ast.SelectorExpr, dateVars calendarVariables, dateHelpers, timezonePackages map[string]bool) bool {
+	if calendarIdentifierField(selector.Sel.Name) {
+		return false
+	}
+	return expressionUsesTodayDate(selector.X, dateVars, dateHelpers, timezonePackages)
 }
 
 func expressionContainsTodayDate(expr ast.Expr, dateVars calendarVariables, dateHelpers, timezonePackages map[string]bool) bool {
@@ -528,7 +537,8 @@ func isLiveInstantSource(call *ast.CallExpr, instantHelpers, timePackages, timez
 }
 
 func isLiveInstantSourceWithReceiverTypes(call *ast.CallExpr, instantHelpers, timePackages, timezonePackages map[string]bool, types map[*calendarObject]string) bool {
-	if isImportedCall(call.Fun, timePackages, "Now") || isImportedCall(call.Fun, timezonePackages, "Now") {
+	if isImportedCall(call.Fun, timePackages, "Now") || isImportedCall(call.Fun, timezonePackages, "Now") ||
+		isImportedCall(call.Fun, timezonePackages, "Today") {
 		return true
 	}
 	return instantHelpers[calendarCalledHelper(call, types)]

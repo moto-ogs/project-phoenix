@@ -918,9 +918,11 @@ func TestPresenceAttendance_GetStudentCurrentStatus(t *testing.T) {
 
 		// Create attendance record for today but late in the day
 		attendance := &studentpresence.Attendance{
-			StudentID:   tzStudent.ID,
-			Date:        today.String(),
-			CheckInTime: today.BerlinMidnight().Add(23 * time.Hour), // Late in the day
+			StudentID: tzStudent.ID,
+			Date:      today.String(),
+			// 23:00 on the wall clock; midnight plus 23 hours is the next day
+			// on the spring clock change (#4027).
+			CheckInTime: time.Date(today.Year(), today.Month(), today.Day(), 23, 0, 0, 0, calendar.Berlin),
 			CheckedInBy: data.Staff1ID,
 			DeviceID:    data.Device1ID,
 		}
