@@ -38,9 +38,9 @@ var (
 	// ErrAbsenceTypeSchoolLimitExceeded refuses a booking beyond the days
 	// per person and year the school allows for a Träger's type.
 	ErrAbsenceTypeSchoolLimitExceeded = errors.New("workforce: the school's limit for this absence type is exceeded")
-	// ErrAbsenceTypeNotRequestable refuses a request of a type staff may not
-	// request; the Leitung books it.
-	ErrAbsenceTypeNotRequestable = errors.New("workforce: this absence type cannot be requested")
+	// ErrTraegerAbsenceAllowanceBelowBooked refuses days for a person below
+	// what the schools already booked or hold for open requests.
+	ErrTraegerAbsenceAllowanceBelowBooked = errors.New("workforce: the allowance is below the booked days")
 )
 
 // TraegerAbsenceTypeError names why a type of the Träger is invalid.

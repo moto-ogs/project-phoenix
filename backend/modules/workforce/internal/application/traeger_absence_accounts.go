@@ -251,9 +251,8 @@ func (p recordPool) checkClaim(input workforce.SetTraegerAbsenceAllowance) (*flo
 	}
 	if overdrawn := after.Overdrawn(before); len(overdrawn) > 0 {
 		summary := after.Summary(input.RecordID, input.AbsenceTypeID, input.Year)
-		return nil, &workforce.InvalidAbsenceAllowanceError{Reason: fmt.Sprintf(
-			"Der Anspruch kann nicht unter %s liegen, so viele Tage sind an allen Schulen schon eingetragen oder beantragt.",
-			formatAllowanceDays(summary.TakenDays+summary.ReservedDays))}
+		return nil, fmt.Errorf("%w: %s taken or requested in %d", workforce.ErrTraegerAbsenceAllowanceBelowBooked,
+			formatAllowanceDays(summary.TakenDays+summary.ReservedDays), overdrawn[0])
 	}
 	if days, ok := claim.Individual[input.Year]; ok {
 		return &days, nil

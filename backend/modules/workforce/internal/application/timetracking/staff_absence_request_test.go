@@ -69,3 +69,34 @@ func TestAbsCreateOwnAbsence_RequestableTypeBecomesARequest(t *testing.T) {
 		require.ErrorIs(t, err, ErrManagerControlledAbsence)
 	})
 }
+
+// The Leitung approves a request of a requestable type only while it still
+// fits (#4710): the school's limit or the Kontingent changed since refuses
+// the approval, and the absence stays requested.
+func TestAbsApproveAbsence_RechecksARequestedType(t *testing.T) {
+	t.Parallel()
+	typeID := int64(42)
+	requested := &StaffAbsence{
+		Model: Model{ID: 9}, StaffID: 7, AbsenceType: AbsenceTypeOther, AbsenceTypeID: &typeID,
+		DateStart: NewDate(2099, 3, 2), DateEnd: NewDate(2099, 3, 2), Status: AbsenceStatusRequested, CreatedBy: 7,
+	}
+	svc, absRepo, _ := absSetupService()
+	svc.absenceTypes = &absTypeReaderMock{
+		rows: []*StaffAbsenceType{{
+			Model: Model{ID: typeID}, Name: "Regenerationstag", BaseType: AbsenceTypeOther,
+			IsActive: true, AllowanceEnabled: true, Requestable: true,
+		}},
+		previewAllowanceBookingError: workforce.ErrAbsenceTypeSchoolLimitExceeded,
+	}
+	absRepo.findByIDFunc = func(context.Context, any) (*StaffAbsence, error) {
+		copied := *requested
+		return &copied, nil
+	}
+	absRepo.updateFunc = func(context.Context, *StaffAbsence) error {
+		t.Fatal("a request beyond the school's limit must not be approved")
+		return nil
+	}
+
+	_, err := svc.ApproveAbsence(context.Background(), requested.ID, 1, 2, "")
+	require.ErrorIs(t, err, workforce.ErrAbsenceTypeSchoolLimitExceeded)
+}

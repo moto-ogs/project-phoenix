@@ -148,6 +148,12 @@ func TestTraegerAbsenceTypesShareOneKontingentOverAllSchools(t *testing.T) {
 			assert.Equal(t, 1.0, summary.TakenDays)
 			return nil
 		}))
+		require.NoError(t, inSchool(t, unit, south, func(ctx context.Context) error {
+			_, err := school.PreviewAllowanceBooking(ctx, miraSouth.ID, southType, "2027-03-03", "2027-03-04", false)
+			assert.ErrorIs(t, err, workforce.ErrAbsenceTypeAllowanceExceeded,
+				"the north school's day counts at the south school too, even on the same date")
+			return nil
+		}))
 		bookAbsence(t, db, south, miraSouth.ID, southType, "2027-04-05", "2027-04-05", "requested")
 		require.NoError(t, inSchool(t, unit, north, func(ctx context.Context) error {
 			_, err := school.PreviewAllowanceBooking(ctx, miraNorth.ID, northType, "2027-05-03", "2027-05-03", true)
@@ -229,7 +235,7 @@ func TestTraegerAbsenceTypesShareOneKontingentOverAllSchools(t *testing.T) {
 		assert.Equal(t, map[int64]int{north: 1, south: 1}, entries, "each Einsatzort logs the read")
 		rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/staff-records/%d/absence-accounts/%d", record.ID, regeneration.ID),
 			map[string]any{"year": 2027, "entitled_days": 1.5, "reason": "weniger"})
-		assertStaffRefusal(t, rec, http.StatusBadRequest, "workforce.traeger_absence_allowance_invalid")
+		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_absence_allowance_below_booked")
 	})
 
 	t.Run("a booked type keeps its name", func(t *testing.T) {

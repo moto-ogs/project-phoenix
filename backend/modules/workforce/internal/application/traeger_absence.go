@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -157,7 +158,7 @@ func (t *TraegerStaff) carryAbsenceType(ctx context.Context, actor workforce.Tra
 	for _, school := range schools {
 		// A school that fails keeps its previous state and shows as not
 		// carried; the next change of the type tries it again.
-		_ = t.ports.Runtime.WithinSchool(ctx, school.ID, func(ctx context.Context) error {
+		err := t.ports.Runtime.WithinSchool(ctx, school.ID, func(ctx context.Context) error {
 			if err := t.carryInto(ctx, value); err != nil {
 				return err
 			}
@@ -165,6 +166,14 @@ func (t *TraegerStaff) carryAbsenceType(ctx context.Context, actor workforce.Tra
 			carried[school.ID] = rows
 			return err
 		})
+		if err != nil {
+			slog.Default().WarnContext(ctx, "traeger absence type not carried into school",
+				"organization_id", actor.OrganizationID,
+				"school_id", school.ID,
+				"traeger_absence_type_id", value.ID,
+				"error", err.Error(),
+			)
+		}
 	}
 	return publicTraegerAbsenceType(value, schools, carried), nil
 }

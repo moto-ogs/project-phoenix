@@ -317,6 +317,12 @@ function AbsenceTypeCard({
               );
             })}
           </FramedList>
+          {carried < type.schools.length ? (
+            <p className="mt-2 text-sm text-gray-600">
+              Wählen Sie „Ändern“ und „Speichern“. Dann trägt moto die Art auch
+              in die übrigen Schulen.
+            </p>
+          ) : null}
         </div>
       )}
     </SectionCard>

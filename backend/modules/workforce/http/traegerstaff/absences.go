@@ -123,7 +123,7 @@ func (rs *RecordsResource) absenceAccounts(w http.ResponseWriter, r *http.Reques
 	if raw := r.URL.Query().Get("year"); raw != "" {
 		parsed, err := strconv.Atoi(raw)
 		if err != nil {
-			common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerAbsenceAllowanceInvalid, "year"))
+			common.RenderError(w, r, common.ErrorInvalidRequest(err))
 			return
 		}
 		year = parsed
@@ -158,7 +158,7 @@ func (rs *RecordsResource) setAbsenceAllowance(w http.ResponseWriter, r *http.Re
 	}
 	req := &absenceAllowanceRequest{}
 	if err := render.Bind(r, req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeWorkforceTraegerAbsenceAllowanceInvalid))
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
 	err := rs.absences.SetAbsenceAllowance(r.Context(), session, workforce.SetTraegerAbsenceAllowance{
@@ -185,5 +185,6 @@ var absenceErrors = common.RulesRenderer([]common.ErrorRule{
 	{Target: workforce.ErrTraegerAbsenceTypeNotFound, Render: coded(common.ErrorNotFoundWithCode, common.CodeWorkforceTraegerAbsenceTypeNotFound)},
 	{Target: workforce.ErrTraegerAbsenceTypeNameTaken, Render: coded(common.ErrorConflictWithCode, common.CodeWorkforceTraegerAbsenceTypeNameTaken)},
 	{Target: workforce.ErrTraegerAbsenceTypeInUse, Render: coded(common.ErrorConflictWithCode, common.CodeWorkforceTraegerAbsenceTypeInUse)},
-	{Target: workforce.ErrAbsenceTypeAllowanceInvalid, Render: coded(common.ErrorInvalidRequestWithCode, common.CodeWorkforceTraegerAbsenceAllowanceInvalid)},
+	{Target: workforce.ErrTraegerAbsenceAllowanceBelowBooked, Render: coded(common.ErrorConflictWithCode, common.CodeWorkforceTraegerAbsenceAllowanceBelowBooked)},
+	{Target: workforce.ErrAbsenceTypeAllowanceInvalid, Render: common.ErrorInvalidRequest},
 }, common.ErrorInternalServer)

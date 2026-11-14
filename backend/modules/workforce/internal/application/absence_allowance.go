@@ -164,9 +164,13 @@ func (s *Service) PreviewAllowanceBooking(ctx context.Context, staffID, absenceT
 		return allowancePreviewsToPublic(nil, err)
 	}
 	// Overlapping bookings are merged by the writer, so only coverage beyond
-	// what the day already holds is new.
+	// what the day already holds is new. The writer merges only bookings of
+	// this school: a day another Einsatzort booked counts again (#4710).
 	covered := make(map[string]float64)
 	for _, use := range accounts.uses {
+		if accounts.pooled && !accounts.local[use.AbsenceID] {
+			continue
+		}
 		covered[use.Day] = max(covered[use.Day], use.Days)
 	}
 	additional := make([]domain.AllowanceUse, 0, len(requested))

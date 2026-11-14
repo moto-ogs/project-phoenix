@@ -461,6 +461,9 @@ func checkSchoolDeviation(existing workforce.StaffAbsenceType, input workforce.U
 		return workforce.ErrAbsenceTypeKeptByTraeger
 	}
 	if input.SchoolLimit != nil && input.SchoolLimit.Days != nil {
+		if !existing.AllowanceEnabled {
+			return &workforce.InvalidAbsenceTypeError{Reason: "Eine Grenze gibt es nur bei einer Art mit Kontingent."}
+		}
 		days := *input.SchoolLimit.Days
 		if days < 0 || days > 366 || days*2 != float64(int(days*2)) {
 			return &workforce.InvalidAbsenceTypeError{Reason: "Die Grenze braucht ganze oder halbe Tage zwischen 0 und 366."}

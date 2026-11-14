@@ -1856,8 +1856,6 @@ export const ERROR_CATALOG = {
         "Diese Abwesenheitsart legt Ihr Träger fest. Ihre Schule ändert nur, ob sie die Art anbietet und wie viele Tage hier höchstens gehen.",
       "workforce.absence_type_not_offered":
         "Ihre Schule bietet diese Abwesenheitsart nicht an. Bitte wählen Sie eine andere Art.",
-      "workforce.absence_type_not_requestable":
-        "Diese Abwesenheitsart trägt nur die Leitung ein. Bitte sprechen Sie mit Ihrer Leitung.",
       "workforce.absence_type_school_limit_exceeded":
         "An dieser Schule sind für diese Art nicht mehr Tage erlaubt. Die Grenze legt die Schule fest.",
       "workforce.adjustment_in_closed_month":
@@ -1983,8 +1981,8 @@ export const ERROR_CATALOG = {
         "Das Ende liegt vor dem Anfang. Bitte prüfen Sie den Zeitraum.",
       "workforce.target_override_too_long":
         "Der Zeitraum ist zu lang. Erlaubt sind höchstens {max_days} Tage.",
-      "workforce.traeger_absence_allowance_invalid":
-        "Der Anspruch reicht nicht. An den Schulen sind schon mehr Tage eingetragen oder beantragt.",
+      "workforce.traeger_absence_allowance_below_booked":
+        "Der Anspruch ist zu klein. An den Schulen sind schon mehr Tage eingetragen oder beantragt.",
       "workforce.traeger_absence_type_in_use":
         "Eine Schule hat diese Art schon gebucht. Der Name bleibt deshalb, wie er ist.",
       "workforce.traeger_absence_type_invalid":

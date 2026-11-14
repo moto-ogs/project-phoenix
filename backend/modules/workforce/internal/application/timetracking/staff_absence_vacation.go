@@ -146,6 +146,9 @@ func (s *staffAbsenceService) ApproveAbsence(ctx context.Context, absenceID int6
 			return nil, err
 		}
 	}
+	if err := s.recheckRequestedType(ctx, absence); err != nil {
+		return nil, err
+	}
 	fromStatus := absence.Status
 	now := time.Now()
 	absence.Status = AbsenceStatusApproved
@@ -175,6 +178,22 @@ func (s *staffAbsenceService) ApproveAbsence(ctx context.Context, absenceID int6
 	}
 	s.broadcastTimeTrackingChanged(ctx)
 	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
+}
+
+// recheckRequestedType applies what changed at the school since the request
+// of a requestable type (#4710): a type no longer offered or switched off,
+// and the school's limit and the Kontingent, the request's own days counted
+// once.
+func (s *staffAbsenceService) recheckRequestedType(ctx context.Context, absence *StaffAbsence) error {
+	if absence.AbsenceTypeID == nil || s.absenceTypes == nil {
+		return nil
+	}
+	selected, err := s.absenceTypes.ResolveForAbsence(ctx, *absence.AbsenceTypeID)
+	if err != nil || !selected.AllowanceEnabled {
+		return err
+	}
+	_, err = s.absenceTypes.PreviewAllowanceRebooking(ctx, absence.StaffID, *absence.AbsenceTypeID, []int64{absence.ID})
+	return err
 }
 
 func (s *staffAbsenceService) DenyAbsence(ctx context.Context, absenceID int64, actorAccountID int64, decidedByStaffID int64, reason string) (*StaffAbsenceResponse, error) {

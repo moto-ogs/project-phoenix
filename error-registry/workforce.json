@@ -67,12 +67,6 @@
       "legacy": "workforce.absence_type_not_offered"
     },
     {
-      "code": "workforce.absence_type_not_requestable",
-      "class": "business_rejection",
-      "parameters": [],
-      "legacy": "workforce.absence_type_not_requestable"
-    },
-    {
       "code": "workforce.absence_type_school_limit_exceeded",
       "class": "business_rejection",
       "parameters": [],
@@ -482,10 +476,10 @@
       "legacy": "workforce.target_override_too_long"
     },
     {
-      "code": "workforce.traeger_absence_allowance_invalid",
-      "class": "input",
+      "code": "workforce.traeger_absence_allowance_below_booked",
+      "class": "business_rejection",
       "parameters": [],
-      "legacy": "workforce.traeger_absence_allowance_invalid"
+      "legacy": "workforce.traeger_absence_allowance_below_booked"
     },
     {
       "code": "workforce.traeger_absence_type_in_use",

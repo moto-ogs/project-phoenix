@@ -253,11 +253,17 @@ export function StaffAbsenceAccountsCard({
   const load = useApiLoadError();
   const { show: showLoadError, clear: clearLoadError } = load;
 
+  // Wechselt das Jahr während einer Anfrage, gewinnt die jüngste Anfrage.
+  const latestRequest = useRef(0);
   const reload = useCallback(async () => {
+    const request = ++latestRequest.current;
     try {
-      setAccounts(await fetchTraegerAbsenceAccounts(recordId, year));
+      const loaded = await fetchTraegerAbsenceAccounts(recordId, year);
+      if (request !== latestRequest.current) return;
+      setAccounts(loaded);
       clearLoadError();
     } catch (err) {
+      if (request !== latestRequest.current) return;
       logger.error("traeger_absence_accounts_load_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
