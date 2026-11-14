@@ -796,6 +796,38 @@ describe("PhasesEditor", () => {
     expect(mocks.updatePhase).not.toHaveBeenCalled();
   });
 
+  it("names an existing follow-up phase instead of offering a second one", async () => {
+    mocks.listPhases.mockResolvedValue([
+      phase(),
+      phase({
+        id: "11",
+        name: "Schuljahr 2027/28",
+        service_start_date: "2027-08-01",
+        service_end_date: "2028-07-31",
+        rollover_source_phase_id: "10",
+      }),
+    ]);
+    mocks.listSchemas.mockResolvedValue([schema()]);
+    render(<PhasesEditor />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Schuljahr 2026/27",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    const endInput = await waitForInputByName("service_end_date");
+    fireEvent.change(endInput, { target: { value: "2027-08-31" } });
+
+    expect(
+      await screen.findByText(/gibt es schon eine Anschlussphase/),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Anschlussphase erstellen" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("keeps the follow-up hint off a phase that has not started", async () => {
     mocks.listPhases.mockResolvedValue([
       phase({

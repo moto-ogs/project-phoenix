@@ -1059,6 +1059,9 @@ export function PhasesEditor() {
                     setSchemaSource={setSchemaSource}
                     editing={editingId !== "new"}
                     savedPhase={phases.find((p) => p.id === editingId)}
+                    hasSuccessor={phases.some(
+                      (p) => p.rollover_source_phase_id === editingId,
+                    )}
                     onCreateSuccessor={startRollover}
                     saving={saving}
                     highlightFormSection={highlightFormSection}
@@ -1233,6 +1236,8 @@ interface PhaseFormProps {
   /** The stored phase while editing; its dates decide the extension hint. */
   readonly savedPhase?: Phase;
   readonly onCreateSuccessor: (phase: Phase) => void;
+  /** A follow-up phase exists; the backend refuses a second one. */
+  readonly hasSuccessor: boolean;
   readonly saving: boolean;
   readonly highlightFormSection: boolean;
   /** Tenant grade cap; null when unresolved — the grade picker then hides. */
@@ -1499,7 +1504,7 @@ function PhaseActions({
         />
       ),
       description:
-        "Für das nächste Halbjahr oder Schuljahr. Anmeldungen laufen weiter, Eltern können umbuchen.",
+        "Für das nächste Halbjahr oder Schuljahr. Übernimmt die Anmeldungen, Eltern können dabei umbuchen. Noch ohne E-Mail an Eltern.",
       disabled: saving || rolloverActive,
       onClick: onRollover,
     },
@@ -1587,6 +1592,7 @@ function PhaseForm(props: PhaseFormProps) {
     editing,
     savedPhase,
     onCreateSuccessor,
+    hasSuccessor,
     saving,
     highlightFormSection,
     gradeLevelMax,
@@ -1773,7 +1779,9 @@ function PhaseForm(props: PhaseFormProps) {
           berlinTodayISO(),
         ) ? (
           <PhaseExtensionHint
-            onCreateSuccessor={() => onCreateSuccessor(savedPhase)}
+            onCreateSuccessor={
+              hasSuccessor ? undefined : () => onCreateSuccessor(savedPhase)
+            }
           />
         ) : null}
       </FormFieldset>

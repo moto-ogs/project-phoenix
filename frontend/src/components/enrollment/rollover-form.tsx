@@ -369,8 +369,8 @@ export function RolloverForm({
               label="Modus"
               hint={
                 draft.rollover_mode === "opt_out"
-                  ? "Eltern müssen nichts tun. Bis zur Frist können sie Angebote und Tage ändern oder abmelden. Danach prüfen Sie die Anmeldungen."
-                  : "Eltern bestätigen bis zur Frist und können dabei Angebote und Tage ändern. Ohne Bestätigung wird die Anmeldung zurückgezogen."
+                  ? "Eltern müssen nichts tun. Bis zur Frist können sie Angebote und Tage ändern oder abmelden. Danach prüfen Sie die Anmeldungen, außer bei automatischer Genehmigung."
+                  : "Eltern bestätigen bis zur Frist und können dabei Angebote und Tage ändern. Ohne Bestätigung wird die Anmeldung zurückgezogen. Bestätigte Anmeldungen prüfen Sie."
               }
               value={draft.rollover_mode}
               onChange={(value) =>
@@ -419,7 +419,7 @@ export function RolloverForm({
             checked={draft.rollover_auto_approve}
             onChange={(checked) => update("rollover_auto_approve", checked)}
             label="Vorgemerkte Anmeldungen automatisch genehmigen"
-            hint="Nur bei „Anmeldungen laufen weiter“. Nach der Frist sind die Anmeldungen ohne Ihre Prüfung bestätigt."
+            hint="Nur bei „Anmeldungen laufen weiter“. Nach der Frist bestätigt moto die Anmeldungen ohne Ihre Prüfung. Ist kein Platz mehr frei, entscheiden Sie selbst."
           />
         </div>
 

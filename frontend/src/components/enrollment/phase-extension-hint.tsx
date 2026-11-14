@@ -2,7 +2,6 @@
 
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { CREATE_SUCCESSOR_HINT } from "./phase-expiry-warnings";
 
 /**
  * Ein späteres Ende verlängert die Betreuung schon betreuter Kinder nicht:
@@ -22,16 +21,34 @@ export function extendsRunningPhase(
   );
 }
 
+const CARE_END_STAYS =
+  "Bei Kindern, die schon betreut werden, bleibt das Betreuungsende, wie es ist.";
+
+/**
+ * `onCreateSuccessor` fehlt, wenn die Phase schon eine Anschlussphase hat:
+ * eine zweite lehnt das Backend ab (rollover.source_already_rolled).
+ */
 export function PhaseExtensionHint({
   onCreateSuccessor,
-}: Readonly<{ onCreateSuccessor: () => void }>) {
+}: Readonly<{ onCreateSuccessor?: () => void }>) {
+  if (!onCreateSuccessor) {
+    return (
+      <Alert
+        type="warning"
+        size="compact"
+        announce="polite"
+        className="mt-3"
+        message={`${CARE_END_STAYS} Für die Zeit danach gibt es schon eine Anschlussphase.`}
+      />
+    );
+  }
   return (
     <Alert
       type="warning"
       size="compact"
       announce="polite"
       className="mt-3"
-      message="Bei Kindern, die schon betreut werden, bleibt das Betreuungsende, wie es ist. Soll die Betreuung weiterlaufen und Eltern sollen umbuchen können? Dann erstellen Sie eine Anschlussphase."
+      message={`${CARE_END_STAYS} Soll die Betreuung weiterlaufen und Eltern sollen umbuchen können? Dann erstellen Sie eine Anschlussphase.`}
       actionLayout="stacked"
       action={
         <Button
@@ -39,7 +56,7 @@ export function PhaseExtensionHint({
           variant="surface"
           size="compact"
           onClick={onCreateSuccessor}
-          tooltip={CREATE_SUCCESSOR_HINT}
+          tooltip="Öffnet das Formular für die Anschlussphase. Ihre Änderungen hier werden nicht gespeichert."
         >
           Anschlussphase erstellen
         </Button>
