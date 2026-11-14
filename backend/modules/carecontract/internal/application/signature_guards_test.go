@@ -183,7 +183,9 @@ func TestSignatureStaysVisibleAfterAnApprovedChange(t *testing.T) {
 		}
 		next := record.Version
 		next.Number, next.Status, next.Source = 2, carecontract.VersionEffective, carecontract.SourceBookingChange
-		next.EffectiveFrom = calendar.NewDate(2027, 9, 1)
+		// Any day the version guard accepts as not in the past; the test
+		// moves it below. A fixed far day keeps that true (#4027).
+		next.EffectiveFrom = calendar.NewDate(2099, 9, 1)
 		_, err = store.InsertVersion(txCtx, f.org, f.contract,
 			VersionStep{Supersede: record.Version.ID, Status: carecontract.VersionEffective}, next)
 		return err
