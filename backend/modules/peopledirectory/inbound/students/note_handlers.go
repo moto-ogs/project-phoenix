@@ -69,7 +69,7 @@ func (rs *Resource) listStudentNotes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	notes, err := rs.StudentNotes.ListStudentNotes(r.Context(), peopleModule.StudentNoteFilter{
-		StudentID: student.ID, Kind: kind, Audience: toModuleAudience(audience, callerAccountID(r)),
+		StudentID: student.ID, Kind: kind, Audience: ModuleNoteAudience(audience, callerAccountID(r)),
 	})
 	if err != nil {
 		renderError(w, r, studentNoteErrorRenderer(err))
@@ -198,7 +198,7 @@ func (rs *Resource) deleteStudentNote(w http.ResponseWriter, r *http.Request) {
 	// a note this caller may not see is a not-found for them, and must not
 	// become visible through a delete attempt.
 	found, err := rs.StudentNotes.ListStudentNotes(r.Context(), peopleModule.StudentNoteFilter{
-		StudentID: student.ID, NoteID: noteID, Audience: toModuleAudience(audience, callerAccountID(r)),
+		StudentID: student.ID, NoteID: noteID, Audience: ModuleNoteAudience(audience, callerAccountID(r)),
 	})
 	if err != nil {
 		renderError(w, r, studentNoteErrorRenderer(err))
@@ -312,24 +312,31 @@ func (rs *Resource) resolveNoteReader(
 		sessiontoken.PermissionsFromCtx(r.Context()), reader, child), true
 }
 
-// noteReader gathers the caller's assignments for the audience policy, which
-// takes facts rather than fetching them. The school classes are normalized
-// here because the child's class is too, and both sides must use the rule the
-// class-scoped reads and their LOWER(BTRIM(...)) index already use.
+// noteReader gathers the caller's assignments for the audience policy.
 func (rs *Resource) noteReader(ctx context.Context) (securitycontract.StudentNoteReader, error) {
-	groupIDs, err := rs.UserContextService.MyGroupIDs(ctx)
+	return ResolveNoteReader(ctx, rs.UserContextService)
+}
+
+// ResolveNoteReader gathers the caller's assignments for the audience
+// policy, which takes facts rather than fetching them. The note card and the
+// school search (ADR 0234) both read them here, so the two audiences cannot
+// drift. The school classes are normalized because the child's class is too,
+// and both sides must use the rule the class-scoped reads and their
+// LOWER(BTRIM(...)) index already use.
+func ResolveNoteReader(ctx context.Context, caller CallerContext) (securitycontract.StudentNoteReader, error) {
+	groupIDs, err := caller.MyGroupIDs(ctx)
 	if err != nil {
 		return securitycontract.StudentNoteReader{}, err
 	}
-	ledGroupIDs, err := rs.UserContextService.MyTeacherGroupIDs(ctx)
+	ledGroupIDs, err := caller.MyTeacherGroupIDs(ctx)
 	if err != nil {
 		return securitycontract.StudentNoteReader{}, err
 	}
-	activityIDs, err := rs.UserContextService.MyActivityGroupIDs(ctx)
+	activityIDs, err := caller.MyActivityGroupIDs(ctx)
 	if err != nil {
 		return securitycontract.StudentNoteReader{}, err
 	}
-	classes, err := rs.UserContextService.MySchoolClasses(ctx)
+	classes, err := caller.MySchoolClasses(ctx)
 	if err != nil {
 		return securitycontract.StudentNoteReader{}, err
 	}
@@ -343,21 +350,26 @@ func (rs *Resource) noteReader(ctx context.Context) (securitycontract.StudentNot
 	}, nil
 }
 
+// NoteChild is the child side of the audience question: its OGS group, its
+// class normalized like the caller's, and the activities it is enrolled in
+// today.
+func NoteChild(groupID *int64, schoolClass string, activityGroupIDs []int64) securitycontract.StudentNoteChild {
+	return securitycontract.StudentNoteChild{GroupID: groupID, SchoolClass: schoolClassKey(schoolClass), ActivityGroupIDs: activityGroupIDs}
+}
+
 // noteChild reads the child side of the audience question. The activity
 // enrollments are read for today: a note audience follows who has the child
 // now, not who had it last term.
 func (rs *Resource) noteChild(ctx context.Context, student *peopleModule.StudentState) (securitycontract.StudentNoteChild, error) {
-	child := securitycontract.StudentNoteChild{
-		GroupID: student.GroupID, SchoolClass: schoolClassKey(student.SchoolClass),
-	}
 	activities, err := rs.noteActivities(ctx, student.ID)
 	if err != nil {
 		return securitycontract.StudentNoteChild{}, err
 	}
+	var activityIDs []int64
 	for _, group := range activities {
-		child.ActivityGroupIDs = append(child.ActivityGroupIDs, group.ID)
+		activityIDs = append(activityIDs, group.ID)
 	}
-	return child, nil
+	return NoteChild(student.GroupID, student.SchoolClass, activityIDs), nil
 }
 
 // noteActivities is the one read of the activities a note may refer to: the
@@ -460,10 +472,11 @@ func callerAccountID(r *http.Request) int64 {
 	return int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)
 }
 
-// toModuleAudience turns the policy's facts into the owner's filter. The
+// ModuleNoteAudience turns the policy's facts into the owner's filter. The
 // visibility values are named here, in the one package that holds both sides,
-// so the policy never keeps a second copy of the owner's enum.
-func toModuleAudience(audience securitycontract.StudentNoteAudience, accountID int64) peopleModule.StudentNoteAudience {
+// so the policy never keeps a second copy of the owner's enum. The school
+// search (ADR 0234) builds its filter here too.
+func ModuleNoteAudience(audience securitycontract.StudentNoteAudience, accountID int64) peopleModule.StudentNoteAudience {
 	visibilities := []string{peopleModule.StudentNoteVisibilityAllStaff}
 	if audience.CareTeam {
 		visibilities = append(visibilities, peopleModule.StudentNoteVisibilityCareTeam)

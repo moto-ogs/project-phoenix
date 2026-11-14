@@ -158,6 +158,33 @@ describe("SchoolSearchDialog", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("shows the matched part of a note and opens the child's notes", async () => {
+    signIn(["users:read"]);
+    const onClose = vi.fn();
+    mockSearchSchool.mockResolvedValue({
+      ...EMPTY,
+      children: [
+        {
+          ...child("31", "Romy", "Becker"),
+          groupName: "Füchse",
+          match: {
+            field: "student_note",
+            text: "… Beim Ausflug zum Zoo hatte sie Heimweh. …",
+          },
+        },
+      ],
+    });
+    render(<SchoolSearchDialog isOpen onClose={onClose} />);
+
+    const user = await typeQuery("Zoo");
+    await screen.findByRole("option", {
+      name: "Romy Becker, Klasse 3a · Gruppe Füchse · Notiz: … Beim Ausflug zum Zoo hatte sie Heimweh. …",
+    });
+    await user.keyboard("{Enter}");
+    expect(mockPush).toHaveBeenCalledWith("/students/31?tab=notizen");
+    expect(onClose).toHaveBeenCalled();
+  });
+
   it("says why a phone number finds nothing without contact access", async () => {
     // The session holds users:read, but the server grants no contacts (no
     // staff record): the hint follows the server.
@@ -250,7 +277,7 @@ describe("SchoolSearchDialog", () => {
     await typeQuery("Mia");
     expect(
       await screen.findByText(
-        "Auch Telefonnummern, Anmeldeangaben und Mitarbeitende",
+        "Auch Telefonnummern, Notizen, Anmeldeangaben und Mitarbeitende",
       ),
     ).toBeInTheDocument();
   });

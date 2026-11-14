@@ -20,6 +20,13 @@ func (neverSearch) SearchSchool(context.Context, schoolsearchview.Query) (school
 	panic("an invalid query never reaches the search")
 }
 
+// neverNotes fails a test that resolves the note audience for a refused query.
+type neverNotes struct{}
+
+func (neverNotes) NoteReader(context.Context) (*schoolsearchview.NoteReader, error) {
+	panic("an invalid query never resolves the note audience")
+}
+
 // TestInvalidQueryNamesItsBounds answers a query outside the bounds with the
 // shared input code and the bounds as details, so the dialog words the limit
 // itself (ADR 0006).
@@ -28,7 +35,7 @@ func TestInvalidQueryNamesItsBounds(t *testing.T) {
 	direct := func(r chi.Router, mount func(chi.Router, func(http.Handler) http.Handler)) {
 		mount(r, func(next http.Handler) http.Handler { return next })
 	}
-	router := NewResource(neverSearch{}, staffCheck{staff: true}).Router(direct)
+	router := NewResource(neverSearch{}, staffCheck{staff: true}, neverNotes{}).Router(direct)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"query":"a"}`)))
 
