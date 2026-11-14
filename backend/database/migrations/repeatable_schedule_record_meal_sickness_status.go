@@ -20,6 +20,14 @@ func init() {
 // It records every absence status of a day for the meal plan, with the
 // source and account of each report and clearing (#6842). The retention
 // purge records nothing.
+//
+// Neither does the deletion of the child itself (#5840): the cascade from
+// users.student_profiles removes the status days after the child row is
+// gone, so a "cleared now" row would reference a missing child and fail the
+// history's foreign key, and the same cascade removes the child's history
+// anyway. A direct status day delete under the tenant role reads the child
+// through the same tenant policy that checks the history insert, so the
+// check skips no clearing that insert could still store.
 const repeatableScheduleRecordMealSicknessStatusSQL = `CREATE OR REPLACE FUNCTION schedule.record_meal_sickness_status()
 	RETURNS TRIGGER AS $$
 	DECLARE
@@ -28,6 +36,13 @@ const repeatableScheduleRecordMealSicknessStatusSQL = `CREATE OR REPLACE FUNCTIO
 		event_account BIGINT;
 	BEGIN
 		IF TG_OP = 'DELETE' AND current_setting('app.retention_purge', true) = 'on' THEN
+			RETURN OLD;
+		END IF;
+
+		IF TG_OP = 'DELETE' AND NOT EXISTS (
+			SELECT 1 FROM users.student_profiles AS child
+			WHERE child.tenant_id = OLD.tenant_id AND child.id = OLD.student_id
+		) THEN
 			RETURN OLD;
 		END IF;
 

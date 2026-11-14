@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/workflows/studentdeletion"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 )
 
 // newRetention composes the automatic deletion (#3962) over the fixture's
@@ -65,6 +66,8 @@ func TestStudentRetention_SkipsARefusedChildAndDeletesTheRest(t *testing.T) {
 	for _, id := range []int64{refused.ID, deleted.ID} {
 		testpkg.SetStudentLifecycle(t, db, id, "inactive", nil, &lastCareDay)
 	}
+	// A status day with its meal history must not block the deletion (#5840).
+	testpkg.CreateTestStudentStatusDay(t, db, deleted.ID, calendar.NewDate(2026, 5, 28), "sick")
 	giveAccompaniedPlan(t, db, ctx, refused.ID, "mon")
 	giveAccompaniedPlan(t, db, ctx, companion.ID, "mon")
 	linkCompanions(t, ctx, db, refused.ID, companion.ID)
@@ -76,6 +79,7 @@ func TestStudentRetention_SkipsARefusedChildAndDeletesTheRest(t *testing.T) {
 
 	assert.Equal(t, studentdeletion.RetentionResult{Deleted: 1, Refused: 1, RetentionDays: 365}, result)
 	assert.Zero(t, rowCount(t, db, "users.student_profiles", deleted.ID))
+	assert.Zero(t, studentRows(t, db, "schedule.meal_sickness_status_history", deleted.ID), "the meal history leaves with the child")
 	assert.Equal(t, 1, rowCount(t, db, "users.student_profiles", refused.ID), "the linked child would lose its way home")
 	links, err := companionLinks(db).ListLinksForStudents(ctx, []int64{companion.ID})
 	require.NoError(t, err)
@@ -97,6 +101,8 @@ func TestStudentRetention_AbortsOnAnUnexpectedDeletionFailure(t *testing.T) {
 	student := testpkg.CreateTestStudent(t, db, "Retention", "Audit", "3a")
 	lastCareDay := calendar.NewDate(2026, 5, 29)
 	testpkg.SetStudentLifecycle(t, db, student.ID, "inactive", nil, &lastCareDay)
+	testpkg.CreateTestStudentStatusDay(t, db, student.ID, calendar.NewDate(2026, 5, 28), "sick")
+	require.Equal(t, 1, studentRows(t, db, "schedule.meal_sickness_status_history", student.ID))
 
 	failure := errors.New("injected audit failure")
 	f.deps.AppendAudit = func(context.Context, studentdeletion.Actor, studentdeletion.Result) error { return failure }
@@ -108,6 +114,16 @@ func TestStudentRetention_AbortsOnAnUnexpectedDeletionFailure(t *testing.T) {
 
 	require.ErrorIs(t, err, failure)
 	assert.Equal(t, 1, rowCount(t, db, "users.student_profiles", student.ID), "the savepoint rolls back the failed deletion")
+	assert.Equal(t, 1, studentRows(t, db, "active.student_status_days", student.ID), "the status day survives the rollback")
+	assert.Equal(t, 1, studentRows(t, db, "schedule.meal_sickness_status_history", student.ID), "the meal history survives the rollback unchanged")
+}
+
+func studentRows(t *testing.T, db *bun.DB, table string, studentID int64) int {
+	t.Helper()
+	var count int
+	require.NoError(t, db.NewSelect().TableExpr(table).ColumnExpr("COUNT(*)").
+		Where("student_id = ?", studentID).Scan(context.Background(), &count))
+	return count
 }
 
 // The retention refuses a window outside the frame of ADR 0048 before it
