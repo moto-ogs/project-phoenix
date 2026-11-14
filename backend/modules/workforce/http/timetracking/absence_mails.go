@@ -6,7 +6,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 )
 
@@ -85,6 +87,14 @@ func (rs *Resource) getOwnAbsenceRequestMails(w http.ResponseWriter, r *http.Req
 		out.Absences[strconv.FormatInt(id, 10)] = counts
 	}
 	common.Respond(w, r, http.StatusOK, out, "Absence mails retrieved")
+}
+
+// mountOwnAbsenceMailRoutes adds whether the Leitung got the notice of a
+// waiting request by mail; without the mail status the route stays away.
+func (rs *Resource) mountOwnAbsenceMailRoutes(r chi.Router, withTx common.Middleware) {
+	if rs.absenceMails != nil {
+		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/absences/mails", rs.getOwnAbsenceRequestMails)
+	}
 }
 
 // parseAbsenceMailIDs reads a comma-separated list of positive absence IDs.

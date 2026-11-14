@@ -8,7 +8,6 @@ import (
 	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
-	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -25,10 +24,7 @@ func WorkforceMailOutboxForTests(db transactionruntime.Database, unit tenant.Uni
 		return nil, nil, err
 	}
 	outbox := owners.OutboxEnqueuer{Outbox: delivery.EmailOutbox, Runtime: delivery.Runtime}
-	status, err := workforceCompose.NewAbsenceMailStatus(owners.WorkforceMails{Outcomes: delivery.Runtime.EmailOutcomes})
-	if err != nil {
-		return nil, nil, err
-	}
+	status := workforce.NewAbsenceMailStatus(owners.WorkforceMails{Outcomes: delivery.Runtime.EmailOutcomes})
 	enqueue := func(ctx context.Context, relatedType string, relatedID int64, address string) error {
 		return outbox.EnqueueTransactionalMail(ctx, owners.DurableMail{
 			TenantID: tenant.FromContext(ctx), Type: relatedType, ReferenceID: relatedID,

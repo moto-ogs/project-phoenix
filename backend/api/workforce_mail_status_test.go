@@ -58,12 +58,14 @@ func TestAbsenceMailsShowWhatBecameOfThem(t *testing.T) {
 	service, err := newTimeTrackingTestModule(database, rows, members.Staff, presence, settings.Settings, timeTrackingTestGraph{
 		Audits: owners.TimeTrackingAudits{WorkSessionEdit: audits.WorkSessionEdit, TimeTrackingDeletion: audits.TimeTrackingDeletion, DataAccessLog: audits.DataAccessLog, TimeTrackingAuditLog: audits.TimeTrackingAuditLog},
 		Events: owners.TimeTrackingEvents(realtime.NewHub(slog.Default())), People: people, Holidays: noHolidays{}, StatutoryHolidays: noHolidays{}, Logger: slog.Default(),
+		MailOutcomes: owners.WorkforceMails{Outcomes: outbox.Runtime.EmailOutcomes},
 	}, &workforceCompose.AbsenceEmailDeps{Settings: absenceMailEnabled{}, Dispatcher: owners.AbsenceEmailDispatcher{Durable: outbox, From: email.NewEmail("moto", "no-reply@example.test")},
 		StaffRepo: contacts, SchoolRepo: absenceMailSchool{}, FrontendURL: "http://localhost:3000", Logger: slog.Default(),
 	})
 	require.NoError(t, err)
-	status, err := workforceCompose.NewAbsenceMailStatus(owners.WorkforceMails{Outcomes: outbox.Runtime.EmailOutcomes})
-	require.NoError(t, err)
+	// The status the time tracking composes over the same outbox.
+	status := service.AbsenceMails
+	require.NotNil(t, status)
 
 	var absenceID int64
 	day := calendar.NewDate(2099, 2, 3)

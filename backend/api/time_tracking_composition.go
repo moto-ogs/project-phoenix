@@ -83,7 +83,6 @@ func newTimeTrackingResource(
 	absenceWrites timeTrackingHTTP.OwnAbsenceWrites,
 	shifts workforceModule.StaffShiftPlanning, assignments workforceModule.StaffAssignmentQuery,
 	allowances workforceModule.OwnAbsenceAllowances, calendar schoolcalendar.Calendar, settings settingsCompose.SettingsService,
-	absenceMails workforceModule.AbsenceMailStatus,
 ) *timeTrackingHTTP.Resource {
 	capabilities := owners.NewWorkforceAdminCapabilities(users, documents, timeTracking)
 	return timeTrackingHTTP.NewResource(timeTrackingHTTP.Dependencies{
@@ -99,7 +98,7 @@ func newTimeTrackingResource(
 		Allowances:         allowances,
 		AllowanceResponses: timeTrackingAllowanceResponses,
 		AccountStartDate:   timeTrackingAccountStartDate(settings),
-		AbsenceMails:       absenceMails,
+		AbsenceMails:       timeTracking.AbsenceMails,
 		Identity:           timeTrackingIdentity,
 		WithinTenant: func(ctx context.Context, tenantID int64, run func(context.Context) error) error {
 			id, err := tenant.NewTenantID(tenantID)

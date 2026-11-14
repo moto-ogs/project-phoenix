@@ -1,6 +1,9 @@
 package workforce
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // What became of Workforce's mails (#7058): every mail shows its outcome
 // where it started. Delivery keeps a mail's purpose as its related type and
@@ -45,4 +48,68 @@ type AbsenceMailStatus interface {
 	// to the applicant about an approval, a decline or a question; an absence
 	// without such a mail has no key.
 	AbsenceDecisionMails(ctx context.Context, absenceIDs []int64) (map[int64]string, error)
+}
+
+// NewAbsenceMailStatus reads the absence request mails over the outcomes,
+// one read per related type whatever the number of absences. Without
+// outcomes there is no status: nil.
+func NewAbsenceMailStatus(outcomes MailOutcomes) AbsenceMailStatus {
+	if outcomes == nil {
+		return nil
+	}
+	return absenceMailStatus{outcomes: outcomes}
+}
+
+type absenceMailStatus struct{ outcomes MailOutcomes }
+
+// AbsenceRequestMails counts the latest notice round per absence. A question
+// closes a round: the received mails after the newest question mail are the
+// notice of the resubmitted request, the older ones belong to the first one.
+func (s absenceMailStatus) AbsenceRequestMails(ctx context.Context, absenceIDs []int64) (map[int64]map[string]int, error) {
+	counts := map[int64]map[string]int{}
+	if len(absenceIDs) == 0 {
+		return counts, nil
+	}
+	mails, err := s.outcomes.MailOutcomes(ctx, absenceIDs, AbsenceMailRequestQuestion, AbsenceMailRequestReceived)
+	if err != nil {
+		return nil, fmt.Errorf("absence mail status: read the notice mails: %w", err)
+	}
+	lastQuestion := map[int64]int64{}
+	for _, mail := range mails {
+		if mail.RelatedType == AbsenceMailRequestQuestion && mail.MailID > lastQuestion[mail.RelatedID] {
+			lastQuestion[mail.RelatedID] = mail.MailID
+		}
+	}
+	for _, mail := range mails {
+		if mail.RelatedType != AbsenceMailRequestReceived || mail.MailID < lastQuestion[mail.RelatedID] {
+			continue
+		}
+		if counts[mail.RelatedID] == nil {
+			counts[mail.RelatedID] = map[string]int{}
+		}
+		counts[mail.RelatedID][mail.Outcome]++
+	}
+	return counts, nil
+}
+
+// AbsenceDecisionMails reports the newest decision or question mail per
+// absence; a later mail replaces an earlier one, as a decision follows a
+// question.
+func (s absenceMailStatus) AbsenceDecisionMails(ctx context.Context, absenceIDs []int64) (map[int64]string, error) {
+	outcomes := map[int64]string{}
+	if len(absenceIDs) == 0 {
+		return outcomes, nil
+	}
+	mails, err := s.outcomes.MailOutcomes(ctx, absenceIDs, AbsenceMailRequestApproved, AbsenceMailRequestDeclined, AbsenceMailRequestQuestion)
+	if err != nil {
+		return nil, fmt.Errorf("absence mail status: read the decision mails: %w", err)
+	}
+	newest := map[int64]int64{}
+	for _, mail := range mails {
+		if mail.MailID > newest[mail.RelatedID] {
+			newest[mail.RelatedID] = mail.MailID
+			outcomes[mail.RelatedID] = mail.Outcome
+		}
+	}
+	return outcomes, nil
 }

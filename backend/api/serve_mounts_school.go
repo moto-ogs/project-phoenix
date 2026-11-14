@@ -74,7 +74,7 @@ func mountStaffRoutes(
 	substitution SubstitutionOperations, persons peopledirectory.Capability, settings settingsCompose.SettingsService,
 	hub *realtime.Hub, identity identityaccess.Owner, caller *owners.CallerRows, calendar schoolcalendar.Calendar,
 ) error {
-	staff, _, err := newStaffComposition(membership, workTime, users, staffAdmin, workforce.TimeTracking, workforce.PayrollDispatch, workforce.AbsenceMails, workforce.SickReports, education, persons, settings, hub, identity, viper.GetString("app_env"), db, logger.With("handler", "staff"))
+	staff, _, err := newStaffComposition(membership, workTime, users, staffAdmin, workforce.TimeTracking, workforce.PayrollDispatch, workforce.SickReports, education, persons, settings, hub, identity, viper.GetString("app_env"), db, logger.With("handler", "staff"))
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func mountStaffRoutes(
 	tenant.Mount("/shift-types", newShiftTypesResource(shifts.ShiftTypes, shiftPlanReferences).Router())
 	tenant.Mount("/absence-types", absenceTypes)
 	tenant.Mount("/substitutions", newSubstitutionsResource(SubstitutionCapability(substitution)).Router())
-	tenant.Mount("/time-tracking", newTimeTrackingResource(users, staffAdmin, workforce.TimeTracking, workforce.SickReports, workforce.StaffShifts, shifts.Assignments, workTime, calendar, settings, workforce.AbsenceMails).Router(ProtectedTenantRoutes))
+	tenant.Mount("/time-tracking", newTimeTrackingResource(users, staffAdmin, workforce.TimeTracking, workforce.SickReports, workforce.StaffShifts, shifts.Assignments, workTime, calendar, settings).Router(ProtectedTenantRoutes))
 	return nil
 }
 

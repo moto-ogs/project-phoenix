@@ -16,6 +16,15 @@ import (
 // tenant transaction.
 type WorkforceMails struct{ Outcomes delivery.EmailOutcomes }
 
+// workforceMailOutcomes binds the outcome read of the durable outbox; a root
+// without Delivery's runtime composes no mail status.
+func workforceMailOutcomes(durable OutboxEnqueuer) workforce.MailOutcomes {
+	if durable.Runtime == nil || durable.Runtime.EmailOutcomes == nil {
+		return nil
+	}
+	return WorkforceMails{Outcomes: durable.Runtime.EmailOutcomes}
+}
+
 // MailOutcomes reads the mails of each related type, one read per type.
 func (m WorkforceMails) MailOutcomes(ctx context.Context, relatedIDs []int64, relatedTypes ...string) ([]workforce.MailOutcome, error) {
 	if len(relatedIDs) == 0 || len(relatedTypes) == 0 {

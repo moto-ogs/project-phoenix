@@ -50,7 +50,9 @@ func BuildWorkSessionSide(
 		StatutoryHolidays: schoolCalendarCompose.NewTenantHolidays(calendar),
 		Events:            TimeTrackingEvents(hub),
 		AbsenceEmail:      absenceEmailDependencies(settings, mailFrom, mailIdentity, env.Links.FrontendURL, logger, people, organizations, durable),
-		Logger:            logger,
+		// What became of the absence request mails (#7058).
+		MailOutcomes: workforceMailOutcomes(durable),
+		Logger:       logger,
 	}, TimeTrackingAudits{
 		WorkSessionEdit: audits.WorkSessionEdit, TimeTrackingDeletion: audits.TimeTrackingDeletion,
 		DataAccessLog: audits.DataAccessLog, TimeTrackingAuditLog: audits.TimeTrackingAuditLog,
@@ -72,10 +74,6 @@ func BuildWorkSessionSide(
 		mailFrom, mailIdentity, organizations, people.Staff, env.Links.FrontendURL, env.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("compose payroll dispatch: %w", err)
-	}
-	side.AbsenceMails, err = workforceCompose.NewAbsenceMailStatus(WorkforceMails{Outcomes: durable.Runtime.EmailOutcomes})
-	if err != nil {
-		return nil, fmt.Errorf("compose absence mail status: %w", err)
 	}
 	return side, nil
 }
@@ -109,9 +107,6 @@ type WorkforcePlanning struct {
 	StaffShifts     workforceModule.StaffShiftPlanning
 	TimeTracking    *workforceCompose.TimeTracking
 	PayrollDispatch workforceModule.PayrollDispatch
-	// AbsenceMails tells both sides of an absence request what became of
-	// its mails (#7058).
-	AbsenceMails workforceModule.AbsenceMailStatus
 	// QualificationReminders sends the Nachweis reminders (#4808); the
 	// Worker roots compose it once the notifications exist.
 	QualificationReminders workforceModule.QualificationReminders
@@ -174,6 +169,6 @@ func BuildWorkforcePlanning(
 	if err != nil {
 		return WorkforcePlanning{}, fmt.Errorf("compose time tracking cleanup: %w", err)
 	}
-	return WorkforcePlanning{Shifts: shifts, StaffShifts: staffShifts, TimeTracking: timeTracking, PayrollDispatch: side.PayrollDispatch, AbsenceMails: side.AbsenceMails,
+	return WorkforcePlanning{Shifts: shifts, StaffShifts: staffShifts, TimeTracking: timeTracking, PayrollDispatch: side.PayrollDispatch,
 		SickReports: sickReports, TimeTrackingCleanup: cleanup}, nil
 }
