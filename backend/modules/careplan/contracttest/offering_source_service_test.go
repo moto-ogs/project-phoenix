@@ -1650,11 +1650,13 @@ func loadSourcedInstanceStudents(t *testing.T, env *decisionTestEnv, instanceID 
 }
 
 // firstFutureMondayOnOrAfter returns the first Monday on or after date that
-// has not yet passed in the real calendar. Its callers create planned
-// occurrences, which the reconciler deliberately does not alter in the past.
+// has not yet passed on the decision env's day (decisionTestToday), which
+// the env's Timetable owner and occurrence reconciler decide on too. Its
+// callers create planned occurrences, which the reconciler deliberately
+// does not alter in the past.
 func firstFutureMondayOnOrAfter(date calendar.Date) calendar.Date {
-	if today := calendar.TodayDate(); date.Before(today) {
-		date = today
+	if date.Before(decisionTestToday) {
+		date = decisionTestToday
 	}
 	for date.Weekday() != time.Monday {
 		date = date.AddDays(1)
@@ -2205,7 +2207,7 @@ func TestSourcedRosterRows_AppearInTemplateListReads(t *testing.T) {
 	))
 
 	ctx := testpkg.Ctx(t)
-	repo := owners.MustNewUnobservedTimetable(testpkg.MustDatabase(env.db))
+	repo := owners.MustNewUnobservedTimetable(testpkg.MustDatabase(env.db), decisionTestClock)
 
 	rows, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), repo.ListTemplateRows, &template.ID)
 	require.NoError(t, err)

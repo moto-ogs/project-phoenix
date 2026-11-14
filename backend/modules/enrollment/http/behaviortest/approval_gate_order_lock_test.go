@@ -190,7 +190,7 @@ func TestRolloverService_RunDeadlineWorker_WaitsForApprovalGates(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	seedApprovedChildWithStudent(t, env, "Anna", "Sperre", "rollover-gate-order@example.com", "Lina", "Sperre", int16(1))
 	req := validRolloverRequest(env, enrollmentNative.PhaseRolloverModeOptOut, true)
-	req.RolloverDeadline = time.Now().Add(-1 * time.Hour)
+	req.RolloverDeadline = autoApproveNow.Add(-time.Hour)
 	req.Name = "rollover-gate-order-target"
 	rolled, err := env.rolloverSvc.CreatePhaseFromSource(ctx, req)
 	require.NoError(t, err)
@@ -207,7 +207,7 @@ func TestRolloverService_RunDeadlineWorker_WaitsForApprovalGates(t *testing.T) {
 			return lock(holdCtx)
 		},
 		func(writeCtx context.Context) error {
-			_, err := env.rolloverSvc.RunDeadlineWorker(writeCtx, time.Now())
+			_, err := env.rolloverSvc.RunDeadlineWorker(writeCtx, autoApproveNow)
 			return err
 		},
 		func(holdCtx context.Context) error {

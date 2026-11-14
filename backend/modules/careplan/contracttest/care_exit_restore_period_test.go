@@ -67,7 +67,7 @@ func setupRestoreFixture(t *testing.T, email string, lateSource bool) restoreFix
 	require.NoError(t, timetableCompose.NativeGroupRecords(testTimetableRepositories(env.db).Timetable).Update(testpkg.Ctx(t), group))
 	createCareOfferingTemplateSchedule(t, env.db, group.ID, timetable.WeekdayMonday, &q)
 	createCareOfferingTemplateSchedule(t, env.db, group.ID, timetable.WeekdayWednesday, &q)
-	module, _, _, err := api.NewTimetableTestModule(testpkg.NewDatabase(t, env.db), testpkg.TenantRuntime(t, env.db))
+	module, _, _, err := api.NewTimetableTestModule(testpkg.NewDatabase(t, env.db), testpkg.TenantRuntime(t, env.db), decisionTestClock)
 	require.NoError(t, err)
 
 	booked := []*offeringContract.CareOfferingRecord{source, other}

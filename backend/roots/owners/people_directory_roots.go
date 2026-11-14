@@ -2,6 +2,7 @@ package owners
 
 import (
 	"fmt"
+	"time"
 
 	guardianLinkView "github.com/moto-ogs/project-phoenix/modules/guardianlinkview/compose"
 
@@ -28,8 +29,10 @@ var GuardianRolePresets = peoplePorts.GuardianRolePresetFuncs{
 // NewPeopleDirectory composes the person and student owner for test graphs
 // and CLI roots, without guardian provider and photo runtime. The serve root
 // composes the observed instance through buildPeopleDirectory.
-func NewPeopleDirectory(db transactionruntime.Database) (*peopleCompose.Directory, error) {
-	return NewPeopleDirectoryWithObserver(db, func(peopleCompose.Observation) {}, nil, nil)
+// The School Membership writes behind it decide on the Berlin day of the
+// first clock, the real one when none is given.
+func NewPeopleDirectory(db transactionruntime.Database, clocks ...func() time.Time) (*peopleCompose.Directory, error) {
+	return NewPeopleDirectoryWithObserver(db, func(peopleCompose.Observation) {}, nil, nil, clocks...)
 }
 
 // MustNewPeopleDirectory is NewPeopleDirectory for composition seams that
@@ -47,10 +50,11 @@ func MustNewPeopleDirectory(db transactionruntime.Database) *peopleCompose.Direc
 // People Directory observations, over the graph's guardian provider and photo
 // runtime (nil for none). The Identity & Access membership query, the School
 // Membership and Care Plan write owners and the Audit seams are built here
-// over unobserved owners.
+// over unobserved owners; the School Membership writes decide on the Berlin
+// day of the first clock, the real one when none is given.
 func NewPeopleDirectoryWithObserver(
 	db transactionruntime.Database, observe func(peopleCompose.Observation),
-	guardians *peopleCompose.GuardianDirectoryProvider, photos peopleCompose.StudentPhotoRuntime,
+	guardians *peopleCompose.GuardianDirectoryProvider, photos peopleCompose.StudentPhotoRuntime, clocks ...func() time.Time,
 ) (*peopleCompose.Directory, error) {
 	// Care Plan's companion slice is constructible from the database alone, so
 	// the directory's write path gets it here rather than waiting for the full
@@ -59,7 +63,7 @@ func NewPeopleDirectoryWithObserver(
 	if err != nil {
 		return nil, err
 	}
-	membership, err := NewSchoolMembership(db)
+	membership, err := NewSchoolMembership(db, clocks...)
 	if err != nil {
 		return nil, err
 	}

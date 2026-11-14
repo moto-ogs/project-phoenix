@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"sync"
 	"testing"
+	"time"
 
 	offeringContract "github.com/moto-ogs/project-phoenix/modules/enrollment/offeringcontract"
 
@@ -102,6 +103,10 @@ type stubActivationSettings struct {
 }
 
 const decisionTestToday calendar.Date = "2026-08-24"
+
+// decisionTestClock is the instant clock of decisionTestToday, for the
+// owners of the env that take one.
+func decisionTestClock() time.Time { return decisionTestToday.BerlinMidnight() }
 
 func (s stubActivationSettings) ResolveString(_ context.Context, key string) (string, error) {
 	if key == enrollmentKeys.DefaultActivationMode {
@@ -402,11 +407,15 @@ func testBookingsAuthority(settings owners.EnrollmentDecisionSettings) func(cont
 
 // newTestCareLifecycle composes Care Plan's lifecycle over the test database,
 // with its owners bound the way the production graph binds them. The care-end
-// history goes to the ordinary student audit unless the config names another.
+// history goes to the ordinary student audit unless the config names another,
+// and the lifecycle decides on decisionTestToday unless it names another day.
 func newTestCareLifecycle(db *bun.DB, config api.CareLifecycleTestConfig) careplan.CareLifecycle {
 	repos, err := api.NewCareLifecycleTestRepositories(testpkg.MustDatabase(db), nil)
 	if err != nil {
 		panic(err)
+	}
+	if config.Today == nil {
+		config.Today = func() calendar.Date { return decisionTestToday }
 	}
 	if config.Audit == nil {
 		config.Audit = api.NewPeopleDirectorySuiteStudentAudit(testpkg.RequestAuditActor, api.NewStudentAudit(testpkg.MustDatabase(db)))

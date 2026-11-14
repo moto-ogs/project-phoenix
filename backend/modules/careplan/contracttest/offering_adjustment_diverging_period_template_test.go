@@ -110,7 +110,7 @@ func setupDivergingPeriodFixture(t *testing.T, email string, c divergingPeriodCa
 	createCareOfferingTemplateSchedule(t, env.db, group.ID, timetable.WeekdayMonday, periods[c.monday])
 	createCareOfferingTemplateSchedule(t, env.db, group.ID, timetable.WeekdayWednesday, periods[c.wednesday])
 
-	module, _, _, err := api.NewTimetableTestModule(testpkg.NewDatabase(t, env.db), testpkg.TenantRuntime(t, env.db))
+	module, _, _, err := api.NewTimetableTestModule(testpkg.NewDatabase(t, env.db), testpkg.TenantRuntime(t, env.db), decisionTestClock)
 	require.NoError(t, err)
 
 	requestID, childID, studentID := submitApprovedAdjustmentChild(t, env, email, "Zeitraum",
@@ -173,11 +173,17 @@ func (f divergingPeriodFixture) requirePlannedOn(t *testing.T, step string, date
 
 func (f divergingPeriodFixture) resyncTenant(t *testing.T) {
 	t.Helper()
+	f.resyncTenantFrom(t, offeringResyncToday)
+}
+
+// resyncTenantFrom runs the tenant-wide resync effective from the given day.
+func (f divergingPeriodFixture) resyncTenantFrom(t *testing.T, effectiveFrom calendar.Date) {
+	t.Helper()
 	resyncAll, ok := f.env.bookings.(interface {
 		ResyncOfferingSourcedTemplates(ctx context.Context, effectiveFrom calendar.Date) error
 	})
 	require.True(t, ok, "decision service must implement the tenant-wide resync")
-	require.NoError(t, resyncAll.ResyncOfferingSourcedTemplates(testpkg.Ctx(t), offeringResyncToday))
+	require.NoError(t, resyncAll.ResyncOfferingSourcedTemplates(testpkg.Ctx(t), effectiveFrom))
 }
 
 // resyncOffering runs the offering-scoped resync behind phase and offering
@@ -310,7 +316,8 @@ func TestSourcedRowPeriod_ConnectingSourceWithNarrowerSchedulePeriodSucceeds(t *
 	studentID, childID := submitAndApproveOfferingChild(t, env, source.ID, "zeitraum-teil@example.com", "Teil", 2)
 	templatePeriodID := createLongPhasePeriod(t, env, "termin")
 	// The schedule period leaves out the phase's first month.
-	narrowID := createDivergingCalendarPeriod(t, env, "zeitplan-teil", calendar.NewDate(2026, 10, 1), longPhaseEnd.AddDays(-30))
+	narrowStart := calendar.NewDate(2026, 10, 1)
+	narrowID := createDivergingCalendarPeriod(t, env, "zeitplan-teil", narrowStart, longPhaseEnd.AddDays(-30))
 	group := createCareOfferingTemplateGroup(t, env.db, "MittagessenTeil")
 	group.CalendarPeriodID = &templatePeriodID
 	require.NoError(t, timetableCompose.NativeGroupRecords(testTimetableRepositories(env.db).Timetable).Update(ctx, group))
@@ -319,11 +326,13 @@ func TestSourcedRowPeriod_ConnectingSourceWithNarrowerSchedulePeriodSucceeds(t *
 	resyncer := offeringResyncer(t, env)
 	templates, err := api.NewTimetableHTTP(testpkg.NewDatabase(t, env.db),
 		api.WithOfferingRosterResync(resyncer.ResyncTemplateOfferingRoster),
-		api.WithOfferingSourceValidator(env.offeringCatalog.ValidateTemplateOfferingSource))
+		api.WithOfferingSourceValidator(env.offeringCatalog.ValidateTemplateOfferingSource),
+		api.WithTimetableClock(decisionTestClock))
 	require.NoError(t, err)
-	module, _, _, err := api.NewTimetableTestModule(testpkg.NewDatabase(t, env.db), testpkg.TenantRuntime(t, env.db))
+	module, _, _, err := api.NewTimetableTestModule(testpkg.NewDatabase(t, env.db), testpkg.TenantRuntime(t, env.db), decisionTestClock)
 	require.NoError(t, err)
-	monday := firstFutureMondayOnOrAfter(calendar.Date(env.sourcePhase.ServiceStartDate))
+	// The first Monday the schedule period plans.
+	monday := firstFutureMondayOnOrAfter(narrowStart)
 
 	err = testpkg.WithTenantTx(t, ctx, env.db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
 		_, connectErr := templates.RosterReview.ConnectOfferingSource(txCtx, timetable.ConnectOfferingSourceCommand{
@@ -351,7 +360,11 @@ func TestSourcedRowPeriod_ConnectingSourceWithNarrowerSchedulePeriodSucceeds(t *
 // recorded attendance and their missing children stay as they are.
 func TestSourcedRowPeriod_RewriteLeavesPastInstancesAndAttendance(t *testing.T) {
 	t.Parallel()
-	f := setupDivergingPeriodFixture(t, "zeitraum-vergangen@example.com", divergingPeriodCase{template: "P", monday: "Q", wednesday: "Q", want: "Q"})
+	// The phase starts three weeks before the env's day (decisionTestToday,
+	// a Monday), so two of its Mondays have passed. The rewrite resyncs
+	// effective from the phase start, so it rewrites the whole row.
+	phaseStart := decisionTestToday.AddDays(-21)
+	f := setupDivergingPeriodFixture(t, "zeitraum-vergangen@example.com", divergingPeriodCase{template: "P", monday: "Q", wednesday: "Q", want: "Q", phaseStart: phaseStart})
 	ctx := testpkg.Ctx(t)
 	// Reproduce the state development's resync wrote: the row on P.
 	_, err := f.env.db.NewUpdate().
@@ -366,7 +379,7 @@ func TestSourcedRowPeriod_RewriteLeavesPastInstancesAndAttendance(t *testing.T) 
 
 	monday := firstFutureMondayOnOrAfter(calendar.Date(f.env.sourcePhase.ServiceStartDate))
 	// Two Mondays of the phase that have already passed.
-	attended, missed := calendar.NewDate(2026, 9, 14), calendar.NewDate(2026, 9, 7)
+	attended, missed := calendar.NewDate(2026, 8, 17), calendar.NewDate(2026, 8, 10)
 	require.NotNil(t, f.template.PlannedRoomID)
 	schedulePeriodID := f.wantPeriodID
 	pastAttended := testpkg.CreateTestActivityInstance(t, f.env.db, attended, *f.template.PlannedRoomID, testpkg.ActivityInstanceOpts{
@@ -375,7 +388,7 @@ func TestSourcedRowPeriod_RewriteLeavesPastInstancesAndAttendance(t *testing.T) 
 	pastMissed := testpkg.CreateTestActivityInstance(t, f.env.db, missed, *f.template.PlannedRoomID, testpkg.ActivityInstanceOpts{
 		ActivityGroupID: &f.template.ID, CalendarPeriodID: schedulePeriodID,
 	})
-	checkedIn := time.Date(2026, 9, 14, 12, 5, 0, 0, time.UTC)
+	checkedIn := time.Date(2026, 8, 17, 12, 5, 0, 0, time.UTC)
 	recorded := testpkg.CreateTestInstanceStudent(t, f.env.db, pastAttended.ID, f.studentID, testpkg.ScheduleAttendanceStatusPresent, testpkg.InstanceStudentOpts{
 		CheckedInAt: &checkedIn,
 	})
@@ -383,7 +396,7 @@ func TestSourcedRowPeriod_RewriteLeavesPastInstancesAndAttendance(t *testing.T) 
 	_, err = f.timetable.Materialization.MaterializeForTenant(ctx, monday, monday, timetable.MaterializationSourceManual)
 	require.NoError(t, err)
 
-	f.resyncTenant(t)
+	f.resyncTenantFrom(t, phaseStart)
 
 	rewritten := f.requireSingleRow(t, "one-time rewrite")
 	assert.NotEqual(t, stale[0].ID, rewritten.ID, "sanity: the rewrite replaced the stale row")
@@ -410,7 +423,8 @@ func TestSourcedRowPeriod_SplitWithoutPeriodPlansSuccessorWithoutPeriod(t *testi
 	resyncer := offeringResyncer(t, f.env)
 	templates, err := api.NewTimetableHTTP(testpkg.NewDatabase(t, f.env.db),
 		api.WithOfferingRosterResync(resyncer.ResyncTemplateOfferingRoster),
-		api.WithOfferingSourceValidator(f.env.offeringCatalog.ValidateTemplateOfferingSource))
+		api.WithOfferingSourceValidator(f.env.offeringCatalog.ValidateTemplateOfferingSource),
+		api.WithTimetableClock(decisionTestClock))
 	require.NoError(t, err)
 	require.NotNil(t, f.template.PlannedRoomID)
 	monday := firstFutureMondayOnOrAfter(calendar.Date(f.env.sourcePhase.ServiceStartDate))
