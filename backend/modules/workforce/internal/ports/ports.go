@@ -404,8 +404,7 @@ type TraegerStaffStore interface {
 
 // TraegerProofStore is the persistence of the Nachweise (#4707): kinds,
 // proofs, mappings and reminder claims in the Träger transaction, the
-// school's kinds and the status it sees in its tenant transaction, the
-// released Träger in the administrative transaction.
+// school's kinds and the status it sees in its tenant transaction.
 type TraegerProofStore interface {
 	EnsureStandardProofTypes(ctx context.Context, organizationID int64, kinds []domain.TraegerProofType) error
 	ListProofTypes(ctx context.Context, organizationID int64) ([]domain.TraegerProofType, error)
@@ -418,7 +417,6 @@ type TraegerProofStore interface {
 	SaveProofTypeMapping(ctx context.Context, organizationID, accountID int64, mapping domain.TraegerProofTypeMapping) error
 	SchoolProofKinds(ctx context.Context) ([]domain.QualificationType, error)
 	SchoolTraegerProofStatus(ctx context.Context) ([]domain.SchoolTraegerProofStatus, error)
-	ReleasedOrganizationIDs(ctx context.Context) ([]int64, error)
 }
 
 // TraegerStaffKeep tells the school which of its employments a record of

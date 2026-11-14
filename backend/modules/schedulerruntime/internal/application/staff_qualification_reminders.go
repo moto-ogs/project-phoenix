@@ -57,3 +57,44 @@ func (s *Scheduler) checkAndRunStaffQualificationReminders(ctx context.Context, 
 		)
 	}
 }
+
+const traegerStaffProofRemindersStartupDelay = 80 * time.Second
+
+// scheduleTraegerStaffProofRemindersTask warns before the proofs of the
+// Träger's Personalstamm expire (#4707), hourly like the school's reminders.
+func (s *Scheduler) scheduleTraegerStaffProofRemindersTask() {
+	s.registerTask("traeger-staff-proof-reminders", "1h-poll", s.runTraegerStaffProofRemindersTask)
+}
+
+func (s *Scheduler) runTraegerStaffProofRemindersTask(task *ScheduledTask) {
+	s.runIntervalPolling(task, "panic in traeger staff proof reminders task",
+		"traeger staff proof reminders using interval polling",
+		traegerStaffProofRemindersStartupDelay,
+		func() time.Duration { return staffQualificationRemindersInterval },
+		s.checkAndRunTraegerStaffProofReminders,
+	)
+}
+
+func (s *Scheduler) checkAndRunTraegerStaffProofReminders(ctx context.Context, task *ScheduledTask) {
+	task.mu.Lock()
+	if task.Running {
+		task.mu.Unlock()
+		return
+	}
+	task.Running = true
+	task.mu.Unlock()
+	defer func() {
+		task.mu.Lock()
+		task.Running = false
+		task.mu.Unlock()
+	}()
+
+	ctx, cancel := s.taskContext(ctx, staffQualificationRemindersTimeout)
+	defer cancel()
+
+	if err := s.traegerStaffProofReminders(ctx); err != nil {
+		s.getLogger().Error("traeger staff proof reminders failed",
+			slog.String("error", err.Error()),
+		)
+	}
+}

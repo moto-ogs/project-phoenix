@@ -43,5 +43,19 @@ func NewQualifications(db *bun.DB, staff workforce.QualificationStaff, bound wor
 	if now == nil {
 		now = time.Now
 	}
-	return application.NewQualifications(postgres.New(postgres.DatabaseRuntime(db)), application.Clock{Time: now}, staff, bound)
+	qualifications, err := application.NewQualifications(postgres.New(postgres.DatabaseRuntime(db)), application.Clock{Time: now}, staff, bound)
+	if err == nil && qualifications.QualificationReminders != nil {
+		qualifications.QualificationReminders.WithTraegerProofs(postgres.NewTraegerStaffStore())
+	}
+	return qualifications, err
+}
+
+// NewTraegerProofReminders composes the warnings before a proof of the
+// Personalstamm expires (#4707).
+func NewTraegerProofReminders(db *bun.DB, bound workforce.TraegerProofReminderPorts, now func() time.Time) (workforce.TraegerProofReminders, error) {
+	if now == nil {
+		now = time.Now
+	}
+	return application.NewTraegerProofReminders(postgres.NewTraegerStaffStore(), application.Clock{Time: now}, bound.Runtime, bound.Traeger,
+		postgres.New(postgres.DatabaseRuntime(db)), bound.Reminders)
 }

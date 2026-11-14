@@ -185,3 +185,17 @@ type SchoolTraegerProof struct {
 	Status    string `json:"status"`
 	ExpiresOn string `json:"expires_on,omitempty"`
 }
+
+// TraegerProofReminders sends the warnings before a proof of the
+// Personalstamm expires, at every released Träger (#4707).
+type TraegerProofReminders interface {
+	RunDue(ctx context.Context) error
+}
+
+// TraegerProofReminderPorts are the collaborators of the warnings: the
+// active Träger, the transactions and the ports of the school reminders.
+type TraegerProofReminderPorts struct {
+	Traeger   func(ctx context.Context) ([]int64, error)
+	Runtime   TraegerStaffRuntime
+	Reminders QualificationReminderPorts
+}

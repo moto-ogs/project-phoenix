@@ -352,17 +352,3 @@ func (s *TraegerStaffStore) SchoolTraegerProofStatus(ctx context.Context) ([]dom
 	}
 	return result, nil
 }
-
-// ReleasedOrganizationIDs lists the Träger with the release „Personal beim
-// Träger“, in the administrative transaction of the Worker.
-func (s *TraegerStaffStore) ReleasedOrganizationIDs(ctx context.Context) ([]int64, error) {
-	db, err := adminStaffDB(ctx)
-	if err != nil {
-		return nil, err
-	}
-	var ids []int64
-	if err := db.NewRaw(`SELECT organization_id FROM workforce.staff_releases ORDER BY organization_id`).Scan(ctx, &ids); err != nil {
-		return nil, fmt.Errorf("workforce postgres: list released Träger: %w", err)
-	}
-	return ids, nil
-}
