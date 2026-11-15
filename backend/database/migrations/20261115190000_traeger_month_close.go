@@ -8,12 +8,12 @@ import (
 	"github.com/uptrace/bun"
 )
 
-const traegerMonthCloseVersion = "20261115180000"
+const traegerMonthCloseVersion = "20261115190000"
 
 func init() {
 	MigrationRegistry.Register(&Migration{
 		Version:     traegerMonthCloseVersion,
-		Description: "Monatsabschluss des Trägers je Person in jeder Schule ihrer Personalakte (#4711, ADR 0242)",
+		Description: "Monatsabschluss des Trägers je Person in jeder Schule ihrer Personalakte (#4711, ADR 0243)",
 		DependsOn: []string{
 			staffMonthBalanceSnapshotsVersion, // the month close the Träger writes into each school (#1417)
 			traegerStaffContractsVersion,      // the contracts that decide who the Träger closes (#4706)
@@ -24,7 +24,7 @@ func init() {
 
 // traegerMonthCloseUpSQL lets the Personalverwaltung of a Träger close and
 // reopen the month of a person with an Arbeitsvertrag in every school of her
-// Personalakte (ADR 0242). The close stays the school's snapshot row, so the
+// Personalakte (ADR 0243). The close stays the school's snapshot row, so the
 // school's locks and the frozen Übertrag work unchanged.
 //
 //   - source 'traeger' marks a close of the Träger. It names the Träger

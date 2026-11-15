@@ -14444,7 +14444,7 @@ export const traegerStaffRecordsTopic =
 
 /**
  * Das Stundenkonto einer Personalakte über alle Schulen und der
- * Monatsabschluss des Trägers (#4711, ADR 0242).
+ * Monatsabschluss des Trägers (#4711, ADR 0243).
  */
 export const traegerStaffTimeAccountTopic =
   function traegerStaffTimeAccountTopic(): HelpTopic {

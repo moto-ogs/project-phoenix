@@ -8,7 +8,7 @@ import (
 )
 
 // The Stundenkonto of a Personalakte over all schools with the Monatsabschluss
-// of the Träger (#4711, ADR 0089 section 10, ADR 0242). Each school keeps the
+// of the Träger (#4711, ADR 0089 section 10, ADR 0243). Each school keeps the
 // recorded times and computes its month as before; the Träger reads every
 // school of the record in that school's tenant transaction, sums the months
 // and closes them where a contract of the Träger covers the month.

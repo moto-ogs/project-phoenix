@@ -2,5 +2,5 @@
   "scenario": "workforce.traeger_month_staff",
   "max": 4,
   "exact": true,
-  "description": "modules/workforce — TraegerMonthStaff, served by GET\n/api/staff/time-tracking/month-close/traeger-staff (#4711, ADR 0242): the\nschool's staff with their profiles and persons, then ONE read of the staff\na contract of the Träger covers in the month. Flat in the number of staff\nand contracts. Measured in the school's tenant transaction."
+  "description": "modules/workforce — TraegerMonthStaff, served by GET\n/api/staff/time-tracking/month-close/traeger-staff (#4711, ADR 0243): the\nschool's staff with their profiles and persons, then ONE read of the staff\na contract of the Träger covers in the month. Flat in the number of staff\nand contracts. Measured in the school's tenant transaction."
 }

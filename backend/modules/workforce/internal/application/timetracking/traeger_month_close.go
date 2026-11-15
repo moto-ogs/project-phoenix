@@ -8,7 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The Monatsabschluss of the Träger (#4711, ADR 0242): a contract of the
+// The Monatsabschluss of the Träger (#4711, ADR 0243): a contract of the
 // Träger with a Soll at the school makes the Personalverwaltung close the
 // person's month in every school of the Personalakte. The close is the
 // school's own snapshot with source traeger, so every lock and the frozen
