@@ -12,7 +12,7 @@
   "errorObject": "regjistrimi",
   "loading": "Formulari po ngarkohet…",
   "legalGermanNotice": "Këto tekste ligjore janë detyruese në gjermanisht.",
-  "fixMarked": "Ju lutemi korrigjoni fushat e shënuara me të kuqe.",
+  "fixMarked": "Disa fusha kanë një shënim. Ju lutemi korrigjoni këto fusha.",
   "consentSummary": "Ju lutemi konfirmoni të gjitha pëlqimet e detyrueshme.",
   "sections": {
     "guardianKicker": "Hapi 1",
@@ -137,6 +137,11 @@
     "noOfferingsForGrade": "Për klasën {grade} nuk ka oferta të përshtatshme kujdesi. Për pyetje, ju lutemi kontaktoni {careTerm}-në."
   },
   "captchaMisconfigured": "Regjistrimi online nuk është i mundur tani. Nuk është faji juaj. Ju lutemi kontaktoni {careTerm}-në.",
+  "captchaHelp": {
+    "hint": "Kontrolli i sigurisë ka ngecur?",
+    "restart": "Rinis kontrollin",
+    "restartTooltip": "Ringarkon kontrollin e sigurisë. Të dhënat tuaja mbeten."
+  },
   "structured": {
     "yes": "Po",
     "no": "Jo",

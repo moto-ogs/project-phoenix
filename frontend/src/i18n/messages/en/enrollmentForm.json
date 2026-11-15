@@ -12,7 +12,7 @@
   "errorObject": "the enrollment",
   "loading": "Loading form…",
   "legalGermanNotice": "These legal texts are legally binding in German.",
-  "fixMarked": "Please correct the fields marked in red.",
+  "fixMarked": "Some fields show a note. Please correct these fields.",
   "consentSummary": "Please confirm all required consents.",
   "sections": {
     "guardianKicker": "Step 1",
@@ -135,6 +135,11 @@
     "photoTitle": "Photo consent"
   },
   "captchaMisconfigured": "Online enrollment is not possible right now. This is not your fault. Please contact the {careTerm}.",
+  "captchaHelp": {
+    "hint": "Is the security check stuck?",
+    "restart": "Restart check",
+    "restartTooltip": "Reloads the security check. Your entries stay."
+  },
   "structured": {
     "yes": "Yes",
     "no": "No",

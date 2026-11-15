@@ -18,6 +18,8 @@
   "showPassword": "Şifreyi göster",
   "hidePassword": "Şifreyi gizle",
   "requirementsTitle": "Şifre kuralları",
+  "requirementMet": "karşılandı",
+  "requirementUnmet": "henüz karşılanmadı",
   "submitting": "Kaydediliyor...",
   "submit": "Daveti kabul et",
   "passwordRules": {

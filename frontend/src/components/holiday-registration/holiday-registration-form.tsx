@@ -6,7 +6,7 @@ import { HolidayRegistrationLegal } from "./holiday-registration-legal";
 // dem Absenden steht eine Zusammenfassung, danach die Eingangsbestätigung.
 // Eltern mit Elternkonto wählen ihre bekannten Kinder aus (#4662).
 
-import { Turnstile } from "@marsidev/react-turnstile";
+import { SecurityCheck } from "~/components/enrollment/security-check";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
@@ -300,12 +300,14 @@ export function HolidayRegistrationForm({
           canSubmit={captchaToken !== ""}
           securityCheck={
             offer.captchaSiteKey ? (
-              <Turnstile
+              <SecurityCheck
                 siteKey={offer.captchaSiteKey}
-                options={{ theme: "light" }}
-                onSuccess={setCaptchaToken}
-                onExpire={() => setCaptchaToken("")}
-                onError={() => setCaptchaToken("")}
+                onToken={setCaptchaToken}
+                copy={{
+                  hint: t("captchaHelp.hint"),
+                  restart: t("captchaHelp.restart"),
+                  restartTooltip: t("captchaHelp.restartTooltip"),
+                }}
               />
             ) : (
               <p className="text-sm text-gray-700">{t("captchaMissing")}</p>

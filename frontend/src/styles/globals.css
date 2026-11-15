@@ -1016,6 +1016,32 @@ html[data-chat-page-lock] body {
   animation: fadeInUp 300ms ease-out forwards;
 }
 
+/* Wer weniger Bewegung eingestellt hat, sieht die eigenen Animationen nicht
+   (#7114): Ein- und Ausblenden springen sofort an ihr Ende, Pulsieren steht
+   still. `forwards` hält den Endzustand, die Schließ-Timer der Modals
+   warten wie bisher. Ladekreise drehen weiter: sie zeigen, dass etwas
+   passiert. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-modalEnter,
+  .animate-modalExit,
+  .animate-bounceIn,
+  .animate-contentReveal,
+  .animate-slideInRight,
+  .animate-fadeIn,
+  .animate-fadeInUp {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+
+  .animate-pulse,
+  .mui-skeleton-text,
+  .mui-skeleton-circular,
+  .mui-skeleton-rectangular,
+  .mui-skeleton-rounded {
+    animation: none;
+  }
+}
+
 /* Hide scrollbar utility */
 .scrollbar-hidden::-webkit-scrollbar {
   display: none;

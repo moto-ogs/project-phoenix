@@ -746,7 +746,7 @@ describe("EnrollmentForm", () => {
 
     expect(
       await screen.findByText(
-        "Bitte korrigieren Sie die rot markierten Felder.",
+        "Bei einigen Feldern steht ein Hinweis. Bitte korrigieren Sie diese Felder.",
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Bitte Vornamen angeben.")).toHaveLength(2);
@@ -763,7 +763,7 @@ describe("EnrollmentForm", () => {
       );
       expect(
         await screen.findByText(
-          "Bitte korrigieren Sie die rot markierten Felder.",
+          "Bei einigen Feldern steht ein Hinweis. Bitte korrigieren Sie diese Felder.",
         ),
       ).toBeInTheDocument();
       await submitAttemptFinished();

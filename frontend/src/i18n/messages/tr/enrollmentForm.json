@@ -14,7 +14,7 @@
   "legalGermanNotice": "Bu yasal metinlerin bağlayıcı sürümü Almancadır.",
   "previewError": "Bu bir ön izlemedir. Bu görünümden kayıt gönderilmez.",
   "missingPhase": "Bu kayıt için kayıt dönemi eksik.",
-  "fixMarked": "Lütfen kırmızıyla işaretli alanları düzeltin.",
+  "fixMarked": "Bazı alanların altında bir uyarı var. Lütfen bu alanları düzeltin.",
   "consentSummary": "Lütfen gerekli tüm onayları verin.",
   "sections": {
     "guardianKicker": "1. adım",
@@ -137,6 +137,11 @@
     "photoTitle": "Fotoğraf İzni"
   },
   "captchaMisconfigured": "Online kayıt şu anda mümkün değil. Bu sizin hatanız değil. Lütfen {careTerm} ile iletişime geçin.",
+  "captchaHelp": {
+    "hint": "Güvenlik kontrolü takıldı mı?",
+    "restart": "Kontrolü yeniden başlat",
+    "restartTooltip": "Güvenlik kontrolünü yeniden yükler. Bilgileriniz korunur."
+  },
   "structured": {
     "yes": "Evet",
     "no": "Hayır",
