@@ -397,7 +397,13 @@ export function DatePicker({
           aria-label={
             isMultiple
               ? undefined
-              : (props.ariaLabel ?? (iconOnly ? "Kalender öffnen" : undefined))
+              : iconOnly
+                ? (props.ariaLabel ?? "Kalender öffnen")
+                : props.ariaLabel
+                  ? props.ariaLabel.includes(displayValue ?? placeholder)
+                    ? props.ariaLabel
+                    : `${props.ariaLabel}: ${displayValue ?? placeholder}`
+                  : undefined
           }
           aria-expanded={isOpen}
           aria-describedby={triggerDescribedBy}

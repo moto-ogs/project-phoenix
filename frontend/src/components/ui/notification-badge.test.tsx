@@ -37,6 +37,18 @@ describe("NotificationBadge", () => {
     expect(screen.getByText("99+")).toBeInTheDocument();
   });
 
+  it("caps at a lower maximum when the caller sets one", () => {
+    const { rerender } = render(
+      <NotificationBadge count={9} tone="red" max={9} ariaLabel="9 neu" />,
+    );
+    expect(screen.getByText("9")).toBeInTheDocument();
+
+    rerender(
+      <NotificationBadge count={10} tone="red" max={9} ariaLabel="10 neu" />,
+    );
+    expect(screen.getByText("9+")).toBeInTheDocument();
+  });
+
   it("uses the coral tone", () => {
     render(
       <NotificationBadge

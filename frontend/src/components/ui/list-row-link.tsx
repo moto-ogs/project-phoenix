@@ -56,6 +56,12 @@ type ListRowLinkProps = ListRowLinkTarget & {
    * bleibt Legenden und Plänen vorbehalten (ADR 0149).
    */
   readonly unread?: boolean;
+  /**
+   * Dreizeilig: der Untertitel bricht um statt abgeschnitten zu werden. Für
+   * einen Text, der ganz gelesen werden muss, etwa einen Hinweis der Glocke
+   * (#7148); eine Vorschau wie in den Nachrichten bleibt einzeilig.
+   */
+  readonly wrapSubtitle?: boolean;
   /** Layout-Klassen für den Textteil, etwa bei einer schmalen Planungsspalte. */
   readonly contentClassName?: string;
   /** Als einzelne Karte statt als Zeile einer `FramedList`. */
@@ -99,6 +105,7 @@ export function ListRowLink({
   accent,
   accentTint = false,
   unread = false,
+  wrapSubtitle = false,
   contentClassName,
   framed = false,
   chevron = true,
@@ -156,7 +163,8 @@ export function ListRowLink({
       {subtitle ? (
         <span
           className={cn(
-            "block min-w-0 truncate text-sm",
+            "block min-w-0 text-sm",
+            wrapSubtitle ? "break-words whitespace-normal" : "truncate",
             unread ? "text-gray-700" : "text-gray-500",
           )}
         >

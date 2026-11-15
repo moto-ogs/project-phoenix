@@ -15,6 +15,7 @@ type WorkerRecords interface {
 	ports.Store
 	ports.RetentionStore
 	ports.RealtimeNotificationStore
+	ports.FeedStore
 	targetedEmailStore
 	targetedPushStore
 	ports.EmailDeliveryEventStore

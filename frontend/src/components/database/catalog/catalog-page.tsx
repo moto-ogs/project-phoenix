@@ -143,7 +143,21 @@ export interface CatalogConfig<T extends CatalogItem> {
   readonly preserveDraftOnSectionsChange?: boolean;
   /** Anlegen erst freigeben, wenn die für neue Einträge nötigen Daten vorliegen. */
   readonly createDisabled?: boolean;
+  /**
+   * Weitere Reiter der Objektansicht nach „Stammdaten“, etwa wer einen
+   * Eintrag nutzt. Ein anderer Eintrag öffnet wieder „Stammdaten“.
+   */
+  readonly detailTabs?: (item: T) => readonly CatalogDetailTab[];
 }
+
+/** Ein zusätzlicher Reiter der Objektansicht eines Katalogeintrags. */
+interface CatalogDetailTab {
+  readonly id: string;
+  readonly label: string;
+  readonly content: React.ReactNode;
+}
+
+const STAMMDATEN_TAB = "stammdaten";
 
 interface CatalogPageProps<T extends CatalogItem> {
   readonly config: CatalogConfig<T>;
@@ -236,6 +250,15 @@ export function CatalogPage<T extends CatalogItem>({
     () => all.find((item) => item.id === selectedId) ?? null,
     [all, selectedId],
   );
+
+  // Ein anderer Eintrag beginnt wieder bei „Stammdaten“.
+  const [detailTab, setDetailTab] = useState({
+    itemId: selectedId,
+    tab: STAMMDATEN_TAB,
+  });
+  if (detailTab.itemId !== selectedId) {
+    setDetailTab({ itemId: selectedId, tab: STAMMDATEN_TAB });
+  }
 
   // Ein anderer Eintrag oder ein neu geöffnetes Anlegen beginnt ohne den
   // Fehler des vorigen Versuchs.
@@ -600,7 +623,7 @@ export function CatalogPage<T extends CatalogItem>({
       }
       tabs={[
         {
-          id: "stammdaten",
+          id: STAMMDATEN_TAB,
           label: "Stammdaten",
           content:
             canManage && !selectedReadOnly ? (
@@ -629,9 +652,10 @@ export function CatalogPage<T extends CatalogItem>({
               </p>
             ),
         },
+        ...(config.detailTabs?.(selected) ?? []),
       ]}
-      activeTab="stammdaten"
-      onTabChange={() => undefined}
+      activeTab={detailTab.tab}
+      onTabChange={(tab) => setDetailTab({ itemId: selectedId, tab })}
     />
   ) : (
     <EmptyState

@@ -54,13 +54,20 @@ function isBillingAreaActive(href: string, pathname: string): boolean | null {
   );
 }
 
-/** Die Abwesenheitsarten (#4710) liegen unter /personal, sind aber keine Akte. */
-const STAFF_ABSENCE_TYPES = "/traeger/personal/abwesenheitsarten";
+/**
+ * Die Abwesenheitsarten (#4710) und die Einsatzplanung (#4708) liegen unter
+ * /personal, sind aber keine Akte.
+ */
+const STAFF_PAGES_BESIDE_RECORDS = [
+  "/traeger/personal/abwesenheitsarten",
+  "/traeger/personal/einsatzplanung",
+];
 
 function isStaffAbsenceTypesPath(pathname: string): boolean {
-  return (
-    matchesPath(STAFF_ABSENCE_TYPES, pathname) ||
-    matchesPath(STAFF_ABSENCE_TYPES.slice("/traeger".length), pathname)
+  return STAFF_PAGES_BESIDE_RECORDS.some(
+    (href) =>
+      matchesPath(href, pathname) ||
+      matchesPath(href.slice("/traeger".length), pathname),
   );
 }
 

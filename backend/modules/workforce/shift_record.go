@@ -46,6 +46,15 @@ type ShiftRecord struct {
 	SickAbsenceID *int64 `json:"sick_absence_id,omitempty"`
 	CreatedBy     int64  `json:"created_by"`
 	UpdatedBy     *int64 `json:"updated_by,omitempty"`
+	// PlannedByTraeger marks a shift the Personalverwaltung planned or last
+	// changed in the Träger-Portal (#4708); CreatedBy is 0 when it created it.
+	PlannedByTraeger bool `json:"planned_by_traeger"`
+
+	// WorkingTime is the planner's confirmation of the working-time warnings
+	// of this write and TraegerAccountID the Personalverwaltung behind it
+	// (#4708); neither is stored on the row.
+	WorkingTime      WorkingTimeConfirmation `json:"-"`
+	TraegerAccountID *int64                  `json:"-"`
 
 	// ShiftType is the resolved Schichtart for ShiftTypeID, filled by the
 	// service for readers without access to the shift-type administration
@@ -64,7 +73,7 @@ func (s *ShiftRecord) Validate() error {
 	if err := ValidateShiftRecordWindow(s.StartTime, s.EndTime, s.BreakMinutes); err != nil {
 		return err
 	}
-	if s.CreatedBy <= 0 {
+	if s.CreatedBy <= 0 && !s.PlannedByTraeger {
 		return errors.New("created by is required")
 	}
 	return nil

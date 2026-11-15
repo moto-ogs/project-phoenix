@@ -149,3 +149,28 @@ func (s PresenceSettings) WebParticipantLimitEnforced(ctx context.Context) (bool
 	}
 	return !allowed, nil
 }
+
+// StaffPlanningRules are the Träger values of the Einsatzplanung (#4708):
+// whether shifts are planned in moto at all, the daily maximum and the
+// minimum rest in minutes, and whether breaks are checked.
+func (s PresenceSettings) StaffPlanningRules(ctx context.Context) (enabled bool, maxDailyMinutes, minRestMinutes int, checkBreaks bool, err error) {
+	if enabled, err = s.source.ResolveBool(ctx, configModels.KeyStaffPlanningEnabled); err != nil {
+		return false, 0, 0, false, err
+	}
+	maxDailyHours, err := s.source.ResolveInt(ctx, configModels.KeyStaffPlanningMaxDailyHours)
+	if err != nil {
+		return false, 0, 0, false, err
+	}
+	rest, err := s.source.ResolveString(ctx, configModels.KeyStaffPlanningMinRestHours)
+	if err != nil {
+		return false, 0, 0, false, err
+	}
+	restHours, err := strconv.Atoi(rest)
+	if err != nil {
+		return false, 0, 0, false, fmt.Errorf("setting %s: %q is no number of hours: %w", configModels.KeyStaffPlanningMinRestHours, rest, err)
+	}
+	if checkBreaks, err = s.source.ResolveBool(ctx, configModels.KeyStaffPlanningCheckBreaks); err != nil {
+		return false, 0, 0, false, err
+	}
+	return enabled, maxDailyHours * 60, restHours * 60, checkBreaks, nil
+}

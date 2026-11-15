@@ -141,6 +141,12 @@
       "legacy": "workforce.month_closed"
     },
     {
+      "code": "workforce.month_closed_by_traeger",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.month_closed_by_traeger"
+    },
+    {
       "code": "workforce.month_not_closable",
       "class": "input",
       "parameters": [],
@@ -397,6 +403,22 @@
       "legacy": "workforce.shift_overlap"
     },
     {
+      "code": "workforce.shift_overlaps_other_site",
+      "class": "business_rejection",
+      "parameters": [
+        "start",
+        "end",
+        "day"
+      ],
+      "legacy": "workforce.shift_overlaps_other_site"
+    },
+    {
+      "code": "workforce.shift_planning_off",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.shift_planning_off"
+    },
+    {
       "code": "workforce.shift_series_no_occurrences",
       "class": "input",
       "parameters": [],
@@ -425,6 +447,12 @@
       "class": "business_rejection",
       "parameters": [],
       "legacy": "workforce.shift_type_inactive"
+    },
+    {
+      "code": "workforce.shift_working_time_warning",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.shift_working_time_warning"
     },
     {
       "code": "workforce.staff_kept_by_traeger",
@@ -548,6 +576,41 @@
         "day"
       ],
       "legacy": "workforce.traeger_holiday_week_school_override"
+    },
+    {
+      "code": "workforce.traeger_month_closed_by_school",
+      "class": "business_rejection",
+      "parameters": [
+        "school"
+      ],
+      "legacy": "workforce.traeger_month_closed_by_school"
+    },
+    {
+      "code": "workforce.traeger_month_later_closed",
+      "class": "business_rejection",
+      "parameters": [
+        "school",
+        "month"
+      ],
+      "legacy": "workforce.traeger_month_later_closed"
+    },
+    {
+      "code": "workforce.traeger_month_not_kept",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_month_not_kept"
+    },
+    {
+      "code": "workforce.traeger_planning_shift_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_planning_shift_not_found"
+    },
+    {
+      "code": "workforce.traeger_planning_site_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_planning_site_invalid"
     },
     {
       "code": "workforce.traeger_proof_invalid",

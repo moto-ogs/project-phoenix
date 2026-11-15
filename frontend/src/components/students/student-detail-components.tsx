@@ -13,6 +13,7 @@ import { LocationBadge } from "@/components/students/presence/location-badge";
 import type { Student } from "~/lib/student-helpers";
 import { isNotCheckedInLocation } from "~/lib/location-helper";
 import { useMinuteClock } from "~/lib/pickup-helpers";
+import { getAccessibleTextColor } from "~/lib/kit-palette";
 import {
   getStudentAbsence,
   getStudentTimeStatus,
@@ -663,7 +664,11 @@ function TodayTimeStatusInlineRow({
           className={
             status.textColor ? "font-medium" : "font-medium text-gray-900"
           }
-          style={status.textColor ? { color: status.textColor } : undefined}
+          style={
+            status.textColor
+              ? { color: getAccessibleTextColor(status.textColor) }
+              : undefined
+          }
         >
           {status.displayTime ?? "–"}
         </span>

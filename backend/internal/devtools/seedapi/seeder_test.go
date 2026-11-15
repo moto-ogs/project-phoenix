@@ -1229,6 +1229,12 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": data})
 			return
 		}
+		// The Einsatzplanung of the Träger (#4708): the week of this fake
+		// Träger plans nobody.
+		if r.Method == seedHTTPMethodGet && r.URL.Path == "/traeger/staff-planning/" {
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"people": []any{}}})
+			return
+		}
 		if r.Method == seedHTTPMethodGet && r.URL.Path == "/api/absence-types" {
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []any{}})
 			return

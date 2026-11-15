@@ -37,6 +37,13 @@ var traegerStaffCoreActions = map[RouteKey]CoreAction{
 	// The Personal-Import (#4724).
 	{http.MethodPost, "/traeger/staff-record-imports/"}:        notCaptured,
 	{http.MethodPost, "/traeger/staff-record-imports/preview"}: notCaptured,
+	// The Einsatzplanung over all Einsatzorte (#4708).
+	{http.MethodPost, "/traeger/staff-planning/records/{id}/shifts"}:                                notCaptured,
+	{http.MethodPut, "/traeger/staff-planning/records/{id}/shifts/{shiftId}"}:                       notCaptured,
+	{http.MethodDelete, "/traeger/staff-planning/records/{id}/schools/{schoolId}/shifts/{shiftId}"}: notCaptured,
+	// The Monatsabschluss of the Stundenkonto (#4711).
+	{http.MethodPost, "/traeger/staff-records/{id}/time-account/close"}:  notCaptured,
+	{http.MethodPost, "/traeger/staff-records/{id}/time-account/reopen"}: notCaptured,
 }
 
 func init() {

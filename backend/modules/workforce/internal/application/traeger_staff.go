@@ -27,6 +27,9 @@ type TraegerStaff struct {
 	lock  ports.Transaction
 	clock ports.Clock
 	warn  func(message string, args ...any)
+	// sites is the Dienstplan of each school the Einsatzplanung plans in
+	// (#4708); nil outside the Einsatzplanung.
+	sites workforce.TraegerShiftSites
 }
 
 // TraegerStaffDependencies are the collaborators of the Personalstamm the
@@ -43,7 +46,7 @@ type TraegerStaffDependencies struct {
 // NewTraegerStaff composes the Personalstamm; every collaborator is required.
 func NewTraegerStaff(store ports.TraegerStaffStore, collaborators workforce.TraegerStaffPorts, dependencies TraegerStaffDependencies) *TraegerStaff {
 	if store == nil || collaborators.Schools == nil || collaborators.Employments == nil || collaborators.Persons == nil || collaborators.Access == nil ||
-		collaborators.Runtime == nil || dependencies.Subjects == nil || dependencies.Audit == nil || dependencies.Bank == nil ||
+		collaborators.Runtime == nil || collaborators.Months == nil || dependencies.Subjects == nil || dependencies.Audit == nil || dependencies.Bank == nil ||
 		dependencies.Lock == nil || dependencies.Clock == nil || dependencies.Warn == nil {
 		panic("workforce traeger staff: all dependencies are required")
 	}

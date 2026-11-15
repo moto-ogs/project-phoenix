@@ -116,6 +116,7 @@ vi.mock("next-intl", async () => {
 // getLocale()). It needs a request context that doesn't exist under jsdom.
 vi.mock("next-intl/server", () => ({
   getLocale: () => Promise.resolve("de"),
+  getMessages: () => Promise.resolve({}),
 }));
 
 const tenantProviderMock = vi.hoisted(() => ({

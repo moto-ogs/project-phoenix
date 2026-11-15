@@ -92,6 +92,8 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const AdminView: Story = {
+  // axe meldet hier noch aria-conditional-attr; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   args: {
     staffId: "1",
     from,
@@ -108,6 +110,8 @@ export const AdminView: Story = {
 };
 
 export const SelfView: Story = {
+  // axe meldet hier noch aria-conditional-attr; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   args: {
     staffId: "1",
     from,

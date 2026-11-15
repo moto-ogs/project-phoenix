@@ -38,6 +38,7 @@ import { useTraegerMasterData } from "~/components/traeger/use-traeger-master-da
 import { TRAEGER_BRANDING_TAB } from "~/lib/traeger-branding";
 import { metadataLoadError } from "~/components/traeger/metadata-load-error";
 import { TraegerContactSection } from "~/components/traeger/traeger-contact-section";
+import { FutureShiftsList } from "~/components/traeger/planning/future-shifts-list";
 import { SectionCard } from "~/components/ui/section-card";
 import {
   DEBTOR_NUMBER_ON_CONFIRM_KEY,
@@ -53,6 +54,10 @@ const logger = createLogger({ component: "TraegerSettingsPage" });
  * of the dashboard (#4675). An unknown key opens the first area.
  */
 const AREA_PARAM = "bereich";
+
+/** Der Schalter der Einsatzplanung (#4708); beim Ausschalten zeigt der
+ *  Dialog die Schulen mit künftigen Schichten. */
+const STAFF_PLANNING_ENABLED_KEY = "staff_planning.enabled";
 
 /** Der Bereich mit den Kontaktdaten; er liegt nicht im Einstellungs-Schema. */
 const CONTACT_TAB = "kontakt";
@@ -251,6 +256,11 @@ function TraegerSettingsContent() {
             audience="traeger"
             headingLevel={2}
             autosaveNote
+            renderConfirmDetail={(setting) =>
+              setting.key === STAFF_PLANNING_ENABLED_KEY ? (
+                <FutureShiftsList />
+              ) : null
+            }
             renderAddon={(setting) =>
               setting.key === DEBTOR_NUMBER_DIGITS_ONLY_KEY &&
               setting.value === true &&

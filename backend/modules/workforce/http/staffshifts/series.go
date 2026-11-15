@@ -42,6 +42,8 @@ func (id *occurrenceShiftID) UnmarshalJSON(data []byte) error {
 // split payload reuses this shape plus effective_date; staff_id, the period,
 // and the validity bounds stay with the series lineage there.
 type SeriesRequest struct {
+	// WorkingTimeRequest confirms the working-time warnings (#4708).
+	WorkingTimeRequest
 	StaffID          int64      `json:"staff_id"`
 	Weekdays         []int      `json:"weekdays"` // omitted on split = keep predecessor weekdays
 	StartTime        string     `json:"start_time"`
@@ -265,6 +267,7 @@ func (rs *Resource) createSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.WorkingTime = req.Confirmation()
 
 	result, err := rs.planning.CreateSeries(r.Context(), workforce.CreateStaffShiftSeries{StaffShiftSeriesInput: input})
 	if err != nil {
@@ -295,6 +298,7 @@ func (rs *Resource) splitSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.WorkingTime = req.Confirmation()
 	result, err := rs.planning.SplitSeries(r.Context(), input)
 	if err != nil {
 		rs.renderError(w, r, err)

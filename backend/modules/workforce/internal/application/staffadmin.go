@@ -480,6 +480,16 @@ func (a *StaffAdmin) StaffSollKeptByTraeger(ctx context.Context, staffID int64) 
 	return len(kept) > 0, MapStaffAdminError(err)
 }
 
+// TraegerStaffPlanning composes the Einsatzplanung of the Träger (#4708)
+// over the same Personalstamm and the Dienstplan of each school.
+func (a *StaffAdmin) TraegerStaffPlanning(collaborators workforce.TraegerStaffPorts, sites workforce.TraegerShiftSites) workforce.TraegerStaffPlanning {
+	planning := NewTraegerStaff(a.traeger, collaborators, TraegerStaffDependencies{
+		Subjects: a.subjects, Audit: a.audit, Bank: a.bank, Lock: a.transaction, Clock: a.clock, Warn: a.warn,
+	})
+	planning.sites = sites
+	return planning
+}
+
 // TraegerAbsenceTypes composes the Träger's Abwesenheitsarten and
 // Kontingente (#4710) over the same Personalstamm.
 func (a *StaffAdmin) TraegerAbsenceTypes(collaborators workforce.TraegerStaffPorts) workforce.TraegerAbsenceTypes {

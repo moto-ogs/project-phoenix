@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"time"
 
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	settingsValues "github.com/moto-ogs/project-phoenix/modules/settings"
@@ -47,6 +48,8 @@ type DeliveryNotifications struct {
 	// UnreportedAbsences tells the Schulverwaltung about children missing
 	// without a report (#4791).
 	UnreportedAbsences deliveryContract.UnreportedAbsenceNotifier
+	// Feed serves an account its own notification feed (#7148).
+	Feed deliveryContract.NotificationFeed
 }
 
 // BuildDeliveryNotifications binds the notification router over the realtime
@@ -73,7 +76,16 @@ func BuildDeliveryNotifications(
 	if err != nil {
 		return DeliveryNotifications{}, err
 	}
-	notifier := deliveryCompose.NewNotifier(settings, logger.With("service", "notifications"), deliveryCompose.NotificationDeliveryObserver(env.Observe.Delivery), sse, push)
+	// A nil environment clock is the real one (RootEnvironment.Now).
+	clock := env.Now
+	if clock == nil {
+		clock = time.Now
+	}
+	notifier := deliveryCompose.NewNotifier(settings, logger.With("service", "notifications"), deliveryCompose.NotificationDeliveryObserver(env.Observe.Delivery), delivery.Runtime.Store, clock, sse, push)
+	feed, ok := notifier.(deliveryContract.NotificationFeed)
+	if !ok {
+		return DeliveryNotifications{}, fmt.Errorf("notification router does not serve the notification feed")
+	}
 	preferences, err := deliveryCompose.NewTenantPreferenceService(unit, consent, DeliveryPreferenceSettings(settings), db.Pool(), identity, securityruntime.HasPermission)
 	if err != nil {
 		return DeliveryNotifications{}, err
@@ -106,6 +118,7 @@ func BuildDeliveryNotifications(
 			messaging.ParentMessageThread, BindParentMessageLeadership(people.Staff, identity), db.Pool(), logger.With("producer", "staff_parent_message_notifications")),
 		AbsenceNotifier:  absences,
 		ResponsibleStaff: responsible,
+		Feed:             feed,
 	}, nil
 }
 

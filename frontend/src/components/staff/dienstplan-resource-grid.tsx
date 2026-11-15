@@ -576,6 +576,7 @@ export function DienstplanResourceGrid({
       ariaParts.push("fällt aus");
     } else {
       if (isReplacement) ariaParts.push("Vertretung");
+      if (shift.plannedByTraeger) ariaParts.push("vom Träger geplant");
       if (dayIsAbsent) ariaParts.push("abwesend");
     }
 
@@ -640,6 +641,9 @@ export function DienstplanResourceGrid({
               <p className="text-xs text-gray-500">
                 Pause {shift.breakMinutes} min
               </p>
+            )}
+            {shift.plannedByTraeger && (
+              <p className="text-xs text-gray-500">Vom Träger geplant</p>
             )}
           </>
         )}

@@ -31,6 +31,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
+    "test:storybook": "vitest run -c vitest.storybook.config.ts",
     "vitest": "vitest",
     "typecheck": "node ./node_modules/typescript-native/bin/tsc --noEmit",
     "validate:build-env": "node scripts/validate-build-env.mjs",
@@ -48,6 +49,7 @@
     "generate:portal-pages": "node scripts/generate-portal-pages.mjs",
     "kit-pixel": "node scripts/kit-pixel.mjs",
     "ui-kit:button-baseline": "node scripts/ui-kit-button-baseline-update.mjs",
+    "ui-kit:contrast-baseline": "node scripts/ui-kit-contrast-baseline-update.mjs",
     "test:source-contracts": "node --test scripts/*.node-test.mjs",
     "test:bundle-policy": "node --test scripts/perf/*.node-test.mjs"
   },
@@ -87,6 +89,7 @@
   "devDependencies": {
     "@playwright/test": "^1.65.0",
     "@storybook/addon-a11y": "^10.6.6",
+    "@storybook/addon-vitest": "^10.6.6",
     "@storybook/nextjs-vite": "^10.6.6",
     "@tailwindcss/postcss": "^4.3.4",
     "@testing-library/jest-dom": "^7.0.1",
@@ -96,6 +99,8 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.2.1",
+    "@vitest/browser": "^4.1.12",
+    "@vitest/browser-playwright": "^4.1.12",
     "@vitest/coverage-v8": "^4.1.12",
     "dependency-cruiser": "^18.7.2",
     "happy-dom": "^21.0.4",

@@ -105,4 +105,16 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 		Category:        "benachrichtigungen",
 		SortOrder:       5,
 	},
+	{
+		Key:             config.KeyNotificationsInstanceCancelledEnabled,
+		Label:           "Hinweis bei Absage eines Termins",
+		Description:     "Wird ein Termin oder Angebot abgesagt, bekommt das eingeplante Personal einen Hinweis in moto. Ob dazu eine Mitteilung aufs Handy kommt, entscheidet jede Person selbst.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "benachrichtigungen",
+		SortOrder:       6,
+	},
 }

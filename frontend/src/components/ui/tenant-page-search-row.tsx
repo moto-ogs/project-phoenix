@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useViewportAtLeast } from "~/lib/hooks/use-viewport-at-least";
+import { cn } from "~/lib/utils";
 import { ActiveFilterChips } from "./page-header/ActiveFilterChips";
 import { BadgeDisplay, BadgeDisplayCompact } from "./page-header/BadgeDisplay";
 import { DesktopFilters } from "./page-header/DesktopFilters";
@@ -292,13 +293,27 @@ function MobileSearchSection({
     toggle: toggleMobileFilters,
   } = useFilterPanelAnchor(isMobileFiltersOpen, setIsMobileFiltersOpen);
   const hasFilters = filters.length > 0;
+  const hasOverflowMenu = overflowMenu !== undefined && overflowMenu.length > 0;
+  // Auch ohne Suchfeld: sonst gäbe es unter der Desktop-Breite keinen Weg zu
+  // den Filtern (Zugriffsprotokoll, Ferienanmeldungen), zum Kebab und zur
+  // Zähler-Plakette (#6722).
+  const showRow =
+    search !== undefined ||
+    hasFilters ||
+    hasOverflowMenu ||
+    badge !== undefined;
 
   return (
     <div className={`${hideClass} [&>*:last-child]:mb-0`}>
-      {/* Auch ohne Suchfeld: sonst gäbe es unter der Desktop-Breite keinen
-          Weg zu den Filtern (Zugriffsprotokoll, Ferienanmeldungen). */}
-      {(search ?? hasFilters) && (
-        <div className="mb-3 flex items-center gap-2">
+      {showRow && (
+        <div
+          className={cn(
+            "mb-3 flex items-center gap-2",
+            // Ohne Suchfeld und Filter stehen Kebab und Plakette rechts, wie
+            // auf dem Desktop.
+            search === undefined && !hasFilters && "justify-end",
+          )}
+        >
           {search && (
             <SharedSearchBar {...search} className="min-w-0 flex-1" size="sm" />
           )}
@@ -315,7 +330,7 @@ function MobileSearchSection({
             </div>
           )}
 
-          {overflowMenu && overflowMenu.length > 0 && (
+          {hasOverflowMenu && (
             <div className="flex-shrink-0">
               <OverflowMenu items={overflowMenu} />
             </div>

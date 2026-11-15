@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/application"
 	timetracking "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking"
 )
@@ -75,7 +76,7 @@ func NewWorkSessionSide(capability workforce.Capability, ports TimeTrackingPorts
 	if capability == nil || staff == nil {
 		return nil, errors.New("time tracking: the Workforce capability and the staff lookup are required")
 	}
-	clock, err := timetracking.NewClock(timetracking.Dependencies{Rows: timetracking.TimeTrackingRows(capability), Ports: ports})
+	clock, err := timetracking.NewClock(timetracking.Dependencies{Rows: timetracking.TimeTrackingRows(capability, postgres.NewTraegerStaffStore()), Ports: ports})
 	if err != nil {
 		return nil, err
 	}
@@ -100,9 +101,7 @@ func NewTimeTrackingCleanup(deps TimeTrackingCleanupDependencies) (TimeTrackingC
 	if deps.Workforce == nil {
 		return nil, errors.New("time tracking cleanup: the Workforce capability is required")
 	}
-	return timetracking.NewCleanup(timetracking.CleanupDependencies{
-		Sessions: deps.Workforce, Absences: deps.Absences, Audit: deps.Audit, Settings: deps.Settings, Logger: deps.Logger,
-	})
+	return timetracking.NewCleanup(timetracking.CleanupDependencies{Sessions: deps.Workforce, Absences: deps.Absences, Audit: deps.Audit, Settings: deps.Settings, Logger: deps.Logger})
 }
 
 type WorkSessionSide struct {
@@ -128,5 +127,5 @@ func (s *WorkSessionSide) TimeTracking() (*TimeTracking, error) {
 
 // NewEmploymentReset binds invitation resets to the ordinary audited readers.
 func NewEmploymentReset(admin workforce.StaffRecordAdmin, capability workforce.Capability, employment workforce.StaffEmployments, audit workforce.StaffAdminAudit, ports TimeTrackingPorts) workforce.EmploymentResetter {
-	return application.NewEmploymentReset(admin, capability, employment, audit, timetracking.NewEmploymentTimeReset(timetracking.Dependencies{Rows: timetracking.TimeTrackingRows(capability), Ports: ports}, application.NewEmploymentScheduleReset(capability, employment, audit)))
+	return application.NewEmploymentReset(admin, capability, employment, audit, timetracking.NewEmploymentTimeReset(timetracking.Dependencies{Rows: timetracking.TimeTrackingRows(capability, postgres.NewTraegerStaffStore()), Ports: ports}, application.NewEmploymentScheduleReset(capability, employment, audit)))
 }

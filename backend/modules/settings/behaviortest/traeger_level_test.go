@@ -15,7 +15,10 @@ import (
 
 // traegerSettingsRight is the Träger right "Einstellungen" the root maps
 // records.TraegerRightSettings to (identityaccess.TraegerRightSettingsManage).
-const traegerSettingsRight = "traeger_settings:manage"
+const (
+	traegerSettingsRight = "traeger_settings:manage"
+	traegerStaffRight    = "traeger_staff:manage"
+)
 
 type traegerLevelFixture struct {
 	db                         *bun.DB
@@ -151,7 +154,8 @@ func TestTraegerSettingsCheckTheRightAndTheLevel(t *testing.T) {
 
 // TestTraegerSchemaShowsOnlyTraegerSettingsWithTheirSource: the Träger sees
 // every Träger-level setting, its effective value and where it comes from,
-// writable only with the right, and nothing of another Träger.
+// writable only with its right, and nothing of another Träger. The
+// Einsatzplanung is written with the right Personal (#4708).
 func TestTraegerSchemaShowsOnlyTraegerSettingsWithTheirSource(t *testing.T) {
 	t.Parallel()
 	f := newTraegerLevelFixture(t)
@@ -173,11 +177,18 @@ func TestTraegerSchemaShowsOnlyTraegerSettingsWithTheirSource(t *testing.T) {
 		}
 		return result
 	}
-	writer := items([]string{"traeger_overview:read", traegerSettingsRight})
+	writer := items([]string{"traeger_overview:read", traegerSettingsRight, traegerStaffRight})
 	for key, item := range writer {
 		assert.True(t, records.GetDefinition(key).Levels.AtTraeger(), "%s is a Träger-level setting", key)
 		assert.True(t, item.Writable, "%s is writable with the right", key)
 	}
+	for key, item := range items([]string{"traeger_overview:read", traegerSettingsRight}) {
+		staff := records.GetDefinition(key).TraegerWriteRight == records.TraegerRightStaff
+		assert.Equal(t, !staff, item.Writable, "%s is writable with Einstellungen only when it needs no Personal", key)
+	}
+	staffOnly := items([]string{"traeger_overview:read", traegerStaffRight})
+	assert.True(t, staffOnly[records.KeyStaffPlanningEnabled].Writable, "the Personalverwaltung switches the Einsatzplanung")
+	assert.False(t, staffOnly[records.KeyEnrollmentLegalAGBText].Writable, "Personal writes no other Träger value")
 	require.Contains(t, writer, records.KeyEnrollmentLegalAGBText)
 	assert.NotContains(t, writer, records.KeyMFAMode)
 	assert.Equal(t, "AGB des Trägers", writer[records.KeyEnrollmentLegalAGBText].Value)

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -393,6 +394,36 @@ var (
 	cleanupKinds = []string{"", "plain", "57014", "40P01", "bad_conn"}
 )
 
+// faultPair is one statement fault with the fault of the ROLLBACK after it.
+type faultPair struct{ kind, cleanup string }
+
+// fullCross is every kind with every ROLLBACK fault.
+func fullCross() []faultPair {
+	var out []faultPair
+	for _, kind := range mainKinds {
+		for _, cleanup := range cleanupKinds {
+			out = append(out, faultPair{kind, cleanup})
+		}
+	}
+	return out
+}
+
+// pairsFor are the faults of the nth full cell of a scenario: every ROLLBACK
+// fault once and every kind at least once, shifted by one kind per cell, so
+// four full cells in a row cover the whole cross (#6962). The answer to a
+// fault depends on the statement and its kind, never on the ROLLBACK
+// (expectStatement), and the ROLLBACK is handled in one place for every
+// statement (rollbackDiagnostic): the cross per statement asked the same
+// question twenty times where five ask it of every kind and every ROLLBACK
+// fault. runMatrix requires that each group still met every pair.
+func pairsFor(n int) []faultPair {
+	out := make([]faultPair, 0, len(cleanupKinds))
+	for i, cleanup := range cleanupKinds {
+		out = append(out, faultPair{mainKinds[(i+n)%len(mainKinds)], cleanup})
+	}
+	return out
+}
+
 // receiptAt reports whether statement at belongs to the read-receipt lookup
 // of the conversation, whose failure the route logs and passes over: the
 // statements after the message list up to the read cursor.
@@ -494,23 +525,29 @@ func (r mealWriteRig) assertCell(t *testing.T, run *scenarioRun, name string, wa
 // own school (#6784; one shared rig ran them one after the other).
 func runMatrix(t *testing.T, group string) {
 	var cells atomic.Int64
+	var met sync.Map
 	t.Run("scenarios", func(t *testing.T) {
 		for _, sc := range mealWriteScenarios()[group] {
 			t.Run(sc.route+" "+sc.name, func(t *testing.T) {
 				t.Parallel()
 				testpkg.EnsureTestTenant(t, testpkg.SetupTestDB(t), testpkg.OwnTenant(t))
 				rig := newMealWriteRig(t)
-				cells.Add(int64(rig.runScenario(t, group, sc)))
+				cells.Add(int64(rig.runScenario(t, group, sc, &met)))
 			})
 		}
 	})
 	t.Logf("%s: %d cells", group, cells.Load())
+	for _, pair := range fullCross() {
+		_, ok := met.Load(pair)
+		require.True(t, ok, "%s: no full cell ran %s with rollback %q", group, pair.kind, pair.cleanup)
+	}
 	mealWriteRig{}.writeSuccessStates(t, group)
 }
 
-// runScenario walks the cells of one scenario and counts them.
-func (rig mealWriteRig) runScenario(t *testing.T, group string, sc writeScenario) int {
-	cells := 0
+// runScenario walks the cells of one scenario, counts them and records in
+// met the pairs its full cells ran.
+func (rig mealWriteRig) runScenario(t *testing.T, group string, sc writeScenario, met *sync.Map) int {
+	cells, fullCells := 0, 0
 	{
 		run := rig.prepareScenario(t, group, sc)
 		if run.frame {
@@ -534,19 +571,25 @@ func (rig mealWriteRig) runScenario(t *testing.T, group string, sc writeScenario
 		rig.assertCell(t, run, "success", run.success, nil)
 		cells++
 		for _, cell := range run.cells() {
-			kinds, cleanups := minimumKinds, []string{""}
+			var pairs []faultPair
 			if cell.full {
-				kinds, cleanups = mainKinds, cleanupKinds
-			}
-			for _, kind := range kinds {
-				for _, cleanup := range cleanups {
-					name := fmt.Sprintf("stmt %d (%s: %.40s) %s / rollback %s", cell.at, cell.label, run.stmts[cell.at-1], kind, cleanup)
-					at, kind, cleanup := cell.at, kind, cleanup
-					rig.assertCell(t, run, name, run.expectStatement(at, kind), func(f *writeFaults) {
-						f.stmtAt, f.stmtKind, f.rollbackKind = at, kind, cleanup
-					})
-					cells++
+				pairs = pairsFor(fullCells)
+				fullCells++
+			} else {
+				for _, kind := range minimumKinds {
+					pairs = append(pairs, faultPair{kind: kind})
 				}
+			}
+			for _, pair := range pairs {
+				name := fmt.Sprintf("stmt %d (%s: %.40s) %s / rollback %s", cell.at, cell.label, run.stmts[cell.at-1], pair.kind, pair.cleanup)
+				at := cell.at
+				rig.assertCell(t, run, name, run.expectStatement(at, pair.kind), func(f *writeFaults) {
+					f.stmtAt, f.stmtKind, f.rollbackKind = at, pair.kind, pair.cleanup
+				})
+				if cell.full {
+					met.Store(pair, true)
+				}
+				cells++
 			}
 		}
 	}

@@ -801,6 +801,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
       tabs={{
         value: activeTab,
         onChange: handleTabValueChange,
+        inUrl: true,
         items: TAB_ITEMS.map((tab) => ({
           value: tab.id,
           label: tab.label,

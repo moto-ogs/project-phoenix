@@ -1,7 +1,8 @@
 "use client";
 
 // Eine Personalakte des Trägers (#4705, ADR 0089): die Person, die
-// Personalnummer des Trägers, die Einsatzorte, die Kontingente (#4710), die
+// Personalnummer des Trägers, die Einsatzorte, die Kontingente (#4710), das
+// Stundenkonto mit dem Monatsabschluss (#4711), die
 // Bank- und Steuerdaten und der Verlauf. Die Personalnummer und die Bankdaten ändert nur die
 // Personalverwaltung; die Schulen sehen sie nur noch als „vom Träger“.
 
@@ -64,6 +65,18 @@ const StaffContractsCard = dynamic(
   {
     ssr: false,
     loading: () => <SectionCard title="Arbeitsverträge" loading />,
+  },
+);
+
+// Das Stundenkonto (#4711) bringt Tabelle und Abschluss-Dialoge mit.
+const StaffTimeAccountCard = dynamic(
+  () =>
+    import("~/components/traeger/staff/staff-time-account-card").then(
+      (module) => module.StaffTimeAccountCard,
+    ),
+  {
+    ssr: false,
+    loading: () => <SectionCard title="Stundenkonto" loading />,
   },
 );
 
@@ -516,6 +529,7 @@ export default function TraegerStaffRecordPage() {
           />
           <StaffAbsenceAccountsCard recordId={record.id} />
           <StaffContractsCard record={record} onChanged={setRecord} />
+          <StaffTimeAccountCard recordId={record.id} />
 
           <FinancialCard record={record} onSaved={() => void load()} />
 

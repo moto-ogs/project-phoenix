@@ -27,10 +27,13 @@ type RetentionResult struct {
 	DeliveryEvents int
 	// Suppressions are marked addresses nobody at the school holds any more.
 	Suppressions int
+	// FeedEntries are notification feed entries 30 days after their last
+	// update (#7148).
+	FeedEntries int
 }
 
 // Total is the number of rows the retention deleted or cleared.
 func (r RetentionResult) Total() int {
 	return r.EmailIntents + r.ClearedEmails + r.DeliveryLogs + r.PushIntents + r.RealtimeNotifications +
-		r.DeliveryEvents + r.Suppressions
+		r.DeliveryEvents + r.Suppressions + r.FeedEntries
 }

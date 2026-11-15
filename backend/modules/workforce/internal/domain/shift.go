@@ -85,6 +85,7 @@ type StaffShift struct {
 	SickAbsenceID        *int64
 	CreatedBy            int64
 	UpdatedBy            *int64
+	PlannedByTraeger     bool
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }
@@ -231,7 +232,7 @@ func ValidateStaffShift(shift StaffShift) error {
 	if err := validateShiftWindow(shift.StartTime, shift.EndTime, shift.BreakMinutes, invalidShift); err != nil {
 		return err
 	}
-	if shift.CreatedBy <= 0 {
+	if shift.CreatedBy <= 0 && !shift.PlannedByTraeger {
 		return invalidShift("created by is required")
 	}
 	return nil

@@ -11,7 +11,13 @@
   "api/work-time-models/[id]/archive": [
     "POST tenant /api/work-time-models/id%2F1/archive"
   ],
+  "api/work-time-models/[id]/assignments": [
+    "POST tenant /api/work-time-models/id%2F1/assignments"
+  ],
   "api/work-time-models/[id]/restore": [
     "POST tenant /api/work-time-models/id%2F1/restore"
+  ],
+  "api/work-time-models/staff-facts": [
+    "GET tenant /api/work-time-models/staff-facts"
   ]
 }

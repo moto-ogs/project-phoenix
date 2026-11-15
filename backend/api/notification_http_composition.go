@@ -5,13 +5,14 @@ import (
 	"errors"
 
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
+	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/devices"
 	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
 )
 
 // NewNotificationHTTP binds native Delivery capabilities and HTTP runtime.
 // Plain nil services remain nil; typed nil services retain native dispatch.
-func NewNotificationHTTP(service deliveryCompose.NotificationService, push deliveryCompose.PushSubscriptionService, preferences deliveryCompose.NotificationPreferenceService) *notificationsHTTP.Resource {
+func NewNotificationHTTP(service deliveryCompose.NotificationService, push deliveryCompose.PushSubscriptionService, preferences deliveryCompose.NotificationPreferenceService, feed deliveryContract.NotificationFeed) *notificationsHTTP.Resource {
 	var notifier notificationsHTTP.Service
 	if service != nil {
 		notifier = notificationNotifier{source: service}
@@ -24,7 +25,7 @@ func NewNotificationHTTP(service deliveryCompose.NotificationService, push deliv
 	if preferences != nil {
 		preferencePort = notificationPreferences{source: preferences.StaffPreferences()}
 	}
-	return notificationsHTTP.NewResource(notifier, pushPort, preferencePort, notificationHTTPRuntime())
+	return notificationsHTTP.NewResource(notifier, pushPort, preferencePort, NewNotificationFeedHTTP(feed), notificationHTTPRuntime())
 }
 
 type notificationNotifier struct {
@@ -99,4 +100,37 @@ func (s notificationPreferences) SetEmailSubscribed(ctx context.Context, account
 func (s notificationPreferences) IsUnknownType(err error) bool { return s.source.IsUnknownType(err) }
 func (s notificationPreferences) IsPermissionRequired(err error) bool {
 	return s.source.IsPermissionRequired(err)
+}
+
+// NewNotificationFeedHTTP binds Delivery's notification feed (#7148) to the
+// HTTP adapter; nil stays nil.
+func NewNotificationFeedHTTP(feed deliveryContract.NotificationFeed) notificationsHTTP.FeedService {
+	if feed == nil {
+		return nil
+	}
+	return notificationFeed{NotificationFeed: feed}
+}
+
+// notificationFeed translates the feed page onto the HTTP adapter's types;
+// the count and read-state calls reach Delivery's reader unchanged.
+type notificationFeed struct {
+	deliveryContract.NotificationFeed
+}
+
+func (f notificationFeed) Page(ctx context.Context, tenantID, accountID int64, cursor string, limit int) (notificationsHTTP.FeedPage, error) {
+	page, err := f.NotificationFeed.Page(ctx, tenantID, accountID, cursor, limit)
+	if err != nil {
+		return notificationsHTTP.FeedPage{}, err
+	}
+	out := notificationsHTTP.FeedPage{NextCursor: page.NextCursor, UnreadCount: page.UnreadCount, Entries: make([]notificationsHTTP.FeedEntry, len(page.Entries))}
+	for i, entry := range page.Entries {
+		out.Entries[i] = notificationsHTTP.FeedEntry(entry)
+	}
+	return out, nil
+}
+func (notificationFeed) IsNotFound(err error) bool {
+	return errors.Is(err, deliveryContract.ErrNotificationFeedEntryNotFound)
+}
+func (notificationFeed) IsInvalidCursor(err error) bool {
+	return errors.Is(err, deliveryContract.ErrInvalidNotificationFeedCursor)
 }

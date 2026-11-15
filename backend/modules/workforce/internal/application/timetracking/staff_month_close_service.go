@@ -27,6 +27,15 @@ var (
 	// ErrLaterMonthClosed prevents changing the snapshot chain behind a later
 	// frozen month — HTTP 409.
 	ErrLaterMonthClosed = errors.New("a later month is still closed")
+	// ErrMonthClosedByTraeger refuses the school a reopen of a close the
+	// Personalverwaltung of the Träger wrote (#4711) — HTTP 409.
+	ErrMonthClosedByTraeger = errors.New("month was closed by the traeger")
+	// ErrMonthClosedBySchool refuses the Träger a reopen of a close the school
+	// wrote before the contract — HTTP 409.
+	ErrMonthClosedBySchool = errors.New("month was closed by the school")
+	// ErrMonthNotKeptByTraeger refuses the Träger a close of an employment no
+	// contract of the month covers; the school closes it — HTTP 409.
+	ErrMonthNotKeptByTraeger = errors.New("no contract of the traeger covers the month")
 )
 
 // maxSnapshotYear is the upper bound validateMonth accepts, used to ask the
@@ -44,8 +53,11 @@ type MonthCloseResult struct {
 	Month int `json:"month"`
 	// ClosedStaff counts newly written snapshots, SkippedStaff the ones that
 	// were already frozen (a second click is idempotent, not an error).
-	ClosedStaff  int              `json:"closed_staff"`
-	SkippedStaff int              `json:"skipped_staff"`
+	ClosedStaff  int `json:"closed_staff"`
+	SkippedStaff int `json:"skipped_staff"`
+	// TraegerStaff counts the staff members a contract of the Träger covers
+	// in the month: the Träger closes them, not the school (#4711).
+	TraegerStaff int              `json:"traeger_staff"`
 	Snapshots    []*MonthSnapshot `json:"snapshots"`
 }
 
@@ -69,6 +81,10 @@ type StaffMonthCloseService interface {
 	ReopenMonth(ctx context.Context, staffID, reopenedBy int64, year, month int, reason string) error
 	// ListMonthStatus returns the active snapshots of one month.
 	ListMonthStatus(ctx context.Context, year, month int) ([]*MonthSnapshot, error)
+	// TraegerMonthStaff lists the staff members the Träger closes in the
+	// month (#4711).
+	TraegerMonthStaff(ctx context.Context, year, month int) ([]int64, error)
+	TraegerMonthClosing
 }
 
 type staffMonthCloseService struct {
@@ -82,6 +98,11 @@ type staffMonthCloseService struct {
 	// payrollRules is frozen into every snapshot of a close (#4807): a
 	// closed month keeps the wage types and rules in force at the close.
 	payrollRules workforce.PayrollRuleSetReader
+	// traeger names the staff members a contract of the Träger covers in a
+	// month (#4711); nil in bare unit fixtures, where nobody has one.
+	traeger TraegerMonthStaff
+	// now is the clock of the Träger's close; the constructor wires time.Now.
+	now func() time.Time
 }
 
 func NewStaffMonthCloseService(
@@ -98,6 +119,7 @@ func NewStaffMonthCloseService(
 		staffLister:  staffLister,
 		settings:     settings,
 		logger:       logger,
+		now:          time.Now,
 	}
 	for _, opt := range opts {
 		opt(service)
@@ -173,16 +195,14 @@ func (s *staffMonthCloseService) CloseMonth(ctx context.Context, closedBy int64,
 		return nil, err
 	}
 
-	staffMembers, err := s.staffLister.ListMonthCloseStaff(ctx)
+	staffIDs, err := s.monthCloseStaffIDs(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list staff for month close: %w", err)
+		return nil, err
 	}
-	// External caregivers (#3823) record no working time to close.
-	staffIDs := make([]int64, 0, len(staffMembers))
-	for _, member := range staffMembers {
-		if !member.ExternalCaregiver {
-			staffIDs = append(staffIDs, member.ID)
-		}
+	// The Träger closes the staff members its contracts cover (#4711).
+	staffIDs, traegerStaff, err := s.withoutTraegerStaff(ctx, staffIDs, key)
+	if err != nil {
+		return nil, err
 	}
 	// Ascending staff ID: every other holder of the per-staff advisory lock
 	// takes exactly one, so a consistent order here rules out deadlocks
@@ -197,10 +217,11 @@ func (s *staffMonthCloseService) CloseMonth(ctx context.Context, closedBy int64,
 	if err != nil {
 		return nil, err
 	}
-	result := &MonthCloseResult{Year: year, Month: month}
+	result := &MonthCloseResult{Year: year, Month: month, TraegerStaff: traegerStaff}
 	closedAt := time.Now()
+	closer := monthCloser{staffID: closedBy, source: SnapshotSourceAdmin}
 	for _, staffID := range staffIDs {
-		snapshot, alreadyClosed, err := s.closeStaffMonth(ctx, staffID, closedBy, key, trimmedReason, closedAt, payrollRules, closedMonths[staffID])
+		snapshot, alreadyClosed, err := s.closeStaffMonth(ctx, staffID, closer, key, trimmedReason, closedAt, payrollRules, closedMonths[staffID])
 		if err != nil {
 			return nil, err
 		}
@@ -218,6 +239,7 @@ func (s *staffMonthCloseService) CloseMonth(ctx context.Context, closedBy int64,
 		"closed_by", closedBy,
 		"closed_staff", result.ClosedStaff,
 		"skipped_staff", result.SkippedStaff,
+		"traeger_staff", result.TraegerStaff,
 	)
 	if result.ClosedStaff > 0 {
 		s.broadcastTimeTrackingChanged(ctx)
@@ -281,7 +303,8 @@ func (s *staffMonthCloseService) closedMonthsByStaff(ctx context.Context, staffI
 // full chain.
 func (s *staffMonthCloseService) closeStaffMonth(
 	ctx context.Context,
-	staffID, closedBy int64,
+	staffID int64,
+	closer monthCloser,
 	key monthKey,
 	reason string,
 	closedAt time.Time,
@@ -314,9 +337,10 @@ func (s *staffMonthCloseService) closeStaffMonth(
 		CreditedMinutes:   summary.CreditedSickMinutes + summary.CreditedVacationMinutes + summary.CreditedTrainingMinutes + summary.CreditedOtherMinutes,
 		AdjustmentMinutes: summary.AdjustmentMinutes,
 		ClosedAt:          closedAt,
-		ClosedBy:          closedBy,
+		ClosedBy:          closer.staffID,
+		ClosedByAccountID: closer.accountID,
 		CloseReason:       reason,
-		Source:            SnapshotSourceAdmin,
+		Source:            closer.source,
 		PayrollRules:      payrollRules,
 	}
 	created, err := s.snapshotRepo.RecordClosedMonth(ctx, *snapshot)
@@ -350,6 +374,14 @@ func (s *staffMonthCloseService) frozenPayrollRules(ctx context.Context) ([]byte
 }
 
 func (s *staffMonthCloseService) ReopenMonth(ctx context.Context, staffID, reopenedBy int64, year, month int, reason string) error {
+	return s.reopenStaffMonth(ctx, staffID, reopenedBy, false, year, month, reason)
+}
+
+// reopenStaffMonth supersedes the snapshot of one staff member. A close of
+// the Träger only the Träger reopens, a close of the school only the school
+// (#4711); reopenedBy is the Träger account for byTraeger, else a staff
+// member of the school.
+func (s *staffMonthCloseService) reopenStaffMonth(ctx context.Context, staffID, reopenedBy int64, byTraeger bool, year, month int, reason string) error {
 	if staffID <= 0 || reopenedBy <= 0 {
 		return fmt.Errorf("%w: staff id and reopened_by are required", ErrMonthCloseInvalid)
 	}
@@ -360,36 +392,18 @@ func (s *staffMonthCloseService) ReopenMonth(ctx context.Context, staffID, reope
 	if trimmedReason == "" {
 		return fmt.Errorf("%w: a reason is required", ErrMonthCloseInvalid)
 	}
-	if err := s.snapshotRepo.LockStaffBalanceWrites(ctx, staffID); err != nil {
-		return fmt.Errorf("failed to lock staff balance writes: %w", err)
-	}
-
-	snapshot, err := s.snapshotRepo.LatestClosedMonth(ctx, staffID, year, month)
+	snapshot, err := s.reopenableSnapshot(ctx, staffID, byTraeger, year, month)
 	if err != nil {
-		return fmt.Errorf("failed to load month snapshot: %w", err)
-	}
-	if snapshot == nil || snapshot.Year != year || snapshot.Month != month {
-		return fmt.Errorf("%w: %04d-%02d for staff %d", ErrMonthNotClosed, year, month, staffID)
-	}
-
-	// Reopen must proceed newest-first. Reopening this month while a later one
-	// stays frozen would change that later month's drift while everything
-	// after it remains pinned to a value derived from the old history — a
-	// state no admin can reason about.
-	latest, err := s.snapshotRepo.LatestClosedMonth(ctx, staffID, maxSnapshotYear, 12)
-	if err != nil {
-		return fmt.Errorf("failed to check later month snapshots: %w", err)
-	}
-	if latest != nil && (latest.Year != year || latest.Month != month) {
-		return fmt.Errorf(
-			"%w: %04d-%02d must be reopened first",
-			ErrLaterMonthClosed, latest.Year, latest.Month,
-		)
+		return err
 	}
 
 	now := time.Now()
 	snapshot.ReopenedAt = &now
-	snapshot.ReopenedBy = &reopenedBy
+	if byTraeger {
+		snapshot.ReopenedByAccountID = &reopenedBy
+	} else {
+		snapshot.ReopenedBy = &reopenedBy
+	}
 	snapshot.ReopenReason = trimmedReason
 	if _, err := s.snapshotRepo.ReopenMonthSnapshot(ctx, snapshot.ID, reopenedBy, now, trimmedReason); err != nil {
 		return fmt.Errorf("failed to reopen month snapshot: %w", err)
@@ -400,10 +414,46 @@ func (s *staffMonthCloseService) ReopenMonth(ctx context.Context, staffID, reope
 		"year", year,
 		"month", month,
 		"reopened_by", reopenedBy,
+		"by_traeger", byTraeger,
 		"frozen_closing_balance_minutes", snapshot.ClosingBalanceMinutes,
 	)
 	s.broadcastTimeTrackingChanged(ctx)
 	return nil
+}
+
+// reopenableSnapshot locks the staff member's balance writes and returns the
+// closed month the reopener may reopen: its own close, newest month first.
+func (s *staffMonthCloseService) reopenableSnapshot(ctx context.Context, staffID int64, byTraeger bool, year, month int) (*MonthSnapshot, error) {
+	if err := s.snapshotRepo.LockStaffBalanceWrites(ctx, staffID); err != nil {
+		return nil, fmt.Errorf("failed to lock staff balance writes: %w", err)
+	}
+
+	snapshot, err := s.snapshotRepo.LatestClosedMonth(ctx, staffID, year, month)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load month snapshot: %w", err)
+	}
+	if snapshot == nil || snapshot.Year != year || snapshot.Month != month {
+		return nil, fmt.Errorf("%w: %04d-%02d for staff %d", ErrMonthNotClosed, year, month, staffID)
+	}
+	if err := reopenerMayReopen(*snapshot, byTraeger); err != nil {
+		return nil, err
+	}
+
+	// Reopen must proceed newest-first. Reopening this month while a later one
+	// stays frozen would change that later month's drift while everything
+	// after it remains pinned to a value derived from the old history — a
+	// state no admin can reason about.
+	latest, err := s.snapshotRepo.LatestClosedMonth(ctx, staffID, maxSnapshotYear, 12)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check later month snapshots: %w", err)
+	}
+	if latest != nil && (latest.Year != year || latest.Month != month) {
+		return nil, fmt.Errorf(
+			"%w: %04d-%02d must be reopened first",
+			ErrLaterMonthClosed, latest.Year, latest.Month,
+		)
+	}
+	return snapshot, nil
 }
 
 func (s *staffMonthCloseService) ListMonthStatus(ctx context.Context, year, month int) ([]*MonthSnapshot, error) {

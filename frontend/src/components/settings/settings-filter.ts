@@ -31,6 +31,9 @@ export const TAB_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   // DATEV-Buchungsstapel der Elternabrechnung (#4694); nur im Träger-Portal.
   datev: "DATEV",
+  // Einsatzplanung des Trägers und ihre Arbeitszeitregeln (#4708); nur im
+  // Träger-Portal.
+  einsatzplanung: "Einsatzplanung",
 };
 
 export function displayTabLabel(tab: SchemaTab): string {
@@ -73,6 +76,8 @@ export const categoryLabels: Record<string, string> = {
   essensplan: "Speiseplan",
   feedback: "Feedback der Kinder",
   "ferien-anmeldung": "Ferienanmeldung",
+  "planung-in-moto": "Planung in moto",
+  arbeitszeitregeln: "Arbeitszeitregeln",
   "ferien-beitrag": "Ferienbeitrag",
   "ferien-bestaetigung": "Bestätigen einer Ferienanmeldung",
   "ferien-schreiben": "Schreiben an die Familien",

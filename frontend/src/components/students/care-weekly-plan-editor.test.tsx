@@ -507,7 +507,9 @@ describe("CareWeeklyPlanEditForm", () => {
     );
     await screen.findByRole("button", { name: "Angebot ändern und speichern" });
 
-    fireEvent.click(screen.getByRole("button", { name: "Gilt ab" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Gilt ab: 25.05.2026" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Nächster Monat" }));
     fireEvent.click(
       await screen.findByRole("button", {

@@ -28,6 +28,7 @@ import {
   UNKNOWN_ANALYTICS_PATH,
   type AnalyticsRouteSurface,
 } from "~/lib/analytics-routes";
+import { NOTIFICATION_FEED_ANALYTICS_TYPES } from "~/lib/notification-feed-helpers";
 
 const ANALYTICS_SURFACES = [
   "ogs",
@@ -481,6 +482,11 @@ const CUSTOM_EVENTS: ReadonlySet<string> = new Set([
   "demo_role_switched",
   "demo_restarted",
   "demo_start_clicked",
+  // Glocke im Staff-Portal (#7148). Gelesen markieren ist im Backend
+  // notCaptured; diese drei sind die einzige Erfassung.
+  "notification_bell_opened",
+  "notification_feed_entry_clicked",
+  "notification_feed_all_read",
 ]);
 
 const SAFE_VALUES: Readonly<Record<string, ReadonlySet<string>>> = {
@@ -491,6 +497,7 @@ const SAFE_VALUES: Readonly<Record<string, ReadonlySet<string>>> = {
   $device_type: new Set(["Desktop", "Mobile", "Tablet", "Console", "Wearable"]),
   $event_type: new Set(["click", "submit", "change", "touch"]),
   $dead_swipe_direction: new Set(["up", "down", "left", "right"]),
+  notification_type: new Set(NOTIFICATION_FEED_ANALYTICS_TYPES),
 };
 
 /** SDK identifiers: anonymous runtime IDs, UUIDs, the project token. */

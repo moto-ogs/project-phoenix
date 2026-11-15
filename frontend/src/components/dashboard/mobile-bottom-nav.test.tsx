@@ -130,6 +130,26 @@ vi.mock("~/lib/hooks/use-pickup-change-notices", () => ({
   usePickupChangeNotices: () => ({ notices: pickupChanges.notices }),
 }));
 
+// Ungelesene Hinweise der Glocke (#7148) und das geteilte Blatt. Das Blatt
+// selbst prüft reminders-bell.test.tsx; hier zählt, dass die Menüzeile es
+// öffnet.
+const feedUnread = vi.hoisted(() => ({ count: 0 }));
+vi.mock("~/lib/hooks/use-notification-feed", () => ({
+  // Wie der echte Hook: außerhalb des Staff-Portals zählt nichts.
+  useNotificationFeedUnread: (enabled = true) => ({
+    unreadCount: enabled ? feedUnread.count : 0,
+    setUnreadCount: vi.fn(),
+  }),
+}));
+const mockOpenNotificationsSheet = vi.hoisted(() => vi.fn());
+vi.mock("./header/notifications-sheet-state", () => ({
+  NOTIFICATIONS_BADGE_MAX: 9,
+  useOpenNotificationsSheet: () => mockOpenNotificationsSheet,
+}));
+vi.mock("./header/notifications-panel", () => ({
+  NotificationsSheet: () => <div data-testid="notifications-sheet-host" />,
+}));
+
 vi.mock("~/lib/operator-url", () => ({
   operatorPath: (path: string) => path,
 }));
@@ -497,6 +517,35 @@ describe("MobileBottomNav", () => {
       );
     });
 
+    // Auf dem Telefon fehlt die Kopfzeile mit der Glocke (#7148): die Zeile
+    // „Benachrichtigungen“ im Menü öffnet dasselbe Vollbild-Blatt.
+    it("öffnet die Benachrichtigungen aus dem Menü und zählt neue Hinweise", () => {
+      feedUnread.count = 12;
+      mockUseSession.mockReturnValue(createMockSession(false));
+      try {
+        render(<MobileBottomNav />);
+        // Ohne „Neu für Sie“ zählt „Mehr“ nur die Hinweise, ab 10 als „9+“.
+        expect(screen.getByLabelText("12 neu für Sie")).toHaveTextContent("9+");
+        expect(
+          screen.getByTestId("notifications-sheet-host"),
+        ).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
+
+        const row = screen.getByRole("button", { name: /Benachrichtigungen/ });
+        expect(
+          within(row).getByLabelText("12 neue Hinweise"),
+        ).toHaveTextContent("9+");
+        fireEvent.click(row);
+        expect(mockOpenNotificationsSheet).toHaveBeenCalledTimes(1);
+        expect(screen.getByTestId("drawer")).toHaveAttribute(
+          "data-open",
+          "false",
+        );
+      } finally {
+        feedUnread.count = 0;
+      }
+    });
+
     // Ungelesene Anmeldungen (#3778) an der Zeile „Anmeldungen" im Menü.
     it("zeigt ungelesene Anmeldungen an der Zeile Anmeldungen", () => {
       enrollmentsUnread.count = 4;
@@ -542,8 +591,10 @@ describe("MobileBottomNav", () => {
       ];
       mockUseSession.mockReturnValue(createMockSession(false));
       try {
+        feedUnread.count = 3;
         render(<MobileBottomNav />);
-        expect(screen.getByLabelText("2 neu für Sie")).toBeInTheDocument();
+        // Zwei Einträge „Neu für Sie“ plus drei ungelesene Hinweise (#7148).
+        expect(screen.getByLabelText("5 neu für Sie")).toBeInTheDocument();
         fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
         expect(screen.getByText("Neu für Sie")).toBeInTheDocument();
         expect(
@@ -557,6 +608,7 @@ describe("MobileBottomNav", () => {
           expect.stringMatching(/\/students\/8$/),
         );
       } finally {
+        feedUnread.count = 0;
         teamNotes.notices = [];
         pickupChanges.notices = [];
       }
@@ -659,10 +711,11 @@ describe("MobileBottomNav", () => {
         ),
       ).toBeInTheDocument();
       expect(screen.getAllByText("Aktualisieren")).not.toHaveLength(0);
-      expect(screen.getByText("Erinnerungen").closest("a")).toHaveAttribute(
-        "href",
-        "/test-tenant/reminders",
-      );
+      // Erinnerungen und Hinweise laufen über die Zeile „Benachrichtigungen“
+      // (#7148); /reminders erreicht man über „Alle ansehen“ im Blatt.
+      expect(
+        screen.getByRole("button", { name: /Benachrichtigungen/ }),
+      ).toBeInTheDocument();
       expect(screen.getByText("Profil").closest("a")).toHaveAttribute(
         "href",
         "/test-tenant/profile",

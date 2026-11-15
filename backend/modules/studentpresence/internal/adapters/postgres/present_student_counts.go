@@ -31,24 +31,9 @@ const presentStudentIDsSQL = `SELECT tenant_id, student_id FROM (
 ) AS present`
 
 func (c presentStudents) PresentStudentIDsByTenant(ctx context.Context, schools []int64, at time.Time) (map[int64][]int64, error) {
-	transaction, ok := c.transaction(ctx)
-	if !ok {
-		return nil, errors.New("student presence: transaction is required")
-	}
-	if !c.admin(ctx) {
-		return nil, errors.New("student presence: present student counts need the administrative transaction")
-	}
-	var db bun.IDB
-	switch tx := transaction.(type) {
-	case bun.Tx:
-		db = tx
-	case *bun.Tx:
-		if tx != nil {
-			db = *tx
-		}
-	}
-	if db == nil {
-		return nil, fmt.Errorf("student presence postgres: unsupported transaction %T", transaction)
+	db, err := c.adminDB(ctx, "present student counts")
+	if err != nil {
+		return nil, err
 	}
 	var rows []struct {
 		TenantID  int64 `bun:"tenant_id"`
@@ -62,4 +47,29 @@ func (c presentStudents) PresentStudentIDsByTenant(ctx context.Context, schools 
 		present[row.TenantID] = append(present[row.TenantID], row.StudentID)
 	}
 	return present, nil
+}
+
+// adminDB resolves the caller's administrative transaction and refuses any
+// other: the reads span the schools of a Träger.
+func (c presentStudents) adminDB(ctx context.Context, read string) (bun.IDB, error) {
+	transaction, ok := c.transaction(ctx)
+	if !ok {
+		return nil, errors.New("student presence: transaction is required")
+	}
+	if !c.admin(ctx) {
+		return nil, fmt.Errorf("student presence: %s need the administrative transaction", read)
+	}
+	var db bun.IDB
+	switch tx := transaction.(type) {
+	case bun.Tx:
+		db = tx
+	case *bun.Tx:
+		if tx != nil {
+			db = *tx
+		}
+	}
+	if db == nil {
+		return nil, fmt.Errorf("student presence postgres: unsupported transaction %T", transaction)
+	}
+	return db, nil
 }

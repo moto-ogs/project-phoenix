@@ -170,6 +170,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (a *StaffAdmin) TraegerStaffPlanning(collaborators TraegerStaffPorts, sites TraegerShiftSites) TraegerStaffPlanning {\n\tif sites == nil {\n\t\tpanic(\"workforce traeger planning: the Dienstplan of the schools is required\")\n\t}\n\treturn a.traeger.TraegerStaffPlanning(collaborators, sites)\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/workforce/StaffAdmin.TraegerStaffPlanning",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
       "evidence": "func (a *StaffAdmin) TraegerStaffRecords(collaborators TraegerStaffPorts) TraegerStaffRecords {\n\treturn a.traeger.TraegerStaffRecords(collaborators)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/workforce/StaffAdmin.TraegerStaffRecords",
@@ -793,6 +800,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (c monthClosingCapability) TraegerMonthStaff(ctx context.Context, year, month int) ([]int64, error) {\n\tstaffIDs, err := c.closing.TraegerMonthStaff(ctx, year, month)\n\treturn staffIDs, mapTimeTrackingFailure(err)\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/workforce/internal/application/timetracking/monthClosingCapability.TraegerMonthStaff",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
       "evidence": "func (c monthSnapshotCapability) ClosedMonthSnapshots(ctx context.Context, year, month int) ([]*MonthSnapshot, error) {\n\tvalues, err := c.MonthSnapshots.ClosedMonthSnapshots(ctx, year, month)\n\treturn consumerMonthSnapshots(values), err\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/timetracking/monthSnapshotCapability.ClosedMonthSnapshots",
@@ -992,6 +1006,20 @@
       "evidence": "func (c timeClock) StartBreakOn(ctx context.Context, staffID int64, day string, plannedDurationMinutes *int) (workforce.WorkSessionBreak, error) {\n\tdate, err := timeClockDay(day)\n\tif err != nil {\n\t\treturn workforce.WorkSessionBreak{}, err\n\t}\n\tworkBreak, err := c.sessions.StartBreakOn(ctx, staffID, date, plannedDurationMinutes)\n\tif err != nil {\n\t\treturn workforce.WorkSessionBreak{}, MapTimeTrackingError(err)\n\t}\n\treturn WorkSessionBreakToCapability(workBreak), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/timetracking/timeClock.StartBreakOn",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
+      "evidence": "func (c traegerMonthCapability) CloseMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string) (bool, error) {\n\tclosed, err := c.closing.CloseMonthForTraeger(ctx, staffID, accountID, year, month, reason)\n\treturn closed, mapTimeTrackingFailure(err)\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/workforce/internal/application/timetracking/traegerMonthCapability.CloseMonthForTraeger",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
+      "evidence": "func (c traegerMonthCapability) ReopenMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string) error {\n\treturn mapTimeTrackingFailure(c.closing.ReopenMonthForTraeger(ctx, staffID, accountID, year, month, reason))\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/workforce/internal/application/timetracking/traegerMonthCapability.ReopenMonthForTraeger",
       "owner": "modules/workforce"
     },
     {
@@ -1213,7 +1241,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p staffShiftPlanning) CreateSeries(ctx context.Context, input workforce.CreateStaffShiftSeries) (workforce.StaffShiftSeriesResult, error) {\n\tseries, err := seriesInputToModel(input.StaffShiftSeriesInput)\n\tif err != nil {\n\t\treturn workforce.StaffShiftSeriesResult{}, err\n\t}\n\tseries.CreatedBy = input.ActorStaffID\n\tresult, err := p.deps.Series.CreateSeries(ctx, series)\n\tif err != nil {\n\t\treturn workforce.StaffShiftSeriesResult{}, mapPlanningError(err)\n\t}\n\treturn seriesResultToCapability(result), nil\n}",
+      "evidence": "func (p staffShiftPlanning) CreateSeries(ctx context.Context, input workforce.CreateStaffShiftSeries) (workforce.StaffShiftSeriesResult, error) {\n\tseries, err := seriesInputToModel(input.StaffShiftSeriesInput)\n\tif err != nil {\n\t\treturn workforce.StaffShiftSeriesResult{}, err\n\t}\n\tseries.CreatedBy = input.ActorStaffID\n\tseries.WorkingTime = input.WorkingTime\n\tresult, err := p.deps.Series.CreateSeries(ctx, series)\n\tif err != nil {\n\t\treturn workforce.StaffShiftSeriesResult{}, mapPlanningError(err)\n\t}\n\treturn seriesResultToCapability(result), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/planning/staffShiftPlanning.CreateSeries",
       "owner": "modules/workforce"

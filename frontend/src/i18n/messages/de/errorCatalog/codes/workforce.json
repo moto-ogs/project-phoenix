@@ -22,6 +22,7 @@
   "later_month_closed": "Ein späterer Monat ist schon abgeschlossen. Bitte öffnen Sie zuerst den späteren Monat.",
   "manager_controlled_absence": "Diese Abwesenheit trägt nur die Leitung ein. Bitte fragen Sie die Leitung.",
   "month_closed": "Der {month} ist abgeschlossen. Öffnen Sie den Monat zuerst wieder. Das geht im Reiter Zeiterfassung.",
+  "month_closed_by_traeger": "Diesen Monat hat die Personalverwaltung des Trägers abgeschlossen. Nur sie kann ihn wieder öffnen.",
   "month_not_closable": "Dieser Monat ist noch nicht vorbei. Sie können ihn erst danach abschließen.",
   "month_not_closed": "Dieser Monat ist nicht abgeschlossen. Bitte laden Sie die Seite neu.",
   "no_active_break": "Gerade läuft keine Pause. Bitte laden Sie die Seite neu.",
@@ -109,5 +110,13 @@
   "traeger_staff_release_exists": "Personal beim Träger ist für diesen Träger schon freigeschaltet.",
   "traeger_staff_release_in_use": "Der Träger führt noch Personalakten. Er muss sie zuerst auflösen.",
   "traeger_staff_release_invalid": "Bitte wählen Sie eine der beiden Erklärungen des Trägers.",
-  "traeger_staff_release_not_found": "Personal beim Träger ist für diesen Träger nicht freigeschaltet."
+  "traeger_staff_release_not_found": "Personal beim Träger ist für diesen Träger nicht freigeschaltet.",
+  "shift_overlaps_other_site": "Die Person arbeitet am {day} von {start} bis {end} Uhr schon an einem anderen Einsatzort. Bitte wählen Sie eine andere Zeit.",
+  "shift_planning_off": "Ihr Träger plant Einsätze nicht in moto. Neue Schichten sind deshalb ausgeschaltet.",
+  "shift_working_time_warning": "Die Schicht verstößt gegen eine Arbeitszeitregel. Bitte prüfen Sie die Zeiten und bestätigen Sie die Planung.",
+  "traeger_planning_site_invalid": "Die Person arbeitet an dieser Schule nicht mehr. Bitte wählen Sie einen anderen Einsatzort.",
+  "traeger_planning_shift_not_found": "Die Schicht gibt es nicht mehr. Bitte laden Sie die Woche neu.",
+  "traeger_month_closed_by_school": "Die Schule {school} hat diesen Monat selbst abgeschlossen. Nur die Schule kann ihn wieder öffnen.",
+  "traeger_month_later_closed": "An der Schule {school} ist {month} schon abgeschlossen. Bitte öffnen Sie zuerst diesen späteren Monat.",
+  "traeger_month_not_kept": "In diesem Monat gilt kein Arbeitsvertrag des Trägers. Die Schulen schließen den Monat selbst ab."
 }

@@ -28,6 +28,7 @@ import {
 } from "~/components/ui/page-body";
 import { useNotBookedPageModule } from "./not-booked-slot";
 import { usePagePath } from "./page-path";
+import { usePageTitleSection } from "./page-title-section";
 import { BackLink } from "~/components/ui/back-link";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
@@ -145,6 +146,13 @@ export interface TenantPageProps extends TenantPageSearchRowProps {
     readonly items: readonly TenantPageTab[];
     /** Vorlesbarer Name der Reiterleiste. */
     readonly label?: string;
+    /**
+     * Der Reiter steht in der Adresse (`?tab=…`), ein Lesezeichen öffnet ihn
+     * also wieder. Dann trägt der Seitentitel im Browser den Reiternamen
+     * („Kindakte: Verlauf – moto“, #7109). Reiter mit `href` sind
+     * eigene Adressen und brauchen die Angabe nicht.
+     */
+    readonly inUrl?: boolean;
   };
 
   /**
@@ -487,6 +495,14 @@ export function TenantPage(props: TenantPageProps) {
 
 const logger = createLogger({ component: "TenantPage" });
 
+/** Name des aktiven Reiters, wenn die Adresse ihn auswählt (#7109). */
+function addressedTabLabel(tabs: TenantPageProps["tabs"]): string | null {
+  if (!tabs) return null;
+  const addressed = tabs.inUrl === true || tabs.items.some((tab) => tab.href);
+  if (!addressed) return null;
+  return tabs.items.find((tab) => tab.value === tabs.value)?.label ?? null;
+}
+
 /** Zugänglicher Name eines Bedienelements, ohne das „+“ der Anlegen-Knöpfe. */
 function controlNames(root: HTMLElement | null): Set<string> {
   const names = new Set<string>();
@@ -570,12 +586,22 @@ function TenantPageView({
   overlays,
   testId,
 }: TenantPageProps) {
-  const hasSearchRow =
+  usePageTitleSection(addressedTabLabel(tabs));
+  const hasOverflowMenu = (overflowMenu?.length ?? 0) > 0;
+  const searchRowHasControls =
     search !== undefined ||
     (filters?.length ?? 0) > 0 ||
-    (overflowMenu?.length ?? 0) > 0 ||
     primaryAction != null ||
     badge !== undefined;
+  // Ohne Suche, Filter, Zähler und Hauptaktion trüge die Suchzeile nur das
+  // Kebab: eine Zeile mit einem Symbol (Regel 4), und auf dem Telefon gab es
+  // sie gar nicht (#6722). Ein `searchSlot` ersetzt die Suchzeile ganz. In
+  // beiden Fällen steht das Kebab neben dem Titel, wo die Regel es vorsieht.
+  const kebabInTitleRow =
+    hasOverflowMenu && (searchSlot != null || !searchRowHasControls);
+  // Mit Bedienelementen trägt die Suchzeile das Kebab selbst.
+  const hasSearchRow = searchRowHasControls;
+  const hasHeadActions = actions != null || kebabInTitleRow;
 
   const headRef = useRef<HTMLElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -671,7 +697,7 @@ function TenantPageView({
               // Sind die Knöpfe zusammen breiter als der Kopf, brechen sie
               // in der Gruppe um, statt die Seite seitlich scrollen zu
               // lassen (#4975).
-              actions
+              hasHeadActions
                 ? "ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2"
                 : "contents",
               // Unter sm gilt: JEDE Zeile ist voll. Ein einzelner Textknopf
@@ -681,6 +707,9 @@ function TenantPageView({
             )}
           >
             {actions}
+            {kebabInTitleRow && overflowMenu && (
+              <OverflowMenu items={overflowMenu} />
+            )}
             <MobilePageHelpTarget />
           </div>
         </div>

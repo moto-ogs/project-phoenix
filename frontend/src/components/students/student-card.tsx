@@ -31,7 +31,7 @@ import {
   type StudentTimeStatus,
 } from "~/lib/student-time-status";
 import { GROUP_ROOM_SHADES, LOCATION_COLORS } from "~/lib/location-helper";
-import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
+import { MOTO_COLOR_PALETTE, getAccessibleTextColor } from "~/lib/kit-palette";
 import type { StudentCheckinState } from "~/lib/hooks/use-school-checkin-mode";
 import { Avatar } from "~/components/ui/avatar";
 import { useStudentPhotosEnabled } from "~/lib/hooks/use-student-photos-enabled";
@@ -660,7 +660,9 @@ function TimeStatusRow({
       prominent={prominent}
     >
       {status.textColor ? (
-        <span style={{ color: status.textColor }}>{fullText}</span>
+        <span style={{ color: getAccessibleTextColor(status.textColor) }}>
+          {fullText}
+        </span>
       ) : (
         fullText
       )}

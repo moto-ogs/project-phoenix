@@ -358,6 +358,21 @@ describe("TenantPageSearchRow", () => {
       );
       expect(screen.getAllByTestId("overflow-menu")).toHaveLength(2);
     });
+
+    // #6722: Ohne Suchfeld und Filter fehlte die mobile Zeile ganz, und mit
+    // ihr das Kebab und die Zähler-Plakette.
+    it("offers kebab and badge on the phone without search or filters", () => {
+      render(
+        <TenantPageSearchRow
+          badge={{ count: 3, label: "Einträge" }}
+          overflowMenu={[{ label: "Schließen", onClick: vi.fn() }]}
+        />,
+      );
+      expect(screen.getAllByTestId("overflow-menu")).toHaveLength(2);
+      expect(screen.getByTestId("badge-display-compact")).toHaveTextContent(
+        "3",
+      );
+    });
   });
 
   describe("primaryAction + kebab row placement", () => {
