@@ -4,6 +4,7 @@ import { ListRowLink } from "~/components/ui/list-row-link";
 import { FramedList } from "~/components/ui/framed-list";
 import { COUNTER_TONE } from "~/lib/counter-tones";
 import { staff as staffKeys } from "~/lib/swr/staff";
+import { traegerMonthStaffKeys } from "~/lib/swr/staff-keys";
 import { Suspense, useState, useMemo, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { redirect, useSearchParams } from "next/navigation";
@@ -419,6 +420,24 @@ function StaffPageContent() {
     monthCloseKey,
     () => staffMonthCloseService.getStatus(monthAnchor.year, monthAnchor.month),
     { keepPreviousData: false, revalidateOnFocus: false },
+  );
+  // Personen mit Vertrag beim Träger (#4711): ihren Monat schließt die
+  // Personalverwaltung ab, der Abschluss der Schule lässt sie aus. Ohne
+  // Antwort zeigt die Tabelle nur keinen Hinweis.
+  const { data: traegerStaffIds } = useSWRAuth(
+    monthCloseKey
+      ? traegerMonthStaffKeys.month(monthAnchor.year, monthAnchor.month)
+      : null,
+    () =>
+      staffMonthCloseService.getTraegerStaff(
+        monthAnchor.year,
+        monthAnchor.month,
+      ),
+    { keepPreviousData: false, revalidateOnFocus: false },
+  );
+  const traegerStaff = useMemo(
+    () => new Set(traegerStaffIds ?? []),
+    [traegerStaffIds],
   );
   const accountsLoadError = useSwrLoadError(
     accountsError,
@@ -928,6 +947,16 @@ function StaffPageContent() {
                     Bereits abgeschlossene Konten bleiben unverändert; nur
                     offene Konten werden eingefroren.
                   </p>
+                  {traegerStaff.size > 0 ? (
+                    <p>
+                      {traegerStaff.size === 1
+                        ? "1 Person hat"
+                        : `${traegerStaff.size} Personen haben`}{" "}
+                      einen Arbeitsvertrag beim Träger. Ihren Monat schließt die
+                      Personalverwaltung des Trägers ab. Dieser Abschluss lässt
+                      sie aus.
+                    </p>
+                  ) : null}
                 </>
               }
               submitLabel="Monat abschließen"
@@ -1013,6 +1042,7 @@ function StaffPageContent() {
               onNextMonth={() => shiftMonth(1)}
               canGoNextMonth={!isCurrentOrFutureMonth}
               monthClose={monthClose}
+              traegerStaff={traegerStaff}
               monthCloseError={monthCloseLoadError}
               onRetryMonthClose={() => void mutateMonthClose()}
               monthIsOver={!isCurrentOrFutureMonth}

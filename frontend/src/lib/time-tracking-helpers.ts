@@ -928,6 +928,7 @@ export interface BackendMonthSummary {
   is_closed?: boolean;
   closed_at?: string | null;
   closed_by?: number | null;
+  closed_by_traeger?: boolean;
   close_reason?: string | null;
   frozen_closing_balance_minutes?: number | null;
   drift_minutes?: number | null;
@@ -1038,6 +1039,9 @@ export interface MonthSummary {
   isClosed: boolean;
   closedAt: string | null;
   closedBy: string | null;
+  /** The Personalverwaltung of the Träger closed the month (#4711); only it
+   *  reopens it. */
+  closedByTraeger: boolean;
   closeReason: string | null;
   frozenClosingBalanceMinutes: number | null;
   driftMinutes: number;
@@ -1151,6 +1155,7 @@ export function mapMonthSummaryResponse(
     isClosed: data.is_closed ?? false,
     closedAt: data.closed_at ?? null,
     closedBy: data.closed_by != null ? data.closed_by.toString() : null,
+    closedByTraeger: data.closed_by_traeger ?? false,
     closeReason: data.close_reason ?? null,
     frozenClosingBalanceMinutes: data.frozen_closing_balance_minutes ?? null,
     driftMinutes: data.drift_minutes ?? 0,

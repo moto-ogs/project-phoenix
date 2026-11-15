@@ -279,7 +279,7 @@ export function Monatskarte({
               <Lock className="h-3 w-3 text-gray-500" aria-hidden />
               <StatusBadge
                 tone="gray"
-                label={`Abgeschlossen${
+                label={`${summary.closedByTraeger ? "Vom Träger abgeschlossen" : "Abgeschlossen"}${
                   summary.closedAt
                     ? ` am ${formatLocalizedDate(summary.closedAt, "de")}`
                     : ""
@@ -293,6 +293,8 @@ export function Monatskarte({
               size="md"
               variant="ghost"
               onClick={onReopen}
+              disabled={summary.closedByTraeger}
+              disabledReason="Diesen Monat hat die Personalverwaltung des Trägers abgeschlossen. Nur sie kann ihn wieder öffnen."
               tooltip="Hebt den Abschluss nur für diese Person auf. moto fragt vorher nach."
             >
               Monat wieder öffnen…

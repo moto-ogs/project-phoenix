@@ -80,6 +80,7 @@ vi.mock("~/lib/staff-api", () => ({
   staffService: { getAllStaff, getDocumentDirectory },
   staffMonthCloseService: {
     getStatus: vi.fn().mockResolvedValue([]),
+    getTraegerStaff: vi.fn().mockResolvedValue([]),
     closeMonth,
   },
 }));
