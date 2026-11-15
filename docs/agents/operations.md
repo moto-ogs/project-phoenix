@@ -133,6 +133,15 @@ Chrome is missing or older than `MIN_CHROME_VERSION`. Locally keep Chrome
 updated; CI runs `pnpm exec playwright install --with-deps --force chrome`
 because the runner images ship an outdated Chrome. Keep the sandbox on, also
 after a Playwright upgrade.
+Chrome and Chromium cannot start inside the Codex macOS sandbox (Seatbelt
+denies WindowServer, LaunchServices and Chrome's Mach rendezvous;
+openai/codex#21292). `.claude/rules/browser.rules` (Codex execpolicy, loaded
+through the `.codex/rules` symlink of a trusted checkout) runs the browser
+scripts, `pnpm exec playwright test` and `agent-browser` outside the sandbox.
+Call them plain: a redirect, `&&` chain or env assignment matches no rule.
+Under `CODEX_SANDBOX=seatbelt` on macOS, every Playwright config and
+`vitest.storybook.config.ts` stop at load, before a dev server starts. Do not
+switch to `--single-process` or turn Chrome's own sandbox off instead.
 
 ### Synthetic network E2E suites
 

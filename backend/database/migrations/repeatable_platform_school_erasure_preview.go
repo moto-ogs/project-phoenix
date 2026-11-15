@@ -251,6 +251,7 @@ AS $function$
  v_counts := v_counts || jsonb_build_object('users.surveys',(SELECT count(*) FROM users.surveys AS r WHERE r.tenant_id = p_school));
  v_counts := v_counts || jsonb_build_object('users.parent_announcement_declaration_submissions',(SELECT count(*) FROM users.parent_announcement_declaration_submissions AS r WHERE r.tenant_id = p_school));
  v_counts := v_counts || jsonb_build_object('users.parent_announcement_declaration_versions',(SELECT count(*) FROM users.parent_announcement_declaration_versions AS r WHERE r.tenant_id = p_school));
+ v_counts := v_counts || jsonb_build_object('users.parent_announcement_letter_copies',(SELECT count(*) FROM users.parent_announcement_letter_copies AS r WHERE r.tenant_id = p_school));
  v_counts := v_counts || jsonb_build_object('users.parent_announcement_options',(SELECT count(*) FROM users.parent_announcement_options AS r WHERE r.tenant_id = p_school));
  v_counts := v_counts || jsonb_build_object('users.parent_announcement_reads',(SELECT count(*) FROM users.parent_announcement_reads AS r WHERE r.tenant_id = p_school));
  v_counts := v_counts || jsonb_build_object('users.parent_announcement_responses',(SELECT count(*) FROM users.parent_announcement_responses AS r WHERE r.tenant_id = p_school));

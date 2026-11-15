@@ -15,6 +15,8 @@ import (
 func TestGroupWeekProtocolsMigrationRoundTrip(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
+	// The letter copies (#4813) follow the notification feed at the head; they go first.
+	require.NoError(t, parentLetterCopiesDown(t.Context(), db))
 	// The notification feed (#7148) extends the erasure at the head; it goes first.
 	require.NoError(t, notificationFeedDown(t.Context(), db))
 	// The message attachments (1.15.936, #6685) extend the erasure functions

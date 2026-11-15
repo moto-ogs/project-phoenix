@@ -116,6 +116,9 @@ func (s *service) finishAnnouncementPublication(ctx context.Context, id int64) e
 	if err := s.recordAnnouncementRecipients(ctx, fresh); err != nil {
 		return err
 	}
+	if err := s.freezeLetterCopies(ctx, fresh); err != nil {
+		return err
+	}
 	s.logger.Info("parent announcement published", slog.Int64("announcement_id", id))
 	if err := s.notifyAnnouncementGuardians(ctx, fresh); err != nil {
 		return fmt.Errorf("announcement: publish push notifications: %w", err)

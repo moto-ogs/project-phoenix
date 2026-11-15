@@ -100,6 +100,8 @@ func personContentChild(parent, child string) bool {
 	case "users.staff_message_threads":
 		return child == "users.staff_messages" || child == "users.staff_message_participants"
 	case "users.parent_announcements":
+		// Personalised copies are selected through the child's student_id,
+		// not as shared contents of the announcement.
 		return child == "users.parent_announcement_options" || child == "users.parent_announcement_declaration_versions" || child == "documents.announcement_attachments"
 	case "enrollment.requests":
 		return child == "enrollment.change_requests"

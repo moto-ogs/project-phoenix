@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assertBrowserCanStart,
+  type BrowserHost,
   assertPatchedChrome,
   isPatchedChrome,
   MIN_CHROME_VERSION,
@@ -43,11 +45,26 @@ describe("secure Chrome (#5612)", () => {
         channel: "chromium",
       }),
     ).toEqual({ args: ["--x"], channel: "chrome", chromiumSandbox: true });
-    expect(secureChromeUse()).toEqual({
+    expect(secureChromeUse({}, { env: {}, platform: "darwin" })).toEqual({
       locale: "de-DE",
       timezoneId: "Europe/Berlin",
       channel: "chrome",
       launchOptions: { channel: "chrome", chromiumSandbox: true },
     });
+  });
+
+  it("stops before Chrome aborts inside the Codex macOS sandbox", () => {
+    const codexMac: BrowserHost = {
+      env: { CODEX_SANDBOX: "seatbelt" },
+      platform: "darwin",
+    };
+    expect(() => assertBrowserCanStart(codexMac)).toThrow(/Codex-Sandbox/);
+    expect(() => secureChromeUse({}, codexMac)).toThrow(/Codex-Sandbox/);
+    expect(() =>
+      assertBrowserCanStart({ env: {}, platform: "darwin" }),
+    ).not.toThrow();
+    expect(() =>
+      assertBrowserCanStart({ ...codexMac, platform: "linux" }),
+    ).not.toThrow();
   });
 });

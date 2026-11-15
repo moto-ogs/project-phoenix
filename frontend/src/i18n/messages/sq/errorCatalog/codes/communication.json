@@ -26,5 +26,8 @@
   "staff_group_members_required": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "staff_group_too_large": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "parent_messaging_disabled": "Shkolla i ka çaktivizuar mesazhet për prindërit. Kjo nuk është e mundur tani.",
-  "message_send_conflict": "Ky mesazh është dërguar tashmë me të dhëna të tjera. Ringarkoni bisedën."
+  "message_send_conflict": "Ky mesazh është dërguar tashmë me të dhëna të tjera. Ringarkoni bisedën.",
+  "letter_placeholder_letter_only": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
+  "letter_placeholder_unknown": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
+  "letter_print_not_letter": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
 }

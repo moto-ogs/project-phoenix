@@ -35,6 +35,9 @@ func seedParentLetter(rt *Runtime) error {
 	if err := seedEarlierNotices(rt, reader); err != nil {
 		return err
 	}
+	if err := seedPersonalLetter(rt, reader); err != nil {
+		return err
+	}
 	festival := seedLanternFestivalDate(todaySeedDate())
 	raw, err := rt.Client.Post("/api/parent-announcements/", map[string]any{
 		"title":          seedParentLetterTitle,
@@ -69,7 +72,7 @@ func seedParentLetter(rt *Runtime) error {
 	if err := publishAndRead(rt, id, reader); err != nil {
 		return fmt.Errorf("parent letter: %w", err)
 	}
-	fmt.Println("  3 read notices and 1 parent letter published")
+	fmt.Println("  3 read notices and 2 parent letters published")
 	if err := seedReminderAnnouncement(rt); err != nil {
 		return err
 	}

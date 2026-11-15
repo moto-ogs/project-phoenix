@@ -31,9 +31,16 @@ const BROWSER_CONTEXT_LOCALE = {
 
 /**
  * `use`-Block für Playwright-Configs: Chrome mit Sandbox, deutsche Sprache und
- * Berliner Zeit. Ergänzt vorhandene `launchOptions`.
+ * Berliner Zeit. Ergänzt vorhandene `launchOptions`. Prüft beim Laden der
+ * Config, ob ein Browser überhaupt starten kann: Playwright startet den
+ * `webServer` vor dem `globalSetup`, eine spätere Prüfung käme erst nach dem
+ * Serverstart.
  */
-export function secureChromeUse(launchOptions: LaunchOptions = {}) {
+export function secureChromeUse(
+  launchOptions: LaunchOptions = {},
+  host: BrowserHost = currentBrowserHost(),
+) {
+  assertBrowserCanStart(host);
   return {
     ...BROWSER_CONTEXT_LOCALE,
     channel: "chrome",
@@ -63,6 +70,36 @@ export function assertPatchedChrome(version: string): void {
     throw new Error(
       `Google Chrome ${version} ist älter als ${MIN_CHROME_VERSION} und hat bekannte Sicherheitslücken (#5612). ` +
         "Chrome aktualisieren (lokal: Chrome > Über Google Chrome; CI: pnpm exec playwright install --with-deps --force chrome).",
+    );
+  }
+}
+
+/** Umgebung, in der ein Browser starten soll. */
+export interface BrowserHost {
+  env: Readonly<Record<string, string | undefined>>;
+  platform: NodeJS.Platform;
+}
+
+function currentBrowserHost(): BrowserHost {
+  return { env: process.env, platform: process.platform };
+}
+
+/**
+ * Codex' macOS-Sandbox (Seatbelt) sperrt die Mach-Dienste, die Chrome und
+ * Chromium beim Start brauchen (WindowServer, LaunchServices, coreservicesd).
+ * Der Browser bricht dann sofort ab, macOS zeigt „Google Chrome wurde
+ * unerwartet beendet“, und Playwright meldet nur „Target page, context or
+ * browser has been closed“ (openai/codex#21292). Deshalb bricht jeder Lauf
+ * vorher mit einer klaren Meldung ab. Die erlaubten Befehle in
+ * `.codex/rules/browser.rules` laufen ohnehin außerhalb der Sandbox.
+ */
+export function assertBrowserCanStart(
+  host: BrowserHost = currentBrowserHost(),
+): void {
+  if (host.platform === "darwin" && host.env.CODEX_SANDBOX === "seatbelt") {
+    throw new Error(
+      "Chrome kann in der Codex-Sandbox nicht starten: macOS sperrt dort die Dienste, die der Browser zum Start braucht. " +
+        "Den Befehl ohne Umleitung oder Verkettung aufrufen (die Regeln in .codex/rules/browser.rules führen ihn dann außerhalb der Sandbox aus) oder mit erweiterten Rechten freigeben lassen.",
     );
   }
 }

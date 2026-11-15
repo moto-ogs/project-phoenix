@@ -385,6 +385,7 @@
     {"name": "users.notification_preferences", "scope": "tenant", "export": "include", "personKeys": {"account_id": "auth.accounts.id"}},
     {"name": "users.parent_announcement_declaration_submissions", "scope": "tenant", "export": "include", "allowedSensitiveColumns": {"password_confirmed": "Boolean proof of confirmation, not the password.", "content_hash": "Integrity digest of the declaration content, not a credential.", "record_hash": "Integrity digest of the signed declaration record, not a credential."}, "personKeys": {"student_id": "users.student_profiles.id", "account_id": "auth.accounts.id"}},
     {"name": "users.parent_announcement_declaration_versions", "scope": "tenant", "export": "include", "allowedSensitiveColumns": {"content_hash": "Integrity digest of declaration content, not a credential."}},
+    {"name": "users.parent_announcement_letter_copies", "scope": "tenant", "export": "include", "personKeys": {"student_id": "users.student_profiles.id"}},
     {"name": "users.parent_announcement_options", "scope": "tenant", "export": "include"},
     {"name": "users.parent_announcement_reads", "scope": "tenant", "export": "include", "personKeys": {"account_id": "auth.accounts.id"}},
     {"name": "users.parent_announcement_responses", "scope": "tenant", "export": "include", "personKeys": {"student_id": "users.student_profiles.id", "account_id": "auth.accounts.id"}},

@@ -38,6 +38,9 @@ type FeedAudienceReads interface {
 	ListFeedForAccount(ctx context.Context, accountID int64, scope communication.PortalAnnouncementFeedScope) ([]*communication.PortalAnnouncementFeedItem, error)
 	CountOutstandingForAccount(ctx context.Context, accountID int64, scope communication.PortalAnnouncementFeedScope) (int, error)
 	Stats(ctx context.Context, schoolID, announcementID int64) (*communication.PortalAnnouncementStats, error)
+	// PermittedLetterChildren maps each published letter to the reached
+	// children whose letter the account may read (#4813).
+	PermittedLetterChildren(ctx context.Context, accountID int64, announcementIDs []int64) (map[int64][]int64, error)
 }
 
 type PollAudienceReads interface {
