@@ -22,16 +22,19 @@ type CareNoticeResource struct {
 	notices        capability.CareFeeNotices
 	letters        capability.CareNoticeLetterService
 	requireBilling common.Middleware
+	lists          common.ListRenderer
 }
 
 // NewCareNoticeResource builds the resource over the notices and their
 // stored originals (#6347); requireBilling admits only a session with the
 // Träger right "Abrechnung".
-func NewCareNoticeResource(notices capability.CareFeeNotices, letters capability.CareNoticeLetterService, requireBilling common.Middleware) *CareNoticeResource {
-	if notices == nil || letters == nil || requireBilling == nil {
-		panic("parent billing http: the fee notices, their letters and the right check are required")
+func NewCareNoticeResource(notices capability.CareFeeNotices, letters capability.CareNoticeLetterService, requireBilling common.Middleware,
+	lists common.ListRenderer,
+) *CareNoticeResource {
+	if notices == nil || letters == nil || requireBilling == nil || lists == nil {
+		panic("parent billing http: the fee notices, their letters, the right check and the list export are required")
 	}
-	return &CareNoticeResource{notices: notices, letters: letters, requireBilling: requireBilling}
+	return &CareNoticeResource{notices: notices, letters: letters, requireBilling: requireBilling, lists: lists}
 }
 
 // Router returns the routes mounted at /traeger/care-notice-runs.
@@ -42,7 +45,9 @@ func (rs *CareNoticeResource) Router(protectedTraegerRoutes func(chi.Router, fun
 		billing := r.With(rs.requireBilling, withTx)
 		billing.Get("/", rs.list)
 		billing.Post("/", rs.start)
+		billing.Get("/export", rs.exportList)
 		billing.Get("/{id}", rs.detail)
+		billing.Get("/{id}/export", rs.exportNotices)
 		billing.Post("/{id}/release", rs.release)
 		billing.Post("/{id}/discard", rs.discard)
 		billing.Get("/{id}/notices/{contractID}/letter", rs.letter)

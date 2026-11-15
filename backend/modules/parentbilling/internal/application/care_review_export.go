@@ -41,14 +41,17 @@ const (
 	reviewStatusDouble   = "Nicht abgerechnet: doppelter Vertrag"
 )
 
-// ExportCareRunReview renders the review list of a calculated run as an
-// Excel or a CSV file and records the download with the contracts it names.
+// ExportCareRunReview renders the review list of a calculated run as a PDF,
+// an Excel or a CSV file (#4718) and records the download with the
+// contracts it names.
 func (c *CareBilling) ExportCareRunReview(ctx context.Context, reviewer parentbilling.HolidayReviewer, runID int64, format string) (parentbilling.ExportFile, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.ExportFile{}, err
 	}
-	if format != parentbilling.ExportXLSX && format != parentbilling.ExportCSV {
-		return parentbilling.ExportFile{}, validation.Errors{"format": errors.New("must be xlsx or csv")}
+	switch format {
+	case parentbilling.ExportPDF, parentbilling.ExportXLSX, parentbilling.ExportCSV:
+	default:
+		return parentbilling.ExportFile{}, validation.Errors{"format": errors.New("must be pdf, xlsx or csv")}
 	}
 	if runID <= 0 {
 		return parentbilling.ExportFile{}, parentbilling.ErrCareRunNotFound
@@ -101,7 +104,7 @@ func careReviewTable(detail parentbilling.CareRunDetail) ExportTable {
 			"Schulen: " + strings.Join(schools, ", "),
 			"Vorschau ohne Rechnungsnummern. Die Nummern gibt erst die Ausstellung.",
 		},
-		Columns: careReviewColumns, Rows: rows,
+		Columns: careReviewColumns, Rows: rows, Footer: "Vertraulich. Enthält personenbezogene Daten.",
 	}
 }
 
