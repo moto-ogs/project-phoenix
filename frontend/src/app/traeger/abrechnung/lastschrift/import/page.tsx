@@ -23,6 +23,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
+import { useStepFocus } from "~/components/ui/use-step-focus";
 import { WizardStepper } from "~/components/ui/wizard-stepper";
 import {
   useApiErrorDisplay,
@@ -219,6 +220,11 @@ export default function TraegerSepaImportPage() {
   };
 
   const step = !result ? 0 : result.unmapped.length > 0 ? 1 : 2;
+  // Each step brings its own card (#7111): its heading takes the focus,
+  // while the control the person used (file choice, Übernehmen) is gone.
+  const stepFocus = useStepFocus<HTMLDivElement>(done ? "done" : step);
+  const focusOn = (target: number | "done") =>
+    (done ? "done" : step) === target ? stepFocus : undefined;
   const loading =
     canBill && !pageLoad.error && (creditorId === null || log === null);
   const missingCreditor = creditorId === "";
@@ -235,36 +241,39 @@ export default function TraegerSepaImportPage() {
     >
       <div className="flex flex-col gap-6">
         {done ? (
-          <SectionCard>
-            <EmptyState
-              tone="success"
-              icon={<CheckCircle aria-hidden className="size-6" />}
-              title={`${importChangesLabel(done.counts.imported, done.counts.debtorNumbers)} übernommen`}
-              description={`Mandate: ${done.counts.duplicate} schon vorhanden, ${done.counts.clarify + done.counts.conflict + done.counts.invalid} nicht übernommen. Sie finden Mandate unter Lastschrift und Debitorennummern bei der Familie.`}
-              action={
-                <div className="flex flex-wrap justify-center gap-3">
-                  <ButtonLink
-                    href={traegerPath(LASTSCHRIFT)}
-                    variant="primary"
-                    size="md"
-                    tooltip="Öffnet die Lastschrift mit allen Mandaten."
-                  >
-                    Zur Lastschrift
-                  </ButtonLink>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="md"
-                    onClick={restart}
-                    disabled={applying}
-                    tooltip="Startet einen neuen Import mit einer anderen Datei."
-                  >
-                    Weitere Datei laden
-                  </Button>
-                </div>
-              }
-            />
-          </SectionCard>
+          <div ref={focusOn("done")}>
+            <SectionCard>
+              <EmptyState
+                tone="success"
+                icon={<CheckCircle aria-hidden className="size-6" />}
+                titleAs="h2"
+                title={`${importChangesLabel(done.counts.imported, done.counts.debtorNumbers)} übernommen`}
+                description={`Mandate: ${done.counts.duplicate} schon vorhanden, ${done.counts.clarify + done.counts.conflict + done.counts.invalid} nicht übernommen. Sie finden Mandate unter Lastschrift und Debitorennummern bei der Familie.`}
+                action={
+                  <div className="flex flex-wrap justify-center gap-3">
+                    <ButtonLink
+                      href={traegerPath(LASTSCHRIFT)}
+                      variant="primary"
+                      size="md"
+                      tooltip="Öffnet die Lastschrift mit allen Mandaten."
+                    >
+                      Zur Lastschrift
+                    </ButtonLink>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="md"
+                      onClick={restart}
+                      disabled={applying}
+                      tooltip="Startet einen neuen Import mit einer anderen Datei."
+                    >
+                      Weitere Datei laden
+                    </Button>
+                  </div>
+                }
+              />
+            </SectionCard>
+          </div>
         ) : (
           <>
             <SectionCard>
@@ -313,33 +322,37 @@ export default function TraegerSepaImportPage() {
                 }
               />
             ) : (
-              <SectionCard
-                title="Datei wählen"
-                description="Eine CSV-Datei mit einer Zeile je Mandat und Überschriften in der ersten Zeile."
-              >
-                <Dropzone
-                  accept=".csv,.txt,text/csv,text/plain"
-                  legend="CSV-Datei mit Mandaten"
-                  label="CSV-Datei hierher ziehen"
-                  dragLabel="Datei hier loslassen"
-                  buttonLabel="Datei wählen"
-                  hint="Bis 2 MB. Getrennt mit Semikolon oder Komma, aus Excel oder einem anderen Programm."
-                  loading={reading}
-                  loadingLabel="Datei wird gelesen …"
-                  disabled={missingCreditor || loading}
-                  onFile={choose}
-                />
-              </SectionCard>
+              <div ref={focusOn(0)}>
+                <SectionCard
+                  title="Datei wählen"
+                  description="Eine CSV-Datei mit einer Zeile je Mandat und Überschriften in der ersten Zeile."
+                >
+                  <Dropzone
+                    accept=".csv,.txt,text/csv,text/plain"
+                    legend="CSV-Datei mit Mandaten"
+                    label="CSV-Datei hierher ziehen"
+                    dragLabel="Datei hier loslassen"
+                    buttonLabel="Datei wählen"
+                    hint="Bis 2 MB. Getrennt mit Semikolon oder Komma, aus Excel oder einem anderen Programm."
+                    loading={reading}
+                    loadingLabel="Datei wird gelesen …"
+                    disabled={missingCreditor || loading}
+                    onFile={choose}
+                  />
+                </SectionCard>
+              </div>
             )}
             {result ? (
-              <SepaImportMappingCard
-                headers={result.headers}
-                mapping={result.mapping}
-                unmapped={result.unmapped}
-                creditorId={result.creditorId}
-                disabled={applying}
-                onChange={remap}
-              />
+              <div ref={focusOn(1)}>
+                <SepaImportMappingCard
+                  headers={result.headers}
+                  mapping={result.mapping}
+                  unmapped={result.unmapped}
+                  creditorId={result.creditorId}
+                  disabled={applying}
+                  onChange={remap}
+                />
+              </div>
             ) : null}
             {file && !verified ? (
               <Alert
@@ -367,14 +380,16 @@ export default function TraegerSepaImportPage() {
               />
             ) : null}
             {result && result.unmapped.length === 0 ? (
-              <SepaImportPreviewCard
-                result={result}
-                answers={answers}
-                applying={applying}
-                disabled={!verified}
-                onAnswer={answer}
-                onApply={() => void apply()}
-              />
+              <div ref={focusOn(2)}>
+                <SepaImportPreviewCard
+                  result={result}
+                  answers={answers}
+                  applying={applying}
+                  disabled={!verified}
+                  onAnswer={answer}
+                  onApply={() => void apply()}
+                />
+              </div>
             ) : null}
             {result && result.unmapped.length > 0 ? (
               <Alert

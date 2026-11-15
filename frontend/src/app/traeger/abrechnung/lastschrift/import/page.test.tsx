@@ -226,6 +226,28 @@ describe("SEPA import approval", () => {
     );
   });
 
+  // #7111: the file choice and the Übernehmen button left the DOM with the
+  // focus on them; the heading of the new step takes it now.
+  it("focuses the heading of each new step", async () => {
+    await choose();
+    expect(
+      screen.getByRole("heading", { name: "Prüfen und übernehmen" }),
+    ).toHaveFocus();
+
+    api.applySepaImport.mockResolvedValue({ ...preview, applied: true });
+    fireEvent.click(importButton()!);
+    expect(
+      await screen.findByRole("heading", { name: /übernommen$/ }),
+    ).toHaveFocus();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weitere Datei laden" }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Datei wählen" }),
+    ).toHaveFocus();
+  });
+
   it("confirms and reports a debtor-only import separately from mandates", async () => {
     const onlyDebtors = {
       ...preview,

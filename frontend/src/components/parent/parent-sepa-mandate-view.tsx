@@ -28,6 +28,7 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 import { Input } from "~/components/ui/input";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
+import { useStepFocus } from "~/components/ui/use-step-focus";
 import { StatusBadge } from "~/components/ui/status-badge";
 import {
   useApiFormError,
@@ -78,6 +79,15 @@ export function ParentSepaMandateView({
 }: Readonly<ContractKey>) {
   const t = useTranslations("parentSepaMandate");
   const [view, setView] = useState<SepaMandateView | null>(null);
+  // Granting and revoking swap the card the person acted in (#7111): the
+  // heading of the new one takes the focus. Loading is no step.
+  const phaseRef = useStepFocus<HTMLDivElement>(
+    view?.enabled
+      ? view.mandate && !view.mandate.revokedOn
+        ? "mandate"
+        : "grant"
+      : null,
+  );
   const loadError = useApiLoadError();
   const { show: showLoadError, clear: clearLoadError } = loadError;
 
@@ -148,7 +158,7 @@ export function ParentSepaMandateView({
   const key = { organizationId, contractId };
   if (view.mandate && !view.mandate.revokedOn) {
     return (
-      <div className="space-y-6">
+      <div ref={phaseRef} className="space-y-6">
         <LoadErrorAlert error={loadError.error} />
         <LoadErrorAlert error={afterRevoke.error} />
         <MandateCard
@@ -182,11 +192,11 @@ export function ParentSepaMandateView({
     );
   }
   return (
-    <>
+    <div ref={phaseRef} className="contents">
       <LoadErrorAlert error={loadError.error} />
       <LoadErrorAlert error={afterRevoke.error} />
       <GrantFlow contract={key} view={view} onGranted={setView} />
-    </>
+    </div>
   );
 }
 
@@ -401,37 +411,43 @@ function GrantFlow({
   }));
   const [text, setText] = useState<SepaMandateText | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Account and confirmation take each other's place (#7111).
+  const stepRef = useStepFocus<HTMLDivElement>(text ? "confirm" : "account");
 
   if (text) {
     return (
-      <ConfirmStep
-        contract={contract}
-        input={input}
-        text={text}
-        notice={notice}
-        onBack={() => {
-          setNotice(null);
-          setText(null);
-        }}
-        onTextChanged={(next) => {
-          setNotice(t("textChanged"));
-          setText(next);
-        }}
-        onGranted={onGranted}
-      />
+      <div ref={stepRef} className="contents">
+        <ConfirmStep
+          contract={contract}
+          input={input}
+          text={text}
+          notice={notice}
+          onBack={() => {
+            setNotice(null);
+            setText(null);
+          }}
+          onTextChanged={(next) => {
+            setNotice(t("textChanged"));
+            setText(next);
+          }}
+          onGranted={onGranted}
+        />
+      </div>
     );
   }
   return (
-    <AccountStep
-      contract={contract}
-      input={input}
-      reference={undefined}
-      onChange={setInput}
-      onPreview={(next) => {
-        setNotice(null);
-        setText(next);
-      }}
-    />
+    <div ref={stepRef} className="contents">
+      <AccountStep
+        contract={contract}
+        input={input}
+        reference={undefined}
+        onChange={setInput}
+        onPreview={(next) => {
+          setNotice(null);
+          setText(next);
+        }}
+      />
+    </div>
   );
 }
 
