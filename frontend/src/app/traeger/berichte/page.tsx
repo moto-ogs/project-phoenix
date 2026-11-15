@@ -675,18 +675,9 @@ function TraegerReportsContent() {
                 : []),
             ]}
           />
-        ) : !onReportTab && loadedTemplates ? (
-          <TenantPageStats
-            items={[
-              {
-                value: templates.length,
-                label: templates.length === 1 ? "Vorlage" : "Vorlagen",
-              },
-            ]}
-          />
         ) : null
       }
-      statsLoading={onReportTab ? loading : loadedTemplates === null}
+      statsLoading={onReportTab && loading}
       error={onReportTab ? pageLoad.error : templatesError}
       empty={
         onReportTab && report && schoolCount === 0
@@ -738,13 +729,13 @@ function TraegerReportsContent() {
             }
             todayLabel="Üblicher Stichtag"
             actions={
-              <div className="flex min-w-0 flex-wrap items-center gap-3 max-md:w-full">
+              <div className="flex min-w-0 flex-wrap items-center gap-3 max-md:w-full max-md:flex-col max-md:items-stretch">
                 <CustomSelect
                   ariaLabel="Vorlage"
                   value={templateKnown ? effectiveTemplate : STANDARD}
                   onChange={changeTemplate}
                   options={templateOptions}
-                  className="min-w-0 max-md:flex-1 md:w-72"
+                  className="min-w-0 md:w-72"
                 />
                 {report && report.districts.length > 0 ? (
                   <SegmentedControl

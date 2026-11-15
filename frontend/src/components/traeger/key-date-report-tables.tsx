@@ -114,6 +114,7 @@ export function childrenColumns(header: string): DataTableColumn<ReportRow>[] {
       key: "forms",
       header: "Betreuungsformen",
       align: "right",
+      stacked: "hidden",
       render: (row) => (
         <Figure muted>{formatCount(row.careForms.length)}</Figure>
       ),

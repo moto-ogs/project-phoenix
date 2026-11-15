@@ -85,6 +85,13 @@ Ein-Checken bei Student Presence, Krank- und Entschuldigt-Tage bei Care Plan.
    `traeger-view.adapter.document-rendering-lists` erlauben nur diesem Adapter
    den Listen-Vertrag, wie `care-contract.adapter.document-rendering-lists`.
    Die HTTP-Schicht der Projektion bleibt beim öffentlichen Vertrag.
+   Excel und CSV sind eine Tabelle für die Tabellenkalkulation: eine Zeile je
+   Schule, je Sozialraum eine Summe, zuletzt „Gesamt“, danach die Kinder je
+   Betreuungsform. Das PDF lesen Menschen bei Jugendamt und Kommune; eine
+   Tabelle mit bis zu 18 Spalten bricht dort jede Überschrift. Es druckt
+   deshalb im Block-Layout des Vertrags (`RenderRecords`) eine Karte je
+   Schule mit einer Zeile je Abschnitt und den Betreuungsformen darunter,
+   gruppiert nach Sozialraum mit einer Karte für dessen Summe.
 7. **Register.** `api/traeger_report_ports.go` übersetzt die Vorlage in das
    Vokabular der Projektion (Pass-through-Register `roots`). Die Konstruktoren
    heben das Compose-Budget von `modules/organizationtenancy/compose` um 5 und

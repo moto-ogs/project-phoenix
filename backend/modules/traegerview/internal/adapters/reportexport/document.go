@@ -14,13 +14,22 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The export of the key-date report (#4716, ADR 0242) is one list document:
-// a row per school, grouped by Sozialraum with a sum row per Sozialraum and
-// a last row "Gesamt", then, when the report shows the children, a block
-// "Kinder je Betreuungsform" with a row per school and care form. Its columns
-// follow the sections of the report. Every name comes from the Träger-Büro
-// or the schools and is sanitized before the renderer sees it; the CSV
-// renderer keeps a cell from being read as a formula.
+// The export of the key-date report (#4716, ADR 0242) has two layouts.
+//
+//   - Excel and CSV are one table for a spreadsheet: a row per school,
+//     grouped by Sozialraum with a sum row per Sozialraum and a last row
+//     "Gesamt", then, when the report shows the children, a block "Kinder
+//     je Betreuungsform" with a row per school and care form. Its columns
+//     follow the sections of the report.
+//   - The PDF is read by people at Jugendamt and Kommune, and a table of up
+//     to 18 columns breaks every heading on a page. It prints a card per
+//     school with the figures of each section, its care forms below, grouped
+//     by Sozialraum with a card for the sum of each, and a last card
+//     "Gesamt".
+//
+// Every name comes from the Träger-Büro or the schools and is sanitized
+// before the renderer sees it; the CSV renderer keeps a cell from being read
+// as a formula.
 
 // The columns of the export.
 const (
@@ -81,12 +90,12 @@ var reportSectionColumns = map[string][]lists.Column{
 
 // Renderer renders a key-date report through Document Rendering.
 type Renderer struct {
-	lists lists.Renderer
+	lists lists.DocumentRenderer
 }
 
 // New builds the renderer.
 func New() Renderer {
-	return Renderer{lists: lists.NewRenderer()}
+	return Renderer{lists: lists.NewRendererService()}
 }
 
 var formats = map[string]lists.Format{
@@ -109,7 +118,14 @@ func (r Renderer) RenderKeyDateReport(report traegerview.KeyDateReport, format s
 	if !ok {
 		return traegerview.ReportFile{}, fmt.Errorf("%w: %q", traegerview.ErrUnsupportedReportFormat, format)
 	}
-	file, err := r.lists.Render(keyDateReportDocument(report), listFormat, "bericht-stichtag-"+report.KeyDate.String())
+	base := "bericht-stichtag-" + report.KeyDate.String()
+	var file lists.File
+	var err error
+	if listFormat == lists.FormatPDF {
+		file, err = r.lists.RenderRecords(keyDateReportRecords(report), base)
+	} else {
+		file, err = r.lists.Render(keyDateReportDocument(report), listFormat, base)
+	}
 	if err != nil {
 		return traegerview.ReportFile{}, err
 	}
@@ -177,16 +193,15 @@ func keyDateReportColumns(sections []string, grouped, children bool) []lists.Col
 func keyDateSchoolRows(report traegerview.KeyDateReport, grouped bool) []lists.Row {
 	total := keyDateFigureRow(reportTotalLabel, "", "", report.Sections, report.Total.Figures)
 	if grouped {
-		total.GroupTitle = reportTotalLabel
-		return append(keyDateDistrictRows(report), total)
+		return append(keyDateDistrictRows(report), lists.Row{GroupTitle: reportTotalLabel}, total)
 	}
-	var rows []lists.Row
+	// A row that opens a group is only its title: the renderers print no
+	// values of it, so every title stands in a row of its own.
+	rows := []lists.Row{{GroupTitle: reportAllSchoolsGroup}}
 	for _, school := range report.Schools {
 		rows = append(rows, keyDateFigureRow(school.Name, school.City, "", report.Sections, school.Figures))
 	}
-	rows = append(rows, total)
-	rows[0].GroupTitle = reportAllSchoolsGroup
-	return rows
+	return append(rows, total)
 }
 
 // keyDateDistrictRows prints the schools of each Sozialraum under its title
@@ -194,14 +209,12 @@ func keyDateSchoolRows(report traegerview.KeyDateReport, grouped bool) []lists.R
 func keyDateDistrictRows(report traegerview.KeyDateReport) []lists.Row {
 	var rows []lists.Row
 	for _, district := range report.Districts {
-		title := lists.SanitizeUserText(district.Name)
+		rows = append(rows, lists.Row{GroupTitle: lists.SanitizeUserText(district.Name)})
 		for _, school := range report.Schools {
 			if schoolDistrict(school) != district.Name {
 				continue
 			}
-			row := keyDateFigureRow(school.Name, school.City, district.Name, report.Sections, school.Figures)
-			row.GroupTitle, title = title, ""
-			rows = append(rows, row)
+			rows = append(rows, keyDateFigureRow(school.Name, school.City, district.Name, report.Sections, school.Figures))
 		}
 		rows = append(rows, keyDateFigureRow(reportSumLabel+district.Name, "", district.Name, report.Sections, district.Figures))
 	}
@@ -212,7 +225,7 @@ func keyDateDistrictRows(report traegerview.KeyDateReport) []lists.Row {
 // per school and form, the children of each school without one, and the
 // forms of all schools summed by name.
 func keyDateCareFormRows(report traegerview.KeyDateReport, grouped bool) []lists.Row {
-	var rows []lists.Row
+	rows := []lists.Row{{GroupTitle: reportCareFormGroup}}
 	add := func(school, city string, district *string, form string, children int, capacity *int) {
 		values := map[lists.ColumnID]string{
 			reportColumnSchool: lists.SanitizeUserText(school), reportColumnCity: lists.SanitizeUserText(city),
@@ -224,11 +237,7 @@ func keyDateCareFormRows(report traegerview.KeyDateReport, grouped bool) []lists
 		if capacity != nil {
 			values[reportColumnPlaces] = strconv.Itoa(*capacity)
 		}
-		row := lists.Row{Values: values}
-		if len(rows) == 0 {
-			row.GroupTitle = reportCareFormGroup
-		}
-		rows = append(rows, row)
+		rows = append(rows, lists.Row{Values: values})
 	}
 	for _, school := range report.Schools {
 		district := school.District
@@ -294,4 +303,110 @@ func germanDecimal(value *float64) string {
 		return ""
 	}
 	return strings.Replace(strconv.FormatFloat(*value, 'f', 1, 64), ".", ",", 1)
+}
+
+// keyDateReportRecords lays the report out as cards for the PDF: a group per
+// Sozialraum (or one group of all schools) with a card per school and a card
+// for the sum of the Sozialraum, and a last group with the card "Gesamt".
+func keyDateReportRecords(report traegerview.KeyDateReport) lists.RecordDocument {
+	doc := lists.RecordDocument{
+		Title:       "Bericht zum Stichtag " + report.KeyDate.Format("02.01.2006"),
+		GeneratedAt: report.AsOf,
+		Filters:     keyDateReportHeader(report),
+		Footer:      "Zusammengefasste Zahlen ohne Namen von Kindern oder Personal.",
+	}
+	if report.Template != nil {
+		doc.Subtitle = lists.SanitizeUserText(report.Template.Name)
+	}
+	schoolCard := func(school traegerview.KeyDateSchool) lists.Record {
+		title := school.Name
+		if school.City != "" {
+			title += ", " + school.City
+		}
+		return keyDateRecord(title, report.Sections, school.Figures, school.CareForms)
+	}
+	if len(report.Districts) == 0 {
+		group := lists.RecordGroup{Title: reportAllSchoolsGroup}
+		for _, school := range report.Schools {
+			group.Records = append(group.Records, schoolCard(school))
+		}
+		doc.Groups = append(doc.Groups, group)
+	} else {
+		for _, district := range report.Districts {
+			group := lists.RecordGroup{Title: lists.SanitizeUserText(district.Name)}
+			for _, school := range report.Schools {
+				if schoolDistrict(school) == district.Name {
+					group.Records = append(group.Records, schoolCard(school))
+				}
+			}
+			group.Records = append(group.Records, keyDateRecord(reportSumLabel+district.Name, report.Sections, district.Figures, district.CareForms))
+			doc.Groups = append(doc.Groups, group)
+		}
+	}
+	doc.Groups = append(doc.Groups, lists.RecordGroup{
+		Title:   reportTotalLabel,
+		Records: []lists.Record{keyDateRecord(reportTotalLabel+" ("+schoolCount(report.Total.Schools)+")", report.Sections, report.Total.Figures, report.Total.CareForms)},
+	})
+	return doc
+}
+
+// keyDateRecord is one card: the figures of each section of the report and,
+// with the children, a block of the care forms.
+func keyDateRecord(title string, sections []string, figures traegerview.KeyDateFigures, careForms []traegerview.KeyDateCareForm) lists.Record {
+	record := lists.Record{Title: lists.SanitizeUserText(title)}
+	has := func(section string) bool { return slices.Contains(sections, section) }
+	field := func(label, value string) {
+		if value == "" {
+			value = "–"
+		}
+		record.Fields = append(record.Fields, lists.Field{Label: label, Value: value})
+	}
+	if has(traegerview.ReportSectionChildren) {
+		field("Kinder", strconv.Itoa(figures.Children)+" · davon ohne Betreuungsform "+strconv.Itoa(figures.WithoutCareForm))
+	}
+	if has(traegerview.ReportSectionStaff) {
+		perStaff := germanDecimal(figures.ChildrenPerStaff)
+		if perStaff == "" {
+			perStaff = "–"
+		}
+		field("Personal", strconv.Itoa(figures.Staff)+" · "+perStaff+" Kinder je Fachkraft")
+	}
+	if has(traegerview.ReportSectionAbsences) {
+		rate := germanDecimal(figures.AbsenceRate)
+		if rate == "" {
+			rate = "–"
+		} else {
+			rate += " %"
+		}
+		field("Fehlzeiten", strconv.Itoa(figures.PresentDays)+" Tage anwesend · "+strconv.Itoa(figures.SickDays)+" krank · "+
+			strconv.Itoa(figures.ExcusedDays)+" entschuldigt · Fehlquote "+rate)
+	}
+	if has(traegerview.ReportSectionDemand) {
+		places := "keine Platzgrenze"
+		if figures.Places > 0 {
+			places = strconv.Itoa(figures.BookedPlaces) + " von " + strconv.Itoa(figures.Places) + " belegt · " + strconv.Itoa(figures.FreePlaces) + " frei"
+		}
+		field("Plätze", places)
+		field("Nachfrage", strconv.Itoa(figures.Demand)+" · davon "+strconv.Itoa(figures.Open)+" offene Anmeldungen und "+
+			strconv.Itoa(figures.Waitlisted)+" auf der Warteliste")
+	}
+	if has(traegerview.ReportSectionChildren) && len(careForms) > 0 {
+		sub := lists.SubRecord{Title: reportCareFormGroup}
+		for _, form := range careForms {
+			value := strconv.Itoa(form.Children) + " Kinder"
+			if form.Capacity != nil {
+				value += " von " + strconv.Itoa(*form.Capacity) + " Plätzen"
+			}
+			sub.Fields = append(sub.Fields, lists.Field{Label: lists.SanitizeUserText(form.Name), Value: value})
+		}
+		record.Subs = append(record.Subs, sub)
+	}
+	return record
+}
+
+func schoolCount(count int) string {
+	if count == 1 {
+		return "1 Schule"
+	}
+	return strconv.Itoa(count) + " Schulen"
 }
