@@ -156,6 +156,7 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
   "rooms-keys": ["checkinTargetKeys", "roomKeys"],
   "groups-keys": ["groupKeys"],
   "staff-keys": [
+    "absenceMailKeys",
     "staffKeys",
     "staffMonthSummaryKeys",
     "staffQualificationKeys",

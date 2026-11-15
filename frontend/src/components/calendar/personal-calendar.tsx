@@ -54,6 +54,7 @@ import {
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
 import { AnswerScopeChoice } from "~/components/calendar/answer-scope-choice";
+import { AppointmentMailStatus } from "~/components/calendar/appointment-mail-status";
 import {
   answerDiffersFromSeries,
   defaultAnswerScope,
@@ -96,6 +97,8 @@ interface PersonalCalendarProps {
   // Base path for the .ics download route, e.g. "/api/parent/calendar/appointments".
   // When set, appointment cards show a "Zum Kalender hinzufügen" download link.
   readonly icsHrefBase?: string;
+  /** Zeigt dem Ersteller, was aus den E-Mails an die Eltern wurde (#7058). */
+  readonly showGuardianMails?: boolean;
 }
 
 interface CalendarEventActions {
@@ -121,6 +124,7 @@ interface CalendarEventActions {
   readonly onDelete?: (event: CalendarEvent) => void;
   readonly busyAppointmentId?: string | null;
   readonly icsHrefBase?: string;
+  readonly showGuardianMails?: boolean;
 }
 
 const sourceTone = {
@@ -611,6 +615,7 @@ export function PersonalCalendar({
   onDelete,
   busyAppointmentId,
   icsHrefBase,
+  showGuardianMails,
 }: PersonalCalendarProps) {
   const [clicked, setClicked] = useState<CalendarEvent | null>(null);
   const selectedEvent =
@@ -625,6 +630,7 @@ export function PersonalCalendar({
     onDelete,
     busyAppointmentId,
     icsHrefBase,
+    showGuardianMails,
   };
   const referenceDate =
     rawReferenceDate ?? weekStart ?? parseISODate(berlinTodayISO());
@@ -1283,6 +1289,7 @@ function CalendarEventDetail({
     onDelete,
     busyAppointmentId,
     icsHrefBase,
+    showGuardianMails,
   } = actions;
   const tone = toneOf(event);
   const recipientId = event.recipient_id;
@@ -1423,6 +1430,13 @@ function CalendarEventDetail({
         <p className="text-sm leading-6 whitespace-pre-line text-gray-700">
           {event.description}
         </p>
+      ) : null}
+
+      {canManage && showGuardianMails ? (
+        <AppointmentMailStatus
+          key={event.appointment_id}
+          appointmentId={event.appointment_id!}
+        />
       ) : null}
 
       {hasActions ? (

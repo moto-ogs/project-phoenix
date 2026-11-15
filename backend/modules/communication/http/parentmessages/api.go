@@ -26,11 +26,14 @@ type Resource struct {
 	// TeamHandling serves "Als gelesen bestätigen" (#6486); nil leaves the
 	// route unmounted.
 	TeamHandling communication.ParentMessageTeamHandling
+	// Mails says what became of the e-mails of OGS messages (#7058); nil
+	// leaves its routes unmounted.
+	Mails communication.ParentMessageMailStatus
 }
 
 // NewResource wires the staff messaging resource.
-func NewResource(service communication.ParentMessagingCapability, groups communication.ParentGroupThreadCapability, handling communication.ParentMessageTeamHandling) *Resource {
-	return &Resource{Service: service, Groups: groups, TeamHandling: handling}
+func NewResource(service communication.ParentMessagingCapability, groups communication.ParentGroupThreadCapability, handling communication.ParentMessageTeamHandling, mails communication.ParentMessageMailStatus) *Resource {
+	return &Resource{Service: service, Groups: groups, TeamHandling: handling, Mails: mails}
 }
 
 // Router returns the chi router scoped to /messages.
@@ -66,6 +69,7 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		r.With(read, withTx).Get("/reachable-students", rs.listReachableStudents)
 		r.With(read, withTx).Get("/students/{studentId}/threads", rs.listStudentThreads)
 		rs.mountGroupThreadRoutes(r, read, withTx)
+		rs.mountMessageMailRoutes(r, read, withTx)
 	})
 
 	return r

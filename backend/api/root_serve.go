@@ -420,7 +420,7 @@ func composeServeRoot(
 		},
 		func() error {
 			chat = owners.BuildCommunicationMessaging(db, env, hub, settings.Service, messaging, services.Users, owners.StaffStudentReads{Caller: caller.Caller()},
-				notifications, delivery.Outbox, people, owners.SchoolNameDirectory{Schools: organizations}, CommunicationSession{}, identity)
+				notifications, delivery.Outbox, delivery.Runtime.EmailOutcomes, people, owners.SchoolNameDirectory{Schools: organizations}, CommunicationSession{}, identity)
 			calendarApp = owners.BuildCalendarApp(db, env, people, structure, portalReads, timetableRows, rooms, workTime, organizations,
 				identity, caller.Caller(), appointments, calendar, delivery, notifications, settings.Service, persons)
 			return nil

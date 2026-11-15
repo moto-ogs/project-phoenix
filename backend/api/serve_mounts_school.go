@@ -168,7 +168,7 @@ func mountSchoolPortalRoutes(
 	classDayResource := classdayHTTP.NewResource(classDay.ClassDay, logger.With("handler", "class-day"))
 	// The calendar of moto schule (#4798): the same calendar service as
 	// /api/calendar, behind calendar:school and the school-portal mantle.
-	schoolCalendar := calendarAPI.NewResource(calendarApp, logger.With("handler", "school-calendar"))
+	schoolCalendar := calendarAPI.NewResource(calendarApp, nil, logger.With("handler", "school-calendar"))
 	school := NewSchoolPortalHTTP(SchoolPortalAuth(identity), SchoolPortalMFA(identity), portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeSchool), classDayResource, timetableResource, staffMessaging, staffNotices, notificationRoutes, schoolCalendar)
 	// Parent letters of a Lehrkraft to her classes (#4800): the OGS's
 	// announcement resource, narrowed by the caller's class reach.
@@ -291,7 +291,7 @@ func mountSchoolRoutes(
 // mountCalendarRoutes serves the personal calendars under /api, the
 // read-only staff CalDAV and the public subscription feeds.
 func mountCalendarRoutes(root, tenant chi.Router, logger *slog.Logger, calendarApp calendarCompose.Application) {
-	calendar := calendarAPI.NewResource(calendarApp, logger.With("handler", "calendar"))
+	calendar := calendarAPI.NewResource(calendarApp, calendarApp, logger.With("handler", "calendar"))
 	tenant.Mount("/calendar", calendar.Router(TenantSessionChain))
 
 	// Public parent calendar subscription feed (no auth — the token in the URL

@@ -939,6 +939,7 @@ function StaffCalendarPageInner() {
       onDelete={canManageCalendar ? handleDelete : undefined}
       busyAppointmentId={busyAppointmentId}
       icsHrefBase="/api/calendar/appointments"
+      showGuardianMails={canManageCalendar}
     />
   );
 

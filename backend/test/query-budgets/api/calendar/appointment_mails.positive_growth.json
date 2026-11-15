@@ -1,0 +1,7 @@
+{
+  "scenario": "api.calendar.appointment_mails.positive_growth",
+  "max": 9,
+  "exact": true,
+  "description": "Real staff calendar Resource and TenantSessionChain, N3/N8 mailed guardian recipients whose mails were refused (#7058): the mails in one outcome read, the refused guardians named from one recipient and one profile read. Full transaction statements, excluding the outer live-session verifier.",
+  "route": "GET /api/calendar/appointments/{appointmentId}/mails"
+}

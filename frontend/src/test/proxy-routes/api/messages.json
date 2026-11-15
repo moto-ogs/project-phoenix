@@ -9,6 +9,9 @@
   "api/messages/group-threads/[groupThreadId]/close": [
     "POST tenant /api/messages/group-threads/groupThreadId%2F1/close"
   ],
+  "api/messages/group-threads/[groupThreadId]/mails": [
+    "GET tenant /api/messages/group-threads/groupThreadId%2F1/mails"
+  ],
   "api/messages/group-threads/[groupThreadId]/messages": [
     "POST tenant /api/messages/group-threads/groupThreadId%2F1/messages"
   ],
@@ -20,5 +23,8 @@
   ],
   "api/messages/students/[studentId]/guardians": [
     "GET tenant /api/messages/students/studentId%2F1/guardians"
+  ],
+  "api/messages/threads/[threadId]/mails": [
+    "GET tenant /api/messages/threads/threadId%2F1/mails"
   ]
 }

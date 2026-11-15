@@ -177,7 +177,35 @@ func (s *PayrollDispatch) Overview(ctx context.Context) (workforce.PayrollDispat
 		CreatedAt: latest.CreatedAt, FinishedAt: latest.FinishedAt,
 		DownloadExpiresAt: latest.DownloadExpiresAt, DownloadedAt: latest.DownloadedAt,
 	}
+	if err := s.readMails(ctx, latest.ID, &view); err != nil {
+		return workforce.PayrollDispatchOverview{}, err
+	}
 	return workforce.PayrollDispatchOverview{Latest: &view}, nil
+}
+
+// readMails adds what became of the dispatch's mails (#7058): the one link
+// mail to the Lohnbüro and the notices to the managers, counted by outcome.
+func (s *PayrollDispatch) readMails(ctx context.Context, dispatchID int64, view *workforce.PayrollDispatchView) error {
+	if s.deps.MailOutcomes == nil {
+		return nil
+	}
+	mails, err := s.deps.MailOutcomes.MailOutcomes(ctx, []int64{dispatchID}, PayrollLinkMailType, PayrollProblemMailType)
+	if err != nil {
+		return fmt.Errorf("payroll dispatch: read the mail status: %w", err)
+	}
+	for _, mail := range mails {
+		switch mail.RelatedType {
+		case PayrollLinkMailType:
+			// One link mail per dispatch; the newest wins should there be more.
+			view.LinkMail = mail.Outcome
+		case PayrollProblemMailType:
+			if view.NoticeMails == nil {
+				view.NoticeMails = map[string]int{}
+			}
+			view.NoticeMails[mail.Outcome]++
+		}
+	}
+	return nil
 }
 
 // RunDue claims the due dispatches, works each in its own transactions and

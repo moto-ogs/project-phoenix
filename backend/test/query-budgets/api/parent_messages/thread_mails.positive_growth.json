@@ -1,0 +1,7 @@
+{
+  "scenario": "api.parent_messages.thread_mails.positive_growth",
+  "max": 7,
+  "exact": true,
+  "description": "Protected tenant message route, N3/N8 real guardians and messages with their queued mails (#7058): the mail status of every OGS message in one outcome read, without moving the read state. Foreign tenant cannot read it. Not a global minimum.",
+  "route": "GET /api/messages/threads/{threadId}/mails"
+}

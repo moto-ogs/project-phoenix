@@ -15,9 +15,13 @@ function render(ui: ReactElement) {
   return rtlRender(ui, { wrapper: ToastProvider });
 }
 
-const { state, mutate, api } = vi.hoisted(() => ({
-  state: { detail: null as Record<string, unknown> | null },
+const { state, mutate, mailsMutate, api } = vi.hoisted(() => ({
+  state: {
+    detail: null as Record<string, unknown> | null,
+    mails: {} as Record<string, Record<string, number>>,
+  },
   mutate: vi.fn(() => Promise.resolve(undefined)),
+  mailsMutate: vi.fn(() => Promise.resolve(undefined)),
   api: {
     closeGroupThread: vi.fn(),
     postGroupMessage: vi.fn(),
@@ -27,12 +31,16 @@ const { state, mutate, api } = vi.hoisted(() => ({
 
 vi.mock("~/lib/swr", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/swr")>()),
-  useSWRAuth: () => ({
-    data: state.detail,
-    error: undefined,
-    isLoading: false,
-    mutate,
-  }),
+  // The mails of the messages (#7058) come under their own key.
+  useSWRAuth: (key: string | null) =>
+    key?.startsWith("group-message-mails-")
+      ? {
+          data: state.mails,
+          error: undefined,
+          isLoading: false,
+          mutate: mailsMutate,
+        }
+      : { data: state.detail, error: undefined, isLoading: false, mutate },
 }));
 // The send overlay (#5011) is bound to the signed-in session's scope.
 vi.mock("next-auth/react", () => ({
@@ -107,6 +115,7 @@ function detail(closed: boolean) {
 describe("Gruppennachricht: Objektseite", () => {
   beforeEach(() => {
     state.detail = detail(false);
+    state.mails = {};
     mutate.mockClear();
     api.closeGroupThread.mockReset();
   });
@@ -174,5 +183,19 @@ describe("Gruppennachricht: Objektseite", () => {
     releaseFakeTimers();
 
     await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
+    expect(mailsMutate).toHaveBeenCalled();
+  });
+
+  it("zeigt unter der Nachricht, was aus den E-Mails an die Familien wurde (#7058)", () => {
+    state.mails = { "1": { delivered: 1, undeliverable: 1 } };
+    render(<GroupMessagePage />);
+    expect(screen.getByTestId("group-message-mails")).toHaveTextContent(
+      "E-Mails1 nicht zustellbar1 zugestellt",
+    );
+    expect(
+      screen.getByText(
+        "Eine Mail kam nicht an. Welche Adresse betroffen ist, sehen Sie beim Kind unter „Erziehungsberechtigte“.",
+      ),
+    ).toBeInTheDocument();
   });
 });

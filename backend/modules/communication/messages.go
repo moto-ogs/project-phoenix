@@ -118,6 +118,26 @@ type ParentMessage struct {
 	Attachments json.RawMessage
 }
 
+// ParentMessageMails reads what became of the e-mails that told guardians
+// about OGS messages (#7058), in the caller's tenant transaction. The root
+// binds it to Delivery.
+type ParentMessageMails interface {
+	// ParentMessageMailOutcomes reports the outcome of the one mail of each
+	// conversation message; a message without a mail has no key.
+	ParentMessageMailOutcomes(ctx context.Context, messageIDs []int64) (map[int64]string, error)
+	// ParentGroupMessageMailOutcomes counts the outcomes of the mails of each
+	// group message, one mail per family; a message without a mail has no key.
+	ParentGroupMessageMailOutcomes(ctx context.Context, messageIDs []int64) (map[int64]map[string]int, error)
+}
+
+// ParentMessageMailStatus tells the OGS what became of the e-mails of its
+// messages (#7058). Both reads check access like the conversation itself and
+// advance no read state; a message without a mail has no key.
+type ParentMessageMailStatus interface {
+	ParentMessageThreadMails(ctx context.Context, threadID int64) (map[int64]string, error)
+	ParentGroupThreadMails(ctx context.Context, groupThreadID int64) (map[int64]map[string]int, error)
+}
+
 type ParentMessageInboxThread struct {
 	ThreadID          int64
 	StudentID         int64

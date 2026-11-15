@@ -171,6 +171,7 @@ export function RequestReviewCard({
   submittedByName,
   children,
   history,
+  historyBadge,
   action,
   reason,
   onReasonChange,
@@ -209,6 +210,11 @@ export function RequestReviewCard({
    */
   action?: ReactNode;
   history?: RequestReviewCardHistory;
+  /**
+   * Hinweis in der zugeklappten Zeile der Historie, etwa eine Mail zur
+   * Entscheidung, die nicht ankam (#7058). Nur zusammen mit `history`.
+   */
+  historyBadge?: ReactNode;
   reason?: string;
   onReasonChange?: (value: string) => void;
   reasonPlaceholder?: string;
@@ -319,6 +325,7 @@ export function RequestReviewCard({
             {!decided && meta && (
               <StatusBadge label={meta.label} tone={meta.tone} />
             )}
+            {historyBadge}
           </span>
           {decided &&
             (meta ? (

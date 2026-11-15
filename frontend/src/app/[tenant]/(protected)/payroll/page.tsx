@@ -34,6 +34,11 @@ import { TenantPage } from "~/components/ui/tenant-page";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { formatChatDateTime } from "~/lib/date-helpers";
+import {
+  mailStatusCopy,
+  undeliveredMailNote,
+} from "~/lib/email-delivery-status";
+import { MailOutcomeBadges } from "~/components/messaging/message-mail-status";
 import { errorStatus } from "~/lib/expected-failure";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -1060,6 +1065,11 @@ function LohnbueroCard({
   );
 }
 
+// Neu senden lässt sich der Link nicht: die Adresse steht oben in dieser
+// Karte, die Datei gibt es im Export der Zeitkonten.
+const LINK_MAIL_NEXT_STEP =
+  "Prüfen Sie oben die E-Mail-Adresse des Lohnbüros. Die Monatsdatei finden Sie unter Mitarbeiter im Reiter Zeitkonten bei „Exportieren“.";
+
 function dispatchStateBadge(dispatch: PayrollDispatchView): {
   label: string;
   tone: StatusBadgeTone;
@@ -1072,10 +1082,15 @@ function dispatchStateBadge(dispatch: PayrollDispatchView): {
       dispatch.attempts > 0
         ? { label: "Wird erneut versucht", tone: "blue" }
         : { label: "Wird vorbereitet", tone: "blue" },
-    mailing: { label: "E-Mail wird zugestellt", tone: "blue" },
+    mailing: { label: "E-Mail wird gesendet", tone: "blue" },
+    // Ein verschickter Link ist erst zugestellt, wenn das Postfach des
+    // Lohnbüros es meldet (#7058): der Stand ist dann der der Mail.
     sent:
       dispatch.channel === "email"
-        ? { label: "E-Mail zugestellt", tone: "green" }
+        ? (mailStatusCopy(dispatch.linkMail ?? "accepted") ?? {
+            label: "Versendet",
+            tone: "gray",
+          })
         : { label: "Übertragen", tone: "green" },
     blocked: { label: "Nicht gesendet", tone: "warning" },
     failed: { label: "Fehlgeschlagen", tone: "red" },
@@ -1096,6 +1111,12 @@ function LatestDispatch({
   const settingsHref =
     dispatch.state === "failed" && dispatch.channel === "sftp"
       ? transferFailureSettingsHref(dispatch.reason ?? undefined)
+      : null;
+  // Kam der Link nicht an, steht der nächste Schritt unter dem Stand. Ein
+  // gescheiterter Versand nennt seinen Grund schon selbst.
+  const linkMailNote =
+    isEmail && dispatch.state === "sent"
+      ? undeliveredMailNote(dispatch.linkMail, LINK_MAIL_NEXT_STEP)
       : null;
 
   return (
@@ -1118,6 +1139,15 @@ function LatestDispatch({
         <DataField label="Stand">
           <StatusBadge label={badge.label} tone={badge.tone} />
         </DataField>
+        {dispatch.noticeMails && (
+          <DataField label="Hinweis an die Leitung">
+            <MailOutcomeBadges
+              envelope
+              counts={dispatch.noticeMails}
+              accessibleLabel="E-Mails an die Leitung: "
+            />
+          </DataField>
+        )}
         {dispatch.filename && (
           <DataField label="Datei" mono>
             {dispatch.filename}
@@ -1158,6 +1188,23 @@ function LatestDispatch({
               >
                 Zu den Einstellungen
               </ButtonLink>
+            ) : undefined
+          }
+        />
+      )}
+      {linkMailNote && (
+        <Alert
+          type="warning"
+          announce="polite"
+          message={linkMailNote}
+          action={
+            isEmail ? (
+              <JumpButton
+                targetId="payroll-dispatch-email"
+                tooltip="Springt zur E-Mail-Adresse des Lohnbüros."
+              >
+                Zur Adresse
+              </JumpButton>
             ) : undefined
           }
         />

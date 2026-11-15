@@ -24,6 +24,8 @@ const REQUEST_MAIL_LABELS: Record<string, string> = {
   enrollment_approved: "Zusage",
   enrollment_waitlisted: "Warteliste",
   enrollment_rejected: "Absage",
+  // One mail with the decisions on several children (#7058).
+  enrollment_decision_digest: "Entscheidung",
   enrollment_rollover_opt_in: "Verlängerung",
   enrollment_rollover_opt_out: "Verlängerung",
   enrollment_change_request_question: "Rückfrage zur Änderung",

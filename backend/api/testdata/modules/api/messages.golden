@@ -4,10 +4,12 @@ GET /api/messages/count-scope -> eltern_app
 GET /api/messages/group-threads -> eltern_app
 GET /api/messages/group-threads/audience -> eltern_app
 GET /api/messages/group-threads/{groupThreadId} -> eltern_app
+GET /api/messages/group-threads/{groupThreadId}/mails -> eltern_app
 GET /api/messages/reachable-students -> eltern_app
 GET /api/messages/students/{studentId}/guardians -> eltern_app
 GET /api/messages/students/{studentId}/threads -> eltern_app
 GET /api/messages/threads/{threadId} -> eltern_app
+GET /api/messages/threads/{threadId}/mails -> eltern_app
 GET /api/messages/unread-count -> eltern_app
 POST /api/messages/attachments -> eltern_app
 POST /api/messages/group-threads -> eltern_app

@@ -43,6 +43,11 @@ import {
   type VacationQuotaSummary,
 } from "~/lib/time-tracking-api";
 import { VacationRequestModal } from "./vacation-request-modal";
+import {
+  AbsenceRequestMails,
+  useOwnAbsenceRequestMails,
+} from "~/components/staff/absence-mail-status";
+import type { MailOutcomeCounts } from "~/lib/email-delivery-status";
 import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
 
 const logger = createLogger({ component: "LeaveRequestsCard" });
@@ -172,6 +177,17 @@ export function LeaveRequestsCard() {
         .slice(0, 8),
     [vacations],
   );
+
+  // Ob die Leitung die wartenden Anträge per Mail bekam (#7058).
+  const waitingIds = useMemo(
+    () =>
+      vacations
+        .filter((vacation) => vacation.status === "requested")
+        .map((vacation) => vacation.id)
+        .sort(),
+    [vacations],
+  );
+  const requestMails = useOwnAbsenceRequestMails(waitingIds);
 
   const sortedQuestionedVacations = useMemo(
     () =>
@@ -330,6 +346,11 @@ export function LeaveRequestsCard() {
             {recentVacations.length > 0 && (
               <div className="mt-5 border-t border-gray-100 pt-5">
                 <SectionLabel className="mb-3">Meine Anträge</SectionLabel>
+                <LoadErrorAlert
+                  error={requestMails.loadError}
+                  actionLayout="responsive"
+                  className="mb-3"
+                />
                 <ul className="space-y-2">
                   {recentVacations.map((vacation) => (
                     <AbsenceRequestItem
@@ -337,6 +358,11 @@ export function LeaveRequestsCard() {
                       absence={vacation}
                       currentTimestamp={currentTimestamp}
                       onCancel={handleCancel}
+                      mailCounts={
+                        vacation.status === "requested"
+                          ? requestMails.mails[vacation.id]
+                          : undefined
+                      }
                     />
                   ))}
                 </ul>
@@ -390,12 +416,15 @@ function AbsenceRequestItem({
   onCancel,
   onResubmitted,
   showResubmit = false,
+  mailCounts,
 }: {
   readonly absence: StaffAbsence;
   readonly currentTimestamp: number;
   readonly onCancel: (absence: StaffAbsence) => void;
   readonly onResubmitted?: () => void;
   readonly showResubmit?: boolean;
+  /** The notice of a waiting request to the Leitung (#7058). */
+  readonly mailCounts?: MailOutcomeCounts;
 }) {
   const meta = statusMeta(absence.status);
   const cancelable =
@@ -430,6 +459,7 @@ function AbsenceRequestItem({
               {absence.decisionNote}
             </p>
           )}
+          <AbsenceRequestMails counts={mailCounts} />
         </div>
         <div className="flex items-center gap-3">
           <StatusColorBadge label={meta.label} color={meta.color} />

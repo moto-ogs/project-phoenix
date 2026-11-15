@@ -68,6 +68,9 @@
   "api/staff/absence-types/[absenceTypeId]/allowances/[staffId]/preview": [
     "GET tenant /api/absence-types/absenceTypeId%2F1/allowances/staffId%2F1/preview"
   ],
+  "api/staff/absences/mails": [
+    "GET tenant /api/staff/absences/mails"
+  ],
   "api/staff/dashboard-summary": [
     "GET tenant /api/staff/dashboard-summary"
   ],

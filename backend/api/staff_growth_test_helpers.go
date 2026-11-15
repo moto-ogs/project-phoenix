@@ -34,7 +34,7 @@ func StaffGrowthTestRouter(database transactionruntime.Database, unit tenant.Uni
 	}
 	schedules := owners.MustNewWorkforce(database)
 	capabilities := owners.NewWorkforceAdminCapabilities(svc.Users, work.StaffAdmin, work.TimeTracking)
-	admin := newStaffAdminResource(capabilities, work.SickReports, schedules, nil, nil, work.PayrollDispatch, work.PayrollRules, svc.Users.StaffRows(), database, slog.Default())
+	admin := newStaffAdminResource(capabilities, work.SickReports, schedules, nil, nil, work.PayrollDispatch, nil, work.PayrollRules, svc.Users.StaffRows(), database, slog.Default())
 	resource, err := newStaffResource(membership, svc.PeopleDirectory, identity.Auth, "", func(hooks StaffMembershipHooks) StaffMembershipRuntime {
 		return svc.NewStaffMembershipRuntime(database, slog.Default(), hooks)
 	}, admin, slog.Default())

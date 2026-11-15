@@ -48,6 +48,9 @@ type TimeTracking struct {
 	// StaffDay is today's supervision, work and absence status the staff
 	// list shows.
 	StaffDay StaffDayStatus
+	// AbsenceMails says what became of the absence request mails (#7058);
+	// nil without the mail outcomes.
+	AbsenceMails workforce.AbsenceMailStatus
 }
 
 // StaffDayStatus reads today's status of the staff members.
@@ -88,6 +91,7 @@ func (s *WorkSessionSide) TimeTracking() (*TimeTracking, error) {
 		AutoCheckIn:        s.AutoCheckIn,
 		Jobs:               services.Sessions,
 		StaffDay:           StaffDay{WorkSessionService: services.Sessions, StaffAbsenceService: services.Absences},
+		AbsenceMails:       workforce.NewAbsenceMailStatus(s.Clock.deps.MailOutcomes),
 	}, nil
 }
 

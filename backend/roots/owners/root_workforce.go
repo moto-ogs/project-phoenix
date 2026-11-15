@@ -50,7 +50,9 @@ func BuildWorkSessionSide(
 		StatutoryHolidays: schoolCalendarCompose.NewTenantHolidays(calendar),
 		Events:            TimeTrackingEvents(hub),
 		AbsenceEmail:      absenceEmailDependencies(settings, mailFrom, mailIdentity, env.Links.FrontendURL, logger, people, organizations, durable),
-		Logger:            logger,
+		// What became of the absence request mails (#7058).
+		MailOutcomes: workforceMailOutcomes(durable),
+		Logger:       logger,
 	}, TimeTrackingAudits{
 		WorkSessionEdit: audits.WorkSessionEdit, TimeTrackingDeletion: audits.TimeTrackingDeletion,
 		DataAccessLog: audits.DataAccessLog, TimeTrackingAuditLog: audits.TimeTrackingAuditLog,

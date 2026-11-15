@@ -91,7 +91,8 @@ export function payrollTopic(): HelpTopic {
       "Der Export erzeugt keine Datei? Dann fehlt oben unter `Vollständigkeit` noch etwas.",
       "Ein Krankheitstag zählt 0 Stunden? Dann fehlt das Soll. `Vollständigkeit` zählt bei `Soll (Arbeitszeit)` alle Personen ohne Soll im laufenden Monat.",
       "`Zuschlagsregel anlegen` lässt sich nicht tippen? Dann fehlt noch eine eigene Lohnart.",
-      "Unter `Letzter Versand` steht `Nicht gesendet` oder `Fehlgeschlagen`? Darunter steht der Grund. Wer die Zeiterfassung des Teams verwaltet, bekommt dazu eine E-Mail.",
+      "Unter `Letzter Versand` steht `Nicht gesendet` oder `Fehlgeschlagen`? Darunter steht der Grund. Wer die Zeiterfassung des Teams verwaltet, bekommt dazu eine E-Mail. Ob sie ankam, steht bei `Hinweis an die Leitung`.",
+      "Unter `Letzter Versand` steht `Nicht zustellbar`? Die Mail mit dem Link kam beim Lohnbüro nicht an. Prüfen Sie die `E-Mail-Adresse des Lohnbüros`. `Versendet` heißt: Die Mail ist raus, eine Meldung aus dem Postfach fehlt noch.",
       "Der `Versandweg` `SFTP` braucht die Gegenstelle aus den Einstellungen unter `Kalender und Export` bei `Zeitkonten übertragen`.",
     ],
     related: [

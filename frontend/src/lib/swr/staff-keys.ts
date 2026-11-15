@@ -26,6 +26,18 @@ export const staffKeys = {
     resourceKey("staff-directory-teachers-", { page: 1, pageSize: 1000 }),
 } as const;
 
+/**
+ * Der Stand der Mails zu Abwesenheitsanträgen (#7058), je Satz der gezeigten
+ * Anträge; Konto und Schule ergänzen die Hooks. Die Leitung liest die Mails
+ * zu ihren Entscheidungen, die Person die Meldung ihrer wartenden Anträge.
+ */
+export const absenceMailKeys = {
+  decisions: (absenceIds: readonly string[]) =>
+    `staff-absence-mails-${absenceIds.join(",")}`,
+  ownRequests: (waitingIds: readonly string[]) =>
+    `own-absence-request-mails-${waitingIds.join(",")}`,
+} as const;
+
 /** Nachweise der Mitarbeitenden (#4808). */
 export const staffQualificationKeys = {
   types: () => "database-qualification-types",

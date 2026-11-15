@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -163,7 +164,7 @@ func (s *staffAbsenceService) enqueueAbsenceRequested(ctx context.Context, absen
 		if approver.Email == "" || approver.StaffID == absence.StaffID {
 			continue
 		}
-		if err := s.dispatchAbsenceEmail(ctx, "absence_request_received", absence, AbsenceEmailMessage{
+		if err := s.dispatchAbsenceEmail(ctx, workforce.AbsenceMailRequestReceived, absence, AbsenceEmailMessage{
 			To:       AbsenceEmailAddress{Name: approver.FirstName + " " + approver.LastName, Address: approver.Email},
 			Subject:  subject,
 			Template: absenceRequestReceivedTemplate,
@@ -195,11 +196,11 @@ func (s *staffAbsenceService) notifyAbsenceDecision(ctx context.Context, absence
 	var subject, template, metaType string
 	switch absence.Status {
 	case AbsenceStatusApproved:
-		subject, template, metaType = "Dein Abwesenheitsantrag wurde genehmigt", "absence-request-approved.html", "absence_request_approved"
+		subject, template, metaType = "Dein Abwesenheitsantrag wurde genehmigt", "absence-request-approved.html", workforce.AbsenceMailRequestApproved
 	case AbsenceStatusDeclined:
-		subject, template, metaType = "Dein Abwesenheitsantrag wurde abgelehnt", "absence-request-declined.html", "absence_request_declined"
+		subject, template, metaType = "Dein Abwesenheitsantrag wurde abgelehnt", "absence-request-declined.html", workforce.AbsenceMailRequestDeclined
 	case AbsenceStatusQuestion:
-		subject, template, metaType = "Rückfrage zu deinem Abwesenheitsantrag", "absence-request-question.html", "absence_request_question"
+		subject, template, metaType = "Rückfrage zu deinem Abwesenheitsantrag", "absence-request-question.html", workforce.AbsenceMailRequestQuestion
 	default:
 		return nil
 	}

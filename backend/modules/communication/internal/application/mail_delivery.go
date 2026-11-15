@@ -75,9 +75,10 @@ func NewMailContent(strings map[string]string, flags map[string]bool) *communica
 }
 
 const (
-	MailKindParentMessage        = communication.MailKindParentMessage
-	MailRelatedTypeParentMessage = communication.MailRelatedTypeParentMessage
-	MailKindParentAnnouncement   = communication.MailKindParentAnnouncement
+	MailKindParentMessage             = communication.MailKindParentMessage
+	MailRelatedTypeParentMessage      = communication.MailRelatedTypeParentMessage
+	MailRelatedTypeParentGroupMessage = communication.MailRelatedTypeParentGroupMessage
+	MailKindParentAnnouncement        = communication.MailKindParentAnnouncement
 )
 
 // NewMailReceiptIndex allocates the application's address-deduplication index.

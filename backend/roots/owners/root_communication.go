@@ -68,6 +68,8 @@ type CommunicationMessaging struct {
 	// TeamHandling confirms guardian activity for the team without a reply
 	// (#6486).
 	TeamHandling communication.ParentMessageTeamHandling
+	// MessageMails says what became of the e-mails of OGS messages (#7058).
+	MessageMails communication.ParentMessageMailStatus
 	// ParentAttachments and StaffAttachments are the photos and files of
 	// the two chat families (#6685); PortalAttachments is the guardian's
 	// side of the first.
@@ -82,7 +84,7 @@ type CommunicationMessaging struct {
 func BuildCommunicationMessaging(
 	db transactionruntime.Database, env RootEnvironment, hub *realtime.Hub, settings settingsCompose.BatchSettingsService,
 	portal parentStore.MessagingRepositories, users peoplePorts.PersonDirectory, caller StaffStudentReads,
-	notifications DeliveryNotifications, outbox *deliveryCompose.EmailOutbox, people PeopleRows,
+	notifications DeliveryNotifications, outbox *deliveryCompose.EmailOutbox, outcomes deliveryModule.EmailOutcomes, people PeopleRows,
 	schools interface {
 		FindSchoolName(context.Context, int64) (string, bool, error)
 	}, session interface {
@@ -100,9 +102,9 @@ func BuildCommunicationMessaging(
 		// der Rueckfall fuer alle, die Push nicht eingerichtet haben.
 		Outbox: OutboxEnqueuer{Outbox: outbox}, GuardianProfiles: BindParentMessageGuardianProfiles(people.GuardianProfiles), Schools: schools,
 		LoginImages: settings, ParentsURL: env.Links.ParentsURL, Observe: env.Observe.Communication,
-		GroupAudience: NewParentGroupAudience(db),
+		GroupAudience: NewParentGroupAudience(db), Mails: ParentMessageMails{Outcomes: outcomes},
 	}
-	messaging, groupThreads, parentAttachments, teamHandling := communicationCompose.NewParentMessaging(messagingConfig, CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
+	messaging, groupThreads, parentAttachments, teamHandling, messageMails := communicationCompose.NewParentMessaging(messagingConfig, CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	staffMessaging, staffAttachments := communicationCompose.NewStaffMessaging(communicationCompose.StaffMessagingConfig{
 		DB:          db.Pool(),
 		ThreadRepo:  staffStore.NewStaffMessageThreadRepository(db.Pool()),
@@ -112,7 +114,7 @@ func BuildCommunicationMessaging(
 		Preferences: notifications.Preferences, Observe: env.Observe.Communication,
 	}, CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	return CommunicationMessaging{
-		Messaging: messaging, StaffMessaging: staffMessaging, GroupThreads: groupThreads, TeamHandling: teamHandling,
+		Messaging: messaging, StaffMessaging: staffMessaging, GroupThreads: groupThreads, TeamHandling: teamHandling, MessageMails: messageMails,
 		ParentAttachments: parentAttachments, StaffAttachments: staffAttachments,
 		PortalAttachments: communicationCompose.NewPortalMessageAttachments(db.Pool()),
 	}

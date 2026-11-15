@@ -2,9 +2,11 @@ import type { HelpTopic } from "../help-types";
 import { HELP_TOPICS } from "~/lib/help-topics";
 
 /**
- * Die Zustellhinweise (#5934). Sie stehen an sechs Stellen: Einladung der Eltern,
- * Elternbrief, Einladung ins Personal, Einladung des Caterers (#5960), Anmeldung
- * und, für den Träger, im Versand der Schreiben. Hier steht, was jedes Wort bedeutet und wer als Nächstes handelt.
+ * Die Zustellhinweise (#5934). Sie stehen dort, wo eine Mail entsteht (#7058):
+ * Einladung der Eltern, Elternbrief, Nachricht und Gruppennachricht, Termin,
+ * Einladung ins Personal und des Caterers (#5960), Anmeldung, Versand an das
+ * Lohnbüro, Abwesenheitsanträge und, für den Träger, der Versand der Schreiben.
+ * Hier steht, was jedes Wort bedeutet und wer als Nächstes handelt.
  * `Versendet` heißt nur: Die Mail ist raus. `Zugestellt` meldet erst der
  * Mail-Dienst, und ohne ihn (Strato, Brevo, Notweg) bleibt es bei `Versendet`.
  */
@@ -14,12 +16,27 @@ export function emailDeliveryTopic(): HelpTopic {
     title: "Wenn eine E-Mail nicht ankommt",
     question: "Was bedeuten Zugestellt, Verzögert und Adresse prüfen?",
     summary:
-      "moto zeigt bei jeder Mail an Eltern, was aus ihr geworden ist und was Sie tun können.",
+      "moto zeigt bei jeder Mail, was aus ihr geworden ist und was Sie tun können.",
     group: "elternarbeit",
     audience: "lead",
     icon: "EnvelopeSimple",
     steps: [],
     instructionGroups: [
+      {
+        title: "Hier sehen Sie den Stand",
+        ordered: false,
+        steps: [
+          "Elternbrief: im geöffneten Brief bei jeder Person.",
+          "Nachricht an Eltern: unter Ihrer Nachricht hinter `E-Mail`.",
+          "Gruppennachricht: unter jeder Nachricht hinter `E-Mails`, gezählt je Ergebnis.",
+          "Termin mit Eltern: im Termin unter `E-Mails an die Eltern`. Das sieht, wer den Termin angelegt hat.",
+          "Einladung der Eltern: beim Kind unter `Erziehungsberechtigte`.",
+          "Einladung ins Personal und des Caterers: unter `Offene Einladungen`.",
+          "Anmeldung: in der Anmeldung unter `E-Mails an die Familie`.",
+          "Versand an das Lohnbüro: unter `Abrechnung` bei `Letzter Versand`.",
+          "Antrag auf Urlaub oder Abwesenheit: am Antrag, für Sie und für die Leitung.",
+        ],
+      },
       {
         title: "Das bedeuten die Hinweise",
         ordered: false,

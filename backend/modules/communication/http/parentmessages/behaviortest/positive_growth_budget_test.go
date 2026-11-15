@@ -36,13 +36,18 @@ func TestParentMessagePositiveGrowthQueryBudget(t *testing.T) {
 	settings, err := owners.NewSettingsTestModule(database, testpkg.TenantRuntime(t, db))
 	require.NoError(t, err)
 	require.NoError(t, settings.Settings.SetValue(testpkg.Ctx(t), "operations.parent_notes_enabled", true, nil, nil))
+	delivery, err := api.NewDeliveryTestModule(database, testpkg.TenantRuntime(t, db))
+	require.NoError(t, err)
 	identity := owners.NewPeopleIdentityAccess(database, nil)
 	persons := owners.ParentMessagePeopleWithLeaders{ParentMessagePeople: owners.BindParentMessagePeople(directory), ParentMessageLeadership: owners.BindParentMessageLeadership(people.Staff, identity)}
-	svc, groups, _, handling := compose.NewParentMessaging(compose.ParentMessagingConfig{ThreadRepo: repos.ParentMessageThread, MessageRepo: parentStore.NewParentMessageRepository(db), ReadRepo: repos.ParentMessageRead, Persons: persons, UserContext: owners.StaffStudentReads{}, Session: api.CommunicationSession{}, Settings: settingsValues.NewParentMessagingValues(settings.Settings), Broadcaster: realtime.NewHub(slog.Default()), DB: db, Logger: slog.Default(), Observe: func(compose.Observation) {}, GroupAudience: owners.NewParentGroupAudience(database)}, owners.CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
+	svc, groups, _, handling, mails := compose.NewParentMessaging(compose.ParentMessagingConfig{ThreadRepo: repos.ParentMessageThread, MessageRepo: parentStore.NewParentMessageRepository(db), ReadRepo: repos.ParentMessageRead, Persons: persons, UserContext: owners.StaffStudentReads{}, Session: api.CommunicationSession{}, Settings: settingsValues.NewParentMessagingValues(settings.Settings), Broadcaster: realtime.NewHub(slog.Default()), DB: db, Logger: slog.Default(), Observe: func(compose.Observation) {}, GroupAudience: owners.NewParentGroupAudience(database),
+		// Real mails and their outcomes (#7058).
+		Outbox: owners.OutboxEnqueuer{Outbox: delivery.EmailOutbox}, GuardianProfiles: owners.BindParentMessageGuardianProfiles(people.GuardianProfile),
+		ParentsURL: "https://eltern.example", Mails: owners.ParentMessageMails{Outcomes: delivery.Runtime.EmailOutcomes}}, owners.CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	_, staff := testpkg.CreateTestStaffWithAccount(t, db, "Budget", "Staff")
 	testpkg.EnsureAccountTenant(t, db, staff.ID, testpkg.Tenant(t))
 	token := testutil.MintTestJWT(t, sessiontoken.AppClaims{ID: int(staff.ID), Sub: staff.Email, Roles: []string{"admin"}, Permissions: []string{"admin:*"}, TenantID: testpkg.Tenant(t)})
-	router := messaging.NewResource(svc, groups, handling).Router(api.ProtectedTenantRoutes)
+	router := messaging.NewResource(svc, groups, handling, mails).Router(api.ProtectedTenantRoutes)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	counter := testpkg.CaptureQueriesForContext(t, db)
 	counter.Stop()
@@ -97,7 +102,7 @@ func TestParentMessagePositiveGrowthQueryBudget(t *testing.T) {
 		for i := 1; i < n; i++ {
 			request("POST", "/group-threads/"+groupID+"/messages", fmt.Sprintf(`{"body":"group-%02d"}`, i), false)
 		}
-		for _, entry := range []struct{ name, path string }{{"guardians", fmt.Sprintf("/students/%d/guardians", chain.StudentID)}, {"student_threads", fmt.Sprintf("/students/%d/threads", chain.StudentID)}, {"thread", "/threads/" + threadIDs[0]}, {"group_audience", "/group-threads/audience?target_type=class&target_id=1a"}, {"group_thread", "/group-threads/" + groupID}} {
+		for _, entry := range []struct{ name, path string }{{"guardians", fmt.Sprintf("/students/%d/guardians", chain.StudentID)}, {"student_threads", fmt.Sprintf("/students/%d/threads", chain.StudentID)}, {"thread", "/threads/" + threadIDs[0]}, {"group_audience", "/group-threads/audience?target_type=class&target_id=1a"}, {"group_thread", "/group-threads/" + groupID}, {"thread_mails", "/threads/" + threadIDs[0] + "/mails"}, {"group_thread_mails", "/group-threads/" + groupID + "/mails"}} {
 			rec := request("GET", entry.path, "", true)
 			t.Logf("MEASURE parent_messages %s N%d=%d", entry.name, n, counter.Total())
 			switch entry.name {
@@ -154,8 +159,28 @@ func TestParentMessagePositiveGrowthQueryBudget(t *testing.T) {
 					require.Equal(t, fmt.Sprintf("group-%02d", i), row.Body)
 					require.NotEmpty(t, row.ID)
 				}
+			case "thread_mails":
+				var out struct{ Data messaging.ThreadMailsResponse }
+				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
+				require.Len(t, out.Data.Messages, n, "every OGS message mailed the guardian")
+				for _, outcome := range out.Data.Messages {
+					require.Equal(t, "queued", outcome)
+				}
+			case "group_thread_mails":
+				var out struct {
+					Data messaging.GroupThreadMailsResponse
+				}
+				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
+				require.Len(t, out.Data.Messages, n, "every group message mailed its families")
+				for _, outcomes := range out.Data.Messages {
+					require.Positive(t, outcomes["queued"])
+				}
 			}
 			switch entry.name {
+			case "thread_mails":
+				querybudgets.AssertQueryBudget(t, "api.parent_messages.thread_mails.positive_growth", counter.Measurement(counter.Queries()))
+			case "group_thread_mails":
+				querybudgets.AssertQueryBudget(t, "api.parent_messages.group_thread_mails.positive_growth", counter.Measurement(counter.Queries()))
 			case "guardians":
 				querybudgets.AssertQueryBudget(t, "api.parent_messages.guardians.positive_growth", counter.Measurement(counter.Queries()))
 			case "student_threads":

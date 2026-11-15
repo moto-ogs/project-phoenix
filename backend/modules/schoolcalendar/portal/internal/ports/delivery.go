@@ -1,6 +1,10 @@
 package ports
 
-import "context"
+import (
+	"context"
+
+	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
+)
 
 type EnqueueRequest struct {
 	Kind              string
@@ -21,6 +25,14 @@ type Outbox interface {
 	Enqueue(context.Context, EnqueueRequest) (*EmailOutbox, error)
 	CancelPendingByRelatedEntity(context.Context, string, int64, string) (int64, error)
 }
+type AppointmentMail = portal.AppointmentMail
+
+// AppointmentMails reads the guardian e-mails of an appointment, oldest
+// first, in the caller's tenant transaction; the root binds it to Delivery.
+type AppointmentMails interface {
+	AppointmentMails(ctx context.Context, appointmentID int64) ([]AppointmentMail, error)
+}
+
 type Message struct {
 	To, Subject, Template string
 	Content               map[string]any

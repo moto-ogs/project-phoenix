@@ -669,6 +669,66 @@
       "target_owner": "staff-directory-view"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentGroupMessageMailOutcomes",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentGroupMessageMailOutcomes",
+      "reason": "Read-only delivery state: communication reads what became of the e-mails of OGS messages (#7058) through runtime.EmailOutcomes.EmailOutcomes; no write, no lock.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentGroupMessageMailOutcomes",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentGroupMessageMailOutcomes",
+      "reason": "Read-only delivery state: communication reads what became of the e-mails of OGS messages (#7058) through tenant.TenantFromContext; no write, no lock.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentGroupMessageMailOutcomes",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentGroupMessageMailOutcomes",
+      "reason": "Read-only delivery state: communication reads what became of the e-mails of OGS messages (#7058) through tenant.TenantID.Int64; no write, no lock.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentMessageMailOutcomes",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentMessageMailOutcomes",
+      "reason": "Read-only delivery state: communication reads what became of the e-mails of OGS messages (#7058) through runtime.EmailOutcomes.EmailOutcomes; no write, no lock.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentMessageMailOutcomes",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentMessageMailOutcomes",
+      "reason": "Read-only delivery state: communication reads what became of the e-mails of OGS messages (#7058) through tenant.TenantFromContext; no write, no lock.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentMessageMailOutcomes",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentMessageMailOutcomes",
+      "reason": "Read-only delivery state: communication reads what became of the e-mails of OGS messages (#7058) through tenant.TenantID.Int64; no write, no lock.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication.parentMessagePeople.FindParentMessageStudent",
       "classification": "query",
       "effect": "query",

@@ -4,6 +4,7 @@
 // route (savePayrollSetting) using the setting keys this status carries.
 
 import { apiErrorFromResponse } from "./api-error";
+import type { MailOutcome, MailOutcomeCounts } from "./email-delivery-status";
 import { sessionFetch } from "./session-cache";
 import { transferFailureMessage } from "./sftp-export-api";
 
@@ -217,6 +218,8 @@ interface BackendPayrollDispatchView {
   finished_at?: string;
   download_expires_at?: string;
   downloaded_at?: string;
+  link_mail?: MailOutcome;
+  notice_mails?: MailOutcomeCounts;
 }
 
 export interface PayrollDispatchView {
@@ -235,6 +238,10 @@ export interface PayrollDispatchView {
   finishedAt: string | null;
   downloadExpiresAt: string | null;
   downloadedAt: string | null;
+  /** Was aus der Mail mit dem Link ans Lohnbüro wurde (#7058). */
+  linkMail: MailOutcome | null;
+  /** Die Hinweise an die Leitung, nach Ergebnis gezählt (#7058). */
+  noticeMails: MailOutcomeCounts | null;
 }
 
 function mapPayrollDispatch(
@@ -255,6 +262,8 @@ function mapPayrollDispatch(
     finishedAt: data.finished_at ?? null,
     downloadExpiresAt: data.download_expires_at ?? null,
     downloadedAt: data.downloaded_at ?? null,
+    linkMail: data.link_mail ?? null,
+    noticeMails: data.notice_mails ?? null,
   };
 }
 

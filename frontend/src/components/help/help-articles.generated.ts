@@ -2251,9 +2251,11 @@ export const editStudentTopic = function editStudentTopic(): HelpTopic {
 } satisfies typeof authored_editStudentTopic;
 
 /**
- * Die Zustellhinweise (#5934). Sie stehen an sechs Stellen: Einladung der Eltern,
- * Elternbrief, Einladung ins Personal, Einladung des Caterers (#5960), Anmeldung
- * und, für den Träger, im Versand der Schreiben. Hier steht, was jedes Wort bedeutet und wer als Nächstes handelt.
+ * Die Zustellhinweise (#5934). Sie stehen dort, wo eine Mail entsteht (#7058):
+ * Einladung der Eltern, Elternbrief, Nachricht und Gruppennachricht, Termin,
+ * Einladung ins Personal und des Caterers (#5960), Anmeldung, Versand an das
+ * Lohnbüro, Abwesenheitsanträge und, für den Träger, der Versand der Schreiben.
+ * Hier steht, was jedes Wort bedeutet und wer als Nächstes handelt.
  * `Versendet` heißt nur: Die Mail ist raus. `Zugestellt` meldet erst der
  * Mail-Dienst, und ohne ihn (Strato, Brevo, Notweg) bleibt es bei `Versendet`.
  */
@@ -2263,12 +2265,27 @@ export const emailDeliveryTopic = function emailDeliveryTopic(): HelpTopic {
     title: "Wenn eine E-Mail nicht ankommt",
     question: "Was bedeuten Zugestellt, Verzögert und Adresse prüfen?",
     summary:
-      "moto zeigt bei jeder Mail an Eltern, was aus ihr geworden ist und was Sie tun können.",
+      "moto zeigt bei jeder Mail, was aus ihr geworden ist und was Sie tun können.",
     group: "elternarbeit",
     audience: "lead",
     icon: "EnvelopeSimple",
     steps: [],
     instructionGroups: [
+      {
+        title: "Hier sehen Sie den Stand",
+        ordered: false,
+        steps: [
+          "Elternbrief: im geöffneten Brief bei jeder Person.",
+          "Nachricht an Eltern: unter Ihrer Nachricht hinter `E-Mail`.",
+          "Gruppennachricht: unter jeder Nachricht hinter `E-Mails`, gezählt je Ergebnis.",
+          "Termin mit Eltern: im Termin unter `E-Mails an die Eltern`. Das sieht, wer den Termin angelegt hat.",
+          "Einladung der Eltern: beim Kind unter `Erziehungsberechtigte`.",
+          "Einladung ins Personal und des Caterers: unter `Offene Einladungen`.",
+          "Anmeldung: in der Anmeldung unter `E-Mails an die Familie`.",
+          "Versand an das Lohnbüro: unter `Abrechnung` bei `Letzter Versand`.",
+          "Antrag auf Urlaub oder Abwesenheit: am Antrag, für Sie und für die Leitung.",
+        ],
+      },
       {
         title: "Das bedeuten die Hinweise",
         ordered: false,
@@ -4989,6 +5006,7 @@ export const myScheduleTopic = function myScheduleTopic(): HelpTopic {
       "`Teilnehmer` zeigt bei einer Reihe die Antworten für den geöffneten Termin.",
       "Beim Anlegen und Bearbeiten wählen Sie unter `Wer sieht die Teilnehmerübersicht?`, wer die Antworten sieht. Bei `Alle Eingeladenen` sehen Eltern nur, wie viele zugesagt und abgesagt haben, keine Namen.",
       "Legen Sie einen Termin an und wählen Sie `Alle Lehrkräfte`. Dann sehen die Lehrkräfte ihn in moto schule.",
+      "Ging zu Ihrem Termin eine E-Mail an Eltern, sehen Sie im geöffneten Termin unter `E-Mails an die Eltern`, ob sie angekommen ist. Kam eine Mail nicht an, steht dort, bei wem.",
     ],
     differences: [
       "Das Kalender-Abo ist nur zum Lesen. Änderungen in Ihrem persönlichen Kalender werden nicht an moto übertragen.",
@@ -6507,9 +6525,14 @@ export const parentGroupMessageTopic =
         "Keine Familie sieht, wer die Nachricht noch bekommt oder wer geantwortet hat.",
         "moto ermittelt die Empfänger bei jeder Nachricht neu. Wer später in die Gruppe kommt, liest nur die neuen Nachrichten.",
         "Unter `Gelesen` sehen Sie für jedes Kind, ob die Eltern die neueste Nachricht gelesen haben.",
+        "Unter jeder Nachricht steht hinter `E-Mails`, was aus den Mails an die Familien wurde, zum Beispiel `10 zugestellt` und `1 nicht zustellbar`. Welche Adresse betroffen ist, sehen Sie beim Kind unter `Erziehungsberechtigte`.",
         "Über dem Schreibfeld steht bei `Ging an:`, an wen die Nachricht ging und wie viele Familien sie bekommen haben.",
       ],
-      related: [HELP_TOPICS.parentMessage, HELP_TOPICS.leadParentAnnouncement],
+      related: [
+        HELP_TOPICS.parentMessage,
+        HELP_TOPICS.leadParentAnnouncement,
+        HELP_TOPICS.leadEmailDelivery,
+      ],
     };
   } satisfies typeof authored_parentGroupMessageTopic;
 
@@ -7045,11 +7068,16 @@ export const parentMessageTopic = function parentMessageTopic(): HelpTopic {
       "Schreiben Sie persönliche Angaben nur in die Unterhaltung der richtigen Bezugsperson.",
       "Mit `Nur ungelesen` sehen Sie nur neue Unterhaltungen.",
       "Eine als ungelesen markierte Unterhaltung bleibt für alle ungelesen, bis jemand aus dem Team sie öffnet oder antwortet.",
+      "Unter Ihrer Nachricht steht hinter `E-Mail`, was aus der Mail an die Eltern wurde, zum Beispiel `Zugestellt` oder `Nicht zustellbar`. Kam sie nicht an, steht darunter, was Sie tun können.",
       "Die Eltern sehen `Gelesen` erst, wenn jemand aus dem Team die Unterhaltung öffnet.",
       "Die Nachrichten stehen immer im Posteingang, auch wenn Ihre Zahl sie nicht zählt.",
       "Über `Zum Kinderprofil` wechseln Sie direkt zu den Angaben des Kindes.",
     ],
-    related: [HELP_TOPICS.parentRequests, HELP_TOPICS.studentSearch],
+    related: [
+      HELP_TOPICS.parentRequests,
+      HELP_TOPICS.studentSearch,
+      HELP_TOPICS.leadEmailDelivery,
+    ],
   };
 } satisfies typeof authored_parentMessageTopic;
 
@@ -7678,7 +7706,8 @@ export const payrollTopic = function payrollTopic(): HelpTopic {
       "Der Export erzeugt keine Datei? Dann fehlt oben unter `Vollständigkeit` noch etwas.",
       "Ein Krankheitstag zählt 0 Stunden? Dann fehlt das Soll. `Vollständigkeit` zählt bei `Soll (Arbeitszeit)` alle Personen ohne Soll im laufenden Monat.",
       "`Zuschlagsregel anlegen` lässt sich nicht tippen? Dann fehlt noch eine eigene Lohnart.",
-      "Unter `Letzter Versand` steht `Nicht gesendet` oder `Fehlgeschlagen`? Darunter steht der Grund. Wer die Zeiterfassung des Teams verwaltet, bekommt dazu eine E-Mail.",
+      "Unter `Letzter Versand` steht `Nicht gesendet` oder `Fehlgeschlagen`? Darunter steht der Grund. Wer die Zeiterfassung des Teams verwaltet, bekommt dazu eine E-Mail. Ob sie ankam, steht bei `Hinweis an die Leitung`.",
+      "Unter `Letzter Versand` steht `Nicht zustellbar`? Die Mail mit dem Link kam beim Lohnbüro nicht an. Prüfen Sie die `E-Mail-Adresse des Lohnbüros`. `Versendet` heißt: Die Mail ist raus, eine Meldung aus dem Postfach fehlt noch.",
       "Der `Versandweg` `SFTP` braucht die Gegenstelle aus den Einstellungen unter `Kalender und Export` bei `Zeitkonten übertragen`.",
     ],
     related: [
@@ -14395,6 +14424,7 @@ export const vacationTopic = function vacationTopic(): HelpTopic {
       "Ist der Antrag genehmigt, fallen Ihre Schichten an den ganzen Urlaubstagen aus. Im Betreuungsplan stehen Sie dann als abwesend. Das Team sieht dort nur `Abwesenheit`.",
       "Stornieren Sie einen genehmigten Antrag, plant moto Sie an diesen Tagen wieder ein.",
       "Bei einer `Rückfrage` schreiben Sie eine Antwort und wählen `Antwort senden & erneut einreichen`.",
+      "Unter einem offenen Antrag steht `Mail an die Leitung`, wenn die Schule die Leitung per Mail informiert. Kam eine Mail nicht an, sagen Sie der Leitung direkt Bescheid.",
     ],
     related: [HELP_TOPICS.ownAbsence, HELP_TOPICS.correctWorkTime],
   };
@@ -14692,6 +14722,7 @@ export const workTimeReviewTopic = function workTimeReviewTopic(): HelpTopic {
       "`Team` → `Zeiterfassung` zeigt nur Ihre eigene Stempeluhr, nicht die des Teams.",
       "Mit `Monat abschließen` frieren Sie den Stand ein. Das geht ab dem 1. des Folgemonats.",
       "Ist unter `Abrechnung` der `Versand an das Lohnbüro` eingeschaltet, geht die Monatsdatei danach von selbst an das Lohnbüro.",
+      "Unter einer Rückfrage und in der Historie steht, ob die Mail dazu bei der Person ankam. Kam sie nicht an, sagen Sie der Person direkt Bescheid.",
     ],
     differences: [
       "Fehlt der Reiter `Mitarbeitende`? Dann dürfen Sie keine Anträge entscheiden.",

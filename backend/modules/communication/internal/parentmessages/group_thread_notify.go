@@ -119,9 +119,9 @@ func (s *Service) mailGroupRecipient(ctx context.Context, thread *deliveryPorts.
 	}
 	request := deliveryPorts.MailEnqueueInput{
 		Kind:              deliveryPorts.MailKindParentMessage,
-		RelatedEntityType: "parent_group_message",
+		RelatedEntityType: deliveryPorts.MailRelatedTypeParentGroupMessage,
 		RelatedEntityID:   messageID,
-		IdempotencyKey:    "parent_group_message:" + strconv.FormatInt(messageID, 10) + ":" + strconv.FormatInt(accountID, 10),
+		IdempotencyKey:    deliveryPorts.MailRelatedTypeParentGroupMessage + ":" + strconv.FormatInt(messageID, 10) + ":" + strconv.FormatInt(accountID, 10),
 		Payload: map[string]json.RawMessage{
 			messagePayloadRecipient:   deliveryPorts.JSONString(strings.TrimSpace(*profile.Email)),
 			messagePayloadFirstName:   deliveryPorts.JSONString(profile.FirstName),

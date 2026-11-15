@@ -90,6 +90,9 @@ type Ports struct {
 	// PayrollRules is the school's wage types and surcharge rules in force
 	// (#4807): the export books with them, the month close freezes them.
 	PayrollRules workforce.PayrollRuleSetReader
+	// MailOutcomes reads what became of the absence request mails (#7058);
+	// nil composes no mail status.
+	MailOutcomes workforce.MailOutcomes
 
 	Settings Settings
 	Payroll  PayrollConfigurationReader

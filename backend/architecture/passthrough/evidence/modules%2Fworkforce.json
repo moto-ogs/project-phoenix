@@ -303,13 +303,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *PayrollDispatch) Overview(ctx context.Context) (workforce.PayrollDispatchOverview, error) {\n\tlatest, err := s.deps.Store.LatestPayrollDispatch(ctx)\n\tif err != nil || latest == nil {\n\t\treturn workforce.PayrollDispatchOverview{}, err\n\t}\n\tview := workforce.PayrollDispatchView{Year: latest.Year, Month: latest.Month, Correction: latest.Correction \u003e 0, Channel: latest.Channel, Format: latest.Format, Recipient: latest.Recipient, State: latest.State, Reason: latest.Reason, Attempts: latest.Attempts, Filename: latest.Filename, CreatedAt: latest.CreatedAt, FinishedAt: latest.FinishedAt, DownloadExpiresAt: latest.DownloadExpiresAt, DownloadedAt: latest.DownloadedAt}\n\treturn workforce.PayrollDispatchOverview{Latest: \u0026view}, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/workforce/internal/application/PayrollDispatch.Overview",
-      "owner": "modules/workforce"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Service) ClosedMonthSnapshots(ctx context.Context, year, month int) ([]*workforce.StaffMonthBalanceSnapshot, error) {\n\tvar result []*domain.StaffMonthBalanceSnapshot\n\tvar err error\n\terr = s.run(ctx, \"closed_month_snapshots\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\tvar queryStats domain.OperationStats\n\t\tresult, queryStats, err = s.store.ClosedMonthSnapshots(ctx, year, month)\n\t\tstats.Add(queryStats)\n\t\treturn err\n\t})\n\treturn monthSnapshotsToPublic(result), err\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/Service.ClosedMonthSnapshots",

@@ -1,6 +1,7 @@
 // Time tracking API service for check-in/out and history management
 
 import type { ErrorCode } from "~/lib/error-codes.generated";
+import type { MailOutcomeCounts } from "~/lib/email-delivery-status";
 import { unavailableApiError } from "./api-error";
 import { buildApiError } from "./auth-api";
 import {
@@ -348,6 +349,18 @@ class TimeTrackingService {
       "Failed to get questioned absences",
     );
     return (result.data ?? []).map((a) => mapStaffAbsenceResponse(a as never));
+  }
+
+  /**
+   * Ob die Leitung die eigenen offenen Anträge per Mail bekam (#7058): je
+   * Antrag die Mails der letzten Meldung, nach Ergebnis gezählt. Ein Antrag
+   * ohne Mail fehlt.
+   */
+  async getAbsenceRequestMails(): Promise<Record<string, MailOutcomeCounts>> {
+    const result = await this.request<{
+      absences?: Record<string, MailOutcomeCounts> | null;
+    }>("/absences/mails", "GET", "Failed to get absence request mails");
+    return result.data?.absences ?? {};
   }
 
   async createAbsence(req: CreateAbsenceRequest): Promise<StaffAbsence> {

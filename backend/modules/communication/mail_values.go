@@ -73,5 +73,8 @@ type MailRenderer func(context.Context, *MailIntent) (*MailMessage, error)
 const (
 	MailKindParentMessage        = "parent_message"
 	MailRelatedTypeParentMessage = "parent_message"
-	MailKindParentAnnouncement   = "parent_announcement"
+	// MailRelatedTypeParentGroupMessage relates the mails of a group message,
+	// one per family (#4784).
+	MailRelatedTypeParentGroupMessage = "parent_group_message"
+	MailKindParentAnnouncement        = "parent_announcement"
 )

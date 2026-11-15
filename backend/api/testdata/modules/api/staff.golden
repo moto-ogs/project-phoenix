@@ -8,6 +8,7 @@ DELETE /api/staff/{id}/target-overrides/{overrideId} -> zeiterfassung
 DELETE /api/staff/{id}/time-tracking/adjustments/{adjustmentId} -> zeiterfassung
 DELETE /api/staff/{id}/vacation/opening -> zeiterfassung
 GET /api/staff/ -> basis
+GET /api/staff/absences/mails -> zeiterfassung
 GET /api/staff/absences/pending -> zeiterfassung
 GET /api/staff/absences/plan-gaps -> zeiterfassung
 GET /api/staff/absences/requests -> zeiterfassung

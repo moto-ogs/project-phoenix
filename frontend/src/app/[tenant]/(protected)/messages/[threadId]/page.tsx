@@ -46,6 +46,11 @@ import { PickupRequestDetailModal } from "~/components/messaging/pickup-request-
 import { RequestStatusBadge } from "~/components/messaging/request-status-badge";
 import { useChatViewportLock } from "~/lib/hooks/use-chat-viewport-lock";
 import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
+import { useThreadMails } from "~/lib/hooks/use-message-mails";
+import {
+  MessageMailBadge,
+  messageMailNote,
+} from "~/components/messaging/message-mail-status";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSwitchedOffWhileOpen } from "~/lib/hooks/use-switched-off-while-open";
 import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
@@ -336,9 +341,15 @@ function MessageThreadContent() {
   // After "Als ungelesen markieren" the page is on its way to the inbox. A
   // refetch now would open the thread again and end the mark at once, so the
   // SSE refresh stands down while leaving.
+  // What became of the e-mail of each OGS message (#7058); follows a send
+  // and every live refresh of the conversation.
+  const threadMails = useThreadMails(threadId);
+  const refreshMails = threadMails.refresh;
   const refreshThread = useCallback(() => {
-    if (!leavingAsUnreadRef.current) void mutate();
-  }, [mutate]);
+    if (leavingAsUnreadRef.current) return;
+    void mutate();
+    void refreshMails();
+  }, [mutate, refreshMails]);
   useMessagesActivity({
     onMatch: refreshThread,
     threadId,
@@ -453,6 +464,7 @@ function MessageThreadContent() {
       },
     });
     sendArrived.current = outcome.status !== "failed";
+    if (outcome.status !== "failed") void refreshMails();
     if (outcome.status === "done") {
       attempt.complete(clientMessageId);
       sentFiles.current = [];
@@ -665,6 +677,14 @@ function MessageThreadContent() {
                             ? "Gelesen"
                             : undefined
                         }
+                        mailStatus={
+                          <MessageMailBadge
+                            outcome={threadMails.mails[message.id]}
+                          />
+                        }
+                        mailNote={messageMailNote(
+                          threadMails.mails[message.id],
+                        )}
                       />
                     </div>
                   ),
@@ -684,6 +704,7 @@ function MessageThreadContent() {
             </div>
           )}
 
+          <LoadErrorAlert error={threadMails.loadError} className="mt-3" />
           <FormErrorAlert message={sendError.error} className="mt-3" />
 
           {/* Wer mitliest, steht direkt über dem Schreibfeld (#5200). Die

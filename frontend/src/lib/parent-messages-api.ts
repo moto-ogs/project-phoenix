@@ -8,6 +8,7 @@
  * Go backend with the staff JWT. Backend int64 ids arrive already stringified.
  */
 
+import type { MailOutcome } from "./email-delivery-status";
 import {
   ApiError,
   apiErrorFromResponse,
@@ -245,6 +246,22 @@ export async function fetchThread(threadId: string): Promise<ThreadDetail> {
     throw missingData(fallback);
   }
   return result.data;
+}
+
+/**
+ * What became of the e-mail of each OGS message in a conversation (#7058),
+ * keyed by message id. A message without a mail has no key.
+ */
+export async function fetchThreadMails(
+  threadId: string,
+): Promise<Readonly<Record<string, MailOutcome>>> {
+  const result = await getEnvelope<{
+    messages?: Record<string, MailOutcome>;
+  }>(
+    `/api/messages/threads/${encodeURIComponent(threadId)}/mails`,
+    "Der Stand der E-Mails konnte nicht geladen werden",
+  );
+  return result.data?.messages ?? {};
 }
 
 /**
