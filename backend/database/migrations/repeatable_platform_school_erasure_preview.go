@@ -188,6 +188,7 @@ AS $function$
  v_counts := v_counts || jsonb_build_object('platform.email_delivery_events',(SELECT count(*) FROM platform.email_delivery_events AS r WHERE r.tenant_id = p_school));
  v_counts := v_counts || jsonb_build_object('platform.email_outbox',(SELECT count(*) FROM platform.email_outbox AS r WHERE r.tenant_id = p_school));
  v_counts := v_counts || jsonb_build_object('platform.email_suppressions',(SELECT count(*) FROM platform.email_suppressions AS r WHERE r.tenant_id = p_school));
+ v_counts := v_counts || jsonb_build_object('platform.notification_feed_entries',(SELECT count(*) FROM platform.notification_feed_entries AS r WHERE r.tenant_id = p_school));
  v_counts := v_counts || jsonb_build_object('platform.push_outbox',(SELECT count(*) FROM platform.push_outbox AS r WHERE r.tenant_id = p_school));
  v_counts := v_counts || jsonb_build_object('platform.realtime_notifications',(SELECT count(*) FROM platform.realtime_notifications AS r WHERE r.tenant_id = p_school));
  v_counts := v_counts || jsonb_build_object('platform.schools',(SELECT count(*) FROM platform.schools AS r WHERE r.id = p_school));

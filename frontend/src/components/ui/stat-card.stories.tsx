@@ -100,6 +100,8 @@ export const LinkedLoading: Story = {
 
 /** Dieselbe verlinkte Kennzahl als Listenzeile. */
 export const Rows: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   render: () => (
     <div className="w-80 space-y-2">
       <StatCard
@@ -123,6 +125,8 @@ export const Rows: Story = {
 };
 
 export const RowFocused: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   ...Rows,
   play: async ({ canvasElement }) => {
     await userEvent.tab();

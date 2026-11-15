@@ -332,6 +332,16 @@ export const parentAnnouncementKeys = {
 } as const;
 
 export const displayKeys = { list: () => "info-displays" } as const;
+
+/**
+ * Benachrichtigungs-Feed der Glocke (#7148): die erste Seite der Hinweise und
+ * der Zähler der ungelesenen. Getrennt, weil die Glocke den Zähler immer
+ * lädt, die Liste erst beim Öffnen.
+ */
+export const notificationFeedKeys = {
+  firstPage: () => "notification-feed-first-page",
+  unreadCount: () => "notification-feed-unread",
+} as const;
 /** Dokumente, die der Träger für die Schule freigegeben hat (#4692). */
 export const schoolTraegerDocumentKeys = {
   list: () => "traeger-documents-school",

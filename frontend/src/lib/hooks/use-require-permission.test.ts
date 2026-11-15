@@ -90,6 +90,21 @@ describe("useRequirePermission", () => {
     expect(mockRedirect).toHaveBeenCalledWith("/home");
   });
 
+  it("reports a denial without redirecting when the page explains it itself", () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { id: "1" } },
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(() =>
+      useRequirePermission("time_tracking:own", { redirectWhenDenied: false }),
+    );
+
+    expect(result.current.isDenied).toBe(true);
+    expect(result.current.isReady).toBe(false);
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
   it("is ready when the user holds any permission of an array", () => {
     mockUseSession.mockReturnValue({
       data: { user: { id: "1" } },

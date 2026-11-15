@@ -74,7 +74,7 @@ func NewCommunicationTestNotifier(settings interface {
 	ResolveBoolForTenant(context.Context, int64, string) (bool, error)
 	ResolveStringForTenant(context.Context, int64, string) (string, error)
 }, logger *slog.Logger) devices.NotificationCommands {
-	return deliveryCompose.NewNotifier(settings, logger, nil)
+	return deliveryCompose.NewNotifier(settings, logger, nil, nil, nil)
 }
 
 // NewCommunicationRequestDecisionNotifier binds the real producer to a native

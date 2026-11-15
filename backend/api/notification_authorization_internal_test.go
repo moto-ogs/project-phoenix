@@ -31,7 +31,7 @@ func TestTestNotificationRouteAllowsStaffWithoutConfigUpdate(t *testing.T) {
 	testpkg.SetupTestDB(t)
 
 	svc := &notificationRouteCaptureService{}
-	router := NewNotificationHTTP(svc, nil, nil).Router()
+	router := NewNotificationHTTP(svc, nil, nil, nil).Router()
 	claims := routetest.TeacherTestClaims(73)
 	require.NotContains(t, claims.Permissions, "config:update")
 	req := routetest.NewAuthenticatedRequest(

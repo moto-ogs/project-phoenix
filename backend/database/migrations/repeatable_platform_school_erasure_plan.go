@@ -181,6 +181,7 @@ AS $function$ SELECT $manifest$[
   {"name": "platform.email_delivery_events","predicate": "r.tenant_id = $1"},
   {"name": "platform.email_outbox","predicate": "r.tenant_id = $1"},
   {"name": "platform.email_suppressions","predicate": "r.tenant_id = $1"},
+  {"name": "platform.notification_feed_entries","predicate": "r.tenant_id = $1"},
   {"name": "platform.push_outbox","predicate": "r.tenant_id = $1"},
   {"name": "platform.realtime_notifications","predicate": "r.tenant_id = $1"},
   {"name": "platform.schools","predicate": "r.id = $1"},

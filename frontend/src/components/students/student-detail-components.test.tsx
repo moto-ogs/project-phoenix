@@ -42,6 +42,7 @@ import { fetchStudentCompanions } from "~/lib/student-companion-api";
 import type { Student } from "~/lib/student-helpers";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { getPillTone } from "~/lib/kit-palette";
+import { setTestClock } from "~/test/clock";
 import type { SupervisorContact } from "~/lib/student-helpers";
 import type { AttendanceActor } from "~/lib/attendance-actor";
 
@@ -209,6 +210,22 @@ describe("Kopf der Kindakte", () => {
     location_since: "2024-01-15T08:00:00Z",
     bus: false,
   };
+
+  it("uses a text-safe shade for a slightly overdue pickup", () => {
+    setTestClock("2026-09-09T16:15:00+02:00");
+    render(
+      <StudentHeaderStats
+        student={mockStudent}
+        todayArrivalActualTime="08:00"
+        todayPickupPlannedTime="16:00"
+      />,
+    );
+
+    const time = within(screen.getByTestId("today-time-row-pickup")).getByText(
+      "16:00",
+    );
+    expect(time).toHaveStyle({ color: "#a35c0b" });
+  });
 
   it("renders student name", () => {
     render(

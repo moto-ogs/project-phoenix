@@ -361,7 +361,8 @@ describe("getParentHelpTopicForPath", () => {
     // 49 seit #4774 („Soll und Ist vergleichen“, Betreuung und Leitung).
     // 50 seit #4769 („Das Wochenprotokoll ergänzen“, Betreuung und Leitung).
     // 51 seit #6954 („Mit der Suche finden“, Betreuung und Leitung).
-    expect(caregiverTopics).toHaveLength(51);
+    // 52 seit #7148 („Hinweise und Erinnerungen in der Glocke“).
+    expect(caregiverTopics).toHaveLength(52);
     expect([...new Set(caregiverTopics.map((topic) => topic.group))]).toEqual([
       "einstieg",
       "tagesplanung",
@@ -570,7 +571,7 @@ describe("getParentHelpTopicForPath", () => {
           // unter die NFC- und die Anwesenheitsregel, wird also nur
           // einmal abgezogen.
           const expectedLength =
-            51 -
+            52 -
             (nfcEnabled ? 0 : 7) -
             (presenceMode === "binary" ? (nfcEnabled ? 6 : 5) : 0) -
             (groupMode === "open_care" ? 2 : 0);
@@ -625,7 +626,9 @@ describe("getParentHelpTopicForPath", () => {
     // 101 seit #4808: Nachweise wie Erste Hilfe im Blick behalten.
     // 103 seit #4692: Dokumente vom Träger finden.
     // 107 seit #6954: Mit der Suche finden.
-    expect(leadTopics).toHaveLength(108);
+    // 108 seit #7148: Hinweise und Erinnerungen in der Glocke.
+    // 109 seit #4813: Elternbrief mit den Angaben jedes Kindes.
+    expect(leadTopics).toHaveLength(109);
     expect(
       leadTopics.every(
         (topic) =>

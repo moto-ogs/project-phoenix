@@ -1,5 +1,7 @@
 package api
 
+import "context"
+
 type Runtime struct {
 	Adapter            Adapter
 	Client             *Client
@@ -23,6 +25,8 @@ type Runtime struct {
 	Enrollment          SeedEnrollmentState
 	DeferredSeedPending bool
 	Values              map[string]any
+	// TraegerLock is SeedOptions.TraegerLock.
+	TraegerLock func(context.Context) (func(), error)
 }
 
 func newRuntime(seeder *Seeder, operatorEmail, operatorPassword, staffPIN string) *Runtime {
@@ -36,6 +40,7 @@ func newRuntime(seeder *Seeder, operatorEmail, operatorPassword, staffPIN string
 		Result:             &SeedResult{},
 		AdditionalProfiles: make(map[string]*SeedProfile),
 		Values:             make(map[string]any),
+		TraegerLock:        seeder.options.TraegerLock,
 	}
 }
 

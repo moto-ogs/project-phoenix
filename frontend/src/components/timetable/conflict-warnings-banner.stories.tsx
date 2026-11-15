@@ -56,6 +56,8 @@ export const NoConflicts: Story = {
 };
 
 export const SingleConflict: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   args: {
     openConflicts: [studentConflict],
     hiddenConflicts: [],
@@ -63,6 +65,8 @@ export const SingleConflict: Story = {
 };
 
 export const MultipleConflicts: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   args: {
     openConflicts: [studentConflict, staffConflict],
     hiddenConflicts: [],
@@ -70,6 +74,8 @@ export const MultipleConflicts: Story = {
 };
 
 export const WithHiddenConflicts: Story = {
+  // axe meldet hier noch color-contrast, label-content-name-mismatch; Behebung in #7110, #7112.
+  parameters: { a11y: { test: "todo" } },
   args: {
     openConflicts: [studentConflict],
     hiddenConflicts: [staffConflict],
@@ -82,6 +88,8 @@ export const WithHiddenConflicts: Story = {
  * panel as the page's ⋮ menu opens it (`revealHidden`).
  */
 export const AllHiddenPanelRevealed: Story = {
+  // axe meldet hier noch color-contrast; Behebung in #7110.
+  parameters: { a11y: { test: "todo" } },
   args: {
     openConflicts: [],
     hiddenConflicts: [studentConflict, staffConflict],

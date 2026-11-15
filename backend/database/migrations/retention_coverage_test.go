@@ -389,6 +389,7 @@ var tableRetentions = map[string]tableRetention{
 	"platform.email_delivery_events":                        own("nightly retention step delivery_retention, DeleteExpiredDeliveries (with the mail, 30 days after it ended; system and Träger mail through RunOnce's DeleteExpiredSystemEmails by cascade)"),
 	"platform.email_suppressions":                           own("nightly retention step delivery_retention, DeleteUnheldEmailSuppressions (no fixed period: the first run after no guardian, account or open application of the school holds the address)"),
 	"platform.email_outbox":                                 own("nightly retention step delivery_retention, DeleteExpiredDeliveries (30 days after sent, dead letter or cancelled; guardian welcome keeps only its key)"),
+	"platform.notification_feed_entries":                    own("nightly retention step delivery_retention, DeleteExpiredDeliveries (30 days after the last update, #7148); goes with auth.accounts and platform.schools"),
 	"platform.operator_audit_log":                           own("hourly token-cleanup, operator audit log retention, DeleteExpiredOperatorAuditLog (before 1 January of last year)"),
 	"platform.operator_email_change_tokens":                 own("hourly token-cleanup, CleanupOperatorEmailChanges -> DeleteStaleOperatorEmailChanges"),
 	"platform.operator_invitation_tokens":                   own("hourly token-cleanup, DeleteExpiredOperatorInvitations"),

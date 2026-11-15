@@ -183,6 +183,7 @@ AS $function$
     platform.email_delivery_events,
     platform.email_outbox,
     platform.email_suppressions,
+    platform.notification_feed_entries,
     platform.push_outbox,
     platform.realtime_notifications,
     platform.schools,
@@ -329,7 +330,7 @@ AS $function$
      WHERE f.contype='f' AND pn.nspname || '.' || pc.relname IN
       (SELECT item->>'name' FROM jsonb_array_elements(v_plan) AS item)
      GROUP BY f.oid,cn.nspname,cc.relname,f.conname,pn.nspname,pc.relname,f.confdeltype
-    ) AS edge) <> 'f603cf6dfc91488b5edb2f07de529d081f8635b29656c2589a46d3f973dbd1f3' THEN
+    ) AS edge) <> '6f662d17a6d0e688f4a456aefd8caea6d70d8521c46347486fbfc33673bef9e4' THEN
     RAISE EXCEPTION 'school erasure foreign keys changed; review plan' USING ERRCODE = '55000';
    END IF;
    -- Generated incoming-FK scope checks. Never cascade into foreign rows.

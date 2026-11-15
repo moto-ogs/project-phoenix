@@ -7,6 +7,7 @@ import { useDemoEveningActive } from "~/components/demo/demo-evening-notice";
 import { StaffPreviewBanner } from "~/components/staff-preview/staff-preview-banner";
 import { useShellAuthSafe } from "~/lib/shell-auth-context";
 import { Header } from "./header";
+import { RemindersBell } from "./header/reminders-bell";
 import { Sidebar } from "./sidebar";
 import { StaffSettingsReturnPathMemory } from "./staff-settings-nav";
 import { MobileBottomNav } from "./mobile-bottom-nav";
@@ -48,7 +49,7 @@ export function AppShell({ children }: AppShellProps) {
     <div className={eveningRow ? "pt-20" : stripActive ? "pt-12" : undefined}>
       <MobilePageHelpPortal>
         <PortalShell
-          header={<Header />}
+          header={<Header notificationBell={<RemindersBell />} />}
           headerClassName={
             eveningRow
               ? "sticky top-20 z-40 hidden lg:block"

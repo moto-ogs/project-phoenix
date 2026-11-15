@@ -478,6 +478,14 @@ describe("AbsenceIcon", () => {
 describe("PickupTimeRow", () => {
   const now = new Date("2025-01-15T14:00:00");
 
+  it("uses a text-safe shade for a slightly overdue pickup", () => {
+    render(<PickupTimeRow pickupTime="13:45" isException={false} now={now} />);
+
+    expect(screen.getByText("Gehzeit: 13:45 Uhr")).toHaveStyle({
+      color: "#a35c0b",
+    });
+  });
+
   it("renders the planned pickup time", () => {
     render(<PickupTimeRow pickupTime="15:30" isException={false} now={now} />);
 

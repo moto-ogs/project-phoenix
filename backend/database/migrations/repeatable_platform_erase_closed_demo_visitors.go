@@ -204,6 +204,11 @@ AS $function$
 					-- visitor's alone, so all of them go (#5540).
 					DELETE FROM platform.realtime_notifications
 					WHERE tenant_id = ANY (hidden_schools);
+					-- A feed entry of the school (#7148) can name the visitor in its
+					-- title or text; the school is the visitor's alone, so all of
+					-- them go.
+					DELETE FROM platform.notification_feed_entries
+					WHERE tenant_id = ANY (hidden_schools);
 					-- A push subscription holds the endpoint and user agent of a
 					-- device that opened the school; the school is the visitor's
 					-- alone, so all of them go (#5540).

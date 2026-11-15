@@ -12,7 +12,7 @@ Object.assign(process.env, storybookProcessEnv, {
 
 const config: StorybookConfig = {
   stories: ["../src/components/**/*.stories.@(ts|tsx)"],
-  addons: ["@storybook/addon-a11y"],
+  addons: ["@storybook/addon-a11y", "@storybook/addon-vitest"],
   framework: { name: "@storybook/nextjs-vite", options: {} },
   async viteFinal(viteConfig) {
     viteConfig.publicDir = path.resolve(dirname, "../public");

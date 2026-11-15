@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"sync"
 )
 
@@ -12,7 +13,8 @@ import (
 // up to three of them at once: in parallel, two schools both found no open
 // monthly run and both started one (409 parent_billing.care_run_open), or
 // took the same contract for a notice or a paper signature. Each step keeps
-// its own name, so a failure still names the step that failed.
+// its own name, so a failure still names the step that failed. A seed run
+// beside other seed processes holds Runtime.TraegerLock as well (#6962).
 type traegerSerialStep struct{ Step }
 
 // traegerLocks holds one lock per organization ID: a channel of capacity
@@ -31,6 +33,13 @@ func (s traegerSerialStep) Run(ctx context.Context, rt *Runtime) error {
 		return ctx.Err()
 	}
 	defer func() { <-held }()
+	if rt.TraegerLock != nil {
+		release, err := rt.TraegerLock(ctx)
+		if err != nil {
+			return fmt.Errorf("wait for the Träger lock: %w", err)
+		}
+		defer release()
+	}
 	return s.Step.Run(ctx, rt)
 }
 

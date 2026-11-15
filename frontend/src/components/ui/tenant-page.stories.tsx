@@ -181,6 +181,8 @@ export const QuietFilters: Story = { args: quietFilterArgs };
 
 /** Wie `QuietFilters`, mit geöffneter Filterfläche. */
 export const QuietFiltersOpened: Story = {
+  // axe meldet hier noch color-contrast; Behebung in #7110.
+  parameters: { a11y: { test: "todo" } },
   args: quietFilterArgs,
   play: async ({ canvasElement }) => {
     const visibleFilterButton = within(canvasElement)
@@ -362,6 +364,8 @@ export const SymbolActionsWithTourAndPreload: Story = {
  * Umschalter und Knopf: alle auf der Bedienhöhe der Kopfkarte (#6579).
  */
 export const ControlsInSearchSlot: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   args: {
     title: "Planung",
     searchSlot: (

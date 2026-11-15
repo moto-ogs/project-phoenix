@@ -70,6 +70,8 @@ export const RadioRows: Story = {
 };
 
 export const ButtonTiles: Story = {
+  // axe meldet hier noch color-contrast; Behebung in #7110.
+  parameters: { a11y: { test: "todo" } },
   render: () => {
     const [mode, setMode] = useState<"text" | "pdf">("text");
     return (

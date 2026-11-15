@@ -8,7 +8,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-const parentLetterCopiesVersion = "20261115200000"
+const parentLetterCopiesVersion = "20261115210000"
 
 func init() {
 	MigrationRegistry.Register(&Migration{
@@ -18,7 +18,7 @@ func init() {
 			parentLetterDeliveryVersion,         // users.parent_announcements.delivery_mode
 			"1.15.399",                          // users.student_profiles is the child's owner row
 			parentAnnouncementRecipientsVersion, // the reached children a copy is written for
-			roomsArchiveVersion,                 // the erasure fingerprint this one follows
+			notificationFeedVersion,             // the erasure fingerprint this one follows
 		},
 	})
 	Migrations.MustRegister(parentLetterCopiesUp, parentLetterCopiesDown)
@@ -86,7 +86,7 @@ func parentLetterCopiesUp(ctx context.Context, db *bun.DB) error {
 
 // parentLetterCopiesFingerprint is the incoming-FK fingerprint of the school
 // erasure plan with the letter copies; the repeatable preflight checks it.
-const parentLetterCopiesFingerprint = "f603cf6dfc91488b5edb2f07de529d081f8635b29656c2589a46d3f973dbd1f3"
+const parentLetterCopiesFingerprint = "6f662d17a6d0e688f4a456aefd8caea6d70d8521c46347486fbfc33673bef9e4"
 
 // parentLetterCopiesErasureLines are the lines the repeatable school and
 // demo visitor erasures carry for the copies, per function. The down takes
@@ -121,7 +121,7 @@ func parentLetterCopiesDown(ctx context.Context, db *bun.DB) error {
 				continue // an older erasure is installed; it never knew the copies
 			}
 			definition = strings.Replace(definition, line, "", 1)
-			definition = strings.Replace(definition, "'"+parentLetterCopiesFingerprint+"'", "'"+roomsArchiveFingerprint+"'", 1)
+			definition = strings.Replace(definition, "'"+parentLetterCopiesFingerprint+"'", "'"+notificationFeedFingerprint+"'", 1)
 			restored = append(restored, definition)
 		}
 		if err := installDerivedSchoolErasureFunctions(ctx, tx, restored); err != nil {

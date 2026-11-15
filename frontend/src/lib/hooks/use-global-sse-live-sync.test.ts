@@ -258,6 +258,7 @@ describe("useGlobalSSE: reconcile after a reconnect (#5017)", () => {
       expect.arrayContaining([
         "messages-unread-refresh",
         "team-messages-unread-refresh",
+        "notification-feed-refresh",
         "change-requests-refresh",
         "phoenix:reminders-stale",
       ]),

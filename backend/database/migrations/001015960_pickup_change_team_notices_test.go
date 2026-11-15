@@ -60,6 +60,10 @@ func TestPickupChangeTeamNoticeErasureDeletesNoticesFirst(t *testing.T) {
 func TestPickupChangeTeamNoticesMigrationRoundTrip(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
+	// The letter copies (#4813) follow the notification feed at the head; they go first.
+	require.NoError(t, parentLetterCopiesDown(t.Context(), db))
+	// The notification feed (#7148) extends the erasure at the head; it goes first.
+	require.NoError(t, notificationFeedDown(t.Context(), db))
 	ctx := t.Context()
 	exists := func() bool {
 		var found bool
@@ -72,8 +76,6 @@ func TestPickupChangeTeamNoticesMigrationRoundTrip(t *testing.T) {
 		return definition
 	}
 	// The room archive (#6845) changes the fingerprint at the head; it goes first.
-	// The letter copies (#4813) add a table to the erasure at the head; they go first.
-	require.NoError(t, parentLetterCopiesDown(t.Context(), db))
 	require.NoError(t, roomsArchiveDown(ctx, db))
 	require.True(t, exists())
 	assert.Contains(t, preflight(), pickupChangeTeamNoticesFingerprint)

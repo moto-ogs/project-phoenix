@@ -17,6 +17,7 @@ import {
   buttonRatchetAllowlist,
   buttonRatchetBaseline,
 } from "./ui-kit-button-baseline.mjs";
+import { contrastRatchetBaseline } from "./ui-kit-contrast-baseline.mjs";
 import {
   lintSource as lintProbe,
   removeProbeDirectories,
@@ -2704,6 +2705,90 @@ describe("button ratchet baseline", () => {
     }
     for (const entry of buttonRatchetAllowlist) {
       expect(existsSync(resolve(entry.file)), entry.file).toBe(true);
+    }
+  });
+});
+
+// #7108: gray-400 als Schrift oder Fokusring, shrink-only je Datei.
+describe.concurrent(
+  "ui-kit/no-gray-400-text and no-gray-400-focus-ring",
+  () => {
+    const TEXT = /ui-kit\(no-gray-400-text\)/g;
+    const RING = /ui-kit\(no-gray-400-focus-ring\)/g;
+    const baselined = "src/app/[tenant]/(protected)/activities/page.tsx";
+
+    it("rejects new gray-400 text, also with a state or opacity", async () => {
+      const { status, output } = await lintSource(
+        `export const a = <p className="text-sm text-gray-400">A</p>;
+      export const b = "hover:text-gray-400 placeholder:text-gray-400/80";
+      export const c = \`flex \${a ? "text-gray-400" : ""}\`;`,
+        "src/components/probe/contrast.tsx",
+      );
+      expect(status).toBe(1);
+      expect(output.match(TEXT)).toHaveLength(4);
+    });
+
+    it("rejects ring-gray-400 as a focus ring", async () => {
+      const { status, output } = await lintSource(
+        `export const a = "focus-visible:ring-2 focus-visible:ring-gray-400";
+      export const b = "focus:ring-gray-400 focus-within:ring-gray-400";
+      export const c = "ring-gray-400 focus-visible:ring-2";`,
+        "src/components/probe/ring.tsx",
+      );
+      expect(status).toBe(1);
+      expect(output.match(RING)).toHaveLength(4);
+    });
+
+    it("allows icons, disabled states, other gray-400 utilities and darker text", async () => {
+      const { status, output } = await lintSource(
+        `import { CaretRightIcon } from "@phosphor-icons/react";
+      export const a = <CaretRightIcon className="h-4 w-4 text-gray-400" />;
+      export const b = <svg className="text-gray-400" />;
+      export const c = "disabled:text-gray-400 border-gray-400 bg-gray-400 text-gray-4000";
+      export const d = "text-gray-500 hover:ring-gray-400 ring-gray-400";`,
+        "src/components/probe/allowed.tsx",
+      );
+      expect(output).not.toMatch(TEXT);
+      expect(output).not.toMatch(RING);
+      expect(status).toBe(0);
+    });
+
+    it("allows a baselined file its count and fails one more", async () => {
+      const allowed = contrastRatchetBaseline["no-gray-400-text"]?.[baselined];
+      expect(allowed).toBe(1);
+      const atBaseline = await lintSource(
+        'export const a = "text-gray-400";',
+        baselined,
+      );
+      const overBaseline = await lintSource(
+        'export const a = "text-gray-400";\nexport const b = "text-gray-400";',
+        baselined,
+      );
+      expect(atBaseline.output).not.toMatch(TEXT);
+      expect(overBaseline.status).toBe(1);
+      expect(overBaseline.output).toContain("erlaubt sind 1");
+    });
+  },
+);
+
+describe("contrast ratchet baseline", () => {
+  // Die Zahl darf nur sinken: nach einem Abbau sinkt die Baseline mit.
+  it("matches the current findings exactly", () => {
+    const result = spawnSync(
+      process.execPath,
+      [resolve("scripts/ui-kit-contrast-baseline-update.mjs"), "--check"],
+      { encoding: "utf8" },
+    );
+
+    expect(result.status, `${result.stdout}${result.stderr}`).toBe(0);
+  }, 120_000);
+
+  it("names only files that exist and positive counts", () => {
+    for (const [rule, files] of Object.entries(contrastRatchetBaseline)) {
+      for (const [file, count] of Object.entries(files)) {
+        expect(existsSync(resolve(file)), `${rule}: ${file}`).toBe(true);
+        expect(count).toBeGreaterThan(0);
+      }
     }
   });
 });
