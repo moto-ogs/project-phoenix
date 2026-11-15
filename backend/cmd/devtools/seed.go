@@ -99,6 +99,9 @@ further schools, --school-name for the name, and --state for its own state file.
   --school-name 'OGS Nord'     Override the profile's school name
   --profile vollbetrieb        Seed only this profile
   --state ogs-nord.json        Write the seed state to this file
+  --traeger-lock seed.lock     Seed beside other runs that name the same file:
+                               the Träger steps, which act on every school
+                               of the Träger, then run one school at a time
 
 Usage:
   docker compose run server go run ./cmd/devtools seed --email op@example.com --password 'Test1234%' --pin 1234 --url http://server:8080
@@ -126,6 +129,7 @@ Usage:
 		profile, _ := cmd.Flags().GetString("profile")
 		statePath, _ := cmd.Flags().GetString("state")
 		productScreenshots, _ := cmd.Flags().GetBool("product-screenshots")
+		traegerLock, _ := cmd.Flags().GetString("traeger-lock")
 
 		options := seedapi.SeedOptions{
 			TenantSlug:         tenantSlug,
@@ -138,6 +142,9 @@ Usage:
 			ReadMailLink:       FetchLatestMailLink,
 			ProductScreenshots: productScreenshots,
 			SeedWeekProtocols:  true,
+		}
+		if traegerLock != "" {
+			options.TraegerLock = fileTraegerLock(traegerLock)
 		}
 
 		history, closeHistory, err := openPresenceHistory()
@@ -171,5 +178,6 @@ func init() {
 	seedCmd.Flags().String("profile", "", "Seed only this profile (vollbetrieb); empty seeds all four")
 	seedCmd.Flags().String("state", "", "Output path for the seed state (default .seed-state.json)")
 	seedCmd.Flags().Bool("randomize", false, "Create a unique ad-hoc school with generated admin credentials")
+	seedCmd.Flags().String("traeger-lock", "", "Lock file shared with other seed runs into the same database; their Träger steps then run one at a time")
 	seedCmd.Flags().Bool("product-screenshots", false, "Prepare vollbetrieb for the product screenshots (no weekend care plan, no seed-time statistics session)")
 }
