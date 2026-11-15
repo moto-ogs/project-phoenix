@@ -250,9 +250,13 @@ function and the axe check of `@storybook/addon-a11y` (#7108). A render
 error, a failing `play` or an axe violation fails the story.
 `.storybook/preview.tsx` sets `a11y.test: "error"` for all stories.
 
-- CI runs the step „Storybook tests (a11y)“ in „Frontend quality“
-  (`scripts/storybook-test-changed.mjs`). A pull request tests the stories
-  whose imports it changes (`vitest related`); a change to the global
+- CI runs the job „Storybook tests“ in three shards on hosted runners
+  (`scripts/storybook-test-changed.mjs`, `STORYBOOK_SHARD=1/3`). The full
+  run is CPU-bound and costs about 220 s on one 4-core runner, three
+  quarters of it the fresh iframe every file gets; more workers and
+  `isolate: false` were measured and rejected (#6962). A pull request
+  tests the stories whose imports it changes (`vitest related`); a change
+  to the global
   inputs in `GLOBAL_INPUTS` (`.storybook/`, its providers, styles,
   `public/`, dependencies, the config) runs all stories, as do pushes and
   the nightly run. Copy in `src/i18n/messages` is deliberately not a

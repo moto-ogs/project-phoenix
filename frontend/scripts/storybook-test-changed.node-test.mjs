@@ -2,9 +2,11 @@
 // starten den Vollauf, weil `vitest related` nur den Importen der Stories
 // folgt und forceRerunTriggers dort nicht wirkt.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { parse } from "yaml";
 
-import { needsFullRun } from "./storybook-test-changed.mjs";
+import { needsFullRun, shardArgs } from "./storybook-test-changed.mjs";
 
 test("a global input of every story starts the full run", () => {
   for (const path of [
@@ -39,4 +41,29 @@ test("component, story and copy changes keep the selection", () => {
     ]),
     false,
   );
+});
+
+test("a shard passes through to Vitest, an invalid one stops the run", () => {
+  assert.deepEqual(shardArgs(undefined), []);
+  assert.deepEqual(shardArgs(""), []);
+  assert.deepEqual(shardArgs("2/3"), ["--shard=2/3"]);
+  for (const value of ["0/3", "4/3", "1", "a/b", "1/3/4"])
+    assert.throws(() => shardArgs(value), /STORYBOOK_SHARD/, value);
+});
+
+test("the CI shards cover every story file exactly once", () => {
+  const job = parse(
+    readFileSync(
+      new URL("../../.github/workflows/lint.yml", import.meta.url),
+      "utf8",
+    ),
+  ).jobs["storybook-tests"];
+  const shards = job.strategy.matrix.shard;
+  const step = job.steps.find((s) => s.name === "Storybook tests (a11y)");
+  assert.equal(step.env.STORYBOOK_SHARD, `\${{ matrix.shard }}/${shards.length}`);
+  assert.deepEqual(
+    shards,
+    shards.map((_, i) => i + 1),
+  );
+  assert.equal(job.name, `Storybook tests (\${{ matrix.shard }}/${shards.length})`);
 });
