@@ -11,6 +11,7 @@
 import type { Session } from "next-auth";
 import { hasPermission } from "~/lib/auth-utils";
 import type { MotoConcept } from "~/lib/moto-concepts";
+import { arrivalPickupConcept } from "~/lib/concepts/arrivalPickup";
 import { backConcept } from "~/lib/concepts/back";
 import { billingConcept } from "~/lib/concepts/billing";
 import { careContractsConcept } from "~/lib/concepts/careContracts";
@@ -25,7 +26,6 @@ import { helpConcept } from "~/lib/concepts/help";
 import { holidayWeeksConcept } from "~/lib/concepts/holidayWeeks";
 import { parentsConcept } from "~/lib/concepts/parents";
 import { peopleConcept } from "~/lib/concepts/people";
-import { pickupConcept } from "~/lib/concepts/pickup";
 import { reportsConcept } from "~/lib/concepts/reports";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { settingsConcept } from "~/lib/concepts/settings";
@@ -118,7 +118,7 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         href: "/traeger/ankunft-abholung",
         label: "Ankunft und Abholung",
         shortLabel: "Ankunft",
-        concept: pickupConcept,
+        concept: arrivalPickupConcept,
         right: REPORTS_RIGHT,
       },
     ],

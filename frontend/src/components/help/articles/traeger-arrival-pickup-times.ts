@@ -23,7 +23,7 @@ export function traegerArrivalPickupTimesTopic(): HelpTopic {
       "Wählen Sie oben den Zeitraum. Am Anfang sind es die letzten 4 Wochen bis gestern.",
       "Lesen Sie oben die Hauptzeiten: `Meiste Ankünfte` und `Meiste Abholungen`.",
       "Lesen Sie die Heatmaps `Ankunft` und `Abholung`. Je dunkler ein Feld, desto mehr Kinder. Die Zahl im Feld ist der Durchschnitt eines Tages.",
-      "Zeigen Sie auf ein Feld. Unter der Heatmap steht dann die genaue Zahl.",
+      "Zeigen Sie auf ein Feld oder tippen Sie darauf. Unter der Heatmap steht dann die genaue Zahl.",
       "Wählen Sie unter `Je Schule` eine Schule oder oben den Filter `Schule`. Dann sehen Sie nur diese Schule.",
       "Wählen Sie `Herunterladen` und dann `CSV`, um alle Zahlen als Tabelle zu speichern.",
     ],
