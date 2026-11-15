@@ -35,7 +35,7 @@ func (s *pickupScheduleService) GetUpcomingStudentPickupExceptions(
 	ctx context.Context,
 	studentID int64,
 ) ([]*careplan.PickupException, error) {
-	return s.upcomingExceptions(ctx, studentID)
+	return s.upcomingExceptions(ctx, studentID, s.today())
 }
 
 func (s *pickupScheduleService) CreateStudentPickupException(

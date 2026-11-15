@@ -7,7 +7,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
-	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 type StatusDayStore interface {
@@ -105,7 +104,7 @@ func (s *Service) DeleteExpiredStudentStatusDays(ctx context.Context, retentionD
 	if retentionDays <= 0 {
 		return 0, fmt.Errorf("%w, got %d", careplan.ErrStatusDayRetentionWindow, retentionDays)
 	}
-	cutoff := careplan.Date(calendar.TodayDate().AddDays(-retentionDays))
+	cutoff := careplan.Date(s.today().AddDays(-retentionDays))
 	return requestCommandValue(s, ctx, "delete_expired_student_status_days", func(txCtx context.Context) (int, domain.OperationStats, error) {
 		deleted, stats, err := s.statusDays.DeleteStudentStatusDaysBefore(txCtx, cutoff)
 		return int(deleted), stats, err

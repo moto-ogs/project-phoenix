@@ -15,7 +15,7 @@ func (s *Service) ListDepartureExceptions(ctx context.Context, filter careplan.S
 		return s.statusQueries.ListDepartureExceptions(txCtx, filter)
 	})
 
-	s.observeRequest("list_departure_exceptions", started, stats, err)
+	s.observeRequest("list_departure_exceptions", time.Since(started), stats, err)
 	return value, err
 }
 
@@ -33,7 +33,7 @@ func (s *Service) SaveDepartureException(ctx context.Context, v careplan.Departu
 		result, stats, err = s.statusQueries.SaveDepartureException(tx, v)
 		return err
 	})
-	s.observeRequest("save_departure_exception", started, stats, err)
+	s.observeRequest("save_departure_exception", time.Since(started), stats, err)
 	return result, err
 }
 
@@ -49,6 +49,6 @@ func (s *Service) DeleteDepartureException(ctx context.Context, id int64) error 
 		stats, deleteErr = s.statusQueries.DeleteDepartureException(tx, id)
 		return deleteErr
 	})
-	s.observeRequest("delete_departure_exception", started, stats, err)
+	s.observeRequest("delete_departure_exception", time.Since(started), stats, err)
 	return err
 }

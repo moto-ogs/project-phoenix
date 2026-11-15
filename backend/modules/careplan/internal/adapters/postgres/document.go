@@ -147,7 +147,7 @@ func (s *Store) ListCareDocumentCleanups(ctx context.Context, studentID *int64) 
 	}
 	rows := []careDocumentCleanupRow{}
 	query := db.NewSelect().Model(&rows).ModelTableExpr(`users.student_document_file_cleanup AS "care_document_cleanup"`).
-		Where(`"care_document_cleanup".retry_after <= ?`, time.Now()).
+		Where(`"care_document_cleanup".retry_after <= ?`, s.currentTime()).
 		Where(`"care_document_cleanup".cleaned_at IS NULL`).
 		Where(`"care_document_cleanup".tenant_id = ?`, tenantID).
 		OrderExpr(`"care_document_cleanup".id ASC`).
@@ -228,7 +228,7 @@ func (s *Store) SoftDeleteCareDocument(ctx context.Context, documentID, deletedB
 	if err != nil {
 		return time.Time{}, domain.OperationStats{}, err
 	}
-	now := time.Now()
+	now := s.currentTime()
 	stats, err := execGuarded(ctx, db.NewUpdate().Model((*careDocumentRow)(nil)).
 		ModelTableExpr(`users.student_documents AS "care_document"`).
 		Set("deleted_at = ?", now).Set("deleted_by = ?", deletedBy).
@@ -245,7 +245,7 @@ func (s *Store) MarkCareDocumentFileDeleted(ctx context.Context, documentID int6
 	}
 	return execAny(ctx, db.NewUpdate().Model((*careDocumentRow)(nil)).
 		ModelTableExpr(`users.student_documents AS "care_document"`).
-		Set("file_deleted_at = ?", time.Now()).
+		Set("file_deleted_at = ?", s.currentTime()).
 		Where(`"care_document".id = ?`, documentID).
 		Where(`"care_document".file_deleted_at IS NULL`).
 		Where(`"care_document".tenant_id = ?`, tenantID).
@@ -277,7 +277,7 @@ func (s *Store) CompleteCareDocumentCleanup(ctx context.Context, cleanupID int64
 	}
 	return execAny(ctx, db.NewUpdate().Model((*careDocumentCleanupRow)(nil)).
 		ModelTableExpr(`users.student_document_file_cleanup AS "care_document_cleanup"`).
-		Set("cleaned_at = ?", time.Now()).
+		Set("cleaned_at = ?", s.currentTime()).
 		Where(`"care_document_cleanup".id = ?`, cleanupID).
 		Where(`"care_document_cleanup".cleaned_at IS NULL`).
 		Where(`"care_document_cleanup".tenant_id = ?`, tenantID), "complete care document cleanup")
@@ -290,7 +290,7 @@ func (s *Store) CompleteCareDocumentCleanupByFilename(ctx context.Context, filen
 	}
 	return execAny(ctx, db.NewUpdate().Model((*careDocumentCleanupRow)(nil)).
 		ModelTableExpr(`users.student_document_file_cleanup AS "care_document_cleanup"`).
-		Set("cleaned_at = ?", time.Now()).
+		Set("cleaned_at = ?", s.currentTime()).
 		Where(`"care_document_cleanup".filename_stored = ?`, filename).
 		Where(`"care_document_cleanup".cleaned_at IS NULL`).
 		Where(`"care_document_cleanup".tenant_id = ?`, tenantID), "complete care document cleanup by filename")
@@ -303,7 +303,7 @@ func (s *Store) ActivateCareDocumentCleanup(ctx context.Context, filename string
 	}
 	return execAny(ctx, db.NewUpdate().Model((*careDocumentCleanupRow)(nil)).
 		ModelTableExpr(`users.student_document_file_cleanup AS "care_document_cleanup"`).
-		Set("retry_after = ?", time.Now()).
+		Set("retry_after = ?", s.currentTime()).
 		Where(`"care_document_cleanup".filename_stored = ?`, filename).
 		Where(`"care_document_cleanup".cleaned_at IS NULL`).
 		Where(`"care_document_cleanup".tenant_id = ?`, tenantID), "activate care document cleanup")

@@ -27,6 +27,9 @@ func nativeClassArrivalPlans(t *testing.T) careplanCompose.ArrivalClassPlans {
 	return owners.ClassArrivalPlans(classes)
 }
 
+// arrivalTestMonday is the fixed Monday of the arrival suites.
+const arrivalTestMonday = decisionTestToday
+
 // arrivalTestToday is the day clock of the arrival suites.
 func arrivalTestToday() calendar.Date { return arrivalTestMonday }
 

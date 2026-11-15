@@ -41,7 +41,8 @@ func newBookingAuthorityLifecycle(t *testing.T, db *bun.DB, authoritative bool, 
 		Audit:                 api.NewPeopleDirectorySuiteStudentAudit(testpkg.RequestAuditActor, api.NewStudentAudit(testpkg.NewDatabase(t, db))),
 		LockCareBookingWrites: lock,
 		BookingsAuthoritative: func(context.Context) (bool, error) { return authoritative, nil },
-		Now:                   decisionTestClock,
+		// Every scenario decides on decisionTestToday, the day its dates are built on.
+		Today: func() calendar.Date { return decisionTestToday },
 	})
 	require.NoError(t, err)
 	return svc
@@ -286,7 +287,7 @@ func TestBookingParticipationBoundaryKeepsActualPresenceVisible(t *testing.T) {
 	require.NoError(t, api.SeedPendingCareWithdrawal(ctx, api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).CareWithdrawal, &careplan.WithdrawalCompletion{
 		StudentID: &studentID, FirstBookinglessDay: firstGap,
 		Trigger:                 careplan.WithdrawalTriggerBookingExpired,
-		WithdrawalConfirmedRole: "system", WithdrawalConfirmedAt: decisionTestClock(),
+		WithdrawalConfirmedRole: "system", WithdrawalConfirmedAt: time.Now(),
 	}))
 	svc := bookingAuthorityService(t, db, true)
 
@@ -314,7 +315,7 @@ func TestDirectWithdrawalBoundaryDoesNotDependOnBookingAuthority(t *testing.T) {
 	require.NoError(t, api.SeedPendingCareWithdrawal(scope.Context(), repos.CareWithdrawal, &careplan.WithdrawalCompletion{
 		StudentID: &studentID, FirstBookinglessDay: firstGap,
 		Trigger:                 careplan.WithdrawalTriggerDirectSchool,
-		WithdrawalConfirmedRole: "admin", WithdrawalConfirmedAt: decisionTestClock(),
+		WithdrawalConfirmedRole: "admin", WithdrawalConfirmedAt: time.Now(),
 	}))
 
 	participating, err := bookingAuthorityService(t, db, false).ParticipatingStudentIDs(
@@ -391,7 +392,7 @@ func TestNaturalSchedulerPreservesConfirmedWithdrawalAudit(t *testing.T) {
 	repo := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).CareWithdrawal
 	require.NoError(t, api.SeedPendingCareWithdrawal(scope.Context(), repo, &careplan.WithdrawalCompletion{
 		StudentID: &studentID, FirstBookinglessDay: gap, Trigger: careplan.WithdrawalTriggerDirectSchool,
-		WithdrawalConfirmedBy: &actor.ID, WithdrawalConfirmedRole: "admin", WithdrawalConfirmedAt: decisionTestClock().Add(-time.Hour),
+		WithdrawalConfirmedBy: &actor.ID, WithdrawalConfirmedRole: "admin", WithdrawalConfirmedAt: time.Now().Add(-time.Hour),
 	}))
 	before := requirePendingCompletion(t, repo, scope.Context(), student.ID)
 
@@ -427,7 +428,7 @@ func TestOverdueRebookingReplacesTheStaleCompletion(t *testing.T) {
 	studentID := student.ID
 	require.NoError(t, api.SeedPendingCareWithdrawal(scope.Context(), repo, &careplan.WithdrawalCompletion{
 		StudentID: &studentID, FirstBookinglessDay: oldGap,
-		Trigger: careplan.WithdrawalTriggerBookingExpired, WithdrawalConfirmedRole: "system", WithdrawalConfirmedAt: decisionTestClock(),
+		Trigger: careplan.WithdrawalTriggerBookingExpired, WithdrawalConfirmedRole: "system", WithdrawalConfirmedAt: time.Now(),
 	}))
 
 	require.NoError(t, bookingAuthorityService(t, db, true).ReconcileAuthoritativeBookingChange(
@@ -541,7 +542,7 @@ func assertNonCareMutationKeepsConfirmedWithdrawal(t *testing.T, authoritative b
 	repo := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).CareWithdrawal
 	require.NoError(t, api.SeedPendingCareWithdrawal(scope.Context(), repo, &careplan.WithdrawalCompletion{
 		StudentID: &studentID, FirstBookinglessDay: gap, Trigger: careplan.WithdrawalTriggerDirectSchool,
-		WithdrawalConfirmedRole: "admin", WithdrawalConfirmedAt: decisionTestClock(),
+		WithdrawalConfirmedRole: "admin", WithdrawalConfirmedAt: time.Now(),
 	}))
 
 	err := bookingAuthorityService(t, db, authoritative).ReconcileAuthoritativeBookingChange(
@@ -629,7 +630,7 @@ func TestDisablingBookingAuthorityObsoletesOnlyOpenBookingCompletions(t *testing
 		require.NoError(t, api.SeedPendingCareWithdrawal(ctx, repos.CareWithdrawal, &careplan.WithdrawalCompletion{
 			StudentID: &studentID, FirstBookinglessDay: today,
 			Trigger:                 careplan.WithdrawalTriggerBookingExpired,
-			WithdrawalConfirmedRole: "system", WithdrawalConfirmedAt: decisionTestClock(),
+			WithdrawalConfirmedRole: "system", WithdrawalConfirmedAt: time.Now(),
 		}))
 	}
 	resolvedRows, _, err := repos.CareWithdrawal.ListPending(ctx, careplan.WithdrawalListFilter{
@@ -638,7 +639,7 @@ func TestDisablingBookingAuthorityObsoletesOnlyOpenBookingCompletions(t *testing
 	require.NoError(t, err)
 	require.Len(t, resolvedRows, 1)
 	actorID := testpkg.CreateTestAccount(t, db, "booking-authority-disable").ID
-	changed, err := repos.CareWithdrawal.MarkResolved(ctx, resolvedRows[0].ID, actorID, decisionTestClock())
+	changed, err := repos.CareWithdrawal.MarkResolved(ctx, resolvedRows[0].ID, actorID, time.Now())
 	require.NoError(t, err)
 	require.True(t, changed)
 

@@ -309,7 +309,8 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0241: the utilization reads of modules/careplan/compose (+7),
 // modules/facilities/compose (+13) and modules/studentpresence/compose (+7)
 // add exactly 27 LOC.
-const moduleComposeBudgetTotal = 13512
+// ADR 0240: the clock fields of modules/careplan/compose (+8).
+const moduleComposeBudgetTotal = 13520
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -326,6 +327,7 @@ const moduleComposeBudgetTotal = 13512
 // the audit and the PAIN.008 files of the Träger package.
 // ADR 0231 raised modules/enrollment/compose for the registration answers and
 // added modules/schoolsearchview/compose for the school search.
+// ADR 0240 raised modules/careplan/compose for the clock fields (+8).
 var moduleComposeBudgets = map[string]int{
 	"modules/appointments/compose": 45,
 	// ADR 0103: the signature ledger constructor, construction only.
@@ -340,7 +342,8 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0225: the Stammdaten decision's class follow-up port (+3).
 	// Lowered by #7104: the injected clocks fit in shortened comments (-3).
 	// ADR 0241: the booking intervals of the utilization (+7).
-	"modules/careplan/compose":             1695, // ADR 0220: +13, the pickup change team constructor
+	// ADR 0240: +8, the clock fields of its dependencies.
+	"modules/careplan/compose":             1703, // ADR 0220: +13, the pickup change team constructor
 	"modules/careplan/requestfeed/compose": 53,
 	// Raised by ADR 0102: the class-trip status-day seam (#4799).
 	"modules/classday/compose": 210,

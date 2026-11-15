@@ -112,8 +112,8 @@ func (w *ExcusedRequests) DecideConflictRequest(ctx context.Context, decision ca
 // days the rejected requests fought over, as a manual entry. The days come
 // from the requests, never from the client.
 func (w *ExcusedRequests) WriteStaffValue(ctx context.Context, write careplan.ExcusedStaffValueWrite) (err error) {
-	started := time.Now()
-	defer func() { w.done("excused_request_write_staff_value", started, err) }()
+	started := w.now()
+	defer func() { w.done("excused_request_write_staff_value", time.Since(started), err) }()
 	status, err := staffAbsenceStatus(write.Status)
 	if err != nil {
 		return err

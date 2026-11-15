@@ -10,7 +10,7 @@ import (
 
 func (w *ExcusedRequests) ListHistory(ctx context.Context, filter careplan.RequestQueueFilter) (items []*careplan.ExcusedRequestHistoryItem, next *careplan.RequestCursor, err error) {
 	started := time.Now()
-	defer func() { w.done("excused_request_list_history", started, err) }()
+	defer func() { w.done("excused_request_list_history", time.Since(started), err) }()
 	// limit+1 probes for an older page without a second count query.
 	probe := probeLimit(filter)
 	rows, err := w.carePlan.ListExcusedAbsenceRequests(ctx, careplan.ExcusedAbsenceRequestFilter{
@@ -63,7 +63,7 @@ func (w *ExcusedRequests) ListHistory(ctx context.Context, filter careplan.Reque
 
 func (w *ExcusedRequests) ListPending(ctx context.Context, filter careplan.RequestQueueFilter) (items []*careplan.ExcusedRequestReviewItem, next *careplan.RequestCursor, err error) {
 	started := time.Now()
-	defer func() { w.done("excused_request_list_pending", started, err) }()
+	defer func() { w.done("excused_request_list_pending", time.Since(started), err) }()
 	probe := probeLimit(filter)
 	rows, err := w.listPendingForTenant(ctx, &probe)
 	if err != nil {
@@ -163,7 +163,7 @@ func (w *ExcusedRequests) pendingReviewItem(ctx context.Context, r *careplan.Exc
 
 func (w *ExcusedRequests) PendingByStudentForDate(ctx context.Context, date careplan.Date) (result map[int64]*careplan.ExcusedAbsenceRequest, err error) {
 	started := time.Now()
-	defer func() { w.done("excused_request_pending_by_student", started, err) }()
+	defer func() { w.done("excused_request_pending_by_student", time.Since(started), err) }()
 	rows, err := w.listPendingForTenant(ctx, &careplan.RequestQueueFilter{})
 	if err != nil {
 		return nil, err

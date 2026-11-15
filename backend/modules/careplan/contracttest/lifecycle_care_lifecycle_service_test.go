@@ -53,9 +53,6 @@ func newCareLifecycleServiceWithLockAt(
 	today func() calendar.Date,
 ) careplan.CareLifecycle {
 	t.Helper()
-	if today == nil {
-		today = func() calendar.Date { return decisionTestToday }
-	}
 	// RFID tag release runs through the People Directory composition (#2661).
 	repos, err := api.NewCareLifecycleTestRepositories(testpkg.NewDatabase(t, db), nil)
 	require.NoError(t, err)
@@ -64,8 +61,6 @@ func newCareLifecycleServiceWithLockAt(
 		LockCareBookingWrites: lockCareBookingWrites,
 		BookingsAuthoritative: func(context.Context) (bool, error) { return false, nil },
 		Today:                 today,
-		// Noon of the pinned day leaves room for check-ins earlier that day.
-		Now: func() time.Time { return today().BerlinMidnight().Add(12 * time.Hour) },
 	})
 	require.NoError(t, err)
 	return svc
@@ -74,9 +69,6 @@ func newCareLifecycleServiceWithLockAt(
 // newCareResumptionAt binds the workflow independently of the domain lifecycle.
 func newCareResumptionAt(t *testing.T, db *bun.DB, today func() calendar.Date) func(context.Context, careplan.CareResumeInput) error {
 	t.Helper()
-	if today == nil {
-		today = func() calendar.Date { return decisionTestToday }
-	}
 	repos, err := api.NewCareLifecycleTestRepositories(testpkg.NewDatabase(t, db), nil)
 	require.NoError(t, err)
 	return repos.NewCareResumption(api.CareLifecycleTestConfig{
@@ -139,7 +131,7 @@ func TestCareLifecycle_ConfirmAuditsOnlyCareEnd(t *testing.T) {
 
 	endCare(t, ctx, svc, actorID, careplan.CareExitInput{
 		StudentIDs:  []int64{student.ID},
-		LastCareDay: decisionTestToday,
+		LastCareDay: calendar.TodayDate(),
 		Reason:      careplan.CareExitReasonMovedAway,
 	})
 
@@ -188,7 +180,7 @@ func TestCareLifecycle_RefusesRetroactiveExit(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	svc := newCareLifecycleService(t, db)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
 
 	student := testpkg.CreateTestStudent(t, db, "Jonas", "Bergmann", "2a")
 
@@ -208,7 +200,7 @@ func TestCareLifecycle_ReasonNotePairing(t *testing.T) {
 	svc := newCareLifecycleService(t, db)
 
 	student := testpkg.CreateTestStudent(t, db, "Mila", "Bergmann", "2a")
-	today := decisionTestToday
+	today := calendar.TodayDate()
 
 	t.Run("other requires a note", func(t *testing.T) {
 		_, err := testpkg.TenantQuery1(t, ctx, db, svc.Preview, careplan.CareExitInput{
@@ -249,7 +241,7 @@ func TestCareLifecycle_ConfirmRefusesStalePreview(t *testing.T) {
 
 	first := testpkg.CreateTestStudent(t, db, "Ida", "Kramer", "3a")
 	second := testpkg.CreateTestStudent(t, db, "Tom", "Kramer", "3a")
-	today := decisionTestToday
+	today := calendar.TodayDate()
 	input := careplan.CareExitInput{
 		StudentIDs:  []int64{first.ID, second.ID},
 		LastCareDay: today,
@@ -298,7 +290,7 @@ func TestCareLifecycle_BlockedChildStopsTheWholeAction(t *testing.T) {
 
 	input := careplan.CareExitInput{
 		StudentIDs:  []int64{fine.ID, graduated.ID},
-		LastCareDay: decisionTestToday,
+		LastCareDay: calendar.TodayDate(),
 		Reason:      careplan.CareExitReasonMovedAway,
 	}
 
@@ -331,7 +323,7 @@ func TestCareLifecycle_TenantIsolation(t *testing.T) {
 
 	preview, err := testpkg.TenantQuery1(t, ctx, db, svc.Preview, careplan.CareExitInput{
 		StudentIDs:  []int64{foreign.ID},
-		LastCareDay: decisionTestToday,
+		LastCareDay: calendar.TodayDate(),
 		Reason:      careplan.CareExitReasonMovedAway,
 	})
 	require.NoError(t, err)
@@ -349,7 +341,7 @@ func TestCareLifecycle_EndsBookingsAtTheLastCareDay(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	svc := newCareLifecycleService(t, db)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
 	actorID := careActor(t, db)
 	timetableRepos := testTimetableRepositories(db)
 
@@ -399,7 +391,7 @@ func TestCareLifecycle_CancelOnlyBeforeItTakesEffect(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	svc := newCareLifecycleService(t, db)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
 	actorID := careActor(t, db)
 
 	student := testpkg.CreateTestStudent(t, db, "Ruben", "Hesse", "3c")
@@ -482,7 +474,7 @@ func TestCareLifecycle_CancelRefusedAfterItTookEffect(t *testing.T) {
 	student := testpkg.CreateTestStudent(t, db, "Fine", "Hesse", "3c")
 	// Written directly: the product refuses a retroactive exit, and this test
 	// is about the state the day after a legitimate one.
-	yesterday := decisionTestToday.AddDays(-1)
+	yesterday := calendar.TodayDate().AddDays(-1)
 	_, err := db.NewUpdate().
 		TableExpr("users.student_school_memberships").
 		Set("enrolled_until = ?", yesterday).
@@ -595,7 +587,7 @@ func TestCareLifecycle_ResumeForAFutureStartWaitsForTheScheduler(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	resume := newCareResumptionAt(t, db, nil)
+	resume := newCareResumptionAt(t, db, func() calendar.Date { return decisionTestToday })
 	actorID := careActor(t, db)
 
 	student := testpkg.CreateTestStudent(t, db, "Emil", "Roth", "2c")
@@ -639,7 +631,7 @@ func TestCareLifecycle_ArchiveHoldsEveryRegularlyEndedCare(t *testing.T) {
 	phase := testpkg.CreateTestStudent(t, db, "Karl", "Peters", "4a")
 	running := testpkg.CreateTestStudent(t, db, "Mia", "Peters", "4a")
 
-	yesterday := decisionTestToday.AddDays(-1)
+	yesterday := calendar.TodayDate().AddDays(-1)
 	for _, id := range []int64{manual.ID, phase.ID} {
 		_, err := db.NewUpdate().
 			TableExpr("users.student_school_memberships").
@@ -813,7 +805,7 @@ func TestCareLifecycle_ChangingTheDayReplansFromTheBaseline(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	svc := newCareLifecycleService(t, db)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
 	actorID := careActor(t, db)
 	timetableRepos := testTimetableRepositories(db)
 
@@ -890,8 +882,8 @@ func TestCareLifecycle_ResumeDoesNotBringThePlanBack(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	svc := newCareLifecycleService(t, db)
-	resume := newCareResumptionAt(t, db, nil)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
+	resume := newCareResumptionAt(t, db, func() calendar.Date { return decisionTestToday })
 	actorID := careActor(t, db)
 	timetableRepos := testTimetableRepositories(db)
 

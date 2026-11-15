@@ -143,7 +143,7 @@ func (rs *Resource) previewStudentPickupAdjustment(w http.ResponseWriter, r *htt
 		renderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodePickupInvalid))
 		return
 	}
-	input, err := pickupAdjustmentPreviewInput(student.ID, body, rs.todayDate())
+	input, err := pickupAdjustmentPreviewInput(student.ID, body, rs.today())
 	if err != nil {
 		renderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodePickupInvalid))
 		return
@@ -170,7 +170,7 @@ func (rs *Resource) applyStudentPickupAdjustment(w http.ResponseWriter, r *http.
 		renderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodePickupInvalid))
 		return
 	}
-	input, err := pickupAdjustmentPreviewInput(student.ID, body, rs.todayDate())
+	input, err := pickupAdjustmentPreviewInput(student.ID, body, rs.today())
 	if err != nil {
 		renderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodePickupInvalid))
 		return

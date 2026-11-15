@@ -85,8 +85,8 @@ var (
 )
 
 // NormalizeAccidentReport trims the report and checks every field the
-// official form needs.
-func NormalizeAccidentReport(report AccidentReport) (AccidentReport, error) {
+// official form needs. now is the instant an accident may not lie after.
+func NormalizeAccidentReport(report AccidentReport, now time.Time) (AccidentReport, error) {
 	report.Location = strings.TrimSpace(report.Location)
 	report.Description = strings.TrimSpace(report.Description)
 	report.InjuredBodyParts = strings.TrimSpace(report.InjuredBodyParts)
@@ -112,7 +112,7 @@ func NormalizeAccidentReport(report AccidentReport) (AccidentReport, error) {
 		at := report.ParentsNotifiedAt.UTC()
 		report.ParentsNotifiedAt = &at
 	}
-	if report.OccurredAt.After(time.Now().Add(AccidentReportClockSkew)) {
+	if report.OccurredAt.After(now.Add(AccidentReportClockSkew)) {
 		return AccidentReport{}, fmt.Errorf("%w: occurred_at lies in the future", ErrAccidentReportInvalid)
 	}
 	for _, field := range []struct{ name, value string }{

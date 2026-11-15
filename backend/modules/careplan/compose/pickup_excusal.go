@@ -10,7 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/application"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	carePlanPorts "github.com/moto-ogs/project-phoenix/modules/careplan/ports"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )

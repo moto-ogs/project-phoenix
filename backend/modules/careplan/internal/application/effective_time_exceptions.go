@@ -69,8 +69,9 @@ func (c *effectiveTimeCore[S, E, N, D]) loadExceptions(
 func (c *effectiveTimeCore[S, E, N, D]) upcomingExceptions(
 	ctx context.Context,
 	studentID int64,
+	from calendar.Date,
 ) ([]E, error) {
-	rows, err := c.exceptions.FindUpcomingByStudentID(ctx, studentID, c.today())
+	rows, err := c.exceptions.FindUpcomingByStudentID(ctx, studentID, from)
 	if err != nil {
 		return nil, &careplan.ScheduleError{
 			Op:  c.operation("get upcoming student %s exceptions"),

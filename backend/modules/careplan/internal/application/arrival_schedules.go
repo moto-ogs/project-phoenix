@@ -28,22 +28,18 @@ type arrivalScheduleService struct {
 	today func() calendar.Date
 }
 
-// NewArrivalSchedules builds the arrival schedules deciding on today, the
-// Berlin calendar day when nil.
 func NewArrivalSchedules(schedules ports.ArrivalScheduleRepository, exceptions ports.EffectiveExceptionRepository[*careplan.ArrivalException],
-	notes ports.EffectiveNoteRepository[*careplan.ArrivalNote], baselines careplan.ArrivalBaselineReader, rules ports.ArrivalScheduleRules, tx ports.EffectiveTimeTransaction, students ports.ArrivalBulkStudents, classes ports.ArrivalClassPlans, classExceptions careplan.ClassArrivalExceptions, logger *slog.Logger,
-	today func() calendar.Date,
-) careplan.ArrivalScheduleService {
-	if today == nil {
-		today = calendar.TodayDate
-	}
+	notes ports.EffectiveNoteRepository[*careplan.ArrivalNote], baselines careplan.ArrivalBaselineReader, rules ports.ArrivalScheduleRules, tx ports.EffectiveTimeTransaction, students ports.ArrivalBulkStudents, classes ports.ArrivalClassPlans, classExceptions careplan.ClassArrivalExceptions, logger *slog.Logger, today func() calendar.Date) careplan.ArrivalScheduleService {
 	if classExceptions == nil {
 		classExceptions = NewClassArrivalExceptions(nil, nil, today)
+	}
+	if today == nil {
+		today = calendar.TodayDate
 	}
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &arrivalScheduleService{effectiveTimeCore: newEffectiveTimeCore(schedules, exceptions, notes, tx, ArrivalTimeDomain{}, today),
+	return &arrivalScheduleService{effectiveTimeCore: newEffectiveTimeCore(schedules, exceptions, notes, tx, ArrivalTimeDomain{}),
 		scheduleRepo: schedules, baselines: baselines, rules: rules, tx: tx, students: students, classes: classes, ClassArrivalExceptions: classExceptions, logger: logger, today: today}
 }
 
@@ -371,7 +367,7 @@ func (s *arrivalScheduleService) GetUpcomingStudentArrivalExceptions(
 	ctx context.Context,
 	studentID int64,
 ) ([]*careplan.ArrivalException, error) {
-	return s.upcomingExceptions(ctx, studentID)
+	return s.upcomingExceptions(ctx, studentID, s.today())
 }
 
 func (s *arrivalScheduleService) CreateStudentArrivalException(

@@ -19,12 +19,15 @@ func init() {
 // school older than three years (settings.SettingAuditRetentionYears, #4044),
 // on the database clock. audit.authorize_retention_tenant binds the school to
 // the transaction's tenant.
+// The window runs in UTC like the fixed windows of migration 1.15.606, so a
+// Berlin session's clock change cannot move the three-year cutoff (#7104).
 const repeatableConfigDeleteExpiredSettingAuditSQL = `CREATE OR REPLACE FUNCTION config.delete_expired_setting_audit(p_tenant_id BIGINT)
 	RETURNS BIGINT
 	LANGUAGE plpgsql
 	VOLATILE
 	SECURITY DEFINER
 	SET search_path = pg_catalog, config
+	SET TimeZone = 'UTC'
 	AS $$
 	DECLARE
 		deleted_count BIGINT;

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 )
@@ -20,7 +19,7 @@ func (s *StudentDocuments) QueueStudentDocumentFileCleanup(ctx context.Context, 
 		return fmt.Errorf("%w: cleanup file details are required", careplan.ErrStudentDocumentInvalid)
 	}
 	cleanup := careplan.CareDocumentCleanup{
-		OwnerID: studentID, FilenameStored: storedName, RetryAfter: time.Now().Add(studentDocumentCleanupDelay),
+		OwnerID: studentID, FilenameStored: storedName, RetryAfter: s.now().Add(studentDocumentCleanupDelay),
 	}
 	return s.transaction(ctx, func(txCtx context.Context) error {
 		_, err := s.records.QueueCareDocumentCleanup(txCtx, cleanup)

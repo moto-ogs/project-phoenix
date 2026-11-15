@@ -13,11 +13,12 @@ import (
 type ClassArrivalExceptions struct {
 	store    ports.ClassArrivalExceptionStore
 	students ports.ClassArrivalStudents
-	// today bounds the editable days; the Berlin calendar day when nil.
+	// today is the school day before which an exception lies in the past.
 	today func() calendar.Date
 }
 
-// A missing store preserves the optional endpoint's explicit not-configured error.
+// A missing store preserves the optional endpoint's explicit not-configured
+// error. A nil today is the real Berlin day.
 func NewClassArrivalExceptions(store ports.ClassArrivalExceptionStore, students ports.ClassArrivalStudents, today func() calendar.Date) *ClassArrivalExceptions {
 	if store != nil && students == nil {
 		panic("care plan: class arrival student directory is required")

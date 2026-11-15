@@ -19,12 +19,15 @@ func init() {
 // Träger of the calling transaction (app.current_org_id) older than three
 // years, on the database clock. The Träger transaction prunes through it
 // before each new entry.
+// The window runs in UTC like the fixed windows of migration 1.15.606, so a
+// Berlin session's clock change cannot move the three-year cutoff (#7104).
 const repeatablePlatformDeleteExpiredTraegerMasterDataAuditSQL = `CREATE OR REPLACE FUNCTION platform.delete_expired_traeger_master_data_audit(p_organization_id BIGINT)
 	RETURNS BIGINT
 	LANGUAGE plpgsql
 	VOLATILE
 	SECURITY DEFINER
 	SET search_path = pg_catalog, platform
+	SET TimeZone = 'UTC'
 	AS $$
 	DECLARE
 		current_organization_id BIGINT;
