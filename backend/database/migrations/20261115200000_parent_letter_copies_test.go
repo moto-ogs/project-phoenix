@@ -39,7 +39,7 @@ func TestParentLetterCopiesGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.NoError(t, err)
 	result := eraseSchoolAsCLI(t, db, school, beginErasure(t, db, school))
 	require.Equal(t, "db_done", result.Status)
-	assert.Equal(t, int64(1), result.RowCounts["users.parent_announcement_letter_copies"])
+	assert.EqualValues(t, 1, result.RowCounts["users.parent_announcement_letter_copies"], "the one copy of the school")
 
 	require.NoError(t, parentLetterCopiesDown(ctx, db))
 	assert.False(t, exists())

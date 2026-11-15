@@ -50,7 +50,10 @@ func (s *service) freezeLetterCopies(ctx context.Context, a *StaffParentAnnounce
 	if err := s.letters.Copies.ReplaceParentLetterCopies(ctx, tenantID, a.ID, copies); err != nil {
 		return fmt.Errorf("announcement: write letter copies: %w", err)
 	}
-	s.logger.Info("parent letter copies written", slog.Int64("announcement_id", a.ID), slog.Int("child_count", len(copies)))
+	s.logger.Info("parent letter copies written",
+		slog.Int64("announcement_id", a.ID),
+		slog.Int("child_count", len(copies)),
+	)
 	return nil
 }
 
