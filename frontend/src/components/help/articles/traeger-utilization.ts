@@ -56,6 +56,10 @@ export function traegerUtilizationTopic(): HelpTopic {
     image: "/help/screens/traeger-auslastung.webp",
     imageAlt:
       "Die Seite Auslastung: oben Zeitraum und Schule, darunter vier Kennzahlen und der Verlauf der belegten Plätze als Diagramm.",
-    related: [HELP_TOPICS.traegerOccupancy, HELP_TOPICS.traegerKeyDateCounts],
+    related: [
+      HELP_TOPICS.traegerOccupancy,
+      HELP_TOPICS.traegerKeyDateCounts,
+      HELP_TOPICS.traegerSchoolComparison,
+    ],
   };
 }
