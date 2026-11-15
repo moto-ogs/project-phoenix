@@ -4,7 +4,8 @@ import { HELP_TOPICS } from "~/lib/help-topics";
 /**
  * `/traeger/personal` (#4705, ADR 0089): eine Personalakte über alle
  * Schulen. Vorschläge prüfen und verknüpfen, Personalnummer und Bank- und
- * Steuerdaten pflegen, eine Akte auflösen. Nur mit der Rolle Personal und
+ * Steuerdaten pflegen, Personal aus einer Datei importieren (#4724), eine
+ * Akte auflösen. Nur mit der Rolle Personal und
  * nach der Freigabe „Personal beim Träger“.
  */
 export function traegerStaffRecordsTopic(): HelpTopic {
@@ -44,6 +45,20 @@ export function traegerStaffRecordsTopic(): HelpTopic {
         ],
       },
       {
+        title: "Personal aus einer Datei importieren",
+        description:
+          "Für den Start mit moto: Sie übernehmen Ihr Personal aus dem Lohnprogramm oder aus einer Liste. moto erkennt jede Person an der Personalnummer.",
+        steps: [
+          "Speichern Sie Ihr Personal als CSV-Datei. Eine Zeile je Person, Überschriften in der ersten Zeile. Pflicht sind Personalnummer, Vorname und Nachname. Eine Vorlage bekommen Sie mit `Beispieldatei`.",
+          "Wählen Sie in der Navigation `Personalakten` und oben `Personal importieren`.",
+          "Wählen Sie bei `Datei wählen` Ihre Datei.",
+          "Prüfen Sie bei `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt.",
+          "Prüfen Sie bei `Prüfen und übernehmen` jede Zeile. `Zu prüfen` zeigt, warum eine Zeile draußen bleibt.",
+          "Wählen Sie unten den grünen Knopf, zum Beispiel `7 Zeilen übernehmen`.",
+          "Öffnen Sie danach den Reiter `Vorschläge`. Verknüpfen Sie jede neue Akte mit dem Personal der Schulen.",
+        ],
+      },
+      {
         title: "Personalnummer eintragen",
         steps: [
           "Öffnen Sie die Akte im Reiter `Akten`.",
@@ -74,6 +89,9 @@ export function traegerStaffRecordsTopic(): HelpTopic {
     result:
       "Die Akte gilt für alle Schulen der Person. Jede Schule sieht die Personalnummer des Trägers und kann sie nicht mehr ändern. Die Bank- und Steuerdaten ziehen von den Schulen in die Akte. Die Schulen sehen nur noch: „führt der Träger“. Planung, Zeiten und Abwesenheiten bleiben an jeder Schule wie bisher. Vertrag und Soll tragen Sie danach in der Akte ein.",
     notes: [
+      "Sie können dieselbe Datei noch einmal laden. Eine neue Personalnummer wird eine neue Akte. Bei einer bekannten Nummer trägt moto nur fehlende IBAN, Steuer-ID oder SV-Nummer ein. Bestehende Werte ändert der Import nie.",
+      "Der Import verknüpft keine Akte von selbst mit einer Schule. Das bestätigen Sie unter `Vorschläge`.",
+      "moto bewahrt die Datei nicht auf. Im `Verlauf` jeder Akte stehen Dateiname und Zeile. `Bisherige Importe` zeigt, wer wann welche Datei übernommen hat.",
       "Ein Wert, den Sie beim Verknüpfen nicht wählen, bleibt mit seiner Schule im `Verlauf` der Akte.",
       "Jede Schule sieht weiter nur ihr eigenes Personal. Sie sieht keine Akte und keine anderen Schulen.",
       "Jedes Anzeigen der Bank- und Steuerdaten steht im Zugriffsprotokoll jeder Schule der Person.",
@@ -85,6 +103,9 @@ export function traegerStaffRecordsTopic(): HelpTopic {
       "Sie sehen `Personalakten` nicht in der Navigation: Ihnen fehlt die Rolle `Personal`.",
     ],
     troubleshootingDetails: [
+      "Eine Zeile steht bei `Zu prüfen` mit „Passt nicht“: Name, Geburtsdatum oder ein Bankwert weicht von der Akte mit dieser Personalnummer ab. Prüfen Sie die Nummer in der Datei. moto übernimmt die Zeile nicht, damit keine Daten bei der falschen Person landen.",
+      "„Die Personalnummer steht mehrmals in der Datei“: Lassen Sie jede Nummer nur einmal stehen und laden Sie die Datei noch einmal.",
+      "„Seit der Vorschau hat sich etwas an den Personalakten geändert“: Jemand hat gerade eine Akte geändert. Prüfen Sie die Vorschau und übernehmen Sie noch einmal.",
       "„Diese Personalnummer ist schon vergeben“: Eine andere Akte oder eine andere Person an einer der Schulen hat die Nummer. Ändern Sie zuerst die andere Nummer.",
       "„Eine dieser Personen hat schon eine Personalakte“: Laden Sie die Seite neu. Vielleicht hat jemand den Vorschlag gerade verknüpft.",
     ],

@@ -47,6 +47,12 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 		return errors.New("traeger staff records: the Personalstamm serves no Nachweise")
 	}
 	root.Mount("/traeger/staff-proofs", traegerstaff.NewProofsResource(proofs, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
+	// The Personal-Import fills the same records from a file (#4724).
+	imports, ok := records.(workforce.TraegerStaffImports)
+	if !ok {
+		return errors.New("traeger staff records: the Personalstamm serves no Personal-Import")
+	}
+	root.Mount("/traeger/staff-record-imports", traegerstaff.NewImportsResource(imports, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
 	// The Träger's Abwesenheitsarten and Kontingente (#4710).
 	root.Mount("/traeger/absence-types", traegerstaff.NewAbsenceTypesResource(absences, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
 	return nil
