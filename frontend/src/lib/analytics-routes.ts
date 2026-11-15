@@ -13,6 +13,12 @@
  * serve `/parents/*` and `/school/*` without that prefix.
  */
 
+import {
+  createRouteTemplateMatcher,
+  pathBelow,
+  type RouteTemplateMatcher,
+} from "./route-templates";
+
 /** Authenticated OGS pages under `app/[tenant]/(protected)`. */
 export const TRACKED_TENANT_ROUTE_TEMPLATES = [
   "/absences",
@@ -310,60 +316,28 @@ export type AnalyticsRouteSurface =
 /** Path of every page without a template; never the raw browser path. */
 export const UNKNOWN_ANALYTICS_PATH = "/unknown";
 
-interface RouteMatcher {
-  readonly template: string;
-  readonly pattern: RegExp;
-}
-
-function segmentPattern(segment: string): string {
-  if (segment.startsWith(":")) {
-    return segment.endsWith("*") ? "[^/]+(?:/[^/]+)*" : "[^/]+";
-  }
-  return segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-// Static templates win over dynamic ones: /rooms/unterwegs before /rooms/:id.
-function buildMatchers(templates: readonly string[]): RouteMatcher[] {
-  return [...templates]
-    .sort((left, right) => left.split(":").length - right.split(":").length)
-    .map((template) => ({
-      template,
-      pattern: new RegExp(
-        `^${template.split("/").map(segmentPattern).join("/")}$`,
-      ),
-    }));
-}
-
 const matchersBySurface: Readonly<
-  Record<AnalyticsRouteSurface, readonly RouteMatcher[]>
+  Record<AnalyticsRouteSurface, RouteTemplateMatcher>
 > = {
-  ogs: buildMatchers([
+  ogs: createRouteTemplateMatcher([
     ...TRACKED_TENANT_ROUTE_TEMPLATES,
     ...TRACKED_TENANT_PUBLIC_ROUTE_TEMPLATES,
   ]),
-  parents: buildMatchers(TRACKED_PARENT_ROUTE_TEMPLATES),
-  school: buildMatchers(TRACKED_SCHOOL_ROUTE_TEMPLATES),
-  caterer: buildMatchers(TRACKED_CATERER_ROUTE_TEMPLATES),
-  traeger: buildMatchers(TRACKED_TRAEGER_ROUTE_TEMPLATES),
-  public: buildMatchers(TRACKED_PUBLIC_ROUTE_TEMPLATES),
+  parents: createRouteTemplateMatcher(TRACKED_PARENT_ROUTE_TEMPLATES),
+  school: createRouteTemplateMatcher(TRACKED_SCHOOL_ROUTE_TEMPLATES),
+  caterer: createRouteTemplateMatcher(TRACKED_CATERER_ROUTE_TEMPLATES),
+  traeger: createRouteTemplateMatcher(TRACKED_TRAEGER_ROUTE_TEMPLATES),
+  public: createRouteTemplateMatcher(TRACKED_PUBLIC_ROUTE_TEMPLATES),
 };
 
 function matchTemplate(
   surface: AnalyticsRouteSurface,
   pathname: string,
 ): string | null {
-  return (
-    matchersBySurface[surface].find(({ pattern }) => pattern.test(pathname))
-      ?.template ?? null
-  );
+  return matchersBySurface[surface](pathname);
 }
 
-function withoutPrefix(pathname: string, prefix: string): string | null {
-  if (pathname === prefix) return "/";
-  return pathname.startsWith(`${prefix}/`)
-    ? pathname.slice(prefix.length)
-    : null;
-}
+const withoutPrefix = pathBelow;
 
 function resolveOnSurface(
   surface: AnalyticsRouteSurface,

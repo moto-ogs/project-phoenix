@@ -1,0 +1,40 @@
+{
+  "portals": {
+    "parents": "Родители",
+    "ogs": "OGS"
+  },
+  "pages": {
+    "start": "Главная",
+    "guardianInvite": "Приглашение для родителя",
+    "enrollmentStart": "Новая заявка",
+    "enrollmentForm": "Форма заявки",
+    "enrollmentPreview": "Предпросмотр формы заявки",
+    "enrollmentStatus": "Статус заявки",
+    "enrollmentAdjust": "Изменить заявку",
+    "enrollmentEdit": "Редактировать заявку",
+    "enrollmentSubmitted": "Заявка отправлена",
+    "calendar": "Календарь",
+    "children": "Дети",
+    "childProfile": "Профиль ребенка",
+    "conference": "День консультаций",
+    "demo": "Демо",
+    "documents": "Документы",
+    "contractEnd": "Расторгнуть или отозвать договор",
+    "contract": "Договор об уходе",
+    "holidayRegistration": "Заявка на каникулы",
+    "holidayRegistrationStatus": "Статус заявки на каникулы",
+    "holidayRegistrations": "Заявки на каникулы",
+    "holidayAccount": "Создать родительский аккаунт",
+    "invite": "Принять приглашение",
+    "login": "Вход",
+    "mealPlan": "Обед",
+    "messages": "Сообщения",
+    "conversation": "Переписка",
+    "groupMessage": "Групповое сообщение",
+    "news": "Письма родителям",
+    "declarationProof": "Подтверждение заявления",
+    "resetPassword": "Сброс пароля",
+    "settings": "Настройки",
+    "contractSign": "Подписать договор"
+  }
+}

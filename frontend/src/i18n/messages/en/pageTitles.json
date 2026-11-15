@@ -1,0 +1,40 @@
+{
+  "portals": {
+    "parents": "Parents",
+    "ogs": "OGS"
+  },
+  "pages": {
+    "start": "Home",
+    "guardianInvite": "Invitation as a parent",
+    "enrollmentStart": "New enrollment",
+    "enrollmentForm": "Enrollment form",
+    "enrollmentPreview": "Enrollment form preview",
+    "enrollmentStatus": "Enrollment status",
+    "enrollmentAdjust": "Adjust enrollment",
+    "enrollmentEdit": "Edit enrollment",
+    "enrollmentSubmitted": "Enrollment sent",
+    "calendar": "Calendar",
+    "children": "Children",
+    "childProfile": "Child profile",
+    "conference": "Parent-teacher day",
+    "demo": "Demo",
+    "documents": "Documents",
+    "contractEnd": "Cancel or withdraw contract",
+    "contract": "Care contract",
+    "holidayRegistration": "Holiday registration",
+    "holidayRegistrationStatus": "Holiday registration status",
+    "holidayRegistrations": "Holiday registrations",
+    "holidayAccount": "Set up parent account",
+    "invite": "Accept invitation",
+    "login": "Sign in",
+    "mealPlan": "Lunch",
+    "messages": "Messages",
+    "conversation": "Conversation",
+    "groupMessage": "Group message",
+    "news": "Letters to parents",
+    "declarationProof": "Proof of declaration",
+    "resetPassword": "Reset password",
+    "settings": "Settings",
+    "contractSign": "Sign contract"
+  }
+}

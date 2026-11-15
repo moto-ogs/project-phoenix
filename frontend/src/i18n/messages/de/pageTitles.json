@@ -1,0 +1,40 @@
+{
+  "portals": {
+    "parents": "Eltern",
+    "ogs": "OGS"
+  },
+  "pages": {
+    "start": "Start",
+    "guardianInvite": "Einladung als Elternteil",
+    "enrollmentStart": "Neue Anmeldung",
+    "enrollmentForm": "Anmeldeformular",
+    "enrollmentPreview": "Vorschau des Anmeldeformulars",
+    "enrollmentStatus": "Stand der Anmeldung",
+    "enrollmentAdjust": "Anmeldung anpassen",
+    "enrollmentEdit": "Anmeldung bearbeiten",
+    "enrollmentSubmitted": "Anmeldung gesendet",
+    "calendar": "Kalender",
+    "children": "Kinder",
+    "childProfile": "Kinderprofil",
+    "conference": "Elternsprechtag",
+    "demo": "Demo",
+    "documents": "Dokumente",
+    "contractEnd": "Vertrag kündigen oder widerrufen",
+    "contract": "Betreuungsvertrag",
+    "holidayRegistration": "Ferienanmeldung",
+    "holidayRegistrationStatus": "Stand der Ferienanmeldung",
+    "holidayRegistrations": "Ferienanmeldungen",
+    "holidayAccount": "Elternkonto einrichten",
+    "invite": "Einladung annehmen",
+    "login": "Anmelden",
+    "mealPlan": "Mittagessen",
+    "messages": "Nachrichten",
+    "conversation": "Unterhaltung",
+    "groupMessage": "Gruppennachricht",
+    "news": "Elternbriefe",
+    "declarationProof": "Nachweis der Erklärung",
+    "resetPassword": "Passwort zurücksetzen",
+    "settings": "Einstellungen",
+    "contractSign": "Vertrag unterschreiben"
+  }
+}

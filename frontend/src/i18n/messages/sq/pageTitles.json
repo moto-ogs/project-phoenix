@@ -1,0 +1,40 @@
+{
+  "portals": {
+    "parents": "Prindërit",
+    "ogs": "OGS"
+  },
+  "pages": {
+    "start": "Fillimi",
+    "guardianInvite": "Ftesë si prind",
+    "enrollmentStart": "Regjistrim i ri",
+    "enrollmentForm": "Formulari i regjistrimit",
+    "enrollmentPreview": "Pamje paraprake e formularit",
+    "enrollmentStatus": "Gjendja e regjistrimit",
+    "enrollmentAdjust": "Përshtat regjistrimin",
+    "enrollmentEdit": "Ndrysho regjistrimin",
+    "enrollmentSubmitted": "Regjistrimi u dërgua",
+    "calendar": "Kalendari",
+    "children": "Fëmijët",
+    "childProfile": "Profili i fëmijës",
+    "conference": "Dita e takimeve me prindërit",
+    "demo": "Demo",
+    "documents": "Dokumentet",
+    "contractEnd": "Anulo ose tërhiq kontratën",
+    "contract": "Kontrata e kujdesit",
+    "holidayRegistration": "Regjistrimi për pushimet",
+    "holidayRegistrationStatus": "Gjendja e regjistrimit për pushimet",
+    "holidayRegistrations": "Regjistrimet për pushimet",
+    "holidayAccount": "Krijo llogarinë e prindit",
+    "invite": "Prano ftesën",
+    "login": "Hyr",
+    "mealPlan": "Dreka",
+    "messages": "Mesazhe",
+    "conversation": "Biseda",
+    "groupMessage": "Mesazh grupi",
+    "news": "Letra për prindërit",
+    "declarationProof": "Dëshmia e deklaratës",
+    "resetPassword": "Rivendos fjalëkalimin",
+    "settings": "Cilësimet",
+    "contractSign": "Nënshkruaj kontratën"
+  }
+}

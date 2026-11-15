@@ -1,0 +1,40 @@
+{
+  "portals": {
+    "parents": "Rodzice",
+    "ogs": "OGS"
+  },
+  "pages": {
+    "start": "Strona główna",
+    "guardianInvite": "Zaproszenie dla rodzica",
+    "enrollmentStart": "Nowy zapis",
+    "enrollmentForm": "Formularz zapisu",
+    "enrollmentPreview": "Podgląd formularza zapisu",
+    "enrollmentStatus": "Status zapisu",
+    "enrollmentAdjust": "Dostosuj zapis",
+    "enrollmentEdit": "Edytuj zapis",
+    "enrollmentSubmitted": "Zapis wysłany",
+    "calendar": "Kalendarz",
+    "children": "Dzieci",
+    "childProfile": "Profil dziecka",
+    "conference": "Dzień konsultacji",
+    "demo": "Demo",
+    "documents": "Dokumenty",
+    "contractEnd": "Wypowiedz lub odwołaj umowę",
+    "contract": "Umowa o opiekę",
+    "holidayRegistration": "Zgłoszenie na ferie",
+    "holidayRegistrationStatus": "Status zgłoszenia na ferie",
+    "holidayRegistrations": "Zgłoszenia na ferie",
+    "holidayAccount": "Załóż konto rodzica",
+    "invite": "Przyjmij zaproszenie",
+    "login": "Zaloguj się",
+    "mealPlan": "Obiad",
+    "messages": "Wiadomości",
+    "conversation": "Rozmowa",
+    "groupMessage": "Wiadomość grupowa",
+    "news": "Listy do rodziców",
+    "declarationProof": "Potwierdzenie oświadczenia",
+    "resetPassword": "Resetuj hasło",
+    "settings": "Ustawienia",
+    "contractSign": "Podpisz umowę"
+  }
+}

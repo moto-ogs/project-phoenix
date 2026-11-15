@@ -15,10 +15,12 @@ import { PushNotificationSection } from "~/components/settings/push-notification
 import { SchoolAnalyticsConsentSection } from "~/components/settings/analytics-consent-section";
 import { TrustedDevicesSection } from "~/components/settings/trusted-devices-section";
 import { TenantPage } from "~/components/ui/tenant-page";
+import { usePageTitleSection } from "~/components/ui/page-title-section";
 import { activeSchoolSettingsSection } from "~/components/school/shell/school-nav-items";
 
 function SchoolSettingsContent() {
   const section = activeSchoolSettingsSection(useSearchParams().get("tab"));
+  usePageTitleSection(section.label);
   return (
     <TenantPage title={section.label}>
       {section.key === "notifications" && (

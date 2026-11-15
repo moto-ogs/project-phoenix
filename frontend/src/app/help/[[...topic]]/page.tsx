@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import {
+  getHelpTopics,
+  HELP_GROUP_LABELS,
+  HELP_GROUPS,
+} from "~/components/help/help-content";
 import { HelpView } from "~/components/help/help-view";
+import { formatPageTitle } from "~/lib/page-titles";
 
 // Optionaler Catch-all: `/help` zeigt den Einstieg, `/help/<thema>` eine
 // Anleitung, `/help/gruppe/<id>` eine Oberkategorie. Die Adressen sind flach,
@@ -10,11 +16,39 @@ import { HelpView } from "~/components/help/help-view";
 // Die statische Druckseite `/help/nfc/erste-schritte` liegt daneben und
 // gewinnt gegen diesen Catch-all, weil Next.js konkrete Segmente zuerst
 // prueft.
-export const metadata: Metadata = {
-  title: "moto Hilfe",
-  description:
-    "Anleitungen für moto: für Betreuungskräfte, die Leitung, Eltern und Lehrkräfte.",
-};
+const DESCRIPTION =
+  "Anleitungen für moto: für Betreuungskräfte, die Leitung, Eltern und Lehrkräfte.";
+
+/** Name of the article or category the address shows (#7109). */
+function helpPageName(topic: readonly string[] | undefined): string | null {
+  const [first, second] = topic ?? [];
+  if (first === undefined) return null;
+  if (first === "gruppe") {
+    const group = HELP_GROUPS.find((id) => id === second);
+    return group ? HELP_GROUP_LABELS[group] : null;
+  }
+  // Article titles do not depend on the settings variant; "unknown" matches
+  // a link without settings parameters.
+  return (
+    getHelpTopics("unknown", "unknown", null).find((item) => item.id === first)
+      ?.title ?? null
+  );
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ topic?: string[] }>;
+}): Promise<Metadata> {
+  const { topic } = await params;
+  const name = helpPageName(topic);
+  return {
+    title: name
+      ? formatPageTitle({ page: name, portal: "Hilfe" })
+      : formatPageTitle({ page: "Hilfe" }),
+    description: DESCRIPTION,
+  };
+}
 
 export default function HelpPage() {
   return (

@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import RootLayout, { generateMetadata, viewport } from "./layout";
 
 const headerState = vi.hoisted(() => ({
@@ -21,6 +21,12 @@ vi.mock("next/headers", () => ({
     }),
 }));
 
+const navigationState = vi.hoisted(() => ({ pathname: "/" }));
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => navigationState.pathname,
+}));
+
 // Mock child components
 vi.mock("./providers", () => ({
   Providers: ({ children }: { children: React.ReactNode }) => (
@@ -37,9 +43,12 @@ vi.mock("~/components/background-wrapper", () => ({
 describe("RootLayout", () => {
   beforeEach(() => {
     headerState.host = "moto-app.de";
+    navigationState.pathname = "/";
     vi.stubEnv("NEXT_PUBLIC_OPERATOR_HOSTNAME", "operator.moto-app.de");
     vi.stubEnv("NEXT_PUBLIC_PARENTS_HOSTNAME", "eltern.moto-app.de");
     vi.stubEnv("NEXT_PUBLIC_SCHOOL_HOSTNAME", "schule.moto-app.de");
+    vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", "traeger.moto-app.de");
+    vi.stubEnv("NEXT_PUBLIC_CATERER_HOSTNAME", "caterer.moto-app.de");
     vi.stubEnv("TENANT_DOMAIN", "moto-app.de");
   });
 
@@ -65,11 +74,25 @@ describe("RootLayout", () => {
     expect(getByTestId("background-wrapper")).toBeInTheDocument();
   });
 
+  // #7109: the title names the page and the portal of the host.
+  it("renders the title of the current page", async () => {
+    headerState.host = "schule.moto-app.de";
+    navigationState.pathname = "/kalender";
+
+    render(await RootLayout({ children: <div>Test</div> }));
+
+    await waitFor(() =>
+      expect(document.title).toBe("Kalender – Schule – moto"),
+    );
+  });
+
   describe("metadata", () => {
-    it("has correct title", async () => {
+    // #7109: every page names itself through RouteTitle; a shared title
+    // here would give 100 pages the same tab name again.
+    it("sets no shared title", async () => {
       const metadata = await generateMetadata();
 
-      expect(metadata.title).toBe("moto – Digitale Ganztagsbetreuung");
+      expect(metadata).not.toHaveProperty("title");
     });
 
     it("has correct description", async () => {
@@ -108,7 +131,7 @@ describe("RootLayout", () => {
 
       const metadata = await generateMetadata();
 
-      expect(metadata.title).toBe("moto Eltern");
+      expect(metadata).not.toHaveProperty("title");
       expect(metadata.description).toContain("Betreuung Ihres Kindes");
     });
 

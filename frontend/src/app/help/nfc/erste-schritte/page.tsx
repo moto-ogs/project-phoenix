@@ -57,7 +57,7 @@ const hints = [
 ] as const;
 
 export const metadata = {
-  title: "moto NFC-Tablet: Erste Schritte",
+  title: "NFC-Tablet: Erste Schritte – Hilfe – moto",
   description:
     "Onepager für den Versandkarton: erste Schritte für das moto NFC-Tablet.",
 };
