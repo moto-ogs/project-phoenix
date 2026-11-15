@@ -234,9 +234,13 @@ jobs:
       - name: Start Chromium install for Storybook tests
         working-directory: frontend
         run: |
-          (pnpm exec playwright install --with-deps --only-shell chromium \
-            > "$RUNNER_TEMP/chromium-install.log" 2>&1
-           echo $? > "$RUNNER_TEMP/chromium-install.exit") &
+          (if pnpm exec playwright install --with-deps --only-shell chromium \
+              > "$RUNNER_TEMP/chromium-install.log" 2>&1; then
+             status=0
+           else
+             status=$?
+           fi
+           echo "$status" > "$RUNNER_TEMP/chromium-install.exit") &
 
       - name: Frontend quality (shared with pre-push)
         run: bash scripts/check-quality.sh frontend

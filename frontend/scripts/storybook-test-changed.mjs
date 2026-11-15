@@ -5,7 +5,10 @@
 // nightly), bei einer globalen Eingabe aller Stories oder wenn die Auswahl
 // scheitert, läuft alles: die Auswahl schlägt offen fehl.
 import { spawnSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { dirname, relative, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import ts from "typescript";
 
 // Was alle Stories betrifft, ohne dass eine es importiert: Storybook-
 // Konfiguration und die Provider aus .storybook/preview.tsx, globale Styles
@@ -22,16 +25,88 @@ const GLOBAL_INPUTS = [
   /^scripts\/storybook-test-changed\.mjs$/,
   /^\.storybook\//,
   /^src\/styles\//,
-  /^src\/app\/providers\.tsx$/,
-  /^src\/lib\/tenant-context\.tsx$/,
+  /^src\/fonts\//,
   /^postcss\.config\.mjs$/,
   /^tsconfig\.json$/,
   /^public\//,
 ];
 
+const frontend = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+let previewInputs;
+
+// Nicht nur die Provider selbst, sondern auch ihre lokalen Importe wirken
+// auf jede Story. TypeScripts Resolver berücksichtigt die tsconfig-Aliase.
+function globalPreviewInputs() {
+  const config = ts.readConfigFile(
+    resolve(frontend, "tsconfig.json"),
+    ts.sys.readFile,
+  );
+  if (config.error) throw new Error("tsconfig.json nicht lesbar");
+  const { options, errors } = ts.parseJsonConfigFileContent(
+    config.config,
+    ts.sys,
+    frontend,
+  );
+  if (errors.length) throw new Error("tsconfig.json nicht auswertbar");
+  const inputs = new Set();
+  function visit(file) {
+    const path = relative(frontend, file).split("\\").join("/");
+    // Bewusste Ausnahme für Texte, siehe oben.
+    if (inputs.has(path) || path.startsWith("src/i18n/messages/")) return;
+    inputs.add(path);
+    const source = /\.(css|[cm]?[jt]sx?)$/.test(file)
+      ? readFileSync(file, "utf8")
+      : "";
+    const imports = file.endsWith(".css")
+      ? [
+          ...source.matchAll(/(?:@import\s+["']|url\(\s*["']?)([^"'\s)]+)/g),
+        ].map((match) => match[1])
+      : ts
+          .preProcessFile(source, true, true)
+          .importedFiles.map((imported) => imported.fileName);
+    for (const fileName of imports) {
+      if (!/^(\.|~\/|@\/|~storybook\/)/.test(fileName)) continue;
+      // CSS und Schriftdateien löst TypeScript nicht als Module auf.
+      const asset = fileName.startsWith(".")
+        ? resolve(dirname(file), fileName)
+        : resolve(
+            frontend,
+            fileName
+              .replace(/^(~|@)\//, "src/")
+              .replace(/^~storybook\//, ".storybook/"),
+          );
+      if (existsSync(asset) && statSync(asset).isFile()) {
+        visit(asset);
+        continue;
+      }
+      const { resolvedModule } = ts.resolveModuleName(
+        fileName,
+        file,
+        options,
+        ts.sys,
+      );
+      if (!resolvedModule)
+        throw new Error(`Import nicht auflösbar: ${fileName} in ${path}`);
+      visit(resolvedModule.resolvedFileName);
+    }
+  }
+  visit(resolve(frontend, ".storybook/preview.tsx"));
+  return inputs;
+}
+
 /** Pfade relativ zu frontend/. */
 export function needsFullRun(changed) {
-  return changed.some((path) => GLOBAL_INPUTS.some((re) => re.test(path)));
+  if (changed.some((path) => GLOBAL_INPUTS.some((re) => re.test(path))))
+    return true;
+  try {
+    previewInputs ??= globalPreviewInputs();
+    return changed.some((path) => previewInputs.has(path));
+  } catch (error) {
+    console.log(
+      `Preview-Importgraph nicht auswertbar (${error.message}): alle Stories.`,
+    );
+    return true;
+  }
 }
 
 const config = ["-c", "vitest.storybook.config.ts"];
