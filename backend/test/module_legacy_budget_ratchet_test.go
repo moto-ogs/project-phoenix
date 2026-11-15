@@ -306,7 +306,7 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0232: the import of existing contracts of modules/carecontract/compose
 // (+6) and its debtor numbers of modules/parentbilling/compose (+5).
 // ADR 0234: the note search of modules/peopledirectory/compose (+2).
-const moduleComposeBudgetTotal = 13490
+const moduleComposeBudgetTotal = 13488
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -371,7 +371,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0215: NewTraegerPhases (+4) and NewOfferingSelectionReferences (+4),
 	// less shortened comments and a merged file (-6).
 	// ADR 0231: the registration answers constructor (+5).
-	"modules/enrollment/compose": 640,
+	"modules/enrollment/compose": 639,
 	// ADR 0218: the Träger scope and the recipient rekey (+33).
 	"modules/exporttransfer/compose":               182,
 	"modules/facilities/compose":                   184,
@@ -467,7 +467,7 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0128: the student template days constructor (+5), by
 	// ADR 0144: the vacation hint constructor (+6) and by ADR 0224: the cohort
 	// rosters constructor (+5).
-	"modules/timetable/compose":                     1151,
+	"modules/timetable/compose":                     1150,
 	"modules/timetableblockdisplay/compose":         9,
 	"modules/timetableenrollmentprovenance/compose": 10,
 	"modules/timetableprojection/compose":           7,

@@ -45,14 +45,19 @@ type OfferingCapacity struct {
 	offerings       CapacityOfferings
 	peaks           CapacityPeaks
 	waitlistEnabled func(context.Context) (bool, error)
+	today           func() calendar.Date
 }
 
 var _ enrollmentNative.OfferingCapacity = (*OfferingCapacity)(nil)
 
 // NewOfferingCapacity composes the gate. A nil waitlistEnabled fails a
 // waitlist-mode phase with a configuration error; nil peaks disable the gate.
-func NewOfferingCapacity(offerings CapacityOfferings, peaks CapacityPeaks, waitlistEnabled func(context.Context) (bool, error)) *OfferingCapacity {
-	return &OfferingCapacity{offerings: offerings, peaks: peaks, waitlistEnabled: waitlistEnabled}
+// today starts the phase's remaining capacity window; nil reads the real day.
+func NewOfferingCapacity(offerings CapacityOfferings, peaks CapacityPeaks, waitlistEnabled func(context.Context) (bool, error), today func() calendar.Date) *OfferingCapacity {
+	if today == nil {
+		today = calendar.TodayDate
+	}
+	return &OfferingCapacity{offerings: offerings, peaks: peaks, waitlistEnabled: waitlistEnabled, today: today}
 }
 
 // ApplyCapacityOverflow runs the gate and maps each over-capacity child's
@@ -63,10 +68,11 @@ func (c *OfferingCapacity) ApplyCapacityOverflow(ctx context.Context, check enro
 		return overrides, nil
 	}
 	phase := check.Phase
+	today := c.today()
 	// Historical manual approvals and late invites can legitimately target a
 	// completed care period. They create no present or future capacity claim,
 	// so querying from today through the already-ended phase would be empty.
-	if calendar.Date(phase.ServiceEndDate).Before(calendar.TodayDate()) {
+	if calendar.Date(phase.ServiceEndDate).Before(today) {
 		return overrides, nil
 	}
 	// Serialize this count with offering-change approvals and other
@@ -83,7 +89,7 @@ func (c *OfferingCapacity) ApplyCapacityOverflow(ctx context.Context, check enro
 	if err != nil {
 		return nil, err
 	}
-	run := newCapacityRun(ctx, c.peaks, phase, openByID, check)
+	run := newCapacityRun(ctx, c.peaks, phase, openByID, check, today)
 	return run.apply(mode, overrides)
 }
 
@@ -183,10 +189,10 @@ type capacityRun struct {
 	preservedRemaining map[int64]int
 }
 
-func newCapacityRun(ctx context.Context, peaks CapacityPeaks, phase *enrollmentNative.Phase, openByID map[int64]*offeringContract.CareOfferingRecord, check enrollmentNative.CapacityCheck) *capacityRun {
+func newCapacityRun(ctx context.Context, peaks CapacityPeaks, phase *enrollmentNative.Phase, openByID map[int64]*offeringContract.CareOfferingRecord, check enrollmentNative.CapacityCheck, today calendar.Date) *capacityRun {
 	// The phase's remaining capacity window; every claim interval is
 	// clamped into it before counting.
-	capacityFrom := calendar.TodayDate()
+	capacityFrom := today
 	if calendar.Date(phase.ServiceStartDate).After(capacityFrom) {
 		capacityFrom = calendar.Date(phase.ServiceStartDate)
 	}

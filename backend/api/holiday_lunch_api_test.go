@@ -64,9 +64,9 @@ func lunchWeeks(office traegerOffice, lunchPrice any) []map[string]any {
 	return []map[string]any{
 		{"starts_on": dayMonday, "ends_on": dayFriday, "host_school_id": office.schools[0], "booking_unit": "day",
 			"lunch_price_cents": lunchPrice, "time_models": model(1500)},
-		{"starts_on": "2027-01-11", "ends_on": "2027-01-15", "host_school_id": office.schools[0],
+		{"starts_on": "2099-01-12", "ends_on": "2099-01-16", "host_school_id": office.schools[0],
 			"lunch_price_cents": lunchPrice, "time_models": model(4500)},
-		{"starts_on": "2027-01-18", "ends_on": "2027-01-22", "host_school_id": office.schools[0], "time_models": model(4500)},
+		{"starts_on": "2099-01-19", "ends_on": "2099-01-23", "host_school_id": office.schools[0], "time_models": model(4500)},
 	}
 }
 
@@ -75,7 +75,7 @@ func newLunchFixture(t *testing.T, name string) lunchFixture {
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, name, identityaccess.TraegerRoleAdministration)
 	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, "/traeger/holiday-periods/", map[string]any{
-		"name": "Winterferien 2027", "registration_opens_on": "2020-01-01", "registration_closes_on": "2099-12-31",
+		"name": "Winterferien 2099", "registration_opens_on": "2020-01-01", "registration_closes_on": "2099-12-31",
 		"binding": true, "notes": "", "weeks": lunchWeeks(office, 430),
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -224,7 +224,7 @@ func TestHolidayLunchOfferStaysWhileBookedAndAFrozenPriceHolds(t *testing.T) {
 			weeks[i]["time_models"].([]map[string]any)[0]["id"] = l.lunch.Weeks[i].TimeModels[0].ID
 		}
 		return traegerJSON(t, l.traeger, l.office.token, http.MethodPut, holidayPeriodPath(l.period.ID), map[string]any{
-			"name": "Winterferien 2027", "registration_opens_on": "2020-01-01", "registration_closes_on": "2099-12-31",
+			"name": "Winterferien 2099", "registration_opens_on": "2020-01-01", "registration_closes_on": "2099-12-31",
 			"binding": true, "notes": "", "weeks": weeks,
 		})
 	}
@@ -328,7 +328,7 @@ func TestHolidayLunchShowsOnTheParticipantListOfTheHostingSchool(t *testing.T) {
 	}
 
 	today := &atomic.Value{}
-	today.Store(calendar.NewDate(2027, 1, 1))
+	today.Store(calendar.NewDate(2099, 1, 2))
 	host := holidayHostFixture{holidayRegistrationFixture: l.holidayRegistrationFixture}
 	router := newHolidayHostRouter(t, l.holidayRegistrationFixture, today)
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/holiday-weeks/%d/participants", l.lunch.Weeks[0].ID), nil)
@@ -366,7 +366,7 @@ func TestHolidayLunchShowsOnTheParticipantListOfTheHostingSchool(t *testing.T) {
 	// The school closes the Wednesday: nobody eats then, so the list the
 	// school orders from no longer names the day.
 	closed := newHolidayHostRouter(t, l.holidayRegistrationFixture, today, owners.HolidayTestSchoolCalendar{
-		{Date: calendar.NewDate(2027, 1, 6), Kind: enrollment.HolidayNoCareClosingDay, Name: "Betriebsausflug"},
+		{Date: calendar.NewDate(2099, 1, 7), Kind: enrollment.HolidayNoCareClosingDay, Name: "Betriebsausflug"},
 	})
 	rec = httptest.NewRecorder()
 	closed.ServeHTTP(rec, req.Clone(t.Context()))
@@ -402,7 +402,7 @@ func TestHolidayLunchCountsNoLunchOnADayWithoutCare(t *testing.T) {
 	assert.Equal(t, int64(4500+2150), read(l.traeger).TotalCents, "five care days, five lunches")
 
 	closed := parentBillingCalendarRouter(t, l.review, owners.HolidayTestSchoolCalendar{
-		{Date: calendar.NewDate(2027, 1, 13), Kind: enrollment.HolidayNoCareClosingDay, Name: "Betriebsausflug"},
+		{Date: calendar.NewDate(2099, 1, 14), Kind: enrollment.HolidayNoCareClosingDay, Name: "Betriebsausflug"},
 	})
 	rec := publicJSON(t, closed, http.MethodPost, holidayQuotePath(l.period.PublicToken), map[string]any{
 		"children": []map[string]any{{"bookings": []map[string]any{l.booking(1, true)}}},
@@ -429,7 +429,7 @@ func TestHolidayFrozenLunchSurvivesAClosingDayAndRebooking(t *testing.T) {
 	assert.Equal(t, int64(1500+430), l.confirm(t, receipt.ID).TotalCents)
 
 	closed := parentBillingCalendarRouter(t, l.review, owners.HolidayTestSchoolCalendar{
-		{Date: calendar.NewDate(2027, 1, 4), Kind: enrollment.HolidayNoCareClosingDay, Name: "Betriebsausflug"},
+		{Date: calendar.NewDate(2099, 1, 5), Kind: enrollment.HolidayNoCareClosingDay, Name: "Betriebsausflug"},
 	})
 	rec := traegerJSON(t, closed, l.office.token, http.MethodPut, holidayRebookPath(l.period.ID, receipt.ID, l.childOf(t, receipt.ID)),
 		map[string]any{"bookings": []map[string]any{l.booking(0, true, dayMonday)}})
@@ -448,7 +448,7 @@ func TestHolidayLunchSelectedOnAClosedDayGainsNoChargeWhenTheDayOpensAgain(t *te
 	l := newLunchFixture(t, "Mittagessen wieder offen")
 	receipt := l.submit(t, l.registration("offen.essen@example.org", "Tom", l.booking(0, true, dayWednesday)))
 	closed := parentBillingCalendarRouter(t, l.review, owners.HolidayTestSchoolCalendar{
-		{Date: calendar.NewDate(2027, 1, 6), Kind: enrollment.HolidayNoCareClosingDay, Name: "Betriebsausflug"},
+		{Date: calendar.NewDate(2099, 1, 7), Kind: enrollment.HolidayNoCareClosingDay, Name: "Betriebsausflug"},
 	})
 	rec := traegerJSON(t, closed, l.office.token, http.MethodPost, holidayConfirmPath(l.period.ID, receipt.ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

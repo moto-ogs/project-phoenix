@@ -11,18 +11,19 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/application"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	carePlanBindingPorts "github.com/moto-ogs/project-phoenix/modules/careplan/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/uptrace/bun"
 )
 
 type PickupBulkStudents = ports.PickupBulkStudents
 type PickupBulkStudent = ports.PickupBulkStudent
 
-func NewPickupSchedules(db *bun.DB, records carePlanBindingPorts.PickupScheduleRecords, baselines careplan.PickupBaselineReader, auto careplan.PickupAutoExcusal, students PickupBulkStudents, logger *slog.Logger) (careplan.PickupScheduleService, error) {
+func NewPickupSchedules(db *bun.DB, records carePlanBindingPorts.PickupScheduleRecords, baselines careplan.PickupBaselineReader, auto careplan.PickupAutoExcusal, students PickupBulkStudents, logger *slog.Logger, today func() calendar.Date) (careplan.PickupScheduleService, error) {
 	if db == nil || records == nil || baselines == nil {
 		return nil, errors.New("pickup schedules: database, records, and baselines are required")
 	}
 	return application.NewPickupSchedules(application.PickupScheduleRecords(records), application.PickupExceptionRecords(records),
-		application.PickupNoteRecords(records), pickupScheduleTransaction{excusalTransaction: excusalTransaction{db: db}}, baselines, auto, students, records, logger), nil
+		application.PickupNoteRecords(records), pickupScheduleTransaction{excusalTransaction: excusalTransaction{db: db}}, baselines, auto, students, records, logger, today), nil
 }
 
 type pickupScheduleTransaction struct{ excusalTransaction }

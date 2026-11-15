@@ -364,7 +364,7 @@ func (c *CareOfferingCatalog) offeringRequiresMaterialization(ctx context.Contex
 	if offering.ID <= 0 {
 		return false, nil
 	}
-	count, err := c.deps.Bookings.MaterializableOfferingCount(ctx, offering.ID, calendar.TodayDate())
+	count, err := c.deps.Bookings.MaterializableOfferingCount(ctx, offering.ID, c.deps.Today())
 	if err != nil {
 		return false, fmt.Errorf("count materializable care offering selections: %w", err)
 	}

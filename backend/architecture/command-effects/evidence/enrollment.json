@@ -434,14 +434,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.SyncApprovedChildData",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ApprovedChildChanges.SyncApprovedChildData",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.SyncApprovedChildData",
       "binding_digest": "9ef6332f807c7aa91432bc2a823f5865",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ApprovedChildChanges.SyncApprovedChildData",
       "source_owner": "enrollment",
@@ -570,14 +562,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ChangeRequests.Approve",
-      "binding_digest": "6044fd25242f3428a5063b836f9a1be8",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ChangeRequests.Approve",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ChangeRequests.Approve",
       "binding_digest": "65b88fbd6c760380fb193e04134a5105",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ChangeRequests.Approve",
       "source_owner": "enrollment",
@@ -631,14 +615,6 @@
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ChangeRequests.CorrectApprovedChildData",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ChangeRequests.CorrectApprovedChildData",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ChangeRequests.CorrectApprovedChildData",
@@ -754,14 +730,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ChangeRequests.Reject",
-      "binding_digest": "6044fd25242f3428a5063b836f9a1be8",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ChangeRequests.Reject",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ChangeRequests.Reject",
       "binding_digest": "65b88fbd6c760380fb193e04134a5105",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ChangeRequests.Reject",
       "source_owner": "enrollment",
@@ -818,14 +786,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.DecideAndInvite",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.DecisionCommand.DecideAndInvite",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.DecideAndInvite",
       "binding_digest": "9ef6332f807c7aa91432bc2a823f5865",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.DecisionCommand.DecideAndInvite",
       "source_owner": "enrollment",
@@ -882,14 +842,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.Decide",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.Decide",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.Decide",
       "binding_digest": "9ef6332f807c7aa91432bc2a823f5865",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.Decide",
       "source_owner": "enrollment",
@@ -943,14 +895,6 @@
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RecurrenceWriteLock.LockRecurrenceWrites",
       "target_owner": "timetable-activities"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/enrollmenttest.enrollmentDecisionFixtureRoot.Decide",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.Decide",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/enrollmenttest.enrollmentDecisionFixtureRoot.Decide",
@@ -1010,14 +954,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.DecideAndInvite",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.DecideAndInvite",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.DecideAndInvite",
       "binding_digest": "9ef6332f807c7aa91432bc2a823f5865",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.DecideAndInvite",
       "source_owner": "enrollment",
@@ -1074,66 +1010,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/enrollmenttest.enrollmentDecisionFixtureRoot.DecideAndInvite",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.DecideAndInvite",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/enrollmenttest.enrollmentDecisionFixtureRoot.DecideAndInvite",
       "binding_digest": "9ef6332f807c7aa91432bc2a823f5865",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.DecideAndInvite",
       "source_owner": "enrollment",
       "target": "unresolved:interface{Field(byte) string; error}.Field",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.ExportPhase",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.ExportPhase",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/enrollmenttest.enrollmentDecisionFixtureRoot.ExportPhase",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.ExportPhase",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.ExportStudent",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.ExportStudent",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/enrollmenttest.enrollmentDecisionFixtureRoot.ExportStudent",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.ExportStudent",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.ListChildOfferings",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.ListChildOfferings",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/enrollmenttest.enrollmentDecisionFixtureRoot.ListChildOfferings",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.ListChildOfferings",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
       "target_owner": ""
     },
     {
@@ -2290,14 +2170,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Intake.CreateManualApprovedEnrollment",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.IntakeSubmissions.CreateManualApprovedEnrollment",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Intake.CreateManualApprovedEnrollment",
       "binding_digest": "9ef6332f807c7aa91432bc2a823f5865",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.IntakeSubmissions.CreateManualApprovedEnrollment",
       "source_owner": "enrollment",
@@ -2922,14 +2794,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Rollovers.RunDeadlineWorker",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Rollovers.RunDeadlineWorker",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Rollovers.RunDeadlineWorker",
       "binding_digest": "9ef6332f807c7aa91432bc2a823f5865",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Rollovers.RunDeadlineWorker",
       "source_owner": "enrollment",
@@ -3346,14 +3210,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.changeRequestService.Approve",
-      "binding_digest": "6044fd25242f3428a5063b836f9a1be8",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.ChangeRequestService.Approve",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.changeRequestService.Approve",
       "binding_digest": "65b88fbd6c760380fb193e04134a5105",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.ChangeRequestService.Approve",
       "source_owner": "enrollment",
@@ -3407,14 +3263,6 @@
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.changeRequestService.CorrectApprovedChildData",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.ChangeRequestService.CorrectApprovedChildData",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.changeRequestService.CorrectApprovedChildData",
@@ -3530,14 +3378,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.changeRequestService.Reject",
-      "binding_digest": "6044fd25242f3428a5063b836f9a1be8",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.ChangeRequestService.Reject",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.changeRequestService.Reject",
       "binding_digest": "65b88fbd6c760380fb193e04134a5105",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.ChangeRequestService.Reject",
       "source_owner": "enrollment",
@@ -3594,14 +3434,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.decisionService.Decide",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.DecisionService.Decide",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.decisionService.Decide",
       "binding_digest": "9ef6332f807c7aa91432bc2a823f5865",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.DecisionService.Decide",
       "source_owner": "enrollment",
@@ -3658,42 +3490,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.decisionService.DecideAndInvite",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.DecisionService.DecideAndInvite",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.decisionService.DecideAndInvite",
       "binding_digest": "9ef6332f807c7aa91432bc2a823f5865",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.DecisionService.DecideAndInvite",
       "source_owner": "enrollment",
       "target": "unresolved:interface{Field(byte) string; error}.Field",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.decisionService.ExportPhase",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.DecisionService.ExportPhase",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.decisionService.ExportStudent",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.DecisionService.ExportStudent",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.decisionService.ListChildOfferings",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.DecisionService.ListChildOfferings",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
       "target_owner": ""
     },
     {
@@ -3871,14 +3671,6 @@
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithSavepoint",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Intake.CreateManualApprovedEnrollment",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.CreateManualApprovedEnrollment",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Intake.CreateManualApprovedEnrollment",
@@ -4114,14 +3906,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.intakeService.CreateManualApprovedEnrollment",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.RequestService.CreateManualApprovedEnrollment",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.intakeService.CreateManualApprovedEnrollment",
       "binding_digest": "9ef6332f807c7aa91432bc2a823f5865",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.RequestService.CreateManualApprovedEnrollment",
       "source_owner": "enrollment",
@@ -4319,14 +4103,6 @@
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithSavepoint",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.rolloverService.RunDeadlineWorker",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.RolloverService.RunDeadlineWorker",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.rolloverService.RunDeadlineWorker",
@@ -4575,14 +4351,6 @@
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithSavepoint",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.CreateManualApprovedEnrollment",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.manualApprovedEnrollments.CreateManualApprovedEnrollment",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.IntakeOwner.CreateManualApprovedEnrollment",
@@ -5690,14 +5458,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Decisions.DecideAndInvite",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ManualEnrollmentDecider.DecideAndInvite",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Decisions.DecideAndInvite",
       "binding_digest": "9ef6332f807c7aa91432bc2a823f5865",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ManualEnrollmentDecider.DecideAndInvite",
       "source_owner": "enrollment",
@@ -6170,14 +5930,6 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Decisions.ApplyDueWeeklyPlans",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RolloverDecider.ApplyDueWeeklyPlans",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Decisions.ApplyDueWeeklyPlans",
       "binding_digest": "9ef6332f807c7aa91432bc2a823f5865",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RolloverDecider.ApplyDueWeeklyPlans",
       "source_owner": "enrollment",
@@ -6231,14 +5983,6 @@
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RecurrenceWriteLock.LockRecurrenceWrites",
       "target_owner": "timetable-activities"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Decisions.Decide",
-      "binding_digest": "682ca549373dc131c1e4403a8b7918cc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RolloverDecider.Decide",
-      "source_owner": "enrollment",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.Decisions.Decide",

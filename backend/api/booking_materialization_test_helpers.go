@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -85,7 +86,8 @@ func newBookingMaterializationTestModule(db transactionruntime.Database, unit te
 	if err != nil {
 		return BookingMaterializationTestModule{}, err
 	}
-	reposTimetable := NewEnrollmentTimetableRows(db)
+	clock := bookingTestClock(options.Today)
+	reposTimetable := NewEnrollmentTimetableRows(db, clock)
 	reposCalendar := MustNewTimetableSchoolCalendar(db)
 	settings, err := bookingTestSettings(db, unit, options)
 	if err != nil {
@@ -111,7 +113,7 @@ func newBookingMaterializationTestModule(db transactionruntime.Database, unit te
 		return BookingMaterializationTestModule{}, err
 	}
 	deps, err := owners.BookingMaterializationOwners(
-		reposTimetable.Timetable, reposTimetable.RosterMaintenance(slog.Default(), nil), people, reposCalendar.SchoolCalendar(), repos.Enrollment(),
+		reposTimetable.Timetable, reposTimetable.RosterMaintenance(slog.Default(), clock), people, reposCalendar.SchoolCalendar(), repos.Enrollment(),
 		approved, NewStudentAuditRows(db, auditCommand).EnrollmentOfferingAdjustment, repos.Person, accounts, pickup, students.CarePlan,
 		mustStudentTemplateDays(db, reposTimetable, options.Today, bookingTestStaffing(broadcaster)...),
 	)
@@ -133,6 +135,17 @@ func newBookingMaterializationTestModule(db transactionruntime.Database, unit te
 		return BookingMaterializationTestModule{}, err
 	}
 	return BookingMaterializationTestModule{Bookings: bookings, Catalog: catalog}, nil
+}
+
+// bookingTestClock is the instant clock of a pinned calendar day: the start
+// of that Berlin day. A nil day keeps the real clock. The pinned day decides
+// the Timetable owner and the occurrence reconciliation too, so every
+// collaborator of the materialization plans on the same day.
+func bookingTestClock(today func() calendar.Date) func() time.Time {
+	if today == nil {
+		return nil
+	}
+	return func() time.Time { return today().BerlinMidnight() }
 }
 
 type bookingTestSettingsReads interface {

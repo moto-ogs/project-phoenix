@@ -4,6 +4,7 @@ package owners
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
@@ -14,9 +15,10 @@ import (
 )
 
 // MustNewUnobservedTimetable composes the unobserved Timetable owner over
-// the People Directory and Facilities owners of db.
-func MustNewUnobservedTimetable(db transactionruntime.Database) timetable.Capability {
-	capability, err := NewUnobservedTimetable(db, MustNewPeopleDirectory(db), MustNewUnobservedRooms(db))
+// the People Directory and Facilities owners of db, deciding on the Berlin
+// day of the first clock (the real one when none is given).
+func MustNewUnobservedTimetable(db transactionruntime.Database, clocks ...func() time.Time) timetable.Capability {
+	capability, err := NewUnobservedTimetable(db, MustNewPeopleDirectory(db), MustNewUnobservedRooms(db), clocks...)
 	if err != nil {
 		panic(fmt.Sprintf("compose timetable: %v", err))
 	}

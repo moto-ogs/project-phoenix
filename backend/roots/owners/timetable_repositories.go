@@ -2,6 +2,7 @@ package owners
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -15,6 +16,7 @@ import (
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // TimetableRepositories are the Timetable owner's retained activities and
@@ -50,13 +52,14 @@ func NewTimetableRepositoriesWithPresence(
 
 // NewUnobservedTimetable composes the unobserved Timetable owner for test
 // graphs and CLI roots. The session facts come from Student Presence over
-// the same database (#2762).
-func NewUnobservedTimetable(db transactionruntime.Database, students peopledirectory.StudentQuery, rooms facilities.Query) (timetable.Capability, error) {
+// the same database (#2762). The owner decides on the Berlin day of the
+// first clock, the real one when none is given.
+func NewUnobservedTimetable(db transactionruntime.Database, students peopledirectory.StudentQuery, rooms facilities.Query, clocks ...func() time.Time) (timetable.Capability, error) {
 	membership, err := NewSchoolMembership(db)
 	if err != nil {
 		return nil, err
 	}
-	return newTimetable(db, students, rooms, membership, func(timetableCompose.Observation) {})
+	return newTimetable(db, students, rooms, membership, func(timetableCompose.Observation) {}, calendar.CalendarDateClock(clocks...))
 }
 
 // timetableDirectories binds the Timetable adapters' directory ports to the

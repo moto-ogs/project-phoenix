@@ -28,6 +28,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	classdayhttp "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -323,11 +324,9 @@ func TestSchoolArrivalExceptionBlockStart(t *testing.T) {
 	f.openWrite(t)
 	ctx := testpkg.Ctx(t)
 	// The instance fixture takes a calendar date; the read side only needs a
-	// weekday the class has a block on, so any coming weekday works.
-	date := testpkg.TodayDate().AddDays(14)
-	for date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
-		date = date.AddDays(1)
-	}
+	// weekday the class has a block on, so a fixed Monday a week after
+	// arrivalExceptionMonday (which stays without a block) works.
+	date := calendar.NewDate(2099, time.March, 9)
 
 	room := testpkg.CreateTestRoom(t, f.db, fmt.Sprintf("Raum-%d", time.Now().UnixNano()))
 	group := testpkg.CreateTestActivityGroup(t, f.db, fmt.Sprintf("Randstunde-%d", time.Now().UnixNano()))

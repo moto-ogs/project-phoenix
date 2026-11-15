@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	checkinAPI "github.com/moto-ogs/project-phoenix/modules/devicescan/http/checkin"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -21,9 +22,11 @@ type attendanceKiosk struct {
 	attendance *checkinAPI.AttendanceResource
 }
 
-func setupAttendanceRoute(t *testing.T) *attendanceKiosk {
+// setupAttendanceRoute composes the attendance route; an optional clock
+// pins the day the route reports.
+func setupAttendanceRoute(t *testing.T, clocks ...func() time.Time) *attendanceKiosk {
 	t.Helper()
-	db, module := setupCheckinModule(t)
+	db, module := setupCheckinModule(t, clocks...)
 	return &attendanceKiosk{
 		kiosk:      kiosk{db: db, resource: checkinAPI.NewResource(module.DeviceScan, testRuntime(), nil)},
 		attendance: checkinAPI.NewAttendanceResource(module.DeviceScan, testRuntime(), nil),
@@ -71,7 +74,10 @@ func TestGetAttendanceStatus(t *testing.T) {
 	})
 	t.Run("answers the student with the group", func(t *testing.T) {
 		t.Parallel()
-		k := setupAttendanceRoute(t)
+		// The route reports the clock's Berlin day; a pinned Wednesday keeps
+		// the expected date stable across midnight (Rule 14).
+		day := calendar.NewDate(2026, time.March, 18)
+		k := setupAttendanceRoute(t, func() time.Time { return day.BerlinMidnight().Add(10 * time.Hour) })
 		group := testpkg.CreateTestEducationGroup(t, k.db, "Test Class 1a")
 		tag, studentID, _ := k.studentCard(t, "GroupTest", "Student", "1a")
 		testpkg.SetStudentGroup(t, k.db, studentID, &group.ID)
@@ -88,7 +94,7 @@ func TestGetAttendanceStatus(t *testing.T) {
 		attendance, ok := data["attendance"].(map[string]any)
 		require.True(t, ok)
 		assert.Equal(t, "not_checked_in", attendance["status"])
-		assert.Equal(t, testpkg.TodayDate().String(), attendance["date"])
+		assert.Equal(t, day.String(), attendance["date"])
 	})
 	t.Run("a staff card is not a student", func(t *testing.T) {
 		t.Parallel()

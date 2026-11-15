@@ -130,7 +130,7 @@ func TestBuildAttendanceHistoryDays_EmptyRows(t *testing.T) {
 func TestBuildAttendanceHistoryDays_WithinRoomCap_IncludesVisits(t *testing.T) {
 	t.Parallel()
 
-	date := calendar.Today()
+	date := attendanceHistoryLogicToday
 	roomCutoff := date.AddDate(0, 0, -6)
 	checkIn := date.Add(8 * time.Hour)
 	checkOut := checkIn.Add(5*time.Hour + 30*time.Minute)
@@ -177,7 +177,7 @@ func TestBuildAttendanceHistoryDays_ExactlyOnRoomCutoff_IncludesVisits(t *testin
 	t.Parallel()
 
 	// Attendance date exactly equals roomCutoff → should still include room detail.
-	today := calendar.Today()
+	today := attendanceHistoryLogicToday
 	roomCutoff := today.AddDate(0, 0, -6)
 	checkIn := roomCutoff.Add(8 * time.Hour)
 	checkOut := roomCutoff.Add(15 * time.Hour)
@@ -214,7 +214,7 @@ func TestBuildAttendanceHistoryDays_ExactlyOnRoomCutoff_IncludesVisits(t *testin
 func TestBuildAttendanceHistoryDays_VisitWithNilActiveGroup(t *testing.T) {
 	t.Parallel()
 
-	today := calendar.Today()
+	today := attendanceHistoryLogicToday
 	roomCutoff := today.AddDate(0, 0, -6)
 	checkIn := today.Add(8 * time.Hour)
 
@@ -248,7 +248,7 @@ func TestBuildAttendanceHistoryDays_VisitWithNilActiveGroup(t *testing.T) {
 func TestBuildAttendanceHistoryDays_MultipleDays(t *testing.T) {
 	t.Parallel()
 
-	today := calendar.Today()
+	today := attendanceHistoryLogicToday
 	yesterday := today.AddDate(0, 0, -1)
 	roomCutoff := today.AddDate(0, 0, -6)
 
@@ -263,7 +263,7 @@ func TestBuildAttendanceHistoryDays_MultipleDays(t *testing.T) {
 func TestBuildAttendanceHistoryDays_StatusOnlyDay(t *testing.T) {
 	t.Parallel()
 
-	today := calendar.Today()
+	today := attendanceHistoryLogicToday
 	roomCutoff := today.AddDate(0, 0, -6)
 	reportedAt := today.Add(7 * time.Hour)
 	clearedAt := today.Add(16 * time.Hour)
@@ -295,7 +295,7 @@ func TestBuildAttendanceHistoryDays_StatusOnlyDay(t *testing.T) {
 func TestBuildAttendanceHistoryDays_MultipleRowsSameDay_Consolidated(t *testing.T) {
 	t.Parallel()
 
-	today := calendar.Today()
+	today := attendanceHistoryLogicToday
 	roomCutoff := today.AddDate(0, 0, -6)
 
 	// Two attendance rows on the same day: morning session + afternoon re-check-in.
@@ -324,7 +324,7 @@ func TestBuildAttendanceHistoryDays_MultipleRowsSameDay_Consolidated(t *testing.
 func TestBuildAttendanceHistoryDays_MultipleRowsSameDay_OneOpenSession(t *testing.T) {
 	t.Parallel()
 
-	today := calendar.Today()
+	today := attendanceHistoryLogicToday
 	roomCutoff := today.AddDate(0, 0, -6)
 
 	morningIn := today.Add(8 * time.Hour)
@@ -347,7 +347,7 @@ func TestBuildAttendanceHistoryDays_OutsideRoomCap_HidesVisits(t *testing.T) {
 	t.Parallel()
 
 	// Attendance from 10 days ago, room cutoff at 7 days ago → no room detail.
-	today := calendar.Today()
+	today := attendanceHistoryLogicToday
 	oldDate := today.AddDate(0, 0, -10)
 	roomCutoff := today.AddDate(0, 0, -6)
 	checkIn := oldDate.Add(8 * time.Hour)
@@ -756,3 +756,8 @@ func TestAttachSlotAttendance_OmitsMissingNote(t *testing.T) {
 	require.Len(t, days[0].Slots, 1)
 	assert.Nil(t, days[0].Slots[0].Note)
 }
+
+// attendanceHistoryLogicToday pins the pure day-building cases to a
+// Wednesday: buildAttendanceHistoryDays takes its cutoff as a parameter and
+// never reads the clock (Rule 14).
+var attendanceHistoryLogicToday = calendar.NewDate(2026, time.March, 18).BerlinMidnight()

@@ -36,7 +36,7 @@ type noCareDayPeriodBody struct {
 }
 
 // TestHolidayWeekByDaysLeavesOutOnlyItsDaysWithoutCare: the host school's
-// calendar (bound in #4702 and tested there) names Wednesday 6 January 2027
+// calendar (bound in #4702 and tested there) names the fixture's Wednesday
 // a statutory holiday and Thursday a closing day. The week by days from Monday to Friday is
 // created (red before #6447) and changed; a whole week on the same days,
 // and turning the stored week into a whole week, stay refused. Parents see
@@ -45,8 +45,8 @@ type noCareDayPeriodBody struct {
 func TestHolidayWeekByDaysLeavesOutOnlyItsDaysWithoutCare(t *testing.T) {
 	t.Parallel()
 	f := newHolidayRegistrationFixtureWithDays(t, owners.HolidayTestSchoolCalendar{
-		{Date: calendar.NewDate(2027, 1, 6), Kind: enrollment.HolidayNoCareHoliday, Name: "Heilige Drei Könige"},
-		{Date: calendar.NewDate(2027, 1, 7), Kind: enrollment.HolidayNoCareClosingDay, Name: "Betriebsausflug"},
+		{Date: calendar.Date(dayWednesday), Kind: enrollment.HolidayNoCareHoliday, Name: "Heilige Drei Könige"},
+		{Date: calendar.Date(dayThursday), Kind: enrollment.HolidayNoCareClosingDay, Name: "Betriebsausflug"},
 	})
 	office := newTraegerOffice(t, f.db, f.traeger, "Träger Feiertag Tageswoche", identityaccess.TraegerRoleAdministration)
 	school := office.schools[0]
@@ -56,7 +56,7 @@ func TestHolidayWeekByDaysLeavesOutOnlyItsDaysWithoutCare(t *testing.T) {
 			"time_models": []map[string]any{{"id": model, "name": "bis 13 Uhr", "starts_at": "08:00", "ends_at": "13:00", "price_cents": 1500}}}
 	}
 	period := func(weeks ...map[string]any) map[string]any {
-		return map[string]any{"name": "Winterferien 2027", "registration_opens_on": "2020-01-01", "registration_closes_on": "2099-12-31",
+		return map[string]any{"name": "Winterferien 2099", "registration_opens_on": "2020-01-01", "registration_closes_on": "2099-12-31",
 			"binding": true, "notes": "", "weeks": weeks}
 	}
 	noCareDay := func(rec *httptest.ResponseRecorder) {

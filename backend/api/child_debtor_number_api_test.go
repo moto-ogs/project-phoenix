@@ -213,7 +213,7 @@ func TestSEPAMandateImportTakesOverDebtorNumbersPerChild(t *testing.T) {
 // the mandates leaves the row out.
 func TestSEPAMandateImportTakesOverTheNumberOfAChildWithoutMandate(t *testing.T) {
 	t.Parallel()
-	f := newCareBillingFixture(t, "Träger Debitorenimport ohne Mandat")
+	f := newCareBillingFixtureOn(t, "Träger Debitorenimport ohne Mandat", sepaImportDay)
 	mia, noah, family := siblingContracts(t, f, f.office.schools[0])
 	saveCreditor(t, f, map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 14, "missing_mandate": "transfer"})
 	childScope(t, f)

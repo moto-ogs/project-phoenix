@@ -303,7 +303,7 @@ func templateIsFresh(ctx context.Context, maint sqlExecutor, name, hash string) 
 		return false, nil
 	}
 	touched, ok := touchedAt(comment)
-	return ok && time.Since(touched) < templateStampInterval, nil
+	return ok && realNow().Sub(touched) < templateStampInterval, nil
 }
 
 // adoptBaseTemplate copies the legacy base database (the name in
@@ -395,7 +395,7 @@ func templateState(ctx context.Context, maint sqlExecutor, name string) (exists 
 // stampTemplate marks the template as fully built and records the current
 // time as its last use; the sweep's template GC reads that timestamp.
 func stampTemplate(ctx context.Context, maint sqlExecutor, name, hash string) error {
-	comment := hashCommentPrefix + hash + touchedCommentKey + strconv.FormatInt(time.Now().Unix(), 10)
+	comment := hashCommentPrefix + hash + touchedCommentKey + strconv.FormatInt(realNow().Unix(), 10)
 	stmt := fmt.Sprintf(`COMMENT ON DATABASE %s IS %s`, quoteIdentifier(name), quoteLiteral(comment))
 	if _, err := maint.ExecContext(ctx, stmt); err != nil {
 		return fmt.Errorf("stamp template %q: %w", name, err)

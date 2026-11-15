@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
@@ -212,13 +213,18 @@ func setupManualEnrollmentRouter(t *testing.T) manualEnrollmentRouter {
 
 	guardianAccess, err := identityaccessCompose.New(identityaccessCompose.Dependencies{DB: db, Observe: func(identityaccessCompose.Observation) {}})
 	require.NoError(t, err)
-	studentEnrollment, err := owners.NewPeopleDirectory(testpkg.MustDatabase(db))
+	// Every owner decides on requestTestToday, a school day inside the
+	// phase: on the real day the child's care would have ended with the
+	// phase from 2027-08-01 on and no longer count to the Kinderkontingent.
+	today := func() calendar.Date { return requestTestToday }
+	studentEnrollment, err := owners.NewPeopleDirectory(testpkg.MustDatabase(db), func() time.Time { return requestTestToday.BerlinMidnight() })
 	require.NoError(t, err)
 	bookings := newBookingMaterialization(t, db,
 		api.WithBookingCatalog(newCareOfferingCatalog(t, db).Catalog),
 		api.WithBookingSettings(offeringGuardSettings(false)),
+		api.WithBookingToday(today),
 	).Bookings
-	decisions := newOfferingGuardDecisions(repos, reposCare, reposTimetable, false, repos.Enrollment(), guardianAccess, studentEnrollment, bookings)
+	decisions := newOfferingGuardDecisions(repos, reposCare, reposTimetable, false, repos.Enrollment(), guardianAccess, studentEnrollment, bookings, today)
 	decision := enrollmentAPI.NewDecisionService(enrollmentCompose.PublicDecisions(decisions))
 	requests := newFixtureRequestRoot(owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
 		Requests: repos.Enrollment(), Children: repos.Enrollment(), Guardians: repos.Enrollment(),

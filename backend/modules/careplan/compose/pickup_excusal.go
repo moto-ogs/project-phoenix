@@ -38,8 +38,7 @@ func NewPickupAutoExcusal(deps PickupExcusalDependencies) (careplan.PickupAutoEx
 		deps.Blocks, deps.Preview, deps.Extensions, excusalTransaction{db: deps.DB}), nil
 }
 
-// LockWeeklyPickupStudents binds Care Plan's lock order of a weekly pickup
-// approval to the student locks of the People Directory.
+// LockWeeklyPickupStudents binds a weekly pickup approval's lock order to People Directory's student locks.
 func LockWeeklyPickupStudents(students PickupStudentLocks) func(context.Context, []int64) error {
 	return func(ctx context.Context, studentIDs []int64) error {
 		return application.LockWeeklyPickupStudents(ctx, students, studentIDs)

@@ -9,9 +9,7 @@ import (
 
 // calendarFixtureClockExceptions contains only tests whose purpose requires
 // the system clock. Every exact function key needs its own reviewed reason.
-var calendarFixtureClockExceptions = map[string]string{
-	"modules/careplan/contracttest/offering_source_service_test.go:TestResyncTemplateOfferingRoster_PreservesManualOccurrenceRemoval": "the reconciliation contract distinguishes planned occurrences from past occurrences relative to the current Berlin day",
-}
+var calendarFixtureClockExceptions = map[string]string{}
 
 func TestCalendarFixtureClockRatchet(t *testing.T) {
 	t.Parallel()
@@ -26,6 +24,11 @@ func TestCalendarFixtureClockRatchet(t *testing.T) {
 	}
 	if err != nil {
 		t.Fatal(err)
+	}
+	findings, debtProblems := applyCalendarShiftDebt(findings, calendarFixtureShiftedLiveDateDebt)
+	if len(debtProblems) > 0 {
+		t.Errorf("calendarFixtureShiftedLiveDateDebt is out of date (shrink-only, see its header):\n  %s",
+			strings.Join(debtProblems, "\n  "))
 	}
 	if len(findings) == 0 {
 		return

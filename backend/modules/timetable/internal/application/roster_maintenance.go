@@ -45,6 +45,10 @@ type RosterReconciler struct {
 	directories         ports.RepositoryDirectories
 	logger              *slog.Logger
 	now                 func() time.Time
+	// today is the school day the occurrence reconciliation starts from;
+	// dates before it are history and stay untouched. It follows now unless
+	// the composing service decides on its own calendar day.
+	today func() calendar.Date
 }
 
 var _ timetable.RosterMaintenance = (*RosterReconciler)(nil)
@@ -63,13 +67,31 @@ func NewRosterReconciler(
 	if len(now) > 0 && now[0] != nil {
 		clock = now[0]
 	}
+	return newRosterReconcilerOn(instanceRepo, instanceStudentRepo, enrollmentRepo, directories, logger, clock, nil)
+}
+
+// newRosterReconcilerOn constructs a RosterReconciler deciding on the given
+// school day; a nil day follows now.
+func newRosterReconcilerOn(
+	instanceRepo ports.InstanceRows,
+	instanceStudentRepo ports.ParticipantRows,
+	enrollmentRepo timetable.StudentEnrollmentQuery,
+	directories ports.RepositoryDirectories,
+	logger *slog.Logger,
+	now func() time.Time,
+	today func() calendar.Date,
+) *RosterReconciler {
+	if today == nil {
+		today = calendar.CalendarDateClock(now)
+	}
 	return &RosterReconciler{
 		instanceRepo:        instanceRepo,
 		instanceStudentRepo: instanceStudentRepo,
 		enrollmentRepo:      enrollmentRepo,
 		directories:         directories,
 		logger:              logger,
-		now:                 clock,
+		now:                 now,
+		today:               today,
 	}
 }
 
@@ -482,7 +504,7 @@ func (s *RosterReconciler) reconcileSourcedTemplateRosters(
 	if templateID <= 0 || len(studentIDs) == 0 {
 		return 0, 0, nil
 	}
-	if today := calendar.TodayDate(); from.Before(today) {
+	if today := s.today(); from.Before(today) {
 		from = today
 	}
 	instances, instanceIDs, err := loadPlannedTemplateInstances(ctx, s.instanceRepo.Reads, templateID, from, "reconcile sourced roster")

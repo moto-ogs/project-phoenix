@@ -62,7 +62,7 @@ func NewTimetableTestRepositoriesWithMembers(db transactionruntime.Database, mem
 	if err != nil {
 		return TimetableTestRepositories{}, err
 	}
-	bookings, err := NewUnobservedTimetable(db, persons, timetableRooms)
+	bookings, err := NewUnobservedTimetable(db, persons, timetableRooms, clocks...)
 	if err != nil {
 		return TimetableTestRepositories{}, err
 	}

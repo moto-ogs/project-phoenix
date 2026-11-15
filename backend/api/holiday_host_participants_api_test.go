@@ -86,11 +86,8 @@ func newHolidayHostFixture(t *testing.T, name string) holidayHostFixture {
 	t.Helper()
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, name, identityaccess.TraegerRoleAdministration)
-	body := januaryHolidays(office)
-	body.Name = "Sommerferien 2099"
+	body := julyHolidays2099(office)
 	body.RegistrationOpensOn, body.RegistrationClosesOn = "2020-01-01", "2099-06-30"
-	body.Weeks[0].StartsOn, body.Weeks[0].EndsOn = "2099-07-06", "2099-07-10"
-	body.Weeks[1].StartsOn, body.Weeks[1].EndsOn = "2099-07-13", "2099-07-17"
 	created := createHolidayPeriod(t, f.traeger, office, body)
 	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

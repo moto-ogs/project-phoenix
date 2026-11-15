@@ -16955,18 +16955,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.BulkCancelPlanned",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.InstanceLifecycle.BulkCancelPlanned",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.Cancel",
       "classification": "leaf",
@@ -17077,18 +17065,6 @@
       "target_owner": "student-presence"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.Complete",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.InstanceLifecycle.Complete",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.Reopen",
       "classification": "leaf",
@@ -17109,30 +17085,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.LockSupervisors",
       "target_owner": "student-presence"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.Reopen",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.InstanceLifecycle.Reopen",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.Start",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.InstanceLifecycle.Start",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0067",
@@ -17168,18 +17120,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.InstanceLifecycleService.BulkCancelPlanned",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.InstanceLifecycleCapability.BulkCancelPlanned",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.BulkCancelPlanned",
       "classification": "leaf",
@@ -17211,18 +17151,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.BulkCancelPlanned",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.InstanceLifecycleCapability.BulkCancelPlanned",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0067",
@@ -17401,18 +17329,6 @@
       "target_owner": "student-presence"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.InstanceLifecycleService.Complete",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.InstanceLifecycleCapability.Complete",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.Complete",
       "classification": "leaf",
@@ -17455,18 +17371,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.LockOpenVisits",
       "target_owner": "student-presence"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.Complete",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.InstanceLifecycleCapability.Complete",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0067",
@@ -17577,18 +17481,6 @@
       "target_owner": "student-presence"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.InstanceLifecycleService.Reopen",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.InstanceLifecycleCapability.Reopen",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.Reopen",
       "classification": "leaf",
@@ -17609,18 +17501,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.LockSupervisors",
       "target_owner": "student-presence"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.Reopen",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.InstanceLifecycleCapability.Reopen",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.InstanceLifecycleService.ReplanWeek",
@@ -17967,30 +17847,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.InstanceLifecycleService.Start",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.InstanceLifecycleCapability.Start",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.Start",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.InstanceLifecycleCapability.Start",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0067",
@@ -20311,42 +20167,6 @@
       "target_owner": "care-plan"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.CheckInStudent",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.CheckInStudent",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.CheckInStudents",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.CheckInStudents",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.CheckOutStudent",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.CheckOutStudent",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.Complete",
       "classification": "leaf",
@@ -20389,30 +20209,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.LockOpenVisits",
       "target_owner": "student-presence"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.Complete",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.Complete",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Reached through *modules/timetable/internal/application.operations.Complete; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.Complete",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.Complete",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0067",
@@ -20458,30 +20254,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.CreateAndStartSpontaneous",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.CreateAndStartSpontaneous",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Reached through *modules/timetable/internal/application.operations.CreateAndStartSpontaneous; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.CreateAndStartSpontaneous",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.CreateAndStartSpontaneous",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.EarliestPlannedBlockStartForClass",
       "classification": "query",
       "effect": "query",
@@ -20492,18 +20264,6 @@
       "target_owner": "school-structure"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.PatchAttendance",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.PatchAttendance",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.PlannedNow",
       "classification": "query",
       "effect": "query",
@@ -20512,18 +20272,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetableblockdisplay/internal/adapters/postgres.List",
       "target_owner": "timetable-block-display"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.PlannedNow",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.PlannedNow",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0067",
@@ -20548,78 +20296,6 @@
       "target_owner": "student-presence"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.Reopen",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.Reopen",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Reached through *modules/timetable/internal/application.operations.Reopen; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.Roster",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.Roster",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.RosterByActiveGroup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.RosterByActiveGroup",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.SessionBlocks",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.SessionBlocks",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.Start",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.Start",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Reached through *modules/timetable/internal/application.operations.Start; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operations.Start",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.Start",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.EarliestPlannedBlockStartForClass",
       "classification": "query",
       "effect": "query",
@@ -20638,54 +20314,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetableblockdisplay/internal/adapters/postgres.List",
       "target_owner": "timetable-block-display"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.PlannedNow",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationQuery.PlannedNow",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.Roster",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationQuery.Roster",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.RosterByActiveGroup",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationQuery.RosterByActiveGroup",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationCapability.SessionBlocks",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.OperationQuery.SessionBlocks",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.OperationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0098",
@@ -27013,54 +26641,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.RosterReconciler.RemoveStudentsFromFutureRosters",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.RosterMaintenance.RemoveStudentsFromFutureRosters",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/internal/application.RosterReconciler.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.RosterReconciler.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.RosterReconciler.RemoveStudentsFromFutureRosters",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.RosterMaintenance.RemoveStudentsFromFutureRosters",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/internal/application.RosterReconciler.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.RosterReconciler.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.RosterReconciler.RestoreStudentsToFutureRosters",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.RosterMaintenance.RestoreStudentsToFutureRosters",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/internal/application.RosterReconciler.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.RosterReconciler.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.RosterReconciler.RestoreStudentsToFutureRosters",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.RosterMaintenance.RestoreStudentsToFutureRosters",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/internal/application.RosterReconciler.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.RosterReconciler.now",
-      "target_owner": ""
-    },
-    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Capability.CapScheduleValidUntil",
       "classification": "platform",
@@ -27543,18 +27123,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.staffDeviations.ApplyBulkSubstitution",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.StaffDeviations.ApplyBulkSubstitution",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.StaffDeviationDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffDeviationDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0067",
@@ -28587,30 +28155,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0128",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.StudentTemplateDays.RemoveStudentTemplateDays",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.StudentTemplateDays.RemoveStudentTemplateDays",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow: the root clock that bounds the removal to today. Exact boundary: unresolved:callable:roots/owners.now. Approved for #5102 by ADR 0128; a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/roots/owners.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0128",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.StudentTemplateDays.RemoveStudentTemplateDays",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.StudentTemplateDays.RemoveStudentTemplateDays",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow: the root clock that bounds the removal to today. Exact boundary: unresolved:function:modules/timetable/ports.StudentTemplateDaysDependencies.Today. Approved for #5102 by ADR 0128; a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.StudentTemplateDaysDependencies.Today",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.AlignPlannedInstanceStaff",
       "classification": "query",
       "effect": "query",
@@ -28702,30 +28246,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.AlignPlannedInstanceStaff",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.AlignPlannedInstanceStaff",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.clock. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.clock",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.AlignPlannedInstanceStaff",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.AlignPlannedInstanceStaff",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.ArchiveTemplate",
@@ -29130,7 +28650,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Guarded leaf lock for timetable assignments (#6702): Membership ListStaff with ForMutation locks the complete ID set in ascending order inside the caller transaction, omits employment and rejects missing memberships. Timetable skips rows already held by that transaction. Replaces the single-row FindStaffForMutation binding without a new gate or scope protocol (ADR 0067). Re-reviewed under ADR 0215: the template split and end reach the care-offering catalog through the batch roster binding of the Träger copy commands; the staff-assignment lock, its order and the target stay unchanged.",
+      "reason": "Guarded leaf lock for timetable assignments (#6702): Membership ListStaff with ForMutation locks the complete ID set in ascending order inside the caller transaction, omits employment and rejects missing memberships. Timetable skips rows already held by that transaction. Replaces the single-row FindStaffForMutation binding without a new gate or scope protocol (ADR 0067). Re-reviewed under ADR 0215: the template split and end reach the care-offering catalog through the batch roster binding of the Träger copy commands; the staff-assignment lock, its order and the target stay unchanged. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
       "target_owner": "school-membership"
@@ -29161,7 +28681,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Capability.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Capability.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroups",
       "target_owner": "school-structure"
@@ -29172,7 +28692,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.GroupListing.ListGroups",
       "target_owner": "school-structure"
@@ -29183,7 +28703,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Owner.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Owner.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroups",
       "target_owner": "school-structure"
@@ -29204,7 +28724,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
       "target_owner": "settings-platform"
@@ -29216,7 +28736,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
@@ -29228,58 +28748,10 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.clock. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.clock",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/timetable/internal/application.clock. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.clock",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.EndTemplateFromDate",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.EndTemplateFromDate",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/timetable/internal/application.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.now",
-      "target_owner": ""
     },
     {
       "adr": "0083",
@@ -29550,7 +29022,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Guarded leaf lock for timetable assignments (#6702): Membership ListStaff with ForMutation locks the complete ID set in ascending order inside the caller transaction, omits employment and rejects missing memberships. Timetable skips rows already held by that transaction. Replaces the single-row FindStaffForMutation binding without a new gate or scope protocol (ADR 0067). Re-reviewed under ADR 0215: the template split and end reach the care-offering catalog through the batch roster binding of the Träger copy commands; the staff-assignment lock, its order and the target stay unchanged.",
+      "reason": "Guarded leaf lock for timetable assignments (#6702): Membership ListStaff with ForMutation locks the complete ID set in ascending order inside the caller transaction, omits employment and rejects missing memberships. Timetable skips rows already held by that transaction. Replaces the single-row FindStaffForMutation binding without a new gate or scope protocol (ADR 0067). Re-reviewed under ADR 0215: the template split and end reach the care-offering catalog through the batch roster binding of the Träger copy commands; the staff-assignment lock, its order and the target stay unchanged. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
       "target_owner": "school-membership"
@@ -29581,7 +29053,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Capability.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Capability.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroups",
       "target_owner": "school-structure"
@@ -29592,7 +29064,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.GroupListing.ListGroups",
       "target_owner": "school-structure"
@@ -29613,7 +29085,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Owner.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Owner.ListGroups (school-structure) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroups",
       "target_owner": "school-structure"
@@ -29634,7 +29106,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
       "target_owner": "settings-platform"
@@ -29646,7 +29118,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
@@ -29658,58 +29130,10 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through *modules/timetable/internal/application.templateAdministration.SplitTemplate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.clock. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.clock",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/timetable/internal/application.clock. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.clock",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.SplitTemplate",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.SplitTemplate",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/timetable/internal/application.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.now",
-      "target_owner": ""
     },
     {
       "adr": "0083",
@@ -30145,30 +29569,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.UpdateTemplate",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.UpdateTemplate",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.clock. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.clock",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateAdministration.UpdateTemplate",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.UpdateTemplate",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
     },
     {
       "adr": "0083",
@@ -33887,18 +33287,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest.fromInstanceLifecycle.BulkCancelPlanned",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest.InstanceLifecycle.BulkCancelPlanned",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Reached through modules/timetable/fixturetest.fromInstanceLifecycle.BulkCancelPlanned; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest.fromInstanceLifecycle.Cancel",
       "classification": "leaf",
@@ -34009,18 +33397,6 @@
       "target_owner": "student-presence"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest.fromInstanceLifecycle.Complete",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest.InstanceLifecycle.Complete",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Reached through modules/timetable/fixturetest.fromInstanceLifecycle.Complete; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest.fromInstanceLifecycle.CompleteInstanceRow",
       "classification": "leaf",
@@ -34063,18 +33439,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.LockOpenVisits",
       "target_owner": "student-presence"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest.fromInstanceLifecycle.CompleteInstanceRow",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest.InstanceLifecycle.CompleteInstanceRow",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Reached through modules/timetable/fixturetest.fromInstanceLifecycle.CompleteInstanceRow; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0067",
@@ -34140,18 +33504,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.LockSupervisors",
       "target_owner": "student-presence"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest.fromInstanceLifecycle.Reopen",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest.InstanceLifecycle.Reopen",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Reached through modules/timetable/fixturetest.fromInstanceLifecycle.Reopen; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest.fromInstanceLifecycle.ReplanWeek",
@@ -34325,18 +33677,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest.fromInstanceLifecycle.Start",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest.InstanceLifecycle.Start",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Reached through modules/timetable/fixturetest.fromInstanceLifecycle.Start; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0067",
@@ -36572,7 +35912,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Guarded leaf lock for timetable assignments (#6702): Membership ListStaff with ForMutation locks the complete ID set in ascending order inside the caller transaction, omits employment and rejects missing memberships. Timetable skips rows already held by that transaction. Replaces the single-row FindStaffForMutation binding without a new gate or scope protocol (ADR 0067). Re-reviewed under ADR 0215: the template split and end reach the care-offering catalog through the batch roster binding of the Träger copy commands; the staff-assignment lock, its order and the target stay unchanged.",
+      "reason": "Guarded leaf lock for timetable assignments (#6702): Membership ListStaff with ForMutation locks the complete ID set in ascending order inside the caller transaction, omits employment and rejects missing memberships. Timetable skips rows already held by that transaction. Replaces the single-row FindStaffForMutation binding without a new gate or scope protocol (ADR 0067). Re-reviewed under ADR 0215: the template split and end reach the care-offering catalog through the batch roster binding of the Träger copy commands; the staff-assignment lock, its order and the target stay unchanged. Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
       "target_owner": "school-membership"
@@ -36603,7 +35943,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Capability.ListGroups (school-structure) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Capability.ListGroups (school-structure) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroups",
       "target_owner": "school-structure"
@@ -36614,7 +35954,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.GroupListing.ListGroups (school-structure) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.GroupListing.ListGroups",
       "target_owner": "school-structure"
@@ -36625,7 +35965,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Owner.ListGroups (school-structure) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/schoolstructure.Owner.ListGroups (school-structure) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroups",
       "target_owner": "school-structure"
@@ -36646,7 +35986,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Read-only target already reviewed as query: timetable-activities reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. No persistent, lock or scope effect; newly attributed to this port by #6583 (the staff row locks of the day writers resolve through timetable.InstanceStaffLocks). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
       "target_owner": "settings-platform"
@@ -36658,7 +35998,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
@@ -36670,58 +36010,10 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583).",
+      "reason": "Reviewed batch roster binding under ADR 0215; target ownership and lock order are unchanged. Reviewed batch roster bindings under ADR 0215; target ownership and lock order remain unchanged. Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through *modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly reached through the staff row locks a day writer takes before its first block row (#6583). Re-reviewed for #4027: the binding changed only in how its clock reaches it (ADR 0239); effect and classification are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.clock. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.clock",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/timetable/internal/application.clock. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.clock",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.TemplateSplitService.EndTemplateFromDate",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.templateEnder.EndTemplateFromDate",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/timetable/internal/application.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.now",
-      "target_owner": ""
     },
     {
       "adr": "0083",
@@ -39663,18 +38955,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.InstanceLifecycleService.BulkCancelPlanned",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.BulkCancelPlanned",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.InstanceLifecycleService.Cancel",
       "classification": "leaf",
@@ -39785,18 +39065,6 @@
       "target_owner": "student-presence"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.InstanceLifecycleService.Complete",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.Complete",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.InstanceLifecycleService.CompleteInstanceRow",
       "classification": "leaf",
@@ -39839,18 +39107,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.LockOpenVisits",
       "target_owner": "student-presence"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.InstanceLifecycleService.CompleteInstanceRow",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.CompleteInstanceRow",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0067",
@@ -39916,18 +39172,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.LockSupervisors",
       "target_owner": "student-presence"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.InstanceLifecycleService.Reopen",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.Reopen",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.InstanceLifecycleService.ReplanWeek",
@@ -40101,18 +39345,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.InstanceLifecycleService.Start",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycle.Start",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0067",
@@ -41202,18 +40434,6 @@
       "target_owner": "student-presence"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operationLifecycle.Complete",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationLifecycle.Complete",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Reached through modules/timetable/internal/application.operationLifecycle.Complete; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operationLifecycle.CreateSpontaneous",
       "classification": "leaf",
@@ -41277,30 +40497,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.LockSupervisors",
       "target_owner": "student-presence"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operationLifecycle.Reopen",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationLifecycle.Reopen",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Reached through modules/timetable/internal/application.operationLifecycle.Reopen; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0176",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.operationLifecycle.Start",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationLifecycle.Start",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/ports.InstanceLifecycleDependencies.Now. Reached through modules/timetable/internal/application.operationLifecycle.Start; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceLifecycleDependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.TimetableOperationPeople.FindByAccountID",
@@ -42633,30 +41829,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.RosterReconciler.RemoveStudentsFromFutureRosters",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.RosterReconciler.RemoveStudentsFromFutureRosters",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/internal/application.RosterReconciler.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.RosterReconciler.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.RosterReconciler.RestoreStudentsToFutureRosters",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.RosterReconciler.RestoreStudentsToFutureRosters",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/timetable/internal/application.RosterReconciler.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.RosterReconciler.now",
-      "target_owner": ""
-    },
-    {
       "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.InstanceLifecycleService.SnapshotDeviations",
       "classification": "leaf",
@@ -43093,30 +42265,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.AlignPlannedInstanceStaff",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesSeeding.AlignPlannedInstanceStaff",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.clock. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.clock",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.AlignPlannedInstanceStaff",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesSeeding.AlignPlannedInstanceStaff",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:api.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "timetable-activities",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/api.now",
-      "target_owner": ""
     },
     {
       "adr": "0083",

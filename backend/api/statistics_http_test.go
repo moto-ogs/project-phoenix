@@ -39,6 +39,14 @@ type statisticsHTTPTestContext struct {
 	createClosingDay func(ctx context.Context, start, end calendar.Date, reason string) error
 }
 
+// statisticsJuly2026 is the clock of the statistics tests whose fixtures lie
+// in June 2026: the day after their latest window, so every window has ended
+// and lies inside the attendance, status-day and course retention, on
+// whatever day the suite runs.
+func statisticsJuly2026() time.Time {
+	return calendar.NewDate(2026, 7, 1).BerlinMidnight().Add(12 * time.Hour)
+}
+
 func setupStatisticsRoute(t *testing.T, statisticsClocks ...func() time.Time) *statisticsHTTPTestContext {
 	t.Helper()
 	db, svc := setupStatisticsModule(t, statisticsClocks...)
@@ -674,7 +682,7 @@ func TestStatisticsExport_RendersAndAudits(t *testing.T) {
 // one the child table reports.
 func TestStatisticsReport_CourseParticipation(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	tenantID := testpkg.Tenant(t)
 	ctx := testpkg.Ctx(t)
 	_, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, tenantID, "Kurs", "Tester")
@@ -710,7 +718,8 @@ func TestStatisticsReport_CourseParticipation(t *testing.T) {
 	outside := testpkg.CreateTestActivityInstance(t, tc.db, calendar.NewDate(2026, 5, 20), room.ID,
 		instanceOpts(testpkg.ScheduleInstanceStatusCompleted))
 	// Today, still planned: a date the school has not run yet.
-	futureInstance := testpkg.CreateTestActivityInstance(t, tc.db, calendar.TodayDate(), room.ID,
+	today := calendar.DateFromTime(statisticsJuly2026())
+	futureInstance := testpkg.CreateTestActivityInstance(t, tc.db, today, room.ID,
 		instanceOpts(testpkg.ScheduleInstanceStatusPlanned))
 	operationalDate := testpkg.CreateTestActivityInstance(t, tc.db, calendar.NewDate(2026, 6, 9), room.ID,
 		testpkg.ActivityInstanceOpts{
@@ -793,7 +802,6 @@ func TestStatisticsReport_CourseParticipation(t *testing.T) {
 
 	// Today's date is still planned: it may yet run, so it is no Termin that
 	// has taken place.
-	today := calendar.TodayDate()
 	req = httptest.NewRequest(http.MethodGet,
 		"/report?section=courses&from="+today.String()+"&to="+today.String(), nil)
 	rec = authExec(t, tc, req, claims, reportPermissions)
@@ -972,7 +980,7 @@ type occupancyPayload struct {
 // plan, attendance gives the actual window, and the class filter narrows both.
 func TestStatisticsReport_OccupancyByTimeOfDay(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	tenantID := testpkg.Tenant(t)
 	staff, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, tenantID, "Belegung", "Tester")
 	claims := claimsFor(t, account.ID)

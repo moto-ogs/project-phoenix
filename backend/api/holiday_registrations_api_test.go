@@ -117,7 +117,12 @@ type traegerPeriodLink struct {
 // plausible test day; its weeks lie in January 2027.
 func openHolidays(t *testing.T, f holidayRegistrationFixture, office traegerOffice) traegerPeriodLink {
 	t.Helper()
-	body := januaryHolidays(office)
+	return openHolidaysOf(t, f, office, januaryHolidays(office))
+}
+
+// openHolidaysOf publishes body with the registration window of openHolidays.
+func openHolidaysOf(t *testing.T, f holidayRegistrationFixture, office traegerOffice, body holidayPeriodBody) traegerPeriodLink {
+	t.Helper()
 	body.RegistrationOpensOn, body.RegistrationClosesOn = "2020-01-01", "2099-12-31"
 	created := createHolidayPeriod(t, f.traeger, office, body)
 	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)

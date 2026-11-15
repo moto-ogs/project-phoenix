@@ -128,7 +128,7 @@ Every Playwright config and the screenshot capture start the installed Google
 Chrome (`channel: "chrome"`) with `chromiumSandbox: true`, never Playwright's
 bundled Chromium (#5612: Playwright 1.64 ships Chromium 156.0.8078.4 with
 critical CVEs and starts without sandbox by default). The shared options live
-in `frontend/scripts/secure-chrome.ts`; its global setup stops the run when
+in `frontend/scripts/secure-chrome.ts`, including `timezoneId: "Europe/Berlin"` and `locale: "de-DE"`, so a run does not depend on the host's zone; its global setup stops the run when
 Chrome is missing or older than `MIN_CHROME_VERSION`. Locally keep Chrome
 updated; CI runs `pnpm exec playwright install --with-deps --force chrome`
 because the runner images ship an outdated Chrome. Keep the sandbox on, also

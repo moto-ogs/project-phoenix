@@ -40,7 +40,7 @@ func TestRolloverService_AutoApprove_SkipsChildrenAboveTheKinderkontingent(t *te
 
 	req := validRolloverRequest(env, capability.PhaseRolloverModeOptOut, true)
 	req.RolloverAutoApprove = true
-	req.RolloverDeadline = time.Now().Add(-time.Hour)
+	req.RolloverDeadline = autoApproveNow.Add(-time.Hour)
 	req.Name = "child-quota-auto-approve-target"
 	result, err := env.rolloverSvc.CreatePhaseFromSource(ctx, req)
 	require.NoError(t, err)
@@ -49,7 +49,7 @@ func TestRolloverService_AutoApprove_SkipsChildrenAboveTheKinderkontingent(t *te
 	var summary *enrollmentAPI.DeadlineWorkerSummary
 	err = testpkg.WithTenantTx(t, context.Background(), env.db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
 		var workerErr error
-		summary, workerErr = env.rolloverSvc.RunDeadlineWorker(txCtx, time.Now())
+		summary, workerErr = env.rolloverSvc.RunDeadlineWorker(txCtx, autoApproveNow)
 		return workerErr
 	})
 	require.NoError(t, err, "a child above the Kinderkontingent must not abort the run")
@@ -93,7 +93,7 @@ func TestRolloverService_AutoApprove_SkipsChildrenAboveTheKinderkontingent(t *te
 	require.NoError(t, err)
 	err = testpkg.WithTenantTx(t, context.Background(), env.db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
 		var workerErr error
-		summary, workerErr = env.rolloverSvc.RunDeadlineWorker(txCtx, time.Now())
+		summary, workerErr = env.rolloverSvc.RunDeadlineWorker(txCtx, autoApproveNow)
 		return workerErr
 	})
 	require.NoError(t, err)

@@ -84,7 +84,7 @@ func HoldServer(ctx context.Context, cfg *Config) error {
 		}
 	}()
 	// Record brief users that begin and end between watcher polls.
-	now := time.Now()
+	now := realNow()
 	if err := os.Chtimes(lease.Name(), now, now); err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func holdRegisteredIdleServers(ctx context.Context, cache, project string, held 
 		if err != nil {
 			return fmt.Errorf("protect registered test server: %w", err)
 		}
-		now := time.Now()
+		now := realNow()
 		if err := os.Chtimes(lease.Name(), now, now); err != nil {
 			_ = lease.Close()
 			return err

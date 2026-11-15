@@ -66,7 +66,7 @@ func Sweep(ctx context.Context, cfg *Config, opts SweepOptions) (*SweepResult, e
 	}
 	result.Dropped = append(result.Dropped, gcDropped...)
 
-	templatesDropped, err := gcTemplatesLocked(ctx, conn, cfg, time.Now())
+	templatesDropped, err := gcTemplatesLocked(ctx, conn, cfg, realNow())
 	if err != nil {
 		return result, err
 	}

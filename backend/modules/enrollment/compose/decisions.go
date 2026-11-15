@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // Ports the composition root binds for Enrollment's decision flow, restore, rollover and deletions (#3564).
@@ -130,6 +131,6 @@ func NewRejectedCleanup(deps RejectedCleanupDependencies) enrollment.RejectedEnr
 }
 
 // NewOfferingCapacity composes the capacity gate a submission shares with the restore; a nil waitlistEnabled fails a waitlist-mode phase with a configuration error.
-func NewOfferingCapacity(offerings CapacityOfferings, peaks CapacityPeaks, waitlistEnabled func(context.Context) (bool, error)) enrollment.OfferingCapacity {
-	return application.NewOfferingCapacity(offerings, peaks, waitlistEnabled)
+func NewOfferingCapacity(offerings CapacityOfferings, peaks CapacityPeaks, waitlistEnabled func(context.Context) (bool, error), today func() calendar.Date) enrollment.OfferingCapacity {
+	return application.NewOfferingCapacity(offerings, peaks, waitlistEnabled, today)
 }

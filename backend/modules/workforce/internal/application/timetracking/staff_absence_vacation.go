@@ -62,7 +62,7 @@ func (s *staffAbsenceService) RequestVacation(ctx context.Context, staffID int64
 	if err != nil {
 		return nil, err
 	}
-	if isBeforeLocalToday(dateStart, time.Now()) {
+	if dateStart.Before(s.today()) {
 		return nil, workforce.ErrVacationRequestInPast
 	}
 	if err := s.lockVacationRequestRange(ctx, staffID, dateStart, dateEnd); err != nil {
@@ -367,7 +367,7 @@ func (s *staffAbsenceService) CancelAbsence(ctx context.Context, staffID int64, 
 		return workforce.ErrAbsenceNotCancelable
 	}
 	if absence.Status == AbsenceStatusApproved &&
-		isBeforeLocalToday(absence.DateStart, time.Now()) {
+		absence.DateStart.Before(s.today()) {
 		return workforce.ErrPastAbsenceCancel
 	}
 	fromStatus := absence.Status
@@ -415,10 +415,6 @@ func (s *staffAbsenceService) createAudit(ctx context.Context, absenceID int64, 
 	}
 	applyAbsenceAudit(audit, value)
 	return nil
-}
-
-func isBeforeLocalToday(date calendar.Date, now time.Time) bool {
-	return date.Before(calendar.DateFromTime(now))
 }
 
 func (s *staffAbsenceService) lockVacationRequestRange(ctx context.Context, staffID int64, dateStart, dateEnd calendar.Date) error {

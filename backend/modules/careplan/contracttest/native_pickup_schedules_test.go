@@ -70,7 +70,7 @@ func TestNativePickupSchedulesPersistAndRejectDuplicateStaffEdits(t *testing.T) 
 	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
 	student := testpkg.CreateTestStudent(t, db, "Pickup", "Native", "1a")
 	staff := testpkg.CreateTestStaff(t, db, "Pickup", "Staff")
-	service, err := compose.NewPickupSchedules(db, owner, excusalBaseline{}, nil, nil, nil)
+	service, err := compose.NewPickupSchedules(db, owner, excusalBaseline{}, nil, nil, nil, nil)
 	require.NoError(t, err)
 	clock := time.Date(1, 1, 1, 15, 0, 0, 0, time.UTC)
 	weekly := &careplan.PickupSchedule{StudentID: student.ID, Weekday: 1, PickupTime: clock, CreatedBy: staff.ID}
@@ -156,6 +156,6 @@ func TestNativePickupApprovalRecordsPreserveDayAndConflict(t *testing.T) {
 
 func TestNativePickupSchedulesRejectMissingDependencies(t *testing.T) {
 	t.Parallel()
-	_, err := compose.NewPickupSchedules(nil, nil, nil, nil, nil, nil)
+	_, err := compose.NewPickupSchedules(nil, nil, nil, nil, nil, nil, nil)
 	require.Error(t, err)
 }

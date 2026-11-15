@@ -321,8 +321,10 @@ func TestContractDevicePushRechecksVersionAndExactChild(t *testing.T) {
 				require.NoError(t, err)
 			case "newer version":
 				var nextVersion int64
+				// A later version must not start in the past (migration
+				// 1.15.787); a far fixed day stays ahead of the clock (#4027).
 				err := f.db.NewRaw(`INSERT INTO care_contract.contract_versions (organization_id,contract_id,version_number,effective_from,status,child_first_name,child_last_name,school_name,term_kind,notice_months,notice_to,special_termination,special_termination_note,statute_required,statute_title,statute_url,contract_partner)
-     VALUES (?,?,2,'2027-09-01','wirksam','Test','Child','School','open_ended',1,'month_end',false,'',false,'','','') RETURNING id`, f.organization, contractID).Scan(f.ctx, &nextVersion)
+     VALUES (?,?,2,'2099-09-01','wirksam','Test','Child','School','open_ended',1,'month_end',false,'',false,'','','') RETURNING id`, f.organization, contractID).Scan(f.ctx, &nextVersion)
 				require.NoError(t, err)
 				var nextDocument int64
 				require.NoError(t, f.db.NewRaw(`INSERT INTO care_contract.contract_documents (organization_id,contract_id,contract_version_id,template_version,filename,pdf) VALUES (?,?,?,0,'new-contract.pdf',?) RETURNING id`, f.organization, contractID, nextVersion, []byte("%PDF-new")).Scan(f.ctx, &nextDocument))

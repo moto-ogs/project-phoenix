@@ -74,7 +74,7 @@ type RequestQueries interface {
 	AdminRequests(ctx context.Context, filters RequestListFilters) ([]*Request, error)
 	CountPhaseRequests(ctx context.Context, phaseID int64) (int, error)
 	FullyRejectedRequestsBefore(ctx context.Context, cutoff time.Time) ([]int64, error)
-	SettledRequestsBefore(ctx context.Context, withdrawnCutoff, rejectedCutoff time.Time) ([]int64, error)
+	SettledRequestsBefore(ctx context.Context, withdrawnCutoff, rejectedCutoff time.Time, today calendar.Date) ([]int64, error)
 	ActiveDuplicateChildren(ctx context.Context, phaseID int64, email string, children []DuplicateChildKey, excludedRequestID int64) ([]DuplicateChildKey, error)
 	HasActiveRequestForMatchedStudent(ctx context.Context, phaseID, studentID, excludedChildID int64) (bool, error)
 	AccountRequests(ctx context.Context, accountID int64, accountEmail string) ([]AccountRequest, error)

@@ -49,6 +49,7 @@ func BuildEnrollmentNotices(
 		CountAuditAdjustments: audit.Persistence.EnrollmentOfferingAdjustment.CountForDeletion,
 		CountBookings:         carePlan.CountCareOfferingBookings, Audit: audit.Persistence.EnrollmentDeletionAudit,
 		Delivery: enrollmentDeliveryAdapter{module: module, outcomes: outcomes}, Settings: settings, Logger: env.Logger,
+		Today: env.Today,
 	})
 	return EnrollmentNotices{
 		Notifications:   NewEnrollmentNotifications(enrollment.Bookings, settings, outbox, EnrollmentSchoolDirectory{Schools: organizations}),
@@ -167,7 +168,7 @@ func BuildEnrollmentFlows(
 	settings settingsCompose.BatchSettingsService, outbox MailOutbox,
 ) EnrollmentFlows {
 	records, links := enrollment.Bookings, env.Links
-	capacity := NewEnrollmentOfferingCapacity(notices.CareOfferings, records, settings)
+	capacity := NewEnrollmentOfferingCapacity(notices.CareOfferings, records, settings, env.Today)
 	return EnrollmentFlows{
 		Capacity: capacity,
 		Intake: NewEnrollmentIntake(EnrollmentIntakeSources{

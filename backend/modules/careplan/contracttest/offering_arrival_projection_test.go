@@ -66,7 +66,8 @@ func bookingModePickupBaseline(env *decisionTestEnv, authoritative bool) carepla
 }
 
 func bookingModePickupService(env *decisionTestEnv, authoritative bool) careplan.PickupScheduleService {
-	result, err := careplanCompose.NewPickupSchedules(env.db, env.repos.CarePlan(), bookingModePickupBaseline(env, authoritative), nil, nil, nil)
+	result, err := careplanCompose.NewPickupSchedules(env.db, env.repos.CarePlan(), bookingModePickupBaseline(env, authoritative), nil, nil, nil,
+		func() calendar.Date { return decisionTestToday })
 	if err != nil {
 		panic(err)
 	}

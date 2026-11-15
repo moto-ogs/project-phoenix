@@ -3,6 +3,8 @@ package application
 import (
 	"context"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // SetRequestWithdrawal updates the request marker after child states change.
@@ -33,11 +35,11 @@ func (m *Service) FullyRejectedRequestsBefore(ctx context.Context, cutoff time.T
 // child withdrawn or rejected and none of them created a child record, at
 // least one withdrawn, each withdrawal before withdrawnCutoff and each
 // rejection before rejectedCutoff (#3960).
-func (m *Service) SettledRequestsBefore(ctx context.Context, withdrawnCutoff, rejectedCutoff time.Time) ([]int64, error) {
+func (m *Service) SettledRequestsBefore(ctx context.Context, withdrawnCutoff, rejectedCutoff time.Time, today calendar.Date) ([]int64, error) {
 	if err := m.transactions.RequireTransaction(ctx); err != nil {
 		return nil, err
 	}
-	return m.store.SettledRequestsBefore(ctx, withdrawnCutoff, rejectedCutoff)
+	return m.store.SettledRequestsBefore(ctx, withdrawnCutoff, rejectedCutoff, today)
 }
 
 func (m *Service) DeleteRequest(ctx context.Context, id int64) error {

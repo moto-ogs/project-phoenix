@@ -26,6 +26,7 @@ import (
 	workforceModule "github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	"github.com/moto-ogs/project-phoenix/observability"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 func NewCleanupTimetable(db transactionruntime.Database) (timetableModule.Capability, error) {
@@ -40,13 +41,15 @@ func NewCleanupTimetable(db transactionruntime.Database) (timetableModule.Capabi
 	return NewUnobservedTimetable(db, students, rooms)
 }
 
-func newTimetable(db transactionruntime.Database, students peopleModule.StudentQuery, rooms facilitiesModule.Query, membership schoolMembershipModule.Capability, observe func(timetableCompose.Observation)) (timetableModule.Owner, error) {
+// newTimetable composes the Timetable owner; a nil today decides on the
+// Berlin calendar day.
+func newTimetable(db transactionruntime.Database, students peopleModule.StudentQuery, rooms facilitiesModule.Query, membership schoolMembershipModule.Capability, observe func(timetableCompose.Observation), today func() calendar.Date) (timetableModule.Owner, error) {
 	return timetableCompose.New(timetableCompose.Dependencies{
 		LockStaffAssignments: func(ctx context.Context, staffIDs []int64) error {
 			return schoolMembershipModule.LockStaffAssignments(ctx, membership, staffIDs)
 		},
 		DB: db.Pool(), Students: timetableStudents(students), Rooms: timetableRooms(rooms), Sessions: NewPresenceFacts(db),
-		Observe: observe, Provenance: enrollmentProvenanceView.NewReader(),
+		Observe: observe, Provenance: enrollmentProvenanceView.NewReader(), Today: today,
 	})
 }
 

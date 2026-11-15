@@ -56,7 +56,7 @@ func editHolidayTimesOn(t *testing.T, db *bun.DB, org, account int64, booking ow
 
 func TestStudentCareTimes_TimeEditsKeepPastHolidaySoll(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	school := testpkg.Tenant(t)
 	_, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, school, "Zeitänderung", "Leitung")
 	own := testpkg.CreateTestStudent(t, tc.db, "Tina", "Eigen", "2a")
