@@ -282,6 +282,9 @@ type Ports struct {
 	Times ArrivalPickupCounts
 	// Reports are the reads behind the key-date report (#4716, ADR 0246).
 	Reports ReportPorts
+	// Daily are the reads behind the daily attendance report of
+	// Mecklenburg-Vorpommern (#4717).
+	Daily DailyAttendancePorts
 }
 
 // Overview answers the Träger-Portal reads.

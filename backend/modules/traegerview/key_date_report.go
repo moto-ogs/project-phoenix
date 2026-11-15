@@ -107,11 +107,11 @@ type ReportTemplateReads interface {
 	ReportTemplate(ctx context.Context, organizationID, templateID int64) (ReportTemplate, error)
 }
 
-// AbsenceDays counts, at Care Plan, the children of each school with a sick
+// KeyDateAbsenceCounts counts, at Care Plan, the children of each school with a sick
 // and with an excused status day, per weekday of the window (both days
 // included); a child counts once a day, sick before excused. It joins the
 // projection's administrative transaction and reads only the given schools.
-type AbsenceDays interface {
+type KeyDateAbsenceCounts interface {
 	StatusDayCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date) (sick, excused map[int64]map[calendar.Date]int, err error)
 }
 
@@ -127,7 +127,7 @@ type EnrollmentDemand interface {
 // occupancy, the utilization and the school figures do not already bind.
 type ReportPorts struct {
 	Templates ReportTemplateReads
-	Absences  AbsenceDays
+	Absences  KeyDateAbsenceCounts
 	Demand    EnrollmentDemand
 }
 

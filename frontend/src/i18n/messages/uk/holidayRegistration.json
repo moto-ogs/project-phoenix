@@ -102,6 +102,7 @@
   "contributionExemption": "Звільнення через отримання допомоги: {note}",
   "contributionChildTotal": "Сума",
   "contributionTotal": "Разом",
+  "contributionUpdated": "Внесок перераховано. Разом: {total}",
   "benefitsLabel": "Ми отримуємо допомогу, наприклад Bürgergeld, допомогу на житло (Wohngeld) або доплату на дитину (Kinderzuschlag).",
   "benefitsHint": "Тоді догляд на канікулах безкоштовний. Організатору потрібне підтвердження.",
   "benefitsProofLabel": "Підтвердження отримання допомоги",

@@ -116,6 +116,23 @@ describe("TraegerSidebar", () => {
     ).toHaveAttribute("href", "/einstellungen");
   });
 
+  it("offers the Tagesmeldung only where a school lies in Mecklenburg-Vorpommern (#4717)", () => {
+    sessionUser.permissions = ["traeger_overview:read", "traeger_reports:read"];
+    const { unmount } = render(<TraegerSidebar federalStates={["DE-NW"]} />);
+    expect(
+      mainNav().getByRole("link", { name: "Ankunft und Abholung" }),
+    ).toBeInTheDocument();
+    expect(
+      mainNav().queryByRole("link", { name: "Tagesmeldung" }),
+    ).not.toBeInTheDocument();
+    unmount();
+
+    render(<TraegerSidebar federalStates={["DE-MV", "DE-NW"]} />);
+    expect(
+      mainNav().getByRole("link", { name: "Tagesmeldung" }),
+    ).toHaveAttribute("href", "/tagesmeldung");
+  });
+
   it("leaves out a group without an open entry", () => {
     sessionUser.permissions = ["traeger_overview:read"];
     render(<TraegerSidebar />);

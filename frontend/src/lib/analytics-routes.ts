@@ -290,6 +290,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/schulen/:id",
   "/standortvergleich",
   "/stichtagszahlen",
+  "/tagesmeldung",
   "/uebersicht",
   "/vertraege",
   "/vertraege/:id",

@@ -259,6 +259,7 @@ export const HELP_TOPICS = {
   traegerCareContracts: "betreuungsvertraege-senden",
   traegerCareTimeOverruns: "laenger-als-gebucht",
   traegerArrivalPickupTimes: "ankunft-und-abholung",
+  traegerDailyAttendance: "tagesmeldung-mecklenburg-vorpommern",
   traegerSharedDocuments: "dokumente-fuer-eltern-und-schulen-freigeben",
   traegerStaffRecords: "personalakten-ueber-alle-schulen",
   traegerStaffProofs: "personalnachweise-mit-ablaufwarnung",

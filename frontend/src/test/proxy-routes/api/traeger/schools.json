@@ -17,6 +17,9 @@
   "api/traeger/schools/comparison": [
     "GET traeger /traeger/schools/comparison"
   ],
+  "api/traeger/schools/daily-attendance": [
+    "GET traeger /traeger/schools/daily-attendance"
+  ],
   "api/traeger/schools/key-date-counts": [
     "GET traeger /traeger/schools/key-date-counts"
   ],

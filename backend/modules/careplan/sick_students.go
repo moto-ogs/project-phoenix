@@ -24,4 +24,25 @@ type SickStudents interface {
 	// day that stands for the day, per school and weekday of the window (both
 	// days included): one per child and day, sick before excused.
 	StatusDayCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date) (sick, excused map[int64]map[calendar.Date]int, err error)
+	// StatusDaysByTenant lists the status days that stand for their day
+	// between from and to, both included, one per child and day (#4717).
+	StatusDaysByTenant(ctx context.Context, schools []int64, from, to calendar.Date) ([]StatusDay, error)
+}
+
+// The statuses of a StatusDay.
+const (
+	StatusDaySick      = "sick"
+	StatusDayExcused   = "excused"
+	StatusDayClassTrip = "class_trip"
+)
+
+// StatusDay is a child's reported absence on one day at one school: sick,
+// excused or on a class trip. It stands for the day as on the school's own
+// dashboard: active, or archived at the day's end. Where a child has several,
+// sick wins over excused, excused over class trip.
+type StatusDay struct {
+	SchoolID  int64
+	Date      calendar.Date
+	StudentID int64
+	Status    string
 }

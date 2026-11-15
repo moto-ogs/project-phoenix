@@ -102,6 +102,7 @@
   "contributionExemption": "Free because of benefits: {note}",
   "contributionChildTotal": "Subtotal",
   "contributionTotal": "Total",
+  "contributionUpdated": "The fee has been recalculated. Total: {total}",
   "benefitsLabel": "We receive benefits, for example Bürgergeld, housing benefit (Wohngeld) or child supplement (Kinderzuschlag).",
   "benefitsHint": "Then holiday care is free. The provider needs proof of this.",
   "benefitsProofLabel": "Proof of benefits",

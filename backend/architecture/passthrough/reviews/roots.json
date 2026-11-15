@@ -1221,6 +1221,11 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0247",
+      "id": "api/traegerAbsenceDays.AbsenceDaysByTenant",
+      "reason": "ADR 0247 (#4717): Consumer-port adapter of the daily attendance report of Mecklenburg-Vorpommern; it translates Care Plan's status days into the projection's AbsenceDay vocabulary and drops a status the report does not know."
+    },
+    {
       "decision": "0109",
       "id": "api/traegerAccessTrail.ListAccessTrail",
       "reason": "ADR 0109 (#4655): root translation of the Audit Platform's access trail into the Träger projection's port vocabulary."
@@ -1239,6 +1244,11 @@
       "decision": "0109",
       "id": "api/traegerBureauAddresses.BureauAddresses",
       "reason": "ADR 0109 (#4655): root translation of the Identity \u0026 Access Träger accounts; only accounts with a Träger role at the Träger are named."
+    },
+    {
+      "decision": "0247",
+      "id": "api/traegerChildDays.ChildDaysByTenant",
+      "reason": "ADR 0247 (#4717): Consumer-port adapter of the daily attendance report of Mecklenburg-Vorpommern; it translates Student Presence's care days per child into the projection's ChildDay vocabulary."
     },
     {
       "decision": "0084",
@@ -1319,6 +1329,11 @@
       "decision": "0233",
       "id": "api/traegerSchoolPersons.SchoolPersons",
       "reason": "ADR 0233 (#4705): Consumer-port adapter that reads the persons behind those employments from the People Directory and translates them into Workforce's TraegerSchoolPerson."
+    },
+    {
+      "decision": "0247",
+      "id": "api/traegerSchoolStates.TraegerSchoolStates",
+      "reason": "ADR 0247 (#4717): Consumer-port adapter of the daily attendance report of Mecklenburg-Vorpommern; it reads the federal state of each school of the Träger at School Calendar's Träger view (#4702) and keys it by school for the projection."
     },
     {
       "decision": "0090",
