@@ -55,8 +55,9 @@ Ein-Checken bei Student Presence, Krank- und Entschuldigt-Tage bei Care Plan.
      der Belegung (ADR 0154), jetzt mit dem Stichtag statt heute;
    - Ein-Checken über `PresenceSeries` (ADR 0241);
    - Krank- und Entschuldigt-Tage über die neue Care-Plan-Lesung
-     `StatusDayCountsByTenant` (je Kind und Tag einmal, Montag bis Freitag,
-     Statustag „gilt für den Tag“ wie beim Dashboard);
+     `StatusDayCountsByTenant` (je Schule und Tag; je Kind und Tag einmal,
+     krank vor entschuldigt, Montag bis Freitag, Statustag „gilt für den Tag“
+     wie beim Dashboard);
    - offene und Wartelisten-Kinder über die neue Enrollment-Lesung
      `EnrollmentDemandByTenant`; das Dashboard liest seine offenen Kinder jetzt
      über dieselbe Abfrage.
@@ -69,7 +70,12 @@ Ein-Checken bei Student Presence, Krank- und Entschuldigt-Tage bei Care Plan.
    Der Fehlzeiten-Zeitraum beginnt am 1. August des Schuljahres des Stichtags
    (höchstens 365 Tage vorher) und endet am Stichtag, höchstens gestern. Die
    Fehlquote ist Krank- plus Entschuldigt-Tage über diese plus
-   Anwesenheitstage. Plätze zählen nur aktive Betreuungsformen mit Grenze.
+   Anwesenheitstage. Alle drei zählen nur an Tagen mit einem Check-in an der
+   Schule: Dann war sie offen und bewahrt die Anwesenheit des Tages noch auf.
+   So heben Ferien, Feiertage, Schließtage und Tage vor der aufbewahrten
+   Anwesenheit die Fehlquote nicht. Ein Kind mit Check-in und Statustag am
+   selben Tag zählt in beiden; das ist selten (Kind geht krank nach Hause)
+   und braucht die Daten zweier Owner je Kind. Plätze zählen nur aktive Betreuungsformen mit Grenze.
    Offene Anmeldungen und Warteliste gelten „Stand heute“, weil die Anmeldung
    keinen Statusverlauf speichert; Export und Seite nennen den Stand.
    Sozialraum und Summe werden aus den Schulzahlen addiert, Quoten aus den

@@ -142,8 +142,8 @@ type keyDateReads struct {
 	withCareForms bool
 	staff         map[int64][]int64
 	attendance    map[int64]traegerview.DailyCounts
-	sick          map[int64]int
-	excused       map[int64]int
+	sick          map[int64]map[calendar.Date]int
+	excused       map[int64]map[calendar.Date]int
 	open          map[int64]int
 	waitlisted    map[int64]int
 	window        *traegerview.ReportWindow
@@ -209,12 +209,18 @@ func (r keyDateReads) school(school traegerview.School, districts map[int64]stri
 	if r.window != nil {
 		attendance := r.attendance[school.ID]
 		row.AttendanceFrom = attendance.From
+		// Only days with a check-in at the school count: on such a day the
+		// school was open and still keeps its attendance, so a sick or excused
+		// day on a holiday, a closing day or before the kept attendance
+		// raises no absence rate (#4716).
 		for day, count := range attendance.Counts {
-			if weekday := day.Weekday(); weekday != time.Saturday && weekday != time.Sunday {
-				figures.PresentDays += count
+			if weekday := day.Weekday(); weekday == time.Saturday || weekday == time.Sunday || count == 0 {
+				continue
 			}
+			figures.PresentDays += count
+			figures.SickDays += r.sick[school.ID][day]
+			figures.ExcusedDays += r.excused[school.ID][day]
 		}
-		figures.SickDays, figures.ExcusedDays = r.sick[school.ID], r.excused[school.ID]
 	}
 	figures.Open, figures.Waitlisted = r.open[school.ID], r.waitlisted[school.ID]
 	row.Figures = completeFigures(figures, row.CareForms)

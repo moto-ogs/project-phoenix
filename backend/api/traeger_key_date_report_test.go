@@ -91,7 +91,12 @@ func newKeyDateReportFixture(t *testing.T, db *bun.DB, router *traegerPortalHand
 	presence := newUtilizationPresence(t, db, park)
 	presence.checkIn(anna.ID, calendar.NewDate(2026, time.October, 12)) // Monday
 	presence.checkIn(ben.ID, calendar.NewDate(2026, time.October, 12))
-	presence.checkIn(cem.ID, calendar.NewDate(2026, time.October, 11))                  // Sunday: no weekday
+	presence.checkIn(cem.ID, calendar.NewDate(2026, time.October, 11)) // Sunday: no weekday
+	presence.checkIn(cem.ID, calendar.NewDate(2026, time.October, 13)) // the school is open
+	presence.checkIn(cem.ID, calendar.NewDate(2026, time.October, 14))
+	// A weekday without any check-in, a holiday say: its sick day raises no
+	// absence (#4716).
+	statusDay(t, db, park, ben.ID, calendar.NewDate(2026, time.October, 5), "sick")
 	statusDay(t, db, park, anna.ID, calendar.NewDate(2026, time.October, 14), "sick")   // Wednesday
 	statusDay(t, db, park, anna.ID, calendar.NewDate(2026, time.October, 10), "sick")   // Saturday: no weekday
 	statusDay(t, db, park, ben.ID, calendar.NewDate(2026, time.October, 13), "excused") // Tuesday
@@ -135,10 +140,12 @@ func TestTraegerKeyDateReportCountsChildrenStaffAbsencesAndDemand(t *testing.T) 
 	park := keyDateSchoolOf(t, report, fixture.park)
 	assert.Nil(t, park.District)
 	require.NotNil(t, park.AttendanceFrom)
-	half, rate := 1.5, 50.0
+	// Two absent of six counted days, computed at run time like the report.
+	absent, counted := 2.0, 6.0
+	half, rate := 1.5, absent/counted*100
 	assert.Equal(t, traegerview.KeyDateFigures{
 		Children: 3, WithoutCareForm: 1, Staff: 2, ChildrenPerStaff: &half,
-		PresentDays: 2, SickDays: 1, ExcusedDays: 1, AbsenceRate: &rate,
+		PresentDays: 4, SickDays: 1, ExcusedDays: 1, AbsenceRate: &rate,
 		Places: 10, BookedPlaces: 2, FreePlaces: 8, Booked: 2, Open: 1, Waitlisted: 1, Demand: 4,
 	}, park.Figures)
 	ten := 10
@@ -333,8 +340,8 @@ func TestTraegerKeyDateReportReadsRefuseOutsideTheAdministrativeTransaction(t *t
 	require.NoError(t, testpkg.WithinAdminContext(t, context.Background(), db, func(adminCtx context.Context) error {
 		sick, excused, err := carePlanCompose.NewSickStudents().StatusDayCountsByTenant(adminCtx, scope, from, to)
 		require.NoError(t, err)
-		assert.Equal(t, map[int64]int{school: 1}, sick, "only the given schools")
-		assert.Equal(t, map[int64]int{school: 1}, excused)
+		assert.Equal(t, map[int64]map[calendar.Date]int{school: {calendar.NewDate(2026, time.October, 13): 1}}, sick, "only the given schools")
+		assert.Equal(t, map[int64]map[calendar.Date]int{school: {calendar.NewDate(2026, time.October, 14): 1}}, excused)
 		open, waitlisted, err := enrollmentCompose.NewOpenEnrollments().EnrollmentDemandByTenant(adminCtx, scope)
 		require.NoError(t, err)
 		assert.Empty(t, open, "the waiting child is the other school's")

@@ -30,7 +30,7 @@ export const SECTION_META: Record<
   },
   absences: {
     label: "Fehlzeiten",
-    hint: "Anwesende, kranke und entschuldigte Tage vom Schuljahresbeginn bis zum Stichtag.",
+    hint: "Anwesende, kranke und entschuldigte Tage vom Schuljahresbeginn bis zum Stichtag, nur an Tagen mit Check-ins.",
   },
   demand: {
     label: "Belegung und Nachfrage",

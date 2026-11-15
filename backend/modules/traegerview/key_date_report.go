@@ -35,7 +35,11 @@ import (
 //     PresentDays are the children with an attendance (check-in) summed over
 //     the weekdays of the window; SickDays and ExcusedDays the children with
 //     a sick or an excused status day that stands for the day (active, or
-//     archived at its end), summed over the weekdays. AbsenceRate is
+//     archived at its end), one per child and day, sick before excused. All
+//     three count only on days with a check-in at the school: the school was
+//     open and still keeps that day's attendance, so holidays, closing days
+//     and days before the kept attendance raise no absence. A child with a
+//     check-in and a status on the same day counts in both. AbsenceRate is
 //     SickDays plus ExcusedDays over PresentDays plus both, in percent; nil
 //     without any such day. An empty window (a key date of today or later
 //     before its school year has a day that is over) has no window and zeros.
@@ -103,12 +107,12 @@ type ReportTemplateReads interface {
 	ReportTemplate(ctx context.Context, organizationID, templateID int64) (ReportTemplate, error)
 }
 
-// AbsenceDays counts, at Care Plan, the sick and the excused status days of
-// the children of each school on the weekdays of the window (both days
-// included). It joins the projection's administrative transaction and reads
-// only the given schools.
+// AbsenceDays counts, at Care Plan, the children of each school with a sick
+// and with an excused status day, per weekday of the window (both days
+// included); a child counts once a day, sick before excused. It joins the
+// projection's administrative transaction and reads only the given schools.
 type AbsenceDays interface {
-	StatusDayCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date) (sick, excused map[int64]int, err error)
+	StatusDayCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date) (sick, excused map[int64]map[calendar.Date]int, err error)
 }
 
 // EnrollmentDemand counts, at Enrollment, the children of the online

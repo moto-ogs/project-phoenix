@@ -26,14 +26,20 @@ type sickStudents struct {
 const sickDayStudentIDsSQL = `SELECT DISTINCT tenant_id, student_id AS id FROM active.student_status_days
 WHERE tenant_id = ANY(?) AND date = ?::date AND status = 'sick' AND (cleared_at IS NULL OR (source = '` + statusSourceEndDay + `' AND cleared_source IS NULL))`
 
-// statusDayCountsSQL counts the status days that stand for the day, as the
-// sick days above, one per child, day and status, on Monday to Friday of the
-// window. It takes the school set and the window (from, to).
-const statusDayCountsSQL = `SELECT tenant_id, status, COUNT(DISTINCT (student_id, date))::int AS days FROM active.student_status_days
-WHERE tenant_id = ANY(?0) AND date BETWEEN ?1::date AND ?2::date AND status IN ('sick', 'excused')
-  AND date_part('isodow', date) < 6
-  AND (cleared_at IS NULL OR (source = '` + statusSourceEndDay + `' AND cleared_source IS NULL))
-GROUP BY tenant_id, status`
+// statusDayCountsSQL counts, per school and day, the children with a status
+// day that stands for the day, as the sick days above, on Monday to Friday of
+// the window. A child counts once a day; sick wins over excused. It takes the
+// school set and the window (from, to).
+const statusDayCountsSQL = `SELECT tenant_id, date,
+  COUNT(*) FILTER (WHERE sick)::int AS sick, COUNT(*) FILTER (WHERE NOT sick)::int AS excused
+FROM (
+  SELECT tenant_id, student_id, date, bool_or(status = 'sick') AS sick FROM active.student_status_days
+  WHERE tenant_id = ANY(?0) AND date BETWEEN ?1::date AND ?2::date AND status IN ('sick', 'excused')
+    AND date_part('isodow', date) < 6
+    AND (cleared_at IS NULL OR (source = '` + statusSourceEndDay + `' AND cleared_source IS NULL))
+  GROUP BY tenant_id, student_id, date
+) AS child_days
+GROUP BY tenant_id, date`
 
 const sickFlagMembershipIDsSQL = `SELECT tenant_id, membership_id AS id FROM users.student_care_profiles
 WHERE tenant_id = ANY(?) AND sick`
@@ -94,8 +100,8 @@ func (s sickStudents) SickFlagMembershipIDsByTenant(ctx context.Context, schools
 	return idsByTenant(rows), nil
 }
 
-func (s sickStudents) StatusDayCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date) (map[int64]int, map[int64]int, error) {
-	sick, excused := map[int64]int{}, map[int64]int{}
+func (s sickStudents) StatusDayCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date) (map[int64]map[calendar.Date]int, map[int64]map[calendar.Date]int, error) {
+	sick, excused := map[int64]map[calendar.Date]int{}, map[int64]map[calendar.Date]int{}
 	if len(schools) == 0 {
 		return sick, excused, nil
 	}
@@ -104,19 +110,26 @@ func (s sickStudents) StatusDayCountsByTenant(ctx context.Context, schools []int
 		return nil, nil, err
 	}
 	var rows []struct {
-		TenantID int64  `bun:"tenant_id"`
-		Status   string `bun:"status"`
-		Days     int    `bun:"days"`
+		TenantID int64         `bun:"tenant_id"`
+		Date     calendar.Date `bun:"date"`
+		Sick     int           `bun:"sick"`
+		Excused  int           `bun:"excused"`
 	}
 	if err := db.NewRaw(statusDayCountsSQL, pgdialect.Array(schools), from, to).Scan(ctx, &rows); err != nil {
 		return nil, nil, fmt.Errorf("care plan postgres: status day counts: %w", err)
 	}
-	for _, row := range rows {
-		if row.Status == "sick" {
-			sick[row.TenantID] = row.Days
-		} else {
-			excused[row.TenantID] = row.Days
+	add := func(counts map[int64]map[calendar.Date]int, tenantID int64, day calendar.Date, children int) {
+		if children == 0 {
+			return
 		}
+		if counts[tenantID] == nil {
+			counts[tenantID] = map[calendar.Date]int{}
+		}
+		counts[tenantID][day] = children
+	}
+	for _, row := range rows {
+		add(sick, row.TenantID, row.Date, row.Sick)
+		add(excused, row.TenantID, row.Date, row.Excused)
 	}
 	return sick, excused, nil
 }
