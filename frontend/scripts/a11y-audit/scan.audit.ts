@@ -692,10 +692,25 @@ async function errorStates(browser: Browser) {
           .filter(Boolean),
         invalid: document.querySelectorAll('[aria-invalid="true"]').length,
       }));
+      // Tab-Lauf nach dem Fehler (#7111): kein Stopp darf auf <body> liegen,
+      // sonst beginnt die Tastatur wieder oben auf der Seite.
+      const tabStops: string[] = [];
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press("Tab");
+        tabStops.push(
+          await page.evaluate(() => {
+            const a = document.activeElement as HTMLElement | null;
+            return a ? `${a.tagName.toLowerCase()}#${a.id}` : "null";
+          }),
+        );
+      }
+      const onBody = [st.active, ...tabStops].filter(
+        (stop) => !stop || stop.startsWith("body"),
+      ).length;
       const ax = await axe(page);
-      save(l.label, { label: l.label, state: st, axe: ax });
+      save(l.label, { label: l.label, state: st, tabStops, onBody, axe: ax });
       console.log(
-        `${l.label}: Fokus=${st.active} aria-invalid=${st.invalid} Meldung="${st.alerts[0] ?? "-"}" axe=${ax.violations.map((x: any) => `${x.id}:${x.count}`).join(" ") || 0}`,
+        `${l.label}: Fokus=${st.active} Tab=${tabStops.join(" → ")} body=${onBody} aria-invalid=${st.invalid} Meldung="${st.alerts[0] ?? "-"}" axe=${ax.violations.map((x: any) => `${x.id}:${x.count}`).join(" ") || 0}`,
       );
     } catch (e) {
       console.log(`${l.label}: FEHLER ${String(e).slice(0, 160)}`);

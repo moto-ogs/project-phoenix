@@ -58,7 +58,6 @@
     "removeObject": "usunięcie urządzenia"
   },
   "challenge": {
-    "back": "Wstecz",
     "backLabel": "Wróć do logowania",
     "title": "Proszę wpisać kod",
     "sentTo": "Wysłaliśmy 6-cyfrowy kod na <b>{email}</b>. Kod jest ważny 10 minut.",

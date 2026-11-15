@@ -1489,6 +1489,8 @@ export function EnrollmentForm({
                           formFieldName.child(i, "date_of_birth"),
                         )}
                         tr={tr}
+                        name={formFieldName.child(i, "date_of_birth")}
+                        errorId={`enrollment-children-${i}-date-of-birth-error`}
                       />
                     </div>
                     {collectGradeLevel && (

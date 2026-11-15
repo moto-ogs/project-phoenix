@@ -601,7 +601,7 @@ function useApiErrorCore(
           ? control.nextElementSibling?.querySelector<HTMLElement>(
               '[role="combobox"], button',
             )
-          : control;
+          : (control ?? firstFieldById(formRef?.current ?? document, failed));
       // FormErrorAlert alone scrolls (#5217): one jump to the first marked
       // field, not a second instant one from the focus.
       target?.focus({ preventScroll: true });
@@ -716,6 +716,23 @@ function useApiErrorCore(
     setFieldErrors,
     invalidatePendingShow,
   };
+}
+
+/**
+ * A field without a named control, such as the signature pad, is marked
+ * under its `id` (#7111): the first of them in page order, if focusable.
+ */
+function firstFieldById(
+  root: ParentNode,
+  failed: ReadonlySet<string>,
+): HTMLElement | undefined {
+  const fields = [...failed]
+    .map((name) => root.querySelector<HTMLElement>(`#${CSS.escape(name)}`))
+    .filter((field): field is HTMLElement => field !== null)
+    .sort((a, b) =>
+      a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
+    );
+  return fields.find((field) => field.matches("[tabindex]"));
 }
 
 /** Opt-in display path for actions without a form (#2510). */
