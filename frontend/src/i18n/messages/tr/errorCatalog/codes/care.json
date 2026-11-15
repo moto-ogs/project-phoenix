@@ -41,7 +41,7 @@
   "guardian_role_managed": "Bu kişi velidir. Bilgilerini yalnızca kendisi veya okul değiştirebilir.",
   "guardian_shared_across_families": "Bu kişi birden fazla aileye bağlı. Bilgilerini yalnızca okul değiştirebilir. Lütfen okulla iletişime geçin.",
   "guardian_social_worker_managed": "Bu iletişim bilgilerini okul yönetiyor. Değişiklik için lütfen okulla iletişime geçin.",
-  "invalid_credentials": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
+  "invalid_credentials": "E-posta adresi veya şifre doğru değil. Lütfen girdiğiniz bilgileri kontrol edin.",
   "invalid_poll_response": "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",
   "invalid_recipients": "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",
   "invalid_request_payload": "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",

@@ -38,6 +38,11 @@ interface PasswordResetModalProps {
   readonly errorPath: DatabaseFormErrorPath;
   /** The element `errorPath` searches for a refused field to focus. */
   readonly formRef?: RefObject<HTMLFormElement | null>;
+  /**
+   * The address the login form already holds. Each opening starts with it,
+   * so nobody types it twice after a refused password (#7106).
+   */
+  readonly initialEmail?: string;
 }
 
 interface PasswordResetModalCopy {
@@ -133,8 +138,16 @@ export function PasswordResetModal({
   copy = DEFAULT_PASSWORD_RESET_MODAL_COPY,
   errorPath,
   formRef,
+  initialEmail = "",
 }: PasswordResetModalProps) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(isOpen ? initialEmail.trim() : "");
+  // The dialog stays mounted while closed: each opening takes the login
+  // form's address anew.
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    if (isOpen) setEmail(initialEmail.trim());
+  }
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [rateLimitUntil, setRateLimitUntil] = useState<number | null>(null);
