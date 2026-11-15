@@ -124,3 +124,35 @@ function berlinDay(iso: string): string | null {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? null : berlinTodayISO(date);
 }
+
+/** Die Kennzahlen eines Monats für eine einzige gewählte Schule (#4718). */
+export interface KeyDateSchoolFigures {
+  readonly month: TraegerKeyDateMonth;
+  readonly previous: TraegerKeyDateMonth | null;
+}
+
+/**
+ * Die Monatszahlen nur einer Schule, im Format der Summe über alle Schulen:
+ * so zeigen die Kennzahlen oben dieselbe Schule wie Tabelle und Download.
+ * Ohne Zahlen zum Stichtag zählt die Schule mit 0 und nicht als erfasst.
+ */
+export function keyDateSchoolFigures(
+  row: KeyDateSchoolRow,
+  month: TraegerKeyDateMonth,
+  previous: TraegerKeyDateMonth | null,
+): KeyDateSchoolFigures {
+  const of = (
+    count: TraegerKeyDateCount | null,
+    base: TraegerKeyDateMonth,
+  ): TraegerKeyDateMonth => ({
+    period: base.period,
+    keyDate: count?.keyDate ?? base.keyDate,
+    activeStudents: count?.activeStudents ?? 0,
+    activeTerminals: count?.activeTerminals ?? 0,
+    schools: count ? 1 : 0,
+  });
+  return {
+    month: of(row.count, month),
+    previous: previous ? of(row.previous, previous) : null,
+  };
+}

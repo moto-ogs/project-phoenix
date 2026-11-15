@@ -13,11 +13,6 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DateRangePicker } from "~/components/ui/date-range-picker";
 import { EmptyState } from "~/components/ui/empty-state";
 import {
-  ExportMenu,
-  type ExportMenuOption,
-  exportFormatOptions,
-} from "~/components/ui/export-menu";
-import {
   Heatmap,
   type HeatmapCell,
   type HeatmapRow,
@@ -47,15 +42,16 @@ import {
   weekdayShort,
 } from "~/components/traeger/arrival-pickup-model";
 import { useTraegerArrivalPickupTimes } from "~/components/traeger/use-traeger-arrival-pickup-times";
-import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { childrenConcept } from "~/lib/concepts/children";
 import { pickupConcept } from "~/lib/concepts/pickup";
 import { presentConcept } from "~/lib/concepts/present";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
-import { downloadBlob } from "~/lib/file-download";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { createLogger } from "~/lib/logger";
 import type {
   ArrivalPickupHeatmap,
   ArrivalPickupPeriod,
@@ -63,12 +59,6 @@ import type {
   TraegerSchoolArrivalPickup,
 } from "~/lib/traeger-arrival-pickup-api";
 import { downloadTraegerArrivalPickupTimes } from "~/lib/traeger-arrival-pickup-api";
-
-const logger = createLogger({ component: "TraegerArrivalPickupPage" });
-
-const EXPORT_FORMATS: readonly ExportMenuOption[] = exportFormatOptions([
-  "csv",
-]);
 
 /** So weit reicht ein Zeitraum zurück: ein Jahr, wie im Backend. */
 const MAX_DAYS = 366;
@@ -407,10 +397,8 @@ export default function TraegerArrivalPickupPage() {
     return { from: toISODate(initial.from!), to: toISODate(initial.to!) };
   });
   const [schoolId, setSchoolId] = useState("");
-  const [exporting, setExporting] = useState(false);
   const { times, error, reportError, loading } =
     useTraegerArrivalPickupTimes(period);
-  const { show: showActionError } = useApiErrorDisplay();
 
   const schools = times?.schools ?? [];
   const selected = schools.find((school) => school.id === schoolId) ?? null;
@@ -434,26 +422,6 @@ export default function TraegerArrivalPickupPage() {
     setRange(next);
     if (next?.from && next.to) {
       setPeriod({ from: toISODate(next.from), to: toISODate(next.to) });
-    }
-  }
-
-  async function exportCsv() {
-    setExporting(true);
-    try {
-      const file = await downloadTraegerArrivalPickupTimes(period);
-      downloadBlob(
-        file.blob,
-        file.filename ??
-          `ankunft-und-abholung-${period.from}-bis-${period.to}.csv`,
-      );
-    } catch (err) {
-      reportError(err);
-      logger.error("traeger_arrival_pickup_export_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showActionError(err, { object: "die Exportdatei" });
-    } finally {
-      setExporting(false);
     }
   }
 
@@ -511,12 +479,20 @@ export default function TraegerArrivalPickupPage() {
             className="w-full sm:w-auto"
             triggerClassName="w-full sm:w-auto"
           />
-          <ExportMenu
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerArrivalPickupTimes(
+                period,
+                format,
+                selected?.id ?? undefined,
+              )
+            }
+            scope={traegerExportScope(selected?.name)}
             ariaLabel="Ankunft und Abholung herunterladen"
-            options={EXPORT_FORMATS}
-            busyKey={exporting ? "csv" : null}
+            fallbackName={`ankunft-und-abholung-${period.from}-bis-${period.to}`}
+            errorObject="die Ankunfts- und Abholzeiten"
             unavailable={!times}
-            onSelect={() => void exportCsv()}
+            onError={reportError}
           />
         </>
       }

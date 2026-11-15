@@ -4,6 +4,7 @@ import {
   formatKeyDateChange,
   formatKeyDateMonth,
   keyDateChange,
+  keyDateSchoolFigures,
   selectKeyDateMonth,
 } from "./key-date-counts-model";
 
@@ -77,5 +78,40 @@ describe("key-date figures", () => {
     expect(capturedLate({ ...base, recordedAt: "2026-10-15T22:30:00Z" })).toBe(
       true,
     );
+  });
+});
+
+describe("keyDateSchoolFigures", () => {
+  it("shows the figures of the one chosen school, a month without figures as 0", () => {
+    const count = school.counts[0]!;
+    const all = {
+      ...october,
+      activeStudents: 40,
+      activeTerminals: 4,
+      schools: 3,
+    };
+    const before = {
+      ...september,
+      activeStudents: 38,
+      activeTerminals: 4,
+      schools: 3,
+    };
+    expect(
+      keyDateSchoolFigures({ school, count, previous: null }, all, before),
+    ).toEqual({
+      month: { ...october, activeStudents: 10, activeTerminals: 1, schools: 1 },
+      previous: {
+        ...september,
+        activeStudents: 0,
+        activeTerminals: 0,
+        schools: 0,
+      },
+    });
+    expect(
+      keyDateSchoolFigures({ school, count: null, previous: null }, all, null),
+    ).toEqual({
+      month: { ...october, activeStudents: 0, activeTerminals: 0, schools: 0 },
+      previous: null,
+    });
   });
 });

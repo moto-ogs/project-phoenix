@@ -30,6 +30,10 @@ import {
 } from "~/components/traeger/care-contract-format";
 import { careContractTabs } from "~/components/traeger/care-contract-tabs";
 import { emptySearchText } from "~/components/traeger/empty-search";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -69,6 +73,7 @@ import {
   sendCareContracts,
 } from "~/lib/traeger-care-contracts-api";
 import { fetchTraegerSchools, type TraegerSchool } from "~/lib/traeger-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { useDebounce } from "~/lib/use-debounce";
 import { traegerPath } from "~/lib/traeger-url";
 
@@ -524,6 +529,22 @@ export default function TraegerVertraegePage() {
       }}
       actions={
         <>
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList("/api/traeger/contracts/export", format, {
+                status: status === "all" ? undefined : status,
+                school_id: schoolId,
+                search: debouncedSearch,
+              })
+            }
+            scope={traegerExportScope(
+              schools.find((school) => school.value === schoolId)?.label,
+            )}
+            ariaLabel="Verträge herunterladen"
+            fallbackName="betreuungsvertraege"
+            errorObject="die Verträge"
+            unavailable={!data}
+          />
           <ButtonLink
             href={traegerPath("/traeger/vertraege/import")}
             variant="outline"

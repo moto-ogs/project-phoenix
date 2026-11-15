@@ -5,6 +5,8 @@
 // Ein- und Auschecken (Soll und Ist, ADR 0139). Die Zahlen je Schule sieht
 // jede Rolle mit „Berichte lesen“, die Kinder mit Namen nur „Verträge
 // verwalten“; jedes Lesen der Namen steht im Zugriffsprotokoll der Schule.
+// Beide Tabellen gibt es als PDF, Excel und CSV, für den Monat und die
+// gewählte Schule (#4718); der Download der Namen braucht dasselbe Recht.
 
 import {
   type MouseEvent,
@@ -28,7 +30,12 @@ import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiLoadError } from "~/contexts/ToastContext";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { hasPermission } from "~/lib/auth-utils";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { calendarConcept } from "~/lib/concepts/calendar";
 import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { childrenConcept } from "~/lib/concepts/children";
@@ -496,6 +503,15 @@ export default function TraegerZeitvergleichPage() {
     [range.from, range.to, maxMinutes],
   );
 
+  const exportParams = {
+    from: range.from,
+    to: range.to,
+    school_id: schoolId === ALL_SCHOOLS ? undefined : schoolId,
+  };
+  const exportScope = traegerExportScope(
+    schools.find((school) => school.schoolId === schoolId)?.schoolName,
+  );
+
   return (
     <TenantPage
       title="Länger als gebucht"
@@ -569,6 +585,22 @@ export default function TraegerZeitvergleichPage() {
           title: "Je Schule",
           count: evaluation?.schools.length,
           level: 2,
+          action: (
+            <TraegerListExportMenu
+              download={(format) =>
+                downloadTraegerList(
+                  "/api/traeger/care-time-overruns/export",
+                  format,
+                  exportParams,
+                )
+              }
+              scope={exportScope}
+              ariaLabel="Zahlen je Schule herunterladen"
+              fallbackName={`laenger-als-gebucht-${range.from}-bis-${range.to}`}
+              errorObject="die Zahlen je Schule"
+              unavailable={!evaluation}
+            />
+          ),
         }}
         columns={columns}
         rows={[...(evaluation?.schools ?? [])]}
@@ -585,6 +617,23 @@ export default function TraegerZeitvergleichPage() {
             title: "Kinder",
             count: evaluation?.children.length,
             level: 2,
+            action: (
+              <TraegerListExportMenu
+                download={(format) =>
+                  downloadTraegerList(
+                    "/api/traeger/care-time-overruns/children/export",
+                    format,
+                    exportParams,
+                  )
+                }
+                scope={exportScope}
+                ariaLabel="Kinder herunterladen"
+                tooltip="Zeigt die Formate. Jeder Download der Namen steht im Zugriffsprotokoll der Schule."
+                fallbackName={`laenger-als-gebucht-kinder-${range.from}-bis-${range.to}`}
+                errorObject="die Kinder"
+                unavailable={!evaluation}
+              />
+            ),
           }}
           columns={CHILD_COLUMNS}
           rows={[...(evaluation?.children ?? [])]}
