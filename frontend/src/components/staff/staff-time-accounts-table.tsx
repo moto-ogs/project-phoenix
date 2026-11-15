@@ -511,7 +511,11 @@ export function StaffTimeAccountsTable({
       <LoadErrorAlert error={error} />
 
       {withoutTargetCount > 0 && (
-        <div ref={withoutTargetRef} className="scroll-mt-24">
+        <div
+          ref={withoutTargetRef}
+          className="scroll-mt-24"
+          data-setup-tour="time-accounts-without-target"
+        >
           <Alert
             type="warning"
             announce="off"

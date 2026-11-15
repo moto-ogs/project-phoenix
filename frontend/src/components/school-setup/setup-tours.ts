@@ -1,4 +1,5 @@
 import type { SchoolSetupStepKey } from "~/lib/school-setup-api";
+import { staffWithoutTargetHref } from "~/lib/time-account-links";
 
 /**
  * Die geführten Touren der ersten Schritte (#2832).
@@ -79,6 +80,12 @@ export const CHILD_RECORD = /^(?!.*\/database\/)(?:\/[^/]+)?\/students\/[^/]+$/;
 export interface SetupTour {
   /** Die Seite, auf der die Tour läuft. */
   path: string;
+  /**
+   * Die Adresse, mit der die Tour die Seite öffnet, wenn sie mehr trägt als
+   * den Pfad, etwa eine Ansicht und einen Filter. Die Tour erkennt die Seite
+   * weiter am Pfad.
+   */
+  href?: string;
   stops: readonly SetupTourStop[];
 }
 
@@ -122,6 +129,9 @@ function viaSidebar(path: string, label: string): SetupTourStop[] {
     },
   ];
 }
+
+/** Der Reiter „Zeitkonten“ der Personalseite. */
+const TIME_ACCOUNTS_TAB = '[role="tab"][data-tab-value="accounts"]';
 
 /** Die Karte „Neue Einladung“, erkannt an ihrem Senden-Knopf. */
 const INVITE_FORM = 'div:has(> form [data-setup-tour="invite-submit"])';
@@ -373,4 +383,36 @@ export const SETUP_TOURS: Readonly<
       },
     ],
   },
+  worktime: workTimeTour(),
 };
+
+/**
+ * Die Tour zu den Personen ohne Soll (#6919). Sie führt nicht durch die
+ * Seitenleiste: Die Tour öffnet die Zeitkonten gleich mit dem Filter „ohne
+ * Soll“. Die Checkliste startet sie im Monat, den sie gezählt hat.
+ */
+function workTimeTour(): SetupTour {
+  return {
+    path: "/staff",
+    href: staffWithoutTargetHref(),
+    stops: [
+      {
+        // Nur wer schon auf der Personalseite steht, sieht noch die Liste
+        // der Personen. Öffnet die Tour die Seite, sind die Zeitkonten da.
+        target: TIME_ACCOUNTS_TAB,
+        title: "Zeitkonten öffnen",
+        text: "Unter „Zeitkonten“ sehen Sie, wer noch kein Soll hat. Wählen Sie „Zeitkonten“.",
+        advance: "click",
+        skipWhenVisible: `${TIME_ACCOUNTS_TAB}[aria-selected="true"]`,
+      },
+      {
+        target: '[data-setup-tour="time-accounts-without-target"]',
+        title: "Personen ohne Soll",
+        text: "Bei diesen Personen fehlt das Soll. In der Tabelle steht bei ihnen „Kein Soll“. Tragen Sie nach der Tour bei jeder das Arbeitszeitmodell ein.",
+        advance: "next",
+        missingText:
+          "Hier steht kein Hinweis. Dann haben in diesem Monat alle ein Soll.",
+      },
+    ],
+  };
+}

@@ -6,6 +6,7 @@
 import { apiErrorFromResponse } from "./api-error";
 import type { MailOutcome, MailOutcomeCounts } from "./email-delivery-status";
 import { sessionFetch } from "./session-cache";
+import { monthYearLabel } from "./time-account-links";
 import { transferFailureMessage } from "./sftp-export-api";
 
 interface BackendPayrollCategoryStatus {
@@ -370,13 +371,5 @@ export function payrollDispatchReasonText(
   return DISPATCH_REASON_TEXTS[reason] ?? DISPATCH_REASON_TEXTS.internal_error!;
 }
 
-const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", {
-  month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-});
-
 /** „September 2026“ für Jahr und Monat (1 bis 12). */
-export function payrollMonthLabel(year: number, month: number): string {
-  return MONTH_FORMATTER.format(new Date(Date.UTC(year, month - 1, 1)));
-}
+export const payrollMonthLabel = monthYearLabel;

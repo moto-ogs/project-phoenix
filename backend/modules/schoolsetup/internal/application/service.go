@@ -23,17 +23,18 @@ type Service struct {
 	schoolsetup.Store
 	progress schoolsetup.Progress
 	settings schoolsetup.Settings
+	workTime schoolsetup.WorkTime
 	now      func() time.Time
 }
 
 var _ schoolsetup.Service = (*Service)(nil)
 
 // New wires the wizard. Every dependency is required.
-func New(store schoolsetup.Store, progress schoolsetup.Progress, settings schoolsetup.Settings, now func() time.Time) (*Service, error) {
-	if store == nil || progress == nil || settings == nil || now == nil {
+func New(store schoolsetup.Store, progress schoolsetup.Progress, settings schoolsetup.Settings, workTime schoolsetup.WorkTime, now func() time.Time) (*Service, error) {
+	if store == nil || progress == nil || settings == nil || workTime == nil || now == nil {
 		return nil, errors.New("school setup service: all dependencies are required")
 	}
-	return &Service{Store: store, progress: progress, settings: settings, now: now}, nil
+	return &Service{Store: store, progress: progress, settings: settings, workTime: workTime, now: now}, nil
 }
 
 // Status returns the wizard for the calling person.
@@ -64,7 +65,11 @@ func (s *Service) Status(ctx context.Context, tenantID, accountID int64) (school
 	if err != nil {
 		return schoolsetup.Status{}, err
 	}
-	status.Steps = steps(state, basics, facts)
+	targets, err := s.workTime(ctx)
+	if err != nil {
+		return schoolsetup.Status{}, fmt.Errorf("resolve working-time targets: %w", err)
+	}
+	status.Steps = steps(state, basics, facts, targets)
 	return status, nil
 }
 
@@ -156,13 +161,14 @@ func (s *Service) basics(ctx context.Context) (schoolsetup.Basics, error) {
 
 // steps derives the wizard steps. A step that does not apply is never done or
 // skipped from the wizard's point of view.
-func steps(state *schoolsetup.State, basics schoolsetup.Basics, facts schoolsetup.Facts) []schoolsetup.Step {
+func steps(state *schoolsetup.State, basics schoolsetup.Basics, facts schoolsetup.Facts, targets schoolsetup.WorkTimeTargets) []schoolsetup.Step {
 	applies := map[schoolsetup.StepKey]bool{
 		schoolsetup.StepTeam:      true,
 		schoolsetup.StepRooms:     basics.PresenceMode == schoolsetup.PresenceModeDetailed,
 		schoolsetup.StepGroups:    basics.GroupMode == schoolsetup.GroupModeFixedGroups,
 		schoolsetup.StepStudents:  true,
 		schoolsetup.StepGuardians: true,
+		schoolsetup.StepWorkTime:  targets.Booked,
 	}
 	done := map[schoolsetup.StepKey]bool{
 		schoolsetup.StepTeam:      facts.StaffInvited,
@@ -170,6 +176,7 @@ func steps(state *schoolsetup.State, basics schoolsetup.Basics, facts schoolsetu
 		schoolsetup.StepGroups:    facts.GroupCreated,
 		schoolsetup.StepStudents:  facts.StudentEnrolled,
 		schoolsetup.StepGuardians: facts.GuardianInvited,
+		schoolsetup.StepWorkTime:  targets.Maintained(),
 	}
 	result := make([]schoolsetup.Step, 0, len(schoolsetup.StepKeys))
 	for _, step := range schoolsetup.StepKeys {

@@ -111,10 +111,11 @@ func renderEmailWebhookFailure(w http.ResponseWriter, r *http.Request, err error
 
 // mountModuleRoutes mounts the route groups modules serve themselves.
 func mountModuleRoutes(tenant chi.Router, settings settingsCompose.SettingsService, caller *owners.CallerRows, answers enrollmentOwner.StudentAnswers,
-	notes peopleOwner.StudentNoteSearch, activities activityContract.ActivityService,
+	notes peopleOwner.StudentNoteSearch, activities activityContract.ActivityService, staffOverview schoolSetupTargetCoverage,
 ) error {
 	schoolSetup, err := newSchoolSetupRoute(schoolSetupCompose.Dependencies{
 		Settings: SchoolSetupSettings{Settings: settings},
+		WorkTime: newSchoolSetupWorkTime(settings, staffOverview),
 	})
 	if err != nil {
 		return err
