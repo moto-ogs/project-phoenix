@@ -16,7 +16,7 @@ export function hasLetterPlaceholders(text: string): boolean {
 }
 
 /** The placeholder names a text uses, in lower case, once each. */
-export function letterPlaceholderNames(text: string): string[] {
+function letterPlaceholderNames(text: string): string[] {
   const names = new Set<string>();
   for (const match of text.matchAll(TOKEN)) {
     names.add((match[1] ?? "").toLowerCase());

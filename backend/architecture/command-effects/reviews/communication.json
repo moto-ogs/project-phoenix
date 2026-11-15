@@ -753,36 +753,6 @@
       "target_owner": "school-structure"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentLetterChildren.ParentLetterChildren",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterChildren.ParentLetterChildren",
-      "reason": "Tenant-scoped batch read for parent-letter child values (#4813); no mutation or locking read. Communication owns orchestration and formatting; the root adapter only maps the source capability to the consumer-owned port (ADR 0068).",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
-      "target_owner": "school-structure"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentLetterChildren.ParentLetterChildren",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterChildren.ParentLetterChildren",
-      "reason": "Tenant-scoped batch read for parent-letter child values (#4813); no mutation or locking read. Communication owns orchestration and formatting; the root adapter only maps the source capability to the consumer-owned port (ADR 0068).",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
-      "target_owner": "school-structure"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentLetterChildren.ParentLetterChildren",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterChildren.ParentLetterChildren",
-      "reason": "Tenant-scoped batch read for parent-letter child values (#4813); no mutation or locking read. Communication owns orchestration and formatting; the root adapter only maps the source capability to the consumer-owned port (ADR 0068).",
-      "source_owner": "communication",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
-      "target_owner": "school-structure"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentLetterLogos.ParentLetterLogo",
       "classification": "query",
       "effect": "query",
@@ -1838,6 +1808,36 @@
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/devices.ParentDeliveryPolicy.SchoolLogoURL",
       "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentLetterChildren.ParentLetterChildren",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentLetterChildren.ParentLetterChildren",
+      "reason": "Tenant-scoped batch read for parent-letter child values (#4813); no mutation or locking read. Communication owns orchestration and formatting; the root adapter only maps the source capability to the consumer-owned port (ADR 0068).",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
+      "target_owner": "school-structure"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentLetterChildren.ParentLetterChildren",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentLetterChildren.ParentLetterChildren",
+      "reason": "Tenant-scoped batch read for parent-letter child values (#4813); no mutation or locking read. Communication owns orchestration and formatting; the root adapter only maps the source capability to the consumer-owned port (ADR 0068).",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
+      "target_owner": "school-structure"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.parentLetterChildren.ParentLetterChildren",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentLetterChildren.ParentLetterChildren",
+      "reason": "Tenant-scoped batch read for parent-letter child values (#4813); no mutation or locking read. Communication owns orchestration and formatting; the root adapter only maps the source capability to the consumer-owned port (ADR 0068).",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
+      "target_owner": "school-structure"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ParentReadLatestReadCursorByOther",

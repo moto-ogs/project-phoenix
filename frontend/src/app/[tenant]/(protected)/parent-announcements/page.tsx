@@ -88,6 +88,8 @@ import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { useTenantSlugSafe } from "~/lib/tenant-context";
 import { ParentTargetPicker } from "~/components/announcements/parent-target-picker";
+import { LetterTemplateInline } from "~/components/announcements/letter-template-text";
+import { hasLetterPlaceholders } from "~/lib/parent-letter-placeholders";
 import {
   LetterBodyField,
   type LetterPreviewChildren,
@@ -131,6 +133,7 @@ import {
   createAnnouncement,
   fetchAnnouncements,
   isClassLetter,
+  isLetter,
   publishAnnouncement,
   updateAnnouncement,
   announcementAttachmentDownloadUrl,
@@ -590,7 +593,11 @@ function ParentAnnouncementsContent() {
               )}
           </div>
           <p className="mt-0.5 line-clamp-1 text-xs text-gray-500">
-            {row.body}
+            {isLetter(row) && hasLetterPlaceholders(row.body) ? (
+              <LetterTemplateInline text={row.body} links={false} />
+            ) : (
+              row.body
+            )}
           </p>
           {isClassLetter(row) && (
             <p className="mt-0.5 line-clamp-1 text-xs text-gray-500">

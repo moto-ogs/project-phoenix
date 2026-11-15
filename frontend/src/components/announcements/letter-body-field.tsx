@@ -26,7 +26,7 @@ import { useDebounce } from "~/lib/use-debounce";
 import { useLetterPlaceholders } from "./use-letter-placeholders";
 
 /** A child the preview can show. */
-export interface LetterPreviewChild {
+interface LetterPreviewChild {
   readonly value: string;
   readonly label: string;
 }

@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/modules/communication/ports"
 )
 
 // Serienbriefe (#4813): an Elternbrief that names each child is written once
@@ -32,6 +34,25 @@ type ParentLetters struct {
 	Children ParentLetterChildren
 	Logos    communication.ParentLetterLogos
 	Access   communication.ParentLetterAccessLog
+}
+
+// ParentLetterPorts are what the personalised letters read outside
+// Communication: the child values of the owners, the school's logo and the
+// data access log. The copies live in the announcements' repository.
+type ParentLetterPorts struct {
+	Sources ports.ParentLetterSources
+	Logos   communication.ParentLetterLogos
+	Access  communication.ParentLetterAccessLog
+}
+
+// Bind gives the service its letter ports over the announcements'
+// repository; without sources it previews and personalises nothing.
+func (p ParentLetterPorts) Bind(repo communication.ParentLetterCopyRecords, now func() time.Time) ParentLetters {
+	letters := ParentLetters{Copies: repo, Logos: p.Logos, Access: p.Access}
+	if p.Sources.Students != nil {
+		letters.Children = NewParentLetterChildren(p.Sources, now)
+	}
+	return letters
 }
 
 var errParentLettersNotWired = errors.New("announcement: personalised letters are not wired")

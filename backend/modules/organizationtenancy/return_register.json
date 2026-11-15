@@ -32953,12 +32953,6 @@
           "nullable": false
         },
         {
-          "name": "published_at",
-          "type": "timestamp with time zone",
-          "udt": "timestamptz",
-          "nullable": false
-        },
-        {
           "name": "created_at",
           "type": "timestamp with time zone",
           "udt": "timestamptz",

@@ -1,7 +1,6 @@
 package communication
 
 import (
-	"cmp"
 	"regexp"
 	"sort"
 	"strings"
@@ -117,8 +116,11 @@ func UnknownParentLetterPlaceholders(text string) []string {
 	unknown := map[string]bool{}
 	for _, match := range letterPlaceholderPattern.FindAllStringSubmatch(text, -1) {
 		name := strings.ToLower(match[1])
-		if name == "" || !knownLetterPlaceholder(name) {
-			unknown[cmp.Or(name, match[0])] = true
+		switch {
+		case name == "":
+			unknown[match[0]] = true
+		case !knownLetterPlaceholder(name):
+			unknown[name] = true
 		}
 	}
 	for _, stray := range letterStrayBrace.FindAllString(letterPlaceholderPattern.ReplaceAllString(text, " "), -1) {
