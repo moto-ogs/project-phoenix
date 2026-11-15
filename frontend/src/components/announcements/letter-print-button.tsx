@@ -1,7 +1,7 @@
 "use client";
 
 import { Printer } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
@@ -18,7 +18,6 @@ export function LetterPrintButton({
 }: Readonly<{ announcementId: string; apiBase?: string }>) {
   const { show: showError } = useApiErrorDisplay();
   const [busy, setBusy] = useState(false);
-  const latest = useRef<() => void>(() => undefined);
 
   const print = async () => {
     setBusy(true);
@@ -29,13 +28,12 @@ export function LetterPrintButton({
     } catch (error) {
       void showError(error, {
         object: "die Briefe zum Drucken",
-        retry: () => latest.current(),
+        retry: () => void print(),
       });
     } finally {
       setBusy(false);
     }
   };
-  latest.current = () => void print();
 
   return (
     <Button
