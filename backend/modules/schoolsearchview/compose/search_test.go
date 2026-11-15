@@ -367,8 +367,10 @@ func TestStaffRoomsAndGroupsFollowTheirScope(t *testing.T) {
 	require.Len(t, reversed.Staff, 1, "a name matches in either order")
 	require.Equal(t, staff.ID, reversed.Staff[0].ID)
 
-	numbered := testpkg.CreateTestRoom(t, db, "Werkraum 4711")
-	byDigits := search(t, db, tenantID, nil, "4711", fullScope)
+	// Eight digits: the fixtures suffix every room name with a nanosecond
+	// timestamp, which held a four-digit query by chance (#4724).
+	numbered := testpkg.CreateTestRoom(t, db, "Werkraum 47110815")
+	byDigits := search(t, db, tenantID, nil, "47110815", fullScope)
 	require.Len(t, byDigits.Rooms, 1, "digits that read like a phone number still find a room")
 	require.Equal(t, numbered.ID, byDigits.Rooms[0].ID)
 

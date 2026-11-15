@@ -57,10 +57,29 @@ function contractChangeText(change: StaffChange): string {
         ? `Ferien-Soll an der Schule ${school} gelöscht: ${change.value}`
         : `Ferien-Soll an der Schule ${school} eingetragen: ${change.value}`;
     default:
-      if (change.kind === "added") return `Arbeitsvertrag angelegt: ${change.value}`;
-      if (change.kind === "removed") return `Arbeitsvertrag gelöscht: ${change.value}`;
+      if (change.kind === "added")
+        return `Arbeitsvertrag angelegt: ${change.value}`;
+      if (change.kind === "removed")
+        return `Arbeitsvertrag gelöscht: ${change.value}`;
       return `Arbeitsvertrag geändert, vorher: ${change.value}`;
   }
+}
+
+/**
+ * Ein Eintrag des Personal-Imports (#4724). Der Wert lautet
+ * „Zeile <n>: <Datei>“; er nennt nie den importierten Wert.
+ */
+function importedChangeText(change: StaffChange): string {
+  const match = /^Zeile (\d+): (.*)$/.exec(change.value);
+  const source = match ? `${match[2]}, Zeile ${match[1]}` : change.value;
+  if (
+    change.field === "iban" ||
+    change.field === "tax_id" ||
+    change.field === "social_security_number"
+  ) {
+    return `${STAFF_FIELD_LABELS[change.field]} aus Datei eingetragen (${source})`;
+  }
+  return `Aus Datei angelegt (${source})`;
 }
 
 /** Ein Eintrag im Verlauf als ein Satz. */
@@ -75,6 +94,9 @@ export function staffChangeText(change: StaffChange): string {
   }
   if (change.kind === "linked") {
     return `Beschäftigung an der Schule ${school} verknüpft`;
+  }
+  if (change.kind === "imported" || change.field === "record") {
+    return importedChangeText(change);
   }
   const field =
     change.field === "school" ? "Schule" : STAFF_FIELD_LABELS[change.field];

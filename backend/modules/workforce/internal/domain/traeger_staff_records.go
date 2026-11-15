@@ -81,7 +81,22 @@ const (
 	StaffChangeChanged   = "changed"
 	// StaffChangeFieldSchool is the field of a linked entry: the Einsatzort.
 	StaffChangeFieldSchool = "school"
+	// StaffChangeImported is a record the Personal-Import created (field
+	// StaffChangeFieldRecord) or a bank or tax value it filled in (#4724);
+	// the text names the line and the file.
+	StaffChangeImported    = "imported"
+	StaffChangeFieldRecord = "record"
 )
+
+// StaffImportEvent is one import as the trail keeps it: the file, who
+// imported when, how many records it created and how many it completed.
+type StaffImportEvent struct {
+	File       string
+	AccountID  int64
+	ImportedAt time.Time
+	Created    int
+	Completed  int
+}
 
 // MaskStaffValue masks a bank or tax value for the trail and the preview:
 // the IBAN keeps its last four characters, the others show nothing of

@@ -522,7 +522,7 @@ export default function TraegerStaffRecordPage() {
           <SectionCard
             concept={changeHistoryConcept}
             title="Verlauf"
-            description="Was beim Verknüpfen nicht übernommen wurde und was sich seitdem geändert hat. Bank- und Steuerwerte stehen nur maskiert hier."
+            description="Woher die Akte kommt, was beim Verknüpfen nicht übernommen wurde und was sich seitdem geändert hat. Bank- und Steuerwerte stehen nur maskiert hier."
           >
             {record.changes.length > 0 ? (
               <FramedList>

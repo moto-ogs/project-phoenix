@@ -9,6 +9,7 @@ import {
   IdentificationCardIcon,
   LinkSimpleIcon,
   LockKeyIcon,
+  UploadSimpleIcon,
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -17,6 +18,7 @@ import {
   STAFF_MATCH_LABELS,
   STAFF_MATCH_TONES,
 } from "~/components/traeger/staff/staff-record-format";
+import { ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { IconTile } from "~/components/ui/icon-tile";
@@ -293,6 +295,20 @@ export default function TraegerStaffRecordsPage() {
         ) : null
       }
       statsLoading={!overview && !pageLoad.error}
+      actions={
+        released ? (
+          <ButtonLink
+            href={traegerPath("/traeger/personal/import")}
+            className="gap-2"
+            variant="outline"
+            size="md"
+            tooltip="Öffnet den Import für Personal aus einer CSV-Datei."
+          >
+            <UploadSimpleIcon className="h-4 w-4" aria-hidden="true" />
+            Personal importieren
+          </ButtonLink>
+        ) : undefined
+      }
       error={pageLoad.error}
       loading={!overview && !pageLoad.error}
       tabs={
@@ -394,7 +410,7 @@ export default function TraegerStaffRecordsPage() {
                   />
                 }
                 title="Noch keine Akte."
-                description="Verknüpfen Sie einen Vorschlag, oder legen Sie unter „Ohne Akte“ eine Akte für eine Person an."
+                description="Verknüpfen Sie einen Vorschlag, legen Sie unter „Ohne Akte“ eine Akte an, oder importieren Sie Ihr Personal oben mit „Personal importieren“."
               />
             }
           />

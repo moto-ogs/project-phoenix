@@ -1208,6 +1208,14 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": data})
 			return
 		}
+		// The Personal-Import (#4724) previews a multipart file, then takes it
+		// over with the fingerprint of the preview.
+		if strings.HasPrefix(r.URL.Path, "/traeger/staff-record-imports/") {
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{
+				"fingerprint": "seed-preview", "counts": map[string]any{"imported": 3},
+			}})
+			return
+		}
 		// The Träger's Abwesenheitsarten (#4710): both types exist after the
 		// seed; the school carries none in this fake.
 		if r.URL.Path == "/traeger/absence-types/" {

@@ -6,7 +6,8 @@ import (
 )
 
 // traegerStaffCoreActions classifies the writing routes of the staff records
-// of a Träger (#4705) and their Nachweise (#4707). They belong to the
+// of a Träger (#4705), their Nachweise (#4707) and the Personal-Import
+// (#4724). They belong to the
 // Träger, not to a school, so like the other Träger-Portal routes they count
 // for no school yet. init merges the table into coreActions.
 var traegerStaffCoreActions = map[RouteKey]CoreAction{
@@ -33,6 +34,9 @@ var traegerStaffCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/staff-records/{id}/contracts/{contractId}/soll"}:                                   notCaptured,
 	{http.MethodPost, "/traeger/staff-records/{id}/contracts/{contractId}/holiday-weeks"}:                          notCaptured,
 	{http.MethodDelete, "/traeger/staff-records/{id}/contracts/{contractId}/holiday-weeks/{schoolId}/{weekStart}"}: notCaptured,
+	// The Personal-Import (#4724).
+	{http.MethodPost, "/traeger/staff-record-imports/"}:        notCaptured,
+	{http.MethodPost, "/traeger/staff-record-imports/preview"}: notCaptured,
 }
 
 func init() {

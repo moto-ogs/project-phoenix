@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.staff_record_imports",
+  "max": 3,
+  "exact": true,
+  "description": "modules/workforce — GET /traeger/staff-record-imports/ (#4724): the binding of\nthe Träger transaction, its release and the import entries of the record\ntrail, grouped into imports by the store. Flat in the number of imports;\nimports of colleagues add one read of their names for the whole set.",
+  "route": "GET /traeger/staff-record-imports/"
+}
