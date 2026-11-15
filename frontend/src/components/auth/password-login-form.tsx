@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   credentialError,
+  INVALID_CREDENTIALS,
   LOGIN_REFUSALS,
   PASSKEY_LOGIN_REFUSALS,
 } from "~/components/auth/credential-error";
@@ -36,19 +37,9 @@ import {
   isPasskeyCeremonyIncompleteError,
   isPasskeySupported,
 } from "~/lib/passkey-api";
-import type { PortalKey } from "~/lib/portal-paths";
+import { hasPasswordReset, type PortalKey } from "~/lib/portal-paths";
 
 const logger = createLogger({ component: "PasswordLoginForm" });
-
-/**
- * The refusals that mean "this address and password do not match". Only
- * these lead from the error to the password reset: an inactive account gets
- * no new password that way (#3376).
- */
-const WRONG_PASSWORD_REFUSALS: readonly ErrorCode[] = [
-  "identity.invalid_credentials",
-  "care.invalid_credentials",
-];
 
 export interface PasswordCredentials {
   readonly email: string;
@@ -122,6 +113,79 @@ interface PasswordLoginFormProps {
 }
 
 /**
+ * One sign-in attempt of a login step on the shared error path: a refusal
+ * shows its catalog text, the limiter's 429 says to wait, a failure without
+ * an answer reads as unreachable, and a 4xx stays out of the error reports.
+ */
+export function useLoginAttempt(
+  portal: PortalKey,
+  rateLimited: string = DEFAULT_COPY.rateLimited,
+) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const errors = useApiFormError(formRef);
+  const [pending, setPending] = useState(false);
+  const [passwordRefused, setPasswordRefused] = useState(false);
+
+  const attempt = async (
+    run: () => Promise<void>,
+    refusals: readonly ErrorCode[],
+    object: string,
+    retry: () => void,
+  ) => {
+    setPending(true);
+    errors.clear();
+    setPasswordRefused(false);
+    try {
+      await run();
+    } catch (err) {
+      if (isPasskeyCeremonyIncompleteError(err)) {
+        // The person closed the browser dialog: nothing to report.
+        logger.info("passkey_login_not_completed", { portal });
+        return;
+      }
+      const status = errorStatus(err);
+      const failure = {
+        portal,
+        error: err instanceof Error ? err.message : String(err),
+        status,
+      };
+      if (status !== undefined && status >= 400 && status < 500) {
+        logger.warn("login_rejected", failure);
+      } else {
+        logger.error("login_failed", failure);
+      }
+      // A 429 with a code of its own (a blocked second factor) keeps its
+      // catalog text.
+      if (
+        status === 429 &&
+        (!(err instanceof ApiError) ||
+          err.code === undefined ||
+          err.code === "general.unavailable")
+      ) {
+        errors.invalid(rateLimited);
+        return;
+      }
+      setPasswordRefused(
+        status === 401 &&
+          err instanceof ApiError &&
+          err.code !== undefined &&
+          (INVALID_CREDENTIALS as readonly ErrorCode[]).includes(err.code),
+      );
+      void errors.show(
+        err instanceof ApiError
+          ? credentialError(err, refusals)
+          : unavailableApiError(err),
+        { object, retry },
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return { formRef, errors, pending, passwordRefused, attempt };
+}
+
+/**
  * The e-mail and password step of every portal login: fields, the shared
  * error path with „Wiederholen“, the passkey button and „Passwort
  * vergessen?“ with the typed address.
@@ -139,16 +203,14 @@ export function PasswordLoginForm({
 }: PasswordLoginFormProps) {
   const [email, setEmail] = useState(defaultEmail);
   const [password, setPassword] = useState("");
-  const [pending, setPending] = useState(false);
-  const [passwordRefused, setPasswordRefused] = useState(false);
   const [passkeySupported, setPasskeySupported] = useState(false);
   const [isResetOpen, setIsResetOpen] = useState(false);
   const [sessionExpired, setSessionExpired] = useSessionExpiredNotice();
-  const formRef = useRef<HTMLFormElement>(null);
-  const errors = useApiFormError(formRef);
+  const { formRef, errors, pending, passwordRefused, attempt } =
+    useLoginAttempt(portal, copy.rateLimited);
   const latestSubmitRef = useRef<() => void>(() => undefined);
   const latestPasskeyRef = useRef<() => void>(() => undefined);
-  const resetPortal = portal === "operator" ? null : portal;
+  const resetPortal = hasPasswordReset(portal) ? portal : null;
   const sending = pending || leaving;
   const busy = locked || sending;
 
@@ -170,67 +232,6 @@ export function PasswordLoginForm({
     if (resetPortal) setIsResetOpen(true);
   }, [resetPortal]);
 
-  const attempt = async (
-    run: () => Promise<void>,
-    refusals: readonly ErrorCode[],
-    object: string,
-    retry: () => void,
-  ) => {
-    setPending(true);
-    errors.clear();
-    setPasswordRefused(false);
-    setSessionExpired(false);
-    try {
-      await run();
-    } catch (err) {
-      if (isPasskeyCeremonyIncompleteError(err)) {
-        // The person closed the browser dialog: nothing to report.
-        logger.info("passkey_login_not_completed", { portal });
-        return;
-      }
-      const status = errorStatus(err);
-      const failure = {
-        portal,
-        error: err instanceof Error ? err.message : String(err),
-        status,
-      };
-      // A 4xx is the backend refusing the login, not a defect: it stays
-      // out of the error reports.
-      if (status !== undefined && status >= 400 && status < 500) {
-        logger.warn("login_rejected", failure);
-      } else {
-        logger.error("login_failed", failure);
-      }
-      // The limiter's 429 carries only the class code; a 429 with a code
-      // of its own (a blocked second factor) keeps its catalog text.
-      if (
-        status === 429 &&
-        (!(err instanceof ApiError) ||
-          err.code === undefined ||
-          err.code === "general.unavailable")
-      ) {
-        errors.invalid(copy.rateLimited);
-        return;
-      }
-      setPasswordRefused(
-        status === 401 &&
-          err instanceof ApiError &&
-          err.code !== undefined &&
-          WRONG_PASSWORD_REFUSALS.includes(err.code),
-      );
-      // A failure without an answer is the login being unreachable; its own
-      // text never reaches the screen.
-      void errors.show(
-        err instanceof ApiError
-          ? credentialError(err, refusals)
-          : unavailableApiError(err),
-        { object, retry },
-      );
-    } finally {
-      setPending(false);
-    }
-  };
-
   const submit = async () => {
     if (busy) return;
     // An empty field is named before anything is sent: the refusal's
@@ -246,6 +247,7 @@ export function PasswordLoginForm({
       );
       return;
     }
+    setSessionExpired(false);
     await attempt(
       () => onSubmit({ email, password }),
       LOGIN_REFUSALS,
@@ -256,6 +258,7 @@ export function PasswordLoginForm({
 
   const passkeyLogin = async () => {
     if (busy || !onPasskey) return;
+    setSessionExpired(false);
     await attempt(
       onPasskey,
       PASSKEY_LOGIN_REFUSALS,

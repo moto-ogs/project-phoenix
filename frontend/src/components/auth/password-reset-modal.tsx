@@ -14,8 +14,10 @@ import { SpinnerIcon } from "~/components/ui/icons";
 import { Input } from "~/components/ui/input";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
-import { requestPasswordReset, type PasswordResetPortal } from "~/lib/auth-api";
+import { requestPasswordReset } from "~/lib/auth-api";
+import type { PasswordResetPortal } from "~/lib/portal-paths";
 import { looksLikeEmail } from "~/lib/email-format";
+import { errorStatus } from "~/lib/expected-failure";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "PasswordReset" });
@@ -56,30 +58,29 @@ export interface PasswordResetModalCopy {
    * Senden des Links"), and the wait shown next to the button after too
    * many requests.
    */
-  readonly errorObject?: string;
-  readonly rateLimitWait?: (countdown: string) => string;
+  readonly errorObject: string;
+  readonly rateLimitWait: (countdown: string) => string;
 }
 
-export const DEFAULT_PASSWORD_RESET_MODAL_COPY: Required<PasswordResetModalCopy> =
-  {
-    title: "Passwort zurücksetzen",
-    description:
-      "Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.",
-    emailLabel: "E-Mail-Adresse",
-    invalidEmail: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
-    cancel: "Abbrechen",
-    submit: "Link senden",
-    submitting: "Wird gesendet...",
-    successTitle: "E-Mail versendet!",
-    successMessage:
-      "Wir haben Ihnen eine E-Mail mit einem Link zum Zurücksetzen Ihres Passworts gesendet.",
-    successHint:
-      "Bitte überprüfen Sie Ihren Posteingang und folgen Sie den Anweisungen in der E-Mail.",
-    close: "Schließen",
-    errorObject: "das Senden des Links",
-    rateLimitWait: (countdown) =>
-      `Einen neuen Link können Sie in ${countdown} anfordern.`,
-  };
+export const DEFAULT_PASSWORD_RESET_MODAL_COPY: PasswordResetModalCopy = {
+  title: "Passwort zurücksetzen",
+  description:
+    "Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.",
+  emailLabel: "E-Mail-Adresse",
+  invalidEmail: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+  cancel: "Abbrechen",
+  submit: "Link senden",
+  submitting: "Wird gesendet...",
+  successTitle: "E-Mail versendet!",
+  successMessage:
+    "Wir haben Ihnen eine E-Mail mit einem Link zum Zurücksetzen Ihres Passworts gesendet.",
+  successHint:
+    "Bitte überprüfen Sie Ihren Posteingang und folgen Sie den Anweisungen in der E-Mail.",
+  close: "Schließen",
+  errorObject: "das Senden des Links",
+  rateLimitWait: (countdown) =>
+    `Einen neuen Link können Sie in ${countdown} anfordern.`,
+};
 
 const EmailIcon = ({ className }: { className?: string }) => (
   <svg
@@ -207,8 +208,7 @@ export function PasswordResetModal({
     );
   };
 
-  const errorObject =
-    copy.errorObject ?? DEFAULT_PASSWORD_RESET_MODAL_COPY.errorObject;
+  const errorObject = copy.errorObject;
 
   const submit = async () => {
     const path = errorPath;
@@ -233,9 +233,17 @@ export function PasswordResetModal({
         startRateLimit(err.retryAfterSeconds);
         void path.show(err, { object: errorObject });
       } else {
-        logger.error("password_reset_failed", {
+        const status = errorStatus(err);
+        const failure = {
           error: err instanceof Error ? err.message : String(err),
-        });
+          status,
+        };
+        // A refused address is no defect.
+        if (status !== undefined && status >= 400 && status < 500) {
+          logger.warn("password_reset_failed", failure);
+        } else {
+          logger.error("password_reset_failed", failure);
+        }
         void path.show(err, {
           object: errorObject,
           retry: () => latestSubmitRef.current(),
@@ -299,10 +307,9 @@ export function PasswordResetModal({
               <FormErrorAlert message={errorPath.error} />
               {rateLimitActive ? (
                 <p className="text-sm text-gray-600" role="status">
-                  {(
-                    copy.rateLimitWait ??
-                    DEFAULT_PASSWORD_RESET_MODAL_COPY.rateLimitWait
-                  )(formatCountdown(Math.max(secondsRemaining, 0)))}
+                  {copy.rateLimitWait(
+                    formatCountdown(Math.max(secondsRemaining, 0)),
+                  )}
                 </p>
               ) : null}
 

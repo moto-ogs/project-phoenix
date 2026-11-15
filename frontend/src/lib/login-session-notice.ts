@@ -8,7 +8,7 @@ import { DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
 const SESSION_ERRORS = new Set(["SessionRequired", "SessionExpired"]);
 
 /** Takes NextAuth's session error and its callbackUrl out of the address. */
-export function clearSessionErrorFromUrl() {
+function clearSessionErrorFromUrl() {
   const url = new URL(window.location.href);
   if (!SESSION_ERRORS.has(url.searchParams.get("error") ?? "")) return;
   url.searchParams.delete("error");

@@ -1,8 +1,6 @@
-// lib/auth-service.ts
 import api from "./api-transport";
 import { createLogger } from "~/lib/logger";
 
-// Logger instance for auth service
 const logger = createLogger({ component: "AuthService" });
 import {
   mapRoleResponse,
@@ -14,18 +12,12 @@ import {
 } from "./auth-helpers";
 import { apiErrorFromText } from "./api-error";
 
-// Generic API response interface
 interface ApiResponse<T> {
   success: boolean;
   message: string;
   data: T;
 }
 
-// ============================================================================
-// Generic Auth API Helper
-// ============================================================================
-
-// The remaining callers only read (GET) and replace (PUT).
 type HttpMethod = "GET" | "PUT";
 
 interface AuthFetchOptions<TBackend, TFrontend> {
@@ -82,7 +74,6 @@ async function executeBrowserFetch<TBackend>(
     );
   }
 
-  // Handle 204 No Content and empty responses (void endpoints)
   if (response.status === 204) {
     return null;
   }
@@ -146,7 +137,6 @@ async function authFetch<TBackend, TFrontend = void>(
         errorPrefix,
       );
 
-      // Handle void responses (204/empty body)
       if (responseData === null) {
         return undefined as TFrontend;
       }
@@ -257,7 +247,6 @@ function extractNestedRoles(response: unknown): BackendRole[] {
 }
 
 export const authService = {
-  // Admin endpoints - Role management
   getRoles: async (filters?: { name?: string }): Promise<Role[]> => {
     const params = new URLSearchParams();
     if (filters?.name) params.append("name", filters.name);
@@ -288,7 +277,6 @@ export const authService = {
       errorPrefix: "Replace role permissions",
     }),
 
-  // Admin endpoints - Permission management
   getPermissions: async (filters?: {
     resource?: string;
     action?: string;
@@ -307,7 +295,6 @@ export const authService = {
     );
   },
 
-  // Admin endpoints - Account role assignment
   /**
    * Macht `roleId` zur einzigen Systemrolle des Kontos an dieser Schule.
    * Andere Systemrollen entfernt das Backend; Elternzugang (guardian) bleibt.

@@ -32,6 +32,7 @@ interface MFAEnrollmentStep {
 
 export default function OperatorLoginPage() {
   const [email, setEmail] = useState("");
+  const [awaitingRedirect, setAwaitingRedirect] = useState(false);
   const [mfaStep, setMfaStep] = useState<MFAStep | null>(null);
   const [enrollmentStep, setEnrollmentStep] =
     useState<MFAEnrollmentStep | null>(null);
@@ -78,6 +79,7 @@ export default function OperatorLoginPage() {
   // The BFF has installed the cookie. Refresh only the safe provider snapshot.
   const completeLogin = async () => {
     await update();
+    setAwaitingRedirect(true);
     router.push(operatorPath("/operator/organizations"));
   };
 
@@ -139,6 +141,7 @@ export default function OperatorLoginPage() {
           onSubmit={submit}
           onPasskey={passkeyLogin}
           defaultEmail={email}
+          leaving={awaitingRedirect}
         />
       )}
     </AuthShell>

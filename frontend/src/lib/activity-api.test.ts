@@ -37,7 +37,7 @@ vi.mock("./session-cache", () => {
         },
       });
       if (response.status === 401) {
-        const { handleAuthFailure } = (await import("./auth-api")) as {
+        const { handleAuthFailure } = (await import("./auth-failure")) as {
           handleAuthFailure: () => Promise<boolean>;
         };
         const refreshed = await handleAuthFailure();

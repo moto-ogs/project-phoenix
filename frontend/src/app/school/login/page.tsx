@@ -18,10 +18,7 @@ import { Alert } from "~/components/ui/alert";
 import { ApiError } from "~/lib/api-error";
 import { portalNotBookedExplanation } from "~/lib/portal-not-booked";
 import { schoolPath } from "~/lib/school-url";
-import {
-  clearSessionErrorFromUrl,
-  useLoginSessionCheck,
-} from "~/lib/login-session-notice";
+import { useLoginSessionCheck } from "~/lib/login-session-notice";
 import type { MFAStep } from "~/lib/sign-in-answer";
 import { login as loginApi } from "~/lib/mfa-api";
 import { createLogger } from "~/lib/logger";
@@ -59,7 +56,6 @@ function LoginForm() {
   });
 
   const completeLogin = () => {
-    clearSessionErrorFromUrl();
     setAwaitingRedirect(true);
     window.location.href = schoolPath("/school");
   };

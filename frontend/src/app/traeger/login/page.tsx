@@ -17,14 +17,12 @@ import {
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { AuthShell, MotoBrand } from "~/components/auth/auth-shell";
-import {
-  credentialError,
-  LOGIN_REFUSALS,
-} from "~/components/auth/credential-error";
+import { LOGIN_REFUSALS } from "~/components/auth/credential-error";
 import { MFAChallengeForm } from "~/components/auth/mfa-challenge-form";
 import { MFAEnrollmentScreen } from "~/components/auth/mfa-enrollment-screen";
 import {
   PasswordLoginForm,
+  useLoginAttempt,
   type PasswordCredentials,
 } from "~/components/auth/password-login-form";
 import { Alert } from "~/components/ui/alert";
@@ -36,10 +34,7 @@ import { Radio } from "~/components/ui/radio";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { hasSessionAccess } from "~/lib/session-access";
 import { createLogger } from "~/lib/logger";
-import {
-  clearSessionErrorFromUrl,
-  signOutStaleSession,
-} from "~/lib/login-session-notice";
+import { signOutStaleSession } from "~/lib/login-session-notice";
 import { endTraegerSession } from "~/lib/shell-auth-context";
 import {
   clearTraegerSignInWithCode,
@@ -78,7 +73,6 @@ function LoginForm() {
     isTraegerSignInWithCodeRequested,
     serverTraegerSignInWithCode,
   );
-  const [isLoading, setIsLoading] = useState(false);
   const [awaitingRedirect, setAwaitingRedirect] = useState(false);
   const [choices, setChoices] = useState<readonly TraegerChoice[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -87,8 +81,7 @@ function LoginForm() {
     null,
   );
   // The Träger choice after the password, with its own error path.
-  const choiceFormRef = useRef<HTMLFormElement>(null);
-  const choiceErrors = useApiFormError(choiceFormRef);
+  const choice = useLoginAttempt("traeger");
   // Ending a session a sign-in with code is to replace (#6955).
   const endErrors = useApiFormError();
   const [endingSession, setEndingSession] = useState(false);
@@ -146,7 +139,6 @@ function LoginForm() {
   const completeLogin = () => {
     // The sign-in is complete: the next one may use the device again.
     clearTraegerSignInWithCode();
-    clearSessionErrorFromUrl();
     setAwaitingRedirect(true);
     window.location.href = traegerPath("/traeger");
   };
@@ -180,29 +172,19 @@ function LoginForm() {
     completeLogin();
   };
 
+  // Ein Konto ohne Zugang zum Träger-Portal kommt als traeger.no_membership.
   const submitCredentials = async (given: PasswordCredentials) => {
     setCredentials(given);
     await sendLogin(given);
   };
 
-  // Ein Konto ohne Zugang zum Träger-Portal kommt als traeger.no_membership.
-  const submitChoice = async () => {
-    setIsLoading(true);
-    choiceErrors.clear();
-    try {
-      await sendLogin(credentials, selectedId ?? undefined);
-    } catch (err) {
-      void choiceErrors.show(credentialError(err, LOGIN_REFUSALS), {
-        object: "die Anmeldung",
-        retry: () => latestChoiceRef.current(),
-      });
-      logger.warn("traeger_choice_login_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const submitChoice = () =>
+    choice.attempt(
+      () => sendLogin(credentials, selectedId ?? undefined),
+      LOGIN_REFUSALS,
+      "die Anmeldung",
+      () => latestChoiceRef.current(),
+    );
 
   useLayoutEffect(() => {
     latestChoiceRef.current = () => void submitChoice();
@@ -300,13 +282,13 @@ function LoginForm() {
     );
   }
 
-  const isSubmitting = isLoading || awaitingRedirect;
+  const isSubmitting = choice.pending || awaitingRedirect;
 
   return (
     <AuthShell {...SHELL_COPY} variant="tenant" brand={<MotoBrand />}>
       {choices ? (
         <form
-          ref={choiceFormRef}
+          ref={choice.formRef}
           noValidate
           className="space-y-6"
           onSubmit={(event) => {
@@ -314,7 +296,7 @@ function LoginForm() {
             void submitChoice();
           }}
         >
-          <FormErrorAlert message={choiceErrors.error} />
+          <FormErrorAlert message={choice.errors.error} />
           <fieldset className="space-y-3 border-0 p-0">
             <legend className="mb-2 text-sm font-medium text-gray-700">
               Sie gehören zu mehreren Trägern. Welchen Träger möchten Sie

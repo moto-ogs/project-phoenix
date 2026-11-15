@@ -109,6 +109,15 @@ export const PORTAL_ROUTES = {
 
 export type PortalKey = keyof typeof PORTAL_ROUTES;
 
+/** A portal with a "Passwort vergessen?": every portal but the operator's. */
+export type PasswordResetPortal = Exclude<PortalKey, "operator">;
+
+export function hasPasswordReset(
+  portal: PortalKey,
+): portal is PasswordResetPortal {
+  return portal !== "operator";
+}
+
 /** A portal on its own host: every portal but the tenant. */
 export type HostedPortalKey = keyof typeof HOSTED_PORTAL_ROUTES;
 

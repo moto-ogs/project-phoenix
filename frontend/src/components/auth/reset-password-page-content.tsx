@@ -1,7 +1,7 @@
 "use client";
 
 import { EmptyState } from "~/components/ui/empty-state";
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useLayoutEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useTenantRouter } from "~/lib/tenant-router";
@@ -18,9 +18,12 @@ import { Loading } from "~/components/ui/loading";
 import { useApiFormError } from "~/contexts/ToastContext";
 import Link from "next/link";
 import { CheckIcon, SpinnerIcon } from "~/components/ui/icons";
-import { confirmPasswordReset, type PasswordResetPortal } from "~/lib/auth-api";
+import { confirmPasswordReset } from "~/lib/auth-api";
 import { errorStatus } from "~/lib/expected-failure";
 import { createLogger } from "~/lib/logger";
+import { FORGOT_PASSWORD_PARAM } from "~/lib/login-params";
+import { PASSWORD_RULES, type PasswordRuleKey } from "~/lib/password-rules";
+import { portalLoginPath, type PasswordResetPortal } from "~/lib/portal-paths";
 import { useTenantSafe } from "~/lib/tenant-context";
 import { loginImageSrc } from "~/lib/tenant-api";
 import { Alert } from "~/components/ui/alert";
@@ -31,33 +34,28 @@ const logger = createLogger({ component: "ResetPasswordPage" });
 
 interface ResetPasswordPageContentProps {
   readonly portal: PasswordResetPortal;
-  readonly successRedirectPath?: string;
-  readonly backHref?: string;
-  readonly backLabel?: string;
   readonly copy?: ResetPasswordPageCopy;
   // Localized testimonial-panel copy. The parents portal passes its
   // translated copy here so the reset page doesn't fall back to the
   // German staff/moto testimonials next to a localized form.
   readonly testimonialPanelCopy?: AuthTestimonialPanelCopy;
-  /**
-   * Without a token the page shows only the notice and this way to a new
-   * link, instead of a form that cannot be sent. `subtitle` replaces the
-   * form's subtitle there, which asks for a password no field takes.
-   */
-  readonly noTokenAction?: {
-    readonly label: string;
-    readonly href: string;
-    readonly subtitle?: string;
-  };
 }
 
 export interface ResetPasswordPageCopy {
+  /**
+   * Without a token the page shows no form, only this notice and the way to
+   * a new link: the login page opens „Passwort vergessen?“ right away.
+   */
   readonly missingToken: string;
+  readonly requestNewLink: string;
+  /** Replaces the form's subtitle, which asks for a password no field takes. */
+  readonly newLinkSubtitle: string;
+  readonly backToLogin: string;
   /**
    * The noun phrase the shared error path puts into its catalog text, for
    * example "das Zurücksetzen des Passworts" (#2517).
    */
-  readonly errorObject?: string;
+  readonly errorObject: string;
   readonly passwordTooShort: string;
   readonly passwordMissingUppercase: string;
   readonly passwordMissingLowercase: string;
@@ -83,11 +81,13 @@ export interface ResetPasswordPageCopy {
   readonly submit: string;
 }
 
-const DEFAULT_ERROR_OBJECT = "das Zurücksetzen des Passworts";
-
 export const DEFAULT_RESET_PASSWORD_PAGE_COPY: ResetPasswordPageCopy = {
   missingToken:
     "Der Link ist unvollständig. Bitte fordern Sie einen neuen Link an.",
+  requestNewLink: "Neuen Link anfordern",
+  newLinkSubtitle: "Dafür brauchen Sie einen neuen Link.",
+  backToLogin: "Zurück zur Anmeldung",
+  errorObject: "das Zurücksetzen des Passworts",
   passwordTooShort: "Das Passwort muss mindestens 8 Zeichen lang sein.",
   passwordMissingUppercase:
     "Das Passwort muss mindestens einen Großbuchstaben enthalten.",
@@ -170,12 +170,8 @@ function PasswordField({
 
 export function ResetPasswordPageContent({
   portal,
-  successRedirectPath = "/",
-  backHref = "/",
-  backLabel = "Zurück zur Anmeldung",
   copy = DEFAULT_RESET_PASSWORD_PAGE_COPY,
   testimonialPanelCopy,
-  noTokenAction,
 }: ResetPasswordPageContentProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -183,11 +179,9 @@ export function ResetPasswordPageContent({
   // am Feld. Vor der Anmeldung heißt 401 "abgelehnt", nicht "abgelaufen".
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
-  const { invalid: showInvalid } = formErrors;
   const latestSubmitRef = useRef<() => void>(() => undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
   const router = useTenantRouter();
   const searchParams = useSearchParams();
   const tenantContext = useTenantSafe();
@@ -204,41 +198,23 @@ export function ResetPasswordPageContent({
     />
   ) : null;
 
-  // Keyed by the token value: invalid() sets state, so an effect keyed by
-  // the searchParams object would run again on every render.
-  const tokenParam = searchParams.get("token");
-  useEffect(() => {
-    if (tokenParam) {
-      setToken(tokenParam);
-    } else {
-      showInvalid(copy.missingToken);
-    }
-  }, [copy.missingToken, tokenParam, showInvalid]);
+  const token = searchParams.get("token");
+  const loginPath = portal === "tenant" ? "/" : portalLoginPath(portal);
 
+  const ruleMessages: Record<PasswordRuleKey, string> = {
+    length: copy.passwordTooShort,
+    upper: copy.passwordMissingUppercase,
+    lower: copy.passwordMissingLowercase,
+    digit: copy.passwordMissingNumber,
+    special: copy.passwordMissingSpecial,
+  };
   const validatePassword = (pwd: string): string | null => {
-    if (pwd.length < 8) {
-      return copy.passwordTooShort;
-    }
-    if (!/[A-Z]/.test(pwd)) {
-      return copy.passwordMissingUppercase;
-    }
-    if (!/[a-z]/.test(pwd)) {
-      return copy.passwordMissingLowercase;
-    }
-    if (!/\d/.test(pwd)) {
-      return copy.passwordMissingNumber;
-    }
-    if (!/[^A-Za-z0-9]/.test(pwd)) {
-      return copy.passwordMissingSpecial;
-    }
-    return null;
+    const broken = PASSWORD_RULES.find((rule) => !rule.test(pwd));
+    return broken ? ruleMessages[broken.key] : null;
   };
 
   const submit = async () => {
-    if (!token) {
-      formErrors.invalid(copy.missingToken);
-      return;
-    }
+    if (!token) return;
 
     const passwordError = validatePassword(password);
     if (passwordError) {
@@ -261,7 +237,7 @@ export function ResetPasswordPageContent({
       setIsSuccess(true);
 
       setTimeout(() => {
-        router.push(successRedirectPath);
+        router.push(loginPath);
       }, 3000);
     } catch (err) {
       // Ein abgelaufener Link oder ein zu schwaches Passwort ist kein Defekt.
@@ -279,7 +255,7 @@ export function ResetPasswordPageContent({
       // identity.password_reset_link_invalid, never 401: the form shows its
       // catalog text in place.
       void formErrors.show(err, {
-        object: copy.errorObject ?? DEFAULT_ERROR_OBJECT,
+        object: copy.errorObject,
         retry: () => latestSubmitRef.current(),
       });
     } finally {
@@ -327,12 +303,12 @@ export function ResetPasswordPageContent({
     );
   }
 
-  if (noTokenAction && !searchParams.get("token")) {
+  if (!token) {
     return (
       <AuthShell
         eyebrow={copy.formEyebrow}
         title={copy.formTitle}
-        subtitle={noTokenAction.subtitle ?? copy.formSubtitle}
+        subtitle={copy.newLinkSubtitle}
         variant="reset"
         brand={brand}
         testimonialPanelCopy={testimonialPanelCopy}
@@ -340,19 +316,19 @@ export function ResetPasswordPageContent({
         <div className="space-y-4">
           <Alert type="warning" message={copy.missingToken} />
           <ButtonLink
-            href={noTokenAction.href}
+            href={`${loginPath}?${FORGOT_PASSWORD_PARAM}=1`}
             variant="primary"
             size="field"
             className="w-full"
           >
-            {noTokenAction.label}
+            {copy.requestNewLink}
           </ButtonLink>
           <div className="pt-2 text-center">
             <Link
-              href={backHref}
+              href={loginPath}
               className="text-sm text-gray-600 transition-colors hover:text-gray-800 hover:underline"
             >
-              {backLabel}
+              {copy.backToLogin}
             </Link>
           </div>
         </div>
@@ -385,7 +361,7 @@ export function ResetPasswordPageContent({
             label={copy.passwordLabel}
             value={password}
             onChange={setPassword}
-            disabled={isLoading || !token}
+            disabled={isLoading}
             showPasswordLabel={copy.showPassword}
             hidePasswordLabel={copy.hidePassword}
           />
@@ -396,7 +372,7 @@ export function ResetPasswordPageContent({
             label={copy.confirmPasswordLabel}
             value={confirmPassword}
             onChange={setConfirmPassword}
-            disabled={isLoading || !token}
+            disabled={isLoading}
             showPasswordLabel={copy.showPassword}
             hidePasswordLabel={copy.hidePassword}
           />
@@ -415,7 +391,7 @@ export function ResetPasswordPageContent({
 
         <Button
           type="submit"
-          disabled={isLoading || !token}
+          disabled={isLoading}
           variant="primary"
           size="field"
           className="w-full"
@@ -432,10 +408,10 @@ export function ResetPasswordPageContent({
 
         <div className="pt-2 text-center">
           <Link
-            href={backHref}
+            href={loginPath}
             className="text-sm text-gray-600 transition-colors hover:text-gray-800 hover:underline"
           >
-            {backLabel}
+            {copy.backToLogin}
           </Link>
         </div>
       </form>

@@ -70,6 +70,9 @@ const ERROR_OBJECT = "ERROR_OBJECT";
 
 const COPY: ResetPasswordPageCopy = {
   missingToken: "MISSING_TOKEN",
+  requestNewLink: "REQUEST_NEW_LINK",
+  newLinkSubtitle: "NEW_LINK_SUBTITLE",
+  backToLogin: "BACK_LABEL",
   errorObject: ERROR_OBJECT,
   passwordTooShort: "TOO_SHORT",
   passwordMissingUppercase: "NO_UPPERCASE",
@@ -96,33 +99,8 @@ const COPY: ResetPasswordPageCopy = {
 
 const VALID_PASSWORD = "Str0ngP@ssword";
 
-function renderContent(
-  overrides: Partial<{
-    confirmReset: (
-      token: string,
-      password: string,
-      confirmPassword: string,
-    ) => Promise<{ message: string }>;
-    successRedirectPath: string;
-    backHref: string;
-    backLabel: string;
-  }> = {},
-) {
-  const confirmReset =
-    overrides.confirmReset ?? vi.fn().mockResolvedValue({ message: "ok" });
-  mocks.confirmPasswordReset.mockImplementation(
-    (_portal: string, token: string, password: string, confirm: string) =>
-      confirmReset(token, password, confirm),
-  );
-  return render(
-    <ResetPasswordPageContent
-      portal="tenant"
-      successRedirectPath={overrides.successRedirectPath ?? "/login"}
-      backHref={overrides.backHref ?? "/login"}
-      backLabel={overrides.backLabel ?? "BACK_LABEL"}
-      copy={COPY}
-    />,
-  );
+function renderContent() {
+  return render(<ResetPasswordPageContent portal="tenant" copy={COPY} />);
 }
 
 function fillPasswords(password: string, confirm = password) {
@@ -140,6 +118,7 @@ function submit() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.confirmPasswordReset.mockReset().mockResolvedValue(undefined);
   mocks.token = "valid-token";
   mocks.tenant = null;
 });
@@ -157,13 +136,16 @@ describe("ResetPasswordPageContent — token handling", () => {
     expect(screen.getByLabelText(COPY.passwordLabel)).toBeEnabled();
   });
 
-  it("shows the missing-token error and disables the form when no token is in the URL", () => {
+  it("offers a new link instead of a form when no token is in the URL", () => {
     mocks.token = null;
     renderContent();
 
+    // Anker: der Hinweis auf den unvollständigen Link steht da.
     expect(screen.getByText(COPY.missingToken)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: COPY.submit })).toBeDisabled();
-    expect(screen.getByLabelText(COPY.passwordLabel)).toBeDisabled();
+    expect(
+      screen.getByRole("link", { name: COPY.requestNewLink }),
+    ).toHaveAttribute("href", "/?passwort-vergessen=1");
+    expect(screen.queryByLabelText(COPY.passwordLabel)).not.toBeInTheDocument();
   });
 
   it("renders the password requirements list", () => {
@@ -191,8 +173,8 @@ describe("ResetPasswordPageContent — password validation", () => {
   ])(
     "blocks submit and shows the %s error",
     async (_label, password, expectedError) => {
-      const confirmReset = vi.fn();
-      renderContent({ confirmReset });
+      const confirmReset = mocks.confirmPasswordReset;
+      renderContent();
 
       fillPasswords(password);
       submit();
@@ -203,28 +185,13 @@ describe("ResetPasswordPageContent — password validation", () => {
   );
 
   it("blocks submit when the two passwords differ", async () => {
-    const confirmReset = vi.fn();
-    renderContent({ confirmReset });
+    const confirmReset = mocks.confirmPasswordReset;
+    renderContent();
 
     fillPasswords(VALID_PASSWORD, `${VALID_PASSWORD}X`);
     submit();
 
     expect(await screen.findByText(COPY.passwordMismatch)).toBeInTheDocument();
-    expect(confirmReset).not.toHaveBeenCalled();
-  });
-
-  it("disables submit and never calls the network when the token is absent", () => {
-    // Without a token the form is inert: the submit button is disabled and the
-    // missing-token error is shown, so a tokenless confirm can never be sent.
-    mocks.token = null;
-    const confirmReset = vi.fn();
-    renderContent({ confirmReset });
-
-    expect(screen.getByText(COPY.missingToken)).toBeInTheDocument();
-    fillPasswords(VALID_PASSWORD);
-    submit();
-
-    expect(screen.getByRole("button", { name: COPY.submit })).toBeDisabled();
     expect(confirmReset).not.toHaveBeenCalled();
   });
 });
@@ -234,15 +201,15 @@ describe("ResetPasswordPageContent — password validation", () => {
 // ---------------------------------------------------------------------------
 
 describe("ResetPasswordPageContent — successful reset", () => {
-  it("calls confirmReset with the token and both passwords, then shows the success screen", async () => {
-    const confirmReset = vi.fn().mockResolvedValue({ message: "ok" });
-    renderContent({ confirmReset });
+  it("confirms with the portal, the token and both passwords, then shows the success screen", async () => {
+    renderContent();
 
     fillPasswords(VALID_PASSWORD);
     submit();
 
     expect(await screen.findByText(COPY.successTitle)).toBeInTheDocument();
-    expect(confirmReset).toHaveBeenCalledWith(
+    expect(mocks.confirmPasswordReset).toHaveBeenCalledWith(
+      "tenant",
       "valid-token",
       VALID_PASSWORD,
       VALID_PASSWORD,
@@ -250,16 +217,15 @@ describe("ResetPasswordPageContent — successful reset", () => {
     expect(screen.getByText(COPY.successBody)).toBeInTheDocument();
   });
 
-  it("redirects to the success path after the post-success delay", async () => {
+  it("opens the login after the post-success delay", async () => {
     vi.useFakeTimers();
     try {
-      const confirmReset = vi.fn().mockResolvedValue({ message: "ok" });
-      renderContent({ confirmReset, successRedirectPath: "/parents/login" });
+      renderContent();
 
       fillPasswords(VALID_PASSWORD);
       submit();
 
-      // Flush the awaited confirmReset() + the success state update.
+      // Flush the awaited confirmation + the success state update.
       await act(async () => {
         await Promise.resolve();
         await Promise.resolve();
@@ -272,7 +238,7 @@ describe("ResetPasswordPageContent — successful reset", () => {
         vi.advanceTimersByTime(3000);
       });
 
-      expect(mocks.push).toHaveBeenCalledWith("/parents/login");
+      expect(mocks.push).toHaveBeenCalledWith("/");
     } finally {
       releaseFakeTimers();
     }
@@ -309,8 +275,8 @@ describe("ResetPasswordPageContent — error display", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    const confirmReset = vi.fn().mockRejectedValue(error);
-    renderContent({ confirmReset });
+    mocks.confirmPasswordReset.mockRejectedValue(error);
+    renderContent();
 
     fillPasswords(VALID_PASSWORD);
     submit();
@@ -329,12 +295,12 @@ describe("ResetPasswordPageContent — error display", () => {
     const assign = vi
       .spyOn(window.location, "assign")
       .mockImplementation(() => undefined);
-    const confirmReset = vi.fn().mockRejectedValue(
+    mocks.confirmPasswordReset.mockRejectedValue(
       new ApiError("invalid or expired reset token", 410, {
         code: "identity.password_reset_link_invalid",
       }),
     );
-    renderContent({ confirmReset });
+    renderContent();
 
     fillPasswords(VALID_PASSWORD);
     submit();
@@ -351,13 +317,13 @@ describe("ResetPasswordPageContent — error display", () => {
   it("marks the password field the backend refused", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    const confirmReset = vi.fn().mockRejectedValue(
+    mocks.confirmPasswordReset.mockRejectedValue(
       new ApiError("password too weak", 400, {
         code: "identity.password_too_weak",
         errors: [{ field: "new_password", reason: "too weak" }],
       }),
     );
-    renderContent({ confirmReset });
+    renderContent();
 
     fillPasswords(VALID_PASSWORD);
     submit();
@@ -374,8 +340,8 @@ describe("ResetPasswordPageContent — error display", () => {
   it("shows the general text when the rejection is no API error", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    const confirmReset = vi.fn().mockRejectedValue(new Error("network down"));
-    renderContent({ confirmReset });
+    mocks.confirmPasswordReset.mockRejectedValue(new Error("network down"));
+    renderContent();
 
     fillPasswords(VALID_PASSWORD);
     submit();
@@ -388,12 +354,12 @@ describe("ResetPasswordPageContent — error display", () => {
   it("re-enables the submit button after a failed attempt", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    const confirmReset = vi.fn().mockRejectedValue(
+    mocks.confirmPasswordReset.mockRejectedValue(
       new ApiError("invalid or expired reset token", 400, {
         code: "identity.password_reset_link_invalid",
       }),
     );
-    renderContent({ confirmReset });
+    renderContent();
 
     fillPasswords(VALID_PASSWORD);
     submit();

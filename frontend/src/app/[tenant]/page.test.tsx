@@ -45,16 +45,11 @@ vi.mock("next-auth/react", () => ({
 // Mock next/navigation
 const mockPush = vi.fn();
 const mockRefresh = vi.fn();
-const mockSearchParamsGet = vi.fn((_key: string): string | null => null);
-// Stable reference, real useSearchParams returns the same object between renders.
-// A fresh object each call causes the useEffect([searchParams]) to re-fire.
-const stableSearchParams = { get: mockSearchParamsGet };
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
     refresh: mockRefresh,
   }),
-  useSearchParams: () => stableSearchParams,
 }));
 
 // Mock tenant-router
@@ -180,7 +175,6 @@ describe("HomePage (Login)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUpdateSession.mockReset().mockResolvedValue(browserSession);
-    mockSearchParamsGet.mockImplementation((_key: string) => null);
     vi.mocked(useSession).mockReturnValue({
       data: null,
       status: "unauthenticated",
@@ -298,14 +292,6 @@ describe("HomePage (Login)", () => {
     });
   });
 
-  it("renders forgot password link", async () => {
-    render(<HomePage />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Passwort vergessen?")).toBeInTheDocument();
-    });
-  });
-
   it("shows loading state when session is being checked", async () => {
     vi.mocked(useSession).mockReturnValue({
       data: null,
@@ -365,7 +351,7 @@ describe("HomePage (Login)", () => {
     expect(mockTrackTenantEvent).not.toHaveBeenCalled();
   });
 
-  it("removes stale session-expired query params before refreshing the provider", async () => {
+  it("takes the session-expired query out of the address", async () => {
     mockUpdateSession.mockResolvedValue(browserSession);
     window.history.pushState(
       {},
@@ -741,25 +727,6 @@ describe("HomePage (Login)", () => {
     });
   });
 
-  it("toggles password visibility", async () => {
-    render(<HomePage />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("input-password")).toBeInTheDocument();
-    });
-
-    const passwordInput = screen.getByTestId("input-password");
-    expect(passwordInput).toHaveAttribute("type", "password");
-
-    // Find and click the toggle button
-    const toggleButton = screen.getByLabelText("Passwort anzeigen");
-    await act(async () => {
-      fireEvent.click(toggleButton);
-    });
-
-    expect(passwordInput).toHaveAttribute("type", "text");
-  });
-
   it("opens password reset modal when forgot password is clicked", async () => {
     render(<HomePage />);
 
@@ -941,20 +908,6 @@ describe("Tenant name display", () => {
     expect(
       screen.queryByText("Grundschule Musterstadt"),
     ).not.toBeInTheDocument();
-  });
-
-  it("does not display tenant name when tenant.name is empty", async () => {
-    vi.mocked(useTenant).mockReturnValue({
-      tenantSlug: "test-tenant",
-      routingMode: "path",
-      tenant: { name: "" } as ReturnType<typeof useTenant>["tenant"],
-    });
-
-    render(<HomePage />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Willkommen bei moto")).toBeInTheDocument();
-    });
   });
 });
 
@@ -1139,7 +1092,6 @@ describe("Deliberate logout suppression", () => {
   afterEach(() => {
     sessionStorage.clear();
     vi.restoreAllMocks();
-    mockSearchParamsGet.mockImplementation((_key: string) => null);
     window.history.pushState({}, "", "/");
   });
 

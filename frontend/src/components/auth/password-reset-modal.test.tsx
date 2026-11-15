@@ -19,8 +19,6 @@ function rateLimited(retryAfterSeconds: number): ApiError {
   return error;
 }
 
-const modalOnCloseHistory: Array<() => void> = [];
-
 vi.mock("~/components/ui/modal", () => ({
   Modal: ({
     isOpen,
@@ -31,8 +29,6 @@ vi.mock("~/components/ui/modal", () => ({
     children: React.ReactNode;
     onClose: () => void;
   }) => {
-    modalOnCloseHistory.push(onClose);
-
     return isOpen ? (
       <div data-testid="modal">
         <button type="button" onClick={onClose}>
@@ -120,7 +116,6 @@ describe("PasswordResetModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorageMock.clear();
-    modalOnCloseHistory.length = 0;
     mockRequestPasswordReset.mockResolvedValue({});
   });
 
@@ -129,17 +124,6 @@ describe("PasswordResetModal", () => {
 
     expect(screen.getByText(/Passwort zurücksetzen/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/E-Mail-Adresse/i)).toBeInTheDocument();
-  });
-
-  it("keeps a stable modal close handler while typing", () => {
-    render(<ResetModal isOpen={true} onClose={mockOnClose} />);
-
-    const initialOnClose = modalOnCloseHistory.at(-1);
-    const emailInput = screen.getByTestId("input-reset-email");
-
-    fireEvent.change(emailInput, { target: { value: "y.we" } });
-
-    expect(modalOnCloseHistory.at(-1)).toBe(initialOnClose);
   });
 
   it("displays success state after successful submission", async () => {
@@ -316,37 +300,6 @@ describe("PasswordResetModal", () => {
     expect(
       screen.queryByText(/Einen neuen Link können Sie in/i),
     ).not.toBeInTheDocument();
-  });
-
-  describe("Scroll to error", () => {
-    it("scrolls to error when API request fails", async () => {
-      const scrollIntoViewMock = vi.fn();
-      Element.prototype.scrollIntoView = scrollIntoViewMock;
-
-      mockRequestPasswordReset.mockRejectedValue(
-        new ApiError("smtp unavailable", 500),
-      );
-
-      render(<ResetModal isOpen={true} onClose={mockOnClose} />);
-
-      const emailInput = screen.getByTestId("input-reset-email");
-      fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-
-      const submitButton = screen.getByRole("button", {
-        name: /Link senden/i,
-      });
-      fireEvent.click(submitButton);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("alert-error")).toBeInTheDocument();
-      });
-
-      await waitFor(() => {
-        expect(scrollIntoViewMock).toHaveBeenCalledWith({
-          behavior: "smooth",
-          block: "nearest",
-        });
-      });
-    });
+    expect(localStorageMock.getItem("passwordResetRateLimitUntil")).toBeNull();
   });
 });

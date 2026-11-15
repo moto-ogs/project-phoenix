@@ -23,8 +23,6 @@ import { Loading } from "~/components/ui/loading";
 
 const logger = createLogger({ component: "CatererLoginPage" });
 
-// Wie die anderen Anmeldungen: der Portalname klein darüber, die Begrüßung
-// als Titel.
 const SHELL_COPY = {
   title: "Willkommen im Caterer-Portal",
   subtitle: "Melden Sie sich mit Ihrem Caterer-Konto an.",
@@ -80,7 +78,7 @@ export default function CatererLoginPage() {
           onCancel={() => setMfaStep(null)}
         />
       ) : isCheckingAuth ? (
-        <Loading message="Anmeldung wird geprüft …" />
+        <Loading message="Sitzung wird überprüft …" />
       ) : (
         <PasswordLoginForm
           portal="caterer"

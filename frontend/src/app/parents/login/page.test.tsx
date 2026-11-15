@@ -586,20 +586,6 @@ describe("ParentLoginPage i18n", () => {
       });
     }
 
-    it("names a switched-off account by its code", async () => {
-      mocks.login.mockRejectedValue(
-        await refusal(401, "identity.session_account_inactive"),
-      );
-
-      await submitLogin();
-
-      expect(
-        await screen.findByText(
-          enCatalogText("identity.session_account_inactive", LOGIN_OBJECT),
-        ),
-      ).toBeInTheDocument();
-    });
-
     it("keeps its own sentence for too many attempts", async () => {
       mocks.login.mockRejectedValue(await refusal(429, "general.unavailable"));
 

@@ -3,7 +3,7 @@
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import type { MailOutcomeCounts } from "~/lib/email-delivery-status";
 import { unavailableApiError } from "./api-error";
-import { buildApiError } from "./auth-api";
+import { buildApiError } from "./api-error-response";
 import {
   mapAllowance,
   type AbsenceTypeAllowanceSummary,

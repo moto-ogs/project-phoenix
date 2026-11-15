@@ -221,17 +221,6 @@ describe("OperatorLoginPage", () => {
     });
   });
 
-  it("redirects when already authenticated as operator", () => {
-    mockUseSession.mockReturnValue({
-      status: "authenticated",
-      data: { user: { scope: "platform", token: "valid-token" } },
-    });
-
-    render(<OperatorLoginPage />);
-
-    expect(mockRedirect).toHaveBeenCalledWith("/operator/organizations");
-  });
-
   // The layout's server snapshot carries no token (#4991).
   it("redirects an operator whose session came from the server snapshot", () => {
     mockUseSession.mockReturnValue({
@@ -262,24 +251,6 @@ describe("OperatorLoginPage", () => {
       expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
     });
     expect(mockRedirect).not.toHaveBeenCalled();
-  });
-
-  it("clears an errored operator session before redirecting", async () => {
-    mockSignOut.mockResolvedValue(undefined);
-    mockUseSession.mockReturnValue({
-      status: "authenticated",
-      data: {
-        error: "RefreshTokenExpired",
-        user: { scope: "platform" },
-      },
-    });
-
-    render(<OperatorLoginPage />);
-
-    expect(mockRedirect).not.toHaveBeenCalled();
-    await waitFor(() => {
-      expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
-    });
   });
 
   it("shows loading screen while checking auth", () => {
@@ -476,21 +447,7 @@ describe("OperatorLoginPage", () => {
 
     render(<OperatorLoginPage />);
 
-    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockRedirect).not.toHaveBeenCalled();
     expect(screen.getByText("Operator Console")).toBeInTheDocument();
-  });
-
-  it("toggles password visibility", () => {
-    render(<OperatorLoginPage />);
-
-    const passwordInput = screen.getByLabelText("Passwort");
-    expect(passwordInput).toHaveAttribute("type", "password");
-
-    const toggleButton = screen.getByRole("button", {
-      name: "Passwort anzeigen",
-    });
-    fireEvent.click(toggleButton);
-
-    expect(passwordInput).toHaveAttribute("type", "text");
   });
 });

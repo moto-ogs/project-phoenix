@@ -1,7 +1,7 @@
 "use client";
 
 import type { ErrorCode } from "~/lib/error-codes.generated";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { Alert } from "~/components/ui/alert";
@@ -22,10 +22,7 @@ import { parentsPortalLoginUrl } from "~/lib/parent-url";
 import { schoolPortalLoginUrl } from "~/lib/school-url";
 import { isSchoolPortalHandoffPath } from "~/lib/redirect-utils";
 import { hasSessionAccess } from "~/lib/session-access";
-import {
-  clearSessionErrorFromUrl,
-  useLoginSessionCheck,
-} from "~/lib/login-session-notice";
+import { useLoginSessionCheck } from "~/lib/login-session-notice";
 import type { MFAStep } from "~/lib/sign-in-answer";
 import { login as loginApi } from "~/lib/mfa-api";
 import { loginWithPasskey } from "~/lib/passkey-api";
@@ -90,7 +87,7 @@ interface MFAEnrollmentStep {
   email: string;
 }
 
-function LoginForm() {
+export default function HomePage() {
   const [email, setEmail] = useState("");
   const [awaitingRedirect, setAwaitingRedirect] = useState(false);
   const [mfaStep, setMfaStep] = useState<MFAStep | null>(null);
@@ -128,7 +125,6 @@ function LoginForm() {
   // The BFF has already set the httpOnly session cookie. Read only the
   // browser-safe session to update the provider before SmartRedirect runs.
   const completeLogin = async () => {
-    clearSessionErrorFromUrl();
     const current = await update();
     if (!hasSessionAccess(current))
       throw new Error("Session was not established");
@@ -345,24 +341,5 @@ function LoginForm() {
           />
         )}
     </AuthShell>
-  );
-}
-
-export default function HomePage() {
-  return (
-    <Suspense
-      fallback={
-        <AuthShell
-          title="Willkommen"
-          subtitle="Melden Sie sich mit Ihrem Konto an."
-          variant="tenant"
-          brand={<MotoBrand />}
-        >
-          <Loading message="Anmeldung wird vorbereitet …" />
-        </AuthShell>
-      }
-    >
-      <LoginForm />
-    </Suspense>
   );
 }
