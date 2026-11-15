@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.12.0](https://github.com/moto-ogs/project-phoenix/compare/v1.11.0...v1.12.0) (2026-11-15)
+
+
+### Neue Funktionen
+
+* **traeger:** Berichte für Jugendamt und Kommune nach Vorlage zum Stichtag, als PDF, Excel und CSV ([3b8bc78](https://github.com/moto-ogs/project-phoenix/commit/3b8bc78649bd1863572a2414c2d5b6e61c518601))
+* **traeger:** Tagesmeldung der An- und Abwesenheit für Schulen in Mecklenburg-Vorpommern ([c767a69](https://github.com/moto-ogs/project-phoenix/commit/c767a69a3b81f24c5fb97bc5b0776cd9e9e7e94d))
+
+
+### Fehlerbehebungen
+
+* **a11y:** Fokus nach Fehlern und Schrittwechseln ([2a31f61](https://github.com/moto-ogs/project-phoenix/commit/2a31f61501796fd5ce38fa76b85b3157b1de8d8a))
+* **a11y:** Kontraste von Text, Fokusringen und Feldrändern ([#7110](https://github.com/moto-ogs/project-phoenix/issues/7110)) ([dbc544e](https://github.com/moto-ogs/project-phoenix/commit/dbc544e45a957b45ea899e506ed6c16b6e3b3f25))
+* **a11y:** vergangene Blöcke im Tagesplan auf grauer Fläche ([#7110](https://github.com/moto-ogs/project-phoenix/issues/7110)) ([f7ab32b](https://github.com/moto-ogs/project-phoenix/commit/f7ab32bbaa2901c4f5d5543e31f4f7bc9163b179))
+* **a11y:** Vergangenes einheitlich ausgegraut, Feldränder heller als Fokus ([#7110](https://github.com/moto-ogs/project-phoenix/issues/7110)) ([5c179a8](https://github.com/moto-ogs/project-phoenix/commit/5c179a8b4390e4e13e9a23327268cad09ae0fa06))
+* **ci:** expect the page title guard in the changed-test selector test ([#7170](https://github.com/moto-ogs/project-phoenix/issues/7170)) ([fd8e47d](https://github.com/moto-ogs/project-phoenix/commit/fd8e47d8e8d9418c751502d27abaaa9bc0587fc3))
+
 ## [1.11.0](https://github.com/moto-ogs/project-phoenix/compare/v1.10.0...v1.11.0) (2026-11-15)
 
 
