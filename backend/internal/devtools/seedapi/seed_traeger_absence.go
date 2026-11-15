@@ -111,7 +111,7 @@ func seedTraegerAbsenceTypes(client *Client, auth AuthRef) (map[string]int64, er
 	return ids, nil
 }
 
-type seedTraegerStaffRecord struct {
+type seedTraegerAbsenceRecord struct {
 	ID          int64  `json:"id"`
 	FirstName   string `json:"first_name"`
 	LastName    string `json:"last_name"`
@@ -124,20 +124,20 @@ type seedTraegerStaffRecord struct {
 
 // seedTraegerStaffRecordsOf returns the records with a live employment at
 // schoolID.
-func seedTraegerStaffRecordsOf(client *Client, auth AuthRef, schoolID int64) ([]seedTraegerStaffRecord, error) {
+func seedTraegerStaffRecordsOf(client *Client, auth AuthRef, schoolID int64) ([]seedTraegerAbsenceRecord, error) {
 	raw, err := client.GetWithAuth(auth, "/traeger/staff-records/")
 	if err != nil {
 		return nil, fmt.Errorf("read the Träger staff records: %w", err)
 	}
 	var envelope struct {
 		Data struct {
-			Records []seedTraegerStaffRecord `json:"records"`
+			Records []seedTraegerAbsenceRecord `json:"records"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return nil, fmt.Errorf("decode the Träger staff records: %w", err)
 	}
-	var result []seedTraegerStaffRecord
+	var result []seedTraegerAbsenceRecord
 	for _, record := range envelope.Data.Records {
 		for _, employment := range record.Employments {
 			if employment.SchoolID == schoolID && employment.Active {
@@ -173,7 +173,7 @@ func seedSchoolAbsenceTypes(rt *Runtime) (map[string]string, error) {
 
 // seedTraegerAbsenceRequest signs in a caregiver of the school who has a
 // staff record and asks for a Regenerationstag in three weeks.
-func seedTraegerAbsenceRequest(ctx context.Context, rt *Runtime, records []seedTraegerStaffRecord, typeID string) (int, error) {
+func seedTraegerAbsenceRequest(ctx context.Context, rt *Runtime, records []seedTraegerAbsenceRecord, typeID string) (int, error) {
 	if typeID == "" || rt.FixedSeeder == nil {
 		return 0, nil
 	}
@@ -211,7 +211,7 @@ func seedNextWeekday(day time.Time) time.Time {
 // seedTraegerConversionBooking books an Umwandlungstag three weeks ago for
 // the person who works at most schools, as the Leitung of this school does,
 // so the Kontingent of the Personalakte shows a booking.
-func seedTraegerConversionBooking(rt *Runtime, records []seedTraegerStaffRecord, typeID string) error {
+func seedTraegerConversionBooking(rt *Runtime, records []seedTraegerAbsenceRecord, typeID string) error {
 	if typeID == "" || len(records) == 0 {
 		return nil
 	}

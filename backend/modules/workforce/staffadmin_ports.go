@@ -104,6 +104,7 @@ type staffAdminTraeger interface {
 	StaffTraegerKeep
 	TraegerStaffRecords(collaborators TraegerStaffPorts) TraegerStaffRecords
 	TraegerAbsenceTypes(collaborators TraegerStaffPorts) TraegerAbsenceTypes
+	TraegerStaffContracts(collaborators TraegerStaffPorts) TraegerStaffContracts
 }
 
 // StaffTraegerKeep tells the school whether its Träger keeps an employment
@@ -111,6 +112,10 @@ type staffAdminTraeger interface {
 // the bank and tax values are then the Träger's, read-only for the school.
 type StaffTraegerKeep interface {
 	StaffKeptByTraeger(ctx context.Context, staffID int64) (bool, error)
+	// StaffSollKeptByTraeger is true while a contract of the Träger governs
+	// the Soll of the employment (#4706): the school then reads its schedule
+	// and Ferien-Soll but does not change them.
+	StaffSollKeptByTraeger(ctx context.Context, staffID int64) (bool, error)
 }
 
 // StaffAdmin is the public facade of the personnel-record administration: the
@@ -232,6 +237,17 @@ func (a *StaffAdmin) ActivateQueuedStaffDocumentFileCleanup(ctx context.Context,
 
 func (a *StaffAdmin) StaffKeptByTraeger(ctx context.Context, staffID int64) (bool, error) {
 	return a.traeger.StaffKeptByTraeger(ctx, staffID)
+}
+
+func (a *StaffAdmin) StaffSollKeptByTraeger(ctx context.Context, staffID int64) (bool, error) {
+	return a.traeger.StaffSollKeptByTraeger(ctx, staffID)
+}
+
+// TraegerStaffContracts are the Arbeitsverträge of the Personalstamm (#4706,
+// ADR 0089 section 1); the root binds the same collaborators as for the
+// records.
+func (a *StaffAdmin) TraegerStaffContracts(collaborators TraegerStaffPorts) TraegerStaffContracts {
+	return a.traeger.TraegerStaffContracts(collaborators)
 }
 
 // TraegerStaffRecords is the Personalstamm of the Träger-Portal (#4705, ADR

@@ -325,6 +325,18 @@
       "write_owner": "workforce"
     },
     {
+      "name": "workforce.staff_contract_holiday_weeks",
+      "write_owner": "workforce"
+    },
+    {
+      "name": "workforce.staff_contract_targets",
+      "write_owner": "workforce"
+    },
+    {
+      "name": "workforce.staff_contracts",
+      "write_owner": "workforce"
+    },
+    {
       "name": "workforce.staff_record_changes",
       "write_owner": "workforce"
     },

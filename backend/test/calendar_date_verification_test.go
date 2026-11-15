@@ -39,6 +39,13 @@ var legacyTimeTimeDateColumns = map[string]string{}
 // field (raw-SQL-only access or superseded tables). Every newly discovered
 // unmapped column must be classified here with a reason.
 var unmappedDateColumns = map[string]string{
+	// #4706: the Arbeitsverträge of a Träger are read by raw statements into
+	// calendar.Date fields and written from calendar.Date values; no
+	// time.Time ever reaches these columns.
+	"workforce.staff_contracts.starts_on":               "#4706: Workforce binds and scans calendar.Date, never time.Time",
+	"workforce.staff_contracts.ends_on":                 "#4706: Workforce binds and scans *calendar.Date, never time.Time",
+	"workforce.staff_contract_targets.valid_from":       "#4706: Workforce binds and scans calendar.Date, never time.Time",
+	"workforce.staff_contract_holiday_weeks.week_start": "#4706: Workforce binds and scans calendar.Date, never time.Time",
 	// #4701: the booked days of a holiday booking are a DATE[] written from
 	// calendar.Date text as an array literal and read back as ::text into
 	// calendar.Date values; no time.Time ever reaches the column.

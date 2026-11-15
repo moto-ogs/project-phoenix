@@ -439,6 +439,12 @@
       "legacy": "workforce.staff_profile_missing"
     },
     {
+      "code": "workforce.staff_soll_kept_by_traeger",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.staff_soll_kept_by_traeger"
+    },
+    {
       "code": "workforce.stammdaten_invalid",
       "class": "input",
       "parameters": [],
@@ -504,6 +510,44 @@
       "class": "input",
       "parameters": [],
       "legacy": "workforce.traeger_absence_type_not_found"
+    },
+    {
+      "code": "workforce.traeger_contract_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_contract_invalid"
+    },
+    {
+      "code": "workforce.traeger_contract_month_closed",
+      "class": "business_rejection",
+      "parameters": [
+        "school",
+        "day"
+      ],
+      "legacy": "workforce.traeger_contract_month_closed"
+    },
+    {
+      "code": "workforce.traeger_contract_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_contract_not_found"
+    },
+    {
+      "code": "workforce.traeger_contract_overlap",
+      "class": "business_rejection",
+      "parameters": [
+        "school"
+      ],
+      "legacy": "workforce.traeger_contract_overlap"
+    },
+    {
+      "code": "workforce.traeger_holiday_week_school_override",
+      "class": "business_rejection",
+      "parameters": [
+        "school",
+        "day"
+      ],
+      "legacy": "workforce.traeger_holiday_week_school_override"
     },
     {
       "code": "workforce.traeger_staff_already_linked",

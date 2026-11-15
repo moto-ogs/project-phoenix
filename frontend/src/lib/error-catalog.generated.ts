@@ -1971,6 +1971,8 @@ export const ERROR_CATALOG = {
         "Diesen Wert führt der Träger in seiner Personalakte. Bitte wenden Sie sich an die Personalverwaltung des Trägers.",
       "workforce.staff_profile_missing":
         "Für Ihr Konto gibt es keinen Personaldatensatz. Diese Einstellung gilt nur für Personal.",
+      "workforce.staff_soll_kept_by_traeger":
+        "Das Soll dieser Person führt der Träger im Arbeitsvertrag. Bitte wenden Sie sich an die Personalverwaltung des Trägers.",
       "workforce.stammdaten_invalid":
         "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "workforce.target_override_hours_invalid":
@@ -1991,6 +1993,16 @@ export const ERROR_CATALOG = {
         "Eine Abwesenheitsart mit diesem Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
       "workforce.traeger_absence_type_not_found":
         "Diese Abwesenheitsart gibt es nicht mehr. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_contract_invalid":
+        "Bitte prüfen Sie die Angaben zum Arbeitsvertrag.",
+      "workforce.traeger_contract_month_closed":
+        "Die Schule {school} hat die Zeit davor schon abgerechnet. Eine Änderung geht dort erst ab dem {day}.",
+      "workforce.traeger_contract_not_found":
+        "Diesen Arbeitsvertrag gibt es nicht mehr. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_contract_overlap":
+        "An der Schule {school} gilt an diesen Tagen schon ein anderer Arbeitsvertrag. Beenden Sie den anderen Vertrag zuerst oder wählen Sie andere Tage.",
+      "workforce.traeger_holiday_week_school_override":
+        "Die Schule {school} hat für die Woche ab dem {day} schon eine eigene Sonderarbeitszeit. Bitte bitten Sie die Schule, diese zu löschen, oder wählen Sie eine andere Woche.",
       "workforce.traeger_staff_already_linked":
         "Eine dieser Personen hat schon eine Personalakte. Bitte laden Sie die Seite neu.",
       "workforce.traeger_staff_link_invalid":

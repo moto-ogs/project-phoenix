@@ -28,7 +28,7 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 	if staffAdmin == nil {
 		return errors.New("traeger staff records: the personnel record is required")
 	}
-	ports := workforce.TraegerStaffPorts{
+	collaborators := workforce.TraegerStaffPorts{
 		Schools:     traegerStaffSchools{organizations: organizations},
 		Employments: traegerSchoolEmployments{staff: membership},
 		Persons:     traegerSchoolPersons{persons: persons},
@@ -36,8 +36,9 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 		Runtime:     traegerDocumentRuntime{},
 	}
 	requireStaff := common.RequiresPermission(identityaccess.TraegerRightStaffManage)
-	absences := staffAdmin.TraegerAbsenceTypes(ports)
-	resource := traegerstaff.NewRecordsResource(staffAdmin.TraegerStaffRecords(ports), absences, requireStaff)
+	absences := staffAdmin.TraegerAbsenceTypes(collaborators)
+	resource := traegerstaff.NewRecordsResource(staffAdmin.TraegerStaffRecords(collaborators), staffAdmin.TraegerStaffContracts(collaborators),
+		absences, requireStaff)
 	root.Mount("/traeger/staff-records", resource.TraegerRouter(ProtectedTraegerRoutes))
 	// The Träger's Abwesenheitsarten and Kontingente (#4710).
 	root.Mount("/traeger/absence-types", traegerstaff.NewAbsenceTypesResource(absences, requireStaff).TraegerRouter(ProtectedTraegerRoutes))

@@ -8,7 +8,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-const traegerAbsenceTypesVersion = "20261114220000"
+const traegerAbsenceTypesVersion = "20261115090000"
 
 func init() {
 	MigrationRegistry.Register(&Migration{

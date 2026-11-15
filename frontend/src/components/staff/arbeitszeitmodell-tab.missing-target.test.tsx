@@ -118,3 +118,26 @@ describe("ArbeitszeitmodellTab ohne Soll", () => {
     expect(screen.queryByText(/kein Soll/)).not.toBeInTheDocument();
   });
 });
+
+// #4706: führt ein Arbeitsvertrag des Trägers das Soll, liest die Schule es
+// nur: kein „Bearbeiten“, kein Anlegen einer Sonderarbeitszeit, ein Satz,
+// wer es ändert.
+describe("ArbeitszeitmodellTab mit Soll vom Träger", () => {
+  it("zeigt das Soll aus dem Arbeitsvertrag ohne Bearbeiten", () => {
+    mocks.schedule = { ...filledSchedule, keptByTraeger: true };
+    mocks.hasTarget = true;
+    render(<ArbeitszeitmodellTab staffId="42" canEdit />);
+
+    expect(screen.getByText("Soll aus dem Arbeitsvertrag")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Das Soll führt der Träger im Arbeitsvertrag/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Bearbeiten" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Sonderarbeitszeit anlegen/ }),
+    ).not.toBeInTheDocument();
+  });
+});
+

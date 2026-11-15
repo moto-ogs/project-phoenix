@@ -20,6 +20,13 @@ var traegerStaffCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/absence-types/"}:                              notCaptured,
 	{http.MethodPut, "/traeger/absence-types/{id}"}:                           notCaptured,
 	{http.MethodPut, "/traeger/staff-records/{id}/absence-accounts/{typeId}"}: notCaptured,
+	// The Arbeitsverträge of a record (#4706).
+	{http.MethodPost, "/traeger/staff-records/{id}/contracts"}:                                                     notCaptured,
+	{http.MethodPut, "/traeger/staff-records/{id}/contracts/{contractId}"}:                                         notCaptured,
+	{http.MethodDelete, "/traeger/staff-records/{id}/contracts/{contractId}"}:                                      notCaptured,
+	{http.MethodPost, "/traeger/staff-records/{id}/contracts/{contractId}/soll"}:                                   notCaptured,
+	{http.MethodPost, "/traeger/staff-records/{id}/contracts/{contractId}/holiday-weeks"}:                          notCaptured,
+	{http.MethodDelete, "/traeger/staff-records/{id}/contracts/{contractId}/holiday-weeks/{schoolId}/{weekStart}"}: notCaptured,
 }
 
 func init() {

@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -458,13 +459,33 @@ func (a *StaffAdmin) StaffKeptByTraeger(ctx context.Context, staffID int64) (boo
 // record: a link writes the school's number and bank hand-over into the
 // school's own trail.
 func (a *StaffAdmin) TraegerStaffRecords(collaborators workforce.TraegerStaffPorts) workforce.TraegerStaffRecords {
-	return NewTraegerStaff(a.traeger, collaborators, a.subjects, a.audit, a.bank)
+	return NewTraegerStaff(a.traeger, collaborators, TraegerStaffDependencies{
+		Subjects: a.subjects, Audit: a.audit, Bank: a.bank, Lock: a.transaction, Clock: a.clock, Warn: a.warn,
+	})
+}
+
+// TraegerStaffContracts composes the Arbeitsverträge of the Personalstamm
+// (#4706) over the same collaborators as the records.
+func (a *StaffAdmin) TraegerStaffContracts(collaborators workforce.TraegerStaffPorts) workforce.TraegerStaffContracts {
+	return NewTraegerStaff(a.traeger, collaborators, TraegerStaffDependencies{
+		Subjects: a.subjects, Audit: a.audit, Bank: a.bank, Lock: a.transaction, Clock: a.clock, Warn: a.warn,
+	})
+}
+
+// StaffSollKeptByTraeger reports whether a contract of the school's Träger
+// governs the Soll of the employment today (#4706). It joins the caller's
+// tenant transaction.
+func (a *StaffAdmin) StaffSollKeptByTraeger(ctx context.Context, staffID int64) (bool, error) {
+	kept, err := a.traeger.SollKeptStaffIDs(ctx, []int64{staffID}, calendar.Date(a.clock.Today()))
+	return len(kept) > 0, MapStaffAdminError(err)
 }
 
 // TraegerAbsenceTypes composes the Träger's Abwesenheitsarten and
 // Kontingente (#4710) over the same Personalstamm.
 func (a *StaffAdmin) TraegerAbsenceTypes(collaborators workforce.TraegerStaffPorts) workforce.TraegerAbsenceTypes {
-	return NewTraegerStaff(a.traeger, collaborators, a.subjects, a.audit, a.bank)
+	return NewTraegerStaff(a.traeger, collaborators, TraegerStaffDependencies{
+		Subjects: a.subjects, Audit: a.audit, Bank: a.bank, Lock: a.transaction, Clock: a.clock, Warn: a.warn,
+	})
 }
 
 func (a *StaffAdmin) keptByTraeger(ctx context.Context, staffID int64) (bool, error) {
