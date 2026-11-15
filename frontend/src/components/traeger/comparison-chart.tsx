@@ -21,6 +21,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "~/components/ui/chart";
+import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import type { ComparisonMetric } from "~/lib/traeger-comparison-api";
 import {
@@ -38,6 +39,30 @@ export const COMPARISON_CHART_COLORS = {
 
 /** Höhe je Schule; so bleiben auch 30 Schulen lesbar. */
 const ROW_HEIGHT = 36;
+/** Auf dem Telefon steht der Name über dem Balken und braucht eine Zeile. */
+const PHONE_ROW_HEIGHT = 52;
+
+/**
+ * Der Name über dem Balken, auf dem Telefon: eine Achse links ließe dort
+ * kaum Platz für die Balken.
+ */
+function nameAboveBar(props: {
+  readonly x?: number | string;
+  readonly y?: number | string;
+  readonly value?: unknown;
+}) {
+  return (
+    <text
+      x={Number(props.x ?? 0)}
+      y={Number(props.y ?? 0) - 6}
+      className="fill-gray-700"
+      fontSize={12}
+      fontWeight={500}
+    >
+      {String(props.value ?? "")}
+    </text>
+  );
+}
 
 interface Point {
   readonly id: string;
@@ -76,6 +101,7 @@ export function ComparisonChart({
   metric: ComparisonMetric;
   average: number | undefined;
 }>) {
+  const phone = useMediaQuery(BELOW_SM);
   const info = metricInfo(metric);
   const share = info.format === "share";
   const data: Point[] = entries.map((entry) => {
@@ -101,18 +127,25 @@ export function ComparisonChart({
     value: { label: info.label, color: COMPARISON_CHART_COLORS.value },
   } satisfies ChartConfig;
   const longestName = Math.max(...data.map((point) => point.name.length), 8);
-  const axisWidth = Math.min(Math.max(longestName * 7, 96), 200);
+  // 12-px names need up to 8 px a letter, plus room before the bar; a
+  // narrower axis wraps the name onto two lines.
+  const axisWidth = Math.min(Math.max(longestName * 8 + 32, 120), 240);
   return (
     <ChartContainer
       config={config}
       className="aspect-auto w-full"
-      style={{ height: Math.max(data.length * ROW_HEIGHT + 40, 140) }}
+      style={{
+        height: Math.max(
+          data.length * (phone ? PHONE_ROW_HEIGHT : ROW_HEIGHT) + 40,
+          140,
+        ),
+      }}
     >
       <BarChart
         accessibilityLayer
         layout="vertical"
         data={data}
-        margin={{ top: 16, right: 56, left: 0, bottom: 0 }}
+        margin={{ top: phone ? 24 : 16, right: 56, left: 0, bottom: 0 }}
         barCategoryGap={8}
       >
         <CartesianGrid horizontal={false} strokeDasharray="3 3" />
@@ -133,7 +166,8 @@ export function ComparisonChart({
           tickLine={false}
           axisLine={false}
           fontSize={12}
-          width={axisWidth}
+          width={phone ? 0 : axisWidth}
+          hide={phone}
           interval={0}
         />
         <ChartTooltip
@@ -149,8 +183,12 @@ export function ComparisonChart({
           dataKey="value"
           radius={[0, 6, 6, 0]}
           maxBarSize={22}
+          // A school with 0 keeps a sliver and its label, so it reads as 0
+          // and not as missing.
+          minPointSize={2}
           isAnimationActive={false}
         >
+          {phone ? <LabelList dataKey="name" content={nameAboveBar} /> : null}
           <LabelList
             dataKey="label"
             position="right"

@@ -53,6 +53,7 @@ import {
 } from "~/components/traeger/utilization-model";
 import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
 import { childrenConcept } from "~/lib/concepts/children";
+import { presentConcept } from "~/lib/concepts/present";
 import { schoolComparisonConcept } from "~/lib/concepts/schoolComparison";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
@@ -269,6 +270,7 @@ function Figures({
             : "mit Check-in, je Tag"
         }
         tone="blue"
+        icon={<MotoConceptIcon concept={presentConcept} />}
         loading={loading}
       />
     </div>
@@ -614,24 +616,27 @@ export default function TraegerComparisonPage() {
         )}
       </SectionCard>
       <DataTable
-        heading={{ title: "Kennzahlen je Schule", level: 2 }}
-        headerActions={
-          <MultiSelect
-            ariaLabel="Kennzahlen in der Tabelle"
-            value={metrics}
-            onChange={(next) => {
-              const chosen = COMPARISON_METRICS.filter((metric) =>
-                next.includes(metric),
-              );
-              setMetrics(chosen.length > 0 ? chosen : DEFAULT_METRICS);
-            }}
-            options={METRIC_OPTIONS}
-            placeholder="Kennzahlen wählen"
-            summaryLabel={(count) => `${count} Kennzahlen`}
-            menuAlign="end"
-            className="min-w-0 sm:w-56"
-          />
-        }
+        heading={{
+          title: "Kennzahlen je Schule",
+          level: 2,
+          action: (
+            <MultiSelect
+              ariaLabel="Kennzahlen in der Tabelle"
+              value={metrics}
+              onChange={(next) => {
+                const chosen = COMPARISON_METRICS.filter((metric) =>
+                  next.includes(metric),
+                );
+                setMetrics(chosen.length > 0 ? chosen : DEFAULT_METRICS);
+              }}
+              options={METRIC_OPTIONS}
+              placeholder="Kennzahlen wählen"
+              summaryLabel={(count) => `${count} Kennzahlen`}
+              menuAlign="end"
+              className="min-w-0 sm:w-56"
+            />
+          ),
+        }}
         columns={columns}
         rows={rows}
         getRowKey={rowKey}
