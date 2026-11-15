@@ -174,12 +174,12 @@ func (s *staffMonthCloseService) ReopenMonthForTraeger(ctx context.Context, staf
 // reopenerMayReopen keeps a close with its author: the Träger reopens its
 // own closes, the school the ones it wrote itself.
 func reopenerMayReopen(snapshot MonthSnapshot, byTraeger bool) error {
-	switch byTraeger {
-	case snapshot.Source == SnapshotSourceTraeger:
+	closedByTraeger := snapshot.Source == SnapshotSourceTraeger
+	if byTraeger == closedByTraeger {
 		return nil
-	case true:
-		return fmt.Errorf("%w: %04d-%02d", ErrMonthClosedBySchool, snapshot.Year, snapshot.Month)
-	default:
-		return fmt.Errorf("%w: %04d-%02d", ErrMonthClosedByTraeger, snapshot.Year, snapshot.Month)
 	}
+	if byTraeger {
+		return fmt.Errorf("%w: %04d-%02d", ErrMonthClosedBySchool, snapshot.Year, snapshot.Month)
+	}
+	return fmt.Errorf("%w: %04d-%02d", ErrMonthClosedByTraeger, snapshot.Year, snapshot.Month)
 }

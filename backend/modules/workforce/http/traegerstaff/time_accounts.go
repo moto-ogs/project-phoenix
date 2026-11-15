@@ -71,9 +71,11 @@ type monthChangeRequest struct {
 	Reason string `json:"reason"`
 }
 
+var errReasonRequired = errors.New("a reason is required")
+
 func (req *monthChangeRequest) Bind(*http.Request) error {
 	if strings.TrimSpace(req.Reason) == "" {
-		return errors.New("a reason is required")
+		return errReasonRequired
 	}
 	return nil
 }
@@ -96,7 +98,12 @@ func (rs *RecordsResource) changeTimeAccountMonth(w http.ResponseWriter, r *http
 	}
 	req := &monthChangeRequest{}
 	if err := render.Bind(r, req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeGeneralInput, "reason"))
+		// Only the missing reason belongs to a field; a broken body does not.
+		if errors.Is(err, errReasonRequired) {
+			common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeGeneralInput, "reason"))
+		} else {
+			common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		}
 		return
 	}
 	account, err := change(r.Context(), session, id, workforce.TraegerMonthChange{Year: req.Year, Month: req.Month, Reason: req.Reason})

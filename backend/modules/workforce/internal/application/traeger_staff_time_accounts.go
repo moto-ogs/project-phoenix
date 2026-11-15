@@ -44,7 +44,9 @@ func (t *TraegerStaff) monthOrThisMonth(year, month int) (int, int) {
 // CloseTimeAccountMonth closes the month at every school whose month a
 // contract of the Träger covers. It checks every school first, so a later
 // closed month or a running month stops the close before any school is
-// written. A school that was closed already stays as it is.
+// written. A school that was closed already stays as it is. A school that
+// fails anyway (a race after the checks) leaves the schools before it closed;
+// a second close finishes the rest (ADR 0240 point 4).
 func (t *TraegerStaff) CloseTimeAccountMonth(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, change workforce.TraegerMonthChange) (workforce.TraegerTimeAccount, error) {
 	links, account, err := t.readTimeAccount(ctx, actor, recordID, change.Year, change.Month)
 	if err != nil {

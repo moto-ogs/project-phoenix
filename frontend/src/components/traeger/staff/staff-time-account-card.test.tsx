@@ -141,6 +141,41 @@ describe("StaffTimeAccountCard", () => {
     ).toHaveAttribute("aria-disabled", "true");
   });
 
+  // ADR 0240 point 4: a close that stopped halfway can be finished and
+  // undone; a month only the schools closed offers no reopen.
+  it("offers reopen exactly where the Träger closed a school", async () => {
+    api.fetchTraegerTimeAccount.mockResolvedValue(
+      account({
+        schools: [
+          school("OGS Nord", { closed: true, closedByTraeger: true }),
+          school("OGS Süd"),
+        ],
+      }),
+    );
+    const { unmount } = renderCard();
+    expect(
+      await screen.findByRole("button", { name: /Wieder öffnen/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Monat abschließen/ }),
+    ).toBeInTheDocument();
+    unmount();
+
+    api.fetchTraegerTimeAccount.mockResolvedValue(
+      account({
+        state: "closed",
+        schools: [school("OGS Nord", { closed: true })],
+      }),
+    );
+    renderCard();
+    expect(
+      await screen.findByText("Von der Schule abgeschlossen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Wieder öffnen/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("leaves a month without a contract to the schools", async () => {
     api.fetchTraegerTimeAccount.mockResolvedValue(
       account({

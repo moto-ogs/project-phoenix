@@ -11,6 +11,7 @@ import { ChevronLeft, ChevronRight, Lock, LockOpen } from "lucide-react";
 
 import { MonthCloseReasonModal } from "~/components/staff/month-close-modal";
 import { formatSignedDuration } from "~/components/staff/staff-time-views";
+import { monthLabel } from "~/components/time-tracking/monatskarte";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -34,33 +35,17 @@ import {
 
 const logger = createLogger({ component: "TraegerStaffTimeAccount" });
 
-const MONTH_NAMES = [
-  "Januar",
-  "Februar",
-  "März",
-  "April",
-  "Mai",
-  "Juni",
-  "Juli",
-  "August",
-  "September",
-  "Oktober",
-  "November",
-  "Dezember",
-] as const;
-
 interface MonthKey {
   readonly year: number;
   readonly month: number;
 }
 
-const monthLabel = ({ year, month }: MonthKey) =>
-  `${MONTH_NAMES[month - 1] ?? ""} ${year}`;
+const monthKeyLabel = ({ year, month }: MonthKey) => monthLabel(year, month);
 
 /** „2026-11“ als „November 2026“. */
 const isoMonthLabel = (value: string) => {
   const [year, month] = value.split("-").map(Number);
-  return year && month ? monthLabel({ year, month }) : value;
+  return year && month ? monthLabel(year, month) : value;
 };
 
 const shift = ({ year, month }: MonthKey, delta: number): MonthKey => {
@@ -190,7 +175,7 @@ export function StaffTimeAccountCard({
 
   const isThisMonth =
     shown.year === thisMonth.year && shown.month === thisMonth.month;
-  const label = monthLabel(shown);
+  const shownLabel = monthKeyLabel(shown);
 
   const columns = useMemo<DataTableColumn<TraegerTimeAccountSchool>[]>(
     () => [
@@ -282,36 +267,45 @@ export function StaffTimeAccountCard({
       (school) => school.byTraeger && school.closed && !school.closedByTraeger,
     ) ?? [];
 
-  const headAction =
-    account?.state === "open" ? (
-      <Button
-        type="button"
-        size="md"
-        variant="primary"
-        className="gap-2"
-        disabled={Boolean(blocked)}
-        disabledReason={blocked ?? undefined}
-        tooltip="Öffnet ein Fenster, um den Monat an allen Schulen festzuschreiben."
-        onClick={() => setDialog("close")}
-      >
-        <Lock className="h-4 w-4" aria-hidden />
-        Monat abschließen
-      </Button>
-    ) : account?.state === "closed" ? (
-      <Button
-        type="button"
-        size="md"
-        variant="outline_danger"
-        className="gap-2"
-        disabled={Boolean(reopenBlocked)}
-        disabledReason={reopenBlocked ?? undefined}
-        tooltip="Hebt den Abschluss an allen Schulen auf. moto fragt vorher nach."
-        onClick={() => setDialog("reopen")}
-      >
-        <LockOpen className="h-4 w-4" aria-hidden />
-        Wieder öffnen
-      </Button>
-    ) : null;
+  // Abschließen, solange eine Schule mit Vertrag offen ist; wieder öffnen,
+  // sobald der Träger an einer Schule abgeschlossen hat, auch nach einem
+  // halb fertigen Abschluss (ADR 0240 Punkt 4).
+  const canReopen =
+    account?.schools.some((school) => school.closedByTraeger) ?? false;
+  const headAction = (
+    <>
+      {account?.state === "open" ? (
+        <Button
+          type="button"
+          size="md"
+          variant="primary"
+          className="gap-2"
+          disabled={Boolean(blocked)}
+          disabledReason={blocked ?? undefined}
+          tooltip="Öffnet ein Fenster, um den Monat an allen Schulen festzuschreiben."
+          onClick={() => setDialog("close")}
+        >
+          <Lock className="h-4 w-4" aria-hidden />
+          Monat abschließen
+        </Button>
+      ) : null}
+      {canReopen ? (
+        <Button
+          type="button"
+          size="md"
+          variant="outline_danger"
+          className="gap-2"
+          disabled={Boolean(reopenBlocked)}
+          disabledReason={reopenBlocked ?? undefined}
+          tooltip="Hebt Ihren Abschluss an allen Schulen auf. moto fragt vorher nach."
+          onClick={() => setDialog("reopen")}
+        >
+          <LockOpen className="h-4 w-4" aria-hidden />
+          Wieder öffnen
+        </Button>
+      ) : null}
+    </>
+  );
 
   return (
     <SectionCard
@@ -326,7 +320,7 @@ export function StaffTimeAccountCard({
           />
         ) : undefined
       }
-      description={`${label} · Soll und Ist an allen Schulen der Person. Jede Schule rechnet ihren Teil selbst.`}
+      description={`${shownLabel} · Soll und Ist an allen Schulen der Person. Jede Schule rechnet ihren Teil selbst.`}
       actions={
         <>
           <Button
@@ -417,7 +411,7 @@ export function StaffTimeAccountCard({
 
       {dialog === "close" && account ? (
         <MonthCloseReasonModal
-          title={`${label} abschließen`}
+          title={`${shownLabel} abschließen`}
           description={
             <>
               <p>
@@ -434,21 +428,27 @@ export function StaffTimeAccountCard({
           }
           submitLabel="Monat abschließen"
           submitTooltip="Schreibt den Monat an allen Schulen mit Ihrem Vertrag fest."
-          successMessage={`${label} ist abgeschlossen.`}
+          successMessage={`${shownLabel} ist abgeschlossen.`}
           onSubmit={async (reason) => {
-            setAccount(
-              await closeTraegerTimeAccountMonth(recordId, {
-                ...shown,
-                reason,
-              }),
-            );
+            try {
+              setAccount(
+                await closeTraegerTimeAccountMonth(recordId, {
+                  ...shown,
+                  reason,
+                }),
+              );
+            } catch (err) {
+              // Schulen vor dem Fehler sind schon abgeschlossen: neu laden.
+              void reload();
+              throw err;
+            }
           }}
           onClose={() => setDialog(null)}
         />
       ) : null}
       {dialog === "reopen" && account ? (
         <MonthCloseReasonModal
-          title={`${label} wieder öffnen`}
+          title={`${shownLabel} wieder öffnen`}
           description={
             <>
               <p>
@@ -463,16 +463,21 @@ export function StaffTimeAccountCard({
           }
           submitLabel="Wieder öffnen"
           submitTooltip="Hebt den Abschluss an allen Schulen auf. Die Schulen ändern den Monat danach wieder."
-          successMessage={`${label} ist wieder offen.`}
+          successMessage={`${shownLabel} ist wieder offen.`}
           errorObject="das Öffnen des Monats"
           destructive
           onSubmit={async (reason) => {
-            setAccount(
-              await reopenTraegerTimeAccountMonth(recordId, {
-                ...shown,
-                reason,
-              }),
-            );
+            try {
+              setAccount(
+                await reopenTraegerTimeAccountMonth(recordId, {
+                  ...shown,
+                  reason,
+                }),
+              );
+            } catch (err) {
+              void reload();
+              throw err;
+            }
           }}
           onClose={() => setDialog(null)}
         />
