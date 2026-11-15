@@ -1,56 +1,44 @@
-import { Fragment } from "react";
+"use client";
 
 import { LinkifiedText } from "~/components/ui/linkified-text";
+import { splitLetterText } from "~/lib/parent-letter-placeholders";
 
-const PLACEHOLDER_PATTERN = /(\{\{\s*[^{}]*?\s*\}\})/g;
-
-/** What a placeholder stands for, as the composer names it. */
-const PLACEHOLDER_LABELS: Readonly<Record<string, string>> = {
-  vorname: "Vorname",
-  nachname: "Nachname",
-  klasse: "Klasse",
-  gruppe: "Gruppe",
-  betreuungstage: "Betreuungstage",
-  abholzeit: "Abholzeit",
-};
-
-/** Whether a letter text names any placeholder. */
-export function hasLetterPlaceholders(text: string): boolean {
-  return /\{\{[^{}]*\}\}/.test(text);
-}
-
-function labelOf(token: string): string {
-  const name = token.replace(/[{}\s]/g, "").toLowerCase();
-  return PLACEHOLDER_LABELS[name] ?? name;
-}
+import { useLetterPlaceholders } from "./use-letter-placeholders";
 
 /**
  * Der Text eines Elternbriefs mit seinen Platzhaltern (#4813): jeder
- * Platzhalter steht als Feld mit seinem Namen im Text, so liest das Personal,
- * wo moto die Angaben jedes Kindes einsetzt.
+ * Platzhalter steht als grünes Feld mit seinem Namen im Text, so liest das
+ * Personal, wo moto die Angaben jedes Kindes einsetzt.
  */
-export function LetterTemplateText({ text }: Readonly<{ text: string }>) {
-  const parts = text.split(PLACEHOLDER_PATTERN);
+export function LetterTemplateText({
+  text,
+  apiBase,
+}: Readonly<{ text: string; apiBase?: string }>) {
+  const { labels } = useLetterPlaceholders(apiBase);
   return (
     <>
-      {parts.map((part, index) =>
-        index % 2 === 1 ? (
-          // oxlint-disable-next-line ui-kit/no-hand-rolled-pill -- inline field marker in running text, not a status pill
-          <mark
-            // Parts are split from one fixed text; the index is stable.
+      <p className="text-sm leading-6 whitespace-pre-line text-gray-800">
+        {splitLetterText(text).map((part, index) =>
+          part.kind === "placeholder" ? (
+            // oxlint-disable-next-line ui-kit/no-hand-rolled-pill -- inline field marker in running text, not a status pill
+            <mark
+              // Parts are cut from one fixed text; the index is stable.
+              // eslint-disable-next-line react/no-array-index-key
+              key={index}
+              className="bg-moto-green-soft text-moto-green-strong rounded-md px-1 py-0.5 font-medium"
+            >
+              {labels.get(part.name) ?? part.name}
+            </mark>
+          ) : (
             // eslint-disable-next-line react/no-array-index-key
-            key={index}
-            className="bg-moto-green-soft text-moto-green-strong rounded-md px-1 py-0.5 font-medium"
-          >
-            {labelOf(part)}
-          </mark>
-        ) : (
-          // eslint-disable-next-line react/no-array-index-key
-          <Fragment key={index}>
-            <LinkifiedText text={part} />
-          </Fragment>
-        ),
-      )}
+            <LinkifiedText key={index} text={part.text} />
+          ),
+        )}
+      </p>
+      <p className="mt-3 text-xs text-gray-500">
+        Die grünen Felder füllt moto für jedes Kind mit seinen Angaben. Jede
+        Familie liest nur den Brief ihres eigenen Kindes.
+      </p>
     </>
   );
 }

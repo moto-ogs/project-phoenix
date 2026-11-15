@@ -310,11 +310,11 @@ export const parentAnnouncementKeys = {
     `parent-announcement-poll-evaluation-${encodeURIComponent(id)}`,
   // Serienbriefe (#4813): the placeholders per portal and the children a
   // letter preview can show.
-  letterPlaceholders: (portal: "ogs" | "school") =>
-    `parent-letter-placeholders-${portal}`,
-  letterPreviewChildren: () => "parent-letter-preview-children",
-  classLetterPreviewChildren: (schoolClass: string) =>
-    `school-parent-letter-preview-${encodeURIComponent(schoolClass)}`,
+  letterPlaceholders: (base = "ogs") => `parent-letter-placeholders-${base}`,
+  letterPreview: (base = "ogs", studentId: string, body: string) =>
+    `parent-letter-preview-${base}-${studentId}-${body}`,
+  letterPreviewChildren: (scope: string) =>
+    `parent-letter-preview-children-${encodeURIComponent(scope)}`,
   preview(data: unknown, id: string) {
     const row = previewRow(data, id);
     const name = previewText(row?.title);

@@ -1,27 +1,37 @@
 package owners
 
 import (
+	"bytes"
 	"encoding/base64"
-	"strings"
+	"image"
+	"image/jpeg"
+	"image/png"
 	"testing"
 )
 
-func TestLetterLogoImageEmbedsPNGJPEGAndConvertsWebP(t *testing.T) {
+func TestLetterLogoImageKeepsEveryImageTheLettersCanShow(t *testing.T) {
 	t.Parallel()
-	for _, image := range [][]byte{[]byte("\x89PNG\r\n\x1a\nrest"), []byte("\xff\xd8\xff\xe0")} {
-		if got := letterLogoImage(image); string(got) != string(image) {
-			t.Fatalf("PNG and JPEG print as uploaded, got %q", got)
-		}
+	pixel := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	var pngData, jpegData bytes.Buffer
+	if err := png.Encode(&pngData, pixel); err != nil {
+		t.Fatal(err)
+	}
+	if err := jpeg.Encode(&jpegData, pixel, nil); err != nil {
+		t.Fatal(err)
 	}
 	// A 1×1 lossless WebP, as the login image upload keeps it.
-	webp, err := base64.StdEncoding.DecodeString("UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==")
+	webpData, err := base64.StdEncoding.DecodeString("UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := letterLogoImage(webp); !strings.HasPrefix(string(got), "\x89PNG\r\n\x1a\n") {
-		t.Fatalf("a WebP logo prints as PNG, got %q", got)
+	for name, upload := range map[string][]byte{"png": pngData.Bytes(), "jpeg": jpegData.Bytes(), "webp": webpData} {
+		if got := letterLogoImage(upload); !bytes.Equal(got, upload) {
+			t.Fatalf("a %s logo prints as uploaded", name)
+		}
 	}
-	if letterLogoImage([]byte("RIFF....WEBP")) != nil || letterLogoImage(nil) != nil {
-		t.Fatal("broken and empty files print without a logo")
+	for _, broken := range [][]byte{[]byte("\x89PNG\r\n\x1a\nrest"), []byte("RIFF....WEBP"), nil} {
+		if letterLogoImage(broken) != nil {
+			t.Fatalf("%q prints without a logo", broken)
+		}
 	}
 }

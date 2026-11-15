@@ -3,12 +3,14 @@ package owners
 import (
 	"bytes"
 	"context"
-	"image/png"
+	"fmt"
+	"image"
+	_ "image/jpeg" // the login image may be JPEG
+	_ "image/png"
 	"os"
 	"strings"
-	"time"
 
-	"golang.org/x/image/webp"
+	_ "golang.org/x/image/webp" // the login image may be WebP
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -39,30 +41,23 @@ type ParentLetterArrivals interface {
 	GetWeeklySchedulesByStudentIDsForDate(ctx context.Context, studentIDs []int64, date calendar.Date) ([]*careplan.ArrivalSchedule, error)
 }
 
-// BuildParentLetters binds the Serienbrief ports over the owners a root has
-// built: the People Directory, the school structure, Care Plan's weekly plans,
-// the access log and the signed-in account of the request.
-func BuildParentLetters(students ParentLetterStudents, groups schoolstructure.Query, schedules CarePlanSchedules, audit AuditOwner, tokens TokenAdapter, now func() time.Time) communication.ParentLetters {
-	return NewParentLetters(communicationPorts.ParentLetterSources{
-		Students: parentLetterStudents{source: students},
-		Groups:   parentLetterGroups{source: groups}.GroupNames,
-		Pickups:  parentLetterPickups{source: schedules.Pickups},
-		Arrivals: parentLetterArrivals{source: schedules.Arrivals},
-	},
-		audit.Persistence.DataAccessLog, func(ctx context.Context) int64 { claims, _ := tokens.Claims(ctx); return claims.AccountID }, now)
-}
-
-// NewParentLetters binds the Serienbrief ports of the announcements. actor
-// names the signed-in account the access log attributes a read to; a read
-// without one (no request) is not logged as nobody's.
-func NewParentLetters(sources communicationPorts.ParentLetterSources, accessLog DataAccessAppender, actor func(context.Context) int64, now func() time.Time) communication.ParentLetters {
-	if now == nil {
-		now = time.Now
-	}
-	return communication.ParentLetters{
-		Children: communicationCompose.NewParentLetterChildren(sources, now),
-		Logos:    parentLetterLogos{},
-		Access:   parentLetterAccessLog{writer: accessLog, actor: actor},
+// BuildParentLetters binds the ports the personalised letters read over the
+// owners a root has built: the People Directory, the school structure, Care
+// Plan's weekly plans, the access log and the signed-in account of the
+// request.
+func BuildParentLetters(students ParentLetterStudents, groups schoolstructure.Query, schedules CarePlanSchedules, audit AuditOwner, tokens TokenAdapter) communicationCompose.ParentLetterPorts {
+	return communicationCompose.ParentLetterPorts{
+		Sources: communicationPorts.ParentLetterSources{
+			Students: parentLetterStudents{source: students},
+			Groups:   parentLetterGroups{source: groups}.GroupNames,
+			Pickups:  parentLetterPickups{source: schedules.Pickups},
+			Arrivals: parentLetterArrivals{source: schedules.Arrivals},
+		},
+		Logos: parentLetterLogos{},
+		Access: parentLetterAccessLog{writer: audit.Persistence.DataAccessLog, actor: func(ctx context.Context) int64 {
+			claims, _ := tokens.Claims(ctx)
+			return claims.AccountID
+		}},
 	}
 }
 
@@ -93,25 +88,13 @@ func (parentLetterLogos) ParentLetterLogo(_ context.Context, logoURL string) []b
 	return letterLogoImage(data)
 }
 
-// letterLogoImage is the logo as the letter layout embeds it: PNG and JPEG
-// as uploaded, a WebP upload converted to PNG. Anything else prints no logo.
+// letterLogoImage keeps an upload the letters can show: a PNG, JPEG or
+// WebP image. Anything else prints no logo.
 func letterLogoImage(data []byte) []byte {
-	text := string(data)
-	switch {
-	case strings.HasPrefix(text, "\x89PNG\r\n\x1a\n"), strings.HasPrefix(text, "\xff\xd8\xff"):
-		return data
-	case len(text) >= 12 && text[:4] == "RIFF" && text[8:12] == "WEBP":
-		decoded, err := webp.Decode(bytes.NewReader(data))
-		if err != nil {
-			return nil
-		}
-		var out bytes.Buffer
-		if png.Encode(&out, decoded) != nil {
-			return nil
-		}
-		return out.Bytes()
+	if _, _, err := image.DecodeConfig(bytes.NewReader(data)); err != nil {
+		return nil
 	}
-	return nil
+	return data
 }
 
 // parentLetterAccessLog writes each read of children's data through a
@@ -134,12 +117,14 @@ func (a parentLetterAccessLog) RecordParentLetterAccess(ctx context.Context, acc
 		Metadata: map[string]any{"child_count": access.ChildCount},
 	}
 	switch access.Kind {
+	case communication.ParentLetterAccessPreview:
+		entry.ResourceType = auditModels.ResourceTypeParentLetterPreview
 	case communication.ParentLetterAccessPrint:
 		entry.ResourceType = auditModels.ResourceTypeParentLetterPrint
 	case communication.ParentLetterAccessPublish:
 		entry.ResourceType = auditModels.ResourceTypeParentLetterPublish
 	default:
-		entry.ResourceType = auditModels.ResourceTypeParentLetterPreview
+		return fmt.Errorf("parent letter access: unknown kind %q", access.Kind)
 	}
 	if access.AnnouncementID != nil {
 		entry.Metadata["announcement_id"] = *access.AnnouncementID

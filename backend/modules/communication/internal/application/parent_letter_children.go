@@ -13,7 +13,10 @@ import (
 
 // NewParentLetterChildren reads and formats the child values named by a
 // parent letter. All source reads share the caller's tenant transaction.
-func NewParentLetterChildren(sources ports.ParentLetterSources, now func() time.Time) communication.ParentLetterChildren {
+func NewParentLetterChildren(sources ports.ParentLetterSources, now func() time.Time) ParentLetterChildren {
+	if now == nil {
+		now = time.Now
+	}
 	return parentLetterChildren{students: sources.Students, groups: sources.Groups, pickups: sources.Pickups, arrivals: sources.Arrivals, now: now}
 }
 
@@ -116,7 +119,6 @@ func (c parentLetterChildren) careWeeks(ctx context.Context, studentIDs []int64)
 	return weeks, nil
 }
 
-// letterCareWeekPlan is one child's weekly plan.
 type letterCareWeekPlan struct {
 	pickups     []*ports.ParentLetterPickup
 	arrivalDays []int

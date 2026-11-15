@@ -1,57 +1,60 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
+import { EmptyState } from "~/components/ui/empty-state";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { InsetPanel } from "~/components/ui/inset-panel";
+import { LinkifiedText } from "~/components/ui/linkified-text";
 import { SectionLabel } from "~/components/ui/section-label";
 import { SkeletonRows } from "~/components/ui/skeleton";
 import { Textarea } from "~/components/ui/textarea";
-import { useApiLoadError } from "~/contexts/ToastContext";
-import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import type { FormError } from "~/components/ui/form-error";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { previewLetter } from "~/lib/parent-announcements-api";
 import {
-  fetchLetterPlaceholders,
-  previewLetter,
-  type LetterPlaceholder,
-  type LetterPreview,
-} from "~/lib/parent-announcements-api";
+  hasLetterPlaceholders,
+  unknownLetterPlaceholders,
+} from "~/lib/parent-letter-placeholders";
 import { useSWRAuth } from "~/lib/swr";
 import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useDebounce } from "~/lib/use-debounce";
+
+import { useLetterPlaceholders } from "./use-letter-placeholders";
 
 /** A child the preview can show. */
-interface LetterPreviewChild {
+export interface LetterPreviewChild {
   readonly value: string;
   readonly label: string;
 }
 
-const PLACEHOLDER_PATTERN = /\{\{\s*([^{}]*?)\s*\}\}/g;
-const PREVIEW_DELAY_MS = 400;
-
-/** The placeholders a text names, in lower case, once each. */
-export function placeholderNames(text: string): string[] {
-  const names = new Set<string>();
-  for (const match of text.matchAll(PLACEHOLDER_PATTERN)) {
-    names.add((match[1] ?? "").toLowerCase());
-  }
-  return [...names];
+/**
+ * Where the preview finds the children it can show: whose children they are
+ * (the school, or one class) and their load. The list loads only once the
+ * text names a placeholder.
+ */
+export interface LetterPreviewChildren {
+  readonly scope: string;
+  readonly load: () => Promise<readonly LetterPreviewChild[]>;
 }
+
+// Every preview reads a child's data and is written to the data access log,
+// so it waits until the writing pauses.
+const PREVIEW_DELAY_MS = 400;
 
 interface LetterBodyFieldProps {
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly error?: string;
+  readonly required?: boolean;
   readonly disabled?: boolean;
-  /** API base of the portal; the OGS default when absent. */
+  /** API base of the portal; the OGS routes when absent. */
   readonly apiBase?: string;
-  /** Children whose letter the preview can show. */
-  readonly previewChildren: readonly LetterPreviewChild[];
-  readonly previewChildrenLoading?: boolean;
-  readonly previewChildrenError?: FormError | null;
+  /** Null while there is no child to show yet, such as before a class is chosen. */
+  readonly previewChildren: LetterPreviewChildren | null;
   readonly placeholder?: string;
   readonly rows?: number;
   readonly id?: string;
@@ -60,18 +63,17 @@ interface LetterBodyFieldProps {
 
 /**
  * The text of an Elternbrief that names each child (#4813): the field, the
- * placeholders to insert at the caret, a warning for a placeholder moto does
- * not know, and the letter as one chosen child reads it.
+ * placeholders to insert at the caret, a warning for what moto does not
+ * know, and the letter as one chosen child's family reads it.
  */
 export function LetterBodyField({
   value,
   onChange,
   error,
+  required,
   disabled = false,
   apiBase,
   previewChildren,
-  previewChildrenLoading = false,
-  previewChildrenError,
   placeholder,
   rows = 5,
   id,
@@ -80,35 +82,12 @@ export function LetterBodyField({
   const fieldRef = useRef<HTMLTextAreaElement>(null);
   const caret = useRef<{ start: number; end: number } | null>(null);
   const labelId = useId();
+  const { placeholders, labels, loadError } = useLetterPlaceholders(apiBase);
 
-  const {
-    data: placeholders,
-    error: placeholdersError,
-    mutate: reloadPlaceholders,
-  } = useSWRAuth<LetterPlaceholder[]>(
-    parentAnnouncementKeys.letterPlaceholders(
-      apiBase === undefined ? "ogs" : "school",
-    ),
-    () =>
-      apiBase === undefined
-        ? fetchLetterPlaceholders()
-        : fetchLetterPlaceholders(apiBase),
-    { revalidateOnFocus: false },
-  );
-  const placeholdersLoadError = useSwrLoadError(
-    placeholdersError,
-    "die Liste der Platzhalter",
-    () => reloadPlaceholders(),
-  );
-  const known = useMemo(
-    () => new Set((placeholders ?? []).map((p) => p.name)),
-    [placeholders],
-  );
-  const used = placeholderNames(value);
   const unknown = placeholders
-    ? used.filter((name) => name === "" || !known.has(name))
+    ? unknownLetterPlaceholders(value, new Set(labels.keys()))
     : [];
-  const personal = used.length > 0;
+  const personal = hasLetterPlaceholders(value);
 
   const rememberCaret = (field: HTMLTextAreaElement) => {
     caret.current = { start: field.selectionStart, end: field.selectionEnd };
@@ -134,6 +113,7 @@ export function LetterBodyField({
         name="body"
         label="Text"
         error={error}
+        required={required}
         disabled={disabled}
         value={value}
         onChange={(e) => {
@@ -152,10 +132,7 @@ export function LetterBodyField({
         <SectionLabel as="p" id={labelId}>
           Für jedes Kind einsetzen
         </SectionLabel>
-        <LoadErrorAlert
-          error={placeholdersLoadError}
-          actionLayout="responsive"
-        />
+        <LoadErrorAlert error={loadError} actionLayout="responsive" />
         <ul aria-labelledby={labelId} className="flex flex-wrap gap-2">
           {(placeholders ?? []).map((p) => (
             <li key={p.name}>
@@ -180,9 +157,7 @@ export function LetterBodyField({
             type="warning"
             size="compact"
             announce="polite"
-            message={`Diese Platzhalter kennt moto nicht: ${unknown
-              .map((name) => `{{${name}}}`)
-              .join(", ")}. Bitte nehmen Sie nur Platzhalter aus der Liste.`}
+            message={`Diese Platzhalter kennt moto nicht: ${unknown.join(", ")}. Bitte nehmen Sie nur Platzhalter aus der Liste.`}
           />
         )}
       </div>
@@ -191,9 +166,7 @@ export function LetterBodyField({
         <LetterPreviewPanel
           body={value}
           apiBase={apiBase}
-          options={previewChildren}
-          loading={previewChildrenLoading}
-          childrenError={previewChildrenError}
+          source={previewChildren}
         />
       )}
     </div>
@@ -203,61 +176,53 @@ export function LetterBodyField({
 function LetterPreviewPanel({
   body,
   apiBase,
-  options,
-  loading,
-  childrenError,
+  source,
 }: Readonly<{
   body: string;
   apiBase?: string;
-  options: readonly LetterPreviewChild[];
-  loading: boolean;
-  childrenError?: FormError | null;
+  source: LetterPreviewChildren | null;
 }>) {
-  const [studentId, setStudentId] = useState("");
-  const [preview, setPreview] = useState<LetterPreview | null>(null);
-  const [pending, setPending] = useState(false);
-  const previewError = useApiLoadError();
-  const { show: showPreviewError, clear: clearPreviewError } = previewError;
-  const [retryKey, setRetryKey] = useState(0);
+  const children = useSWRAuth(
+    source ? parentAnnouncementKeys.letterPreviewChildren(source.scope) : null,
+    () => (source ? source.load() : Promise.resolve([])),
+  );
+  const childrenError = useSwrLoadError(
+    children.error,
+    "die Liste der Kinder für die Vorschau",
+    () => children.mutate(),
+  );
+  const options = children.data ?? [];
 
+  const [picked, setPicked] = useState("");
   // The first child is the default, so the preview shows a letter at once.
-  const chosen = options.some((option) => option.value === studentId)
-    ? studentId
+  const chosen = options.some((o) => o.value === picked)
+    ? picked
     : (options[0]?.value ?? "");
-  const currentPreview = preview?.child.student_id === chosen ? preview : null;
 
-  useEffect(() => {
-    if (!chosen) return;
-    let cancelled = false;
-    setPending(true);
-    const timer = setTimeout(() => {
-      const call =
-        apiBase === undefined
-          ? previewLetter(body, chosen)
-          : previewLetter(body, chosen, apiBase);
-      call
-        .then((result) => {
-          if (cancelled) return;
-          setPreview(result);
-          clearPreviewError();
-        })
-        .catch((err: unknown) => {
-          if (cancelled) return;
-          setPreview(null);
-          void showPreviewError(err, {
-            object: "die Vorschau",
-            retry: () => setRetryKey((key) => key + 1),
-          });
-        })
-        .finally(() => {
-          if (!cancelled) setPending(false);
-        });
-    }, PREVIEW_DELAY_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [body, chosen, apiBase, retryKey, showPreviewError, clearPreviewError]);
+  const settledBody = useDebounce(body, PREVIEW_DELAY_MS);
+  const preview = useSWRAuth(
+    chosen
+      ? parentAnnouncementKeys.letterPreview(apiBase, chosen, settledBody)
+      : null,
+    () => previewLetter(settledBody, chosen, apiBase),
+    {
+      keepPreviousData: true,
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      shouldRetryOnError: false,
+    },
+  );
+  // While the text settles the letter of the same child stays; another
+  // child's letter never shows under this child's name.
+  const shown =
+    !preview.error && preview.data?.child.student_id === chosen
+      ? preview.data
+      : undefined;
+  const previewError = useSwrLoadError(preview.error, "die Vorschau", () =>
+    preview.mutate(),
+  );
+  const loadingChildren = source !== null && children.isLoading;
 
   return (
     <InsetPanel
@@ -266,39 +231,40 @@ function LetterPreviewPanel({
       padding="md"
       as="section"
       aria-label="Vorschau des Briefs"
+      className="space-y-3"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SectionLabel as="h4">So liest die Familie den Brief</SectionLabel>
+        <SectionLabel as="p">So liest die Familie den Brief</SectionLabel>
         <div className="sm:w-64">
           <CustomSelect
             ariaLabel="Kind für die Vorschau"
             value={chosen}
             options={options}
-            onChange={setStudentId}
-            placeholder={loading ? "Kinder werden geladen…" : "Kind wählen"}
-            disabled={loading || options.length === 0}
+            onChange={setPicked}
+            placeholder={
+              loadingChildren ? "Kinder werden geladen…" : "Kind wählen"
+            }
+            disabled={loadingChildren || options.length === 0}
             searchable
             searchPlaceholder="Kind suchen"
           />
         </div>
       </div>
-      <div className="mt-3 border-t border-gray-100 pt-3" aria-live="polite">
-        <LoadErrorAlert error={childrenError} actionLayout="responsive" />
-        <LoadErrorAlert error={previewError.error} actionLayout="responsive" />
-        {!chosen && !loading && !childrenError ? (
-          <p className="text-sm text-gray-500">
-            Noch kein Kind in der Auswahl. Die Vorschau zeigt den Brief, sobald
-            ein Kind da ist.
-          </p>
-        ) : pending && !currentPreview ? (
-          <SkeletonRows rows={3} />
-        ) : currentPreview ? (
-          <p className="text-sm leading-6 whitespace-pre-line text-gray-900">
-            {currentPreview.body}
-          </p>
-        ) : null}
-      </div>
-      <p className="mt-3 text-xs text-gray-500">
+      <LoadErrorAlert error={childrenError} actionLayout="responsive" />
+      <LoadErrorAlert error={previewError} actionLayout="responsive" />
+      {!chosen && !loadingChildren && !childrenError ? (
+        <EmptyState
+          variant="compact"
+          description="Noch kein Kind in der Auswahl. Die Vorschau zeigt den Brief, sobald ein Kind da ist."
+        />
+      ) : shown ? (
+        <p className="text-sm leading-6 whitespace-pre-line text-gray-900">
+          <LinkifiedText text={shown.body} />
+        </p>
+      ) : (chosen && !preview.error) || loadingChildren ? (
+        <SkeletonRows rows={3} />
+      ) : null}
+      <p className="text-xs text-gray-500">
         Jede Familie bekommt den Brief mit den Angaben ihres Kindes. Fehlt eine
         Angabe, bleibt die Stelle leer.
       </p>

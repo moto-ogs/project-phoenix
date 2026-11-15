@@ -35,8 +35,7 @@ func NewParentLetterPrinter() ParentLetterPrinter {
 	return ParentLetterPrinter{letters: lists.NewLetterRenderer()}
 }
 
-// PrintLetters renders each letter and combines them; a letter whose logo
-// the layout refuses is printed without it.
+// PrintLetters renders each letter and combines them into one PDF.
 func (p ParentLetterPrinter) PrintLetters(sheets parentLetterSheets, filenameBase string) (recordReportFile, error) {
 	rendered := make([][]byte, 0, len(sheets.Letters))
 	for _, sheet := range sheets.Letters {
@@ -53,10 +52,6 @@ func (p ParentLetterPrinter) PrintLetters(sheets parentLetterSheets, filenameBas
 			letter.Blocks = append(letter.Blocks, lists.LetterBlock{Text: paragraph})
 		}
 		file, err := p.letters.RenderLetter(letter, filenameBase)
-		if err != nil && letter.Logo != nil {
-			letter.Logo = nil
-			file, err = p.letters.RenderLetter(letter, filenameBase)
-		}
 		if err != nil {
 			return recordReportFile{}, err
 		}

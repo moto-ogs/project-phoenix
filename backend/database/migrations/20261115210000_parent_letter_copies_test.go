@@ -34,8 +34,8 @@ func TestParentLetterCopiesGoWithTheSchoolAndRollBack(t *testing.T) {
 	var announcementID int64
 	require.NoError(t, db.NewRaw(`INSERT INTO users.parent_announcements (tenant_id, title, body, created_by, published_at, delivery_mode, send_email, requires_acknowledgement)
 		VALUES (?, 'Sommerfest', 'Hallo {{vorname}}', ?, NOW(), 'letter', TRUE, TRUE) RETURNING id`, school, author.ID).Scan(ctx, &announcementID))
-	_, err := db.ExecContext(ctx, `INSERT INTO users.parent_announcement_letter_copies (tenant_id, announcement_id, student_id, first_name, body, published_at)
-		VALUES (?, ?, ?, 'Lina', 'Hallo Lina', NOW())`, school, announcementID, student.ID)
+	_, err := db.ExecContext(ctx, `INSERT INTO users.parent_announcement_letter_copies (tenant_id, announcement_id, student_id, first_name, body)
+		VALUES (?, ?, ?, 'Lina', 'Hallo Lina')`, school, announcementID, student.ID)
 	require.NoError(t, err)
 	result := eraseSchoolAsCLI(t, db, school, beginErasure(t, db, school))
 	require.Equal(t, "db_done", result.Status)

@@ -35,7 +35,10 @@ import {
 } from "~/components/ui/slide-over";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Textarea } from "~/components/ui/textarea";
-import { LetterBodyField } from "~/components/announcements/letter-body-field";
+import {
+  LetterBodyField,
+  type LetterPreviewChildren,
+} from "~/components/announcements/letter-body-field";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
@@ -66,7 +69,6 @@ import {
 } from "~/lib/school-parent-letters";
 import { schoolPath } from "~/lib/school-url";
 import { useSWRAuth } from "~/lib/swr";
-import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 import { StatusBadge } from "~/components/ui/status-badge";
 
 const logger = createLogger({ component: "SchoolParentLettersPage" });
@@ -156,31 +158,20 @@ export default function SchoolParentLettersPage() {
   const formErrors = useApiFormError(formRef);
   const latestSubmitRef = useRef<() => void>(() => undefined);
 
-  // The preview of a letter that names each child (#4813) shows a child of
-  // the chosen class.
+  // The preview of a letter (#4813) shows a child of the chosen class.
   const previewClass = draft.kind === "letter" ? draft.schoolClass : "";
-  const {
-    data: classDay,
-    error: previewChildrenError,
-    mutate: reloadPreviewChildren,
-    isLoading: previewChildrenLoading,
-  } = useSWRAuth(
-    previewClass
-      ? parentAnnouncementKeys.classLetterPreviewChildren(previewClass)
-      : null,
-    () => fetchClassDaySchool(previewClass, berlinTodayISO()),
-  );
-  const previewChildrenLoadError = useSwrLoadError(
-    previewChildrenError,
-    "die Liste der Kinder für die Vorschau",
-    () => reloadPreviewChildren(),
-  );
-  const previewChildren = (classDay?.rows ?? [])
-    .filter((row) => row.student_id > 0)
-    .map((row) => ({
-      value: String(row.student_id),
-      label: `${row.first_name} ${row.last_name}`.trim(),
-    }));
+  const previewChildren: LetterPreviewChildren | null = previewClass
+    ? {
+        scope: `class-${previewClass}`,
+        load: async () =>
+          (await fetchClassDaySchool(previewClass, berlinTodayISO())).rows
+            .filter((row) => row.student_id > 0)
+            .map((row) => ({
+              value: String(row.student_id),
+              label: `${row.first_name} ${row.last_name}`.trim(),
+            })),
+      }
+    : null;
   const update = (patch: Partial<SchoolParentLetterDraft>) =>
     setDraft((current) => ({ ...current, ...patch }));
 
@@ -361,16 +352,14 @@ export default function SchoolParentLettersPage() {
                     </fieldset>
 
                     {draft.kind === "letter" ? (
-                      // Serienbriefe (#4813): the letter names each child.
                       <LetterBodyField
                         value={draft.body}
                         onChange={(body) => update({ body })}
                         error={formErrors.fieldError("body")}
                         disabled={fieldsDisabled}
                         apiBase={SCHOOL_PARENT_LETTERS_BASE}
+                        required
                         previewChildren={previewChildren}
-                        previewChildrenLoading={previewChildrenLoading}
-                        previewChildrenError={previewChildrenLoadError}
                         rows={8}
                       />
                     ) : (

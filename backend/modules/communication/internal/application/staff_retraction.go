@@ -31,12 +31,12 @@ func (s *service) dropDeliveryRows(ctx context.Context, tenantID, id int64) erro
 	return nil
 }
 
-// dropLetterCopies removes the letters of a retracted publication.
-func (s *service) dropLetterCopies(ctx context.Context, tenantID, id int64) error {
-	if s.letters.Copies == nil {
+// dropLetterCopies removes the letters of a retracted personalised letter.
+func (s *service) dropLetterCopies(ctx context.Context, a *StaffParentAnnouncement) error {
+	if !a.IsPersonalLetter() {
 		return nil
 	}
-	if err := s.letters.Copies.ReplaceParentLetterCopies(ctx, tenantID, id, nil); err != nil {
+	if err := s.letters.Copies.ReplaceParentLetterCopies(ctx, a.GetTenantID(), a.ID, nil); err != nil {
 		return fmt.Errorf("announcement: drop letter copies: %w", err)
 	}
 	return nil

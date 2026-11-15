@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -134,9 +133,8 @@ func (rs *Resource) reachedClass(ctx context.Context, class string) (string, err
 	if err != nil {
 		return "", err
 	}
-	wanted := strings.TrimSpace(class)
 	for _, reached := range classes {
-		if strings.EqualFold(strings.TrimSpace(reached), wanted) {
+		if announcementService.SameSchoolClass(class, reached) {
 			return reached, nil
 		}
 	}

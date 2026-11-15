@@ -895,11 +895,6 @@ export async function previewLetter(
   return data;
 }
 
-/** Download address of every letter of a dispatch as one PDF. */
-function letterPrintUrl(id: string, base = BASE): string {
-  return `${base}/${encodeURIComponent(id)}/letters-pdf`;
-}
-
 /**
  * Downloads every letter of a published Elternbrief as one PDF to print, one
  * letter per child, under the file name the backend chose.
@@ -908,7 +903,9 @@ export async function downloadLetterPrint(
   id: string,
   base = BASE,
 ): Promise<void> {
-  const response = await transportFetch(letterPrintUrl(id, base));
+  const response = await transportFetch(
+    `${base}/${encodeURIComponent(id)}/letters-pdf`,
+  );
   if (!response.ok) {
     await throwApiError(response, "Die Briefe konnten nicht erstellt werden");
   }

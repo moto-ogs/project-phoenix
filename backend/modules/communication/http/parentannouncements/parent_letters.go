@@ -54,7 +54,6 @@ type letterPlaceholderResponse struct {
 	Example string `json:"example"`
 }
 
-// letterPlaceholders lists the placeholders a letter may name.
 func (rs *Resource) letterPlaceholders(w http.ResponseWriter, r *http.Request) {
 	placeholders := announcementService.ParentLetterPlaceholders()
 	out := make([]letterPlaceholderResponse, 0, len(placeholders))
@@ -92,14 +91,9 @@ func decodeLetterPreview(w http.ResponseWriter, r *http.Request) (string, int64,
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid student_id")))
 		return "", 0, false
 	}
-	if len([]rune(req.Body)) > 4000 {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("body is at most 4000 characters")))
-		return "", 0, false
-	}
 	return req.Body, studentID, true
 }
 
-// letterPreview fills a letter text for one child of the school.
 func (rs *Resource) letterPreview(w http.ResponseWriter, r *http.Request) {
 	rs.respondLetterPreview(w, r, nil)
 }

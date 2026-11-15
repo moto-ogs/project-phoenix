@@ -1,6 +1,7 @@
 package communication
 
 import (
+	"cmp"
 	"regexp"
 	"sort"
 	"strings"
@@ -16,9 +17,19 @@ import (
 // ParentLetterPlaceholder is a value a letter can name for each child.
 // Example is what the composer shows beside it.
 type ParentLetterPlaceholder struct {
-	Name    string `json:"name"`
-	Label   string `json:"label"`
-	Example string `json:"example"`
+	Name    string
+	Label   string
+	Example string
+}
+
+// ParentLetterDeliveryMode is the delivery mode of an Elternbrief.
+const ParentLetterDeliveryMode = "letter"
+
+// IsPersonalParentLetter reports whether an announcement is an Elternbrief
+// that names each child. Only such a letter is written once per child; every
+// other announcement reads the same for everybody.
+func IsPersonalParentLetter(deliveryMode, body string) bool {
+	return deliveryMode == ParentLetterDeliveryMode && HasParentLetterPlaceholders(body)
 }
 
 const (
@@ -48,13 +59,13 @@ func ParentLetterPlaceholders() []ParentLetterPlaceholder {
 // ParentLetterChild is what a letter can say about one child. Empty values
 // print nothing.
 type ParentLetterChild struct {
-	StudentID   int64  `json:"student_id"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	SchoolClass string `json:"school_class"`
-	Group       string `json:"group"`
-	CareDays    string `json:"care_days"`
-	PickupTime  string `json:"pickup_time"`
+	StudentID   int64
+	FirstName   string
+	LastName    string
+	SchoolClass string
+	Group       string
+	CareDays    string
+	PickupTime  string
 }
 
 func (c ParentLetterChild) value(name string) string {
@@ -107,7 +118,7 @@ func UnknownParentLetterPlaceholders(text string) []string {
 	for _, match := range letterPlaceholderPattern.FindAllStringSubmatch(text, -1) {
 		name := strings.ToLower(match[1])
 		if name == "" || !knownLetterPlaceholder(name) {
-			unknown[cmpOrText(name, match[0])] = true
+			unknown[cmp.Or(name, match[0])] = true
 		}
 	}
 	for _, stray := range letterStrayBrace.FindAllString(letterPlaceholderPattern.ReplaceAllString(text, " "), -1) {
@@ -119,13 +130,6 @@ func UnknownParentLetterPlaceholders(text string) []string {
 	}
 	sort.Strings(names)
 	return names
-}
-
-func cmpOrText(value, fallback string) string {
-	if value == "" {
-		return fallback
-	}
-	return value
 }
 
 // FillParentLetter writes the values of one child into text. A line whose
@@ -187,16 +191,9 @@ func (e *ParentLetterPlaceholderError) Error() string {
 	return "unknown placeholders: " + strings.Join(e.Names, ", ")
 }
 
-// CheckParentLetterPlaceholders accepts the title and body of an
-// announcement: a letter may name the placeholders of the list in its body,
-// every other text names none.
-func CheckParentLetterPlaceholders(letter bool, title, body string) error {
-	if !letter {
-		if HasParentLetterPlaceholders(title) || HasParentLetterPlaceholders(body) {
-			return &ParentLetterPlaceholderError{LetterOnly: true}
-		}
-		return nil
-	}
+// CheckParentLetterText accepts the title and body of an Elternbrief: the
+// body may name the placeholders of the list, the title none.
+func CheckParentLetterText(title, body string) error {
 	if HasParentLetterPlaceholders(title) {
 		return &ParentLetterPlaceholderError{LetterOnly: true}
 	}
@@ -204,4 +201,22 @@ func CheckParentLetterPlaceholders(letter bool, title, body string) error {
 		return &ParentLetterPlaceholderError{Names: names}
 	}
 	return nil
+}
+
+// CheckNoParentLetterPlaceholders refuses a placeholder in a text that goes
+// to every family alike: a Mitteilung, or the wording of a reminder.
+func CheckNoParentLetterPlaceholders(texts ...string) error {
+	for _, text := range texts {
+		if HasParentLetterPlaceholders(text) {
+			return &ParentLetterPlaceholderError{LetterOnly: true}
+		}
+	}
+	return nil
+}
+
+// SameSchoolClass reports whether two spellings name one class, ignoring
+// case and surrounding space; an empty class matches none.
+func SameSchoolClass(a, b string) bool {
+	a = strings.TrimSpace(a)
+	return a != "" && strings.EqualFold(a, strings.TrimSpace(b))
 }

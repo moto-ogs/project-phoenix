@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	deliveryPolicy "github.com/moto-ogs/project-phoenix/roots/communicationtest"
@@ -102,7 +101,7 @@ func newPersonalLetterFixture(body string) letterFixture {
 		Now: staffTestClock, Repo: f.repo, Settings: &fakeSettings{enabled: true, logoURL: "/uploads/login-images/7.png"},
 		Notifier: &fakeNotifier{}, Outbox: f.outbox, Deliveries: &letterDeliveries{},
 		ParentsURL: "https://eltern.example.test", Logger: slog.Default(),
-		Letters: communication.ParentLetters{Copies: f.copies, Children: f.values, Logos: fixedLetterLogo("png"), Access: f.access},
+		Letters: ParentLetters{Copies: f.copies, Children: f.values, Logos: fixedLetterLogo("png"), Access: f.access},
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 	return f
 }
@@ -138,9 +137,6 @@ func TestPublishPersonalLetterWritesOneFrozenLetterPerChild(t *testing.T) {
 	for _, c := range copies {
 		if c.Body != want[c.StudentID] {
 			t.Errorf("letter of child %d:\n%q\nwant\n%q", c.StudentID, c.Body, want[c.StudentID])
-		}
-		if c.PublishedAt.IsZero() {
-			t.Errorf("letter of child %d carries no publication instant", c.StudentID)
 		}
 	}
 
@@ -188,20 +184,40 @@ func TestPublishPersonalLetterMailsEachFamilyOnlyItsOwnChildren(t *testing.T) {
 	}
 }
 
-func TestPublishLetterWithoutPlaceholdersKeepsOneTextAndStillWritesCopies(t *testing.T) {
+// A letter that names nobody reads the same for everybody: it keeps no
+// copies and reads no child's values when it goes out, and still prints one
+// page per recorded child.
+func TestLetterWithoutPlaceholdersGoesOutAsOneTextAndPrintsPerChild(t *testing.T) {
 	t.Parallel()
-	f := newPersonalLetterFixture("Liebe Eltern,\n\nam Freitag ist Sommerfest.")
+	const text = "Liebe Eltern,\n\nam Freitag ist Sommerfest."
+	f := newPersonalLetterFixture(text)
 
 	if _, err := f.service.Publish(context.Background(), 42); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
 	for address, body := range mailBodies(f.outbox) {
-		if body != "Liebe Eltern,\n\nam Freitag ist Sommerfest." {
+		if body != text {
 			t.Errorf("the mail to %s is %q, want the one text of the letter", address, body)
 		}
 	}
-	if got := len(f.copies.copies[42]); got != 3 {
-		t.Fatalf("wrote %d letters, want 3: a letter without placeholders prints one page per child too", got)
+	if len(f.copies.copies[42]) != 0 || len(f.access.entries) != 0 {
+		t.Fatalf("copies = %d, access = %+v: a letter that names nobody keeps no copies and reads no values", len(f.copies.copies[42]), f.access.entries)
+	}
+
+	printed, err := f.service.PrintParentLetters(context.Background(), 5, 42)
+	if err != nil {
+		t.Fatalf("PrintParentLetters: %v", err)
+	}
+	if len(printed.Copies) != 3 || printed.Copies[0].Body != text {
+		t.Fatalf("copies = %+v, want the one text for each of the 3 recorded children", printed.Copies)
+	}
+	if len(f.access.entries) != 1 || f.access.entries[0].Kind != communication.ParentLetterAccessPrint {
+		t.Fatalf("access = %+v, want the print logged", f.access.entries)
+	}
+
+	f.repo.children = nil
+	if _, err := f.service.PrintParentLetters(context.Background(), 5, 42); !errors.Is(err, communication.ErrParentLetterNotPrintable) {
+		t.Fatalf("a letter that reached nobody: err = %v, want ErrParentLetterNotPrintable", err)
 	}
 }
 
@@ -334,37 +350,14 @@ func TestPreviewLetterForATeacherShowsOnlyChildrenOfHerClasses(t *testing.T) {
 	}
 }
 
-func TestPublishLetterLogsTheReadOfEveryChild(t *testing.T) {
+func TestPublishPersonalLetterLogsTheReadOfEveryChild(t *testing.T) {
 	t.Parallel()
-	// A letter without placeholders also freezes each child's name and class.
-	for _, body := range []string{personalLetterBody, "Liebe Eltern, am Freitag ist Sommerfest."} {
-		f := newPersonalLetterFixture(body)
-		if _, err := f.service.Publish(context.Background(), 42); err != nil {
-			t.Fatalf("Publish: %v", err)
-		}
-		if len(f.access.entries) != 1 || f.access.entries[0].Kind != communication.ParentLetterAccessPublish || f.access.entries[0].ChildCount != 3 {
-			t.Fatalf("%q: access entries = %+v, want one publish read of 3 children", body, f.access.entries)
-		}
+	f := newPersonalLetterFixture(personalLetterBody)
+	if _, err := f.service.Publish(context.Background(), 42); err != nil {
+		t.Fatalf("Publish: %v", err)
 	}
-}
-
-func TestPrintLettersOfAnOlderLetterUsesItsTextForEveryRecordedChild(t *testing.T) {
-	t.Parallel()
-	f := newPersonalLetterFixture("Liebe Eltern, am Freitag ist Sommerfest.")
-	published := staffTestNow.Add(-time.Hour)
-	f.repo.announcement.PublishedAt = &published // published before the copies existed
-
-	printed, err := f.service.PrintParentLetters(context.Background(), 5, 42)
-	if err != nil {
-		t.Fatalf("PrintParentLetters: %v", err)
-	}
-	if len(printed.Copies) != 3 || printed.Copies[0].Body != "Liebe Eltern, am Freitag ist Sommerfest." {
-		t.Fatalf("copies = %+v, want the one text for each of the 3 recorded children", printed.Copies)
-	}
-
-	f.repo.children = nil
-	if _, err := f.service.PrintParentLetters(context.Background(), 5, 42); !errors.Is(err, communication.ErrParentLetterNotPrintable) {
-		t.Fatalf("a letter that reached nobody: err = %v, want ErrParentLetterNotPrintable", err)
+	if len(f.access.entries) != 1 || f.access.entries[0].Kind != communication.ParentLetterAccessPublish || f.access.entries[0].ChildCount != 3 {
+		t.Fatalf("access entries = %+v, want one publish read of 3 children", f.access.entries)
 	}
 }
 

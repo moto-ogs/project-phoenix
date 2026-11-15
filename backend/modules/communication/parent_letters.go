@@ -18,13 +18,12 @@ var ErrParentLetterNotPrintable = errors.New("announcement: only a published par
 // when the child's data change later; a correction (unpublish, edit,
 // publish) writes new copies.
 type ParentLetterCopy struct {
-	AnnouncementID int64     `json:"-"`
-	StudentID      int64     `json:"student_id"`
-	FirstName      string    `json:"first_name"`
-	LastName       string    `json:"last_name"`
-	SchoolClass    string    `json:"school_class"`
-	Body           string    `json:"body"`
-	PublishedAt    time.Time `json:"-"`
+	AnnouncementID int64
+	StudentID      int64
+	FirstName      string
+	LastName       string
+	SchoolClass    string
+	Body           string
 }
 
 // ParentLetterCopyRecords keeps the copies of a letter in the publish
@@ -33,15 +32,6 @@ type ParentLetterCopy struct {
 type ParentLetterCopyRecords interface {
 	ReplaceParentLetterCopies(ctx context.Context, tenantID, announcementID int64, copies []ParentLetterCopy) error
 	ParentLetterCopies(ctx context.Context, tenantID, announcementID int64) ([]ParentLetterCopy, error)
-}
-
-// ParentLetterChildren reads the values a letter names for each child, in
-// one read for the whole set, from the owners of the data: names and class
-// from the People Directory, the group from the school structure, booked
-// days and pickup time from the Care Plan. A child of another school or an
-// unknown child is missing from the answer.
-type ParentLetterChildren interface {
-	ParentLetterChildren(ctx context.Context, studentIDs []int64) ([]ParentLetterChild, error)
 }
 
 // ParentLetterLogos reads the bytes of the school's logo for the printed
@@ -61,12 +51,11 @@ type ParentLetterAccess struct {
 	AccessedAt     time.Time
 }
 
-// The kinds of ParentLetterAccess.
+// The kinds of ParentLetterAccess. Publish is the read of every reached
+// child's values when a letter that names each child goes out.
 const (
 	ParentLetterAccessPreview = "preview"
 	ParentLetterAccessPrint   = "print"
-	// ParentLetterAccessPublish is the read of every reached child's values
-	// when a letter that names each child is published.
 	ParentLetterAccessPublish = "publish"
 )
 
@@ -111,15 +100,4 @@ func ParentLettersOf(announcements ParentAnnouncementCapability) (ParentLetterCa
 		return nil, fmt.Errorf("parent letters: parent announcements %T were composed without letters", announcements)
 	}
 	return letters, nil
-}
-
-// ParentLetters are the Serienbrief ports of the announcements (#4813): the
-// copies, the owners' child values, the logo and the access log, bound at the
-// root. Each may be nil; then a letter without placeholders still goes out and
-// the print, preview and personalised letters refuse.
-type ParentLetters struct {
-	Copies   ParentLetterCopyRecords
-	Children ParentLetterChildren
-	Logos    ParentLetterLogos
-	Access   ParentLetterAccessLog
 }

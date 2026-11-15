@@ -646,7 +646,7 @@ func TestSendDueReminders_PersonalLetterRepeatsEachFamilysOwnLetter(t *testing.T
 		Now: staffTestClock, Repo: repo, Settings: h.settings, Notifier: h.notifier,
 		Series: communication.NotificationSeries{NotifyDurably: h.notifier.NotifyEachDurably},
 		Outbox: h.outbox, ParentsURL: "https://parents.example.test", Logger: slog.Default(), Attachments: &stubPurger{},
-		Letters: communication.ParentLetters{Copies: copies},
+		Letters: ParentLetters{Copies: copies},
 	}, testpkg.TenantTransactionRuntime{}, devices.NewParentDeliveryPolicy())
 
 	_, _, err := h.svc.SendDueReminders(context.Background(), staffTestNow.Add(-time.Hour), staffTestNow)

@@ -83,7 +83,6 @@ type letterMailLayout struct {
 	childrenByAddress map[string][]int64
 }
 
-// bodyFor is the mail text for one address.
 func (l letterMailLayout) bodyFor(address string) string {
 	return l.letters.bodyFor(l.childrenByAddress[address], l.body)
 }

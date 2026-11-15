@@ -2,6 +2,7 @@ package listexport
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"image"
@@ -162,7 +163,12 @@ func TestRenderLetterWritesAPDFWithLogo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for name, logo := range map[string][]byte{"png": pngLogo.Bytes(), "jpeg": jpegLogo.Bytes(), "interlaced": interlaced, "small interlaced fallback": smallInterlaced, "16-bit": png16Logo.Bytes()} {
+	// A 1×1 lossless WebP, as a school's login image upload keeps it.
+	webpLogo, err := base64.StdEncoding.DecodeString("UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, logo := range map[string][]byte{"png": pngLogo.Bytes(), "jpeg": jpegLogo.Bytes(), "webp": webpLogo, "interlaced": interlaced, "small interlaced fallback": smallInterlaced, "16-bit": png16Logo.Bytes()} {
 		letter := sampleLetter()
 		letter.Logo = logo
 		_, trace := traceLetter(t, letter)

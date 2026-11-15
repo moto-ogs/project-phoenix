@@ -33,8 +33,26 @@ type ParentAnnouncementConfig struct {
 	ParentsURL   string
 	Logger       *slog.Logger
 	SurveyStaff  deliveryPorts.SurveyStaff // with it, the surveys (#4781)
-	Letters      communication.ParentLetters
+	Letters      ParentLetterPorts
 	Now          func() time.Time
+}
+
+// ParentLetterPorts are what the personalised letters (#4813) read outside
+// Communication: the child values of the owners, the school's logo and the
+// data access log. The copies live in Repo. Without them a school still
+// sends letters that name nobody.
+type ParentLetterPorts struct {
+	Sources ports.ParentLetterSources
+	Logos   communication.ParentLetterLogos
+	Access  communication.ParentLetterAccessLog
+}
+
+func (p ParentLetterPorts) bind(repo communication.ParentLetterCopyRecords, now func() time.Time) deliveryPorts.ParentLetters {
+	letters := deliveryPorts.ParentLetters{Copies: repo, Logos: p.Logos, Access: p.Access}
+	if p.Sources.Students != nil {
+		letters.Children = deliveryPorts.NewParentLetterChildren(p.Sources, now)
+	}
+	return letters
 }
 
 type ParentAnnouncementEmailConfig communication.MailRendererConfig
@@ -54,15 +72,10 @@ func NewParentAnnouncementsWithAttachments(cfg ParentAnnouncementConfig, attachm
 		Repo: records.NewRepository(cfg.Repo), Settings: cfg.Settings, Outbox: cfg.Outbox, PushOutbox: cfg.PushOutbox, Notifier: deliveryPorts.NewNotificationSender(cfg.Notifier),
 		Series: cfg.Series, Preferences: cfg.Preferences, Deliveries: deliveries,
 		ParentsURL: cfg.ParentsURL, Logger: cfg.Logger, Fingerprints: cfg.Fingerprints, Signatures: cfg.Signatures, Attachments: attachments, Now: cfg.Now,
-		Letters: cfg.Letters,
+		Letters: cfg.Letters.bind(cfg.Repo, cfg.Now),
 	}, runtime, policy)), cfg.Repo, cfg.SurveyStaff)
 }
 
 func NewParentAnnouncementRenderer(cfg ParentAnnouncementEmailConfig) communication.MailRenderer {
 	return communication.MailRenderer(deliveryPorts.NewAnnouncementRenderer(deliveryPorts.EmailConfig(cfg)))
-}
-
-// NewParentLetterChildren composes the tenant-scoped child-value reader.
-func NewParentLetterChildren(sources ports.ParentLetterSources, now func() time.Time) communication.ParentLetterChildren {
-	return deliveryPorts.NewParentLetterChildren(sources, now)
 }

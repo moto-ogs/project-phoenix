@@ -88,7 +88,10 @@ import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { useTenantSlugSafe } from "~/lib/tenant-context";
 import { ParentTargetPicker } from "~/components/announcements/parent-target-picker";
-import { LetterBodyField } from "~/components/announcements/letter-body-field";
+import {
+  LetterBodyField,
+  type LetterPreviewChildren,
+} from "~/components/announcements/letter-body-field";
 import { WizardStepper } from "~/components/ui/wizard-stepper";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import type { SegmentedControlItem } from "~/components/ui/segmented-control";
@@ -119,7 +122,6 @@ import {
   insertPastedOptions,
 } from "~/lib/announcement-poll-options";
 import { useSWRAuth } from "~/lib/swr";
-import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 import { type Group } from "~/lib/api";
 import { fetchSchoolClasses, fetchAllStudentNames } from "~/lib/student-api";
 import { schoolClassLabel } from "~/lib/school-class-label";
@@ -913,6 +915,19 @@ const DECLARATION_SIGNER_OPTIONS: ReadonlyArray<{
  * final, explicit choices. Only drafts ever reach this modal (published
  * announcements are immutable).
  */
+// The preview of a letter (#4813) can show any child of the school; it
+// loads their names only.
+const SCHOOL_PREVIEW_CHILDREN: LetterPreviewChildren = {
+  scope: "school",
+  load: async () =>
+    (await fetchAllStudentNames()).map((student) => ({
+      value: student.id,
+      label: student.school_class
+        ? `${student.name} (${schoolClassLabel(student.school_class)})`
+        : student.name,
+    })),
+};
+
 function AnnouncementFormModal({
   announcement,
   initialStudents = NO_PREFILL_STUDENTS,
@@ -1023,32 +1038,6 @@ function AnnouncementFormModal({
 
   const [title, setTitle] = useState(announcement?.title ?? "");
   const [body, setBody] = useState(announcement?.body ?? "");
-  // The preview of a letter that names each child (#4813) shows one child
-  // of the school; names only.
-  const {
-    data: letterStudents,
-    error: letterStudentsError,
-    mutate: reloadLetterStudents,
-    isLoading: letterPreviewChildrenLoading,
-  } = useSWRAuth(
-    isLetterForm ? parentAnnouncementKeys.letterPreviewChildren() : null,
-    async () => ({ students: await fetchAllStudentNames() }),
-  );
-  const letterStudentsLoadError = useSwrLoadError(
-    letterStudentsError,
-    "die Liste der Kinder für die Vorschau",
-    () => reloadLetterStudents(),
-  );
-  const letterPreviewChildren = useMemo(
-    () =>
-      (letterStudents?.students ?? []).map((student) => ({
-        value: student.id,
-        label: student.school_class
-          ? `${student.name} (${schoolClassLabel(student.school_class)})`
-          : student.name,
-      })),
-    [letterStudents],
-  );
   const [linkUrl, setLinkUrl] = useState(announcement?.link_url ?? "");
   const [priority, setPriority] = useState<AnnouncementPriority>(
     announcement?.priority ?? "info",
@@ -1627,15 +1616,12 @@ function AnnouncementFormModal({
                   />
 
                   {isLetterForm ? (
-                    // Serienbriefe (#4813): the letter names each child.
                     <LetterBodyField
                       id="announcement-body"
                       value={body}
                       onChange={setBody}
                       error={bodyError ?? undefined}
-                      previewChildren={letterPreviewChildren}
-                      previewChildrenLoading={letterPreviewChildrenLoading}
-                      previewChildrenError={letterStudentsLoadError}
+                      previewChildren={SCHOOL_PREVIEW_CHILDREN}
                       placeholder="Liebe Eltern von {{vorname}}, … Links im Text werden für Eltern klickbar."
                       className="resize-y px-4 py-3 text-base"
                     />

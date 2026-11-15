@@ -15,12 +15,13 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	_ "image/jpeg" // logos are PNG or JPEG
-	_ "image/png"
+	_ "image/jpeg" // logos are PNG, JPEG or WebP
+	"image/png"
 	"strings"
 
 	listrecords "github.com/moto-ogs/project-phoenix/modules/documentrendering/records"
 	"github.com/signintech/gopdf"
+	"golang.org/x/image/webp"
 )
 
 // Geometry of the letter in PDF points (A4 is 595 × 842).
@@ -140,7 +141,6 @@ func (l *letterLayout) fit() error {
 	return l.run()
 }
 
-// scaleBody sets the body type to a share of its normal size.
 func (l *letterLayout) scaleBody(scale float64) {
 	l.bodySize, l.bodyLine, l.paragraph = letterBodySize*scale, letterBodyLine*scale, letterParagraph*scale
 }
@@ -175,17 +175,38 @@ func newLetterLayout(chrome *pageChrome, letter listrecords.Letter) (*letterLayo
 		l.accent = accent
 	}
 	if len(letter.Logo) > 0 {
-		if _, _, ok := imageSize(letter.Logo); !ok {
-			return nil, errors.New("letter logo: not a PNG or JPEG image")
+		logo, err := embeddableLogo(letter.Logo)
+		if err != nil {
+			return nil, err
 		}
-		holder, err := pdfImage(letter.Logo)
+		holder, err := pdfImage(logo)
 		if err != nil {
 			return nil, fmt.Errorf("letter logo: %w", err)
 		}
 		l.logo = holder
-		l.logoW, l.logoH = logoBox(letter.Logo)
+		l.logoW, l.logoH = logoBox(logo)
 	}
 	return l, nil
+}
+
+// embeddableLogo is a logo as the PDF embeds it: PNG and JPEG as they are,
+// WebP converted to PNG, which the PDF format cannot hold.
+func embeddableLogo(data []byte) ([]byte, error) {
+	if bytes.HasPrefix(data, []byte("RIFF")) && len(data) >= 12 && string(data[8:12]) == "WEBP" {
+		decoded, err := webp.Decode(bytes.NewReader(data))
+		if err != nil {
+			return nil, fmt.Errorf("letter logo: %w", err)
+		}
+		var out bytes.Buffer
+		if err := png.Encode(&out, decoded); err != nil {
+			return nil, fmt.Errorf("letter logo: %w", err)
+		}
+		return out.Bytes(), nil
+	}
+	if _, _, ok := imageSize(data); !ok {
+		return nil, errors.New("letter logo: not a PNG, JPEG or WebP image")
+	}
+	return data, nil
 }
 
 // logoBox scales the logo into its box, keeping the aspect ratio.

@@ -43,10 +43,8 @@ func BuildParentEventEmitter(
 func BuildParentAnnouncements(
 	env RootEnvironment, settings settingsCompose.BatchSettingsService, outbox *deliveryCompose.EmailOutbox, module deliveryModule.Capability, outcomes deliveryModule.EmailOutcomes,
 	notifications DeliveryNotifications, messaging parentStore.MessagingRepositories,
-	attachments communication.ParentAnnouncementAttachmentPurger, letters communication.ParentLetters,
+	attachments communication.ParentAnnouncementAttachmentPurger, letters communicationCompose.ParentLetterPorts,
 ) (communication.ParentAnnouncementCapability, error) {
-	// The copies of a letter live beside the announcement (#4813).
-	letters.Copies = messaging.ParentAnnouncement
 	return communicationCompose.NewParentAnnouncementsWithAttachments(communicationCompose.ParentAnnouncementConfig{
 		Repo: messaging.ParentAnnouncement, Settings: settingsValues.NewParentAnnouncementValues(settings), Outbox: OutboxEnqueuer{Outbox: outbox},
 		PushOutbox: deliveryCompose.NewDurablePushOutbox(module), Notifier: BindCommunicationNotificationSender(notifications.Notifier),

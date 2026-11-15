@@ -40,7 +40,7 @@ type ServiceConfig struct {
 	ParentsURL  string
 	// Letters fill an Elternbrief per child, keep the copies and print them
 	// (#4813).
-	Letters communication.ParentLetters
+	Letters ParentLetters
 	Logger  *slog.Logger
 	// Now is the clock of deadlines, expiries and publication; nil is the
 	// real clock (ADR 0239).

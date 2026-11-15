@@ -1,8 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { LetterBodyField, placeholderNames } from "./letter-body-field";
+import {
+  LetterBodyField,
+  type LetterPreviewChildren,
+} from "./letter-body-field";
 import type { LetterPlaceholder } from "~/lib/parent-announcements-api";
 import { unavailableApiError } from "~/lib/api-error";
 
@@ -11,32 +14,73 @@ const PLACEHOLDERS: LetterPlaceholder[] = [
   { name: "gruppe", label: "Gruppe", example: "Füchse" },
 ];
 
-const { previewLetter, useSWRAuth, reloadPlaceholders } = vi.hoisted(() => ({
+const { previewLetter, fetchLetterPlaceholders } = vi.hoisted(() => ({
   previewLetter: vi.fn(),
-  useSWRAuth: vi.fn(),
-  reloadPlaceholders: vi.fn(),
+  fetchLetterPlaceholders: vi.fn(),
 }));
 
+// A small SWR: loads once per key, keeps the result of the current key and
+// loads again on mutate.
 vi.mock("~/lib/swr", () => ({
-  useSWRAuth,
+  useSWRAuth: (key: string | null, fetcher: () => Promise<unknown>) => {
+    const [state, setState] = useState<{
+      key: string | null;
+      data?: unknown;
+      error?: unknown;
+    }>({ key: null });
+    const [round, setRound] = useState(0);
+    useEffect(() => {
+      if (key === null) return;
+      let live = true;
+      fetcher().then(
+        (data) => live && setState({ key, data }),
+        (error: unknown) => live && setState({ key, error }),
+      );
+      return () => {
+        live = false;
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- like SWR, the key decides
+    }, [key, round]);
+    const current: { data?: unknown; error?: unknown } =
+      state.key === key ? state : {};
+    return {
+      data: current.data,
+      error: current.error,
+      isLoading: key !== null && !("data" in current) && !current.error,
+      mutate: () => setRound((r) => r + 1),
+    };
+  },
 }));
 
 vi.mock("~/lib/parent-announcements-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-announcements-api")>()),
   previewLetter,
+  fetchLetterPlaceholders,
 }));
 
-function Harness({ initial }: Readonly<{ initial: string }>) {
+function children(
+  scope: string,
+  list: { value: string; label: string }[],
+): LetterPreviewChildren {
+  return { scope, load: vi.fn(async () => list) };
+}
+
+const LINA_AND_EMIL = children("1a", [
+  { value: "7", label: "Lina Muster (Klasse 1a)" },
+  { value: "8", label: "Emil Weber (Klasse 1a)" },
+]);
+
+function Harness({
+  initial,
+  source = LINA_AND_EMIL,
+}: Readonly<{ initial: string; source?: LetterPreviewChildren }>) {
   const [value, setValue] = useState(initial);
   return (
     <>
       <LetterBodyField
         value={value}
         onChange={setValue}
-        previewChildren={[
-          { value: "7", label: "Lina Muster (Klasse 1a)" },
-          { value: "8", label: "Emil Weber (Klasse 1a)" },
-        ]}
+        previewChildren={source}
       />
       <output data-testid="value">{value}</output>
     </>
@@ -45,11 +89,12 @@ function Harness({ initial }: Readonly<{ initial: string }>) {
 
 beforeEach(() => {
   previewLetter.mockReset();
-  reloadPlaceholders.mockReset();
-  useSWRAuth.mockReturnValue({
-    data: PLACEHOLDERS,
-    mutate: reloadPlaceholders,
-  });
+  previewLetter.mockImplementation(async (_body: string, id: string) => ({
+    body: `Brief für Kind ${id}`,
+    child: { student_id: id, first_name: "", last_name: "", school_class: "" },
+  }));
+  fetchLetterPlaceholders.mockReset();
+  fetchLetterPlaceholders.mockResolvedValue(PLACEHOLDERS);
 });
 
 describe("LetterBodyField", () => {
@@ -62,130 +107,115 @@ describe("LetterBodyField", () => {
     field.setSelectionRange(17, 17);
     fireEvent.blur(field);
 
-    fireEvent.click(screen.getByRole("button", { name: /Vorname des Kindes/ }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Vorname des Kindes/ }),
+    );
 
     expect(screen.getByTestId("value")).toHaveTextContent(
       "Liebe Eltern von {{vorname}}, bis bald",
     );
   });
 
-  it("warns about a placeholder moto does not know and shows no preview", () => {
+  it("warns about what moto does not know, as the backend refuses it, and shows no preview", async () => {
     render(
-      <Harness initial="Hallo {{vorname}}, bitte {{Allergien}} angeben." />,
+      <Harness initial="Hallo {{vorname}}, bitte {{Allergien}} und {gruppe}} angeben." />,
     );
 
     expect(
-      screen.getByText(
-        "Diese Platzhalter kennt moto nicht: {{allergien}}. Bitte nehmen Sie nur Platzhalter aus der Liste.",
+      await screen.findByText(
+        "Diese Platzhalter kennt moto nicht: {{allergien}}, {gruppe}}. Bitte nehmen Sie nur Platzhalter aus der Liste.",
       ),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("region", { name: "Vorschau des Briefs" }),
     ).not.toBeInTheDocument();
-    expect(previewLetter).not.toHaveBeenCalled();
   });
 
   it("previews the letter for the first child and for the one chosen", async () => {
-    previewLetter.mockImplementation(async (_body: string, id: string) => ({
-      body:
-        id === "7" ? "Hallo Lina aus den Füchsen" : "Hallo Emil aus den Igeln",
-      child: {
-        student_id: id,
-        first_name: "",
-        last_name: "",
-        school_class: "1a",
-      },
-    }));
-    render(<Harness initial="Hallo {{vorname}} aus den {{gruppe}}" />);
+    render(<Harness initial="Hallo {{vorname}}" />);
 
-    expect(
-      await screen.findByText("Hallo Lina aus den Füchsen"),
-    ).toBeInTheDocument();
-    expect(previewLetter).toHaveBeenLastCalledWith(
-      "Hallo {{vorname}} aus den {{gruppe}}",
-      "7",
-    );
-  });
-
-  it("shows no preview while the text names nobody", async () => {
-    render(<Harness initial="Liebe Eltern, am Freitag ist Sommerfest." />);
-    expect(screen.getByRole("button", { name: /Gruppe/ })).toBeInTheDocument();
-    await waitFor(() => expect(previewLetter).not.toHaveBeenCalled());
-    expect(
-      screen.queryByRole("region", { name: "Vorschau des Briefs" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("replaces an explicitly chosen child when the class options change", async () => {
-    previewLetter.mockImplementation(async (_body: string, id: string) => ({
-      body: `Brief für Kind ${id}`,
-      child: { student_id: id },
-    }));
-    const props = {
-      value: "Hallo {{vorname}}",
-      onChange: vi.fn(),
-      previewChildren: [
-        { value: "7", label: "Lina" },
-        { value: "8", label: "Emil" },
-      ],
-    };
-    const view = render(<LetterBodyField {...props} />);
     expect(await screen.findByText("Brief für Kind 7")).toBeInTheDocument();
+    expect(previewLetter).toHaveBeenLastCalledWith(
+      "Hallo {{vorname}}",
+      "7",
+      undefined,
+    );
+
     fireEvent.click(
       screen.getByRole("combobox", { name: "Kind für die Vorschau" }),
     );
-    fireEvent.click(screen.getByRole("option", { name: "Emil" }));
+    fireEvent.click(
+      screen.getByRole("option", { name: "Emil Weber (Klasse 1a)" }),
+    );
+    expect(await screen.findByText("Brief für Kind 8")).toBeInTheDocument();
+  });
+
+  it("loads the children only once the text names a placeholder", async () => {
+    const source = children("school", [{ value: "7", label: "Lina" }]);
+    render(
+      <Harness
+        initial="Liebe Eltern, am Freitag ist Sommerfest."
+        source={source}
+      />,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: /Gruppe/ }),
+    ).toBeInTheDocument();
+    expect(source.load).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /Gruppe/ }));
+    expect(await screen.findByText("Brief für Kind 7")).toBeInTheDocument();
+    expect(source.load).toHaveBeenCalledOnce();
+  });
+
+  it("replaces a chosen child that the new list no longer holds", async () => {
+    const props = { value: "Hallo {{vorname}}", onChange: vi.fn() };
+    const view = render(
+      <LetterBodyField {...props} previewChildren={LINA_AND_EMIL} />,
+    );
+    fireEvent.click(
+      await screen.findByRole("combobox", { name: "Kind für die Vorschau" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Emil Weber (Klasse 1a)" }),
+    );
     expect(await screen.findByText("Brief für Kind 8")).toBeInTheDocument();
 
     view.rerender(
       <LetterBodyField
         {...props}
-        previewChildren={[{ value: "9", label: "Mia" }]}
+        previewChildren={children("2b", [{ value: "9", label: "Mia" }])}
       />,
     );
+    expect(await screen.findByText("Brief für Kind 9")).toBeInTheDocument();
     expect(
       screen.getByRole("combobox", { name: "Kind für die Vorschau" }),
     ).toHaveTextContent("Mia");
-    expect(screen.queryByText("Brief für Kind 8")).not.toBeInTheDocument();
-    expect(await screen.findByText("Brief für Kind 9")).toBeInTheDocument();
-    expect(previewLetter).toHaveBeenLastCalledWith(props.value, "9");
 
-    view.rerender(<LetterBodyField {...props} previewChildren={[]} />);
+    view.rerender(<LetterBodyField {...props} previewChildren={null} />);
     expect(
-      screen.getByText(/Noch kein Kind in der Auswahl/),
+      await screen.findByText(/Noch kein Kind in der Auswahl/),
     ).toBeInTheDocument();
     expect(screen.queryByText("Brief für Kind 9")).not.toBeInTheDocument();
   });
 
   it("shows a placeholder load error and retries the failed load", async () => {
-    useSWRAuth.mockReturnValue({
-      error: unavailableApiError(new TypeError("Failed to fetch")),
-      mutate: reloadPlaceholders,
-    });
-    const view = render(<Harness initial="Liebe Eltern" />);
+    fetchLetterPlaceholders.mockRejectedValueOnce(
+      unavailableApiError(new TypeError("Failed to fetch")),
+    );
+    render(<Harness initial="Liebe Eltern" />);
+
     const retry = await screen.findByRole("button", { name: /Wiederholen/ });
     expect(screen.getByRole("alert")).toHaveTextContent(/Platzhalter/);
     fireEvent.click(retry);
-    expect(reloadPlaceholders).toHaveBeenCalledOnce();
 
-    useSWRAuth.mockReturnValue({
-      data: PLACEHOLDERS,
-      mutate: reloadPlaceholders,
-    });
-    view.rerender(<Harness initial="Liebe Eltern" />);
     expect(
       await screen.findByRole("button", { name: /Vorname des Kindes/ }),
     ).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
     );
-  });
-});
-
-describe("placeholderNames", () => {
-  it("lists each placeholder once in lower case", () => {
-    expect(placeholderNames("{{ Vorname }} {{vorname}} {{abholzeit}}")).toEqual(
-      ["vorname", "abholzeit"],
-    );
+    expect(fetchLetterPlaceholders).toHaveBeenCalledTimes(2);
   });
 });

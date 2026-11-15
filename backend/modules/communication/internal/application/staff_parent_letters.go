@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -9,16 +10,41 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 )
 
-// Serienbriefe (#4813): a published Elternbrief is one letter per reached
-// child. Publishing writes each child's letter once (ParentLetterCopy); the
-// mail, the parent portal and the printed letters read those copies, so a
-// letter stays as it went out.
+// Serienbriefe (#4813): an Elternbrief that names each child is written once
+// per reached child when it is published (ParentLetterCopy). The mail, the
+// parent portal and the printed letters read those copies, so a letter stays
+// as it went out. A letter that names nobody reads the same for everybody
+// and has no copies.
+
+// ParentLetterChildren reads the values a letter names for each child, in
+// one read for the whole set. A child of another school or an unknown child
+// is missing from the answer.
+type ParentLetterChildren interface {
+	ParentLetterChildren(ctx context.Context, studentIDs []int64) ([]communication.ParentLetterChild, error)
+}
+
+// ParentLetters are the ports the personalised letters use: the copies, the
+// owners' child values, the school's logo and the data access log. A school
+// without them still sends letters that name nobody; a personalised letter
+// refuses.
+type ParentLetters struct {
+	Copies   communication.ParentLetterCopyRecords
+	Children ParentLetterChildren
+	Logos    communication.ParentLetterLogos
+	Access   communication.ParentLetterAccessLog
+}
+
+var errParentLettersNotWired = errors.New("announcement: personalised letters are not wired")
+
+func (a *StaffParentAnnouncement) IsPersonalLetter() bool {
+	return communication.IsPersonalParentLetter(a.DeliveryMode, a.Body)
+}
 
 // freezeLetterCopies writes the letter of every child the publication
-// reached. It runs in the publish transaction after the children were
-// recorded, so the copies are exactly the recorded children.
+// reached and logs that read. It needs the recorded recipients, so publish
+// runs it after recordAnnouncementRecipients.
 func (s *service) freezeLetterCopies(ctx context.Context, a *StaffParentAnnouncement) error {
-	if !a.IsLetter() || s.letters.Copies == nil {
+	if !a.IsPersonalLetter() {
 		return nil
 	}
 	tenantID := a.GetTenantID()
@@ -26,32 +52,25 @@ func (s *service) freezeLetterCopies(ctx context.Context, a *StaffParentAnnounce
 	if err != nil {
 		return fmt.Errorf("announcement: letter children for copies: %w", err)
 	}
+	values, err := s.letterChildValues(ctx, letterChildIDs(reached))
+	if err != nil {
+		return err
+	}
 	copies := make([]communication.ParentLetterCopy, 0, len(reached))
-	byStudent := map[int64]communication.ParentLetterChild{}
-	if communication.HasParentLetterPlaceholders(a.Body) {
-		if byStudent, err = s.letterChildValues(ctx, letterChildIDs(reached)); err != nil {
-			return err
-		}
-	}
-	publishedAt := s.now()
-	if a.PublishedAt != nil {
-		publishedAt = *a.PublishedAt
-	}
 	for _, child := range reached {
-		values, ok := byStudent[child.StudentID]
+		values, ok := values[child.StudentID]
 		if !ok {
 			values = communication.ParentLetterChild{StudentID: child.StudentID, FirstName: child.FirstName, LastName: child.LastName, SchoolClass: child.SchoolClass}
 		}
 		copies = append(copies, communication.ParentLetterCopy{
-			AnnouncementID: a.ID, StudentID: child.StudentID, FirstName: child.FirstName, LastName: child.LastName,
-			SchoolClass: child.SchoolClass, Body: communication.FillParentLetter(a.Body, values), PublishedAt: publishedAt,
+			AnnouncementID: a.ID, StudentID: child.StudentID, FirstName: values.FirstName, LastName: values.LastName,
+			SchoolClass: values.SchoolClass, Body: communication.FillParentLetter(a.Body, values),
 		})
 	}
 	if err := s.letters.Copies.ReplaceParentLetterCopies(ctx, tenantID, a.ID, copies); err != nil {
 		return fmt.Errorf("announcement: write letter copies: %w", err)
 	}
-	if len(copies) > 0 && s.letters.Access != nil {
-		// The publication froze a letter with each reached child's data (#4813).
+	if len(copies) > 0 {
 		if err := s.recordLetterAccess(ctx, communication.ParentLetterAccess{
 			Kind: communication.ParentLetterAccessPublish, AnnouncementID: &a.ID, ChildCount: len(copies),
 		}); err != nil {
@@ -73,15 +92,13 @@ func letterChildIDs(children []*StaffAnnouncementLetterChildStatus) []int64 {
 	return ids
 }
 
-// letterChildValues reads the placeholder values of a set of children in
-// one read.
 func (s *service) letterChildValues(ctx context.Context, studentIDs []int64) (map[int64]communication.ParentLetterChild, error) {
 	out := make(map[int64]communication.ParentLetterChild, len(studentIDs))
 	if len(studentIDs) == 0 {
 		return out, nil
 	}
 	if s.letters.Children == nil {
-		return nil, fmt.Errorf("announcement: letter placeholders need the child values, which are not wired")
+		return nil, errParentLettersNotWired
 	}
 	children, err := s.letters.Children.ParentLetterChildren(ctx, studentIDs)
 	if err != nil {
@@ -98,7 +115,7 @@ func (s *service) letterChildValues(ctx context.Context, studentIDs []int64) (ma
 type letterMailBodies map[int64]communication.ParentLetterCopy
 
 func (s *service) personalLetterBodies(ctx context.Context, a *StaffParentAnnouncement) (letterMailBodies, error) {
-	if !a.IsLetter() || !communication.HasParentLetterPlaceholders(a.Body) || s.letters.Copies == nil {
+	if !a.IsPersonalLetter() {
 		return nil, nil
 	}
 	copies, err := s.letters.Copies.ParentLetterCopies(ctx, a.GetTenantID(), a.ID)
@@ -120,11 +137,9 @@ func (b letterMailBodies) bodyFor(studentIDs []int64, fallback string) string {
 	}
 	parts := make([]communication.ParentLetterCopy, 0, len(studentIDs))
 	for _, id := range studentIDs {
-		c, ok := b[id]
-		if !ok {
-			continue
+		if c, ok := b[id]; ok {
+			parts = append(parts, c)
 		}
-		parts = append(parts, c)
 	}
 	switch len(parts) {
 	case 0:
@@ -173,7 +188,10 @@ func (s *service) PreviewParentLetter(ctx context.Context, actorAccountID int64,
 }
 
 func (s *service) previewLetter(ctx context.Context, actorAccountID int64, body string, studentID int64, classes []string) (*communication.ParentLetterPreview, error) {
-	if err := communication.CheckParentLetterPlaceholders(true, "", body); err != nil {
+	if len([]rune(body)) > maxBodyLen {
+		return nil, fmt.Errorf("%w: body", ErrValidation)
+	}
+	if err := communication.CheckParentLetterText("", body); err != nil {
 		return nil, err
 	}
 	values, err := s.letterChildValues(ctx, []int64{studentID})
@@ -192,6 +210,20 @@ func (s *service) previewLetter(ctx context.Context, actorAccountID int64, body 
 	return &communication.ParentLetterPreview{Child: child, Body: communication.FillParentLetter(body, child)}, nil
 }
 
+// inLetterClasses reports whether a child's class is one of classes; nil
+// classes admit every child of the school.
+func inLetterClasses(class string, classes []string) bool {
+	if classes == nil {
+		return true
+	}
+	for _, reached := range classes {
+		if communication.SameSchoolClass(class, reached) {
+			return true
+		}
+	}
+	return false
+}
+
 // PrintParentLetters returns every letter of a published Elternbrief with
 // the school that sends them. The read is written to the data access log.
 func (s *service) PrintParentLetters(ctx context.Context, actorAccountID, id int64) (*communication.ParentLetterPrint, error) {
@@ -207,10 +239,9 @@ func (s *service) printLetters(ctx context.Context, actorAccountID, id int64) (*
 	if a == nil || isSurveyCarrier(a) {
 		return nil, ErrNotFound
 	}
-	if !a.IsLetter() || !a.IsPublished() || s.letters.Copies == nil {
+	if !a.IsLetter() || !a.IsPublished() {
 		return nil, communication.ErrParentLetterNotPrintable
 	}
-	tenantID := a.GetTenantID()
 	copies, err := s.printCopies(ctx, a)
 	if err != nil {
 		return nil, err
@@ -218,15 +249,14 @@ func (s *service) printLetters(ctx context.Context, actorAccountID, id int64) (*
 	if len(copies) == 0 {
 		return nil, communication.ErrParentLetterNotPrintable
 	}
+	tenantID := a.GetTenantID()
 	schoolName, err := s.repo.SchoolName(ctx, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("announcement: resolve school name: %w", err)
 	}
-	var logo []byte
-	if s.letters.Logos != nil && s.settings != nil {
-		if raw, err := s.settings.GetLoginImageURL(ctx, tenantID); err == nil && raw != "" {
-			logo = s.letters.Logos.ParentLetterLogo(ctx, raw)
-		}
+	logo, err := s.letterLogo(ctx, tenantID)
+	if err != nil {
+		return nil, err
 	}
 	if err := s.recordLetterAccess(ctx, communication.ParentLetterAccess{
 		ActorAccountID: actorAccountID, Kind: communication.ParentLetterAccessPrint, AnnouncementID: &id, ChildCount: len(copies),
@@ -240,9 +270,49 @@ func (s *service) printLetters(ctx context.Context, actorAccountID, id int64) (*
 	return out, nil
 }
 
+// printCopies are the letters of a dispatch: the frozen copies of a letter
+// that names each child, or the one text for every recorded child.
+func (s *service) printCopies(ctx context.Context, a *StaffParentAnnouncement) ([]communication.ParentLetterCopy, error) {
+	if a.IsPersonalLetter() {
+		copies, err := s.letters.Copies.ParentLetterCopies(ctx, a.GetTenantID(), a.ID)
+		if err != nil {
+			return nil, fmt.Errorf("announcement: read letter copies for print: %w", err)
+		}
+		return copies, nil
+	}
+	reached, err := s.repo.LetterChildStatuses(ctx, a.GetTenantID(), a.ID)
+	if err != nil {
+		return nil, fmt.Errorf("announcement: letter children for print: %w", err)
+	}
+	copies := make([]communication.ParentLetterCopy, 0, len(reached))
+	for _, child := range reached {
+		copies = append(copies, communication.ParentLetterCopy{
+			AnnouncementID: a.ID, StudentID: child.StudentID, FirstName: child.FirstName, LastName: child.LastName,
+			SchoolClass: child.SchoolClass, Body: a.Body,
+		})
+	}
+	return copies, nil
+}
+
+// letterLogo is the school's login image as the printed letters show it; a
+// school without one, or without a logo reader, prints none.
+func (s *service) letterLogo(ctx context.Context, tenantID int64) ([]byte, error) {
+	if s.letters.Logos == nil || s.settings == nil {
+		return nil, nil
+	}
+	raw, err := s.settings.GetLoginImageURL(ctx, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("announcement: read the school logo: %w", err)
+	}
+	if raw == "" {
+		return nil, nil
+	}
+	return s.letters.Logos.ParentLetterLogo(ctx, raw), nil
+}
+
 func (s *service) recordLetterAccess(ctx context.Context, access communication.ParentLetterAccess) error {
 	if s.letters.Access == nil {
-		return fmt.Errorf("announcement: letter access needs the data access log, which is not wired")
+		return errParentLettersNotWired
 	}
 	access.AccessedAt = s.now()
 	if err := s.letters.Access.RecordParentLetterAccess(ctx, access); err != nil {
@@ -251,51 +321,20 @@ func (s *service) recordLetterAccess(ctx context.Context, access communication.P
 	return nil
 }
 
+// checkPlaceholders accepts the placeholders of a letter's body and refuses
+// any in a Mitteilung, which goes to every family alike.
+func checkPlaceholders(in *Input) error {
+	if in.DeliveryMode == StaffParentAnnouncementDeliveryLetter {
+		return communication.CheckParentLetterText(in.Title, in.Body)
+	}
+	return communication.CheckNoParentLetterPlaceholders(in.Title, in.Body)
+}
+
 // checkReminderPlaceholders refuses placeholders in the wording of a
 // reminder: it goes to every family alike and is never filled per child.
 func checkReminderPlaceholders(text *string) error {
 	if text == nil {
 		return nil
 	}
-	return communication.CheckParentLetterPlaceholders(false, "", *text)
-}
-
-// inLetterClasses reports whether a child's class is one of classes; nil
-// classes admit every child of the school.
-func inLetterClasses(class string, classes []string) bool {
-	if classes == nil {
-		return true
-	}
-	wanted := strings.TrimSpace(class)
-	for _, reached := range classes {
-		if wanted != "" && strings.EqualFold(strings.TrimSpace(reached), wanted) {
-			return true
-		}
-	}
-	return false
-}
-
-// printCopies are the letters of a dispatch: the frozen copies, or for a
-// letter published before the copies existed (#4813) and naming nobody, its
-// one text for every child the publication recorded.
-func (s *service) printCopies(ctx context.Context, a *StaffParentAnnouncement) ([]communication.ParentLetterCopy, error) {
-	tenantID := a.GetTenantID()
-	copies, err := s.letters.Copies.ParentLetterCopies(ctx, tenantID, a.ID)
-	if err != nil {
-		return nil, fmt.Errorf("announcement: read letter copies for print: %w", err)
-	}
-	if len(copies) > 0 || communication.HasParentLetterPlaceholders(a.Body) {
-		return copies, nil
-	}
-	reached, err := s.repo.LetterChildStatuses(ctx, tenantID, a.ID)
-	if err != nil {
-		return nil, fmt.Errorf("announcement: letter children for print: %w", err)
-	}
-	for _, child := range reached {
-		copies = append(copies, communication.ParentLetterCopy{
-			AnnouncementID: a.ID, StudentID: child.StudentID, FirstName: child.FirstName, LastName: child.LastName,
-			SchoolClass: child.SchoolClass, Body: a.Body, PublishedAt: *a.PublishedAt,
-		})
-	}
-	return copies, nil
+	return communication.CheckNoParentLetterPlaceholders(*text)
 }

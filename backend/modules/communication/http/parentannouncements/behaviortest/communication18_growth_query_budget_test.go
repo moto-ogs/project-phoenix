@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	communicationCompose "github.com/moto-ogs/project-phoenix/modules/communication/composition"
 	announcement "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
 	"github.com/moto-ogs/project-phoenix/modules/communication/parentstore"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/objects"
@@ -150,7 +151,7 @@ func TestCommunication18AnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 			require.NoError(t, err)
 			delivery, err := api.NewDeliveryTestModule(database, testpkg.TenantRuntime(t, db))
 			require.NoError(t, err)
-			service, err := owners.BuildParentAnnouncements(owners.RootEnvironment{Logger: slog.Default(), Links: owners.ServiceLinks{ParentsURL: "http://localhost"}}, settings.Settings, delivery.EmailOutbox, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, owners.DeliveryNotifications{Notifier: delivery.Notifications, Preferences: delivery.NotificationPreferences}, repos.MessagingRepositories, files, communication.ParentLetters{})
+			service, err := owners.BuildParentAnnouncements(owners.RootEnvironment{Logger: slog.Default(), Links: owners.ServiceLinks{ParentsURL: "http://localhost"}}, settings.Settings, delivery.EmailOutbox, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, owners.DeliveryNotifications{Notifier: delivery.Notifications, Preferences: delivery.NotificationPreferences}, repos.MessagingRepositories, files, communicationCompose.ParentLetterPorts{})
 			require.NoError(t, err)
 			_, viewer := testpkg.CreateTestStaffWithAccount(t, db, "Teacher", "Growth")
 			token := testutil.MintTestJWT(t, sessiontoken.AppClaims{ID: int(viewer.ID), Sub: viewer.Email, TenantID: testpkg.Tenant(t), Roles: []string{"user"}, Permissions: []string{permissions.AdminWildcard}})

@@ -33,7 +33,7 @@ type service struct {
 	// attachments is the file side of #2890, injected after construction (the
 	// two services point at each other).
 	attachments AttachmentPurger
-	letters     communication.ParentLetters
+	letters     ParentLetters
 	logger      *slog.Logger
 	now         func() time.Time
 }
@@ -611,7 +611,7 @@ func (s *service) Unpublish(ctx context.Context, id int64) (*StaffParentAnnounce
 		if err := s.dropDeliveryRows(ctx, a.GetTenantID(), id); err != nil {
 			return nil, err
 		}
-		if err := s.dropLetterCopies(ctx, a.GetTenantID(), id); err != nil {
+		if err := s.dropLetterCopies(ctx, a); err != nil {
 			return nil, err
 		}
 		a.PublishedAt = nil
@@ -729,8 +729,7 @@ func normalizeInput(in *Input, now time.Time) ([]*StaffParentAnnouncementTarget,
 	if err := normalizeDelivery(in, now); err != nil {
 		return nil, err
 	}
-	// A letter names each child with the listed placeholders (#4813).
-	if err := communication.CheckParentLetterPlaceholders(in.DeliveryMode == StaffParentAnnouncementDeliveryLetter, in.Title, in.Body); err != nil {
+	if err := checkPlaceholders(in); err != nil {
 		return nil, err
 	}
 

@@ -29,10 +29,8 @@ import {
 } from "~/components/ui/segmented-control";
 import { LetterStatusPanel } from "~/components/announcements/letter-status-panel";
 import { LetterPrintButton } from "~/components/announcements/letter-print-button";
-import {
-  LetterTemplateText,
-  hasLetterPlaceholders,
-} from "~/components/announcements/letter-template-text";
+import { LetterTemplateText } from "~/components/announcements/letter-template-text";
+import { hasLetterPlaceholders } from "~/lib/parent-letter-placeholders";
 import { DeclarationStatusPanel } from "~/components/announcements/declaration-status-panel";
 import type { Group } from "~/lib/api";
 import type { Activity } from "~/lib/activity-helpers";
@@ -595,7 +593,6 @@ export function AnnouncementDetail({
   const isPublished = announcement.status !== "draft";
   const poll = isPoll(announcement);
   const letter = isLetter(announcement);
-  // A letter that names each child (#4813) shows where moto fills in.
   const personalLetter = letter && hasLetterPlaceholders(announcement.body);
   const declaration = isDeclaration(announcement);
   const chips = targetChips(announcement.targets, groups, activities);
@@ -627,17 +624,11 @@ export function AnnouncementDetail({
           ) : undefined
         }
       >
-        <p className="text-sm leading-6 whitespace-pre-line text-gray-800">
-          {personalLetter ? (
-            <LetterTemplateText text={announcement.body} />
-          ) : (
+        {personalLetter ? (
+          <LetterTemplateText text={announcement.body} apiBase={apiBase} />
+        ) : (
+          <p className="text-sm leading-6 whitespace-pre-line text-gray-800">
             <LinkifiedText text={announcement.body} />
-          )}
-        </p>
-        {personalLetter && (
-          <p className="mt-3 text-xs text-gray-500">
-            Die grünen Felder füllt moto für jedes Kind mit seinen Angaben. Jede
-            Familie liest nur den Brief ihres eigenen Kindes.
           </p>
         )}
 

@@ -413,7 +413,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() (err error) {
 			announcements, err = BuildParentAnnouncements(env, settings.Service, delivery.Outbox, DeliveryModuleOf(delivery), delivery.Runtime.EmailOutcomes,
-				notifications, messaging, purger, BuildParentLetters(persons, groups, schedules, audit, tokens, env.Now))
+				notifications, messaging, purger, BuildParentLetters(persons, groups, schedules, audit, tokens))
 			return
 		},
 		func() error {

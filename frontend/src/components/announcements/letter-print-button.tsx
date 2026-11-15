@@ -22,9 +22,7 @@ export function LetterPrintButton({
   const print = async () => {
     setBusy(true);
     try {
-      await (apiBase === undefined
-        ? downloadLetterPrint(announcementId)
-        : downloadLetterPrint(announcementId, apiBase));
+      await downloadLetterPrint(announcementId, apiBase);
     } catch (error) {
       void showError(error, {
         object: "die Briefe zum Drucken",

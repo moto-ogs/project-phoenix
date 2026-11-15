@@ -50,6 +50,7 @@ import { unavailableApiError } from "~/lib/api-error";
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { Announcement } from "~/lib/parent-announcements-api";
 import SchoolParentLettersPage from "./page";
+import { SCHOOL_PARENT_LETTERS_BASE } from "~/lib/parent-announcements-api";
 import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 
 const sentLetter = {
@@ -67,7 +68,7 @@ const previewLoad = { error: null as Error | null, retry: vi.fn() };
 
 function mockData(classes: string[], letters: Announcement[]) {
   mockUseSWRAuth.mockImplementation((key: string | null) => {
-    if (key === parentAnnouncementKeys.classLetterPreviewChildren("3b")) {
+    if (key === parentAnnouncementKeys.letterPreviewChildren("class-3b")) {
       return {
         data: undefined,
         error: previewLoad.error,
@@ -75,13 +76,19 @@ function mockData(classes: string[], letters: Announcement[]) {
         mutate: previewLoad.retry,
       };
     }
-    if (key === parentAnnouncementKeys.letterPlaceholders("school")) {
+    if (
+      key ===
+      parentAnnouncementKeys.letterPlaceholders(SCHOOL_PARENT_LETTERS_BASE)
+    ) {
       return {
         data: [
           { name: "vorname", label: "Vorname des Kindes", example: "Lina" },
         ],
         mutate: mockMutate,
       };
+    }
+    if (key === null || key.startsWith("parent-letter-preview-")) {
+      return { data: undefined, isLoading: false, mutate: mockMutate };
     }
     if (key === "school-parent-letter-classes") {
       return {

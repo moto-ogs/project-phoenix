@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/require"
@@ -17,25 +18,76 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	communicationCompose "github.com/moto-ogs/project-phoenix/modules/communication/composition"
 	announcement "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
+	communicationPorts "github.com/moto-ogs/project-phoenix/modules/communication/ports"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// fixedLetterChildren stands in for the root's reads of the owners: the
-// values a letter names per child.
-type fixedLetterChildren map[int64]communication.ParentLetterChild
+// letterChild is what the owners hold about one child in this test: its
+// directory entry, its group's name and its pickup time.
+type letterChild struct {
+	first, last, class, group string
+	pickup                    time.Time
+}
 
-func (f fixedLetterChildren) ParentLetterChildren(_ context.Context, ids []int64) ([]communication.ParentLetterChild, error) {
-	out := []communication.ParentLetterChild{}
+// letterSources stand in for the root's reads of the owners.
+type letterSources map[int64]*letterChild
+
+func (f letterSources) ports() communicationPorts.ParentLetterSources {
+	return communicationPorts.ParentLetterSources{Students: f, Groups: f.groupNames, Pickups: f, Arrivals: noArrivals{}}
+}
+
+func (f letterSources) ListStudentsByID(_ context.Context, ids []int64) ([]communicationPorts.ParentLetterStudent, error) {
+	out := []communicationPorts.ParentLetterStudent{}
 	for _, id := range ids {
 		if child, ok := f[id]; ok {
-			out = append(out, child)
+			group := id
+			out = append(out, communicationPorts.ParentLetterStudent{ID: id, SchoolClass: child.class, GroupID: &group})
 		}
 	}
 	return out, nil
+}
+
+func (f letterSources) ListStudentNamesByID(_ context.Context, ids []int64) ([]communicationPorts.ParentLetterStudentName, error) {
+	out := []communicationPorts.ParentLetterStudentName{}
+	for _, id := range ids {
+		if child, ok := f[id]; ok {
+			out = append(out, communicationPorts.ParentLetterStudentName{StudentID: id, FirstName: child.first, LastName: child.last})
+		}
+	}
+	return out, nil
+}
+
+// groupNames answers each child's group under the child's own ID.
+func (f letterSources) groupNames(_ context.Context, ids []int64) (map[int64]string, error) {
+	out := map[int64]string{}
+	for _, id := range ids {
+		if child, ok := f[id]; ok {
+			out[id] = child.group
+		}
+	}
+	return out, nil
+}
+
+func (f letterSources) GetWeeklySchedulesByStudentIDsForDate(_ context.Context, ids []int64, _ calendar.Date) ([]*communicationPorts.ParentLetterPickup, error) {
+	out := []*communicationPorts.ParentLetterPickup{}
+	for _, id := range ids {
+		if child, ok := f[id]; ok && !child.pickup.IsZero() {
+			out = append(out, &communicationPorts.ParentLetterPickup{StudentID: id, Weekday: 1, PickupTime: child.pickup})
+		}
+	}
+	return out, nil
+}
+
+type noArrivals struct{}
+
+func (noArrivals) GetWeeklySchedulesByStudentIDsForDate(context.Context, []int64, calendar.Date) ([]*communicationPorts.ParentLetterArrival, error) {
+	return nil, nil
 }
 
 type countingLetterAccess struct{ kinds []string }
@@ -81,15 +133,15 @@ func TestParentLettersNameEachChildAndStayWithTheirFamily(t *testing.T) {
 	// Lina's guardian may also pick Emil up, without portal access to him:
 	// that link reaches the mail, but not Emil's letter.
 	testpkg.CreateTestStudentGuardianLink(t, db, emil.StudentID, lina.GuardianProfileID, "pickup_only")
-	values := fixedLetterChildren{
-		lina.StudentID: {StudentID: lina.StudentID, FirstName: "Lina", LastName: "Muster", SchoolClass: "1a", Group: "Füchse", PickupTime: "15:30 Uhr"},
-		emil.StudentID: {StudentID: emil.StudentID, FirstName: "Emil", LastName: "Weber", SchoolClass: "1a", Group: "Igel"},
+	values := letterSources{
+		lina.StudentID: {first: "Lina", last: "Muster", class: "1a", group: "Füchse", pickup: time.Date(2000, 1, 1, 15, 30, 0, 0, time.UTC)},
+		emil.StudentID: {first: "Emil", last: "Weber", class: "1a", group: "Igel"},
 	}
 	access := &countingLetterAccess{}
 	service, err := owners.BuildParentAnnouncements(owners.RootEnvironment{Logger: slog.Default(), Links: owners.ServiceLinks{ParentsURL: "http://localhost"}},
 		settings.Settings, delivery.EmailOutbox, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes,
 		owners.DeliveryNotifications{Notifier: delivery.Notifications, Preferences: delivery.NotificationPreferences}, repos.MessagingRepositories, files,
-		communication.ParentLetters{Children: values, Access: access})
+		communicationCompose.ParentLetterPorts{Sources: values.ports(), Access: access})
 	require.NoError(t, err)
 
 	_, staff := testpkg.CreateTestStaffWithAccount(t, db, "Paula", "Kern")
@@ -159,7 +211,8 @@ func TestParentLettersNameEachChildAndStayWithTheirFamily(t *testing.T) {
 	require.Equal(t, http.StatusOK, send(http.MethodPost, base+"/publish", admin, nil).Code)
 
 	// The child's data change after publication; the letter does not.
-	values[lina.StudentID] = communication.ParentLetterChild{StudentID: lina.StudentID, FirstName: "Lina", Group: "Bären", PickupTime: "14:00 Uhr"}
+	values[lina.StudentID].group = "Bären"
+	values[lina.StudentID].pickup = time.Date(2000, 1, 1, 14, 0, 0, 0, time.UTC)
 
 	// In the parent feed each family reads its own child's letter only.
 	feed := func(accountID int64) *communication.PortalAnnouncementFeedItem {

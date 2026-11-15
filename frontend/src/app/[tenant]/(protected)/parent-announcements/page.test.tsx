@@ -56,7 +56,7 @@ vi.mock("~/lib/swr", () => ({
               data ?? fetchAnnouncements(true).catch(() => listState.data),
           ),
         }
-      : key === "parent-letter-preview-children"
+      : key === "parent-letter-preview-children-school"
         ? {
             data: undefined,
             isLoading: false,

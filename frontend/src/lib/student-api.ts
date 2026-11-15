@@ -139,12 +139,13 @@ export async function fetchSchoolClasses(): Promise<string[]> {
 
 /** Names for a complete local child selector, including subsequent pages. */
 export async function fetchAllStudentNames(): Promise<Student[]> {
-  const result = await fetchStudents({ page: 1, pageSize: 500, view: "names" });
-  for (let page = 2; page <= result.pagination.total_pages; page++) {
-    const next = await fetchStudents({ page, pageSize: 500, view: "names" });
-    result.students.push(...next.students);
-  }
-  return result.students;
+  const first = await fetchStudents({ page: 1, pageSize: 500, view: "names" });
+  const rest = await Promise.all(
+    Array.from({ length: first.pagination.total_pages - 1 }, (_, i) =>
+      fetchStudents({ page: i + 2, pageSize: 500, view: "names" }),
+    ),
+  );
+  return [first, ...rest].flatMap((page) => page.students);
 }
 
 /** One child with access flags, feature flags and privacy consent. */

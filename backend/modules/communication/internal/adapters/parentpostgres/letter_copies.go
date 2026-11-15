@@ -3,7 +3,6 @@ package parentpostgres
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/uptrace/bun"
 
@@ -13,9 +12,6 @@ import (
 // The letter each child got when an Elternbrief was published (#4813). Every
 // statement touches Communication's own table only.
 
-// letterDeliveryMode is the delivery mode of an Elternbrief.
-const letterDeliveryMode = "letter"
-
 const (
 	letterCopyTableExpr = `users.parent_announcement_letter_copies AS "plc"`
 	letterCopyAlias     = "plc"
@@ -23,21 +19,20 @@ const (
 
 type letterCopyRow struct {
 	bun.BaseModel  `bun:"table:users.parent_announcement_letter_copies,alias:plc"`
-	ID             int64     `bun:"id,pk,autoincrement"`
-	TenantID       int64     `bun:"tenant_id,notnull"`
-	AnnouncementID int64     `bun:"announcement_id,notnull"`
-	StudentID      int64     `bun:"student_id,notnull"`
-	FirstName      string    `bun:"first_name,notnull"`
-	LastName       string    `bun:"last_name,notnull"`
-	SchoolClass    string    `bun:"school_class,notnull"`
-	Body           string    `bun:"body,notnull"`
-	PublishedAt    time.Time `bun:"published_at,notnull"`
+	ID             int64  `bun:"id,pk,autoincrement"`
+	TenantID       int64  `bun:"tenant_id,notnull"`
+	AnnouncementID int64  `bun:"announcement_id,notnull"`
+	StudentID      int64  `bun:"student_id,notnull"`
+	FirstName      string `bun:"first_name,notnull"`
+	LastName       string `bun:"last_name,notnull"`
+	SchoolClass    string `bun:"school_class,notnull"`
+	Body           string `bun:"body,notnull"`
 }
 
 func (r letterCopyRow) value() communication.ParentLetterCopy {
 	return communication.ParentLetterCopy{
 		AnnouncementID: r.AnnouncementID, StudentID: r.StudentID, FirstName: r.FirstName, LastName: r.LastName,
-		SchoolClass: r.SchoolClass, Body: r.Body, PublishedAt: r.PublishedAt,
+		SchoolClass: r.SchoolClass, Body: r.Body,
 	}
 }
 
@@ -62,7 +57,7 @@ func (r *announcementRepository) ReplaceParentLetterCopies(ctx context.Context, 
 	for _, c := range copies {
 		rows = append(rows, letterCopyRow{
 			TenantID: tenant, AnnouncementID: announcementID, StudentID: c.StudentID, FirstName: c.FirstName,
-			LastName: c.LastName, SchoolClass: c.SchoolClass, Body: c.Body, PublishedAt: c.PublishedAt,
+			LastName: c.LastName, SchoolClass: c.SchoolClass, Body: c.Body,
 		})
 	}
 	if _, err := db.NewInsert().Model(&rows).ModelTableExpr(letterCopyTableExpr).Returning("NULL").Exec(ctx); err != nil {
@@ -124,7 +119,7 @@ func personalLetterItems(items []*communication.PortalAnnouncementFeedItem) (map
 	byID := map[int64]*communication.PortalAnnouncementFeedItem{}
 	ids := make([]int64, 0)
 	for _, item := range items {
-		if item.DeliveryMode == letterDeliveryMode && communication.HasParentLetterPlaceholders(item.Body) {
+		if communication.IsPersonalParentLetter(item.DeliveryMode, item.Body) {
 			byID[item.ID] = item
 			ids = append(ids, item.ID)
 		}

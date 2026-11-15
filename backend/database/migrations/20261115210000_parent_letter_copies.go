@@ -45,7 +45,6 @@ CREATE TABLE users.parent_announcement_letter_copies (
 	last_name       TEXT NOT NULL DEFAULT '',
 	school_class    TEXT NOT NULL DEFAULT '',
 	body            TEXT NOT NULL,
-	published_at    TIMESTAMPTZ NOT NULL,
 	created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 	CONSTRAINT uq_parent_letter_copies_child UNIQUE (announcement_id, student_id),
 	CONSTRAINT fk_parent_letter_copies_announcement FOREIGN KEY (tenant_id, announcement_id)

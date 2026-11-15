@@ -53,7 +53,7 @@ func TestFillParentLetterFillsMultilinePlaceholders(t *testing.T) {
 	t.Parallel()
 	for _, newline := range []string{"\n", "\r\n"} {
 		body := "Hallo {{" + newline + "vorname" + newline + "}},\nAbholzeit: {{" + newline + "abholzeit" + newline + "}}\nBis bald"
-		if err := communication.CheckParentLetterPlaceholders(true, "Brief", body); err != nil {
+		if err := communication.CheckParentLetterText("Brief", body); err != nil {
 			t.Fatalf("valid whitespace in placeholders: %v", err)
 		}
 		got := communication.FillParentLetter(body, communication.ParentLetterChild{FirstName: "Lina"})
