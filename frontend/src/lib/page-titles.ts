@@ -1,9 +1,9 @@
 /**
  * Page titles (WCAG 2.4.2, #7109): every page names itself in the browser tab
- * and to screen readers as `<Seite> – <Portal> – moto`.
+ * and to screen readers as `<Seite> – moto`.
  *
  * The title belongs to the route template, not to the loaded record: a tab
- * shows „Kindakte – OGS – moto“, never a child's name. Tab titles end up in
+ * shows „Kindakte – moto“, never a child's name. Tab titles end up in
  * the browser history, bookmarks and shared screens, so they carry no
  * personal data (data minimisation), and they are there before any data has
  * loaded.
@@ -20,17 +20,6 @@ export type PageTitleSurface =
 
 /** Suffix of every title. */
 const PAGE_TITLE_BRAND = "moto";
-
-/** Portal part of the title for the German-only portals. */
-const GERMAN_PORTAL_TITLES: Readonly<
-  Record<Exclude<PageTitleSurface, "parents" | "public">, string>
-> = {
-  ogs: "OGS",
-  school: "Schule",
-  caterer: "Caterer",
-  traeger: "Träger",
-  operator: "Operator",
-};
 
 /** The tenant's catch-all 404 page (`[tenant]/[...not-found]`). */
 export const OGS_NOT_FOUND_TEMPLATE = "/:not-found*";
@@ -68,30 +57,29 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/care-offerings": "Betreuungsangebote",
     "/dashboard": "Startseite",
     "/database": "Datenverwaltung",
-    "/database/absence-types": "Abwesenheitsarten – Datenverwaltung",
-    "/database/activities": "Aktivitäten – Datenverwaltung",
-    "/database/categories": "Terminkategorien – Datenverwaltung",
-    "/database/devices": "Geräte – Datenverwaltung",
-    "/database/exports": "Exporte – Datenverwaltung",
-    "/database/grade-transitions": "Schuljahreswechsel – Datenverwaltung",
-    "/database/groups": "Gruppendaten – Datenverwaltung",
-    "/database/permissions": "Berechtigungen – Datenverwaltung",
-    "/database/personal": "Personal – Datenverwaltung",
-    "/database/personal/import": "Personal importieren – Datenverwaltung",
-    "/database/personal/opening-balances": "Eröffnungssalden – Datenverwaltung",
-    "/database/planning-tracks": "Planungsspuren – Datenverwaltung",
-    "/database/qualification-types": "Nachweisarten – Datenverwaltung",
-    "/database/qualifications": "Nachweise – Datenverwaltung",
-    "/database/roles": "Rollen – Datenverwaltung",
-    "/database/rooms": "Räume – Datenverwaltung",
-    "/database/shift-types": "Dienstarten – Datenverwaltung",
-    "/database/students": "Kinderdaten – Datenverwaltung",
-    "/database/students/class-list": "Klassenliste – Datenverwaltung",
-    "/database/students/class-list/import":
-      "Klassenliste importieren – Datenverwaltung",
-    "/database/students/ended-care": "Beendete Betreuungen – Datenverwaltung",
-    "/database/students/import": "Kinder importieren – Datenverwaltung",
-    "/database/work-time-models": "Arbeitszeitmodelle – Datenverwaltung",
+    "/database/absence-types": "Abwesenheitsarten",
+    "/database/activities": "Aktivitätsdaten",
+    "/database/categories": "Terminkategorien",
+    "/database/devices": "Geräte",
+    "/database/exports": "Exporte",
+    "/database/grade-transitions": "Schuljahreswechsel",
+    "/database/groups": "Gruppendaten",
+    "/database/permissions": "Berechtigungen",
+    "/database/personal": "Personal",
+    "/database/personal/import": "Personal importieren",
+    "/database/personal/opening-balances": "Eröffnungssalden",
+    "/database/planning-tracks": "Planungsspuren",
+    "/database/qualification-types": "Nachweisarten",
+    "/database/qualifications": "Nachweise",
+    "/database/roles": "Rollen",
+    "/database/rooms": "Raumdaten",
+    "/database/shift-types": "Dienstarten",
+    "/database/students": "Kinderdaten",
+    "/database/students/class-list": "Klassenliste",
+    "/database/students/class-list/import": "Klassenliste importieren",
+    "/database/students/ended-care": "Beendete Betreuungen",
+    "/database/students/import": "Kinder importieren",
+    "/database/work-time-models": "Arbeitszeitmodelle",
     "/dateien": "Dateien",
     "/day-log": "Tagesauswertung",
     "/dienstplan": "Dienstplan",
@@ -350,7 +338,6 @@ export const METADATA_TITLE_TEMPLATES = [
 
 /** The messages below `pageTitles` a localized surface hands to the title. */
 export interface LocalizedPageTitleMessages {
-  readonly portals: Readonly<Record<string, string>>;
   readonly pages: Readonly<Record<string, string>>;
 }
 
@@ -462,23 +449,21 @@ export function resolvePageTitle(
   );
 }
 
-/** `<Abschnitt> – <Seite> – <Portal> – moto`, without empty or repeated parts. */
+/**
+ * `<Seite> – moto`; a part of the page the address selects follows after a
+ * colon: `Kindakte: Notizen – moto`. Each portal has its own address, so the
+ * title does not name it.
+ */
 export function formatPageTitle(parts: {
   readonly page: string;
-  readonly portal?: string | null;
   readonly section?: string | null;
 }): string {
-  // A section the page title already starts with adds nothing
-  // („Klassenliste“ before „Klassenliste – Datenverwaltung“).
-  const section =
-    parts.section && parts.page.split(" – ")[0] === parts.section.trim()
-      ? null
-      : parts.section;
-  const ordered = [section, parts.page, parts.portal, PAGE_TITLE_BRAND];
-  return ordered
-    .filter((part): part is string => Boolean(part?.trim()))
-    .filter((part, index, all) => all.indexOf(part) === index)
-    .join(" – ");
+  const section = parts.section?.trim();
+  const page =
+    section && section !== parts.page
+      ? `${parts.page}: ${section}`
+      : parts.page;
+  return `${page} – ${PAGE_TITLE_BRAND}`;
 }
 
 /** The tab title of a resolved page, or null when the page sets its own. */
@@ -492,28 +477,12 @@ export function pageTitleText(
 
   const { surface, template } = resolved;
   const key = LOCALIZED_PAGE_TITLES[surface]?.[template];
-  if (key !== undefined) {
-    return formatPageTitle({
-      page: localized.pages[key] ?? PAGE_TITLE_BRAND,
-      // "OGS" is the school's own word for its care, the same in every
-      // language; only the parents portal has a translated name.
-      portal:
-        surface === "ogs"
-          ? GERMAN_PORTAL_TITLES.ogs
-          : (localized.portals[surface] ?? null),
-      section,
-    });
-  }
-  const german = GERMAN_PAGE_TITLES[surface][template];
-  if (german === undefined) return PAGE_TITLE_BRAND;
-  return formatPageTitle({
-    page: german,
-    portal:
-      surface === "public" || surface === "parents"
-        ? null
-        : GERMAN_PORTAL_TITLES[surface],
-    section,
-  });
+  const page =
+    key !== undefined
+      ? localized.pages[key]
+      : GERMAN_PAGE_TITLES[surface][template];
+  if (page === undefined) return PAGE_TITLE_BRAND;
+  return formatPageTitle({ page, section });
 }
 
 /**

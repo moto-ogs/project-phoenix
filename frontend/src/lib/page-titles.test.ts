@@ -74,7 +74,6 @@ function titledTemplates(surface: PageTitleSurface): string[] {
 }
 
 const GERMAN_MESSAGES = {
-  portals: dePageTitles.portals,
   pages: dePageTitles.pages,
 };
 
@@ -125,7 +124,8 @@ describe("page title registry", () => {
       // The Metadata API pages set their own title.
       if (ownMetadata.includes(template)) continue;
       const title = germanTabTitle(surface, template) ?? "";
-      expect(title, template).toMatch(/ – moto$/);
+      // One dash, before the brand: „Kindakte – moto“.
+      expect(title, template).toMatch(/^[^–]+ – moto$/);
       const target = aliases[template];
       if (target !== undefined) {
         expect(title).toBe(germanTabTitle(surface, target));
@@ -151,8 +151,9 @@ describe("page title registry", () => {
     (_locale, catalog) => {
       for (const titles of Object.values(LOCALIZED_PAGE_TITLES)) {
         const texts = Object.values(titles).map(
-          (key) => (catalog.pages as Record<string, string>)[key],
+          (key) => (catalog.pages as Record<string, string>)[key] ?? "",
         );
+        for (const text of texts) expect(text).not.toContain("–");
         expect(new Set(texts).size).toBe(texts.length);
       }
     },
@@ -266,9 +267,7 @@ describe("resolvePageTitle", () => {
 
 describe("pageTitleText", () => {
   it("builds page, portal and brand", () => {
-    expect(germanTabTitle("traeger", "/vertraege")).toBe(
-      "Verträge – Träger – moto",
-    );
+    expect(germanTabTitle("traeger", "/vertraege")).toBe("Verträge – moto");
     expect(germanTabTitle("public", "/start")).toBe("Erstgespräch – moto");
   });
 
@@ -278,7 +277,7 @@ describe("pageTitleText", () => {
       GERMAN_MESSAGES,
       null,
     );
-    expect(title).toBe("Kindakte – OGS – moto");
+    expect(title).toBe("Kindakte – moto");
   });
 
   it("puts the addressed tab in front", () => {
@@ -288,20 +287,19 @@ describe("pageTitleText", () => {
         GERMAN_MESSAGES,
         "Verlauf",
       ),
-    ).toBe("Verlauf – Kindakte – OGS – moto");
+    ).toBe("Kindakte: Verlauf – moto");
   });
 
-  it("translates the localized portals", () => {
+  it("translates the parents portal", () => {
     expect(
       pageTitleText(
         resolvePageTitle("parents", "/children"),
         {
-          portals: { parents: "Parents" },
           pages: { children: "Children" },
         },
         null,
       ),
-    ).toBe("Children – Parents – moto");
+    ).toBe("Children – moto");
   });
 
   it("falls back to the brand for a path no page serves", () => {
@@ -322,27 +320,21 @@ describe("pageTitleText", () => {
 });
 
 describe("formatPageTitle", () => {
-  it("drops empty and repeated parts", () => {
+  it("names the page and moto", () => {
+    expect(formatPageTitle({ page: "Preisliste", section: "" })).toBe(
+      "Preisliste – moto",
+    );
+  });
+
+  it("adds the addressed tab after a colon, once", () => {
+    expect(formatPageTitle({ page: "Kindakte", section: "Notizen" })).toBe(
+      "Kindakte: Notizen – moto",
+    );
     expect(
-      formatPageTitle({ page: "Preisliste", portal: "Träger", section: "" }),
-    ).toBe("Preisliste – Träger – moto");
-    expect(
-      formatPageTitle({
-        page: "Monatsbeiträge",
-        portal: "Träger",
-        section: "Monatsbeiträge",
-      }),
-    ).toBe("Monatsbeiträge – Träger – moto");
-    expect(
-      formatPageTitle({
-        page: "Klassenliste – Datenverwaltung",
-        portal: "OGS",
-        section: "Klassenliste",
-      }),
-    ).toBe("Klassenliste – Datenverwaltung – OGS – moto");
+      formatPageTitle({ page: "Monatsbeiträge", section: "Monatsbeiträge" }),
+    ).toBe("Monatsbeiträge – moto");
   });
 });
-
 describe("pageTitleSurfaceOf", () => {
   it("maps the request host to its portal", () => {
     expect(

@@ -44,8 +44,8 @@ export function PageTitleSectionProvider({
 
 /**
  * Puts the part of a page the address selects in front of the page title,
- * for example the tab of a record (`?tab=…`): „Verlauf – Kindakte – OGS –
- * moto“. Pass null when the address selects nothing. Without a provider
+ * for example the tab of a record (`?tab=…`): „Kindakte: Verlauf
+ * – moto“. Pass null when the address selects nothing. Without a provider
  * (tests, stories) nothing happens; the hook reads no router state itself.
  */
 export function usePageTitleSection(label: string | null | undefined): void {

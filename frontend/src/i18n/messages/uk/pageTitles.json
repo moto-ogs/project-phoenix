@@ -1,7 +1,4 @@
 {
-  "portals": {
-    "parents": "Батьки"
-  },
   "pages": {
     "start": "Головна",
     "guardianInvite": "Запрошення для батьків",

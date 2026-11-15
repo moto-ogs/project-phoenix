@@ -1,7 +1,4 @@
 {
-  "portals": {
-    "parents": "Eltern"
-  },
   "pages": {
     "start": "Start",
     "guardianInvite": "Einladung als Elternteil",

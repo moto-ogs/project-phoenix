@@ -149,7 +149,7 @@ export interface TenantPageProps extends TenantPageSearchRowProps {
     /**
      * Der Reiter steht in der Adresse (`?tab=…`), ein Lesezeichen öffnet ihn
      * also wieder. Dann trägt der Seitentitel im Browser den Reiternamen
-     * („Verlauf – Kindakte – OGS – moto“, #7109). Reiter mit `href` sind
+     * („Kindakte: Verlauf – moto“, #7109). Reiter mit `href` sind
      * eigene Adressen und brauchen die Angabe nicht.
      */
     readonly inUrl?: boolean;

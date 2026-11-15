@@ -1,7 +1,4 @@
 {
-  "portals": {
-    "parents": "Veli"
-  },
   "pages": {
     "start": "Ana sayfa",
     "guardianInvite": "Veli olarak davet",

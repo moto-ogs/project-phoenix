@@ -43,9 +43,7 @@ export async function generateMetadata({
   const { topic } = await params;
   const name = helpPageName(topic);
   return {
-    title: name
-      ? formatPageTitle({ page: name, portal: "Hilfe" })
-      : formatPageTitle({ page: "Hilfe" }),
+    title: formatPageTitle({ page: name ?? "Hilfe" }),
     description: DESCRIPTION,
   };
 }

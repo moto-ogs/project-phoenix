@@ -1,7 +1,4 @@
 {
-  "portals": {
-    "parents": "Родители"
-  },
   "pages": {
     "start": "Главная",
     "guardianInvite": "Приглашение для родителя",

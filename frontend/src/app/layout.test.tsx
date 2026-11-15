@@ -81,9 +81,7 @@ describe("RootLayout", () => {
 
     render(await RootLayout({ children: <div>Test</div> }));
 
-    await waitFor(() =>
-      expect(document.title).toBe("Kalender – Schule – moto"),
-    );
+    await waitFor(() => expect(document.title).toBe("Kalender – moto"));
   });
 
   it("renders with an unparsable Host header", async () => {

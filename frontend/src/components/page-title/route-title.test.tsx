@@ -16,7 +16,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-const MESSAGES = { portals: {}, pages: {} };
+const MESSAGES = { pages: {} };
 
 const TABS = [
   { value: "overview", label: "Überblick" },
@@ -46,27 +46,27 @@ describe("RouteTitle", () => {
       </RouteTitle>,
     );
 
-    await waitFor(() => expect(document.title).toBe("Kindakte – OGS – moto"));
+    await waitFor(() => expect(document.title).toBe("Kindakte – moto"));
   });
 
   it("puts a tab the address selects in front of the title", async () => {
     renderRecord({ value: "history", inUrl: true });
 
     await waitFor(() =>
-      expect(document.title).toBe("Verlauf – Kindakte – OGS – moto"),
+      expect(document.title).toBe("Kindakte: Verlauf – moto"),
     );
   });
 
   it("keeps a tab outside the address out of the title", async () => {
     renderRecord({ value: "history" });
 
-    await waitFor(() => expect(document.title).toBe("Kindakte – OGS – moto"));
+    await waitFor(() => expect(document.title).toBe("Kindakte – moto"));
   });
 
   it("drops the tab when its page unmounts", async () => {
     const view = renderRecord({ value: "history", inUrl: true });
     await waitFor(() =>
-      expect(document.title).toBe("Verlauf – Kindakte – OGS – moto"),
+      expect(document.title).toBe("Kindakte: Verlauf – moto"),
     );
 
     view.rerender(
@@ -75,7 +75,7 @@ describe("RouteTitle", () => {
       </RouteTitle>,
     );
 
-    await waitFor(() => expect(document.title).toBe("Kindakte – OGS – moto"));
+    await waitFor(() => expect(document.title).toBe("Kindakte – moto"));
   });
 
   // Render-Budget (#2939): RouteTitle wraps every page from the root layout,

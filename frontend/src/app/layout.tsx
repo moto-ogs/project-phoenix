@@ -114,7 +114,7 @@ async function pageTitleProps() {
   };
   return {
     hostSurface,
-    messages: messages.pageTitles ?? { portals: {}, pages: {} },
+    messages: messages.pageTitles ?? { pages: {} },
   };
 }
 
