@@ -6,7 +6,6 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 
-import { trackTenantEvent } from "~/lib/analytics";
 import { useTenantSafe } from "~/lib/tenant-context";
 
 /** Abzeichen an Glocke und „Mehr“: zwei Ziffern sind das Höchste, „9+“. */
@@ -29,6 +28,17 @@ function subscribe(listener: () => void) {
 const readOpen = () => sheetOpen;
 const readServer = () => false;
 
+/**
+ * Zählt das Öffnen der Glocke (`notification_bell_opened`, ohne Inhalte).
+ * Die Nutzungsanalyse lädt erst hier: Die Glocke steckt in der Kopfzeile
+ * jedes Portals, die Analyse-Bibliothek gehört nicht in jedes Bündel.
+ */
+export function trackBellOpened(schoolId: string) {
+  void import("~/lib/analytics").then(({ trackTenantEvent }) =>
+    trackTenantEvent("notification_bell_opened", schoolId),
+  );
+}
+
 /** Ob das Vollbild-Blatt offen ist, für `aria-expanded` an den Auslösern. */
 export function useNotificationsSheetOpen(): boolean {
   return useSyncExternalStore(subscribe, readOpen, readServer);
@@ -47,7 +57,7 @@ export function useOpenNotificationsSheet(): () => void {
   const schoolId = useAnalyticsSchoolId();
   return useCallback(() => {
     if (!sheetOpen && schoolId) {
-      trackTenantEvent("notification_bell_opened", schoolId);
+      trackBellOpened(schoolId);
     }
     setSheetOpen(true);
   }, [schoolId]);

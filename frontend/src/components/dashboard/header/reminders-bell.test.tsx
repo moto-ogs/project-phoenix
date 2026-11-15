@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen, fireEvent, within } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 
 import { ToastProvider } from "~/contexts/ToastContext";
@@ -593,8 +600,12 @@ describe("RemindersBell — Hinweise", () => {
     const bell = await openBell("Benachrichtigungen");
     expect(bell).toHaveAttribute("aria-expanded", "true");
 
-    expect(mockTrack).toHaveBeenCalledWith("notification_bell_opened", "7");
+    // The analytics library loads on demand, so the event follows the click.
+    await waitFor(() =>
+      expect(mockTrack).toHaveBeenCalledWith("notification_bell_opened", "7"),
+    );
     fireEvent.click(bell);
+    await Promise.resolve();
     expect(mockTrack).toHaveBeenCalledTimes(1);
   });
 });
@@ -616,7 +627,9 @@ describe("RemindersBell — Telefon", () => {
     ).toBeInTheDocument();
     expect(within(sheet).getByText("Kind")).toBeInTheDocument();
 
-    expect(mockTrack).toHaveBeenCalledWith("notification_bell_opened", "7");
+    await waitFor(() =>
+      expect(mockTrack).toHaveBeenCalledWith("notification_bell_opened", "7"),
+    );
 
     fireEvent.click(within(sheet).getByRole("button", { name: "Schließen" }));
     // The sheet animates out; until then Radix hides the page behind it.

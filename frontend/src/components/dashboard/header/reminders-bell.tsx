@@ -15,13 +15,13 @@ import { useCallback, useState } from "react";
 import { AnchoredPopover } from "~/components/ui/anchored-popover";
 import { Button } from "~/components/ui/button";
 import { NotificationBadge } from "~/components/ui/notification-badge";
-import { trackTenantEvent } from "~/lib/analytics";
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useNotificationFeedUnread } from "~/lib/hooks/use-notification-feed";
 import { useReminders } from "~/lib/hooks/use-reminders";
 
 import {
   NOTIFICATIONS_BADGE_MAX,
+  trackBellOpened,
   useAnalyticsSchoolId,
   useNotificationsSheetOpen,
   useOpenNotificationsSheet,
@@ -51,7 +51,7 @@ export function RemindersBell() {
   const changeOpen = useCallback(
     (next: boolean) => {
       if (next && !isOpen && schoolId) {
-        trackTenantEvent("notification_bell_opened", schoolId);
+        trackBellOpened(schoolId);
       }
       setIsOpen(next);
     },
