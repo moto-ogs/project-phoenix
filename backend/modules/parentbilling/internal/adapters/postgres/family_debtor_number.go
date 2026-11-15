@@ -153,7 +153,7 @@ func (s *Store) SetFamilyDebtorNumber(ctx context.Context, organizationID, accou
 		return parentbilling.FamilyBilling{}, err
 	}
 	row := &familyBillingRow{OrganizationID: organizationID, FamilyEmail: familyEmail, RecipientKind: parentbilling.RecipientApplicant,
-		DebtorNumber: textRef(number), LastUsedOn: &today, UpdatedByAccountID: accountRef(accountID), UpdatedAt: time.Now()}
+		DebtorNumber: textRef(number), LastUsedOn: &today, UpdatedByAccountID: accountRef(accountID)}
 	if err := db.NewInsert().Model(row).
 		On("CONFLICT (organization_id, family_email) DO UPDATE").
 		Set("debtor_number = EXCLUDED.debtor_number").Set("debtor_number_registration_id = NULL").

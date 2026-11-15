@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -41,7 +42,8 @@ func (s *ParentMandateTestSettings) TraegerTexts(_ context.Context, organization
 }
 
 // NewParentSEPAMandatesForTests binds the parents' mandates over the real
-// store with the settings of the test and the given bank-data cipher.
-func NewParentSEPAMandatesForTests(settings *ParentMandateTestSettings, cipher BankDataCipher) parentportal.SEPAMandatesPort {
-	return NewParentSEPAMandates(settings, cipher)
+// store with the settings of the test, the given bank-data cipher and the
+// test's day.
+func NewParentSEPAMandatesForTests(settings *ParentMandateTestSettings, cipher BankDataCipher, today func() calendar.Date) parentportal.SEPAMandatesPort {
+	return NewParentSEPAMandates(settings, cipher, today)
 }

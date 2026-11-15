@@ -24,6 +24,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -31,6 +32,10 @@ import (
 // catalogPhaseOfferings is Care Plan as the phase administration counts
 // and lists the offerings of a phase.
 type catalogPhaseOfferings struct{ carePlan careplan.Capability }
+
+// traegerCatalogBillingDay is the day of the Elternabrechnung in the
+// rollout tests, before the school year 2027/28 their tariffs start in.
+func traegerCatalogBillingDay() calendar.Date { return calendar.NewDate(2027, 6, 1) }
 
 func (o catalogPhaseOfferings) OfferingIDsForPhase(ctx context.Context, phaseID int64) ([]int64, error) {
 	offerings, err := o.carePlan.ListCareOfferings(ctx, careplan.CareOfferingFilter{PhaseIDs: []int64{phaseID}, Order: careplan.OfferingOrderCatalog})
@@ -71,7 +76,7 @@ func traegerCatalogRouter(t *testing.T, db *bun.DB, tariffOverride ...parentbill
 	})
 	require.NoError(t, err)
 	billing, intake := newTraegerCatalogBilling(organizations, settings, schoolSettings.Settings, presence, delivery.Module,
-		providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog, owners.CareContractTestHolidays{}, "http://parents.localhost:3000")
+		providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog, owners.CareContractTestHolidays{}, "http://parents.localhost:3000", traegerCatalogBillingDay)
 	if len(tariffOverride) > 0 {
 		billing = tariffOverride[0]
 	}
