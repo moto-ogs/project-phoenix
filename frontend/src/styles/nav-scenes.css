@@ -260,6 +260,10 @@
 /* ChartBarIcon: die Balken füllen sich nacheinander */
 [data-nav-scene="ChartBarIcon"] .ns-bar{transform-origin:0 208px} .ns-play[data-nav-scene="ChartBarIcon"] .ns-bar{animation:ns-bar 360ms var(--ns-o) calc(var(--ns-i,0)*90ms) both}
 
+/* ChartBarHorizontalIcon: die Balken wachsen nacheinander aus der Achse */
+[data-nav-scene="ChartBarHorizontalIcon"] .ns-hbar{transform-origin:48px 0} .ns-play[data-nav-scene="ChartBarHorizontalIcon"] .ns-hbar{animation:ns-hbar 380ms var(--ns-o) calc(var(--ns-i,0)*90ms) both}
+@keyframes ns-hbar{0%{transform:scaleX(0)}65%{transform:scaleX(1.12)}100%{transform:none}}
+
 /* QuestionIcon: das Fragezeichen wundert sich */
 [data-nav-scene="QuestionIcon"] .ns-wonder{transform-origin:128px 144px} .ns-play[data-nav-scene="QuestionIcon"] .ns-wonder{animation:ns-wonder 520ms var(--ns-o) both}
 @keyframes ns-wonder{0%,100%{transform:none}25%{transform:rotate(-18deg)}55%{transform:rotate(14deg)}80%{transform:rotate(-5deg)}}

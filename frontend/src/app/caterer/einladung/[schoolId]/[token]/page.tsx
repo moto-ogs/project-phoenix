@@ -35,9 +35,9 @@ import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
 import {
   acceptCatererInvitation,
   fetchCatererInvitation,
-  loginCaterer,
   type CatererInvitationPreview,
 } from "~/lib/caterer-api";
+import { portalPasswordLogin } from "~/lib/portal-password-login";
 import type { MFAStep } from "~/lib/sign-in-answer";
 import { catererPath } from "~/lib/caterer-url";
 import { PASSWORD_RULES } from "~/lib/password-rules";
@@ -218,7 +218,11 @@ function AcceptForm({
     );
     let target = catererPath("/caterer");
     try {
-      const result = await loginCaterer(invitation.email, password);
+      const result = await portalPasswordLogin(
+        "caterer",
+        invitation.email,
+        password,
+      );
       if (result.status === "mfa_required") {
         // Two-factor sign-in is on (#4497): the sign-in already mailed its
         // code, so it is asked here instead of mailing a second one.

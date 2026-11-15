@@ -5,151 +5,83 @@
 // Passkeys und Eltern-Weiche: der Backend-Login pinnt selbst die Schule, an
 // der das Konto eine Schul-Portal-Rolle hält.
 
-import { useEffect, useLayoutEffect, useRef, useState, Suspense } from "react";
-import { useSession } from "next-auth/react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AuthShell, MotoBrand } from "~/components/auth/auth-shell";
-import {
-  credentialError,
-  LOGIN_CREDENTIAL_FIELDS,
-  LOGIN_REFUSALS,
-} from "~/components/auth/credential-error";
 import { MFAChallengeForm } from "~/components/auth/mfa-challenge-form";
 import { MFAEnrollmentScreen } from "~/components/auth/mfa-enrollment-screen";
-import { PasswordResetModal } from "~/components/auth/password-reset-modal";
-import { FieldErrorHint } from "~/components/ui/field-error-hint";
+import {
+  PasswordLoginForm,
+  type PasswordCredentials,
+} from "~/components/auth/password-login-form";
 import { Alert } from "~/components/ui/alert";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import { FieldLabel } from "~/components/ui/field-label";
-import { Input } from "~/components/ui/input";
-import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { portalNotBookedExplanation } from "~/lib/portal-not-booked";
-import { hasSessionAccess } from "~/lib/session-access";
-import { requestSchoolPasswordReset } from "~/lib/auth-api";
 import { schoolPath } from "~/lib/school-url";
-import {
-  clearSessionErrorFromUrl,
-  signOutStaleSession,
-  useSessionExpiredNotice,
-} from "~/lib/login-session-notice";
+import { useLoginSessionCheck } from "~/lib/login-session-notice";
 import type { MFAStep } from "~/lib/sign-in-answer";
 import { login as loginApi } from "~/lib/mfa-api";
-import { errorStatus } from "~/lib/expected-failure";
 import { createLogger } from "~/lib/logger";
-import { Button } from "~/components/ui/button";
 import { Loading } from "~/components/ui/loading";
 
 const logger = createLogger({ component: "SchoolLoginPage" });
+
+function openSchoolPortal() {
+  window.location.href = schoolPath("/school");
+}
+
+const SHELL_COPY = {
+  title: "Willkommen im Schulportal",
+  subtitle: "Melden Sie sich mit Ihrem Konto für moto schule an.",
+} as const;
 
 interface MFAEnrollmentStep {
   enrollmentToken: string;
   email: string;
 }
 
+/** A refusal that is no error of the input, but the school's decision. */
+type SchoolRefusal = "no_portal_role" | "not_booked";
+
 function LoginForm() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  // Fehler laufen über den gemeinsamen Weg: Katalogtext je Code im
-  // Fehlerkasten des Formulars, Feldfehler am Feld.
-  const formRef = useRef<HTMLFormElement>(null);
-  const formErrors = useApiFormError(formRef);
-  const { clear: clearFormError } = formErrors;
-  const latestSubmitRef = useRef<() => void>(() => undefined);
-  const resetFormRef = useRef<HTMLFormElement>(null);
-  const resetErrors = useApiFormError(resetFormRef);
-  const [noPortalRole, setNoPortalRole] = useState(false);
-  const [portalNotBooked, setPortalNotBooked] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [refusal, setRefusal] = useState<SchoolRefusal | null>(null);
   const [awaitingRedirect, setAwaitingRedirect] = useState(false);
-  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [mfaStep, setMfaStep] = useState<MFAStep | null>(null);
   const [enrollmentStep, setEnrollmentStep] =
     useState<MFAEnrollmentStep | null>(null);
-  const searchParams = useSearchParams();
-  const [sessionExpired, setSessionExpired] =
-    useSessionExpiredNotice(searchParams);
-  const targetTenantSlug = searchParams.get("tenant") ?? undefined;
-  const { data: session, status } = useSession();
+  const targetTenantSlug = useSearchParams().get("tenant") ?? undefined;
+  const isCheckingAuth = useLoginSessionCheck({
+    logger,
+    paused: enrollmentStep !== null,
+    onAccess: openSchoolPortal,
+  });
 
-  const isCleaningSessionRef = useRef(false);
-
-  useEffect(() => {
-    const checkAndRedirect = async () => {
-      const cleanup = signOutStaleSession({
-        status,
-        session,
-        started: isCleaningSessionRef,
-        logger,
-      });
-      if (cleanup) {
-        await cleanup;
-        setCheckingAuth(false);
-        return;
-      }
-
-      // The layout's server snapshot carries no token (#4991) and redirects
-      // too; a stripped session (empty token) stays on the form.
-      if (
-        status === "authenticated" &&
-        hasSessionAccess(session) &&
-        !enrollmentStep
-      ) {
-        window.location.href = schoolPath("/school");
-        return;
-      }
-
-      if (status !== "loading") {
-        setCheckingAuth(false);
-      }
-    };
-
-    void checkAndRedirect();
-  }, [status, session, enrollmentStep]);
-
-  const isCheckingAuth = checkingAuth || status === "loading";
-  const isSubmitting = isLoading || awaitingRedirect;
-
-  const completeLogin = async () => {
-    clearSessionErrorFromUrl();
+  const completeLogin = () => {
     setAwaitingRedirect(true);
     window.location.href = schoolPath("/school");
   };
 
-  const handleMFASuccess = async () => {
-    await completeLogin();
-    setMfaStep(null);
-  };
-
-  const submit = async () => {
-    setIsLoading(true);
-    formErrors.clear();
-    setSessionExpired(false);
-    setNoPortalRole(false);
-    setPortalNotBooked(false);
-
+  const submit = async (credentials: PasswordCredentials) => {
+    setRefusal(null);
+    setEmail(credentials.email);
     try {
       const response = await loginApi("school", {
-        email,
-        password,
+        ...credentials,
         tenantSlug: targetTenantSlug,
       });
-
       if (response.status === "mfa_required") {
         setMfaStep(response);
         return;
       }
-
       if (response.status === "mfa_enrollment_required") {
         setEnrollmentStep({
           enrollmentToken: response.enrollmentToken,
-          email,
+          email: credentials.email,
         });
         return;
       }
-
-      await completeLogin();
+      completeLogin();
     } catch (err) {
       // Konto ohne Schul-Portal-Rolle: das Passwort war korrekt, die
       // Ablehnung kommt von der Rolle — die spezifische Meldung verrät
@@ -158,202 +90,65 @@ function LoginForm() {
         err instanceof ApiError &&
         err.code === "school.no_school_portal_role"
       ) {
-        setNoPortalRole(true);
+        setRefusal("no_portal_role");
         return;
       }
       // Die Schule nutzt moto schule nicht (#4895): erklärt, kein Fehler.
       if (err instanceof ApiError && err.code === "module.not_booked") {
-        setPortalNotBooked(true);
+        setRefusal("not_booked");
         return;
       }
-
-      // Ein falsches Passwort, ein ausgeschaltetes Konto oder zu viele
-      // Versuche haben eigene Katalogtexte (#3376). Vor der Anmeldung heißt
-      // 401 "abgelehnt", nicht "Sitzung abgelaufen".
-      void formErrors.show(
-        credentialError(err, LOGIN_REFUSALS, LOGIN_CREDENTIAL_FIELDS),
-        {
-          object: "die Anmeldung",
-          retry: () => latestSubmitRef.current(),
-        },
-      );
-      logger.error("school login failed", {
-        error: err instanceof Error ? err.message : String(err),
-        status: errorStatus(err),
-      });
-    } finally {
-      setIsLoading(false);
+      throw err;
     }
   };
 
-  // „Wiederholen“ sendet den Stand, der dann im Formular steht.
-  useLayoutEffect(() => {
-    latestSubmitRef.current = () => void submit();
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    void submit();
-  };
-
   return (
-    <>
-      <AuthShell
-        title="Willkommen im Schulportal"
-        subtitle="Melden Sie sich mit Ihrem Konto für moto schule an."
-        variant="tenant"
-        brand={<MotoBrand />}
-      >
-        {isCheckingAuth && <Loading message="Sitzung wird überprüft..." />}
-
-        <div
-          className={`transition-opacity duration-300 ${isCheckingAuth ? "pointer-events-none hidden" : "opacity-100"}`}
-        >
-          {mfaStep ? (
-            <MFAChallengeForm
-              scope="school"
-              challengeToken={mfaStep.challengeToken}
-              maskedEmail={mfaStep.maskedEmail}
-              trustedDeviceEnabled={mfaStep.trustedDeviceEnabled}
-              trustedDeviceDays={mfaStep.trustedDeviceDays}
-              onSuccess={handleMFASuccess}
-              onCancel={() => {
-                setMfaStep(null);
-                clearFormError();
-                setPassword("");
-              }}
-            />
-          ) : enrollmentStep ? (
-            <MFAEnrollmentScreen
-              scope="school"
-              bearerToken={enrollmentStep.enrollmentToken}
-              userEmail={enrollmentStep.email}
-              onExit={() => {
-                setEnrollmentStep(null);
-                clearFormError();
-                setPassword("");
-              }}
-              onComplete={async () => {
-                setEnrollmentStep(null);
-                await completeLogin();
-              }}
-            />
-          ) : (
-            <form
-              ref={formRef}
-              onSubmit={handleSubmit}
-              noValidate
-              className="space-y-6"
-            >
-              {portalNotBooked ? (
-                <Alert
-                  type="info"
-                  message={portalNotBookedExplanation("school", "de")}
-                />
-              ) : noPortalRole ? (
-                <Alert
-                  type="info"
-                  message="Dieses Konto hat keinen Zugang zum Schul-Portal. Bitte wenden Sie sich an Ihre OGS-Verwaltung."
-                />
-              ) : formErrors.error ? (
-                <FormErrorAlert message={formErrors.error} />
-              ) : sessionExpired ? (
-                <Alert
-                  type="info"
-                  message="Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
-                />
-              ) : null}
-
-              <div className="space-y-4">
-                <div className="text-left">
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    label="E-Mail-Adresse"
-                    controlSize="compact"
-                    data-testid="input-email"
-                    autoComplete="username"
-                    required
-                    disabled={isSubmitting}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    error={formErrors.fieldError("email")}
-                  />
-                </div>
-
-                <div className="text-left">
-                  <FieldLabel
-                    htmlFor="password"
-                    required
-                    invalid={Boolean(formErrors.fieldError("password"))}
-                  >
-                    Passwort
-                  </FieldLabel>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    controlSize="compact"
-                    data-testid="input-password"
-                    autoComplete="current-password"
-                    required
-                    disabled={isSubmitting}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    aria-invalid={Boolean(formErrors.fieldError("password"))}
-                    aria-describedby={
-                      formErrors.fieldError("password")
-                        ? "password-error"
-                        : undefined
-                    }
-                    revealable
-                  />
-                  <FieldErrorHint
-                    id="password-error"
-                    message={formErrors.fieldError("password")}
-                  />
-                </div>
-
-                <div className="text-center">
-                  <Button
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={() => setIsResetModalOpen(true)}
-                    variant="link"
-                    size="md"
-                  >
-                    Passwort vergessen?
-                  </Button>
-                </div>
-              </div>
-
-              <div className="mt-2">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  variant="primary"
-                  size="field"
-                  className="w-full"
-                >
-                  <span className="relative z-10">
-                    {isSubmitting ? "Anmeldung läuft..." : "Anmelden"}
-                  </span>
-                </Button>
-              </div>
-            </form>
-          )}
-        </div>
-      </AuthShell>
-
-      <PasswordResetModal
-        isOpen={isResetModalOpen}
-        onClose={() => setIsResetModalOpen(false)}
-        onRequestReset={requestSchoolPasswordReset}
-        errorPath={resetErrors}
-        formRef={resetFormRef}
-      />
-    </>
+    <AuthShell {...SHELL_COPY} variant="tenant" brand={<MotoBrand />}>
+      {isCheckingAuth ? (
+        <Loading message="Sitzung wird überprüft …" />
+      ) : mfaStep ? (
+        <MFAChallengeForm
+          scope="school"
+          challengeToken={mfaStep.challengeToken}
+          maskedEmail={mfaStep.maskedEmail}
+          trustedDeviceEnabled={mfaStep.trustedDeviceEnabled}
+          trustedDeviceDays={mfaStep.trustedDeviceDays}
+          onSuccess={completeLogin}
+          onCancel={() => setMfaStep(null)}
+        />
+      ) : enrollmentStep ? (
+        <MFAEnrollmentScreen
+          scope="school"
+          bearerToken={enrollmentStep.enrollmentToken}
+          userEmail={enrollmentStep.email}
+          onExit={() => setEnrollmentStep(null)}
+          onComplete={() => {
+            setEnrollmentStep(null);
+            completeLogin();
+          }}
+        />
+      ) : (
+        <PasswordLoginForm
+          portal="school"
+          onSubmit={submit}
+          defaultEmail={email}
+          leaving={awaitingRedirect}
+          refusal={
+            refusal === "not_booked" ? (
+              <Alert
+                type="info"
+                message={portalNotBookedExplanation("school", "de")}
+              />
+            ) : refusal === "no_portal_role" ? (
+              <Alert
+                type="info"
+                message="Dieses Konto hat keinen Zugang zum Schul-Portal. Bitte wenden Sie sich an Ihre OGS-Verwaltung."
+              />
+            ) : undefined
+          }
+        />
+      )}
+    </AuthShell>
   );
 }
 
@@ -361,12 +156,7 @@ export default function SchoolLoginPage() {
   return (
     <Suspense
       fallback={
-        <AuthShell
-          title="Willkommen im Schulportal"
-          subtitle="Melden Sie sich mit Ihrem Konto für moto schule an."
-          variant="tenant"
-          brand={<MotoBrand />}
-        >
+        <AuthShell {...SHELL_COPY} variant="tenant" brand={<MotoBrand />}>
           <Loading message="Anmeldung wird vorbereitet …" />
         </AuthShell>
       }

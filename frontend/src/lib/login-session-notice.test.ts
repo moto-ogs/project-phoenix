@@ -1,10 +1,17 @@
 import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { signOut } = vi.hoisted(() => ({ signOut: vi.fn() }));
-vi.mock("next-auth/react", () => ({ signOut }));
+const { signOut, useSession } = vi.hoisted(() => ({
+  signOut: vi.fn(),
+  useSession: vi.fn(),
+}));
+vi.mock("next-auth/react", () => ({ signOut, useSession }));
 
-import { signOutStaleSession } from "./login-session-notice";
+import { renderHook } from "@testing-library/react";
+import {
+  signOutStaleSession,
+  useLoginSessionCheck,
+} from "./login-session-notice";
 
 const stale = { error: "RefreshTokenExpired" } as unknown as Session;
 const healthy = { user: { id: "1" } } as unknown as Session;
@@ -38,7 +45,9 @@ describe("signOutStaleSession", () => {
     const input = { status: "authenticated", session: stale, started, logger };
 
     const cleanup = signOutStaleSession({ ...input, status: "authenticated" });
-    expect(signOutStaleSession({ ...input, status: "authenticated" })).toBeNull();
+    expect(
+      signOutStaleSession({ ...input, status: "authenticated" }),
+    ).toBeNull();
     await cleanup;
 
     expect(signOut).toHaveBeenCalledTimes(1);
@@ -73,5 +82,24 @@ describe("signOutStaleSession", () => {
       logger,
     });
     expect(signOut).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("useLoginSessionCheck", () => {
+  // useSession's update() after a sign-in loads again; the step waiting for
+  // it must stay on screen.
+  it("keeps the check done when the session loads again", () => {
+    useSession.mockReturnValue({ data: null, status: "unauthenticated" });
+    const onAccess = vi.fn();
+    const { result, rerender } = renderHook(() =>
+      useLoginSessionCheck({ logger: { warn: vi.fn() }, onAccess }),
+    );
+    expect(result.current).toBe(false);
+
+    useSession.mockReturnValue({ data: null, status: "loading" });
+    rerender();
+
+    expect(result.current).toBe(false);
+    expect(onAccess).not.toHaveBeenCalled();
   });
 });

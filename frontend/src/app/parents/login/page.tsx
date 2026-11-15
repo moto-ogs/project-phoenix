@@ -1,36 +1,26 @@
 "use client";
 
-import {
-  Suspense,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 // eslint-disable-next-line no-restricted-imports -- parent routes are not tenant-scoped
 import { redirect, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Alert } from "~/components/ui/alert";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import { FieldErrorHint } from "~/components/ui/field-error-hint";
-import { FieldLabel } from "~/components/ui/field-label";
-import { Input } from "~/components/ui/input";
 import {
   AuthShell,
   AuthShellSkeleton,
   MotoBrand,
 } from "~/components/auth/auth-shell";
 import { buildParentAuthShellCopy } from "~/components/auth/parent-auth-shell-copy";
-import { PasswordResetModal } from "~/components/auth/password-reset-modal";
+import {
+  PasswordLoginForm,
+  type PasswordCredentials,
+  type PasswordLoginCopy,
+} from "~/components/auth/password-login-form";
 import { LanguageSwitcher } from "~/components/parent/language-switcher";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError, unavailableApiError } from "~/lib/api-error";
-import {
-  credentialError,
-  LOGIN_CREDENTIAL_FIELDS,
-} from "~/components/auth/credential-error";
 import {
   MFAChallengeForm,
   type MFAChallengeCopy,
@@ -39,14 +29,11 @@ import { signOutStaleSession } from "~/lib/login-session-notice";
 import { portalPasswordLogin } from "~/lib/portal-password-login";
 import type { MFAStep } from "~/lib/sign-in-answer";
 import { createLogger } from "~/lib/logger";
-import type { ErrorCode } from "~/lib/error-codes.generated";
-import { requestParentPasswordReset } from "~/lib/auth-api";
 import { parentPath } from "~/lib/parent-url";
 import { holidayRegistrationReturnPath } from "~/lib/parent-holiday-registration";
 import { portalNotBookedExplanation } from "~/lib/portal-not-booked";
 import { normalizeLocale } from "~/i18n/locales";
 import { clientEnv } from "~/env.client";
-import { Button } from "~/components/ui/button";
 
 const logger = createLogger({ component: "ParentLoginPage" });
 
@@ -63,26 +50,6 @@ function staffLoginUrl(): string {
   const portSuffix = window.location.port ? `:${window.location.port}` : "";
   return `${window.location.protocol}//${clientEnv.NEXT_PUBLIC_TENANT_DOMAIN}${portSuffix}/`;
 }
-
-/**
- * The 401 refusals of the parents' password and code steps: a wrong password
- * names the care code the page has always shown (portalauth ParentLoginRules).
- */
-const PARENT_LOGIN_REFUSALS = [
-  "care.invalid_credentials",
-  "identity.invalid_credentials",
-  "identity.session_account_inactive",
-] as const;
-
-/**
- * The refusals that mean "this address and password do not match". Only
- * these lead from the error to the password reset: an inactive account gets
- * no new password that way (#3376).
- */
-const WRONG_PASSWORD_REFUSALS: readonly ErrorCode[] = [
-  "care.invalid_credentials",
-  "identity.invalid_credentials",
-];
 
 type ParentSignInTranslate = ReturnType<typeof useTranslations<"parentSignIn">>;
 
@@ -115,6 +82,44 @@ function challengeCopy(t: ParentSignInTranslate): MFAChallengeCopy {
   };
 }
 
+/** The password step in the parent's language. */
+function loginCopy(
+  t: ReturnType<typeof useTranslations<"parentLogin">>,
+  tErrorCatalog: ReturnType<typeof useTranslations<"errorCatalog">>,
+  tReset: ReturnType<typeof useTranslations<"parentPasswordResetModal">>,
+): PasswordLoginCopy {
+  return {
+    emailLabel: t("emailLabel"),
+    passwordLabel: t("passwordLabel"),
+    showPassword: t("showPassword"),
+    hidePassword: t("hidePassword"),
+    forgotPassword: t("forgotPassword"),
+    submit: t("submit"),
+    submitting: t("submitting"),
+    errorObject: t("errorObject"),
+    missingEmail: t("errors.missingEmail"),
+    missingPassword: t("errors.missingPassword"),
+    missingCredentials: t("errors.missingCredentials"),
+    rateLimited: t("errors.rateLimited"),
+    sessionExpired: tErrorCatalog("loginNotice"),
+    reset: {
+      title: tReset("title"),
+      description: tReset("description"),
+      emailLabel: tReset("emailLabel"),
+      invalidEmail: tReset("invalidEmail"),
+      cancel: tReset("cancel"),
+      submit: tReset("submit"),
+      submitting: tReset("submitting"),
+      successTitle: tReset("successTitle"),
+      successMessage: tReset("successMessage"),
+      successHint: tReset("successHint"),
+      close: tReset("close"),
+      errorObject: tReset("errorObject"),
+      rateLimitWait: (countdown) => tReset("rateLimitWait", { countdown }),
+    },
+  };
+}
+
 export default function ParentLoginPage() {
   // useSearchParams verlangt eine Suspense-Grenze (siehe frontend/CLAUDE.md).
   return (
@@ -124,6 +129,9 @@ export default function ParentLoginPage() {
   );
 }
 
+/** A refusal that is no error of the input: the wrong place or the school. */
+type ParentRefusal = "staff_account" | "not_booked";
+
 function ParentLoginForm() {
   const t = useTranslations("parentLogin");
   const tErrorCatalog = useTranslations("errorCatalog");
@@ -131,34 +139,22 @@ function ParentLoginForm() {
   const tReset = useTranslations("parentPasswordResetModal");
   const tSignIn = useTranslations("parentSignIn");
   const mfaCopy = useMemo(() => challengeCopy(tSignIn), [tSignIn]);
+  const formCopy = useMemo(
+    () => loginCopy(t, tErrorCatalog, tReset),
+    [t, tErrorCatalog, tReset],
+  );
   // Where the account has the code by e-mail switched on (#7051), the
   // password leads to this second step.
   const [mfaStep, setMfaStep] = useState<MFAStep | null>(null);
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  // Fehler laufen über den gemeinsamen Weg (#2518): Katalogtext je Code im
-  // Fehlerkasten des Formulars, in der Sprache der Eltern.
-  const formRef = useRef<HTMLFormElement>(null);
-  const formErrors = useApiFormError(formRef);
-  const latestSubmitRef = useRef<() => void>(() => undefined);
-  const resetFormRef = useRef<HTMLFormElement>(null);
-  const resetErrors = useApiFormError(resetFormRef);
-  // Ein Personal-Konto: kein Fehler der Eingabe, sondern der falsche Ort. Der
-  // Hinweis bringt den Link zur Schul-Anmeldung mit.
-  const [isStaffAccount, setIsStaffAccount] = useState(false);
-  // Keine Schule des Kontos nutzt das Elternportal (#4895): kein Fehler der
-  // Eingabe, die Schule entscheidet.
-  const [portalNotBooked, setPortalNotBooked] = useState(false);
-  // Address and password did not match: the error offers the reset with
-  // the address already typed (#7106).
-  const [passwordRefused, setPasswordRefused] = useState(false);
+  const [refusal, setRefusal] = useState<ParentRefusal | null>(null);
+  // A stale session that could not be ended keeps the form locked.
+  const cleanupErrors = useApiFormError();
+  const { show: showCleanupError } = cleanupErrors;
   const locale = normalizeLocale(useLocale());
-  const [isLoading, setIsLoading] = useState(false);
-  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-  // Gesetzt, wenn die Personal-Anmeldung ein Elternkonto hierher geschickt hat.
   const searchParams = useSearchParams();
+  // Gesetzt, wenn die Personal-Anmeldung ein Elternkonto hierher geschickt hat.
   const cameFromStaffLogin = searchParams.get("from") === "staff";
-  const sessionExpired = searchParams.get("error") === "SessionExpired";
   // Die Ferienanmeldung schickt Eltern mit Konto hierher und will sie nach
   // dem Login wieder im Formular haben (#6671). Nur dieses eine Ziel gilt.
   const returnPath = holidayRegistrationReturnPath(searchParams.get("next"));
@@ -173,8 +169,6 @@ function ParentLoginForm() {
   const cleanupStartedRef = useRef(false);
   const [cleanupAttempt, setCleanupAttempt] = useState(0);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
-  const { error: formError, show: showFormError } = formErrors;
-  const hasError = Boolean(formError) || isStaffAccount || portalNotBooked;
   const testimonialPanelCopy = useMemo(
     () => buildParentAuthShellCopy(tAuthShell),
     [tAuthShell],
@@ -202,8 +196,7 @@ function ParentLoginForm() {
       // The stale session keeps the form locked: say so, and let
       // Wiederholen run the cleanup again.
       onFailure: (cause) => {
-        setPasswordRefused(false);
-        void showFormError(unavailableApiError(cause), {
+        void showCleanupError(unavailableApiError(cause), {
           object: t("errorObject"),
           retry: () => setCleanupAttempt((current) => current + 1),
         });
@@ -212,7 +205,7 @@ function ParentLoginForm() {
     if (!cleanup) return;
     setIsCleaningUp(true);
     void cleanup.then(() => setIsCleaningUp(false));
-  }, [status, session, cleanupAttempt, showFormError, t]);
+  }, [status, session, cleanupAttempt, showCleanupError, t]);
 
   // Ein Elternteil, das bereits angemeldet ist und /login direkt aufruft,
   // geht in die App. Nach einer Anmeldung hier lädt completeLogin die App
@@ -227,118 +220,76 @@ function ParentLoginForm() {
     window.location.href = returnPath ?? parentPath("/parents");
   };
 
-  const submit = async () => {
-    if (isSessionSettling) return;
-    setIsLoading(true);
-    formErrors.clear();
-    setIsStaffAccount(false);
-    setPortalNotBooked(false);
-    setPasswordRefused(false);
-
+  const submit = async (credentials: PasswordCredentials) => {
+    setRefusal(null);
+    cleanupErrors.clear();
+    setEmail(credentials.email);
     try {
-      const result = await portalPasswordLogin("parent", email, password);
+      const result = await portalPasswordLogin(
+        "parent",
+        credentials.email,
+        credentials.password,
+      );
       if (result.status === "mfa_required") {
         setMfaStep(result);
-        setIsLoading(false);
         return;
       }
-      // isLoading bleibt stehen: Das Formular bleibt bis zur Navigation
-      // gesperrt, damit niemand ein zweites Mal absendet.
       completeLogin();
     } catch (err) {
-      setIsLoading(false);
       // The 403 follows a correct password check, so naming a staff
       // account tells a stranger nothing.
       if (err instanceof ApiError && err.code === "care.not_a_guardian") {
-        setIsStaffAccount(true);
+        setRefusal("staff_account");
         return;
       }
+      // Keine Schule des Kontos nutzt das Elternportal (#4895): kein Fehler
+      // der Eingabe, die Schule entscheidet.
       if (err instanceof ApiError && err.code === "module.not_booked") {
-        setPortalNotBooked(true);
+        setRefusal("not_booked");
         return;
       }
-      if (err instanceof ApiError && err.status === 429) {
-        formErrors.invalid(t("errors.rateLimited"));
-        return;
-      }
-      setPasswordRefused(
-        err instanceof ApiError &&
-          err.status === 401 &&
-          err.code !== undefined &&
-          WRONG_PASSWORD_REFUSALS.includes(err.code),
-      );
-      void formErrors.show(
-        err instanceof ApiError
-          ? credentialError(err, PARENT_LOGIN_REFUSALS, LOGIN_CREDENTIAL_FIELDS)
-          : unavailableApiError(err),
-        {
-          object: t("errorObject"),
-          retry: () => latestSubmitRef.current(),
-        },
-      );
+      throw err;
     }
   };
 
-  const backToCredentials = () => {
-    setMfaStep(null);
-    setPassword("");
-    setPasswordRefused(false);
-    formErrors.clear();
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    void submit();
-  };
-
-  // „Wiederholen“ sendet, was dann in den Feldern steht.
-  useLayoutEffect(() => {
-    latestSubmitRef.current = () => void submit();
-  });
-
   return (
-    <>
-      <AuthShell
-        eyebrow={t("eyebrow")}
-        title={t("title")}
-        subtitle={t("subtitle")}
-        variant="parents"
-        brand={<MotoBrand />}
-        footer={<LanguageSwitcher />}
-        testimonialPanelCopy={testimonialPanelCopy}
-      >
-        {mfaStep ? (
-          <MFAChallengeForm
-            scope="parent"
-            copy={mfaCopy}
-            challengeToken={mfaStep.challengeToken}
-            maskedEmail={mfaStep.maskedEmail}
-            trustedDeviceEnabled={mfaStep.trustedDeviceEnabled}
-            trustedDeviceDays={mfaStep.trustedDeviceDays}
-            onSuccess={completeLogin}
-            onCancel={backToCredentials}
-          />
-        ) : (
-          <form
-            ref={formRef}
-            onSubmit={handleSubmit}
-            noValidate
-            className="space-y-6"
-            aria-busy={isSessionSettling || undefined}
-          >
-            {cameFromStaffLogin && !hasError && (
-              <Alert type="info" message={t("fromStaffBanner")} />
-            )}
-            {sessionExpired && !hasError && (
-              <Alert type="info" message={tErrorCatalog("loginNotice")} />
-            )}
-
-            {portalNotBooked ? (
+    <AuthShell
+      eyebrow={t("eyebrow")}
+      title={t("title")}
+      subtitle={t("subtitle")}
+      variant="parents"
+      brand={<MotoBrand />}
+      footer={<LanguageSwitcher />}
+      testimonialPanelCopy={testimonialPanelCopy}
+    >
+      {mfaStep ? (
+        <MFAChallengeForm
+          scope="parent"
+          copy={mfaCopy}
+          challengeToken={mfaStep.challengeToken}
+          maskedEmail={mfaStep.maskedEmail}
+          trustedDeviceEnabled={mfaStep.trustedDeviceEnabled}
+          trustedDeviceDays={mfaStep.trustedDeviceDays}
+          onSuccess={completeLogin}
+          onCancel={() => setMfaStep(null)}
+        />
+      ) : (
+        <PasswordLoginForm
+          portal="parent"
+          copy={formCopy}
+          onSubmit={submit}
+          defaultEmail={email}
+          locked={isSessionSettling}
+          leaving={awaitingRedirect}
+          refusal={
+            cleanupErrors.error ? (
+              <FormErrorAlert message={cleanupErrors.error} />
+            ) : refusal === "not_booked" ? (
               <Alert
                 type="info"
                 message={portalNotBookedExplanation("parent", locale)}
               />
-            ) : isStaffAccount ? (
+            ) : refusal === "staff_account" ? (
               <Alert
                 type="info"
                 message={t("errors.notAGuardian")}
@@ -353,128 +304,15 @@ function ParentLoginForm() {
                   ) : undefined
                 }
               />
-            ) : (
-              <FormErrorAlert
-                message={formErrors.error}
-                action={
-                  passwordRefused ? (
-                    <Button
-                      type="button"
-                      variant="link_tone"
-                      size="compact"
-                      onClick={() => setIsResetModalOpen(true)}
-                      className="-ml-2.5 self-start"
-                    >
-                      {tReset("title")}
-                    </Button>
-                  ) : undefined
-                }
-              />
-            )}
-
-            <div className="space-y-4">
-              <div className="text-left">
-                <Input
-                  id="parent-email"
-                  name="email"
-                  type="email"
-                  label={t("emailLabel")}
-                  controlSize="compact"
-                  autoComplete="username"
-                  required
-                  disabled={isSessionSettling}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  error={formErrors.fieldError("email")}
-                />
-              </div>
-
-              <div className="text-left">
-                <FieldLabel
-                  htmlFor="parent-password"
-                  required
-                  invalid={Boolean(formErrors.fieldError("password"))}
-                >
-                  {t("passwordLabel")}
-                </FieldLabel>
-                <Input
-                  id="parent-password"
-                  name="password"
-                  type="password"
-                  controlSize="compact"
-                  autoComplete="current-password"
-                  required
-                  disabled={isSessionSettling}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  aria-invalid={Boolean(formErrors.fieldError("password"))}
-                  aria-describedby={
-                    formErrors.fieldError("password")
-                      ? "parent-password-error"
-                      : undefined
-                  }
-                  revealable
-                  showPasswordLabel={t("showPassword")}
-                  hidePasswordLabel={t("hidePassword")}
-                />
-                <FieldErrorHint
-                  id="parent-password-error"
-                  message={formErrors.fieldError("password")}
-                />
-              </div>
-
-              <div className="text-center">
-                <Button
-                  type="button"
-                  variant="link"
-                  size="md"
-                  disabled={isLoading || isSessionSettling}
-                  onClick={() => setIsResetModalOpen(true)}
-                >
-                  {t("forgotPassword")}
-                </Button>
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={isLoading || isSessionSettling}
-              variant="primary"
-              size="field"
-              className="w-full"
-            >
-              <span className="relative z-10">
-                {isLoading ? t("submitting") : t("submit")}
-              </span>
-            </Button>
-          </form>
-        )}
-      </AuthShell>
-
-      <PasswordResetModal
-        isOpen={isResetModalOpen}
-        onClose={() => setIsResetModalOpen(false)}
-        onRequestReset={requestParentPasswordReset}
-        initialEmail={email}
-        rateLimitStorageKey="parentPasswordResetRateLimitUntil"
-        errorPath={resetErrors}
-        formRef={resetFormRef}
-        copy={{
-          title: tReset("title"),
-          description: tReset("description"),
-          emailLabel: tReset("emailLabel"),
-          invalidEmail: tReset("invalidEmail"),
-          cancel: tReset("cancel"),
-          submit: tReset("submit"),
-          submitting: tReset("submitting"),
-          successTitle: tReset("successTitle"),
-          successMessage: tReset("successMessage"),
-          successHint: tReset("successHint"),
-          close: tReset("close"),
-          errorObject: tReset("errorObject"),
-          rateLimitWait: (countdown) => tReset("rateLimitWait", { countdown }),
-        }}
-      />
-    </>
+            ) : undefined
+          }
+          notice={
+            cameFromStaffLogin ? (
+              <Alert type="info" message={t("fromStaffBanner")} />
+            ) : undefined
+          }
+        />
+      )}
+    </AuthShell>
   );
 }

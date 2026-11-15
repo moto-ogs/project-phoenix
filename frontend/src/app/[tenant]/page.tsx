@@ -1,31 +1,20 @@
-// [tenant]/page.tsx, tenant-scoped login page
 "use client";
 
 import type { ErrorCode } from "~/lib/error-codes.generated";
-import { useState, useEffect, useLayoutEffect, useRef, Suspense } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { FieldErrorHint } from "~/components/ui/field-error-hint";
-import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { Alert } from "~/components/ui/alert";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import { FieldLabel } from "~/components/ui/field-label";
-import { Input } from "~/components/ui/input";
-import {
-  credentialError,
-  LOGIN_CREDENTIAL_FIELDS,
-  LOGIN_REFUSALS,
-  PASSKEY_LOGIN_REFUSALS,
-} from "~/components/auth/credential-error";
-import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { trackTenantEvent } from "~/lib/analytics";
 import { SmartRedirect } from "~/components/auth/smart-redirect";
 import { AuthShell, MotoBrand } from "~/components/auth/auth-shell";
 import { MFAChallengeForm } from "~/components/auth/mfa-challenge-form";
 import { MFAEnrollmentScreen } from "~/components/auth/mfa-enrollment-screen";
-import { TenantPasswordResetModal } from "~/components/auth/tenant-password-reset-modal";
+import {
+  PasswordLoginForm,
+  type PasswordCredentials,
+} from "~/components/auth/password-login-form";
 import { useTenant } from "~/lib/tenant-context";
 import { loginImageSrc } from "~/lib/tenant-api";
 import { useTenantRouter } from "~/lib/tenant-router";
@@ -33,23 +22,11 @@ import { parentsPortalLoginUrl } from "~/lib/parent-url";
 import { schoolPortalLoginUrl } from "~/lib/school-url";
 import { isSchoolPortalHandoffPath } from "~/lib/redirect-utils";
 import { hasSessionAccess } from "~/lib/session-access";
-import {
-  clearSessionErrorFromUrl,
-  signOutStaleSession,
-  useSessionExpiredNotice,
-} from "~/lib/login-session-notice";
+import { useLoginSessionCheck } from "~/lib/login-session-notice";
 import type { MFAStep } from "~/lib/sign-in-answer";
 import { login as loginApi } from "~/lib/mfa-api";
-import {
-  isPasskeySupported,
-  isPasskeyCeremonyIncompleteError,
-  loginWithPasskey,
-} from "~/lib/passkey-api";
-
-import { errorStatus } from "~/lib/expected-failure";
+import { loginWithPasskey } from "~/lib/passkey-api";
 import { createLogger } from "~/lib/logger";
-import { passkeysConcept } from "~/lib/concepts/passkeys";
-import { Button } from "~/components/ui/button";
 import { Loading } from "~/components/ui/loading";
 import { SpinnerIcon } from "~/components/ui/icons";
 
@@ -110,36 +87,32 @@ interface MFAEnrollmentStep {
   email: string;
 }
 
-function LoginForm() {
+export default function HomePage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  // Fehler laufen über den gemeinsamen Weg (#2517): Katalogtext je Code im
-  // Fehlerkasten des Formulars, Feldfehler am Feld.
-  const formRef = useRef<HTMLFormElement>(null);
-  const formErrors = useApiFormError(formRef);
-  const { clear: clearFormError } = formErrors;
-  const latestSubmitRef = useRef<() => void>(() => undefined);
-  const latestPasskeyRef = useRef<() => void>(() => undefined);
-  const [isLoading, setIsLoading] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
   const [awaitingRedirect, setAwaitingRedirect] = useState(false);
-  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [mfaStep, setMfaStep] = useState<MFAStep | null>(null);
   const [enrollmentStep, setEnrollmentStep] =
     useState<MFAEnrollmentStep | null>(null);
   const [wrongPortalHint, setWrongPortalHint] =
     useState<WrongPortalHint | null>(null);
-  const [passkeySupported, setPasskeySupported] = useState(false);
   const router = useTenantRouter();
   const { tenantSlug, tenant } = useTenant();
-  const searchParams = useSearchParams();
-  const [sessionExpired, setSessionExpired] =
-    useSessionExpiredNotice(searchParams);
   const { data: session, status, update } = useSession();
   const loginTitle = tenant?.name?.trim() ? tenant.name : "Willkommen bei moto";
   const tenantLoginImageUrl = tenant?.settings?.loginImageUrl;
   const hasTenantLoginLogo = Boolean(tenantLoginImageUrl);
   const analyticsSchoolId = tenant?.tenantId?.toString() ?? null;
+  // moto schule opens with this school picked.
+  const schoolHandoffQuery = `?from=staff&tenant=${encodeURIComponent(tenantSlug)}`;
+  const prepareSmartRedirect = useCallback(() => {
+    logger.debug("valid session found, preparing smart redirect");
+    setAwaitingRedirect(true);
+  }, []);
+  const isCheckingAuth = useLoginSessionCheck({
+    logger,
+    paused: enrollmentStep !== null,
+    onAccess: prepareSmartRedirect,
+  });
 
   const trackLoginEvent = (
     event: "login_failed",
@@ -149,58 +122,12 @@ function LoginForm() {
     trackTenantEvent(event, analyticsSchoolId, props);
   };
 
-  const isCleaningSessionRef = useRef(false);
-
-  // Check for valid session
-  useEffect(() => {
-    setPasskeySupported(isPasskeySupported());
-  }, []);
-
-  useEffect(() => {
-    const checkAndRedirect = async () => {
-      const cleanup = signOutStaleSession({
-        status,
-        session,
-        started: isCleaningSessionRef,
-        logger,
-      });
-      if (cleanup) {
-        await cleanup;
-        setCheckingAuth(false);
-        return;
-      }
-
-      // A session without an error grants access; the browser never sees
-      // its tokens (#5005), and the JWT callback renews them server-side.
-      if (
-        status === "authenticated" &&
-        hasSessionAccess(session) &&
-        !enrollmentStep
-      ) {
-        logger.debug("valid session found, preparing smart redirect");
-        setAwaitingRedirect(true);
-        setCheckingAuth(false);
-        return;
-      }
-
-      // Only show login form if not authenticated
-      if (status !== "loading") {
-        setCheckingAuth(false);
-      }
-    };
-
-    void checkAndRedirect();
-  }, [status, session, enrollmentStep]);
-
-  const isCheckingAuth = checkingAuth || status === "loading";
   const isSmartRedirecting =
     awaitingRedirect && status === "authenticated" && hasSessionAccess(session);
-  const isSubmitting = isLoading || awaitingRedirect;
 
   // The BFF has already set the httpOnly session cookie. Read only the
   // browser-safe session to update the provider before SmartRedirect runs.
   const completeLogin = async () => {
-    clearSessionErrorFromUrl();
     const current = await update();
     if (!hasSessionAccess(current))
       throw new Error("Session was not established");
@@ -236,9 +163,7 @@ function LoginForm() {
       redirectUrl =
         portal === "parents"
           ? parentsPortalLoginUrl("?from=staff")
-          : schoolPortalLoginUrl(
-              `?from=staff&tenant=${encodeURIComponent(tenantSlug)}`,
-            );
+          : schoolPortalLoginUrl(schoolHandoffQuery);
     } catch (urlErr) {
       logger.error("portal_url_unavailable", {
         portal,
@@ -253,23 +178,11 @@ function LoginForm() {
     return true;
   };
 
-  const handleMFASuccess = async () => {
-    await completeLogin();
-    setMfaStep(null);
-  };
-
-  const submitLogin = async () => {
-    setIsLoading(true);
-    formErrors.clear();
-    setSessionExpired(false);
+  const submitLogin = async (credentials: PasswordCredentials) => {
     setWrongPortalHint(null);
-
+    setEmail(credentials.email);
     try {
-      const response = await loginApi("tenant", {
-        email,
-        password,
-        tenantSlug,
-      });
+      const response = await loginApi("tenant", { ...credentials, tenantSlug });
 
       if (response.status === "mfa_required") {
         setMfaStep(response);
@@ -279,7 +192,7 @@ function LoginForm() {
       if (response.status === "mfa_enrollment_required") {
         setEnrollmentStep({
           enrollmentToken: response.enrollmentToken,
-          email,
+          email: credentials.email,
         });
         return;
       }
@@ -293,342 +206,139 @@ function LoginForm() {
       if (err instanceof ApiError && showWrongPortalHint(err.code)) {
         return;
       }
-
-      // Ein ausgeschaltetes Konto hat einen eigenen Katalogtext: sonst liest
-      // sich die Ablehnung wie ein falsches Passwort, und niemand kommt über
-      // "Passwort vergessen" wieder hinein (#3376).
       const code =
         err instanceof ApiError ? wireErrorCode(err.code) : undefined;
       trackLoginEvent("login_failed", {
         reason: (code && LOGIN_FAILURE_REASONS[code]) ?? "error",
       });
-      // Vor der Anmeldung heißt 401 "abgelehnt", nicht "Sitzung abgelaufen".
-      void formErrors.show(
-        credentialError(err, LOGIN_REFUSALS, LOGIN_CREDENTIAL_FIELDS),
-        {
-          object: "die Anmeldung",
-          retry: () => latestSubmitRef.current(),
-        },
-      );
-      // A 4xx is the backend rejecting the login (wrong password, no access
-      // to this school), not a defect, so it stays out of Sentry issues.
-      const status = errorStatus(err);
-      const logContext = {
-        error: err instanceof Error ? err.message : String(err),
-        status,
-      };
-      if (status !== undefined && status >= 400 && status < 500) {
-        logger.warn("login rejected", logContext);
-      } else {
-        logger.error("login failed", logContext);
-      }
-    } finally {
-      setIsLoading(false);
+      throw err;
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    void submitLogin();
-  };
-
   const handlePasskeyLogin = async () => {
-    setIsLoading(true);
-    formErrors.clear();
-    setSessionExpired(false);
     setWrongPortalHint(null);
     try {
       await loginWithPasskey("tenant", { tenantSlug });
       await completeLogin();
     } catch (err) {
-      if (isPasskeyCeremonyIncompleteError(err)) {
-        logger.info("passkey login not completed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        return;
-      }
       if (err instanceof ApiError && showWrongPortalHint(err.code)) {
         return;
       }
-      logger.error("passkey login failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void formErrors.show(credentialError(err, PASSKEY_LOGIN_REFUSALS), {
-        object: "die Anmeldung mit Passkey",
-        retry: () => latestPasskeyRef.current(),
-      });
-    } finally {
-      setIsLoading(false);
+      throw err;
     }
   };
 
-  // „Wiederholen“ sendet den Stand, der dann im Formular steht.
-  useLayoutEffect(() => {
-    latestSubmitRef.current = () => void submitLogin();
-    latestPasskeyRef.current = () => void handlePasskeyLogin();
-  });
-
   return (
-    <>
-      <AuthShell
-        title={loginTitle}
-        subtitle="Melden Sie sich mit Ihrem Konto an."
-        variant="tenant"
-        showMotoAttribution={hasTenantLoginLogo}
-        brand={
-          tenantLoginImageUrl ? (
-            <Image
-              src={loginImageSrc(tenantLoginImageUrl)}
-              alt={`${tenant?.name ?? "Einrichtung"} Logo`}
-              width={180}
-              height={104}
-              className="max-h-[104px] w-auto object-contain"
-              priority
-              unoptimized
-            />
-          ) : (
-            <MotoBrand />
-          )
-        }
-      >
-        {isCheckingAuth && (
-          <output
-            aria-live="polite"
-            aria-busy="true"
-            className="flex items-center justify-center gap-3 py-12 text-gray-600"
-          >
-            <SpinnerIcon className="h-6 w-6" />
-            <span className="text-sm font-medium">
-              Sitzung wird überprüft...
-            </span>
-          </output>
-        )}
-
-        <div
-          className={`transition-opacity duration-300 ${isCheckingAuth ? "pointer-events-none hidden" : "opacity-100"}`}
-        >
-          {isSmartRedirecting ? (
-            <div className="flex flex-col items-center gap-4 py-12 text-center">
-              <SpinnerIcon className="h-6 w-6 text-gray-600" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-900">
-                  Sie sind bereits angemeldet.
-                </p>
-                <p className="text-sm text-gray-500">moto öffnet Ihre OGS...</p>
-              </div>
-            </div>
-          ) : mfaStep ? (
-            <MFAChallengeForm
-              scope="tenant"
-              challengeToken={mfaStep.challengeToken}
-              maskedEmail={mfaStep.maskedEmail}
-              trustedDeviceEnabled={mfaStep.trustedDeviceEnabled}
-              trustedDeviceDays={mfaStep.trustedDeviceDays}
-              onSuccess={handleMFASuccess}
-              onError={(mfaError) => {
-                if (
-                  mfaError instanceof ApiError &&
-                  showWrongPortalHint(mfaError.code)
-                ) {
-                  setMfaStep(null);
-                  return true;
-                }
-                return false;
-              }}
-              onCancel={() => {
-                setMfaStep(null);
-                clearFormError();
-                setPassword("");
-              }}
-            />
-          ) : enrollmentStep ? (
-            <MFAEnrollmentScreen
-              scope="tenant"
-              bearerToken={enrollmentStep.enrollmentToken}
-              userEmail={enrollmentStep.email}
-              onExit={() => {
-                setEnrollmentStep(null);
-                clearFormError();
-                setPassword("");
-              }}
-              onComplete={async () => {
-                await completeLogin();
-                setEnrollmentStep(null);
-              }}
-            />
-          ) : (
-            <form
-              ref={formRef}
-              onSubmit={handleSubmit}
-              noValidate
-              className="space-y-6"
-            >
-              {wrongPortalHint ? (
-                <Alert
-                  type="info"
-                  message={
-                    wrongPortalHint.redirectUrl
-                      ? WRONG_PORTAL_COPY[wrongPortalHint.portal].redirecting
-                      : WRONG_PORTAL_COPY[wrongPortalHint.portal].manual
-                  }
-                  action={
-                    wrongPortalHint.redirectUrl ? (
-                      <a
-                        href={wrongPortalHint.redirectUrl}
-                        className="font-medium whitespace-nowrap underline underline-offset-2"
-                      >
-                        {WRONG_PORTAL_COPY[wrongPortalHint.portal].action}
-                      </a>
-                    ) : undefined
-                  }
-                />
-              ) : formErrors.error ? (
-                <FormErrorAlert message={formErrors.error} />
-              ) : sessionExpired ? (
-                <Alert
-                  type="info"
-                  message="Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
-                />
-              ) : null}
-
-              <div className="space-y-4">
-                <div className="text-left">
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    label="E-Mail-Adresse"
-                    controlSize="compact"
-                    data-testid="input-email"
-                    autoComplete="username"
-                    required
-                    disabled={isSubmitting}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    error={formErrors.fieldError("email")}
-                  />
-                </div>
-
-                <div className="text-left">
-                  <FieldLabel
-                    htmlFor="password"
-                    required
-                    invalid={Boolean(formErrors.fieldError("password"))}
-                  >
-                    Passwort
-                  </FieldLabel>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    controlSize="compact"
-                    data-testid="input-password"
-                    autoComplete="current-password"
-                    required
-                    disabled={isSubmitting}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    aria-invalid={Boolean(formErrors.fieldError("password"))}
-                    aria-describedby={
-                      formErrors.fieldError("password")
-                        ? "password-error"
-                        : undefined
-                    }
-                    revealable
-                  />
-                  <FieldErrorHint
-                    id="password-error"
-                    message={formErrors.fieldError("password")}
-                  />
-                </div>
-
-                {/* Forgot Password Link */}
-                <div className="text-center">
-                  <Button
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={() => setIsResetModalOpen(true)}
-                    variant="link"
-                    size="md"
-                  >
-                    Passwort vergessen?
-                  </Button>
-                </div>
-              </div>
-
-              <div className="mt-2">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  variant="primary"
-                  size="field"
-                  className="w-full"
-                >
-                  <span className="relative z-10">
-                    {isSubmitting ? "Anmeldung läuft..." : "Anmelden"}
-                  </span>
-                </Button>
-              </div>
-              {passkeySupported && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="field"
-                  className="w-full gap-2"
-                  disabled={isSubmitting}
-                  onClick={handlePasskeyLogin}
-                >
-                  <MotoConceptIcon concept={passkeysConcept} size={16} />
-                  <span>Mit Passkey anmelden</span>
-                </Button>
-              )}
-            </form>
-          )}
-        </div>
-
-        {/* Smart redirect for authenticated users */}
-        {awaitingRedirect &&
-          status === "authenticated" &&
-          hasSessionAccess(session) && (
-            <SmartRedirect
-              onRedirect={(path) => {
-                logger.info("redirecting based on user permissions", { path });
-                if (isSchoolPortalHandoffPath(path)) {
-                  window.location.href = schoolPortalLoginUrl(
-                    `?from=staff&tenant=${encodeURIComponent(tenantSlug)}`,
-                  );
-                  return;
-                }
-                router.push(path);
-              }}
-            />
-          )}
-      </AuthShell>
-
-      {/* Password Reset Modal */}
-      <TenantPasswordResetModal
-        isOpen={isResetModalOpen}
-        onClose={() => setIsResetModalOpen(false)}
-      />
-    </>
-  );
-}
-
-export default function HomePage() {
-  return (
-    <Suspense
-      fallback={
-        <AuthShell
-          title="Willkommen"
-          subtitle="Melden Sie sich mit Ihrem Konto an."
-          variant="tenant"
-          brand={<MotoBrand />}
-        >
-          <Loading message="Anmeldung wird vorbereitet …" />
-        </AuthShell>
+    <AuthShell
+      title={loginTitle}
+      subtitle="Melden Sie sich mit Ihrem Konto an."
+      variant="tenant"
+      showMotoAttribution={hasTenantLoginLogo}
+      brand={
+        tenantLoginImageUrl ? (
+          <Image
+            src={loginImageSrc(tenantLoginImageUrl)}
+            alt={`${tenant?.name ?? "Einrichtung"} Logo`}
+            width={180}
+            height={104}
+            className="max-h-[104px] w-auto object-contain"
+            priority
+            unoptimized
+          />
+        ) : (
+          <MotoBrand />
+        )
       }
     >
-      <LoginForm />
-    </Suspense>
+      {isSmartRedirecting ? (
+        <div className="flex flex-col items-center gap-4 py-12 text-center">
+          <SpinnerIcon className="h-6 w-6 text-gray-600" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-gray-900">
+              Sie sind bereits angemeldet.
+            </p>
+            <p className="text-sm text-gray-500">moto öffnet Ihre OGS...</p>
+          </div>
+        </div>
+      ) : isCheckingAuth ? (
+        <Loading message="Sitzung wird überprüft …" />
+      ) : mfaStep ? (
+        <MFAChallengeForm
+          scope="tenant"
+          challengeToken={mfaStep.challengeToken}
+          maskedEmail={mfaStep.maskedEmail}
+          trustedDeviceEnabled={mfaStep.trustedDeviceEnabled}
+          trustedDeviceDays={mfaStep.trustedDeviceDays}
+          onSuccess={completeLogin}
+          onError={(mfaError) => {
+            if (
+              mfaError instanceof ApiError &&
+              showWrongPortalHint(mfaError.code)
+            ) {
+              setMfaStep(null);
+              return true;
+            }
+            return false;
+          }}
+          onCancel={() => setMfaStep(null)}
+        />
+      ) : enrollmentStep ? (
+        <MFAEnrollmentScreen
+          scope="tenant"
+          bearerToken={enrollmentStep.enrollmentToken}
+          userEmail={enrollmentStep.email}
+          onExit={() => setEnrollmentStep(null)}
+          onComplete={async () => {
+            await completeLogin();
+            setEnrollmentStep(null);
+          }}
+        />
+      ) : (
+        <PasswordLoginForm
+          portal="tenant"
+          onSubmit={submitLogin}
+          onPasskey={handlePasskeyLogin}
+          defaultEmail={email}
+          leaving={awaitingRedirect}
+          refusal={
+            wrongPortalHint ? (
+              <Alert
+                type="info"
+                message={
+                  wrongPortalHint.redirectUrl
+                    ? WRONG_PORTAL_COPY[wrongPortalHint.portal].redirecting
+                    : WRONG_PORTAL_COPY[wrongPortalHint.portal].manual
+                }
+                action={
+                  wrongPortalHint.redirectUrl ? (
+                    <a
+                      href={wrongPortalHint.redirectUrl}
+                      className="font-medium whitespace-nowrap underline underline-offset-2"
+                    >
+                      {WRONG_PORTAL_COPY[wrongPortalHint.portal].action}
+                    </a>
+                  ) : undefined
+                }
+              />
+            ) : undefined
+          }
+        />
+      )}
+
+      {awaitingRedirect &&
+        status === "authenticated" &&
+        hasSessionAccess(session) && (
+          <SmartRedirect
+            onRedirect={(path) => {
+              logger.info("redirecting based on user permissions", { path });
+              if (isSchoolPortalHandoffPath(path)) {
+                window.location.href = schoolPortalLoginUrl(schoolHandoffQuery);
+                return;
+              }
+              router.push(path);
+            }}
+          />
+        )}
+    </AuthShell>
   );
 }

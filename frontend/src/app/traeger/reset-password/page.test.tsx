@@ -18,7 +18,7 @@ vi.mock("~/lib/tenant-context", () => ({
 }));
 
 vi.mock("~/lib/auth-api", () => ({
-  confirmTraegerPasswordReset: vi.fn(),
+  confirmPasswordReset: vi.fn(),
 }));
 
 vi.mock("~/lib/traeger-url", () => ({

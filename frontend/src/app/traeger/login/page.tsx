@@ -4,8 +4,7 @@
 // Schul-Logins mit einem Zwischenschritt: Wer zu mehreren Trägern gehört,
 // wählt den Träger aus. Danach ist der zweite Faktor immer Pflicht (#4651):
 // ein Code per E-Mail, beim ersten Mal mit Einrichtung. Ein Gerät merkt sich
-// das Träger-Portal nicht. „Passwort vergessen?“ schickt den Link auf den
-// Träger-Host (#5149).
+// das Träger-Portal nicht.
 
 import {
   Suspense,
@@ -18,33 +17,24 @@ import {
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { AuthShell, MotoBrand } from "~/components/auth/auth-shell";
-import {
-  credentialError,
-  LOGIN_CREDENTIAL_FIELDS,
-  LOGIN_REFUSALS,
-} from "~/components/auth/credential-error";
+import { LOGIN_REFUSALS } from "~/components/auth/credential-error";
 import { MFAChallengeForm } from "~/components/auth/mfa-challenge-form";
 import { MFAEnrollmentScreen } from "~/components/auth/mfa-enrollment-screen";
-import { FieldErrorHint } from "~/components/ui/field-error-hint";
+import {
+  PasswordLoginForm,
+  useLoginAttempt,
+  type PasswordCredentials,
+} from "~/components/auth/password-login-form";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import { FieldLabel } from "~/components/ui/field-label";
-import { Input } from "~/components/ui/input";
 import { Loading } from "~/components/ui/loading";
-import { PasswordResetModal } from "~/components/auth/password-reset-modal";
 import { Radio } from "~/components/ui/radio";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { requestTraegerPasswordReset } from "~/lib/auth-api";
 import { hasSessionAccess } from "~/lib/session-access";
-import { errorStatus } from "~/lib/expected-failure";
 import { createLogger } from "~/lib/logger";
-import {
-  clearSessionErrorFromUrl,
-  signOutStaleSession,
-  useSessionExpiredNotice,
-} from "~/lib/login-session-notice";
+import { signOutStaleSession } from "~/lib/login-session-notice";
 import { endTraegerSession } from "~/lib/shell-auth-context";
 import {
   clearTraegerSignInWithCode,
@@ -55,10 +45,7 @@ import {
 } from "~/lib/traeger-sign-in-with-code";
 import type { MFAStep, TraegerChoice } from "~/lib/sign-in-answer";
 import { traegerLogin } from "~/lib/traeger-api";
-import {
-  TRAEGER_FORGOT_PASSWORD_PARAM,
-  TRAEGER_SIGN_IN_WITH_CODE_PARAM,
-} from "~/lib/traeger-login-params";
+import { TRAEGER_SIGN_IN_WITH_CODE_PARAM } from "~/lib/login-params";
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerLoginPage" });
@@ -74,8 +61,10 @@ interface EnrollmentStep {
 }
 
 function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [credentials, setCredentials] = useState<PasswordCredentials>({
+    email: "",
+    password: "",
+  });
   // A school asked for a sign-in with code (#6955): the next sign-in in
   // this tab ignores the remembered device. Read, never consumed, while
   // rendering; the server renders no hint.
@@ -84,7 +73,6 @@ function LoginForm() {
     isTraegerSignInWithCodeRequested,
     serverTraegerSignInWithCode,
   );
-  const [isLoading, setIsLoading] = useState(false);
   const [awaitingRedirect, setAwaitingRedirect] = useState(false);
   const [choices, setChoices] = useState<readonly TraegerChoice[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -92,19 +80,14 @@ function LoginForm() {
   const [enrollmentStep, setEnrollmentStep] = useState<EnrollmentStep | null>(
     null,
   );
-  const formRef = useRef<HTMLFormElement>(null);
-  const formErrors = useApiFormError(formRef);
-  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-  const resetFormRef = useRef<HTMLFormElement>(null);
-  const resetErrors = useApiFormError(resetFormRef);
+  // The Träger choice after the password, with its own error path.
+  const choice = useLoginAttempt("traeger");
   // Ending a session a sign-in with code is to replace (#6955).
   const endErrors = useApiFormError();
   const [endingSession, setEndingSession] = useState(false);
-  const latestSubmitRef = useRef<() => void>(() => undefined);
+  const latestChoiceRef = useRef<() => void>(() => undefined);
   const isCleaningSessionRef = useRef(false);
   const searchParams = useSearchParams();
-  const [sessionExpired, setSessionExpired] =
-    useSessionExpiredNotice(searchParams);
   const { data: session, status } = useSession();
 
   // A school tab sends the person here to sign in with code (#6955): the
@@ -153,109 +136,67 @@ function LoginForm() {
     }
   }, [status, session, enrollmentStep]);
 
-  // A reset link without token leads here to ask for a new link: the dialog
-  // opens at once, and the address forgets the request.
-  useEffect(() => {
-    if (searchParams.get(TRAEGER_FORGOT_PASSWORD_PARAM) !== "1") return;
-    setIsResetModalOpen(true);
-    const url = new URL(window.location.href);
-    url.searchParams.delete(TRAEGER_FORGOT_PASSWORD_PARAM);
-    window.history.replaceState(
-      {},
-      "",
-      `${url.pathname}${url.search}${url.hash}`,
-    );
-  }, [searchParams]);
-
-  const isSubmitting = isLoading || awaitingRedirect;
-
-  const completeLogin = async () => {
+  const completeLogin = () => {
     // The sign-in is complete: the next one may use the device again.
     clearTraegerSignInWithCode();
-    clearSessionErrorFromUrl();
     setAwaitingRedirect(true);
     window.location.href = traegerPath("/traeger");
   };
 
-  const submit = async () => {
-    formErrors.clear();
-    // An empty field is named before anything is sent: „prüfen Sie Ihre
-    // Angaben“ would not say what is missing.
-    if (!choices) {
-      const missing: Record<string, string> = {};
-      if (email.trim() === "")
-        missing.email = "Bitte geben Sie Ihre E-Mail-Adresse ein.";
-      if (password === "")
-        missing.password = "Bitte geben Sie Ihr Passwort ein.";
-      const texts = Object.values(missing);
-      if (texts.length > 0) {
-        formErrors.invalid(
-          texts.length > 1
-            ? "Bitte geben Sie E-Mail-Adresse und Passwort ein."
-            : (texts[0] ?? ""),
-          missing,
-        );
-        return;
-      }
+  const sendLogin = async (
+    given: PasswordCredentials,
+    organizationId?: string,
+  ) => {
+    const ignoreTrustedDevice = isTraegerSignInWithCodeRequested();
+    const result = await traegerLogin({
+      ...given,
+      organizationId,
+      ...(ignoreTrustedDevice && { ignoreTrustedDevice: true }),
+    });
+    if (result.status === "organization_selection_required") {
+      setChoices(result.organizations);
+      setSelectedId(result.organizations[0]?.id ?? null);
+      return;
     }
-    setIsLoading(true);
-    setSessionExpired(false);
-    try {
-      const ignoreTrustedDevice = isTraegerSignInWithCodeRequested();
-      const result = await traegerLogin({
-        email,
-        password,
-        organizationId: choices ? (selectedId ?? undefined) : undefined,
-        ...(ignoreTrustedDevice && { ignoreTrustedDevice: true }),
-      });
-      if (result.status === "organization_selection_required") {
-        setChoices(result.organizations);
-        setSelectedId(result.organizations[0]?.id ?? null);
-        return;
-      }
-      if (result.status === "mfa_required") {
-        setMfaStep(result);
-        return;
-      }
-      if (result.status === "mfa_enrollment_required") {
-        setEnrollmentStep({
-          enrollmentToken: result.enrollmentToken,
-          organizationId: result.organizationId,
-        });
-        return;
-      }
-      await completeLogin();
-    } catch (err) {
-      // Ein falsches Passwort und ein ausgeschaltetes Konto haben eigene
-      // Katalogtexte; vor der Anmeldung heißt 401 "abgelehnt". Ein Konto
-      // ohne Zugang zum Träger-Portal kommt als traeger.no_membership.
-      void formErrors.show(
-        credentialError(err, LOGIN_REFUSALS, LOGIN_CREDENTIAL_FIELDS),
-        {
-          object: "die Anmeldung",
-          retry: () => latestSubmitRef.current(),
-        },
-      );
-      logger.error("traeger login failed", {
-        error: err instanceof Error ? err.message : String(err),
-        status: errorStatus(err),
-      });
-    } finally {
-      setIsLoading(false);
+    if (result.status === "mfa_required") {
+      setMfaStep(result);
+      return;
     }
+    if (result.status === "mfa_enrollment_required") {
+      setEnrollmentStep({
+        enrollmentToken: result.enrollmentToken,
+        organizationId: result.organizationId,
+      });
+      return;
+    }
+    completeLogin();
   };
 
+  // Ein Konto ohne Zugang zum Träger-Portal kommt als traeger.no_membership.
+  const submitCredentials = async (given: PasswordCredentials) => {
+    setCredentials(given);
+    await sendLogin(given);
+  };
+
+  const submitChoice = () =>
+    choice.attempt(
+      () => sendLogin(credentials, selectedId ?? undefined),
+      LOGIN_REFUSALS,
+      "die Anmeldung",
+      () => latestChoiceRef.current(),
+    );
+
   useLayoutEffect(() => {
-    latestSubmitRef.current = () => void submit();
+    latestChoiceRef.current = () => void submitChoice();
   });
 
   const backToCredentials = () => {
+    choice.errors.clear();
     setChoices(null);
     setSelectedId(null);
     setMfaStep(null);
     setEnrollmentStep(null);
-    setPassword("");
-    formErrors.clear();
+    setCredentials((current) => ({ ...current, password: "" }));
   };
 
   if (status === "loading") {
@@ -333,7 +274,7 @@ function LoginForm() {
         <MFAEnrollmentScreen
           scope="traeger"
           bearerToken={enrollmentStep.enrollmentToken}
-          userEmail={email}
+          userEmail={credentials.email}
           organizationId={enrollmentStep.organizationId}
           onExit={backToCredentials}
           onComplete={completeLogin}
@@ -342,163 +283,85 @@ function LoginForm() {
     );
   }
 
+  const isSubmitting = choice.pending || awaitingRedirect;
+
   return (
-    <>
-      <AuthShell {...SHELL_COPY} variant="tenant" brand={<MotoBrand />}>
+    <AuthShell {...SHELL_COPY} variant="tenant" brand={<MotoBrand />}>
+      {choices ? (
         <form
-          ref={formRef}
+          ref={choice.formRef}
           noValidate
           className="space-y-6"
           onSubmit={(event) => {
             event.preventDefault();
-            void submit();
+            void submitChoice();
           }}
         >
-          {formErrors.error ? (
-            <FormErrorAlert message={formErrors.error} />
-          ) : sessionExpired ? (
-            <Alert
-              type="info"
-              message="Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
-            />
-          ) : withCode ? (
-            <Alert
-              type="info"
-              message="Die Schule verlangt eine Anmeldung mit Code. Geben Sie nach dem Passwort den Code aus Ihrer E-Mail ein."
-            />
-          ) : null}
-
-          {choices ? (
-            <fieldset className="space-y-3 border-0 p-0">
-              <legend className="mb-2 text-sm font-medium text-gray-700">
-                Sie gehören zu mehreren Trägern. Welchen Träger möchten Sie
-                öffnen?
-              </legend>
-              {choices.map((choice) => (
-                <ChoiceTile
-                  key={choice.id}
-                  tone="green"
-                  selected={selectedId === choice.id}
-                  className="p-3"
-                >
-                  <Radio
-                    name="organization"
-                    value={choice.id}
-                    checked={selectedId === choice.id}
-                    disabled={isSubmitting}
-                    onChange={() => setSelectedId(choice.id)}
-                  />
-                  <span>{choice.name}</span>
-                </ChoiceTile>
-              ))}
-            </fieldset>
-          ) : (
-            <div className="space-y-4">
-              <div className="text-left">
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  label="E-Mail-Adresse"
-                  controlSize="touch"
-                  data-testid="input-email"
-                  autoComplete="username"
-                  required
+          <FormErrorAlert message={choice.errors.error} />
+          <fieldset className="space-y-3 border-0 p-0">
+            <legend className="mb-2 text-sm font-medium text-gray-700">
+              Sie gehören zu mehreren Trägern. Welchen Träger möchten Sie
+              öffnen?
+            </legend>
+            {choices.map((choice) => (
+              <ChoiceTile
+                key={choice.id}
+                tone="green"
+                selected={selectedId === choice.id}
+                className="p-3"
+              >
+                <Radio
+                  name="organization"
+                  value={choice.id}
+                  checked={selectedId === choice.id}
                   disabled={isSubmitting}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  error={formErrors.fieldError("email")}
+                  onChange={() => setSelectedId(choice.id)}
                 />
-              </div>
-
-              <div className="text-left">
-                <FieldLabel
-                  htmlFor="password"
-                  required
-                  invalid={Boolean(formErrors.fieldError("password"))}
-                >
-                  Passwort
-                </FieldLabel>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  controlSize="touch"
-                  data-testid="input-password"
-                  autoComplete="current-password"
-                  required
-                  disabled={isSubmitting}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  aria-invalid={Boolean(formErrors.fieldError("password"))}
-                  aria-describedby={
-                    formErrors.fieldError("password")
-                      ? "password-error"
-                      : undefined
-                  }
-                  revealable
-                />
-                <FieldErrorHint
-                  id="password-error"
-                  message={formErrors.fieldError("password")}
-                />
-              </div>
-
-              <div className="text-center">
-                <Button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => setIsResetModalOpen(true)}
-                  variant="link"
-                  size="md"
-                >
-                  Passwort vergessen?
-                </Button>
-              </div>
-            </div>
-          )}
-
+                <span>{choice.name}</span>
+              </ChoiceTile>
+            ))}
+          </fieldset>
           <div className="mt-2 space-y-3">
             <Button
               type="submit"
-              disabled={isSubmitting || (choices !== null && !selectedId)}
+              disabled={isSubmitting || !selectedId}
               variant="primary"
               size="field"
               className="w-full"
             >
               <span className="relative z-10">
-                {isSubmitting
-                  ? "Anmeldung läuft …"
-                  : choices
-                    ? "Träger öffnen"
-                    : "Anmelden"}
+                {isSubmitting ? "Anmeldung läuft …" : "Träger öffnen"}
               </span>
             </Button>
-            {choices ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="field"
-                disabled={isSubmitting}
-                onClick={backToCredentials}
-                className="w-full"
-              >
-                Mit einem anderen Konto anmelden
-              </Button>
-            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="field"
+              disabled={isSubmitting}
+              onClick={backToCredentials}
+              className="w-full"
+            >
+              Mit einem anderen Konto anmelden
+            </Button>
           </div>
         </form>
-      </AuthShell>
-
-      <PasswordResetModal
-        isOpen={isResetModalOpen}
-        onClose={() => setIsResetModalOpen(false)}
-        onRequestReset={requestTraegerPasswordReset}
-        inputControlSize="compact"
-        errorPath={resetErrors}
-        formRef={resetFormRef}
-      />
-    </>
+      ) : (
+        <PasswordLoginForm
+          portal="traeger"
+          onSubmit={submitCredentials}
+          defaultEmail={credentials.email}
+          leaving={awaitingRedirect}
+          notice={
+            withCode ? (
+              <Alert
+                type="info"
+                message="Die Schule verlangt eine Anmeldung mit Code. Geben Sie nach dem Passwort den Code aus Ihrer E-Mail ein."
+              />
+            ) : undefined
+          }
+        />
+      )}
+    </AuthShell>
   );
 }
 

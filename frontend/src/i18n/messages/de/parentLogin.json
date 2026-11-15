@@ -14,7 +14,10 @@
   "staffLoginLink": "Zur Schul-Anmeldung",
   "errors": {
     "rateLimited": "Zu viele Anmeldeversuche. Bitte versuchen Sie es später erneut.",
-    "notAGuardian": "Dieses Konto gehört zum Personal einer Schule. Bitte melden Sie sich über die Schul-Anmeldung an."
+    "notAGuardian": "Dieses Konto gehört zum Personal einer Schule. Bitte melden Sie sich über die Schul-Anmeldung an.",
+    "missingEmail": "Bitte geben Sie Ihre E-Mail-Adresse ein.",
+    "missingPassword": "Bitte geben Sie Ihr Passwort ein.",
+    "missingCredentials": "Bitte geben Sie E-Mail-Adresse und Passwort ein."
   },
   "errorObject": "die Anmeldung"
 }

@@ -1,6 +1,3 @@
-// lib/auth-helpers.ts
-// Type definitions for auth entities
-
 import {
   SYSTEM_ROLE_LABELS,
   isSystemRoleName,
@@ -29,7 +26,6 @@ export interface BackendPermission {
   updated_at: string;
 }
 
-// Frontend types
 /** German display labels for system base roles used in announcement targeting. */
 export const BASE_ROLE_LABELS: Record<string, string> = {
   admin: SYSTEM_ROLE_LABELS.admin.name,
@@ -66,7 +62,6 @@ export interface Permission {
   updatedAt: string;
 }
 
-// Transformation functions
 // Flexible role interface for handling mixed case API responses
 interface FlexibleRoleData {
   ID?: string | number;
@@ -244,11 +239,4 @@ export function toAssignableRoleOptions(roles: Role[]): RoleOption[] {
       name: role.name ? getRoleDisplayName(role.name) : `Rolle ${role.id}`,
       systemName: role.name?.toLowerCase() ?? "",
     }));
-}
-
-// Request types
-export interface PasswordResetConfirmRequest {
-  token: string;
-  newPassword: string;
-  confirmPassword: string;
 }

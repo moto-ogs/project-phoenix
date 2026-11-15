@@ -264,7 +264,7 @@ describe("inventory", () => {
     // const key = `school-setup-opened:${accountID}`, const sessionKey = …
     String.raw`\b(?:const|let)\s+(?:key|\w*(?:[sS]torage|[sS]ession)Key)\s*=\s*` +
       LITERAL,
-    // rateLimitStorageKey = "…" as default parameter or JSX prop
+    // localeStorageKey = "…", also as default parameter or JSX prop
     String.raw`\b\w*StorageKey\s*=\s*` + LITERAL,
     String.raw`\bcacheKey:\s*` + LITERAL,
   ].map((rule) => new RegExp(rule, "g"));
@@ -357,7 +357,7 @@ describe("inventory", () => {
     expect(allKeys).toEqual(
       expect.arrayContaining([
         "moto-pwa-usage-reported.*.*.*",
-        "parentPasswordResetRateLimitUntil",
+        "passwordResetRateLimitUntil",
         "messages_unread_count:*:*",
         "collection-view:*:*:*",
         "moto.*.notification-setup.v1*.*",
