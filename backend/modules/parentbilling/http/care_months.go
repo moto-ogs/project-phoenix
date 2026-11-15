@@ -62,6 +62,7 @@ func (rs *CareBillingResource) RunRouter(protectedTraegerRoutes func(chi.Router,
 		billing.Post("/", rs.start)
 		billing.Get("/export", rs.exportList)
 		billing.Get("/{id}", rs.detail)
+		billing.Get("/{id}/invoices/export", rs.exportInvoices)
 		billing.Post("/{id}/release", rs.release)
 		billing.Post("/{id}/discard", rs.discardRun)
 		rs.mountReview(billing)

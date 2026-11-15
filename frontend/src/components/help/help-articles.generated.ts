@@ -11587,7 +11587,7 @@ export const traegerCareCostSharesTopic =
           steps: [
             "Wählen Sie `Familien und Zahlung` und dann den Reiter `Kostenübernahmen`.",
             "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Kinder, ohne Suche und Filter.",
-            "Die Datei enthält personenbezogene Daten. Jeder Download steht im Zugriffsprotokoll.",
+            "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },
       ],
@@ -11738,6 +11738,7 @@ export const traegerCareMonthsTopic =
             "Sie können eine Rechnung aus diesem Lauf nehmen. Sie kommt im nächsten Lauf dieses Monats wieder. Hat ein Kind eine Rechnung für die Betreuung und eine eigene `Mensa-Rechnung`, schließen Sie jede für sich aus.",
           steps: [
             "Wählen Sie bei `Monatslauf` den Knopf `Prüfliste` und dann `PDF`, `Excel` oder `CSV`. Die Liste hat je Position eine Zeile. Rechnungsnummern stehen noch nicht darin.",
+            "Nach der Freigabe heißt der Knopf bei `Monatslauf` `Herunterladen`. Die Datei enthält alle Rechnungen des Laufs mit ihren Nummern.",
             "Stimmt eine Rechnung noch nicht, wählen Sie in ihrer Zeile das Menü mit den drei Punkten und dann `Ausschließen`.",
             "Prüfen Sie im Fenster, welche Rechnung Sie ausschließen. Dort steht zum Beispiel `Mensa-Rechnung` und darunter, ob die Betreuungsrechnung des Kindes im Lauf bleibt. Steht die Mensa auf der Rechnung der Betreuung, wird sie mit ausgeschlossen.",
             "Schreiben Sie bei `Grund`, warum, zum Beispiel „Kündigung wird noch geprüft“. Wählen Sie `Ausschließen`.",
@@ -12065,7 +12066,7 @@ export const traegerCareReductionsTopic =
           steps: [
             "Wählen Sie `Familien und Zahlung` und dann den Reiter `Kinderzahl` oder `Nachweise`.",
             "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält die ganze Liste, ohne Suche.",
-            "Die Datei enthält personenbezogene Daten. Jeder Download steht im Zugriffsprotokoll.",
+            "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },
       ],

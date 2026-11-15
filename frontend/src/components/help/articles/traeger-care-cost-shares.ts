@@ -59,7 +59,7 @@ export function traegerCareCostSharesTopic(): HelpTopic {
         steps: [
           "Wählen Sie `Familien und Zahlung` und dann den Reiter `Kostenübernahmen`.",
           "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Kinder, ohne Suche und Filter.",
-          "Die Datei enthält personenbezogene Daten. Jeder Download steht im Zugriffsprotokoll.",
+          "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
         ],
       },
     ],

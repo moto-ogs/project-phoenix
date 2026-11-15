@@ -38,7 +38,7 @@ const LIST_EXPORTS: Readonly<Record<string, string>> = {
   "/abrechnung/kostentraeger": "page",
   "/abrechnung/lastschrift": "page",
   "/abrechnung/monatsbeitraege": "page",
-  "/abrechnung/monatsbeitraege/[id]": "components/traeger/care-run-review.tsx",
+  "/abrechnung/monatsbeitraege/[id]": "page",
   "/abrechnung/nachweise": "page",
   "/ankunft-abholung": "page",
   "/anmeldephasen": "page",

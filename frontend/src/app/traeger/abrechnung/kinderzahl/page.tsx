@@ -358,7 +358,7 @@ export default function TraegerKinderzahlPage() {
           }
           scope="Alle Familien, ohne Suche"
           ariaLabel="Kinderzahl herunterladen"
-          tooltip="Zeigt die Formate für alle Familien, ohne Suche. Jeder Download steht im Zugriffsprotokoll."
+          tooltip="Zeigt die Formate für alle Familien, ohne Suche. Jeder Download wird protokolliert."
           fallbackName="kinderzahl"
           errorObject="die Kinderzahl der Familien"
           unavailable={families.length === 0}

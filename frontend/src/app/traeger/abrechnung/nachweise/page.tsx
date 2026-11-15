@@ -291,7 +291,7 @@ export default function TraegerNachweisePage() {
           }
           scope="Alle Nachweise, ohne Suche"
           ariaLabel="Nachweise herunterladen"
-          tooltip="Zeigt die Formate für alle Verträge, ohne Suche. Jeder Download steht im Zugriffsprotokoll."
+          tooltip="Zeigt die Formate für alle Verträge, ohne Suche. Jeder Download wird protokolliert."
           fallbackName="nachweise-ermaessigung"
           errorObject="die Nachweise"
           unavailable={!data || data.contracts.length === 0}

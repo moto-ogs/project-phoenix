@@ -87,7 +87,7 @@ export function traegerCareReductionsTopic(): HelpTopic {
         steps: [
           "Wählen Sie `Familien und Zahlung` und dann den Reiter `Kinderzahl` oder `Nachweise`.",
           "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält die ganze Liste, ohne Suche.",
-          "Die Datei enthält personenbezogene Daten. Jeder Download steht im Zugriffsprotokoll.",
+          "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
         ],
       },
     ],

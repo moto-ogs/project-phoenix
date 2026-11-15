@@ -135,6 +135,15 @@ func TestCareCostSharesSplitTheContributionAndStayOnTheIssuedInvoice(t *testing.
 		}
 	}
 
+	// #4718: the invoices of the released run as a file, each with its number.
+	invoices := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, "/invoices/export"), nil)
+	require.Equal(t, http.StatusOK, invoices.Code, invoices.Body.String())
+	assert.True(t, strings.HasPrefix(strings.TrimPrefix(invoices.Body.String(), "\xEF\xBB\xBF"),
+		"Rechnung Nr.;Ausgestellt am;Schule;Nachname;Vorname;Leistung;Empfänger;Debitorennummer;Summe\n"), invoices.Body.String())
+	assert.Contains(t, invoices.Body.String(), miaNumber+";")
+	assert.Equal(t, 3, strings.Count(strings.TrimSpace(invoices.Body.String()), "\n")+1, "the header and both invoices")
+	assertTraegerListFormats(t, f.traeger, f.office.token, careRunPath(run.ID, "/invoices/export"), "rechnungen-monatsbeitrag-"+released.BillingMonth[:7])
+
 	// A later change of the share and of the cost bearer's name never
 	// reaches the issued invoice.
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, "/traeger/cost-bearers/"+strconv.FormatInt(youthOffice, 10),

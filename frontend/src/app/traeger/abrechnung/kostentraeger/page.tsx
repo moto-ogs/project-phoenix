@@ -321,7 +321,7 @@ export default function TraegerKostentraegerPage() {
           }
           scope="Alle Anteile, ohne Suche und Filter"
           ariaLabel="Anteile der Kostenträger herunterladen"
-          tooltip="Zeigt die Formate für alle Kinder, ohne Suche und Filter. Jeder Download steht im Zugriffsprotokoll."
+          tooltip="Zeigt die Formate für alle Kinder, ohne Suche und Filter. Jeder Download wird protokolliert."
           fallbackName="kostentraeger-anteile"
           errorObject="die Anteile der Kostenträger"
           unavailable={!data || data.contracts.length === 0}
