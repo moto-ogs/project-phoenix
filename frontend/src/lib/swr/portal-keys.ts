@@ -348,6 +348,9 @@ export const traegerKeys = {
   schoolsAlerts: () => "traeger-schools-alerts",
   keyDateCounts: () => "traeger-key-date-counts",
   occupancy: () => "traeger-occupancy",
+  // Ankunft und Abholung eines Zeitraums (#4714): Durchschnitte, keine Kinder.
+  arrivalPickupTimes: (from: string, to: string) =>
+    `traeger-arrival-pickup-times-${from}-${to}`,
   periodsFamily: "traeger-holiday-period-",
   periods: () => "traeger-holiday-period-list",
   period: (id: string) =>

@@ -5,6 +5,9 @@
   "api/traeger/schools/alerts": [
     "GET traeger /traeger/schools/alerts"
   ],
+  "api/traeger/schools/arrival-pickup-times": [
+    "GET traeger /traeger/schools/arrival-pickup-times"
+  ],
   "api/traeger/schools/[id]": [
     "GET traeger /traeger/schools/id%2F1"
   ],

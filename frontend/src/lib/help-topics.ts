@@ -256,6 +256,7 @@ export const HELP_TOPICS = {
   traegerDocumentKinds: "rechnung-oder-gebuehrenbescheid",
   traegerCareContracts: "betreuungsvertraege-senden",
   traegerCareTimeOverruns: "laenger-als-gebucht",
+  traegerArrivalPickupTimes: "ankunft-und-abholung",
   traegerSharedDocuments: "dokumente-fuer-eltern-und-schulen-freigeben",
   traegerStaffRecords: "personalakten-ueber-alle-schulen",
   traegerStaffProofs: "personalnachweise-mit-ablaufwarnung",

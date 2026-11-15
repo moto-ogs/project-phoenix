@@ -55,6 +55,7 @@ export const PORTAL_PAGES = {
   ],
   traeger: [
     "/abrechnung",
+    "/ankunft-abholung",
     "/anmeldephasen",
     "/belegung",
     "/dokumente",

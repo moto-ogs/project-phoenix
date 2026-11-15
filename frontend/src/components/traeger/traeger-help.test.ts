@@ -19,6 +19,14 @@ describe("getTraegerHelpTopicForPath", () => {
     }
   });
 
+  it("opens the arrival and pickup article on its page (#4714)", () => {
+    for (const path of ["/ankunft-abholung", "/traeger/ankunft-abholung"]) {
+      expect(getTraegerHelpTopicForPath(path)).toBe(
+        HELP_TOPICS.traegerArrivalPickupTimes,
+      );
+    }
+  });
+
   it("opens the school view article on the view of a school (#5686)", () => {
     for (const path of ["/schulen/2", "/traeger/schulen/2"]) {
       expect(getTraegerHelpTopicForPath(path)).toBe(

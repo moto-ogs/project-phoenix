@@ -779,6 +779,7 @@ describe("getParentHelpTopicForPath", () => {
       HELP_TOPICS.traegerStaffContracts,
       HELP_TOPICS.traegerSharedDocuments,
       HELP_TOPICS.traegerCareTimeOverruns,
+      HELP_TOPICS.traegerArrivalPickupTimes,
       HELP_TOPICS.traegerAccessLog,
       HELP_TOPICS.traegerBriefkopf,
       HELP_TOPICS.traegerDocumentTemplates,
