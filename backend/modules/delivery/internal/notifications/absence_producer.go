@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sort"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
@@ -169,14 +170,20 @@ func (n *absenceNotifier) notify(ctx context.Context, report AbsenceReport) erro
 	if err != nil {
 		return err
 	}
-	events := append(groupAbsenceEvents(report, deliveries), schoolEvents...)
-	if len(events) == 0 {
+	// The OGS notices write the feed, which only Notify does (#7137); the
+	// moto schule notices keep their batch.
+	for _, event := range groupAbsenceEvents(report, deliveries) {
+		if err := n.notifier.Notify(ctx, event); err != nil {
+			return err
+		}
+	}
+	if len(schoolEvents) == 0 {
 		return nil
 	}
 	if batch, ok := n.notifier.(BatchNotifier); ok {
-		return batch.NotifyBatch(ctx, events)
+		return batch.NotifyBatch(ctx, schoolEvents)
 	}
-	for _, event := range events {
+	for _, event := range schoolEvents {
 		if err := n.notifier.Notify(ctx, event); err != nil {
 			return err
 		}
@@ -184,7 +191,10 @@ func (n *absenceNotifier) notify(ctx context.Context, report AbsenceReport) erro
 	return nil
 }
 
-// groupAbsenceEvents builds one OGS event per recipient scope.
+// groupAbsenceEvents builds one OGS event per recipient scope. Everyone
+// responsible gets a feed entry, a push only who agreed (#7137). A count of
+// many children opens the app without a link on the device; its feed entry
+// leads to the list of children.
 func groupAbsenceEvents(report AbsenceReport, deliveries []absenceDelivery) []Event {
 	events := make([]Event, 0, len(deliveries))
 	for _, delivery := range deliveries {
@@ -207,6 +217,7 @@ func groupAbsenceEvents(report AbsenceReport, deliveries []absenceDelivery) []Ev
 				Scope:           ScopeStaff,
 				StaffAccountIDs: delivery.accountIDs,
 			},
+			Feed: &contract.NotificationFeedDelivery{PushAccountIDs: delivery.pushAccountIDs, DeepLink: absenceFeedDeepLink(scopedReport)},
 		})
 	}
 	return events
@@ -223,8 +234,18 @@ func absenceEventKey(report AbsenceReport, accountIDs []int64) string {
 }
 
 type absenceDelivery struct {
-	studentIDs []int64
-	accountIDs []int64
+	studentIDs     []int64
+	accountIDs     []int64
+	pushAccountIDs []int64
+}
+
+// absenceFeedDeepLink is the feed entry's link where the push has none: a
+// feed entry always leads somewhere, here to the list of children.
+func absenceFeedDeepLink(report AbsenceReport) string {
+	if absenceDeepLink(report) == "" {
+		return "/students"
+	}
+	return ""
 }
 
 // resolveDeliveries builds each account's visible student subset from the
@@ -238,6 +259,7 @@ func (n *absenceNotifier) resolveDeliveries(ctx context.Context, report AbsenceR
 		StudentIDs:         report.StudentIDs,
 		NotificationType:   TypeStudentAbsenceReported,
 		ExcludedAccountIDs: excluded,
+		Feed:               true,
 	})
 	if err != nil {
 		return nil, err
@@ -254,15 +276,17 @@ func (n *absenceNotifier) resolveDeliveries(ctx context.Context, report AbsenceR
 			keys = append(keys, key)
 		}
 		delivery.accountIDs = append(delivery.accountIDs, scope.AccountID)
+		if scope.Push {
+			delivery.pushAccountIDs = append(delivery.pushAccountIDs, scope.AccountID)
+		}
 	}
 	sort.Strings(keys)
 
 	deliveries := make([]absenceDelivery, 0, len(keys))
 	for _, key := range keys {
 		delivery := byScope[key]
-		sort.Slice(delivery.accountIDs, func(i, j int) bool {
-			return delivery.accountIDs[i] < delivery.accountIDs[j]
-		})
+		slices.Sort(delivery.accountIDs)
+		slices.Sort(delivery.pushAccountIDs)
 		deliveries = append(deliveries, *delivery)
 	}
 	return deliveries, nil

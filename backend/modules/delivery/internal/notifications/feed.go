@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/domain"
 )
@@ -40,7 +41,7 @@ func (r *router) windowAndFeed(ctx context.Context, event *Event) (bool, error) 
 		if err != nil {
 			return false, err
 		}
-		if !within && event.Feed == nil {
+		if !within && (event.Feed == nil || event.Feed.HoldOutsideWindow) {
 			return false, ErrOutsideActiveWindow
 		}
 		pushAllowed = within
@@ -72,8 +73,12 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 		}
 	}
 	now := r.now()
+	link := event.DeepLink
+	if event.Feed.DeepLink != "" {
+		link = event.Feed.DeepLink
+	}
 	write, err := r.store.PublishFeedEntries(ctx, event.Audience.TenantID, domain.FeedEntryContent{
-		Type: event.Type, Title: event.Title, Body: event.Body, DeepLink: event.DeepLink,
+		Type: event.Type, Title: event.Title, Body: event.Body, DeepLink: link,
 		RelatedType: event.RelatedType, RelatedID: event.RelatedID,
 	}, event.Audience.StaffAccountIDs, now, now.Add(-domain.FeedBundleWindow))
 	if err != nil {
@@ -94,20 +99,44 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 }
 
 // feedType checks the shape a feed event needs: a staff audience, a known
-// staff type, an app-relative deep link and the object it is about.
+// feed type, an app-relative deep link and the object it is about.
 func feedType(event Event) (TypeDefinition, error) {
 	if event.Audience.Scope != ScopeStaff {
 		return TypeDefinition{}, fmt.Errorf("notification feed requires the staff scope, got %q", event.Audience.Scope)
 	}
 	def, known := GetType(event.Type)
-	if !known || def.Portal != PortalStaff {
+	if !known || !def.Feed {
 		return TypeDefinition{}, fmt.Errorf("%w: %s", ErrUnknownNotificationType, event.Type)
 	}
-	if event.DeepLink == "" {
+	if event.DeepLink == "" && event.Feed.DeepLink == "" {
 		return TypeDefinition{}, errors.New("notification feed requires a deep link")
+	}
+	if !appRelative(event.Feed.DeepLink) {
+		return TypeDefinition{}, errors.New("feed deep link must be an app-relative path")
 	}
 	if event.RelatedType == "" || event.RelatedID <= 0 {
 		return TypeDefinition{}, errors.New("notification feed requires the object it is about")
 	}
 	return def, nil
+}
+
+// requireFeedDelivery holds a type and its delivery path together (#7137):
+// an event of a feed type needs its feed recipients, and an event of any
+// other type must not ask for the feed. It keeps a producer from pushing a
+// feed type past the feed, and a message type out of the bell.
+func requireFeedDelivery(event Event) error {
+	def, known := GetType(event.Type)
+	writesFeed := known && def.Feed
+	switch {
+	case writesFeed && event.Feed == nil:
+		return fmt.Errorf("notification type %s writes the feed and needs its feed recipients", event.Type)
+	case !writesFeed && event.Feed != nil:
+		return fmt.Errorf("notification type %s does not write the feed", event.Type)
+	}
+	return nil
+}
+
+// appRelative reports whether an optional link stays inside the app.
+func appRelative(link string) bool {
+	return link == "" || (strings.HasPrefix(link, "/") && !strings.HasPrefix(link, "//") && !strings.Contains(link, `\`))
 }
