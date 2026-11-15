@@ -432,3 +432,27 @@ Verworfen:
   Schule danach scheitert.
 - **Ein Abbild der Buchungen beim Träger:** Es wäre erst nach dem Abgleich
   aktuell. Zwei Schulen könnten so denselben Rest buchen.
+
+## Nachtrag 2026-11-15: Der Personal-Import legt den Personalstamm an (#4724)
+
+**Status: Vorgeschlagen.**
+
+§5 sagt, der Personal-Import lege Personalstamm und Arbeitsverträge an. Der
+Import in [#4724](https://github.com/moto-ogs/project-phoenix/issues/4724)
+legt nur den Personalstamm an:
+
+1. **Kein Arbeitsvertrag aus der Datei.** Ein Arbeitsvertrag braucht das
+   Soll mindestens eines Einsatzorts (§1). Eine neue Akte aus der Datei hat
+   noch keinen Einsatzort, denn der Import verknüpft nach §5 nicht von
+   selbst. Die Personalverwaltung bestätigt danach die Vorschläge der
+   Übersicht (gleiche Personalnummer) und legt den Vertrag in der Akte an.
+2. **Ergänzen, nie überschreiben.** Hat eine Akte die Nummer der Zeile,
+   trägt der Import nur leere Werte für IBAN, Steuer-ID und SV-Nummer ein.
+   Weichen Name, Geburtsdatum oder ein vorhandener Wert ab, bleibt die Zeile
+   draußen. So bringt eine falsche Nummer keine Bankdaten zu einer anderen
+   Person.
+3. **Die Personalnummer ohne führende Nullen.** Der Abgleich nach §5 liest
+   „00123“ und „123“ als dieselbe Nummer, weil Tabellenprogramme führende
+   Nullen beim Speichern weglassen. Die Nummer der Akte ändert der Import
+   nicht. Steht eine Nummer mehrmals in der Datei, übernimmt der Import
+   keine dieser Zeilen.

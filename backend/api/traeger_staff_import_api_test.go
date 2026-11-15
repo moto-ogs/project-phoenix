@@ -9,6 +9,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -148,6 +150,13 @@ func TestTraegerStaffImportTakesOverStaffWithoutDuplicates(t *testing.T) {
 		assert.Equal(t, 2, staffSchoolValue(t, db, `SELECT COUNT(*) FROM workforce.staff_records WHERE organization_id = ?`, office.organization))
 	})
 
+	t.Run("a number without its leading zeros finds its record", func(t *testing.T) {
+		rec, result := staffImport(t, router, office.token, "Personalnummer;Vorname;Nachname\n070031;Mira;Sommer\n", false)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, map[int]string{2: "duplicate"}, staffImportStatuses(result), "a spreadsheet adds or drops leading zeros")
+		assert.Equal(t, mira, result.Rows[0].RecordID)
+	})
+
 	t.Run("a row fills empty bank values of its record and never changes a contradicted one", func(t *testing.T) {
 		completing := "Personalnummer;Vorname;Nachname;IBAN\n70032;Jonas;Keller;" + staffImportIBAN + "\n70031;Mira;Sommer-Berg;" + staffImportIBAN + "\n"
 		rec, result := staffImport(t, router, office.token, completing, false)
@@ -188,19 +197,29 @@ func TestTraegerStaffImportTakesOverStaffWithoutDuplicates(t *testing.T) {
 			"a preview that reads a record with an Einsatzort is in that school's access log")
 	})
 
-	t.Run("the log lists the imports", func(t *testing.T) {
-		rec := traegerJSON(t, router, office.token, http.MethodGet, staffImportPath, nil)
+	t.Run("the log lists the imports and names the colleague who imported", func(t *testing.T) {
+		colleague := staffImportColleague(t, db, portal, office.organization, "Ines Lindner")
+		rec, _ := staffImport(t, router, colleague, "Personalnummer;Vorname;Nachname\n70050;Tom;Lenz\n", true)
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		rec = traegerJSON(t, router, office.token, http.MethodGet, staffImportPath, nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		entries := decode[[]workforce.StaffImportEntry](t, rec)
-		require.Len(t, entries, 2)
-		assert.Equal(t, "personal.csv", entries[0].File)
-		assert.Equal(t, [2]int{0, 1}, [2]int{entries[0].Created, entries[0].Completed}, "the newest import filled one record")
-		assert.Equal(t, [2]int{2, 0}, [2]int{entries[1].Created, entries[1].Completed})
+		require.Len(t, entries, 3)
+		assert.False(t, entries[0].ByYou)
+		assert.Equal(t, "Ines Lindner", entries[0].AccountName, "the Personalverwaltung may not read the Träger-Büro; the log names the colleague")
+		assert.Equal(t, [2]int{1, 0}, [2]int{entries[0].Created, entries[0].Completed})
+		assert.Equal(t, "personal.csv", entries[1].File)
+		assert.True(t, entries[1].ByYou)
+		assert.Empty(t, entries[1].AccountName, "the reader's own import needs no name")
+		assert.Equal(t, [2]int{0, 1}, [2]int{entries[1].Created, entries[1].Completed}, "the newer own import filled one record")
+		assert.Equal(t, [2]int{2, 0}, [2]int{entries[2].Created, entries[2].Completed})
 	})
 
 	t.Run("no role without the right and no other Träger reaches the records", func(t *testing.T) {
 		overviewOnly := newTraegerOffice(t, db, portal, "Träger Import Übersicht", identityaccess.TraegerRoleReadOnly)
 		rec, _ := staffImport(t, router, overviewOnly.token, file, false)
+		assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+		rec, _ = staffImport(t, router, overviewOnly.token, file, true)
 		assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 		rec = traegerJSON(t, router, overviewOnly.token, http.MethodGet, staffImportPath, nil)
 		assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
@@ -224,6 +243,21 @@ func TestTraegerStaffImportTakesOverStaffWithoutDuplicates(t *testing.T) {
 		})
 		assertStaffRefusal(t, rec, http.StatusBadRequest, "workforce.traeger_staff_import_mapping_invalid")
 	})
+}
+
+// staffImportColleague signs in a second person of the Personalverwaltung
+// of the Träger, with the name the person carries there.
+func staffImportColleague(t *testing.T, db *bun.DB, portal *traegerPortalHandler, organization int64, name string) string {
+	t.Helper()
+	password := testpkg.NewTestPassword()
+	account := traegerAccount(t, db, password)
+	testpkg.CreateTestTraegerMember(t, db, organization, account.ID, identityaccess.TraegerRolePersonnel)
+	_, err := db.ExecContext(context.Background(), `UPDATE platform.organization_accounts SET display_name = ?
+		WHERE organization_id = ? AND account_id = ?`, name, organization, account.ID)
+	require.NoError(t, err)
+	code, answer := traegerSignIn(t, portal, account.Email, password, 0)
+	require.Equal(t, http.StatusOK, code)
+	return answer.AccessToken
 }
 
 // TestTraegerStaffImportLogQueryBudgetIsFlat pins the statements of the

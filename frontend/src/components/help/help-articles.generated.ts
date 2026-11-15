@@ -14263,7 +14263,7 @@ export const traegerStaffRecordsTopic =
       result:
         "Die Akte gilt für alle Schulen der Person. Jede Schule sieht die Personalnummer des Trägers und kann sie nicht mehr ändern. Die Bank- und Steuerdaten ziehen von den Schulen in die Akte. Die Schulen sehen nur noch: „führt der Träger“. Planung, Zeiten und Abwesenheiten bleiben an jeder Schule wie bisher. Vertrag und Soll tragen Sie danach in der Akte ein.",
       notes: [
-        "Sie können dieselbe Datei noch einmal laden. Eine neue Personalnummer wird eine neue Akte. Bei einer bekannten Nummer trägt moto nur fehlende IBAN, Steuer-ID oder SV-Nummer ein. Bestehende Werte ändert der Import nie.",
+        "Sie können dieselbe Datei noch einmal laden. Eine neue Personalnummer wird eine neue Akte. Bei einer bekannten Nummer trägt moto nur fehlende IBAN, Steuer-ID oder SV-Nummer ein. Bestehende Werte ändert der Import nie. Führende Nullen zählen nicht: 00123 und 123 sind dieselbe Nummer.",
         "Der Import verknüpft keine Akte von selbst mit einer Schule. Das bestätigen Sie unter `Vorschläge`.",
         "moto bewahrt die Datei nicht auf. Im `Verlauf` jeder Akte stehen Dateiname und Zeile. `Bisherige Importe` zeigt, wer wann welche Datei übernommen hat.",
         "Ein Wert, den Sie beim Verknüpfen nicht wählen, bleibt mit seiner Schule im `Verlauf` der Akte.",

@@ -10,10 +10,28 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 // The writes and the log of the Personal-Import (#4724), all in the Träger
 // transaction and each in one statement, whatever the number of rows.
+
+// LockStaffRecords locks every record of the Träger, in the order of their
+// IDs, until the transaction ends.
+func (s *TraegerStaffStore) LockStaffRecords(ctx context.Context, organizationID int64) error {
+	db, err := traegerStaffDB(ctx, organizationID)
+	if err != nil {
+		return err
+	}
+	if err := tenant.OrderLock(ctx, tenant.LockLeaf, "workforce.staff_records"); err != nil {
+		return err
+	}
+	if _, err := db.ExecContext(ctx, `SELECT id FROM workforce.staff_records WHERE organization_id = ? ORDER BY id FOR UPDATE`,
+		organizationID); err != nil {
+		return fmt.Errorf("workforce postgres: lock staff records: %w", err)
+	}
+	return nil
+}
 
 // ReserveStaffRecordIDs draws count IDs from the record sequence.
 func (s *TraegerStaffStore) ReserveStaffRecordIDs(ctx context.Context, organizationID int64, count int) ([]int64, error) {

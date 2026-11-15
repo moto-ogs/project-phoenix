@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/fnv"
+	"maps"
 	"slices"
 	"strings"
 	"unicode"
@@ -219,12 +220,7 @@ func (t *TraegerStaff) evaluateStaffImport(ctx context.Context, actor workforce.
 	if err != nil {
 		return staffImportScene{}, err
 	}
-	byNumber := make(map[string]domain.TraegerStaffRecord, len(records))
-	for _, record := range records {
-		if record.PersonnelNumber != nil {
-			byNumber[*record.PersonnelNumber] = record
-		}
-	}
+	recordWithNumber := staffImportRecordIndex(records)
 	today, err := calendar.ParseDate(t.clock.Today())
 	if err != nil {
 		return staffImportScene{}, fmt.Errorf("workforce: today of the import: %w", err)
@@ -233,7 +229,7 @@ func (t *TraegerStaff) evaluateStaffImport(ctx context.Context, actor workforce.
 	checks := make([]domain.StaffImportCheck, len(table.read.Rows))
 	for i, cells := range table.read.Rows {
 		raw := staffImportRaw(cells, columns)
-		record, ok := byNumber[strings.TrimSpace(raw.PersonnelNumber)]
+		record, ok := recordWithNumber(raw.PersonnelNumber)
 		var known *domain.StaffImportRecord
 		if ok {
 			if known, err = t.importRecord(record); err != nil {
@@ -248,6 +244,31 @@ func (t *TraegerStaff) evaluateStaffImport(ctx context.Context, actor workforce.
 		scene.rows[i] = staffImportRow{line: table.read.Lines[i], check: check}
 	}
 	return scene, nil
+}
+
+// staffImportRecordIndex finds the record of a row's number: the record
+// with exactly that number, or else the only record whose number differs in
+// leading zeros alone, which a spreadsheet program drops on saving.
+func staffImportRecordIndex(records []domain.TraegerStaffRecord) func(number string) (domain.TraegerStaffRecord, bool) {
+	exact := make(map[string]domain.TraegerStaffRecord, len(records))
+	byKey := make(map[string][]domain.TraegerStaffRecord, len(records))
+	for _, record := range records {
+		if record.PersonnelNumber != nil {
+			exact[*record.PersonnelNumber] = record
+			key := domain.StaffImportNumberKey(*record.PersonnelNumber)
+			byKey[key] = append(byKey[key], record)
+		}
+	}
+	return func(number string) (domain.TraegerStaffRecord, bool) {
+		number = strings.TrimSpace(number)
+		if record, ok := exact[number]; ok {
+			return record, true
+		}
+		if candidates := byKey[domain.StaffImportNumberKey(number)]; number != "" && len(candidates) == 1 {
+			return candidates[0], true
+		}
+		return domain.TraegerStaffRecord{}, false
+	}
 }
 
 func staffImportRaw(cells []string, columns map[string]int) domain.StaffImportRaw {
@@ -276,17 +297,15 @@ func (t *TraegerStaff) importRecord(record domain.TraegerStaffRecord) (*domain.S
 }
 
 // logStaffImportAccess writes, before the answer leaves, an access entry at
-// every school whose employment belongs to a record a row matched. A record
-// without Einsatzorte belongs to no school yet.
+// every school whose employment belongs to a record the import opened,
+// also when the row stays out because its number repeats. A record without
+// Einsatzorte belongs to no school yet.
 func (t *TraegerStaff) logStaffImportAccess(ctx context.Context, actor workforce.TraegerStaffActor, scene staffImportScene) error {
 	shown := map[int64][]int64{}
 	var schools []int64
-	for _, row := range scene.rows {
-		record, ok := scene.matched[row.check.RecordID]
-		if !ok {
-			continue
-		}
-		for _, link := range record.Links {
+	ids := slices.Sorted(maps.Keys(scene.matched))
+	for _, id := range ids {
+		for _, link := range scene.matched[id].Links {
 			if _, seen := shown[link.SchoolID]; !seen {
 				schools = append(schools, link.SchoolID)
 			}
@@ -320,6 +339,12 @@ func (t *TraegerStaff) applyStaffImport(ctx context.Context, actor workforce.Tra
 	}
 	var scene staffImportScene
 	err := t.released(ctx, actor, func(ctx context.Context) error {
+		// The lock keeps every record as the rows are checked against it: an
+		// edit that renumbers or renames a record waits, so bank data never
+		// lands in a record the row no longer matches.
+		if err := t.store.LockStaffRecords(ctx, actor.OrganizationID); err != nil {
+			return err
+		}
 		var err error
 		if scene, err = t.evaluateStaffImport(ctx, actor, table, plan.columns); err != nil {
 			return err
@@ -510,9 +535,13 @@ func countStaffImportRow(counts *workforce.StaffImportCounts, status string) {
 // StaffImportLog lists the imports of the Träger, newest first.
 func (t *TraegerStaff) StaffImportLog(ctx context.Context, actor workforce.TraegerStaffActor) ([]workforce.StaffImportEntry, error) {
 	var events []domain.StaffImportEvent
+	names := map[int64]string{}
 	err := t.released(ctx, actor, func(ctx context.Context) error {
 		var err error
-		events, err = t.store.StaffImportEvents(ctx, actor.OrganizationID, staffImportLogLimit)
+		if events, err = t.store.StaffImportEvents(ctx, actor.OrganizationID, staffImportLogLimit); err != nil {
+			return err
+		}
+		names, err = t.colleagueNames(ctx, actor, events)
 		return err
 	})
 	if err != nil {
@@ -520,8 +549,28 @@ func (t *TraegerStaff) StaffImportLog(ctx context.Context, actor workforce.Traeg
 	}
 	entries := make([]workforce.StaffImportEntry, len(events))
 	for i, event := range events {
-		entries[i] = workforce.StaffImportEntry{File: event.File, AccountID: event.AccountID, ImportedAt: event.ImportedAt,
-			Created: event.Created, Completed: event.Completed}
+		entries[i] = workforce.StaffImportEntry{File: event.File, AccountID: event.AccountID, ByYou: event.AccountID == actor.AccountID,
+			AccountName: names[event.AccountID], ImportedAt: event.ImportedAt, Created: event.Created, Completed: event.Completed}
 	}
 	return entries, nil
+}
+
+// colleagueNames reads, in one call, the names of the other accounts that
+// imported; the reader's own imports need none. The Personalverwaltung may
+// not read the Träger-Büro, so the log names the colleagues itself.
+func (t *TraegerStaff) colleagueNames(ctx context.Context, actor workforce.TraegerStaffActor, events []domain.StaffImportEvent) (map[int64]string, error) {
+	var ids []int64
+	for _, event := range events {
+		if event.AccountID != actor.AccountID && !slices.Contains(ids, event.AccountID) {
+			ids = append(ids, event.AccountID)
+		}
+	}
+	if len(ids) == 0 {
+		return map[int64]string{}, nil
+	}
+	names, err := t.ports.Names.TraegerActorNames(ctx, actor.OrganizationID, ids)
+	if err != nil {
+		return nil, fmt.Errorf("workforce: read the names of the Träger-Büro: %w", err)
+	}
+	return names, nil
 }

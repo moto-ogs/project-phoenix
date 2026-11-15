@@ -427,6 +427,10 @@ type TraegerStaffStore interface {
 // TraegerStaffImportStore writes the records of a Personal-Import (#4724)
 // in bulk in the Träger transaction and reads its trail entries.
 type TraegerStaffImportStore interface {
+	// LockStaffRecords locks every record of the Träger until the Träger
+	// transaction ends, in one statement: an edit of a record waits for the
+	// import, and the import checks its rows against what it then writes.
+	LockStaffRecords(ctx context.Context, organizationID int64) error
 	// ReserveStaffRecordIDs draws count record IDs in one statement, so the
 	// bank values can be sealed to their record before the insert.
 	ReserveStaffRecordIDs(ctx context.Context, organizationID int64, count int) ([]int64, error)

@@ -10495,6 +10495,16 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingActorNames.TraegerActorNames",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffActorNames.TraegerActorNames",
+      "reason": "Read-only: the log of the Personal-Import names the colleagues of the session's Träger who imported (#4724) through Organisation \u0026 Tenancy's names of the Träger memberships, the same binding as the export protocol, in one statement in the caller's Träger transaction (platform.traeger_member_names answers only for app.current_org_id). No persistent, lock or scope effect.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMemberNames.ListTraegerMemberNames",
+      "target_owner": "organization-tenancy"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinSchool",
       "classification": "query",
       "effect": "query",

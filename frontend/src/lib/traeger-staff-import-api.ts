@@ -80,6 +80,10 @@ export interface StaffImportResult {
 export interface StaffImportLogEntry {
   readonly file: string;
   readonly accountId: string;
+  /** The reader's own import. */
+  readonly byYou: boolean;
+  /** The name a colleague carries at the Träger; "" for the reader or none. */
+  readonly accountName: string;
   readonly importedAt: string;
   readonly created: number;
   readonly completed: number;
@@ -123,6 +127,8 @@ interface BackendResult {
 interface BackendLogEntry {
   file: string;
   account_id: number;
+  by_you: boolean;
+  account_name?: string;
   imported_at: string;
   created: number;
   completed: number;
@@ -210,6 +216,8 @@ export async function fetchStaffImportLog(): Promise<StaffImportLogEntry[]> {
   return (entries ?? []).map((entry) => ({
     file: entry.file,
     accountId: String(entry.account_id),
+    byYou: entry.by_you,
+    accountName: entry.account_name ?? "",
     importedAt: entry.imported_at,
     created: entry.created,
     completed: entry.completed,

@@ -183,11 +183,15 @@ type StaffImport struct {
 // StaffImportEntry is one import in the log: when, by whom, which file,
 // how many records it created and how many it completed.
 type StaffImportEntry struct {
-	File       string    `json:"file"`
-	AccountID  int64     `json:"account_id"`
-	ImportedAt time.Time `json:"imported_at"`
-	Created    int       `json:"created"`
-	Completed  int       `json:"completed"`
+	File      string `json:"file"`
+	AccountID int64  `json:"account_id"`
+	// ByYou marks the reader's own import; AccountName names a colleague's
+	// with the name the colleague carries at the Träger, empty without one.
+	ByYou       bool      `json:"by_you"`
+	AccountName string    `json:"account_name,omitempty"`
+	ImportedAt  time.Time `json:"imported_at"`
+	Created     int       `json:"created"`
+	Completed   int       `json:"completed"`
 }
 
 // TraegerStaffImports is the Personal-Import of the Personalstamm. Each

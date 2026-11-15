@@ -149,22 +149,45 @@ func decideAgainstRecord(check *StaffImportCheck, record StaffImportRecord) {
 	}
 }
 
-// MarkRepeatedStaffNumbers refuses every row whose number another readable
-// row of the file carries too: the file cannot say which one is right.
+// MarkRepeatedStaffNumbers refuses every row whose number another row of
+// the file carries too, read by StaffImportNumberKey: the file cannot say
+// which one is right. A row that is invalid for another reason still counts,
+// and stays invalid.
 func MarkRepeatedStaffNumbers(checks []StaffImportCheck) {
 	seen := map[string]int{}
 	for _, check := range checks {
-		if check.Status != StaffImportInvalid {
-			seen[check.Values.PersonnelNumber]++
+		if check.readableNumber() {
+			seen[StaffImportNumberKey(check.Values.PersonnelNumber)]++
 		}
 	}
 	for i := range checks {
-		if checks[i].Status == StaffImportInvalid || seen[checks[i].Values.PersonnelNumber] < 2 {
+		if checks[i].Status == StaffImportInvalid || seen[StaffImportNumberKey(checks[i].Values.PersonnelNumber)] < 2 {
 			continue
 		}
 		checks[i].Status, checks[i].RecordID, checks[i].Completes = StaffImportConflict, 0, nil
 		checks[i].Problems = []StaffImportProblem{{Field: StaffFieldPersonnelNumber, Code: StaffImportProblemRepeated}}
 	}
+}
+
+// readableNumber tells whether the row carries a valid personnel number.
+func (c StaffImportCheck) readableNumber() bool {
+	for _, problem := range c.Problems {
+		if problem.Field == StaffFieldPersonnelNumber && problem.Code != StaffImportProblemRepeated {
+			return false
+		}
+	}
+	return c.Values.PersonnelNumber != ""
+}
+
+// StaffImportNumberKey is the key a personnel number matches by: its digits
+// without leading zeros. A spreadsheet program drops them when it saves the
+// list, and "00123" and "123" are the same person in the payroll program.
+func StaffImportNumberKey(number string) string {
+	number = strings.TrimSpace(number)
+	if key := strings.TrimLeft(number, "0"); key != "" || number == "" {
+		return key
+	}
+	return "0"
 }
 
 func normalizeStaffImportRow(raw StaffImportRaw, today calendar.Date) (StaffImportValues, []StaffImportProblem) {

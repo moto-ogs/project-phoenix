@@ -233,7 +233,7 @@ export default function TraegerStaffImportPage() {
             size="md"
             onClick={downloadTemplate}
             className="gap-2"
-            tooltip="Lädt eine leere CSV-Datei mit den passenden Überschriften herunter."
+            tooltip="Eine leere CSV-Datei mit den passenden Überschriften herunterladen."
           >
             <DownloadSimpleIcon className="h-4 w-4" aria-hidden="true" />
             Beispieldatei

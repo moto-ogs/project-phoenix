@@ -354,6 +354,13 @@ type TraegerStaffRuntime interface {
 	WithinTraeger(ctx context.Context, organizationID int64, fn func(context.Context) error) error
 }
 
+// TraegerStaffActorNames names the people of the Träger-Büro (#4724): the
+// name each account carries at the Träger, in the caller's Träger
+// transaction, one read for the set; an account without a name is missing.
+type TraegerStaffActorNames interface {
+	TraegerActorNames(ctx context.Context, organizationID int64, accountIDs []int64) (map[int64]string, error)
+}
+
 // TraegerStaffPorts are the collaborators the Personalstamm does not own.
 type TraegerStaffPorts struct {
 	Schools     TraegerStaffSchools
@@ -361,4 +368,5 @@ type TraegerStaffPorts struct {
 	Persons     TraegerSchoolPersons
 	Access      TraegerStaffAccessLog
 	Runtime     TraegerStaffRuntime
+	Names       TraegerStaffActorNames
 }

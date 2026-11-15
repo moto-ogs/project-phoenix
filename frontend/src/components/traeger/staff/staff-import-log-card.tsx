@@ -4,42 +4,22 @@
 // viele Akten neu und wie viele ergänzt. Nur zur Information; die Datei
 // selbst bewahrt moto nicht auf.
 
-import { useEffect, useState } from "react";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { SectionCard } from "~/components/ui/section-card";
 import { formatBerlinDate, formatBerlinTime } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
-import { fetchTraegerBuero } from "~/lib/traeger-api";
 import type { StaffImportLogEntry } from "~/lib/traeger-staff-import-api";
 
-const logger = createLogger({ component: "StaffImportLogCard" });
+// Wer importiert hat: „Ihnen“ für die eigenen Importe, sonst der Name, den
+// die Person beim Träger trägt. Die Personalverwaltung darf das Träger-Büro
+// nicht lesen; die Namen kommen deshalb mit dem Protokoll.
+function importedBy(entry: StaffImportLogEntry): string {
+  if (entry.byYou) return "Ihnen";
+  return entry.accountName.trim() || "Konto ohne Namen";
+}
 
 export function StaffImportLogCard({
   entries,
 }: Readonly<{ entries: readonly StaffImportLogEntry[] }>) {
-  const [emails, setEmails] = useState<ReadonlyMap<string, string>>(new Map());
-
-  useEffect(() => {
-    if (entries.length === 0) return;
-    let current = true;
-    // Die Personen des Träger-Büros nennen die Konten; ohne Leserecht
-    // bleibt die Kontonummer.
-    fetchTraegerBuero()
-      .then((buero) => {
-        if (current) {
-          setEmails(new Map(buero.members.map((m) => [m.accountId, m.email])));
-        }
-      })
-      .catch((err: unknown) => {
-        logger.warn("staff_import_log_people_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-    return () => {
-      current = false;
-    };
-  }, [entries.length]);
-
   const columns: DataTableColumn<StaffImportLogEntry>[] = [
     {
       key: "file",
@@ -62,9 +42,7 @@ export function StaffImportLogCard({
       key: "by",
       header: "Von",
       render: (entry) => (
-        <span className="wrap-anywhere">
-          {emails.get(entry.accountId) ?? `Konto ${entry.accountId}`}
-        </span>
+        <span className="wrap-anywhere">{importedBy(entry)}</span>
       ),
     },
     {

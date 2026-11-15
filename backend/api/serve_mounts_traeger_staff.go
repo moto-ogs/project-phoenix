@@ -35,6 +35,8 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 		Persons:     traegerSchoolPersons{persons: persons},
 		Access:      traegerStaffAccessLog{log: accessLog},
 		Runtime:     traegerDocumentRuntime{},
+		// The import log names colleagues like the export protocol (#4693).
+		Names: parentBillingActorNames{names: owners.NewTraegerMemberNames()},
 	}
 	records := staffAdmin.TraegerStaffRecords(collaborators)
 	requireStaff := common.RequiresPermission(identityaccess.TraegerRightStaffManage)

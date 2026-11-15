@@ -19,9 +19,6 @@ vi.mock("~/lib/traeger-staff-import-api", async (original) => ({
   ...api,
 }));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
-vi.mock("~/lib/traeger-api", () => ({
-  fetchTraegerBuero: () => Promise.resolve({ members: [] }),
-}));
 vi.mock("~/components/ui/tenant-page", () => ({
   TenantPage: ({
     children,
@@ -188,6 +185,37 @@ describe("TraegerStaffImportPage", () => {
       expect(api.previewStaffImport).toHaveBeenCalledTimes(2),
     );
     expect(screen.queryByText(/^Übernommen:/)).not.toBeInTheDocument();
+  });
+
+  it("names who imported without reading the Träger-Büro", async () => {
+    api.fetchStaffImportLog.mockResolvedValueOnce([
+      {
+        file: "lohn-november.csv",
+        accountId: "8",
+        byYou: false,
+        accountName: "Ines Lindner",
+        importedAt: "2026-11-15T09:30:00Z",
+        created: 3,
+        completed: 1,
+      },
+      {
+        file: "lohn-oktober.csv",
+        accountId: "7",
+        byYou: true,
+        accountName: "",
+        importedAt: "2026-10-15T09:30:00Z",
+        created: 5,
+        completed: 0,
+      },
+    ]);
+    render(
+      <ToastProvider>
+        <TraegerStaffImportPage />
+      </ToastProvider>,
+    );
+
+    expect(await screen.findByText("Ines Lindner")).toBeInTheDocument();
+    expect(screen.getByText("Ihnen")).toBeInTheDocument();
   });
 
   it("explains the missing release instead of offering an import", async () => {

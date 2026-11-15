@@ -92,3 +92,31 @@ func TestMarkRepeatedStaffNumbersRefusesEveryRowOfANumber(t *testing.T) {
 	assert.Equal(t, StaffImportConflict, checks[2].Status)
 	assert.Equal(t, StaffImportInvalid, checks[3].Status, "an invalid row stays invalid")
 }
+
+func TestMarkRepeatedStaffNumbersCountsInvalidRowsAndLeadingZeros(t *testing.T) {
+	t.Parallel()
+	checks := []StaffImportCheck{
+		CheckStaffImportRow(StaffImportRaw{PersonnelNumber: "70040", FirstName: "Ole", LastName: "Wendt", IBAN: "DE00"}, nil, importToday),
+		CheckStaffImportRow(StaffImportRaw{PersonnelNumber: "70040", FirstName: "Ole", LastName: "Wendt-Berg"}, nil, importToday),
+		CheckStaffImportRow(StaffImportRaw{PersonnelNumber: "00123", FirstName: "A", LastName: "B"}, nil, importToday),
+		CheckStaffImportRow(StaffImportRaw{PersonnelNumber: "123", FirstName: "A", LastName: "B"}, nil, importToday),
+		CheckStaffImportRow(StaffImportRaw{PersonnelNumber: "x1", FirstName: "C", LastName: "D"}, nil, importToday),
+		CheckStaffImportRow(StaffImportRaw{PersonnelNumber: "x1", FirstName: "C", LastName: "D"}, nil, importToday),
+	}
+
+	MarkRepeatedStaffNumbers(checks)
+
+	assert.Equal(t, StaffImportInvalid, checks[0].Status, "the invalid row keeps its own problem")
+	assert.Equal(t, StaffImportConflict, checks[1].Status, "the file holds two versions of 70040")
+	assert.Equal(t, StaffImportConflict, checks[2].Status, "a spreadsheet drops leading zeros: 00123 is 123")
+	assert.Equal(t, StaffImportConflict, checks[3].Status)
+	assert.Equal(t, StaffImportInvalid, checks[4].Status, "an unreadable number repeats nothing")
+	assert.Equal(t, []StaffImportProblem{{Field: StaffFieldPersonnelNumber, Code: StaffImportProblemInvalid}}, checks[5].Problems)
+}
+
+func TestStaffImportNumberKeyDropsLeadingZeros(t *testing.T) {
+	t.Parallel()
+	for number, key := range map[string]string{"00123": "123", " 123 ": "123", "0": "0", "000": "0", "": "", "70040": "70040"} {
+		assert.Equal(t, key, StaffImportNumberKey(number), number)
+	}
+}
