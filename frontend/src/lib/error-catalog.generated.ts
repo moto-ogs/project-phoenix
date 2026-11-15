@@ -151,6 +151,8 @@ export const ERROR_CATALOG = {
         "Dieser Kontakt ist mehreren Familien zugeordnet und kann nur von der Schule geändert werden. Bitte wenden Sie sich an die Schule.",
       "care.guardian_social_worker_managed":
         "Diese Kontaktdaten werden von der Schule verwaltet. Für Änderungen wenden Sie sich bitte an die Schule.",
+      "care.invalid_credentials":
+        "Die E-Mail-Adresse oder das Passwort stimmt nicht. Bitte prüfen Sie Ihre Eingabe.",
       "care.invalid_poll_response":
         "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.invalid_recipients":
@@ -2179,6 +2181,8 @@ export const ERROR_CATALOG = {
         "This contact is shared with several families and can only be changed by the school. Please contact the school.",
       "care.guardian_social_worker_managed":
         "These contact details are managed by the school. To make changes, please contact the school.",
+      "care.invalid_credentials":
+        "The email address or the password is not correct. Please check your entry.",
       "care.invalid_poll_response":
         "{object} contains invalid details. Please check your entries.",
       "care.invalid_recipients":
@@ -2911,6 +2915,8 @@ export const ERROR_CATALOG = {
         "Этот контакт используется несколькими семьями и может быть изменён только школой. Обратитесь в школу.",
       "care.guardian_social_worker_managed":
         "Эти контактные данные управляются школой. Для изменений обратитесь в школу.",
+      "care.invalid_credentials":
+        "Неверный адрес электронной почты или пароль. Проверьте введённые данные.",
       "care.invalid_poll_response":
         "Указаны неверные данные: {object}. Проверьте введённые данные.",
       "care.invalid_recipients":
@@ -3515,6 +3521,8 @@ export const ERROR_CATALOG = {
         "Ky kontakt përdoret nga disa familje dhe mund të ndryshohet vetëm nga shkolla. Kontaktoni shkollën.",
       "care.guardian_social_worker_managed":
         "Këto të dhëna kontakti menaxhohen nga shkolla. Për ndryshime kontaktoni shkollën.",
+      "care.invalid_credentials":
+        "Adresa e email-it ose fjalëkalimi nuk është i saktë. Kontrolloni të dhënat.",
       "care.invalid_poll_response":
         "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
       "care.invalid_recipients":
@@ -4133,6 +4141,8 @@ export const ERROR_CATALOG = {
         "Ten kontakt jest przypisany do kilku rodzin. Może go zmienić tylko szkoła. Skontaktuj się ze szkołą.",
       "care.guardian_social_worker_managed":
         "Tymi danymi kontaktowymi zarządza szkoła. W sprawie zmian skontaktuj się ze szkołą.",
+      "care.invalid_credentials":
+        "Adres e-mail lub hasło są nieprawidłowe. Sprawdź wpisane dane.",
       "care.invalid_poll_response":
         "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
       "care.invalid_recipients":
@@ -4737,6 +4747,8 @@ export const ERROR_CATALOG = {
         "Bu kişi birden fazla aileye bağlı. Bilgilerini yalnızca okul değiştirebilir. Lütfen okulla iletişime geçin.",
       "care.guardian_social_worker_managed":
         "Bu iletişim bilgilerini okul yönetiyor. Değişiklik için lütfen okulla iletişime geçin.",
+      "care.invalid_credentials":
+        "E-posta adresi veya şifre doğru değil. Lütfen girdiğiniz bilgileri kontrol edin.",
       "care.invalid_poll_response":
         "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",
       "care.invalid_recipients":
@@ -5346,6 +5358,8 @@ export const ERROR_CATALOG = {
         "Цей контакт належить до кількох сімей. Змінити його може лише школа. Зверніться до школи.",
       "care.guardian_social_worker_managed":
         "Цими контактними даними керує школа. Щодо змін зверніться до школи.",
+      "care.invalid_credentials":
+        "Неправильна адреса електронної пошти або пароль. Перевірте введені дані.",
       "care.invalid_poll_response":
         "Указано неправильні дані: {object}. Перевірте введені дані.",
       "care.invalid_recipients":

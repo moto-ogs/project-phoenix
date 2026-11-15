@@ -126,7 +126,7 @@ export const classes = {
   "care.guardian_role_managed": "permission",
   "care.guardian_shared_across_families": "permission",
   "care.guardian_social_worker_managed": "permission",
-  "care.invalid_credentials": "permission",
+  "care.invalid_credentials": "input",
   "care.invalid_poll_response": "input",
   "care.invalid_recipients": "input",
   "care.invalid_request_payload": "input",

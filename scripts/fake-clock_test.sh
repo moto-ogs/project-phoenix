@@ -56,12 +56,16 @@ grep -q 'Go clock at 2027-04-20T00:30' "$fixture/stderr" || fail "no notice on s
 offset=$(cat "$fixture/postgres/offset")
 [[ "$offset" =~ ^\+[0-9]{19}$ ]] || fail "Postgres offset file holds '$offset', want a fixed-width offset"
 
-past=$(cd "$fixture" && "$fake_clock" 2026-01-02T08:00 go run . 2> /dev/null | head -n 1)
+# Whole output, then its first line: "| head -n 1" closes the pipe while the
+# program still writes, and under pipefail its SIGPIPE fails the script.
+past=$(cd "$fixture" && "$fake_clock" 2026-01-02T08:00 go run . 2> /dev/null)
+past=${past%%$'\n'*}
 [ "$past" = 2026-01-02T08:00 ] || fail "a time in the past printed $past"
 
 # The minute may turn while the program compiles.
 before=$(TZ=Europe/Berlin date +%Y-%m-%dT%H:%M)
-real=$(cd "$fixture" && go run . | head -n 1)
+real=$(cd "$fixture" && go run .)
+real=${real%%$'\n'*}
 after=$(TZ=Europe/Berlin date +%Y-%m-%dT%H:%M)
 [[ "$real" = "$before" || "$real" = "$after" ]] || fail "a normal build printed $real, not the real time"
 

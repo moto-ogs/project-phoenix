@@ -137,7 +137,7 @@ func (s *OfferingChanges) courseGroupsForCompetingRequests(
 	for _, offering := range offerings {
 		references = append(references, ports.CourseOfferingReference{OfferingID: offering.ID, ActivityGroupID: offering.ActivityGroupID})
 	}
-	additionalGroups, err := s.deps.Planning.CourseGroupsForOfferings(ctx, references, calendar.TodayDate())
+	additionalGroups, err := s.deps.Planning.CourseGroupsForOfferings(ctx, references, s.todayDate())
 	if err != nil {
 		return nil, fmt.Errorf("course request: load competing waitlist course groups: %w", err)
 	}

@@ -279,8 +279,8 @@ func (s PickupExcusalRows) FindByStudentIDAndDate(ctx context.Context, id int64,
 	}
 	return &rows[0], nil
 }
-func (s PickupExcusalRows) FindUpcomingByStudentID(ctx context.Context, id int64) ([]*careplan.PickupException, error) {
-	return s.list(ctx, careplan.StudentScheduleFilter{StudentIDs: []int64{id}, UpcomingFrom: careplan.Date(calendar.TodayDate())})
+func (s PickupExcusalRows) FindUpcomingByStudentID(ctx context.Context, id int64, from calendar.Date) ([]*careplan.PickupException, error) {
+	return s.list(ctx, careplan.StudentScheduleFilter{StudentIDs: []int64{id}, UpcomingFrom: careplan.Date(from)})
 }
 func (s PickupExcusalRows) FindByStudentIDAndDateRange(ctx context.Context, id int64, from, to calendar.Date) ([]*careplan.PickupException, error) {
 	return s.list(ctx, careplan.StudentScheduleFilter{StudentIDs: []int64{id}, From: careplan.Date(from), To: careplan.Date(to)})

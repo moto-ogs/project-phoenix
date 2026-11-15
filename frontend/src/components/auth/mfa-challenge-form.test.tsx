@@ -324,6 +324,34 @@ describe("MFAChallengeForm", () => {
     assign.mockRestore();
   });
 
+  // The parents portal names a password a change has replaced since the
+  // sign-in by its care code (parentauth loginRules): a refusal like the
+  // staff portals' identity code, not an expired session (#7106).
+  it("keeps the parents portal's refused password in the form", async () => {
+    const assign = vi
+      .spyOn(window.location, "assign")
+      .mockImplementation(() => undefined);
+    global.fetch = mockErr(
+      401,
+      "invalid credentials",
+      "care.invalid_credentials",
+    );
+
+    render(
+      <MFAChallengeForm {...defaultProps} scope="parent" onSuccess={vi.fn()} />,
+    );
+
+    await submitCodeOnce("111111");
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Die E-Mail-Adresse oder das Passwort stimmt nicht. Bitte prüfen Sie Ihre Eingabe.",
+      );
+    });
+    expect(assign).not.toHaveBeenCalled();
+    assign.mockRestore();
+  });
+
   // A 401 without a refusal code means the challenge itself ran out. The
   // form no longer invents identity.invalid_credentials for it (ADR 0006):
   // it is an expired login and leads to the login screen.

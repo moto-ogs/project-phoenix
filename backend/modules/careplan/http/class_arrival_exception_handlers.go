@@ -147,7 +147,7 @@ func parseClassArrivalExceptionDate(w http.ResponseWriter, r *http.Request) (cal
 // the next 60 days.
 func (rs *Resource) getClassArrivalExceptions(w http.ResponseWriter, r *http.Request) {
 	schoolClass := strings.TrimSpace(chi.URLParam(r, "schoolClass"))
-	from, to, err := classArrivalExceptionWindow(r)
+	from, to, err := classArrivalExceptionWindow(r, rs.todayDate())
 	if err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -173,8 +173,8 @@ func (rs *Resource) getClassArrivalExceptions(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, http.StatusOK, resp, "Class arrival exceptions retrieved successfully")
 }
 
-func classArrivalExceptionWindow(r *http.Request) (calendar.Date, calendar.Date, error) {
-	from := calendar.TodayDate()
+func classArrivalExceptionWindow(r *http.Request, today calendar.Date) (calendar.Date, calendar.Date, error) {
+	from := today
 	to := from.AddDays(classArrivalExceptionListDays)
 	if raw := r.URL.Query().Get("from"); raw != "" {
 		parsed, err := calendar.ParseDate(raw)

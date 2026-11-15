@@ -125,7 +125,7 @@ func (w *ExcusedRequests) WriteStaffValue(ctx context.Context, write careplan.Ex
 	if len(dates) == 0 {
 		return careplan.ErrStaffValueUnsupported
 	}
-	now := time.Now()
+	now := w.now()
 	reviewer := write.ReviewerID
 	// "Present" lifts every status of the days; any other verdict replaces
 	// the status standing for each day as it is written (#6958).

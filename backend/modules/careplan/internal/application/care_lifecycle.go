@@ -59,7 +59,10 @@ type CareLifecycleDependencies struct {
 	// Fingerprint hashes the binding preview content into its token.
 	Fingerprint func([]byte) string
 	Logger      *slog.Logger
-	Today       func() calendar.Date
+	// Today defaults to the Berlin calendar day of Now.
+	Today func() calendar.Date
+	// Now stamps the lifecycle's records; the real clock when nil.
+	Now func() time.Time
 }
 
 // CareLifecycle is the native care-lifecycle application (#3427).
@@ -75,6 +78,7 @@ type CareLifecycle struct {
 	planningStaffing      ports.BookingPlanningStaffing
 	logger                *slog.Logger
 	today                 func() calendar.Date
+	now                   func() time.Time
 }
 
 var _ careplan.CareLifecycle = (*CareLifecycle)(nil)
@@ -87,17 +91,25 @@ func NewCareLifecycle(deps CareLifecycleDependencies) (*CareLifecycle, error) {
 		return nil, errors.New("care lifecycle: every owner port is required")
 	}
 	if deps.Records == nil || deps.SourceBookings == nil || deps.Directory == nil || deps.Unit == nil ||
-		deps.LockCareBookingWrites == nil || deps.BookingsAuthoritative == nil || deps.Fingerprint == nil || deps.Today == nil {
-		return nil, errors.New("care lifecycle: records, source bookings, directory, unit of work, booking lock, booking setting, fingerprint and clock are required")
+		deps.LockCareBookingWrites == nil || deps.BookingsAuthoritative == nil || deps.Fingerprint == nil {
+		return nil, errors.New("care lifecycle: records, source bookings, directory, unit of work, booking lock, booking setting and fingerprint are required")
 	}
 	logger := deps.Logger
 	if logger == nil {
 		logger = slog.Default()
 	}
+	now := deps.Now
+	if now == nil {
+		now = time.Now
+	}
+	today := deps.Today
+	if today == nil {
+		today = calendar.CalendarDateClock(now)
+	}
 	return &CareLifecycle{
 		owners: owners, records: deps.Records, sourceBookings: deps.SourceBookings, directory: deps.Directory, unit: deps.Unit,
 		lockCareBookingWrites: deps.LockCareBookingWrites, bookingsAuthoritative: deps.BookingsAuthoritative,
-		fingerprint: deps.Fingerprint, planningStaffing: owners.PlanningStaffing, logger: logger, today: deps.Today,
+		fingerprint: deps.Fingerprint, planningStaffing: owners.PlanningStaffing, logger: logger, today: today, now: now,
 	}, nil
 }
 
@@ -315,7 +327,7 @@ func (s *CareLifecycle) finishCareExitConfirmation(ctx context.Context, state *c
 	if state.completion == nil {
 		return nil
 	}
-	resolved, err := s.records.ResolveWithdrawal(ctx, state.completion.ID, state.actorAccountID, time.Now())
+	resolved, err := s.records.ResolveWithdrawal(ctx, state.completion.ID, state.actorAccountID, s.now())
 	if err != nil {
 		return fmt.Errorf("care lifecycle: resolve care withdrawal completion: %w", err)
 	}
@@ -408,7 +420,7 @@ func (s *CareLifecycle) plannedCareExits(ctx context.Context, ids []int64) (map[
 // records the restored care end in the child's history.
 func (s *CareLifecycle) reopenCancelledExit(ctx context.Context, id int64, exit careplan.CareExit, before map[int64]*calendar.Date, actorAccountID int64) error {
 	if completionID := exit.WithdrawalCompletionID; completionID != nil {
-		if _, err := s.records.ReopenWithdrawalAfterCancelledExit(ctx, *completionID, id, time.Now()); err != nil {
+		if _, err := s.records.ReopenWithdrawalAfterCancelledExit(ctx, *completionID, id, s.now()); err != nil {
 			return fmt.Errorf("care lifecycle: reopen care withdrawal after cancelled exit: %w", err)
 		}
 	}

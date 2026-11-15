@@ -516,13 +516,55 @@ describe("ParentLoginPage i18n", () => {
 
       await submitLogin();
 
-      expect(
-        await screen.findByText(
-          enCatalogText("care.invalid_credentials", LOGIN_OBJECT),
-        ),
-      ).toBeInTheDocument();
+      // A fixed sentence, not the catalog: the catalog once said the parent
+      // lacked permission and should ask the school (#7106).
+      const alert = await screen.findByRole("alert");
+      // Anker: die Meldung zum falschen Passwort steht im Fehlerkasten.
+      expect(alert).toHaveTextContent(
+        "The email address or the password is not correct. Please check your entry.",
+      );
+      expect(alert).not.toHaveTextContent(/contact the school/);
       expect(
         screen.queryByRole("link", { name: "Go to the school login" }),
+      ).not.toBeInTheDocument();
+    });
+
+    // The alert leads to the reset, with the address already typed (#7106).
+    it("offers the password reset from a wrong password", async () => {
+      mocks.login.mockRejectedValue(
+        await refusal(401, "care.invalid_credentials"),
+      );
+
+      await submitLogin();
+
+      const alert = await screen.findByRole("alert");
+      await act(async () => {
+        fireEvent.click(
+          within(alert).getByRole("button", { name: "Reset password" }),
+        );
+      });
+
+      const resetDialog = within(screen.getByRole("dialog"));
+      expect(resetDialog.getByText("Reset password")).toBeVisible();
+      expect(resetDialog.getByLabelText("Email address")).toHaveValue(
+        "staff@example.com",
+      );
+    });
+
+    it("offers no password reset for a switched-off account", async () => {
+      mocks.login.mockRejectedValue(
+        await refusal(401, "identity.session_account_inactive"),
+      );
+
+      await submitLogin();
+
+      const alert = await screen.findByRole("alert");
+      // Anker: der Fehlerkasten zeigt das ausgeschaltete Konto.
+      expect(alert).toHaveTextContent(
+        enCatalogText("identity.session_account_inactive", LOGIN_OBJECT),
+      );
+      expect(
+        within(alert).queryByRole("button", { name: "Reset password" }),
       ).not.toBeInTheDocument();
     });
   });

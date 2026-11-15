@@ -19,12 +19,18 @@ type PickupAutoExcusalSyncer struct {
 	preview    ports.PartialAbsencePreview
 	extensions ports.PickupExtensions
 	locker     ports.PickupExcusalLocker
+	// today is the first day a weekly resync re-derives.
+	today func() calendar.Date
 }
 
 func NewPickupAutoExcusal(pickups ports.PickupExcusalStore, weekly careplan.PickupBaselineReader,
 	slots ports.PartialAbsenceBlocks, preview ports.PartialAbsencePreview, extensions ports.PickupExtensions, locker ports.PickupExcusalLocker,
+	today func() calendar.Date,
 ) careplan.PickupAutoExcusal {
-	return &PickupAutoExcusalSyncer{pickups: pickups, weekly: weekly, slots: slots, preview: preview, extensions: extensions, locker: locker}
+	if today == nil {
+		today = calendar.TodayDate
+	}
+	return &PickupAutoExcusalSyncer{pickups: pickups, weekly: weekly, slots: slots, preview: preview, extensions: extensions, locker: locker, today: today}
 }
 
 // Sync reconciles the auto excusal for one freshly written pickup exception.
@@ -206,7 +212,7 @@ func (s *PickupAutoExcusalSyncer) ResyncFutureExceptions(ctx context.Context, st
 // resyncUpcomingExceptions re-derives the upcoming exceptions of a student
 // whose row lock the caller holds.
 func (s *PickupAutoExcusalSyncer) resyncUpcomingExceptions(ctx context.Context, studentID int64) error {
-	rows, err := s.pickups.FindUpcomingByStudentID(ctx, studentID)
+	rows, err := s.pickups.FindUpcomingByStudentID(ctx, studentID, s.today())
 	if err != nil {
 		return fmt.Errorf("auto excusal: load upcoming pickup exceptions for student %d: %w", studentID, err)
 	}

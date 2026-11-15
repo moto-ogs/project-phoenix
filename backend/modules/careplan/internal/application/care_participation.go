@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
@@ -139,7 +138,7 @@ func (s *CareLifecycle) inUnitApplyBookingAuthoritySetting(ctx context.Context, 
 		return nil, err
 	}
 	if !enabled {
-		changed, err := s.records.MarkPendingWithdrawalsObsoleteForWeeklyPlans(ctx, time.Now())
+		changed, err := s.records.MarkPendingWithdrawalsObsoleteForWeeklyPlans(ctx, s.now())
 		if err == nil && changed > 0 {
 			s.announcePlanningChange(ctx)
 		}

@@ -24,7 +24,7 @@ import (
 
 // setupPickupScheduleService creates a PickupScheduleService with real database connection
 func setupPickupScheduleService(t *testing.T, db *bun.DB) careplan.PickupScheduleService {
-	serviceFactorySchedules, err := api.NewTestCarePlanSchedules(testpkg.NewDatabase(t, db), slog.Default())
+	serviceFactorySchedules, err := api.NewTestCarePlanSchedules(testpkg.NewDatabase(t, db), slog.Default(), decisionTestClock)
 	require.NoError(t, err, "Failed to create service factory")
 	return serviceFactorySchedules.Pickups
 }
@@ -395,7 +395,7 @@ func TestPickupScheduleService_ReclaimGuardianPickupRejectsSharedPartialAbsence(
 	staff := testpkg.CreateTestStaff(t, db, "Partial", fmt.Sprintf("Owner-%d", time.Now().UnixNano()))
 	guardian := testpkg.CreateTestAccount(t, db, fmt.Sprintf("guardian-partial-%d@test.local", time.Now().UnixNano()))
 
-	date := calendar.TodayDate().AddDays(4)
+	date := decisionTestToday.AddDays(4)
 	pickupTime := calendar.NormalizeWallClock(time.Date(2000, 1, 1, 16, 0, 0, 0, time.UTC))
 	guardianID := guardian.ID
 	guardianPickup := &careplan.PickupException{
@@ -449,7 +449,7 @@ func TestPickupScheduleService_GetStudentPickupExceptions(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, db, "Test", "Student", "1a")
 
 		// Use consistent base date to avoid any timezone edge cases
-		baseDate := calendar.TodayDate()
+		baseDate := decisionTestToday
 		for i := -2; i <= 2; i++ {
 			exception := &careplan.PickupException{
 				StudentID:     student.ID,
@@ -480,7 +480,7 @@ func TestPickupScheduleService_GetUpcomingStudentPickupExceptions(t *testing.T) 
 		student := testpkg.CreateTestStudent(t, db, "Test", "Student", "1a")
 
 		// Use consistent base date to avoid timezone edge cases
-		baseDate := calendar.TodayDate()
+		baseDate := decisionTestToday
 
 		for i := -5; i < 0; i++ {
 			exception := &careplan.PickupException{
@@ -753,7 +753,7 @@ func TestPickupScheduleService_DeleteStudentPickupException(t *testing.T) {
 	t.Run("rejects a pickup exception shared with a partial absence", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, db, "Partial", fmt.Sprintf("Delete-%d", time.Now().UnixNano()), "1a")
 		staffID := createPickupServiceTestStaffID(t, db)
-		date := calendar.TodayDate().AddDays(5)
+		date := decisionTestToday.AddDays(5)
 		from := calendar.NormalizeWallClock(time.Date(2000, 1, 1, 13, 30, 0, 0, time.UTC))
 		exception := &careplan.PickupException{
 			StudentID:             student.ID,
@@ -801,7 +801,7 @@ func TestPickupScheduleService_GetStudentPickupData(t *testing.T) {
 
 		exception := &careplan.PickupException{
 			StudentID:     student.ID,
-			ExceptionDate: careplan.Date(calendar.TodayDate().AddDays(5)),
+			ExceptionDate: careplan.Date(decisionTestToday.AddDays(5)),
 			Reason:        testpkg.StrPtr("Future exception"),
 			CreatedBy:     createPickupServiceTestStaffID(t, db),
 		}
@@ -1237,7 +1237,7 @@ func TestPickupScheduleService_GetStudentPickupNotes(t *testing.T) {
 	t.Run("returns all notes for student", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, db, "Test", "Student", "1a")
 
-		baseDate := calendar.TodayDate()
+		baseDate := decisionTestToday
 		for i := 0; i < 3; i++ {
 			note := &careplan.PickupNote{
 				StudentID: student.ID,
@@ -1393,7 +1393,7 @@ func TestPickupScheduleService_DeleteAllStudentPickupNotes(t *testing.T) {
 	t.Run("deletes all notes for student", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, db, "Test", "Student", "1a")
 
-		baseDate := calendar.TodayDate()
+		baseDate := decisionTestToday
 		for i := 1; i <= 5; i++ {
 			note := &careplan.PickupNote{
 				StudentID: student.ID,

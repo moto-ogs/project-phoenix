@@ -285,7 +285,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return fail(err)
 	}
-	classExceptions, err := owners.NewClassArrivalExceptions(classArrivalQueries, students)
+	classExceptions, err := owners.NewClassArrivalExceptions(classArrivalQueries, students, nil)
 	if err != nil {
 		return fail(err)
 	}

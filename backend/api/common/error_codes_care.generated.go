@@ -126,7 +126,7 @@ var errorCodeClassesCare = []errorCodeClass{
 	{CodeCareGuardianRoleManaged, "permission"},
 	{CodeCareGuardianSharedAcrossFamilies, "permission"},
 	{CodeCareGuardianSocialWorkerManaged, "permission"},
-	{CodeCareInvalidCredentials, "permission"},
+	{CodeCareInvalidCredentials, "input"},
 	{CodeCareInvalidPollResponse, "input"},
 	{CodeCareInvalidRecipients, "input"},
 	{CodeCareInvalidRequestPayload, "input"},

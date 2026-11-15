@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
@@ -176,7 +175,7 @@ func (s *CareLifecycle) reconcileWeeklyPlanRebooking(ctx context.Context, change
 	if evaluation := domain.EvaluateCareBookingStates(facts, firstBookinglessDay)[0]; !evaluation.HasCareDays {
 		return nil
 	}
-	_, err = s.records.MarkWithdrawalObsoleteForRebooking(ctx, change.StudentID, careplan.Date(completion.FirstBookinglessDay), time.Now())
+	_, err = s.records.MarkWithdrawalObsoleteForRebooking(ctx, change.StudentID, careplan.Date(completion.FirstBookinglessDay), s.now())
 	return err
 }
 
@@ -238,7 +237,7 @@ func (s *CareLifecycle) reconcileBookingEvaluation(
 // filled. Its own day always satisfies the no-gap predicate, so false means
 // the task changed concurrently.
 func (s *CareLifecycle) closeMovedPendingTask(ctx context.Context, studentID int64, pendingDay calendar.Date) error {
-	changed, err := s.records.MarkWithdrawalObsoleteForRebooking(ctx, studentID, careplan.Date(pendingDay), time.Now())
+	changed, err := s.records.MarkWithdrawalObsoleteForRebooking(ctx, studentID, careplan.Date(pendingDay), s.now())
 	if err != nil {
 		return err
 	}
@@ -315,7 +314,7 @@ func (s *CareLifecycle) upsertBookingCompletion(ctx context.Context, evaluation 
 		SourceRequestChildID:    optionalPositiveID(sourceChildID),
 		WithdrawalConfirmedBy:   actorID,
 		WithdrawalConfirmedRole: role,
-		WithdrawalConfirmedAt:   time.Now(),
+		WithdrawalConfirmedAt:   s.now(),
 		SourceOfferings:         sourceOfferings,
 		State:                   careplan.WithdrawalStatePending,
 	})
