@@ -184,7 +184,9 @@ const (
 	TraegerAccountRolesChanged       = "roles_changed"
 	TraegerAccountMemberRemoved      = "member_removed"
 	TraegerAccountMembersListed      = "members_listed"
-	TraegerAccountNameChanged        = "name_changed"
+	// TraegerAccountHistoryExported records a download of the history (#4718).
+	TraegerAccountHistoryExported = "history_exported"
+	TraegerAccountNameChanged     = "name_changed"
 )
 
 // TraegerAccountManagement serves the Träger-Büro account routes. Role sets

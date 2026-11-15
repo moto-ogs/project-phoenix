@@ -38,6 +38,11 @@ func (t *TraegerAccounts) ListTraegerAccountHistory(ctx context.Context, actor i
 		for _, change := range changes {
 			result.Entries = append(result.Entries, historyEntry(change, emails[change.ActorAccountID]))
 		}
+		if query.All {
+			// The file holds the addresses of the Büro: its download stands
+			// in the ledger like a listing of the members (#4718).
+			return t.record(txCtx, actor, identityaccess.TraegerAccountHistoryExported, nil, nil, nil, nil)
+		}
 		return nil
 	})
 	return result, err

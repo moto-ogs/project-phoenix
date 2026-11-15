@@ -132,6 +132,12 @@ func TestTraegerAccountHistoryShowsTheChangesOfTheOwnTraeger(t *testing.T) {
 	assert.Contains(t, export.Body.String(), ";Einladung angenommen;Rolle: Nur lesen.;"+colleague.Email+";Gelöschtes Konto\n")
 	assert.NotContains(t, export.Body.String(), "fremd-verlauf", "no entry of another Träger")
 	assertTraegerListFormats(t, router, session.AccessToken, "/traeger/accounts/history/export", "verlauf-traeger-buero")
+	afterHistory := traegerLedger(t, db, own)
+	assert.Equal(t, "history_exported", afterHistory[len(afterHistory)-1], "the download of the history is in the ledger")
+	listed := traegerHistory(t, router, session.AccessToken, 0)
+	for _, entry := range listed.Entries {
+		assert.NotEqual(t, "history_exported", entry.Action, "a download is no change of the Büro")
+	}
 	members := traegerCall(t, router, http.MethodGet, "/traeger/accounts/export", session.AccessToken, nil)
 	require.Equal(t, http.StatusOK, members.Code, members.Body.String())
 	assert.Contains(t, members.Body.String(), ";"+leader.Email+";Leitung;\n")
