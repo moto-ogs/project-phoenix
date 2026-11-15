@@ -8,8 +8,10 @@ import (
 	classdayCompose "github.com/moto-ogs/project-phoenix/modules/classday/compose"
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
 	devicescanCompose "github.com/moto-ogs/project-phoenix/modules/devicescan/compose"
+	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
+	workforceModule "github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -226,4 +228,34 @@ func (s SchoolSetupSettings) PresenceMode(ctx context.Context) (string, error) {
 
 func (s SchoolSetupSettings) GroupMode(ctx context.Context) (string, error) {
 	return s.Settings.ResolveString(ctx, configModels.KeyGroupMode)
+}
+
+// schoolSetupModuleSettings is the slice of the settings service the
+// working-time step reads the module switch with.
+type schoolSetupModuleSettings interface {
+	ResolveBool(ctx context.Context, key string) (bool, error)
+}
+
+// schoolSetupTargetCoverage is the slice of Workforce's staff overview the
+// working-time step counts with.
+type schoolSetupTargetCoverage interface {
+	TargetCoverage(ctx context.Context, year, month int) (*workforceModule.TargetCoverage, error)
+}
+
+// newSchoolSetupWorkTime binds the working-time step of the school setup
+// (#6919): it applies only while the school books Zeiterfassung, and counts
+// with the payroll check's own calculation (year and month zero select the
+// payroll month, #6890). A school without the module pays for no count.
+func newSchoolSetupWorkTime(settings schoolSetupModuleSettings, coverage schoolSetupTargetCoverage) schoolsetup.WorkTime {
+	return func(ctx context.Context) (schoolsetup.WorkTimeTargets, error) {
+		booked, err := settings.ResolveBool(ctx, configModels.KeyModuleZeiterfassung)
+		if err != nil || !booked {
+			return schoolsetup.WorkTimeTargets{}, err
+		}
+		counted, err := coverage.TargetCoverage(ctx, 0, 0)
+		if err != nil {
+			return schoolsetup.WorkTimeTargets{}, err
+		}
+		return schoolsetup.WorkTimeTargets{Booked: true, StaffTotal: counted.StaffTotal, StaffWithoutTarget: counted.StaffWithoutTarget}, nil
+	}
 }

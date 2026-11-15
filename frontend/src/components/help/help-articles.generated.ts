@@ -3115,6 +3115,7 @@ export const firstStepsTopic = function firstStepsTopic(): HelpTopic {
     notes: [
       "Jeden Schritt können Sie mit `Überspringen` auslassen.",
       "Ein Schritt ist erledigt, sobald es den ersten Eintrag gibt, zum Beispiel das erste Kind. Die übrigen legen Sie danach genauso an.",
+      "Ihre OGS nutzt die Zeiterfassung? Dann gibt es den Schritt `Arbeitszeitmodelle eintragen`. Er zeigt, wie viele Personen noch kein Soll haben. Erledigt ist er erst, wenn jede Person mit Zeitkonto ein Soll hat.",
       "Sie können die Checkliste einklappen. Unten rechts steht dann `Erste Schritte` mit der Zahl der offenen Schritte.",
       "Sie können jeden Schritt in der Checkliste aufklappen, auch in anderer Reihenfolge.",
       "Ob moto auch den Raum erfasst, stimmt das moto-Team mit Ihnen ab.",
@@ -3133,6 +3134,7 @@ export const firstStepsTopic = function firstStepsTopic(): HelpTopic {
       HELP_TOPICS.leadInviteStaff,
       HELP_TOPICS.leadCreateStudent,
       HELP_TOPICS.leadInviteGuardians,
+      HELP_TOPICS.leadStaffRecord,
     ],
   };
 } satisfies typeof authored_firstStepsTopic;

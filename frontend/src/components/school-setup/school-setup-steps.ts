@@ -4,6 +4,7 @@ import type {
   SchoolSetupStep,
   SchoolSetupStepKey,
 } from "~/lib/school-setup-api";
+import { staffWithoutTargetHref } from "~/lib/time-account-links";
 
 /** Was der Assistent zu einem Schritt zeigt (#2832). */
 export interface SchoolSetupStepContent {
@@ -83,6 +84,20 @@ export const SCHOOL_SETUP_STEP_CONTENT: Readonly<
       reason: "Dafür braucht es zuerst mindestens ein Kind in moto.",
     },
   },
+  worktime: {
+    // Anders als die Schritte davor: erledigt erst, wenn niemand mehr ohne
+    // Soll ist (#6919). Die Zahl dazu zeigt die Checkliste selbst.
+    title: "Arbeitszeitmodelle eintragen",
+    description:
+      "Tragen Sie für jede Person im Team ein Arbeitszeitmodell ein. Daraus rechnet moto das Soll.",
+    hints: [
+      "Ohne Soll zählen Krankheit, Urlaub und Fortbildung 0 Stunden.",
+      "Teilen mehrere Personen ein Modell? Dann legen Sie es einmal als Vorlage an.",
+    ],
+    href: staffWithoutTargetHref(),
+    actionLabel: "Zu den Zeitkonten",
+    helpTopic: HELP_TOPICS.leadStaffRecord,
+  },
 };
 
 /** Die Schritte, die für diese Schule gelten, in Reihenfolge. */
@@ -145,6 +160,11 @@ const FILL_TOPICS: Readonly<
     description:
       "Für viele Kinder auf einmal: „Auswählen“, dann „Eltern einladen“.",
     link: { topic: HELP_TOPICS.leadInviteGuardians },
+  },
+  worktime: {
+    title: "Arbeitszeitmodelle aktuell halten",
+    description: "Wer neu ins Team kommt, braucht auch ein Arbeitszeitmodell.",
+    link: { topic: HELP_TOPICS.leadStaffRecord },
   },
 };
 

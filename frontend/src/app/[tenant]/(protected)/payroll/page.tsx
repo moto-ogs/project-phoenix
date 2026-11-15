@@ -99,6 +99,7 @@ import {
   type PayrollWageType,
   type WageTypeUnit,
 } from "~/lib/payroll-rules-api";
+import { staffWithoutTargetHref } from "~/lib/time-account-links";
 import {
   CreateSurchargeRuleModal,
   CreateWageTypeModal,
@@ -431,11 +432,6 @@ export default function PayrollPage() {
       )}
     </TenantPage>
   );
-}
-
-/** Zeitkonten des Monats mit dem Filter „ohne Soll“ (#6890). */
-function staffWithoutTargetHref(year: number, month: number): string {
-  return `/staff?view=accounts&filter=ohne-soll&month=${year}-${String(month).padStart(2, "0")}`;
 }
 
 type ReadinessState = "done" | "open" | "checking";

@@ -22,16 +22,18 @@ type Dependencies struct {
 	// the root binds it to the Settings Platform.
 	Settings schoolsetup.Settings
 	Store    schoolsetup.Store
+	// WorkTime answers the working-time step (#6919) from Workforce.
+	WorkTime schoolsetup.WorkTime
 }
 
 // New returns the wizard service.
 func New(deps Dependencies) (schoolsetup.Service, error) {
-	if deps.Settings == nil {
-		return nil, errors.New("school setup compose: settings are required")
+	if deps.Settings == nil || deps.WorkTime == nil {
+		return nil, errors.New("school setup compose: settings and working time are required")
 	}
 	store := deps.Store
 	projection := schoolsetupview.New(ambientTx)
-	return application.New(store, application.NewProgress(projection), deps.Settings, time.Now)
+	return application.New(store, application.NewProgress(projection), deps.Settings, deps.WorkTime, time.Now)
 }
 
 // NewStaffOnboarding returns the first steps of care workers (#3748): the

@@ -25,6 +25,7 @@ import {
   type SchoolSetupStepKey,
 } from "~/lib/school-setup-api";
 import { useShellAuthSafe } from "~/lib/shell-auth-context";
+import { staffWithoutTargetHref } from "~/lib/time-account-links";
 import { useNFCEnabled } from "~/lib/tenant-context";
 import { SetupBeacon, SchoolSetupChecklist } from "./school-setup-checklist";
 import {
@@ -35,6 +36,7 @@ import {
 import { useSchoolSetup } from "./use-school-setup";
 import { SETUP_TOURS } from "./setup-tours";
 import { useSetupTour } from "./use-setup-tour";
+import { useWorkTimeCoverage } from "./use-work-time-coverage";
 
 const logger = createLogger({ component: "SchoolSetupWizard" });
 
@@ -150,9 +152,27 @@ function SchoolSetupWizardForAdmin({
     setExpandedByPerson(true);
     setNotice(TOUR_LEFT);
   }, []);
-  const tour = useSetupTour(SETUP_TOURS, onTourFinished, onTourLeft);
-
   const visible = state !== null && !state.completed && !state.dismissed;
+  // Die Zahl der Personen ohne Soll (#6919) lädt erst, wenn der Schritt in
+  // der offenen Checkliste aufgeklappt ist: Die Rechnung geht über alle
+  // Zeitkonten und gehört nicht in jeden Seitenaufruf.
+  const workTime = useWorkTimeCoverage(
+    visible && view === "checklist" && expanded === "worktime",
+  );
+  const tour = useSetupTour(SETUP_TOURS, onTourFinished, onTourLeft);
+  // Die Tour öffnet die Zeitkonten im Monat, den die Checkliste gezählt hat:
+  // Die Liste zeigt dann dieselben Personen. Die Zahl lädt mit dem
+  // Aufklappen; wer schneller klickt, wartet kurz auf sie. Scheitert sie,
+  // öffnet die Tour den laufenden Monat, und der Grund steht im Schritt.
+  const startWorkTimeTour = async () => {
+    const counted =
+      workTime.coverage ?? (await workTime.retry().catch(() => undefined));
+    tour.start(
+      "worktime",
+      staffWithoutTargetHref(counted?.year, counted?.month),
+    );
+  };
+
   const nextOpen = state ? firstOpenStep(state) : null;
 
   // Beim ersten Aufruf der Sitzung geht die Checkliste von selbst auf.
@@ -250,6 +270,7 @@ function SchoolSetupWizardForAdmin({
     <>
       <SchoolSetupChecklist
         steps={steps}
+        workTime={workTime}
         expanded={expanded}
         busy={busy}
         error={formErrors.error}
@@ -264,7 +285,8 @@ function SchoolSetupWizardForAdmin({
         }}
         onStartTour={(step) => {
           setNotice(null);
-          tour.start(step);
+          if (step === "worktime") void startWorkTimeTour();
+          else tour.start(step);
         }}
         onSkip={(step, skipped) =>
           void run(() => setSchoolSetupStepSkipped(step, skipped))

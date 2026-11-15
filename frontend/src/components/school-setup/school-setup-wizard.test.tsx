@@ -54,6 +54,44 @@ vi.mock("./use-school-setup", () => ({
   }),
 }));
 
+// Die Soll-Prüfung des Schritts „Arbeitszeitmodelle“ (#6919); `enabled`
+// hält fest, wann die Checkliste sie abruft.
+const workTime = vi.hoisted(() => ({
+  coverage: undefined as
+    | {
+        year: number;
+        month: number;
+        staffTotal: number;
+        staffWithoutTarget: number;
+      }
+    | undefined,
+  error: undefined as unknown,
+  retry: vi.fn<
+    () => Promise<
+      | {
+          year: number;
+          month: number;
+          staffTotal: number;
+          staffWithoutTarget: number;
+        }
+      | undefined
+    >
+  >(() => Promise.resolve(undefined)),
+  enabled: [] as boolean[],
+}));
+vi.mock("./use-work-time-coverage", () => ({
+  useWorkTimeCoverage: (enabled: boolean) => {
+    workTime.enabled.push(enabled);
+    return enabled
+      ? {
+          coverage: workTime.coverage,
+          error: workTime.error,
+          retry: workTime.retry,
+        }
+      : { coverage: undefined, error: undefined, retry: workTime.retry };
+  },
+}));
+
 const api = vi.hoisted(() => ({
   setSchoolSetupStepSkipped: vi.fn(),
   completeSchoolSetup: vi.fn(),
@@ -1039,6 +1077,169 @@ describe("SchoolSetupWizard", () => {
         timeout: 3000,
       },
     );
+  });
+
+  describe("Schritt „Arbeitszeitmodelle eintragen“ (#6919)", () => {
+    /** Alles davor ist erledigt; offen sind nur noch die Arbeitszeitmodelle. */
+    function workTimeNext(): SchoolSetupState {
+      return {
+        ...newSchool(),
+        steps: [
+          ...newSchool().steps.map((step) => ({ ...step, done: true })),
+          { key: "worktime", applies: true, done: false, skipped: false },
+        ],
+      };
+    }
+
+    beforeEach(() => {
+      workTime.coverage = {
+        year: 2026,
+        month: 8,
+        staffTotal: 5,
+        staffWithoutTarget: 2,
+      };
+      workTime.error = undefined;
+      workTime.enabled.length = 0;
+    });
+
+    it("says how many people still have no Soll, in the counted month", () => {
+      setupState = workTimeNext();
+      render(<SchoolSetupWizard />);
+
+      const step = screen.getByRole("button", {
+        name: "Arbeitszeitmodelle eintragen Offen",
+      });
+      expect(step).toHaveAttribute("aria-expanded", "true");
+      expect(
+        screen.getByText("von 5 Personen haben noch kein Soll"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Zeitkonten August 2026")).toBeInTheDocument();
+      expect(
+        screen.getByRole("progressbar", {
+          name: "3 von 5 Personen haben ein Soll",
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it("counts only while the step is open in the checklist", () => {
+      setupState = newSchool();
+      render(<SchoolSetupWizard />);
+
+      // Aufgeklappt ist „Erste Person ins Team einladen“: kein Abruf.
+      expect(
+        screen.getByRole("button", {
+          name: "Erste Person ins Team einladen Offen",
+        }),
+      ).toHaveAttribute("aria-expanded", "true");
+      expect(workTime.enabled).not.toContain(true);
+    });
+
+    it("shows the step without a number when the person may not count", () => {
+      setupState = workTimeNext();
+      workTime.coverage = undefined;
+      workTime.error = new ApiError("forbidden", 403, {
+        code: "general.forbidden",
+      });
+      render(<SchoolSetupWizard />);
+
+      expect(
+        screen.getByText(/Tragen Sie für jede Person im Team/),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("progressbar", { name: /Soll/ })).toBeNull();
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("says so when the number could not be loaded", async () => {
+      setupState = workTimeNext();
+      workTime.coverage = undefined;
+      workTime.error = new ApiError("boom", 503, {
+        code: "general.unavailable",
+      });
+      render(<SchoolSetupWizard />);
+
+      expect(
+        await screen.findByText(
+          catalogText("general.unavailable", "die Zahl der Personen ohne Soll"),
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("opens the Zeitkonten with the filter, in the counted month", async () => {
+      setupState = workTimeNext();
+      const { rerender } = render(<SchoolSetupWizard />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Zeig es mir" }));
+
+      await waitFor(() =>
+        expect(push).toHaveBeenCalledWith(
+          "/staff?view=accounts&filter=ohne-soll&month=2026-08",
+        ),
+      );
+      // Auf der Seite angekommen: Die Zeitkonten sind schon gewählt, die
+      // Tour zeigt gleich auf den Hinweis über der Tabelle.
+      pathname = "/staff";
+      const tab = visibleElement(document.createElement("button"));
+      tab.setAttribute("role", "tab");
+      tab.dataset.tabValue = "accounts";
+      tab.setAttribute("aria-selected", "true");
+      document.body.appendChild(tab);
+      visibleTarget("time-accounts-without-target");
+      rerender(<SchoolSetupWizard />);
+
+      expect(
+        await screen.findByRole("dialog", { name: "Personen ohne Soll" }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Fertig" })).toBeVisible();
+    });
+
+    it("waits for the count when the person starts the tour before it is there", async () => {
+      setupState = workTimeNext();
+      const counted = workTime.coverage;
+      workTime.coverage = undefined;
+      workTime.retry.mockResolvedValue(counted);
+      render(<SchoolSetupWizard />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Zeig es mir" }));
+
+      await waitFor(() =>
+        expect(push).toHaveBeenCalledWith(
+          "/staff?view=accounts&filter=ohne-soll&month=2026-08",
+        ),
+      );
+    });
+
+    it("opens the current month when the count cannot be loaded", async () => {
+      setupState = workTimeNext();
+      workTime.coverage = undefined;
+      workTime.retry.mockRejectedValue(new ApiError("boom", 503));
+      render(<SchoolSetupWizard />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Zeig es mir" }));
+
+      await waitFor(() =>
+        expect(push).toHaveBeenCalledWith(
+          "/staff?view=accounts&filter=ohne-soll",
+        ),
+      );
+    });
+
+    it("starts at the Zeitkonten tab when the person is on the staff page", async () => {
+      setupState = workTimeNext();
+      pathname = "/staff";
+      const tab = visibleElement(document.createElement("button"));
+      tab.setAttribute("role", "tab");
+      tab.dataset.tabValue = "accounts";
+      tab.setAttribute("aria-selected", "false");
+      document.body.appendChild(tab);
+      render(<SchoolSetupWizard />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Zeig es mir" }));
+
+      expect(
+        await screen.findByRole("dialog", { name: "Zeitkonten öffnen" }),
+      ).toBeInTheDocument();
+      expect(push).not.toHaveBeenCalled();
+    });
   });
 
   it("closes with the cards and completes the school", async () => {

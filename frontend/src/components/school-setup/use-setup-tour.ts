@@ -79,6 +79,14 @@ export function findVisibleTarget(selector: string): Element | null {
   return null;
 }
 
+/**
+ * Die Adresse, mit der die Tour ihre Seite öffnet: die beim Start genannte,
+ * sonst die der Tour.
+ */
+function pageHref(tour: SetupTour, started?: { href?: string }): string {
+  return started?.href ?? tour.href ?? tour.path;
+}
+
 /** Die erste Station auf der Seite selbst, nach dem Weg durch die Leiste. */
 function firstPageStop(stops: readonly SetupTourStop[]): number {
   const index = stops.findIndex((stop) => !stop.nav);
@@ -107,6 +115,8 @@ interface TourState<K extends string> {
   reviewing?: boolean;
   /** Die Tour läuft in diesem Zweig, etwa im Import. */
   branch?: SetupTourBranch;
+  /** Die Adresse der Seite für diesen Lauf, siehe `start`. */
+  href?: string;
 }
 
 function definitionOf<K extends string>(
@@ -145,7 +155,11 @@ export function useSetupTour<K extends string>(
   onLeft: (step: K) => void,
 ): {
   active: ActiveTourStop | null;
-  start: (step: K) => void;
+  /**
+   * `href` öffnet die Seite für diesen Lauf mit einer genaueren Adresse als
+   * der der Tour, etwa im Monat, den die Checkliste gezählt hat.
+   */
+  start: (step: K, href?: string) => void;
   next: () => void;
   back: () => void;
   stop: () => void;
@@ -261,7 +275,7 @@ export function useSetupTour<K extends string>(
   const back = useCallback(() => {
     if (!tour || !canGoBack || !previousStop || !definition) return;
     closeOverlayLeftBehind(target, previousStop);
-    if (previousNeedsPage) routerRef.current.push(definition.path);
+    if (previousNeedsPage) routerRef.current.push(pageHref(definition, tour));
     setTour({ ...tour, index: previousIndex, reviewing: true });
   }, [
     tour,
@@ -274,7 +288,7 @@ export function useSetupTour<K extends string>(
   ]);
 
   const start = useCallback(
-    (step: K) => {
+    (step: K, href?: string) => {
       const tourDefinition = tours[step];
       if (!tourDefinition) return;
       // Wer schon auf der Seite eines Zweigs steht, etwa beim Import,
@@ -290,10 +304,14 @@ export function useSetupTour<K extends string>(
       }
       // Die Tour beginnt in der Seitenleiste. Wer schon auf der Seite ist,
       // fängt direkt dort an.
-      const index = pathname.endsWith(tourDefinition.path)
-        ? firstPageStop(tourDefinition.stops)
-        : 0;
-      setTour({ step, index });
+      const onTourPage = pathname.endsWith(tourDefinition.path);
+      const index = onTourPage ? firstPageStop(tourDefinition.stops) : 0;
+      // Eine Tour ohne Weg durch die Seitenleiste öffnet ihre Seite selbst,
+      // etwa die Zeitkonten gleich mit dem Filter „ohne Soll“ (#6919).
+      if (!onTourPage && !tourDefinition.stops[index]?.nav) {
+        routerRef.current.push(pageHref(tourDefinition, { href }));
+      }
+      setTour({ step, index, href });
     },
     [tours, pathname],
   );
@@ -391,7 +409,7 @@ export function useSetupTour<K extends string>(
       const waited = polls * POLL_MS;
       if (stop.nav && waited > NAV_MISSING_AFTER_MS) {
         // Keine Seitenleiste (Handy, eingeklappt): die Seite direkt öffnen.
-        routerRef.current.push(definition.path);
+        routerRef.current.push(pageHref(definition, tour));
         setTour({ ...tour, index: firstPageStop(definition.stops) });
         return true;
       }

@@ -45,10 +45,13 @@ const (
 	StepStudents StepKey = "students"
 	// StepGuardians invites the parents.
 	StepGuardians StepKey = "guardians"
+	// StepWorkTime gives every staff member a Soll (#6919). Only for schools
+	// that book Zeiterfassung.
+	StepWorkTime StepKey = "worktime"
 )
 
 // StepKeys lists every step in wizard order.
-var StepKeys = []StepKey{StepTeam, StepRooms, StepGroups, StepStudents, StepGuardians}
+var StepKeys = []StepKey{StepTeam, StepRooms, StepGroups, StepStudents, StepGuardians, StepWorkTime}
 
 // ParseStepKey accepts the known step keys and nothing else.
 func ParseStepKey(raw string) (StepKey, bool) {
@@ -185,6 +188,28 @@ type Facts struct {
 type Progress interface {
 	Facts(ctx context.Context, tenantID int64) (Facts, error)
 }
+
+// WorkTimeTargets is what the working-time step needs to know (#6919).
+type WorkTimeTargets struct {
+	// Booked: the school books Zeiterfassung. Without it nobody has a Soll
+	// to maintain and the step does not apply.
+	Booked bool
+	// StaffTotal counts the staff with a time account in the payroll month,
+	// StaffWithoutTarget those of them without a Soll.
+	StaffTotal         int
+	StaffWithoutTarget int
+}
+
+// Maintained reports whether every staff member with a time account has a
+// Soll. A school without any time account has nothing maintained yet.
+func (t WorkTimeTargets) Maintained() bool {
+	return t.StaffTotal > 0 && t.StaffWithoutTarget == 0
+}
+
+// WorkTime answers the working-time step from the calculation the time
+// accounts and the payroll check use, so the three can never disagree. The
+// root binds it to Workforce and the module switch.
+type WorkTime func(ctx context.Context) (WorkTimeTargets, error)
 
 // Settings resolves the school's settings that decide which steps apply.
 type Settings interface {

@@ -27,6 +27,10 @@ import {
   type SchoolSetupNextTopic,
 } from "./school-setup-steps";
 import { SETUP_TOURS } from "./setup-tours";
+import {
+  WorkTimeCoverageNote,
+  type WorkTimeCoverageState,
+} from "./work-time-coverage-note";
 
 // Auf dem Handy links: rechts unten sitzt dort der grüne „+“-Knopf der
 // Datenseiten (DatabaseCreateAction), über der unteren Navigation.
@@ -142,6 +146,11 @@ interface SetupChecklistStep<K extends string> extends SetupChecklistStepState {
   readonly hints: readonly string[];
   readonly helpTopic?: HelpTopicId;
   readonly hasTour: boolean;
+  /**
+   * Der Stand des Schritts in Zahlen, unter den Hinweisen, etwa wie viele
+   * Personen noch kein Soll haben. Nur im aufgeklappten Schritt.
+   */
+  readonly detail?: ReactNode;
   /**
    * Ein vorausgesetzter Schritt, der noch fehlt, etwa: erst ein Kind, dann
    * Eltern. Statt „Zeig es mir“ führt ein Knopf zu diesem Schritt.
@@ -317,6 +326,7 @@ export function SetupChecklist<K extends string>({
                           </p>
                         )}
                       </div>
+                      {step.detail}
                       {notice && (
                         <p
                           className="text-sm font-medium text-gray-900"
@@ -429,6 +439,8 @@ export function SetupChecklist<K extends string>({
 
 interface SchoolSetupChecklistProps {
   readonly steps: readonly SchoolSetupStep[];
+  /** Die Soll-Prüfung des Schritts „Arbeitszeitmodelle“ (#6919). */
+  readonly workTime: WorkTimeCoverageState;
   readonly expanded: SchoolSetupStepKey | null;
   readonly busy: boolean;
   /** Warum die letzte Änderung scheiterte, vom gemeinsamen Fehlerweg. */
@@ -455,6 +467,7 @@ export function SchoolSetupChecklist({
   helpHref,
   helpGroupHref,
   busy,
+  workTime,
   onComplete,
   ...rest
 }: SchoolSetupChecklistProps) {
@@ -475,6 +488,10 @@ export function SchoolSetupChecklist({
       hints: content.hints,
       helpTopic: content.helpTopic,
       hasTour: SETUP_TOURS[step.key] !== undefined,
+      detail:
+        step.key === "worktime" ? (
+          <WorkTimeCoverageNote {...workTime} />
+        ) : undefined,
       blockedBy: blocked
         ? {
             step: required.step,
