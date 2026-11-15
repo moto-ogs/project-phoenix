@@ -62,9 +62,10 @@ func (rs *MasterDataResource) listTemplates(w http.ResponseWriter, r *http.Reque
 // templateKindLabels name the kinds of document as the list of templates
 // does.
 var templateKindLabels = map[templates.Kind]string{
-	"bestaetigung": "Bestätigung und Rechnung", "rechnung": "Rechnung", "bescheid": "Gebührenbescheid",
-	"vertrag": "Betreuungsvertrag", "kuendigung": "Bestätigung der Kündigung", "mahnung": "Zahlungserinnerung",
-	"bescheinigung": "Bescheinigung über Betreuungskosten",
+	templates.KindConfirmation: "Bestätigung und Rechnung", templates.KindInvoice: "Rechnung",
+	templates.KindFeeNotice: "Gebührenbescheid", templates.KindContract: "Betreuungsvertrag",
+	templates.KindCancellation: "Bestätigung der Kündigung", templates.KindReminder: "Zahlungserinnerung",
+	templates.KindCertificate: "Bescheinigung über Betreuungskosten",
 }
 
 // exportTemplates answers GET /traeger/master-data/document-templates/export:

@@ -152,7 +152,7 @@ func holidayDays(days []calendar.Date) string {
 
 // holidayInstant is „04.01.2027, 08:15“ in Berlin time.
 func holidayInstant(at time.Time) string {
-	return at.In(calendar.Berlin).Format("02.01.2006, 15:04")
+	return common.ListInstant(at)
 }
 
 // exportPlaces answers GET /traeger/holiday-periods/{id}/places/export: per

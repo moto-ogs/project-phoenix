@@ -356,7 +356,7 @@ export default function TraegerKinderzahlPage() {
           download={(format) =>
             downloadTraegerList("/api/traeger/family-children/export", format)
           }
-          scope="Alle Familien, ohne Suche und Filter"
+          scope="Alle Familien, ohne Suche"
           ariaLabel="Kinderzahl herunterladen"
           tooltip="Zeigt die Formate für alle Familien, ohne Suche. Jeder Download steht im Zugriffsprotokoll."
           fallbackName="kinderzahl"

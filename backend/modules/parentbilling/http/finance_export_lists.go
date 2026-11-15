@@ -2,6 +2,7 @@ package parentbillinghttp
 
 import (
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -40,6 +41,9 @@ func (rs *FinanceExportResource) exportRuns(w http.ResponseWriter, r *http.Reque
 			run.Label, dateText(run.IssuedOn), strconv.Itoa(run.InvoiceCount), euroText(run.TotalCents),
 			lastFileText(run.LastSollstellung), lastFileText(run.LastDatev), strconv.Itoa(run.Exports),
 		})
+	}
+	if len(runs.Runs) < runs.Total {
+		table.Filters = append(slices.Clone(table.Filters), common.ListCutNote(capability.MaxExportListRows))
 	}
 	common.WriteList(w, r, rs.lists, format, table)
 }
@@ -83,6 +87,9 @@ func (rs *FinanceExportResource) exportFiles(w http.ResponseWriter, r *http.Requ
 			strconv.FormatInt(file.FileNumber, 10), file.FileName, file.RunLabel, financeFileKinds[file.Format],
 			strconv.Itoa(file.InvoiceCount), euroText(file.TotalCents), instantText(&file.ExportedAt),
 		})
+	}
+	if len(files.Files) < files.Total {
+		table.Filters = append(slices.Clone(table.Filters), common.ListCutNote(capability.MaxExportListRows))
 	}
 	common.WriteList(w, r, rs.lists, format, table)
 }

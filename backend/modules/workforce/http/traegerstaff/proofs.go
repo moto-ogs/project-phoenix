@@ -72,9 +72,8 @@ func (rs *ProofsResource) export(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	format, err := common.ParseListFormat(r)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+	format, ok := common.ListFormatOf(w, r)
+	if !ok {
 		return
 	}
 	list, err := rs.proofs.ProofList(r.Context(), session, workforce.TraegerStaffViewProofExport)

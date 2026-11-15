@@ -41,7 +41,7 @@ func (rs *TraegerClosingDayResource) export(w http.ResponseWriter, r *http.Reque
 		Title:   "Schließtage",
 		Filters: []string{common.ListPeriodLabel(from.Format("02.01.2006"), to.Format("02.01.2006")), common.ListSchoolLabel("")},
 		Columns: []common.ListColumn{
-			{ID: "start", Label: "Von"}, {ID: "end", Label: "Bis"}, {ID: "days", Label: "Tage"},
+			{ID: "start", Label: "Von"}, {ID: "end", Label: "Bis"}, {ID: "days", Label: "Kalendertage"},
 			{ID: "reason", Label: "Grund"}, {ID: "schools", Label: "Gilt für"},
 		},
 		Rows: rows, Filename: "schliesstage-" + from.String() + "-bis-" + to.String(),

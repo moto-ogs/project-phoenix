@@ -72,7 +72,7 @@ func optionalEuro(cents *int64) string {
 
 // dateText is a day as „07.09.2026“.
 func dateText(day calendar.Date) string {
-	return day.Format("02.01.2006")
+	return common.ListDate(day)
 }
 
 // optionalDate is a day or „–“ without one.
@@ -93,7 +93,7 @@ func instantText(at *time.Time) string {
 	if at == nil {
 		return "–"
 	}
-	return at.In(calendar.Berlin).Format("02.01.2006 15:04")
+	return common.ListInstant(*at)
 }
 
 // countText is a count with its word, or „noch nicht ausgestellt“ before

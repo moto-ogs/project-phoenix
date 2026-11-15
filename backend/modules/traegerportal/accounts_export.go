@@ -7,7 +7,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // The lists of the page „Mitglieder und Rollen“ as PDF, Excel or CSV
@@ -51,7 +50,7 @@ func roleNames(roles []string, none string) string {
 
 // berlinInstant is „04.01.2027, 08:15“ in Berlin time.
 func berlinInstant(at time.Time) string {
-	return at.In(calendar.Berlin).Format("02.01.2006, 15:04")
+	return common.ListInstant(at)
 }
 
 // exportAccounts answers GET /traeger/accounts/export: the people of the
@@ -116,8 +115,12 @@ func (rs *Resource) exportHistory(w http.ResponseWriter, r *http.Request) {
 			berlinInstant(entry.OccurredAt), traegerAccountActionLabels[entry.Action], historyDetail(entry), entry.TargetEmail, actorEmail,
 		})
 	}
+	var filters []string
+	if history.HasMore {
+		filters = []string{common.ListCutNote(identityaccess.TraegerAccountHistoryExportLimit)}
+	}
 	common.WriteList(w, r, rs.lists, format, common.ListTable{
-		Title: "Verlauf des Träger-Büros",
+		Title: "Verlauf des Träger-Büros", Filters: filters,
 		Columns: []common.ListColumn{
 			{ID: "occurred", Label: "Zeitpunkt"}, {ID: "action", Label: "Was"}, {ID: "detail", Label: "Angaben"},
 			{ID: "target", Label: "Betrifft"}, {ID: "actor", Label: "Von"},

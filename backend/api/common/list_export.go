@@ -4,8 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -114,4 +117,37 @@ func ListSchoolLabel(schoolName string) string {
 // ListPeriodLabel is „Zeitraum: 07.09.2026 bis 11.09.2026“.
 func ListPeriodLabel(from, to string) string {
 	return "Zeitraum: " + from + " bis " + to
+}
+
+// ListDate is a calendar day in an export: „07.09.2026“, empty without one.
+func ListDate(day calendar.Date) string {
+	if day.IsZero() {
+		return ""
+	}
+	return day.Format("02.01.2006")
+}
+
+// ListInstant is an instant in an export, on the Berlin wall clock:
+// „07.09.2026, 14:30“.
+func ListInstant(at time.Time) string {
+	return at.In(calendar.Berlin).Format("02.01.2006, 15:04")
+}
+
+// ListCutNote stands in the head of an export that holds only the newest
+// entries of a longer list, so nobody takes the file for the whole list.
+func ListCutNote(limit int) string {
+	return "Gekürzt: nur die neuesten " + groupedThousands(limit) + " Einträge"
+}
+
+// groupedThousands writes 10000 as „10.000“.
+func groupedThousands(n int) string {
+	digits := strconv.Itoa(n)
+	var b strings.Builder
+	for i, digit := range digits {
+		if i > 0 && (len(digits)-i)%3 == 0 {
+			b.WriteByte('.')
+		}
+		b.WriteRune(digit)
+	}
+	return b.String()
 }
