@@ -77,6 +77,11 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	// count them for. The preview stores nothing.
 	{http.MethodPost, "/traeger/master-data/document-templates/{kind}/versions"}: notCaptured,
 	{http.MethodPost, "/traeger/master-data/document-templates/{kind}/preview"}:  notCaptured,
+	// The report templates (#4716) belong to the Träger: no school to count
+	// them for.
+	{http.MethodPost, "/traeger/report-templates/"}:       notCaptured,
+	{http.MethodPut, "/traeger/report-templates/{id}"}:    notCaptured,
+	{http.MethodDelete, "/traeger/report-templates/{id}"}: notCaptured,
 	// The public holiday registration of a Träger (#4661) and the upload of
 	// its proof of benefits (#5238) have no session and no school, so no
 	// collection policy admits them yet.

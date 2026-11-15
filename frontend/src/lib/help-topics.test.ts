@@ -750,6 +750,7 @@ describe("getParentHelpTopicForPath", () => {
       HELP_TOPICS.traegerOccupancy,
       HELP_TOPICS.traegerUtilization,
       HELP_TOPICS.traegerSchoolComparison,
+      HELP_TOPICS.traegerReports,
       HELP_TOPICS.traegerSchoolView,
       HELP_TOPICS.traegerSchoolSwitch,
       HELP_TOPICS.traegerTestSystem,

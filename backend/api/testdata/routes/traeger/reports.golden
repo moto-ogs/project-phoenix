@@ -1,0 +1,2 @@
+GET /traeger/reports/key-date
+GET /traeger/reports/key-date/export
