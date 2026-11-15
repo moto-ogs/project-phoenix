@@ -13,7 +13,7 @@ import { traegerRequest } from "~/lib/traeger-api";
 const RECORDS = "/api/traeger/staff-records";
 
 /** Wie der Monat beim Träger steht. */
-export type TraegerMonthState =
+type TraegerMonthState =
   /** Ein Vertrag deckt den Monat ab, eine Schule ist noch offen. */
   | "open"
   /** Jede Schule, die der Träger abschließt, ist abgeschlossen. */
@@ -21,7 +21,7 @@ export type TraegerMonthState =
   /** Kein Vertrag deckt den Monat ab: die Schulen schließen selbst ab. */
   | "school";
 
-export interface TraegerTimeAccountMinutes {
+interface TraegerTimeAccountMinutes {
   readonly targetMinutes: number;
   readonly actualMinutes: number;
   readonly creditedMinutes: number;
@@ -99,9 +99,7 @@ function mapMinutes(data: BackendMinutes): TraegerTimeAccountMinutes {
   };
 }
 
-export function mapTraegerTimeAccount(
-  data: BackendAccount,
-): TraegerTimeAccount {
+function mapTraegerTimeAccount(data: BackendAccount): TraegerTimeAccount {
   return {
     ...mapMinutes(data),
     year: data.year,
