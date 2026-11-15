@@ -31,6 +31,7 @@
   "earlyStart": "Opieka ma się rozpocząć przed końcem okresu na odstąpienie.",
   "earlyStartHint": "Jeśli później odstąpisz od umowy, zapłacisz proporcjonalnie za opiekę do tego czasu.",
   "signatureRequired": "Podpisz i potwierdź podpis.",
+  "checkFields": "Sprawdź zaznaczone pola.",
   "submit": "Podpisz umowę wiążąco",
   "submitting": "Podpisywanie …",
   "submitObject": "podpis",

@@ -58,7 +58,6 @@
     "removeObject": "das Entfernen des Geräts"
   },
   "challenge": {
-    "back": "Zurück",
     "backLabel": "Zurück zur Anmeldung",
     "title": "Code eingeben",
     "sentTo": "Wir haben einen 6-stelligen Code an <b>{email}</b> geschickt. Der Code gilt 10 Minuten.",

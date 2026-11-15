@@ -135,6 +135,10 @@
       "write_owner": "organization-tenancy"
     },
     {
+      "name": "platform.traeger_report_templates",
+      "write_owner": "organization-tenancy"
+    },
+    {
       "name": "platform.traeger_profiles",
       "write_owner": "organization-tenancy"
     },

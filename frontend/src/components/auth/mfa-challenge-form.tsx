@@ -21,6 +21,7 @@ import {
   type MFAResult,
 } from "~/lib/mfa-api";
 import { OTPInputGrid, type OTPInputGridHandle } from "./otp-input-grid";
+import { BackAction } from "~/components/ui/back-link";
 import { Button } from "~/components/ui/button";
 import { IconTile } from "~/components/ui/icon-tile";
 import { SpinnerIcon } from "~/components/ui/icons";
@@ -50,7 +51,6 @@ const DEVICE_LIST_PLACE: Record<LoginScope, string> = {
  * parents portal passes its own in the parent's language (#7051).
  */
 export interface MFAChallengeCopy {
-  readonly back: string;
   readonly backLabel: string;
   readonly title: string;
   readonly sentTo: (maskedEmail: ReactNode) => ReactNode;
@@ -75,7 +75,6 @@ export interface MFAChallengeCopy {
 /** The German copy of a portal's code step. */
 export function germanMFAChallengeCopy(scope: LoginScope): MFAChallengeCopy {
   return {
-    back: "Zurück",
     backLabel: "Zurück zum Login",
     title: "Code-Eingabe",
     sentTo: (maskedEmail) => (
@@ -363,29 +362,11 @@ export function MFAChallengeForm({
     <div ref={formRef} className="space-y-6 text-left">
       {showBack && (
         <div>
-          <button
-            type="button"
+          <BackAction
             onClick={handleBack}
             disabled={isVerifying}
-            className="-ml-1 flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-gray-800 focus:outline-none disabled:cursor-not-allowed disabled:text-gray-300"
-            aria-label={copy.backLabel}
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            {copy.back}
-          </button>
+            label={copy.backLabel}
+          />
         </div>
       )}
 

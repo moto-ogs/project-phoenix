@@ -31,6 +31,7 @@
   "earlyStart": "Kujdesi të fillojë para përfundimit të afatit të tërheqjes.",
   "earlyStartHint": "Nëse tërhiqeni më vonë, paguani kujdesin deri atëherë në mënyrë proporcionale.",
   "signatureRequired": "Ju lutemi nënshkruani dhe konfirmoni nënshkrimin.",
+  "checkFields": "Ju lutemi kontrolloni fushat e shënuara.",
   "submit": "Nënshkruani kontratën",
   "submitting": "Po nënshkruhet …",
   "submitObject": "nënshkrimi",

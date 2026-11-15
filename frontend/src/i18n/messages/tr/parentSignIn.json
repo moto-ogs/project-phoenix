@@ -58,7 +58,6 @@
     "removeObject": "cihazın kaldırılması"
   },
   "challenge": {
-    "back": "Geri",
     "backLabel": "Girişe dön",
     "title": "Kodu girin",
     "sentTo": "<b>{email}</b> adresine 6 haneli bir kod gönderdik. Kod 10 dakika geçerlidir.",
