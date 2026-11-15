@@ -226,9 +226,10 @@ function BlockRow({
   const cancelled = block.status === "cancelled";
   const startable =
     block.status === "planned" && canStartPlannedInstance(block, new Date());
-  // Vorbei ist vorbei: grauere Schrift (statt Deckkraft, WCAG 1.4.3, #7110)
-  // lässt das Laufende und Kommende von selbst hervortreten — wie im
-  // Tagesplan; die Metazeile nennt den Zustand zusätzlich in Worten.
+  // Vorbei ist vorbei: ausgegraut über Schrift in gray-500 statt Deckkraft
+  // (WCAG 1.4.3, #7110), damit das Laufende und Kommende von selbst
+  // hervortritt — wie im Tagesplan; die Metazeile nennt den Zustand
+  // zusätzlich in Worten.
   // Ein Dienst (#3822) wird nie gestartet und hat keine Kinder.
   const isDuty = block.isDuty === true;
   const ended =
@@ -329,7 +330,7 @@ function BlockRow({
         >
           <span className="w-14 shrink-0 sm:w-16">
             <span
-              className={`block text-sm font-semibold tabular-nums ${over ? "text-gray-600" : "text-gray-900"}`}
+              className={`block text-sm font-semibold tabular-nums ${over ? "text-gray-500" : "text-gray-900"}`}
             >
               {block.startTime}
             </span>
@@ -339,7 +340,7 @@ function BlockRow({
           </span>
           <span className="min-w-0 flex-1">
             <span
-              className={`block truncate text-sm ${over ? "text-gray-600" : "text-gray-900"} ${running ? "font-semibold" : "font-medium"}`}
+              className={`block truncate text-sm ${over ? "text-gray-500" : "text-gray-900"} ${running ? "font-semibold" : "font-medium"}`}
             >
               {block.title}
               {block.isSubstitute && (

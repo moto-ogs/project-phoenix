@@ -323,7 +323,7 @@ export function MessageComposer({
         <div
           {...(attachments ? dropProps : {})}
           className={cn(
-            "relative flex min-w-0 flex-1 flex-col rounded-2xl bg-white shadow-sm ring-1 ring-gray-500 transition-shadow duration-200 ring-inset focus-within:ring-2 focus-within:ring-gray-600",
+            "relative flex min-w-0 flex-1 flex-col rounded-2xl bg-white shadow-sm ring-1 ring-gray-500/80 transition-shadow duration-200 ring-inset focus-within:ring-2 focus-within:ring-gray-900",
             inputLocked && "bg-gray-50",
           )}
         >

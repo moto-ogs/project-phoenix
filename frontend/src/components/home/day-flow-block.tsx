@@ -121,12 +121,12 @@ export function DayFlowBlock() {
             <ul className="space-y-2">
               {shown.map((block) => {
                 const mine = showMine && block.isAssigned;
-                // Beendete Blöcke treten über grauere Schrift zurück, nicht
-                // über Deckkraft (WCAG 1.4.3, #7110); „Beendet" steht rechts.
-                const strong =
-                  block.status === "completed"
-                    ? "text-gray-600"
-                    : "text-gray-900";
+                // Beendete Blöcke sind ausgegraut: Schrift gray-500 statt
+                // Deckkraft und ohne Tönung, auf der gray-500 keine 4,5:1
+                // erreicht (#7110); „Beendet" steht rechts.
+                const done = block.status === "completed";
+                const tinted = mine && !done;
+                const strong = done ? "text-gray-500" : "text-gray-900";
                 return (
                   <li key={block.id}>
                     {/* Jede Zeile führt in den Tagesplan, wo der Block bedient
@@ -134,7 +134,7 @@ export function DayFlowBlock() {
                     <ListRow
                       href={dayPlanHref}
                       aria-label={`${block.title}${mine ? " (Mein Block)" : ""}: unter Heute öffnen`}
-                      style={blockTintStyle(block, mine)}
+                      style={blockTintStyle(block, tinted)}
                       trailing={<BlockState block={block} now={now} />}
                     >
                       <span
@@ -150,7 +150,7 @@ export function DayFlowBlock() {
                           {block.title}
                         </span>
                         <span
-                          className={mine ? "text-gray-600" : "text-gray-500"}
+                          className={tinted ? "text-gray-600" : "text-gray-500"}
                         >
                           {[
                             block.roomName ? (

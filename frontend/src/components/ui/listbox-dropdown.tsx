@@ -1135,7 +1135,7 @@ export function ListboxDropdown<K extends string>({
                       placeholder={searchPlaceholder}
                       aria-label={searchPlaceholder}
                       aria-controls={listboxId}
-                      className="h-9 w-full rounded-lg border border-gray-500 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-600 focus:outline-none"
+                      className="h-9 w-full rounded-lg border border-gray-500/80 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-900 focus:outline-none"
                     />
                   </div>
                 ) : null}

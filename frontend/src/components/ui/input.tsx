@@ -85,7 +85,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   const [ownRevealed, setOwnRevealed] = useState(false);
   const isRevealed = revealed ?? ownRevealed;
 
-  const controlClassName = `block w-full rounded-lg border-0 bg-white text-gray-900 shadow-sm ring-1 ring-gray-500 transition-all duration-200 ring-inset placeholder:text-gray-500 focus:outline-none focus:ring-inset focus-visible:ring-2 focus-visible:ring-gray-600 disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 read-only:bg-gray-50 read-only:text-gray-500 aria-[invalid=true]:ring-moto-red ${CONTROL_SIZE_CLASS[controlSize]}`;
+  const controlClassName = `block w-full rounded-lg border-0 bg-white text-gray-900 shadow-sm ring-1 ring-gray-500/80 transition-all duration-200 ring-inset placeholder:text-gray-500 focus:outline-none focus:ring-inset focus-visible:ring-2 focus-visible:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 read-only:bg-gray-50 read-only:text-gray-500 aria-[invalid=true]:ring-moto-red ${CONTROL_SIZE_CLASS[controlSize]}`;
 
   const revealPadding = controlSize === "large" ? "pr-12" : "pr-10";
   const control = (
@@ -122,7 +122,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
               setOwnRevealed(!isRevealed);
               onRevealedChange?.(!isRevealed);
             }}
-            className="absolute top-1/2 right-2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none pointer-coarse:right-1 pointer-coarse:h-11 pointer-coarse:w-11"
+            className="absolute top-1/2 right-2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none pointer-coarse:right-1 pointer-coarse:h-11 pointer-coarse:w-11"
             aria-label={isRevealed ? hidePasswordLabel : showPasswordLabel}
           >
             {isRevealed ? (

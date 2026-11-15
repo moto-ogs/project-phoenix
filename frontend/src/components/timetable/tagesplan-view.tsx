@@ -222,9 +222,13 @@ function TagesplanRow({
   // heraus. Sieht jemand ohnehin nur die eigene Einteilung, wäre jede Zeile
   // hinterlegt und die Farbe sagte nichts mehr.
   const mine = showMine && instance.isAssigned;
-  // Auf der Blockfarbe des eigenen Blocks erreicht gray-500 keine 4,5:1
-  // (#7110); Nebentext wird dort eine Stufe dunkler.
-  const muted = mine ? "text-gray-600" : "text-gray-500";
+  // Vergangenes ist einheitlich ausgegraut: alle Schrift gray-500 (4,8:1 auf
+  // Weiß, #7110) statt Deckkraft, ohne die Tönung des eigenen Blocks, auf der
+  // gray-500 keine 4,5:1 erreicht. Laufendes und Kommendes auf der Tönung
+  // bekommt Nebentext eine Stufe dunkler.
+  const tinted = mine && !over;
+  const muted = tinted ? "text-gray-600" : "text-gray-500";
+  const strong = over ? "text-gray-500" : "text-gray-900";
 
   // Der Raum trägt sein Konzeptsymbol mitten in der Metazeile. Die Symbole
   // sind Schmuck: der Text daneben sagt schon, was gemeint ist.
@@ -251,9 +255,7 @@ function TagesplanRow({
 
   const timeColumn = (
     <span className={parallel ? TIME_PARALLEL_CLASS : TIME_CLASS}>
-      <span
-        className={`block text-sm font-semibold tabular-nums ${over ? "text-gray-600" : "text-gray-900"}`}
-      >
+      <span className={`block text-sm font-semibold tabular-nums ${strong}`}>
         {instance.startTime}
       </span>
       <span className={`block text-xs tabular-nums ${muted}`}>
@@ -310,7 +312,7 @@ function TagesplanRow({
         }
       >
         <span
-          className={`block truncate text-sm ${over ? "text-gray-600" : "text-gray-900"} ${running ? "font-semibold" : "font-medium"}`}
+          className={`block truncate text-sm ${strong} ${running ? "font-semibold" : "font-medium"}`}
         >
           {titleContent}
         </span>
@@ -337,7 +339,7 @@ function TagesplanRow({
     </Button>
   ) : null;
 
-  const edgeStyle = blockRowStyle(instance, mine);
+  const edgeStyle = blockRowStyle(instance, tinted);
 
   // In einer schmalen Spalte stehen Zeit, Inhalt und Aktion untereinander;
   // Badge, Chevron und Starten-Knopf rücken zusammen ans Ende.
@@ -359,7 +361,7 @@ function TagesplanRow({
             subtitle={detailLines}
             badge={badge}
             accent={blockEdgeColor(instance)}
-            accentTint={mine && !cancelled}
+            accentTint={tinted && !cancelled}
             contentClassName="w-full @xs:w-auto"
             className="h-full flex-col items-start gap-2 px-3 py-3 @xs:flex-row @xs:items-center @xs:gap-3 @xs:px-4 @xs:py-3.5"
           />
@@ -386,7 +388,7 @@ function TagesplanRow({
           subtitle={detailLines}
           badge={badge}
           accent={blockEdgeColor(instance)}
-          accentTint={mine && !cancelled}
+          accentTint={tinted && !cancelled}
           className="border-b border-gray-100 py-3.5 last:border-b-0"
         />
       </li>

@@ -288,17 +288,32 @@ describe("TagesplanView", () => {
         makeInstance({
           id: "1",
           title: "Basteln",
+          startTime: "14:00",
+          endTime: "14:45",
           isAssigned: true,
           planningTrackColor: "#5080D8",
         }),
         makeInstance({
           id: "2",
           title: "Hausaufgaben",
-          startTime: "10:00",
+          startTime: "15:00",
+          endTime: "15:45",
           isAssigned: true,
           isSubstitute: true,
         }),
-        makeInstance({ id: "3", title: "Fußball-AG", startTime: "11:00" }),
+        makeInstance({
+          id: "3",
+          title: "Fußball-AG",
+          startTime: "16:00",
+          endTime: "16:45",
+        }),
+        // Vorbei (Testuhr 12:00): ausgegraut, ohne Tönung (#7110).
+        makeInstance({
+          id: "4",
+          title: "Frühbetreuung",
+          isAssigned: true,
+          planningTrackColor: "#5080D8",
+        }),
       ],
       isLoading: false,
       error: null,
@@ -316,6 +331,9 @@ describe("TagesplanView", () => {
       backgroundColor: `${TIMETABLE_UNTYPED_EDGE_COLOR}1A`,
     });
     expect(rowOf("Fußball-AG")?.style.backgroundColor).toBe("");
+    expect(rowOf("Frühbetreuung")?.style.backgroundColor).toBe("");
+    expect(rowOf("Frühbetreuung")).toHaveTextContent("Mein Block");
+    expect(screen.getByText("Frühbetreuung")).toHaveClass("text-gray-500");
     expect(rowOf("Basteln")).toHaveTextContent("Mein Block");
     expect(rowOf("Hausaufgaben")).toHaveTextContent("Mein Block");
     expect(rowOf("Fußball-AG")).not.toHaveTextContent("Mein Block");
