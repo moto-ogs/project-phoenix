@@ -78,7 +78,7 @@ function currentSoll(
 }
 
 /** „September 2026“ aus „2026-09“. */
-export function monthLabel(month: string): string {
+function monthLabel(month: string): string {
   return parseISODate(`${month}-01`).toLocaleDateString("de-DE", {
     month: "long",
     year: "numeric",

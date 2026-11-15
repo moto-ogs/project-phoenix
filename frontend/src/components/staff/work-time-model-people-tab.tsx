@@ -34,7 +34,7 @@ import {
 } from "./work-time-model-assignment-helpers";
 
 /** Nach einer Zuordnung: das Soll und der Reiter jeder Person laden neu. */
-export function isStaleAfterAssignment(key: unknown): boolean {
+function isStaleAfterAssignment(key: unknown): boolean {
   return (
     isStaleAfterModelSave(key) ||
     (typeof key === "string" && key.includes("staff-schedule-"))
