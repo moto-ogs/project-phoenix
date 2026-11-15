@@ -14380,6 +14380,14 @@ export const traegerStaffPlanningTopic =
           ],
         },
         {
+          title: "Die Woche herunterladen",
+          steps: [
+            "Wählen Sie die Woche mit den Pfeilen.",
+            "Wählen Sie oben `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei hat eine Zeile je Person und eine Spalte je Tag.",
+          ],
+        },
+        {
           title: "Die Regeln ändern",
           steps: [
             "Wählen Sie `Einstellungen` und dort `Einsatzplanung`.",
@@ -14394,7 +14402,7 @@ export const traegerStaffPlanningTopic =
         "moto zählt alle Schulen der Person zusammen: die Stunden am Tag, die Ruhezeit, die Pausen und das Soll der Woche.",
         "Dieselbe Prüfung läuft, wenn eine Schule selbst eine Schicht plant.",
         "Das Soll kommt aus dem Arbeitsvertrag. Feiertage und Schließtage zählen nicht.",
-        "Jedes Anzeigen der Woche steht im Zugriffsprotokoll jeder Schule.",
+        "Jedes Anzeigen und jeder Download der Woche steht im Zugriffsprotokoll jeder Schule.",
         "moto prüft die Regeln als Hilfe. Ob eine Planung erlaubt ist, entscheiden Sie.",
       ],
       differences: [
@@ -14556,6 +14564,14 @@ export const traegerStaffRecordsTopic =
           ],
         },
         {
+          title: "Die Liste der Akten herunterladen",
+          steps: [
+            "Wählen Sie in der Navigation `Personalakten`.",
+            "Wählen Sie oben rechts `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält alle Akten mit Personalnummer und Einsatzorten. Bank- und Steuerdaten stehen nicht darin.",
+          ],
+        },
+        {
           title: "Personalnummer eintragen",
           steps: [
             "Öffnen Sie die Akte im Reiter `Akten`.",
@@ -14592,6 +14608,7 @@ export const traegerStaffRecordsTopic =
         "Ein Wert, den Sie beim Verknüpfen nicht wählen, bleibt mit seiner Schule im `Verlauf` der Akte.",
         "Jede Schule sieht weiter nur ihr eigenes Personal. Sie sieht keine Akte und keine anderen Schulen.",
         "Jedes Anzeigen der Bank- und Steuerdaten steht im Zugriffsprotokoll jeder Schule der Person.",
+        "Jeder Download der Liste steht im Zugriffsprotokoll jeder Schule.",
         "Lehrkräfte des Landes und Kräfte anderer Träger bekommen keine Akte. Verknüpfen Sie nur Personen, die Ihr Träger beschäftigt.",
         "Die Verarbeitung stützt sich auf Art. 6 Abs. 1 lit. b und c DSGVO: Ihr Träger ist der Arbeitgeber.",
       ],

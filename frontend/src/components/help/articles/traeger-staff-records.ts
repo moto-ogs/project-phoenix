@@ -59,6 +59,14 @@ export function traegerStaffRecordsTopic(): HelpTopic {
         ],
       },
       {
+        title: "Die Liste der Akten herunterladen",
+        steps: [
+          "Wählen Sie in der Navigation `Personalakten`.",
+          "Wählen Sie oben rechts `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Die Datei enthält alle Akten mit Personalnummer und Einsatzorten. Bank- und Steuerdaten stehen nicht darin.",
+        ],
+      },
+      {
         title: "Personalnummer eintragen",
         steps: [
           "Öffnen Sie die Akte im Reiter `Akten`.",
@@ -95,6 +103,7 @@ export function traegerStaffRecordsTopic(): HelpTopic {
       "Ein Wert, den Sie beim Verknüpfen nicht wählen, bleibt mit seiner Schule im `Verlauf` der Akte.",
       "Jede Schule sieht weiter nur ihr eigenes Personal. Sie sieht keine Akte und keine anderen Schulen.",
       "Jedes Anzeigen der Bank- und Steuerdaten steht im Zugriffsprotokoll jeder Schule der Person.",
+      "Jeder Download der Liste steht im Zugriffsprotokoll jeder Schule.",
       "Lehrkräfte des Landes und Kräfte anderer Träger bekommen keine Akte. Verknüpfen Sie nur Personen, die Ihr Träger beschäftigt.",
       "Die Verarbeitung stützt sich auf Art. 6 Abs. 1 lit. b und c DSGVO: Ihr Träger ist der Arbeitgeber.",
     ],
