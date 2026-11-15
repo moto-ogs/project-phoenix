@@ -123,6 +123,7 @@ describe("TenantPage", () => {
     const titleRow = heading.closest("header")!.firstElementChild!;
     expect(titleRow.contains(heading)).toBe(true);
     expect(titleRow.contains(kebab)).toBe(true);
+    // Anker: das Kebab steht in der Titelzeile; keine Hülle blendet es aus.
     for (let el: Element | null = kebab; el; el = el.parentElement) {
       expect(el.className).not.toMatch(
         /(^|\s)(hidden|lg:hidden|xl:hidden)(\s|$)/,
@@ -146,6 +147,7 @@ describe("TenantPage", () => {
     const kebabs = screen.getAllByRole("button", { name: "Weitere Aktionen" });
     // Telefon- und Desktop-Fassung der Suchzeile, keine im Titel.
     expect(kebabs).toHaveLength(2);
+    // Anker: beide Kebabs sind gerendert, keines steht in der Titelzeile.
     for (const kebab of kebabs) expect(titleRow.contains(kebab)).toBe(false);
   });
 

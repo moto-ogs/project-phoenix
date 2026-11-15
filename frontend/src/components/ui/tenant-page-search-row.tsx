@@ -311,7 +311,7 @@ function MobileSearchSection({
             "mb-3 flex items-center gap-2",
             // Ohne Suchfeld und Filter stehen Kebab und Plakette rechts, wie
             // auf dem Desktop.
-            !search && !hasFilters && "justify-end",
+            search === undefined && !hasFilters && "justify-end",
           )}
         >
           {search && (

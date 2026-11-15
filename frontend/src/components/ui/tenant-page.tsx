@@ -582,8 +582,8 @@ function TenantPageView({
   // beiden Fällen steht das Kebab neben dem Titel, wo die Regel es vorsieht.
   const kebabInTitleRow =
     hasOverflowMenu && (searchSlot != null || !searchRowHasControls);
-  const hasSearchRow =
-    searchRowHasControls || (hasOverflowMenu && !kebabInTitleRow);
+  // Mit Bedienelementen trägt die Suchzeile das Kebab selbst.
+  const hasSearchRow = searchRowHasControls;
   const hasHeadActions = actions != null || kebabInTitleRow;
 
   const headRef = useRef<HTMLElement>(null);
