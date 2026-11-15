@@ -416,6 +416,8 @@ import type { traegerStaffProofsTopic as authored_traegerStaffProofsTopic } from
 
 import type { traegerStaffRecordsTopic as authored_traegerStaffRecordsTopic } from "./articles/traeger-staff-records";
 
+import type { traegerStaffTimeAccountTopic as authored_traegerStaffTimeAccountTopic } from "./articles/traeger-staff-time-account";
+
 import type { traegerTestSystemTopic as authored_traegerTestSystemTopic } from "./articles/traeger-test-system";
 
 import type { traegerUtilizationTopic as authored_traegerUtilizationTopic } from "./articles/traeger-utilization";
@@ -7703,6 +7705,7 @@ export const payrollTopic = function payrollTopic(): HelpTopic {
       "Die Feiertage nimmt moto aus dem Bundesland der Schule.",
       "Ist ein Sonntag auch Feiertag, zählt die höhere Regel. Nachtarbeit zählt zusätzlich.",
       "Ein abgeschlossener Monat behält die Lohnarten und Regeln, die beim Abschluss galten.",
+      "Personen mit Arbeitsvertrag beim Träger fehlen in der Monatsdatei der Schule. Ihren Lohn rechnet der Träger ab.",
       "Eine Lohnart, die eine Regel oder Abwesenheitsart noch nutzt, lässt sich nicht archivieren.",
       "Per `E-Mail` bekommt das Lohnbüro einen Link, keinen Anhang. Der Link gilt 14 Tage und funktioniert nur einmal.",
       "Öffnen Sie einen Monat wieder und schließen ihn erneut ab, geht die Datei noch einmal raus. Ihr Name enthält dann „korrektur“.",
@@ -14439,6 +14442,78 @@ export const traegerStaffRecordsTopic =
     };
   } satisfies typeof authored_traegerStaffRecordsTopic;
 
+/**
+ * Das Stundenkonto einer Personalakte über alle Schulen und der
+ * Monatsabschluss des Trägers (#4711, ADR 0243).
+ */
+export const traegerStaffTimeAccountTopic =
+  function traegerStaffTimeAccountTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerStaffTimeAccount,
+      title: "Stundenkonto und Monatsabschluss",
+      question: "Wie sehe ich das Stundenkonto und schließe einen Monat ab?",
+      summary:
+        "Das Stundenkonto zählt Soll und Ist an allen Schulen der Person. Mit Ihrem Vertrag schließen Sie den Monat für alle Schulen ab.",
+      group: "personal",
+      audience: "traeger",
+      icon: "Timer",
+      requirements: [
+        "Sie haben die Rolle `Personal`.",
+        "Die Person hat eine Personalakte.",
+        "Zum Abschließen: Die Person hat in dem Monat einen Arbeitsvertrag bei Ihnen.",
+      ],
+      instructionGroups: [
+        {
+          title: "Stundenkonto ansehen",
+          steps: [
+            "Öffnen Sie die Akte im Reiter `Akten`.",
+            "Gehen Sie zur Karte `Stundenkonto`. Sie zeigt den Vormonat.",
+            "Mit den Pfeilen wechseln Sie den Monat.",
+            "Oben stehen Soll, Ist, Saldo und Kontostand über alle Schulen. Darunter steht jede Schule in einer Zeile.",
+          ],
+        },
+        {
+          title: "Monat abschließen",
+          description: "Zum Beispiel, bevor Sie die Löhne abrechnen.",
+          steps: [
+            "Wählen Sie den Monat. Er muss vorbei sein.",
+            "Wählen Sie `Monat abschließen`.",
+            "Schreiben Sie einen Grund. Wählen Sie `Monat abschließen`.",
+          ],
+        },
+        {
+          title: "Monat wieder öffnen",
+          description: "Nur, wenn der Abschluss falsch war.",
+          steps: [
+            "Wählen Sie den abgeschlossenen Monat.",
+            "Wählen Sie `Wieder öffnen`.",
+            "Schreiben Sie einen Grund. Wählen Sie `Wieder öffnen`.",
+          ],
+        },
+      ],
+      steps: [],
+      result:
+        "Der Monat ist an jeder Schule mit Ihrem Vertrag abgeschlossen. Die Schulen ändern darin keine Zeiten und Buchungen mehr. Der Kontostand geht in den nächsten Monat.",
+      notes: [
+        "Personen mit Ihrem Vertrag schließen nur Sie ab. Die Schule lässt sie bei ihrem eigenen Abschluss aus. Sie fehlen auch im Lohnexport der Schule.",
+        "Jedes Öffnen des Stundenkontos steht im Zugriffsprotokoll der Schulen.",
+        "Monate öffnen Sie vom neuesten an. Ist der Oktober abgeschlossen, öffnen Sie zuerst den Oktober, dann den September.",
+      ],
+      differences: [
+        "Statt `Monat abschließen` steht `Schulen schließen selbst ab`: In dem Monat gilt kein Arbeitsvertrag bei Ihnen. Jede Schule schließt dann selbst ab.",
+        "Eine Schule zeigt `Von der Schule abgeschlossen`: Die Schule war vor Ihrem Vertrag schon fertig. Diesen Abschluss öffnet nur die Schule.",
+      ],
+      troubleshootingDetails: [
+        "`Monat abschließen` ist grau: Der Monat läuft noch, oder eine Schule hat einen späteren Monat schon abgeschlossen. Der Hinweis über der Tabelle nennt die Schule.",
+        "`Wieder öffnen` ist grau: Ein späterer Monat ist noch abgeschlossen. Öffnen Sie zuerst diesen.",
+      ],
+      related: [
+        HELP_TOPICS.traegerStaffContracts,
+        HELP_TOPICS.traegerStaffRecords,
+      ],
+    };
+  } satisfies typeof authored_traegerStaffTimeAccountTopic;
+
 /** Hinweis `Testsystem` im Träger-Portal (#4658): erfundene Beispielkinder. */
 export const traegerTestSystemTopic =
   function traegerTestSystemTopic(): HelpTopic {
@@ -14951,6 +15026,7 @@ export const workTimeReviewTopic = function workTimeReviewTopic(): HelpTopic {
       "Wochensaldo und Stundenkonto rechnen gegen das hinterlegte Arbeitszeitmodell. Ohne Soll zählen Krankheit, Urlaub und Fortbildung 0 Stunden.",
       "`Team` → `Zeiterfassung` zeigt nur Ihre eigene Stempeluhr, nicht die des Teams.",
       "Mit `Monat abschließen` frieren Sie den Stand ein. Das geht ab dem 1. des Folgemonats.",
+      "Steht bei einer Person `Schließt der Träger ab`, hat sie einen Arbeitsvertrag beim Träger. Ihren Monat schließt der Träger ab, Ihr Abschluss lässt sie aus. Nur der Träger öffnet ihn wieder.",
       "Ist unter `Abrechnung` der `Versand an das Lohnbüro` eingeschaltet, geht die Monatsdatei danach von selbst an das Lohnbüro.",
       "Unter einer Rückfrage und in der Historie steht, ob die Mail dazu bei der Person ankam. Kam sie nicht an, sagen Sie der Person direkt Bescheid.",
     ],

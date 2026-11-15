@@ -70,6 +70,7 @@ describe("staffMonthCloseService", () => {
         closedAt: "2026-07-01T08:00:00Z",
         closedBy: "4",
         closeReason: "Lohnlauf",
+        source: "manual",
       },
     ]);
     expect(empty).toEqual([]);

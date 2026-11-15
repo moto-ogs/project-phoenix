@@ -305,6 +305,7 @@ func (rs *StaffAdminResource) registerCrossStaffRoutes(r chi.Router, withTx comm
 		Get("/time-tracking/payroll-dispatch", rs.getPayrollDispatch)
 
 	r.With(timeTracking, withTx).Get("/time-tracking/month-close", rs.listMonthCloseStatus)
+	r.With(timeTracking, withTx).Get("/time-tracking/month-close/traeger-staff", rs.listTraegerMonthStaff)
 	r.With(timeTracking, withTx).Post("/time-tracking/month-close", rs.closeMonth)
 	r.With(timeTracking, withTx).Post("/{id}/time-tracking/month-close/reopen", rs.reopenMonth)
 }

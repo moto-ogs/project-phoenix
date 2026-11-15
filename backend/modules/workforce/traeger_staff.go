@@ -369,4 +369,7 @@ type TraegerStaffPorts struct {
 	Access      TraegerStaffAccessLog
 	Runtime     TraegerStaffRuntime
 	Names       TraegerStaffActorNames
+	// Months is the school's month of an employment for the Stundenkonto
+	// (#4711).
+	Months TraegerStaffMonths
 }

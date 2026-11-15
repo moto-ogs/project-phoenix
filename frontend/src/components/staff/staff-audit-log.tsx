@@ -212,6 +212,9 @@ function describeEvent(event: AuditLogEvent): string {
 }
 
 function actorLabel(event: AuditLogEvent): string {
+  // Abschluss und Wiederöffnen des Trägers (#4711) haben kein Personal der
+  // Schule als Urheber.
+  if (event.detail.by_traeger === true) return "Personalverwaltung des Trägers";
   if (event.actorIsSystem) return "System";
   if (!event.actorName) return "Unbekannt";
   return event.actorIsSelf ? `${event.actorName} (selbst)` : event.actorName;

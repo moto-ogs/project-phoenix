@@ -76,6 +76,7 @@ export function payrollTopic(): HelpTopic {
       "Die Feiertage nimmt moto aus dem Bundesland der Schule.",
       "Ist ein Sonntag auch Feiertag, zählt die höhere Regel. Nachtarbeit zählt zusätzlich.",
       "Ein abgeschlossener Monat behält die Lohnarten und Regeln, die beim Abschluss galten.",
+      "Personen mit Arbeitsvertrag beim Träger fehlen in der Monatsdatei der Schule. Ihren Lohn rechnet der Träger ab.",
       "Eine Lohnart, die eine Regel oder Abwesenheitsart noch nutzt, lässt sich nicht archivieren.",
       "Per `E-Mail` bekommt das Lohnbüro einen Link, keinen Anhang. Der Link gilt 14 Tage und funktioniert nur einmal.",
       "Öffnen Sie einen Monat wieder und schließen ihn erneut ab, geht die Datei noch einmal raus. Ihr Name enthält dann „korrektur“.",

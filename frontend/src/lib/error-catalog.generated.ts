@@ -1881,6 +1881,8 @@ export const ERROR_CATALOG = {
         "Diese Abwesenheit trägt nur die Leitung ein. Bitte fragen Sie die Leitung.",
       "workforce.month_closed":
         "Der {month} ist abgeschlossen. Öffnen Sie den Monat zuerst wieder. Das geht im Reiter Zeiterfassung.",
+      "workforce.month_closed_by_traeger":
+        "Diesen Monat hat die Personalverwaltung des Trägers abgeschlossen. Nur sie kann ihn wieder öffnen.",
       "workforce.month_not_closable":
         "Dieser Monat ist noch nicht vorbei. Sie können ihn erst danach abschließen.",
       "workforce.month_not_closed":
@@ -2011,6 +2013,12 @@ export const ERROR_CATALOG = {
         "An der Schule {school} gilt an diesen Tagen schon ein anderer Arbeitsvertrag. Beenden Sie den anderen Vertrag zuerst oder wählen Sie andere Tage.",
       "workforce.traeger_holiday_week_school_override":
         "Die Schule {school} hat für die Woche ab dem {day} schon eine eigene Sonderarbeitszeit. Bitte bitten Sie die Schule, diese zu löschen, oder wählen Sie eine andere Woche.",
+      "workforce.traeger_month_closed_by_school":
+        "Die Schule {school} hat diesen Monat selbst abgeschlossen. Nur die Schule kann ihn wieder öffnen.",
+      "workforce.traeger_month_later_closed":
+        "An der Schule {school} ist {month} schon abgeschlossen. Bitte öffnen Sie zuerst diesen späteren Monat.",
+      "workforce.traeger_month_not_kept":
+        "In diesem Monat gilt kein Arbeitsvertrag des Trägers. Die Schulen schließen den Monat selbst ab.",
       "workforce.traeger_planning_shift_not_found":
         "Die Schicht gibt es nicht mehr. Bitte laden Sie die Woche neu.",
       "workforce.traeger_planning_site_invalid":

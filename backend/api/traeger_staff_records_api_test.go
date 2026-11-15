@@ -76,7 +76,15 @@ func newTraegerStaffFixtureWith(t *testing.T, db *bun.DB, now func() time.Time, 
 	})
 	schoolShifts, sites, err := StaffPlanningTestComposition(testpkg.NewDatabase(t, db), rules)
 	require.NoError(t, err)
-	require.NoError(t, mountTraegerStaffRoutes(router, admin, organizations, persons, membership, tenantAudit.DataAccessLog, sites))
+	// The school months of the Stundenkonto (#4711) come from the time
+	// tracking the service graph composes.
+	var clocks []func() time.Time
+	if now != nil {
+		clocks = append(clocks, now)
+	}
+	workforceModule, _, err := NewWorkforceTestModule(testpkg.NewDatabase(t, db), unit, clocks...)
+	require.NoError(t, err)
+	require.NoError(t, mountTraegerStaffRoutes(router, admin, workforceModule.TimeTracking.TraegerMonths, organizations, persons, membership, tenantAudit.DataAccessLog, sites))
 	office := newTraegerOffice(t, db, portal, "Träger Personal", identityaccess.TraegerRolePersonnel)
 	return testpkg.SessionVerifier(router), portal, admin, unit, office, schoolShifts
 }

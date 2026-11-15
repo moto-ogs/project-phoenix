@@ -22,10 +22,12 @@ type MonthSnapshot struct {
 	AdjustmentMinutes     int        `json:"adjustment_minutes"`
 	ClosedAt              time.Time  `json:"closed_at"`
 	ClosedBy              int64      `json:"closed_by"`
+	ClosedByAccountID     int64      `json:"-"`
 	CloseReason           string     `json:"close_reason,omitempty"`
 	Source                string     `json:"source"`
 	ReopenedAt            *time.Time `json:"reopened_at,omitempty"`
 	ReopenedBy            *int64     `json:"reopened_by,omitempty"`
+	ReopenedByAccountID   *int64     `json:"-"`
 	ReopenReason          string     `json:"reopen_reason,omitempty"`
 	// PayrollRules is the JSON of the wage types, rules and absence type
 	// mapping in force at the close (#4807); nil books with the current ones.
@@ -34,7 +36,11 @@ type MonthSnapshot struct {
 
 func (s *MonthSnapshot) IsActive() bool { return s.ReopenedAt == nil }
 
-const SnapshotSourceAdmin = "admin"
+const (
+	SnapshotSourceAdmin = "admin"
+	// SnapshotSourceTraeger marks a close of the Träger (#4711).
+	SnapshotSourceTraeger = "traeger"
+)
 
 // MonthSnapshots is the consumer-owned port for frozen balances.
 type MonthSnapshots interface {

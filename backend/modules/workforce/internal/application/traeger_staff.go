@@ -46,7 +46,7 @@ type TraegerStaffDependencies struct {
 // NewTraegerStaff composes the Personalstamm; every collaborator is required.
 func NewTraegerStaff(store ports.TraegerStaffStore, collaborators workforce.TraegerStaffPorts, dependencies TraegerStaffDependencies) *TraegerStaff {
 	if store == nil || collaborators.Schools == nil || collaborators.Employments == nil || collaborators.Persons == nil || collaborators.Access == nil ||
-		collaborators.Runtime == nil || dependencies.Subjects == nil || dependencies.Audit == nil || dependencies.Bank == nil ||
+		collaborators.Runtime == nil || collaborators.Months == nil || dependencies.Subjects == nil || dependencies.Audit == nil || dependencies.Bank == nil ||
 		dependencies.Lock == nil || dependencies.Clock == nil || dependencies.Warn == nil {
 		panic("workforce traeger staff: all dependencies are required")
 	}

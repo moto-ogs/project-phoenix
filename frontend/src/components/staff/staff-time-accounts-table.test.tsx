@@ -204,6 +204,26 @@ describe("StaffTimeAccountsTable Hinweise", () => {
     expect(screen.getByText("Brandt, Ben")).toBeInTheDocument();
   });
 
+  // #4711: den Monat einer Person mit Vertrag beim Träger schließt der
+  // Träger ab; die Zeile sagt es, die anderen Zeilen nicht.
+  it("markiert die Personen, deren Monat der Träger abschließt", () => {
+    render(
+      <StaffTimeAccountsTable
+        {...baseProps}
+        rows={rows}
+        traegerStaff={new Set(["2"])}
+        onSaldoPresetChange={vi.fn()}
+        onCustomSaldoHoursChange={vi.fn()}
+        showCustomSaldo={false}
+        onShowCustomSaldoChange={vi.fn()}
+      />,
+    );
+
+    const badges = screen.getAllByText("Schließt der Träger ab");
+    expect(badges).toHaveLength(1);
+    expect(badges[0]?.closest("tr")).toHaveTextContent("Brandt, Ben");
+  });
+
   it("filtert auf Personen mit Hinweisen", () => {
     renderAccounts();
 

@@ -177,7 +177,10 @@ type staffOverviewService struct {
 	// month export (#4807); without them no row carries any.
 	payrollRules      workforce.PayrollRuleSetReader
 	statutoryHolidays HolidayDatesReader
-	logger            *slog.Logger
+	// traeger names the staff the Träger pays (#4711): the payroll rows leave
+	// them out. nil in bare unit fixtures.
+	traeger TraegerMonthStaff
+	logger  *slog.Logger
 
 	// todayFunc is a test hook; production uses timezone.TodayDate.
 	todayFunc func() calendar.Date

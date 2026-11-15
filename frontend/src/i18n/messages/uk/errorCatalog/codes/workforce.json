@@ -22,6 +22,7 @@
   "later_month_closed": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "manager_controlled_absence": "У вас немає доступу до: {object}. Зверніться до школи.",
   "month_closed": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "month_closed_by_traeger": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "month_not_closable": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "month_not_closed": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "no_active_break": "Не вдалося змінити: {object}. Перевірте поточний стан.",
@@ -114,5 +115,8 @@
   "shift_planning_off": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "shift_working_time_warning": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "traeger_planning_site_invalid": "Не вдалося зберегти: {object}. Перевірте введені дані.",
-  "traeger_planning_shift_not_found": "Не вдалося зберегти: {object}. Перевірте введені дані."
+  "traeger_planning_shift_not_found": "Не вдалося зберегти: {object}. Перевірте введені дані.",
+  "traeger_month_closed_by_school": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "traeger_month_later_closed": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "traeger_month_not_kept": "Не вдалося змінити: {object}. Перевірте поточний стан."
 }

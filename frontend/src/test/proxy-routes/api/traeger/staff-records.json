@@ -35,6 +35,15 @@
   "api/traeger/staff-records/[id]/personnel-number": [
     "PUT traeger /traeger/staff-records/id%2F1/personnel-number"
   ],
+  "api/traeger/staff-records/[id]/time-account": [
+    "GET traeger /traeger/staff-records/id%2F1/time-account query=year,month"
+  ],
+  "api/traeger/staff-records/[id]/time-account/close": [
+    "POST traeger /traeger/staff-records/id%2F1/time-account/close"
+  ],
+  "api/traeger/staff-records/[id]/time-account/reopen": [
+    "POST traeger /traeger/staff-records/id%2F1/time-account/reopen"
+  ],
   "api/traeger/staff-records/link-preview": [
     "POST traeger /traeger/staff-records/link-preview"
   ]

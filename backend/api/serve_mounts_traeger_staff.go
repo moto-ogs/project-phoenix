@@ -24,11 +24,11 @@ import (
 // the Einsatzplanung (#4708) at /traeger/staff-planning behind the Träger
 // right „Personal“, over the personnel record staffAdmin the root built for
 // the schools and the Dienstplan of the schools.
-func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, organizations HolidayOrganizations,
+func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, months workforce.TraegerStaffMonths, organizations HolidayOrganizations,
 	persons TraegerPersons, membership TraegerStaff, accessLog owners.DataAccessAppender, sites workforce.TraegerShiftSites,
 ) error {
-	if staffAdmin == nil {
-		return errors.New("traeger staff records: the personnel record is required")
+	if staffAdmin == nil || months == nil {
+		return errors.New("traeger staff records: the personnel record and the school months are required")
 	}
 	collaborators := workforce.TraegerStaffPorts{
 		Schools:     traegerStaffSchools{organizations: organizations},
@@ -37,12 +37,18 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 		Access:      traegerStaffAccessLog{log: accessLog},
 		Runtime:     traegerDocumentRuntime{},
 		// The import log names colleagues like the export protocol (#4693).
-		Names: parentBillingActorNames{names: owners.NewTraegerMemberNames()},
+		Names:  parentBillingActorNames{names: owners.NewTraegerMemberNames()},
+		Months: months,
 	}
 	records := staffAdmin.TraegerStaffRecords(collaborators)
 	requireStaff := common.RequiresPermission(identityaccess.TraegerRightStaffManage)
 	absences := staffAdmin.TraegerAbsenceTypes(collaborators)
-	resource := traegerstaff.NewRecordsResource(records, staffAdmin.TraegerStaffContracts(collaborators), absences, requireStaff)
+	// The Personalstamm serves the Stundenkonto over the same records (#4711).
+	timeAccounts, ok := records.(workforce.TraegerStaffTimeAccounts)
+	if !ok {
+		return errors.New("traeger staff records: the Personalstamm serves no Stundenkonto")
+	}
+	resource := traegerstaff.NewRecordsResource(records, staffAdmin.TraegerStaffContracts(collaborators), absences, timeAccounts, requireStaff)
 	root.Mount("/traeger/staff-records", resource.TraegerRouter(ProtectedTraegerRoutes))
 	// The Personalstamm serves its Nachweise over the same records (#4707).
 	proofs, ok := records.(workforce.TraegerStaffProofs)
