@@ -24,7 +24,11 @@ type Story = StoryObj<typeof SmartRedirect>;
  * confirms it mounts without crashing given the global fake session,
  * NextIntl, and Tenant providers plus a local SupervisionProvider.
  */
-export const Default: Story = {};
+export const Default: Story = {
+  // Ohne onRedirect leitet die Komponente per redirect() wirklich weiter und
+  // verlässt die Seite; im Testlauf schließt das die Browser-Sitzung (#7108).
+  tags: ["!test"],
+};
 
 /**
  * With an `onRedirect` callback supplied, the component calls it instead of

@@ -103,6 +103,8 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const WithPendingAndHistory: Story = {
+  // axe meldet hier noch color-contrast; Behebung in #7110.
+  parameters: { a11y: { test: "todo" } },
   args: {
     staffId: "1",
     canEdit: true,
@@ -114,6 +116,8 @@ export const WithPendingAndHistory: Story = {
 };
 
 export const ReadOnly: Story = {
+  // axe meldet hier noch color-contrast; Behebung in #7110.
+  parameters: { a11y: { test: "todo" } },
   args: {
     staffId: "1",
     canEdit: false,

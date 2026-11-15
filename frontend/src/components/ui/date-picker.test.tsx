@@ -107,6 +107,33 @@ describe("DatePicker", () => {
     expect(screen.getByText("Datum auswählen")).toBeInTheDocument();
   });
 
+  it.each([
+    [null, "Datum auswählen"],
+    [new Date("2024-01-15T00:00:00Z"), "15.01.2024"],
+  ])("keeps the visible value in a named trigger (%s)", (value, text) => {
+    render(
+      <DatePicker value={value} onChange={mockOnChange} ariaLabel="Tag" />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: `Tag: ${text}` }),
+    ).toBeInTheDocument();
+  });
+
+  it("preserves a trigger name that already contains its displayed date", () => {
+    render(
+      <DatePicker
+        value={new Date("2024-01-15T00:00:00Z")}
+        onChange={mockOnChange}
+        ariaLabel="Datum: 15.01.2024"
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Datum: 15.01.2024" }),
+    ).toBeInTheDocument();
+  });
+
   it("renders with custom placeholder", () => {
     render(
       <DatePicker

@@ -229,6 +229,19 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
+      # The Storybook tests below need Chromium. Its download and system
+      # packages run beside the quality checks instead of before them.
+      - name: Start Chromium install for Storybook tests
+        working-directory: frontend
+        run: |
+          (if pnpm exec playwright install --with-deps --only-shell chromium \
+              > "$RUNNER_TEMP/chromium-install.log" 2>&1; then
+             status=0
+           else
+             status=$?
+           fi
+           echo "$status" > "$RUNNER_TEMP/chromium-install.exit") &
+
       - name: Frontend quality (shared with pre-push)
         run: bash scripts/check-quality.sh frontend
 
@@ -237,6 +250,30 @@ jobs:
       - name: Build Storybook
         working-directory: frontend
         run: pnpm run build-storybook
+
+      - name: Wait for Chromium install
+        run: |
+          # A hung install fails after 5 min instead of the job timeout.
+          for _ in $(seq 300); do
+            [ -f "$RUNNER_TEMP/chromium-install.exit" ] && break
+            sleep 1
+          done
+          if [ ! -f "$RUNNER_TEMP/chromium-install.exit" ]; then
+            cat "$RUNNER_TEMP/chromium-install.log"
+            echo "Chromium install did not finish within 5 minutes." >&2
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/chromium-install.log"
+          exit "$(cat "$RUNNER_TEMP/chromium-install.exit")"
+
+      # Every story renders in Chromium and fails on an axe violation (#7108).
+      # A pull request tests the stories its changes import; pushes and the
+      # nightly run test all of them (scripts/storybook-test-changed.mjs).
+      - name: Storybook tests (a11y)
+        working-directory: frontend
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/storybook-test-changed.mjs
 
   # The regular build of the tested tree: on pull requests GitHub's synthetic
   # merge, which this job checks out by default. It ran in "Frontend build"
