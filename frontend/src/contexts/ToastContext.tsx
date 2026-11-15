@@ -601,7 +601,8 @@ function useApiErrorCore(
           ? control.nextElementSibling?.querySelector<HTMLElement>(
               '[role="combobox"], button',
             )
-          : (control ?? firstFieldById(formRef?.current ?? document, failed));
+          : (control ??
+            firstFieldById(formRef?.current ?? document.body, failed));
       // FormErrorAlert alone scrolls (#5217): one jump to the first marked
       // field, not a second instant one from the focus.
       target?.focus({ preventScroll: true });
