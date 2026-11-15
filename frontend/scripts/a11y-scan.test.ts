@@ -62,6 +62,51 @@ function setup() {
 }
 
 describe("a11y scan completeness", () => {
+  it.each([false, true])(
+    "leaves timed-out routes open for a loaded scan (quiet at deadline=%s)",
+    async (quietAtDeadline) => {
+      vi.useFakeTimers();
+      const { page, recorder, scanned } = setup();
+      const started = Date.now();
+      vi.mocked(page.evaluate).mockImplementation(async () =>
+        quietAtDeadline && Date.now() - started >= 9_800
+          ? null
+          : '<div aria-busy="true">Loading</div>',
+      );
+      analyze.mockResolvedValue({
+        violations: [
+          {
+            id: "image-alt",
+            help: "Images need alternative text",
+            helpUrl: "https://example.com/image-alt",
+            nodes: [{ target: ["img"] }],
+          },
+        ],
+      });
+
+      const pending = recorder.scan(page);
+      await vi.advanceTimersByTimeAsync(10_000);
+      await pending;
+
+      expect(recorder.complete).toBe(false);
+      expect(recorder.records).toEqual([]);
+      expect(scanned.size).toBe(0);
+      expect(analyze).not.toHaveBeenCalled();
+
+      vi.mocked(page.evaluate).mockResolvedValue(null);
+      const loaded = recorder.scan(page);
+      await vi.advanceTimersByTimeAsync(400);
+      await loaded;
+
+      expect(recorder.records).toEqual([
+        { route: "web /login", counts: { "image-alt": 1 } },
+      ]);
+      expect(scanned.has("web /login")).toBe(true);
+      expect(recorder.failure()).toContain("image-alt");
+      expect(recorder.complete).toBe(false);
+    },
+  );
+
   it("propagates stable-page scanner failures and keeps the route unmeasured", async () => {
     const { page, recorder, scanned } = setup();
     const error = new Error("axe injection failed");
@@ -106,9 +151,14 @@ describe("a11y scan completeness", () => {
 });
 
 describe("a11y baseline shrinking", () => {
-  it.each([false, true])(
-    "requires every scan to be complete (complete=%s)",
-    (complete) => {
+  it.each([
+    { complete: false, skipped: false },
+    { complete: true, skipped: false },
+    { complete: false, skipped: true },
+    { complete: true, skipped: true },
+  ])(
+    "requires complete scans and no skipped tests ($complete, $skipped)",
+    ({ complete, skipped }) => {
       vi.stubEnv("A11Y_BASELINE_SHRINK", "1");
       vi.spyOn(process, "argv", "get").mockReturnValue([
         "node",
@@ -130,6 +180,7 @@ describe("a11y baseline shrinking", () => {
         reporter.onTestEnd(
           {} as TestCase,
           {
+            status: "passed",
             attachments: [
               {
                 name: SCAN_ATTACHMENT,
@@ -139,10 +190,19 @@ describe("a11y baseline shrinking", () => {
           } as TestResult,
         );
       }
+      if (skipped) {
+        reporter.onTestEnd(
+          {} as TestCase,
+          {
+            status: "skipped",
+            attachments: [],
+          } as unknown as TestResult,
+        );
+      }
 
       reporter.onEnd({ status: "passed", startTime: new Date(), duration: 0 });
 
-      expect(writeFileSync).toHaveBeenCalledTimes(complete ? 1 : 0);
+      expect(writeFileSync).toHaveBeenCalledTimes(complete && !skipped ? 1 : 0);
     },
   );
 });

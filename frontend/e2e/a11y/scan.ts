@@ -34,7 +34,7 @@ export const SCAN_ATTACHMENT = "a11y-scan";
 /** Was ein Test geprüft hat, als Anhang für reporter.ts. */
 export interface ScanReport {
   records: ScanRecord[];
-  /** Kein Analysefehler und keine ausgeschöpften Navigationsversuche. */
+  /** Kein Analysefehler, Lade-Timeout oder ausgeschöpfter Navigationsversuch. */
   complete: boolean;
   /** Zeit für Warten und axe, in Millisekunden. */
   ms: number;
@@ -70,7 +70,7 @@ async function settle(page: Page): Promise<string | null> {
     quiet = busy === null ? quiet + 1 : 0;
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
-  return quiet < 2 ? busy : null;
+  return quiet < 2 ? (busy ?? "Seite noch nicht stabil") : null;
 }
 
 interface Violation {
@@ -148,10 +148,12 @@ export class A11yRecorder {
       const busy = await settle(page);
       this.settleMs += Date.now() - settleStarted;
       if (busy) {
+        this.complete = false;
         this.info.annotations.push({
           type: "a11y",
           description: `${before}: Ladeanzeige nach 10 s noch sichtbar: ${busy}`,
         });
+        return;
       }
       const address = page.url();
       const route = this.routeOf(page, state);

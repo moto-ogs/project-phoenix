@@ -19,14 +19,15 @@ import { BASELINE_PATH, SCAN_ATTACHMENT, type ScanReport } from "./scan";
 // Abschluss des A11y-Ratchets (#7107): sammelt die Prüfungen aller Tests,
 // nennt ihre Laufzeit und meldet, wo die Baseline sinken kann. Mit
 // A11Y_BASELINE_SHRINK=1 senkt er sie selbst, aber nur nach einem grünen,
-// vollen Lauf ohne Shard, Dateifilter oder --grep: Ein Teillauf sieht nicht
-// jede Route und würde zu viel streichen. Er erhöht nie einen Wert und nimmt
-// keine neue Route auf.
+// vollen Lauf ohne übersprungene Tests, Shard, Dateifilter oder --grep:
+// Ein Teillauf sieht nicht jede Route und würde zu viel streichen. Er erhöht
+// nie einen Wert und nimmt keine neue Route auf.
 
 export default class A11yReporter implements Reporter {
   private config: FullConfig | null = null;
   private readonly records: ScanRecord[] = [];
   private scansComplete = true;
+  private hasSkippedTests = false;
   private ms = 0;
   private settleMs = 0;
 
@@ -35,6 +36,7 @@ export default class A11yReporter implements Reporter {
   }
 
   onTestEnd(_test: TestCase, result: TestResult): void {
+    this.hasSkippedTests ||= result.status === "skipped";
     for (const attachment of result.attachments) {
       if (attachment.name !== SCAN_ATTACHMENT || !attachment.body) continue;
       const report = JSON.parse(attachment.body.toString("utf8")) as ScanReport;
@@ -54,6 +56,7 @@ export default class A11yReporter implements Reporter {
     const complete =
       result.status === "passed" &&
       this.scansComplete &&
+      !this.hasSkippedTests &&
       this.config?.shard === null &&
       !selectsSubset(process.argv);
     const baseline = readBaseline(BASELINE_PATH);
