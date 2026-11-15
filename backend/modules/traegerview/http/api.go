@@ -23,7 +23,8 @@ type Resource struct {
 }
 
 // NewResource builds the resource. reports answers the heatmap of arrival
-// and pickup times (#4714) and the comparison of schools (#4715).
+// and pickup times (#4714), the comparison of schools (#4715) and the daily
+// attendance report of Mecklenburg-Vorpommern (#4717).
 func NewResource(overview traegerview.Overview, reports traegerview.Reports) *Resource {
 	if overview == nil || reports == nil {
 		panic("traeger view http: the overview and the reports are required")
@@ -53,6 +54,10 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 		r.With(common.RequiresPermission(identityaccess.TraegerRightContractsManage)).Get("/{id}/utilization/children", rs.utilizationChildren)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/arrival-pickup-times", rs.arrivalPickupTimes)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/arrival-pickup-times/export", rs.arrivalPickupTimesExport)
+		// The daily attendance report of Mecklenburg-Vorpommern (#4717): the
+		// figures and the anonymous file are reports, like the heatmap.
+		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/daily-attendance", rs.dailyAttendance)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/daily-attendance/export", rs.dailyAttendanceExport)
 		// The comparison of the schools is a report too (#4715, ADR 0245).
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/comparison", rs.comparison)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/comparison/export", rs.comparisonExport)
@@ -63,7 +68,9 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 
 // TraegerOrganizationRouter returns the route mounted at /traeger/organization
 // inside the Träger route group: the Träger of the session, which the portal
-// frame names and marks as a test system (#4658). It needs the overview right
+// frame names and marks as a test system (#4658), with the federal states of
+// its schools, so the frame offers the daily attendance report of
+// Mecklenburg-Vorpommern only there (#4717). It needs the overview right
 // every Träger role holds; the Träger name and its test mark are no personal
 // data, so the read is not written to the access log.
 func (rs *Resource) TraegerOrganizationRouter(protectedTraegerRoutes func(chi.Router, func(chi.Router, common.Middleware))) chi.Router {
@@ -82,6 +89,10 @@ func (rs *Resource) getTraeger(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	traeger, err := rs.overview.Traeger(r.Context(), principal.OrganizationID(), principal.AccountID())
+	var states []string
+	if err == nil {
+		states, err = rs.reports.FederalStates(r.Context(), principal.OrganizationID())
+	}
 	if errors.Is(err, traegerview.ErrTraegerUnavailable) {
 		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
 		return
@@ -90,7 +101,13 @@ func (rs *Resource) getTraeger(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, traeger, "Träger retrieved successfully")
+	common.Respond(w, r, http.StatusOK, traegerFrame{Traeger: traeger, FederalStates: states}, "Träger retrieved successfully")
+}
+
+// traegerFrame is the Träger of the session as the portal frame reads it.
+type traegerFrame struct {
+	traegerview.Traeger
+	FederalStates []string `json:"federal_states"`
 }
 
 // listSchools answers GET /traeger/schools: every school of the Träger of the

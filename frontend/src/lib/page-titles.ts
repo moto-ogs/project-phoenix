@@ -236,6 +236,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/schulen/:id": "Schule",
     "/standortvergleich": "Standortvergleich",
     "/stichtagszahlen": "Stichtagszahlen",
+    "/tagesmeldung": "Tagesmeldung",
     "/uebersicht": "Dashboard",
     "/vertraege": "Verträge",
     "/vertraege/:id": "Vertrag",

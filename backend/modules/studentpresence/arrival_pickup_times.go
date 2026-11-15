@@ -46,8 +46,10 @@ type ArrivalPickupTimes interface {
 }
 
 // TraegerPresence is what the Träger's views read of Student Presence: who is
-// present right now (#5686) and when children arrive and leave (#4714).
+// present right now (#5686), when children arrive and leave (#4714) and each
+// child's care day for the daily attendance report (#4717).
 type TraegerPresence interface {
 	PresentStudents
 	ArrivalPickupTimes
+	DailyAttendance
 }

@@ -55,7 +55,7 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	if _, ok := identity.(identityaccess.TraegerMemberProfiles); !ok {
 		return errors.New("traeger portal: identity does not serve the names of the Träger-Büro")
 	}
-	if err := mountTraegerPortalRoutes(root, limiters, identity, organizations, persons, staff, audit, settings, healthData, holidayCalendar, holidayTraegerMail{delivery: delivery}, holidayMailStates{mails: closureMail.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics, today); err != nil {
+	if err := mountTraegerPortalRoutes(root, limiters, identity, organizations, persons, staff, audit, settings, healthData, holidayCalendar, holidayTraegerMail{delivery: delivery}, holidayMailStates{mails: closureMail.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics, today, calendarSchools); err != nil {
 		return err
 	}
 	setups, ok := identity.(identityaccess.HolidayParentSetups)

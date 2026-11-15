@@ -4,6 +4,8 @@ GET /traeger/schools/arrival-pickup-times
 GET /traeger/schools/arrival-pickup-times/export
 GET /traeger/schools/comparison
 GET /traeger/schools/comparison/export
+GET /traeger/schools/daily-attendance
+GET /traeger/schools/daily-attendance/export
 GET /traeger/schools/key-date-counts
 GET /traeger/schools/occupancy
 GET /traeger/schools/occupancy/export
