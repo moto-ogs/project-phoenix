@@ -198,4 +198,19 @@ describe("Arbeitszeitmodelle (#6891)", () => {
     ).not.toHaveLength(0);
     expect(workTimeModelService.update).not.toHaveBeenCalled();
   });
+
+  it("opens the people of a template in their own tab (#6921)", () => {
+    render(<WorkTimeModelsPage />);
+
+    const tab = screen.getByRole("tab", { name: "Personen" });
+    fireEvent.mouseDown(tab, { button: 0 });
+
+    expect(tab).toHaveAttribute("aria-selected", "true");
+    expect(
+      screen.getByRole("button", { name: "Personen zuordnen" }),
+    ).toBeVisible();
+    expect(
+      screen.getByText(/Zuordnen können Sie eine Vorlage im Reiter „Personen“/),
+    ).toBeVisible();
+  });
 });

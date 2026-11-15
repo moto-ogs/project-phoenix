@@ -1,0 +1,7 @@
+{
+  "scenario": "api.workforce.work_time_models.assign",
+  "max": 12,
+  "exact": true,
+  "description": "POST /api/work-time-models/{id}/assignments (#6921): real Workforce capability and protected tenant router, bulk assignment from today. Counts every statement except the three locks each person needs (balance gate, staff row, employment profile), which the test asserts separately as 3 per person: BEGIN, combined tenant role/config, template FOR SHARE, live-staff read, template, its entries, current bindings, running Träger contracts, one UPDATE closing the running versions, one profile upsert, one schedule INSERT and COMMIT. Exact for 1 and 4 people.",
+  "route": "POST /api/work-time-models/{id}/assignments"
+}

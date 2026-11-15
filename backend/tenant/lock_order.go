@@ -17,7 +17,8 @@ import (
 //
 // The order spans owners: a staff exit's account row comes first (Konto →
 // Schule → Profil), then School Membership's exclusive class-write gate,
-// Workforce's payroll-rules gate and per-staff work-time gates (month close
+// Workforce's payroll-rules gate, the work-time template row and per-staff
+// work-time gates (month close
 // and offboarding hold them while they take staff-shift gates), then the
 // staff-shift gate before Timetable's recurrence gate, the grade transition
 // gate, the reference rows a writer pins and the day locks: a sick report
@@ -46,6 +47,11 @@ const (
 	// LockPayrollRules is Workforce's tenant-wide payroll-rules gate; month
 	// close freezes the rules before it locks the staff balances.
 	LockPayrollRules
+	// LockWorkTimeModel is a Workforce work-time template row (#6921); keys
+	// are template ids (LockIDKey). A template edit updates the row before it
+	// locks the people bound to it, and a bulk assignment holds it FOR SHARE
+	// before it locks its people, so both take the template first.
+	LockWorkTimeModel
 	// LockStaffWorkTime is Workforce's per-staff balance and absence gates;
 	// keys are the staff id with the gate (StaffWorkTimeKey), so a writer
 	// takes one person's balance before that person's absence gate and the
@@ -109,6 +115,8 @@ func (c LockClass) String() string {
 		return "account row"
 	case LockPayrollRules:
 		return "payroll-rules gate"
+	case LockWorkTimeModel:
+		return "work-time template row"
 	case LockStaffWorkTime:
 		return "staff work-time gate"
 	case LockStaffShifts:
