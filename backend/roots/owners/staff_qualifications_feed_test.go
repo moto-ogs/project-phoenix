@@ -58,7 +58,7 @@ func TestQualificationReminderWritesTheFeedForEveryRecipient(t *testing.T) {
 		notifier := &feedNotifierDouble{}
 		notify := qualificationNotifier(DeliveryNotifications{Notifier: notifier, Preferences: feedPreferencesDouble{declined: 2}}, slog.Default())
 		sent, err := notify(t.Context(), workforce.QualificationNotice{
-			TenantID: 4, StaffID: 9, Own: own, Title: "Nachweis läuft ab", DeepLink: "/staff/9", IdempotencyKey: "k",
+			TenantID: 4, StaffID: 9, QualificationID: 31, Own: own, Title: "Nachweis läuft ab", DeepLink: "/staff/9", IdempotencyKey: "k",
 			RecipientAccountIDs: []int64{1, 2},
 		})
 		require.NoError(t, err)
@@ -66,6 +66,7 @@ func TestQualificationReminderWritesTheFeedForEveryRecipient(t *testing.T) {
 		require.Len(t, notifier.sent, 1)
 		event := notifier.sent[0]
 		assert.Equal(t, []int64{1, 2}, event.Audience.StaffAccountIDs)
+		assert.Equal(t, int64(31), event.RelatedID, "entries bundle per Nachweis, not per person")
 		require.NotNil(t, event.Feed)
 		assert.Equal(t, []int64{1}, event.Feed.PushAccountIDs)
 		assert.True(t, event.Feed.HoldOutsideWindow)
@@ -73,7 +74,7 @@ func TestQualificationReminderWritesTheFeedForEveryRecipient(t *testing.T) {
 
 	held := &feedNotifierDouble{err: deliveryCompose.ErrOutsideNotificationWindow}
 	notify := qualificationNotifier(DeliveryNotifications{Notifier: held, Preferences: feedPreferencesDouble{}}, slog.Default())
-	sent, err := notify(t.Context(), workforce.QualificationNotice{TenantID: 4, Title: "T", RecipientAccountIDs: []int64{1}})
+	sent, err := notify(t.Context(), workforce.QualificationNotice{TenantID: 4, QualificationID: 32, Title: "T", RecipientAccountIDs: []int64{1}})
 	require.NoError(t, err)
 	assert.False(t, sent, "the run repeats the held notice")
 	assert.Equal(t, deliveryContract.NotificationStaffQualificationExpiry, held.sent[0].Type)

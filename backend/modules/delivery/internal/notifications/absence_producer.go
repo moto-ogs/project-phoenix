@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"log/slog"
 	"slices"
 	"sort"
@@ -172,10 +173,8 @@ func (n *absenceNotifier) notify(ctx context.Context, report AbsenceReport) erro
 	}
 	// The OGS notices write the feed, which only Notify does (#7137); the
 	// moto schule notices keep their batch.
-	for _, event := range groupAbsenceEvents(report, deliveries) {
-		if err := n.notifier.Notify(ctx, event); err != nil {
-			return err
-		}
+	if err := n.notifyEach(ctx, groupAbsenceEvents(report, deliveries)); err != nil {
+		return err
 	}
 	if len(schoolEvents) == 0 {
 		return nil
@@ -183,7 +182,11 @@ func (n *absenceNotifier) notify(ctx context.Context, report AbsenceReport) erro
 	if batch, ok := n.notifier.(BatchNotifier); ok {
 		return batch.NotifyBatch(ctx, schoolEvents)
 	}
-	for _, event := range schoolEvents {
+	return n.notifyEach(ctx, schoolEvents)
+}
+
+func (n *absenceNotifier) notifyEach(ctx context.Context, events []Event) error {
+	for _, event := range events {
 		if err := n.notifier.Notify(ctx, event); err != nil {
 			return err
 		}
@@ -206,8 +209,8 @@ func groupAbsenceEvents(report AbsenceReport, deliveries []absenceDelivery) []Ev
 		events = append(events, Event{
 			Type:           TypeStudentAbsenceReported,
 			IdempotencyKey: absenceEventKey(scopedReport, delivery.accountIDs),
-			RelatedType:    "student_absence",
-			RelatedID:      scopedReport.StudentIDs[0],
+			RelatedType:    absenceRelatedType(scopedReport),
+			RelatedID:      absenceRelatedID(scopedReport),
 			Priority:       PriorityNormal,
 			Title:          absenceReportedTitle,
 			Body:           absenceBody(scopedReport),
@@ -328,4 +331,29 @@ func containsToday(dates []calendar.Date) bool {
 		}
 	}
 	return false
+}
+
+// absenceRelatedType and absenceRelatedID name the object a feed entry
+// bundles on (#7137): the child of a report about one child, otherwise the
+// set of children. A later report about another set must not overwrite the
+// unread entry of the first one and lose its push.
+func absenceRelatedType(report AbsenceReport) string {
+	if len(report.StudentIDs) == 1 {
+		return "student_absence"
+	}
+	return "student_absence_set"
+}
+
+func absenceRelatedID(report AbsenceReport) int64 {
+	if len(report.StudentIDs) == 1 {
+		return report.StudentIDs[0]
+	}
+	ids := slices.Clone(report.StudentIDs)
+	slices.Sort(ids)
+	hash := fnv.New64a()
+	for _, id := range ids {
+		_, _ = fmt.Fprintf(hash, "%d,", id)
+	}
+	// A positive ID: the feed requires one.
+	return int64(hash.Sum64()>>1) | 1
 }

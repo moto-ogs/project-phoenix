@@ -73,12 +73,8 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 		}
 	}
 	now := r.now()
-	link := event.DeepLink
-	if event.Feed.DeepLink != "" {
-		link = event.Feed.DeepLink
-	}
 	write, err := r.store.PublishFeedEntries(ctx, event.Audience.TenantID, domain.FeedEntryContent{
-		Type: event.Type, Title: event.Title, Body: event.Body, DeepLink: link,
+		Type: event.Type, Title: event.Title, Body: event.Body, DeepLink: feedDeepLink(*event),
 		RelatedType: event.RelatedType, RelatedID: event.RelatedID,
 	}, event.Audience.StaffAccountIDs, now, now.Add(-domain.FeedBundleWindow))
 	if err != nil {
@@ -87,11 +83,7 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 	event.feedChanged = append(slices.Clone(write.Created), write.Updated...)
 	var push []int64
 	if pushAllowed {
-		for _, accountID := range write.Created {
-			if slices.Contains(event.Feed.PushAccountIDs, accountID) {
-				push = append(push, accountID)
-			}
-		}
+		push = feedPushRecipients(write.Created, event.Feed.PushAccountIDs)
 	}
 	event.Audience.StaffAccountIDs = push
 	event.feedOnly = len(push) == 0
@@ -139,4 +131,25 @@ func requireFeedDelivery(event Event) error {
 // appRelative reports whether an optional link stays inside the app.
 func appRelative(link string) bool {
 	return link == "" || (strings.HasPrefix(link, "/") && !strings.HasPrefix(link, "//") && !strings.Contains(link, `\`))
+}
+
+// feedDeepLink is the link of the feed entry: the feed's own where the push
+// opens the app without one.
+func feedDeepLink(event Event) string {
+	if event.Feed.DeepLink != "" {
+		return event.Feed.DeepLink
+	}
+	return event.DeepLink
+}
+
+// feedPushRecipients keeps the accounts that got a new entry and may get a
+// push; an updated entry pushes no second time.
+func feedPushRecipients(created, allowed []int64) []int64 {
+	var push []int64
+	for _, accountID := range created {
+		if slices.Contains(allowed, accountID) {
+			push = append(push, accountID)
+		}
+	}
+	return push
 }

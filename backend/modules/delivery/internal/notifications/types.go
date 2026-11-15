@@ -217,6 +217,18 @@ func RegisterType(def TypeDefinition) {
 	default:
 		panic("notifications: unknown portal " + def.Portal + " for key " + def.Key)
 	}
+	validateTypeChannel(def)
+
+	typeMu.Lock()
+	defer typeMu.Unlock()
+	if _, exists := typeRegistry[def.Key]; exists {
+		panic("notifications: duplicate type key " + def.Key)
+	}
+	typeRegistry[def.Key] = def
+}
+
+// validateTypeChannel panics on a definition its channel cannot deliver.
+func validateTypeChannel(def TypeDefinition) {
 	switch def.Channel {
 	case "", ChannelPush:
 		if _, ok := groupOrder[def.Group]; !ok {
@@ -239,13 +251,6 @@ func RegisterType(def TypeDefinition) {
 	default:
 		panic("notifications: unknown channel " + def.Channel + " for key " + def.Key)
 	}
-
-	typeMu.Lock()
-	defer typeMu.Unlock()
-	if _, exists := typeRegistry[def.Key]; exists {
-		panic("notifications: duplicate type key " + def.Key)
-	}
-	typeRegistry[def.Key] = def
 }
 
 // OfferedInPortal reports whether a person using the given portal may see
@@ -307,6 +312,7 @@ func init() {
 	registerPickupTypes()
 	registerActivityTypes()
 	registerStaffMessageTypes()
+	registerStaffTeamTypes()
 	registerStaffNoteTypes()
 	registerStaffQualificationTypes()
 	registerParentMessageTypes()
@@ -464,6 +470,12 @@ func registerStaffMessageTypes() {
 		SortOrder:    2,
 		SchoolPortal: true,
 	})
+
+}
+
+// registerStaffTeamTypes adds the notices about the team itself: surveys
+// and planned exits.
+func registerStaffTeamTypes() {
 	// Staff surveys (#4781) are answered in the OGS portal only; the school
 	// portal never offers them.
 	RegisterType(TypeDefinition{
@@ -489,7 +501,6 @@ func registerStaffMessageTypes() {
 		SortOrder:   4,
 		Feed:        true,
 	})
-
 }
 
 func registerParentMessageTypes() {

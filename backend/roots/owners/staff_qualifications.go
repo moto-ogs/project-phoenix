@@ -148,7 +148,9 @@ func qualificationNotifier(notifications DeliveryNotifications, logger *slog.Log
 			return false, fmt.Errorf("filter qualification reminder recipients: %w", err)
 		}
 		err = notifications.Notifier.Notify(ctx, deliveryCompose.NotificationEvent{
-			Type: kind, IdempotencyKey: notice.IdempotencyKey, RelatedType: "staff", RelatedID: notice.StaffID,
+			// The object is the Nachweis: two Nachweise of one person due in
+			// one run are two feed entries, each with its push (#7137).
+			Type: kind, IdempotencyKey: notice.IdempotencyKey, RelatedType: "staff_qualification", RelatedID: notice.QualificationID,
 			Title: notice.Title, Body: notice.Body, DeepLink: notice.DeepLink,
 			Audience: deliveryCompose.NotificationAudience{
 				TenantID: notice.TenantID, Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: notice.RecipientAccountIDs,
