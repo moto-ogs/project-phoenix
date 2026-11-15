@@ -46,8 +46,11 @@ describe("LetterBodyField", () => {
   it("inserts a placeholder where the person writes", async () => {
     render(<Harness initial="Liebe Eltern von , bis bald" />);
     const field = screen.getByLabelText("Text") as HTMLTextAreaElement;
+    // As in the browser: the person places the caret, then the click on the
+    // button takes the focus away from the field.
+    field.focus();
     field.setSelectionRange(17, 17);
-    fireEvent.select(field);
+    fireEvent.blur(field);
 
     fireEvent.click(screen.getByRole("button", { name: /Vorname des Kindes/ }));
 
