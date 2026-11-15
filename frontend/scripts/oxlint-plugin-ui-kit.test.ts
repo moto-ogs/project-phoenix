@@ -2731,11 +2731,12 @@ describe.concurrent(
     it("rejects ring-gray-400 as a focus ring", async () => {
       const { status, output } = await lintSource(
         `export const a = "focus-visible:ring-2 focus-visible:ring-gray-400";
-      export const b = "focus:ring-gray-400 focus-within:ring-gray-400";`,
+      export const b = "focus:ring-gray-400 focus-within:ring-gray-400";
+      export const c = "ring-gray-400 focus-visible:ring-2";`,
         "src/components/probe/ring.tsx",
       );
       expect(status).toBe(1);
-      expect(output.match(RING)).toHaveLength(3);
+      expect(output.match(RING)).toHaveLength(4);
     });
 
     it("allows icons, disabled states, other gray-400 utilities and darker text", async () => {

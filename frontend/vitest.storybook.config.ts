@@ -15,17 +15,6 @@ export default defineConfig({
   plugins: [storybookTest({ configDir })],
   test: {
     name: "storybook",
-    // `vitest related` (CI-Auswahl pro PR, scripts/storybook-test-changed.mjs)
-    // folgt nur den Importen der Stories. Was alle Stories betrifft, ohne
-    // dass eine es importiert, startet den Vollauf: Storybook-Konfiguration,
-    // globale Styles, Abhängigkeiten und diese Datei.
-    forceRerunTriggers: [
-      "**/package.json/**",
-      "**/pnpm-lock.yaml/**",
-      "**/vitest.storybook.config.ts/**",
-      "**/.storybook/**",
-      "**/src/styles/**",
-    ],
     browser: {
       enabled: true,
       headless: true,

@@ -6503,13 +6503,16 @@ const menuItemNeedsDescription = {
 //   Zustand (hover:, placeholder:) oder Deckkraft. Nicht gezählt: disabled-
 //   Zustände (WCAG nimmt inaktive Bedienelemente aus) und die Farbe eines
 //   Symbols (Element `…Icon` oder `svg`), das neben seinem Text steht.
-// - no-gray-400-focus-ring: ring-gray-400 unter einem focus-Zustand.
+// - no-gray-400-focus-ring: ring-gray-400 unter einem focus-Zustand, oder
+//   ohne Zustand in einem String, der den Ring erst im Fokus zeigt
+//   (`ring-gray-400 focus-visible:ring-2`).
 
 const GRAY_400_TEXT_RE =
   /(?<![\w:/-])((?:[\w-]+:)*)!?text-gray-400(?:\/[\w.[\]]+)?!?(?![\w/-])/g;
 const GRAY_400_RING_RE =
   /(?<![\w:/-])((?:[\w-]+:)*)!?ring-gray-400(?:\/[\w.[\]]+)?!?(?![\w/-])/g;
 const ICON_ELEMENT_RE = /(?:Icon|^svg)$/;
+const FOCUS_RING_WIDTH_RE = /(?<![\w-])(?:[\w-]+:)*focus[\w-]*:ring(?:-\d+)?(?![\w/-])/;
 
 function classOfIconElement(node) {
   let current = node.parent;
@@ -6548,7 +6551,8 @@ function makeGray400Rule({ ruleName, description, message, regex, counts }) {
       const check = (node, text) => {
         regex.lastIndex = 0;
         for (const match of text.matchAll(regex)) {
-          if (counts(match[1].split(":").filter(Boolean), node)) found(node);
+          const variants = match[1].split(":").filter(Boolean);
+          if (counts(variants, node, text)) found(node);
         }
       };
       return {
@@ -6582,7 +6586,9 @@ const noGray400FocusRing = makeGray400Rule({
   message:
     "ring-gray-400 ist als Fokusring zu blass (2,6:1 auf Weiß, nötig 3:1). Den Fokusring des Kits nehmen: focus-visible:ring-gray-600 wie Input, besser gleich den Kit-Baustein (#7108).",
   regex: GRAY_400_RING_RE,
-  counts: (variants) => variants.some((variant) => variant.includes("focus")),
+  counts: (variants, _node, text) =>
+    variants.some((variant) => variant.includes("focus")) ||
+    (variants.length === 0 && FOCUS_RING_WIDTH_RE.test(text)),
 });
 
 export default {

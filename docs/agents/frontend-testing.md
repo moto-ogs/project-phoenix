@@ -252,9 +252,12 @@ error, a failing `play` or an axe violation fails the story.
 
 - CI runs the step „Storybook tests (a11y)“ in „Frontend quality“
   (`scripts/storybook-test-changed.mjs`). A pull request tests the stories
-  whose imports it changes (`vitest related`); a change to `.storybook/`,
-  `src/styles/`, `package.json`, the lockfile or the config runs all
-  stories, as do pushes and the nightly run. Locally the full run took about
+  whose imports it changes (`vitest related`); a change to the global
+  inputs in `GLOBAL_INPUTS` (`.storybook/`, its providers, styles,
+  `public/`, dependencies, the config) runs all stories, as do pushes and
+  the nightly run. Copy in `src/i18n/messages` is deliberately not a
+  trigger: it changes in about a quarter of frontend PRs, so the push and
+  nightly runs check it. Locally the full run took about
   100 s on 16 cores; a selection `pnpm exec vitest related --run -c
   vitest.storybook.config.ts <files>`.
 - A story with known violations sets `parameters: { a11y: { test: "todo" } }`
