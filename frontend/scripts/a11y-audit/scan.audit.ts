@@ -724,10 +724,11 @@ async function errorStates(browser: Browser) {
       await scanOne(page, href, "public/anmeldung-formular", {
         keyboard: true,
       });
-      await page.setViewportSize({ width: 1366, height: 900 });
+      await page.setViewportSize({ width: 390, height: 844 });
       await page.goto(href, { waitUntil: "domcontentloaded" });
       await settle(page);
       await scanOne(page, href, "public/anmeldung-formular", { mobile: true });
+      await page.setViewportSize({ width: 1366, height: 900 });
       await page.goto(href, { waitUntil: "domcontentloaded" });
       await settle(page);
       const submit = page.locator('button[type="submit"]').last();

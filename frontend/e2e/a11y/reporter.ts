@@ -26,6 +26,7 @@ import { BASELINE_PATH, SCAN_ATTACHMENT, type ScanReport } from "./scan";
 export default class A11yReporter implements Reporter {
   private config: FullConfig | null = null;
   private readonly records: ScanRecord[] = [];
+  private scansComplete = true;
   private ms = 0;
   private settleMs = 0;
 
@@ -37,6 +38,7 @@ export default class A11yReporter implements Reporter {
     for (const attachment of result.attachments) {
       if (attachment.name !== SCAN_ATTACHMENT || !attachment.body) continue;
       const report = JSON.parse(attachment.body.toString("utf8")) as ScanReport;
+      this.scansComplete &&= report.complete;
       this.records.push(...report.records);
       this.ms += report.ms;
       this.settleMs += report.settleMs;
@@ -51,6 +53,7 @@ export default class A11yReporter implements Reporter {
     );
     const complete =
       result.status === "passed" &&
+      this.scansComplete &&
       this.config?.shard === null &&
       !selectsSubset(process.argv);
     const baseline = readBaseline(BASELINE_PATH);

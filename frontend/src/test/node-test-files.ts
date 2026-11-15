@@ -5,6 +5,7 @@
 // not listed run in happy-dom (app-dom). See docs/agents/frontend-testing.md.
 export const nodeLogicTestFiles = [
   "scripts/a11y-baseline.test.ts",
+  "scripts/a11y-scan.test.ts",
   "scripts/product-screenshots/pipeline.test.ts",
   "scripts/oxlint-plugin-absence-assertion.test.ts",
   "scripts/oxlint-plugin-bauart-autosave.test.ts",

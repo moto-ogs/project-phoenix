@@ -34,6 +34,8 @@ export const SCAN_ATTACHMENT = "a11y-scan";
 /** Was ein Test geprüft hat, als Anhang für reporter.ts. */
 export interface ScanReport {
   records: ScanRecord[];
+  /** Kein Analysefehler und keine ausgeschöpften Navigationsversuche. */
+  complete: boolean;
   /** Zeit für Warten und axe, in Millisekunden. */
   ms: number;
   /** Anteil davon fürs Warten auf das Ende der Ladeanzeigen. */
@@ -87,11 +89,13 @@ async function analyze(page: Page): Promise<Violation[]> {
   return result.violations as Violation[];
 }
 
-class A11yRecorder {
+export class A11yRecorder {
   readonly records: ScanRecord[] = [];
+  complete = true;
   ms = 0;
   settleMs = 0;
   private readonly violations = new Map<string, Violation[]>();
+  private readonly errors: string[] = [];
 
   constructor(
     private readonly baseline: Baseline,
@@ -121,6 +125,12 @@ class A11yRecorder {
     const started = Date.now();
     try {
       await this.scanOnce(page, state);
+    } catch (error) {
+      this.complete = false;
+      this.errors.push(
+        `${this.routeOf(page, state) ?? page.url()}: ${String(error)}`,
+      );
+      throw error;
     } finally {
       this.ms += Date.now() - started;
     }
@@ -129,7 +139,11 @@ class A11yRecorder {
   private async scanOnce(page: Page, state?: string): Promise<void> {
     for (let attempt = 0; attempt < 3; attempt++) {
       const before = this.routeOf(page, state);
-      if (!before || this.scanned.has(before)) return;
+      if (!before) {
+        if (attempt > 0) this.complete = false;
+        return;
+      }
+      if (this.scanned.has(before)) return;
       const settleStarted = Date.now();
       const busy = await settle(page);
       this.settleMs += Date.now() - settleStarted;
@@ -141,17 +155,17 @@ class A11yRecorder {
       }
       const address = page.url();
       const route = this.routeOf(page, state);
-      if (!route || this.scanned.has(route)) return;
+      if (!route) {
+        this.complete = false;
+        return;
+      }
+      if (this.scanned.has(route)) return;
       let violations: Violation[];
       try {
         violations = await analyze(page);
       } catch (error) {
         if (page.url() !== address) continue;
-        this.info.annotations.push({
-          type: "a11y",
-          description: `${route} nicht geprüft: ${String(error).slice(0, 160)}`,
-        });
-        return;
+        throw error;
       }
       if (page.url() !== address) continue;
       this.scanned.add(route);
@@ -163,10 +177,16 @@ class A11yRecorder {
       this.violations.set(route, violations);
       return;
     }
+    this.complete = false;
   }
 
   /** Fehlermeldung für jede Regel über der Baseline, sonst null. */
   failure(): string | null {
+    // Auch ein Aufrufer, der einen Navigationsfehler abfängt, darf den
+    // fehlgeschlagenen Scan nicht in einen grünen Test verwandeln.
+    if (this.errors.length > 0) {
+      return ["A11y-Analyse fehlgeschlagen:", ...this.errors].join("\n");
+    }
     const lines: string[] = [];
     for (const record of this.records) {
       for (const { rule, count, allowed } of exceeding(this.baseline, record)) {
@@ -210,9 +230,10 @@ export const test = base.extend<
       a11yScanned,
     );
     await use(recorder);
-    if (recorder.records.length > 0) {
+    if (recorder.records.length > 0 || !recorder.complete) {
       const report: ScanReport = {
         records: recorder.records,
+        complete: recorder.complete,
         ms: recorder.ms,
         settleMs: recorder.settleMs,
       };
