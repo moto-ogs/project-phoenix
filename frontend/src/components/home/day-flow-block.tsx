@@ -157,6 +157,7 @@ export function DayFlowBlock() {
                               <Fragment key="room">
                                 <MotoConceptIcon
                                   concept={roomsConcept}
+                                  tone={done ? "neutral" : undefined}
                                   size={14}
                                   className="mr-1 inline-block align-[-2px]"
                                 />

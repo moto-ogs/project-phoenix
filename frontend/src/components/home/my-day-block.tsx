@@ -267,6 +267,7 @@ function BlockRow({
       <Fragment key="room">
         <MotoConceptIcon
           concept={roomsConcept}
+          tone={over ? "neutral" : undefined}
           size={14}
           className="mr-1 inline-block align-[-2px]"
         />
@@ -279,6 +280,7 @@ function BlockRow({
       <Fragment key="staff">
         <MotoConceptIcon
           concept={staffConcept}
+          tone={over ? "neutral" : undefined}
           size={14}
           className="mr-1 inline-block align-[-2px]"
         />

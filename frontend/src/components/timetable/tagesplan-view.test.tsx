@@ -333,7 +333,7 @@ describe("TagesplanView", () => {
     expect(rowOf("Fußball-AG")?.style.backgroundColor).toBe("");
     expect(rowOf("Frühbetreuung")?.style.backgroundColor).toBe("");
     expect(rowOf("Frühbetreuung")).toHaveTextContent("Mein Block");
-    expect(screen.getByText("Frühbetreuung")).toHaveClass("text-gray-500");
+    expect(screen.getByText("Frühbetreuung")).toHaveClass("text-gray-600");
     expect(rowOf("Basteln")).toHaveTextContent("Mein Block");
     expect(rowOf("Hausaufgaben")).toHaveTextContent("Mein Block");
     expect(rowOf("Fußball-AG")).not.toHaveTextContent("Mein Block");
@@ -345,11 +345,15 @@ describe("TagesplanView", () => {
         makeInstance({
           id: "1",
           title: "Basteln",
+          startTime: "14:00",
+          endTime: "14:45",
           roomName: "Kreativraum",
           staffNames: [
             { staffId: "9", displayName: "Maria Muster", isSubstitute: false },
           ],
         }),
+        // Vorbei (Testuhr 12:00): Symbole grau statt in Konzeptfarbe (#7110).
+        makeInstance({ id: "2", title: "Frühdienst", roomName: "Aula" }),
       ],
       isLoading: false,
       error: null,
@@ -370,6 +374,10 @@ describe("TagesplanView", () => {
       staffConcept.tone,
     );
     expect(staffIcon).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText(/Aula/).querySelector("svg")).toHaveAttribute(
+      "data-moto-duotone-tone",
+      "neutral",
+    );
   });
 
   // Wer nur die eigene Einteilung sieht (#2380), hätte das Etikett an jeder

@@ -222,13 +222,14 @@ function TagesplanRow({
   // heraus. Sieht jemand ohnehin nur die eigene Einteilung, wäre jede Zeile
   // hinterlegt und die Farbe sagte nichts mehr.
   const mine = showMine && instance.isAssigned;
-  // Vergangenes ist einheitlich ausgegraut: alle Schrift gray-500 (4,8:1 auf
-  // Weiß, #7110) statt Deckkraft, ohne die Tönung des eigenen Blocks, auf der
-  // gray-500 keine 4,5:1 erreicht. Laufendes und Kommendes auf der Tönung
-  // bekommt Nebentext eine Stufe dunkler.
+  // Vergangenes ist ausgegraut über eine graue Fläche, graue Kante und graue
+  // Symbole statt über Deckkraft (#7110). Auf gray-100 erreicht erst gray-600
+  // die 4,5:1, deshalb trägt dort aller Text gray-600. Laufendes und
+  // Kommendes auf der Tönung des eigenen Blocks bekommt Nebentext ebenfalls
+  // eine Stufe dunkler.
   const tinted = mine && !over;
-  const muted = tinted ? "text-gray-600" : "text-gray-500";
-  const strong = over ? "text-gray-500" : "text-gray-900";
+  const muted = tinted || over ? "text-gray-600" : "text-gray-500";
+  const strong = over ? "text-gray-600" : "text-gray-900";
 
   // Der Raum trägt sein Konzeptsymbol mitten in der Metazeile. Die Symbole
   // sind Schmuck: der Text daneben sagt schon, was gemeint ist.
@@ -243,6 +244,7 @@ function TagesplanRow({
       <Fragment key="room">
         <MotoConceptIcon
           concept={roomsConcept}
+          tone={over ? "neutral" : undefined}
           size={14}
           className="mr-1 inline-block align-[-2px]"
         />
@@ -278,8 +280,10 @@ function TagesplanRow({
     <>
       {cancelled ? (
         <span
-          className="block truncate text-xs font-medium"
-          style={{ color: LOCATION_COLORS.DANGER }}
+          className={`block truncate text-xs font-medium ${
+            over ? "text-moto-red-strong" : ""
+          }`}
+          style={over ? undefined : { color: LOCATION_COLORS.DANGER }}
         >
           {instance.cancelReason
             ? `Fällt aus · ${instance.cancelReason}`
@@ -295,6 +299,7 @@ function TagesplanRow({
         <span className={`block truncate text-xs ${muted}`}>
           <MotoConceptIcon
             concept={staffConcept}
+            tone={over ? "neutral" : undefined}
             size={14}
             className="mr-1 inline-block align-[-2px]"
           />
@@ -339,7 +344,11 @@ function TagesplanRow({
     </Button>
   ) : null;
 
-  const edgeStyle = blockRowStyle(instance, tinted);
+  // Vorbei: graue Fläche und helle Kante statt der Blockfarbe, damit eine
+  // vergangene Zeile sich auch von einem laufenden Block ohne Spurfarbe
+  // abhebt (#7110). Vergangene Zeilen sind nie zu öffnen.
+  const edgeStyle = over ? {} : blockRowStyle(instance, tinted);
+  const overSurface = over ? "bg-gray-100 border-l-gray-200" : "";
 
   // In einer schmalen Spalte stehen Zeit, Inhalt und Aktion untereinander;
   // Badge, Chevron und Starten-Knopf rücken zusammen ans Ende.
@@ -349,7 +358,7 @@ function TagesplanRow({
     return (
       <li
         className={`@container border-b border-gray-100 last:border-b-0 ${
-          openable ? "" : "border-l-4"
+          openable ? "" : `border-l-4 ${overSurface}`
         }`}
         style={openable ? placement : { ...edgeStyle, ...placement }}
       >
@@ -397,7 +406,7 @@ function TagesplanRow({
 
   return (
     <li
-      className="flex w-full items-center gap-3 border-b border-l-4 border-gray-100 px-4 py-3.5 last:border-b-0"
+      className={`flex w-full items-center gap-3 border-b border-l-4 border-gray-100 px-4 py-3.5 last:border-b-0 ${overSurface}`}
       style={edgeStyle}
     >
       {body}
