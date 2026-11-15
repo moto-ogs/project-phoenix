@@ -58,5 +58,7 @@
   "newsPollSaveTooltip": "Одразу надсилає вашу відповідь до школи.",
   "newsPollSaveDisabledReason": "Спершу виберіть відповідь або змініть вибір.",
   "newsReadAndConfirmTooltip": "Одразу підтверджує школі, що ви прочитали лист.",
-  "newsCloseUnsavedTooltip": "Закриває опитування, новий вибір буде втрачено."
+  "newsCloseUnsavedTooltip": "Закриває опитування, новий вибір буде втрачено.",
+  "newsLetterChildChoice": "Лист для якої дитини?",
+  "newsLetterPerChild": "Кожна ваша дитина має власний лист."
 }

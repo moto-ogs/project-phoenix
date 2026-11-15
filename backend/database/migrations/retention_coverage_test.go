@@ -465,6 +465,7 @@ var tableRetentions = map[string]tableRetention{
 	"users.notification_preferences":                        parent("auth.accounts"),
 	"users.parent_announcement_declaration_submissions":     parent("users.student_profiles"),
 	"users.parent_announcement_declaration_versions":        parent("users.parent_announcements"),
+	"users.parent_announcement_letter_copies":               parent("users.parent_announcements"),
 	"users.parent_announcement_options":                     notPersonal("announcement answer options"),
 	"users.parent_announcement_reads":                       parent("auth.accounts"),
 	"users.parent_announcement_responses":                   parent("users.student_profiles"),

@@ -46,7 +46,18 @@ const (
 	// lifting the block on the address (#5934). StudentID stays NULL; metadata
 	// carries guardian_profile_id and action, never the address.
 	ResourceTypeGuardianEmailStop = "guardian_email_stop"
-	ResourceTypeGuardianEmailLift = "guardian_email_lift"
+	// ResourceTypeParentLetterPreview records a letter text filled with one
+	// child's values before it is sent (#4813). StudentID names the child.
+	ResourceTypeParentLetterPreview = "parent_letter_preview"
+	// ResourceTypeParentLetterPrint records the download of every letter of
+	// an Elternbrief as one PDF (#4813). StudentID stays NULL; metadata
+	// carries announcement_id and child_count.
+	ResourceTypeParentLetterPrint = "parent_letter_print"
+	// ResourceTypeParentLetterPublish records the read of every reached
+	// child's values when a letter naming each child is published (#4813).
+	// StudentID stays NULL; metadata carries announcement_id and child_count.
+	ResourceTypeParentLetterPublish = "parent_letter_publish"
+	ResourceTypeGuardianEmailLift   = "guardian_email_lift"
 	// ResourceTypeGuardianFinancialView records serving the MASKED bank
 	// details of one guardian (#2608). StudentID stays NULL; metadata carries
 	// guardian_profile_id.

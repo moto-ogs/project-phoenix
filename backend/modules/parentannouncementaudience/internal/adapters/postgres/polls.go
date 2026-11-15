@@ -277,3 +277,48 @@ func reminderRecipients(rows []reminderRecipientRow) []*contract.ParentAnnouncem
 	}
 	return recipients
 }
+
+// permittedLetterChildrenSQL is "the child was reached by the published
+// letter AND the account is a guardian of exactly that child with parent
+// portal access" (#4813). Only these children's letters reach the account.
+const permittedLetterChildrenSQL = `
+			SELECT DISTINCT a.id AS announcement_id, sg.student_id
+			FROM users.parent_announcements a
+			JOIN users.student_profiles s ON s.tenant_id = a.tenant_id AND s.id = ANY(a.recipient_student_ids)` + studentMembershipJoins + `
+			JOIN users.persons p ON p.id = s.person_id AND p.deleted_at IS NULL AND sm.status <> 'alumnus'
+			JOIN (?) sg ON sg.tenant_id = a.tenant_id AND sg.student_id = s.id
+				AND sg.permissions @> '{"parent_portal.access": true}'::jsonb
+			JOIN users.guardian_profiles gp ON gp.id = sg.guardian_profile_id AND gp.tenant_id = a.tenant_id
+				AND gp.account_id = ?
+			JOIN auth.account_tenants act ON act.account_id = gp.account_id
+				AND act.tenant_id = gp.tenant_id AND act.status = 'active'
+			WHERE a.id IN (?) AND a.delivery_mode = 'letter' AND a.published_at IS NOT NULL
+			ORDER BY a.id, sg.student_id`
+
+type permittedLetterChildRow struct {
+	AnnouncementID int64 `bun:"announcement_id"`
+	StudentID      int64 `bun:"student_id"`
+}
+
+// PermittedLetterChildren returns, per letter, the reached children whose
+// letter the account may read.
+func (p *Projection) PermittedLetterChildren(ctx context.Context, accountID int64, announcementIDs []int64) (map[int64][]int64, error) {
+	children := make(map[int64][]int64, len(announcementIDs))
+	if len(announcementIDs) == 0 {
+		return children, nil
+	}
+	db, _, err := p.database(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var rows []permittedLetterChildRow
+	if err := db.NewRaw(permittedLetterChildrenSQL,
+		p.links.AllSchoolsGuardianLinkRows(db), accountID, bun.List(announcementIDs),
+	).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("list permitted letter children: %w", err)
+	}
+	for _, row := range rows {
+		children[row.AnnouncementID] = append(children[row.AnnouncementID], row.StudentID)
+	}
+	return children, nil
+}

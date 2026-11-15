@@ -1,0 +1,224 @@
+package communication
+
+import (
+	"regexp"
+	"sort"
+	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+)
+
+// Serienbriefe (#4813): an Elternbrief of the school may name each child
+// with its own values. A placeholder is written {{name}}; the list below is
+// fixed and holds no health data. A letter is filled once per child when it
+// is published and stays as it was then (ParentLetterCopy).
+
+// ParentLetterPlaceholder is a value a letter can name for each child.
+// Example is what the composer shows beside it.
+type ParentLetterPlaceholder struct {
+	Name    string
+	Label   string
+	Example string
+}
+
+// ParentLetterDeliveryMode is the delivery mode of an Elternbrief.
+const ParentLetterDeliveryMode = "letter"
+
+// IsPersonalParentLetter reports whether an announcement is an Elternbrief
+// that names each child. Only such a letter is written once per child; every
+// other announcement reads the same for everybody.
+func IsPersonalParentLetter(deliveryMode, body string) bool {
+	return deliveryMode == ParentLetterDeliveryMode && HasParentLetterPlaceholders(body)
+}
+
+const (
+	letterPlaceholderFirstName  = "vorname"
+	letterPlaceholderLastName   = "nachname"
+	letterPlaceholderClass      = "klasse"
+	letterPlaceholderGroup      = "gruppe"
+	letterPlaceholderCareDays   = "betreuungstage"
+	letterPlaceholderPickupTime = "abholzeit"
+)
+
+var parentLetterPlaceholders = []ParentLetterPlaceholder{
+	{Name: letterPlaceholderFirstName, Label: "Vorname", Example: "Lina"},
+	{Name: letterPlaceholderLastName, Label: "Nachname", Example: "Muster"},
+	{Name: letterPlaceholderClass, Label: "Klasse", Example: "Klasse 3a"},
+	{Name: letterPlaceholderGroup, Label: "Gruppe", Example: "Füchse"},
+	{Name: letterPlaceholderCareDays, Label: "Betreuungstage", Example: "Montag, Dienstag und Donnerstag"},
+	{Name: letterPlaceholderPickupTime, Label: "Abholzeit", Example: "15:30 Uhr"},
+}
+
+// ParentLetterPlaceholders lists the placeholders of a parent letter in the
+// order the composer offers them.
+func ParentLetterPlaceholders() []ParentLetterPlaceholder {
+	return append([]ParentLetterPlaceholder(nil), parentLetterPlaceholders...)
+}
+
+// ParentLetterChild is what a letter can say about one child. Empty values
+// print nothing.
+type ParentLetterChild struct {
+	StudentID   int64
+	FirstName   string
+	LastName    string
+	SchoolClass string
+	Group       string
+	CareDays    string
+	PickupTime  string
+}
+
+func (c ParentLetterChild) value(name string) string {
+	switch name {
+	case letterPlaceholderFirstName:
+		return c.FirstName
+	case letterPlaceholderLastName:
+		return c.LastName
+	case letterPlaceholderClass:
+		// The school spells its classes "3a" or "Klasse 3a"; the letter
+		// always reads "Klasse 3a".
+		return collation.SchoolClassLabel(c.SchoolClass)
+	case letterPlaceholderGroup:
+		return c.Group
+	case letterPlaceholderCareDays:
+		return c.CareDays
+	case letterPlaceholderPickupTime:
+		return c.PickupTime
+	}
+	return ""
+}
+
+var (
+	letterPlaceholderPattern = regexp.MustCompile(`\{\{\s*([^{}]*?)\s*\}\}`)
+	// letterStrayBrace finds what is left of a placeholder written wrongly,
+	// such as {{vorname} or {klasse}}, after the complete ones are removed.
+	letterStrayBrace = regexp.MustCompile(`\S*[{}]\S*`)
+)
+
+func knownLetterPlaceholder(name string) bool {
+	for _, p := range parentLetterPlaceholders {
+		if p.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// HasParentLetterPlaceholders reports whether text names any placeholder.
+func HasParentLetterPlaceholders(text string) bool {
+	return letterPlaceholderPattern.MatchString(text)
+}
+
+// UnknownParentLetterPlaceholders lists, sorted and once each, the
+// placeholders of text that are not in the list and every placeholder
+// written wrongly, as it stands in the text. Names are matched in lower
+// case, so {{ Klasse }} is {{klasse}}.
+func UnknownParentLetterPlaceholders(text string) []string {
+	unknown := map[string]bool{}
+	for _, match := range letterPlaceholderPattern.FindAllStringSubmatch(text, -1) {
+		name := strings.ToLower(match[1])
+		switch {
+		case name == "":
+			unknown[match[0]] = true
+		case !knownLetterPlaceholder(name):
+			unknown[name] = true
+		}
+	}
+	for _, stray := range letterStrayBrace.FindAllString(letterPlaceholderPattern.ReplaceAllString(text, " "), -1) {
+		unknown[stray] = true
+	}
+	names := make([]string, 0, len(unknown))
+	for name := range unknown {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// FillParentLetter writes the values of one child into text. A line whose
+// placeholders all print nothing and whose other words are at most a label
+// ("Abholzeit:") is left out, so a missing pickup time leaves no bare label
+// behind; a line with a sentence keeps its words.
+func FillParentLetter(text string, child ParentLetterChild) string {
+	if !HasParentLetterPlaceholders(text) {
+		return text
+	}
+	// Validation accepts whitespace inside a token, including line breaks.
+	// Collapse it before splitting so every valid token stays on one line.
+	text = letterPlaceholderPattern.ReplaceAllString(text, "{{$1}}")
+	lines := strings.Split(text, "\n")
+	kept := make([]string, 0, len(lines))
+	for _, line := range lines {
+		used, filled := 0, 0
+		out := letterPlaceholderPattern.ReplaceAllStringFunc(line, func(match string) string {
+			used++
+			value := strings.TrimSpace(child.value(strings.ToLower(letterPlaceholderPattern.FindStringSubmatch(match)[1])))
+			if value != "" {
+				filled++
+			}
+			return value
+		})
+		if used > 0 && filled == 0 && onlyLabel(letterPlaceholderPattern.ReplaceAllString(line, "")) {
+			continue
+		}
+		kept = append(kept, out)
+	}
+	return strings.Join(kept, "\n")
+}
+
+// onlyLabel reports whether the words of a line around its placeholders are
+// nothing or a bare label such as "Abholzeit:" or "Gebuchte Tage:": at most
+// three words before a colon, with no punctuation of a sentence.
+func onlyLabel(rest string) bool {
+	rest = strings.TrimSpace(rest)
+	if rest == "" {
+		return true
+	}
+	label, isLabel := strings.CutSuffix(rest, ":")
+	return isLabel && !strings.ContainsAny(label, ".,;:!?") && len(strings.Fields(label)) <= 3
+}
+
+// ParentLetterPlaceholderError refuses a text whose placeholders a letter
+// cannot fill: Names lists the unknown or broken ones. LetterOnly reports
+// placeholders in an announcement that is no Elternbrief, or in the title of
+// one; only the body of a letter is written once per child.
+type ParentLetterPlaceholderError struct {
+	Names      []string
+	LetterOnly bool
+}
+
+func (e *ParentLetterPlaceholderError) Error() string {
+	if e.LetterOnly {
+		return "placeholders are only filled in the text of an Elternbrief"
+	}
+	return "unknown placeholders: " + strings.Join(e.Names, ", ")
+}
+
+// CheckParentLetterText accepts the title and body of an Elternbrief: the
+// body may name the placeholders of the list, the title none.
+func CheckParentLetterText(title, body string) error {
+	if HasParentLetterPlaceholders(title) {
+		return &ParentLetterPlaceholderError{LetterOnly: true}
+	}
+	if names := UnknownParentLetterPlaceholders(body); len(names) > 0 {
+		return &ParentLetterPlaceholderError{Names: names}
+	}
+	return nil
+}
+
+// CheckNoParentLetterPlaceholders refuses a placeholder in a text that goes
+// to every family alike: a Mitteilung, or the wording of a reminder.
+func CheckNoParentLetterPlaceholders(texts ...string) error {
+	for _, text := range texts {
+		if HasParentLetterPlaceholders(text) {
+			return &ParentLetterPlaceholderError{LetterOnly: true}
+		}
+	}
+	return nil
+}
+
+// SameSchoolClass reports whether two spellings name one class, ignoring
+// case and surrounding space; an empty class matches none.
+func SameSchoolClass(a, b string) bool {
+	a = strings.TrimSpace(a)
+	return a != "" && strings.EqualFold(a, strings.TrimSpace(b))
+}

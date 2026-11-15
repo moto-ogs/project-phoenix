@@ -312,9 +312,10 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0240: the clock fields of modules/careplan/compose (+8).
 // ADR 0242: the working-time check and the Einsatzplanung sites of
 // modules/workforce/compose (+11).
+// ADR 0248: Communication's parent-letter child reader constructor (+6).
 // ADR 0246: the report templates of modules/organizationtenancy/compose (+5)
 // and the export adapter of modules/traegerview/compose (+1).
-const moduleComposeBudgetTotal = 13536
+const moduleComposeBudgetTotal = 13540
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -353,7 +354,8 @@ var moduleComposeBudgets = map[string]int{
 	"modules/classday/compose": 210,
 	// Raised by ADR 0073: the parent announcement retention.
 	// ADR 0212: the message attachments (+25).
-	"modules/communication/composition":  376,
+	// ADR 0248: the parent-letter child reader constructor (+6).
+	"modules/communication/composition":  380,
 	"modules/dataimport/compose":         85,
 	"modules/dataimport/compose/imports": 29,
 	// ADR 0145: +40 LOC for transport lifecycle, -8 LOC for the retired local wrapper.

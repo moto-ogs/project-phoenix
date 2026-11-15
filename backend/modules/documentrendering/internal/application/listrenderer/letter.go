@@ -15,12 +15,13 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	_ "image/jpeg" // logos are PNG or JPEG
-	_ "image/png"
+	_ "image/jpeg" // logos are PNG, JPEG or WebP
+	"image/png"
 	"strings"
 
 	listrecords "github.com/moto-ogs/project-phoenix/modules/documentrendering/records"
 	"github.com/signintech/gopdf"
+	"golang.org/x/image/webp"
 )
 
 // Geometry of the letter in PDF points (A4 is 595 × 842).
@@ -76,7 +77,16 @@ type letterLayout struct {
 	total       int
 	draw        bool
 	trace       []string
+	// bodySize, bodyLine and paragraph set the type of the body; a letter
+	// that must fit on one page sets them smaller (onePageScales).
+	bodySize  float64
+	bodyLine  float64
+	paragraph float64
 }
+
+// onePageScales are the body sizes a one-page letter tries in turn, down
+// to 8 points; a body longer than that still continues on the next page.
+var onePageScales = []float64{1, 0.9, 0.8}
 
 // renderLetterPDF renders one letter.
 func renderLetterPDF(letter listrecords.Letter) ([]byte, error) {
@@ -88,7 +98,7 @@ func renderLetterPDF(letter listrecords.Letter) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := measure.run(); err != nil {
+	if err := measure.fit(); err != nil {
 		return nil, err
 	}
 	paint := *measure
@@ -101,6 +111,38 @@ func renderLetterPDF(letter listrecords.Letter) ([]byte, error) {
 		return nil, fmt.Errorf("write letter pdf: %w", err)
 	}
 	return buf.Bytes(), nil
+}
+
+// fit measures the letter. A letter that must fit on one page is measured
+// again with a smaller body until it does; one too long for the smallest
+// size keeps the normal body and continues on the next page.
+func (l *letterLayout) fit() error {
+	scales := onePageScales[:1]
+	if l.letter.OnePage {
+		scales = onePageScales
+	}
+	for _, scale := range scales {
+		l.scaleBody(scale)
+		l.trace = nil
+		if err := l.run(); err != nil {
+			return err
+		}
+		if l.page == 1 {
+			return nil
+		}
+	}
+	if len(scales) == 1 {
+		return nil
+	}
+	// Too long even in the smallest type: it reads better on two pages in
+	// the normal one.
+	l.scaleBody(1)
+	l.trace = nil
+	return l.run()
+}
+
+func (l *letterLayout) scaleBody(scale float64) {
+	l.bodySize, l.bodyLine, l.paragraph = letterBodySize*scale, letterBodyLine*scale, letterParagraph*scale
 }
 
 // newLetterChrome starts a white A4 page set with the fonts of the list
@@ -128,21 +170,43 @@ func newLetterChrome(title string) (*pageChrome, error) {
 
 func newLetterLayout(chrome *pageChrome, letter listrecords.Letter) (*letterLayout, error) {
 	l := &letterLayout{pageChrome: chrome, letter: letter, accent: colorInk}
+	l.scaleBody(1)
 	if accent, ok := parseHexColor(letter.AccentColor); ok {
 		l.accent = accent
 	}
 	if len(letter.Logo) > 0 {
-		if _, _, ok := imageSize(letter.Logo); !ok {
-			return nil, errors.New("letter logo: not a PNG or JPEG image")
+		logo, err := embeddableLogo(letter.Logo)
+		if err != nil {
+			return nil, err
 		}
-		holder, err := pdfImage(letter.Logo)
+		holder, err := pdfImage(logo)
 		if err != nil {
 			return nil, fmt.Errorf("letter logo: %w", err)
 		}
 		l.logo = holder
-		l.logoW, l.logoH = logoBox(letter.Logo)
+		l.logoW, l.logoH = logoBox(logo)
 	}
 	return l, nil
+}
+
+// embeddableLogo is a logo as the PDF embeds it: PNG and JPEG as they are,
+// WebP converted to PNG, which the PDF format cannot hold.
+func embeddableLogo(data []byte) ([]byte, error) {
+	if bytes.HasPrefix(data, []byte("RIFF")) && len(data) >= 12 && string(data[8:12]) == "WEBP" {
+		decoded, err := webp.Decode(bytes.NewReader(data))
+		if err != nil {
+			return nil, fmt.Errorf("letter logo: %w", err)
+		}
+		var out bytes.Buffer
+		if err := png.Encode(&out, decoded); err != nil {
+			return nil, fmt.Errorf("letter logo: %w", err)
+		}
+		return out.Bytes(), nil
+	}
+	if _, _, ok := imageSize(data); !ok {
+		return nil, errors.New("letter logo: not a PNG, JPEG or WebP image")
+	}
+	return data, nil
 }
 
 // logoBox scales the logo into its box, keeping the aspect ratio.
@@ -185,7 +249,7 @@ func (l *letterLayout) run() error {
 	if err := l.writeLine(l.letter.Subject, styleBold, letterSubjectSize, l.accent); err != nil {
 		return err
 	}
-	l.y += letterBodyLine
+	l.y += l.bodyLine
 	if l.letter.Salutation != "" {
 		if err := l.writeParagraph(l.letter.Salutation, styleNormal); err != nil {
 			return err
@@ -197,7 +261,7 @@ func (l *letterLayout) run() error {
 		}
 	}
 	for _, line := range l.letter.Closing {
-		if err := l.writeLine(line, styleNormal, letterBodySize, colorBody); err != nil {
+		if err := l.writeLine(line, styleNormal, l.bodySize, colorBody); err != nil {
 			return err
 		}
 	}
@@ -371,7 +435,7 @@ func (l *letterLayout) writeLine(s, style string, size float64, col rgb) error {
 		return err
 	}
 	for _, line := range l.wrap(s, l.contentWidth()) {
-		if err := l.ensure(letterBodyLine); err != nil {
+		if err := l.ensure(l.bodyLine); err != nil {
 			return err
 		}
 		if err := l.style(style, size, col); err != nil {
@@ -380,7 +444,7 @@ func (l *letterLayout) writeLine(s, style string, size float64, col rgb) error {
 		if err := l.emit(letterMarginLeft, l.y+size, line); err != nil {
 			return err
 		}
-		l.y += letterBodyLine
+		l.y += l.bodyLine
 	}
 	return nil
 }
@@ -390,23 +454,23 @@ func (l *letterLayout) writeLine(s, style string, size float64, col rgb) error {
 func (l *letterLayout) writeParagraph(s, style string) error {
 	for _, segment := range strings.Split(strings.ReplaceAll(s, "\r\n", "\n"), "\n") {
 		if strings.TrimSpace(segment) == "" {
-			l.y += letterBodyLine
+			l.y += l.bodyLine
 			continue
 		}
-		if err := l.writeLine(segment, style, letterBodySize, colorBody); err != nil {
+		if err := l.writeLine(segment, style, l.bodySize, colorBody); err != nil {
 			return err
 		}
 	}
-	l.y += letterParagraph
+	l.y += l.paragraph
 	return nil
 }
 
 func (l *letterLayout) writeBlock(block listrecords.LetterBlock) error {
 	if block.Heading != "" {
-		if err := l.ensure(3 * letterBodyLine); err != nil {
+		if err := l.ensure(3 * l.bodyLine); err != nil {
 			return err
 		}
-		if err := l.writeLine(block.Heading, styleBold, letterBodySize, l.accent); err != nil {
+		if err := l.writeLine(block.Heading, styleBold, l.bodySize, l.accent); err != nil {
 			return err
 		}
 	}
@@ -422,13 +486,13 @@ func (l *letterLayout) writeBlock(block listrecords.LetterBlock) error {
 	if len(block.Facts) == 0 {
 		return nil
 	}
-	l.y += letterFactGap - letterParagraph
+	l.y += letterFactGap - l.paragraph
 	for _, fact := range block.Facts {
 		if err := l.writeFactRow(fact); err != nil {
 			return err
 		}
 	}
-	l.y += letterParagraph + letterFactGap
+	l.y += l.paragraph + letterFactGap
 	return nil
 }
 
@@ -437,7 +501,7 @@ func (l *letterLayout) writeBlock(block listrecords.LetterBlock) error {
 // width, the label the rest, and the row is as high as the longer one.
 func (l *letterLayout) writeFactRow(fact listrecords.LetterFact) error {
 	style := factStyle(fact)
-	if err := l.style(style, letterBodySize, colorBody); err != nil {
+	if err := l.style(style, l.bodySize, colorBody); err != nil {
 		return err
 	}
 	labels, values, err := l.factColumns(fact)
@@ -459,7 +523,7 @@ func (l *letterLayout) writeFactRow(fact listrecords.LetterFact) error {
 		if err := l.writeFactLine(labels, values, i); err != nil {
 			return err
 		}
-		l.y += letterBodyLine
+		l.y += l.bodyLine
 	}
 	return nil
 }
@@ -475,11 +539,11 @@ func factStyle(fact listrecords.LetterFact) string {
 // together and sets the row's style again, also after a page break.
 func (l *letterLayout) startRowLine(together bool, style string) error {
 	if !together {
-		if err := l.ensure(letterBodyLine); err != nil {
+		if err := l.ensure(l.bodyLine); err != nil {
 			return err
 		}
 	}
-	return l.style(style, letterBodySize, colorBody)
+	return l.style(style, l.bodySize, colorBody)
 }
 
 // drawRule draws the hairline above a total.
@@ -495,7 +559,7 @@ func (l *letterLayout) drawRule() {
 // does not fit this one. A longer row, such as a reason of many lines,
 // continues line by line instead; then it reports false.
 func (l *letterLayout) keepRowTogether(rows int) (bool, error) {
-	height := float64(rows) * letterBodyLine
+	height := float64(rows) * l.bodyLine
 	if height > l.pageRoom() {
 		return false, nil
 	}
@@ -509,12 +573,12 @@ func (l *letterLayout) writeFactLine(labels, values []string, i int) error {
 		if err != nil {
 			return err
 		}
-		if err := l.emit(l.w-letterMarginRight-width, l.y+letterBodySize, values[i]); err != nil {
+		if err := l.emit(l.w-letterMarginRight-width, l.y+l.bodySize, values[i]); err != nil {
 			return err
 		}
 	}
 	if i < len(labels) {
-		return l.emit(letterMarginLeft, l.y+letterBodySize, labels[i])
+		return l.emit(letterMarginLeft, l.y+l.bodySize, labels[i])
 	}
 	return nil
 }

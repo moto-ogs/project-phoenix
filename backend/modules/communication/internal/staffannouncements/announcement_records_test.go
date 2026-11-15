@@ -18,6 +18,7 @@ import (
 type nativeAnnouncementProbe struct {
 	communication.StaffAnnouncementRecords
 	communication.AnnouncementRecipientRecords
+	communication.ParentLetterCopyRecords
 	create        func(context.Context, *communication.PortalParentAnnouncement) error
 	list          func(context.Context, bool) ([]*communication.PortalParentAnnouncement, error)
 	insertVersion func(context.Context, *communication.PortalDeclarationVersion) error
