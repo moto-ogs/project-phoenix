@@ -67,7 +67,7 @@ func TestNormalizeInput_Valid(t *testing.T) {
 			{TargetType: StaffAnnouncementTargetPendingEnrollment},
 		},
 	}
-	targets, err := normalizeInput(&in)
+	targets, err := normalizeInput(&in, staffTestNow)
 	if err != nil {
 		t.Fatalf("expected valid input, got %v", err)
 	}
@@ -109,7 +109,7 @@ func TestNormalizeInput_Errors(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			in := c.in
-			if _, err := normalizeInput(&in); !errors.Is(err, ErrValidation) {
+			if _, err := normalizeInput(&in, staffTestNow); !errors.Is(err, ErrValidation) {
 				t.Fatalf("expected ErrValidation, got %v", err)
 			}
 		})
@@ -128,7 +128,7 @@ func TestNormalizeInput_DedupesTargets(t *testing.T) {
 			{TargetType: StaffAnnouncementTargetSchoolAll},
 		},
 	}
-	targets, err := normalizeInput(&in)
+	targets, err := normalizeInput(&in, staffTestNow)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -144,7 +144,7 @@ func TestNormalizeInput_SendEmailPassesThrough(t *testing.T) {
 		Title: "t", Body: "b", SendEmail: true,
 		Targets: []TargetInput{{TargetType: StaffAnnouncementTargetSchoolAll}},
 	}
-	if _, err := normalizeInput(&in); err != nil {
+	if _, err := normalizeInput(&in, staffTestNow); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if !in.SendEmail {

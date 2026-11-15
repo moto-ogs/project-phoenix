@@ -16,7 +16,7 @@ func TestNormalizePollOptions_PlainAnnouncementStaysPlain(t *testing.T) {
 	t.Parallel()
 
 	in := Input{}
-	options, err := normalizePollOptions(&in)
+	options, err := normalizePollOptions(&in, staffTestNow)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -31,9 +31,9 @@ func TestNormalizePollOptions_PlainAnnouncementStaysPlain(t *testing.T) {
 func TestNormalizePollOptions_ClearsDeadlineOnPlainAnnouncement(t *testing.T) {
 	t.Parallel()
 
-	deadline := time.Now().Add(48 * time.Hour)
+	deadline := staffTestNow.Add(48 * time.Hour)
 	in := Input{ResponseDeadline: &deadline}
-	if _, err := normalizePollOptions(&in); err != nil {
+	if _, err := normalizePollOptions(&in, staffTestNow); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.ResponseDeadline != nil {
@@ -45,7 +45,7 @@ func TestNormalizePollOptions_RejectsOptionsWithoutResponseType(t *testing.T) {
 	t.Parallel()
 
 	in := Input{Options: []string{"Ja", "Nein"}}
-	if _, err := normalizePollOptions(&in); !errors.Is(err, ErrValidation) {
+	if _, err := normalizePollOptions(&in, staffTestNow); !errors.Is(err, ErrValidation) {
 		t.Fatalf("expected validation error, got %v", err)
 	}
 }
@@ -57,7 +57,7 @@ func TestNormalizePollOptions_TrimsAndPositionsOptions(t *testing.T) {
 		ResponseType: StaffParentAnnouncementResponseSingleChoice,
 		Options:      []string{"  Ja  ", "Nein", "   "},
 	}
-	options, err := normalizePollOptions(&in)
+	options, err := normalizePollOptions(&in, staffTestNow)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestNormalizePollOptions_ClearsAcknowledgementForPoll(t *testing.T) {
 		Options:                 []string{"Ja", "Nein"},
 		RequiresAcknowledgement: true,
 	}
-	if _, err := normalizePollOptions(&in); err != nil {
+	if _, err := normalizePollOptions(&in, staffTestNow); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.RequiresAcknowledgement {
@@ -95,7 +95,7 @@ func TestNormalizePollOptions_RejectsDuplicateLabels(t *testing.T) {
 		ResponseType: StaffParentAnnouncementResponseSingleChoice,
 		Options:      []string{"Ja", "ja"},
 	}
-	if _, err := normalizePollOptions(&in); !errors.Is(err, ErrValidation) {
+	if _, err := normalizePollOptions(&in, staffTestNow); !errors.Is(err, ErrValidation) {
 		t.Fatalf("expected duplicate labels to be rejected, got %v", err)
 	}
 }
@@ -107,7 +107,7 @@ func TestNormalizePollOptions_RejectsTooFewOptions(t *testing.T) {
 		ResponseType: StaffParentAnnouncementResponseSingleChoice,
 		Options:      []string{"Ja"},
 	}
-	if _, err := normalizePollOptions(&in); !errors.Is(err, ErrValidation) {
+	if _, err := normalizePollOptions(&in, staffTestNow); !errors.Is(err, ErrValidation) {
 		t.Fatalf("expected a single option to be rejected, got %v", err)
 	}
 }
@@ -119,7 +119,7 @@ func TestNormalizePollOptions_RejectsTooManyOptions(t *testing.T) {
 		ResponseType: StaffParentAnnouncementResponseMultiChoice,
 		Options:      distinctPollLabels(maxPollOptions + 1),
 	}
-	_, err := normalizePollOptions(&in)
+	_, err := normalizePollOptions(&in, staffTestNow)
 	if !errors.Is(err, ErrValidation) || !strings.Contains(err.Error(), "at most") {
 		t.Fatalf("expected more than %d options to be rejected, got %v", maxPollOptions, err)
 	}
@@ -136,7 +136,7 @@ func TestNormalizePollOptions_AcceptsMaxOptions(t *testing.T) {
 		ResponseType: StaffParentAnnouncementResponseMultiChoice,
 		Options:      distinctPollLabels(maxPollOptions),
 	}
-	out, err := normalizePollOptions(&in)
+	out, err := normalizePollOptions(&in, staffTestNow)
 	if err != nil {
 		t.Fatalf("expected %d options to be accepted, got %v", maxPollOptions, err)
 	}
@@ -158,13 +158,13 @@ func distinctPollLabels(n int) []string {
 func TestNormalizePollOptions_RejectsPastDeadline(t *testing.T) {
 	t.Parallel()
 
-	past := time.Now().Add(-time.Hour)
+	past := staffTestNow.Add(-time.Hour)
 	in := Input{
 		ResponseType:     StaffParentAnnouncementResponseSingleChoice,
 		Options:          []string{"Ja", "Nein"},
 		ResponseDeadline: &past,
 	}
-	if _, err := normalizePollOptions(&in); !errors.Is(err, ErrValidation) {
+	if _, err := normalizePollOptions(&in, staffTestNow); !errors.Is(err, ErrValidation) {
 		t.Fatalf("expected a past deadline to be rejected, got %v", err)
 	}
 }
@@ -174,7 +174,7 @@ func TestNormalizePollOptions_RejectsPastDeadline(t *testing.T) {
 func TestNormalizePollOptions_RejectsDeadlineAfterExpiry(t *testing.T) {
 	t.Parallel()
 
-	expires := time.Now().Add(24 * time.Hour)
+	expires := staffTestNow.Add(24 * time.Hour)
 	deadline := expires.Add(time.Hour)
 	in := Input{
 		ResponseType:     StaffParentAnnouncementResponseSingleChoice,
@@ -182,7 +182,7 @@ func TestNormalizePollOptions_RejectsDeadlineAfterExpiry(t *testing.T) {
 		ExpiresAt:        &expires,
 		ResponseDeadline: &deadline,
 	}
-	if _, err := normalizePollOptions(&in); !errors.Is(err, ErrValidation) {
+	if _, err := normalizePollOptions(&in, staffTestNow); !errors.Is(err, ErrValidation) {
 		t.Fatalf("expected a deadline after expiry to be rejected, got %v", err)
 	}
 }
@@ -191,7 +191,7 @@ func TestNormalizePollOptions_RejectsUnknownResponseType(t *testing.T) {
 	t.Parallel()
 
 	in := Input{ResponseType: "ranking", Options: []string{"Ja", "Nein"}}
-	if _, err := normalizePollOptions(&in); !errors.Is(err, ErrValidation) {
+	if _, err := normalizePollOptions(&in, staffTestNow); !errors.Is(err, ErrValidation) {
 		t.Fatalf("expected an unknown response type to be rejected, got %v", err)
 	}
 }
@@ -201,7 +201,7 @@ func TestNormalizePollOptions_RejectsUnknownResponseType(t *testing.T) {
 func TestAcceptsResponsesAt(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := staffTestNow
 	past := now.Add(-time.Minute)
 	future := now.Add(time.Minute)
 
@@ -242,7 +242,7 @@ func TestNormalizeInput_RejectsPendingEnrollmentTargetForPoll(t *testing.T) {
 			{TargetType: StaffAnnouncementTargetPendingEnrollment},
 		},
 	}
-	if _, err := normalizeInput(&in); !errors.Is(err, ErrValidation) {
+	if _, err := normalizeInput(&in, staffTestNow); !errors.Is(err, ErrValidation) {
 		t.Fatalf("expected validation error, got %v", err)
 	}
 }
@@ -258,7 +258,7 @@ func TestNormalizeInput_AllowsPendingEnrollmentTargetForAnnouncement(t *testing.
 			{TargetType: StaffAnnouncementTargetPendingEnrollment},
 		},
 	}
-	targets, err := normalizeInput(&in)
+	targets, err := normalizeInput(&in, staffTestNow)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

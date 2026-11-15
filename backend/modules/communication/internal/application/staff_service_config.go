@@ -2,6 +2,7 @@ package application
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 )
@@ -38,4 +39,7 @@ type ServiceConfig struct {
 	Attachments AttachmentPurger
 	ParentsURL  string
 	Logger      *slog.Logger
+	// Now is the clock of deadlines, expiries and publication; nil is the
+	// real clock (ADR 0239).
+	Now func() time.Time
 }

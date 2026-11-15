@@ -481,7 +481,7 @@ func (s *service) remindUnacknowledged(ctx context.Context, a *StaffParentAnnoun
 	if !a.IsPublished() || !a.Active {
 		return 0, ErrNotPublished
 	}
-	now := time.Now()
+	now := s.now()
 	if a.ExpiresAt != nil && !a.ExpiresAt.After(now) {
 		return 0, ErrNotPublished
 	}

@@ -113,7 +113,7 @@ const declarationReminderKicker = "Einverständnis: Ihre Antwort fehlt"
 
 // normalizeDeclaration validates and completes the declaration settings. It
 // runs inside normalizeDelivery, after the delivery mode is known.
-func normalizeDeclaration(in *Input) error {
+func normalizeDeclaration(in *Input, now time.Time) error {
 	if in.DeliveryMode != StaffParentAnnouncementDeliveryDeclaration {
 		in.Declaration = StaffAnnouncementDeclarationSettings{}
 		return nil
@@ -146,7 +146,7 @@ func normalizeDeclaration(in *Input) error {
 	}
 	in.ResponseType = StaffParentAnnouncementResponseNone
 	in.RequiresAcknowledgement = false
-	if in.ResponseDeadline != nil && !in.ResponseDeadline.After(time.Now()) {
+	if in.ResponseDeadline != nil && !in.ResponseDeadline.After(now) {
 		return fmt.Errorf("%w: the deadline must lie in the future", ErrValidation)
 	}
 	// Parents cannot answer an Einverständnis after it disappears from their
@@ -164,7 +164,7 @@ func normalizeDeclaration(in *Input) error {
 // (invisible to parents, immutable), so it fails with a 5xx and the tenant
 // tx rolls the flip back for staff to retry.
 func (s *service) settlePublication(ctx context.Context, fresh *StaffParentAnnouncement) error {
-	now := time.Now()
+	now := s.now()
 	if fresh.ExpiresAt != nil && !fresh.ExpiresAt.After(now) {
 		return fmt.Errorf("announcement: draft expired concurrently during publish; rolled back")
 	}
@@ -194,7 +194,7 @@ func (s *service) freezeDeclaration(ctx context.Context, a *StaffParentAnnouncem
 	}
 	version := &StaffDeclarationVersion{
 		TenantID: a.GetTenantID(), AnnouncementID: a.ID, Title: a.Title, Body: a.Body,
-		Kind: a.Declaration.Kind, PublishedAt: time.Now(),
+		Kind: a.Declaration.Kind, PublishedAt: s.now(),
 		Attachments: make([]StaffDeclarationAttachmentDigest, 0, len(digests)),
 	}
 	for _, d := range digests {
@@ -381,7 +381,7 @@ func (s *service) ParentDeclarationStatus(ctx context.Context, id int64) (*Decla
 		return nil, err
 	}
 	a := facts.announcement
-	now := time.Now()
+	now := s.now()
 	out := &DeclarationStatus{
 		Title:       a.Title,
 		Settings:    a.Declaration,
@@ -537,7 +537,7 @@ func (s *service) remindDeclaration(ctx context.Context, a *StaffParentAnnouncem
 	if !a.IsPublished() || !a.Active {
 		return 0, ErrNotPublished
 	}
-	now := time.Now()
+	now := s.now()
 	if a.ExpiresAt != nil && !a.ExpiresAt.After(now) {
 		return 0, ErrNotPublished
 	}

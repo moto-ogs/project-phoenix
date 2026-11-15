@@ -51,7 +51,7 @@ func BuildParentAnnouncements(
 		Series: BindCommunicationNotificationSeries(notifications.Notifier), Preferences: notifications.Preferences,
 		Deliveries: announcementDeliveryAdapter{module: module, outcomes: outcomes}, ParentsURL: env.Links.ParentsURL,
 		Fingerprints: SecurityFingerprints{}, Signatures: CommunicationSignatures{Ledger: SignatureLedger()},
-		Logger: env.Logger.With("service", "announcement"),
+		Logger: env.Logger.With("service", "announcement"), Now: env.Now,
 		// The surveys (#4781) ask the colleagues of the team chat.
 		SurveyStaff: messaging.StaffMessageRead,
 	}, attachments, CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})

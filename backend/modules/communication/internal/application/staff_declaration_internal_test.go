@@ -28,7 +28,7 @@ func TestNormalizeDeclarationCompletesAndRefuses(t *testing.T) {
 	in := declarationTestInput()
 	in.Declaration.Kind = ""
 	in.RequiresAcknowledgement = true
-	_, err := normalizeInput(&in)
+	_, err := normalizeInput(&in, staffTestNow)
 	require.NoError(t, err)
 	assert.Equal(t, StaffDeclarationKindConsent, in.Declaration.Kind, "an Einverständnis is the only kind")
 	assert.Equal(t, StaffDeclarationSignersAny, in.Declaration.Signers, "one guardian is the default")
@@ -43,11 +43,11 @@ func TestNormalizeDeclarationCompletesAndRefuses(t *testing.T) {
 			in.Targets = []TargetInput{{TargetType: StaffAnnouncementTargetPendingEnrollment}}
 		},
 		"deadline in the past": func(in *Input) {
-			past := time.Now().Add(-time.Hour)
+			past := staffTestNow.Add(-time.Hour)
 			in.ResponseDeadline = &past
 		},
 		"deadline after expiry": func(in *Input) {
-			expires := time.Now().Add(24 * time.Hour)
+			expires := staffTestNow.Add(24 * time.Hour)
 			deadline := expires.Add(time.Hour)
 			in.ExpiresAt = &expires
 			in.ResponseDeadline = &deadline
@@ -58,7 +58,7 @@ func TestNormalizeDeclarationCompletesAndRefuses(t *testing.T) {
 			t.Parallel()
 			in := declarationTestInput()
 			mutate(&in)
-			_, err := normalizeInput(&in)
+			_, err := normalizeInput(&in, staffTestNow)
 			assert.True(t, errors.Is(err, ErrValidation), "got %v", err)
 		})
 	}
@@ -66,7 +66,7 @@ func TestNormalizeDeclarationCompletesAndRefuses(t *testing.T) {
 	standard := declarationTestInput()
 	standard.DeliveryMode = ""
 	standard.Declaration.RequiresPassword = true
-	_, err = normalizeInput(&standard)
+	_, err = normalizeInput(&standard, staffTestNow)
 	require.NoError(t, err)
 	assert.Equal(t, StaffAnnouncementDeclarationSettings{}, standard.Declaration,
 		"another mode never keeps declaration settings")
@@ -214,7 +214,7 @@ func TestDeclarationLifecycleVersionsProofAndDeleteGuard(t *testing.T) {
 	announcement.ID = 9
 	announcement.SetTenantID(3)
 	repo := &declarationRepo{announcement: announcement}
-	svc := NewService(ServiceConfig{Repo: repo, Settings: newsOn{}, Fingerprints: securityFingerprints{}, Attachments: digestStub{&stubPurger{}}}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy()).(*service)
+	svc := NewService(ServiceConfig{Now: staffTestClock, Repo: repo, Settings: newsOn{}, Fingerprints: securityFingerprints{}, Attachments: digestStub{&stubPurger{}}}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy()).(*service)
 
 	_, err := svc.Publish(ctx, announcement.ID)
 	require.NoError(t, err)
@@ -289,7 +289,7 @@ func TestDeclarationWithSubmissionsKeepsItsDeliveryMode(t *testing.T) {
 	announcement.ID = 9
 	announcement.SetTenantID(3)
 	repo := &declarationRepo{announcement: announcement, submissions: []*StaffDeclarationSubmission{{ID: 1}}}
-	svc := NewService(ServiceConfig{Repo: repo, Settings: newsOn{}}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy()).(*service)
+	svc := NewService(ServiceConfig{Now: staffTestClock, Repo: repo, Settings: newsOn{}}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy()).(*service)
 
 	in := declarationTestInput()
 	in.DeliveryMode = StaffParentAnnouncementDeliveryStandard
@@ -300,7 +300,7 @@ func TestDeclarationWithSubmissionsKeepsItsDeliveryMode(t *testing.T) {
 
 func TestDeclarationWithSubmissionsKeepsItsRules(t *testing.T) {
 	t.Parallel()
-	deadline := time.Now().Add(72 * time.Hour)
+	deadline := staffTestNow.Add(72 * time.Hour)
 	announcement := &StaffParentAnnouncement{
 		Title: "Ausflug", Body: "Freitag", Priority: StaffParentAnnouncementPriorityInfo, Active: true,
 		DeliveryMode:     StaffParentAnnouncementDeliveryDeclaration,
@@ -312,7 +312,7 @@ func TestDeclarationWithSubmissionsKeepsItsRules(t *testing.T) {
 	announcement.ID = 9
 	announcement.SetTenantID(3)
 	repo := &declarationRepo{announcement: announcement, submissions: []*StaffDeclarationSubmission{{ID: 1}}}
-	svc := NewService(ServiceConfig{Repo: repo, Settings: newsOn{}}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy()).(*service)
+	svc := NewService(ServiceConfig{Now: staffTestClock, Repo: repo, Settings: newsOn{}}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy()).(*service)
 
 	in := declarationTestInput()
 	in.Declaration.Signers = StaffDeclarationSignersAll
@@ -331,21 +331,21 @@ func (newsOn) ParentNewsEnabled(context.Context) (bool, error) { return true, ni
 
 func TestDeclarationKeepsItsDeadlineThroughTheFullNormalisation(t *testing.T) {
 	t.Parallel()
-	deadline := time.Now().Add(72 * time.Hour)
+	deadline := staffTestNow.Add(72 * time.Hour)
 	in := declarationTestInput()
 	in.ResponseDeadline = &deadline
-	_, err := normalizeInput(&in)
+	_, err := normalizeInput(&in, staffTestNow)
 	require.NoError(t, err)
-	_, err = normalizePollOptions(&in)
+	_, err = normalizePollOptions(&in, staffTestNow)
 	require.NoError(t, err)
 	require.NotNil(t, in.ResponseDeadline, "the Frist of an Erklärung must survive the poll normalisation")
 
 	mitteilung := declarationTestInput()
 	mitteilung.DeliveryMode = ""
 	mitteilung.ResponseDeadline = &deadline
-	_, err = normalizeInput(&mitteilung)
+	_, err = normalizeInput(&mitteilung, staffTestNow)
 	require.NoError(t, err)
-	_, err = normalizePollOptions(&mitteilung)
+	_, err = normalizePollOptions(&mitteilung, staffTestNow)
 	require.NoError(t, err)
 	assert.Nil(t, mitteilung.ResponseDeadline)
 }
