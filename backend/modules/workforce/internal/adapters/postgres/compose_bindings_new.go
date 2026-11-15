@@ -52,3 +52,10 @@ func (a Assignments) RebaseAnchor(ctx context.Context, staffIDs []int64, anchorD
 	}
 	return a.Store.RebaseStaffRotationAnchor(ctx, staffIDs, anchorDate)
 }
+
+func (a Assignments) LiveStaffIDs(ctx context.Context, staffIDs []int64) ([]int64, error) {
+	if len(staffIDs) == 0 {
+		return nil, nil
+	}
+	return a.Live(ctx, staffIDs)
+}

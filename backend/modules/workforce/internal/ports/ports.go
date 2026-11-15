@@ -55,6 +55,27 @@ type Store interface {
 	WorkSessionStore
 	StaffRecordStore
 	TargetOverrideStore
+	WorkTimeModelAssignmentStore
+}
+
+// WorkTimeModelAssignmentStore serves the assignment of one template to
+// several staff members (#6921) over users.staff_employment_profiles,
+// config.staff_work_schedules, active.staff_month_balance_snapshots and the
+// Träger's contract targets. Every read and write is set-based.
+type WorkTimeModelAssignmentStore interface {
+	// StaffWorkTimeFacts reads, in one statement, every staff member of the
+	// school with a template binding, a schedule, a Soll of the Träger or a
+	// closed month.
+	StaffWorkTimeFacts(ctx context.Context, today string) ([]domain.StaffWorkTimeFact, domain.OperationStats, error)
+	// StaffWorkTimeModelBindings returns the template each given member is
+	// bound to; members without one are absent.
+	StaffWorkTimeModelBindings(ctx context.Context, staffIDs []int64) (map[int64]int64, domain.OperationStats, error)
+	// StaffSollKeptByTraeger returns which of the given members a contract
+	// of the Träger governs on day.
+	StaffSollKeptByTraeger(ctx context.Context, staffIDs []int64, day string) ([]int64, domain.OperationStats, error)
+	// BindStaffWorkTimeModel binds the template and its anchor to every
+	// given member in one statement, creating missing profiles.
+	BindStaffWorkTimeModel(ctx context.Context, staffIDs []int64, workTimeModelID int64, anchorDate string) (domain.OperationStats, error)
 }
 
 // WorkSessionStore is the persistence port over active.work_sessions,
@@ -316,6 +337,9 @@ type StaffAssignments interface {
 	// RebaseAnchor stamps the template's rotation anchor onto the given
 	// assignees, which the caller has already resolved.
 	RebaseAnchor(ctx context.Context, staffIDs []int64, anchorDate string) error
+	// LiveStaffIDs returns the given memberships School Membership still
+	// holds as live, ascending.
+	LiveStaffIDs(ctx context.Context, staffIDs []int64) ([]int64, error)
 }
 
 // Transaction runs a unit of work on the caller's ambient transaction or, when

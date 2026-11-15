@@ -1,0 +1,7 @@
+{
+  "scenario": "api.workforce.work_time_models.assignments.facts",
+  "max": 4,
+  "exact": true,
+  "description": "GET /api/work-time-models/assignments (#6921): real Workforce capability and protected tenant router. Complete request capture: BEGIN, combined tenant role/config, one tenant-scoped SELECT that joins template bindings, schedule history, running Träger contracts and closed months per staff member, and COMMIT. Exact for 1 and 4 bound people; writes nothing.",
+  "route": "GET /api/work-time-models/assignments"
+}

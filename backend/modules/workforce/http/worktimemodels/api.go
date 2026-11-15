@@ -74,12 +74,14 @@ func (rs *Resource) Router() chi.Router {
 	rs.runtime.Protected(r, func(r chi.Router, withTx Middleware) {
 		manage := rs.runtime.Permission(rs.runtime.Manage)
 		r.With(manage, withTx).Get("/", rs.list)
+		r.With(manage, withTx).Get("/assignments", rs.staffFacts)
 		r.With(manage, withTx).Get("/{id}", rs.get)
 		r.With(manage, withTx).Post("/", rs.create)
 		r.With(manage, withTx).Put("/{id}", rs.update)
 		r.With(manage, withTx).Delete("/{id}", rs.delete)
 		r.With(manage, withTx).Post("/{id}/archive", rs.archive)
 		r.With(manage, withTx).Post("/{id}/restore", rs.restore)
+		r.With(manage, withTx).Post("/{id}/assignments", rs.assign)
 	})
 
 	return r
@@ -282,15 +284,18 @@ func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {
 }
 
 // renderCapabilityError maps a capability error to its HTTP response:
-// caller-input validation failures become 400, an unknown model 404, a model
-// still assigned to staff 409, everything else (a failed read or write) 500.
+// caller-input validation failures become 400, an unknown model or staff
+// member 404, a model still assigned to staff, an archived model and a Soll
+// the Träger keeps 409, everything else (a failed read or write) 500. The
+// composition root picks the registered code of each conflict.
 func (rs *Resource) renderCapabilityError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, workforce.ErrInvalidWorkTime):
 		rs.runtime.Failure(w, r, FailureInvalid, err)
-	case errors.Is(err, workforce.ErrWorkTimeModelNotFound):
+	case errors.Is(err, workforce.ErrWorkTimeModelNotFound), errors.Is(err, workforce.ErrStaffEmploymentNotFound):
 		rs.runtime.Failure(w, r, FailureNotFound, err)
-	case errors.Is(err, workforce.ErrWorkTimeModelAssigned):
+	case errors.Is(err, workforce.ErrWorkTimeModelAssigned), errors.Is(err, workforce.ErrWorkTimeModelArchived),
+		errors.Is(err, workforce.ErrStaffSollKeptByTraeger):
 		rs.runtime.Failure(w, r, FailureConflict, err)
 	default:
 		rs.runtime.Failure(w, r, FailureInternal, err)
