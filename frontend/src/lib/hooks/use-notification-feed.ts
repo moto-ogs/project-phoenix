@@ -45,10 +45,13 @@ function onFeedRefresh(refresh: () => void): () => void {
  * `notification_feed_changed` (auch von einem anderen Gerät) und ein
  * Wiederverbinden lösen über ein Fenster-Ereignis einen neuen Abruf aus.
  */
-export function useNotificationFeedUnread() {
+export function useNotificationFeedUnread(
+  /** Nur im Staff-Portal; die untere Leiste dient auch anderen Portalen. */
+  enabled = true,
+) {
   const refreshInterval = useLiveRefreshInterval(UNREAD_FALLBACK_INTERVAL_MS);
   const { data, mutate } = useSWRAuth<number>(
-    notificationFeedKeys.unreadCount(),
+    enabled ? notificationFeedKeys.unreadCount() : null,
     fetchNotificationFeedUnreadCount,
     {
       refreshInterval,
@@ -58,14 +61,17 @@ export function useNotificationFeedUnread() {
     },
   );
 
-  useEffect(() => onFeedRefresh(() => void mutate()), [mutate]);
+  useEffect(
+    () => (enabled ? onFeedRefresh(() => void mutate()) : undefined),
+    [enabled, mutate],
+  );
 
   const setUnreadCount = useCallback(
     (count: number) => void mutate(count, { revalidate: false }),
     [mutate],
   );
 
-  return { unreadCount: data ?? 0, setUnreadCount };
+  return { unreadCount: enabled ? (data ?? 0) : 0, setUnreadCount };
 }
 
 export interface NotificationFeedItem {

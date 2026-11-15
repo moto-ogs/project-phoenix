@@ -2,7 +2,6 @@
 // Ultra-minimalist mobile navigation following Instagram/Twitter/Uber patterns
 "use client";
 
-import { REMINDERS_LINK_TOOLTIP } from "~/components/home/home-link-tooltips";
 import { Alert } from "~/components/ui/alert";
 import { SectionLabel } from "~/components/ui/section-label";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
@@ -43,6 +42,12 @@ import {
   useStaffNews,
 } from "~/components/dashboard/header/staff-news-button";
 import { NotificationBadge } from "~/components/ui/notification-badge";
+import {
+  NOTIFICATIONS_BADGE_MAX,
+  NotificationsSheet,
+  useOpenNotificationsSheet,
+} from "./header/notifications-panel";
+import { useNotificationFeedUnread } from "~/lib/hooks/use-notification-feed";
 import { navigationIcons } from "~/lib/navigation-icons";
 import {
   navigationEntryTarget,
@@ -638,6 +643,13 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
   // Get shell auth mode
   const { mode, isSessionExpired, canStartStaffPreview, profileUrl } =
     useShellAuth();
+  // Ungelesene Hinweise der Glocke (#7148): unter 1024 px fehlt die
+  // Kopfzeile, also zählen sie am Knopf „Mehr“ und an der Menüzeile mit.
+  const { unreadCount: feedUnreadCount } = useNotificationFeedUnread(
+    mode === "teacher",
+  );
+  const openNotificationsSheet = useOpenNotificationsSheet();
+  const moreBadgeCount = staffNews.length + feedUnreadCount;
   const traegerReturnHref = useTraegerReturnHref();
 
   // Check if current path matches nav item
@@ -1057,6 +1069,8 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
         isOpen={logoutModalOpen}
         onClose={() => setLogoutModalOpen(false)}
       />
+      {/* Einziger Ort des Vollbild-Blatts der Glocke (#7148). */}
+      {mode === "teacher" ? <NotificationsSheet /> : null}
       {mode === "teacher" && canStartStaffPreview ? (
         <StaffPreviewModal
           isOpen={staffPreviewModalOpen}
@@ -1086,10 +1100,11 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
           badge:
             mode === "teacher" ? (
               <NotificationBadge
-                count={staffNews.length}
+                count={moreBadgeCount}
                 tone="red"
                 size="sm"
-                ariaLabel={`${staffNews.length} neu für Sie`}
+                max={NOTIFICATIONS_BADGE_MAX}
+                ariaLabel={`${moreBadgeCount} neu für Sie`}
                 className="absolute -top-1 -right-2"
               />
             ) : null,
@@ -1272,23 +1287,37 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
                     />
                   ) : null}
                   {mode !== "parent" ? <RefreshButton drawer /> : null}
+                  {/* Der Weg zur Glocke auf dem Telefon (#7148): dasselbe
+                      Blatt wie die Glocke, Erinnerungen oben, Hinweise darunter;
+                      „Alle ansehen“ dort führt weiter zu /reminders. */}
                   {mode === "teacher" ? (
-                    <ButtonLink
-                      href={tenantPath("/reminders")}
-                      onClick={closeOverflowMenu}
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        closeOverflowMenu();
+                        openNotificationsSheet();
+                      }}
                       variant="ghost"
                       size="md"
                       className="w-full justify-start gap-3"
-                      tooltip={REMINDERS_LINK_TOOLTIP}
+                      tooltip="Zeigt Ihre Erinnerungen und Hinweise."
                     >
                       <Bell
                         className="h-5 w-5 text-gray-600"
                         aria-hidden="true"
                       />
                       <span className="text-base font-medium">
-                        Erinnerungen
+                        Benachrichtigungen
                       </span>
-                    </ButtonLink>
+                      <NotificationBadge
+                        count={feedUnreadCount}
+                        tone="red"
+                        size="md"
+                        max={NOTIFICATIONS_BADGE_MAX}
+                        ariaLabel={`${feedUnreadCount} neue Hinweise`}
+                        className="ml-auto"
+                      />
+                    </Button>
                   ) : null}
                   {mode === "teacher" && canStartStaffPreview ? (
                     <Button

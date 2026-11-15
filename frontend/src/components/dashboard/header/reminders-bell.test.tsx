@@ -29,43 +29,66 @@ vi.mock("~/lib/notification-feed-api", async (importOriginal) => ({
   ...api,
 }));
 
-// A small stand-in for the scoped SWR hook: it runs the real fetcher once per
-// key, keeps the answer in state and refetches on mutate(), so the real feed
-// hooks run against the mocked API. The global test setup stubs SWR itself.
+// A small stand-in for the scoped SWR hook: readers of one key share one
+// entry (like the SWR cache), the first reader runs the real fetcher, and
+// mutate() refetches or writes, so the real feed hooks run against the mocked
+// API. The global test setup stubs SWR itself.
+const swrCache = vi.hoisted(() => ({
+  entries: new Map<string, { data?: unknown; error?: unknown }>(),
+  listeners: new Set<() => void>(),
+}));
 vi.mock("~/lib/swr", async () => {
   const React = await import("react");
+  const write = (key: string, next: { data?: unknown; error?: unknown }) => {
+    swrCache.entries.set(key, next);
+    for (const listener of swrCache.listeners) listener();
+  };
   return {
     useLiveRefreshInterval: (fallback: number) => fallback,
     useSWRAuth: <T,>(key: string | null, fetcher: () => Promise<T>) => {
-      const [data, setData] = React.useState<T | undefined>(undefined);
-      const [error, setError] = React.useState<unknown>(undefined);
+      const entry = React.useSyncExternalStore(
+        (listener) => {
+          swrCache.listeners.add(listener);
+          return () => swrCache.listeners.delete(listener);
+        },
+        () => (key === null ? undefined : swrCache.entries.get(key)),
+      );
       const fetcherRef = React.useRef(fetcher);
       fetcherRef.current = fetcher;
       const load = React.useCallback(async () => {
+        if (key === null) return undefined;
         try {
           const value = await fetcherRef.current();
-          setData(value);
-          setError(undefined);
+          write(key, { data: value });
           return value;
         } catch (failure) {
-          setError(failure);
+          write(key, { data: swrCache.entries.get(key)?.data, error: failure });
           return undefined;
         }
-      }, []);
+      }, [key]);
       React.useEffect(() => {
-        if (key !== null) void load();
+        if (key !== null && !swrCache.entries.has(key)) {
+          swrCache.entries.set(key, {});
+          void load();
+        }
       }, [key, load]);
       const mutate = React.useCallback(
         (next?: T, options?: { revalidate?: boolean }) => {
-          if (next !== undefined) setData(next);
+          if (next !== undefined && key !== null) write(key, { data: next });
           if (next === undefined || options?.revalidate !== false) {
             return load();
           }
           return Promise.resolve(next);
         },
-        [load],
+        [key, load],
       );
-      return { data, error, isLoading: data === undefined, mutate };
+      const data = entry?.data as T | undefined;
+      return {
+        data,
+        error: entry?.error,
+        isLoading: data === undefined,
+        mutate,
+      };
     },
   };
 });
@@ -90,6 +113,10 @@ vi.mock("~/lib/analytics", () => ({
   trackTenantEvent: (...args: unknown[]) => mockTrack(...args),
 }));
 
+import {
+  closeNotificationsSheet,
+  NotificationsSheet,
+} from "./notifications-panel";
 import { RemindersBell } from "./reminders-bell";
 
 function reminder(over: Partial<Reminder> = {}): Reminder {
@@ -148,11 +175,18 @@ function setUnread(count: number) {
 }
 
 function renderBell() {
-  return render(<RemindersBell />, {
-    wrapper: ({ children }: { children: ReactNode }) => (
-      <ToastProvider>{children}</ToastProvider>
-    ),
-  });
+  // The phone sheet lives once in the bottom nav; render it beside the bell.
+  return render(
+    <>
+      <RemindersBell />
+      <NotificationsSheet />
+    </>,
+    {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ToastProvider>{children}</ToastProvider>
+      ),
+    },
+  );
 }
 
 async function openBell(name: string | RegExp = /Benachrichtigungen/) {
@@ -163,6 +197,8 @@ async function openBell(name: string | RegExp = /Benachrichtigungen/) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  closeNotificationsSheet();
+  swrCache.entries.clear();
   entryCounter = 0;
   state.phone = false;
   state.feedPages.clear();
@@ -361,6 +397,7 @@ describe("RemindersBell — Zähler", () => {
     const view = renderBell();
     expect(await screen.findByText("9")).toBeInTheDocument();
     view.unmount();
+    swrCache.entries.clear();
 
     setUnread(10);
     renderBell();
@@ -580,6 +617,8 @@ describe("RemindersBell — Telefon", () => {
       await within(sheet).findByText("Termin abgesagt"),
     ).toBeInTheDocument();
     expect(within(sheet).getByText("Kind")).toBeInTheDocument();
+
+    expect(mockTrack).toHaveBeenCalledWith("notification_bell_opened", "7");
 
     fireEvent.click(within(sheet).getByRole("button", { name: "Schließen" }));
     // The sheet animates out; until then Radix hides the page behind it.
