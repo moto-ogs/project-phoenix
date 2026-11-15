@@ -20,7 +20,7 @@ const UNREAD_FALLBACK_INTERVAL_MS = 60 * 1000;
 // Das Live-Ereignis zu einem Gelesen-Status kann kurz vor dem Speichern
 // eintreffen (#7148); ein Abruf erst nach einer kurzen Pause sieht den
 // gespeicherten Stand und fasst mehrere Ereignisse zu einem Abruf zusammen.
-export const NOTIFICATION_FEED_REFRESH_DELAY_MS = 500;
+const NOTIFICATION_FEED_REFRESH_DELAY_MS = 500;
 
 /** Ruft `refresh` nach dem letzten Live-Ereignis einer kurzen Folge auf. */
 function onFeedRefresh(refresh: () => void): () => void {

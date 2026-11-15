@@ -248,10 +248,12 @@ func TestCancellationFeedBundlesAndReads(t *testing.T) {
 	require.Len(t, next.Data.Entries, 1)
 	assert.NotEqual(t, page.Data.Entries[0].ID, next.Data.Entries[0].ID)
 	assert.Nil(t, next.Data.NextCursor)
+	code, body := f.call(t, planned.accountID, testpkg.Tenant(t), http.MethodGet, "/api/notifications/feed?cursor=not-a-cursor")
+	assert.Equal(t, http.StatusBadRequest, code, "a cursor the feed did not issue: %s", body)
 
 	// Reading one entry, a foreign entry and all entries.
 	bundled := feed.Data.Entries[0].ID
-	code, body := f.call(t, actor.accountID, testpkg.Tenant(t), http.MethodPost, fmt.Sprintf("/api/notifications/feed/%d/read", bundled))
+	code, body = f.call(t, actor.accountID, testpkg.Tenant(t), http.MethodPost, fmt.Sprintf("/api/notifications/feed/%d/read", bundled))
 	assert.Equal(t, http.StatusNotFound, code, "an entry of another account stays unread: %s", body)
 	code, body = f.call(t, planned.accountID, testpkg.Tenant(t), http.MethodPost, fmt.Sprintf("/api/notifications/feed/%d/read", bundled))
 	require.Equal(t, http.StatusOK, code, string(body))

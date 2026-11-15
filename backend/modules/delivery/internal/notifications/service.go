@@ -387,7 +387,7 @@ func (r *router) NotifyBatch(ctx context.Context, events []Event) error {
 // producer with no other delivery channel can roll back its claim when no push
 // subscription accepted the event.
 func (r *router) NotifyDurably(ctx context.Context, event Event) (int, error) {
-	if err := validate(event); err != nil {
+	if err := validateOutsideFeed(event); err != nil {
 		return 0, err
 	}
 	if event.Priority == "" {

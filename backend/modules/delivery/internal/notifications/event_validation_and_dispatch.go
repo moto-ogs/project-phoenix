@@ -73,8 +73,19 @@ func validate(event Event) error {
 	return nil
 }
 
+// validateOutsideFeed is validate for the delivery paths beside Notify: only
+// Notify writes the notification feed (#7148) and narrows the push to its
+// recipients, so a feed event elsewhere is refused rather than pushed to the
+// whole audience without its entries.
+func validateOutsideFeed(event Event) error {
+	if event.Feed != nil {
+		return errors.New("notification feed events are delivered by Notify only")
+	}
+	return validate(event)
+}
+
 func (r *router) NotifySynchronously(ctx context.Context, event Event) error {
-	if err := validate(event); err != nil {
+	if err := validateOutsideFeed(event); err != nil {
 		return err
 	}
 	if event.Priority == "" {
@@ -264,7 +275,7 @@ func (r *router) requireDispatch(ctx context.Context, tenantID int64, realDelive
 func prepareBatch(events []Event, tenantID int64) ([]Event, error) {
 	prepared := make([]Event, 0, len(events))
 	for _, event := range events {
-		if err := validate(event); err != nil {
+		if err := validateOutsideFeed(event); err != nil {
 			return nil, err
 		}
 		if event.Audience.TenantID != tenantID {

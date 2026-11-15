@@ -10,7 +10,6 @@ import (
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -84,5 +83,5 @@ func staffCancellationCopy(notice timetablePorts.StaffCancellationNotice) (title
 	if name == "" {
 		body = strings.Replace(body, "„“", "Ein Termin", 1)
 	}
-	return "Termin abgesagt", body, "/mein-dienstplan?d=" + calendar.Date(notice.Date).String()
+	return "Termin abgesagt", body, "/mein-dienstplan?d=" + notice.Date.String()
 }

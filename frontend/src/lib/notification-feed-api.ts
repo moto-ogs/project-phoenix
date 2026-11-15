@@ -19,7 +19,7 @@ interface UnreadCountWire {
 }
 
 /** Einträge je Seite; die Glocke lädt beim Scrollen die nächste. */
-export const NOTIFICATION_FEED_PAGE_SIZE = 20;
+const NOTIFICATION_FEED_PAGE_SIZE = 20;
 
 export { NOTIFICATION_FEED_REFRESH_EVENT } from "./notification-events";
 
