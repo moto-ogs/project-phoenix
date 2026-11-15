@@ -144,6 +144,12 @@ func WithAdjustmentEvents(publisher EventPublisher) StaffBalanceAdjustmentOption
 // StaffMonthCloseOption configures optional month-close collaborators.
 type StaffMonthCloseOption func(*staffMonthCloseService)
 
+// WithMonthCloseTraeger names the staff members the Träger closes (#4711):
+// the school's close leaves them out, and only the Träger closes them.
+func WithMonthCloseTraeger(traeger TraegerMonthStaff) StaffMonthCloseOption {
+	return func(s *staffMonthCloseService) { s.traeger = traeger }
+}
+
 // WithMonthClosePayrollRules freezes the school's wage types and rules into
 // every snapshot of a close (#4807).
 func WithMonthClosePayrollRules(reader workforce.PayrollRuleSetReader) StaffMonthCloseOption {
@@ -183,6 +189,12 @@ func WithOverviewTargetOverrides(reader TargetOverrideReader) StaffOverviewOptio
 // Without it the overview ignores takeovers.
 func WithOverviewVacationOpenings(repo VacationOpeningRecords) StaffOverviewOption {
 	return func(s *staffOverviewService) { s.openingRepo = repo }
+}
+
+// WithOverviewTraeger leaves the staff the Träger pays out of the payroll
+// rows (#4711).
+func WithOverviewTraeger(traeger TraegerMonthStaff) StaffOverviewOption {
+	return func(s *staffOverviewService) { s.traeger = traeger }
 }
 
 // WithAbsenceUnitOfWork binds the command boundary; pure record doubles can

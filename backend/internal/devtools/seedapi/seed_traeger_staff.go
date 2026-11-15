@@ -70,7 +70,11 @@ func (seedTraegerStaffStep) Run(ctx context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("  Träger staff records: %d linked, %d contracts, %d imported, %d planned shifts\n", linked, contracts, imported, planned)
+	closed, err := seedTraegerMonthClose(rt.Client, auth, first)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("  Träger staff records: %d linked, %d contracts, %d imported, %d planned shifts, month closed: %t\n", linked, contracts, imported, planned, closed)
 	return seedTraegerAbsences(ctx, rt, auth)
 }
 

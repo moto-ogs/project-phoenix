@@ -27,6 +27,8 @@ func renderMonthCloseError(w http.ResponseWriter, r *http.Request, err error) {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeWorkforceMonthNotClosable))
 	case errors.Is(err, workforce.ErrMonthNotClosed):
 		common.RenderError(w, r, common.ErrorNotFoundWithCode(err, common.CodeWorkforceMonthNotClosed))
+	case errors.Is(err, workforce.ErrMonthClosedByTraeger):
+		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeWorkforceMonthClosedByTraeger))
 	default:
 		common.RenderError(w, r, common.RenderWithRules(err, monthCloseErrorRules, common.ErrorInternalServer))
 	}
@@ -55,6 +57,31 @@ func (rs *StaffAdminResource) listMonthCloseStatus(w http.ResponseWriter, r *htt
 		return
 	}
 	common.Respond(w, r, http.StatusOK, snapshots, "Month close status retrieved")
+}
+
+// listTraegerMonthStaff handles GET
+// /api/staff/time-tracking/month-close/traeger-staff?year=&month=: the staff
+// members the Träger closes because a contract of the Träger covers the
+// month (#4711). The school's close leaves them out.
+func (rs *StaffAdminResource) listTraegerMonthStaff(w http.ResponseWriter, r *http.Request) {
+	year, month, err := ParseYearMonthQuery(r)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
+	staffIDs, err := rs.MonthCloseService.TraegerMonthStaff(r.Context(), year, month)
+	if err != nil {
+		renderMonthCloseError(w, r, err)
+		return
+	}
+	common.Respond(w, r, http.StatusOK, traegerMonthStaff{Year: year, Month: month, StaffIDs: staffIDs}, "Traeger month staff retrieved")
+}
+
+// traegerMonthStaff lists the staff members the Träger closes in a month.
+type traegerMonthStaff struct {
+	Year     int     `json:"year"`
+	Month    int     `json:"month"`
+	StaffIDs []int64 `json:"staff_ids"`
 }
 
 // closeMonth handles POST /api/staff/time-tracking/month-close — freezes the

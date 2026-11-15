@@ -12,6 +12,7 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /api/staff/absences/plan-gaps
 	GET /api/staff/qualification-types
 	GET /api/staff/qualifications
+	GET /api/staff/time-tracking/month-close/traeger-staff
 	GET /api/staff/time-tracking/payroll-dispatch
 	GET /api/staff/time-tracking/payroll-rules
 	GET /api/staff/time-tracking/target-coverage

@@ -228,6 +228,9 @@ func applyChainSplice(summary *MonthSummary, splice *chainSplice) {
 		summary.IsClosed = true
 		closedAt, closedBy := own.ClosedAt, own.ClosedBy
 		summary.ClosedAt, summary.ClosedBy = &closedAt, &closedBy
+		if own.Source == SnapshotSourceTraeger {
+			summary.ClosedBy, summary.ClosedByTraeger = nil, true
+		}
 		summary.CloseReason = own.CloseReason
 		frozen := own.ClosingBalanceMinutes
 		summary.FrozenClosingBalanceMinutes = &frozen

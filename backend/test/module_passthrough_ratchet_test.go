@@ -277,7 +277,10 @@ const modulePassthroughApplicationSegment = "/internal/application/"
 // Lowered by #7081: Identity & Access keeps one name for the operator's
 // resend of a code (-1).
 // Lowered by #7058: the payroll dispatch overview reads its mails too (-1).
-const modulePassthroughOwnerBudgetTotal = 1397
+// Raised by ADR 0240: the month close of the Träger in modules/workforce,
+// whose capability maps the close, the reopen and the staff read onto the
+// public failures (+3).
+const modulePassthroughOwnerBudgetTotal = 1400
 
 // modulePassthroughOwnerBudgets is the register: module directory →
 // pass-throughs measured in its application layer and its compositions
@@ -352,7 +355,9 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Lowered by #6847: approving and withdrawing an absence return their
 	// plan cascade instead of forwarding the write (-2).
 	// Lowered by #7058: the payroll dispatch overview reads its mails too (-1).
-	"modules/workforce":      135,
+	// Raised by ADR 0240: the month close of the Träger maps its close, its
+	// reopen and the staff the school leaves out onto the public failures (+3).
+	"modules/workforce":      138,
 	"workflows/openroommove": 1,
 	// Raised by ADR 0078: the week change of the meal plan adapter.
 	"workflows/parentportal": 18,

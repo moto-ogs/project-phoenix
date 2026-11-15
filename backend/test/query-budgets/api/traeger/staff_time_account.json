@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.staff_time_account",
+  "max": 35,
+  "exact": true,
+  "description": "modules/workforce — GET /traeger/staff-records/{id}/time-account (#4711,\nADR 0240) at a Träger with two schools: the Träger's schools, the binding of\nthe Träger transaction, its release, the record and its links in one\nstatement each; then per school the binding of its tenant transaction, the\nstaff the Träger closes, the closed months, and the Monatskarte of the\nschool (snapshots, settings, closing days, overrides, profile, schedules,\nsessions, breaks, absences, shifts, adjustments). Flat in the number of\nmonths and bookings; one tenant transaction per school (ADR 0105).",
+  "route": "GET /traeger/staff-records/{id}/time-account"
+}

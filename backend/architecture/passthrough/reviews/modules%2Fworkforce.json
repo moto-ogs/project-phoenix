@@ -571,6 +571,11 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0240",
+      "id": "modules/workforce/internal/application/timetracking/monthClosingCapability.TraegerMonthStaff",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
       "decision": "0090",
       "id": "modules/workforce/internal/application/timetracking/monthSnapshotCapability.ClosedMonthSnapshots",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
@@ -713,6 +718,16 @@
     {
       "decision": "0090",
       "id": "modules/workforce/internal/application/timetracking/timeClock.StartBreakOn",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0240",
+      "id": "modules/workforce/internal/application/timetracking/traegerMonthCapability.CloseMonthForTraeger",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0240",
+      "id": "modules/workforce/internal/application/timetracking/traegerMonthCapability.ReopenMonthForTraeger",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

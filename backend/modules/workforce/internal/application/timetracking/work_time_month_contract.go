@@ -74,10 +74,13 @@ type MonthSummary struct {
 	// --- Monatsabschluss (#1417) -----------------------------------------
 	// IsClosed reports whether THIS month is frozen. The remaining fields
 	// below describe the freeze.
-	IsClosed    bool       `json:"is_closed"`
-	ClosedAt    *time.Time `json:"closed_at,omitempty"`
-	ClosedBy    *int64     `json:"closed_by,omitempty"`
-	CloseReason string     `json:"close_reason,omitempty"`
+	IsClosed bool       `json:"is_closed"`
+	ClosedAt *time.Time `json:"closed_at,omitempty"`
+	ClosedBy *int64     `json:"closed_by,omitempty"`
+	// ClosedByTraeger marks a close of the Personalverwaltung of the
+	// Träger (#4711): ClosedBy is then empty and only the Träger reopens.
+	ClosedByTraeger bool   `json:"closed_by_traeger"`
+	CloseReason     string `json:"close_reason,omitempty"`
 	// FrozenClosingBalanceMinutes is the value that carries forward once this
 	// month is closed. ClosingBalanceMinutes stays the LIVE number so the
 	// card's carry_in + balance identity holds.

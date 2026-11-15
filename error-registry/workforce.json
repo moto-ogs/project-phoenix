@@ -141,6 +141,12 @@
       "legacy": "workforce.month_closed"
     },
     {
+      "code": "workforce.month_closed_by_traeger",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.month_closed_by_traeger"
+    },
+    {
       "code": "workforce.month_not_closable",
       "class": "input",
       "parameters": [],
@@ -570,6 +576,29 @@
         "day"
       ],
       "legacy": "workforce.traeger_holiday_week_school_override"
+    },
+    {
+      "code": "workforce.traeger_month_closed_by_school",
+      "class": "business_rejection",
+      "parameters": [
+        "school"
+      ],
+      "legacy": "workforce.traeger_month_closed_by_school"
+    },
+    {
+      "code": "workforce.traeger_month_later_closed",
+      "class": "business_rejection",
+      "parameters": [
+        "school",
+        "month"
+      ],
+      "legacy": "workforce.traeger_month_later_closed"
+    },
+    {
+      "code": "workforce.traeger_month_not_kept",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_month_not_kept"
     },
     {
       "code": "workforce.traeger_planning_shift_not_found",

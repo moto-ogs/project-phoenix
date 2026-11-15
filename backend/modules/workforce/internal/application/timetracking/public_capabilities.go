@@ -42,6 +42,9 @@ var timeTrackingSentinels = []struct {
 	{ErrMonthNotClosable, workforce.ErrMonthNotClosable},
 	{ErrMonthNotClosed, workforce.ErrMonthNotClosed},
 	{ErrLaterMonthClosed, workforce.ErrLaterMonthClosed},
+	{ErrMonthClosedByTraeger, workforce.ErrMonthClosedByTraeger},
+	{ErrMonthClosedBySchool, workforce.ErrMonthClosedBySchool},
+	{ErrMonthNotKeptByTraeger, workforce.ErrMonthNotKeptByTraeger},
 	{ErrMonthOutOfRange, workforce.ErrMonthOutOfRange},
 	{ErrVacationOpeningInvalid, workforce.ErrVacationOpeningInvalid},
 	{ErrVacationOpeningNotFound, workforce.ErrVacationOpeningNotFound},
@@ -140,7 +143,7 @@ func (c workTimeMonthCapability) MonthSummary(ctx context.Context, staffID int64
 		TrainingDaysWithoutTarget: summary.TrainingDaysWithoutTarget, OtherDaysWithoutTarget: summary.OtherDaysWithoutTarget,
 		PlannedShiftMinutes: summary.PlannedShiftMinutes, AdjustmentMinutes: summary.AdjustmentMinutes,
 		BalanceMinutes: summary.BalanceMinutes, ClosingBalanceMinutes: summary.ClosingBalanceMinutes, IsClosed: summary.IsClosed,
-		ClosedAt: summary.ClosedAt, ClosedBy: summary.ClosedBy, CloseReason: summary.CloseReason,
+		ClosedAt: summary.ClosedAt, ClosedBy: summary.ClosedBy, ClosedByTraeger: summary.ClosedByTraeger, CloseReason: summary.CloseReason,
 		FrozenClosingBalanceMinutes: summary.FrozenClosingBalanceMinutes, DriftMinutes: summary.DriftMinutes,
 		CarryInFrozen: summary.CarryInFrozen, CarryInFrozenFromMonth: summary.CarryInFrozenFromMonth,
 	}
@@ -323,6 +326,11 @@ func (c monthClosingCapability) CloseMonth(ctx context.Context, closedBy int64, 
 
 func (c monthClosingCapability) ReopenMonth(ctx context.Context, staffID, reopenedBy int64, year, month int, reason string) error {
 	return mapTimeTrackingFailure(c.closing.ReopenMonth(ctx, staffID, reopenedBy, year, month, reason))
+}
+
+func (c monthClosingCapability) TraegerMonthStaff(ctx context.Context, year, month int) ([]int64, error) {
+	staffIDs, err := c.closing.TraegerMonthStaff(ctx, year, month)
+	return staffIDs, mapTimeTrackingFailure(err)
 }
 
 func (c monthClosingCapability) ListMonthStatus(ctx context.Context, year, month int) ([]*workforce.StaffMonthBalanceSnapshot, error) {

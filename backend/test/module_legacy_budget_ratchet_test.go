@@ -312,7 +312,7 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0240: the clock fields of modules/careplan/compose (+8).
 // ADR 0242: the working-time check and the Einsatzplanung sites of
 // modules/workforce/compose (+11).
-const moduleComposeBudgetTotal = 13531
+const moduleComposeBudgetTotal = 13530
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -491,7 +491,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0188: the bank cipher dependency and backfill/rekey constructor (+7).
 	// ADR 0197: the export opener of the sealed staff bank and tax data (+5).
 	// ADR 0242: the working-time check and the Einsatzplanung sites (+11).
-	"modules/workforce/compose":       929,
+	"modules/workforce/compose":       928,
 	"workflows/catererportal/compose": 37, // added by ADR 0077
 	// Raised by ADR 0224: the class follow-up port (+2).
 	"workflows/gradetransition/compose": 51,
