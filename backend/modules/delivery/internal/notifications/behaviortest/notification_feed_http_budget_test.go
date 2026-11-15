@@ -21,17 +21,21 @@ import (
 // The staff portal and moto schule (#7139) read the same entries.
 func TestNotificationFeedHTTPQueryBudget(t *testing.T) {
 	t.Parallel()
-	for _, portal := range []struct{ name, scope, path, scenario string }{
-		{"staff", "", "/api/notifications/feed/", "api.notifications.feed"},
-		{"school", "school", "/school/notifications/feed/", "school.notifications.feed"},
-	} {
-		t.Run(portal.name, func(t *testing.T) {
-			assertNotificationFeedQueryBudget(t, portal.scope, portal.path, portal.scenario)
+	t.Run("staff", func(t *testing.T) {
+		assertNotificationFeedQueryBudget(t, "", "/api/notifications/feed/", func(t *testing.T, measurement querybudgets.Measurement) {
+			t.Helper()
+			querybudgets.AssertQueryBudget(t, "api.notifications.feed", measurement)
 		})
-	}
+	})
+	t.Run("school", func(t *testing.T) {
+		assertNotificationFeedQueryBudget(t, "school", "/school/notifications/feed/", func(t *testing.T, measurement querybudgets.Measurement) {
+			t.Helper()
+			querybudgets.AssertQueryBudget(t, "school.notifications.feed", measurement)
+		})
+	})
 }
 
-func assertNotificationFeedQueryBudget(t *testing.T, scope, path, scenario string) {
+func assertNotificationFeedQueryBudget(t *testing.T, scope, path string, assertBudget func(*testing.T, querybudgets.Measurement)) {
 	t.Helper()
 	db := testpkg.SetupIsolatedTestDB(t)
 	module, err := api.NewDeliveryTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
@@ -65,7 +69,7 @@ func assertNotificationFeedQueryBudget(t *testing.T, scope, path, scenario strin
 		response := testutil.ExecuteRequestForTest(t, router, request)
 		counter.Stop()
 		measurement := counter.Measurement(counter.Queries())
-		querybudgets.AssertQueryBudget(t, scenario, measurement)
+		assertBudget(t, measurement)
 		require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 		var page struct {
 			Data struct {

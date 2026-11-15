@@ -217,9 +217,7 @@ func RegisterType(def TypeDefinition) {
 	default:
 		panic("notifications: unknown portal " + def.Portal + " for key " + def.Key)
 	}
-	if def.SchoolPortalWithoutPermission && (!def.SchoolPortal || def.Permission == "") {
-		panic("notifications: type " + def.Key + " needs SchoolPortal and a Permission to waive it in the school portal")
-	}
+	requireSchoolPortalWaiver(def)
 	switch def.Channel {
 	case "", ChannelPush:
 		if _, ok := groupOrder[def.Group]; !ok {
@@ -258,6 +256,14 @@ func OfferedInPortal(def TypeDefinition, portal string) bool {
 		return def.Portal == PortalSchool || (def.Portal == PortalStaff && def.SchoolPortal)
 	}
 	return def.Portal == portal
+}
+
+// requireSchoolPortalWaiver panics when a type waives a Permission in the
+// school portal it neither offers there nor declares.
+func requireSchoolPortalWaiver(def TypeDefinition) {
+	if def.SchoolPortalWithoutPermission && (!def.SchoolPortal || def.Permission == "") {
+		panic("notifications: type " + def.Key + " needs SchoolPortal and a Permission to waive it in the school portal")
+	}
 }
 
 // PermissionInPortal is the right a person using the portal must hold to be

@@ -21,7 +21,7 @@ export interface NotificationFeedPortal {
   readonly analyticsSchoolId?: string | null;
 }
 
-export const STAFF_NOTIFICATION_FEED_PORTAL: NotificationFeedPortal = {
+const STAFF_NOTIFICATION_FEED_PORTAL: NotificationFeedPortal = {
   apiBase: "/api/notifications/feed",
   keyScope: "staff",
   resolveLink: (link) => link,
