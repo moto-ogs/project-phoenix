@@ -137,7 +137,7 @@ var demoErasureSchoolTablesOutsideThePlan = map[string]struct {
 	"platform.school_erasures":                 {true, "evidence of an operator's school erasure; IDs and counts only"},
 	"platform.traeger_document_reads":          {true, "Träger document reads keep their own three-year deadline; the visitor account is anonymized (#4048)"},
 	"platform.traeger_document_releases":       {true, "a Träger release goes with its document or the Träger (ADR 0157)"},
-	"workforce.staff_proof_type_mappings":      {true, "a mapping of a school kind onto a Träger kind names the school by plain id and goes with the Träger kind or the Träger (ADR 0236)"},
+	"workforce.staff_proof_type_mappings":      {true, "a mapping of a school kind onto a Träger kind names the school by plain id and goes with the Träger kind or the Träger (ADR 0238)"},
 	"workforce.staff_contract_holiday_weeks":   {true, "the Ferien-Soll of a Träger contract names the school by plain id and goes with its contract, record or the Träger (ADR 0237)"},
 	"workforce.staff_contract_targets":         {true, "the Soll of a Träger contract names the school by plain id and goes with its contract, record or the Träger (ADR 0237)"},
 	"workforce.staff_record_links":             {true, "an Einsatzort of a Träger staff record names the school by plain id and goes with its record or the Träger (ADR 0233)"},

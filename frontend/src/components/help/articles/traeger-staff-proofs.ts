@@ -2,7 +2,7 @@ import type { HelpTopic } from "../help-types";
 import { HELP_TOPICS } from "~/lib/help-topics";
 
 /**
- * `/traeger/nachweise` (#4707, ADR 0236): Nachweise der Personalakten mit
+ * `/traeger/nachweise` (#4707, ADR 0238): Nachweise der Personalakten mit
  * Ablaufwarnung. Nachweisarten einstellen, Nachweise in der Akte eintragen,
  * die Ablaufliste lesen und herunterladen, die Arten der Schulen zuordnen.
  */

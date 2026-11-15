@@ -29,6 +29,7 @@ import { reportsConcept } from "~/lib/concepts/reports";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { settingsConcept } from "~/lib/concepts/settings";
 import { staffConcept } from "~/lib/concepts/staff";
+import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 
 /** Das Recht, das „Mitglieder und Rollen" öffnet (ADR 0084, #4650). */
@@ -191,6 +192,15 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         label: "Personalnachweise",
         shortLabel: "Nachweise",
         concept: documentsConcept,
+        right: STAFF_RIGHT,
+      },
+      {
+        // Arten und Kontingente über alle Schulen (#4710).
+        key: "abwesenheitsarten",
+        href: "/traeger/personal/abwesenheitsarten",
+        label: "Abwesenheitsarten",
+        shortLabel: "Abwesenheit",
+        concept: timeTrackingConcept,
         right: STAFF_RIGHT,
       },
     ],

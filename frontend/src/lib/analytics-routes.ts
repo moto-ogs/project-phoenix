@@ -271,6 +271,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/nachweise",
   "/personal",
   "/personal/:id",
+  "/personal/abwesenheitsarten",
   "/reset-password",
   "/schliesstage",
   "/schulen/:id",

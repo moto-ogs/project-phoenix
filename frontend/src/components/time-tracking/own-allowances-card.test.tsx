@@ -38,6 +38,7 @@ function regeneration(): OwnAbsenceAllowance {
         expiredDays: 0,
         expiresOn: "2026-03-31",
       },
+      keptByTraeger: false,
     },
   };
 }

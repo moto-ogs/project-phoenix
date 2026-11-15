@@ -1,7 +1,7 @@
 "use client";
 
 // Einen Nachweis an einer Personalakte eintragen oder erneuern (#4707,
-// ADR 0236). Beim Führungszeugnis hält moto nur fest, dass es eingesehen
+// ADR 0238). Beim Führungszeugnis hält moto nur fest, dass es eingesehen
 // wurde, wann es ausgestellt ist und dass es keine einschlägige Eintragung
 // hat; eine Kopie gibt es nicht. Ohne Ablaufdatum rechnet moto es aus der
 // Gültigkeit der Art.

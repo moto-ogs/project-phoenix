@@ -22,6 +22,10 @@ var traegerStaffCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPut, "/traeger/staff-proofs/school-kinds"}:             notCaptured,
 	{http.MethodPut, "/traeger/staff-proofs/records/{id}/{typeId}"}:    notCaptured,
 	{http.MethodDelete, "/traeger/staff-proofs/records/{id}/{typeId}"}: notCaptured,
+	// The Abwesenheitsarten and Kontingente of the Träger (#4710).
+	{http.MethodPost, "/traeger/absence-types/"}:                              notCaptured,
+	{http.MethodPut, "/traeger/absence-types/{id}"}:                           notCaptured,
+	{http.MethodPut, "/traeger/staff-records/{id}/absence-accounts/{typeId}"}: notCaptured,
 	// The Arbeitsverträge of a record (#4706).
 	{http.MethodPost, "/traeger/staff-records/{id}/contracts"}:                                                     notCaptured,
 	{http.MethodPut, "/traeger/staff-records/{id}/contracts/{contractId}"}:                                         notCaptured,

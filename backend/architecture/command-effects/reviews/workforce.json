@@ -10512,7 +10512,7 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0236",
+      "approval_adr": "0238",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Qualifications.StaffTraegerProofs",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -11520,7 +11520,7 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0236",
+      "approval_adr": "0238",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerProofReminders.RunDue",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -11678,7 +11678,7 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0236",
+      "approval_adr": "0238",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.DeleteProof",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -11690,7 +11690,7 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0236",
+      "approval_adr": "0238",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.ProofList",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -11702,7 +11702,7 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0236",
+      "approval_adr": "0238",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.SaveProof",
       "classification": "unresolved",
       "effect": "unresolved",

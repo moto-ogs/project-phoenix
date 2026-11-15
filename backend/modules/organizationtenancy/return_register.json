@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "119107551505f2e63208a12917477a96f76c8ca204ef3c89d88012bdfa972565",
+  "catalogSHA256": "a1f2d26c30a1031554debcd9904e8d330c691b30c3ef3b31e68804435ca61aa1",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -2049,6 +2049,30 @@
           "name": "wage_type_id",
           "type": "bigint",
           "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "traeger_absence_type_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "requestable",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "offered",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "school_limit_days",
+          "type": "numeric",
+          "udt": "numeric",
           "nullable": true
         }
       ],
@@ -37565,6 +37589,240 @@
       ],
       "packages": [
         "school"
+      ]
+    },
+    {
+      "name": "workforce.absence_allowance_changes",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "staff_record_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "absence_type_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "udt": "int4",
+          "nullable": false
+        },
+        {
+          "name": "old_entitled_days",
+          "type": "numeric",
+          "udt": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "new_entitled_days",
+          "type": "numeric",
+          "udt": "numeric",
+          "nullable": false
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "changed_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "absence_type_id",
+          "targetTable": "workforce.absence_types",
+          "targetColumn": "id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.absence_types",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "staff_record_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.absence_allowances",
+      "columns": [
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "staff_record_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "absence_type_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "udt": "int4",
+          "nullable": false
+        },
+        {
+          "name": "entitled_days",
+          "type": "numeric",
+          "udt": "numeric",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "absence_type_id",
+          "targetTable": "workforce.absence_types",
+          "targetColumn": "id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.absence_types",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "staff_record_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.absence_types",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "allowance_enabled",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "standard_days",
+          "type": "numeric",
+          "udt": "numeric",
+          "nullable": false
+        },
+        {
+          "name": "carryover_until",
+          "type": "character",
+          "udt": "bpchar",
+          "nullable": true
+        },
+        {
+          "name": "requestable",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
       ]
     },
     {

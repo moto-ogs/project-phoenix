@@ -219,6 +219,11 @@ var approveAbsenceErrorRules = []common.ErrorRule{
 	}},
 	{Target: workforce.ErrAbsenceNotFound, Render: common.ErrorNotFound},
 	{Target: workforce.ErrAbsenceNotApprovable, Render: conflictWithCode(common.CodeWorkforceAbsenceAlreadyDecided)},
+	// A request of a requestable type meets what changed since (#4710).
+	{Target: workforce.ErrAbsenceTypeInactive, Render: conflictWithCode(common.CodeWorkforceAbsenceTypeInactive)},
+	{Target: workforce.ErrAbsenceTypeNotOffered, Render: conflictWithCode(common.CodeWorkforceAbsenceTypeNotOffered)},
+	{Target: workforce.ErrAbsenceTypeSchoolLimitExceeded, Render: conflictWithCode(common.CodeWorkforceAbsenceTypeSchoolLimitExceeded)},
+	{Target: workforce.ErrAbsenceTypeAllowanceExceeded, Render: conflictWithCode(common.CodeWorkforceAbsenceAllowanceExceeded)},
 }
 
 // denyAbsenceErrorRules keeps a missing reason and a stale decision out of
@@ -577,6 +582,9 @@ var adminAbsenceErrorRules = []common.ErrorRule{
 	{Target: workforce.ErrAbsenceTypeAllowanceExceeded, Render: func(err error) render.Renderer {
 		return common.ErrorConflictWithCode(err, common.CodeWorkforceAbsenceAllowanceExceeded)
 	}},
+	// The school's deviation from a type of its Träger (#4710).
+	{Target: workforce.ErrAbsenceTypeNotOffered, Render: conflictWithCode(common.CodeWorkforceAbsenceTypeNotOffered)},
+	{Target: workforce.ErrAbsenceTypeSchoolLimitExceeded, Render: conflictWithCode(common.CodeWorkforceAbsenceTypeSchoolLimitExceeded)},
 	{Target: workforce.ErrVacationQuotaExceeded, Render: func(err error) render.Renderer {
 		return common.ErrorConflictWithCode(err, common.CodeWorkforceVacationQuotaExceeded)
 	}},

@@ -34,7 +34,10 @@ import {
   formatDayCount,
 } from "~/lib/absence-helpers";
 import { createLogger } from "~/lib/logger";
-import type { StaffAbsence } from "~/lib/time-tracking-helpers";
+import {
+  absenceDisplayLabel,
+  type StaffAbsence,
+} from "~/lib/time-tracking-helpers";
 import {
   timeTrackingService,
   type VacationQuotaSummary,
@@ -74,6 +77,14 @@ function decisionNoteLabel(status: string): string {
   return "Anmerkung der Leitung:";
 }
 
+/** Urlaub und jeder Antrag einer beantragbaren eigenen Art (#4710). */
+function isRequestFlowAbsence(absence: StaffAbsence): boolean {
+  return (
+    absence.absenceType === "vacation" ||
+    (Boolean(absence.absenceTypeId) && absence.status !== "reported")
+  );
+}
+
 export function LeaveRequestsCard() {
   const currentTimestamp = useCurrentTimestamp();
   const [modalOpen, setModalOpen] = useState(false);
@@ -106,10 +117,12 @@ export function LeaveRequestsCard() {
         timeTrackingService.getQuestionedAbsences(),
       ]);
       setQuota(q);
-      setVacations(abs.filter((a) => a.absenceType === "vacation"));
+      // Neben Urlaub laufen Anträge beantragbarer Arten hier mit (#4710):
+      // alles, was nicht direkt eingetragen ist.
+      setVacations(abs.filter(isRequestFlowAbsence));
       setQuestionedVacations(
         questions.filter(
-          (a) => a.absenceType === "vacation" && a.status === "question",
+          (a) => isRequestFlowAbsence(a) && a.status === "question",
         ),
       );
       clearLoadError();
@@ -396,6 +409,9 @@ function AbsenceRequestItem({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium text-gray-800">
+            {absence.absenceType !== "vacation" && (
+              <span className="mr-2">{absenceDisplayLabel(absence)} ·</span>
+            )}
             {formatRange(absence.dateStart, absence.dateEnd)}
             <span className="ml-2 text-xs text-gray-500">
               · {formatDayCount(dayCountFor(absence))}

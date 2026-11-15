@@ -7,6 +7,7 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	DELETE /traeger/staff-records/{id}/contracts/{contractId}/holiday-weeks/{schoolId}/{weekStart}
 	GET /traeger/staff-records/
 	GET /traeger/staff-records/{id}
+	GET /traeger/staff-records/{id}/absence-accounts
 	GET /traeger/staff-records/{id}/financial
 	POST /traeger/staff-records/
 	POST /traeger/staff-records/link-preview
@@ -14,6 +15,7 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	POST /traeger/staff-records/{id}/contracts/{contractId}/holiday-weeks
 	POST /traeger/staff-records/{id}/contracts/{contractId}/soll
 	POST /traeger/staff-records/{id}/financial/reveal
+	PUT /traeger/staff-records/{id}/absence-accounts/{typeId}
 	PUT /traeger/staff-records/{id}/contracts/{contractId}
 	PUT /traeger/staff-records/{id}/financial
 	PUT /traeger/staff-records/{id}/personnel-number

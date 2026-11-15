@@ -1208,6 +1208,23 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": data})
 			return
 		}
+		// The Träger's Abwesenheitsarten (#4710): both types exist after the
+		// seed; the school carries none in this fake.
+		if r.URL.Path == "/traeger/absence-types/" {
+			data := any(map[string]any{"id": 1})
+			if r.Method == seedHTTPMethodGet {
+				data = map[string]any{"types": []any{
+					map[string]any{"id": 1, "name": seedTraegerRegeneration},
+					map[string]any{"id": 2, "name": seedTraegerConversion},
+				}}
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": data})
+			return
+		}
+		if r.Method == seedHTTPMethodGet && r.URL.Path == "/api/absence-types" {
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []any{}})
+			return
+		}
 		// The shared document step (#4692) reads the schools with their
 		// groups and the documents, then uploads one document at a time.
 		if data, ok := fakeTraegerDocumentData(r.Method, r.URL.Path); ok {

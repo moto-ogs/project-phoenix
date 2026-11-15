@@ -139,12 +139,8 @@ func (s *staffAbsenceService) ApproveAbsence(ctx context.Context, absenceID int6
 	if err := s.rejectVacationBeforeOpening(ctx, absence); err != nil {
 		return nil, err
 	}
-	// Other open requests are judged at their own approval; only what is
-	// already spent must leave room for this one.
-	if absence.AbsenceType == AbsenceTypeVacation {
-		if err := s.ensureVacationFits(ctx, absence, absence.ID, false); err != nil {
-			return nil, err
-		}
+	if err := s.ensureApprovalFits(ctx, absence); err != nil {
+		return nil, err
 	}
 	fromStatus := absence.Status
 	now := time.Now()
@@ -175,6 +171,34 @@ func (s *staffAbsenceService) ApproveAbsence(ctx context.Context, absenceID int6
 	}
 	s.broadcastTimeTrackingChanged(ctx)
 	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
+}
+
+// ensureApprovalFits checks the request against what is spent now: other
+// open requests are judged at their own approval, so only what is already
+// spent must leave room for this one.
+func (s *staffAbsenceService) ensureApprovalFits(ctx context.Context, absence *StaffAbsence) error {
+	if absence.AbsenceType == AbsenceTypeVacation {
+		if err := s.ensureVacationFits(ctx, absence, absence.ID, false); err != nil {
+			return err
+		}
+	}
+	return s.recheckRequestedType(ctx, absence)
+}
+
+// recheckRequestedType applies what changed at the school since the request
+// of a requestable type (#4710): a type no longer offered or switched off,
+// and the school's limit and the Kontingent, the request's own days counted
+// once.
+func (s *staffAbsenceService) recheckRequestedType(ctx context.Context, absence *StaffAbsence) error {
+	if absence.AbsenceTypeID == nil || s.absenceTypes == nil {
+		return nil
+	}
+	selected, err := s.absenceTypes.ResolveForAbsence(ctx, *absence.AbsenceTypeID)
+	if err != nil || !selected.AllowanceEnabled {
+		return err
+	}
+	_, err = s.absenceTypes.PreviewAllowanceRebooking(ctx, absence.StaffID, *absence.AbsenceTypeID, []int64{absence.ID})
+	return err
 }
 
 func (s *staffAbsenceService) DenyAbsence(ctx context.Context, absenceID int64, actorAccountID int64, decidedByStaffID int64, reason string) (*StaffAbsenceResponse, error) {

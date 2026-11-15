@@ -906,6 +906,7 @@ describe("TimeTrackingService", () => {
               expiredDays: 0,
               expiresOn: "2026-03-31",
             },
+            keptByTraeger: false,
           },
         },
       ]);

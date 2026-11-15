@@ -1,8 +1,8 @@
 "use client";
 
 // Eine Personalakte des Trägers (#4705, ADR 0089): die Person, die
-// Personalnummer des Trägers, die Einsatzorte, die Bank- und Steuerdaten und
-// der Verlauf. Die Personalnummer und die Bankdaten ändert nur die
+// Personalnummer des Trägers, die Einsatzorte, die Kontingente (#4710), die
+// Bank- und Steuerdaten und der Verlauf. Die Personalnummer und die Bankdaten ändert nur die
 // Personalverwaltung; die Schulen sehen sie nur noch als „vom Träger“.
 
 import { EyeIcon, PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
@@ -15,6 +15,7 @@ import {
   staffChangeText,
 } from "~/components/traeger/staff/staff-record-format";
 import { StaffProofsCard } from "~/components/traeger/staff/staff-proofs-card";
+import { StaffAbsenceAccountsCard } from "~/components/traeger/staff/staff-absence-accounts-card";
 import { Button } from "~/components/ui/button";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -513,6 +514,7 @@ export default function TraegerStaffRecordPage() {
               )
             }
           />
+          <StaffAbsenceAccountsCard recordId={record.id} />
           <StaffContractsCard record={record} onChanged={setRecord} />
 
           <FinancialCard record={record} onSaved={() => void load()} />

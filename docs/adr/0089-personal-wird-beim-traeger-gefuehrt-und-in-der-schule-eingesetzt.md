@@ -368,3 +368,67 @@ Zahlen werden nicht protokolliert.
 - Offen bleiben: das SFTP-Ziel des Trägers, mehrere Arbeitgeber je Träger,
   eigene Löschfristen je Träger und ein Import von Plänen aus tarifführenden
   Systemen.
+
+## Nachtrag 2026-11-14: Abweichung je Schule bei Arten und Kontingenten (E5, #4710)
+
+**Status: Vorgeschlagen.**
+
+Entscheidung E5 des Product Owners vom 13.11.2026 (Kommentar in
+[#4710](https://github.com/moto-ogs/project-phoenix/issues/4710)). Sie ändert
+§10: Die Schule darf von den Arten und Kontingenten des Trägers abweichen.
+Die Vorrangregel lautet:
+
+1. **Der Träger legt fest.** Mit Freigabe legt die Personalverwaltung eigene
+   Abwesenheitsarten des Trägers an, etwa Regenerationstag oder
+   Umwandlungstag. Eine Art hat einen Namen, wahlweise ein Kontingent mit
+   einem Standard in Tagen je Jahr, einen Verfall (31.12. oder ein Tag im
+   Folgejahr) und die Angabe, ob Betreuungskräfte sie beantragen dürfen. Die
+   fünf Grundarten im Code bleiben unverändert und haben kein Kontingent des
+   Trägers. Der Urlaubsanspruch gehört zum Arbeitsvertrag
+   ([#4706](https://github.com/moto-ogs/project-phoenix/issues/4706)).
+2. **Jede Schule führt die Art des Trägers.** Workforce schreibt jede Art des
+   Trägers in jede Schule des Trägers, in deren Tenant-Transaktion, als Art
+   der Schule mit Verweis auf die Art des Trägers. Name, Kontingent, Verfall
+   und „beantragbar“ ändert nur die Personalverwaltung. Hat die Schule schon
+   eine eigene Art mit demselben Namen, wird diese einmal zur Art des
+   Trägers (Zuordnung nach §10). Ihre Buchungen und ihre Lohnart bleiben.
+3. **Eine Schule darf abweichen, nur für ihre Einsätze.** Je Art des
+   Trägers wählt die Schule: „an dieser Schule nicht anbieten“ und „höchstens
+   N Tage je Person und Jahr an dieser Schule“. Die Abweichung gilt nur für
+   Buchungen an dieser Schule. Sie erhöht nie das Kontingent und ändert nie,
+   wie ein gebuchter Tag zählt.
+4. **Ein Kontingent über alle Schulen.** Für eine Person mit Personalakte gilt
+   je Art und Jahr ein Anspruch: der Wert der Personalverwaltung für diese
+   Person, sonst der Standard der Art. Jede Buchung an jeder Schule der Akte
+   zieht davon ab, beantragte Tage halten ihre Tage bis zur Entscheidung.
+   Eine Buchung braucht den Rest im Kontingent und, wenn die Schule eine
+   Grenze setzt, den Rest unter dieser Grenze. Über das Kontingent bleibt sie
+   gesperrt. Personen ohne Akte buchen wie bisher gegen die Kontingente ihrer
+   Schule. Technik: [ADR 0236](0236-abwesenheitsarten-des-traegers-gehen-in-die-schulen-und-eine-datenbankfunktion-prueft-das-kontingent.md).
+5. **Prüfung in der Schule ohne Träger-Transaktion.** Die gebuchte
+   Abwesenheit bleibt in der Schule (§3). Eine Datenbankfunktion des Owners
+   Workforce liest für die Prüfung die Buchungen dieser Art an allen
+   Einsatzorten der Akte und den Anspruch beim Träger. Sie sperrt das
+   Kontingent bis zum Ende der Transaktion, damit zwei Schulen nicht
+   gleichzeitig denselben Rest buchen. In der Tenant-Transaktion nennt sie
+   andere Schulen nicht, nur „anderer Einsatzort“. Sie schreibt nichts.
+6. **Antrag und Freigabe.** Eine Betreuungskraft beantragt eine Art, die
+   „beantragbar“ ist, an ihrer Schule. Die Leitung dieser Schule gibt frei
+   oder lehnt ab, oder sie bucht direkt. Bis es den Haupteinsatzort mit dem
+   Arbeitsvertrag gibt, entscheidet die Schule, an der der Antrag gestellt
+   ist.
+7. **Stundenkonto und Kontingent (#4711) wenden die Regel so an:** Ein
+   gebuchter Tag zählt einmal, an der Schule der Buchung, mit der Grundart
+   der Art des Trägers. Die Abweichung einer Schule ändert daran nichts.
+
+Verworfen:
+
+- **Abweichung als eigenes Kontingent der Schule:** Eine Person hätte wieder
+  zwei Konten für eine Art, und das Stundenkonto müsste entscheiden, welches
+  zählt.
+- **Prüfung in der Träger-Transaktion vor jeder Buchung:** Jede Buchung der
+  Schule läuft in deren Tenant-Transaktion. Eine Träger-Transaktion dazu
+  wäre verschachtelt (ADR 0105) oder bräuchte einen Ausgleich, wenn die
+  Schule danach scheitert.
+- **Ein Abbild der Buchungen beim Träger:** Es wäre erst nach dem Abgleich
+  aktuell. Zwei Schulen könnten so denselben Rest buchen.

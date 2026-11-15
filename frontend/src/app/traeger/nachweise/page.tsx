@@ -1,6 +1,6 @@
 "use client";
 
-// Personalnachweise des Trägers (#4707, ADR 0089 Abschnitt 7, ADR 0236):
+// Personalnachweise des Trägers (#4707, ADR 0089 Abschnitt 7, ADR 0238):
 // die Ablaufliste über alle Personalakten, die Nachweisarten mit Gültigkeit,
 // Warnung und Pflicht, und die Zuordnung der Nachweisarten jeder Schule.
 // Eingetragen wird ein Nachweis in der Personalakte. Jedes Anzeigen der
