@@ -43,6 +43,15 @@ export function traegerSharedDocumentsTopic(): HelpTopic {
         ],
       },
       {
+        title: "Liste herunterladen",
+        description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+        steps: [
+          "Wählen Sie in der Navigation `Dokumente`.",
+          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Die Datei enthält alle Dokumente und für wen sie freigegeben sind.",
+        ],
+      },
+      {
         title: "Freigabe zurücknehmen",
         steps: [
           "Öffnen Sie das Dokument.",

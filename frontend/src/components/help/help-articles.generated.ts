@@ -10774,6 +10774,16 @@ export const traegerAccountsTopic = function traegerAccountsTopic(): HelpTopic {
         ],
       },
       {
+        title: "Liste herunterladen",
+        description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+        steps: [
+          "Wählen Sie unten in der Navigation `Einstellungen`.",
+          "Wählen Sie `Mitglieder und Rollen`.",
+          "Wählen Sie oben `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Personen und offenen Einladungen.",
+          "Den Verlauf laden Sie mit `Herunterladen` beim `Verlauf` herunter.",
+        ],
+      },
+      {
         title: "Person entfernen",
         steps: [
           "Wählen Sie unten in der Navigation `Einstellungen`.",
@@ -12125,6 +12135,15 @@ export const traegerCatalogPhasesTopic =
           ],
         },
         {
+          title: "Liste herunterladen",
+          description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+          steps: [
+            "Wählen Sie in der Navigation `Anmeldephasen`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält alle Anmeldephasen mit Leistungszeitraum, Schulen und Stand.",
+          ],
+        },
+        {
           title: "Vorschau ansehen und übertragen",
           steps: [
             "Öffnen Sie die Anmeldephase.",
@@ -12210,6 +12229,16 @@ export const traegerClosingDaysTopic =
             "Wählen Sie in der Zeile `Eltern informieren`. Ein Klick genügt.",
             "Mehrere Schließtage auf einmal: Wählen Sie oben `Alle Eltern informieren`.",
             "Die Zeile zeigt `Wird gesendet` und dann `Gesendet`.",
+          ],
+        },
+        {
+          title: "Schließtage herunterladen",
+          description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+          steps: [
+            "Wählen Sie in der Navigation `Schließtage`.",
+            "Wählen Sie oben das Jahr.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält die Schließtage dieses Jahres mit Grund und Schulen.",
           ],
         },
         {
@@ -12320,6 +12349,7 @@ export const traegerDashboardTopic =
         "Wählen Sie dort `Zur Schule`, um die Schule anzusehen.",
         "Lesen Sie unter `Zahlen je Schule` die Zahlen jeder Schule.",
         "Wählen Sie eine Schule, um ihre Zahlen und Stammdaten zu sehen.",
+        "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Haben Sie bei `Auffälligkeiten` eine Schule gewählt, enthält die Datei nur diese Schule.",
       ],
       result:
         "Sie sehen für jede Schule, wie viele Kinder gerade da sind, wie viele heute krank sind, wie viele Betreuungskräfte angemeldet sind und wie viele Anmeldungen offen sind.",
@@ -12544,6 +12574,16 @@ export const traegerDocumentTemplatesTopic =
             "Bei Schreiben mit Rechnung wählen Sie unter `Rechnungstabelle`, was die Tabelle zeigt. Es gibt `Nach Kind ordnen` und `Zeitmodell zeigen`.",
             "Wählen Sie `Vorschau zeigen`. Die `Vorschau` zeigt den ganzen Brief mit erfundenen Beispieldaten.",
             "Wählen Sie `Speichern`.",
+          ],
+        },
+        {
+          title: "Liste herunterladen",
+          description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+          steps: [
+            "Wählen Sie unten in der Navigation `Einstellungen`.",
+            "Wählen Sie `Briefkopf und Vorlagen` und dann `Vorlagen`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei zeigt für jedes Dokument, ob es die Standardvorlage oder eine eigene Vorlage nutzt.",
           ],
         },
         {
@@ -12789,6 +12829,15 @@ export const traegerHolidayAllocationTopic =
             "Wählen Sie bei einem Kind `Platz geben` oder `Auf die Warteliste`. Weicht das vom Vorschlag ab, schreiben Sie eine `Begründung`.",
             "Oder wählen Sie bei der Woche `Vorschlag übernehmen`. Mit mehreren Wochen gibt es oben `Vorschlag für alle Wochen übernehmen`.",
             "Bestätigen Sie im Fenster.",
+          ],
+        },
+        {
+          title: "Vergabe herunterladen",
+          description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+          steps: [
+            "Öffnen Sie den Ferienzeitraum und wählen Sie den Reiter `Vergabe`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält die offenen Anmeldungen im Vorschlag und alle Entscheidungen Ihres Büros.",
           ],
         },
         {
@@ -13113,6 +13162,15 @@ export const traegerHolidayPeriodTopic =
           ],
         },
         {
+          title: "Liste herunterladen",
+          description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+          steps: [
+            "Wählen Sie in der Navigation `Ferienbetreuung`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält alle Ferienzeiträume mit Anmeldung, Wochen, Schulen und Status.",
+          ],
+        },
+        {
           title: "Veröffentlichen",
           steps: [
             "Öffnen Sie den Ferienzeitraum in der Liste `Ferienbetreuung`.",
@@ -13197,6 +13255,15 @@ export const traegerHolidayPlacesTopic =
             "Die Zahl vorne ist der Rang. Das Kind mit der 1 bekommt den nächsten freien Platz.",
             "Berücksichtigt der Ferienzeitraum den Ferienwunsch, stehen Kinder mit `Ohne Ferienwunsch` hinter den anderen.",
             "Wählen Sie ein Kind, um seine Anmeldung zu öffnen.",
+          ],
+        },
+        {
+          title: "Plätze herunterladen",
+          description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+          steps: [
+            "Öffnen Sie den Ferienzeitraum und wählen Sie den Reiter `Plätze`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält je Woche die Plätze und die Kinder auf der Warteliste.",
           ],
         },
         {
@@ -13693,6 +13760,7 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
     result: "moto öffnet die Seite `Schulen` mit allen Schulen Ihres Trägers.",
     notes: [
       "Legen Sie sich die Adresse als Lesezeichen an.",
+      "Die Liste der Schulen laden Sie mit `Herunterladen` als `PDF`, `Excel` oder `CSV` herunter.",
       "Ein neues Passwort gilt auch für Ihr Konto in der OGS.",
     ],
     differences: [
@@ -14199,6 +14267,15 @@ export const traegerSharedDocumentsTopic =
             "Wählen Sie bei `An welchen Schulen?`: `Alle Schulen`, `Eine Schule` oder bei Eltern auch `Eine Gruppe`.",
             "Wählen Sie dann die `Schule` und gegebenenfalls die `Gruppe`.",
             "Prüfen Sie den Kasten `Sichtbar für`. Wählen Sie `Freigeben`.",
+          ],
+        },
+        {
+          title: "Liste herunterladen",
+          description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+          steps: [
+            "Wählen Sie in der Navigation `Dokumente`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält alle Dokumente und für wen sie freigegeben sind.",
           ],
         },
         {
