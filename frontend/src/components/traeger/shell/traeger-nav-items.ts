@@ -11,6 +11,7 @@
 import type { Session } from "next-auth";
 import { hasPermission } from "~/lib/auth-utils";
 import type { MotoConcept } from "~/lib/moto-concepts";
+import { arrivalPickupConcept } from "~/lib/concepts/arrivalPickup";
 import { backConcept } from "~/lib/concepts/back";
 import { billingConcept } from "~/lib/concepts/billing";
 import { careContractsConcept } from "~/lib/concepts/careContracts";
@@ -38,7 +39,7 @@ const ACCOUNTS_RIGHT = "traeger_accounts:manage";
 const ENROLLMENT_RIGHT = "traeger_enrollment:manage";
 /** Das Recht, das die Betreuungsverträge öffnet (#4678). */
 const CONTRACTS_RIGHT = "traeger_contracts:manage";
-/** Das Recht, das „Länger als gebucht“ ohne Namen (#4683) und die Auslastung (#4713) öffnet. */
+/** Das Recht, das „Länger als gebucht“ ohne Namen (#4683), die Auslastung (#4713) und „Ankunft und Abholung“ (#4714) öffnet. */
 const REPORTS_RIGHT = "traeger_reports:read";
 /** Das Recht, das die Abrechnungsläufe öffnet (#4668). */
 const BILLING_RIGHT = "traeger_billing:manage";
@@ -117,6 +118,15 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         href: "/traeger/auslastung",
         label: "Auslastung",
         concept: utilizationConcept,
+        right: REPORTS_RIGHT,
+      },
+      {
+        // Wann Kinder ankommen und gehen, je Wochentag und halbe Stunde (#4714).
+        key: "ankunft-abholung",
+        href: "/traeger/ankunft-abholung",
+        label: "Ankunft und Abholung",
+        shortLabel: "Ankunft",
+        concept: arrivalPickupConcept,
         right: REPORTS_RIGHT,
       },
     ],

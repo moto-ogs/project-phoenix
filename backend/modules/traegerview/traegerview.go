@@ -278,6 +278,8 @@ type Ports struct {
 	Known KnownChildrenPorts
 	// Utilization are the reads behind the utilization over time (#4713).
 	Utilization UtilizationPorts
+	// Times are the arrivals and pickups behind the heatmap (#4714).
+	Times ArrivalPickupCounts
 }
 
 // Overview answers the Träger-Portal reads.

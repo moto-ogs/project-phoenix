@@ -78,6 +78,7 @@ import { passkeysConcept } from "~/lib/concepts/passkeys";
 import { exportsConcept } from "~/lib/concepts/exports";
 import { gradeTransitionsConcept } from "~/lib/concepts/gradeTransitions";
 import { pickupConcept } from "~/lib/concepts/pickup";
+import { arrivalPickupConcept } from "~/lib/concepts/arrivalPickup";
 import { transportConcept } from "~/lib/concepts/transport";
 import { birthdaysConcept } from "~/lib/concepts/birthdays";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
@@ -169,6 +170,7 @@ const registry = {
   exports: exportsConcept,
   gradeTransitions: gradeTransitionsConcept,
   pickup: pickupConcept,
+  arrivalPickup: arrivalPickupConcept,
   transport: transportConcept,
   birthdays: birthdaysConcept,
   changeHistory: changeHistoryConcept,

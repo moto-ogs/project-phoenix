@@ -239,6 +239,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/abrechnung/jahresbescheide/:id/versand",
   "/abrechnung/nachweise",
   "/abrechnung/preise",
+  "/ankunft-abholung",
   "/anmeldephasen",
   "/anmeldephasen/:id",
   "/anmeldephasen/:id/angebote/:offeringId",

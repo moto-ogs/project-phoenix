@@ -1,5 +1,7 @@
 GET /traeger/schools/
 GET /traeger/schools/alerts
+GET /traeger/schools/arrival-pickup-times
+GET /traeger/schools/arrival-pickup-times/export
 GET /traeger/schools/key-date-counts
 GET /traeger/schools/occupancy
 GET /traeger/schools/occupancy/export

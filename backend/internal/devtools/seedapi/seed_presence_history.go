@@ -618,16 +618,16 @@ func absenceStatus(roll uint32) string {
 	}
 }
 
-// pastPresenceDay places a child between 11:45 and 12:44 at the OGS and lets
-// it go home between 15:00 and 16:29. A child visits a room only when it has
-// a free place; every visit is inside a session from 12:00 to 16:45.
+// pastPresenceDay places a child at the OGS and lets it go home at the
+// times presenceTimes plans. A child visits a room only when it has a free
+// place; every visit is inside a session from 12:00 to 16:45.
 func pastPresenceDay(input presenceHistoryInput, berlin *time.Location, index int, studentID int64, day calendar.Date, session presenceHistorySession, hasSession bool) PastPresenceDay {
-	at := func(hour, minute int) time.Time {
-		return time.Date(day.Year(), day.Month(), day.Day(), hour, minute, 0, 0, berlin)
+	at := func(minute int) time.Time {
+		return time.Date(day.Year(), day.Month(), day.Day(), minute/60, minute%60, 0, 0, berlin)
 	}
-	checkIn := at(11, 45).Add(time.Duration(presenceRoll(index, day, "in")%60) * time.Minute)
-	checkOut := at(15, 0).Add(time.Duration(presenceRoll(index, day, "out")%90) * time.Minute)
-	sessionStart, sessionEnd := at(12, 0), at(16, 45)
+	arrival, pickup := presenceTimes(index, day)
+	checkIn, checkOut := at(arrival), at(pickup)
+	sessionStart, sessionEnd := at(12*60), at(16*60+45)
 	entry := checkIn.Add(5 * time.Minute)
 	if entry.Before(sessionStart) {
 		entry = sessionStart
@@ -644,6 +644,36 @@ func pastPresenceDay(input presenceHistoryInput, berlin *time.Location, index in
 		Entry: entry, Exit: checkOut.Add(-5 * time.Minute),
 	}
 	return past
+}
+
+// presenceTimes plans when a child arrives and goes home, in minutes after
+// midnight, so the arrival and pickup heatmap of the Träger (#4714) and the
+// Statistik show a school day: every fifth child comes to the early care
+// from 07:00; the others come when class ends, later on Tuesday and
+// Wednesday, earlier on Friday. A child keeps its pickup band (14, 15 or 16
+// o'clock), an hour earlier on Friday. Every arrival is before 13:00 and
+// every pickup between 13:30 and 16:45, so a visit fits its session.
+func presenceTimes(index int, day calendar.Date) (int, int) {
+	roll := func(decision string, spread int) int {
+		return int(presenceRoll(index, day, decision) % uint32(spread))
+	}
+	weekday := day.Weekday()
+	var arrival int
+	switch {
+	case index%5 == 0:
+		arrival = 7*60 + roll("in", 60)
+	case weekday == time.Tuesday || weekday == time.Wednesday:
+		arrival = 12*60 + 10 + roll("in", 50)
+	case weekday == time.Friday:
+		arrival = 11*60 + 30 + roll("in", 30)
+	default:
+		arrival = 11*60 + 30 + roll("in", 45)
+	}
+	pickup := (14+index%3)*60 + roll("out", 45)
+	if weekday == time.Friday {
+		pickup = max(pickup-60, 13*60+30)
+	}
+	return arrival, pickup
 }
 
 // weightedAvailableSession picks among the remaining seats in proportion to
