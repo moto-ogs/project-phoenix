@@ -1918,6 +1918,7 @@ export function EnrollmentForm({
             <SecurityCheck
               instanceRef={captchaRef}
               siteKey={captchaConfig.site_key}
+              token={captchaToken}
               onToken={setCaptchaToken}
               copy={{
                 hint: tr("captchaHelp.hint"),

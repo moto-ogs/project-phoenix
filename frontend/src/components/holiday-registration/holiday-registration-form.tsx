@@ -302,6 +302,7 @@ export function HolidayRegistrationForm({
             offer.captchaSiteKey ? (
               <SecurityCheck
                 siteKey={offer.captchaSiteKey}
+                token={captchaToken}
                 onToken={setCaptchaToken}
                 copy={{
                   hint: t("captchaHelp.hint"),

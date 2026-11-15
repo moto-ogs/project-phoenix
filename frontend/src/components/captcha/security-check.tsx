@@ -5,6 +5,8 @@ import { useState, type Ref } from "react";
 
 import { Button } from "~/components/ui/button";
 
+const SCRIPT_ID = "moto-security-check-script";
+
 export interface SecurityCheckCopy {
   /** One line under the check: what to do when it hangs. */
   readonly hint: string;
@@ -22,11 +24,14 @@ export interface SecurityCheckCopy {
 export function SecurityCheck({
   siteKey,
   copy,
+  token,
   onToken,
   instanceRef,
 }: Readonly<{
   siteKey: string;
   copy: SecurityCheckCopy;
+  /** The form's current token, also cleared after a failed submit. */
+  token: string;
   /** The solved token, or "" when it expired, failed or restarted. */
   onToken: (token: string) => void;
   /** The widget, for a reset by the form after a failed submit. */
@@ -35,24 +40,19 @@ export function SecurityCheck({
   // A new key mounts a fresh widget. `reset()` does not help a widget that
   // never finished loading.
   const [attempt, setAttempt] = useState(0);
-  // Der Hinweis gilt nur, solange die Prüfung offen ist.
-  const [solved, setSolved] = useState(false);
-  const report = (token: string) => {
-    setSolved(token !== "");
-    onToken(token);
-  };
   return (
     <div className="space-y-1.5">
       <Turnstile
         key={attempt}
         ref={instanceRef}
         siteKey={siteKey}
+        scriptOptions={{ id: SCRIPT_ID }}
         options={{ theme: "light" }}
-        onSuccess={report}
-        onExpire={() => report("")}
-        onError={() => report("")}
+        onSuccess={onToken}
+        onExpire={() => onToken("")}
+        onError={() => onToken("")}
       />
-      {solved ? null : (
+      {token ? null : (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <p className="text-sm text-gray-600">{copy.hint}</p>
           <Button
@@ -61,7 +61,12 @@ export function SecurityCheck({
             size="compact"
             tooltip={copy.restartTooltip}
             onClick={() => {
-              report("");
+              // The library keeps a failed/pending script in the DOM and
+              // skips injection on remount. Keep a successfully loaded API.
+              if (!window.turnstile) {
+                document.getElementById(SCRIPT_ID)?.remove();
+              }
+              onToken("");
               setAttempt((current) => current + 1);
             }}
           >

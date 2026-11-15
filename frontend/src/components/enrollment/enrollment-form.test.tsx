@@ -603,6 +603,9 @@ describe("EnrollmentForm", () => {
     expect(document.querySelector('input[name="captcha_token"]')).toHaveValue(
       "",
     );
+    expect(
+      screen.getByRole("button", { name: "Prüfung neu starten" }),
+    ).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
     expect(submit).toBeEnabled();
     expect(submit).not.toHaveAttribute("aria-disabled");
