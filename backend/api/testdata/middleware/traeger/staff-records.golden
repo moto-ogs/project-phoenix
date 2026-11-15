@@ -6,6 +6,7 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	DELETE /traeger/staff-records/{id}/contracts/{contractId}
 	DELETE /traeger/staff-records/{id}/contracts/{contractId}/holiday-weeks/{schoolId}/{weekStart}
 	GET /traeger/staff-records/
+	GET /traeger/staff-records/export
 	GET /traeger/staff-records/{id}
 	GET /traeger/staff-records/{id}/absence-accounts
 	GET /traeger/staff-records/{id}/financial

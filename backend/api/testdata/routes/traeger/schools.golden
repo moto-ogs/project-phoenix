@@ -1,11 +1,13 @@
 GET /traeger/schools/
 GET /traeger/schools/alerts
+GET /traeger/schools/alerts/export
 GET /traeger/schools/arrival-pickup-times
 GET /traeger/schools/arrival-pickup-times/export
 GET /traeger/schools/comparison
 GET /traeger/schools/comparison/export
 GET /traeger/schools/daily-attendance
 GET /traeger/schools/daily-attendance/export
+GET /traeger/schools/export
 GET /traeger/schools/key-date-counts
 GET /traeger/schools/key-date-counts/export
 GET /traeger/schools/occupancy

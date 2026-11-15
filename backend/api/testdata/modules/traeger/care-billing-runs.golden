@@ -1,4 +1,5 @@
 GET /traeger/care-billing-runs/ -> basis
+GET /traeger/care-billing-runs/export -> basis
 GET /traeger/care-billing-runs/schools -> basis
 GET /traeger/care-billing-runs/{id} -> basis
 GET /traeger/care-billing-runs/{id}/cost-shares/{costBearerID}/export -> basis
