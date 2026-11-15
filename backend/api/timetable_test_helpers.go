@@ -45,13 +45,6 @@ type TimetableTestModule struct {
 // with the School Calendar it plans over and the realtime hub it publishes
 // on.
 func NewTimetableTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, clocks ...func() time.Time) (TimetableTestModule, schoolcalendar.Calendar, *realtime.Hub, error) {
-	return newTimetableTestModule(db, unit, timetablePorts.StaffingNoticeDependencies{}, clocks...)
-}
-
-// newTimetableTestModule composes the module; staffing tells the people
-// concerned about the deviation writes' staffing changes (#7136), its zero
-// value nobody.
-func newTimetableTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, staffing timetablePorts.StaffingNoticeDependencies, clocks ...func() time.Time) (TimetableTestModule, schoolcalendar.Calendar, *realtime.Hub, error) {
 	r, err := NewTimetableTestRepositories(db, clocks...)
 	if err != nil {
 		return TimetableTestModule{}, nil, nil, err
@@ -202,7 +195,7 @@ func newTimetableTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 	if err != nil {
 		return TimetableTestModule{}, nil, nil, err
 	}
-	deviationDeps.Locks, deviationDeps.SickReports, deviationDeps.StaffingNotices = arrivalTimetable.NewTenantDatabase(db.Pool()), owners.NewTimetableSickReports(owners.MustNewWorkforce(db)), staffing
+	deviationDeps.Locks, deviationDeps.SickReports = arrivalTimetable.NewTenantDatabase(db.Pool()), owners.NewTimetableSickReports(owners.MustNewWorkforce(db))
 	deviations, err := arrivalTimetable.NewStaffDeviations(deviationDeps)
 	if err != nil {
 		return TimetableTestModule{}, nil, nil, err

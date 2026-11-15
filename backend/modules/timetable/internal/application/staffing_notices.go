@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+	"math"
+	"math/rand/v2"
 	"slices"
 	"time"
 
@@ -19,12 +21,12 @@ import (
 // its own transaction: a multi-day operation is one notice per person and
 // kind, not one per day. The notice never carries an absence's reason.
 
-// The objects a staffing notice is about: a save's first affected
-// assignment, or the absence a cascade follows.
-const (
-	staffingObjectAssignment = "instance_staff"
-	staffingObjectAbsence    = "staff_absence"
-)
+// staffingObjectOperation is what a staffing notice is about: the one
+// operation that made the change (a save, a Sammel-Vertretung, one pass of an
+// absence's cascade). The staffing rows record no link between a substitution
+// and its later removal, so an operation bundles only its own entries: an
+// unrelated change never overwrites an unread entry about other days.
+const staffingObjectOperation = "staffing_operation"
 
 // staffingChange is one block of one person's change in an operation.
 type staffingChange struct {
@@ -34,8 +36,6 @@ type staffingChange struct {
 	instanceID   int64
 	date         calendar.Date
 	start        time.Time
-	// rowID is the subject's assignment the change is about.
-	rowID int64
 }
 
 // staffingStoryKey groups the changes of one person and kind.
@@ -52,19 +52,16 @@ type staffingStory struct {
 	changes []staffingChange
 }
 
-// staffingOperation is one write's collected changes. objectType and
-// objectID override the per-story assignment object (an absence's cascade).
+// staffingOperation is one write's collected changes.
 type staffingOperation struct {
-	changes    []staffingChange
-	actor      *int64
-	objectType string
-	objectID   int64
+	changes []staffingChange
+	actor   *int64
 }
 
-func changeOf(kind string, subjectID, substituteID int64, row *scheduleModel.InstanceStaff, instance *scheduleModel.ActivityInstance) staffingChange {
+func changeOf(kind string, subjectID, substituteID int64, instance *scheduleModel.ActivityInstance) staffingChange {
 	return staffingChange{
 		kind: kind, subjectID: subjectID, substituteID: substituteID, instanceID: instance.ID,
-		date: calendar.Date(instance.Date), start: instance.StartTime, rowID: row.ID,
+		date: calendar.Date(instance.Date), start: instance.StartTime,
 	}
 }
 
@@ -72,10 +69,10 @@ func changeOf(kind string, subjectID, substituteID int64, row *scheduleModel.Ins
 func deviationPlanChanges(plan *deviationPlan) []staffingChange {
 	changes := make([]staffingChange, 0, len(plan.absencePlan)+len(plan.presencePlan)+len(plan.subPlan)+len(plan.removalPlan))
 	for _, op := range plan.presencePlan {
-		changes = append(changes, changeOf(ports.StaffingChangePresent, op.row.StaffID, 0, op.row, op.instance))
+		changes = append(changes, changeOf(ports.StaffingChangePresent, op.row.StaffID, 0, op.instance))
 	}
 	for _, op := range plan.removalPlan {
-		changes = append(changes, changeOf(ports.StaffingChangeSubstituteRemoved, op.row.StaffID, 0, op.row, op.instance))
+		changes = append(changes, changeOf(ports.StaffingChangeSubstituteRemoved, op.row.StaffID, 0, op.instance))
 	}
 	return append(append(changes, absenceChanges(plan.absencePlan)...), substitutionChanges(plan.subPlan)...)
 }
@@ -83,7 +80,7 @@ func deviationPlanChanges(plan *deviationPlan) []staffingChange {
 func absenceChanges(ops []deviationAbsenceOp) []staffingChange {
 	changes := make([]staffingChange, 0, len(ops))
 	for _, op := range ops {
-		changes = append(changes, changeOf(ports.StaffingChangeAbsent, op.row.StaffID, 0, op.row, op.instance))
+		changes = append(changes, changeOf(ports.StaffingChangeAbsent, op.row.StaffID, 0, op.instance))
 	}
 	return changes
 }
@@ -96,23 +93,24 @@ func substitutionChanges(ops []deviationSubOp) []staffingChange {
 		if op.write.Action != timetable.SubstituteActionSubstituted && op.write.Action != timetable.SubstituteActionAlreadyOnInstance {
 			continue
 		}
-		changes = append(changes, changeOf(ports.StaffingChangeSubstituted, op.write.OrigRow.StaffID, op.subID, op.write.OrigRow, op.write.Instance))
+		changes = append(changes, changeOf(ports.StaffingChangeSubstituted, op.write.OrigRow.StaffID, op.subID, op.write.Instance))
 	}
 	return changes
 }
 
-// NoticeSickAbsence tells about the blocks one absence's cascade marked
-// absent: one notice about the absence, without its type or reason.
+// NoticeSickAbsence tells about the blocks one pass of an absence's cascade
+// marked absent or restored: one notice, without the absence's type or
+// reason.
 func (s *staffDeviations) NoticeSickAbsence(ctx context.Context, in timetable.SickAbsenceNotice) error {
+	kind := ports.StaffingChangeAbsent
+	if in.Returned {
+		kind = ports.StaffingChangePresent
+	}
 	changes := make([]staffingChange, 0, len(in.Blocks))
 	for _, block := range in.Blocks {
-		changes = append(changes, staffingChange{
-			kind: ports.StaffingChangeAbsent, subjectID: in.StaffID, instanceID: block.InstanceID, date: block.Date,
-		})
+		changes = append(changes, staffingChange{kind: kind, subjectID: in.StaffID, instanceID: block.InstanceID, date: block.Date})
 	}
-	return s.noticeStaffingChanges(ctx, staffingOperation{
-		changes: changes, actor: in.ActorAccountID, objectType: staffingObjectAbsence, objectID: in.AbsenceID,
-	})
+	return s.noticeStaffingChanges(ctx, staffingOperation{changes: changes, actor: in.ActorAccountID})
 }
 
 // noticeStaffingChanges hands one notice per story to Delivery. It reads the
@@ -137,8 +135,12 @@ func (s *staffDeviations) noticeStaffingChanges(ctx context.Context, op staffing
 	if err != nil {
 		return &ports.ScheduleError{Op: "staffing notice: staff", Err: err}
 	}
+	// A random id names the operation: one write, one object. Nothing reads
+	// it back; it only keeps two operations' entries apart.
+	operationID := rand.Int64N(math.MaxInt64) + 1
 	for _, story := range stories {
 		notice := s.staffingNotice(story, op, today, teachersByBlock, staff)
+		notice.ObjectType, notice.ObjectID = staffingObjectOperation, operationID
 		if len(notice.SubjectAccountIDs)+len(notice.SubstituteAccountIDs)+len(notice.TeacherAccountIDs) == 0 {
 			continue
 		}
@@ -238,12 +240,9 @@ func staffingStaffIDs(stories []staffingStory, teachersByBlock map[int64][]int64
 func (s *staffDeviations) staffingNotice(story staffingStory, op staffingOperation, today calendar.Date, teachersByBlock map[int64][]int64, staff map[int64]*timetable.StaffMember) ports.StaffingNotice {
 	first := story.changes[0]
 	notice := ports.StaffingNotice{
-		Kind: story.key.kind, ObjectType: staffingObjectAssignment, ObjectID: first.rowID,
+		Kind:        story.key.kind,
 		SubjectName: staffName(staff[story.key.subjectID]), InstanceID: first.instanceID,
 		Push: today.DaysUntil(first.date) <= staffNoticePushDays,
-	}
-	if op.objectType != "" {
-		notice.ObjectType, notice.ObjectID = op.objectType, op.objectID
 	}
 	seen := map[int64]bool{}
 	if op.actor != nil {

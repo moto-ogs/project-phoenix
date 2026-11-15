@@ -315,14 +315,15 @@ type SickAbsenceClear struct {
 	ActorAccountID *int64
 }
 
-// SickAbsenceNotice tells about the blocks one absence's plan cascade marked
-// absent (#7136): one notice for the whole absence, whatever the number of
-// days. Blocks are the marked assignments' blocks; the absence's type and
-// reason never reach the notice.
+// SickAbsenceNotice tells about the blocks one pass of an absence's plan
+// cascade marked absent, or with Returned restored after the absence was
+// withdrawn or shortened (#7136): one notice for the pass, whatever the
+// number of days. The absence's type and reason never reach the notice.
 type SickAbsenceNotice struct {
 	AbsenceID      int64
 	StaffID        int64
 	Blocks         []SickAbsenceNoticeBlock
+	Returned       bool
 	ActorAccountID *int64
 }
 

@@ -31,7 +31,8 @@ type staffingFixture struct {
 func newStaffingFixture(t *testing.T) *staffingFixture {
 	t.Helper()
 	f := newFeedFixture(t)
-	database := testpkg.NewDatabase(t, f.s.db)
+	// The package pool the lifecycle fixture opened; the notices write into it.
+	database := testpkg.NewDatabase(t, testpkg.SetupTestDB(t))
 	module, err := api.NewDeliveryTestModule(database, testpkg.TenantRuntime(t, f.s.db))
 	require.NoError(t, err)
 	settings, err := owners.NewSettingsTestModule(database, testpkg.TenantRuntime(t, f.s.db))
@@ -175,7 +176,7 @@ func TestStaffingFeedOfASammelVertretungIsOneEntry(t *testing.T) {
 	t.Parallel()
 	f := newStaffingFixture(t)
 	group := testpkg.CreateTestEducationGroup(t, f.s.db, "Mond")
-	actor, absent, substitute := f.person(t, "Leitung"), f.person(t, "Anna"), f.person(t, "Ben")
+	actor, absent, substitute, unrelated := f.person(t, "Leitung"), f.person(t, "Anna"), f.person(t, "Ben"), f.person(t, "Unbeteiligt")
 	lead := f.teacher(t, "Lehrkraft", group.ID)
 	var dates []calendar.Date
 	for day := 17; day <= 21; day++ {
@@ -197,7 +198,9 @@ func TestStaffingFeedOfASammelVertretungIsOneEntry(t *testing.T) {
 	require.Len(t, teacher, 1)
 	assert.Equal(t, "Ben Feed vertritt Anna Feed an 5 Tagen (17.–21.06.).", teacher[0].Body)
 	assert.Equal(t, 1, f.typedPushes(t, substitute, "staffing_changed"), "one push, not one per day")
+	assert.Equal(t, "Ben Feed vertritt Sie an 5 Tagen (17.–21.06.).", f.entries(t, absent)[0].Body)
 	assert.Empty(t, f.entries(t, actor))
+	assert.Empty(t, f.entries(t, unrelated))
 }
 
 func TestStaffingFeedOfAnAbsenceFarAheadAndTheSchoolSwitch(t *testing.T) {

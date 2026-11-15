@@ -244,8 +244,11 @@ groups as the Betreuungsplan's group filter names them) and links to
 text names no reason. Both types sit under the heading
 „Dienstplan und Vertretung“ (`dienstplan`), push by default and share the
 school switch `notifications.staffing_changed_enabled`. Bundling object: the
-absent person's first assignment of a save, or the absence of a cascade.
-Clearing a sick report writes no notice.
+operation itself (`staffing_operation`, a random id per write), so an
+unrelated change never overwrites an unread entry about other days; the
+staffing rows do not record which substitution a later removal undoes, so a
+removal is an entry of its own. Withdrawing or shortening an absence tells the
+same people that the person is there again.
 
 ### Web Push (#2003)
 
