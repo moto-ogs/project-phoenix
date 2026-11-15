@@ -14,14 +14,18 @@ import { unavailableApiError } from "~/lib/api-error";
 import {
   HOME_BOARD_COLUMNS,
   computeBoardCells,
+  homeBlockHeight,
   type HomeBlockPlacement,
 } from "~/lib/home-blocks";
 
 import {
-  BOARD_GRID_CLASSES,
   CELL_CLASSES,
   NARROW_BOARD_COLUMNS,
+  READ_CELL_CLASSES,
+  READ_GRID_CLASSES,
   SPAN_CLASS,
+  boardRowVariables,
+  cellRowsVariable,
   cellVariables,
 } from "./home-board-cells";
 import type { HomeBoardEditorProps } from "./home-board-editor";
@@ -36,6 +40,11 @@ import type { HomeBoardProps } from "./home-board-types";
  * und wird keine lange Liste. Was nicht in eine Karte passt, wird dort
  * GEZÄHLT und verlinkt, nicht angeschnitten: eine halb sichtbare Zeile am
  * Kartenrand liest sich, als liefe der Baustein aus seiner Karte heraus.
+ *
+ * Die feste Höhe gilt für Karten mit Inhalt. Eine Karte, die nur sagt, dass
+ * gerade nichts da ist, belegt so viel Höhe wie dieser Satz: zwei oder drei
+ * Reihen Weiß unter einer Zeile Text schieben alles darunter aus dem Blick.
+ * Stehen Nachbarn in ihren Reihen, bleibt sie so hoch wie diese.
  *
  * Auf einem Handy gilt das nicht: eine Spalte, keine feste Reihenhöhe, jede
  * Karte so hoch wie ihr Inhalt. Dort steht ohnehin nichts nebeneinander, und
@@ -143,11 +152,21 @@ function HomeBoardGrid({
   const wideCells = computeBoardCells(placements, HOME_BOARD_COLUMNS);
   const narrowCells = computeBoardCells(placements, NARROW_BOARD_COLUMNS);
 
+  const boardStyle: CSSProperties = {
+    ...boardRowVariables(narrowCells.values(), NARROW_BOARD_COLUMNS),
+    ...boardRowVariables(wideCells.values(), HOME_BOARD_COLUMNS),
+  };
+
   return (
-    <ul data-testid="home-board" className={BOARD_GRID_CLASSES}>
+    <ul
+      data-testid="home-board"
+      className={READ_GRID_CLASSES}
+      style={boardStyle}
+    >
       {placements.map((placement) => {
         const style: CSSProperties = {
           position: "relative",
+          ...cellRowsVariable(homeBlockHeight(placement.key)),
           // Beide Zellen als Variablen; CELL_CLASSES wählt am Breakpoint aus.
           ...cellVariables(
             narrowCells.get(placement.key) ?? null,
@@ -167,7 +186,7 @@ function HomeBoardGrid({
             data-span={placement.span}
             data-col={placement.col}
             data-row={placement.row}
-            className={`min-h-0 ${SPAN_CLASS[placement.span]} ${CELL_CLASSES}`}
+            className={`${SPAN_CLASS[placement.span]} ${CELL_CLASSES} ${READ_CELL_CLASSES}`}
           >
             <div className="h-full min-h-0">{children(placement)}</div>
           </li>
