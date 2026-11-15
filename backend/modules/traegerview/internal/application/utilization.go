@@ -36,7 +36,7 @@ func (o *Overview) Utilization(ctx context.Context, organizationID int64, from, 
 		if err != nil {
 			return err
 		}
-		reads, err := o.utilizationReads(adminCtx, ids, from, to, today)
+		reads, err := o.utilizationReads(adminCtx, ids, from, to, today, true)
 		if err != nil {
 			return err
 		}
@@ -142,7 +142,9 @@ type utilizationReads struct {
 	rooms      map[int64][]traegerview.NamedRoom
 }
 
-func (o *Overview) utilizationReads(ctx context.Context, scope []int64, from, to, today calendar.Date) (utilizationReads, error) {
+// utilizationReads reads the owners for the school set; withRooms adds the
+// room days and the room names, which the comparison does not show.
+func (o *Overview) utilizationReads(ctx context.Context, scope []int64, from, to, today calendar.Date, withRooms bool) (utilizationReads, error) {
 	var reads utilizationReads
 	if len(scope) == 0 {
 		return reads, nil
@@ -164,9 +166,15 @@ func (o *Overview) utilizationReads(ctx context.Context, scope []int64, from, to
 		if reads.attendance, err = ports.Presence.AttendanceCountsByTenant(ctx, scope, from, to); err != nil {
 			return reads, err
 		}
+		if !withRooms {
+			return reads, nil
+		}
 		if reads.visits, err = ports.Presence.RoomVisitDaysByTenant(ctx, scope, from, to); err != nil {
 			return reads, err
 		}
+	}
+	if !withRooms {
+		return reads, nil
 	}
 	reads.rooms, err = ports.Rooms.RoomsByTenant(ctx, scope)
 	return reads, err

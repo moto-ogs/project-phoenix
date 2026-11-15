@@ -35,6 +35,9 @@ export function getTraegerHelpTopicForPath(pathname: string): HelpTopicId {
   if (onPage(page, "/ankunft-abholung")) {
     return HELP_TOPICS.traegerArrivalPickupTimes;
   }
+  if (onPage(page, "/standortvergleich")) {
+    return HELP_TOPICS.traegerSchoolComparison;
+  }
   if (onPage(page, "/schulen")) return HELP_TOPICS.traegerSchoolView;
   if (onPage(page, "/dokumente")) return HELP_TOPICS.traegerSharedDocuments;
   if (onPage(page, "/personal/abwesenheitsarten")) {

@@ -2,6 +2,8 @@ GET /traeger/schools/ -> basis
 GET /traeger/schools/alerts -> basis
 GET /traeger/schools/arrival-pickup-times -> basis
 GET /traeger/schools/arrival-pickup-times/export -> basis
+GET /traeger/schools/comparison -> basis
+GET /traeger/schools/comparison/export -> basis
 GET /traeger/schools/key-date-counts -> basis
 GET /traeger/schools/occupancy -> basis
 GET /traeger/schools/occupancy/export -> basis
