@@ -1710,6 +1710,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (a traegerAbsenceDays) AbsenceDaysByTenant(ctx context.Context, schools []int64, from, to calendar.Date) ([]traegerview.AbsenceDay, error) {\n\trows, err := a.absences.StatusDaysByTenant(ctx, schools, from, to)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]traegerview.AbsenceDay, 0, len(rows))\n\tfor _, row := range rows {\n\t\tif status, ok := traegerAbsenceStatus[row.Status]; ok {\n\t\t\tresult = append(result, traegerview.AbsenceDay{SchoolID: row.SchoolID, Date: row.Date, StudentID: row.StudentID, Status: status})\n\t\t}\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerAbsenceDays.AbsenceDaysByTenant",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (t traegerAccessTrail) ListAccessTrail(ctx context.Context, query traegerview.AccessTrailQuery) ([]traegerview.AccessTrailEntry, error) {\n\trows, err := t.trail.ListAccessTrail(ctx, auditlog.AccessTrailFilter(query))\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tentries := make([]traegerview.AccessTrailEntry, 0, len(rows))\n\tfor _, row := range rows {\n\t\tentries = append(entries, traegerview.AccessTrailEntry(row))\n\t}\n\treturn entries, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerAccessTrail.ListAccessTrail",
@@ -1734,6 +1741,13 @@
       "evidence": "func (b traegerBureauAddresses) BureauAddresses(ctx context.Context, organizationID int64, accountIDs []int64) ([]traegerview.AccountName, error) {\n\taccounts, err := b.roles.ListTraegerAccounts(ctx, organizationID, accountIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tnames := make([]traegerview.AccountName, 0, len(accounts))\n\tfor _, account := range accounts {\n\t\tif len(account.Roles) \u003e 0 {\n\t\t\tnames = append(names, traegerview.AccountName{AccountID: account.AccountID, Name: account.Email})\n\t\t}\n\t}\n\treturn names, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerBureauAddresses.BureauAddresses",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (c traegerChildDays) ChildDaysByTenant(ctx context.Context, schools []int64, from, to calendar.Date) ([]traegerview.ChildDay, error) {\n\trows, err := c.days.DailyAttendanceByTenant(ctx, schools, from, to)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]traegerview.ChildDay, len(rows))\n\tfor i, row := range rows {\n\t\tresult[i] = traegerview.ChildDay{SchoolID: row.SchoolID, Date: row.Date, StudentID: row.StudentID, ArrivedAt: row.ArrivedAt, LeftAt: row.LeftAt}\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerChildDays.ChildDaysByTenant",
       "owner": "roots"
     },
     {
@@ -1839,6 +1853,13 @@
       "evidence": "func (p traegerSchoolPersons) SchoolPersons(ctx context.Context, personIDs []int64) ([]workforce.TraegerSchoolPerson, error) {\n\tpersons, err := p.persons.ListPersonsByID(ctx, personIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]workforce.TraegerSchoolPerson, 0, len(persons))\n\tfor _, person := range persons {\n\t\tresult = append(result, workforce.TraegerSchoolPerson{PersonID: person.ID, AccountID: person.AccountID, FirstName: person.FirstName, LastName: person.LastName, Birthday: person.Birthday})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerSchoolPersons.SchoolPersons",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s traegerSchoolStates) TraegerSchoolStates(ctx context.Context, organizationID int64) (map[int64]string, error) {\n\tschools, err := s.schools.TraegerSchools(ctx, organizationID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tstates := make(map[int64]string, len(schools))\n\tfor _, school := range schools {\n\t\tstates[school.ID] = school.FederalState\n\t}\n\treturn states, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerSchoolStates.TraegerSchoolStates",
       "owner": "roots"
     },
     {

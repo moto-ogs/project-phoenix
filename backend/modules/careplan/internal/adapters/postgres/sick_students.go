@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
@@ -25,6 +26,16 @@ type sickStudents struct {
 // archived at its end, as the dashboard and the day log read them (#6291).
 const sickDayStudentIDsSQL = `SELECT DISTINCT tenant_id, student_id AS id FROM active.student_status_days
 WHERE tenant_id = ANY(?) AND date = ?::date AND status = 'sick' AND (cleared_at IS NULL OR (source = '` + statusSourceEndDay + `' AND cleared_source IS NULL))`
+
+// statusDaysSQL reads the status days that stand for their day, as the sick
+// days above, between from and to: one row per child and day, sick before
+// excused before class trip (#4717).
+const statusDaysSQL = `SELECT DISTINCT ON (tenant_id, date, student_id) tenant_id, date, student_id, status
+FROM active.student_status_days
+WHERE tenant_id = ANY(?0) AND date BETWEEN ?1::date AND ?2::date
+  AND (cleared_at IS NULL OR (source = '` + statusSourceEndDay + `' AND cleared_source IS NULL))
+ORDER BY tenant_id, date, student_id,
+  CASE status WHEN 'sick' THEN 0 WHEN 'excused' THEN 1 ELSE 2 END`
 
 const sickFlagMembershipIDsSQL = `SELECT tenant_id, membership_id AS id FROM users.student_care_profiles
 WHERE tenant_id = ANY(?) AND sick`
@@ -83,4 +94,25 @@ func (s sickStudents) SickFlagMembershipIDsByTenant(ctx context.Context, schools
 		return nil, fmt.Errorf("care plan postgres: sick flags: %w", err)
 	}
 	return idsByTenant(rows), nil
+}
+
+func (s sickStudents) StatusDaysByTenant(ctx context.Context, schools []int64, from, to calendar.Date) ([]careplan.StatusDay, error) {
+	db, err := s.database(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		TenantID  int64         `bun:"tenant_id"`
+		Date      calendar.Date `bun:"date"`
+		StudentID int64         `bun:"student_id"`
+		Status    string        `bun:"status"`
+	}
+	if err := db.NewRaw(statusDaysSQL, pgdialect.Array(schools), from, to).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("care plan postgres: status days: %w", err)
+	}
+	result := make([]careplan.StatusDay, len(rows))
+	for i, row := range rows {
+		result[i] = careplan.StatusDay{SchoolID: row.TenantID, Date: row.Date, StudentID: row.StudentID, Status: row.Status}
+	}
+	return result, nil
 }

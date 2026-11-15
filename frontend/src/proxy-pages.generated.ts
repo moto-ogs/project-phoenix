@@ -72,6 +72,7 @@ export const PORTAL_PAGES = {
     "/schulen",
     "/standortvergleich",
     "/stichtagszahlen",
+    "/tagesmeldung",
     "/uebersicht",
     "/vertraege",
     "/zeitvergleich",

@@ -104,7 +104,10 @@ function TraegerPortal({
       <TraegerOwnNamePublisher publish={ownName.publish}>
         <BreadcrumbProvider>
           <ShellIntlProvider>
-            <TraegerShell testSystem={organization?.testSystem === true}>
+            <TraegerShell
+              testSystem={organization?.testSystem === true}
+              federalStates={organization?.federalStates}
+            >
               {children}
             </TraegerShell>
           </ShellIntlProvider>

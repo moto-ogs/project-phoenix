@@ -32,6 +32,7 @@ import { schoolsConcept } from "~/lib/concepts/schools";
 import { settingsConcept } from "~/lib/concepts/settings";
 import { staffConcept } from "~/lib/concepts/staff";
 import { staffPlanConcept } from "~/lib/concepts/staffPlan";
+import { stateReportConcept } from "~/lib/concepts/stateReport";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 
@@ -41,7 +42,7 @@ const ACCOUNTS_RIGHT = "traeger_accounts:manage";
 const ENROLLMENT_RIGHT = "traeger_enrollment:manage";
 /** Das Recht, das die Betreuungsverträge öffnet (#4678). */
 const CONTRACTS_RIGHT = "traeger_contracts:manage";
-/** Das Recht, das „Länger als gebucht“ ohne Namen (#4683), die Auslastung (#4713), „Ankunft und Abholung“ (#4714) und den Standortvergleich (#4715) öffnet. */
+/** Das Recht, das „Länger als gebucht“ ohne Namen (#4683), die Auslastung (#4713), „Ankunft und Abholung“ (#4714), den Standortvergleich (#4715) und die Tagesmeldung (#4717) öffnet. */
 const REPORTS_RIGHT = "traeger_reports:read";
 /** Das Recht, das die Abrechnungsläufe öffnet (#4668). */
 const BILLING_RIGHT = "traeger_billing:manage";
@@ -69,6 +70,11 @@ export interface TraegerNavItem {
   readonly concept: MotoConcept;
   /** Das Recht, ohne das der Eintrag fehlt; `null` für jede Person. */
   readonly right: string | null;
+  /**
+   * Das Bundesland (ISO 3166-2), in dem mindestens eine Schule des Trägers
+   * liegen muss; ohne Angabe gilt der Eintrag überall (#4717).
+   */
+  readonly federalState?: string;
 }
 
 export interface TraegerNavGroup {
@@ -139,6 +145,17 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         shortLabel: "Vergleich",
         concept: schoolComparisonConcept,
         right: REPORTS_RIGHT,
+      },
+      {
+        // Die tägliche An- und Abwesenheit für das Land, nur für Schulen in
+        // Mecklenburg-Vorpommern (§ 32 Abs. 1a KiföG M-V, #4717).
+        key: "tagesmeldung",
+        href: "/traeger/tagesmeldung",
+        label: "Tagesmeldung",
+        shortLabel: "Meldung",
+        concept: stateReportConcept,
+        right: REPORTS_RIGHT,
+        federalState: "DE-MV",
       },
     ],
   },
@@ -355,13 +372,25 @@ export const TRAEGER_HELP_NAV = {
   concept: helpConcept,
 } as const satisfies Omit<TraegerNavItem, "right">;
 
-/** Die Gruppen der Hauptnavigation; eine Gruppe ohne erlaubtes Ziel fehlt. */
+/** Ohne bekannte Bundesländer fehlen die Einträge eines Bundeslands. */
+const NO_FEDERAL_STATES: readonly string[] = [];
+
+/**
+ * Die Gruppen der Hauptnavigation; eine Gruppe ohne erlaubtes Ziel fehlt.
+ * Ein Eintrag mit Bundesland fehlt, solange keine Schule des Trägers dort
+ * liegt (#4717).
+ */
 export function traegerNavGroupsFor(
   session: Session | null,
+  federalStates: readonly string[] = NO_FEDERAL_STATES,
 ): readonly TraegerNavGroup[] {
   return TRAEGER_NAV_GROUPS.map((group) => ({
     ...group,
-    items: visibleFor(group.items, session),
+    items: visibleFor(group.items, session).filter(
+      (item) =>
+        item.federalState === undefined ||
+        federalStates.includes(item.federalState),
+    ),
   })).filter((group) => group.items.length > 0);
 }
 

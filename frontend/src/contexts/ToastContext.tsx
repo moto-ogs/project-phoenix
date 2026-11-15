@@ -246,6 +246,8 @@ function useReducedMotion() {
 
 const DE_DUPE_WINDOW = 2000; // ms
 const MAX_VISIBLE = 3;
+/** Shortest life of a timed info or warning toast (#7113). */
+const MIN_NOTICE_MS = 5000;
 
 /**
  * Open errors never give way to the limit; the newest other toast always
@@ -264,6 +266,8 @@ interface InternalToastTimers {
   timeoutId?: ReturnType<typeof setTimeout>;
   remaining: number;
   start: number;
+  hovered: boolean;
+  focused: boolean;
 }
 
 function ToastRow({
@@ -286,45 +290,76 @@ function ToastRow({
   const timersRef = useRef<InternalToastTimers>({
     remaining: item.duration,
     start: Date.now(),
+    hovered: false,
+    focused: false,
   });
+
+  const expire = useCallback(() => {
+    setExiting(true);
+    setTimeout(() => onClose(item.id), reducedMotion ? 0 : TOAST_FADE_MS);
+  }, [item.id, onClose, reducedMotion]);
 
   useEffect(() => {
     setVisible(true);
-    timersRef.current.start = Date.now();
-
-    let localTimeout: ReturnType<typeof setTimeout> | undefined;
-    if (item.duration > 0) {
-      localTimeout = setTimeout(() => {
-        setExiting(true);
-        setTimeout(() => onClose(item.id), reducedMotion ? 0 : TOAST_FADE_MS);
-      }, item.duration);
-      timersRef.current.timeoutId = localTimeout;
+    const timers = timersRef.current;
+    timers.remaining = item.duration;
+    timers.start = Date.now();
+    if (item.duration > 0 && !timers.hovered && !timers.focused) {
+      timers.timeoutId = setTimeout(expire, item.duration);
     }
 
     return () => {
-      if (localTimeout) clearTimeout(localTimeout);
+      if (timers.timeoutId) clearTimeout(timers.timeoutId);
+      timers.timeoutId = undefined;
     };
-  }, [item.duration, item.id, onClose, reducedMotion]);
+  }, [item.duration, expire]);
 
-  const pauseIfDesktop = () => {
-    if (isMobile) return;
-    if (timersRef.current.timeoutId) {
-      clearTimeout(timersRef.current.timeoutId);
-      timersRef.current.timeoutId = undefined;
-      const elapsed = Date.now() - timersRef.current.start;
-      timersRef.current.remaining = Math.max(0, item.duration - elapsed);
-    }
+  // WCAG 2.2.1: the time stops while the pointer rests on the toast or
+  // keyboard focus is inside it, and resumes with what was left.
+  const pause = () => {
+    const timers = timersRef.current;
+    if (!timers.timeoutId) return;
+    clearTimeout(timers.timeoutId);
+    timers.timeoutId = undefined;
+    timers.remaining = Math.max(
+      0,
+      timers.remaining - (Date.now() - timers.start),
+    );
   };
 
-  const resumeIfDesktop = () => {
+  const resume = () => {
+    const timers = timersRef.current;
+    if (timers.hovered || timers.focused || timers.timeoutId) return;
+    if (item.duration <= 0 || exiting) return;
+    timers.start = Date.now();
+    timers.timeoutId = setTimeout(expire, timers.remaining);
+  };
+
+  // A tap fires mouseenter without a matching mouseleave, so hover pauses
+  // only with a mouse.
+  const onMouseEnter = () => {
     if (isMobile) return;
-    if (timersRef.current.remaining > 0) {
-      timersRef.current.start = Date.now();
-      timersRef.current.timeoutId = setTimeout(() => {
-        setExiting(true);
-        setTimeout(() => onClose(item.id), reducedMotion ? 0 : TOAST_FADE_MS);
-      }, timersRef.current.remaining);
+    timersRef.current.hovered = true;
+    pause();
+  };
+
+  const onMouseLeave = () => {
+    if (isMobile) return;
+    timersRef.current.hovered = false;
+    resume();
+  };
+
+  const onFocus = () => {
+    timersRef.current.focused = true;
+    pause();
+  };
+
+  const onBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      return;
     }
+    timersRef.current.focused = false;
+    resume();
   };
 
   const dismissWithExitAnimation = () => {
@@ -369,8 +404,10 @@ function ToastRow({
         visible={visible && !exiting}
         reducedMotion={reducedMotion}
         touchFriendly={isMobile}
-        onMouseEnter={pauseIfDesktop}
-        onMouseLeave={resumeIfDesktop}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        onFocus={onFocus}
+        onBlur={onBlur}
       />
     </KitLocaleProvider>
   );
@@ -410,13 +447,18 @@ export function ToastProvider({
         options?.id ?? `${now}-${Math.random().toString(36).slice(2, 8)}`;
       const action = options?.action;
 
-      // Errors must not disappear on a timer; success feedback lasts four seconds.
+      // Errors must not disappear on a timer; success feedback lasts four
+      // seconds. Info and warnings stay at least five seconds (#7113, WCAG
+      // 2.2.1); 0 keeps them until they are closed.
+      const requested = options?.duration ?? MIN_NOTICE_MS;
       const duration =
         type === "error"
           ? 0
           : type === "success"
             ? 4000
-            : (options?.duration ?? 1500);
+            : requested <= 0
+              ? 0
+              : Math.max(requested, MIN_NOTICE_MS);
 
       setItems((prev) =>
         withinVisibleLimit([

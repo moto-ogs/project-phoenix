@@ -37,7 +37,9 @@ Registry mechanics: [docs/agents/error-registry.md](../../docs/agents/error-regi
    why it stays silent.
 4. **Error toasts stay.** An error toast stays until the user closes it and
    carries `role="alert"`; a success toast fades after four seconds with
-   `role="status"`. The text names the affected object („Die Gruppe konnte
+   `role="status"`, info and warnings after at least five (`duration: 0`
+   keeps them). Pointer or keyboard focus inside a toast pauses its timer
+   (#7113). The text names the affected object („Die Gruppe konnte
    nicht gespeichert werden“).
 5. **Field errors at the field.** `errors[]` entries go to their field with
    `aria-invalid` and `aria-describedby` (the kit control's `error` prop, or
