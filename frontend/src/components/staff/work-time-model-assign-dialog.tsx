@@ -87,9 +87,17 @@ export function WorkTimeModelAssignDialog({
     [candidates, validFrom],
   );
   const term = foldForSearch(search.trim());
-  const visible = term
-    ? candidates.filter((person) => foldForSearch(person.name).includes(term))
-    : candidates;
+  // Wählbare zuerst: bei „Früheres Datum“ sind oft nur wenige wählbar, und
+  // die sollen nicht unter den gesperrten verschwinden. Innerhalb bleibt
+  // die Reihenfolge nach Namen.
+  const visible = [
+    ...(term
+      ? candidates.filter((person) => foldForSearch(person.name).includes(term))
+      : candidates),
+  ].sort(
+    (a, b) =>
+      Number(reasons.get(a.id) != null) - Number(reasons.get(b.id) != null),
+  );
   const selectable = visible.filter((person) => !reasons.get(person.id));
   // Wer mit dem gewählten Start nicht mehr wählbar ist, fällt aus der
   // Auswahl: eine Person, die die Liste als gesperrt zeigt, wird nie
@@ -249,6 +257,8 @@ export function WorkTimeModelAssignDialog({
                   setConfirmed(false);
                 }}
                 max={dayBefore(today)}
+                required
+                hideClearButton
                 hint="Nur für Personen ohne bisheriges Soll."
               />
               <Alert

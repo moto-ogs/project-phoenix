@@ -124,6 +124,7 @@ export function WorkTimeModelPeopleTab({ model }: WorkTimeModelPeopleTabProps) {
           type="button"
           variant="primary"
           size="md"
+          className="gap-2"
           onClick={() => setDialogOpen(true)}
           disabled={assignDisabledReason !== undefined}
           disabledReason={assignDisabledReason}

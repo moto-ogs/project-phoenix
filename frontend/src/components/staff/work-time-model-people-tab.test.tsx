@@ -214,6 +214,12 @@ describe("Reiter „Personen“ einer Vorlage (#6921)", () => {
     );
     expect(withSchedule).toBeDisabled();
     expect(withSchedule).not.toBeChecked();
+    // Wer noch wählbar ist, steht oben; die Gesperrten folgen.
+    const order = within(within(dialog).getByRole("list", { name: "Personen" }))
+      .getAllByRole("listitem")
+      .map((item) => item.textContent ?? "");
+    expect(order[0]).toContain("Clara Sommer");
+    expect(order.slice(1).join()).toContain("Ben Krüger");
     expect(screen.getByTestId("assign-summary")).toHaveTextContent(
       "1 Person · ab dem 01.09.2026",
     );
