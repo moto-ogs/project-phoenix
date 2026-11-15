@@ -592,8 +592,12 @@ function useApiErrorCore(
         HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
       >("input[name], textarea[name], select[name]");
       // The first failed field in page order, the one FormErrorAlert brings
-      // into view, not the first key the server happened to list.
-      const control = [...controls].find((item) => failed.has(item.name));
+      // into view, not the first key the server happened to list. A field
+      // without a named control (the signature pad) counts by its `id`.
+      const control = firstInPageOrder([
+        ...[...controls].filter((item) => failed.has(item.name)),
+        ...fieldsById(formRef?.current ?? document.body, failed),
+      ]);
       // A CustomSelect or DatePicker carries its value in a hidden input next
       // to its trigger (combobox or the date button).
       const target =
@@ -601,8 +605,7 @@ function useApiErrorCore(
           ? control.nextElementSibling?.querySelector<HTMLElement>(
               '[role="combobox"], button',
             )
-          : (control ??
-            firstFieldById(formRef?.current ?? document.body, failed));
+          : control;
       // FormErrorAlert alone scrolls (#5217): one jump to the first marked
       // field, not a second instant one from the focus.
       target?.focus({ preventScroll: true });
@@ -720,20 +723,25 @@ function useApiErrorCore(
 }
 
 /**
- * A field without a named control, such as the signature pad, is marked
- * under its `id` (#7111): the first of them in page order, if focusable.
+ * Fields without a named control, such as the signature pad, marked under
+ * their `id` (#7111). Only those focusable from code (`tabindex`) count.
  */
-function firstFieldById(
+function fieldsById(
   root: ParentNode,
   failed: ReadonlySet<string>,
-): HTMLElement | undefined {
-  const fields = [...failed]
+): HTMLElement[] {
+  return [...failed]
     .map((name) => root.querySelector<HTMLElement>(`#${CSS.escape(name)}`))
-    .filter((field): field is HTMLElement => field !== null)
-    .sort((a, b) =>
-      a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
+    .filter(
+      (field): field is HTMLElement =>
+        field !== null && field.matches("[tabindex]"),
     );
-  return fields.find((field) => field.matches("[tabindex]"));
+}
+
+function firstInPageOrder<T extends Element>(elements: readonly T[]) {
+  return [...elements].sort((a, b) =>
+    a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
+  )[0];
 }
 
 /** Opt-in display path for actions without a form (#2510). */

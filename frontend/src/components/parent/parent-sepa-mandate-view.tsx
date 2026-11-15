@@ -192,7 +192,7 @@ export function ParentSepaMandateView({
     );
   }
   return (
-    <div ref={phaseRef} className="contents">
+    <div ref={phaseRef} className="space-y-5">
       <LoadErrorAlert error={loadError.error} />
       <LoadErrorAlert error={afterRevoke.error} />
       <GrantFlow contract={key} view={view} onGranted={setView} />
@@ -416,7 +416,7 @@ function GrantFlow({
 
   if (text) {
     return (
-      <div ref={stepRef} className="contents">
+      <div ref={stepRef}>
         <ConfirmStep
           contract={contract}
           input={input}
@@ -436,7 +436,7 @@ function GrantFlow({
     );
   }
   return (
-    <div ref={stepRef} className="contents">
+    <div ref={stepRef}>
       <AccountStep
         contract={contract}
         input={input}

@@ -122,7 +122,7 @@ export function ContractSigningView({
         <CardGridSkeleton cards={3} className="grid grid-cols-1 gap-5" />
       </SkeletonRegion>
     );
-  if (view.signature || view.status !== "versendet") {
+  if (signed) {
     // The mail link closes with the signature (#4679); the number stays
     // changeable in the parents portal.
     return (

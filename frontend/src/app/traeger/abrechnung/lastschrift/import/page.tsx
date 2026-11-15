@@ -220,11 +220,15 @@ export default function TraegerSepaImportPage() {
   };
 
   const step = !result ? 0 : result.unmapped.length > 0 ? 1 : 2;
-  // Each step brings its own card (#7111): its heading takes the focus,
-  // while the control the person used (file choice, Übernehmen) is gone.
-  const stepFocus = useStepFocus<HTMLDivElement>(done ? "done" : step);
+  // A read file, the import and a restart replace the control the person
+  // used (file choice, Übernehmen, Weitere Datei): the heading of the card
+  // that now asks for something takes the focus (#7111). Mapping the last
+  // column turns step 1 into step 2 under the person's hand; that moves
+  // nothing (WCAG 3.2.2).
+  const phase = done ? "done" : result ? "result" : "file";
+  const stepFocus = useStepFocus<HTMLDivElement>(phase);
   const focusOn = (target: number | "done") =>
-    (done ? "done" : step) === target ? stepFocus : undefined;
+    (done ? target === "done" : target === step) ? stepFocus : undefined;
   const loading =
     canBill && !pageLoad.error && (creditorId === null || log === null);
   const missingCreditor = creditorId === "";

@@ -122,7 +122,10 @@ async function choose(result = preview) {
       files: [new File(["Referenz;IBAN"], "mandate.csv", { type: "text/csv" })],
     },
   });
-  await screen.findByRole("heading", { name: "Prüfen und übernehmen" });
+  await screen.findByRole("heading", {
+    name:
+      result.unmapped.length > 0 ? "Spalten zuordnen" : "Prüfen und übernehmen",
+  });
 }
 
 function importButton() {
@@ -246,6 +249,24 @@ describe("SEPA import approval", () => {
     expect(
       await screen.findByRole("heading", { name: "Datei wählen" }),
     ).toHaveFocus();
+  });
+
+  // Mapping the last missing column shows the preview under the person's
+  // hand: the focus stays in the select they just used (WCAG 3.2.2).
+  it("keeps the focus in the mapping when the preview appears", async () => {
+    await choose({ ...preview, unmapped: ["iban"] });
+    expect(
+      screen.getByRole("heading", { name: "Spalten zuordnen" }),
+    ).toHaveFocus();
+    api.previewSepaImport.mockResolvedValueOnce(preview);
+    const iban = screen.getByRole("combobox", { name: "IBAN" });
+    iban.focus();
+    fireEvent.click(iban);
+    fireEvent.click(screen.getByRole("option", { name: "IBAN" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Prüfen und übernehmen" }),
+    ).not.toHaveFocus();
   });
 
   it("confirms and reports a debtor-only import separately from mandates", async () => {

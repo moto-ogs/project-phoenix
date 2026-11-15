@@ -556,7 +556,7 @@ function SchoolParentConferences() {
         </div>
       ) : null}
 
-      <div ref={selected ? undefined : detailFocus} className="print:hidden">
+      <div ref={selected ? undefined : detailFocus}>
         <SectionCard title="Meine Elternsprechtage" className="print:hidden">
           {error && loadError ? (
             <LoadErrorAlert error={loadError} />

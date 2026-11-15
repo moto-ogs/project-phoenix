@@ -710,7 +710,7 @@ async function errorStates(browser: Browser) {
       const ax = await axe(page);
       save(l.label, { label: l.label, state: st, tabStops, onBody, axe: ax });
       console.log(
-        `${l.label}: Fokus=${st.active} Tab=${tabStops.join(" → ")} body=${onBody} aria-invalid=${st.invalid} Meldung="${st.alerts[0] ?? "-"}" axe=${ax.violations.map((x: any) => `${x.id}:${x.count}`).join(" ") || 0}`,
+        `${onBody > 0 ? "FEHLER Fokus auf <body> · " : ""}${l.label}: Fokus=${st.active} Tab=${tabStops.join(" → ")} body=${onBody} aria-invalid=${st.invalid} Meldung="${st.alerts[0] ?? "-"}" axe=${ax.violations.map((x: any) => `${x.id}:${x.count}`).join(" ") || 0}`,
       );
     } catch (e) {
       console.log(`${l.label}: FEHLER ${String(e).slice(0, 160)}`);
