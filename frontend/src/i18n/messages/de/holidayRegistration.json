@@ -89,9 +89,9 @@
   "translationNote": "Übersetzung, es gilt der deutsche Text:",
   "captchaMissing": "Die Sicherheitsprüfung fehlt. Bitte laden Sie die Seite neu.",
   "captchaHelp": {
-    "hint": "Die Sicherheitsprüfung hängt?",
+    "hint": "Die Sicherheitsprüfung lädt nicht oder bleibt stehen?",
     "restart": "Prüfung neu starten",
-    "restartTooltip": "Lädt die Sicherheitsprüfung neu. Ihre Angaben bleiben erhalten."
+    "restartTooltip": "Lädt die Prüfung neu, Ihre Angaben bleiben erhalten."
   },
   "toSummary": "Weiter zur Zusammenfassung",
   "checkFields": "Bitte prüfen Sie die markierten Felder.",

@@ -140,7 +140,7 @@ export function TraegerYearCalendar({
                       mark?.kind === "holiday" &&
                         "bg-moto-blue-soft text-moto-blue-strong rounded-full font-semibold",
                       mark?.kind === "closing" &&
-                        "bg-moto-orange-soft text-moto-orange-strong border-moto-orange rounded-sm border font-semibold",
+                        "bg-moto-orange-soft text-moto-orange-strong border-moto-orange rounded-sm border-2 font-semibold",
                       day.iso === todayISO && "ring-1 ring-gray-900",
                     )}
                   >

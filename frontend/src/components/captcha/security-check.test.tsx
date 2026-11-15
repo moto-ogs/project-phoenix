@@ -27,7 +27,7 @@ vi.mock("@marsidev/react-turnstile", async () => {
 import { SecurityCheck } from "./security-check";
 
 const copy = {
-  hint: "Die Sicherheitsprüfung hängt?",
+  hint: "Die Sicherheitsprüfung lädt nicht oder bleibt stehen?",
   restart: "Prüfung neu starten",
   restartTooltip: "Lädt die Sicherheitsprüfung neu.",
 };
@@ -38,9 +38,7 @@ describe("SecurityCheck (#7114)", () => {
     const onToken = vi.fn();
     render(<SecurityCheck siteKey="site" copy={copy} onToken={onToken} />);
 
-    expect(screen.getByText(/Die Sicherheitsprüfung hängt\?/)).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
-    expect(onToken).toHaveBeenLastCalledWith("token-1");
+    expect(screen.getByText(/lädt nicht oder bleibt stehen\?/)).toBeVisible();
     expect(mounts.count).toBe(1);
 
     fireEvent.click(
@@ -49,5 +47,21 @@ describe("SecurityCheck (#7114)", () => {
 
     expect(onToken).toHaveBeenLastCalledWith("");
     expect(mounts.count).toBe(2);
+  });
+
+  it("blendet den Hinweis aus, sobald die Prüfung bestanden ist", () => {
+    const onToken = vi.fn();
+    render(<SecurityCheck siteKey="site" copy={copy} onToken={onToken} />);
+    expect(
+      screen.getByRole("button", { name: "Prüfung neu starten" }),
+    ).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
+
+    expect(onToken).toHaveBeenLastCalledWith("token-1");
+    expect(
+      screen.queryByRole("button", { name: "Prüfung neu starten" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Solve captcha" })).toBeVisible();
   });
 });

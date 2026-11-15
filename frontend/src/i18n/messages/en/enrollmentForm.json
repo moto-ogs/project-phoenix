@@ -136,9 +136,9 @@
   },
   "captchaMisconfigured": "Online enrollment is not possible right now. This is not your fault. Please contact the {careTerm}.",
   "captchaHelp": {
-    "hint": "Is the security check stuck?",
+    "hint": "Is the security check not loading or stuck?",
     "restart": "Restart check",
-    "restartTooltip": "Reloads the security check. Your entries stay."
+    "restartTooltip": "Reloads the check, your entries stay."
   },
   "structured": {
     "yes": "Yes",

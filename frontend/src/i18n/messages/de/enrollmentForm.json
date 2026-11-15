@@ -138,9 +138,9 @@
   },
   "captchaMisconfigured": "Die Online-Anmeldung ist gerade nicht möglich. Das liegt nicht an Ihnen. Bitte wenden Sie sich an die {careTerm}.",
   "captchaHelp": {
-    "hint": "Die Sicherheitsprüfung hängt?",
+    "hint": "Die Sicherheitsprüfung lädt nicht oder bleibt stehen?",
     "restart": "Prüfung neu starten",
-    "restartTooltip": "Lädt die Sicherheitsprüfung neu. Ihre Angaben bleiben erhalten."
+    "restartTooltip": "Lädt die Prüfung neu, Ihre Angaben bleiben erhalten."
   },
   "structured": {
     "yes": "Ja",

@@ -114,15 +114,27 @@ function LegendGlyph({
       : COLOR_BAR_FALLBACK;
 
   if (variant === "square") {
+    // Umrandetes Quadrat in der Größe des Punkts daneben (`StatusDot` md
+    // 8 px, lg 10 px), wie die umrandeten Tage, die es erklärt.
+    const side = size === "md" ? 10 : 8;
     return (
       <svg
-        width="12"
-        height="12"
-        viewBox="0 0 12 12"
+        width={side}
+        height={side}
+        viewBox={`0 0 ${side} ${side}`}
         aria-hidden="true"
         className="shrink-0"
       >
-        <rect x="0" y="0" width="12" height="12" rx="2" fill={color} />
+        <rect
+          x="0.75"
+          y="0.75"
+          width={side - 1.5}
+          height={side - 1.5}
+          rx="1.5"
+          fill={`${color}33`}
+          stroke={color}
+          strokeWidth="1.5"
+        />
       </svg>
     );
   }

@@ -1126,7 +1126,11 @@ function TimeGridEventBlock({
       >
         {event.title}
       </div>
-      <div className="truncate text-xs text-gray-600">{eventTime(event)}</div>
+      {/* Die Art steht als Text neben der Zeit, nicht nur als Farbe der
+          Leiste (#7114, WCAG 1.4.1). */}
+      <div className="truncate text-xs text-gray-600">
+        {eventTime(event)} · {tone.label}
+      </div>
       {event.location ? (
         <div className="flex items-center gap-1 text-xs text-gray-500">
           <MotoConceptIcon
@@ -1258,6 +1262,12 @@ function EventPill({
         }`}
       >
         {event.title}
+      </span>
+      {/* Die Art nicht nur als Farbe (#7114, WCAG 1.4.1). Auf dem Handy ist
+          die Pille zu schmal, dort hört nur der Screenreader sie. */}
+      <span className="sr-only shrink-0 text-xs text-gray-600 sm:not-sr-only">
+        <span className="sr-only">, </span>
+        {tone.label}
       </span>
       {timeLabel ? (
         <span className="shrink-0 text-xs text-gray-500 tabular-nums">

@@ -89,9 +89,9 @@
   "translationNote": "Çeviri, Almanca metin geçerlidir:",
   "captchaMissing": "Güvenlik kontrolü eksik. Lütfen sayfayı yeniden yükleyin.",
   "captchaHelp": {
-    "hint": "Güvenlik kontrolü takıldı mı?",
+    "hint": "Güvenlik kontrolü yüklenmiyor veya takılı mı kaldı?",
     "restart": "Kontrolü yeniden başlat",
-    "restartTooltip": "Güvenlik kontrolünü yeniden yükler. Bilgileriniz korunur."
+    "restartTooltip": "Kontrolü yeniden yükler, bilgileriniz korunur."
   },
   "toSummary": "Özete devam et",
   "checkFields": "Lütfen işaretli alanları kontrol edin.",

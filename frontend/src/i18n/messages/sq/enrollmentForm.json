@@ -138,9 +138,9 @@
   },
   "captchaMisconfigured": "Regjistrimi online nuk është i mundur tani. Nuk është faji juaj. Ju lutemi kontaktoni {careTerm}-në.",
   "captchaHelp": {
-    "hint": "Kontrolli i sigurisë ka ngecur?",
+    "hint": "Kontrolli i sigurisë nuk ngarkohet ose ka ngecur?",
     "restart": "Rinis kontrollin",
-    "restartTooltip": "Ringarkon kontrollin e sigurisë. Të dhënat tuaja mbeten."
+    "restartTooltip": "Ringarkon kontrollin, të dhënat tuaja mbeten."
   },
   "structured": {
     "yes": "Po",

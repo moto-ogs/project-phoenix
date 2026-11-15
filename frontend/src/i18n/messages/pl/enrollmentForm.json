@@ -138,9 +138,9 @@
   },
   "captchaMisconfigured": "Zapis online nie jest teraz możliwy. Problem nie leży po Państwa stronie. Proszę skontaktować się z {careTerm}.",
   "captchaHelp": {
-    "hint": "Kontrola bezpieczeństwa się zawiesiła?",
+    "hint": "Kontrola bezpieczeństwa się nie ładuje lub zawiesiła?",
     "restart": "Uruchom kontrolę ponownie",
-    "restartTooltip": "Ponownie wczytuje kontrolę bezpieczeństwa. Twoje dane zostaną zachowane."
+    "restartTooltip": "Ponownie wczytuje kontrolę, Twoje dane zostaną zachowane."
   },
   "structured": {
     "yes": "Tak",

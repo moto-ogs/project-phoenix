@@ -138,9 +138,9 @@
   },
   "captchaMisconfigured": "Online kayıt şu anda mümkün değil. Bu sizin hatanız değil. Lütfen {careTerm} ile iletişime geçin.",
   "captchaHelp": {
-    "hint": "Güvenlik kontrolü takıldı mı?",
+    "hint": "Güvenlik kontrolü yüklenmiyor veya takılı mı kaldı?",
     "restart": "Kontrolü yeniden başlat",
-    "restartTooltip": "Güvenlik kontrolünü yeniden yükler. Bilgileriniz korunur."
+    "restartTooltip": "Kontrolü yeniden yükler, bilgileriniz korunur."
   },
   "structured": {
     "yes": "Evet",

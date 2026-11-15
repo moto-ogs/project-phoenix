@@ -23,8 +23,8 @@ describe("TraegerYearCalendar (#7114)", () => {
       name: "Montag, 4. Januar: Schließtag: Brückentag",
     });
     expect(holiday).toHaveClass("rounded-full");
-    expect(holiday).not.toHaveClass("border");
-    expect(closing).toHaveClass("rounded-sm", "border");
+    expect(holiday).not.toHaveClass("border-2");
+    expect(closing).toHaveClass("rounded-sm", "border-2");
     expect(closing).not.toHaveClass("rounded-full");
   });
 });

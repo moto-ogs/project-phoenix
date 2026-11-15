@@ -35,6 +35,12 @@ export function SecurityCheck({
   // A new key mounts a fresh widget. `reset()` does not help a widget that
   // never finished loading.
   const [attempt, setAttempt] = useState(0);
+  // Der Hinweis gilt nur, solange die Prüfung offen ist.
+  const [solved, setSolved] = useState(false);
+  const report = (token: string) => {
+    setSolved(token !== "");
+    onToken(token);
+  };
   return (
     <div className="space-y-1.5">
       <Turnstile
@@ -42,24 +48,26 @@ export function SecurityCheck({
         ref={instanceRef}
         siteKey={siteKey}
         options={{ theme: "light" }}
-        onSuccess={onToken}
-        onExpire={() => onToken("")}
-        onError={() => onToken("")}
+        onSuccess={report}
+        onExpire={() => report("")}
+        onError={() => report("")}
       />
-      <p className="text-sm text-gray-600">
-        {copy.hint}{" "}
-        <Button
-          type="button"
-          variant="link"
-          tooltip={copy.restartTooltip}
-          onClick={() => {
-            onToken("");
-            setAttempt((current) => current + 1);
-          }}
-        >
-          {copy.restart}
-        </Button>
-      </p>
+      {solved ? null : (
+        <p className="text-sm text-gray-600">
+          {copy.hint}{" "}
+          <Button
+            type="button"
+            variant="link"
+            tooltip={copy.restartTooltip}
+            onClick={() => {
+              report("");
+              setAttempt((current) => current + 1);
+            }}
+          >
+            {copy.restart}
+          </Button>
+        </p>
+      )}
     </div>
   );
 }

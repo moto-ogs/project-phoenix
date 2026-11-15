@@ -6,7 +6,7 @@ import { HolidayRegistrationLegal } from "./holiday-registration-legal";
 // dem Absenden steht eine Zusammenfassung, danach die Eingangsbestätigung.
 // Eltern mit Elternkonto wählen ihre bekannten Kinder aus (#4662).
 
-import { SecurityCheck } from "~/components/enrollment/security-check";
+import { SecurityCheck } from "~/components/captcha/security-check";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";

@@ -20,7 +20,7 @@ import {
 import { useLocale } from "next-intl";
 import { Check, Lock, Plus } from "lucide-react";
 import type { TurnstileInstance } from "@marsidev/react-turnstile";
-import { SecurityCheck } from "~/components/enrollment/security-check";
+import { SecurityCheck } from "~/components/captcha/security-check";
 import { DateOfBirthPicker } from "~/components/enrollment/date-of-birth-picker";
 import { Button } from "~/components/ui/button";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
