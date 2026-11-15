@@ -12,6 +12,7 @@ import { SkeletonRows } from "~/components/ui/skeleton";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiLoadError } from "~/contexts/ToastContext";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import type { FormError } from "~/components/ui/form-error";
 import {
   fetchLetterPlaceholders,
   previewLetter,
@@ -50,6 +51,7 @@ interface LetterBodyFieldProps {
   /** Children whose letter the preview can show. */
   readonly previewChildren: readonly LetterPreviewChild[];
   readonly previewChildrenLoading?: boolean;
+  readonly previewChildrenError?: FormError | null;
   readonly placeholder?: string;
   readonly rows?: number;
   readonly id?: string;
@@ -69,6 +71,7 @@ export function LetterBodyField({
   apiBase,
   previewChildren,
   previewChildrenLoading = false,
+  previewChildrenError,
   placeholder,
   rows = 5,
   id,
@@ -190,6 +193,7 @@ export function LetterBodyField({
           apiBase={apiBase}
           options={previewChildren}
           loading={previewChildrenLoading}
+          childrenError={previewChildrenError}
         />
       )}
     </div>
@@ -201,11 +205,13 @@ function LetterPreviewPanel({
   apiBase,
   options,
   loading,
+  childrenError,
 }: Readonly<{
   body: string;
   apiBase?: string;
   options: readonly LetterPreviewChild[];
   loading: boolean;
+  childrenError?: FormError | null;
 }>) {
   const [studentId, setStudentId] = useState("");
   const [preview, setPreview] = useState<LetterPreview | null>(null);
@@ -277,8 +283,9 @@ function LetterPreviewPanel({
         </div>
       </div>
       <div className="mt-3 border-t border-gray-100 pt-3" aria-live="polite">
+        <LoadErrorAlert error={childrenError} actionLayout="responsive" />
         <LoadErrorAlert error={previewError.error} actionLayout="responsive" />
-        {!chosen && !loading ? (
+        {!chosen && !loading && !childrenError ? (
           <p className="text-sm text-gray-500">
             Noch kein Kind in der Auswahl. Die Vorschau zeigt den Brief, sobald
             ein Kind da ist.

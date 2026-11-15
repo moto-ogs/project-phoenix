@@ -136,6 +136,9 @@ func FillParentLetter(text string, child ParentLetterChild) string {
 	if !HasParentLetterPlaceholders(text) {
 		return text
 	}
+	// Validation accepts whitespace inside a token, including line breaks.
+	// Collapse it before splitting so every valid token stays on one line.
+	text = letterPlaceholderPattern.ReplaceAllString(text, "{{$1}}")
 	lines := strings.Split(text, "\n")
 	kept := make([]string, 0, len(lines))
 	for _, line := range lines {

@@ -121,7 +121,7 @@ import {
 import { useSWRAuth } from "~/lib/swr";
 import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 import { type Group } from "~/lib/api";
-import { fetchSchoolClasses, fetchStudents } from "~/lib/student-api";
+import { fetchSchoolClasses, fetchAllStudentNames } from "~/lib/student-api";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import { fetchActivities } from "~/lib/activity-api";
 import type { Activity } from "~/lib/activity-helpers";
@@ -1025,11 +1025,20 @@ function AnnouncementFormModal({
   const [body, setBody] = useState(announcement?.body ?? "");
   // The preview of a letter that names each child (#4813) shows one child
   // of the school; names only.
-  const { data: letterStudents, isLoading: letterPreviewChildrenLoading } =
-    useSWRAuth(
-      isLetterForm ? parentAnnouncementKeys.letterPreviewChildren() : null,
-      () => fetchStudents({ pageSize: 500, view: "names" }),
-    );
+  const {
+    data: letterStudents,
+    error: letterStudentsError,
+    mutate: reloadLetterStudents,
+    isLoading: letterPreviewChildrenLoading,
+  } = useSWRAuth(
+    isLetterForm ? parentAnnouncementKeys.letterPreviewChildren() : null,
+    async () => ({ students: await fetchAllStudentNames() }),
+  );
+  const letterStudentsLoadError = useSwrLoadError(
+    letterStudentsError,
+    "die Liste der Kinder für die Vorschau",
+    () => reloadLetterStudents(),
+  );
   const letterPreviewChildren = useMemo(
     () =>
       (letterStudents?.students ?? []).map((student) => ({
@@ -1626,6 +1635,7 @@ function AnnouncementFormModal({
                       error={bodyError ?? undefined}
                       previewChildren={letterPreviewChildren}
                       previewChildrenLoading={letterPreviewChildrenLoading}
+                      previewChildrenError={letterStudentsLoadError}
                       placeholder="Liebe Eltern von {{vorname}}, … Links im Text werden für Eltern klickbar."
                       className="resize-y px-4 py-3 text-base"
                     />

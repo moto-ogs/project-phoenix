@@ -8,13 +8,13 @@ import {
   type Announcement,
 } from "~/lib/parent-announcements-api";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, unavailableApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import ParentAnnouncementsPage from "./page";
 import { stashAnnouncementStudents } from "~/lib/announcement-prefill";
 
-const { searchParams, pushMock, updateUrlParamsMock, listState } = vi.hoisted(
-  () => ({
+const { searchParams, pushMock, updateUrlParamsMock, listState, previewLoad } =
+  vi.hoisted(() => ({
     searchParams: new URLSearchParams(),
     pushMock: vi.fn(),
     updateUrlParamsMock: vi.fn(),
@@ -23,8 +23,8 @@ const { searchParams, pushMock, updateUrlParamsMock, listState } = vi.hoisted(
       isLoading: false,
       error: null as Error | null,
     },
-  }),
-);
+    previewLoad: { error: null as Error | null, retry: vi.fn() },
+  }));
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => searchParams,
@@ -56,7 +56,14 @@ vi.mock("~/lib/swr", () => ({
               data ?? fetchAnnouncements(true).catch(() => listState.data),
           ),
         }
-      : { data: undefined, isLoading: false, error: null, mutate: vi.fn() },
+      : key === "parent-letter-preview-children"
+        ? {
+            data: undefined,
+            isLoading: false,
+            error: previewLoad.error,
+            mutate: previewLoad.retry,
+          }
+        : { data: undefined, isLoading: false, error: null, mutate: vi.fn() },
 }));
 
 vi.mock("~/lib/parent-announcements-api", async (importOriginal) => {
@@ -147,6 +154,7 @@ describe("ParentAnnouncementsPage (#3115)", () => {
     listState.data = [base, poll];
     listState.isLoading = false;
     listState.error = null;
+    previewLoad.error = null;
   });
 
   it("opens the object page from the row and from „Anzeigen“", async () => {
@@ -234,6 +242,27 @@ describe("ParentAnnouncementsPage (#3115)", () => {
     expect(
       await screen.findByText("1 Elternbrief · 1 veröffentlicht"),
     ).toBeInTheDocument();
+  });
+
+  it("shows and retries a failed preview child load instead of an empty-school message", async () => {
+    searchParams.set("art", "elternbriefe");
+    previewLoad.error = unavailableApiError(new TypeError("Failed to fetch"));
+    render(<ParentAnnouncementsPage />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Neuen Elternbrief erstellen",
+      }),
+    );
+    fireEvent.change(screen.getByLabelText(/^Text/), {
+      target: { value: "Hallo {{vorname}}" },
+    });
+    const retry = await screen.findByRole("button", { name: /Wiederholen/ });
+    expect(screen.getByRole("alert")).toHaveTextContent(/Kinder.*Vorschau/);
+    expect(
+      screen.queryByText(/Noch kein Kind in der Auswahl/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(retry);
+    expect(previewLoad.retry).toHaveBeenCalledOnce();
   });
 
   it("opens the wizard for a draft requested via ?bearbeiten= and clears the parameter", async () => {

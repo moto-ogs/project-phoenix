@@ -159,11 +159,21 @@ export default function SchoolParentLettersPage() {
   // The preview of a letter that names each child (#4813) shows a child of
   // the chosen class.
   const previewClass = draft.kind === "letter" ? draft.schoolClass : "";
-  const { data: classDay, isLoading: previewChildrenLoading } = useSWRAuth(
+  const {
+    data: classDay,
+    error: previewChildrenError,
+    mutate: reloadPreviewChildren,
+    isLoading: previewChildrenLoading,
+  } = useSWRAuth(
     previewClass
       ? parentAnnouncementKeys.classLetterPreviewChildren(previewClass)
       : null,
     () => fetchClassDaySchool(previewClass, berlinTodayISO()),
+  );
+  const previewChildrenLoadError = useSwrLoadError(
+    previewChildrenError,
+    "die Liste der Kinder für die Vorschau",
+    () => reloadPreviewChildren(),
   );
   const previewChildren = (classDay?.rows ?? [])
     .filter((row) => row.student_id > 0)
@@ -360,6 +370,7 @@ export default function SchoolParentLettersPage() {
                         apiBase={SCHOOL_PARENT_LETTERS_BASE}
                         previewChildren={previewChildren}
                         previewChildrenLoading={previewChildrenLoading}
+                        previewChildrenError={previewChildrenLoadError}
                         rows={8}
                       />
                     ) : (

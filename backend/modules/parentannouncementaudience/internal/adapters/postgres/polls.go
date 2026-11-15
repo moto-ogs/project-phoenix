@@ -284,7 +284,9 @@ func reminderRecipients(rows []reminderRecipientRow) []*contract.ParentAnnouncem
 const permittedLetterChildrenSQL = `
 			SELECT DISTINCT a.id AS announcement_id, sg.student_id
 			FROM users.parent_announcements a
-			JOIN (?) sg ON sg.tenant_id = a.tenant_id AND sg.student_id = ANY(a.recipient_student_ids)
+			JOIN users.student_profiles s ON s.tenant_id = a.tenant_id AND s.id = ANY(a.recipient_student_ids)` + studentMembershipJoins + `
+			JOIN users.persons p ON p.id = s.person_id AND p.deleted_at IS NULL AND sm.status <> 'alumnus'
+			JOIN (?) sg ON sg.tenant_id = a.tenant_id AND sg.student_id = s.id
 				AND sg.permissions @> '{"parent_portal.access": true}'::jsonb
 			JOIN users.guardian_profiles gp ON gp.id = sg.guardian_profile_id AND gp.tenant_id = a.tenant_id
 				AND gp.account_id = ?

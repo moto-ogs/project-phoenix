@@ -63,8 +63,18 @@ const sentLetter = {
   sender_school_class: "3b",
 } as Announcement;
 
+const previewLoad = { error: null as Error | null, retry: vi.fn() };
+
 function mockData(classes: string[], letters: Announcement[]) {
   mockUseSWRAuth.mockImplementation((key: string | null) => {
+    if (key === parentAnnouncementKeys.classLetterPreviewChildren("3b")) {
+      return {
+        data: undefined,
+        error: previewLoad.error,
+        isLoading: false,
+        mutate: previewLoad.retry,
+      };
+    }
     if (key === parentAnnouncementKeys.letterPlaceholders("school")) {
       return {
         data: [
@@ -98,6 +108,7 @@ describe("Elternbriefe in moto schule (#4800)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockMutate.mockResolvedValue(undefined);
+    previewLoad.error = null;
   });
 
   it("lists the own letters with their class and opens one", () => {
@@ -109,6 +120,24 @@ describe("Elternbriefe in moto schule (#4800)", () => {
     expect(screen.getAllByText("Gesendet").length).toBeGreaterThan(0);
     fireEvent.click(screen.getAllByText("Wandertag")[0]!);
     expect(mockPush).toHaveBeenCalledWith("/school/elternbriefe/11");
+  });
+
+  it("shows and retries a failed preview child load instead of claiming the class is empty", async () => {
+    mockData(["3b"], []);
+    previewLoad.error = unavailableApiError(new TypeError("Failed to fetch"));
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /Neuer Elternbrief/ }));
+    fireEvent.click(screen.getByLabelText(/Mit Lesebestätigung/));
+    fireEvent.change(screen.getByLabelText(/^Text/), {
+      target: { value: "Hallo {{vorname}}" },
+    });
+    const retry = await screen.findByRole("button", { name: /Wiederholen/ });
+    expect(screen.getByRole("alert")).toHaveTextContent(/Kinder.*Vorschau/);
+    expect(
+      screen.queryByText(/Noch kein Kind in der Auswahl/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(retry);
+    expect(previewLoad.retry).toHaveBeenCalledOnce();
   });
 
   it("writes and sends a signed consent to the one class of the Lehrkraft", async () => {
