@@ -105,7 +105,6 @@ export function HolidayRegistrationForm({
 }>) {
   const t = useTranslations("holidayRegistration");
   const formRef = useRef<HTMLFormElement>(null);
-  const errorPath = useApiFormError(formRef);
   const [draft, setDraft] = useState<RegistrationDraft>(() =>
     registrationFromFamily(family),
   );
@@ -116,10 +115,13 @@ export function HolidayRegistrationForm({
     readonly HolidayReceiptPlacement[]
   >([]);
   const [statusToken, setStatusToken] = useState("");
-  const fieldError = (name: string) => errorPath.fieldError(name) ?? undefined;
   const accountFieldsetRef = useRef<HTMLFieldSetElement>(null);
   // Each step takes the place of the last one: its heading takes the focus.
   const stepRef = useStepFocus<HTMLDivElement>(step);
+  // After the step focus: a failed send returns to the form, and the first
+  // invalid field takes the focus from the heading in the same commit.
+  const errorPath = useApiFormError(formRef);
+  const fieldError = (name: string) => errorPath.fieldError(name) ?? undefined;
   const [accountError, setAccountError] = useState<string | undefined>();
   const asksForAccount = parentAccount === "ask";
   const invalidate = useInvalidateMatching();
