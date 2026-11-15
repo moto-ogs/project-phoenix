@@ -306,6 +306,7 @@ export const HELP_TOPIC_AUDIENCE = {
   [HELP_TOPICS.traegerSchoolComparison]: "traeger",
   [HELP_TOPICS.traegerReports]: "traeger",
   [HELP_TOPICS.teacherSettings]: "teacher",
+  [HELP_TOPICS.teacherNotificationFeed]: "teacher",
   [HELP_TOPICS.teacherClassDay]: "teacher",
   [HELP_TOPICS.teacherClassList]: "teacher",
   [HELP_TOPICS.teacherMorningAttendance]: "teacher",

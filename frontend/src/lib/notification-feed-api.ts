@@ -1,6 +1,7 @@
-// Client des Benachrichtigungs-Feeds im Staff-Portal (#7148). Die Routen
-// unter /api/notifications/feed reichen an das Backend weiter; der Wrapper
-// antwortet mit { success, message, data }.
+// Client des Benachrichtigungs-Feeds (#7148). Die Routen unter
+// /api/notifications/feed (Staff-Portal) und /api/school/notifications/feed
+// (moto schule, #7139) reichen an das Backend weiter; der Wrapper antwortet
+// mit { success, message, data }. `apiBase` wählt das Portal.
 
 import { authFetch } from "./api-helpers";
 import {
@@ -23,22 +24,27 @@ const NOTIFICATION_FEED_PAGE_SIZE = 20;
 
 export { NOTIFICATION_FEED_REFRESH_EVENT } from "./notification-events";
 
+const STAFF_FEED_API = "/api/notifications/feed";
+
 export async function fetchNotificationFeed(
   cursor?: string | null,
+  apiBase: string = STAFF_FEED_API,
 ): Promise<NotificationFeedPage> {
   const query = new URLSearchParams({
     limit: String(NOTIFICATION_FEED_PAGE_SIZE),
   });
   if (cursor) query.set("cursor", cursor);
   const response = await authFetch<ProxyResponse<NotificationFeedPageWire>>(
-    `/api/notifications/feed?${query.toString()}`,
+    `${apiBase}?${query.toString()}`,
   );
   return mapNotificationFeedPage(response.data);
 }
 
-export async function fetchNotificationFeedUnreadCount(): Promise<number> {
+export async function fetchNotificationFeedUnreadCount(
+  apiBase: string = STAFF_FEED_API,
+): Promise<number> {
   const response = await authFetch<ProxyResponse<UnreadCountWire>>(
-    "/api/notifications/feed/unread-count",
+    `${apiBase}/unread-count`,
   );
   return response.data.unread_count;
 }
@@ -46,18 +52,21 @@ export async function fetchNotificationFeedUnreadCount(): Promise<number> {
 /** Markiert einen Eintrag als gelesen; liefert den neuen Zähler. */
 export async function markNotificationFeedEntryRead(
   id: string,
+  apiBase: string = STAFF_FEED_API,
 ): Promise<number> {
   const response = await authFetch<ProxyResponse<UnreadCountWire>>(
-    `/api/notifications/feed/${encodeURIComponent(id)}/read`,
+    `${apiBase}/${encodeURIComponent(id)}/read`,
     { method: "POST" },
   );
   return response.data.unread_count;
 }
 
 /** Markiert alle Einträge als gelesen; liefert den neuen Zähler. */
-export async function markAllNotificationFeedRead(): Promise<number> {
+export async function markAllNotificationFeedRead(
+  apiBase: string = STAFF_FEED_API,
+): Promise<number> {
   const response = await authFetch<ProxyResponse<UnreadCountWire>>(
-    "/api/notifications/feed/read-all",
+    `${apiBase}/read-all`,
     { method: "POST" },
   );
   return response.data.unread_count;

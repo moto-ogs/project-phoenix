@@ -277,6 +277,7 @@ export const HELP_TOPICS = {
   traegerSchoolComparison: "schulen-miteinander-vergleichen",
   traegerReports: "berichte-zum-stichtag-erstellen",
   teacherSettings: "als-lehrkraft-benachrichtigungen-einstellen",
+  teacherNotificationFeed: "als-lehrkraft-hinweise-in-der-glocke",
   teacherClassDay: "meinen-klassentag-ansehen",
   teacherClassList: "die-liste-einer-klasse-lesen",
   teacherMorningAttendance: "anwesenheit-am-vormittag-eintragen",

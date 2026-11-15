@@ -696,7 +696,7 @@ describe("getParentHelpTopicForPath", () => {
     // die Fehlzeiten einer Klasse, 26 seit #4797: die Beobachtungen der OGS,
     // 25 seit #4791: die nachgetragene Meldung der Schulverwaltung, 24 seit #4800: der
     // Elternbrief an die eigene Klasse, 23 seit #4795, 22 seit #4901).
-    expect(teacherTopics).toHaveLength(28);
+    expect(teacherTopics).toHaveLength(29);
     expect([...visible]).toEqual(
       expect.arrayContaining([
         HELP_TOPICS.teacherHomework,

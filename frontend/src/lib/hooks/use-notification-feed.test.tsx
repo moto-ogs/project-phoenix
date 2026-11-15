@@ -196,7 +196,10 @@ describe("notification feed reconciliation", () => {
       ]);
       expect(feed.onUnreadCount).toHaveBeenLastCalledWith(2);
       await act(() => feed.result.current.loadMore());
-      expect(api.fetchNotificationFeed).toHaveBeenLastCalledWith("new-cursor");
+      expect(api.fetchNotificationFeed).toHaveBeenLastCalledWith(
+        "new-cursor",
+        "/api/notifications/feed",
+      );
     },
   );
 

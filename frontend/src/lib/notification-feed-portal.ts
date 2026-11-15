@@ -1,0 +1,39 @@
+"use client";
+
+// Welches Portal die Glocke bedient (#7148, #7139). Staff-Portal und moto
+// schule zeigen denselben Feed des Kontos, jeweils über die eigene BFF-Route,
+// unter eigenen SWR-Schlüsseln und mit den Links des eigenen Portals. Ohne
+// Anbieter gilt das Staff-Portal.
+
+import { createContext, useContext } from "react";
+
+export interface NotificationFeedPortal {
+  /** BFF-Basis der Feed-Routen, ohne abschließenden Schrägstrich. */
+  readonly apiBase: string;
+  /** Unterscheidet die SWR-Schlüssel der Portale. */
+  readonly keyScope: "staff" | "school";
+  /** Macht aus dem Link eines Eintrags den Pfad für den Router. */
+  readonly resolveLink: (link: string) => string;
+  /**
+   * Schule für die Nutzungsanalyse. `undefined`: aus dem Tenant-Kontext
+   * (Staff-Portal); `null`: nichts erfassen.
+   */
+  readonly analyticsSchoolId?: string | null;
+}
+
+export const STAFF_NOTIFICATION_FEED_PORTAL: NotificationFeedPortal = {
+  apiBase: "/api/notifications/feed",
+  keyScope: "staff",
+  resolveLink: (link) => link,
+};
+
+const NotificationFeedPortalContext = createContext<NotificationFeedPortal>(
+  STAFF_NOTIFICATION_FEED_PORTAL,
+);
+
+export const NotificationFeedPortalProvider =
+  NotificationFeedPortalContext.Provider;
+
+export function useNotificationFeedPortal(): NotificationFeedPortal {
+  return useContext(NotificationFeedPortalContext);
+}

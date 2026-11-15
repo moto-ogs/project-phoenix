@@ -52,6 +52,30 @@ describe("SchoolRealtimeBridge", () => {
     }
   });
 
+  it("tells the bell that the feed changed (#7139)", () => {
+    render(<SchoolRealtimeBridge />);
+
+    const feed = vi.fn();
+    const refresh = vi.fn();
+    window.addEventListener("notification-feed-refresh", feed);
+    window.addEventListener(CLASS_DAY_REFRESH_EVENT, refresh);
+
+    try {
+      registeredHandler()({
+        type: "notification_feed_changed",
+        active_group_id: "",
+        data: {},
+        timestamp: new Date().toISOString(),
+      });
+
+      expect(feed).toHaveBeenCalledOnce();
+      expect(refresh).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener("notification-feed-refresh", feed);
+      window.removeEventListener(CLASS_DAY_REFRESH_EVENT, refresh);
+    }
+  });
+
   it("keeps a team chat message away from the class view", () => {
     render(<SchoolRealtimeBridge />);
 
