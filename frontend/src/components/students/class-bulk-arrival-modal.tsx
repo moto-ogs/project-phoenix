@@ -483,7 +483,7 @@ export function FilteredBulkArrivalModal({
                         Format HH:MM
                       </span>
                     ) : value === "" ? (
-                      <span className="col-start-2 text-xs text-gray-400 italic">
+                      <span className="col-start-2 text-xs text-gray-500 italic">
                         nicht ändern
                       </span>
                     ) : null}

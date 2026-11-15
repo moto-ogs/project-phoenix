@@ -427,7 +427,7 @@ export function DatePicker({
               ? "border-moto-red"
               : "border-gray-200",
             isDisabled
-              ? "cursor-not-allowed bg-gray-50 text-gray-400"
+              ? "cursor-not-allowed bg-gray-50 text-gray-500"
               : isOpen
                 ? "border-gray-300 bg-gray-50"
                 : "bg-white hover:bg-gray-50",

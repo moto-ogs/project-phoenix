@@ -52,7 +52,7 @@ function PersonIdentity({ row, person, name }: PersonHeaderProps) {
   return (
     <div className="min-w-0">
       <div
-        className={`truncate text-sm font-semibold ${person.absent ? "text-gray-400 line-through" : "text-gray-900"}`}
+        className={`truncate text-sm font-semibold ${person.absent ? "text-gray-500 line-through" : "text-gray-900"}`}
       >
         {name}
       </div>
@@ -66,7 +66,7 @@ function PersonIdentity({ row, person, name }: PersonHeaderProps) {
         >
           {person.absent ? "Abwesend" : "Anwesend"}
         </span>
-        {row.isPrimary && <span className="text-gray-400">• Zuständig</span>}
+        {row.isPrimary && <span className="text-gray-500">• Zuständig</span>}
       </div>
     </div>
   );
@@ -210,7 +210,7 @@ function AppointmentChoice({
           onChange={onToggle}
         />
         <span
-          className={`text-sm ${selectable ? "text-gray-800" : "text-gray-400"}`}
+          className={`text-sm ${selectable ? "text-gray-800" : "text-gray-500"}`}
         >
           {appointment.startTime}–{appointment.endTime} · {appointment.title}
           {status}
@@ -343,7 +343,7 @@ interface SubstituteHintProps {
 function SubstituteHint(props: SubstituteHintProps) {
   if (props.unstaffed) {
     return (
-      <p className="mt-1 text-xs text-gray-400">
+      <p className="mt-1 text-xs text-gray-500">
         Der Termin ist bewusst unbesetzt. Deshalb ist keine Vertretung möglich.
       </p>
     );
@@ -357,7 +357,7 @@ function SubstituteHint(props: SubstituteHintProps) {
   }
   if (props.fullyCovered) {
     return (
-      <p className="mt-1 text-xs text-gray-400">
+      <p className="mt-1 text-xs text-gray-500">
         Der Termin ist bereits vollständig vertreten. Wählen Sie zuerst
         „Entfernen“.
       </p>

@@ -152,12 +152,12 @@ export function AttachmentList({
               // A viewable file opens in a new tab, so its row must not
               // promise a download (#5330).
               <ExternalLink
-                className="h-4 w-4 shrink-0 text-gray-400"
+                className="h-4 w-4 shrink-0 text-gray-500"
                 aria-hidden="true"
               />
             ) : (
               <Download
-                className="h-4 w-4 shrink-0 text-gray-400"
+                className="h-4 w-4 shrink-0 text-gray-500"
                 aria-hidden="true"
               />
             )}

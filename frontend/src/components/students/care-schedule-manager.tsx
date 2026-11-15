@@ -1103,7 +1103,7 @@ export function CareScheduleManager({
             </Button>
           </div>
           {isCurrentWeek ? (
-            <span className="absolute left-1/2 hidden h-9 -translate-x-1/2 items-center justify-center rounded-full bg-gray-100 px-3 text-sm font-semibold text-gray-500 sm:inline-flex">
+            <span className="absolute left-1/2 hidden h-9 -translate-x-1/2 items-center justify-center rounded-full bg-gray-100 px-3 text-sm font-semibold text-gray-600 sm:inline-flex">
               Aktuelle Woche
             </span>
           ) : (
@@ -1541,10 +1541,10 @@ function AbsencePlaceholder({
         type="button"
         onClick={() => onRequestDeleteStatusDay(statusDay)}
         disabled={isDeleting}
-        className="moto-content-surface moto-hover-elevated group relative flex min-h-[134px] w-full items-center rounded-lg border p-3 text-left focus-visible:outline-2 focus-visible:outline-gray-400 disabled:cursor-not-allowed disabled:opacity-70"
+        className="moto-content-surface moto-hover-elevated group relative flex min-h-[134px] w-full items-center rounded-lg border p-3 text-left focus-visible:outline-2 focus-visible:outline-gray-600 disabled:cursor-not-allowed disabled:opacity-70"
         aria-label={`${label} entfernen`}
       >
-        <span className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition-colors group-hover:bg-gray-100 group-hover:text-gray-700">
+        <span className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-md text-gray-500 transition-colors group-hover:bg-gray-100 group-hover:text-gray-700">
           <X className="h-3.5 w-3.5" aria-hidden="true" />
         </span>
         {content}
@@ -1583,7 +1583,7 @@ function CareBoundarySection({
       <button
         type="button"
         onClick={onEdit}
-        className="flex min-h-[134px] w-full flex-col rounded-lg border border-gray-100 bg-gray-50 text-left transition-colors hover:bg-gray-100/70 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none"
+        className="flex min-h-[134px] w-full flex-col rounded-lg border border-gray-100 bg-gray-50 text-left transition-colors hover:bg-gray-100/70 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none"
       >
         {rows}
       </button>
@@ -1676,7 +1676,7 @@ function CareNotesSection({ notes }: { readonly notes: CareNoteItem[] }) {
           key={note.key}
           className="flex min-w-0 items-start gap-2 text-xs leading-5 text-gray-500"
         >
-          <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
+          <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-500" />
           <span className="font-semibold text-gray-600">{note.label}:</span>
           <span className="min-w-0 break-words">{note.value}</span>
         </div>

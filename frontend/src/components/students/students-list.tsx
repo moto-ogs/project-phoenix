@@ -297,7 +297,9 @@ export function StudentsList({
     // sagt nichts. Gibt es nichts zu ergänzen, entfällt die Zeile.
     const subtitleText = subtitleParts.join(" · ");
     const subtitle = !subtitleText ? undefined : !hasArrival ? (
-      <span className="text-moto-orange font-medium">{subtitleText}</span>
+      <span className="text-moto-orange-strong font-medium">
+        {subtitleText}
+      </span>
     ) : (
       subtitleText
     );

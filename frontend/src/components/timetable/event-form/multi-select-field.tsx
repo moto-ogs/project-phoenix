@@ -151,7 +151,7 @@ export function MultiSelectField({
         <label className="relative">
           <span className="sr-only">{label} suchen</span>
           <Search
-            className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+            className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500"
             aria-hidden
           />
           <Input
@@ -315,7 +315,7 @@ export function MultiSelectField({
                       )}
                     </span>
                     {(option.schoolClass || option.groupName) && (
-                      <span className="block truncate text-xs text-gray-400">
+                      <span className="block truncate text-xs text-gray-500">
                         {[option.schoolClass, option.groupName]
                           .filter(Boolean)
                           .join(" · ")}

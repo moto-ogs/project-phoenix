@@ -243,7 +243,7 @@ export function FormPreview({
                       </p>
                       <PreviewAttachmentNames attachments={block.attachments} />
                       {previewText.trim() !== "" ? (
-                        <p className="mt-1 line-clamp-2 text-sm leading-5 text-gray-400">
+                        <p className="mt-1 line-clamp-2 text-sm leading-5 text-gray-500">
                           {previewText}
                         </p>
                       ) : null}

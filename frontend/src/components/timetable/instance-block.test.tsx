@@ -87,7 +87,7 @@ describe("InstanceBlock -> PlanBlock mapping", () => {
     renderBlock(makeInstance({ status: "cancelled" }));
 
     const label = screen.getByText("Mensa");
-    expect(label).toHaveClass("line-through", "text-gray-400");
+    expect(label).toHaveClass("line-through", "text-gray-600");
     // Cancelled flattens the edge to neutral gray and drops any coverage.
     expect(screen.getByRole("button")).toHaveStyle({
       borderLeft: "3px solid #9CA3AF",

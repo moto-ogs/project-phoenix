@@ -2009,7 +2009,7 @@ function AnnouncementFormModal({
                   <div>
                     <p className="flex items-center gap-2 text-sm font-medium text-gray-800">
                       <Paperclip
-                        className="h-4 w-4 text-gray-400"
+                        className="h-4 w-4 text-gray-500"
                         aria-hidden
                       />
                       Dateien anhängen

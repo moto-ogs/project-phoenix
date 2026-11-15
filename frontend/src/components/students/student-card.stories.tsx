@@ -72,7 +72,7 @@ export const WithPhoto: Story = {
 };
 
 export const WithExtraContent: Story = {
-  // axe meldet hier noch color-contrast, label-content-name-mismatch; Behebung in #7110, #7112.
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
   parameters: { a11y: { test: "todo" } },
   args: {
     extraContent: (
@@ -116,8 +116,6 @@ export const CheckinModePending: Story = {
 // (OGS groups, active supervisions, student search). Grouped in one gallery
 // since each takes only trivial/no props.
 export const SubPartsGallery: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   render: () => (
     <div className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-4">
       <StudentInfoRow icon={<SchoolClassIcon />}>Klasse 3a</StudentInfoRow>

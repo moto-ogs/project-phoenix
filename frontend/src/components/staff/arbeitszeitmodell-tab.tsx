@@ -212,7 +212,7 @@ export function ArbeitszeitmodellTab({
       {keptByTraeger ? (
         <InsetPanel className="flex items-start gap-2">
           <Lock
-            className="mt-0.5 h-4 w-4 shrink-0 text-gray-400"
+            className="mt-0.5 h-4 w-4 shrink-0 text-gray-500"
             aria-hidden="true"
           />
           <p className="text-sm text-gray-600">
@@ -297,13 +297,13 @@ export function ArbeitszeitmodellTab({
                           className={`tabular-nums ${
                             minutes > 0
                               ? "font-medium text-gray-700"
-                              : "text-gray-300"
+                              : "text-gray-500"
                           }`}
                         >
                           {minutes > 0 ? formatDuration(minutes) : "–"}
                         </div>
                         {minutes > 0 && entry?.startTime && (
-                          <div className="text-xs text-gray-400 tabular-nums">
+                          <div className="text-xs text-gray-500 tabular-nums">
                             ab {entry.startTime}
                           </div>
                         )}
@@ -443,7 +443,7 @@ function FourWeekPreview({
                         ? "font-semibold text-gray-900"
                         : d.target !== null && d.target > 0
                           ? ""
-                          : "text-gray-300"
+                          : "text-gray-500"
                     }
                   >
                     {dayLabels[(d.date.getDay() + 6) % 7]}{" "}

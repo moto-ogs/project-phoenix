@@ -262,7 +262,7 @@ export function PendingInvitationsList({
       className: "hidden whitespace-nowrap md:table-cell",
       render: (invitation) => {
         if (!isValidDateString(invitation.expiresAt)) {
-          return <span className="text-xs text-gray-400">Ungültig</span>;
+          return <span className="text-xs text-gray-500">Ungültig</span>;
         }
         const expiresDate = new Date(invitation.expiresAt);
         return (

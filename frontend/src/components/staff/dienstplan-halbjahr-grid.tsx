@@ -503,7 +503,7 @@ function HalbjahrGridInner({
           type="button"
           onClick={() => state.retry()}
           aria-label={`Woche ${kw} erneut laden`}
-          className="flex w-full flex-1 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-50 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none"
+          className="flex w-full flex-1 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none"
         >
           <RotateCw className="h-4 w-4" aria-hidden="true" />
         </button>

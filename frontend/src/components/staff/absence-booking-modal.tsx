@@ -398,14 +398,14 @@ function OptionHint({
   }
   const hints: readonly AccountHint[] = accountHints ?? [{ account, firstDay }];
   if (hints.length === 1 && !hints[0]!.account) {
-    return <span className="text-xs text-gray-400">…</span>;
+    return <span className="text-xs text-gray-500">…</span>;
   }
   return (
     <span className="flex shrink-0 flex-col items-end text-xs whitespace-nowrap tabular-nums">
       {hints.map((hint) => {
         if (!hint.account) {
           return (
-            <span key={hint.year ?? hint.firstDay} className="text-gray-400">
+            <span key={hint.year ?? hint.firstDay} className="text-gray-500">
               {hints.length > 1 ? `${hint.year}: ` : ""}…
             </span>
           );

@@ -142,7 +142,7 @@ export function PlanBlock({
     .join(" ");
 
   const labelClassName = `truncate text-xs font-semibold ${
-    isCancelled ? "text-gray-400 line-through" : "text-gray-900"
+    isCancelled ? "text-gray-600 line-through" : "text-gray-900"
   }`;
 
   const content =
@@ -153,7 +153,7 @@ export function PlanBlock({
               Spalte entfällt die Zeit, sie steht im Tooltip. In einer sehr
               schmalen Spalte entfällt stattdessen der Zusatz. */}
           <span
-            className={`shrink-0 text-xs font-medium text-gray-500 tabular-nums ${compactInline ? "@min-[5rem]:@max-[11rem]:hidden" : ""}`}
+            className={`shrink-0 text-xs font-medium text-gray-600 tabular-nums ${compactInline ? "@min-[5rem]:@max-[11rem]:hidden" : ""}`}
           >
             {timeRange}
           </span>
@@ -174,7 +174,7 @@ export function PlanBlock({
       <span className="block min-w-0">
         {/* Einzeilig: eine umbrechende Zeitspanne kostet in schmalen Spalten
             die Zeile, die Raum oder Namen tragen sollte (#3817). */}
-        <span className="block truncate text-xs font-medium text-gray-500 tabular-nums">
+        <span className="block truncate text-xs font-medium text-gray-600 tabular-nums">
           {timeRange}
         </span>
         <span className={labelClassName}>{label}</span>

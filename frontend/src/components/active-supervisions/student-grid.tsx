@@ -148,7 +148,7 @@ export function buildSupervisionTableColumns({
         (student.independent ? (
           "Ohne Angebot"
         ) : (
-          <span className="text-gray-400">–</span>
+          <span className="text-gray-500">–</span>
         )),
       sortValue: (student) => student.activity_name ?? "",
     },
@@ -326,7 +326,7 @@ export function SupervisionStudentGrid({
                       key={teacherHintKey(hint)}
                       icon={
                         <StickyNote
-                          className="h-3.5 w-3.5 text-gray-400"
+                          className="h-3.5 w-3.5 text-gray-500"
                           aria-hidden="true"
                         />
                       }

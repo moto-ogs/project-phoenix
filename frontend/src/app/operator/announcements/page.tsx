@@ -932,7 +932,7 @@ export default function OperatorAnnouncementsPage() {
                     );
                   })}
                   {availableSchools.length === 0 && (
-                    <p className="text-xs text-gray-400 italic">
+                    <p className="text-xs text-gray-500 italic">
                       Keine Schulen verfügbar
                     </p>
                   )}
@@ -1098,7 +1098,7 @@ function AnnouncementCard({
 
       {/* Target roles display */}
       {announcement.targetRoles.length > 0 && (
-        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-400">
+        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-500">
           <svg
             className="h-3.5 w-3.5"
             fill="none"
@@ -1122,7 +1122,7 @@ function AnnouncementCard({
 
       {/* Target organizations display */}
       {(announcement.targetOrgIds?.length ?? 0) > 0 && organizations && (
-        <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-400">
+        <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
           <svg
             className="h-3.5 w-3.5"
             fill="none"
@@ -1149,7 +1149,7 @@ function AnnouncementCard({
 
       {/* Target tenants/schools display */}
       {(announcement.targetTenantIds?.length ?? 0) > 0 && schools && (
-        <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-400">
+        <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
           <svg
             className="h-3.5 w-3.5"
             fill="none"
@@ -1212,7 +1212,7 @@ function AnnouncementCard({
 
       {/* Published + expired timestamps */}
       {announcement.status !== "draft" && announcement.publishedAt && (
-        <div className="mt-3 flex flex-wrap items-center gap-x-2 text-xs text-gray-400">
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 text-xs text-gray-500">
           <span>
             Veröffentlicht {getRelativeTime(announcement.publishedAt)}
           </span>

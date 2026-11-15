@@ -86,7 +86,7 @@ export function ListGroupHeader({
               <ChevronRight
                 aria-hidden
                 className={cn(
-                  "h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform",
+                  "h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform",
                   collapsible.expanded && "rotate-90",
                 )}
               />

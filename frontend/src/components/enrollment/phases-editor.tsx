@@ -836,7 +836,7 @@ export function PhasesEditor() {
                 {formatDate(phase.service_end_date)}
               </span>
               <p
-                className={`mt-0.5 truncate text-xs ${periodName ? "text-gray-500" : "text-gray-400"}`}
+                className={`mt-0.5 truncate text-xs ${periodName ? "text-gray-500" : "text-gray-500"}`}
               >
                 {periodName ?? "Kein Kalenderzeitraum"}
               </p>
@@ -1326,7 +1326,7 @@ function EnrollmentWindowCell({
   closeAt,
 }: Readonly<{ openAt?: string | null; closeAt?: string | null }>) {
   if (!openAt && !closeAt) {
-    return <span className="text-sm text-gray-400">Jederzeit offen</span>;
+    return <span className="text-sm text-gray-500">Jederzeit offen</span>;
   }
 
   return (
@@ -1699,13 +1699,13 @@ function PhaseForm(props: PhaseFormProps) {
               ]}
             />
             {!draft.calendar_period_id && (
-              <span className="text-moto-orange mt-1 block text-xs">
+              <span className="text-moto-orange-strong mt-1 block text-xs">
                 Ohne Verknüpfung können Betreuungsplan und Dienstplan später
                 nicht auf diese Phase aufbauen.
               </span>
             )}
             {linkedPeriodDrift && (
-              <span className="text-moto-orange mt-1 flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-moto-orange-strong mt-1 flex flex-wrap items-center gap-2 text-xs">
                 Beginn und Ende weichen vom Kalenderzeitraum ab (
                 {formatPeriodRange(linkedPeriodDrift)}).
                 <Button
@@ -2169,7 +2169,7 @@ function GradeLevelListEditor({
 }>) {
   if (gradeLevelMax === null) {
     return (
-      <p className="mt-2 text-xs text-gray-400">
+      <p className="mt-2 text-xs text-gray-500">
         Klassenstufen konnten nicht geladen werden.
       </p>
     );
@@ -2260,7 +2260,7 @@ function SchoolClassListEditor({
           ))}
         </ul>
       ) : (
-        <p className="mt-2 text-xs text-gray-400">
+        <p className="mt-2 text-xs text-gray-500">
           Noch keine Klassen hinterlegt.
         </p>
       )}

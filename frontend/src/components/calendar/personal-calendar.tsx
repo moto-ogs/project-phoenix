@@ -858,7 +858,7 @@ function CalendarDayColumn({
     <section className={className}>
       <div
         className={`border-b border-gray-200 px-3 py-2 ${
-          muted ? "bg-gray-50/60 text-gray-400" : "bg-gray-50"
+          muted ? "bg-gray-50/60 text-gray-500" : "bg-gray-50"
         }`}
       >
         <div className="text-sm font-semibold text-gray-900">
@@ -950,7 +950,7 @@ function CalendarTimeGrid({
       </div>
       {hasAllDay ? (
         <div className="flex border-b border-gray-200">
-          <div className="w-16 shrink-0 border-r border-gray-200 px-1 py-2 text-center text-xs text-gray-400">
+          <div className="w-16 shrink-0 border-r border-gray-200 px-1 py-2 text-center text-xs text-gray-500">
             Ganztägig
           </div>
           <div className="grid flex-1" style={columnTemplate}>
@@ -978,7 +978,7 @@ function CalendarTimeGrid({
               hour === startHour ? null : (
                 <div
                   key={hour}
-                  className="absolute inset-x-0 -translate-y-1/2 text-center text-xs text-gray-400"
+                  className="absolute inset-x-0 -translate-y-1/2 text-center text-xs text-gray-500"
                   style={{ top: (hour - startHour) * HOUR_PX }}
                 >
                   {`${String(hour).padStart(2, "0")}:00`}
@@ -1128,7 +1128,7 @@ function TimeGridEventBlock({
       </div>
       <div className="truncate text-xs text-gray-600">{eventTime(event)}</div>
       {event.location ? (
-        <div className="flex items-center gap-1 text-xs text-gray-500">
+        <div className="flex items-center gap-1 text-xs text-gray-600">
           <MotoConceptIcon
             concept={roomsConcept}
             size={12}
@@ -1138,7 +1138,7 @@ function TimeGridEventBlock({
         </div>
       ) : null}
       {subtitle ? (
-        <div className="truncate text-xs text-gray-500">{subtitle}</div>
+        <div className="truncate text-xs text-gray-600">{subtitle}</div>
       ) : null}
     </button>
   );
@@ -1189,13 +1189,13 @@ function AgendaRow({
     >
       <div className="flex w-12 shrink-0 flex-col items-start leading-tight tabular-nums">
         {allDay ? (
-          <span className="text-xs font-medium text-gray-400">ganztg.</span>
+          <span className="text-xs font-medium text-gray-500">ganztg.</span>
         ) : (
           <>
             <span className="text-sm font-semibold text-gray-900">
               {event.start_time}
             </span>
-            <span className="text-xs text-gray-400">{event.end_time}</span>
+            <span className="text-xs text-gray-500">{event.end_time}</span>
           </>
         )}
       </div>

@@ -70,8 +70,6 @@ export const RadioRows: Story = {
 };
 
 export const ButtonTiles: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   render: () => {
     const [mode, setMode] = useState<"text" | "pdf">("text");
     return (
@@ -88,7 +86,7 @@ export const ButtonTiles: Story = {
             <FileText className="h-4 w-4" aria-hidden="true" />
             Text eingeben
           </span>
-          <span className="text-xs font-normal text-gray-500">
+          <span className="text-xs font-normal text-gray-600">
             Eltern lesen den Text direkt im Formular.
           </span>
         </ChoiceTile>
@@ -104,7 +102,7 @@ export const ButtonTiles: Story = {
             <Upload className="h-4 w-4" aria-hidden="true" />
             PDF hochladen
           </span>
-          <span className="text-xs font-normal text-gray-500">
+          <span className="text-xs font-normal text-gray-600">
             Eltern öffnen die Datei aus dem Formular.
           </span>
         </ChoiceTile>

@@ -79,8 +79,6 @@ export default meta;
 type Story = StoryObj<typeof WeeklyCalendarGrid>;
 
 export const Empty: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     weekDays,
     instances: [],
@@ -94,7 +92,7 @@ export const Empty: Story = {
 };
 
 export const WithInstances: Story = {
-  // axe meldet hier noch color-contrast, label-content-name-mismatch; Behebung in #7110, #7112.
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
   parameters: { a11y: { test: "todo" } },
   args: {
     weekDays,
@@ -110,8 +108,6 @@ export const WithInstances: Story = {
 };
 
 export const EmptyStateOverlay: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     weekDays,
     instances: [],

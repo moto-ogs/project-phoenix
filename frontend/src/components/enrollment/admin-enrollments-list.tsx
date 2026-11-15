@@ -735,7 +735,7 @@ function EnrollmentSetupGuide({
           type="button"
           onClick={() => setExpanded((value) => !value)}
           aria-expanded={expanded}
-          className="group flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none"
+          className="group flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none"
         >
           <span className="flex min-w-0 items-center gap-3.5">
             <span className="min-w-0">
@@ -749,7 +749,7 @@ function EnrollmentSetupGuide({
             </span>
           </span>
           <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors group-hover:bg-gray-100 group-hover:text-gray-700"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors group-hover:bg-gray-100 group-hover:text-gray-700"
             aria-hidden="true"
           >
             <ChevronDown
@@ -824,7 +824,7 @@ function EnrollmentSetupGuide({
                     <li key={step.title}>
                       <NavigationLink
                         href={step.href}
-                        className="group grid gap-3 py-3 transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none sm:grid-cols-[2.25rem_1fr_auto] sm:items-center sm:px-2"
+                        className="group grid gap-3 py-3 transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none sm:grid-cols-[2.25rem_1fr_auto] sm:items-center sm:px-2"
                       >
                         <span
                           className={`flex h-9 w-9 items-center justify-center rounded-full border ${getStepIconClass(step.status)}`}
@@ -915,7 +915,7 @@ function EnrollmentSetupGuide({
                       <NavigationLink
                         key={step.title}
                         href={step.href}
-                        className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none"
+                        className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none"
                       >
                         <span className="min-w-0 truncate text-gray-700">
                           {step.title}
@@ -968,7 +968,7 @@ function StepMeta({
     status === "done"
       ? "text-moto-green-strong"
       : status === "blocked"
-        ? "text-gray-400"
+        ? "text-gray-500"
         : "text-gray-500";
   return (
     <span

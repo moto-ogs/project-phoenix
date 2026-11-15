@@ -771,7 +771,7 @@ function CalendarMonthPanel({
                     dateISO === today
                       ? "bg-gray-900 text-white"
                       : outsideMonth || !inLoadedRange
-                        ? "text-gray-400"
+                        ? "text-gray-500"
                         : "text-gray-700"
                   }`}
                 >

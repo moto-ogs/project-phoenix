@@ -80,7 +80,7 @@ export function EmptyState({
     return (
       <div className={cn("flex items-start gap-3 py-2 text-left", className)}>
         {visual != null ? (
-          <span className="mt-0.5 shrink-0 text-gray-400" aria-hidden="true">
+          <span className="mt-0.5 shrink-0 text-gray-500" aria-hidden="true">
             {visual}
           </span>
         ) : null}
@@ -117,7 +117,7 @@ export function EmptyState({
       )}
     >
       {visual != null ? (
-        <span className="text-gray-400" aria-hidden="true">
+        <span className="text-gray-500" aria-hidden="true">
           {visual}
         </span>
       ) : null}

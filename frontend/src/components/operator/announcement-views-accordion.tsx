@@ -76,7 +76,7 @@ export function AnnouncementViewsAccordion({
         <span className="flex items-center gap-1.5 font-medium">
           <span>Lesebestätigungen</span>
           {count !== undefined && (
-            <span className="text-xs font-normal text-gray-400">({count})</span>
+            <span className="text-xs font-normal text-gray-500">({count})</span>
           )}
         </span>
         <ChevronDown
@@ -120,7 +120,7 @@ export function AnnouncementViewsAccordion({
                               "de-DE",
                               { timeZone: "Europe/Berlin" },
                             )}
-                            className="text-xs text-gray-400"
+                            className="text-xs text-gray-500"
                           >
                             · {getRelativeTime(detail.seenAt)}
                           </time>
@@ -137,7 +137,7 @@ export function AnnouncementViewsAccordion({
             {!isLoading &&
               viewDetails !== undefined &&
               confirmedUsers.length === 0 && (
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-500">
                   Noch keine Lesebestätigungen.
                 </p>
               )}

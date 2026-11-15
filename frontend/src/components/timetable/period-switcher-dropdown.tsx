@@ -194,7 +194,7 @@ export function PeriodSwitcherDropdown({
                 setOpen(false);
                 onCreate();
               }}
-              className="flex h-8 w-full items-center gap-1.5 px-4 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none focus-visible:ring-inset"
+              className="flex h-8 w-full items-center gap-1.5 px-4 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none focus-visible:ring-inset"
             >
               <Plus className="h-4 w-4" aria-hidden /> Neuen Zeitraum anlegen
             </button>
@@ -228,7 +228,7 @@ export function PeriodSwitcherDropdown({
         >
           <StatusDot className="bg-moto-green" decorative />
           <span className="truncate">{triggerLabel}</span>
-          <ChevronDown className="h-3.5 w-3.5 text-gray-400" aria-hidden />
+          <ChevronDown className="h-3.5 w-3.5 text-gray-500" aria-hidden />
         </Button>
       )}
     >
@@ -270,7 +270,7 @@ export function PeriodSwitcherDropdown({
                                 a.date,
                               );
                               return slot ? (
-                                <span className="text-gray-400">
+                                <span className="text-gray-500">
                                   {" "}
                                   · Woche {weekCycleSlotLetter(slot)}
                                 </span>
@@ -309,7 +309,7 @@ export function PeriodSwitcherDropdown({
                           close();
                           onSelect(p);
                         }}
-                        className={`group relative min-w-0 flex-1 rounded-lg px-2 py-1.5 pr-8 text-left transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none ${
+                        className={`group relative min-w-0 flex-1 rounded-lg px-2 py-1.5 pr-8 text-left transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none ${
                           isSelected ? "bg-gray-100" : ""
                         }`}
                       >
@@ -398,7 +398,7 @@ function MonthPeriodSummary({
             className="truncate text-xs text-gray-600 tabular-nums"
           >
             <span className="font-medium text-gray-800">{period.name}</span>{" "}
-            <span className="text-gray-400">{formatPeriodRange(period)}</span>
+            <span className="text-gray-500">{formatPeriodRange(period)}</span>
           </p>
         ))}
         {hasMissingDays && (

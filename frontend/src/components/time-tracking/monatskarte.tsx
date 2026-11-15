@@ -76,7 +76,7 @@ function SummaryRow({
           <span className="ml-2 inline-flex align-middle">{badge}</span>
         )}
         {hint && (
-          <span className="ml-2 text-xs font-normal text-gray-400">{hint}</span>
+          <span className="ml-2 text-xs font-normal text-gray-500">{hint}</span>
         )}
       </span>
       <span
@@ -348,7 +348,7 @@ export function Monatskarte({
           value={planCoverage.value}
           valueClass={
             summary.plannedShiftMinutes === null
-              ? "text-gray-400"
+              ? "text-gray-500"
               : "text-gray-900"
           }
         />

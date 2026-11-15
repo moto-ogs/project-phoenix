@@ -57,7 +57,7 @@ export function DemoSetupScreen({ schoolName, step }: DemoSetupProgress) {
                 <span
                   className={
                     state === "next"
-                      ? "text-gray-400"
+                      ? "text-gray-500"
                       : "font-medium text-gray-900"
                   }
                 >

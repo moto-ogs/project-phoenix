@@ -180,7 +180,7 @@ export function BlockStaffNames({
         ))}
       </span>
       {hidden > 0 ? (
-        <span className="shrink-0 pl-1 text-gray-500">
+        <span className="shrink-0 pl-1 text-gray-600">
           +{hidden}
           <span className="sr-only"> weitere</span>
         </span>

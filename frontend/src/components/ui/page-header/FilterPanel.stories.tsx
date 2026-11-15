@@ -58,8 +58,6 @@ const sections: FilterSection[] = [
 ];
 
 export const Default: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     isOpen: true,
     onClose: fn(),
@@ -70,8 +68,6 @@ export const Default: Story = {
 };
 
 export const Quiet: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     isOpen: true,
     onClose: fn(),
@@ -83,8 +79,6 @@ export const Quiet: Story = {
 };
 
 export const Sectioned: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     isOpen: true,
     onClose: fn(),
@@ -97,8 +91,6 @@ export const Sectioned: Story = {
 };
 
 export const DesktopPlacement: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     isOpen: true,
     onClose: fn(),

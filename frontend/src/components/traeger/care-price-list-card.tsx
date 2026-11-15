@@ -93,7 +93,7 @@ function PriceCell({
     );
   }
   return (
-    <span className="text-gray-400" aria-label="nicht gebucht">
+    <span className="text-gray-500" aria-label="nicht gebucht">
       –
     </span>
   );

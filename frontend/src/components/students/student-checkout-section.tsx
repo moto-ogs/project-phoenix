@@ -33,7 +33,7 @@ export function StudentCheckoutSection({
       </div>
       <div className="text-center">
         <p className="text-base font-semibold text-gray-900">Abmelden</p>
-        <p className="mt-0.5 hidden text-xs text-gray-400 sm:block">
+        <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">
           Aus der OGS abmelden
         </p>
       </div>
@@ -58,7 +58,7 @@ export function StudentCheckinSection({
       </div>
       <div className="text-center">
         <p className="text-base font-semibold text-gray-900">Anmelden</p>
-        <p className="mt-0.5 hidden text-xs text-gray-400 sm:block">
+        <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">
           Für heute in der OGS anmelden
         </p>
       </div>
@@ -113,7 +113,7 @@ export function StudentSickReportSection({
         <p className="text-base font-semibold text-gray-900">
           {isSick ? "Gesund melden" : "Krank melden"}
         </p>
-        <p className="mt-0.5 hidden text-xs text-gray-400 sm:block">
+        <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">
           {isSick && sickSinceDisplay
             ? `Krank gemeldet seit ${sickSinceDisplay}`
             : "Als krank melden"}
@@ -170,7 +170,7 @@ export function StudentExcusedReportSection({
         <p className="text-base font-semibold text-gray-900">
           {isExcused ? "Entschuldigung aufheben" : "Entschuldigen"}
         </p>
-        <p className="mt-0.5 hidden text-xs text-gray-400 sm:block">
+        <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">
           {isExcused && excusedSinceDisplay
             ? `Entschuldigt seit ${excusedSinceDisplay}`
             : "Als entschuldigt markieren"}

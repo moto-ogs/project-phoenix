@@ -49,7 +49,9 @@ export function RoomsList({ groupDefinitions, objectHref }: RoomsListProps) {
             subtitle={
               <span
                 className={
-                  room.isOccupied ? "text-moto-orange font-medium" : undefined
+                  room.isOccupied
+                    ? "text-moto-orange-strong font-medium"
+                    : undefined
                 }
               >
                 {buildRoomSubtitle(room)}

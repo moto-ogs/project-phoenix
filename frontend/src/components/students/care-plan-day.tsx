@@ -151,19 +151,16 @@ function AttendanceTag({ instance }: { readonly instance: CarePlanInstance }) {
   }
   if (status === "present") {
     return (
-      <span
-        className="inline-flex items-center gap-1 text-xs font-medium"
-        style={{ color: LOCATION_COLORS.GROUP_ROOM }}
-      >
+      <span className="text-moto-green-strong inline-flex items-center gap-1 text-xs font-medium">
         <Check className="h-3 w-3" aria-hidden="true" /> anwesend
         {isUnplanned ? " (spontan)" : ""}
       </span>
     );
   }
   if (status === "absent") {
-    return <span className="text-xs font-medium text-gray-400">abwesend</span>;
+    return <span className="text-xs font-medium text-gray-500">abwesend</span>;
   }
-  return <span className="text-xs font-medium text-gray-400">geplant</span>;
+  return <span className="text-xs font-medium text-gray-500">geplant</span>;
 }
 
 function InstanceBlock({
@@ -367,7 +364,7 @@ export function CarePlanDayTimeline({
         <button
           type="button"
           onClick={onEditSchedule}
-          className="text-moto-blue mt-1 text-sm font-semibold hover:underline"
+          className="text-moto-blue-strong mt-1 text-sm font-semibold hover:underline"
         >
           Zeiten bearbeiten
         </button>

@@ -1056,7 +1056,7 @@ function GroupThreadReference({
     <div className="mb-1 flex justify-end">
       <NavigationLink
         href={parentPath(`/parents/messages/group/${groupThreadId}`)}
-        className="text-moto-blue max-w-[85%] truncate text-xs font-medium underline-offset-2 hover:underline"
+        className="text-moto-blue-strong max-w-[85%] truncate text-xs font-medium underline-offset-2 hover:underline"
       >
         {t("answerTo", { title: title ?? "" })}
       </NavigationLink>

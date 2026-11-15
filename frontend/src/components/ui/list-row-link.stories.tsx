@@ -80,8 +80,6 @@ export const Accent: Story = {
 
 /** Dreizeilig wie eine Unterhaltung; Ungelesenes zeigt die Zahl. */
 export const Unread: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   render: () => (
     <FramedList>
       <li>

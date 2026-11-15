@@ -231,7 +231,7 @@ function PhaseRow({
         phase.school_subdomain,
       )}/${encodeURIComponent(phase.phase_id)}`}
       aria-label={`${t("openPhase")}: ${phaseDisplayName(phase, locale)}`}
-      className="group flex items-center gap-4 p-4 transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none sm:px-5"
+      className="group flex items-center gap-4 p-4 transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none sm:px-5"
     >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -254,7 +254,7 @@ function PhaseRow({
         )}
       </div>
       <ArrowRight
-        className="h-4 w-4 shrink-0 text-gray-400 transition-colors group-hover:text-gray-700"
+        className="h-4 w-4 shrink-0 text-gray-500 transition-colors group-hover:text-gray-700"
         aria-hidden="true"
       />
     </Link>
