@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -56,9 +55,16 @@ func TestKeyDateReportRecordsPrintACardPerSchoolDistrictAndTotal(t *testing.T) {
 	require.Len(t, doc.Groups[0].Records, 2)
 	school := doc.Groups[0].Records[0]
 	assert.Equal(t, "OGS Am Park, Bonn", school.Title)
-	assert.Contains(t, school.Fields, lists.Field{Label: "Plätze", Value: "10 von 40 belegt · 30 frei"})
+	lines := map[string]string{}
+	for _, field := range school.Fields {
+		lines[field.Label] = field.Value
+	}
+	assert.Equal(t, "10 von 40 belegt · 30 frei", lines["Plätze"])
+	assert.Equal(t, "2 · – Kinder je Fachkraft", lines["Personal"], "no ratio without the figure")
 	require.Len(t, school.Subs, 1)
-	assert.Equal(t, []lists.Field{{Label: "Bis 16 Uhr", Value: "10 Kinder von 40 Plätzen"}}, school.Subs[0].Fields)
+	require.Len(t, school.Subs[0].Fields, 1)
+	assert.Equal(t, "Bis 16 Uhr", school.Subs[0].Fields[0].Label)
+	assert.Equal(t, "10 Kinder von 40 Plätzen", school.Subs[0].Fields[0].Value)
 	assert.Equal(t, "Summe Nord", doc.Groups[0].Records[1].Title)
 	assert.Equal(t, "Gesamt (1 Schule)", doc.Groups[1].Records[0].Title)
 }

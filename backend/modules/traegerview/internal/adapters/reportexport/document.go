@@ -318,7 +318,18 @@ func keyDateReportRecords(report traegerview.KeyDateReport) lists.RecordDocument
 	if report.Template != nil {
 		doc.Subtitle = lists.SanitizeUserText(report.Template.Name)
 	}
-	schoolCard := func(school traegerview.KeyDateSchool) lists.Record {
+	doc.Groups = keyDateSchoolGroups(report)
+	doc.Groups = append(doc.Groups, lists.RecordGroup{
+		Title:   reportTotalLabel,
+		Records: []lists.Record{keyDateRecord(reportTotalLabel+" ("+schoolCount(report.Total.Schools)+")", report.Sections, report.Total.Figures, report.Total.CareForms)},
+	})
+	return doc
+}
+
+// keyDateSchoolGroups prints the cards of the schools: one group of all
+// schools without a Sozialraum, else a group per Sozialraum closed by its sum.
+func keyDateSchoolGroups(report traegerview.KeyDateReport) []lists.RecordGroup {
+	card := func(school traegerview.KeyDateSchool) lists.Record {
 		title := school.Name
 		if school.City != "" {
 			title += ", " + school.City
@@ -328,80 +339,82 @@ func keyDateReportRecords(report traegerview.KeyDateReport) lists.RecordDocument
 	if len(report.Districts) == 0 {
 		group := lists.RecordGroup{Title: reportAllSchoolsGroup}
 		for _, school := range report.Schools {
-			group.Records = append(group.Records, schoolCard(school))
+			group.Records = append(group.Records, card(school))
 		}
-		doc.Groups = append(doc.Groups, group)
-	} else {
-		for _, district := range report.Districts {
-			group := lists.RecordGroup{Title: lists.SanitizeUserText(district.Name)}
-			for _, school := range report.Schools {
-				if schoolDistrict(school) == district.Name {
-					group.Records = append(group.Records, schoolCard(school))
-				}
-			}
-			group.Records = append(group.Records, keyDateRecord(reportSumLabel+district.Name, report.Sections, district.Figures, district.CareForms))
-			doc.Groups = append(doc.Groups, group)
-		}
+		return []lists.RecordGroup{group}
 	}
-	doc.Groups = append(doc.Groups, lists.RecordGroup{
-		Title:   reportTotalLabel,
-		Records: []lists.Record{keyDateRecord(reportTotalLabel+" ("+schoolCount(report.Total.Schools)+")", report.Sections, report.Total.Figures, report.Total.CareForms)},
-	})
-	return doc
+	groups := make([]lists.RecordGroup, 0, len(report.Districts))
+	for _, district := range report.Districts {
+		group := lists.RecordGroup{Title: lists.SanitizeUserText(district.Name)}
+		for _, school := range report.Schools {
+			if schoolDistrict(school) == district.Name {
+				group.Records = append(group.Records, card(school))
+			}
+		}
+		group.Records = append(group.Records, keyDateRecord(reportSumLabel+district.Name, report.Sections, district.Figures, district.CareForms))
+		groups = append(groups, group)
+	}
+	return groups
 }
 
-// keyDateRecord is one card: the figures of each section of the report and,
-// with the children, a block of the care forms.
+// keyDateRecord is one card: a line per section of the report and, with the
+// children, a block of the care forms.
 func keyDateRecord(title string, sections []string, figures traegerview.KeyDateFigures, careForms []traegerview.KeyDateCareForm) lists.Record {
 	record := lists.Record{Title: lists.SanitizeUserText(title)}
-	has := func(section string) bool { return slices.Contains(sections, section) }
-	field := func(label, value string) {
-		if value == "" {
-			value = "–"
+	for _, section := range traegerview.ReportSections() {
+		if slices.Contains(sections, section) {
+			record.Fields = append(record.Fields, sectionFields(section, figures)...)
 		}
-		record.Fields = append(record.Fields, lists.Field{Label: label, Value: value})
 	}
-	if has(traegerview.ReportSectionChildren) {
-		field("Kinder", strconv.Itoa(figures.Children)+" · davon ohne Betreuungsform "+strconv.Itoa(figures.WithoutCareForm))
+	if slices.Contains(sections, traegerview.ReportSectionChildren) && len(careForms) > 0 {
+		record.Subs = append(record.Subs, careFormBlock(careForms))
 	}
-	if has(traegerview.ReportSectionStaff) {
-		perStaff := germanDecimal(figures.ChildrenPerStaff)
-		if perStaff == "" {
-			perStaff = "–"
-		}
-		field("Personal", strconv.Itoa(figures.Staff)+" · "+perStaff+" Kinder je Fachkraft")
-	}
-	if has(traegerview.ReportSectionAbsences) {
-		rate := germanDecimal(figures.AbsenceRate)
-		if rate == "" {
-			rate = "–"
-		} else {
-			rate += " %"
-		}
-		field("Fehlzeiten", strconv.Itoa(figures.PresentDays)+" Tage anwesend · "+strconv.Itoa(figures.SickDays)+" krank · "+
-			strconv.Itoa(figures.ExcusedDays)+" entschuldigt · Fehlquote "+rate)
-	}
-	if has(traegerview.ReportSectionDemand) {
+	return record
+}
+
+// sectionFields are the lines of one section on a card.
+func sectionFields(section string, figures traegerview.KeyDateFigures) []lists.Field {
+	switch section {
+	case traegerview.ReportSectionChildren:
+		return []lists.Field{{Label: "Kinder", Value: strconv.Itoa(figures.Children) + " · davon ohne Betreuungsform " + strconv.Itoa(figures.WithoutCareForm)}}
+	case traegerview.ReportSectionStaff:
+		return []lists.Field{{Label: "Personal", Value: strconv.Itoa(figures.Staff) + " · " + decimalOrDash(figures.ChildrenPerStaff, "") + " Kinder je Fachkraft"}}
+	case traegerview.ReportSectionAbsences:
+		return []lists.Field{{Label: "Fehlzeiten", Value: strconv.Itoa(figures.PresentDays) + " Tage anwesend · " + strconv.Itoa(figures.SickDays) + " krank · " +
+			strconv.Itoa(figures.ExcusedDays) + " entschuldigt · Fehlquote " + decimalOrDash(figures.AbsenceRate, " %")}}
+	case traegerview.ReportSectionDemand:
 		places := "keine Platzgrenze"
 		if figures.Places > 0 {
 			places = strconv.Itoa(figures.BookedPlaces) + " von " + strconv.Itoa(figures.Places) + " belegt · " + strconv.Itoa(figures.FreePlaces) + " frei"
 		}
-		field("Plätze", places)
-		field("Nachfrage", strconv.Itoa(figures.Demand)+" · davon "+strconv.Itoa(figures.Open)+" offene Anmeldungen und "+
-			strconv.Itoa(figures.Waitlisted)+" auf der Warteliste")
-	}
-	if has(traegerview.ReportSectionChildren) && len(careForms) > 0 {
-		sub := lists.SubRecord{Title: reportCareFormGroup}
-		for _, form := range careForms {
-			value := strconv.Itoa(form.Children) + " Kinder"
-			if form.Capacity != nil {
-				value += " von " + strconv.Itoa(*form.Capacity) + " Plätzen"
-			}
-			sub.Fields = append(sub.Fields, lists.Field{Label: lists.SanitizeUserText(form.Name), Value: value})
+		return []lists.Field{
+			{Label: "Plätze", Value: places},
+			{Label: "Nachfrage", Value: strconv.Itoa(figures.Demand) + " · davon " + strconv.Itoa(figures.Open) + " offene Anmeldungen und " +
+				strconv.Itoa(figures.Waitlisted) + " auf der Warteliste"},
 		}
-		record.Subs = append(record.Subs, sub)
 	}
-	return record
+	return nil
+}
+
+// careFormBlock lists the children and places of each care form.
+func careFormBlock(careForms []traegerview.KeyDateCareForm) lists.SubRecord {
+	sub := lists.SubRecord{Title: reportCareFormGroup}
+	for _, form := range careForms {
+		value := strconv.Itoa(form.Children) + " Kinder"
+		if form.Capacity != nil {
+			value += " von " + strconv.Itoa(*form.Capacity) + " Plätzen"
+		}
+		sub.Fields = append(sub.Fields, lists.Field{Label: lists.SanitizeUserText(form.Name), Value: value})
+	}
+	return sub
+}
+
+// decimalOrDash prints a value with one decimal and the suffix, "–" without one.
+func decimalOrDash(value *float64, suffix string) string {
+	if value == nil {
+		return "–"
+	}
+	return germanDecimal(value) + suffix
 }
 
 func schoolCount(count int) string {

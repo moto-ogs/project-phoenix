@@ -11,8 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// New builds the Träger projection: its overview, its heatmap (#4714) and
-// its key-date reports (ADR 0246).
+// New builds the Träger projection, its heatmap and its key-date reports.
 func New(ports traegerview.Ports) (traegerview.Overview, traegerview.ArrivalPickupReport, traegerview.KeyDateReports, error) {
 	overview, err := application.New(ports, postgres.New(postgres.AmbientAdminDB), reportexport.New(), tenant.WithinAdmin)
 	if err != nil {
