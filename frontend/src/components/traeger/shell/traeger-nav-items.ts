@@ -142,6 +142,7 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         key: "tagesmeldung",
         href: "/traeger/tagesmeldung",
         label: "Tagesmeldung",
+        shortLabel: "Meldung",
         concept: stateReportConcept,
         right: REPORTS_RIGHT,
         federalState: "DE-MV",
