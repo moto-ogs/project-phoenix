@@ -13,7 +13,7 @@ import (
 )
 
 // ReportTemplateResource serves the report templates of the session's Träger
-// (#4716, ADR 0242) at /traeger/report-templates. Every route sits behind
+// (#4716, ADR 0246) at /traeger/report-templates. Every route sits behind
 // the Träger session and runs in the Träger transaction of that Träger (ADR
 // 0105). Reading needs "Berichte lesen", the right of the reports the
 // templates shape; writing needs "Einstellungen". A template names no person,

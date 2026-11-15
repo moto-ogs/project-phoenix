@@ -26,7 +26,7 @@ func NewSharedTraegerDocuments() *postgres.TraegerDocumentStore {
 	return postgres.NewTraegerDocumentStore()
 }
 
-// NewTraegerReportTemplates builds the report templates of a Träger (#4716, ADR 0242) in the Träger transaction and the Träger projection's read of one in its administrative transaction.
+// NewTraegerReportTemplates builds the report templates of a Träger (#4716, ADR 0246) in the Träger transaction and the Träger projection's read of one in its administrative transaction.
 func NewTraegerReportTemplates() (organizationtenancy.TraegerReportTemplates, organizationtenancy.TraegerReportTemplateReads) {
 	return application.NewTraegerReportTemplates(postgres.NewTraegerMasterDataStore()), postgres.NewTraegerReportTemplateReads()
 }

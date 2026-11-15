@@ -20,7 +20,7 @@ type SickStudents interface {
 	// SickFlagMembershipIDsByTenant lists the memberships with the live sick flag.
 	SickFlagMembershipIDsByTenant(ctx context.Context, schools []int64) (map[int64][]int64, error)
 	// StatusDayCountsByTenant counts, for the Träger's key-date report
-	// (#4716, ADR 0242), the children with a sick and with an excused status
+	// (#4716, ADR 0246), the children with a sick and with an excused status
 	// day that stands for the day, per school and weekday of the window (both
 	// days included): one per child and day, sick before excused.
 	StatusDayCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date) (sick, excused map[int64]map[calendar.Date]int, err error)

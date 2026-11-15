@@ -1,9 +1,9 @@
 {
   "sites": [
     {
-      "decision": "0242",
+      "decision": "0246",
       "id": "modules/traegerview/internal/adapters/reportexport/Renderer.RenderKeyDateReport",
-      "reason": "ADR 0242 (#4716): Owner-edge translation of the export adapter; it maps the report format onto the Document Rendering list format, lays the key-date report out as a list document and answers in the projection's report file."
+      "reason": "ADR 0246 (#4716): Owner-edge translation of the export adapter; it maps the report format onto the Document Rendering list format, lays the key-date report out as a list document and answers in the projection's report file."
     }
   ]
 }

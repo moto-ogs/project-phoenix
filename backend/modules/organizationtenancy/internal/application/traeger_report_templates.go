@@ -16,7 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports"
 )
 
-// Report templates of a Träger (#4716, ADR 0242). Like the master data, the
+// Report templates of a Träger (#4716, ADR 0246). Like the master data, the
 // service opens no transaction: the Träger-Portal route runs it in the
 // Träger transaction of the session's Träger. Every write locks the Träger's
 // profile row first, decides every refusal before its first write and logs

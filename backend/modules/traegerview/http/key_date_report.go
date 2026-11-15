@@ -17,7 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
-// ReportResource serves the key-date report of the Träger (#4716, ADR 0242)
+// ReportResource serves the key-date report of the Träger (#4716, ADR 0246)
 // at /traeger/reports. Its routes need "Berichte lesen". The report holds
 // counts and the names of schools, Sozialräume and care forms, no child and
 // no staff member, so neither the report nor its export is written to the

@@ -51,7 +51,7 @@ type occupancyReads struct {
 }
 
 // careFormReads are the roster and the care form bookings of a day, the
-// part of the occupancy the key-date report shares (ADR 0242).
+// part of the occupancy the key-date report shares (ADR 0246).
 type careFormReads struct {
 	roster   map[int64]map[int64]int64
 	bookings map[int64][]traegerview.CareOfferingBookings

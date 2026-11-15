@@ -7,7 +7,7 @@ import (
 )
 
 // Report templates of a Träger (#4716, spec #4611 user stories 115 and 116,
-// ADR 0242): the Träger-Büro hands its Kommune and its Jugendamt reports by
+// ADR 0246): the Träger-Büro hands its Kommune and its Jugendamt reports by
 // key date, each in the shape that office asks for. A template names the
 // sections the report shows, the key date of the year it is usually drawn up
 // for and the Sozialraum of each school of the Träger, because a Kommune

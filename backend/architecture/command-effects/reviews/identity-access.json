@@ -29596,7 +29596,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/traegerportal.TraegerRouter.TraegerRouter",
-      "reason": "Reviewed construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy/inbound/traeger.ReportTemplateResource.TraegerRouter mounts the Träger report templates behind the Träger rights and the Träger transaction (#4716, ADR 0242). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy/inbound/traeger.ReportTemplateResource.TraegerRouter mounts the Träger report templates behind the Träger rights and the Träger transaction (#4716, ADR 0246). May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger.ReportTemplateResource.TraegerRouter",
       "target_owner": "organization-tenancy"
@@ -29626,7 +29626,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/traegerportal.TraegerRouter.TraegerRouter",
-      "reason": "Reviewed construction method; no owned-row mutation or locking read at this terminal. Target modules/traegerview/http.ReportResource.TraegerRouter mounts the Träger key-date report (#4716, ADR 0242); it takes and ignores the Träger transaction middleware the route group offers (ADR 0105). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed construction method; no owned-row mutation or locking read at this terminal. Target modules/traegerview/http.ReportResource.TraegerRouter mounts the Träger key-date report (#4716, ADR 0246); it takes and ignores the Träger transaction middleware the route group offers (ADR 0105). May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/traegerview/http.ReportResource.TraegerRouter",
       "target_owner": "traeger-view"

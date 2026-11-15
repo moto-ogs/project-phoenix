@@ -2,6 +2,6 @@
   "scenario": "api.traeger.report_templates",
   "max": 3,
   "exact": true,
-  "description": "modules/organizationtenancy — GET /traeger/report-templates/ (#4716, ADR 0242):\nthe Träger binding of the Träger transaction, every report template of the Träger\nin one statement and its schools, which keep only their own districts. Flat\nin the number of templates.",
+  "description": "modules/organizationtenancy — GET /traeger/report-templates/ (#4716, ADR 0246):\nthe Träger binding of the Träger transaction, every report template of the Träger\nin one statement and its schools, which keep only their own districts. Flat\nin the number of templates.",
   "route": "GET /traeger/report-templates/"
 }

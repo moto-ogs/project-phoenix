@@ -12,7 +12,7 @@ const traegerReportTemplatesVersion = "20261115140000"
 func init() {
 	MigrationRegistry.Register(&Migration{
 		Version:     traegerReportTemplatesVersion,
-		Description: "Träger-Portal: Berichtsvorlagen für Kommune und Jugendamt mit Stichtag und Sozialräumen (#4716, ADR 0242)",
+		Description: "Träger-Portal: Berichtsvorlagen für Kommune und Jugendamt mit Stichtag und Sozialräumen (#4716, ADR 0246)",
 		DependsOn: []string{
 			traegerWithdrawalContactVersion, // the master data log whose subjects this one extends
 		},
@@ -21,7 +21,7 @@ func init() {
 }
 
 // traegerReportTemplatesUpSQL adds the report templates of a Träger (#4716,
-// spec #4611 user stories 115 and 116, ADR 0242):
+// spec #4611 user stories 115 and 116, ADR 0246):
 //
 //   - platform.traeger_report_templates: a named template of the key-date
 //     report the Träger-Büro hands to its Kommune or Jugendamt: the sections
@@ -63,7 +63,7 @@ CREATE TABLE platform.traeger_report_templates (
 );
 CREATE UNIQUE INDEX uq_traeger_report_templates_name ON platform.traeger_report_templates (organization_id, lower(name));
 COMMENT ON TABLE platform.traeger_report_templates IS
-	'Report templates of a Träger for its Kommune and Jugendamt (#4716, ADR 0242): sections, key date and the Sozialraum of each school; read and written in the Träger transaction (ADR 0105).';
+	'Report templates of a Träger for its Kommune and Jugendamt (#4716, ADR 0246): sections, key date and the Sozialraum of each school; read and written in the Träger transaction (ADR 0105).';
 
 CREATE TRIGGER update_platform_traeger_report_templates_updated_at
 	BEFORE UPDATE ON platform.traeger_report_templates

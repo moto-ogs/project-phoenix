@@ -1,5 +1,5 @@
 // Package reportexport renders the key-date report of the Träger projection
-// (#4716, ADR 0242) as a PDF, XLSX or CSV file through the list contract of
+// (#4716, ADR 0246) as a PDF, XLSX or CSV file through the list contract of
 // Document Rendering. It writes and reads nothing.
 package reportexport
 
@@ -14,7 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The export of the key-date report (#4716, ADR 0242) has two layouts.
+// The export of the key-date report (#4716, ADR 0246) has two layouts.
 //
 //   - Excel and CSV are one table for a spreadsheet: a row per school,
 //     grouped by Sozialraum with a sum row per Sozialraum and a last row

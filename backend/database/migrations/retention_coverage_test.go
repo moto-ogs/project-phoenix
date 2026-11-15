@@ -411,7 +411,7 @@ var tableRetentions = map[string]tableRetention{
 	"platform.traeger_bank_accounts":                        own("the Träger-Büro deletes a bank account in the Träger-Portal (ADR 0112); the rest go with platform.organizations when the Träger is erased (#4657)"),
 	"platform.traeger_master_data_audit":                    own("each read or change of the Träger master data prunes the Träger's entries older than three years in the same Träger transaction, TraegerMasterDataStore.AppendAudit (ADR 0112); rows go with platform.organizations; actor_account_id SET NULL on account delete"),
 	"platform.traeger_profiles":                             own("the Träger-Büro clears or replaces the contact person and removes the logo in the Träger-Portal (ADR 0112); the row goes with platform.organizations when the Träger is erased (#4657)"),
-	"platform.traeger_report_templates":                     own("the Träger-Büro deletes a report template in the Träger-Portal (#4716, ADR 0242); the rest go with platform.organizations when the Träger is erased (#4657); created_by and updated_by SET NULL on account delete"),
+	"platform.traeger_report_templates":                     own("the Träger-Büro deletes a report template in the Träger-Portal (#4716, ADR 0246); the rest go with platform.organizations when the Träger is erased (#4657); created_by and updated_by SET NULL on account delete"),
 	"platform.worker_leases":                                notPersonal("Worker leadership lease"),
 	"public.bun_migration_locks":                            notPersonal("schema bookkeeping"),
 	"public.bun_migrations":                                 notPersonal("schema bookkeeping"),

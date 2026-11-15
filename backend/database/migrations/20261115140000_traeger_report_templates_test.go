@@ -12,7 +12,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// TestTraegerReportTemplatesStayWithTheirTraeger pins ADR 0242 on
+// TestTraegerReportTemplatesStayWithTheirTraeger pins ADR 0246 on
 // platform.traeger_report_templates: under the request role a Träger reads,
 // writes and deletes only its own templates and a school transaction sees
 // none; a name exists once per Träger without case; only the four sections

@@ -8,7 +8,7 @@ import (
 )
 
 // seedTraegerReportTemplatesStep gives the demo Träger the two report
-// templates of #4716 (ADR 0242) through the Träger routes, the way the
+// templates of #4716 (ADR 0246) through the Träger routes, the way the
 // Träger-Büro writes them: the report for the Jugendamt on 15 October with
 // every section and its schools in two Sozialräume, and the report for the
 // Kommune with children and demand only. The page "Berichte" then offers

@@ -13,7 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// Report templates of a Träger (#4716, ADR 0242) in
+// Report templates of a Träger (#4716, ADR 0246) in
 // platform.traeger_report_templates, under the same Träger policy as the
 // master data. The Träger-Büro writes them in its Träger transaction; the
 // Träger projection reads one in its administrative transaction.

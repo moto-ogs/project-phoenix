@@ -11,7 +11,7 @@ import (
 )
 
 // traegerReportPorts binds the owners' reads behind the Träger's key-date
-// report (#4716, ADR 0242): the report template at Organisation & Tenancy,
+// report (#4716, ADR 0246): the report template at Organisation & Tenancy,
 // the sick and excused status days at Care Plan and the waiting and
 // waitlisted children at Enrollment. The figures of the occupancy, the
 // utilization and the school view stay bound through their own ports.

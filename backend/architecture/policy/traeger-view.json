@@ -113,7 +113,7 @@
     },
     {
       "id": "traeger-view.adapter.public",
-      "description": "The export adapter renders the projection's public key-date report into its public report file (#4716, ADR 0242).",
+      "description": "The export adapter renders the projection's public key-date report into its public report file (#4716, ADR 0246).",
       "scopes": [
         "production"
       ],
@@ -124,7 +124,7 @@
     },
     {
       "id": "traeger-view.adapter.document-rendering-lists",
-      "description": "The export adapter fills and renders the Document Rendering list contract for the key-date report as PDF, XLSX or CSV (#4716, ADR 0242).",
+      "description": "The export adapter fills and renders the Document Rendering list contract for the key-date report as PDF, XLSX or CSV (#4716, ADR 0246).",
       "scopes": [
         "production"
       ],

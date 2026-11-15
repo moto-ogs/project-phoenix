@@ -105,7 +105,7 @@ type Resource struct {
 // reset (#5149) and stepUp the code step in the running session (#7068);
 // without them those routes answer 500. reports serves the key-date report
 // of the Träger projection and reportTemplates the report templates of
-// Organisation & Tenancy (#4716, ADR 0242).
+// Organisation & Tenancy (#4716, ADR 0246).
 func NewResource(auth AuthRuntime, mfa MFARuntime, resets common.PasswordResetRoutes, schools, holidayPeriods, accessLog, settings, masterData TraegerRouter, accounts identityaccess.TraegerAccountManagement, profiles identityaccess.TraegerMemberProfiles, organization TraegerOrganizationRouter, schoolSessions identityaccess.TraegerSchoolSessions, stepUp identityaccess.TraegerSessionStepUp, reports, reportTemplates TraegerRouter) *Resource {
 	if schools == nil || holidayPeriods == nil || accessLog == nil || settings == nil || masterData == nil || organization == nil || reports == nil || reportTemplates == nil {
 		panic("traeger portal: the school list, holiday period, access log, settings, master data, Träger, report and report template routes are required")

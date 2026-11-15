@@ -37,7 +37,7 @@ func (o *Overview) KeyDateReportExport(ctx context.Context, organizationID int64
 }
 
 // KeyDateReport returns the report of every school of the Träger on the key
-// date in the sections of the template (#4716, ADR 0242); templateID 0 is
+// date in the sections of the template (#4716, ADR 0246); templateID 0 is
 // the standard report. Every owner is read once for the whole school set and
 // only for the sections that need it, so the read costs the same statements
 // for 3 and for 100 schools. The answer holds counts and the names of
