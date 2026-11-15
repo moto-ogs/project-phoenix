@@ -31,7 +31,7 @@ func (rs *Resource) dailyAttendance(w http.ResponseWriter, r *http.Request) {
 // per child and day without name or ID. The projection writes the export to
 // the access log of every school with rows before the file leaves.
 func (rs *Resource) dailyAttendanceExport(w http.ResponseWriter, r *http.Request) {
-	format, err := listFormat(r)
+	format, err := common.ParseListFormat(r)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -44,7 +44,7 @@ func (rs *Resource) dailyAttendanceExport(w http.ResponseWriter, r *http.Request
 	if renderDailyAttendanceError(w, r, err) {
 		return
 	}
-	writeList(w, r, rs.lists, format, dailyAttendanceTable(export))
+	common.WriteList(w, r, rs.lists, format, dailyAttendanceTable(export))
 }
 
 // dailyAttendanceRequest reads the session's Träger and account and the
@@ -95,7 +95,7 @@ var dailyAttendanceStatus = map[string]string{
 // town, the day, a running number of the day at that school, the status,
 // arrival, pickup (Berlin wall clock) and the stay in minutes. The running
 // number counts rows, it identifies no child across days.
-func dailyAttendanceTable(export traegerview.DailyAttendanceExport) ListTable {
+func dailyAttendanceTable(export traegerview.DailyAttendanceExport) common.ListTable {
 	schools := make(map[int64]traegerview.School, len(export.Schools))
 	for _, school := range export.Schools {
 		schools[school.ID] = school
@@ -124,10 +124,10 @@ func dailyAttendanceTable(export traegerview.DailyAttendanceExport) ListTable {
 		rows = append(rows, row)
 	}
 	from, to := export.From.Format("02.01.2006"), export.To.Format("02.01.2006")
-	return ListTable{
+	return common.ListTable{
 		Title: "Tagesmeldung Mecklenburg-Vorpommern", Subtitle: from + " bis " + to,
-		Filters: []string{schoolFilterLabel(""), periodLabel(from, to)},
-		Columns: []ListColumn{
+		Filters: []string{common.ListSchoolLabel(""), common.ListPeriodLabel(from, to)},
+		Columns: []common.ListColumn{
 			{ID: "school", Label: "Einrichtung"}, {ID: "city", Label: "Ort"}, {ID: "day", Label: "Datum"},
 			{ID: "number", Label: "Lfd. Nr."}, {ID: "status", Label: "Status"}, {ID: "arrival", Label: "Ankunft"},
 			{ID: "pickup", Label: "Abholung"}, {ID: "minutes", Label: "Anwesenheit in Minuten"},

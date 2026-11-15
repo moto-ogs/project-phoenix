@@ -20,12 +20,12 @@ import (
 type ProofsResource struct {
 	proofs       workforce.TraegerStaffProofs
 	requireStaff common.Middleware
-	lists        ListRenderer
+	lists        common.ListRenderer
 }
 
 // NewProofsResource builds the resource; the root binds requireStaff to the
 // Träger right traeger_staff:manage and lists to Document Rendering (#4718).
-func NewProofsResource(proofs workforce.TraegerStaffProofs, requireStaff common.Middleware, lists ListRenderer) *ProofsResource {
+func NewProofsResource(proofs workforce.TraegerStaffProofs, requireStaff common.Middleware, lists common.ListRenderer) *ProofsResource {
 	if proofs == nil || requireStaff == nil || lists == nil {
 		panic("workforce traeger staff proofs: the proofs, the right check and the list renderer are required")
 	}
@@ -72,7 +72,7 @@ func (rs *ProofsResource) export(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	format, err := listFormat(r)
+	format, err := common.ParseListFormat(r)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -82,7 +82,7 @@ func (rs *ProofsResource) export(w http.ResponseWriter, r *http.Request) {
 		renderProofError(w, r, err)
 		return
 	}
-	writeList(w, r, rs.lists, format, proofListTable(list))
+	common.WriteList(w, r, rs.lists, format, proofListTable(list))
 }
 
 // proofStatusLabels are the German statuses of the export.
@@ -101,7 +101,7 @@ func germanDay(day string) string {
 	return parsed.Format("02.01.2006")
 }
 
-func proofListTable(list workforce.TraegerStaffProofList) ListTable {
+func proofListTable(list workforce.TraegerStaffProofList) common.ListTable {
 	rows := make([][]string, 0, len(list.Entries))
 	for _, entry := range list.Entries {
 		number := ""
@@ -113,10 +113,10 @@ func proofListTable(list workforce.TraegerStaffProofList) ListTable {
 			proofStatusLabels[entry.Status], germanDay(entry.ExpiresOn), germanDay(entry.PresentedOn),
 		})
 	}
-	return ListTable{
+	return common.ListTable{
 		Title: "Nachweise", Subtitle: "Stand " + germanDay(list.Today),
 		Filters: []string{"Alle Personen und Einsatzorte"},
-		Columns: []ListColumn{
+		Columns: []common.ListColumn{
 			{ID: "last_name", Label: "Nachname"}, {ID: "first_name", Label: "Vorname"}, {ID: "personnel_number", Label: "Personalnummer"},
 			{ID: "schools", Label: "Einsatzorte"}, {ID: "type", Label: "Nachweis"}, {ID: "status", Label: "Stand"},
 			{ID: "expires_on", Label: "Gültig bis"}, {ID: "presented_on", Label: "Vorgelegt am"},

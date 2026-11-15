@@ -43,7 +43,7 @@ func (rs *Resource) occupancyExport(w http.ResponseWriter, r *http.Request) {
 		}
 		occupancy.Schools, schoolName = []traegerview.SchoolOccupancy{school}, school.Name
 	}
-	writeList(w, r, rs.lists, format, occupancyTable(occupancy, schoolName))
+	common.WriteList(w, r, rs.lists, format, occupancyTable(occupancy, schoolName))
 }
 
 func (rs *Resource) readOccupancy(w http.ResponseWriter, r *http.Request) (traegerview.Occupancy, bool) {
@@ -76,7 +76,7 @@ const (
 // occupancyTable is one row per school and figure: the school, its town,
 // the kind of the row, the name of the group or offer, the children and the
 // places of the offer. A spreadsheet filters and sums it by kind.
-func occupancyTable(occupancy traegerview.Occupancy, schoolName string) ListTable {
+func occupancyTable(occupancy traegerview.Occupancy, schoolName string) common.ListTable {
 	day := occupancy.Day.Format("02.01.2006")
 	var rows [][]string
 	for _, school := range occupancy.Schools {
@@ -97,10 +97,10 @@ func occupancyTable(occupancy traegerview.Occupancy, schoolName string) ListTabl
 		}
 		rows = append(rows, row(occupancyRowWithoutCareForm, "", school.WithoutCareForm, nil))
 	}
-	return ListTable{
+	return common.ListTable{
 		Title: "Belegung", Subtitle: "Stand " + day,
-		Filters: []string{schoolFilterLabel(schoolName)},
-		Columns: []ListColumn{
+		Filters: []string{common.ListSchoolLabel(schoolName)},
+		Columns: []common.ListColumn{
 			{ID: "day", Label: "Datum", SpreadsheetOnly: true}, {ID: "school", Label: "Schule"}, {ID: "city", Label: "Ort"},
 			{ID: "kind", Label: "Art"}, {ID: "name", Label: "Name"}, {ID: "children", Label: "Kinder"}, {ID: "places", Label: "Plätze"},
 		},

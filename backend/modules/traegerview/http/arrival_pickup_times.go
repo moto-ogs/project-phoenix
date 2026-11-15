@@ -42,9 +42,9 @@ func (rs *Resource) arrivalPickupTimesExport(w http.ResponseWriter, r *http.Requ
 	writeArrivalPickupExport(w, r, rs.lists, format, schoolID, times)
 }
 
-func writeArrivalPickupExport(w http.ResponseWriter, r *http.Request, render ListRenderer, format string, schoolID int64, times traegerview.ArrivalPickupTimes) {
+func writeArrivalPickupExport(w http.ResponseWriter, r *http.Request, render common.ListRenderer, format string, schoolID int64, times traegerview.ArrivalPickupTimes) {
 	if schoolID == 0 {
-		writeList(w, r, render, format, arrivalPickupTable(times, ""))
+		common.WriteList(w, r, render, format, arrivalPickupTable(times, ""))
 		return
 	}
 	school, found := findSchool(times.Schools, schoolID, func(s traegerview.SchoolArrivalPickupTimes) traegerview.School { return s.School })
@@ -53,7 +53,7 @@ func writeArrivalPickupExport(w http.ResponseWriter, r *http.Request, render Lis
 		return
 	}
 	times.Schools = []traegerview.SchoolArrivalPickupTimes{school}
-	writeList(w, r, render, format, arrivalPickupTable(times, school.Name))
+	common.WriteList(w, r, render, format, arrivalPickupTable(times, school.Name))
 }
 
 func (rs *Resource) readArrivalPickupTimes(w http.ResponseWriter, r *http.Request) (traegerview.ArrivalPickupTimes, bool) {
@@ -94,7 +94,7 @@ const arrivalPickupAllSchools = "Alle Schulen"
 // arrivals and pickups of a day and the days they come from. A spreadsheet
 // filters it by school and weekday. The rows of all schools together come
 // first, unless the export holds one school.
-func arrivalPickupTable(times traegerview.ArrivalPickupTimes, schoolName string) ListTable {
+func arrivalPickupTable(times traegerview.ArrivalPickupTimes, schoolName string) common.ListTable {
 	from, to := times.From.Format("02.01.2006"), times.To.Format("02.01.2006")
 	var rows [][]string
 	appendHeatmap := func(school, city string, heatmap traegerview.ArrivalPickupHeatmap) {
@@ -111,10 +111,10 @@ func arrivalPickupTable(times traegerview.ArrivalPickupTimes, schoolName string)
 	for _, school := range times.Schools {
 		appendHeatmap(school.Name, school.City, school.ArrivalPickupHeatmap)
 	}
-	return ListTable{
+	return common.ListTable{
 		Title: "Ankunft und Abholung", Subtitle: from + " bis " + to,
-		Filters: []string{schoolFilterLabel(schoolName), periodLabel(from, to)},
-		Columns: []ListColumn{
+		Filters: []string{common.ListSchoolLabel(schoolName), common.ListPeriodLabel(from, to)},
+		Columns: []common.ListColumn{
 			{ID: "from", Label: "Von", SpreadsheetOnly: true}, {ID: "to", Label: "Bis", SpreadsheetOnly: true},
 			{ID: "school", Label: "Schule"}, {ID: "city", Label: "Ort"}, {ID: "weekday", Label: "Wochentag"},
 			{ID: "slot", Label: "Uhrzeit"}, {ID: "arrivals", Label: "Ankunft je Tag"}, {ID: "pickups", Label: "Abholung je Tag"},

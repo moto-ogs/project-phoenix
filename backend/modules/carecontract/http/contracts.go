@@ -28,12 +28,12 @@ type Resource struct {
 	intake          carecontract.Intake
 	paper           carecontract.PaperSignatures
 	requireContract common.Middleware
-	lists           ListRenderer
+	lists           common.ListRenderer
 }
 
 // NewResource builds the resource; lists renders the export of the
 // contracts (#4718).
-func NewResource(contracts carecontract.Contracts, intake carecontract.Intake, paper carecontract.PaperSignatures, requireContract common.Middleware, lists ListRenderer) *Resource {
+func NewResource(contracts carecontract.Contracts, intake carecontract.Intake, paper carecontract.PaperSignatures, requireContract common.Middleware, lists common.ListRenderer) *Resource {
 	if contracts == nil || intake == nil || paper == nil || requireContract == nil || lists == nil {
 		panic("care contract http: the contracts, the intake, the paper signature, the right check and the list renderer are required")
 	}

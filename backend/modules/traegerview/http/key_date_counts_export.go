@@ -37,7 +37,7 @@ func (rs *Resource) keyDateCountsExport(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if schoolID == 0 {
-		writeList(w, r, rs.lists, format, keyDateCountsTable(counts, ""))
+		common.WriteList(w, r, rs.lists, format, keyDateCountsTable(counts, ""))
 		return
 	}
 	school, found := findSchool(counts.Schools, schoolID, func(s traegerview.SchoolKeyDateCounts) traegerview.School { return s.School })
@@ -46,13 +46,13 @@ func (rs *Resource) keyDateCountsExport(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	counts.Schools, counts.Months = []traegerview.SchoolKeyDateCounts{school}, nil
-	writeList(w, r, rs.lists, format, keyDateCountsTable(counts, school.Name))
+	common.WriteList(w, r, rs.lists, format, keyDateCountsTable(counts, school.Name))
 }
 
 // keyDateCountsTable is one row per month for all schools together, then one
 // row per school and captured month, newest month first. A row of all
 // schools names how many schools have figures in that month.
-func keyDateCountsTable(counts traegerview.KeyDateCounts, schoolName string) ListTable {
+func keyDateCountsTable(counts traegerview.KeyDateCounts, schoolName string) common.ListTable {
 	var rows [][]string
 	for _, month := range counts.Months {
 		rows = append(rows, []string{
@@ -68,9 +68,9 @@ func keyDateCountsTable(counts traegerview.KeyDateCounts, schoolName string) Lis
 			})
 		}
 	}
-	return ListTable{
-		Title: "Stichtagszahlen", Filters: []string{schoolFilterLabel(schoolName)},
-		Columns: []ListColumn{
+	return common.ListTable{
+		Title: "Stichtagszahlen", Filters: []string{common.ListSchoolLabel(schoolName)},
+		Columns: []common.ListColumn{
 			{ID: "month", Label: "Monat"}, {ID: "key_date", Label: "Stichtag"}, {ID: "school", Label: "Schule"},
 			{ID: "city", Label: "Ort"}, {ID: "children", Label: "Aktive Kinder"}, {ID: "terminals", Label: "Aktive Geräte"},
 			{ID: "recorded", Label: "Festgehalten am"},

@@ -31,7 +31,7 @@ func (rs *Resource) comparison(w http.ResponseWriter, r *http.Request) {
 // per school, then the average and the figure together. metrics=a,b keeps
 // those figures in that order; without it the file holds every figure.
 func (rs *Resource) comparisonExport(w http.ResponseWriter, r *http.Request) {
-	format, err := listFormat(r)
+	format, err := common.ParseListFormat(r)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -45,7 +45,7 @@ func (rs *Resource) comparisonExport(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	writeList(w, r, rs.lists, format, comparisonTable(comparison, metrics))
+	common.WriteList(w, r, rs.lists, format, comparisonTable(comparison, metrics))
 }
 
 func (rs *Resource) readComparison(w http.ResponseWriter, r *http.Request) (traegerview.SchoolComparison, bool) {
@@ -145,10 +145,10 @@ const (
 // comparisonTable is one row per school, then the average and the figure
 // together. A missing figure stays empty, so a spreadsheet never reads a gap
 // as 0; decimals carry a comma, as German spreadsheets expect.
-func comparisonTable(comparison traegerview.SchoolComparison, metrics []string) ListTable {
-	columns := []ListColumn{{ID: "school", Label: "Schule"}, {ID: "city", Label: "Ort"}}
+func comparisonTable(comparison traegerview.SchoolComparison, metrics []string) common.ListTable {
+	columns := []common.ListColumn{{ID: "school", Label: "Schule"}, {ID: "city", Label: "Ort"}}
 	for _, key := range metrics {
-		columns = append(columns, ListColumn{ID: key, Label: comparisonColumns[key].head})
+		columns = append(columns, common.ListColumn{ID: key, Label: comparisonColumns[key].head})
 	}
 	row := func(name, city string, values traegerview.ComparisonValues) []string {
 		line := []string{name, city}
@@ -165,9 +165,9 @@ func comparisonTable(comparison traegerview.SchoolComparison, metrics []string) 
 	}
 	rows = append(rows, row(comparisonRowAverage, "", comparison.Average), row(comparisonRowTogether, "", comparison.Together))
 	from, to := comparison.From.Format("02.01.2006"), comparison.To.Format("02.01.2006")
-	return ListTable{
+	return common.ListTable{
 		Title: "Standortvergleich", Subtitle: from + " bis " + to,
-		Filters: []string{"Schulen: " + strings.Join(names, ", "), periodLabel(from, to)},
+		Filters: []string{"Schulen: " + strings.Join(names, ", "), common.ListPeriodLabel(from, to)},
 		Columns: columns, Rows: rows,
 		Filename: fmt.Sprintf("standortvergleich-%s-bis-%s", comparison.From, comparison.To),
 	}

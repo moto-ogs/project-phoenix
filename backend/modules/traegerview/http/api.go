@@ -20,14 +20,14 @@ import (
 type Resource struct {
 	overview traegerview.Overview
 	reports  traegerview.Reports
-	lists    ListRenderer
+	lists    common.ListRenderer
 }
 
 // NewResource builds the resource. reports answers the heatmap of arrival
 // and pickup times (#4714), the comparison of schools (#4715) and the daily
 // attendance report of Mecklenburg-Vorpommern (#4717); lists renders the
 // exports as PDF, Excel or CSV (#4718).
-func NewResource(overview traegerview.Overview, reports traegerview.Reports, lists ListRenderer) *Resource {
+func NewResource(overview traegerview.Overview, reports traegerview.Reports, lists common.ListRenderer) *Resource {
 	if overview == nil || reports == nil || lists == nil {
 		panic("traeger view http: the overview, the reports and the list renderer are required")
 	}

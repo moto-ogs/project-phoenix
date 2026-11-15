@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	careContractHTTP "github.com/moto-ogs/project-phoenix/modules/carecontract/http"
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
-	traegerViewHTTP "github.com/moto-ogs/project-phoenix/modules/traegerview/http"
-	"github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 )
 
 // The lists and reports of the Träger-Portal are exported as PDF, Excel or
@@ -70,9 +68,10 @@ func renderTraegerList(render SimpleListRenderer, list traegerList, format strin
 	}, format, list.Filename)
 }
 
-// traegerViewListRenderer binds the Träger projection's export port.
-func traegerViewListRenderer(render SimpleListRenderer) traegerViewHTTP.ListRenderer {
-	return func(table traegerViewHTTP.ListTable, format string) (traegerViewHTTP.ListFile, error) {
+// traegerListRenderer binds the shared list export port of the
+// Träger-Portal routes (common.ListRenderer) to Document Rendering.
+func traegerListRenderer(render SimpleListRenderer) common.ListRenderer {
+	return func(table common.ListTable, format string) (common.ListFile, error) {
 		columns := make([]traegerListColumn, len(table.Columns))
 		for i, column := range table.Columns {
 			columns[i] = traegerListColumn{ID: column.ID, Label: column.Label, SpreadsheetOnly: column.SpreadsheetOnly}
@@ -81,36 +80,6 @@ func traegerViewListRenderer(render SimpleListRenderer) traegerViewHTTP.ListRend
 			Title: table.Title, Subtitle: table.Subtitle, Filters: table.Filters, Columns: columns,
 			Rows: table.Rows, Footer: table.Footer, Filename: table.Filename,
 		}, format)
-		return traegerViewHTTP.ListFile{Data: file.Data, ContentType: file.ContentType, Filename: file.Filename}, err
-	}
-}
-
-// traegerStaffListRenderer binds the Personalstamm's export port.
-func traegerStaffListRenderer(render SimpleListRenderer) traegerstaff.ListRenderer {
-	return func(table traegerstaff.ListTable, format string) (traegerstaff.ListFile, error) {
-		columns := make([]traegerListColumn, len(table.Columns))
-		for i, column := range table.Columns {
-			columns[i] = traegerListColumn{ID: column.ID, Label: column.Label}
-		}
-		file, err := renderTraegerList(render, traegerList{
-			Title: table.Title, Subtitle: table.Subtitle, Filters: table.Filters, Columns: columns,
-			Rows: table.Rows, Footer: table.Footer, Filename: table.Filename,
-		}, format)
-		return traegerstaff.ListFile{Data: file.Data, ContentType: file.ContentType, Filename: file.Filename}, err
-	}
-}
-
-// careContractListRenderer binds the Betreuungsvertrag's export port.
-func careContractListRenderer(render SimpleListRenderer) careContractHTTP.ListRenderer {
-	return func(table careContractHTTP.ListTable, format string) (careContractHTTP.ListFile, error) {
-		columns := make([]traegerListColumn, len(table.Columns))
-		for i, column := range table.Columns {
-			columns[i] = traegerListColumn{ID: column.ID, Label: column.Label}
-		}
-		file, err := renderTraegerList(render, traegerList{
-			Title: table.Title, Subtitle: table.Subtitle, Filters: table.Filters, Columns: columns,
-			Rows: table.Rows, Footer: table.Footer, Filename: table.Filename,
-		}, format)
-		return careContractHTTP.ListFile{Data: file.Data, ContentType: file.ContentType, Filename: file.Filename}, err
+		return common.ListFile{Data: file.Data, ContentType: file.ContentType, Filename: file.Filename}, err
 	}
 }

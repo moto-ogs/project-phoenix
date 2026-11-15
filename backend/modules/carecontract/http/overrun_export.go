@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
+
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 )
 
@@ -25,7 +27,7 @@ func overrunHead(result carecontract.OverrunEvaluation, filter carecontract.Over
 
 // overrunSchoolsTable is one row per school with its figures, then the
 // total of every school of the filter.
-func overrunSchoolsTable(result carecontract.OverrunEvaluation, filter carecontract.OverrunFilter) ListTable {
+func overrunSchoolsTable(result carecontract.OverrunEvaluation, filter carecontract.OverrunFilter) common.ListTable {
 	subtitle, filters := overrunHead(result, filter)
 	rows := make([][]string, 0, len(result.Schools)+1)
 	for _, school := range result.Schools {
@@ -38,9 +40,9 @@ func overrunSchoolsTable(result carecontract.OverrunEvaluation, filter carecontr
 	if filter.SchoolID == 0 && len(result.Schools) > 1 {
 		rows = append(rows, append([]string{"Alle Schulen"}, overrunFigures(result.Total, "", -1)...))
 	}
-	return ListTable{
+	return common.ListTable{
 		Title: "Länger als gebucht", Subtitle: subtitle, Filters: filters,
-		Columns: []ListColumn{
+		Columns: []common.ListColumn{
 			{ID: "school", Label: "Schule"}, {ID: "children", Label: "Kinder"}, {ID: "overrun_days", Label: "Tage länger als gebucht"},
 			{ID: "unbooked_days", Label: "Tage ohne Buchung"}, {ID: "extra", Label: "Zusätzliche Zeit"},
 			{ID: "data_from", Label: "Daten ab"}, {ID: "compared_days", Label: "Verglichene Tage"},
@@ -63,7 +65,7 @@ func overrunFigures(figures carecontract.OverrunFigures, dataFrom string, compar
 }
 
 // overrunChildrenTable is one row per child with an overrun.
-func overrunChildrenTable(result carecontract.OverrunEvaluation, filter carecontract.OverrunFilter) ListTable {
+func overrunChildrenTable(result carecontract.OverrunEvaluation, filter carecontract.OverrunFilter) common.ListTable {
 	subtitle, filters := overrunHead(result, filter)
 	rows := make([][]string, 0, len(result.Children))
 	for _, child := range result.Children {
@@ -72,14 +74,14 @@ func overrunChildrenTable(result carecontract.OverrunEvaluation, filter carecont
 			strconv.Itoa(child.OverrunDays), strconv.Itoa(child.UnbookedDays), overrunDuration(child.ExtraMinutes),
 		})
 	}
-	return ListTable{
+	return common.ListTable{
 		Title: "Länger als gebucht: Kinder", Subtitle: subtitle, Filters: filters,
-		Columns: []ListColumn{
+		Columns: []common.ListColumn{
 			{ID: "last_name", Label: "Nachname"}, {ID: "first_name", Label: "Vorname"}, {ID: "class", Label: "Klasse"},
 			{ID: "school", Label: "Schule"}, {ID: "overrun_days", Label: "Tage länger als gebucht"},
 			{ID: "unbooked_days", Label: "Tage ohne Buchung"}, {ID: "extra", Label: "Zusätzliche Zeit"},
 		},
-		Rows: rows, Footer: personalDataFooter,
+		Rows: rows, Footer: common.ListPersonalDataFooter,
 		Filename: fmt.Sprintf("laenger-als-gebucht-kinder-%s-bis-%s", result.From, result.To),
 	}
 }

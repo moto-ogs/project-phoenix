@@ -55,7 +55,7 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 	if !ok {
 		return errors.New("traeger staff records: the Personalstamm serves no Nachweise")
 	}
-	root.Mount("/traeger/staff-proofs", traegerstaff.NewProofsResource(proofs, requireStaff, traegerStaffListRenderer(NewSimpleListRenderer())).TraegerRouter(ProtectedTraegerRoutes))
+	root.Mount("/traeger/staff-proofs", traegerstaff.NewProofsResource(proofs, requireStaff, traegerListRenderer(NewSimpleListRenderer())).TraegerRouter(ProtectedTraegerRoutes))
 	// The Personal-Import fills the same records from a file (#4724).
 	imports, ok := records.(workforce.TraegerStaffImports)
 	if !ok {
