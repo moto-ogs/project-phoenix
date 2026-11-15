@@ -117,4 +117,16 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 		Category:        "benachrichtigungen",
 		SortOrder:       6,
 	},
+	{
+		Key:             config.KeyNotificationsStaffingChangedEnabled,
+		Label:           "Hinweis bei Vertretung und Dienstplanänderung",
+		Description:     "Vertritt jemand oder ist jemand nicht da, bekommen die vertretende und die vertretene Person einen Hinweis in moto, dazu die Lehrkräfte der Gruppe. Ob dazu eine Mitteilung aufs Handy kommt, entscheidet jede Person selbst.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "benachrichtigungen",
+		SortOrder:       7,
+	},
 }

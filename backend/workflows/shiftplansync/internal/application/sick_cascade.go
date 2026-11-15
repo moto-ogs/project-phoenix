@@ -66,6 +66,9 @@ type SickDeviations interface {
 	MarkSickAbsence(ctx context.Context, in timetable.SickAbsenceMark, touched timetable.TouchedActivities) error
 	ClearSickAbsence(ctx context.Context, in timetable.SickAbsenceClear, touched timetable.TouchedActivities) error
 	QueueActivityUpdates(ctx context.Context, touched timetable.TouchedActivities)
+	// NoticeSickAbsence tells the person and the group's teachers about the
+	// blocks one cascade marked absent (#7136).
+	NoticeSickAbsence(ctx context.Context, in timetable.SickAbsenceNotice) error
 }
 
 // SickCascadeDependencies are the owner surfaces the cascade coordinates: the
@@ -260,32 +263,46 @@ func (s *sickCascade) markBlocksForSickDays(ctx context.Context, report sickRepo
 	// what actually happened (mirrors the deviations endpoints' past guard).
 	today := s.todayDate()
 	reason := timetable.BlockAbsenceReason(report.sick())
+	notice := timetable.SickAbsenceNotice{AbsenceID: report.absenceID, StaffID: report.subjectStaffID, ActorAccountID: report.actorAccountID}
 	for _, d := range days {
 		if d.Before(today) {
 			continue
 		}
-		if err := s.markBlocksForSickDay(ctx, report, d, &reason, activeTouched); err != nil {
+		marked, err := s.markBlocksForSickDay(ctx, report, d, &reason, activeTouched)
+		if err != nil {
 			return err
 		}
+		notice.Blocks = append(notice.Blocks, marked...)
+	}
+	// One notice for every block this pass marked, whatever the number of
+	// days; it names neither the absence's type nor its reason (#7136).
+	if len(notice.Blocks) == 0 {
+		return nil
+	}
+	if err := s.deviations.NoticeSickAbsence(ctx, notice); err != nil {
+		return fmt.Errorf("sick cascade: staffing notice: %w", err)
 	}
 	return nil
 }
 
-func (s *sickCascade) markBlocksForSickDay(ctx context.Context, report sickReport, day calendar.Date, reason *string, activeTouched timetable.TouchedActivities) error {
+// markBlocksForSickDay marks the person's plannable blocks of the day absent
+// and reports the blocks it marked.
+func (s *sickCascade) markBlocksForSickDay(ctx context.Context, report sickReport, day calendar.Date, reason *string, activeTouched timetable.TouchedActivities) ([]timetable.SickAbsenceNoticeBlock, error) {
 	if err := s.timetableData.AcquireSubstituteDayLock(ctx, day); err != nil {
-		return fmt.Errorf("sick cascade: day lock %s: %w", day.String(), err)
+		return nil, fmt.Errorf("sick cascade: day lock %s: %w", day.String(), err)
 	}
 	rows, err := s.timetableData.FindByStaffAndDate(ctx, report.subjectStaffID, day)
 	if err != nil {
-		return fmt.Errorf("sick cascade: load assignments %s: %w", day.String(), err)
+		return nil, fmt.Errorf("sick cascade: load assignments %s: %w", day.String(), err)
 	}
 	instancesByID, err := s.timetableData.GetActivityInstancesByID(ctx, instanceStaffInstanceIDs(rows))
 	if err != nil {
-		return fmt.Errorf("sick cascade: load instances for %s: %w", day.String(), err)
+		return nil, fmt.Errorf("sick cascade: load instances for %s: %w", day.String(), err)
 	}
 	if missingID := missingActivityInstanceID(rows, instancesByID); missingID > 0 {
-		return fmt.Errorf("sick cascade: load instance %d: %w", missingID, errRecordNotFound)
+		return nil, fmt.Errorf("sick cascade: load instance %d: %w", missingID, errRecordNotFound)
 	}
+	var marked []timetable.SickAbsenceNoticeBlock
 	for _, row := range rows {
 		if row.IsAbsent {
 			continue // already absent (manual deviation or overlapping report)
@@ -297,10 +314,11 @@ func (s *sickCascade) markBlocksForSickDay(ctx context.Context, report sickRepor
 		if err := s.deviations.MarkSickAbsence(ctx, timetable.SickAbsenceMark{
 			AssignmentID: row.ID, Reason: reason, SickAbsenceID: report.absenceID, Sick: report.sick(), ActorAccountID: report.actorAccountID,
 		}, activeTouched); err != nil {
-			return fmt.Errorf("sick cascade: mark block %d: %w", row.InstanceID, err)
+			return nil, fmt.Errorf("sick cascade: mark block %d: %w", row.InstanceID, err)
 		}
+		marked = append(marked, timetable.SickAbsenceNoticeBlock{InstanceID: row.InstanceID, Date: day})
 	}
-	return nil
+	return marked, nil
 }
 
 // ClearSickForRange reverses what MarkSickForRange stamped for this absence.

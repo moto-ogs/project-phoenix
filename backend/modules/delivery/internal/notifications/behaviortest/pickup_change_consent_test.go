@@ -98,3 +98,19 @@ func TestInstanceCancelledNoticeFollowsTheRight(t *testing.T) {
 	assert.Equal(t, notifications.GroupAppointments, def.Group)
 	assert.False(t, def.SchoolPortal, "the feed of moto schule follows later")
 }
+
+// TestStaffingNoticesFollowTheRight pins the substitution notices (#7136) to
+// their own heading and the right every staff role holds; both push by
+// default.
+func TestStaffingNoticesFollowTheRight(t *testing.T) {
+	t.Parallel()
+	for _, key := range []string{notifications.TypeStaffingChanged, notifications.TypeGroupStaffingChanged} {
+		def, ok := notifications.GetType(key)
+		require.True(t, ok, key)
+		assert.Equal(t, permissions.ActivitiesRead, def.Permission, key)
+		assert.True(t, def.DefaultOn, key)
+		assert.Equal(t, notifications.PortalStaff, def.Portal, key)
+		assert.Equal(t, notifications.GroupStaffing, def.Group, key)
+		assert.Equal(t, "notifications.staffing_changed_enabled", def.TenantGate, key)
+	}
+}

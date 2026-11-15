@@ -231,6 +231,22 @@ without the person who cancelled; feed and push from today up to 14 days
 ahead, feed only later, nothing for the past. A bulk cancellation of a
 period writes no entries per block.
 
+Staffing changes (#7136) come from every write of the Timetable staffing:
+the single Vertretungsplan save, the Sammel-Vertretung, and the plan cascade
+of an absence (sick report, its reconciliation and the Dienstplan-Abgleich
+`SyncAbsencePlan`). Each operation is one notice per person and kind
+(substituted, absent, present again, substitute removed), whatever the number
+of days. `staffing_changed` reaches the substitute and the absent person and
+links to their own Dienstplan; `group_staffing_changed` reaches the teachers
+assigned to the OGS groups of the affected blocks (`education.group_teacher`,
+groups as the Betreuungsplan's group filter names them) and links to
+`/vertretung?d=…&block=…`. The person who made the change gets nothing; the
+text names no reason. Both types sit under the heading
+„Dienstplan und Vertretung“ (`dienstplan`), push by default and share the
+school switch `notifications.staffing_changed_enabled`. Bundling object: the
+absent person's first assignment of a save, or the absence of a cascade.
+Clearing a sick report writes no notice.
+
 ### Web Push (#2003)
 
 - **Keys**: `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBSCRIBER`

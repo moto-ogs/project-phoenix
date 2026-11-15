@@ -23,6 +23,7 @@ import (
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
+	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
@@ -71,6 +72,13 @@ func (payrollDispatchOff) Download(context.Context, int64, string) (workforce.Pa
 // NewWorkforceTestModule composes the Workforce owner over db and returns it
 // with the People Directory's person directory it reads staff through.
 func NewWorkforceTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, clocks ...func() time.Time) (WorkforceTestModule, peoplePorts.PersonDirectory, error) {
+	return NewWorkforceTestModuleWithStaffingNotices(db, unit, timetablePorts.StaffingNoticeDependencies{}, clocks...)
+}
+
+// NewWorkforceTestModuleWithStaffingNotices composes the module whose sick
+// cascade tells the person and the group's teachers about the blocks it
+// marks absent (#7136).
+func NewWorkforceTestModuleWithStaffingNotices(db transactionruntime.Database, unit tenant.UnitOfWork, staffing timetablePorts.StaffingNoticeDependencies, clocks ...func() time.Time) (WorkforceTestModule, peoplePorts.PersonDirectory, error) {
 	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
 	if err != nil {
 		return WorkforceTestModule{}, nil, err
@@ -132,7 +140,7 @@ func NewWorkforceTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 	}
 	nonWorkingDayService := schoolCalendarCompose.NewNonWorkingDays(calendar)
 	today := timezone.CalendarDateClock(OptionalClock(clocks))
-	timetable, _, _, err := NewTimetableTestModule(db, unit, clocks...)
+	timetable, _, _, err := newTimetableTestModule(db, unit, staffing, clocks...)
 	if err != nil {
 		return WorkforceTestModule{}, nil, err
 	}
