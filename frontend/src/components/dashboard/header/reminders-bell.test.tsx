@@ -113,10 +113,8 @@ vi.mock("~/lib/analytics", () => ({
   trackTenantEvent: (...args: unknown[]) => mockTrack(...args),
 }));
 
-import {
-  closeNotificationsSheet,
-  NotificationsSheet,
-} from "./notifications-panel";
+import { NotificationsSheet } from "./notifications-panel";
+import { closeNotificationsSheet } from "./notifications-sheet-state";
 import { RemindersBell } from "./reminders-bell";
 
 function reminder(over: Partial<Reminder> = {}): Reminder {

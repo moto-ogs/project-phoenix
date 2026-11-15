@@ -9,6 +9,7 @@
 "use client";
 
 import { Bell } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useCallback, useState } from "react";
 
 import { AnchoredPopover } from "~/components/ui/anchored-popover";
@@ -21,11 +22,20 @@ import { useReminders } from "~/lib/hooks/use-reminders";
 
 import {
   NOTIFICATIONS_BADGE_MAX,
-  NotificationsPanelContent,
   useAnalyticsSchoolId,
   useNotificationsSheetOpen,
   useOpenNotificationsSheet,
-} from "./notifications-panel";
+} from "./notifications-sheet-state";
+
+// The bell is mounted on every staff page and the shared header of every
+// portal; its content loads only when the popover opens.
+const NotificationsPanelContent = dynamic(
+  () =>
+    import("./notifications-panel").then(
+      (module) => module.NotificationsPanelContent,
+    ),
+  { ssr: false },
+);
 
 export function RemindersBell() {
   const { count, enabled } = useReminders();

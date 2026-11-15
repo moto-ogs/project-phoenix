@@ -142,10 +142,12 @@ vi.mock("~/lib/hooks/use-notification-feed", () => ({
   }),
 }));
 const mockOpenNotificationsSheet = vi.hoisted(() => vi.fn());
-vi.mock("./header/notifications-panel", () => ({
+vi.mock("./header/notifications-sheet-state", () => ({
   NOTIFICATIONS_BADGE_MAX: 9,
-  NotificationsSheet: () => <div data-testid="notifications-sheet-host" />,
   useOpenNotificationsSheet: () => mockOpenNotificationsSheet,
+}));
+vi.mock("./header/notifications-panel", () => ({
+  NotificationsSheet: () => <div data-testid="notifications-sheet-host" />,
 }));
 
 vi.mock("~/lib/operator-url", () => ({

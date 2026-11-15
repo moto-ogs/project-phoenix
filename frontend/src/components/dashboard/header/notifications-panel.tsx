@@ -8,7 +8,6 @@
 
 import dynamic from "next/dynamic";
 import { X } from "lucide-react";
-import { useCallback, useSyncExternalStore } from "react";
 
 import { Button, ButtonLink } from "~/components/ui/button";
 import {
@@ -20,7 +19,6 @@ import {
 import { EmptyState } from "~/components/ui/empty-state";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
 import { Loading } from "~/components/ui/loading";
-import { trackTenantEvent } from "~/lib/analytics";
 import { useNotificationFeedUnread } from "~/lib/hooks/use-notification-feed";
 import { useReminders } from "~/lib/hooks/use-reminders";
 import type { Reminder } from "~/lib/reminders-api";
@@ -30,14 +28,16 @@ import {
   reminderSubtitle,
   reminderToneClass,
 } from "~/lib/reminders-display";
-import { useTenantSafe } from "~/lib/tenant-context";
 import { useTenantAwarePath } from "~/lib/tenant-path";
+
+import {
+  closeNotificationsSheet,
+  useAnalyticsSchoolId,
+  useNotificationsSheetOpen,
+} from "./notifications-sheet-state";
 
 // How many reminders to preview inline before linking out to the full page.
 const PREVIEW_LIMIT = 5;
-
-/** Abzeichen an Glocke und „Mehr“: zwei Ziffern sind das Höchste, „9+“. */
-export const NOTIFICATIONS_BADGE_MAX = 9;
 
 // The feed list, its hooks and the infinite scroll load only when the panel
 // opens: the bell itself is mounted on every staff page.
@@ -51,53 +51,6 @@ const NotificationFeedSection = dynamic(
     loading: () => <Loading compact message="Hinweise werden geladen." />,
   },
 );
-
-// --- Offen-Zustand des Blatts ------------------------------------------------
-
-let sheetOpen = false;
-const listeners = new Set<() => void>();
-
-function setSheetOpen(next: boolean) {
-  if (sheetOpen === next) return;
-  sheetOpen = next;
-  for (const listener of listeners) listener();
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-const readOpen = () => sheetOpen;
-const readServer = () => false;
-
-/** Ob das Vollbild-Blatt offen ist, für `aria-expanded` an den Auslösern. */
-export function useNotificationsSheetOpen(): boolean {
-  return useSyncExternalStore(subscribe, readOpen, readServer);
-}
-
-/** Die Schule der Sitzung für die Nutzungsanalyse; null ohne Schule. */
-export function useAnalyticsSchoolId(): string | null {
-  return useTenantSafe()?.tenant?.tenantId?.toString() ?? null;
-}
-
-/**
- * Öffnet das Blatt und zählt das Öffnen der Glocke, von welchem Auslöser
- * auch immer (`notification_bell_opened`, ohne Inhalte).
- */
-export function useOpenNotificationsSheet(): () => void {
-  const schoolId = useAnalyticsSchoolId();
-  return useCallback(() => {
-    if (!sheetOpen && schoolId) {
-      trackTenantEvent("notification_bell_opened", schoolId);
-    }
-    setSheetOpen(true);
-  }, [schoolId]);
-}
-
-export function closeNotificationsSheet() {
-  setSheetOpen(false);
-}
 
 // --- Inhalt -----------------------------------------------------------------
 

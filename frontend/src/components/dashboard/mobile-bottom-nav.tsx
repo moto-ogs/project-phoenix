@@ -2,6 +2,8 @@
 // Ultra-minimalist mobile navigation following Instagram/Twitter/Uber patterns
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { Alert } from "~/components/ui/alert";
 import { SectionLabel } from "~/components/ui/section-label";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
@@ -44,9 +46,8 @@ import {
 import { NotificationBadge } from "~/components/ui/notification-badge";
 import {
   NOTIFICATIONS_BADGE_MAX,
-  NotificationsSheet,
   useOpenNotificationsSheet,
-} from "./header/notifications-panel";
+} from "./header/notifications-sheet-state";
 import { useNotificationFeedUnread } from "~/lib/hooks/use-notification-feed";
 import { navigationIcons } from "~/lib/navigation-icons";
 import {
@@ -138,6 +139,16 @@ import {
   useIsStaffSettingsPage,
 } from "./staff-settings-nav";
 import { supervisionConcept } from "~/lib/concepts/supervision";
+
+// Das Vollbild-Blatt der Benachrichtigungen (#7148) lädt erst im Staff-Portal
+// und nach dem ersten Zeichnen, nicht in jedem Bündel der unteren Leiste.
+const NotificationsSheet = dynamic(
+  () =>
+    import("./header/notifications-panel").then(
+      (module) => module.NotificationsSheet,
+    ),
+  { ssr: false },
+);
 
 // Icon component for consistent SVG rendering
 const Icon = ({ path, className }: { path: string; className?: string }) => (
