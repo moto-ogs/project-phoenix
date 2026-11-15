@@ -53,11 +53,12 @@ export function SecurityCheck({
         onError={() => report("")}
       />
       {solved ? null : (
-        <p className="text-sm text-gray-600">
-          {copy.hint}{" "}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <p className="text-sm text-gray-600">{copy.hint}</p>
           <Button
             type="button"
-            variant="link"
+            variant="outline"
+            size="compact"
             tooltip={copy.restartTooltip}
             onClick={() => {
               report("");
@@ -66,7 +67,7 @@ export function SecurityCheck({
           >
             {copy.restart}
           </Button>
-        </p>
+        </div>
       )}
     </div>
   );
