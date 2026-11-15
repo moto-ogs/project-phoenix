@@ -147,6 +147,14 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         right: REPORTS_RIGHT,
       },
       {
+        // Berichte nach Vorlage zum Stichtag für Jugendamt und Kommune (#4716).
+        key: "berichte",
+        href: "/traeger/berichte",
+        label: "Berichte",
+        concept: reportsConcept,
+        right: REPORTS_RIGHT,
+      },
+      {
         // Die tägliche An- und Abwesenheit für das Land, nur für Schulen in
         // Mecklenburg-Vorpommern (§ 32 Abs. 1a KiföG M-V, #4717).
         key: "tagesmeldung",
