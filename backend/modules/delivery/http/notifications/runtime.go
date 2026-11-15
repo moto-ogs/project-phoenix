@@ -34,4 +34,6 @@ type Runtime struct {
 	Conflict        func(http.ResponseWriter, *http.Request, error)
 	NotFound        func(http.ResponseWriter, *http.Request, error)
 	Wrapped         func(http.ResponseWriter, *http.Request, string, error)
+	// ParseIDParam reads an int64 path parameter: api/common.ParseIDParam.
+	ParseIDParam func(*http.Request, string) (int64, error)
 }

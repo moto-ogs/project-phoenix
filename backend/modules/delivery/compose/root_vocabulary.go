@@ -74,7 +74,7 @@ var (
 	NewEmailOutbox                   = emailoutbox.NewService
 	NewEmailTemplateRegistry         = emailoutbox.NewTemplateRegistry
 	NewTenantMailIdentity            = emailoutbox.NewTenantMailIdentity
-	NewNotifier                      = notifications.NewServiceWithDeliveryObserver
+	NewNotifier                      = notifications.NewServiceWithFeed
 	NewPushSubscriptionService       = notifications.NewPushSubscriptionService
 	NewPreferenceService             = notifications.NewPreferenceService
 	NewEmailRecipientResolver        = notifications.NewEmailRecipientResolver

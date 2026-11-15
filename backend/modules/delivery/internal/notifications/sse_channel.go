@@ -76,6 +76,12 @@ func NewSSEChannel(broadcaster realtime.Broadcaster, opts ...SSEChannelOption) C
 
 func (c *sseChannel) Name() string { return "sse" }
 
+// signalFeed tells the accounts' open staff sessions that their feed changed
+// (#7148). The signal carries no content; the sessions reload the feed.
+func (c *sseChannel) signalFeed(tenantID int64, accountIDs []int64) error {
+	return c.broadcaster.BroadcastToStaffAccounts(tenantID, accountIDs, realtime.NewEvent(realtime.EventNotificationFeedChanged, "", realtime.EventData{}))
+}
+
 func (c *sseChannel) getLogger() *slog.Logger {
 	if c.logger == nil {
 		return slog.Default()
@@ -131,6 +137,14 @@ func (c *sseChannel) Deliver(ctx context.Context, event Event) error {
 // deliverToStaff addresses the staff accounts in the portals the
 // notification type belongs to; the stored copy records the same portals.
 func (c *sseChannel) deliverToStaff(ctx context.Context, event Event, sseEvent realtime.Event, stored domain.RealtimeNotification) error {
+	if len(event.feedChanged) > 0 {
+		if err := c.signalFeed(event.Audience.TenantID, event.feedChanged); err != nil {
+			return err
+		}
+	}
+	if event.feedOnly {
+		return nil
+	}
 	accountIDs := staffAccountIDs(event.Audience)
 	stored.Scope, stored.AccountIDs = domain.RealtimeScopeStaff, accountIDs
 	stored.StaffPortal, stored.SchoolPortal = deliversToStaffPortal(event), deliversToOpenSchoolPortal(event)

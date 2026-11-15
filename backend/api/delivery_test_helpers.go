@@ -4,6 +4,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 	"time"
@@ -61,14 +62,19 @@ type DeliveryTestModule struct {
 	Notifications           deliveryCompose.Notifier
 	PushSubscriptions       deliveryCompose.PushSubscriptionService
 	NotificationPreferences deliveryCompose.NotificationPreferenceService
+	// Feed reads the notification feed (#7148); Hub is the local realtime
+	// hub its signals and the in-app notices go to.
+	Feed deliveryContract.NotificationFeed
+	Hub  *realtime.Hub
 }
 
 // NotificationPreferenceRouterForTests mounts the actual protected resources
-// over the module's real owner stores. The outer host's session-liveness and
+// over the module's real owner stores, the notification feed (#7148)
+// included. The outer host's session-liveness and
 // module-booking middleware are outside this route-sized test root.
 func (m DeliveryTestModule) NotificationPreferenceRouterForTests() chi.Router {
 	router := chi.NewRouter()
-	notifications := NewNotificationHTTP(nil, nil, m.NotificationPreferences)
+	notifications := NewNotificationHTTP(nil, nil, m.NotificationPreferences, m.Feed)
 	router.Mount("/api/notifications", notifications.Router())
 	router.Mount("/school/notifications", notifications.SchoolRouter())
 	parents := parentAPI.NewResource(parentAPI.ResourceConfig{Preferences: bindParentPreferences(m.NotificationPreferences)})
@@ -122,16 +128,11 @@ func NewDeliveryTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return DeliveryTestModule{}, err
 	}
-	parentMembers := owners.MustNewMembershipTestRepositories(db)
-	sse, err := deliveryCompose.NewTenantSSEChannel(unit, realtime.NewHub(logger), db.Pool(), parentMembers.StudentGuardian, logger, delivery.Store)
+	hub := realtime.NewHub(logger)
+	service, feed, err := newDeliveryTestRouter(db, unit, settings.Settings, delivery, hub, vapid, logger)
 	if err != nil {
 		return DeliveryTestModule{}, err
 	}
-	webPush, err := deliveryCompose.NewTenantDurableWebPushChannel(unit, db.Pool(), pushRepo, vapid, deliveryCompose.NewDurablePushOutbox(delivery.Module), logger)
-	if err != nil {
-		return DeliveryTestModule{}, err
-	}
-	service := deliveryCompose.NewNotifier(settings.Settings, logger, func(string, string, string, time.Duration, error) {}, sse, webPush)
 	push, err := deliveryCompose.NewTenantPushSubscriptionService(unit, db.Pool(), pushRepo, members, vapid, logger)
 	if err != nil {
 		return DeliveryTestModule{}, err
@@ -141,7 +142,29 @@ func NewDeliveryTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 		return DeliveryTestModule{}, err
 	}
 	return DeliveryTestModule{Runtime: delivery, EmailOutbox: deliveryCompose.NewEmailOutbox(deliveryCompose.NewDurableEmails(delivery.Module)),
-		Notifications: service, PushSubscriptions: push, NotificationPreferences: preferences}, nil
+		Notifications: service, PushSubscriptions: push, NotificationPreferences: preferences, Feed: feed, Hub: hub}, nil
+}
+
+// newDeliveryTestRouter builds the notification router over the SSE, Web Push
+// and feed channels with the feed reader beside it (#7148).
+func newDeliveryTestRouter(db transactionruntime.Database, unit tenant.UnitOfWork, settings deliveryPushTestSettings, delivery *deliveryCompose.Runtime, hub *realtime.Hub,
+	vapid deliveryCompose.VAPIDConfig, logger *slog.Logger,
+) (deliveryCompose.Notifier, deliveryContract.NotificationFeed, error) {
+	parentMembers := owners.MustNewMembershipTestRepositories(db)
+	sse, err := deliveryCompose.NewTenantSSEChannel(unit, hub, db.Pool(), parentMembers.StudentGuardian, logger, delivery.Store)
+	if err != nil {
+		return nil, nil, err
+	}
+	webPush, err := deliveryCompose.NewTenantDurableWebPushChannel(unit, db.Pool(), deliveryCompose.NewPushSubscriptionRepository(db.Pool()), vapid, deliveryCompose.NewDurablePushOutbox(delivery.Module), logger)
+	if err != nil {
+		return nil, nil, err
+	}
+	notifier := deliveryCompose.NewNotifier(settings, logger, func(string, string, string, time.Duration, error) {}, delivery.Store, time.Now, sse, webPush)
+	feed, ok := notifier.(deliveryContract.NotificationFeed)
+	if !ok {
+		return nil, nil, errors.New("notification router does not serve the notification feed")
+	}
+	return notifier, feed, nil
 }
 
 // deliveryPushTestSettings is the router's tenant gate read.
@@ -160,5 +183,24 @@ func NewDeliveryTestPushNotifier(db transactionruntime.Database, unit tenant.Uni
 	if err != nil {
 		return nil, err
 	}
-	return deliveryCompose.NewNotifier(settings, slog.Default(), func(string, string, string, time.Duration, error) {}, webPush), nil
+	return deliveryCompose.NewNotifier(settings, slog.Default(), func(string, string, string, time.Duration, error) {}, nil, nil, webPush), nil
+}
+
+// NewDeliveryTestFeedNotifier is the production notification router with the
+// notification feed (#7148) and the durable Web Push channel with fixed test
+// VAPID keys, so a producer's test reads the feed entries and the push
+// intents its action stores. The feed signals go to the module's hub.
+func NewDeliveryTestFeedNotifier(db transactionruntime.Database, unit tenant.UnitOfWork, settings deliveryPushTestSettings, module DeliveryTestModule) (deliveryCompose.Notifier, error) {
+	vapid := deliveryCompose.VAPIDConfig{PublicKey: "pub", PrivateKey: "priv", Subscriber: "mailto:test@example.org"}
+	webPush, err := deliveryCompose.NewTenantDurableWebPushChannel(unit, db.Pool(), deliveryCompose.NewPushSubscriptionRepository(db.Pool()),
+		vapid, deliveryCompose.NewDurablePushOutbox(module.Runtime.Module), slog.Default())
+	if err != nil {
+		return nil, err
+	}
+	parentMembers := owners.MustNewMembershipTestRepositories(db)
+	sse, err := deliveryCompose.NewTenantSSEChannel(unit, module.Hub, db.Pool(), parentMembers.StudentGuardian, slog.Default(), module.Runtime.Store)
+	if err != nil {
+		return nil, err
+	}
+	return deliveryCompose.NewNotifier(settings, slog.Default(), func(string, string, string, time.Duration, error) {}, module.Runtime.Store, time.Now, sse, webPush), nil
 }

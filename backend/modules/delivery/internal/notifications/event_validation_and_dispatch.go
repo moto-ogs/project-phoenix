@@ -222,6 +222,9 @@ func (r *router) deliver(ctx context.Context, event Event) {
 		if _, durable := ch.(durableChannel); durable {
 			continue
 		}
+		if _, feedSignal := ch.(feedSignalChannel); event.feedOnly && !feedSignal {
+			continue
+		}
 		if err := ch.Deliver(ctx, event); err != nil {
 			// Fire-and-forget per channel: one failing channel must neither
 			// block the caller nor the remaining channels.

@@ -120,6 +120,24 @@ describe("DrawerContent", () => {
     expect(handle).toBeInTheDocument();
   });
 
+  it("fills the whole screen with fullScreen instead of the 90vh cap", () => {
+    const { rerender } = render(
+      <DrawerContent>
+        <div>Content</div>
+      </DrawerContent>,
+    );
+    expect(screen.getByTestId("drawer-content")).toHaveClass("max-h-[90vh]");
+
+    rerender(
+      <DrawerContent fullScreen>
+        <div>Content</div>
+      </DrawerContent>,
+    );
+    const content = screen.getByTestId("drawer-content");
+    expect(content).toHaveClass("inset-0", "h-dvh", "max-h-dvh");
+    expect(content).not.toHaveClass("max-h-[90vh]");
+  });
+
   it("applies custom className", () => {
     render(
       <DrawerContent className="custom-class">
