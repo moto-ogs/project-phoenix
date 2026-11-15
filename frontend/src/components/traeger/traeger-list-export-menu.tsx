@@ -20,7 +20,7 @@ import {
 const logger = createLogger({ component: "TraegerListExportMenu" });
 
 /** What each format is good for, in one line under its name. */
-export const TRAEGER_LIST_FORMAT_DESCRIPTIONS: Readonly<
+const TRAEGER_LIST_FORMAT_DESCRIPTIONS: Readonly<
   Record<TraegerListFormat, string>
 > = {
   pdf: "Zum Drucken und Ablegen",
