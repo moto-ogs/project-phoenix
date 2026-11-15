@@ -10764,6 +10764,9 @@ export const traegerArrivalPickupTimesTopic =
       question: "Wann kommen die Kinder an und wann gehen sie?",
       summary:
         "Zwei Heatmaps zeigen je Wochentag und halbe Stunde, wie viele Kinder ankommen und gehen. So planen Sie Personal für die vollen Zeiten.",
+      image: "/help/screens/ankunft-und-abholung.webp",
+      imageAlt:
+        "Oben die Hauptzeiten Meiste Ankünfte und Meiste Abholungen. Darunter die grüne Heatmap Ankunft mit einer Zeile je Wochentag und einem Feld je halbe Stunde.",
       group: "auswertung",
       audience: "traeger",
       icon: "ClockAfternoon",
