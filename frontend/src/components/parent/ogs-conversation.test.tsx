@@ -38,9 +38,11 @@ vi.mock("~/lib/hooks/use-messages-activity", () => ({
   useMessagesActivity: vi.fn(),
 }));
 
+const care = vi.hoisted(() => ({ loading: false }));
+
 vi.mock("~/components/parent/child-care", () => ({
   useChildCare: () => ({
-    loading: false,
+    loading: care.loading,
     features: { notes_enabled: true },
   }),
   getOgsActions: () => [],
@@ -59,6 +61,7 @@ const thread = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  care.loading = false;
 });
 
 describe("OgsConversation back link", () => {
@@ -375,5 +378,21 @@ describe("OgsConversation for screen readers (#7113)", () => {
       name: "Nachrichtenverlauf",
     });
     expect(history).toHaveTextContent("Felix ist abgeholt.");
+  });
+});
+
+describe("OgsConversation keeps the composer while care reloads (#7113)", () => {
+  it("keeps the field and its focus when the child's care refreshes in the background", async () => {
+    mockGetConversation.mockResolvedValue(thread);
+    const { rerender } = render(<OgsConversation studentId="42" />);
+    const field = await screen.findByLabelText("Nachricht");
+    act(() => field.focus());
+
+    // A send or an SSE event reloads the child's care; its features stay.
+    care.loading = true;
+    rerender(<OgsConversation studentId="42" />);
+
+    expect(screen.getByLabelText("Nachricht")).toBe(field);
+    expect(field).toHaveFocus();
   });
 });
