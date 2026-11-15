@@ -47,9 +47,9 @@ import (
 //	cd backend && ../scripts/run-go-toolchain.sh go test -tags=testhooks ./test/ \
 //	  -run '^TestModuleLiveClockRatchet$' -count=1 -v
 //
-// Re-measured 2026-11-15 for #7104: not counting stopwatch starts lowered
-// the sum from 1,646 to 814 calls; Care Plan then took its clock from its
-// composition (129 to 1).
+// Re-measured 2026-11-15 for #7104: not counting stopwatch starts and the
+// owner slices lowered the sum from 1,646 to 665 calls; Care Plan (139 to 1)
+// and Parent Billing (7 to 0) take their clocks from their compositions.
 var moduleLiveClockBudget = map[string]int{
 	"modules/appointments": 5,
 	"modules/auditlog":     15,
@@ -72,7 +72,6 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/mealplan":                     1,
 	"modules/operatordashboard":            2,
 	"modules/organizationtenancy":          7,
-	"modules/parentbilling":                7,
 	"modules/peopledirectory":              12,
 	"modules/planexport":                   2,
 	"modules/presenceprojection":           15,

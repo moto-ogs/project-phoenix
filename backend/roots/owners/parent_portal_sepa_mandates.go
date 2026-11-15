@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	parentBillingCompose "github.com/moto-ogs/project-phoenix/modules/parentbilling/compose"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -69,10 +70,11 @@ type parentSEPAMandates struct {
 	mandates parentbilling.ParentSEPAMandates
 }
 
-// NewParentSEPAMandates binds the parents' mandates to the Elternabrechnung.
-func NewParentSEPAMandates(settings ParentMandateSettings, cipher BankDataCipher) parentportal.SEPAMandatesPort {
+// NewParentSEPAMandates binds the parents' mandates to the Elternabrechnung
+// on the root's day clock.
+func NewParentSEPAMandates(settings ParentMandateSettings, cipher BankDataCipher, today func() calendar.Date) parentportal.SEPAMandatesPort {
 	return parentSEPAMandates{mandates: parentBillingCompose.NewParentSEPAMandates(
-		parentMandateParties{billing: careContractCompose.NewContractVersions()}, cipher, parentOnlineMandateSettings{settings: settings}, SecurityFingerprints{})}
+		parentMandateParties{billing: careContractCompose.NewContractVersions()}, cipher, parentOnlineMandateSettings{settings: settings}, SecurityFingerprints{}, today)}
 }
 
 func (m parentSEPAMandates) SEPAMandate(ctx context.Context, organizationID int64, reader parentportal.SEPAMandateReader) (parentportal.SEPAMandateView, error) {

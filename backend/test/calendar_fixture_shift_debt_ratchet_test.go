@@ -68,7 +68,6 @@ var calendarFixtureShiftedLiveDateDebt = map[string]int{
 	"modules/identityaccess/sessiontoken/authenticator_test.go":                                              1,
 	"modules/organizationtenancy/compose/data_return_export_test.go":                                         1,
 	"modules/organizationtenancy/internal/adapters/datareturn/datareturn_test.go":                            3,
-	"modules/parentbilling/internal/adapters/postgres/family_children_takeover_test.go":                      2,
 	"modules/parentrequestfeedprojection/internal/adapters/postgres/query_budget_growth_test.go":             1,
 	"modules/parentrequestfeedprojection/internal/adapters/postgres/query_test.go":                           1,
 	"modules/peopledirectory/contracttest/external_caregiver_record_repository_test.go":                      1,
