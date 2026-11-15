@@ -140,7 +140,7 @@ export function PasswordResetModal({
   formRef,
   initialEmail = "",
 }: PasswordResetModalProps) {
-  const [email, setEmail] = useState(isOpen ? initialEmail : "");
+  const [email, setEmail] = useState(isOpen ? initialEmail.trim() : "");
   // The dialog stays mounted while closed: each opening takes the login
   // form's address anew.
   const [wasOpen, setWasOpen] = useState(isOpen);

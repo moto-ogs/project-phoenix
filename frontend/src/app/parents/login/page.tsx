@@ -35,6 +35,7 @@ import { signOutStaleSession } from "~/lib/login-session-notice";
 import { portalPasswordLogin } from "~/lib/portal-password-login";
 import type { MFAStep } from "~/lib/sign-in-answer";
 import { createLogger } from "~/lib/logger";
+import type { ErrorCode } from "~/lib/error-codes.generated";
 import { requestParentPasswordReset } from "~/lib/auth-api";
 import { parentPath } from "~/lib/parent-url";
 import { holidayRegistrationReturnPath } from "~/lib/parent-holiday-registration";
@@ -74,7 +75,7 @@ const PARENT_LOGIN_REFUSALS = [
  * these lead from the error to the password reset: an inactive account gets
  * no new password that way (#3376).
  */
-const WRONG_PASSWORD_REFUSALS: readonly string[] = [
+const WRONG_PASSWORD_REFUSALS: readonly ErrorCode[] = [
   "care.invalid_credentials",
   "identity.invalid_credentials",
 ];
@@ -260,7 +261,8 @@ function ParentLoginForm() {
       setPasswordRefused(
         err instanceof ApiError &&
           err.status === 401 &&
-          WRONG_PASSWORD_REFUSALS.includes(err.code ?? ""),
+          err.code !== undefined &&
+          WRONG_PASSWORD_REFUSALS.includes(err.code),
       );
       void formErrors.show(
         err instanceof ApiError

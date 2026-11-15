@@ -519,6 +519,7 @@ describe("ParentLoginPage i18n", () => {
       // A fixed sentence, not the catalog: the catalog once said the parent
       // lacked permission and should ask the school (#7106).
       const alert = await screen.findByRole("alert");
+      // Anker: die Meldung zum falschen Passwort steht im Fehlerkasten.
       expect(alert).toHaveTextContent(
         "The email address or the password is not correct. Please check your entry.",
       );
@@ -558,6 +559,7 @@ describe("ParentLoginPage i18n", () => {
       await submitLogin();
 
       const alert = await screen.findByRole("alert");
+      // Anker: der Fehlerkasten zeigt das ausgeschaltete Konto.
       expect(alert).toHaveTextContent(
         enCatalogText("identity.session_account_inactive", LOGIN_OBJECT),
       );
