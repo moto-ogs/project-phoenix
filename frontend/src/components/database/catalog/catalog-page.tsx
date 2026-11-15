@@ -151,7 +151,7 @@ export interface CatalogConfig<T extends CatalogItem> {
 }
 
 /** Ein zusätzlicher Reiter der Objektansicht eines Katalogeintrags. */
-export interface CatalogDetailTab {
+interface CatalogDetailTab {
   readonly id: string;
   readonly label: string;
   readonly content: React.ReactNode;

@@ -963,7 +963,7 @@ interface BackendStaffWorkTimeFact {
   closed_through: string | null;
 }
 
-export interface WorkTimeModelAssignmentResult {
+interface WorkTimeModelAssignmentResult {
   assignedStaffIds: string[];
   unchangedStaffIds: string[];
   /** Erster Tag des neuen Solls, „YYYY-MM-DD“. */

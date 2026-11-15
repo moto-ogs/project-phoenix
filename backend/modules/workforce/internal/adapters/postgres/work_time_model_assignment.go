@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 )
@@ -88,6 +89,9 @@ func (s *Store) StaffWorkTimeFacts(ctx context.Context, today string) ([]domain.
 func (s *Store) ShareLockWorkTimeModel(ctx context.Context, id int64) (bool, domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
+		return false, domain.OperationStats{}, err
+	}
+	if err := tenant.OrderLock(ctx, tenant.LockWorkTimeModel, tenant.LockIDKey(id)); err != nil {
 		return false, domain.OperationStats{}, err
 	}
 	row := &workTimeModelRow{}

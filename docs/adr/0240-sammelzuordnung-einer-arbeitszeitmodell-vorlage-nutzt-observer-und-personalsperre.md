@@ -6,8 +6,9 @@ status: proposed
 
 Decision of 2026-11-15 for
 [#6921](https://github.com/moto-ogs/project-phoenix/issues/6921). It approves
-six new command-effect diagnostics. It adds no owner, no policy rule, no new
-lock class and no runtime exception.
+six new command-effect diagnostics and adds the lock class
+`tenant.LockWorkTimeModel`. It adds no owner, no policy rule and no runtime
+exception.
 
 ## Context
 
@@ -54,7 +55,11 @@ writers take the template before the people. Without this lock an
 assignment could copy the old pattern while an edit was still open, and the
 edit, reading the bindings before the assignment committed, would leave those
 people on the old Soll. Two assignments share the lock and do not wait for
-each other.
+each other. The row lock gets its own class, `tenant.LockWorkTimeModel`,
+between the payroll-rules gate and the per-staff work-time gates: as a
+`LockLeaf` it would have to come after every gate, which is the order that
+deadlocks against the edit. The template edit already follows the new class
+implicitly (its UPDATE comes before its balance gates).
 
 Then the assignment keeps the lock protocol of a single assignment and of a
 template edit (`refreshAssignedSchedules`): every assignee's balance gate,
