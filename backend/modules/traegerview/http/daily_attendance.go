@@ -23,7 +23,7 @@ func (rs *Resource) dailyAttendance(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	report, err := rs.daily.DailyAttendance(r.Context(), viewer, from, to)
+	report, err := rs.reports.DailyAttendance(r.Context(), viewer, from, to)
 	if !renderDailyAttendanceError(w, r, err) {
 		common.Respond(w, r, http.StatusOK, report, "Daily attendance retrieved successfully")
 	}
@@ -38,7 +38,7 @@ func (rs *Resource) dailyAttendanceExport(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	export, err := rs.daily.DailyAttendanceExport(r.Context(), viewer, from, to)
+	export, err := rs.reports.DailyAttendanceExport(r.Context(), viewer, from, to)
 	if renderDailyAttendanceError(w, r, err) {
 		return
 	}

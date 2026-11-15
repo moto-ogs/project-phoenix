@@ -10,11 +10,11 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// New builds the Träger projection: overview, heatmap (#4714), daily report (#4717).
-func New(ports traegerview.Ports) (traegerview.Overview, traegerview.ArrivalPickupReport, traegerview.DailyAttendanceReport, error) {
+// New builds the Träger projection: its overview and its reports.
+func New(ports traegerview.Ports) (traegerview.Overview, traegerview.Reports, error) {
 	overview, err := application.New(ports, postgres.New(postgres.AmbientAdminDB), tenant.WithinAdmin)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	return overview, overview, overview, nil
+	return overview, overview, nil
 }

@@ -27,6 +27,7 @@ import { holidayWeeksConcept } from "~/lib/concepts/holidayWeeks";
 import { parentsConcept } from "~/lib/concepts/parents";
 import { peopleConcept } from "~/lib/concepts/people";
 import { reportsConcept } from "~/lib/concepts/reports";
+import { schoolComparisonConcept } from "~/lib/concepts/schoolComparison";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { settingsConcept } from "~/lib/concepts/settings";
 import { staffConcept } from "~/lib/concepts/staff";
@@ -41,7 +42,7 @@ const ACCOUNTS_RIGHT = "traeger_accounts:manage";
 const ENROLLMENT_RIGHT = "traeger_enrollment:manage";
 /** Das Recht, das die Betreuungsverträge öffnet (#4678). */
 const CONTRACTS_RIGHT = "traeger_contracts:manage";
-/** Das Recht, das „Länger als gebucht“ ohne Namen (#4683), die Auslastung (#4713), „Ankunft und Abholung“ (#4714) und die Tagesmeldung (#4717) öffnet. */
+/** Das Recht, das „Länger als gebucht“ ohne Namen (#4683), die Auslastung (#4713), „Ankunft und Abholung“ (#4714), den Standortvergleich (#4715) und die Tagesmeldung (#4717) öffnet. */
 const REPORTS_RIGHT = "traeger_reports:read";
 /** Das Recht, das die Abrechnungsläufe öffnet (#4668). */
 const BILLING_RIGHT = "traeger_billing:manage";
@@ -134,6 +135,15 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         label: "Ankunft und Abholung",
         shortLabel: "Ankunft",
         concept: arrivalPickupConcept,
+        right: REPORTS_RIGHT,
+      },
+      {
+        // Ausgewählte Kennzahlen der Schulen nebeneinander (#4715).
+        key: "standortvergleich",
+        href: "/traeger/standortvergleich",
+        label: "Standortvergleich",
+        shortLabel: "Vergleich",
+        concept: schoolComparisonConcept,
         right: REPORTS_RIGHT,
       },
       {

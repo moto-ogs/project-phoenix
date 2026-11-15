@@ -62,6 +62,7 @@ import { mealPlanConcept } from "~/lib/concepts/mealPlan";
 import { databaseConcept } from "~/lib/concepts/database";
 import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 import { reportsConcept } from "~/lib/concepts/reports";
+import { schoolComparisonConcept } from "~/lib/concepts/schoolComparison";
 import { holidayWeeksConcept } from "~/lib/concepts/holidayWeeks";
 import { siblingsConcept } from "~/lib/concepts/siblings";
 import { singleParentConcept } from "~/lib/concepts/singleParent";
@@ -155,6 +156,7 @@ const registry = {
   database: databaseConcept,
   enrollments: enrollmentsConcept,
   reports: reportsConcept,
+  schoolComparison: schoolComparisonConcept,
   holidayWeeks: holidayWeeksConcept,
   siblings: siblingsConcept,
   singleParent: singleParentConcept,

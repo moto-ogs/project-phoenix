@@ -116,7 +116,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 		return nil, errors.New("traeger portal: identity, organizations, persons, staff, the access trail, the access log, the settings, the host schools' calendar, the holiday mail, its states, the Träger names, the statistics and the schools' federal states are required")
 	}
 	presence, sick := studentPresenceCompose.NewPresentStudents(), carePlanCompose.NewSickStudents()
-	overview, arrivalPickup, daily, err := traegerViewCompose.New(traegerview.Ports{
+	overview, reports, err := traegerViewCompose.New(traegerview.Ports{
 		SchoolIDs: traegerSchoolIDs{organizations: organizations}, Trail: traegerAccessTrail{trail: audit.Trail},
 		Recorder: traegerAccessRecorder{log: audit.Log}, Holiday: traegerHolidayTrail{trail: enrollmentCompose.NewHolidayAccessTrail()}, Persons: traegerPersonDirectory{persons: persons}, Staff: traegerStaffDirectory{staff: staff},
 		Bureau:  traegerBureauAddresses{roles: identity},
@@ -141,7 +141,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 		identityaccess.TraegerRightSettingsManage, identityaccess.TraegerRightStaffManage, identityaccess.TraegerRightBillingManage)
 	masterData := organizationTenancyTraeger.NewMasterDataResource(organizationTenancyCompose.NewTraegerMasterData(), organizationTenancyCompose.NewTraegerDocumentTemplates(),
 		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage))
-	overviewRoutes := traegerViewHTTP.NewResource(overview, arrivalPickup, daily)
+	overviewRoutes := traegerViewHTTP.NewResource(overview, reports)
 	// The names of the Träger-Büro (#4693); a route-sized test identity
 	// without them answers 500 on those routes, the serving root refuses it.
 	profiles, _ := identity.(identityaccess.TraegerMemberProfiles)

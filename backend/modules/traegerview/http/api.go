@@ -18,19 +18,18 @@ import (
 
 // Resource serves the Träger projection routes.
 type Resource struct {
-	overview      traegerview.Overview
-	arrivalPickup traegerview.ArrivalPickupReport
-	daily         traegerview.DailyAttendanceReport
+	overview traegerview.Overview
+	reports  traegerview.Reports
 }
 
-// NewResource builds the resource. arrivalPickup answers the heatmap of
-// arrival and pickup times (#4714), daily the daily attendance report of
-// Mecklenburg-Vorpommern (#4717).
-func NewResource(overview traegerview.Overview, arrivalPickup traegerview.ArrivalPickupReport, daily traegerview.DailyAttendanceReport) *Resource {
-	if overview == nil || arrivalPickup == nil || daily == nil {
-		panic("traeger view http: the overview, the arrival and pickup times and the daily attendance report are required")
+// NewResource builds the resource. reports answers the heatmap of arrival
+// and pickup times (#4714), the comparison of schools (#4715) and the daily
+// attendance report of Mecklenburg-Vorpommern (#4717).
+func NewResource(overview traegerview.Overview, reports traegerview.Reports) *Resource {
+	if overview == nil || reports == nil {
+		panic("traeger view http: the overview and the reports are required")
 	}
-	return &Resource{overview: overview, arrivalPickup: arrivalPickup, daily: daily}
+	return &Resource{overview: overview, reports: reports}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/schools inside the
@@ -59,6 +58,9 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 		// figures and the anonymous file are reports, like the heatmap.
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/daily-attendance", rs.dailyAttendance)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/daily-attendance/export", rs.dailyAttendanceExport)
+		// The comparison of the schools is a report too (#4715, ADR 0245).
+		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/comparison", rs.comparison)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/comparison/export", rs.comparisonExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/{id}", rs.getSchool)
 	})
 	return r
@@ -89,7 +91,7 @@ func (rs *Resource) getTraeger(w http.ResponseWriter, r *http.Request) {
 	traeger, err := rs.overview.Traeger(r.Context(), principal.OrganizationID(), principal.AccountID())
 	var states []string
 	if err == nil {
-		states, err = rs.daily.FederalStates(r.Context(), principal.OrganizationID())
+		states, err = rs.reports.FederalStates(r.Context(), principal.OrganizationID())
 	}
 	if errors.Is(err, traegerview.ErrTraegerUnavailable) {
 		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))

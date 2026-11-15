@@ -234,6 +234,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/reset-password": "Passwort zurücksetzen",
     "/schliesstage": "Schließtage und Feiertage",
     "/schulen/:id": "Schule",
+    "/standortvergleich": "Standortvergleich",
     "/stichtagszahlen": "Stichtagszahlen",
     "/tagesmeldung": "Tagesmeldung",
     "/uebersicht": "Dashboard",
