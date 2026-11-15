@@ -56,6 +56,7 @@ export const PORTAL_PAGES = {
   traeger: [
     "/abrechnung",
     "/anmeldephasen",
+    "/auslastung",
     "/belegung",
     "/dokumente",
     "/einstellungen",

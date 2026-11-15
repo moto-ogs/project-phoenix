@@ -1787,9 +1787,23 @@
     },
     {
       "build": "production",
+      "evidence": "func (p traegerPresenceSeries) AttendanceCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date) (map[int64]traegerview.DailyCounts, error) {\n\tcounts, err := p.series.AttendanceCountsByTenant(ctx, schools, from, to)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]traegerview.DailyCounts, len(counts))\n\tfor school, days := range counts {\n\t\tresult[school] = traegerview.DailyCounts{From: days.FirstDay, Counts: days.Children}\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerPresenceSeries.AttendanceCountsByTenant",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (c traegerRegisteredChildren) RegisteredChildren(ctx context.Context, organizationID, periodID, registrationID int64) ([]traegerview.RegisteredChild, error) {\n\tchildren, err := c.children.HolidayRegisteredChildren(ctx, organizationID, periodID, registrationID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]traegerview.RegisteredChild, 0, len(children))\n\tfor _, child := range children {\n\t\tresult = append(result, traegerview.RegisteredChild(child))\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerRegisteredChildren.RegisteredChildren",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (n traegerRoomNames) RoomsByTenant(ctx context.Context, schools []int64) (map[int64][]traegerview.NamedRoom, error) {\n\trooms, err := n.rooms.RoomsByTenant(ctx, schools)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64][]traegerview.NamedRoom, len(rooms))\n\tfor school, named := range rooms {\n\t\tfor _, room := range named {\n\t\t\tresult[school] = append(result[school], traegerview.NamedRoom{ID: room.ID, Name: room.Name, Capacity: room.Capacity})\n\t\t}\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerRoomNames.RoomsByTenant",
       "owner": "roots"
     },
     {
