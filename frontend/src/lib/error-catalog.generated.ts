@@ -1881,6 +1881,8 @@ export const ERROR_CATALOG = {
         "Diese Abwesenheit trägt nur die Leitung ein. Bitte fragen Sie die Leitung.",
       "workforce.month_closed":
         "Der {month} ist abgeschlossen. Öffnen Sie den Monat zuerst wieder. Das geht im Reiter Zeiterfassung.",
+      "workforce.month_closed_by_traeger":
+        "Diesen Monat hat die Personalverwaltung des Trägers abgeschlossen. Nur sie kann ihn wieder öffnen.",
       "workforce.month_not_closable":
         "Dieser Monat ist noch nicht vorbei. Sie können ihn erst danach abschließen.",
       "workforce.month_not_closed":
@@ -1959,6 +1961,10 @@ export const ERROR_CATALOG = {
         "Für diese Schicht gibt es Vertretungen. Bitte passen Sie zuerst die Vertretungen an.",
       "workforce.shift_overlap":
         "Die Schicht überschneidet sich mit einer anderen Schicht dieser Person. Bitte prüfen Sie die Zeiten.",
+      "workforce.shift_overlaps_other_site":
+        "Die Person arbeitet am {day} von {start} bis {end} Uhr schon an einem anderen Einsatzort. Bitte wählen Sie eine andere Zeit.",
+      "workforce.shift_planning_off":
+        "Ihr Träger plant Einsätze nicht in moto. Neue Schichten sind deshalb ausgeschaltet.",
       "workforce.shift_series_no_occurrences":
         "Für {object} gibt es keine Termine mehr. Bitte prüfen Sie Wochentage und „Gültig bis“.",
       "workforce.shift_series_outside_period":
@@ -1969,6 +1975,8 @@ export const ERROR_CATALOG = {
         "Diese Dienstart wurde entfernt. Bitte wählen Sie eine andere.",
       "workforce.shift_type_inactive":
         "Diese Dienstart ist ausgeschaltet. Bitte wählen Sie eine andere.",
+      "workforce.shift_working_time_warning":
+        "Die Schicht verstößt gegen eine Arbeitszeitregel. Bitte prüfen Sie die Zeiten und bestätigen Sie die Planung.",
       "workforce.staff_kept_by_traeger":
         "Diesen Wert führt der Träger in seiner Personalakte. Bitte wenden Sie sich an die Personalverwaltung des Trägers.",
       "workforce.staff_profile_missing":
@@ -2005,6 +2013,16 @@ export const ERROR_CATALOG = {
         "An der Schule {school} gilt an diesen Tagen schon ein anderer Arbeitsvertrag. Beenden Sie den anderen Vertrag zuerst oder wählen Sie andere Tage.",
       "workforce.traeger_holiday_week_school_override":
         "Die Schule {school} hat für die Woche ab dem {day} schon eine eigene Sonderarbeitszeit. Bitte bitten Sie die Schule, diese zu löschen, oder wählen Sie eine andere Woche.",
+      "workforce.traeger_month_closed_by_school":
+        "Die Schule {school} hat diesen Monat selbst abgeschlossen. Nur die Schule kann ihn wieder öffnen.",
+      "workforce.traeger_month_later_closed":
+        "An der Schule {school} ist {month} schon abgeschlossen. Bitte öffnen Sie zuerst diesen späteren Monat.",
+      "workforce.traeger_month_not_kept":
+        "In diesem Monat gilt kein Arbeitsvertrag des Trägers. Die Schulen schließen den Monat selbst ab.",
+      "workforce.traeger_planning_shift_not_found":
+        "Die Schicht gibt es nicht mehr. Bitte laden Sie die Woche neu.",
+      "workforce.traeger_planning_site_invalid":
+        "Die Person arbeitet an dieser Schule nicht mehr. Bitte wählen Sie einen anderen Einsatzort.",
       "workforce.traeger_proof_invalid":
         "Der Nachweis lässt sich so nicht speichern. Bitte prüfen Sie das markierte Feld.",
       "workforce.traeger_proof_mapping_invalid":

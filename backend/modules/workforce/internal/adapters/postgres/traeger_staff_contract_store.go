@@ -315,6 +315,41 @@ func (s *TraegerStaffStore) SollKeptStaffIDs(ctx context.Context, staffIDs []int
 	return kept, nil
 }
 
+// TraegerKeptStaffByMonth returns, for every month of first..last keyed by
+// its first day, which of the school's employments the Träger closes
+// (#4711): a contract with a Soll at this school that runs on a day of the
+// month. One statement for the whole range; RLS shows a school only the Soll
+// of its own employments, so the query holds no Träger id.
+func (s *TraegerStaffStore) TraegerKeptStaffByMonth(ctx context.Context, staffIDs []int64, first, last calendar.Date) (map[calendar.Date][]int64, error) {
+	kept := map[calendar.Date][]int64{}
+	if len(staffIDs) == 0 {
+		return kept, nil
+	}
+	db, schoolID, err := schoolStaffDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		Month   calendar.Date `bun:"month,type:date"`
+		StaffID int64         `bun:"staff_id"`
+	}
+	if err := db.NewRaw(`SELECT DISTINCT month.first::date AS month, target.membership_id AS staff_id
+		FROM generate_series(date_trunc('month', ?::date), ?::date, interval '1 month') AS month(first)
+		JOIN workforce.staff_contract_targets AS target ON target.school_id = ? AND target.membership_id = ANY(?)
+		JOIN workforce.staff_contracts AS contract ON contract.id = target.contract_id
+		WHERE target.valid_from <= (month.first + interval '1 month - 1 day')::date
+		  AND contract.starts_on <= (month.first + interval '1 month - 1 day')::date
+		  AND (contract.ends_on IS NULL OR contract.ends_on >= month.first::date)
+		ORDER BY month, staff_id`,
+		first, last, schoolID, pgdialect.Array(staffIDs)).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("workforce postgres: read staff the Träger closes: %w", err)
+	}
+	for _, row := range rows {
+		kept[row.Month] = append(kept[row.Month], row.StaffID)
+	}
+	return kept, nil
+}
+
 // KeepTemplateHistory writes the work-time template an employment stands on
 // as a schedule version up to the day until, when the employment has no
 // schedule version yet. The Soll resolution uses a template only while no

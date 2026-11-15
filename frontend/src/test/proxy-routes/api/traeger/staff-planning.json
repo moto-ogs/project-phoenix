@@ -1,0 +1,17 @@
+{
+  "api/traeger/staff-planning": [
+    "GET traeger /traeger/staff-planning/ query=week"
+  ],
+  "api/traeger/staff-planning/future-shifts": [
+    "GET traeger /traeger/staff-planning/future-shifts"
+  ],
+  "api/traeger/staff-planning/records/[id]/schools/[schoolId]/shifts/[shiftId]": [
+    "DELETE traeger /traeger/staff-planning/records/id%2F1/schools/schoolId%2F1/shifts/shiftId%2F1"
+  ],
+  "api/traeger/staff-planning/records/[id]/shifts": [
+    "POST traeger /traeger/staff-planning/records/id%2F1/shifts"
+  ],
+  "api/traeger/staff-planning/records/[id]/shifts/[shiftId]": [
+    "PUT traeger /traeger/staff-planning/records/id%2F1/shifts/shiftId%2F1"
+  ]
+}

@@ -28,10 +28,12 @@ type staffShiftRow struct {
 	ChangeReason         *string       `bun:"change_reason"`
 	OriginShiftID        *int64        `bun:"origin_shift_id"`
 	SickAbsenceID        *int64        `bun:"sick_absence_id"`
-	CreatedBy            int64         `bun:"created_by,notnull"`
-	UpdatedBy            *int64        `bun:"updated_by"`
-	CreatedAt            time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt            time.Time     `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	// CreatedBy is NULL for a shift the Träger-Portal planned (#4708).
+	CreatedBy        int64     `bun:"created_by,nullzero"`
+	UpdatedBy        *int64    `bun:"updated_by"`
+	PlannedByTraeger bool      `bun:"planned_by_traeger,notnull,default:false"`
+	CreatedAt        time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	UpdatedAt        time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
 }
 
 type staffShiftSeriesRow struct {
@@ -116,7 +118,8 @@ func staffShiftFromDomain(value domain.StaffShift) (*staffShiftRow, error) {
 		Notes: value.Notes, SeriesID: value.SeriesID, Detached: value.Detached, SeriesOverride: value.SeriesOverride,
 		SeriesOccurrenceDate: optionalCalendarDate(value.SeriesOccurrenceDate), Cancelled: value.Cancelled,
 		ChangeReason: value.ChangeReason, OriginShiftID: value.OriginShiftID, SickAbsenceID: value.SickAbsenceID,
-		CreatedBy: value.CreatedBy, UpdatedBy: value.UpdatedBy, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		CreatedBy: value.CreatedBy, UpdatedBy: value.UpdatedBy, PlannedByTraeger: value.PlannedByTraeger,
+		CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}, nil
 }
 
@@ -127,7 +130,8 @@ func staffShiftToDomain(row staffShiftRow) domain.StaffShift {
 		ShiftTypeID: row.ShiftTypeID, Notes: row.Notes, SeriesID: row.SeriesID, Detached: row.Detached, SeriesOverride: row.SeriesOverride,
 		SeriesOccurrenceDate: calendarDateString(row.SeriesOccurrenceDate), Cancelled: row.Cancelled,
 		ChangeReason: row.ChangeReason, OriginShiftID: row.OriginShiftID, SickAbsenceID: row.SickAbsenceID,
-		CreatedBy: row.CreatedBy, UpdatedBy: row.UpdatedBy, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		CreatedBy: row.CreatedBy, UpdatedBy: row.UpdatedBy, PlannedByTraeger: row.PlannedByTraeger,
+		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 	}
 }
 

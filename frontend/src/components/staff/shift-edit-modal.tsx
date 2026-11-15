@@ -60,6 +60,7 @@ import {
   RhythmPicker,
   WeekdayPicker,
 } from "./shift-recurrence-fields";
+import { useWorkingTimeConfirmation } from "./working-time-confirmation";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionLabel } from "~/components/ui/section-label";
 
@@ -203,6 +204,9 @@ export function ShiftEditModal({
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
+  // Rückfrage bei einem Verstoß gegen eine Arbeitszeitregel (#4708).
+  const workingTime = useWorkingTimeConfirmation();
+  const { reset: resetWorkingTime } = workingTime;
   const deleteErrors = useApiFormError();
   const periodsLoad = useApiLoadError();
   const seriesRuleLoad = useApiLoadError();
@@ -272,6 +276,7 @@ export function ShiftEditModal({
 
   useEffect(() => {
     if (!isOpen) return;
+    resetWorkingTime();
     setStartTime(initial.startTime);
     setEndTime(initial.endTime);
     setBreakMinutesStr(String(initial.breakMinutes));
@@ -313,6 +318,7 @@ export function ShiftEditModal({
     existingReplacements,
     clearFormError,
     clearDeleteError,
+    resetWorkingTime,
   ]);
 
   const showPeriodsLoadError = periodsLoad.show;
@@ -623,6 +629,7 @@ export function ShiftEditModal({
             validUntil:
               seriesValidUntil === "" ? null : dayAfterISO(seriesValidUntil),
             includeSchoolBreaks: seriesIncludeSchoolBreaks,
+            workingTime: workingTime.current(),
           },
         );
         finishSeriesMutation(result, op);
@@ -633,6 +640,7 @@ export function ShiftEditModal({
         });
         // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
         if (!op.isCurrent()) return;
+        if (workingTime.intercept(err, () => latestSaveRef.current())) return;
         await formErrors.show(err, {
           object: "die Serie",
           retry: () => latestSaveRef.current(),
@@ -740,6 +748,7 @@ export function ShiftEditModal({
           // the API's valid_until is exclusive — send the day after.
           validUntil: validUntil === "" ? null : dayAfterISO(validUntil),
           includeSchoolBreaks,
+          workingTime: workingTime.current(),
         });
         finishSeriesMutation(result, op);
       } catch (err: unknown) {
@@ -750,6 +759,7 @@ export function ShiftEditModal({
         });
         // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
         if (!op.isCurrent()) return;
+        if (workingTime.intercept(err, () => latestSaveRef.current())) return;
         await formErrors.show(err, {
           object: "die Serie",
           retry: () => latestSaveRef.current(),
@@ -794,6 +804,7 @@ export function ShiftEditModal({
                       row.shiftTypeId === "" ? null : row.shiftTypeId,
                   }))
                 : [],
+              workingTime: workingTime.current(),
             });
           } else {
             await staffShiftService.updateShift(shift.id, {
@@ -804,6 +815,7 @@ export function ShiftEditModal({
               breakMinutes: breakMinutes ?? 0,
               shiftTypeId: resolvedShiftTypeId,
               changeReason,
+              workingTime: workingTime.current(),
             });
           }
         } else {
@@ -814,6 +826,7 @@ export function ShiftEditModal({
             endTime,
             breakMinutes: breakMinutes ?? 0,
             shiftTypeId: resolvedShiftTypeId,
+            workingTime: workingTime.current(),
           });
         }
         onSaved();
@@ -827,6 +840,7 @@ export function ShiftEditModal({
         });
         // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
         if (!op.isCurrent()) return;
+        if (workingTime.intercept(err, () => latestSaveRef.current())) return;
         await formErrors.show(err, {
           object: "die Schicht",
           retry: () => latestSaveRef.current(),
@@ -848,6 +862,7 @@ export function ShiftEditModal({
           endTime,
           breakMinutes: breakMinutes ?? 0,
           shiftTypeId: shiftTypeId === "" ? null : shiftTypeId,
+          workingTime: workingTime.current(),
         });
         finishSeriesMutation(result, op);
       } catch (err: unknown) {
@@ -858,6 +873,7 @@ export function ShiftEditModal({
         });
         // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
         if (!op.isCurrent()) return;
+        if (workingTime.intercept(err, () => latestSaveRef.current())) return;
         await formErrors.show(err, {
           object: "die Serie",
           retry: () => latestSaveRef.current(),
@@ -1574,6 +1590,7 @@ export function ShiftEditModal({
           <SlideOverFooter>{footer}</SlideOverFooter>
         </SlideOverContent>
       </SlideOver>
+      {workingTime.dialog}
       <ConfirmDeleteModal
         isOpen={confirmDeleteOpen}
         title="Schicht löschen"

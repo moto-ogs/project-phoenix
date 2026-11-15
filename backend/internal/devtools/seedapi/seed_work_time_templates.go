@@ -64,23 +64,23 @@ func seedWorkTimeTemplatesViaAPI(rt *Runtime, staff []StaffCredentials, staffIDB
 }
 
 // assignSeedWorkTimeTemplate binds the first staff members that have a Soll
-// of their own to the template.
+// of their own to the template in one request, as the catalog page does
+// (#6921).
 func assignSeedWorkTimeTemplate(rt *Runtime, staff []StaffCredentials, staffIDByEmail map[string]int64, modelID int64) error {
-	assigned := 0
+	staffIDs := make([]int64, 0, seedWorkTimeTemplateAssignees)
 	for _, cred := range staff {
-		if assigned == seedWorkTimeTemplateAssignees {
-			return nil
+		if len(staffIDs) == seedWorkTimeTemplateAssignees {
+			break
 		}
 		if cred.Position == "Extern" || cred.Name == seedStaffWithoutTarget {
 			continue
 		}
-		staffID := staffIDByEmail[cred.Email]
-		if _, err := rt.Client.Put(fmt.Sprintf("/api/staff/%d/schedule", staffID), map[string]any{
-			"mode": "template", "model_id": modelID,
-		}); err != nil {
-			return fmt.Errorf("assign work time template to staff %d: %w", staffID, err)
-		}
-		assigned++
+		staffIDs = append(staffIDs, staffIDByEmail[cred.Email])
+	}
+	if _, err := rt.Client.Post(fmt.Sprintf("/api/work-time-models/%d/assignments", modelID), map[string]any{
+		"staff_ids": staffIDs,
+	}); err != nil {
+		return fmt.Errorf("assign work time template to staff %v: %w", staffIDs, err)
 	}
 	return nil
 }

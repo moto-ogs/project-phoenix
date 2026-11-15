@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -46,8 +47,21 @@ func renderWorkTimeModelsFailure(w http.ResponseWriter, r *http.Request, kind wo
 	case worktimemodelsHTTP.FailureNotFound:
 		apiCommon.RenderError(w, r, apiCommon.ErrorNotFound(err))
 	case worktimemodelsHTTP.FailureConflict:
-		apiCommon.RenderError(w, r, apiCommon.ErrorConflict(err))
+		renderWorkTimeModelsConflict(w, r, err)
 	default:
 		apiCommon.RenderError(w, r, apiCommon.ErrorInternalServer(err))
+	}
+}
+
+// renderWorkTimeModelsConflict answers a conflict with its registered code, so
+// the catalog page can name the reason (#6921).
+func renderWorkTimeModelsConflict(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, workforce.ErrWorkTimeModelArchived):
+		apiCommon.RenderError(w, r, apiCommon.ErrorConflictWithCode(err, apiCommon.CodeWorkforceWorkTimeModelArchived))
+	case errors.Is(err, workforce.ErrStaffSollKeptByTraeger):
+		apiCommon.RenderError(w, r, apiCommon.ErrorConflictWithCode(err, apiCommon.CodeWorkforceStaffSollKeptByTraeger))
+	default:
+		apiCommon.RenderError(w, r, apiCommon.ErrorConflict(err))
 	}
 }

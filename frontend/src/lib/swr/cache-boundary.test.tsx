@@ -160,6 +160,7 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
     "staffKeys",
     "staffMonthSummaryKeys",
     "staffQualificationKeys",
+    "traegerMonthStaffKeys",
     "workTimeModelKeys",
   ],
   "me-keys": ["meKeys"],

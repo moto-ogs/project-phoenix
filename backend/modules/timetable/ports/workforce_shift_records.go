@@ -26,6 +26,7 @@ type WorkforceShift struct {
 	SickAbsenceID        *int64
 	CreatedBy            int64
 	UpdatedBy            *int64
+	PlannedByTraeger     bool
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }

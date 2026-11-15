@@ -22,6 +22,7 @@
   "later_month_closed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "manager_controlled_absence": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "month_closed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "month_closed_by_traeger": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "month_not_closable": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "month_not_closed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "no_active_break": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
@@ -109,5 +110,13 @@
   "traeger_staff_release_exists": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "traeger_staff_release_in_use": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "traeger_staff_release_invalid": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
-  "traeger_staff_release_not_found": "Nuk u ruajt: {object}. Kontrolloni të dhënat."
+  "traeger_staff_release_not_found": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
+  "shift_overlaps_other_site": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "shift_planning_off": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "shift_working_time_warning": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "traeger_planning_site_invalid": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
+  "traeger_planning_shift_not_found": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
+  "traeger_month_closed_by_school": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "traeger_month_later_closed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "traeger_month_not_kept": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
 }

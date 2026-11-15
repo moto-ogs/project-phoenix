@@ -230,6 +230,7 @@ func successorSeries(old *StaffShiftSeries, input SplitSeriesInput, rootID int64
 		ValidUntil:          validUntil,
 		SeriesRootID:        &rootID,
 		CreatedBy:           input.ActorStaffID,
+		WorkingTime:         input.WorkingTime,
 	}
 	if input.Weekdays != nil {
 		successor.Weekdays = input.Weekdays

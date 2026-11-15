@@ -778,6 +778,8 @@ describe("getParentHelpTopicForPath", () => {
       HELP_TOPICS.traegerStaffProofs,
       HELP_TOPICS.traegerAbsenceTypes,
       HELP_TOPICS.traegerStaffContracts,
+      HELP_TOPICS.traegerStaffPlanning,
+      HELP_TOPICS.traegerStaffTimeAccount,
       HELP_TOPICS.traegerSharedDocuments,
       HELP_TOPICS.traegerCareTimeOverruns,
       HELP_TOPICS.traegerArrivalPickupTimes,

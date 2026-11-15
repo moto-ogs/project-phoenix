@@ -38,6 +38,15 @@ export const absenceMailKeys = {
     `own-absence-request-mails-${waitingIds.join(",")}`,
 } as const;
 
+/**
+ * Die Personen, deren Monat der Träger abschließt (#4711), je Monat. Der
+ * Abschluss der Schule ändert sie nicht; ein neuer Monat lädt neu.
+ */
+export const traegerMonthStaffKeys = {
+  month: (year: number, month: number) =>
+    `staff-month-close-traeger-staff-${year}-${month}`,
+} as const;
+
 /** Nachweise der Mitarbeitenden (#4808). */
 export const staffQualificationKeys = {
   types: () => "database-qualification-types",
@@ -56,6 +65,8 @@ export const staffQualificationKeys = {
 export const workTimeModelKeys = {
   catalog: () => "database-work-time-models",
   picker: () => "work-time-models",
+  /** Vorlage, Soll und Sperren je Person für den Zuordnungsdialog (#6921). */
+  staffFacts: () => "work-time-model-staff-facts",
 } as const;
 
 /** Monatskarte einer Person (#1842). Derselbe Schlüssel, den

@@ -410,9 +410,13 @@ import type { traegerSharedDocumentsTopic as authored_traegerSharedDocumentsTopi
 
 import type { traegerStaffContractsTopic as authored_traegerStaffContractsTopic } from "./articles/traeger-staff-contracts";
 
+import type { traegerStaffPlanningTopic as authored_traegerStaffPlanningTopic } from "./articles/traeger-staff-planning";
+
 import type { traegerStaffProofsTopic as authored_traegerStaffProofsTopic } from "./articles/traeger-staff-proofs";
 
 import type { traegerStaffRecordsTopic as authored_traegerStaffRecordsTopic } from "./articles/traeger-staff-records";
+
+import type { traegerStaffTimeAccountTopic as authored_traegerStaffTimeAccountTopic } from "./articles/traeger-staff-time-account";
 
 import type { traegerTestSystemTopic as authored_traegerTestSystemTopic } from "./articles/traeger-test-system";
 
@@ -2140,6 +2144,10 @@ export const dutyRosterTopic = function dutyRosterTopic(): HelpTopic {
     ],
     differences: [
       "Eine neue Schicht auf einem Schließtag löst eine Rückfrage aus.",
+      // #4708: die Arbeitszeitregeln des Trägers über alle Einsatzorte.
+      "Arbeitet die Person auch an einer anderen Schule Ihres Trägers, zählt moto beide Schulen zusammen. Verletzt eine Schicht eine Arbeitszeitregel, fragt moto nach. Sie ändern die Zeiten oder wählen `Trotzdem planen`, wo nötig mit einer `Begründung`.",
+      "Eine Schicht zur selben Zeit an einer anderen Schule speichert moto nicht.",
+      "Eine Schicht mit `Vom Träger geplant` hat die Personalverwaltung Ihres Trägers eingetragen.",
       // #7021: Abwesenheiten von vor #6847 übernimmt die Leitung selbst.
       "Steht über dem Plan `Abwesenheiten fehlen im Plan`? Diese Abwesenheiten gelten schon, die Personen stehen aber noch im Plan. Wählen Sie `In den Plan übernehmen` oder `Alle übernehmen`. Abgesagte Schichten und Vertretungen bleiben, wie sie sind. Soll die Person doch arbeiten, wählen Sie `Ausblenden`.",
       "Ist ein Tag nicht vollständig durch Schichten abgedeckt, weist moto darauf hin.",
@@ -7697,6 +7705,7 @@ export const payrollTopic = function payrollTopic(): HelpTopic {
       "Die Feiertage nimmt moto aus dem Bundesland der Schule.",
       "Ist ein Sonntag auch Feiertag, zählt die höhere Regel. Nachtarbeit zählt zusätzlich.",
       "Ein abgeschlossener Monat behält die Lohnarten und Regeln, die beim Abschluss galten.",
+      "Personen mit Arbeitsvertrag beim Träger fehlen in der Monatsdatei der Schule. Ihren Lohn rechnet der Träger ab.",
       "Eine Lohnart, die eine Regel oder Abwesenheitsart noch nutzt, lässt sich nicht archivieren.",
       "Per `E-Mail` bekommt das Lohnbüro einen Link, keinen Anhang. Der Link gilt 14 Tage und funktioniert nur einmal.",
       "Öffnen Sie einen Monat wieder und schließen ihn erneut ab, geht die Datei noch einmal raus. Ihr Name enthält dann „korrektur“.",
@@ -8620,7 +8629,7 @@ export const staffRecordTopic = function staffRecordTopic(): HelpTopic {
         steps: [
           "Wählen Sie oben `Arbeitszeitmodell`.",
           "Wählen Sie rechts `Bearbeiten`.",
-          "Wählen Sie `Vorlage zuweisen` für ein Modell, das mehrere Personen teilen. Vorlagen legen Sie unter `Datenverwaltung` › `Arbeitszeitmodelle` an.",
+          "Wählen Sie `Vorlage zuweisen` für ein Modell, das mehrere Personen teilen. Vorlagen legen Sie unter `Datenverwaltung` › `Arbeitszeitmodelle` an. Dort ordnen Sie eine Vorlage auch mehreren Personen auf einmal zu.",
           "Oder wählen Sie `Eigenes Modell` nur für diese Person.",
           "Wählen Sie bei `Rotation` zum Beispiel `Standard (1 Woche)` oder `A/B-Wochen (2 Wochen)`.",
           "Tragen Sie je Wochentag die Stunden ein, zum Beispiel `4,45`.",
@@ -14151,6 +14160,88 @@ export const traegerStaffContractsTopic =
   } satisfies typeof authored_traegerStaffContractsTopic;
 
 /**
+ * `/traeger/personal/einsatzplanung` (#4708, ADR 0242): die Woche aller
+ * Personen mit Personalakte über alle Einsatzorte, das Planen einer Schicht
+ * im Dienstplan einer Schule, die Prüfung der Arbeitszeitregeln und der
+ * Schalter `Einsatzplanung in moto` in den Einstellungen.
+ */
+export const traegerStaffPlanningTopic =
+  function traegerStaffPlanningTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerStaffPlanning,
+      title: "Einsatzplanung über alle Schulen",
+      question: "Wie plane ich Personal über alle Schulen?",
+      summary:
+        "Sie sehen die Woche jeder Person an allen ihren Schulen und planen Schichten dort. moto prüft dabei die Arbeitszeitregeln über alle Schulen.",
+      group: "personal",
+      audience: "traeger",
+      icon: "CalendarCheck",
+      requirements: [
+        "Sie haben die Rolle `Personal`.",
+        "Die Person hat eine Personalakte und ist an der Schule beschäftigt.",
+      ],
+      instructionGroups: [
+        {
+          title: "Eine Schicht planen",
+          steps: [
+            "Wählen Sie in der Navigation `Einsatzplanung`.",
+            "Wählen Sie mit den Pfeilen die Woche.",
+            "Wählen Sie in der Zeile der Person den freien Tag.",
+            "Wählen Sie den `Einsatzort` und tragen Sie `Beginn`, `Ende` und `Pause` ein.",
+            "Wählen Sie `Planen`.",
+          ],
+        },
+        {
+          title: "Eine Schicht ändern oder löschen",
+          steps: [
+            "Wählen Sie die Schicht in der Woche.",
+            "Ändern Sie die Zeiten und wählen Sie `Speichern`.",
+            "Zum Löschen wählen Sie `Schicht löschen` und bestätigen.",
+          ],
+        },
+        {
+          title: "Wenn moto vor einer Regel warnt",
+          steps: [
+            "moto zeigt jeden Hinweis in einem Satz, etwa zu wenig Ruhezeit.",
+            "Ändern Sie die Zeiten. Oder wählen Sie `Trotzdem planen`.",
+            "Wo moto es verlangt, schreiben Sie eine `Begründung`.",
+          ],
+        },
+        {
+          title: "Die Regeln ändern",
+          steps: [
+            "Wählen Sie `Einstellungen` und dort `Einsatzplanung`.",
+            "Stellen Sie die Stunden am Tag, die Ruhezeit und die Pausen ein.",
+          ],
+        },
+      ],
+      steps: [],
+      result:
+        "Die Schicht steht sofort im Dienstplan der Schule. Die Schule sieht, dass der Träger sie geplant hat. Eine Begründung steht im Änderungsprotokoll der Schule.",
+      notes: [
+        "moto zählt alle Schulen der Person zusammen: die Stunden am Tag, die Ruhezeit, die Pausen und das Soll der Woche.",
+        "Dieselbe Prüfung läuft, wenn eine Schule selbst eine Schicht plant.",
+        "Das Soll kommt aus dem Arbeitsvertrag. Feiertage und Schließtage zählen nicht.",
+        "Jedes Anzeigen der Woche steht im Zugriffsprotokoll jeder Schule.",
+        "moto prüft die Regeln als Hilfe. Ob eine Planung erlaubt ist, entscheiden Sie.",
+      ],
+      differences: [
+        "Oben steht `Einsatzplanung in moto ist aus`: Ihr Träger plant außerhalb von moto. Neue Schichten sind dann überall gesperrt. Geplante Schichten bleiben.",
+        "Eine Schule fehlt in der Woche: moto konnte sie gerade nicht lesen. Laden Sie die Seite später neu.",
+      ],
+      troubleshootingDetails: [
+        "„Die Person arbeitet … schon an einem anderen Einsatzort“: Zur selben Zeit hat die Person eine Schicht an einer anderen Schule. Wählen Sie eine andere Zeit.",
+        "Eine Person fehlt: Sie hat keine Personalakte, oder sie ist an keiner Schule mehr beschäftigt.",
+      ],
+      related: [
+        HELP_TOPICS.traegerStaffRecords,
+        HELP_TOPICS.traegerStaffContracts,
+        HELP_TOPICS.traegerSettings,
+      ],
+    };
+  } satisfies typeof authored_traegerStaffPlanningTopic;
+
+/**
  * `/traeger/nachweise` (#4707, ADR 0238): Nachweise der Personalakten mit
  * Ablaufwarnung. Nachweisarten einstellen, Nachweise in der Akte eintragen,
  * die Ablaufliste lesen und herunterladen, die Arten der Schulen zuordnen.
@@ -14350,6 +14441,78 @@ export const traegerStaffRecordsTopic =
       ],
     };
   } satisfies typeof authored_traegerStaffRecordsTopic;
+
+/**
+ * Das Stundenkonto einer Personalakte über alle Schulen und der
+ * Monatsabschluss des Trägers (#4711, ADR 0243).
+ */
+export const traegerStaffTimeAccountTopic =
+  function traegerStaffTimeAccountTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerStaffTimeAccount,
+      title: "Stundenkonto und Monatsabschluss",
+      question: "Wie sehe ich das Stundenkonto und schließe einen Monat ab?",
+      summary:
+        "Das Stundenkonto zählt Soll und Ist an allen Schulen der Person. Mit Ihrem Vertrag schließen Sie den Monat für alle Schulen ab.",
+      group: "personal",
+      audience: "traeger",
+      icon: "Timer",
+      requirements: [
+        "Sie haben die Rolle `Personal`.",
+        "Die Person hat eine Personalakte.",
+        "Zum Abschließen: Die Person hat in dem Monat einen Arbeitsvertrag bei Ihnen.",
+      ],
+      instructionGroups: [
+        {
+          title: "Stundenkonto ansehen",
+          steps: [
+            "Öffnen Sie die Akte im Reiter `Akten`.",
+            "Gehen Sie zur Karte `Stundenkonto`. Sie zeigt den Vormonat.",
+            "Mit den Pfeilen wechseln Sie den Monat.",
+            "Oben stehen Soll, Ist, Saldo und Kontostand über alle Schulen. Darunter steht jede Schule in einer Zeile.",
+          ],
+        },
+        {
+          title: "Monat abschließen",
+          description: "Zum Beispiel, bevor Sie die Löhne abrechnen.",
+          steps: [
+            "Wählen Sie den Monat. Er muss vorbei sein.",
+            "Wählen Sie `Monat abschließen`.",
+            "Schreiben Sie einen Grund. Wählen Sie `Monat abschließen`.",
+          ],
+        },
+        {
+          title: "Monat wieder öffnen",
+          description: "Nur, wenn der Abschluss falsch war.",
+          steps: [
+            "Wählen Sie den abgeschlossenen Monat.",
+            "Wählen Sie `Wieder öffnen`.",
+            "Schreiben Sie einen Grund. Wählen Sie `Wieder öffnen`.",
+          ],
+        },
+      ],
+      steps: [],
+      result:
+        "Der Monat ist an jeder Schule mit Ihrem Vertrag abgeschlossen. Die Schulen ändern darin keine Zeiten und Buchungen mehr. Der Kontostand geht in den nächsten Monat.",
+      notes: [
+        "Personen mit Ihrem Vertrag schließen nur Sie ab. Die Schule lässt sie bei ihrem eigenen Abschluss aus. Sie fehlen auch im Lohnexport der Schule.",
+        "Jedes Öffnen des Stundenkontos steht im Zugriffsprotokoll der Schulen.",
+        "Monate öffnen Sie vom neuesten an. Ist der Oktober abgeschlossen, öffnen Sie zuerst den Oktober, dann den September.",
+      ],
+      differences: [
+        "Statt `Monat abschließen` steht `Schulen schließen selbst ab`: In dem Monat gilt kein Arbeitsvertrag bei Ihnen. Jede Schule schließt dann selbst ab.",
+        "Eine Schule zeigt `Von der Schule abgeschlossen`: Die Schule war vor Ihrem Vertrag schon fertig. Diesen Abschluss öffnet nur die Schule.",
+      ],
+      troubleshootingDetails: [
+        "`Monat abschließen` ist grau: Der Monat läuft noch, oder eine Schule hat einen späteren Monat schon abgeschlossen. Der Hinweis über der Tabelle nennt die Schule.",
+        "`Wieder öffnen` ist grau: Ein späterer Monat ist noch abgeschlossen. Öffnen Sie zuerst diesen.",
+      ],
+      related: [
+        HELP_TOPICS.traegerStaffContracts,
+        HELP_TOPICS.traegerStaffRecords,
+      ],
+    };
+  } satisfies typeof authored_traegerStaffTimeAccountTopic;
 
 /** Hinweis `Testsystem` im Träger-Portal (#4658): erfundene Beispielkinder. */
 export const traegerTestSystemTopic =
@@ -14863,6 +15026,7 @@ export const workTimeReviewTopic = function workTimeReviewTopic(): HelpTopic {
       "Wochensaldo und Stundenkonto rechnen gegen das hinterlegte Arbeitszeitmodell. Ohne Soll zählen Krankheit, Urlaub und Fortbildung 0 Stunden.",
       "`Team` → `Zeiterfassung` zeigt nur Ihre eigene Stempeluhr, nicht die des Teams.",
       "Mit `Monat abschließen` frieren Sie den Stand ein. Das geht ab dem 1. des Folgemonats.",
+      "Steht bei einer Person `Schließt der Träger ab`, hat sie einen Arbeitsvertrag beim Träger. Ihren Monat schließt der Träger ab, Ihr Abschluss lässt sie aus. Nur der Träger öffnet ihn wieder.",
       "Ist unter `Abrechnung` der `Versand an das Lohnbüro` eingeschaltet, geht die Monatsdatei danach von selbst an das Lohnbüro.",
       "Unter einer Rückfrage und in der Historie steht, ob die Mail dazu bei der Person ankam. Kam sie nicht an, sagen Sie der Person direkt Bescheid.",
     ],
@@ -14885,7 +15049,8 @@ export const workTimeReviewTopic = function workTimeReviewTopic(): HelpTopic {
 /**
  * `/database/work-time-models` (#6891): die Arbeitszeitmodell-Vorlagen der
  * Schule. Vorher ließ sich eine Vorlage nur aus der Personalakte heraus
- * anlegen. Zugeordnet wird weiter in der Personalakte.
+ * anlegen. Seit #6921 ordnet der Reiter `Personen` sie mehreren Personen auf
+ * einmal zu; einzeln geht es weiter in der Personalakte.
  */
 export const workTimeTemplatesTopic =
   function workTimeTemplatesTopic(): HelpTopic {
@@ -14915,7 +15080,18 @@ export const workTimeTemplatesTopic =
           ],
         },
         {
-          title: "Eine Vorlage zuordnen",
+          title: "Mehrere Personen auf einmal zuordnen",
+          steps: [
+            "Wählen Sie die Vorlage in der Liste.",
+            "Öffnen Sie oben den Reiter `Personen`. Dort steht, wer die Vorlage schon nutzt.",
+            "Wählen Sie `Personen zuordnen`.",
+            "Wählen Sie bei `Ab wann gilt das neue Soll?` meist `Ab heute`.",
+            "Setzen Sie den Haken bei allen Personen, die die Vorlage bekommen. `Alle auswählen` nimmt alle angezeigten.",
+            "Wählen Sie unten zum Beispiel `3 Personen zuordnen`.",
+          ],
+        },
+        {
+          title: "Eine Person in der Personalakte zuordnen",
           steps: [
             "Klappen Sie in der Seitenleiste `Team` auf.",
             "Öffnen Sie `Mitarbeiter` und wählen Sie die Person.",
@@ -14934,15 +15110,18 @@ export const workTimeTemplatesTopic =
         },
       ],
       result:
-        "In der Liste steht bei jeder Vorlage, wie viele Personen sie nutzen.",
+        "In der Liste steht bei jeder Vorlage, wie viele Personen sie nutzen. Wer neu zugeordnet ist, hat ab dem gewählten Tag das Soll der Vorlage.",
       notes: [
         "Eine Änderung gilt ab heute für alle Personen mit dieser Vorlage. Die Seite zeigt vor dem Speichern, wie viele es sind.",
         "Über die drei Punkte wählen Sie `Nicht mehr anbieten`. Wer die Vorlage schon nutzt, behält sie. Neu zuordnen lässt sie sich dann nicht mehr.",
         "Löschen geht nur, wenn niemand die Vorlage nutzt.",
+        "Mit `Früheres Datum` beginnt das neue Soll rückwirkend. Das geht nur für Personen ohne bisheriges Soll. Der Start liegt nie in einem abgeschlossenen Monat. Wer an diesen Tagen weniger gearbeitet hat, bekommt Minusstunden. Deshalb fragt moto vorher nach.",
       ],
       differences: [
         "Sie sehen `Arbeitszeitmodelle` nicht? Dann hat Ihre Schule die Zeiterfassung nicht gebucht, oder Ihnen fehlt das Recht dafür.",
         "Bei einer Person steht „Das Soll führt der Träger im Arbeitsvertrag“ und `Bearbeiten` fehlt: Der Träger führt ihr Soll. Änderungen macht die Personalverwaltung des Trägers.",
+        "In `Personen zuordnen` lässt sich eine Person nicht anhaken: Unter ihrem Namen steht der Grund, zum Beispiel dass der Träger ihr Soll festlegt.",
+        "`Personen zuordnen` ist grau: Die Vorlage wird nicht mehr angeboten. Wählen Sie über die drei Punkte zuerst `Wieder anbieten`.",
       ],
       related: [
         HELP_TOPICS.leadStaffRecord,

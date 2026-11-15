@@ -16,14 +16,11 @@ import {
   type SegmentedControlItem,
 } from "~/components/ui/segmented-control";
 import { StatCard } from "~/components/ui/stat-card";
-import { formatDuration } from "~/lib/time-tracking-helpers";
+import { formatDuration, formatSignedDuration } from "~/lib/duration-format";
 import type { PeriodMetrics } from "~/lib/hooks/use-period-metrics";
 import { getDeltaStatus } from "~/lib/staff-metrics-helpers";
 
-export function formatSignedDuration(minutes: number): string {
-  const sign = minutes > 0 ? "+" : minutes < 0 ? "−" : "";
-  return `${sign}${formatDuration(Math.abs(minutes))}`;
-}
+export { formatSignedDuration };
 
 // ─── KPI Cards ───────────────────────────────────────────────────────────────
 

@@ -44,6 +44,14 @@ func newTraegerStaffFixture(t *testing.T, db *bun.DB) (http.Handler, *traegerPor
 // is the wall clock.
 func newTraegerStaffFixtureAt(t *testing.T, db *bun.DB, now func() time.Time) (http.Handler, *traegerPortalHandler, *workforce.StaffAdmin, tenant.UnitOfWork, traegerOffice) {
 	t.Helper()
+	handler, portal, admin, unit, office, _ := newTraegerStaffFixtureWith(t, db, now, &StaffPlanningTestRules{})
+	return handler, portal, admin, unit, office
+}
+
+// newTraegerStaffFixtureWith also mounts the Einsatzplanung (#4708) over the
+// real Dienstplan with rules, and returns the school's staff-shift router.
+func newTraegerStaffFixtureWith(t *testing.T, db *bun.DB, now func() time.Time, rules *StaffPlanningTestRules) (http.Handler, *traegerPortalHandler, *workforce.StaffAdmin, tenant.UnitOfWork, traegerOffice, http.Handler) {
+	t.Helper()
 	unit := testpkg.TenantRuntime(t, db)
 	portal, _ := traegerPortalOn(t, db, unit)
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, db))
@@ -66,9 +74,19 @@ func newTraegerStaffFixtureAt(t *testing.T, db *bun.DB, now func() time.Time) (h
 			next.ServeHTTP(w, r.WithContext(tenant.WithUnitOfWork(r.Context(), unit)))
 		})
 	})
-	require.NoError(t, mountTraegerStaffRoutes(router, admin, organizations, persons, membership, tenantAudit.DataAccessLog))
+	schoolShifts, sites, err := StaffPlanningTestComposition(testpkg.NewDatabase(t, db), rules)
+	require.NoError(t, err)
+	// The school months of the Stundenkonto (#4711) come from the time
+	// tracking the service graph composes.
+	var clocks []func() time.Time
+	if now != nil {
+		clocks = append(clocks, now)
+	}
+	workforceModule, _, err := NewWorkforceTestModule(testpkg.NewDatabase(t, db), unit, clocks...)
+	require.NoError(t, err)
+	require.NoError(t, mountTraegerStaffRoutes(router, admin, workforceModule.TimeTracking.TraegerMonths, organizations, persons, membership, tenantAudit.DataAccessLog, sites))
 	office := newTraegerOffice(t, db, portal, "Träger Personal", identityaccess.TraegerRolePersonnel)
-	return testpkg.SessionVerifier(router), portal, admin, unit, office
+	return testpkg.SessionVerifier(router), portal, admin, unit, office, schoolShifts
 }
 
 func staffRelease(t *testing.T, db *bun.DB, organization int64) {

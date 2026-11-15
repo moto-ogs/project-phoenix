@@ -8,6 +8,7 @@ import {
   useLayoutEffect,
   useRef,
   useId,
+  type ReactNode,
 } from "react";
 import {
   ExternalLink,
@@ -94,6 +95,14 @@ const CONFIRM_ON_DISABLE: Record<
     title: "Kinderfotos deaktivieren?",
     body: "Beim Ausschalten werden ALLE bereits hochgeladenen Kinderfotos sofort und unwiderruflich gelöscht. Die elterliche Einwilligung bleibt dokumentiert. Diese Aktion kann nicht rückgängig gemacht werden.",
     confirmText: "Deaktivieren und Fotos löschen",
+  },
+  // Die Einsatzplanung des Trägers (#4708, ADR 0242 Punkt 6): Ausschalten
+  // sperrt neue Schichten in allen Schulen und löscht nichts. Der Aufrufer
+  // nennt im Dialog die Schulen mit künftigen Schichten (`renderConfirmDetail`).
+  "staff_planning.enabled": {
+    title: "Einsatzplanung in moto ausschalten?",
+    body: "Danach legt niemand in moto neue Schichten an, auch die Schulen nicht. Das gilt auch für neue Vertretungen. Geplante Schichten bleiben. Sie lassen sich weiter ändern und absagen.",
+    confirmText: "Ausschalten",
   },
 };
 
@@ -387,6 +396,12 @@ interface SettingsFieldProps {
    * field leaves that line out and keeps only who set the value.
    */
   readonly traegerOnlyStated?: boolean;
+  /**
+   * Live content under the text of the confirmation before a switch turns
+   * off, such as the schools with future shifts (#4708). Rendered only while
+   * the dialog is open.
+   */
+  readonly renderConfirmDetail?: (setting: ResolvedSetting) => ReactNode;
 }
 
 /** The first line of a text, cut after 60 characters. */
@@ -416,6 +431,7 @@ export function SettingsField({
   confirmTextReset = false,
   plainTextareas = false,
   traegerOnlyStated = false,
+  renderConfirmDetail,
 }: SettingsFieldProps) {
   const LabelHeading = labelLevel === 3 ? "h3" : "h4";
   const [confirmingTextReset, setConfirmingTextReset] = useState(false);
@@ -1332,6 +1348,9 @@ export function SettingsField({
           }
         >
           <p className="text-sm text-gray-600">{activeConfirmConfig.body}</p>
+          {confirmOpen && pendingValueRef.current === false
+            ? renderConfirmDetail?.(setting)
+            : null}
         </ConfirmationModal>
       )}
 

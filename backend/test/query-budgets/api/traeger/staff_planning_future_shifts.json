@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.staff_planning_future_shifts",
+  "max": 5,
+  "exact": true,
+  "description": "modules/workforce — GET /traeger/staff-planning/future-shifts (#4708) at a\nTräger with two schools: the Träger's schools in one statement; then per\nschool the binding of its tenant transaction and the count of its shifts\nafter today. Counts name no person (ADR 0242 point 6).",
+  "route": "GET /traeger/staff-planning/future-shifts"
+}

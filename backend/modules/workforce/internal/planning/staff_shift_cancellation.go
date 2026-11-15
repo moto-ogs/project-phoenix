@@ -42,6 +42,8 @@ type CancelShiftInput struct {
 	ShiftTypeID      *int64
 	Replacements     []ShiftReplacementInput
 	ActorStaffID     int64
+	// WorkingTime confirms the working-time warnings of the covers (#4708).
+	WorkingTime workforce.WorkingTimeConfirmation
 }
 
 // CancelShiftResult reports the updated origin and the freshly created covers.
@@ -288,7 +290,10 @@ func cancellationOriginUpdate(existing *workforce.ShiftRecord, input CancelShift
 // origin. Each create re-validates the origin (must be cancelled, same date,
 // not self-covered) and overlap for its own staff member, and grandfathers a
 // since-deactivated type only for the staff member whose preserved cover
-// already carried it.
+// already carried it. A cover with the staff member and window of a stored
+// cover stands in for it: it keeps that cover's reason, the working-time
+// check compares against it, and it is no new shift while the Träger plans
+// outside moto. Every other cover is a new shift (#4708, ADR 0242).
 func (s *staffShiftService) rebuildReplacements(
 	ctx context.Context,
 	existing *workforce.ShiftRecord,
@@ -299,6 +304,13 @@ func (s *staffShiftService) rebuildReplacements(
 	var created []*workforce.ShiftRecord
 	coverConsumed := make([]bool, len(covers))
 	for _, r := range input.Replacements {
+		stored := matchedCover(covers, coverConsumed, r)
+		reason := input.ChangeReason
+		if stored != nil {
+			reason = stored.ChangeReason
+		} else if err := s.refuseWhenPlanningOff(ctx); err != nil {
+			return nil, err
+		}
 		replacement := &workforce.ShiftRecord{
 			StaffID:       r.StaffID,
 			Date:          existing.Date,
@@ -307,10 +319,11 @@ func (s *staffShiftService) rebuildReplacements(
 			BreakMinutes:  r.BreakMinutes,
 			ShiftTypeID:   r.ShiftTypeID,
 			OriginShiftID: &existing.ID,
-			ChangeReason:  matchedCoverReason(covers, coverConsumed, r, input.ChangeReason),
+			ChangeReason:  reason,
 			CreatedBy:     input.ActorStaffID,
+			WorkingTime:   input.WorkingTime,
 		}
-		shift, err := s.createShift(ctx, replacement, grandfatheredTypesByStaff[r.StaffID])
+		shift, err := s.createShift(ctx, replacement, grandfatheredTypesByStaff[r.StaffID], stored)
 		if err != nil {
 			return nil, err
 		}
@@ -319,7 +332,7 @@ func (s *staffShiftService) rebuildReplacements(
 	return created, nil
 }
 
-// matchedCoverReason picks the change reason of a rebuilt cover.
+// matchedCover finds the stored cover a rebuilt cover stands in for.
 //
 // A cover's change reason is set on the cover itself when it is edited directly
 // (the ordinary PUT), and ReplacementRequest carries no per-cover reason, so
@@ -328,7 +341,7 @@ func (s *staffShiftService) rebuildReplacements(
 // the existing cover it corresponds to (same staff + wall-clock window) and
 // carry that reason across; a genuinely new cover takes the origin's reason.
 // coverConsumed prevents two identical rows from both claiming one cover (#1841).
-func matchedCoverReason(covers []*workforce.ShiftRecord, coverConsumed []bool, r ShiftReplacementInput, originReason *string) *string {
+func matchedCover(covers []*workforce.ShiftRecord, coverConsumed []bool, r ShiftReplacementInput) *workforce.ShiftRecord {
 	for i, cover := range covers {
 		if coverConsumed[i] || cover.StaffID != r.StaffID {
 			continue
@@ -336,8 +349,8 @@ func matchedCoverReason(covers []*workforce.ShiftRecord, coverConsumed []bool, r
 		if calendar.SameClockTime(cover.StartTime, r.StartTime) &&
 			calendar.SameClockTime(cover.EndTime, r.EndTime) {
 			coverConsumed[i] = true
-			return cover.ChangeReason
+			return cover
 		}
 	}
-	return originReason
+	return nil
 }

@@ -58,6 +58,9 @@ type StaffShiftSeries struct {
 	IncludeSchoolBreaks bool   `json:"include_school_breaks"`
 	CreatedBy           int64  `json:"created_by"`
 	UpdatedBy           *int64 `json:"updated_by,omitempty"`
+	// WorkingTime confirms the working-time warnings of the occurrences this
+	// write materializes (#4708); it is not stored.
+	WorkingTime workforce.WorkingTimeConfirmation `json:"-"`
 }
 
 // Validate ensures series data is consistent. Period-dependent rules

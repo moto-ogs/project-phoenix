@@ -30,6 +30,7 @@ import { reportsConcept } from "~/lib/concepts/reports";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { settingsConcept } from "~/lib/concepts/settings";
 import { staffConcept } from "~/lib/concepts/staff";
+import { staffPlanConcept } from "~/lib/concepts/staffPlan";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 
@@ -200,6 +201,16 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         label: "Personalakten",
         shortLabel: "Personal",
         concept: staffConcept,
+        right: STAFF_RIGHT,
+      },
+      {
+        // Die Woche aller Personen über alle Einsatzorte, mit Prüfung der
+        // Arbeitszeitregeln (#4708).
+        key: "einsatzplanung",
+        href: "/traeger/personal/einsatzplanung",
+        label: "Einsatzplanung",
+        shortLabel: "Planung",
+        concept: staffPlanConcept,
         right: STAFF_RIGHT,
       },
       {

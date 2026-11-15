@@ -683,10 +683,14 @@ func scanOne(ctx context.Context, query *bun.SelectQuery, operation string) (boo
 	return true, stats, nil
 }
 
-func scanAll(ctx context.Context, query *bun.SelectQuery, operation string) (domain.OperationStats, error) {
+// scanAll runs one read into the query's model or, for a raw query, into
+// dest.
+func scanAll(ctx context.Context, query interface {
+	Scan(context.Context, ...any) error
+}, operation string, dest ...any) (domain.OperationStats, error) {
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
-	err := query.Scan(ctx)
+	err := query.Scan(ctx, dest...)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return stats, fmt.Errorf("workforce postgres: %s: %w", operation, err)

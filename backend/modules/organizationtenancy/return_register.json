@@ -2463,7 +2463,7 @@
           "name": "closed_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "close_reason",
@@ -2511,6 +2511,18 @@
           "name": "payroll_rules",
           "type": "jsonb",
           "udt": "jsonb",
+          "nullable": true
+        },
+        {
+          "name": "closed_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "reopened_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
           "nullable": true
         }
       ],
@@ -30662,7 +30674,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "updated_by",
@@ -30732,6 +30744,12 @@
         },
         {
           "name": "series_override",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "planned_by_traeger",
           "type": "boolean",
           "udt": "bool",
           "nullable": false

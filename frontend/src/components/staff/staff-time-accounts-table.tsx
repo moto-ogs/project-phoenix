@@ -113,6 +113,9 @@ interface Props {
   readonly onNextMonth: () => void;
   readonly canGoNextMonth: boolean;
   readonly monthClose: MonthCloseState | null;
+  /** Personen, deren Monat der Träger abschließt (#4711): ein Vertrag des
+   *  Trägers deckt den Monat ab, der Abschluss der Schule lässt sie aus. */
+  readonly traegerStaff?: ReadonlySet<string>;
   /** Ladefehler des Abschlussstatus, am besten aus `useApiLoadError` (mit
    *  Wiederholen und Vorgangskennung, #2514). */
   readonly monthCloseError: FormErrorInput;
@@ -155,6 +158,7 @@ export function StaffTimeAccountsTable({
   onNextMonth,
   canGoNextMonth,
   monthClose,
+  traegerStaff,
   monthCloseError,
   onRetryMonthClose,
   monthIsOver,
@@ -213,8 +217,13 @@ export function StaffTimeAccountsTable({
         header: "Name",
         sortValue: (row) => `${row.lastName} ${row.firstName}`,
         render: (row) => (
-          <span className="font-medium text-gray-900">
-            {row.lastName}, {row.firstName}
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <span className="font-medium text-gray-900">
+              {row.lastName}, {row.firstName}
+            </span>
+            {traegerStaff?.has(row.staffId) ? (
+              <StatusBadge label="Schließt der Träger ab" tone="blue" compact />
+            ) : null}
           </span>
         ),
       },
@@ -300,7 +309,7 @@ export function StaffTimeAccountsTable({
         ),
       },
     ],
-    [],
+    [traegerStaff],
   );
 
   // Der Hinweis zum Monatsabschluss gehört in den Kartenkopf, nicht als

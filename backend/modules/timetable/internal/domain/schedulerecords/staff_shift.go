@@ -64,8 +64,11 @@ type StaffShift struct {
 	// cascade cancelled this shift. NULL for manual cancellations; deleting the
 	// sick report reactivates only shifts carrying its id.
 	SickAbsenceID *int64 `bun:"sick_absence_id" json:"sick_absence_id,omitempty"`
-	CreatedBy     int64  `bun:"created_by,notnull" json:"created_by"`
+	CreatedBy     int64  `bun:"created_by,nullzero" json:"created_by"`
 	UpdatedBy     *int64 `bun:"updated_by" json:"updated_by,omitempty"`
+	// PlannedByTraeger marks a shift the Personalverwaltung planned in the
+	// Träger-Portal (#4708); CreatedBy is 0 when it created it.
+	PlannedByTraeger bool `bun:"planned_by_traeger,notnull,default:false" json:"planned_by_traeger"`
 
 	// ShiftType is the resolved Schichtart (name + color) for ShiftTypeID, when
 	// set. Not loaded by ordinary scans — the service populates it so readers who
@@ -86,7 +89,7 @@ func (s *StaffShift) Validate() error {
 	if err := validateShiftWindow(s.StartTime, s.EndTime, s.BreakMinutes); err != nil {
 		return err
 	}
-	if s.CreatedBy <= 0 {
+	if s.CreatedBy <= 0 && !s.PlannedByTraeger {
 		return errors.New("created by is required")
 	}
 	return nil

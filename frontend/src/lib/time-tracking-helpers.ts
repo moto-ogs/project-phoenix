@@ -654,33 +654,7 @@ export function mapWorkSessionEditResponse(
   };
 }
 
-/**
- * Formats duration in minutes to human-readable string
- * @param minutes - Duration in minutes
- * @returns Formatted string like "6h 30min" or "0min" or "--"
- */
-export function formatDuration(minutes: number | null | undefined): string {
-  if (minutes === null || minutes === undefined || Number.isNaN(minutes)) {
-    return "--";
-  }
-
-  if (minutes === 0) {
-    return "0min";
-  }
-
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-
-  if (hours === 0) {
-    return `${mins}min`;
-  }
-
-  if (mins === 0) {
-    return `${hours}h`;
-  }
-
-  return `${hours}h ${mins}min`;
-}
+export { formatDuration } from "~/lib/duration-format";
 
 /** A time field the person emptied (#6293). */
 export const TIME_REQUIRED_HINT = "Bitte eine Uhrzeit eintragen.";
@@ -928,6 +902,7 @@ export interface BackendMonthSummary {
   is_closed?: boolean;
   closed_at?: string | null;
   closed_by?: number | null;
+  closed_by_traeger?: boolean;
   close_reason?: string | null;
   frozen_closing_balance_minutes?: number | null;
   drift_minutes?: number | null;
@@ -1038,6 +1013,9 @@ export interface MonthSummary {
   isClosed: boolean;
   closedAt: string | null;
   closedBy: string | null;
+  /** The Personalverwaltung of the Träger closed the month (#4711); only it
+   *  reopens it. */
+  closedByTraeger: boolean;
   closeReason: string | null;
   frozenClosingBalanceMinutes: number | null;
   driftMinutes: number;
@@ -1078,6 +1056,8 @@ export interface MonthCloseSnapshot {
   closedAt: string;
   closedBy: string;
   closeReason: string;
+  /** "traeger" when the Personalverwaltung of the Träger closed it (#4711). */
+  source: string;
 }
 
 export function mapMonthCloseSnapshotResponse(
@@ -1091,6 +1071,7 @@ export function mapMonthCloseSnapshotResponse(
     closedAt: data.closed_at,
     closedBy: data.closed_by.toString(),
     closeReason: data.close_reason ?? "",
+    source: data.source,
   };
 }
 
@@ -1151,6 +1132,7 @@ export function mapMonthSummaryResponse(
     isClosed: data.is_closed ?? false,
     closedAt: data.closed_at ?? null,
     closedBy: data.closed_by != null ? data.closed_by.toString() : null,
+    closedByTraeger: data.closed_by_traeger ?? false,
     closeReason: data.close_reason ?? null,
     frozenClosingBalanceMinutes: data.frozen_closing_balance_minutes ?? null,
     driftMinutes: data.drift_minutes ?? 0,

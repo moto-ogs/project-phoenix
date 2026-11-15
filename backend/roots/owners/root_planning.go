@@ -38,7 +38,7 @@ func BuildActivities(owner TimetableOwner, timetableOwner timetable.Capability, 
 func BuildShiftPlanning(
 	db transactionruntime.Database, env RootEnvironment, hub *realtime.Hub, workTime workforceCompose.WorkTime,
 	people PeopleRows, calendar schoolcalendar.Days, audit AuditOwner, owner TimetableOwner, rooms facilitiesModule.Catalog,
-	activities activityContract.ActivityService,
+	activities activityContract.ActivityService, settings settingsCompose.BatchSettingsService,
 ) (*workforceCompose.ShiftPlanning, error) {
 	repos := owner.Repositories
 	return workforceCompose.NewShiftPlanning(workforceCompose.ShiftPlanningDependencies{
@@ -52,7 +52,8 @@ func BuildShiftPlanning(
 		Holidays:       schoolCalendarCompose.NewNonWorkingDays(calendar), NonWorkingDays: calendar,
 		CategoryLinker: activities.SetCategoryShiftTypeLinks,
 		DB:             db.Pool(), Broadcaster: hub, Logger: env.Logger.With("service", "shift_planning"),
-		Today: env.Today,
+		Today: env.Today, PlanRules: settingsCompose.PresenceSettings(settings),
+		WorkingTimeAudit: NewWorkingTimeOverrideAudit(audit.Persistence.DeviationEvent),
 	})
 }
 

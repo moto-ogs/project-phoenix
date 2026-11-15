@@ -10152,11 +10152,44 @@
     },
     {
       "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.ApplyCancellation",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.ApplyCancellation",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftPlanning.ApplyCancellation. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.CreateSeries",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.CreateSeries",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftPlanning.CreateSeries. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.CreateShift",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.CreateShift",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftPlanning.CreateShift. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.MoveShift",
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.MoveShift",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftPlanning.MoveShift. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftPlanning.MoveShift. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); #4708 writes the working-time override entry of a move confirmed despite a warning before the move event, in the same unit (ADR 0242).",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
       "target_owner": "audit-platform"
@@ -10180,6 +10213,28 @@
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.IndexCalendarWeeks",
       "target_owner": "timetable-activities"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.SplitSeries",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.SplitSeries",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftPlanning.SplitSeries. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.UpdateShift",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.UpdateShift",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftPlanning.UpdateShift. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce.Capability.ListStaffTargetOverrides",
@@ -10505,6 +10560,28 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.ChangeShift",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffPlanning.ChangeShift",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/application.TraegerStaff.ChangeShift. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.PlanShift",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffPlanning.PlanShift",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/application.TraegerStaff.PlanShift. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinSchool",
       "classification": "query",
       "effect": "query",
@@ -10692,6 +10769,93 @@
       "target_owner": ""
     },
     {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkTimeModelCatalog.AssignWorkTimeModel",
+      "reason": "Guarded leaf command (lock) already reviewed as leaf for this target: workforce reaches modules/schoolmembership.Capability.FindStaffForMutation (school-membership) through modules/workforce/compose.WorkTime.AssignWorkTimeModel. Participates in the caller unit; the staff-row lock of the assignees, taken ascending after their balance gates (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaffForMutation",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkTimeModelCatalog.AssignWorkTimeModel",
+      "reason": "Read-only target already reviewed as query: workforce reaches modules/schoolmembership.Capability.ListStaff (school-membership) through modules/workforce/compose.WorkTime.AssignWorkTimeModel. No persistent, lock or scope effect; the liveness read of the assignees, added by the assignment of one template to several people (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkTimeModelCatalog.AssignWorkTimeModel",
+      "reason": "Guarded leaf command (lock) already reviewed as leaf for this target: workforce reaches modules/schoolmembership.Owner.FindStaffForMutation (school-membership) through modules/workforce/compose.WorkTime.AssignWorkTimeModel. Participates in the caller unit; the staff-row lock of the assignees, taken ascending after their balance gates (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaffForMutation",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkTimeModelCatalog.AssignWorkTimeModel",
+      "reason": "Read-only target already reviewed as query: workforce reaches modules/schoolmembership.Owner.ListStaff (school-membership) through modules/workforce/compose.WorkTime.AssignWorkTimeModel. No persistent, lock or scope effect; the liveness read of the assignees, added by the assignment of one template to several people (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0244",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "classification": "debt",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkTimeModelCatalog.AssignWorkTimeModel",
+      "reason": "Unreviewed cross-owner lock, explicit coordination finding (not a leaf or E1-E5 grant): workforce reaches modules/schoolmembership.Query.FindStaffForMutation (school-membership) through modules/workforce/compose.WorkTime.AssignWorkTimeModel. The staff-row lock every template assignment already takes, here ascending for several people (#6921, ADR 0240); protocol review is follow-up work (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.FindStaffForMutation",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkTimeModelCatalog.AssignWorkTimeModel",
+      "reason": "Read-only target already reviewed as query: workforce reaches modules/schoolmembership.Query.ListStaff (school-membership) through modules/workforce/compose.WorkTime.AssignWorkTimeModel. No persistent, lock or scope effect; the liveness read of the assignees, added by the assignment of one template to several people (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkTimeModelCatalog.AssignWorkTimeModel",
+      "reason": "Platform protocol participation (scope): workforce reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/workforce/compose.WorkTime.AssignWorkTimeModel. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); added by the assignment of one template to several people (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0244",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkTimeModelCatalog.AssignWorkTimeModel",
+      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Added by the assignment of one template to several people (#6921, ADR 0240); a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
+      "target_owner": ""
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.RestoreWorkTimeModel",
       "classification": "platform",
@@ -10710,6 +10874,29 @@
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkTimeModelCatalog.RestoreWorkTimeModel",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Added by the work-time template catalog (#6891, ADR 0221); a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
+      "target_owner": ""
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.StaffWorkTimeFacts",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkTimeModelCatalog.StaffWorkTimeFacts",
+      "reason": "Platform protocol participation (scope): workforce reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/workforce/compose.WorkTime.StaffWorkTimeFacts. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); added by the assignment of one template to several people (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0244",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.StaffWorkTimeFacts",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkTimeModelCatalog.StaffWorkTimeFacts",
+      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Added by the assignment of one template to several people (#6921, ADR 0240); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "workforce",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
       "target_owner": ""
@@ -12891,6 +13078,93 @@
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.ArchiveWorkTimeModel",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Added by the work-time template catalog (#6891, ADR 0221); a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
+      "target_owner": ""
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Service.AssignWorkTimeModel",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "reason": "Guarded leaf command (lock) already reviewed as leaf for this target: workforce reaches modules/schoolmembership.Capability.FindStaffForMutation (school-membership) through *modules/workforce/internal/application.Service.AssignWorkTimeModel. Participates in the caller unit; the staff-row lock of the assignees, taken ascending after their balance gates (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaffForMutation",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Service.AssignWorkTimeModel",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "reason": "Read-only target already reviewed as query: workforce reaches modules/schoolmembership.Capability.ListStaff (school-membership) through *modules/workforce/internal/application.Service.AssignWorkTimeModel. No persistent, lock or scope effect; the liveness read of the assignees, added by the assignment of one template to several people (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Service.AssignWorkTimeModel",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "reason": "Guarded leaf command (lock) already reviewed as leaf for this target: workforce reaches modules/schoolmembership.Owner.FindStaffForMutation (school-membership) through *modules/workforce/internal/application.Service.AssignWorkTimeModel. Participates in the caller unit; the staff-row lock of the assignees, taken ascending after their balance gates (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaffForMutation",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Service.AssignWorkTimeModel",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "reason": "Read-only target already reviewed as query: workforce reaches modules/schoolmembership.Owner.ListStaff (school-membership) through *modules/workforce/internal/application.Service.AssignWorkTimeModel. No persistent, lock or scope effect; the liveness read of the assignees, added by the assignment of one template to several people (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0244",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Service.AssignWorkTimeModel",
+      "classification": "debt",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "reason": "Unreviewed cross-owner lock, explicit coordination finding (not a leaf or E1-E5 grant): workforce reaches modules/schoolmembership.Query.FindStaffForMutation (school-membership) through *modules/workforce/internal/application.Service.AssignWorkTimeModel. The staff-row lock every template assignment already takes, here ascending for several people (#6921, ADR 0240); protocol review is follow-up work (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.FindStaffForMutation",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Service.AssignWorkTimeModel",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "reason": "Read-only target already reviewed as query: workforce reaches modules/schoolmembership.Query.ListStaff (school-membership) through *modules/workforce/internal/application.Service.AssignWorkTimeModel. No persistent, lock or scope effect; the liveness read of the assignees, added by the assignment of one template to several people (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Service.AssignWorkTimeModel",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "reason": "Platform protocol participation (scope): workforce reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/workforce/internal/application.Service.AssignWorkTimeModel. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); added by the assignment of one template to several people (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0244",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Service.AssignWorkTimeModel",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
+      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Added by the assignment of one template to several people (#6921, ADR 0240); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "workforce",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
       "target_owner": ""
@@ -16010,6 +16284,29 @@
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.StaffTargetOverrideDays",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
+      "target_owner": ""
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Service.StaffWorkTimeFacts",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.StaffWorkTimeFacts",
+      "reason": "Platform protocol participation (scope): workforce reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/workforce/internal/application.Service.StaffWorkTimeFacts. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); added by the assignment of one template to several people (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0244",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Service.StaffWorkTimeFacts",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.StaffWorkTimeFacts",
+      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Added by the assignment of one template to several people (#6921, ADR 0240); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "workforce",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
       "target_owner": ""
@@ -19485,6 +19782,30 @@
       "target_owner": ""
     },
     {
+      "adr": "0083",
+      "approval_adr": "0243",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.monthCloseCommands.CloseMonthForTraeger",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.StaffMonthCloseService.CloseMonthForTraeger",
+      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Reached through *modules/workforce/internal/application/timetracking.monthCloseCommands.CloseMonthForTraeger, the close and reopen of the Träger (#4711) over the same observed unit as the school's own (ADR 0243); a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0243",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.staffMonthCloseService.CloseMonthForTraeger",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.StaffMonthCloseService.CloseMonthForTraeger",
+      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Reached through *modules/workforce/internal/application/timetracking.staffMonthCloseService.CloseMonthForTraeger, the close and reopen of the Träger (#4711) over the same observed unit as the school's own (ADR 0243); a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
+      "target_owner": ""
+    },
+    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.monthCloseCommands.ReopenMonth",
       "classification": "platform",
@@ -19526,6 +19847,52 @@
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.StaffMonthCloseService.ReopenMonth",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Reached through *modules/workforce/internal/application/timetracking.staffMonthCloseService.ReopenMonth; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
+      "target_owner": ""
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.monthCloseCommands.ReopenMonthForTraeger",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.StaffMonthCloseService.ReopenMonthForTraeger",
+      "reason": "Platform protocol participation (scope): workforce reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/workforce/internal/application/timetracking.monthCloseCommands.ReopenMonthForTraeger. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); the close and reopen of the Träger (#4711) run in the school's tenant transaction like the school's own (ADR 0243).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0243",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.monthCloseCommands.ReopenMonthForTraeger",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.StaffMonthCloseService.ReopenMonthForTraeger",
+      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Reached through *modules/workforce/internal/application/timetracking.monthCloseCommands.ReopenMonthForTraeger, the close and reopen of the Träger (#4711) over the same observed unit as the school's own (ADR 0243); a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
+      "target_owner": ""
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.staffMonthCloseService.ReopenMonthForTraeger",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.StaffMonthCloseService.ReopenMonthForTraeger",
+      "reason": "Platform protocol participation (scope): workforce reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/workforce/internal/application/timetracking.staffMonthCloseService.ReopenMonthForTraeger. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); the close and reopen of the Träger (#4711) run in the school's tenant transaction like the school's own (ADR 0243).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0243",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.staffMonthCloseService.ReopenMonthForTraeger",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.StaffMonthCloseService.ReopenMonthForTraeger",
+      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Reached through *modules/workforce/internal/application/timetracking.staffMonthCloseService.ReopenMonthForTraeger, the close and reopen of the Träger (#4711) over the same observed unit as the school's own (ADR 0243); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "workforce",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
       "target_owner": ""
@@ -19719,6 +20086,41 @@
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.TimeTrackingDeletionRepository.Create",
       "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0243",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.StaffMonthCloseService.CloseMonthForTraeger",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.TraegerMonthClosing.CloseMonthForTraeger",
+      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Reached through modules/workforce/internal/application/timetracking.StaffMonthCloseService.CloseMonthForTraeger, the close and reopen of the Träger (#4711) over the same observed unit as the school's own (ADR 0243); a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
+      "target_owner": ""
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.StaffMonthCloseService.ReopenMonthForTraeger",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.TraegerMonthClosing.ReopenMonthForTraeger",
+      "reason": "Platform protocol participation (scope): workforce reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/workforce/internal/application/timetracking.StaffMonthCloseService.ReopenMonthForTraeger. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); the close and reopen of the Träger (#4711) run in the school's tenant transaction like the school's own (ADR 0243).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0243",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.StaffMonthCloseService.ReopenMonthForTraeger",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.TraegerMonthClosing.ReopenMonthForTraeger",
+      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Reached through modules/workforce/internal/application/timetracking.StaffMonthCloseService.ReopenMonthForTraeger, the close and reopen of the Träger (#4711) over the same observed unit as the school's own (ADR 0243); a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
+      "target_owner": ""
     },
     {
       "adr": "0098",
@@ -21234,6 +21636,16 @@
       "target_owner": "timetable-activities"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.StaffPlanningRules",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.PlanRuleSettings.StaffPlanningRules",
+      "reason": "Read-only settings resolution: the working-time check reads the Träger values of the Einsatzplanung through the settings owner's named question (#4708); no write.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.StaffPlanningRules",
+      "target_owner": "settings-platform"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.CapStaffShiftSeries",
       "classification": "platform",
@@ -22265,11 +22677,77 @@
     },
     {
       "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftSeriesService.CreateSeries",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftSeriesService.CreateSeries",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftSeriesService.CreateSeries. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftSeriesService.SplitSeries",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftSeriesService.SplitSeries",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftSeriesService.SplitSeries. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.ApplyCancellation",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.ApplyCancellation",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftService.ApplyCancellation. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.CreateShift",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.CreateShift",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftService.CreateShift. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.MoveShift",
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.MoveShift",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftService.MoveShift. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftService.MoveShift. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); #4708 writes the working-time override entry of a move confirmed despite a warning before the move event, in the same unit (ADR 0242).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.UpdateShift",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.UpdateShift",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftService.UpdateShift. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.UpdateShiftWithOptions",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.UpdateShiftWithOptions",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftService.UpdateShiftWithOptions. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
       "target_owner": "audit-platform"
@@ -23290,6 +23768,36 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/ports.StaffAssignments.AssignedStaffIDs",
       "reason": "Read-only already reviewed target: workforce reaches modules/schoolmembership.Query.ListStaff (school-membership) through modules/workforce/internal/adapters/postgres.Assignments.AssignedStaffIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/adapters/postgres.Assignments.LiveStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/ports.StaffAssignments.LiveStaffIDs",
+      "reason": "Read-only target already reviewed as query: workforce reaches modules/schoolmembership.Capability.ListStaff (school-membership) through modules/workforce/internal/adapters/postgres.Assignments.LiveStaffIDs. No persistent, lock or scope effect; the liveness read of the assignees, added by the assignment of one template to several people (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/adapters/postgres.Assignments.LiveStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/ports.StaffAssignments.LiveStaffIDs",
+      "reason": "Read-only target already reviewed as query: workforce reaches modules/schoolmembership.Owner.ListStaff (school-membership) through modules/workforce/internal/adapters/postgres.Assignments.LiveStaffIDs. No persistent, lock or scope effect; the liveness read of the assignees, added by the assignment of one template to several people (#6921).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/adapters/postgres.Assignments.LiveStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/ports.StaffAssignments.LiveStaffIDs",
+      "reason": "Read-only target already reviewed as query: workforce reaches modules/schoolmembership.Query.ListStaff (school-membership) through modules/workforce/internal/adapters/postgres.Assignments.LiveStaffIDs. No persistent, lock or scope effect; the liveness read of the assignees, added by the assignment of one template to several people (#6921).",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListStaff",
       "target_owner": "school-membership"

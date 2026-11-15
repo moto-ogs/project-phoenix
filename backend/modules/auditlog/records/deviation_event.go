@@ -38,6 +38,9 @@ const (
 	// Anchored via StaffShiftID (no activity slot exists for a shift);
 	// old_value/new_value carry {staff_id, date, start_time, end_time}.
 	DeviationEventShiftMoved = "shift_moved"
+	// DeviationEventWorkingTimeOverride records a shift planned despite a
+	// working-time warning, with the planner's reason (#4708).
+	DeviationEventWorkingTimeOverride = "working_time_override"
 )
 
 // ShiftScopedDeviationEventTypes lists the event types that belong to the
@@ -45,7 +48,7 @@ const (
 // alone cannot mark that scope durably: its FK is ON DELETE SET NULL, so
 // deleting the shift would otherwise leak the event into slot-history reads.
 // Extend this list whenever a new shift-anchored event type is added.
-var ShiftScopedDeviationEventTypes = []string{DeviationEventShiftMoved}
+var ShiftScopedDeviationEventTypes = []string{DeviationEventShiftMoved, DeviationEventWorkingTimeOverride}
 
 // DeviationEvent is one append-only entry in the planning Änderungsprotokoll
 // (#1886). Rows are never updated or deleted by application code; only the

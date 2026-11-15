@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ShiftEditModal } from "./shift-edit-modal";
+import { ApiError } from "~/lib/api-error";
 import { staffShiftService } from "~/lib/shift-api";
 import type { StaffShift } from "~/lib/shift-helpers";
 
@@ -46,6 +47,65 @@ const oneHourShift: StaffShift = {
 };
 
 describe("ShiftEditModal", () => {
+  it("asks before it saves a shift that breaks a working-time rule (#4708)", async () => {
+    const updateShift = vi.mocked(staffShiftService.updateShift);
+    updateShift.mockReset();
+    updateShift
+      .mockRejectedValueOnce(
+        new ApiError("refused", 409, {
+          code: "workforce.shift_working_time_warning",
+          details: {
+            reason_required: false,
+            warnings: [
+              {
+                kind: "rest_shortened",
+                date: "2026-07-06",
+                minutes: 600,
+                limit: 660,
+                needs_reason: false,
+              },
+            ],
+          },
+        }),
+      )
+      .mockResolvedValueOnce(oneHourShift);
+    const onSaved = vi.fn();
+
+    render(
+      <ShiftEditModal
+        isOpen={true}
+        mode="edit"
+        staffId="7"
+        staffName="Ada Lovelace"
+        date="2026-07-06"
+        shift={oneHourShift}
+        shiftTypes={[]}
+        onClose={vi.fn()}
+        onSaved={onSaved}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Änderungen speichern" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Trotzdem so planen?",
+    });
+    expect(dialog).toHaveTextContent(
+      "Vor Mo., 06.07.: 10 Stunden Ruhezeit statt 11 Stunden.",
+    );
+    expect(screen.queryByLabelText(/Begründung/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Trotzdem planen" }));
+
+    await waitFor(() => expect(updateShift).toHaveBeenCalledTimes(2));
+    expect(updateShift.mock.calls[0]?.[1].workingTime).toBeUndefined();
+    expect(updateShift.mock.calls[1]?.[1].workingTime).toEqual({
+      confirmed: true,
+      reason: "",
+    });
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+  });
+
   it("caps break minutes at the selected shift duration", () => {
     render(
       <ShiftEditModal

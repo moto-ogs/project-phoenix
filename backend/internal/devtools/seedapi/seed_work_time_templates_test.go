@@ -16,7 +16,7 @@ func TestSeedWorkTimeTemplatesCreatesArchivesAndAssigns(t *testing.T) {
 	t.Parallel()
 
 	var calls []string
-	var assignedModels []any
+	var assigned []any
 	nextID := 40
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		calls = append(calls, r.Method+" "+r.URL.Path)
@@ -28,8 +28,8 @@ func TestSeedWorkTimeTemplatesCreatesArchivesAndAssigns(t *testing.T) {
 			_, _ = fmt.Fprintf(w, `{"status":"success","data":{"id":%d}}`, nextID)
 			return
 		}
-		if r.Method == "PUT" {
-			assignedModels = append(assignedModels, body["model_id"])
+		if r.URL.Path == "/api/work-time-models/41/assignments" {
+			assigned = body["staff_ids"].([]any)
 		}
 		_, _ = fmt.Fprint(w, `{"status":"success","data":{}}`)
 	})
@@ -49,8 +49,8 @@ func TestSeedWorkTimeTemplatesCreatesArchivesAndAssigns(t *testing.T) {
 	assert.Equal(t, []string{
 		"POST /api/work-time-models", "POST /api/work-time-models", "POST /api/work-time-models",
 		"POST /api/work-time-models/43/archive",
-		"PUT /api/staff/3/schedule", "PUT /api/staff/4/schedule", "PUT /api/staff/5/schedule",
-	}, calls, "external staff and the person without a Soll keep their state")
-	assert.Equal(t, []any{float64(41), float64(41), float64(41)}, assignedModels, "the full-time template is the one in use")
+		"POST /api/work-time-models/41/assignments",
+	}, calls, "the full-time template is the one in use, assigned in one request")
+	assert.Equal(t, []any{float64(3), float64(4), float64(5)}, assigned, "external staff and the person without a Soll keep their state")
 	assert.Equal(t, timeTrackingDailyTargetMin, seedWorkTimeTemplates()[0].weeks[0][0], "assigning it keeps the custom Soll")
 }

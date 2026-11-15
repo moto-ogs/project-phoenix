@@ -22,6 +22,7 @@
   "later_month_closed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "manager_controlled_absence": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "month_closed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "month_closed_by_traeger": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "month_not_closable": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "month_not_closed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "no_active_break": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
@@ -109,5 +110,13 @@
   "traeger_staff_release_exists": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "traeger_staff_release_in_use": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "traeger_staff_release_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
-  "traeger_staff_release_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin."
+  "traeger_staff_release_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "shift_overlaps_other_site": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "shift_planning_off": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "shift_working_time_warning": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "traeger_planning_site_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "traeger_planning_shift_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "traeger_month_closed_by_school": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "traeger_month_later_closed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "traeger_month_not_kept": "{object} değiştirilemedi. Güncel durumu kontrol edin."
 }

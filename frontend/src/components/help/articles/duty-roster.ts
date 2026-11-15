@@ -38,6 +38,10 @@ export function dutyRosterTopic(): HelpTopic {
     ],
     differences: [
       "Eine neue Schicht auf einem Schließtag löst eine Rückfrage aus.",
+      // #4708: die Arbeitszeitregeln des Trägers über alle Einsatzorte.
+      "Arbeitet die Person auch an einer anderen Schule Ihres Trägers, zählt moto beide Schulen zusammen. Verletzt eine Schicht eine Arbeitszeitregel, fragt moto nach. Sie ändern die Zeiten oder wählen `Trotzdem planen`, wo nötig mit einer `Begründung`.",
+      "Eine Schicht zur selben Zeit an einer anderen Schule speichert moto nicht.",
+      "Eine Schicht mit `Vom Träger geplant` hat die Personalverwaltung Ihres Trägers eingetragen.",
       // #7021: Abwesenheiten von vor #6847 übernimmt die Leitung selbst.
       "Steht über dem Plan `Abwesenheiten fehlen im Plan`? Diese Abwesenheiten gelten schon, die Personen stehen aber noch im Plan. Wählen Sie `In den Plan übernehmen` oder `Alle übernehmen`. Abgesagte Schichten und Vertretungen bleiben, wie sie sind. Soll die Person doch arbeiten, wählen Sie `Ausblenden`.",
       "Ist ein Tag nicht vollständig durch Schichten abgedeckt, weist moto darauf hin.",

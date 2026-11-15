@@ -135,6 +135,9 @@
   "api/staff/time-tracking/export/sftp-status": [
     "GET tenant /api/staff/time-tracking/export/sftp-status"
   ],
+  "api/staff/time-tracking/month-close/traeger-staff": [
+    "GET tenant /api/staff/time-tracking/month-close/traeger-staff"
+  ],
   "api/staff/time-tracking/overview": [
     "GET tenant /api/staff/time-tracking/overview"
   ],

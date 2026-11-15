@@ -22,6 +22,7 @@
   "later_month_closed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "manager_controlled_absence": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
   "month_closed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "month_closed_by_traeger": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "month_not_closable": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "month_not_closed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "no_active_break": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
@@ -109,5 +110,13 @@
   "traeger_staff_release_exists": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "traeger_staff_release_in_use": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "traeger_staff_release_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
-  "traeger_staff_release_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane."
+  "traeger_staff_release_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
+  "shift_overlaps_other_site": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "shift_planning_off": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "shift_working_time_warning": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "traeger_planning_site_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
+  "traeger_planning_shift_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
+  "traeger_month_closed_by_school": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "traeger_month_later_closed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "traeger_month_not_kept": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
 }

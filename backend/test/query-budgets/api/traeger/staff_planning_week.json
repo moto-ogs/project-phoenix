@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.staff_planning_week",
+  "max": 15,
+  "exact": true,
+  "description": "modules/workforce — GET /traeger/staff-planning/ (#4708) at a Träger with\ntwo schools: the Träger's schools, the binding of the Träger transaction,\nits release, the records and their links in one statement each; then per\nschool the binding of its tenant transaction, the employments with their\nprofiles, the shifts of the week and the school's own share of the Soll\n(workforce.shift_plan_soll, ADR 0242) in one statement each. Flat in the\nnumber of people and shifts.",
+  "route": "GET /traeger/staff-planning/"
+}

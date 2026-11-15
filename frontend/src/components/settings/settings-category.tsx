@@ -72,6 +72,8 @@ interface SettingsCategoryProps {
    * switch (#6675). Return null for every other setting.
    */
   readonly renderAddon?: (setting: ResolvedSetting) => ReactNode;
+  /** See `SettingsField` `renderConfirmDetail`. */
+  readonly renderConfirmDetail?: (setting: ResolvedSetting) => ReactNode;
 }
 
 export function SettingsCategory({
@@ -93,6 +95,7 @@ export function SettingsCategory({
   filterQuery = "",
   tabLabel,
   renderAddon,
+  renderConfirmDetail,
 }: SettingsCategoryProps) {
   const visibleItems = filterCategoryItems(category, filterQuery);
 
@@ -170,6 +173,7 @@ export function SettingsCategory({
               confirmTextReset={confirmTextReset}
               plainTextareas={plainTextareas}
               traegerOnlyStated={traegerOnly}
+              renderConfirmDetail={renderConfirmDetail}
             />
             {renderAddon?.(setting)}
           </div>

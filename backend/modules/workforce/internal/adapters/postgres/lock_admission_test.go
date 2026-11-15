@@ -207,6 +207,22 @@ func TestWorkforceRowLocksAreAdmittedBeforeTheyWait(t *testing.T) {
 			run:  store.LockPayrollRules})
 	})
 
+	t.Run("work-time template share lock", func(t *testing.T) {
+		var modelID int64
+		require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, school, func(ctx context.Context) error {
+			model, _, err := store.CreateWorkTimeModel(ctx, domain.WorkTimeModelFields{Name: "Admission", RotationLength: 1, RotationAnchorDate: "2026-09-07", Entries: []domain.WorkTimeModelEntryFields{{DayOfWeek: 1, TargetMinutes: 480}}})
+			modelID = model.ID
+			return err
+		}))
+		testpkg.OwnTestWorkTimeModel(t, db, modelID)
+		requireAdmittedBeforeWait(t, db, admissionPath{class: tenant.LockWorkTimeModel, key: tenant.LockIDKey(modelID),
+			hold: holdRow("config.work_time_models", modelID),
+			run: func(ctx context.Context) error {
+				_, _, err := store.ShareLockWorkTimeModel(ctx, modelID)
+				return err
+			}})
+	})
+
 	t.Run("bank data rekey", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Bank", "Admission")
 		var financial domain.StaffFinancialData
