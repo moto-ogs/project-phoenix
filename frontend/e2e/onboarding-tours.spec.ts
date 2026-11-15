@@ -1,6 +1,4 @@
 import {
-  expect,
-  test,
   type Frame,
   type Locator,
   type Page,
@@ -25,6 +23,7 @@ import {
   type StaffOnboardingStepKey,
 } from "../src/lib/staff-onboarding-api";
 import { loadSeedAccess } from "../scripts/seed-state";
+import { expect, test } from "./a11y/scan";
 import { Deadline } from "./deadline";
 import { frontendPort } from "./frontend-port";
 import {

@@ -1062,6 +1062,7 @@ function StaffCalendarPageInner() {
           ? {
               value: activeTab,
               onChange: handleCalendarTabChange,
+              inUrl: true,
               items: [
                 { value: "meine", label: "Meine Termine" },
                 { value: "schule", label: "Betreuungsplan" },

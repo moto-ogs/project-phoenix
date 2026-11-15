@@ -55,7 +55,7 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	if _, ok := identity.(identityaccess.TraegerMemberProfiles); !ok {
 		return errors.New("traeger portal: identity does not serve the names of the Träger-Büro")
 	}
-	if err := mountTraegerPortalRoutes(root, limiters, identity, organizations, persons, staff, audit, settings, healthData, holidayCalendar, holidayTraegerMail{delivery: delivery}, holidayMailStates{mails: closureMail.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics); err != nil {
+	if err := mountTraegerPortalRoutes(root, limiters, identity, organizations, persons, staff, audit, settings, healthData, holidayCalendar, holidayTraegerMail{delivery: delivery}, holidayMailStates{mails: closureMail.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics, today); err != nil {
 		return err
 	}
 	setups, ok := identity.(identityaccess.HolidayParentSetups)
@@ -72,13 +72,13 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	mountHolidayClosureNotificationRoutes(root, tenant, organizations, closureMail, holidayCalendar, closureHolidays, logger)
 	mountParentBillingRoutes(root, publicLink, organizations, settings, schoolSettings, attendanceMarks, delivery, outcomes, healthData, bankData, holidayCalendar, today, logger)
 	mountCareContractRoutes(root, organizations, settings, schoolSettings, delivery, outcomes, audit.Log,
-		owners.NewCareContractNoticeAddressees(persons, identity), contractHolidays, parentsURL)
+		owners.NewCareContractNoticeAddressees(persons, identity), contractHolidays, parentsURL, today)
 	mountCareTimeOverrunRoutes(root, organizations, statistics, audit.Log)
 	// The office decides the parents' changes through Care Plan's review of
 	// the school (#5979).
 	mountCareContractChangeRoutes(root, organizations, changes, schoolSettings, audit.Log)
 	// The office rolls its phases and offerings out into its schools (#4704).
-	billing, intake := newTraegerCatalogBilling(organizations, settings, schoolSettings, attendanceMarks, delivery, outcomes, audit.Log, contractHolidays, parentsURL)
+	billing, intake := newTraegerCatalogBilling(organizations, settings, schoolSettings, attendanceMarks, delivery, outcomes, audit.Log, contractHolidays, parentsURL, today)
 	return mountTraegerCatalogRoutes(root, schoolPhases, schoolCatalog, lockRecurrence, organizations, billing, intake)
 }
 

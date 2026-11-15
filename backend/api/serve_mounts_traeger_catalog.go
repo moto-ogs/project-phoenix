@@ -20,6 +20,7 @@ import (
 	parentBillingCompose "github.com/moto-ogs/project-phoenix/modules/parentbilling/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	traegerCatalogCompose "github.com/moto-ogs/project-phoenix/workflows/traegercatalog/compose"
 	traegerCatalogHTTP "github.com/moto-ogs/project-phoenix/workflows/traegercatalog/http"
 	"github.com/moto-ogs/project-phoenix/workflows/traegercatalog/ports"
@@ -112,11 +113,11 @@ func traegerCatalogContractTemplates(intake carecontract.Intake) ports.ContractT
 // over the same ports as their own Träger routes.
 func newTraegerCatalogBilling(organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings TraegerSchoolSettings,
 	marks owners.MealAttendanceMarks, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog owners.DataAccessAppender,
-	holidays carecontract.SchoolHolidays, parentsURL string,
+	holidays carecontract.SchoolHolidays, parentsURL string, today func() calendar.Date,
 ) (parentbilling.CareModulePrices, carecontract.Intake) {
 	contracts := parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}
 	billing, _ := parentBillingCompose.NewCareBilling(contracts, parentBillingCareSchools{organizations: organizations},
-		parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks), newParentBillingLetterheads(settings))
+		parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks), newParentBillingLetterheads(settings), today)
 	_, intakePorts := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL)
 	return billing, careContractCompose.NewIntake(intakePorts)
 }

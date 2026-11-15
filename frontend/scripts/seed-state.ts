@@ -17,10 +17,22 @@ interface SeedProfile {
     accounts?: Partial<
       Record<SeedAccountRole, Array<{ email?: string; password?: string }>>
     >;
+    parents?: Array<{
+      email?: string;
+      password?: string;
+      student_ids?: unknown[];
+    }>;
   };
 }
 
-type SeedAccountRole = "admin" | "betreuer";
+/** Eltern-Login aus dem Seed, mit der Zahl seiner Kinder. */
+export interface SeedParent {
+  email: string;
+  password: string;
+  children: number;
+}
+
+type SeedAccountRole = "admin" | "betreuer" | "lehrkraft";
 
 /**
  * Kontoart im Seed-Profil; ohne Angabe die Schul-Leitung (`admin`).
@@ -52,9 +64,10 @@ function isMissingFile(error: unknown): boolean {
   );
 }
 
-export function readSeedAccess(
-  options: LoadSeedAccessOptions = {},
-): SeedAccess | null {
+/** Liest das Seed-Profil; null ohne Seed-Datei. */
+function readSeedProfile(
+  options: LoadSeedAccessOptions,
+): { key: string; profile: SeedProfile } | null {
   const statePath = options.statePath ?? defaultSeedStatePath();
   let raw: string;
   try {
@@ -83,6 +96,33 @@ export function readSeedAccess(
       `Unknown demo school profile ${JSON.stringify(profileKey)}; available profiles: ${available}`,
     );
   }
+  return { key: profileKey, profile };
+}
+
+/** Vollständige Eltern-Logins des Profils; leer ohne Seed-Datei. */
+export function readSeedParents(
+  options: Omit<LoadSeedAccessOptions, "role"> = {},
+): SeedParent[] {
+  const parents = readSeedProfile(options)?.profile.credentials?.parents ?? [];
+  return parents.flatMap((parent) =>
+    parent.email && parent.password
+      ? [
+          {
+            email: parent.email,
+            password: parent.password,
+            children: parent.student_ids?.length ?? 0,
+          },
+        ]
+      : [],
+  );
+}
+
+export function readSeedAccess(
+  options: LoadSeedAccessOptions = {},
+): SeedAccess | null {
+  const seed = readSeedProfile(options);
+  if (!seed) return null;
+  const { key: profileKey, profile } = seed;
   const role = options.role ?? "admin";
   const account =
     role === "school_admin"

@@ -125,7 +125,7 @@ func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdent
 	require.NoError(t, err)
 	portal, err := NewTraegerPortalHTTP(identity, organizations, owners.MustNewPeopleDirectory(database), membership,
 		TraegerAudit{Trail: audit.AccessTrail, Log: audit.DataAccessLog}, settings, testHealthCipher(), days,
-		holidayTraegerMail{delivery: delivery.Module}, holidayMailStates{mails: delivery.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics.Statistics)
+		holidayTraegerMail{delivery: delivery.Module}, holidayMailStates{mails: delivery.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics.Statistics, today)
 	require.NoError(t, err)
 	router := chi.NewRouter()
 	router.Use(func(next http.Handler) http.Handler {
@@ -146,7 +146,7 @@ func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdent
 	mountHolidayClosureNotificationRoutes(router, router, organizations,
 		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, slog.Default())
 	mountCareContractRoutes(router, organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog,
-		owners.NewCareContractNoticeAddressees(owners.MustNewPeopleDirectory(database), identity), owners.CareContractTestHolidays{}, "http://parents.localhost:3000")
+		owners.NewCareContractNoticeAddressees(owners.MustNewPeopleDirectory(database), identity), owners.CareContractTestHolidays{}, "http://parents.localhost:3000", today)
 	return router
 }
 
