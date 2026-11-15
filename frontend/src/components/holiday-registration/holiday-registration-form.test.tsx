@@ -789,6 +789,33 @@ describe("HolidayRegistrationForm", () => {
     );
   });
 
+  it("announces the recomputed contribution politely (#7113)", async () => {
+    mockQuote.mockImplementation((_token, _children, declared: boolean) =>
+      Promise.resolve(quoted(declared)),
+    );
+    renderForm();
+    fillRegistration();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
+    );
+    expect((await screen.findAllByText("45,00 €")).length).toBeGreaterThan(0);
+    const region = screen.getByTestId("contribution-announcement");
+    expect(region).toHaveAttribute("role", "status");
+    // The first amount stands on the screen; only a change is said.
+    expect(region).toBeEmptyDOMElement();
+
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: /Wir bekommen Leistungen, zum Beispiel Bürgergeld/,
+      }),
+    );
+    await waitFor(() =>
+      expect(region).toHaveTextContent(
+        "Der Beitrag ist neu berechnet. Gesamt: 0,00 €",
+      ),
+    );
+  });
+
   it("uploads a proof of benefits in the summary and sends its token (#5238)", async () => {
     mockSubmit.mockResolvedValue(undefined);
     mockQuote.mockImplementation((_token, _children, declared: boolean) =>

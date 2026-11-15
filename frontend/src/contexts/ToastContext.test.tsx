@@ -124,6 +124,106 @@ describe("ToastContext", () => {
         screen.queryByRole("status", { name: "Erfolgreich!: Gespeichert" }),
       ).not.toBeInTheDocument();
     });
+    describe("lifetime of timed toasts (#7113, WCAG 2.2.1)", () => {
+      function Trigger({
+        show,
+      }: Readonly<{ show: (toast: ReturnType<typeof useToast>) => void }>) {
+        const toast = useToast();
+        return (
+          <button type="button" onClick={() => show(toast)}>
+            Auslösen
+          </button>
+        );
+      }
+      const renderTrigger = (
+        show: (toast: ReturnType<typeof useToast>) => void,
+      ) => {
+        render(
+          <ToastProvider>
+            <Trigger show={show} />
+          </ToastProvider>,
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Auslösen" }));
+      };
+      const infoToast = () =>
+        screen.queryByRole("status", { name: "Information: Liste geladen" });
+
+      it("keeps an info toast at least five seconds, also when a caller asks for less", () => {
+        vi.useFakeTimers();
+        renderTrigger((toast) =>
+          toast.info("Liste geladen", { duration: 1500 }),
+        );
+        act(() => vi.advanceTimersByTime(4999));
+        expect(infoToast()).toBeInTheDocument();
+        act(() => vi.advanceTimersByTime(301));
+        expect(infoToast()).not.toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "Auslösen" }),
+        ).toBeInTheDocument();
+      });
+
+      it("keeps a warning without its own duration at least five seconds", () => {
+        vi.useFakeTimers();
+        renderTrigger((toast) => toast.warning("Bitte prüfen"));
+        act(() => vi.advanceTimersByTime(4999));
+        expect(
+          screen.getByRole("status", { name: "Warnung: Bitte prüfen" }),
+        ).toBeInTheDocument();
+      });
+
+      it("does not run out while a control of the toast has keyboard focus", () => {
+        vi.useFakeTimers();
+        renderTrigger((toast) => toast.info("Liste geladen"));
+        const close = screen.getByRole("button", { name: "Schließen" });
+        act(() => vi.advanceTimersByTime(2000));
+        act(() => close.focus());
+        act(() => vi.advanceTimersByTime(60_000));
+        expect(infoToast()).toBeInTheDocument();
+
+        // Leaving the toast resumes the time that was left, not a new run.
+        act(() => close.blur());
+        act(() => vi.advanceTimersByTime(2999));
+        expect(infoToast()).toBeInTheDocument();
+        act(() => vi.advanceTimersByTime(301));
+        expect(infoToast()).not.toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "Auslösen" }),
+        ).toBeInTheDocument();
+      });
+
+      it("stays paused while the pointer leaves but focus remains", () => {
+        vi.useFakeTimers();
+        renderTrigger((toast) => toast.info("Liste geladen"));
+        const close = screen.getByRole("button", { name: "Schließen" });
+        const surface = close.closest(".pointer-events-auto")!;
+        act(() => close.focus());
+        fireEvent.mouseEnter(surface);
+        fireEvent.mouseLeave(surface);
+        act(() => vi.advanceTimersByTime(60_000));
+        expect(infoToast()).toBeInTheDocument();
+      });
+
+      it("pauses on focus on a phone too", () => {
+        vi.mocked(globalThis.matchMedia).mockImplementation(
+          (query: string) => ({
+            matches: query === BELOW_MD,
+            media: query,
+            onchange: null,
+            addListener: vi.fn(),
+            removeListener: vi.fn(),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            dispatchEvent: vi.fn(),
+          }),
+        );
+        vi.useFakeTimers();
+        renderTrigger((toast) => toast.info("Liste geladen"));
+        act(() => screen.getByRole("button", { name: "Schließen" }).focus());
+        act(() => vi.advanceTimersByTime(60_000));
+        expect(infoToast()).toBeInTheDocument();
+      });
+    });
+
     it("ignores empty messages", async () => {
       function TestComponent() {
         const toast = useToast();

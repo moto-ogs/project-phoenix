@@ -85,6 +85,12 @@ export function HolidayRegistrationContribution({
     null,
   );
   const [failed, setFailed] = useState(false);
+  // A new quote after a change is said once in a polite region (#7113,
+  // WCAG 4.1.3); the first amount stands on the screen when the step opens.
+  const quotedBefore = useRef(false);
+  const [announced, setAnnounced] = useState<
+    { readonly totalCents: number } | "failed" | null
+  >(null);
   // Whether the Träger offers the exemption; it stays while a new quote is
   // computed, so the checkbox does not vanish under the pointer.
   const [exemptionOffered, setExemptionOffered] = useState(false);
@@ -107,6 +113,7 @@ export function HolidayRegistrationContribution({
     // arrives.
     setContribution(null);
     setFailed(false);
+    setAnnounced(null);
     try {
       const quoted = await quoteHolidayContribution(
         token,
@@ -117,6 +124,10 @@ export function HolidayRegistrationContribution({
       if (request === latest.current) {
         setContribution(quoted);
         setExemptionOffered(quoted.exemptionAvailable);
+        if (quotedBefore.current) {
+          setAnnounced({ totalCents: quoted.totalCents });
+        }
+        quotedBefore.current = true;
       }
     } catch (err) {
       if (request !== latest.current) return;
@@ -126,6 +137,7 @@ export function HolidayRegistrationContribution({
       });
       setContribution(null);
       setFailed(true);
+      if (quotedBefore.current) setAnnounced("failed");
     }
   }, [token, children, benefitsDeclared, ageRanks]);
 
@@ -195,6 +207,19 @@ export function HolidayRegistrationContribution({
             registrations (#6692); the parents learn it where they see the
             contribution. */}
         <p>{t("contributionDebtorNumberText")}</p>
+        <p
+          role="status"
+          className="sr-only"
+          data-testid="contribution-announcement"
+        >
+          {announced === "failed"
+            ? t("contributionError")
+            : announced
+              ? t("contributionUpdated", {
+                  total: euro.format(announced.totalCents / 100),
+                })
+              : ""}
+        </p>
         {failed ? (
           <div className="space-y-2">
             <p>{t("contributionError")}</p>

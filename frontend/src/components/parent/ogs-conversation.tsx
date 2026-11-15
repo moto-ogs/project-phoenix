@@ -613,6 +613,9 @@ export function OgsConversation({
         <div
           ref={scrollRef}
           data-chat-scroll=""
+          role="log"
+          aria-label={tm("historyLabel")}
+          aria-busy={loading}
           className="flex-1 space-y-2.5 overflow-y-auto bg-gray-50/60 px-3 py-3 sm:px-5 sm:py-4"
         >
           {/* Keep already-loaded messages on screen even if a later background

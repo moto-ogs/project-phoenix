@@ -102,6 +102,7 @@
   "contributionExemption": "Освобождение из-за получения пособий: {note}",
   "contributionChildTotal": "Сумма",
   "contributionTotal": "Итого",
+  "contributionUpdated": "Взнос пересчитан. Итого: {total}",
   "benefitsLabel": "Мы получаем пособия, например Bürgergeld, пособие на жильё (Wohngeld) или доплату на ребёнка (Kinderzuschlag).",
   "benefitsHint": "Тогда присмотр на каникулах бесплатный. Организатору нужно подтверждение.",
   "benefitsProofLabel": "Подтверждение получения пособий",

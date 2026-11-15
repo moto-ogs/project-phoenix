@@ -353,3 +353,27 @@ describe("OgsConversation send reconciliation", () => {
     },
   );
 });
+
+describe("OgsConversation for screen readers (#7113)", () => {
+  it("reads the history as a log, so new messages are announced", async () => {
+    mockGetConversation.mockResolvedValue({
+      ...thread,
+      messages: [
+        {
+          id: "m1",
+          kind: "message",
+          sender_kind: "staff",
+          sender_name: "Frau Weber",
+          body: "Felix ist abgeholt.",
+          created_at: "2026-09-09T10:00:00Z",
+        },
+      ],
+    });
+    render(<OgsConversation studentId="42" />);
+
+    const history = await screen.findByRole("log", {
+      name: "Nachrichtenverlauf",
+    });
+    expect(history).toHaveTextContent("Felix ist abgeholt.");
+  });
+});

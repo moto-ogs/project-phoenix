@@ -2,6 +2,7 @@
 // viele gesendet sind, als Balken und als fünf Kacheln. Jedes Schreiben steht
 // in genau einer Kachel.
 
+import { useState } from "react";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { StatCard } from "~/components/ui/stat-card";
 
@@ -32,8 +33,32 @@ export function LetterSendState({
 }>) {
   const open = lettersToSend(summary);
   const progress = `${summary.sent} von ${summary.letters} ${summary.letters === 1 ? noun.one : noun.many} gesendet`;
+
+  // The end of a send is said once (#7113, WCAG 4.1.3): the page reloads
+  // the counts while letters go out, and the moment none is left on its way
+  // a screen reader hears the result. The region stays in the page so the
+  // change is announced; a state that was done on opening says nothing.
+  const sending = summary.queued > 0;
+  const [wasSending, setWasSending] = useState(sending);
+  const [announcement, setAnnouncement] = useState("");
+  if (sending !== wasSending) {
+    setWasSending(sending);
+    setAnnouncement(
+      sending
+        ? ""
+        : `Der Versand ist fertig. ${progress}${summary.failed > 0 ? `, ${summary.failed} nicht angekommen` : ""}.`,
+    );
+  }
+
   return (
     <div className="space-y-3">
+      <p
+        role="status"
+        className="sr-only"
+        data-testid="letter-send-announcement"
+      >
+        {announcement}
+      </p>
       <div className="space-y-2">
         <p className="text-sm font-medium text-gray-900 tabular-nums">
           {progress}

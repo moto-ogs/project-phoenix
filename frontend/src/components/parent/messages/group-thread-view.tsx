@@ -278,7 +278,12 @@ export function ParentGroupThreadView({
       {loadError && <LoadErrorAlert error={loadError} />}
 
       <SectionCard>
-        <div className="space-y-2.5" data-testid="group-thread-messages">
+        <div
+          className="space-y-2.5"
+          data-testid="group-thread-messages"
+          role="log"
+          aria-label={tm("historyLabel")}
+        >
           {thread.messages.map((message) => (
             <ChatBubble
               key={message.id}
