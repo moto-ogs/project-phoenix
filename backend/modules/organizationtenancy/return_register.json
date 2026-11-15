@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "6dfec30c496ad6fa3cfbd8a2c37f195c7e194e619ba77041bd93f49e9d8e588f",
+  "catalogSHA256": "4acd3fdd1c00d621510637b935be21acf5de932ac25f714cf0799dfeb12a16d7",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -26811,6 +26811,98 @@
         }
       ],
       "relationships": [
+        {
+          "column": "tenant_id",
+          "targetTable": "platform.schools",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school"
+      ]
+    },
+    {
+      "name": "platform.notification_feed_entries",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "tenant_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "deep_link",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "related_type",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "related_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "read_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
+        }
+      ],
+      "relationships": [
+        {
+          "column": "account_id",
+          "targetTable": "auth.accounts",
+          "targetColumn": "id"
+        },
         {
           "column": "tenant_id",
           "targetTable": "platform.schools",

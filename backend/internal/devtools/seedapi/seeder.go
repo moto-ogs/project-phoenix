@@ -51,6 +51,11 @@ type SeedOptions struct {
 	// school of the Träger, so a school seeded beside the four profiles must
 	// not share theirs.
 	TraegerSlug string
+	// TraegerLock serializes the Träger steps with seeds in other processes,
+	// e.g. two demo schools seeded side by side into one database (#6962). It
+	// returns once the lock is held; release frees it. Nil serializes them
+	// only within this process.
+	TraegerLock func(context.Context) (release func(), err error)
 	// ReplaceAbandoned moves a school a broken seed left under the slug out
 	// of the way (renamed and soft-deleted) instead of failing with 409.
 	ReplaceAbandoned bool

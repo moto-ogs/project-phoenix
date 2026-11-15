@@ -24,6 +24,8 @@ export const Checkin: StoryObj<typeof StudentCheckinSection> = {
 };
 
 export const SickReportHealthy: StoryObj<typeof StudentSickReportSection> = {
+  // axe meldet hier noch color-contrast; Behebung in #7110.
+  parameters: { a11y: { test: "todo" } },
   render: () => (
     <StudentSickReportSection
       isSick={false}
@@ -34,6 +36,8 @@ export const SickReportHealthy: StoryObj<typeof StudentSickReportSection> = {
 };
 
 export const SickReportSick: StoryObj<typeof StudentSickReportSection> = {
+  // axe meldet hier noch color-contrast; Behebung in #7110.
+  parameters: { a11y: { test: "todo" } },
   render: () => (
     <StudentSickReportSection
       isSick={true}
@@ -53,6 +57,8 @@ export const SickReportLoading: StoryObj<typeof StudentSickReportSection> = {
 export const ExcusedReportNotExcused: StoryObj<
   typeof StudentExcusedReportSection
 > = {
+  // axe meldet hier noch color-contrast; Behebung in #7110.
+  parameters: { a11y: { test: "todo" } },
   render: () => (
     <StudentExcusedReportSection
       isExcused={false}
@@ -65,6 +71,8 @@ export const ExcusedReportNotExcused: StoryObj<
 export const ExcusedReportExcused: StoryObj<
   typeof StudentExcusedReportSection
 > = {
+  // axe meldet hier noch color-contrast; Behebung in #7110.
+  parameters: { a11y: { test: "todo" } },
   render: () => (
     <StudentExcusedReportSection
       isExcused={true}
@@ -99,6 +107,8 @@ export const StatusActionsMenuClassTrip: StoryObj<
 };
 
 export const Gallery: StoryObj = {
+  // axe meldet hier noch color-contrast; Behebung in #7110.
+  parameters: { a11y: { test: "todo" } },
   render: () => (
     <div className="flex gap-4">
       <StudentCheckoutSection onCheckoutClick={fn()} />

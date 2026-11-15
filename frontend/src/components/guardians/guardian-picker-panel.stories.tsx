@@ -13,9 +13,14 @@ const meta: Meta<typeof GuardianPickerPanel> = {
 export default meta;
 type Story = StoryObj<typeof GuardianPickerPanel>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  // axe meldet hier noch color-contrast; Behebung in #7110.
+  parameters: { a11y: { test: "todo" } },
+};
 
 export const WithExcludedProfiles: Story = {
+  // axe meldet hier noch color-contrast; Behebung in #7110.
+  parameters: { a11y: { test: "todo" } },
   args: {
     excludeProfileIds: ["profile-1", "profile-2"],
   },

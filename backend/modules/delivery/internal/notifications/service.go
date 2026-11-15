@@ -34,7 +34,9 @@ import (
 	"slices"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/devices"
+	deliveryPorts "github.com/moto-ogs/project-phoenix/modules/delivery/internal/ports"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -117,6 +119,18 @@ type Event struct {
 	// booked Unterricht am Vormittag (#4895): the event then skips the
 	// devices of the school portal.
 	schoolPortalClosed bool
+
+	// Feed also writes the event into the notification feed of every staff
+	// account of the audience (#7148), in the caller's transaction. Nil
+	// leaves the feed untouched.
+	Feed *contract.NotificationFeedDelivery
+
+	// feedChanged are the accounts whose feed the event created or updated an
+	// entry in; the SSE channel tells their open sessions after the commit.
+	feedChanged []int64
+	// feedOnly is set when the event reached the feed but no push recipient:
+	// the push and in-app hint channels then skip it.
+	feedOnly bool
 
 	// Portal names the portal that asked for the event. It is only consulted
 	// for TypeTest (#2208): the test notification proves the setup of the
@@ -212,6 +226,9 @@ type router struct {
 	channels []Channel
 	logger   *slog.Logger
 	observe  DeliveryObserver
+	// feedReader is the notification feed (#7148): its store and clock, and
+	// the read side the router serves; nil rejects feed events.
+	*feedReader
 }
 
 // DeliveryObserver records one synchronous transport outcome. All arguments
@@ -238,6 +255,25 @@ func NewServiceWithDeliveryObserver(settings RouterSettings, logger *slog.Logger
 	return service
 }
 
+// NewServiceWithFeed is NewServiceWithDeliveryObserver with the notification
+// feed (#7148) as the third channel next to Web Push and e-mail. now is the
+// clock of the bundle window and the read marks. The router also serves the
+// feed (contract.NotificationFeed); the SSE channel signals its changes. A
+// nil store leaves the feed out.
+func NewServiceWithFeed(settings RouterSettings, logger *slog.Logger, observe DeliveryObserver, feed deliveryPorts.FeedStore, now func() time.Time, channels ...Channel) Notifier {
+	service := NewServiceWithDeliveryObserver(settings, logger, observe, channels...).(*router)
+	if feed == nil {
+		return service
+	}
+	service.feedReader = &feedReader{store: feed, logger: logger, now: now}
+	for _, channel := range channels {
+		if signal, ok := channel.(feedSignalChannel); ok {
+			service.signal = signal.signalFeed
+		}
+	}
+	return service
+}
+
 func (r *router) getLogger() *slog.Logger {
 	if r.logger == nil {
 		return slog.Default()
@@ -257,21 +293,12 @@ func (r *router) Notify(ctx context.Context, event Event) error {
 		return err
 	}
 
-	// The test notification is exempt from the delivery window on purpose: an
-	// admin verifying the setup in the evening must get an answer, not silence
-	// that looks like a broken configuration.
-	if event.Type != TypeTest {
-		within, werr := r.withinActiveWindow(ctx, event.Audience.TenantID)
-		if werr != nil {
-			return werr
-		}
-		if !within {
-			return ErrOutsideActiveWindow
-		}
+	if deliver, err := r.windowAndFeed(ctx, &event); err != nil || !deliver {
+		return err
 	}
 
 	for _, channel := range r.channels {
-		if _, durable := channel.(durableChannel); !durable {
+		if _, durable := channel.(durableChannel); !durable || event.feedOnly {
 			continue
 		}
 		if err := channel.Deliver(ctx, event); err != nil {
@@ -360,7 +387,7 @@ func (r *router) NotifyBatch(ctx context.Context, events []Event) error {
 // producer with no other delivery channel can roll back its claim when no push
 // subscription accepted the event.
 func (r *router) NotifyDurably(ctx context.Context, event Event) (int, error) {
-	if err := validate(event); err != nil {
+	if err := validateOutsideFeed(event); err != nil {
 		return 0, err
 	}
 	if event.Priority == "" {

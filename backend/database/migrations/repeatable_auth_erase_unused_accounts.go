@@ -116,6 +116,7 @@ AS $function$
 					DELETE FROM users.parent_request_rss_feeds AS target WHERE target.account_id = candidate;
 					DELETE FROM users.parent_message_count_preferences AS target WHERE target.account_id = candidate;
 					DELETE FROM iot.push_subscriptions AS target WHERE target.account_id = candidate;
+					DELETE FROM platform.notification_feed_entries AS target WHERE target.account_id = candidate;
 					DELETE FROM iot.pwa_standalone_usage AS target WHERE target.account_id = candidate;
 					DELETE FROM config.home_layouts AS target WHERE target.account_id = candidate;
 					DELETE FROM config.school_setup_dismissals AS target WHERE target.account_id = candidate;

@@ -1,134 +1,122 @@
-// Header bell for staff reminders (issue #1457).
-// Always visible in the topbar (desktop + mobile) so the count is instantly
-// seen without opening the sidebar. Opens a dropdown preview of the most
-// urgent reminders with a link to the full /reminders page. Visual-only — the
-// count refreshes on the useReminders 60s tick, there is no sound or push.
-// Renders nothing until the tenant has enabled at least one reminder type.
+// Header bell for staff reminders (issue #1457) and the notification feed
+// (#7148). Two sections: Erinnerungen on top (only while the school has a
+// reminder type switched on), the feed („Hinweise") below. The badge counts
+// unread Hinweise plus active Erinnerungen and shows „9+" from 10. Opening
+// the bell marks nothing as read; a Hinweis is read by its click or „Alle als
+// gelesen markieren". Below `sm` the bell opens the shared full-screen sheet
+// (`NotificationsSheet`, rendered once by the bottom nav) instead of a popover.
 
 "use client";
 
-import { EmptyState } from "~/components/ui/empty-state";
-import { useState } from "react";
+import { Bell } from "lucide-react";
+import dynamic from "next/dynamic";
+import { useCallback, useState } from "react";
+
 import { AnchoredPopover } from "~/components/ui/anchored-popover";
 import { Button } from "~/components/ui/button";
-import NavigationLink from "~/components/ui/navigation-link";
 import { NotificationBadge } from "~/components/ui/notification-badge";
-import { Bell } from "lucide-react";
+import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
+import { useNotificationFeedUnread } from "~/lib/hooks/use-notification-feed";
 import { useReminders } from "~/lib/hooks/use-reminders";
-import type { Reminder } from "~/lib/reminders-api";
+
 import {
-  reminderKey,
-  reminderRelativeLabel,
-  reminderSubtitle,
-  reminderToneClass,
-} from "~/lib/reminders-display";
-import { useTenantAwarePath } from "~/lib/tenant-path";
+  NOTIFICATIONS_BADGE_MAX,
+  trackBellOpened,
+  useAnalyticsSchoolId,
+  useNotificationsSheetOpen,
+  useOpenNotificationsSheet,
+} from "./notifications-sheet-state";
 
-// How many reminders to preview inline before linking out to the full page.
-const PREVIEW_LIMIT = 5;
-
-function BellRow({ reminder }: { readonly reminder: Reminder }) {
-  const subtitle = reminderSubtitle(reminder);
-  return (
-    <li className="flex items-center justify-between gap-3 px-4 py-2.5">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-gray-900">
-          {reminder.title}
-        </p>
-        {subtitle && (
-          <p className="truncate text-xs text-gray-500">{subtitle}</p>
-        )}
-      </div>
-      <div className="flex flex-shrink-0 flex-col items-end">
-        <span className="text-xs font-semibold text-gray-900">
-          {reminder.due_time}
-        </span>
-        <span className={`text-xs ${reminderToneClass(reminder)}`}>
-          {reminderRelativeLabel(reminder)}
-        </span>
-      </div>
-    </li>
-  );
-}
+// The bell is mounted on every staff page and the shared header of every
+// portal; its content loads only when the popover opens.
+const NotificationsPanelContent = dynamic(
+  () =>
+    import("./notifications-panel").then(
+      (module) => module.NotificationsPanelContent,
+    ),
+  { ssr: false },
+);
 
 export function RemindersBell() {
-  const { reminders, count, enabled } = useReminders();
-  const tenantPath = useTenantAwarePath();
+  const { count, enabled } = useReminders();
+  const { unreadCount } = useNotificationFeedUnread();
+  const isPhone = useMediaQuery(BELOW_SM);
+  const schoolId = useAnalyticsSchoolId();
   const [isOpen, setIsOpen] = useState(false);
+  const sheetOpen = useNotificationsSheetOpen();
+  const openSheet = useOpenNotificationsSheet();
 
-  // Hidden entirely until the school switches on a reminder type.
-  if (!enabled) return null;
+  const badgeCount = unreadCount + (enabled ? count : 0);
 
-  const preview = reminders.slice(0, PREVIEW_LIMIT);
-  const overflow = count - preview.length;
+  const changeOpen = useCallback(
+    (next: boolean) => {
+      if (next && !isOpen && schoolId) {
+        trackBellOpened(schoolId);
+      }
+      setIsOpen(next);
+    },
+    [isOpen, schoolId],
+  );
+  const close = useCallback(() => setIsOpen(false), []);
+
+  const renderTrigger = ({
+    ref,
+    toggle,
+    panelId,
+    expanded,
+  }: {
+    ref?: React.Ref<HTMLButtonElement>;
+    toggle: () => void;
+    panelId?: string;
+    expanded: boolean;
+  }) => (
+    <Button
+      ref={ref}
+      type="button"
+      variant="ghost"
+      size="icon"
+      onClick={toggle}
+      aria-label={
+        badgeCount > 0
+          ? `Benachrichtigungen (${badgeCount})`
+          : "Benachrichtigungen"
+      }
+      aria-expanded={expanded}
+      aria-haspopup="dialog"
+      aria-controls={expanded ? panelId : undefined}
+      tooltip="Zeigt Erinnerungen und Hinweise, ohne die Seite zu verlassen."
+      className="relative"
+    >
+      <Bell className="h-5 w-5" />
+      <NotificationBadge
+        count={badgeCount}
+        tone="red"
+        size="sm"
+        max={NOTIFICATIONS_BADGE_MAX}
+        ariaLabel={`${badgeCount} Benachrichtigungen`}
+        className="absolute -top-0.5 -right-0.5"
+      />
+    </Button>
+  );
+
+  if (isPhone) {
+    return renderTrigger({ toggle: openSheet, expanded: sheetOpen });
+  }
 
   return (
     <AnchoredPopover
       open={isOpen}
-      onOpenChange={setIsOpen}
-      ariaLabel="Erinnerungen"
-      preferredWidth={320}
+      onOpenChange={changeOpen}
+      ariaLabel="Benachrichtigungen"
+      preferredWidth={360}
       align="end"
       focusPanelOnOpen
-      header={<p className="font-semibold text-gray-900">Erinnerungen</p>}
-      footer={
-        <div className="p-2">
-          <NavigationLink
-            href={tenantPath("/reminders")}
-            onClick={() => setIsOpen(false)}
-            className="flex items-center justify-center rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors duration-200 hover:bg-gray-100 hover:text-gray-900"
-          >
-            Alle ansehen
-          </NavigationLink>
-        </div>
+      header={<p className="font-semibold text-gray-900">Benachrichtigungen</p>}
+      renderTrigger={({ ref, toggle, panelId }) =>
+        renderTrigger({ ref, toggle, panelId, expanded: isOpen })
       }
-      renderTrigger={({ ref, toggle, panelId }) => (
-        <Button
-          ref={ref}
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={toggle}
-          aria-label={count > 0 ? `Erinnerungen (${count})` : "Erinnerungen"}
-          aria-expanded={isOpen}
-          aria-haspopup="dialog"
-          aria-controls={isOpen ? panelId : undefined}
-          tooltip="Zeigt Ihre Erinnerungen, ohne die Seite zu verlassen."
-          className="relative"
-        >
-          <Bell className="h-5 w-5" />
-          <NotificationBadge
-            count={count}
-            tone="red"
-            size="sm"
-            ariaLabel={`${count} Erinnerungen`}
-            className="absolute -top-0.5 -right-0.5"
-          />
-        </Button>
-      )}
     >
-      {() =>
-        count === 0 ? (
-          <EmptyState
-            variant="compact"
-            title="Keine aktiven Erinnerungen."
-            className="px-4 py-4"
-          />
-        ) : (
-          <>
-            <ul className="divide-y divide-gray-100">
-              {preview.map((reminder) => (
-                <BellRow key={reminderKey(reminder)} reminder={reminder} />
-              ))}
-            </ul>
-            {overflow > 0 && (
-              <p className="px-4 py-2 text-center text-xs text-gray-500">
-                +{overflow} weitere
-              </p>
-            )}
-          </>
-        )
-      }
+      {() => <NotificationsPanelContent onNavigate={close} />}
     </AnchoredPopover>
   );
 }

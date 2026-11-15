@@ -24,6 +24,8 @@ const state = vi.hoisted(() => ({
   projection: undefined as ReadonlyMap<string, DayProjection> | undefined,
   projectionError: undefined as Error | undefined,
   permissionReady: true,
+  // Ohne time_tracking:own erklärt die Seite den Zustand (#7148).
+  permissionDenied: false,
   // Gebucht ist die Zeiterfassung, aus der das Soll kommt (#4894).
   zeiterfassungBooked: true,
   closingDaysCalls: [] as [string, string][],
@@ -77,7 +79,10 @@ vi.mock("~/lib/hooks/use-berlin-today", () => ({
   useBerlinToday: () => "2026-09-09",
 }));
 vi.mock("~/lib/hooks/use-require-permission", () => ({
-  useRequirePermission: () => ({ isReady: state.permissionReady }),
+  useRequirePermission: () => ({
+    isReady: state.permissionReady && !state.permissionDenied,
+    isDenied: state.permissionDenied,
+  }),
 }));
 vi.mock("~/lib/hooks/use-url-params", () => ({
   useUrlParams: () => ({
@@ -160,6 +165,7 @@ describe("OwnDienstplanView", () => {
     state.projection = undefined;
     state.projectionError = undefined;
     state.permissionReady = true;
+    state.permissionDenied = false;
     state.zeiterfassungBooked = true;
     state.closingDaysCalls = [];
     state.day = null;
@@ -416,6 +422,25 @@ describe("OwnDienstplanView", () => {
     ).toBeInTheDocument();
     expect(state.keys).toEqual([]);
     expect(screen.queryByText("geplant")).not.toBeInTheDocument();
+  });
+
+  // Ein Hinweis der Glocke führt mit ?d= hierher (#7148). Ohne eigenen
+  // Dienstplan erklärt die Seite das, statt still umzuleiten.
+  it("explains a missing own duty roster instead of redirecting", () => {
+    state.permissionDenied = true;
+    state.day = "2026-11-20";
+
+    render(<OwnDienstplanView />);
+
+    // Anker: die Erklärung des fehlenden Zugriffs steht da.
+    expect(
+      screen.getByText(/Sie haben keinen Zugriff auf einen eigenen Dienstplan/),
+    ).toBeInTheDocument();
+    // This file renders without the tenant slug (real tenant context).
+    expect(
+      screen.getByRole("link", { name: "Zur Startseite" }),
+    ).toHaveAttribute("href", "/home");
+    expect(state.keys).toEqual([]);
   });
 
   it("offers a retry when the shifts fail to load", () => {

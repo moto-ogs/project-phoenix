@@ -235,6 +235,13 @@ const (
 	// its caller may see.
 	EventClassDayChanged EventType = "class_day_changed"
 
+	// EventNotificationFeedChanged tells every open session of an account
+	// that its notification feed changed (#7148): a new or updated entry, or a
+	// change of the read state from another device. It carries no content;
+	// clients refetch the feed and its unread count. Delivered with
+	// BroadcastToStaffAccounts to the account only.
+	EventNotificationFeedChanged EventType = "notification_feed_changed"
+
 	// EventNotification carries a user-facing notification from the
 	// notification abstraction (services/notifications, #1624) over the SSE
 	// channel. Unlike every other event type it is NOT a cache-invalidation

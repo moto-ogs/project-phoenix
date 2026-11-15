@@ -53,7 +53,7 @@ export function settingsGuideTopic(): HelpTopic {
       },
       {
         title: "Erinnerungen",
-        description: "Hinweise rund um Abholung, Aktivitäten und Termine.",
+        description: "Erinnerungen rund um Abholung, Aktivitäten und Termine.",
         ordered: false,
         steps: [
           "`Anstehende Abholung`: Erinnert, wenn die Abholzeit eines Kindes näher rückt.",
