@@ -11444,6 +11444,18 @@
       "target_owner": "document-rendering"
     },
     {
+      "adr": "0083",
+      "approval_adr": "0237",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce.StaffAdmin.StaffSollKeptByTraeger",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffTraegerKeep.StaffSollKeptByTraeger",
+      "reason": "Unresolved callable boundary exposed by local alias traversal (ADR 0098): the injected Workforce clock names the day from which the Soll of a Träger contract reaches each Einsatzort (#4706, ADR 0237); its callers supplied only by _test.go pin it. Not a query or approved leaf; a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerSchoolEmployments.SchoolEmployments",
       "classification": "query",
       "effect": "query",
@@ -11516,6 +11528,114 @@
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
       "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0237",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.AddHolidayWeeks",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffContracts.AddHolidayWeeks",
+      "reason": "Unresolved callable boundary exposed by local alias traversal (ADR 0098): the injected Workforce clock names the day from which the Soll of a Träger contract reaches each Einsatzort (#4706, ADR 0237); its callers supplied only by _test.go pin it. Not a query or approved leaf; a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0237",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.ChangeContractSoll",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffContracts.ChangeContractSoll",
+      "reason": "Unresolved callable boundary exposed by local alias traversal (ADR 0098): the injected Workforce clock names the day from which the Soll of a Träger contract reaches each Einsatzort (#4706, ADR 0237); its callers supplied only by _test.go pin it. Not a query or approved leaf; a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0237",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.CreateContract",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffContracts.CreateContract",
+      "reason": "Unresolved callable boundary exposed by local alias traversal (ADR 0098): the injected Workforce clock names the day from which the Soll of a Träger contract reaches each Einsatzort (#4706, ADR 0237); its callers supplied only by _test.go pin it. Not a query or approved leaf; a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0237",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.DeleteContract",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffContracts.DeleteContract",
+      "reason": "Unresolved callable boundary exposed by local alias traversal (ADR 0098): the injected Workforce clock names the day from which the Soll of a Träger contract reaches each Einsatzort (#4706, ADR 0237); its callers supplied only by _test.go pin it. Not a query or approved leaf; a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0237",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.DeleteHolidayWeek",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffContracts.DeleteHolidayWeek",
+      "reason": "Unresolved callable boundary exposed by local alias traversal (ADR 0098): the injected Workforce clock names the day from which the Soll of a Träger contract reaches each Einsatzort (#4706, ADR 0237); its callers supplied only by _test.go pin it. Not a query or approved leaf; a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0237",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.UpdateContract",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffContracts.UpdateContract",
+      "reason": "Unresolved callable boundary exposed by local alias traversal (ADR 0098): the injected Workforce clock names the day from which the Soll of a Träger contract reaches each Einsatzort (#4706, ADR 0237); its callers supplied only by _test.go pin it. Not a query or approved leaf; a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0237",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.Link",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.Link",
+      "reason": "Unresolved callable boundary exposed by local alias traversal (ADR 0098): the injected Workforce clock names the day from which the Soll of a Träger contract reaches each Einsatzort (#4706, ADR 0237); its callers supplied only by _test.go pin it. Not a query or approved leaf; a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0237",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.Record",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.Record",
+      "reason": "Unresolved callable boundary exposed by local alias traversal (ADR 0098): the injected Workforce clock names the day from which the Soll of a Träger contract reaches each Einsatzort (#4706, ADR 0237); its callers supplied only by _test.go pin it. Not a query or approved leaf; a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0237",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.UpdatePersonnelNumber",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffRecords.UpdatePersonnelNumber",
+      "reason": "Unresolved callable boundary exposed by local alias traversal (ADR 0098): the injected Workforce clock names the day from which the Soll of a Träger contract reaches each Einsatzort (#4706, ADR 0237); its callers supplied only by _test.go pin it. Not a query or approved leaf; a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
+      "target_owner": ""
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinSchool",
@@ -12672,6 +12792,18 @@
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/workforce/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "workforce",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0237",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.StaffAdmin.StaffSollKeptByTraeger",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.staffAdminTraeger.StaffSollKeptByTraeger",
+      "reason": "Unresolved callable boundary exposed by local alias traversal (ADR 0098): the injected Workforce clock names the day from which the Soll of a Träger contract reaches each Einsatzort (#4706, ADR 0237); its callers supplied only by _test.go pin it. Not a query or approved leaf; a changed value or closure needs a fresh approval ADR.",
+      "source_owner": "workforce",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Clock.Time",
       "target_owner": ""
     },
     {

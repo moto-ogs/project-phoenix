@@ -142,9 +142,23 @@
     },
     {
       "build": "production",
+      "evidence": "func (a *StaffAdmin) StaffSollKeptByTraeger(ctx context.Context, staffID int64) (bool, error) {\n\treturn a.traeger.StaffSollKeptByTraeger(ctx, staffID)\n}",
+      "form": "unchanged-forward-evidence",
+      "id": "modules/workforce/StaffAdmin.StaffSollKeptByTraeger",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
       "evidence": "func (a *StaffAdmin) StaffStammdaten(ctx context.Context, staffID int64) (*StaffStammdaten, error) {\n\treturn a.engine.StaffStammdaten(ctx, staffID)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/workforce/StaffAdmin.StaffStammdaten",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
+      "evidence": "func (a *StaffAdmin) TraegerStaffContracts(collaborators TraegerStaffPorts) TraegerStaffContracts {\n\treturn a.traeger.TraegerStaffContracts(collaborators)\n}",
+      "form": "unchanged-forward-evidence",
+      "id": "modules/workforce/StaffAdmin.TraegerStaffContracts",
       "owner": "modules/workforce"
     },
     {

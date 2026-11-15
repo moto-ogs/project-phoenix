@@ -68,11 +68,17 @@ const CodeWorkforceShiftTypeArchived = "workforce.shift_type_archived"
 const CodeWorkforceShiftTypeInactive = "workforce.shift_type_inactive"
 const CodeWorkforceStaffKeptByTraeger = "workforce.staff_kept_by_traeger"
 const CodeWorkforceStaffProfileMissing = "workforce.staff_profile_missing"
+const CodeWorkforceStaffSollKeptByTraeger = "workforce.staff_soll_kept_by_traeger"
 const CodeWorkforceStammdatenInvalid = "workforce.stammdaten_invalid"
 const CodeWorkforceTargetOverrideHoursInvalid = "workforce.target_override_hours_invalid"
 const CodeWorkforceTargetOverrideOverlap = "workforce.target_override_overlap"
 const CodeWorkforceTargetOverrideRangeInvalid = "workforce.target_override_range_invalid"
 const CodeWorkforceTargetOverrideTooLong = "workforce.target_override_too_long"
+const CodeWorkforceTraegerContractInvalid = "workforce.traeger_contract_invalid"
+const CodeWorkforceTraegerContractMonthClosed = "workforce.traeger_contract_month_closed"
+const CodeWorkforceTraegerContractNotFound = "workforce.traeger_contract_not_found"
+const CodeWorkforceTraegerContractOverlap = "workforce.traeger_contract_overlap"
+const CodeWorkforceTraegerHolidayWeekSchoolOverride = "workforce.traeger_holiday_week_school_override"
 const CodeWorkforceTraegerStaffAlreadyLinked = "workforce.traeger_staff_already_linked"
 const CodeWorkforceTraegerStaffLinkInvalid = "workforce.traeger_staff_link_invalid"
 const CodeWorkforceTraegerStaffNotReleased = "workforce.traeger_staff_not_released"
@@ -158,11 +164,17 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforceShiftTypeInactive, "business_rejection"},
 	{CodeWorkforceStaffKeptByTraeger, "business_rejection"},
 	{CodeWorkforceStaffProfileMissing, "business_rejection"},
+	{CodeWorkforceStaffSollKeptByTraeger, "business_rejection"},
 	{CodeWorkforceStammdatenInvalid, "input"},
 	{CodeWorkforceTargetOverrideHoursInvalid, "input"},
 	{CodeWorkforceTargetOverrideOverlap, "business_rejection"},
 	{CodeWorkforceTargetOverrideRangeInvalid, "input"},
 	{CodeWorkforceTargetOverrideTooLong, "input"},
+	{CodeWorkforceTraegerContractInvalid, "input"},
+	{CodeWorkforceTraegerContractMonthClosed, "business_rejection"},
+	{CodeWorkforceTraegerContractNotFound, "input"},
+	{CodeWorkforceTraegerContractOverlap, "business_rejection"},
+	{CodeWorkforceTraegerHolidayWeekSchoolOverride, "business_rejection"},
 	{CodeWorkforceTraegerStaffAlreadyLinked, "business_rejection"},
 	{CodeWorkforceTraegerStaffLinkInvalid, "input"},
 	{CodeWorkforceTraegerStaffNotReleased, "business_rejection"},

@@ -27,14 +27,15 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 	if staffAdmin == nil {
 		return errors.New("traeger staff records: the personnel record is required")
 	}
-	records := staffAdmin.TraegerStaffRecords(workforce.TraegerStaffPorts{
+	collaborators := workforce.TraegerStaffPorts{
 		Schools:     traegerStaffSchools{organizations: organizations},
 		Employments: traegerSchoolEmployments{staff: membership},
 		Persons:     traegerSchoolPersons{persons: persons},
 		Access:      traegerStaffAccessLog{log: accessLog},
 		Runtime:     traegerDocumentRuntime{},
-	})
-	resource := traegerstaff.NewRecordsResource(records, common.RequiresPermission(identityaccess.TraegerRightStaffManage))
+	}
+	resource := traegerstaff.NewRecordsResource(staffAdmin.TraegerStaffRecords(collaborators), staffAdmin.TraegerStaffContracts(collaborators),
+		common.RequiresPermission(identityaccess.TraegerRightStaffManage))
 	root.Mount("/traeger/staff-records", resource.TraegerRouter(ProtectedTraegerRoutes))
 	return nil
 }

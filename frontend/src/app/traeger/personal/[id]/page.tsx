@@ -6,6 +6,7 @@
 // Personalverwaltung; die Schulen sehen sie nur noch als „vom Träger“.
 
 import { EyeIcon, PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
+import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -50,6 +51,19 @@ import {
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerStaffRecordPage" });
+
+// Die Arbeitsverträge (#4706) bringen Tabelle, Datumsauswahl und Dialoge mit;
+// sie laden nach, damit die Akte selbst klein bleibt.
+const StaffContractsCard = dynamic(
+  () =>
+    import("~/components/traeger/staff/staff-contracts-card").then(
+      (module) => module.StaffContractsCard,
+    ),
+  {
+    ssr: false,
+    loading: () => <SectionCard title="Arbeitsverträge" loading />,
+  },
+);
 
 const errorMessage = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
@@ -487,6 +501,8 @@ export default function TraegerStaffRecordPage() {
               </FramedList>
             </SectionCard>
           </div>
+
+          <StaffContractsCard record={record} onChanged={setRecord} />
 
           <FinancialCard record={record} onSaved={() => void load()} />
 

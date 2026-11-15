@@ -749,6 +749,9 @@ export interface StaffSchedule {
   // Earliest date on which any version of this schedule was in effect.
   // Anchored as YYYY-MM-DD. Empty string when no schedule rows exist.
   validFrom: string;
+  // True while a contract of the Träger keeps the Soll (#4706): the school
+  // reads it but changes neither the model nor a Sonderarbeitszeit.
+  keptByTraeger?: boolean;
 }
 
 interface BackendScheduleEntry {
@@ -773,6 +776,7 @@ interface BackendScheduleResponse {
   entries: BackendScheduleEntry[];
   weekly_totals: number[];
   valid_from?: string;
+  kept_by_traeger?: boolean;
 }
 
 function mapScheduleResponse(data: BackendScheduleResponse): StaffSchedule {
@@ -796,6 +800,7 @@ function mapScheduleResponse(data: BackendScheduleResponse): StaffSchedule {
     })),
     weeklyTotals: data.weekly_totals ?? [],
     validFrom: (data.valid_from ?? "").slice(0, 10),
+    keptByTraeger: data.kept_by_traeger === true,
   };
 }
 
@@ -2274,7 +2279,7 @@ export interface StaffStammdaten {
  */
 interface StaffPayrollNumber {
   personnelNumber: string | null;
-  keptByTraeger: boolean;
+  keptByTraeger?: boolean;
 }
 
 interface StaffFinancialMasked {
@@ -2282,7 +2287,7 @@ interface StaffFinancialMasked {
   taxIdMasked: string | null;
   socialSecurityNumberMasked: string | null;
   /** Der Träger führt die Werte in seiner Personalakte (#4705). */
-  keptByTraeger: boolean;
+  keptByTraeger?: boolean;
 }
 
 export interface StaffFinancialPlain {

@@ -47,7 +47,11 @@ func (seedTraegerStaffStep) Run(_ context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
-	linked, first, err := seedTraegerStaffLinkAll(rt.Client, auth, suggestions)
+	linked, first, records, err := seedTraegerStaffLinkAll(rt.Client, auth, suggestions)
+	if err != nil {
+		return err
+	}
+	contracts, err := seedTraegerStaffContracts(rt.Client, auth, records)
 	if err != nil {
 		return err
 	}
@@ -56,31 +60,31 @@ func (seedTraegerStaffStep) Run(_ context.Context, rt *Runtime) error {
 			return fmt.Errorf("keep the bank values of a Träger staff record: %w", err)
 		}
 	}
-	fmt.Printf("  Träger staff records: %d linked\n", linked)
+	fmt.Printf("  Träger staff records: %d linked, %d contracts\n", linked, contracts)
 	return nil
 }
 
 // seedTraegerStaffLinkAll confirms up to seedTraegerStaffLinks proposals and
-// returns how many it linked and the first record it created.
-func seedTraegerStaffLinkAll(client *Client, auth AuthRef, suggestions []seedTraegerStaffSuggestion) (int, int64, error) {
-	linked := 0
+// returns how many it linked, the first record it created and all of them.
+func seedTraegerStaffLinkAll(client *Client, auth AuthRef, suggestions []seedTraegerStaffSuggestion) (int, int64, []int64, error) {
+	var records []int64
 	first := int64(0)
 	for _, suggestion := range suggestions {
-		if linked == seedTraegerStaffLinks {
+		if len(records) == seedTraegerStaffLinks {
 			break
 		}
 		id, err := seedTraegerStaffLink(client, auth, suggestion)
 		if err != nil {
-			return 0, 0, err
+			return 0, 0, nil, err
 		}
 		if id > 0 {
-			linked++
+			records = append(records, id)
 		}
 		if first == 0 {
 			first = id
 		}
 	}
-	return linked, first, nil
+	return len(records), first, records, nil
 }
 
 // seedTraegerStaffRelease grants the release with the statement of an

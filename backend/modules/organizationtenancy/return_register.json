@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "b254626938456796d1da0e2a7b19e844657c182c66c528f10f95edf3ed9ff448",
+  "catalogSHA256": "16b3bb12fd819ebdd75ebac628b42532edd4347100d84851209fc030cc1d6889",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -10258,6 +10258,12 @@
           "name": "weekday_minutes",
           "type": "ARRAY",
           "udt": "_int4",
+          "nullable": true
+        },
+        {
+          "name": "traeger_contract_id",
+          "type": "bigint",
+          "udt": "int8",
           "nullable": true
         }
       ],
@@ -37559,6 +37565,231 @@
       ],
       "packages": [
         "school"
+      ]
+    },
+    {
+      "name": "workforce.staff_contract_holiday_weeks",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "contract_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "school_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "membership_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "week_start",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "weekday_minutes",
+          "type": "ARRAY",
+          "udt": "_int4",
+          "nullable": false
+        },
+        {
+          "name": "created_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "contract_id",
+          "targetTable": "workforce.staff_contracts",
+          "targetColumn": "id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_contracts",
+          "targetColumn": "organization_id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.staff_contract_targets",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "contract_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "school_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "membership_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "valid_from",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "weekday_minutes",
+          "type": "ARRAY",
+          "udt": "_int4",
+          "nullable": false
+        },
+        {
+          "name": "created_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "contract_id",
+          "targetTable": "workforce.staff_contracts",
+          "targetColumn": "id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_contracts",
+          "targetColumn": "organization_id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.staff_contracts",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "staff_record_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "kind",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "starts_on",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "ends_on",
+          "type": "date",
+          "udt": "date",
+          "nullable": true
+        },
+        {
+          "name": "created_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "staff_record_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
       ]
     },
     {

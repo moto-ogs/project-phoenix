@@ -46,9 +46,33 @@ export function staffFieldValue(
   return field === "birthday" ? formatDate(value) : value;
 }
 
+/** Ein Eintrag zu einem Arbeitsvertrag im Verlauf (#4706). */
+function contractChangeText(change: StaffChange): string {
+  const school = change.schoolName || "einer Schule";
+  switch (change.field) {
+    case "contract_soll":
+      return `Soll an der Schule ${school} geändert: ${change.value}`;
+    case "holiday_week":
+      return change.kind === "removed"
+        ? `Ferien-Soll an der Schule ${school} gelöscht: ${change.value}`
+        : `Ferien-Soll an der Schule ${school} eingetragen: ${change.value}`;
+    default:
+      if (change.kind === "added") return `Arbeitsvertrag angelegt: ${change.value}`;
+      if (change.kind === "removed") return `Arbeitsvertrag gelöscht: ${change.value}`;
+      return `Arbeitsvertrag geändert, vorher: ${change.value}`;
+  }
+}
+
 /** Ein Eintrag im Verlauf als ein Satz. */
 export function staffChangeText(change: StaffChange): string {
   const school = change.schoolName || "einer Schule";
+  if (
+    change.field === "contract" ||
+    change.field === "contract_soll" ||
+    change.field === "holiday_week"
+  ) {
+    return contractChangeText(change);
+  }
   if (change.kind === "linked") {
     return `Beschäftigung an der Schule ${school} verknüpft`;
   }

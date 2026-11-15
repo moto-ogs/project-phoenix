@@ -21,16 +21,17 @@ import (
 // itself (ADR 0105).
 type RecordsResource struct {
 	records      workforce.TraegerStaffRecords
+	contracts    workforce.TraegerStaffContracts
 	requireStaff common.Middleware
 }
 
 // NewRecordsResource builds the resource; the root binds requireStaff to
 // the Träger right traeger_staff:manage (ADR 0084 section 4).
-func NewRecordsResource(records workforce.TraegerStaffRecords, requireStaff common.Middleware) *RecordsResource {
-	if records == nil || requireStaff == nil {
-		panic("workforce traeger staff: the records and the right check are required")
+func NewRecordsResource(records workforce.TraegerStaffRecords, contracts workforce.TraegerStaffContracts, requireStaff common.Middleware) *RecordsResource {
+	if records == nil || contracts == nil || requireStaff == nil {
+		panic("workforce traeger staff: the records, the contracts and the right check are required")
 	}
-	return &RecordsResource{records: records, requireStaff: requireStaff}
+	return &RecordsResource{records: records, contracts: contracts, requireStaff: requireStaff}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/staff-records.
@@ -48,6 +49,7 @@ func (rs *RecordsResource) TraegerRouter(protectedTraegerRoutes func(chi.Router,
 		staff.Get("/{id}/financial", rs.financial)
 		staff.Post("/{id}/financial/reveal", rs.revealFinancial)
 		staff.Put("/{id}/financial", rs.updateFinancial)
+		rs.contractRoutes(staff)
 	})
 	return r
 }
