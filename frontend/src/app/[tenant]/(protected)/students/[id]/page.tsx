@@ -1543,6 +1543,7 @@ function StudentDetailPageContent() {
           : {
               value: activeTab,
               onChange: handleTabChange,
+              inUrl: true,
               items: buildStudentTabItems(visibleTabs),
               label: "Bereiche der Kindakte",
             }

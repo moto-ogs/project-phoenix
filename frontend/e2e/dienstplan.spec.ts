@@ -1,10 +1,6 @@
-import {
-  expect,
-  type APIRequestContext,
-  type Page,
-  test,
-} from "@playwright/test";
+import { type APIRequestContext, type Page } from "@playwright/test";
 
+import { expect, test } from "./a11y/scan";
 import {
   loginToTenant,
   MISSING_SEED_ACCESS,
