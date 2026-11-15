@@ -9,7 +9,7 @@
 
 import { CheckCircle2, ListChecks } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type AllocationDecisionTarget,
   HolidayAllocationDecisionModal,
@@ -38,6 +38,7 @@ import { ConfirmationModal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
+import { focusStepHeading } from "~/components/ui/use-step-focus";
 import {
   useApiErrorDisplay,
   useApiLoadError,
@@ -74,6 +75,25 @@ export default function TraegerHolidayAllocationPage() {
     null,
   );
   const [taking, setTaking] = useState(false);
+  const boardRef = useRef<HTMLDivElement>(null);
+  // A decision removes the row whose button had the focus (#7111). The week
+  // the person decided in takes it, or the next open one, or "Alles
+  // entschieden"; `null` decides nothing, `"all"` any week.
+  const focusAfterDecision = useRef<string | null>(null);
+  useEffect(() => {
+    const weekId = focusAfterDecision.current;
+    const list = boardRef.current;
+    if (weekId === null || !list) return;
+    focusAfterDecision.current = null;
+    focusStepHeading(
+      list.querySelector<HTMLElement>(
+        `[data-allocation-week="${CSS.escape(weekId)}"]`,
+      ) ??
+        list.querySelector<HTMLElement>(
+          "[data-allocation-week], [data-allocation-done]",
+        ),
+    );
+  }, [board]);
   const boardLoad = useApiLoadError();
   const { show: showLoadError, clear: clearLoadError } = boardLoad;
   const actionErrors = useApiErrorDisplay();
@@ -134,6 +154,7 @@ export default function TraegerHolidayAllocationPage() {
         reason,
       },
     ]);
+    focusAfterDecision.current = target.week.weekId;
     setBoard(next);
     setTarget(null);
     toast.success(
@@ -163,6 +184,10 @@ export default function TraegerHolidayAllocationPage() {
         // Preserve completed batches even when a later batch needs review.
         setBoard(next);
       }
+      focusAfterDecision.current =
+        proposalScope === "all" || proposalScope === null
+          ? "all"
+          : proposalScope.weekId;
       setProposalScope(null);
       toast.success(
         `Der Vorschlag ist übernommen. ${summary.registrations === 1 ? "Die Eltern bekommen" : `Die Eltern von ${summary.registrations} Anmeldungen bekommen`} eine E-Mail.`,
@@ -253,7 +278,7 @@ export default function TraegerHolidayAllocationPage() {
       }
     >
       {byCriteria && board ? (
-        <div className="flex flex-col gap-6">
+        <div ref={boardRef} className="flex flex-col gap-6">
           <SectionCard
             title="So sortiert moto vor"
             description="Zuerst zählt das Kriterium mit der höchsten Priorität, dann das nächste. Bei Gleichstand zählt der Eingang. Sie entscheiden."
@@ -295,29 +320,35 @@ export default function TraegerHolidayAllocationPage() {
           </SectionCard>
 
           {weeks.length === 0 ? (
-            <SectionCard>
-              <EmptyState
-                tone="success"
-                icon={<CheckCircle2 aria-hidden="true" />}
-                title="Alles entschieden"
-                description="Es gibt keine offene Anmeldung. Neue Anmeldungen erscheinen hier, vorsortiert nach Ihren Kriterien."
-                variant="compact"
-              />
-            </SectionCard>
+            <div data-allocation-done>
+              <SectionCard>
+                <EmptyState
+                  tone="success"
+                  icon={<CheckCircle2 aria-hidden="true" />}
+                  titleAs="h2"
+                  title="Alles entschieden"
+                  description="Es gibt keine offene Anmeldung. Neue Anmeldungen erscheinen hier, vorsortiert nach Ihren Kriterien."
+                  variant="compact"
+                />
+              </SectionCard>
+            </div>
           ) : (
             weeks.map((week) => (
-              <HolidayAllocationWeekCard
-                key={week.weekId}
-                periodId={id}
-                week={week}
-                hostSchoolName={names.get(week.hostSchoolId) ?? "Schule"}
-                criteria={board.criteria}
-                busy={busy}
-                onDecide={(entry, placement) =>
-                  setTarget({ week, entry, placement })
-                }
-                onTakeProposal={() => setProposalScope({ weekId: week.weekId })}
-              />
+              <div key={week.weekId} data-allocation-week={week.weekId}>
+                <HolidayAllocationWeekCard
+                  periodId={id}
+                  week={week}
+                  hostSchoolName={names.get(week.hostSchoolId) ?? "Schule"}
+                  criteria={board.criteria}
+                  busy={busy}
+                  onDecide={(entry, placement) =>
+                    setTarget({ week, entry, placement })
+                  }
+                  onTakeProposal={() =>
+                    setProposalScope({ weekId: week.weekId })
+                  }
+                />
+              </div>
             ))
           )}
 

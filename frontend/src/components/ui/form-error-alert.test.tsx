@@ -78,6 +78,77 @@ describe("FormErrorAlert", () => {
     ]);
   });
 
+  // #7111: a submit button disabled while sending drops the focus to
+  // <body>. Without a marked field, the alert takes it, so keyboard and
+  // screen reader users continue at the message instead of the page top.
+  it("takes the focus when it was lost and no field is marked", () => {
+    render(
+      <form>
+        <FormErrorAlert message="Die Anmeldung ist fehlgeschlagen." />
+        <input aria-label="E-Mail" />
+      </form>,
+    );
+
+    const alert = screen.getByRole("alert");
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).toContainElement(alert);
+  });
+
+  it("takes the focus from a submit button disabled while sending", () => {
+    const { rerender } = render(
+      <form>
+        <FormErrorAlert message={null} />
+        <button type="submit">Anmelden</button>
+      </form>,
+    );
+    const submit = screen.getByRole("button", { name: "Anmelden" });
+    submit.focus();
+
+    rerender(
+      <form>
+        <FormErrorAlert message="Die Anmeldung ist fehlgeschlagen." />
+        <button type="submit" disabled>
+          Anmelden
+        </button>
+      </form>,
+    );
+
+    expect(document.activeElement).toContainElement(screen.getByRole("alert"));
+  });
+
+  it("leaves the focus where the person still works", () => {
+    const { rerender } = render(
+      <form>
+        <FormErrorAlert message={null} />
+        <input aria-label="Notiz" />
+      </form>,
+    );
+    const note = screen.getByRole("textbox", { name: "Notiz" });
+    note.focus();
+
+    rerender(
+      <form>
+        <FormErrorAlert message="Speichern fehlgeschlagen." />
+        <input aria-label="Notiz" />
+      </form>,
+    );
+
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(document.activeElement).toBe(note);
+  });
+
+  it("leaves the focus to a marked field", () => {
+    render(
+      <form>
+        <FormErrorAlert message="Bitte prüfen Sie die markierten Felder." />
+        <input aria-label="Telefon" aria-invalid="true" />
+      </form>,
+    );
+
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(document.activeElement).toBe(document.body);
+  });
+
   it("scrolls again for a repeated attempt with the same message", () => {
     const scrollIntoView = vi
       .spyOn(Element.prototype, "scrollIntoView")

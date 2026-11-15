@@ -115,6 +115,7 @@ export function SignaturePad({
   const generatedId = useId();
   const baseId = id ?? `signature-${generatedId}`;
   const hintId = `${baseId}-hint`;
+  const labelId = `${baseId}-label`;
   const errorId = `${baseId}-error`;
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -304,14 +305,23 @@ export function SignaturePad({
 
   return (
     // The pad as a whole is the marked field: a form's FormErrorAlert jumps
-    // to the first `aria-invalid` element, and a canvas (role img) cannot
-    // carry it (#5217).
+    // to the first marked element, and a canvas (role img) cannot carry
+    // `aria-invalid` (#5217); a group cannot either, so the mark is
+    // `data-form-invalid`. The group carries the field's name and error and
+    // is focusable from code only: a failed submit moves the focus here and
+    // reads both (#7111).
     <div
       className="space-y-2"
       id={baseId}
-      aria-invalid={shownError ? true : undefined}
+      role="group"
+      tabIndex={-1}
+      aria-labelledby={labelId}
+      aria-describedby={shownError ? errorId : undefined}
+      data-form-invalid={shownError ? "true" : undefined}
     >
-      <p className="text-sm font-medium text-gray-700">{labels.label}</p>
+      <p id={labelId} className="text-sm font-medium text-gray-700">
+        {labels.label}
+      </p>
       <p id={hintId} className="text-sm text-gray-600">
         {labels.hint}
       </p>

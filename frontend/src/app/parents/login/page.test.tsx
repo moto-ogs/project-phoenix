@@ -1,4 +1,11 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import enMessages from "~/i18n/messages/en.generated";
@@ -528,6 +535,23 @@ describe("ParentLoginPage i18n", () => {
       expect(
         screen.queryByRole("link", { name: "Go to the school login" }),
       ).not.toBeInTheDocument();
+    });
+
+    // #7111: focus stayed in the password field, nothing carried aria-invalid.
+    it("marks both credential fields and focuses the e-mail after a wrong password", async () => {
+      mocks.login.mockRejectedValue(
+        await refusal(401, "care.invalid_credentials"),
+      );
+
+      await submitLogin();
+
+      const email = await screen.findByLabelText(/^Email address/);
+      await waitFor(() => expect(email).toHaveFocus());
+      expect(email).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByLabelText(/^Password/)).toHaveAttribute(
+        "aria-invalid",
+        "true",
+      );
     });
 
     // The alert leads to the reset, with the address already typed (#7106).

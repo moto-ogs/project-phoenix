@@ -95,6 +95,28 @@ describe("Elternsprechtag in moto schule (#4801)", () => {
     expect(screen.getByRole("button", { name: /Drucken/ })).toBeInTheDocument();
   });
 
+  // #7111: the day opened above the list while the focus stayed on the row.
+  it("focuses the heading of the chosen day, and the list after it closes", () => {
+    mockSearch.value = "sprechtag=5";
+    mockList(["2a"], [day]);
+    const { rerender } = renderPage();
+    // A day named in the address on load is no step: the focus stays.
+    const detail = screen.getByRole("heading", { name: /am 12\.11\.2026/ });
+    expect(detail).not.toHaveFocus();
+
+    mockSearch.value = "";
+    rerender(<SchoolParentConferencePage />);
+    expect(
+      screen.getByRole("heading", { name: "Meine Elternsprechtage" }),
+    ).toHaveFocus();
+
+    mockSearch.value = "sprechtag=5";
+    rerender(<SchoolParentConferencePage />);
+    expect(
+      screen.getByRole("heading", { name: /am 12\.11\.2026/ }),
+    ).toHaveFocus();
+  });
+
   it("offers no new day without an assigned class", () => {
     mockList([], []);
     renderPage();

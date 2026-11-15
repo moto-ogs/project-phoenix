@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -205,6 +211,46 @@ describe("ParentSepaMandateView", () => {
         name: /Ich bin Inhaberin oder Inhaber dieses Kontos/,
       }),
     ).not.toBeChecked();
+  });
+
+  // #7111: each step replaced the last one without moving the focus.
+  it("focuses the heading of each new step", async () => {
+    mocks.fetch.mockResolvedValueOnce(open).mockResolvedValueOnce(open);
+    mocks.preview.mockResolvedValue(text);
+    mocks.grant.mockResolvedValue(granted);
+    mocks.revoke.mockResolvedValue({
+      ...granted,
+      mandate: { ...granted.mandate!, revokedOn: "2026-09-10" },
+    });
+    renderView();
+    await fillAccount();
+    // Loading the page is no step: nothing takes the focus.
+    expect(document.activeElement).toBe(document.body);
+
+    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    expect(
+      await screen.findByRole("heading", {
+        name: "Schritt 2 von 2: Mandat bestätigen",
+      }),
+    ).toHaveFocus();
+
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: /Ich bin Inhaberin oder Inhaber dieses Kontos/,
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Mandat erteilen" }));
+    expect(
+      await screen.findByRole("heading", { name: "Ihr Mandat" }),
+    ).toHaveFocus();
+
+    fireEvent.click(screen.getByRole("button", { name: "Mandat widerrufen" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Widerrufen" }));
+    const first = await screen.findByRole("heading", {
+      name: "Schritt 1 von 2: Konto angeben",
+    });
+    await waitFor(() => expect(first).toHaveFocus());
   });
 
   it("revokes the mandate after a confirmation", async () => {

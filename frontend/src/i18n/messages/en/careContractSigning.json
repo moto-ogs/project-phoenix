@@ -31,6 +31,7 @@
   "earlyStart": "Care should start before the withdrawal period ends.",
   "earlyStartHint": "If you withdraw later, you pay for the care up to then on a pro-rata basis.",
   "signatureRequired": "Please sign and confirm your signature.",
+  "checkFields": "Please check the marked fields.",
   "submit": "Sign the contract",
   "submitting": "Signing …",
   "submitObject": "the signature",

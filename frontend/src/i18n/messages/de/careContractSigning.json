@@ -31,6 +31,7 @@
   "earlyStart": "Die Betreuung soll schon vor dem Ende der Widerrufsfrist beginnen.",
   "earlyStartHint": "Widerrufen Sie später, zahlen Sie die Betreuung bis dahin anteilig.",
   "signatureRequired": "Bitte unterschreiben Sie und bestätigen Sie die Unterschrift.",
+  "checkFields": "Bitte prüfen Sie die markierten Felder.",
   "submit": "Vertrag verbindlich unterschreiben",
   "submitting": "Wird unterschrieben …",
   "submitObject": "die Unterschrift",
