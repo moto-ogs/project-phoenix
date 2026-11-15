@@ -109,5 +109,10 @@
   "traeger_staff_release_exists": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "traeger_staff_release_in_use": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "traeger_staff_release_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
-  "traeger_staff_release_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane."
+  "traeger_staff_release_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
+  "shift_overlaps_other_site": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "shift_planning_off": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "shift_working_time_warning": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "traeger_planning_site_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
+  "traeger_planning_shift_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane."
 }

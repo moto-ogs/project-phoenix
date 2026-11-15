@@ -164,6 +164,7 @@ const TRAEGER_PAGE_TITLES: ReadonlyArray<
   ["/zeitvergleich", "Länger als gebucht"],
   ["/dokumente", "Dokumente"],
   ["/personal/abwesenheitsarten", "Abwesenheitsarten"],
+  ["/personal/einsatzplanung", "Einsatzplanung"],
   ["/personal", "Personalakten"],
   ["/nachweise", "Personalnachweise"],
   // Die drei Bereiche der Abrechnung (#5145): die genaueren Adressen zuerst,

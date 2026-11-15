@@ -2,6 +2,8 @@ package owners
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
@@ -66,6 +68,31 @@ func NewShiftMoveAudit(events deviationEventLog) func(context.Context, workforce
 			StaffShiftID: &moved.StaffShiftID, SubjectStaffID: &moved.SubjectStaffID, RelatedStaffID: moved.RelatedStaffID,
 			ActorAccountID: moved.ActorAccountID, EventType: auditModels.DeviationEventShiftMoved,
 			OldValue: moved.OldValue, NewValue: moved.NewValue,
+		})
+	}
+}
+
+// NewWorkingTimeOverrideAudit stores Workforce's entry for a shift planned
+// despite a working-time warning (#4708) as a shift-anchored deviation event
+// with the planner's reason; nil events skip it.
+func NewWorkingTimeOverrideAudit(events deviationEventLog) func(context.Context, workforce.ShiftWorkingTimeOverride) error {
+	if events == nil {
+		return nil
+	}
+	return func(ctx context.Context, override workforce.ShiftWorkingTimeOverride) error {
+		value, err := json.Marshal(map[string]any{"warnings": override.Warnings, "planned_by_staff_id": override.ActorStaffID})
+		if err != nil {
+			return fmt.Errorf("encode working-time override: %w", err)
+		}
+		var reason *string
+		if override.Reason != "" {
+			reason = &override.Reason
+		}
+		return events.Create(ctx, &auditModels.DeviationEvent{
+			OccurrenceDate: auditModels.Date(override.OccurrenceDate), StartTime: override.StartTime,
+			StaffShiftID: &override.StaffShiftID, SubjectStaffID: &override.SubjectStaffID,
+			ActorAccountID: override.ActorAccountID, EventType: auditModels.DeviationEventWorkingTimeOverride,
+			NewValue: value, Reason: reason,
 		})
 	}
 }

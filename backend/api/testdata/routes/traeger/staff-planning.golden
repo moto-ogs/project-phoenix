@@ -1,0 +1,5 @@
+DELETE /traeger/staff-planning/records/{id}/schools/{schoolId}/shifts/{shiftId}
+GET /traeger/staff-planning/
+GET /traeger/staff-planning/future-shifts
+POST /traeger/staff-planning/records/{id}/shifts
+PUT /traeger/staff-planning/records/{id}/shifts/{shiftId}

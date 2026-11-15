@@ -397,6 +397,22 @@
       "legacy": "workforce.shift_overlap"
     },
     {
+      "code": "workforce.shift_overlaps_other_site",
+      "class": "business_rejection",
+      "parameters": [
+        "start",
+        "end",
+        "day"
+      ],
+      "legacy": "workforce.shift_overlaps_other_site"
+    },
+    {
+      "code": "workforce.shift_planning_off",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.shift_planning_off"
+    },
+    {
       "code": "workforce.shift_series_no_occurrences",
       "class": "input",
       "parameters": [],
@@ -425,6 +441,12 @@
       "class": "business_rejection",
       "parameters": [],
       "legacy": "workforce.shift_type_inactive"
+    },
+    {
+      "code": "workforce.shift_working_time_warning",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.shift_working_time_warning"
     },
     {
       "code": "workforce.staff_kept_by_traeger",
@@ -548,6 +570,18 @@
         "day"
       ],
       "legacy": "workforce.traeger_holiday_week_school_override"
+    },
+    {
+      "code": "workforce.traeger_planning_shift_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_planning_shift_not_found"
+    },
+    {
+      "code": "workforce.traeger_planning_site_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_planning_site_invalid"
     },
     {
       "code": "workforce.traeger_proof_invalid",

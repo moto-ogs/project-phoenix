@@ -170,6 +170,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (a *StaffAdmin) TraegerStaffPlanning(collaborators TraegerStaffPorts, sites TraegerShiftSites) TraegerStaffPlanning {\n\tif sites == nil {\n\t\tpanic(\"workforce traeger planning: the Dienstplan of the schools is required\")\n\t}\n\treturn a.traeger.TraegerStaffPlanning(collaborators, sites)\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/workforce/StaffAdmin.TraegerStaffPlanning",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
       "evidence": "func (a *StaffAdmin) TraegerStaffRecords(collaborators TraegerStaffPorts) TraegerStaffRecords {\n\treturn a.traeger.TraegerStaffRecords(collaborators)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/workforce/StaffAdmin.TraegerStaffRecords",
@@ -1213,7 +1220,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p staffShiftPlanning) CreateSeries(ctx context.Context, input workforce.CreateStaffShiftSeries) (workforce.StaffShiftSeriesResult, error) {\n\tseries, err := seriesInputToModel(input.StaffShiftSeriesInput)\n\tif err != nil {\n\t\treturn workforce.StaffShiftSeriesResult{}, err\n\t}\n\tseries.CreatedBy = input.ActorStaffID\n\tresult, err := p.deps.Series.CreateSeries(ctx, series)\n\tif err != nil {\n\t\treturn workforce.StaffShiftSeriesResult{}, mapPlanningError(err)\n\t}\n\treturn seriesResultToCapability(result), nil\n}",
+      "evidence": "func (p staffShiftPlanning) CreateSeries(ctx context.Context, input workforce.CreateStaffShiftSeries) (workforce.StaffShiftSeriesResult, error) {\n\tseries, err := seriesInputToModel(input.StaffShiftSeriesInput)\n\tif err != nil {\n\t\treturn workforce.StaffShiftSeriesResult{}, err\n\t}\n\tseries.CreatedBy = input.ActorStaffID\n\tseries.WorkingTime = input.WorkingTime\n\tresult, err := p.deps.Series.CreateSeries(ctx, series)\n\tif err != nil {\n\t\treturn workforce.StaffShiftSeriesResult{}, mapPlanningError(err)\n\t}\n\treturn seriesResultToCapability(result), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/planning/staffShiftPlanning.CreateSeries",
       "owner": "modules/workforce"

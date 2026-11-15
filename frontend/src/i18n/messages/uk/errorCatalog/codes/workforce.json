@@ -109,5 +109,10 @@
   "traeger_staff_release_exists": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "traeger_staff_release_in_use": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "traeger_staff_release_invalid": "Не вдалося зберегти: {object}. Перевірте введені дані.",
-  "traeger_staff_release_not_found": "Не вдалося зберегти: {object}. Перевірте введені дані."
+  "traeger_staff_release_not_found": "Не вдалося зберегти: {object}. Перевірте введені дані.",
+  "shift_overlaps_other_site": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "shift_planning_off": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "shift_working_time_warning": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "traeger_planning_site_invalid": "Не вдалося зберегти: {object}. Перевірте введені дані.",
+  "traeger_planning_shift_not_found": "Не вдалося зберегти: {object}. Перевірте введені дані."
 }

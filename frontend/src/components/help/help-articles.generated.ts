@@ -410,6 +410,8 @@ import type { traegerSharedDocumentsTopic as authored_traegerSharedDocumentsTopi
 
 import type { traegerStaffContractsTopic as authored_traegerStaffContractsTopic } from "./articles/traeger-staff-contracts";
 
+import type { traegerStaffPlanningTopic as authored_traegerStaffPlanningTopic } from "./articles/traeger-staff-planning";
+
 import type { traegerStaffProofsTopic as authored_traegerStaffProofsTopic } from "./articles/traeger-staff-proofs";
 
 import type { traegerStaffRecordsTopic as authored_traegerStaffRecordsTopic } from "./articles/traeger-staff-records";
@@ -2140,6 +2142,10 @@ export const dutyRosterTopic = function dutyRosterTopic(): HelpTopic {
     ],
     differences: [
       "Eine neue Schicht auf einem Schließtag löst eine Rückfrage aus.",
+      // #4708: die Arbeitszeitregeln des Trägers über alle Einsatzorte.
+      "Arbeitet die Person auch an einer anderen Schule Ihres Trägers, zählt moto beide Schulen zusammen. Verletzt eine Schicht eine Arbeitszeitregel, fragt moto nach. Sie ändern die Zeiten oder wählen `Trotzdem planen`, wo nötig mit einer `Begründung`.",
+      "Eine Schicht zur selben Zeit an einer anderen Schule speichert moto nicht.",
+      "Eine Schicht mit `Vom Träger geplant` hat die Personalverwaltung Ihres Trägers eingetragen.",
       // #7021: Abwesenheiten von vor #6847 übernimmt die Leitung selbst.
       "Steht über dem Plan `Abwesenheiten fehlen im Plan`? Diese Abwesenheiten gelten schon, die Personen stehen aber noch im Plan. Wählen Sie `In den Plan übernehmen` oder `Alle übernehmen`. Abgesagte Schichten und Vertretungen bleiben, wie sie sind. Soll die Person doch arbeiten, wählen Sie `Ausblenden`.",
       "Ist ein Tag nicht vollständig durch Schichten abgedeckt, weist moto darauf hin.",
@@ -14149,6 +14155,88 @@ export const traegerStaffContractsTopic =
       related: [HELP_TOPICS.traegerStaffRecords],
     };
   } satisfies typeof authored_traegerStaffContractsTopic;
+
+/**
+ * `/traeger/personal/einsatzplanung` (#4708, ADR 0242): die Woche aller
+ * Personen mit Personalakte über alle Einsatzorte, das Planen einer Schicht
+ * im Dienstplan einer Schule, die Prüfung der Arbeitszeitregeln und der
+ * Schalter `Einsatzplanung in moto` in den Einstellungen.
+ */
+export const traegerStaffPlanningTopic =
+  function traegerStaffPlanningTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerStaffPlanning,
+      title: "Einsatzplanung über alle Schulen",
+      question: "Wie plane ich Personal über alle Schulen?",
+      summary:
+        "Sie sehen die Woche jeder Person an allen ihren Schulen und planen Schichten dort. moto prüft dabei die Arbeitszeitregeln über alle Schulen.",
+      group: "personal",
+      audience: "traeger",
+      icon: "CalendarCheck",
+      requirements: [
+        "Sie haben die Rolle `Personal`.",
+        "Die Person hat eine Personalakte und ist an der Schule beschäftigt.",
+      ],
+      instructionGroups: [
+        {
+          title: "Eine Schicht planen",
+          steps: [
+            "Wählen Sie in der Navigation `Einsatzplanung`.",
+            "Wählen Sie mit den Pfeilen die Woche.",
+            "Wählen Sie in der Zeile der Person den freien Tag.",
+            "Wählen Sie den `Einsatzort` und tragen Sie `Beginn`, `Ende` und `Pause` ein.",
+            "Wählen Sie `Planen`.",
+          ],
+        },
+        {
+          title: "Eine Schicht ändern oder löschen",
+          steps: [
+            "Wählen Sie die Schicht in der Woche.",
+            "Ändern Sie die Zeiten und wählen Sie `Speichern`.",
+            "Zum Löschen wählen Sie `Schicht löschen` und bestätigen.",
+          ],
+        },
+        {
+          title: "Wenn moto vor einer Regel warnt",
+          steps: [
+            "moto zeigt jeden Hinweis in einem Satz, etwa zu wenig Ruhezeit.",
+            "Ändern Sie die Zeiten. Oder wählen Sie `Trotzdem planen`.",
+            "Wo moto es verlangt, schreiben Sie eine `Begründung`.",
+          ],
+        },
+        {
+          title: "Die Regeln ändern",
+          steps: [
+            "Wählen Sie `Einstellungen` und dort `Einsatzplanung`.",
+            "Stellen Sie die Stunden am Tag, die Ruhezeit und die Pausen ein.",
+          ],
+        },
+      ],
+      steps: [],
+      result:
+        "Die Schicht steht sofort im Dienstplan der Schule. Die Schule sieht, dass der Träger sie geplant hat. Eine Begründung steht im Änderungsprotokoll der Schule.",
+      notes: [
+        "moto zählt alle Schulen der Person zusammen: die Stunden am Tag, die Ruhezeit, die Pausen und das Soll der Woche.",
+        "Dieselbe Prüfung läuft, wenn eine Schule selbst eine Schicht plant.",
+        "Das Soll kommt aus dem Arbeitsvertrag. Feiertage und Schließtage zählen nicht.",
+        "Jedes Anzeigen der Woche steht im Zugriffsprotokoll jeder Schule.",
+        "moto prüft die Regeln als Hilfe. Ob eine Planung erlaubt ist, entscheiden Sie.",
+      ],
+      differences: [
+        "Oben steht `Einsatzplanung in moto ist aus`: Ihr Träger plant außerhalb von moto. Neue Schichten sind dann überall gesperrt. Geplante Schichten bleiben.",
+        "Eine Schule fehlt in der Woche: moto konnte sie gerade nicht lesen. Laden Sie die Seite später neu.",
+      ],
+      troubleshootingDetails: [
+        "„Die Person arbeitet … schon an einem anderen Einsatzort“: Zur selben Zeit hat die Person eine Schicht an einer anderen Schule. Wählen Sie eine andere Zeit.",
+        "Eine Person fehlt: Sie hat keine Personalakte, oder sie ist an keiner Schule mehr beschäftigt.",
+      ],
+      related: [
+        HELP_TOPICS.traegerStaffRecords,
+        HELP_TOPICS.traegerStaffContracts,
+        HELP_TOPICS.traegerSettings,
+      ],
+    };
+  } satisfies typeof authored_traegerStaffPlanningTopic;
 
 /**
  * `/traeger/nachweise` (#4707, ADR 0238): Nachweise der Personalakten mit

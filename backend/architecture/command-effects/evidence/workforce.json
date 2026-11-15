@@ -7305,8 +7305,32 @@
       "target_owner": ""
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.ApplyCancellation",
+      "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.ApplyCancellation",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.CreateSeries",
+      "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.CreateSeries",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.CreateShift",
+      "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.CreateShift",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.MoveShift",
-      "binding_digest": "8742342a75357e83ed1e4b699216606e",
+      "binding_digest": "9b05accbdb2ef86ae0bda3932f538672",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.MoveShift",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
@@ -7327,6 +7351,22 @@
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.IndexCalendarWeeks",
       "target_owner": "timetable-activities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.SplitSeries",
+      "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.SplitSeries",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.UpdateShift",
+      "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.UpdateShift",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce.Capability.ListStaffTargetOverrides",
@@ -7567,6 +7607,22 @@
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMemberNames.ListTraegerMemberNames",
       "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.ChangeShift",
+      "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffPlanning.ChangeShift",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.PlanShift",
+      "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffPlanning.PlanShift",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinSchool",
@@ -15273,6 +15329,14 @@
       "target_owner": "timetable-activities"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.StaffPlanningRules",
+      "binding_digest": "715b4cd2941ccef7b56203d27e4e49dc",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.PlanRuleSettings.StaffPlanningRules",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.StaffPlanningRules",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.CapStaffShiftSeries",
       "binding_digest": "7a6c8ff404e55844be841dd54eba4baf",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.Records.CapStaffShiftSeries",
@@ -16017,9 +16081,57 @@
       "target_owner": "timetable-activities"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftSeriesService.CreateSeries",
+      "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftSeriesService.CreateSeries",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftSeriesService.SplitSeries",
+      "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftSeriesService.SplitSeries",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.ApplyCancellation",
+      "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.ApplyCancellation",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.CreateShift",
+      "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.CreateShift",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.MoveShift",
-      "binding_digest": "8742342a75357e83ed1e4b699216606e",
+      "binding_digest": "9b05accbdb2ef86ae0bda3932f538672",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.MoveShift",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.UpdateShift",
+      "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.UpdateShift",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.UpdateShiftWithOptions",
+      "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.UpdateShiftWithOptions",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
       "target_owner": "audit-platform"

@@ -64,11 +64,14 @@ const CodeWorkforceShiftChanged = "workforce.shift_changed"
 const CodeWorkforceShiftDuplicate = "workforce.shift_duplicate"
 const CodeWorkforceShiftHasReplacements = "workforce.shift_has_replacements"
 const CodeWorkforceShiftOverlap = "workforce.shift_overlap"
+const CodeWorkforceShiftOverlapsOtherSite = "workforce.shift_overlaps_other_site"
+const CodeWorkforceShiftPlanningOff = "workforce.shift_planning_off"
 const CodeWorkforceShiftSeriesNoOccurrences = "workforce.shift_series_no_occurrences"
 const CodeWorkforceShiftSeriesOutsidePeriod = "workforce.shift_series_outside_period"
 const CodeWorkforceShiftSeriesWeekCycleMissing = "workforce.shift_series_week_cycle_missing"
 const CodeWorkforceShiftTypeArchived = "workforce.shift_type_archived"
 const CodeWorkforceShiftTypeInactive = "workforce.shift_type_inactive"
+const CodeWorkforceShiftWorkingTimeWarning = "workforce.shift_working_time_warning"
 const CodeWorkforceStaffKeptByTraeger = "workforce.staff_kept_by_traeger"
 const CodeWorkforceStaffProfileMissing = "workforce.staff_profile_missing"
 const CodeWorkforceStaffSollKeptByTraeger = "workforce.staff_soll_kept_by_traeger"
@@ -87,6 +90,8 @@ const CodeWorkforceTraegerContractMonthClosed = "workforce.traeger_contract_mont
 const CodeWorkforceTraegerContractNotFound = "workforce.traeger_contract_not_found"
 const CodeWorkforceTraegerContractOverlap = "workforce.traeger_contract_overlap"
 const CodeWorkforceTraegerHolidayWeekSchoolOverride = "workforce.traeger_holiday_week_school_override"
+const CodeWorkforceTraegerPlanningShiftNotFound = "workforce.traeger_planning_shift_not_found"
+const CodeWorkforceTraegerPlanningSiteInvalid = "workforce.traeger_planning_site_invalid"
 const CodeWorkforceTraegerProofInvalid = "workforce.traeger_proof_invalid"
 const CodeWorkforceTraegerProofMappingInvalid = "workforce.traeger_proof_mapping_invalid"
 const CodeWorkforceTraegerProofNotFound = "workforce.traeger_proof_not_found"
@@ -177,11 +182,14 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforceShiftDuplicate, "business_rejection"},
 	{CodeWorkforceShiftHasReplacements, "business_rejection"},
 	{CodeWorkforceShiftOverlap, "business_rejection"},
+	{CodeWorkforceShiftOverlapsOtherSite, "business_rejection"},
+	{CodeWorkforceShiftPlanningOff, "business_rejection"},
 	{CodeWorkforceShiftSeriesNoOccurrences, "input"},
 	{CodeWorkforceShiftSeriesOutsidePeriod, "input"},
 	{CodeWorkforceShiftSeriesWeekCycleMissing, "input"},
 	{CodeWorkforceShiftTypeArchived, "business_rejection"},
 	{CodeWorkforceShiftTypeInactive, "business_rejection"},
+	{CodeWorkforceShiftWorkingTimeWarning, "business_rejection"},
 	{CodeWorkforceStaffKeptByTraeger, "business_rejection"},
 	{CodeWorkforceStaffProfileMissing, "business_rejection"},
 	{CodeWorkforceStaffSollKeptByTraeger, "business_rejection"},
@@ -200,6 +208,8 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforceTraegerContractNotFound, "input"},
 	{CodeWorkforceTraegerContractOverlap, "business_rejection"},
 	{CodeWorkforceTraegerHolidayWeekSchoolOverride, "business_rejection"},
+	{CodeWorkforceTraegerPlanningShiftNotFound, "input"},
+	{CodeWorkforceTraegerPlanningSiteInvalid, "input"},
 	{CodeWorkforceTraegerProofInvalid, "input"},
 	{CodeWorkforceTraegerProofMappingInvalid, "input"},
 	{CodeWorkforceTraegerProofNotFound, "input"},
