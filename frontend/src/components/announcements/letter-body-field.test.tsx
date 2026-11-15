@@ -4,16 +4,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LetterBodyField, placeholderNames } from "./letter-body-field";
 import type { LetterPlaceholder } from "~/lib/parent-announcements-api";
+import { unavailableApiError } from "~/lib/api-error";
 
 const PLACEHOLDERS: LetterPlaceholder[] = [
   { name: "vorname", label: "Vorname des Kindes", example: "Lina" },
   { name: "gruppe", label: "Gruppe", example: "Füchse" },
 ];
 
-const { previewLetter } = vi.hoisted(() => ({ previewLetter: vi.fn() }));
+const { previewLetter, useSWRAuth, reloadPlaceholders } = vi.hoisted(() => ({
+  previewLetter: vi.fn(),
+  useSWRAuth: vi.fn(),
+  reloadPlaceholders: vi.fn(),
+}));
 
 vi.mock("~/lib/swr", () => ({
-  useSWRAuth: () => ({ data: PLACEHOLDERS }),
+  useSWRAuth,
 }));
 
 vi.mock("~/lib/parent-announcements-api", async (importOriginal) => ({
@@ -40,6 +45,11 @@ function Harness({ initial }: Readonly<{ initial: string }>) {
 
 beforeEach(() => {
   previewLetter.mockReset();
+  reloadPlaceholders.mockReset();
+  useSWRAuth.mockReturnValue({
+    data: PLACEHOLDERS,
+    mutate: reloadPlaceholders,
+  });
 });
 
 describe("LetterBodyField", () => {
@@ -104,6 +114,71 @@ describe("LetterBodyField", () => {
     expect(
       screen.queryByRole("region", { name: "Vorschau des Briefs" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("replaces an explicitly chosen child when the class options change", async () => {
+    previewLetter.mockImplementation(async (_body: string, id: string) => ({
+      body: `Brief für Kind ${id}`,
+      child: { student_id: id },
+    }));
+    const props = {
+      value: "Hallo {{vorname}}",
+      onChange: vi.fn(),
+      previewChildren: [
+        { value: "7", label: "Lina" },
+        { value: "8", label: "Emil" },
+      ],
+    };
+    const view = render(<LetterBodyField {...props} />);
+    expect(await screen.findByText("Brief für Kind 7")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("combobox", { name: "Kind für die Vorschau" }),
+    );
+    fireEvent.click(screen.getByRole("option", { name: "Emil" }));
+    expect(await screen.findByText("Brief für Kind 8")).toBeInTheDocument();
+
+    view.rerender(
+      <LetterBodyField
+        {...props}
+        previewChildren={[{ value: "9", label: "Mia" }]}
+      />,
+    );
+    expect(
+      screen.getByRole("combobox", { name: "Kind für die Vorschau" }),
+    ).toHaveTextContent("Mia");
+    expect(screen.queryByText("Brief für Kind 8")).not.toBeInTheDocument();
+    expect(await screen.findByText("Brief für Kind 9")).toBeInTheDocument();
+    expect(previewLetter).toHaveBeenLastCalledWith(props.value, "9");
+
+    view.rerender(<LetterBodyField {...props} previewChildren={[]} />);
+    expect(
+      screen.getByText(/Noch kein Kind in der Auswahl/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Brief für Kind 9")).not.toBeInTheDocument();
+  });
+
+  it("shows a placeholder load error and retries the failed load", async () => {
+    useSWRAuth.mockReturnValue({
+      error: unavailableApiError(new TypeError("Failed to fetch")),
+      mutate: reloadPlaceholders,
+    });
+    const view = render(<Harness initial="Liebe Eltern" />);
+    const retry = await screen.findByRole("button", { name: /Wiederholen/ });
+    expect(screen.getByRole("alert")).toHaveTextContent(/Platzhalter/);
+    fireEvent.click(retry);
+    expect(reloadPlaceholders).toHaveBeenCalledOnce();
+
+    useSWRAuth.mockReturnValue({
+      data: PLACEHOLDERS,
+      mutate: reloadPlaceholders,
+    });
+    view.rerender(<Harness initial="Liebe Eltern" />);
+    expect(
+      await screen.findByRole("button", { name: /Vorname des Kindes/ }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+    );
   });
 });
 

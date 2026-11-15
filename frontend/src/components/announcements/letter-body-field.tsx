@@ -20,6 +20,7 @@ import {
 } from "~/lib/parent-announcements-api";
 import { useSWRAuth } from "~/lib/swr";
 import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 
 /** A child the preview can show. */
 interface LetterPreviewChild {
@@ -43,6 +44,7 @@ interface LetterBodyFieldProps {
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly error?: string;
+  readonly disabled?: boolean;
   /** API base of the portal; the OGS default when absent. */
   readonly apiBase?: string;
   /** Children whose letter the preview can show. */
@@ -63,6 +65,7 @@ export function LetterBodyField({
   value,
   onChange,
   error,
+  disabled = false,
   apiBase,
   previewChildren,
   previewChildrenLoading = false,
@@ -75,7 +78,11 @@ export function LetterBodyField({
   const caret = useRef<{ start: number; end: number } | null>(null);
   const labelId = useId();
 
-  const { data: placeholders } = useSWRAuth<LetterPlaceholder[]>(
+  const {
+    data: placeholders,
+    error: placeholdersError,
+    mutate: reloadPlaceholders,
+  } = useSWRAuth<LetterPlaceholder[]>(
     parentAnnouncementKeys.letterPlaceholders(
       apiBase === undefined ? "ogs" : "school",
     ),
@@ -84,6 +91,11 @@ export function LetterBodyField({
         ? fetchLetterPlaceholders()
         : fetchLetterPlaceholders(apiBase),
     { revalidateOnFocus: false },
+  );
+  const placeholdersLoadError = useSwrLoadError(
+    placeholdersError,
+    "die Liste der Platzhalter",
+    () => reloadPlaceholders(),
   );
   const known = useMemo(
     () => new Set((placeholders ?? []).map((p) => p.name)),
@@ -119,6 +131,7 @@ export function LetterBodyField({
         name="body"
         label="Text"
         error={error}
+        disabled={disabled}
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
@@ -136,6 +149,10 @@ export function LetterBodyField({
         <SectionLabel as="p" id={labelId}>
           Für jedes Kind einsetzen
         </SectionLabel>
+        <LoadErrorAlert
+          error={placeholdersLoadError}
+          actionLayout="responsive"
+        />
         <ul aria-labelledby={labelId} className="flex flex-wrap gap-2">
           {(placeholders ?? []).map((p) => (
             <li key={p.name}>
@@ -143,6 +160,7 @@ export function LetterBodyField({
                 type="button"
                 variant="outline"
                 size="compact"
+                disabled={disabled}
                 tooltip={`Setzt „${p.label}“ dort in den Text, wo Sie schreiben.`}
                 onClick={() => insert(p.name)}
                 className="gap-1"
@@ -197,7 +215,10 @@ function LetterPreviewPanel({
   const [retryKey, setRetryKey] = useState(0);
 
   // The first child is the default, so the preview shows a letter at once.
-  const chosen = studentId || (options[0]?.value ?? "");
+  const chosen = options.some((option) => option.value === studentId)
+    ? studentId
+    : (options[0]?.value ?? "");
+  const currentPreview = preview?.child.student_id === chosen ? preview : null;
 
   useEffect(() => {
     if (!chosen) return;
@@ -262,11 +283,11 @@ function LetterPreviewPanel({
             Noch kein Kind in der Auswahl. Die Vorschau zeigt den Brief, sobald
             ein Kind da ist.
           </p>
-        ) : pending && !preview ? (
+        ) : pending && !currentPreview ? (
           <SkeletonRows rows={3} />
-        ) : preview ? (
+        ) : currentPreview ? (
           <p className="text-sm leading-6 whitespace-pre-line text-gray-900">
-            {preview.body}
+            {currentPreview.body}
           </p>
         ) : null}
       </div>

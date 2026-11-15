@@ -356,6 +356,7 @@ export default function SchoolParentLettersPage() {
                         value={draft.body}
                         onChange={(body) => update({ body })}
                         error={formErrors.fieldError("body")}
+                        disabled={fieldsDisabled}
                         apiBase={SCHOOL_PARENT_LETTERS_BASE}
                         previewChildren={previewChildren}
                         previewChildrenLoading={previewChildrenLoading}

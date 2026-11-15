@@ -50,6 +50,7 @@ import { unavailableApiError } from "~/lib/api-error";
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { Announcement } from "~/lib/parent-announcements-api";
 import SchoolParentLettersPage from "./page";
+import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 
 const sentLetter = {
   id: "11",
@@ -64,6 +65,14 @@ const sentLetter = {
 
 function mockData(classes: string[], letters: Announcement[]) {
   mockUseSWRAuth.mockImplementation((key: string | null) => {
+    if (key === parentAnnouncementKeys.letterPlaceholders("school")) {
+      return {
+        data: [
+          { name: "vorname", label: "Vorname des Kindes", example: "Lina" },
+        ],
+        mutate: mockMutate,
+      };
+    }
     if (key === "school-parent-letter-classes") {
       return {
         data: { classes },
@@ -137,9 +146,14 @@ describe("Elternbriefe in moto schule (#4800)", () => {
     );
   });
 
-  it.each(["Senden", "Wiederholen"])(
-    "retries the created letter via %s after a lost response",
-    async (action) => {
+  it.each([
+    { action: "Senden", kind: "info" },
+    { action: "Wiederholen", kind: "info" },
+    { action: "Senden", kind: "letter" },
+    { action: "Wiederholen", kind: "letter" },
+  ])(
+    "$kind retries the created letter via $action after a lost response",
+    async ({ action, kind }) => {
       mockData(["3b"], []);
       mockCreate.mockResolvedValue({
         ...sentLetter,
@@ -155,6 +169,9 @@ describe("Elternbriefe in moto schule (#4800)", () => {
       fireEvent.click(
         screen.getByRole("button", { name: /Neuer Elternbrief/ }),
       );
+      if (kind === "letter") {
+        fireEvent.click(screen.getByLabelText(/Mit Lesebestätigung/));
+      }
       fireEvent.change(screen.getByLabelText(/Betreff/), {
         target: { value: "Zoobesuch" },
       });
@@ -164,6 +181,17 @@ describe("Elternbriefe in moto schule (#4800)", () => {
       fireEvent.click(screen.getByRole("button", { name: "Senden" }));
       const retry = await screen.findByRole("button", { name: /Wiederholen/ });
       expect(screen.getByLabelText(/Betreff/)).toBeDisabled();
+      expect(screen.getByLabelText(/^Text/)).toBeDisabled();
+      if (kind === "letter") {
+        const insert = screen.getByRole("button", {
+          name: /Platzhalter Vorname des Kindes/,
+        });
+        expect(insert).toBeDisabled();
+        fireEvent.click(insert);
+      }
+      expect(screen.getByLabelText(/^Text/)).toHaveValue(
+        "Wir fahren in den Zoo.",
+      );
       fireEvent.click(
         action === "Wiederholen"
           ? retry
