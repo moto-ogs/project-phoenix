@@ -1,6 +1,6 @@
 DELETE /api/work-time-models/{id}
 GET /api/work-time-models/
-GET /api/work-time-models/assignments
+GET /api/work-time-models/staff-facts
 GET /api/work-time-models/{id}
 POST /api/work-time-models/
 POST /api/work-time-models/{id}/archive

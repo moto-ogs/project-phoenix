@@ -48,9 +48,17 @@ Both operations run through the operation wrapper like every template
 operation. Their observer diagnostics cite this ADR as `approval_adr`; the
 observer only reports measurements.
 
-The assignment keeps the lock protocol of a single assignment and of a
-template edit (`refreshAssignedSchedules`): first every assignee's balance
-gate, ascending, then every staff row, ascending, in the caller's unit of work
+The assignment first holds the template row `FOR SHARE`. A template edit
+updates that row before it reads who is bound and refreshes them, so both
+writers take the template before the people. Without this lock an
+assignment could copy the old pattern while an edit was still open, and the
+edit, reading the bindings before the assignment committed, would leave those
+people on the old Soll. Two assignments share the lock and do not wait for
+each other.
+
+Then the assignment keeps the lock protocol of a single assignment and of a
+template edit (`refreshAssignedSchedules`): every assignee's balance gate,
+ascending, then every staff row, ascending, in the caller's unit of work
 (the canonical order of `tenant.LockClass`). The staff-row lock is the same
 `FindStaffForMutation` the other Workforce writes take; its classification
 stays `debt` with the same digest, and the protocol review ADR 0098 names
@@ -61,8 +69,10 @@ not-found.
 Every other read and write is set-based: one statement each for the bindings,
 the Träger's Soll, the schedule history, the closed months, closing the
 running versions, the binding upsert on `users.staff_employment_profiles`
-(Workforce, #2753) and the new versions. Only the two locks are per person,
-as the issue requires.
+(Workforce, #2753) and the new versions. Only the locks are per person (balance
+gate, staff row with its profile), as the issue requires; the query budget
+`api.workforce.work_time_models.assign` pins the rest for one and for four
+people.
 
 After this ADR enters the base it cannot approve another diagnostic. A
 changed observer assignment or lock binding changes its digest and needs

@@ -1,6 +1,6 @@
 DELETE /api/work-time-models/{id} -> zeiterfassung
 GET /api/work-time-models/ -> zeiterfassung
-GET /api/work-time-models/assignments -> zeiterfassung
+GET /api/work-time-models/staff-facts -> zeiterfassung
 GET /api/work-time-models/{id} -> zeiterfassung
 POST /api/work-time-models/ -> zeiterfassung
 POST /api/work-time-models/{id}/archive -> zeiterfassung

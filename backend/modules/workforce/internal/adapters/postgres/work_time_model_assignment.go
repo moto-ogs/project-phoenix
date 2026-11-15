@@ -82,6 +82,24 @@ func (s *Store) StaffWorkTimeFacts(ctx context.Context, today string) ([]domain.
 	return facts, stats, nil
 }
 
+// ShareLockWorkTimeModel conflicts with the row lock an edit of the
+// template takes. Taken before the staff locks, it orders an assignment and
+// an edit the same way: template first, then the people.
+func (s *Store) ShareLockWorkTimeModel(ctx context.Context, id int64) (bool, domain.OperationStats, error) {
+	db, scope, err := s.database(ctx)
+	if err != nil {
+		return false, domain.OperationStats{}, err
+	}
+	row := &workTimeModelRow{}
+	query := withTenant(db.NewSelect().
+		Model(row).
+		ModelTableExpr(tableWorkTimeModels+` AS "work_time_model"`).
+		Column("work_time_model.id").
+		Where(`"work_time_model".id = ?`, id).
+		For("SHARE"), "work_time_model", scope)
+	return scanOne(ctx, query, "share-lock work-time model")
+}
+
 func (s *Store) StaffWorkTimeModelBindings(ctx context.Context, staffIDs []int64) (map[int64]int64, domain.OperationStats, error) {
 	bindings := make(map[int64]int64, len(staffIDs))
 	if len(staffIDs) == 0 {

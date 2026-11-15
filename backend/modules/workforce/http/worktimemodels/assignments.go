@@ -33,7 +33,7 @@ type AssignResponse struct {
 	ValidFrom         string  `json:"valid_from"`
 }
 
-// staffFacts handles GET /api/work-time-models/assignments.
+// staffFacts handles GET /api/work-time-models/staff-facts.
 func (rs *Resource) staffFacts(w http.ResponseWriter, r *http.Request) {
 	facts, err := rs.catalog.StaffWorkTimeFacts(r.Context())
 	if err != nil {

@@ -16,6 +16,14 @@ type assignmentStore struct {
 	ports.Store
 	kept   []int64
 	writes []string
+	locks  *[]string
+}
+
+func (s *assignmentStore) ShareLockWorkTimeModel(_ context.Context, id int64) (bool, domain.OperationStats, error) {
+	if s.locks != nil {
+		*s.locks = append(*s.locks, "template", string(rune('0'+id)))
+	}
+	return id != 9, domain.OperationStats{}, nil
 }
 
 func (s *assignmentStore) FindWorkTimeModel(_ context.Context, id int64) (domain.WorkTimeModel, bool, domain.OperationStats, error) {
@@ -70,6 +78,7 @@ func (t assignmentTransaction) LockStaffBalance(_ context.Context, staffID int64
 }
 
 func newAssignmentService(store *assignmentStore, locks *[]string) *Service {
+	store.locks = locks
 	return &Service{
 		store: store, transaction: assignmentTransaction{locks: locks}, assignments: assignmentLive{},
 		lockStaffAssignment: func(_ context.Context, staffID int64) error {
@@ -88,8 +97,8 @@ func TestAssignWorkTimeModelLocksAscendingAndWritesOnce(t *testing.T) {
 	result, err := newAssignmentService(store, &locks).AssignWorkTimeModel(context.Background(), workforce.AssignWorkTimeModel{ModelID: 4, StaffIDs: []int64{3, 1, 2, 1}})
 	require.NoError(t, err)
 	assert.Equal(t, []int64{1, 2, 3}, result.Assigned)
-	assert.Equal(t, []string{"balance", "1", "balance", "2", "balance", "3", "row", "1", "row", "2", "row", "3"}, locks,
-		"the order refreshAssignedSchedules and a single assignment take")
+	assert.Equal(t, []string{"template", "4", "balance", "1", "balance", "2", "balance", "3", "row", "1", "row", "2", "row", "3"}, locks,
+		"the template first, as an edit of it takes it; then the people as refreshAssignedSchedules takes them")
 	assert.Equal(t, []string{"close", "bind", "insert"}, store.writes, "one statement per write, whatever the number of people")
 }
 
@@ -101,5 +110,16 @@ func TestAssignWorkTimeModelRefusesASollTheTraegerKeeps(t *testing.T) {
 	var locks []string
 	_, err := newAssignmentService(store, &locks).AssignWorkTimeModel(context.Background(), workforce.AssignWorkTimeModel{ModelID: 4, StaffIDs: []int64{1, 2}})
 	require.ErrorIs(t, err, workforce.ErrStaffSollKeptByTraeger)
+	assert.Empty(t, store.writes)
+}
+
+// An unknown template is refused before any person is locked.
+func TestAssignWorkTimeModelRefusesAnUnknownTemplateBeforeLockingPeople(t *testing.T) {
+	t.Parallel()
+	store := &assignmentStore{}
+	var locks []string
+	_, err := newAssignmentService(store, &locks).AssignWorkTimeModel(context.Background(), workforce.AssignWorkTimeModel{ModelID: 9, StaffIDs: []int64{1}})
+	require.ErrorIs(t, err, workforce.ErrWorkTimeModelNotFound)
+	assert.Equal(t, []string{"template", "9"}, locks)
 	assert.Empty(t, store.writes)
 }

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -103,7 +104,7 @@ func (h *assignmentHarness) assign(modelID int64, validFrom string, staffIDs ...
 
 func (h *assignmentHarness) facts() map[int64]assignmentFact {
 	h.t.Helper()
-	status, data, _ := h.request(http.MethodGet, "/assignments", nil)
+	status, data, _ := h.request(http.MethodGet, "/staff-facts", nil)
 	require.Equal(h.t, http.StatusOK, status)
 	var rows []assignmentFact
 	require.NoError(h.t, json.Unmarshal(data, &rows))
@@ -286,7 +287,7 @@ func TestWorkTimeModelAssignmentFactsQueryBudget(t *testing.T) {
 		queries := counter.Measurement(counter.Queries())
 		assert.Len(t, facts, people)
 		require.Zero(t, counter.WriteRows(), "the read writes nothing")
-		querybudgets.AssertQueryBudget(t, "api.workforce.work_time_models.assignments.facts", queries)
+		querybudgets.AssertQueryBudget(t, "api.workforce.work_time_models.staff_facts", queries)
 		previous = people
 	}
 }
@@ -296,4 +297,36 @@ func sortedIDs(a, b int64) []int64 {
 		return []int64{a, b}
 	}
 	return []int64{b, a}
+}
+
+// The bulk write costs the same statements for one person as for four. Only
+// the locks are per person, as the issue asks: the balance gate, the staff
+// row and its employment profile, taken ascending.
+func TestWorkTimeModelAssignmentQueryBudget(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupIsolatedTestDB(t)
+	h := newAssignmentHarness(t, db)
+	counter := testpkg.CaptureQueries(t, db)
+	for _, people := range []int{1, 4} {
+		template := h.model(fmt.Sprintf("Budget %d", people), budgetWorkTimeModelFields("", 1))
+		staffIDs := make([]int64, 0, people)
+		for index := range people {
+			staffIDs = append(staffIDs, testpkg.CreateTestStaff(t, db, "Bulk", fmt.Sprintf("%d-%d", people, index)).ID)
+		}
+		counter.Reset()
+		status, result, _ := h.assign(template.ID, "", staffIDs...)
+		require.Equal(t, http.StatusOK, status)
+		require.Len(t, result.Assigned, people)
+		locks := counter.Matching(isPersonLock)
+		assert.Len(t, locks, 3*people, "three locks per person: balance gate, staff row, employment profile")
+		shared := counter.Matching(func(sql string) bool { return !isPersonLock(sql) })
+		querybudgets.AssertQueryBudget(t, "api.workforce.work_time_models.assign", counter.Measurement(shared))
+	}
+}
+
+// isPersonLock names the statements a single person's lock costs.
+func isPersonLock(sql string) bool {
+	return strings.Contains(sql, "pg_advisory_xact_lock") ||
+		strings.Contains(sql, "for no key update") ||
+		(strings.HasPrefix(sql, "select") && strings.Contains(sql, `"profile"."staff_notes"`))
 }

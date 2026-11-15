@@ -61,6 +61,17 @@ func (s *Service) AssignWorkTimeModel(ctx context.Context, input workforce.Assig
 
 // assignWorkTimeModel is AssignWorkTimeModel inside its unit of work.
 func (s *Service) assignWorkTimeModel(ctx context.Context, modelID int64, staffIDs []int64, validFrom string, stats *domain.OperationStats) (workforce.WorkTimeModelAssignment, error) {
+	// The template first, as an edit of it takes it: an edit that has not
+	// committed yet holds the assignment here, and an edit after it finds
+	// the new members bound and refreshes them too.
+	found, lockStats, err := s.store.ShareLockWorkTimeModel(ctx, modelID)
+	stats.Add(lockStats)
+	if err != nil {
+		return workforce.WorkTimeModelAssignment{}, err
+	}
+	if !found {
+		return workforce.WorkTimeModelAssignment{}, domain.ErrWorkTimeModelNotFound
+	}
 	if err := s.lockAssignees(ctx, staffIDs); err != nil {
 		return workforce.WorkTimeModelAssignment{}, err
 	}
@@ -75,11 +86,11 @@ func (s *Service) assignWorkTimeModel(ctx context.Context, modelID int64, staffI
 	if model.ArchivedAt != nil {
 		return workforce.WorkTimeModelAssignment{}, workforce.ErrWorkTimeModelArchived
 	}
-	targets, unchanged, err := s.splitAssignees(ctx, model.ID, staffIDs, stats)
+	today := s.clock.Today()
+	targets, unchanged, err := s.splitAssignees(ctx, model.ID, staffIDs, today, stats)
 	if err != nil {
 		return workforce.WorkTimeModelAssignment{}, err
 	}
-	today := s.clock.Today()
 	result := workforce.WorkTimeModelAssignment{Assigned: []int64{}, Unchanged: unchanged, ValidFrom: today}
 	if len(targets) == 0 {
 		return result, nil
@@ -119,7 +130,7 @@ func (s *Service) lockAssignees(ctx context.Context, staffIDs []int64) error {
 // splitAssignees separates the members already bound to the template from
 // the ones that need it, and refuses the whole request when the Träger keeps
 // the Soll of one of them (ADR 0089 section 6).
-func (s *Service) splitAssignees(ctx context.Context, modelID int64, staffIDs []int64, stats *domain.OperationStats) (targets, unchanged []int64, err error) {
+func (s *Service) splitAssignees(ctx context.Context, modelID int64, staffIDs []int64, today string, stats *domain.OperationStats) (targets, unchanged []int64, err error) {
 	bindings, bindingStats, err := s.store.StaffWorkTimeModelBindings(ctx, staffIDs)
 	stats.Add(bindingStats)
 	if err != nil {
@@ -133,7 +144,7 @@ func (s *Service) splitAssignees(ctx context.Context, modelID int64, staffIDs []
 			targets = append(targets, staffID)
 		}
 	}
-	kept, keptStats, err := s.store.StaffSollKeptByTraeger(ctx, targets, s.clock.Today())
+	kept, keptStats, err := s.store.StaffSollKeptByTraeger(ctx, targets, today)
 	stats.Add(keptStats)
 	if err != nil {
 		return nil, nil, err

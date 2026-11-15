@@ -74,7 +74,7 @@ func (rs *Resource) Router() chi.Router {
 	rs.runtime.Protected(r, func(r chi.Router, withTx Middleware) {
 		manage := rs.runtime.Permission(rs.runtime.Manage)
 		r.With(manage, withTx).Get("/", rs.list)
-		r.With(manage, withTx).Get("/assignments", rs.staffFacts)
+		r.With(manage, withTx).Get("/staff-facts", rs.staffFacts)
 		r.With(manage, withTx).Get("/{id}", rs.get)
 		r.With(manage, withTx).Post("/", rs.create)
 		r.With(manage, withTx).Put("/{id}", rs.update)

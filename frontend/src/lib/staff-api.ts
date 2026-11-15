@@ -1048,7 +1048,7 @@ class WorkTimeModelService {
 
   /** Für den Zuordnungsdialog: Vorlage, Soll und Sperren je Person. */
   async staffFacts(): Promise<StaffWorkTimeFact[]> {
-    const response = await sessionFetch(`/api/work-time-models/assignments`);
+    const response = await sessionFetch(`/api/work-time-models/staff-facts`);
     if (!response.ok) {
       throw await apiErrorFromResponse(
         response,

@@ -63,6 +63,10 @@ type Store interface {
 // config.staff_work_schedules, active.staff_month_balance_snapshots and the
 // Träger's contract targets. Every read and write is set-based.
 type WorkTimeModelAssignmentStore interface {
+	// ShareLockWorkTimeModel holds the template row FOR SHARE until commit,
+	// so an edit of the template waits for the assignment and then refreshes
+	// the members it bound; found=false for an unknown template.
+	ShareLockWorkTimeModel(ctx context.Context, id int64) (bool, domain.OperationStats, error)
 	// StaffWorkTimeFacts reads, in one statement, every staff member of the
 	// school with a template binding, a schedule, a Soll of the Träger or a
 	// closed month.

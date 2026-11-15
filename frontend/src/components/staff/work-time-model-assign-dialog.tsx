@@ -221,7 +221,7 @@ export function WorkTimeModelAssignDialog({
               size="md"
               disabled={isSaving || disabledReason !== undefined}
               disabledReason={isSaving ? undefined : disabledReason}
-              tooltip="Gibt den Gewählten sofort das Soll dieser Vorlage."
+              tooltip="Speichert sofort: Die Gewählten bekommen ab dem Start das Soll dieser Vorlage."
             >
               {submitLabel}
             </Button>

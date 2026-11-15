@@ -69,7 +69,7 @@ export function workTimeTemplatesTopic(): HelpTopic {
       "Eine Änderung gilt ab heute für alle Personen mit dieser Vorlage. Die Seite zeigt vor dem Speichern, wie viele es sind.",
       "Über die drei Punkte wählen Sie `Nicht mehr anbieten`. Wer die Vorlage schon nutzt, behält sie. Neu zuordnen lässt sie sich dann nicht mehr.",
       "Löschen geht nur, wenn niemand die Vorlage nutzt.",
-      "Mit `Früheres Datum` beginnt das neue Soll rückwirkend. Das geht nur für Personen, die noch kein Soll haben, und nie in einem abgeschlossenen Monat. Wer an diesen Tagen weniger gearbeitet hat, bekommt Minusstunden. Deshalb fragt moto vorher nach.",
+      "Mit `Früheres Datum` beginnt das neue Soll rückwirkend. Das geht nur für Personen ohne bisheriges Soll. Der Start liegt nie in einem abgeschlossenen Monat. Wer an diesen Tagen weniger gearbeitet hat, bekommt Minusstunden. Deshalb fragt moto vorher nach.",
     ],
     differences: [
       "Sie sehen `Arbeitszeitmodelle` nicht? Dann hat Ihre Schule die Zeiterfassung nicht gebucht, oder Ihnen fehlt das Recht dafür.",
