@@ -45,7 +45,7 @@ func TestNormalizeDeliveryLetterForcesBothChannels(t *testing.T) {
 	}
 	for name, in := range cases {
 		t.Run(name, func(t *testing.T) {
-			if err := normalizeDelivery(&in); err != nil {
+			if err := normalizeDelivery(&in, staffTestNow); err != nil {
 				t.Fatalf("normalizeDelivery: unexpected error: %v", err)
 			}
 			if !in.SendEmail {
@@ -68,7 +68,7 @@ func TestNormalizeDeliveryDefaults(t *testing.T) {
 		Body:    "Text",
 		Targets: []TargetInput{{TargetType: StaffAnnouncementTargetSchoolAll}},
 	}
-	if err := normalizeDelivery(&in); err != nil {
+	if err := normalizeDelivery(&in, staffTestNow); err != nil {
 		t.Fatalf("normalizeDelivery: unexpected error: %v", err)
 	}
 	if in.DeliveryMode != StaffParentAnnouncementDeliveryStandard {
@@ -90,14 +90,14 @@ func TestNormalizeDeliveryRejectsUnknownValues(t *testing.T) {
 	t.Run("delivery_mode", func(t *testing.T) {
 		in := letterInput()
 		in.DeliveryMode = "brief"
-		if err := normalizeDelivery(&in); !errors.Is(err, ErrValidation) {
+		if err := normalizeDelivery(&in, staffTestNow); !errors.Is(err, ErrValidation) {
 			t.Fatalf("error = %v, want ErrValidation", err)
 		}
 	})
 	t.Run("email_audience", func(t *testing.T) {
 		in := letterInput()
 		in.EmailAudience = "everyone"
-		if err := normalizeDelivery(&in); !errors.Is(err, ErrValidation) {
+		if err := normalizeDelivery(&in, staffTestNow); !errors.Is(err, ErrValidation) {
 			t.Fatalf("error = %v, want ErrValidation", err)
 		}
 	})
@@ -115,7 +115,7 @@ func TestNormalizeDeliveryRejectsLetterPoll(t *testing.T) {
 	} {
 		in := letterInput()
 		in.ResponseType = responseType
-		if err := normalizeDelivery(&in); !errors.Is(err, ErrValidation) {
+		if err := normalizeDelivery(&in, staffTestNow); !errors.Is(err, ErrValidation) {
 			t.Errorf("response_type %q: error = %v, want ErrValidation", responseType, err)
 		}
 	}
@@ -123,7 +123,7 @@ func TestNormalizeDeliveryRejectsLetterPoll(t *testing.T) {
 	for _, responseType := range []string{"", StaffParentAnnouncementResponseNone} {
 		in := letterInput()
 		in.ResponseType = responseType
-		if err := normalizeDelivery(&in); err != nil {
+		if err := normalizeDelivery(&in, staffTestNow); err != nil {
 			t.Errorf("response_type %q: unexpected error: %v", responseType, err)
 		}
 	}
@@ -139,14 +139,14 @@ func TestNormalizeDeliveryRejectsLetterToPendingEnrollment(t *testing.T) {
 	in.Targets = append(in.Targets, TargetInput{
 		TargetType: StaffAnnouncementTargetPendingEnrollment,
 	})
-	if err := normalizeDelivery(&in); !errors.Is(err, ErrValidation) {
+	if err := normalizeDelivery(&in, staffTestNow); !errors.Is(err, ErrValidation) {
 		t.Fatalf("error = %v, want ErrValidation", err)
 	}
 
 	// The same target stays legal for a plain Mitteilung.
 	std := in
 	std.DeliveryMode = StaffParentAnnouncementDeliveryStandard
-	if err := normalizeDelivery(&std); err != nil {
+	if err := normalizeDelivery(&std, staffTestNow); err != nil {
 		t.Fatalf("standard Mitteilung to pending enrollment: unexpected error: %v", err)
 	}
 }
@@ -164,7 +164,7 @@ func TestNormalizeDeliveryRejectsWideAudienceWithoutEmail(t *testing.T) {
 		SendEmail:     false,
 		Targets:       []TargetInput{{TargetType: StaffAnnouncementTargetSchoolAll}},
 	}
-	if err := normalizeDelivery(&in); !errors.Is(err, ErrValidation) {
+	if err := normalizeDelivery(&in, staffTestNow); !errors.Is(err, ErrValidation) {
 		t.Fatalf("error = %v, want ErrValidation", err)
 	}
 
@@ -172,7 +172,7 @@ func TestNormalizeDeliveryRejectsWideAudienceWithoutEmail(t *testing.T) {
 	// though the client never set the flag itself.
 	letter := letterInput()
 	letter.EmailAudience = StaffEmailAudienceAllContacts
-	if err := normalizeDelivery(&letter); err != nil {
+	if err := normalizeDelivery(&letter, staffTestNow); err != nil {
 		t.Fatalf("letter with all_contacts: unexpected error: %v", err)
 	}
 }
@@ -188,7 +188,7 @@ func TestNormalizeDeliveryRejectsWideAudienceForStandardAnnouncement(t *testing.
 		SendEmail:     true,
 		Targets:       []TargetInput{{TargetType: StaffAnnouncementTargetSchoolAll}},
 	}
-	if err := normalizeDelivery(&in); !errors.Is(err, ErrValidation) {
+	if err := normalizeDelivery(&in, staffTestNow); !errors.Is(err, ErrValidation) {
 		t.Fatalf("error = %v, want ErrValidation", err)
 	}
 }
@@ -199,7 +199,7 @@ func TestNormalizeInputAppliesDeliveryRules(t *testing.T) {
 	t.Parallel()
 
 	in := letterInput()
-	if _, err := normalizeInput(&in); err != nil {
+	if _, err := normalizeInput(&in, staffTestNow); err != nil {
 		t.Fatalf("normalizeInput: unexpected error: %v", err)
 	}
 	if !in.SendEmail || !in.RequiresAcknowledgement {

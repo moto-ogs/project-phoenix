@@ -42,6 +42,13 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/alerts", rs.schoolsAlerts)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/occupancy", rs.occupancy)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/occupancy/export", rs.occupancyExport)
+		// The utilization over time is a report (#4713, ADR 0241): the
+		// figures need "Berichte lesen", the children by name "Verträge
+		// verwalten", the right that already opens the children of Soll und
+		// Ist (ADR 0156).
+		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/utilization", rs.utilization)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/utilization/export", rs.utilizationExport)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightContractsManage)).Get("/{id}/utilization/children", rs.utilizationChildren)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/arrival-pickup-times", rs.arrivalPickupTimes)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/arrival-pickup-times/export", rs.arrivalPickupTimesExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/{id}", rs.getSchool)

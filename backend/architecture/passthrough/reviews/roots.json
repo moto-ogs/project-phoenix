@@ -1276,9 +1276,19 @@
       "reason": "ADR 0109 (#4655): root translation of the People Directory persons behind staff IDs into the Träger projection's person vocabulary."
     },
     {
+      "decision": "0241",
+      "id": "api/traegerPresenceSeries.AttendanceCountsByTenant",
+      "reason": "ADR 0241 (#4713): Consumer-port adapter of the Träger projection's presence series port; it translates Student Presence's check-ins per school and day into the projection's DailyCounts vocabulary."
+    },
+    {
       "decision": "0214",
       "id": "api/traegerRegisteredChildren.RegisteredChildren",
       "reason": "ADR 0214 (#6683): Consumer-port adapter of the Träger projection's registered children port; it translates Enrollment's registered holiday children into the projection's RegisteredChild vocabulary."
+    },
+    {
+      "decision": "0241",
+      "id": "api/traegerRoomNames.RoomsByTenant",
+      "reason": "ADR 0241 (#4713): Consumer-port adapter of the Träger projection's room names port; it translates the rooms of Facilities into the projection's NamedRoom vocabulary."
     },
     {
       "decision": "0233",

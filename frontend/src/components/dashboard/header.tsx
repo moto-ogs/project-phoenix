@@ -156,6 +156,7 @@ const TRAEGER_PAGE_TITLES: ReadonlyArray<
   ["/uebersicht", "Dashboard"],
   ["/stichtagszahlen", "Stichtagszahlen"],
   ["/belegung", "Belegung"],
+  ["/auslastung", "Auslastung"],
   ["/ankunft-abholung", "Ankunft und Abholung"],
   ["/ferien", "Ferienbetreuung"],
   ["/anmeldephasen", "Anmeldephasen"],

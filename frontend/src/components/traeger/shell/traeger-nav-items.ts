@@ -39,7 +39,7 @@ const ACCOUNTS_RIGHT = "traeger_accounts:manage";
 const ENROLLMENT_RIGHT = "traeger_enrollment:manage";
 /** Das Recht, das die Betreuungsverträge öffnet (#4678). */
 const CONTRACTS_RIGHT = "traeger_contracts:manage";
-/** Das Recht, das „Länger als gebucht“ ohne Namen (#4683) und „Ankunft und Abholung“ (#4714) öffnet. */
+/** Das Recht, das „Länger als gebucht“ ohne Namen (#4683), die Auslastung (#4713) und „Ankunft und Abholung“ (#4714) öffnet. */
 const REPORTS_RIGHT = "traeger_reports:read";
 /** Das Recht, das die Abrechnungsläufe öffnet (#4668). */
 const BILLING_RIGHT = "traeger_billing:manage";
@@ -111,6 +111,14 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         label: "Belegung",
         concept: utilizationConcept,
         right: OVERVIEW_RIGHT,
+      },
+      {
+        // Belegung, Anwesenheit und Räume über Wochen und Monate (#4713).
+        key: "auslastung",
+        href: "/traeger/auslastung",
+        label: "Auslastung",
+        concept: utilizationConcept,
+        right: REPORTS_RIGHT,
       },
       {
         // Wann Kinder ankommen und gehen, je Wochentag und halbe Stunde (#4714).

@@ -276,6 +276,8 @@ type Ports struct {
 	// Known are the reads behind the hint on a known child of a holiday
 	// registration (#6683, ADR 0214).
 	Known KnownChildrenPorts
+	// Utilization are the reads behind the utilization over time (#4713).
+	Utilization UtilizationPorts
 	// Times are the arrivals and pickups behind the heatmap (#4714).
 	Times ArrivalPickupCounts
 }
@@ -299,6 +301,14 @@ type Overview interface {
 	// Occupancy returns the children of every school of the Träger by OGS
 	// group and care form, today (#4676).
 	Occupancy(ctx context.Context, organizationID int64) (Occupancy, error)
+	// Utilization returns the utilization of every school of the Träger,
+	// of its care offerings and of its rooms per weekday of the window
+	// (#4713).
+	Utilization(ctx context.Context, organizationID int64, from, to calendar.Date) (Utilization, error)
+	// UtilizationChildren returns the children of one school of the Träger
+	// by name over the window; any other school is ErrSchoolOutsideTraeger.
+	// The school's access log records the read with the viewer's account.
+	UtilizationChildren(ctx context.Context, viewer Viewer, schoolID int64, from, to calendar.Date) (UtilizationChildren, error)
 	// ArrivalPickupTimes returns the heatmap of arrival and pickup times of
 	// every school of the Träger between from and to (#4714). An invalid
 	// period is ErrInvalidArrivalPickupPeriod.

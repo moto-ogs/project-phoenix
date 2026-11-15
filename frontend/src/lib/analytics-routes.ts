@@ -246,6 +246,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/anmeldephasen/:id/angebote/neu",
   "/anmeldephasen/:id/vorschau",
   "/anmeldephasen/neu",
+  "/auslastung",
   "/belegung",
   "/dokumente",
   "/dokumente/:id",

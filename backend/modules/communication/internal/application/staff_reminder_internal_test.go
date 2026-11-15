@@ -86,6 +86,7 @@ func newReminderHarness(repo *reminderRepo) *reminderHarness {
 		settings: &fakeSettings{enabled: true},
 	}
 	h.svc = NewService(ServiceConfig{
+		Now:         staffTestClock,
 		Repo:        repo,
 		Settings:    h.settings,
 		Notifier:    h.notifier,
@@ -101,8 +102,8 @@ func newReminderHarness(repo *reminderRepo) *reminderHarness {
 // publishedWithReminder is a live announcement whose reminder fell due.
 func publishedWithReminder(sendEmail bool) *StaffParentAnnouncement {
 	a := draftAnnouncement(sendEmail)
-	published := time.Now().Add(-14 * 24 * time.Hour)
-	reminderAt := time.Now().Add(-time.Minute)
+	published := staffTestNow.Add(-14 * 24 * time.Hour)
+	reminderAt := staffTestNow.Add(-time.Minute)
 	text := "Morgen endet die Betreuung um 13:00 Uhr."
 	a.PublishedAt = &published
 	a.ReminderAt = &reminderAt
@@ -163,7 +164,7 @@ func TestPublish_RejectsReminderAlreadyInThePast(t *testing.T) {
 	t.Parallel()
 
 	draft := draftAnnouncement(false)
-	past := time.Now().Add(-time.Hour)
+	past := staffTestNow.Add(-time.Hour)
 	draft.ReminderAt = &past
 	repo := &reminderRepo{fakeAnnouncementRepo: fakeAnnouncementRepo{announcement: draft}}
 	h := newReminderHarness(repo)
@@ -177,12 +178,12 @@ func TestUpdateReminder_RefusesOnceSent(t *testing.T) {
 	t.Parallel()
 
 	a := publishedWithReminder(false)
-	sent := time.Now()
+	sent := staffTestNow
 	a.ReminderSentAt = &sent
 	repo := &reminderRepo{fakeAnnouncementRepo: fakeAnnouncementRepo{announcement: a}, setReminderApplied: true}
 	h := newReminderHarness(repo)
 
-	future := time.Now().Add(time.Hour)
+	future := staffTestNow.Add(time.Hour)
 	_, err := h.svc.UpdateReminder(context.Background(), a.ID, ReminderInput{ReminderAt: &future})
 	require.ErrorIs(t, err, ErrReminderAlreadySent)
 	assert.Empty(t, repo.setReminderCalls)
@@ -194,7 +195,7 @@ func TestUpdateReminder_RefusesUnpublishedAnnouncement(t *testing.T) {
 	draft := draftAnnouncement(false)
 	repo := &reminderRepo{fakeAnnouncementRepo: fakeAnnouncementRepo{announcement: draft}}
 	h := newReminderHarness(repo)
-	future := time.Now().Add(time.Hour)
+	future := staffTestNow.Add(time.Hour)
 
 	_, err := h.svc.UpdateReminder(context.Background(), draft.ID, ReminderInput{ReminderAt: &future})
 	require.ErrorIs(t, err, ErrNotPublished)
@@ -219,7 +220,7 @@ func TestUpdateReminder_ValidatesMomentAgainstExpiry(t *testing.T) {
 	t.Parallel()
 
 	a := publishedWithReminder(false)
-	expiry := time.Now().Add(24 * time.Hour)
+	expiry := staffTestNow.Add(24 * time.Hour)
 	a.ExpiresAt = &expiry
 	repo := &reminderRepo{fakeAnnouncementRepo: fakeAnnouncementRepo{announcement: a}, setReminderApplied: true}
 	h := newReminderHarness(repo)
@@ -228,7 +229,7 @@ func TestUpdateReminder_ValidatesMomentAgainstExpiry(t *testing.T) {
 	_, err := h.svc.UpdateReminder(context.Background(), a.ID, ReminderInput{ReminderAt: &late})
 	require.ErrorIs(t, err, ErrValidation)
 
-	past := time.Now().Add(-time.Hour)
+	past := staffTestNow.Add(-time.Hour)
 	_, err = h.svc.UpdateReminder(context.Background(), a.ID, ReminderInput{ReminderAt: &past})
 	require.ErrorIs(t, err, ErrValidation)
 	assert.Empty(t, repo.setReminderCalls)
@@ -244,7 +245,7 @@ func TestUpdateReminder_RefusesPoll(t *testing.T) {
 	repo := &reminderRepo{fakeAnnouncementRepo: fakeAnnouncementRepo{announcement: a}, setReminderApplied: true}
 	h := newReminderHarness(repo)
 
-	future := time.Now().Add(time.Hour)
+	future := staffTestNow.Add(time.Hour)
 	_, err := h.svc.UpdateReminder(context.Background(), a.ID, ReminderInput{ReminderAt: &future})
 	require.ErrorIs(t, err, ErrValidation)
 }
@@ -256,7 +257,7 @@ func TestUpdateReminder_MovesRewordsAndRemoves(t *testing.T) {
 	repo := &reminderRepo{fakeAnnouncementRepo: fakeAnnouncementRepo{announcement: a}, setReminderApplied: true}
 	h := newReminderHarness(repo)
 
-	future := time.Now().Add(72 * time.Hour)
+	future := staffTestNow.Add(72 * time.Hour)
 	got, err := h.svc.UpdateReminder(context.Background(), a.ID, ReminderInput{ReminderAt: &future, ReminderText: strPtr("  Neuer Text  ")})
 	require.NoError(t, err)
 	require.NotNil(t, got)
@@ -280,7 +281,7 @@ func TestUpdateReminder_LostRaceAgainstTheTickIsAConflict(t *testing.T) {
 	repo := &reminderRepo{fakeAnnouncementRepo: fakeAnnouncementRepo{announcement: a}, setReminderApplied: false}
 	h := newReminderHarness(repo)
 
-	future := time.Now().Add(time.Hour)
+	future := staffTestNow.Add(time.Hour)
 	_, err := h.svc.UpdateReminder(context.Background(), a.ID, ReminderInput{ReminderAt: &future})
 	require.ErrorIs(t, err, ErrReminderAlreadySent)
 }
@@ -289,7 +290,7 @@ func TestSendDueReminders_ReachesTheWholeAudienceOnceOverBothChannels(t *testing
 	t.Parallel()
 
 	a := publishedWithReminder(true)
-	acknowledged := time.Now().Add(-24 * time.Hour)
+	acknowledged := staffTestNow.Add(-24 * time.Hour)
 	repo := &reminderRepo{
 		fakeAnnouncementRepo: fakeAnnouncementRepo{
 			announcement: a,
@@ -309,7 +310,7 @@ func TestSendDueReminders_ReachesTheWholeAudienceOnceOverBothChannels(t *testing
 	}
 	h := newReminderHarness(repo)
 
-	sent, _, err := h.svc.SendDueReminders(context.Background(), time.Now().Add(-time.Hour), time.Now())
+	sent, _, err := h.svc.SendDueReminders(context.Background(), staffTestNow.Add(-time.Hour), staffTestNow)
 	require.NoError(t, err)
 	assert.Equal(t, 1, sent)
 	assert.Equal(t, []int64{a.ID}, repo.claimCalls)
@@ -347,7 +348,7 @@ func TestSendDueReminders_WithoutEmailOptInSendsPushOnly(t *testing.T) {
 	}
 	h := newReminderHarness(repo)
 
-	sent, _, err := h.svc.SendDueReminders(context.Background(), time.Now().Add(-time.Hour), time.Now())
+	sent, _, err := h.svc.SendDueReminders(context.Background(), staffTestNow.Add(-time.Hour), staffTestNow)
 	require.NoError(t, err)
 	assert.Equal(t, 1, sent)
 	assert.Len(t, h.notifier.events, 1)
@@ -369,7 +370,7 @@ func TestSendDueReminders_PushOutsideWindowReleasesClaimForRetry(t *testing.T) {
 	h := newReminderHarness(repo)
 	h.notifier.err = devices.OutsideNotificationWindow()
 
-	sent, retryFrom, err := h.svc.SendDueReminders(context.Background(), time.Now().Add(-time.Hour), time.Now())
+	sent, retryFrom, err := h.svc.SendDueReminders(context.Background(), staffTestNow.Add(-time.Hour), staffTestNow)
 	require.NoError(t, err)
 	assert.Zero(t, sent)
 	assert.Empty(t, h.outbox.requests)
@@ -396,7 +397,7 @@ func TestSendDueReminders_SkipsUndeliverableReminderAndContinues(t *testing.T) {
 	h := newReminderHarness(repo)
 	h.notifier.durableAcceptedSet = true // VAPID is unavailable or nobody subscribed.
 
-	sent, _, err := h.svc.SendDueReminders(context.Background(), time.Now().Add(-time.Hour), time.Now())
+	sent, _, err := h.svc.SendDueReminders(context.Background(), staffTestNow.Add(-time.Hour), staffTestNow)
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, sent)
@@ -426,7 +427,7 @@ func TestSendDueReminders_ReloadsTheClaimedReminderBeforeDelivery(t *testing.T) 
 	}
 	h := newReminderHarness(repo)
 
-	_, _, err := h.svc.SendDueReminders(context.Background(), time.Now().Add(-time.Hour), time.Now())
+	_, _, err := h.svc.SendDueReminders(context.Background(), staffTestNow.Add(-time.Hour), staffTestNow)
 	require.NoError(t, err)
 	require.Len(t, h.outbox.requests, 1)
 	assert.Equal(t, freshText, h.outbox.requests[0].Payload[emailPayloadBody])
@@ -449,7 +450,7 @@ func TestSendDueReminders_SeparatesLocaleSpecificPushIntents(t *testing.T) {
 	}
 	h := newReminderHarness(repo)
 
-	_, _, err := h.svc.SendDueReminders(context.Background(), time.Now().Add(-time.Hour), time.Now())
+	_, _, err := h.svc.SendDueReminders(context.Background(), staffTestNow.Add(-time.Hour), staffTestNow)
 	require.NoError(t, err)
 	require.Len(t, h.notifier.events, 2)
 	assert.NotEqual(t, h.notifier.events[0].IdempotencyKey, h.notifier.events[1].IdempotencyKey)
@@ -473,7 +474,7 @@ func TestSendDueReminders_LostClaimSendsNothing(t *testing.T) {
 	}
 	h := newReminderHarness(repo)
 
-	sent, _, err := h.svc.SendDueReminders(context.Background(), time.Now().Add(-time.Hour), time.Now())
+	sent, _, err := h.svc.SendDueReminders(context.Background(), staffTestNow.Add(-time.Hour), staffTestNow)
 	require.NoError(t, err)
 	assert.Equal(t, 0, sent)
 	assert.Empty(t, h.notifier.events, "an overlapping tick already sent this reminder")
@@ -492,7 +493,7 @@ func TestSendDueReminders_NewsDisabledSendsNothing(t *testing.T) {
 	h := newReminderHarness(repo)
 	h.settings.enabled = false
 
-	sent, _, err := h.svc.SendDueReminders(context.Background(), time.Now().Add(-time.Hour), time.Now())
+	sent, _, err := h.svc.SendDueReminders(context.Background(), staffTestNow.Add(-time.Hour), staffTestNow)
 	require.NoError(t, err)
 	assert.Equal(t, 0, sent)
 	assert.Empty(t, repo.claimCalls, "nothing is claimed while the school has the feature off")
@@ -524,7 +525,7 @@ func TestSendDueReminders_LetterCarriesTheReminderTextToItsWideAudience(t *testi
 	}
 	h := newReminderHarness(repo)
 
-	sent, _, err := h.svc.SendDueReminders(context.Background(), time.Now().Add(-time.Hour), time.Now())
+	sent, _, err := h.svc.SendDueReminders(context.Background(), staffTestNow.Add(-time.Hour), staffTestNow)
 	require.NoError(t, err)
 	assert.Equal(t, 1, sent)
 
@@ -563,7 +564,7 @@ func TestSendDueReminders_LetterWithoutOwnTextRepeatsTheBody(t *testing.T) {
 	}
 	h := newReminderHarness(repo)
 
-	_, _, err := h.svc.SendDueReminders(context.Background(), time.Now().Add(-time.Hour), time.Now())
+	_, _, err := h.svc.SendDueReminders(context.Background(), staffTestNow.Add(-time.Hour), staffTestNow)
 	require.NoError(t, err)
 	require.Len(t, h.outbox.requests, 1)
 	assert.Equal(t, a.Body, h.outbox.requests[0].Payload[emailPayloadBody])
@@ -584,7 +585,7 @@ func TestSendDueReminders_DeliveryFailureRollsTheTickBack(t *testing.T) {
 	h := newReminderHarness(repo)
 	h.outbox.enqueueErr = errors.New("outbox unavailable")
 
-	_, _, err := h.svc.SendDueReminders(context.Background(), time.Now().Add(-time.Hour), time.Now())
+	_, _, err := h.svc.SendDueReminders(context.Background(), staffTestNow.Add(-time.Hour), staffTestNow)
 	require.Error(t, err, "the caller's tenant transaction must roll back the claim with the failed delivery")
 }
 

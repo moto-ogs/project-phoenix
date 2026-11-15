@@ -157,6 +157,7 @@ func letterDraft(mode, audience string) *StaffParentAnnouncement {
 
 func newLetterService(repo *letterRepo, outbox *letterOutbox, deliveries *letterDeliveries) StaffService {
 	return NewService(ServiceConfig{
+		Now:        staffTestClock,
 		Repo:       repo,
 		Settings:   &fakeSettings{enabled: true},
 		Notifier:   &fakeNotifier{},
@@ -553,7 +554,7 @@ func (r *letterRepo) UnacknowledgedReminderRecipients(_ context.Context, _, _ in
 func TestRemindOutstandingLetterMailsUnconfirmedFamilies(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	repo := &letterRepo{
@@ -591,7 +592,7 @@ func TestRemindOutstandingLetterMailsUnconfirmedFamilies(t *testing.T) {
 func TestRemindOutstandingLetterDoesNotUsePollPush(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	repo := &letterRepo{
@@ -602,6 +603,7 @@ func TestRemindOutstandingLetterDoesNotUsePollPush(t *testing.T) {
 	}
 	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
+		Now:        staffTestClock,
 		Repo:       repo,
 		Settings:   &fakeSettings{enabled: true},
 		Notifier:   notifier,
@@ -622,7 +624,7 @@ func TestRemindOutstandingLetterDoesNotUsePollPush(t *testing.T) {
 func TestRemindOutstandingRefusesAcknowledgementStandardAnnouncement(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryStandard, StaffEmailAudiencePortalOnly)
 	a.RequiresAcknowledgement = true
 	a.PublishedAt = &published
@@ -637,7 +639,7 @@ func TestRemindOutstandingRefusesAcknowledgementStandardAnnouncement(t *testing.
 func TestRemindOutstandingRefusesAnnouncementWithoutAcknowledgement(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryStandard, StaffEmailAudiencePortalOnly)
 	a.RequiresAcknowledgement = false
 	a.PublishedAt = &published
@@ -664,7 +666,7 @@ func TestRemindOutstandingRefusesUnpublished(t *testing.T) {
 func TestResendFailedEmailsOnlyRetriesFailures(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	bad := "kaputt@example.test"
@@ -708,7 +710,7 @@ func TestResendFailedEmailsOnlyRetriesFailures(t *testing.T) {
 func TestResendFailedEmailsSkipsAMarkedAddress(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	marked := "gesperrt@example.test"
@@ -794,7 +796,7 @@ func (s currentLetterStatuses) ListForEntity(context.Context, int64, string, int
 func TestLetterRetriesWaitForTheFamilysReturn(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	address := "ausgetreten@example.test"
@@ -842,7 +844,7 @@ func TestLetterRetriesWaitForTheFamilysReturn(t *testing.T) {
 func TestResendFailedEmailsLeavesAStoppedOrMarkedAddressAlone(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	stopped, marked, free, provider := "gestoppt@example.test", "gesperrt@example.test", "frei@example.test", "anbieter@example.test"
@@ -869,7 +871,7 @@ func TestResendFailedEmailsLeavesAStoppedOrMarkedAddressAlone(t *testing.T) {
 func TestResendFailedEmailsSendsARefusedLetterOnlyToTheCorrectedAddress(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	old, corrected, refused := "alt@example.test", "neu@example.test", "abgemeldet@example.test"
@@ -896,7 +898,7 @@ func TestResendFailedEmailsSendsARefusedLetterOnlyToTheCorrectedAddress(t *testi
 func TestResendFailedEmailsDeduplicatesSharedAddress(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	address := "familie@example.test"
@@ -922,8 +924,8 @@ func TestResendFailedEmailsDeduplicatesSharedAddress(t *testing.T) {
 func TestResendFailedEmailsRefusesExpiredLetter(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-2 * time.Hour)
-	expired := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-2 * time.Hour)
+	expired := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	a.ExpiresAt = &expired
@@ -937,7 +939,7 @@ func TestResendFailedEmailsRefusesExpiredLetter(t *testing.T) {
 func TestResendFailedEmailsSkipsDeliveryClaimedByConcurrentRequest(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	address := "familie@example.test"
@@ -1038,7 +1040,7 @@ func TestLetterStatusKeepsAcknowledgedChildrenFulfilledAfterAccessRevocation(t *
 func TestLetterChildOutstanding(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := staffTestNow
 	cases := []struct {
 		name     string
 		child    StaffAnnouncementLetterChildStatus

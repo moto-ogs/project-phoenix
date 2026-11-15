@@ -57,6 +57,7 @@ export const PORTAL_PAGES = {
     "/abrechnung",
     "/ankunft-abholung",
     "/anmeldephasen",
+    "/auslastung",
     "/belegung",
     "/dokumente",
     "/einstellungen",

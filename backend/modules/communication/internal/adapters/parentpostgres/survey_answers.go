@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/uptrace/bun"
@@ -44,12 +45,12 @@ type surveyAnswerRow struct {
 // The participation and the response are two statements in one transaction.
 // Neither returns the other's key, and the response id comes from
 // gen_random_uuid(), so the stored rows share nothing the app could join.
-func (s *SurveyStore) RecordSubmission(ctx context.Context, tenantID, surveyID, accountID int64, named bool, answers []communication.SurveyAnswerInput) (bool, error) {
+func (s *SurveyStore) RecordSubmission(ctx context.Context, tenantID, surveyID, accountID int64, named bool, answers []communication.SurveyAnswerInput, now func() time.Time) (bool, error) {
 	db, err := s.anyDB(ctx)
 	if err != nil {
 		return false, err
 	}
-	if err := lockOpenSurveyForSubmission(ctx, db, tenantID, surveyID); err != nil {
+	if err := lockOpenSurveyForSubmission(ctx, db, tenantID, surveyID, now); err != nil {
 		return false, err
 	}
 	result, err := db.NewInsert().Model(&surveyParticipationRow{TenantID: tenantID, SurveyID: surveyID, AccountID: accountID}).
@@ -78,21 +79,25 @@ func (s *SurveyStore) RecordSubmission(ctx context.Context, tenantID, surveyID, 
 }
 
 // lockOpenSurveyForSubmission serializes the final open check with closing a
-// survey. PostgreSQL rechecks the predicate after waiting for a concurrent
-// FOR UPDATE lock, so a submission that waited for CloseSurvey observes its
-// committed close and writes nothing.
-func lockOpenSurveyForSubmission(ctx context.Context, db bun.IDB, tenantID, surveyID int64) error {
+// survey. It locks the published survey row first and reads the clock only
+// once the lock is held, so a submission that waited for CloseSurvey compares
+// against its committed close and writes nothing. now is the service clock
+// that also closes surveys, so both sides read one clock (#7104).
+func lockOpenSurveyForSubmission(ctx context.Context, db bun.IDB, tenantID, surveyID int64, now func() time.Time) error {
 	var row struct {
-		Open bool `bun:"open"`
+		ClosesAt time.Time `bun:"closes_at"`
 	}
-	err := db.NewSelect().TableExpr("users.surveys").ColumnExpr("TRUE AS open").
-		Where("id = ? AND tenant_id = ? AND published_at IS NOT NULL AND closes_at > clock_timestamp()", surveyID, tenantID).
+	err := db.NewSelect().TableExpr("users.surveys").Column("closes_at").
+		Where("id = ? AND tenant_id = ? AND published_at IS NOT NULL", surveyID, tenantID).
 		For("UPDATE").Scan(ctx, &row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return communication.ErrSurveyNotOpen
 	}
 	if err != nil {
 		return fmt.Errorf("lock open survey for submission: %w", err)
+	}
+	if !row.ClosesAt.After(now()) {
+		return communication.ErrSurveyNotOpen
 	}
 	return nil
 }

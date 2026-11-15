@@ -5,4 +5,7 @@ GET /traeger/schools/arrival-pickup-times/export -> basis
 GET /traeger/schools/key-date-counts -> basis
 GET /traeger/schools/occupancy -> basis
 GET /traeger/schools/occupancy/export -> basis
+GET /traeger/schools/utilization -> basis
+GET /traeger/schools/utilization/export -> basis
 GET /traeger/schools/{id} -> basis
+GET /traeger/schools/{id}/utilization/children -> basis

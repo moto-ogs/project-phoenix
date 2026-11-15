@@ -31,6 +31,7 @@ export function getTraegerHelpTopicForPath(pathname: string): HelpTopicId {
     return HELP_TOPICS.traegerKeyDateCounts;
   }
   if (onPage(page, "/belegung")) return HELP_TOPICS.traegerOccupancy;
+  if (onPage(page, "/auslastung")) return HELP_TOPICS.traegerUtilization;
   if (onPage(page, "/ankunft-abholung")) {
     return HELP_TOPICS.traegerArrivalPickupTimes;
   }
