@@ -175,6 +175,12 @@ type TypeDefinition struct {
 	// (#2208). Only types a Lehrkraft can actually receive belong here; the
 	// OGS supervision reminders never address a school-only account.
 	SchoolPortal bool
+	// SchoolPortalWithoutPermission offers a SchoolPortal type with a
+	// Permission to every account of the school portal (#7139). The
+	// Permission stands for "can be addressed by it" in the OGS portal; a
+	// Lehrkraft holds no OGS right, yet the producer addresses her the same
+	// way, for example as planned staff of a cancelled block.
+	SchoolPortalWithoutPermission bool
 	// Channel is ChannelPush (or empty) or ChannelEmail.
 	Channel string
 	// Permission is the right an e-mail type's recipient must hold when the
@@ -210,6 +216,9 @@ func RegisterType(def TypeDefinition) {
 		}
 	default:
 		panic("notifications: unknown portal " + def.Portal + " for key " + def.Key)
+	}
+	if def.SchoolPortalWithoutPermission && (!def.SchoolPortal || def.Permission == "") {
+		panic("notifications: type " + def.Key + " needs SchoolPortal and a Permission to waive it in the school portal")
 	}
 	switch def.Channel {
 	case "", ChannelPush:
@@ -249,6 +258,15 @@ func OfferedInPortal(def TypeDefinition, portal string) bool {
 		return def.Portal == PortalSchool || (def.Portal == PortalStaff && def.SchoolPortal)
 	}
 	return def.Portal == portal
+}
+
+// PermissionInPortal is the right a person using the portal must hold to be
+// offered the type; empty means none.
+func PermissionInPortal(def TypeDefinition, portal string) string {
+	if portal == PortalSchool && def.SchoolPortalWithoutPermission {
+		return ""
+	}
+	return def.Permission
 }
 
 // GetType returns one definition.
@@ -319,6 +337,10 @@ func registerStaffAppointmentTypes() {
 		SortOrder:   1,
 		Permission:  permissionActivitiesRead,
 		DefaultOn:   true,
+		// A Lehrkraft planned for a block in moto schule (#2527) hears
+		// about its cancellation there too (#7139).
+		SchoolPortal:                  true,
+		SchoolPortalWithoutPermission: true,
 	})
 }
 

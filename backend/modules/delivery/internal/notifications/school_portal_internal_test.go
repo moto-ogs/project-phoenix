@@ -28,7 +28,7 @@ func TestSchoolPortalCatalogue(t *testing.T) {
 	for _, def := range TypesForPortal(PortalSchool) {
 		keys = append(keys, def.Key)
 	}
-	assert.Equal(t, []string{TypeSchoolClassAbsenceReported, TypeSchoolUnreportedAbsence, TypeStaffMessage, TypeSchoolParentConferenceBooking}, keys)
+	assert.Equal(t, []string{TypeSchoolClassAbsenceReported, TypeSchoolUnreportedAbsence, TypeStaffMessage, TypeInstanceCancelled, TypeSchoolParentConferenceBooking}, keys)
 
 	staffMessage, _ := GetType(TypeStaffMessage)
 	pickup, _ := GetType(TypePickupUpcoming)
@@ -42,6 +42,10 @@ func TestSchoolPortalCatalogue(t *testing.T) {
 	assert.True(t, OfferedInPortal(conferenceBooking, PortalSchool))
 	assert.False(t, OfferedInPortal(conferenceBooking, PortalStaff), "the Elternsprechtag notice exists only in moto schule (#4801)")
 	assert.Equal(t, "Krankmeldungen meiner Klassen", classAbsence.Label)
+	cancelled, _ := GetType(TypeInstanceCancelled)
+	assert.True(t, OfferedInPortal(cancelled, PortalSchool), "a planned Lehrkraft hears of a cancelled block in moto schule (#7139)")
+	assert.Empty(t, PermissionInPortal(cancelled, PortalSchool), "offered there without the OGS right a Lehrkraft does not hold")
+	assert.Equal(t, cancelled.Permission, PermissionInPortal(cancelled, PortalStaff))
 }
 
 // A school registration rebinds the browser endpoint: the school a Lehrkraft

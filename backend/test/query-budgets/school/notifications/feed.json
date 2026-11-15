@@ -1,0 +1,7 @@
+{
+  "scenario": "school.notifications.feed",
+  "max": 5,
+  "exact": true,
+  "description": "Protected school JWT GET /school/notifications/feed/ through real Delivery (#7139). N=0/3/8 feed entries of the account and one entry of another account; one page read and one unread count, each with the reader's school-portal role check and the school catalogue's types, in the reader's own tenant transaction. Includes tenant BEGIN/prolog/COMMIT; excludes outer host session-liveness and module-booking middleware.",
+  "route": "GET /school/notifications/feed/"
+}

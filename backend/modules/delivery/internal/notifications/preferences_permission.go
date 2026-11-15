@@ -21,7 +21,8 @@ func (s *preferenceService) offeredTypes(ctx context.Context, accountID int64, p
 	loaded := false
 	out := make([]TypeDefinition, 0, len(defs))
 	for _, def := range defs {
-		if def.Permission == "" {
+		permission := PermissionInPortal(def, portal)
+		if permission == "" {
 			out = append(out, def)
 			continue
 		}
@@ -32,23 +33,25 @@ func (s *preferenceService) offeredTypes(ctx context.Context, accountID int64, p
 			}
 			loaded = true
 		}
-		if s.permissions.permits(def.Permission, granted) {
+		if s.permissions.permits(permission, granted) {
 			out = append(out, def)
 		}
 	}
 	return out, nil
 }
 
-// offeredToAccount reports whether the account may decide the type.
-func (s *preferenceService) offeredToAccount(ctx context.Context, accountID int64, def TypeDefinition) (bool, error) {
-	if def.Permission == "" {
+// offeredToAccount reports whether the account may decide the type in the
+// portal.
+func (s *preferenceService) offeredToAccount(ctx context.Context, accountID int64, portal string, def TypeDefinition) (bool, error) {
+	permission := PermissionInPortal(def, portal)
+	if permission == "" {
 		return true, nil
 	}
 	granted, err := s.grantedPermissions(ctx, accountID)
 	if err != nil {
 		return false, err
 	}
-	return s.permissions.permits(def.Permission, granted), nil
+	return s.permissions.permits(permission, granted), nil
 }
 
 // grantedPermissions reads the account's permissions in the current school;

@@ -88,6 +88,8 @@ func TestPickupChangeReachesOnlyTheChildsTeam(t *testing.T) {
 // TestInstanceCancelledNoticeFollowsTheRight pins the right the cancellation
 // notice (#7148) restates: every staff role holds it, so the switch is offered
 // to everyone who can be planned for a block, and the push is on by default.
+// moto schule offers it to every account there (#7139): a Lehrkraft can be
+// planned for a block without holding the OGS right.
 func TestInstanceCancelledNoticeFollowsTheRight(t *testing.T) {
 	t.Parallel()
 	def, ok := notifications.GetType(notifications.TypeInstanceCancelled)
@@ -96,5 +98,6 @@ func TestInstanceCancelledNoticeFollowsTheRight(t *testing.T) {
 	assert.True(t, def.DefaultOn)
 	assert.Equal(t, notifications.PortalStaff, def.Portal)
 	assert.Equal(t, notifications.GroupAppointments, def.Group)
-	assert.False(t, def.SchoolPortal, "the feed of moto schule follows later")
+	assert.True(t, def.SchoolPortal, "moto schule shows the cancellation (#7139)")
+	assert.True(t, def.SchoolPortalWithoutPermission)
 }

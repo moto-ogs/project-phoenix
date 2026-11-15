@@ -16,10 +16,23 @@ import (
 )
 
 // N is the number of feed entries of the account (#7148). The page, the
-// unread count and the staff check of the reader are a fixed number of
+// unread count and the role check of the reader are a fixed number of
 // statements, whatever the feed holds; another account's entries stay out.
+// The staff portal and moto schule (#7139) read the same entries.
 func TestNotificationFeedHTTPQueryBudget(t *testing.T) {
 	t.Parallel()
+	for _, portal := range []struct{ name, scope, path, scenario string }{
+		{"staff", "", "/api/notifications/feed/", "api.notifications.feed"},
+		{"school", "school", "/school/notifications/feed/", "school.notifications.feed"},
+	} {
+		t.Run(portal.name, func(t *testing.T) {
+			assertNotificationFeedQueryBudget(t, portal.scope, portal.path, portal.scenario)
+		})
+	}
+}
+
+func assertNotificationFeedQueryBudget(t *testing.T, scope, path, scenario string) {
+	t.Helper()
 	db := testpkg.SetupIsolatedTestDB(t)
 	module, err := api.NewDeliveryTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
 	require.NoError(t, err)
@@ -39,6 +52,7 @@ func TestNotificationFeedHTTPQueryBudget(t *testing.T) {
 	insert(other.ID, 1)
 	claims := testutil.TeacherTestClaims(int(account.ID))
 	claims.TenantID = testpkg.Tenant(t)
+	claims.Scope = scope
 	token := testutil.MintTestJWT(t, claims)
 	counter := testpkg.CaptureQueries(t, db)
 	previous, statements := 0, 0
@@ -47,11 +61,11 @@ func TestNotificationFeedHTTPQueryBudget(t *testing.T) {
 			insert(account.ID, 100+i)
 		}
 		counter.Reset()
-		request := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/api/notifications/feed/", nil, testutil.WithJWTBearer(token))
+		request := testutil.NewAuthenticatedRequest(t, http.MethodGet, path, nil, testutil.WithJWTBearer(token))
 		response := testutil.ExecuteRequestForTest(t, router, request)
 		counter.Stop()
 		measurement := counter.Measurement(counter.Queries())
-		querybudgets.AssertQueryBudget(t, "api.notifications.feed", measurement)
+		querybudgets.AssertQueryBudget(t, scenario, measurement)
 		require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 		var page struct {
 			Data struct {

@@ -282,3 +282,98 @@ func dataOf(t *testing.T, body []byte) json.RawMessage {
 	require.NoError(t, json.Unmarshal(body, &envelope))
 	return envelope.Data
 }
+
+// schoolCall is call with a session of moto schule (#7139).
+func (f *feedFixture) schoolCall(t *testing.T, accountID int64, method, path string) (int, []byte) {
+	t.Helper()
+	claims := testutil.TeacherTestClaims(int(accountID))
+	claims.TenantID = testpkg.Tenant(t)
+	claims.Scope = "school"
+	request := testutil.NewAuthenticatedRequest(t, method, path, nil, testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)))
+	response := testutil.ExecuteRequestForTest(t, f.router, request)
+	return response.Code, response.Body.Bytes()
+}
+
+func (f *feedFixture) schoolFeed(t *testing.T, person feedPerson) feedResponse {
+	t.Helper()
+	code, body := f.schoolCall(t, person.accountID, http.MethodGet, "/school/notifications/feed")
+	require.Equal(t, http.StatusOK, code, string(body))
+	var feed feedResponse
+	require.NoError(t, json.Unmarshal(body, &feed))
+	return feed
+}
+
+// TestCancellationFeedReachesMotoSchule reads the cancellation (#7139) in a
+// session of moto schule: the same entry of the account with the school's
+// link, a push to the account's school device, the read state shared with
+// the staff portal, and only for accounts that may use moto schule. A type
+// the school portal does not offer stays out of its feed.
+func TestCancellationFeedReachesMotoSchule(t *testing.T) {
+	t.Parallel()
+	f := newFeedFixture(t)
+	actor, teacher := f.person(t, "Actor"), f.person(t, "Teacher")
+	_, err := f.s.db.ExecContext(context.Background(), `INSERT INTO iot.push_subscriptions (tenant_id, account_id, portal, endpoint, p256dh, auth)
+		VALUES (?, ?, 'school', ?, 'test-p256dh', 'test-auth')`, testpkg.Tenant(t), teacher.accountID, fmt.Sprintf("https://fcm.googleapis.com/fcm/send/feed-school-%d", teacher.accountID))
+	require.NoError(t, err)
+	// A staff member without a school-portal role.
+	staffOnly := func() feedPerson {
+		staff, account := testpkg.CreateTestStaffWithAccount(t, f.s.db, "StaffOnly", "Feed")
+		testpkg.MapAccountToTenant(t, f.s.db, account.ID, testpkg.Tenant(t))
+		role := testpkg.CreateTestRoleForTenant(t, f.s.db, "betreuung", testpkg.Tenant(t))
+		_, err := f.s.db.ExecContext(context.Background(), `INSERT INTO auth.account_roles (account_id, role_id, tenant_id) VALUES (?, ?, ?)`, account.ID, role.ID, testpkg.Tenant(t))
+		require.NoError(t, err)
+		return feedPerson{staffID: staff.ID, accountID: account.ID}
+	}()
+	instanceID := f.block(t, calendar.NewDate(2030, 6, 11), actor, teacher, staffOnly)
+
+	f.cancel(t, instanceID, actor)
+
+	feed := f.schoolFeed(t, teacher)
+	require.Len(t, feed.Data.Entries, 1)
+	entry := feed.Data.Entries[0]
+	assert.Equal(t, "instance_cancelled", entry.Type)
+	assert.Equal(t, "Termin abgesagt", entry.Title)
+	assert.Equal(t, "/school/aufsichten", entry.DeepLink, "the link of moto schule, not the staff portal's")
+	assert.Equal(t, 1, feed.Data.UnreadCount)
+	schoolPushes, err := f.s.db.NewSelect().TableExpr("platform.push_outbox").
+		Where("tenant_id = ?", testpkg.Tenant(t)).
+		Where("(recipient->>'account_id')::bigint = ?", teacher.accountID).
+		Where("recipient->>'portal' = 'school'").
+		Where("payload->>'type' = 'instance_cancelled'").
+		Count(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, int(schoolPushes), "the school device gets the push")
+	assert.Empty(t, f.schoolFeed(t, actor).Data.Entries, "the person who cancelled gets nothing")
+	assert.Empty(t, f.schoolFeed(t, staffOnly).Data.Entries, "without a school-portal role moto schule shows nothing")
+	assert.Len(t, f.feed(t, staffOnly, "").Data.Entries, 1, "the staff portal shows the entry")
+
+	// A type the school portal does not offer stays in the staff portal.
+	_, err = f.s.db.ExecContext(context.Background(), `INSERT INTO platform.notification_feed_entries
+		(tenant_id, account_id, type, title, body, deep_link, related_type, related_id)
+		VALUES (?, ?, 'pickup_upcoming', 'Abholung', 'Bald.', '/dashboard', 'student', 1)`, testpkg.Tenant(t), teacher.accountID)
+	require.NoError(t, err)
+	assert.Len(t, f.schoolFeed(t, teacher).Data.Entries, 1)
+	assert.Len(t, f.feed(t, teacher, "").Data.Entries, 2)
+
+	// Read in moto schule is read in the staff portal; "all read" in moto
+	// schule leaves the staff-only entry unread.
+	code, body := f.schoolCall(t, teacher.accountID, http.MethodPost, fmt.Sprintf("/school/notifications/feed/%d/read", entry.ID))
+	require.Equal(t, http.StatusOK, code, string(body))
+	assert.JSONEq(t, `{"unread_count":0}`, string(dataOf(t, body)))
+	assert.Equal(t, 1, f.feed(t, teacher, "").Data.UnreadCount)
+	code, body = f.schoolCall(t, teacher.accountID, http.MethodPost, "/school/notifications/feed/read-all")
+	require.Equal(t, http.StatusOK, code, string(body))
+	assert.Equal(t, 1, f.feed(t, teacher, "").Data.UnreadCount)
+	code, body = f.schoolCall(t, teacher.accountID, http.MethodGet, "/school/notifications/feed/unread-count")
+	require.Equal(t, http.StatusOK, code, string(body))
+	assert.JSONEq(t, `{"unread_count":0}`, string(dataOf(t, body)))
+	var staffEntryID int64
+	for _, candidate := range f.feed(t, teacher, "").Data.Entries {
+		if candidate.Type == "pickup_upcoming" {
+			staffEntryID = candidate.ID
+		}
+	}
+	require.NotZero(t, staffEntryID)
+	code, body = f.schoolCall(t, teacher.accountID, http.MethodPost, fmt.Sprintf("/school/notifications/feed/%d/read", staffEntryID))
+	assert.Equal(t, http.StatusNotFound, code, "moto schule cannot read an entry it does not show: %s", body)
+}

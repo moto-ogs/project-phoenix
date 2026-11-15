@@ -31370,7 +31370,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffCancellationNotices.NotifyInstanceCancelled",
-      "binding_digest": "aa45e0781d7292bb7f2cf378bc5a0b1e",
+      "binding_digest": "fe33c6cfc94e36842cd87f1f9842da6b",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffCancellationNotices.NotifyInstanceCancelled",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
@@ -31378,7 +31378,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffCancellationNotices.NotifyInstanceCancelled",
-      "binding_digest": "a4baf076be273afb795d7fe754328bdc",
+      "binding_digest": "3f4d9dd68b301a97de8bc6109ca00825",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffCancellationNotices.NotifyInstanceCancelled",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",

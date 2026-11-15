@@ -76,10 +76,16 @@ func NewSSEChannel(broadcaster realtime.Broadcaster, opts ...SSEChannelOption) C
 
 func (c *sseChannel) Name() string { return "sse" }
 
-// signalFeed tells the accounts' open staff sessions that their feed changed
-// (#7148). The signal carries no content; the sessions reload the feed.
+// signalFeed tells the accounts' open sessions in the staff portal and in
+// moto schule that their feed changed (#7148, #7139). The signal carries no
+// content; each session reloads the feed of its own portal, so a session
+// whose portal does not show the changed entry only reloads the same state.
 func (c *sseChannel) signalFeed(tenantID int64, accountIDs []int64) error {
-	return c.broadcaster.BroadcastToStaffAccounts(tenantID, accountIDs, realtime.NewEvent(realtime.EventNotificationFeedChanged, "", realtime.EventData{}))
+	event := realtime.NewEvent(realtime.EventNotificationFeedChanged, "", realtime.EventData{})
+	if err := c.broadcaster.BroadcastToStaffAccounts(tenantID, accountIDs, event); err != nil {
+		return err
+	}
+	return c.broadcaster.BroadcastToSchoolAccounts(tenantID, accountIDs, event)
 }
 
 func (c *sseChannel) getLogger() *slog.Logger {
