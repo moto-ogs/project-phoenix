@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/tenant"
 
@@ -43,6 +44,7 @@ type ExcusedRequestDependencies struct {
 	Students        ExcusedRequestStudents
 	Scope           ReviewScopeResolver
 	Today           func() careplan.Date
+	Now             func() time.Time
 	Observe         func(Observation)
 	Logger          *slog.Logger
 	Messenger       RequestMessenger
@@ -65,7 +67,7 @@ func NewExcusedAbsenceRequests(deps ExcusedRequestDependencies) (*ExcusedAbsence
 	}
 	return application.NewExcusedRequests(application.ExcusedRequestDependencies{
 		CarePlan: deps.CarePlan, Students: deps.Students, Scope: deps.Scope, Hooks: TenantHooks{},
-		Today: deps.Today, Observe: observe, Logger: deps.Logger, Messenger: deps.Messenger, Broadcaster: deps.Broadcaster, Notifier: deps.Notifier,
+		Today: deps.Today, Now: deps.Now, Observe: observe, Logger: deps.Logger, Messenger: deps.Messenger, Broadcaster: deps.Broadcaster, Notifier: deps.Notifier,
 		Ledger: deps.Ledger, Shares: deps.Shares, PartialAbsences: deps.PartialAbsences,
 	})
 }

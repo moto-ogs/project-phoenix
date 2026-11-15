@@ -12,7 +12,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
-	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 const opBulkUpsertArrivalSchedules = "bulk upsert arrival schedules"
@@ -99,16 +98,16 @@ func (s *arrivalScheduleService) selectArrivalStudents(ctx context.Context, filt
 	var err error
 	if filter.SchoolClass != "" {
 		kind, value = "school_class", filter.SchoolClass
-		rows, err = s.students.ByClass(ctx, filter.SchoolClass, calendar.TodayDate())
+		rows, err = s.students.ByClass(ctx, filter.SchoolClass, s.today())
 		rows = dropDepartedArrivalStudents(rows)
 	} else if filter.GroupID != 0 {
 		kind, value = "group_id", strconv.FormatInt(filter.GroupID, 10)
-		rows, err = s.students.ByGroup(ctx, filter.GroupID, calendar.TodayDate())
+		rows, err = s.students.ByGroup(ctx, filter.GroupID, s.today())
 		rows = dropDepartedArrivalStudents(rows)
 	} else {
 		kind, value = "student_ids", strconv.Itoa(len(filter.StudentIDs))
 		var byID map[int64]ports.ArrivalBulkStudent
-		byID, err = s.students.ByIDs(ctx, filter.StudentIDs, calendar.TodayDate())
+		byID, err = s.students.ByIDs(ctx, filter.StudentIDs, s.today())
 		if err == nil {
 			rows, err = explicitArrivalStudents(filter.StudentIDs, byID)
 		}
@@ -169,7 +168,7 @@ func (s *arrivalScheduleService) lockArrivalSelection(ctx context.Context, stude
 	sort.Slice(students, func(i, j int) bool { return students[i].ID < students[j].ID })
 	locked := make([]ports.ArrivalBulkStudent, 0, len(students))
 	for _, selected := range students {
-		fresh, err := s.students.LockByID(ctx, selected.ID, calendar.TodayDate())
+		fresh, err := s.students.LockByID(ctx, selected.ID, s.today())
 		if errors.Is(err, careplan.ErrBulkStudentNotFound) {
 			return nil, fmt.Errorf("%w: student %d", careplan.ErrBulkStudentNotFound, selected.ID)
 		}

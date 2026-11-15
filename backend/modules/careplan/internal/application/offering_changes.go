@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
@@ -32,7 +33,9 @@ type OfferingChangeDependencies struct {
 	Ledger    ports.RequestLedger
 	Shares    ports.ShareVisibility
 
-	Today  func() calendar.Date
+	Today func() calendar.Date
+	// Now stamps decisions and confirmations; the real clock when nil.
+	Now    func() time.Time
 	Logger *slog.Logger
 }
 
@@ -53,8 +56,11 @@ func NewOfferingChanges(deps OfferingChangeDependencies) (*OfferingChanges, erro
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
 	if deps.Today == nil {
-		deps.Today = calendar.TodayDate
+		deps.Today = calendar.CalendarDateClock(deps.Now)
 	}
 	return &OfferingChanges{deps: deps}, nil
 }

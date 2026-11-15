@@ -84,6 +84,9 @@ func offeringChangesForTest(deps OfferingChangeDependencies) *OfferingChanges {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
+	if deps.Today == nil {
+		deps.Today = func() calendar.Date { return calendar.NewDate(2026, time.August, 24) }
+	}
 	return &OfferingChanges{deps: deps}
 }
 

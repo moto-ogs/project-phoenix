@@ -3,7 +3,6 @@ package contracttest_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/careplantest"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	arrivalTimetable "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,14 +54,9 @@ func timetableClassArrivals(t *testing.T, db *bun.DB) timetable.ClassArrivals {
 	return arrivals
 }
 
-// mondayOnOrAfter keeps the assertions off weekends without pinning a date.
-func mondayOnOrAfter(from calendar.Date) calendar.Date {
-	date := from
-	for date.Weekday() != time.Monday {
-		date = date.AddDays(1)
-	}
-	return date
-}
+// arrivalTestMonday is the fixed school day of the arrival suites, a Monday.
+// The arrival schedules under test decide on it too (nativeArrivalSchedules).
+const arrivalTestMonday = decisionTestToday
 
 func TestArrivalBaselineTakesTimeFromTheClass(t *testing.T) {
 	t.Parallel()
@@ -77,7 +70,7 @@ func TestArrivalBaselineTakesTimeFromTheClass(t *testing.T) {
 	staff := testpkg.CreateTestStaff(t, db, "Betreuung", "Person")
 	setClassArrivalTimes(t, "3b", map[string]string{"mon": "11:45", "wed": "12:45"})
 
-	monday := mondayOnOrAfter(calendar.TodayDate())
+	monday := arrivalTestMonday
 	tuesday := monday.AddDays(1)
 	wednesday := monday.AddDays(2)
 
@@ -130,7 +123,7 @@ func TestArrivalBaselineHandlesStudentWithoutClassTimetable(t *testing.T) {
 	_, err := db.ExecContext(context.Background(), `UPDATE users.student_school_memberships SET school_class = '' WHERE student_profile_id = ? AND deleted_at IS NULL`, student.ID)
 	require.NoError(t, err)
 	testpkg.CreateTestArrivalSchedule(t, db, student.ID, timetable.WeekdayMonday, staff.ID, "")
-	monday := mondayOnOrAfter(calendar.TodayDate())
+	monday := arrivalTestMonday
 
 	projection, err := baseline.Project(ctx, []int64{student.ID}, monday, monday)
 	require.NoError(t, err)
@@ -158,7 +151,7 @@ func TestArrivalBaselineClassTimeAloneIsNoCareDay(t *testing.T) {
 	})
 	testpkg.CreateTestArrivalSchedule(t, db, student.ID, timetable.WeekdayMonday, staff.ID, "")
 
-	monday := mondayOnOrAfter(calendar.TodayDate())
+	monday := arrivalTestMonday
 	projection, err := baseline.Project(ctx, []int64{student.ID}, monday, monday.AddDays(4))
 	require.NoError(t, err)
 
@@ -182,7 +175,7 @@ func TestArrivalBaselineCareDayWithoutAnyClassTime(t *testing.T) {
 	staff := testpkg.CreateTestStaff(t, db, "Betreuung", "Ohne")
 	testpkg.CreateTestArrivalSchedule(t, db, student.ID, timetable.WeekdayMonday, staff.ID, "")
 
-	monday := mondayOnOrAfter(calendar.NewDate(2026, 8, 24))
+	monday := arrivalTestMonday
 	projection, err := baseline.Project(ctx, []int64{student.ID}, monday, monday)
 	require.NoError(t, err)
 
@@ -206,7 +199,7 @@ func TestArrivalBaselineManualRowOverridesClassTime(t *testing.T) {
 	testpkg.CreateTestArrivalSchedule(t, db, student.ID, timetable.WeekdayMonday, staff.ID, "12:15")
 	testpkg.CreateTestArrivalSchedule(t, db, student.ID, timetable.WeekdayTuesday, staff.ID, "")
 
-	monday := mondayOnOrAfter(calendar.TodayDate())
+	monday := arrivalTestMonday
 	projection, err := baseline.Project(ctx, []int64{student.ID}, monday, monday.AddDays(1))
 	require.NoError(t, err)
 

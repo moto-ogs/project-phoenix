@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -260,7 +259,7 @@ func (w *ExcusedRequests) applyAbsenceRequest(ctx context.Context, req *careplan
 	if len(req.Dates) == 0 {
 		return careplan.ErrExcusedRequestNoDates
 	}
-	now := time.Now()
+	now := w.now()
 	note := req.Note
 	guardianAccountID := req.SubmittedBy
 	// Each write replaces the status standing for its day (#6958).
@@ -306,7 +305,7 @@ func (w *ExcusedRequests) revertApprovedAbsence(ctx context.Context, req *carepl
 				careplan.ErrParentRequestCorrectionUnsupported, germanDate(row.Date))
 		}
 	}
-	return w.carePlan.ClearStudentStatusDays(ctx, req.StudentID, req.AbsenceStatus, req.Dates, time.Now(), careplan.StudentStatusSourceManual, &reviewer)
+	return w.carePlan.ClearStudentStatusDays(ctx, req.StudentID, req.AbsenceStatus, req.Dates, w.now(), careplan.StudentStatusSourceManual, &reviewer)
 }
 
 // absenceRowWrittenByRequest reports whether this status day is still the one

@@ -300,7 +300,7 @@ func (s *StudentDocuments) recordSensitiveDownload(ctx context.Context, studentI
 	if actor.Role = strings.TrimSpace(actor.Role); actor.Role == "" {
 		actor.Role = "unknown"
 	}
-	if err := s.audit.RecordDocumentDownload(ctx, studentID, actor, document, time.Now()); err != nil {
+	if err := s.audit.RecordDocumentDownload(ctx, studentID, actor, document, s.now()); err != nil {
 		return fmt.Errorf("write document access audit: %w", err)
 	}
 	return nil

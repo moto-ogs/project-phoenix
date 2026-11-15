@@ -60,23 +60,23 @@ func TestCareWithdrawalCompletionRepository_RebookingOnlyObsoletesWithoutGap(t *
 	student := testpkg.CreateTestStudent(t, db, "Sam", "Kurz", "3a")
 	actor := testpkg.CreateTestAccount(t, db, "rebooking-actor")
 	studentID := student.ID
-	firstGap := calendar.TodayDate().AddDays(2)
+	firstGap := decisionTestToday.AddDays(2)
 
 	create := func() {
 		t.Helper()
 		require.NoError(t, api.SeedPendingCareWithdrawal(ctx, repo, &careplan.WithdrawalCompletion{
 			StudentID: &studentID, FirstBookinglessDay: firstGap,
 			Trigger:               careplan.WithdrawalTriggerDirectSchool,
-			WithdrawalConfirmedBy: &actor.ID, WithdrawalConfirmedRole: "admin", WithdrawalConfirmedAt: time.Now(),
+			WithdrawalConfirmedBy: &actor.ID, WithdrawalConfirmedRole: "admin", WithdrawalConfirmedAt: decisionTestClock(),
 		}))
 	}
 
 	create()
-	changed, err := repo.MarkObsoleteForRebooking(ctx, student.ID, firstGap.AddDays(1), time.Now())
+	changed, err := repo.MarkObsoleteForRebooking(ctx, student.ID, firstGap.AddDays(1), decisionTestClock())
 	require.NoError(t, err)
 	assert.False(t, changed, "a booking after a real gap must keep the completion open")
 
-	changed, err = repo.MarkObsoleteForRebooking(ctx, student.ID, firstGap, time.Now())
+	changed, err = repo.MarkObsoleteForRebooking(ctx, student.ID, firstGap, decisionTestClock())
 	require.NoError(t, err)
 	assert.True(t, changed)
 	rows, _, err := repo.ListPending(ctx, careplan.WithdrawalListFilter{StudentID: student.ID, Page: 1, PageSize: 1})
@@ -286,20 +286,20 @@ func TestCareWithdrawalCompletionRepository_CancelCreatesNewPendingEvent(t *test
 	actor := testpkg.CreateTestAccount(t, db, "withdrawal-cancel-actor")
 	studentID := student.ID
 	original := &careplan.WithdrawalCompletion{
-		StudentID: &studentID, FirstBookinglessDay: calendar.TodayDate().AddDays(4),
+		StudentID: &studentID, FirstBookinglessDay: decisionTestToday.AddDays(4),
 		Trigger:               careplan.WithdrawalTriggerDirectSchool,
-		WithdrawalConfirmedBy: &actor.ID, WithdrawalConfirmedRole: "admin", WithdrawalConfirmedAt: time.Now(),
+		WithdrawalConfirmedBy: &actor.ID, WithdrawalConfirmedRole: "admin", WithdrawalConfirmedAt: decisionTestClock(),
 	}
 	require.NoError(t, api.SeedPendingCareWithdrawal(ctx, repo, original))
-	resolved, err := repo.MarkResolved(ctx, original.ID, actor.ID, time.Now())
+	resolved, err := repo.MarkResolved(ctx, original.ID, actor.ID, decisionTestClock())
 	require.NoError(t, err)
 	require.True(t, resolved)
 
-	reopened, err := repo.ReopenAfterCancelledExit(ctx, original.ID+1, student.ID, time.Now())
+	reopened, err := repo.ReopenAfterCancelledExit(ctx, original.ID+1, student.ID, decisionTestClock())
 	require.NoError(t, err)
 	assert.False(t, reopened, "an unrelated exit must not resurrect the latest resolved withdrawal")
 
-	reopened, err = repo.ReopenAfterCancelledExit(ctx, original.ID, student.ID, time.Now())
+	reopened, err = repo.ReopenAfterCancelledExit(ctx, original.ID, student.ID, decisionTestClock())
 	require.NoError(t, err)
 	require.True(t, reopened)
 	rows, _, err := repo.ListPending(ctx, careplan.WithdrawalListFilter{StudentID: student.ID, Page: 1, PageSize: 1})

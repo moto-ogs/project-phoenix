@@ -10,7 +10,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // upsertClassArrivalTimes writes the Unterrichtsschluss of one class. Weekdays
@@ -30,7 +29,7 @@ func (s *arrivalScheduleService) upsertClassArrivalTimes(
 		return nil, err
 	}
 
-	students, err := s.students.ByClass(ctx, schoolClass, calendar.TodayDate())
+	students, err := s.students.ByClass(ctx, schoolClass, s.today())
 	if err != nil {
 		return nil, &careplan.ScheduleError{
 			Op:  opBulkUpsertArrivalSchedules,
@@ -108,7 +107,7 @@ func (s *arrivalScheduleService) lockClassArrivalStudents(
 	for _, student := range students {
 		studentIDs = append(studentIDs, student.ID)
 	}
-	lockedByID, err := s.students.LockByIDs(ctx, studentIDs, calendar.TodayDate())
+	lockedByID, err := s.students.LockByIDs(ctx, studentIDs, s.today())
 	if err != nil {
 		return nil, fmt.Errorf("lock selected students: %w", err)
 	}

@@ -60,6 +60,8 @@ type CareLifecycleDependencies struct {
 	Fingerprint func([]byte) string
 	Logger      *slog.Logger
 	Today       func() calendar.Date
+	// Now stamps the lifecycle's records; the real clock when nil.
+	Now func() time.Time
 }
 
 // CareLifecycle is the native care-lifecycle application (#3427).
@@ -75,6 +77,7 @@ type CareLifecycle struct {
 	planningStaffing      ports.BookingPlanningStaffing
 	logger                *slog.Logger
 	today                 func() calendar.Date
+	now                   func() time.Time
 }
 
 var _ careplan.CareLifecycle = (*CareLifecycle)(nil)
@@ -94,10 +97,14 @@ func NewCareLifecycle(deps CareLifecycleDependencies) (*CareLifecycle, error) {
 	if logger == nil {
 		logger = slog.Default()
 	}
+	now := deps.Now
+	if now == nil {
+		now = time.Now
+	}
 	return &CareLifecycle{
 		owners: owners, records: deps.Records, sourceBookings: deps.SourceBookings, directory: deps.Directory, unit: deps.Unit,
 		lockCareBookingWrites: deps.LockCareBookingWrites, bookingsAuthoritative: deps.BookingsAuthoritative,
-		fingerprint: deps.Fingerprint, planningStaffing: owners.PlanningStaffing, logger: logger, today: deps.Today,
+		fingerprint: deps.Fingerprint, planningStaffing: owners.PlanningStaffing, logger: logger, today: deps.Today, now: now,
 	}, nil
 }
 
@@ -315,7 +322,7 @@ func (s *CareLifecycle) finishCareExitConfirmation(ctx context.Context, state *c
 	if state.completion == nil {
 		return nil
 	}
-	resolved, err := s.records.ResolveWithdrawal(ctx, state.completion.ID, state.actorAccountID, time.Now())
+	resolved, err := s.records.ResolveWithdrawal(ctx, state.completion.ID, state.actorAccountID, s.now())
 	if err != nil {
 		return fmt.Errorf("care lifecycle: resolve care withdrawal completion: %w", err)
 	}
@@ -408,7 +415,7 @@ func (s *CareLifecycle) plannedCareExits(ctx context.Context, ids []int64) (map[
 // records the restored care end in the child's history.
 func (s *CareLifecycle) reopenCancelledExit(ctx context.Context, id int64, exit careplan.CareExit, before map[int64]*calendar.Date, actorAccountID int64) error {
 	if completionID := exit.WithdrawalCompletionID; completionID != nil {
-		if _, err := s.records.ReopenWithdrawalAfterCancelledExit(ctx, *completionID, id, time.Now()); err != nil {
+		if _, err := s.records.ReopenWithdrawalAfterCancelledExit(ctx, *completionID, id, s.now()); err != nil {
 			return fmt.Errorf("care lifecycle: reopen care withdrawal after cancelled exit: %w", err)
 		}
 	}

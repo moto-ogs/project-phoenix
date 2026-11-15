@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	boundaryBinding "github.com/moto-ogs/project-phoenix/modules/careplan/internal/adapters/postgres"
@@ -54,6 +55,7 @@ type OfferingChangeDependencies struct {
 	Shares    ShareVisibility
 
 	Today  func() calendar.Date
+	Now    func() time.Time
 	Logger *slog.Logger
 }
 
@@ -67,7 +69,7 @@ func NewOfferingChanges(deps OfferingChangeDependencies) (careplan.OfferingChang
 		Rows: deps.Rows, Catalog: deps.Catalog, Enrollment: deps.Enrollment, Students: deps.Students,
 		Settings: deps.Settings, Planning: deps.Planning, Bookings: deps.Bookings, Scope: deps.Scope,
 		Hooks: TenantHooks{}, Messenger: deps.Messenger, Ledger: deps.Ledger, Shares: deps.Shares,
-		Today: deps.Today, Logger: deps.Logger,
+		Today: deps.Today, Now: deps.Now, Logger: deps.Logger,
 	})
 }
 

@@ -19,11 +19,13 @@ import (
 // contracts, plus the effect ports the root supplies. Today defaults to the
 // Berlin calendar day.
 type ExcusedRequestWiring struct {
-	CarePlan    careplan.Capability
-	Students    ExcusedRequestStudentRows
-	Persons     ExcusedRequestPersonRows
-	Scope       carePlanCompose.ReviewScopeResolver
-	Today       func() careplan.Date
+	CarePlan careplan.Capability
+	Students ExcusedRequestStudentRows
+	Persons  ExcusedRequestPersonRows
+	Scope    carePlanCompose.ReviewScopeResolver
+	Today    func() careplan.Date
+	// Now stamps the status days a decision writes; the real clock when nil.
+	Now         func() time.Time
 	Logger      *slog.Logger
 	Observe     func(carePlanCompose.Observation)
 	Messenger   carePlanCompose.RequestMessenger
@@ -52,6 +54,7 @@ func NewExcusedAbsenceRequests(wiring ExcusedRequestWiring) (*carePlanCompose.Ex
 		},
 		Scope:   wiring.Scope,
 		Today:   today,
+		Now:     wiring.Now,
 		Observe: wiring.Observe, Logger: wiring.Logger,
 		Messenger: wiring.Messenger, Broadcaster: wiring.Broadcaster, Notifier: wiring.Notifier,
 		Ledger: wiring.Ledger, Shares: wiring.Shares, PartialAbsences: wiring.PartialAbsences,

@@ -27,6 +27,8 @@ type effectiveTimeCore[
 	notes        ports.EffectiveNoteRepository[N]
 	transactions ports.EffectiveTimeTransaction
 	domain       D
+	// today is the first day of the upcoming exceptions.
+	today func() calendar.Date
 }
 
 func newEffectiveTimeCore[
@@ -40,6 +42,7 @@ func newEffectiveTimeCore[
 	notes ports.EffectiveNoteRepository[N],
 	transactions ports.EffectiveTimeTransaction,
 	domain D,
+	today func() calendar.Date,
 ) *effectiveTimeCore[S, E, N, D] {
 	return &effectiveTimeCore[S, E, N, D]{
 		schedules:    schedules,
@@ -47,6 +50,7 @@ func newEffectiveTimeCore[
 		notes:        notes,
 		transactions: transactions,
 		domain:       domain,
+		today:        today,
 	}
 }
 

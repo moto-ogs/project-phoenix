@@ -97,7 +97,7 @@ func BuildCarePlanRequests(
 	// retained directories, the review policy and the effect sinks.
 	if requests.Excused, err = NewExcusedAbsenceRequestService(
 		carePlan, people.Students, people.Persons, ParentRequestReviewScope(reviews, permissions),
-		emitter, hub, events, absences, shares, env.Observe.CarePlan, env.Logger.With("service", "excused-requests"), nil,
+		emitter, hub, events, absences, shares, env.Observe.CarePlan, env.Logger.With("service", "excused-requests"), env.Today, env.Now,
 		schedules.PartialAbsences,
 	); err != nil {
 		return CarePlanRequests{}, fmt.Errorf("compose excused absence requests: %w", err)
