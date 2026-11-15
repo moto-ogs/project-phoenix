@@ -60,7 +60,7 @@ func TestLettermintRequiresEveryValueAndNamesTheMissingOnes(t *testing.T) {
 
 func TestUnknownProviderFailsTheStart(t *testing.T) {
 	t.Parallel()
-	err := ProviderConfig{Provider: "brevo"}.Validate()
+	err := ProviderConfig{Provider: "unknown-provider"}.Validate()
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "EMAIL_PROVIDER")

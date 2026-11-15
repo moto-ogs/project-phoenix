@@ -432,6 +432,8 @@ export function TeamChatThread({
         <div
           ref={scrollRef}
           data-chat-scroll=""
+          role="log"
+          aria-label="Nachrichtenverlauf"
           className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1"
         >
           {threadLoadFailed && messages.length > 0 && (

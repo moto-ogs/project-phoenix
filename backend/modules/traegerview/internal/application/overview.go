@@ -39,6 +39,7 @@ type Overview struct {
 	known       traegerview.KnownChildrenPorts
 	times       traegerview.ArrivalPickupCounts
 	utilization traegerview.UtilizationPorts
+	daily       traegerview.DailyAttendancePorts
 	now         func() time.Time
 	withinAdmin func(context.Context, func(context.Context) error) error
 }
@@ -52,13 +53,14 @@ var (
 // the projection reads in; it is the Träger-Portal's only one (ADR 0084).
 func New(ports traegerview.Ports, rows SchoolRows, withinAdmin func(context.Context, func(context.Context) error) error) (*Overview, error) {
 	if ports.SchoolIDs == nil || rows == nil || ports.Trail == nil || ports.Persons == nil || ports.Staff == nil || ports.Bureau == nil || ports.Recorder == nil || ports.Holiday == nil || ports.Rosters == nil || ports.Present == nil || ports.Sick == nil || ports.OnSite == nil || ports.KeyDates == nil ||
-		ports.Enrollments == nil || ports.Alerts == nil || !occupancyPortsBound(ports.Occupancy) || ports.Known.Children == nil || ports.Known.Namesakes == nil || !utilizationPortsBound(ports.Utilization) || ports.Times == nil || withinAdmin == nil {
-		return nil, errors.New("traeger view: school IDs, rows, access trail, persons, staff, Träger-Büro addresses, access recorder, holiday trail, school figures, Stichtagszahlen, open enrollments, alert thresholds, occupancy reads, known child reads, utilization reads, arrival and pickup times and the administrative transaction are required")
+		ports.Enrollments == nil || ports.Alerts == nil || !occupancyPortsBound(ports.Occupancy) || ports.Known.Children == nil || ports.Known.Namesakes == nil || !utilizationPortsBound(ports.Utilization) || ports.Times == nil ||
+		ports.Daily.Days == nil || ports.Daily.Absences == nil || ports.Daily.States == nil || withinAdmin == nil {
+		return nil, errors.New("traeger view: school IDs, rows, access trail, persons, staff, Träger-Büro addresses, access recorder, holiday trail, school figures, Stichtagszahlen, open enrollments, alert thresholds, occupancy reads, known child reads, utilization reads, arrival and pickup times, the daily attendance reads and the administrative transaction are required")
 	}
 	return &Overview{
 		schoolIDs: ports.SchoolIDs, rows: rows, trail: ports.Trail, persons: ports.Persons, staff: ports.Staff, bureau: ports.Bureau,
 		recorder: ports.Recorder, holiday: ports.Holiday, rosters: ports.Rosters, present: ports.Present, sick: ports.Sick, onSite: ports.OnSite, keyDates: ports.KeyDates,
-		enrollments: ports.Enrollments, alerts: ports.Alerts, occupancy: ports.Occupancy, known: ports.Known, utilization: ports.Utilization, times: ports.Times, now: time.Now, withinAdmin: withinAdmin,
+		enrollments: ports.Enrollments, alerts: ports.Alerts, occupancy: ports.Occupancy, known: ports.Known, utilization: ports.Utilization, times: ports.Times, daily: ports.Daily, now: time.Now, withinAdmin: withinAdmin,
 	}, nil
 }
 

@@ -436,6 +436,7 @@ function RoomDetailPageContent() {
           ? {
               value: activeTab,
               onChange: handleTabChange,
+              inUrl: true,
               items: tabItems,
               label: "Bereiche des Raums",
             }

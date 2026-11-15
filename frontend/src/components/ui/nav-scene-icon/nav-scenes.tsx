@@ -582,6 +582,17 @@ export const NAV_SCENES: Readonly<Record<string, NavScene>> = {
       </>
     ),
   },
+  ChartBarHorizontalIcon: {
+    description: "die Balken wachsen nacheinander aus der Achse",
+    render: () => (
+      <>
+        <path d="M48,40V216" />
+        <path className="ns-hbar ns-i0" d="M48,56H176V104H48" />
+        <path className="ns-hbar ns-i1" d="M48,104H224V152H48" />
+        <path className="ns-hbar ns-i2" d="M48,152H144V200H48" />
+      </>
+    ),
+  },
   ChalkboardTeacherIcon: {
     description: "an der Tafel wird geschrieben",
     render: () => (

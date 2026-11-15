@@ -6,7 +6,7 @@
  */
 
 import { clientEnv } from "~/env.client";
-import { TRAEGER_SIGN_IN_WITH_CODE_PARAM } from "~/lib/traeger-login-params";
+import { TRAEGER_SIGN_IN_WITH_CODE_PARAM } from "~/lib/login-params";
 
 /** The entry page on the school's host. */
 const TRAEGER_HANDOFF_PATH = "/traeger-uebergabe";

@@ -35,5 +35,6 @@
   "emptyLeadershipDescription": "Schreiben Sie die erste Nachricht an die Leitung. Die anderen Mitarbeitenden sehen sie nicht.",
   "leadershipUnstaffed": "Zurzeit liest niemand aus der Leitung mit. Bitte schreiben Sie an das ganze {careTerm}-Team.",
   "leadershipUnavailable": "Nachrichten nur an die Leitung sind hier zurzeit nicht möglich. Bitte schreiben Sie an das ganze {careTerm}-Team.",
-  "readersUnnamedLeader": "Schulverwaltung"
+  "readersUnnamedLeader": "Schulverwaltung",
+  "historyLabel": "Nachrichtenverlauf"
 }

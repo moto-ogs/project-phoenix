@@ -125,7 +125,7 @@ func TestPublicParentBillingContractFreezesTheHolidayContribution(t *testing.T) 
 		}}},
 	}}
 	rules := compose.NewContributionRules()
-	contributions, _ := compose.NewHolidayContributions(enrollment, settingsDouble{})
+	contributions, _ := compose.NewHolidayContributions(enrollment, settingsDouble{}, func() calendar.Date { return week.AddDays(-28) })
 	reviewer := parentbilling.HolidayReviewer{OrganizationID: organization, AccountID: account.ID}
 
 	var exemption parentbilling.ContributionRule

@@ -702,6 +702,7 @@ function ParentAnnouncementsContent() {
       tabs={{
         value: kind,
         onChange: (value) => setKind(value as AnnouncementKind),
+        inUrl: true,
         items: KIND_ITEMS.map((item) => ({
           value: item.value,
           label: item.label,

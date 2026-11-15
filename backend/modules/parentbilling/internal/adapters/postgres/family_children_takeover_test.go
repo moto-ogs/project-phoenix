@@ -48,7 +48,10 @@ func TestFamilyChildrenStatementKeepsTheNewerOne(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, applied, "the first statement of the family")
 
-		older := time.Now().Add(-48 * time.Hour)
+		// The statements are dated on PostgreSQL's clock, which caps them.
+		var statedNow time.Time
+		require.NoError(t, tx.NewRaw("SELECT clock_timestamp()").Scan(ctx, &statedNow))
+		older := statedNow.Add(-48 * time.Hour)
 		_, applied, err = store.StateFamilyChildren(ctx, own.organization, 0, family, contracts[own.organization], 2, &older)
 		require.NoError(t, err)
 		assert.False(t, applied, "an older statement does not replace the newer one")
@@ -58,7 +61,7 @@ func TestFamilyChildrenStatementKeepsTheNewerOne(t *testing.T) {
 		require.NotNil(t, count.StatedChildren)
 		assert.Equal(t, 3, *count.StatedChildren)
 
-		future := time.Now().Add(240 * time.Hour)
+		future := statedNow.Add(240 * time.Hour)
 		_, applied, err = store.StateFamilyChildren(ctx, own.organization, 0, family, contracts[own.organization], 4, &future)
 		require.NoError(t, err)
 		require.True(t, applied)

@@ -1,8 +1,6 @@
 package rendering
 
 import (
-	"time"
-
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application"
@@ -28,7 +26,7 @@ func (r *Renderer) RenderTable(table application.ExportTable, format, filenameBa
 		lines[i] = lists.SanitizeUserText(line)
 	}
 	file, err := r.tables.Render(lists.Document{
-		Title: table.Title, Subtitle: lists.SanitizeUserText(table.Subtitle), GeneratedAt: time.Now(),
+		Title: table.Title, Subtitle: lists.SanitizeUserText(table.Subtitle), GeneratedAt: r.now(),
 		Filters: lines, Columns: columns, Rows: rows, Footer: table.Footer,
 	}, lists.Format(format), filenameBase)
 	if err != nil {

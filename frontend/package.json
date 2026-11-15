@@ -19,6 +19,7 @@
     "publish:screenshots": "playwright test -c playwright.screenshots.config.ts publish\\.pw",
     "test:layout": "playwright test -c playwright.layout.config.ts",
     "test:e2e": "playwright test",
+    "audit:a11y": "playwright test -c playwright.a11y-audit.config.ts",
     "test:network": "playwright test -c playwright.network.config.ts",
     "test:tenant-switch": "playwright test -c playwright.tenant-switch.config.ts",
     "generate:locales": "node scripts/generate-locales.mjs",
@@ -87,6 +88,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@playwright/test": "^1.65.0",
     "@storybook/addon-a11y": "^10.6.6",
     "@storybook/addon-vitest": "^10.6.6",
@@ -142,6 +144,7 @@
       "scripts/generate-guides.ts",
       "scripts/secure-chrome.setup.ts",
       "scripts/product-screenshots/*.pw.ts",
+      "scripts/a11y-audit/*.audit.ts",
       "scripts/kit-pixel-browser-version.setup.ts",
       "scripts/kit-pixel-stories.pw.ts",
       "playwright*.config.ts",
@@ -161,6 +164,9 @@
     ],
     "ignoreIssues": {
       "playwright*.config.ts": [
+        "exports"
+      ],
+      "e2e/a11y/reporter.ts": [
         "exports"
       ]
     },

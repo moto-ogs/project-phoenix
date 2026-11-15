@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 	parentportalcompose "github.com/moto-ogs/project-phoenix/workflows/parentportal/compose"
@@ -33,7 +34,7 @@ func newMandateFixture(t *testing.T) mandateFixture {
 	require.NoError(t, err)
 	settings := &owners.ParentMandateTestSettings{}
 	deps := documentInboxDependencies(t, db, &owners.CareContractTestMails{})
-	deps.SEPAMandates = owners.NewParentSEPAMandatesForTests(settings, cipher)
+	deps.SEPAMandates = owners.NewParentSEPAMandatesForTests(settings, cipher, calendar.TodayDate)
 	f := mandateFixture{portal: parentportalcompose.New(deps), db: db, settings: settings, chain: testpkg.CreateTestParentGuardianChain(t, db)}
 	ctx := context.Background()
 	require.NoError(t, db.NewRaw(`SELECT organization_id FROM platform.schools WHERE id = ?`, f.chain.TenantID).Scan(ctx, &f.organization))

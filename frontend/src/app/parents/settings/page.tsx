@@ -16,6 +16,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { usePageTitleSection } from "~/components/ui/page-title-section";
 import { useTranslations } from "next-intl";
 
 import { NotificationPreferencesSection } from "~/components/settings/notification-preferences-section";
@@ -37,6 +38,7 @@ function ParentSettingsContent() {
   const t = useTranslations("parentSettings");
   const tNav = useTranslations("parentNav");
   const section = activeParentSettingsSection(useSearchParams().get("tab"));
+  usePageTitleSection(tNav(section.tKey));
   const pathname = usePathname();
   const [pageUrl, setPageUrl] = useState<URL | null>(null);
   const installHelpHref = buildHelpHref(

@@ -62,6 +62,7 @@ import { mealPlanConcept } from "~/lib/concepts/mealPlan";
 import { databaseConcept } from "~/lib/concepts/database";
 import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 import { reportsConcept } from "~/lib/concepts/reports";
+import { schoolComparisonConcept } from "~/lib/concepts/schoolComparison";
 import { holidayWeeksConcept } from "~/lib/concepts/holidayWeeks";
 import { siblingsConcept } from "~/lib/concepts/siblings";
 import { singleParentConcept } from "~/lib/concepts/singleParent";
@@ -79,6 +80,7 @@ import { exportsConcept } from "~/lib/concepts/exports";
 import { gradeTransitionsConcept } from "~/lib/concepts/gradeTransitions";
 import { pickupConcept } from "~/lib/concepts/pickup";
 import { arrivalPickupConcept } from "~/lib/concepts/arrivalPickup";
+import { stateReportConcept } from "~/lib/concepts/stateReport";
 import { transportConcept } from "~/lib/concepts/transport";
 import { birthdaysConcept } from "~/lib/concepts/birthdays";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
@@ -154,6 +156,7 @@ const registry = {
   database: databaseConcept,
   enrollments: enrollmentsConcept,
   reports: reportsConcept,
+  schoolComparison: schoolComparisonConcept,
   holidayWeeks: holidayWeeksConcept,
   siblings: siblingsConcept,
   singleParent: singleParentConcept,
@@ -171,6 +174,7 @@ const registry = {
   gradeTransitions: gradeTransitionsConcept,
   pickup: pickupConcept,
   arrivalPickup: arrivalPickupConcept,
+  stateReport: stateReportConcept,
   transport: transportConcept,
   birthdays: birthdaysConcept,
   changeHistory: changeHistoryConcept,

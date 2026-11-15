@@ -141,9 +141,14 @@ type careBillingFixture struct {
 	office  traegerOffice
 }
 
+// careBillingDay is the day of the Elternabrechnung in its fixtures: its
+// runs, mandates and debits judge every date against it, so the months
+// ahead stay ahead whatever day the suite runs (#7104).
+func careBillingDay() calendar.Date { return calendar.NewDate(2026, 11, 2) }
+
 func newCareBillingFixture(t *testing.T, name string) careBillingFixture {
 	t.Helper()
-	return newCareBillingFixtureOn(t, name, calendar.TodayDate)
+	return newCareBillingFixtureOn(t, name, careBillingDay)
 }
 
 // newCareBillingFixtureOn is newCareBillingFixture whose day-bound services

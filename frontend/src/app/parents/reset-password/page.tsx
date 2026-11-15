@@ -1,38 +1,29 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { ResetPasswordPageContent } from "~/components/auth/reset-password-page-content";
 import { AuthShellSkeleton } from "~/components/auth/auth-shell";
 import { buildParentAuthShellCopy } from "~/components/auth/parent-auth-shell-copy";
-import { confirmParentPasswordReset } from "~/lib/auth-api";
-import { parentPath } from "~/lib/parent-url";
-
-const parentLoginPath = "/parents/login";
 
 export default function ParentResetPasswordPage() {
   const t = useTranslations("parentPasswordResetPage");
   const tAuthShell = useTranslations("parentAuthShell");
-  const [loginPath, setLoginPath] = useState(parentLoginPath);
   const testimonialPanelCopy = useMemo(
     () => buildParentAuthShellCopy(tAuthShell),
     [tAuthShell],
   );
 
-  useEffect(() => {
-    setLoginPath(parentPath(parentLoginPath));
-  }, []);
-
   return (
     <Suspense fallback={<AuthShellSkeleton />}>
       <ResetPasswordPageContent
-        confirmReset={confirmParentPasswordReset}
-        successRedirectPath={loginPath}
-        backHref={loginPath}
-        backLabel={t("backToLogin")}
+        portal="parent"
         testimonialPanelCopy={testimonialPanelCopy}
         copy={{
           missingToken: t("errors.missingToken"),
+          requestNewLink: t("errors.requestNewLink"),
+          newLinkSubtitle: t("errors.newLinkSubtitle"),
+          backToLogin: t("backToLogin"),
           errorObject: t("errorObject"),
           passwordTooShort: t("validation.tooShort"),
           passwordMissingUppercase: t("validation.missingUppercase"),

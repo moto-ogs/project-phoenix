@@ -28,16 +28,9 @@ vi.mock("~/lib/tenant-api", () => ({
   loginImageSrc: (path: string) => `/resolved${path}`,
 }));
 
-// parentPath is environment-driven; pin it so the success/back links are
-// deterministic without standing up the full parent-url env contract.
-vi.mock("~/lib/parent-url", () => ({
-  parentPath: (path: string) => `https://parents.example.com${path}`,
-}));
-
-const confirmParentPasswordReset = vi.fn();
+const confirmPasswordReset = vi.fn();
 vi.mock("~/lib/auth-api", () => ({
-  confirmParentPasswordReset: (...args: unknown[]) =>
-    confirmParentPasswordReset(...args),
+  confirmPasswordReset: (...args: unknown[]) => confirmPasswordReset(...args),
 }));
 
 import ParentResetPasswordPage from "./page";
@@ -60,17 +53,17 @@ describe("ParentResetPasswordPage", () => {
     ).toBeEnabled();
   });
 
-  it("shows the missing-token error when the URL has no token", () => {
+  it("offers a new link when the URL has no token", () => {
     mocks.token = null;
     render(<ParentResetPasswordPage />);
 
     expect(
-      screen.getByRole("button", { name: "Passwort ändern" }),
-    ).toBeDisabled();
+      screen.getByRole("link", { name: "Neuen Link anfordern" }),
+    ).toHaveAttribute("href", "/parents/login?passwort-vergessen=1");
   });
 
   it("shows a failed reset with the translated object of the shared path", async () => {
-    confirmParentPasswordReset.mockRejectedValue(
+    confirmPasswordReset.mockRejectedValue(
       new ApiError("diag", 503, { code: "general.unavailable" }),
     );
     render(<ParentResetPasswordPage />);
@@ -93,13 +86,11 @@ describe("ParentResetPasswordPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("links back to the parents login via parentPath", () => {
+  // Off its own host (as here), the portal's login is the prefixed page.
+  it("links back to the parents login", () => {
     render(<ParentResetPasswordPage />);
 
     const backLink = screen.getByRole("link", { name: /Anmeldung/i });
-    expect(backLink).toHaveAttribute(
-      "href",
-      "https://parents.example.com/parents/login",
-    );
+    expect(backLink).toHaveAttribute("href", "/parents/login");
   });
 });

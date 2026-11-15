@@ -282,7 +282,13 @@ export function CatalogPhaseForm({
                 defaultTime="23:59"
                 min={toDateTimeLocalValue(draft.enrollmentOpenAt) || undefined}
                 value={toDateTimeLocalValue(draft.enrollmentCloseAt)}
+                name="enrollment_close_at"
                 invalid={Boolean(fieldError("enrollment_close_at"))}
+                ariaDescribedBy={
+                  fieldError("enrollment_close_at")
+                    ? "catalog-phase-close-error"
+                    : undefined
+                }
                 onChange={(next) =>
                   set("enrollmentCloseAt", fromDateTimeLocalValue(next))
                 }

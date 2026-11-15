@@ -6,10 +6,6 @@
 import { authFetch } from "./api-helpers";
 import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { downloadBlob, filenameFromDisposition } from "./file-download";
-import {
-  portalPasswordLogin,
-  type PortalPasswordLoginResult,
-} from "./portal-password-login";
 
 interface ProxyResponse<T> {
   success: boolean;
@@ -220,21 +216,6 @@ export async function acceptCatererInvitation(
     method: "POST",
     body: { password, confirm_password: confirmPassword },
   });
-}
-
-/** The answer of the caterer login (#4497): a session, or the second step. */
-export type CatererLoginResult = PortalPasswordLoginResult;
-
-/**
- * Signs a caterer in. The BFF installs the caterer session itself; the
- * browser only learns whether a second step follows. A refusal comes back
- * as an ApiError with its code.
- */
-export function loginCaterer(
-  email: string,
-  password: string,
-): Promise<CatererLoginResult> {
-  return portalPasswordLogin("caterer", email, password);
 }
 
 export type DeliveryExportFormat = "pdf" | "xlsx" | "csv";

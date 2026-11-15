@@ -266,6 +266,7 @@ function SurveysContent() {
         canManage
           ? {
               value: view,
+              inUrl: true,
               onChange: (next) =>
                 updateUrlParams({ ansicht: next === "alle" ? null : next }),
               items: [

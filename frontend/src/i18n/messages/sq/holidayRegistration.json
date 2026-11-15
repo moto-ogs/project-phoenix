@@ -102,6 +102,7 @@
   "contributionExemption": "I përjashtuar për shkak të ndihmave: {note}",
   "contributionChildTotal": "Shuma",
   "contributionTotal": "Gjithsej",
+  "contributionUpdated": "Pagesa u rillogarit. Gjithsej: {total}",
   "benefitsLabel": "Ne marrim ndihma, për shembull Bürgergeld, ndihmë për banesën (Wohngeld) ose shtesë për fëmijën (Kinderzuschlag).",
   "benefitsHint": "Atëherë kujdesi gjatë pushimeve është falas. Organizatori ka nevojë për një vërtetim.",
   "benefitsProofLabel": "Dëshmia për ndihmat",

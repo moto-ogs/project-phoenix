@@ -10,6 +10,7 @@
 export const DELIBERATE_LOGOUT_KEY = "deliberateLogout";
 
 import { getSession } from "next-auth/react";
+import { handleAuthFailure } from "./auth-failure";
 import type { ErrorCode } from "./error-codes.generated";
 import {
   ApiError,
@@ -269,11 +270,6 @@ export async function sessionFetch(
         return response;
     }
     clearSessionCache();
-    // Import from auth-failure directly (auth-api only re-exports it):
-    // going through auth-api would close a module cycle
-    // session-cache -> auth-api -> auth-service -> api-transport -> session-cache
-    // now that the API clients import this module statically (#2123).
-    const { handleAuthFailure } = await import("./auth-failure");
     const refreshed = await handleAuthFailure();
     if (refreshed) {
       // The refresh does not touch the cookie (see handleAuthFailure); this

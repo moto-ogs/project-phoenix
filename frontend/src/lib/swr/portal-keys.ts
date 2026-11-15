@@ -368,6 +368,9 @@ export const traegerKeys = {
   // Ankunft und Abholung eines Zeitraums (#4714): Durchschnitte, keine Kinder.
   arrivalPickupTimes: (from: string, to: string) =>
     `traeger-arrival-pickup-times-${from}-${to}`,
+  // Tagesmeldung Mecklenburg-Vorpommern eines Zeitraums (#4717): Zahlen, keine Kinder.
+  dailyAttendance: (from: string, to: string) =>
+    `traeger-daily-attendance-${from}-${to}`,
   periodsFamily: "traeger-holiday-period-",
   periods: () => "traeger-holiday-period-list",
   period: (id: string) =>

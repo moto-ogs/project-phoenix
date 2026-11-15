@@ -78,3 +78,60 @@ describe("MessageComposer bei offener Handy-Tastatur (#3664)", () => {
     expect(field.style.height).toBe("160px");
   });
 });
+
+describe("MessageComposer nach dem Senden (#7113, WCAG 2.4.3)", () => {
+  // Wie die Chats: das Feld ist gesperrt, solange die Nachricht unterwegs ist.
+  function SendingComposer({
+    onSend,
+  }: Readonly<{ onSend: () => Promise<boolean> }>) {
+    const [value, setValue] = useState("");
+    const [sending, setSending] = useState(false);
+    return (
+      <MessageComposer
+        value={value}
+        onChange={setValue}
+        sending={sending}
+        fieldLabel="Nachricht"
+        onSend={async () => {
+          setSending(true);
+          setValue("");
+          try {
+            return await onSend();
+          } finally {
+            setSending(false);
+          }
+        }}
+      />
+    );
+  }
+
+  it("lässt den Fokus nach einem Klick auf Senden im Feld", async () => {
+    const user = userEvent.setup();
+    let arrive: (value: boolean) => void = () => {};
+    render(
+      <SendingComposer
+        onSend={() =>
+          new Promise<boolean>((resolve) => {
+            arrive = resolve;
+          })
+        }
+      />,
+    );
+    const field = screen.getByRole("textbox", { name: "Nachricht" });
+    await user.type(field, "Hallo");
+    await user.click(screen.getByRole("button", { name: "Senden" }));
+    await act(async () => arrive(true));
+
+    expect(field).toHaveFocus();
+  });
+
+  it("lässt den Fokus nach Enter im Feld", async () => {
+    const user = userEvent.setup();
+    render(<SendingComposer onSend={() => Promise.resolve(true)} />);
+    const field = screen.getByRole("textbox", { name: "Nachricht" });
+    await user.type(field, "Hallo{Enter}");
+
+    expect(field).toHaveFocus();
+    expect(field).toHaveValue("");
+  });
+});

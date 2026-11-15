@@ -212,7 +212,9 @@ describe("SignaturePad", () => {
     const { container, rerender } = render(
       <Harness onValue={vi.fn()} error="Bitte noch einmal." />,
     );
-    expect(container.querySelector('[aria-invalid="true"]')).toContainElement(
+    // The selector FormErrorAlert jumps to; a group cannot carry
+    // aria-invalid, so the pad is marked with data-form-invalid (#7111).
+    expect(container.querySelector(FORM_INVALID)).toContainElement(
       screen.getByRole("img", { name: "Feld zum Unterschreiben" }),
     );
 
@@ -220,6 +222,8 @@ describe("SignaturePad", () => {
     expect(
       screen.getByRole("img", { name: "Feld zum Unterschreiben" }),
     ).not.toHaveAccessibleDescription(/Bitte noch einmal/);
-    expect(container.querySelector("[aria-invalid]")).toBeNull();
+    expect(container.querySelector(FORM_INVALID)).toBeNull();
   });
 });
+
+const FORM_INVALID = '[aria-invalid="true"], [data-form-invalid="true"]';

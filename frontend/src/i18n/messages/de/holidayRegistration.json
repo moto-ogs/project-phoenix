@@ -102,6 +102,7 @@
   "contributionExemption": "Befreit wegen Leistungsbezug: {note}",
   "contributionChildTotal": "Summe",
   "contributionTotal": "Gesamt",
+  "contributionUpdated": "Der Beitrag ist neu berechnet. Gesamt: {total}",
   "benefitsLabel": "Wir bekommen Leistungen, zum Beispiel Bürgergeld, Wohngeld oder Kinderzuschlag.",
   "benefitsHint": "Dann ist die Ferienbetreuung kostenlos. Der Träger braucht dafür einen Nachweis.",
   "benefitsProofLabel": "Nachweis über die Leistungen",

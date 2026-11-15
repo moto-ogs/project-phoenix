@@ -43,7 +43,12 @@ const HELP_ITEM: BottomNavItem = {
  * mit Hilfe und Einstellungen, in den Einstellungen deren Einträge mit dem
  * Rückweg zur App vorne.
  */
-export function TraegerBottomNav() {
+export function TraegerBottomNav({
+  federalStates,
+}: {
+  /** Die Bundesländer der Schulen des Trägers, wie in der Seitenleiste (#4717). */
+  readonly federalStates?: readonly string[];
+}) {
   const pathname = usePathname() ?? "";
   const { data: session } = useSession();
   const returnHref = useTraegerReturnHref();
@@ -59,7 +64,9 @@ export function TraegerBottomNav() {
     : [
         // Die Leiste folgt der Seitenleiste (#5685); was nicht passt,
         // steht unter „Mehr“.
-        ...traegerNavGroupsFor(session ?? null).flatMap((group) => group.items),
+        ...traegerNavGroupsFor(session ?? null, federalStates).flatMap(
+          (group) => group.items,
+        ),
         HELP_ITEM,
         ...(settingsEntry
           ? [{ ...TRAEGER_SETTINGS_NAV, href: settingsEntry.href }]

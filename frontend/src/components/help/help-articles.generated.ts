@@ -362,6 +362,8 @@ import type { traegerCatalogPhasesTopic as authored_traegerCatalogPhasesTopic } 
 
 import type { traegerClosingDaysTopic as authored_traegerClosingDaysTopic } from "./articles/traeger-closing-days";
 
+import type { traegerDailyAttendanceTopic as authored_traegerDailyAttendanceTopic } from "./articles/traeger-daily-attendance";
+
 import type { traegerDashboardTopic as authored_traegerDashboardTopic } from "./articles/traeger-dashboard";
 
 import type { traegerDatevExportTopic as authored_traegerDatevExportTopic } from "./articles/traeger-datev-export";
@@ -399,6 +401,8 @@ import type { traegerLoginTopic as authored_traegerLoginTopic } from "./articles
 import type { traegerOccupancyTopic as authored_traegerOccupancyTopic } from "./articles/traeger-occupancy";
 
 import type { traegerProfileTopic as authored_traegerProfileTopic } from "./articles/traeger-profile";
+
+import type { traegerSchoolComparisonTopic as authored_traegerSchoolComparisonTopic } from "./articles/traeger-school-comparison";
 
 import type { traegerSchoolSwitchTopic as authored_traegerSchoolSwitchTopic } from "./articles/traeger-school-switch";
 
@@ -2273,7 +2277,7 @@ export const editStudentTopic = function editStudentTopic(): HelpTopic {
  * Lohnbüro, Abwesenheitsanträge und, für den Träger, der Versand der Schreiben.
  * Hier steht, was jedes Wort bedeutet und wer als Nächstes handelt.
  * `Versendet` heißt nur: Die Mail ist raus. `Zugestellt` meldet erst der
- * Mail-Dienst, und ohne ihn (Strato, Brevo, Notweg) bleibt es bei `Versendet`.
+ * Mail-Dienst, und ohne ihn (reines SMTP, Notweg) bleibt es bei `Versendet`.
  */
 export const emailDeliveryTopic = function emailDeliveryTopic(): HelpTopic {
   return {
@@ -12301,6 +12305,59 @@ export const traegerClosingDaysTopic =
     };
   } satisfies typeof authored_traegerClosingDaysTopic;
 
+/**
+ * `/traeger/tagesmeldung` (#4717): An- und Abwesenheit der Kinder je Tag an
+ * den Schulen des Trägers in Mecklenburg-Vorpommern, als Datei für das Land.
+ */
+export const traegerDailyAttendanceTopic =
+  function traegerDailyAttendanceTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerDailyAttendance,
+      title: "Tagesmeldung Mecklenburg-Vorpommern",
+      question: "Wie melde ich die tägliche An- und Abwesenheit an das Land?",
+      summary:
+        "Für Schulen in Mecklenburg-Vorpommern zeigt moto je Tag, wer da war und wer gefehlt hat. Die Datei für das Land laden Sie mit einem Klick herunter.",
+      image: "/help/screens/tagesmeldung-mecklenburg-vorpommern.webp",
+      imageAlt:
+        "Oben die Zahlen Kinder am Tag, Verweildauer, Längster Tag und Abwesend gemeldet. Darunter die Tabelle Je Tag mit einer Zeile je Tag.",
+      group: "auswertung",
+      audience: "traeger",
+      icon: "SealCheck",
+      requirements: [
+        "Sie brauchen das Recht `Berichte lesen`. Es gehört zu den Rollen `Verwaltung`, `Abrechnung`, `Personal` und `Nur lesen`.",
+        "Mindestens eine Schule Ihres Trägers liegt in Mecklenburg-Vorpommern. Das Bundesland einer Schule stellt das moto-Team ein.",
+      ],
+      steps: [
+        "Wählen Sie in der Navigation `Tagesmeldung`.",
+        "Wählen Sie oben den Zeitraum. Am Anfang ist es die letzte Woche bis gestern. Ein Zeitraum hat höchstens 31 Tage.",
+        "Lesen Sie oben die Zahlen: `Kinder am Tag`, `Verweildauer`, `Längster Tag` und `Abwesend gemeldet`.",
+        "Lesen Sie unter `Je Tag`, wie viele Kinder an jedem Tag da waren und wie viele krank, entschuldigt oder auf Klassenfahrt waren.",
+        "Wählen Sie oben den Filter `Schule`, um nur eine Schule zu sehen.",
+        "Wählen Sie `Herunterladen` und dann `CSV`. Diese Datei reichen Sie beim Land ein.",
+      ],
+      result:
+        "Sie haben die Datei mit einer Zeile je Kind und Tag. Sie enthält keine Namen.",
+      notes: [
+        "Die Pflicht steht in § 32 Absatz 1a KiföG M-V und gilt ab 2027.",
+        "Das Land legt das genaue Format noch fest. Bis dahin enthält die Datei: Einrichtung, Ort, Datum, laufende Nummer, Status, Ankunft, Abholung und die Minuten dazwischen.",
+        "Als Ankunft zählt das erste Einchecken am Tag, als Abholung das letzte Auschecken.",
+        "War ein Kind krank gemeldet, kam aber doch, zählt es als anwesend.",
+        "Heute zählt erst ab morgen mit, weil der Tag noch nicht vorbei ist.",
+        "Jedes Herunterladen steht im Zugriffsprotokoll der Schule.",
+      ],
+      differences: [
+        "Fehlt der Eintrag in der Navigation? Dann liegt keine Schule Ihres Trägers in Mecklenburg-Vorpommern, oder Ihre Rolle hat das Recht `Berichte lesen` nicht.",
+        "Steht unter `Ohne Abholung` eine Zahl? So viele Kinder wurden an diesem Tag nicht ausgecheckt. Für sie gibt es keine Abholzeit und keine Verweildauer.",
+        "Steht oben, dass Schulen fehlen? Diese Schulen liegen in einem anderen Bundesland und gehören nicht in die Meldung.",
+        "Auf dem Telefon steht `Tagesmeldung` unter `Mehr`.",
+      ],
+      related: [
+        HELP_TOPICS.traegerArrivalPickupTimes,
+        HELP_TOPICS.traegerAccessLog,
+      ],
+    };
+  } satisfies typeof authored_traegerDailyAttendanceTopic;
+
 /** `/traeger/uebersicht` (#4674), in der Navigation „Dashboard": die Zahlen von jetzt für alle Schulen und ihre Auffälligkeiten (#4675). */
 export const traegerDashboardTopic =
   function traegerDashboardTopic(): HelpTopic {
@@ -13789,6 +13846,52 @@ export const traegerProfileTopic = function traegerProfileTopic(): HelpTopic {
   };
 } satisfies typeof authored_traegerProfileTopic;
 
+/** `/traeger/standortvergleich` (#4715): Kennzahlen der Schulen nebeneinander. */
+export const traegerSchoolComparisonTopic =
+  function traegerSchoolComparisonTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerSchoolComparison,
+      title: "Schulen vergleichen",
+      question: "Wie stehen meine Schulen im Vergleich da?",
+      summary:
+        "Der Standortvergleich zeigt dieselben Kennzahlen für alle Schulen nebeneinander, mit dem Schnitt der Schulen.",
+      group: "einstieg",
+      audience: "traeger",
+      icon: "ChartBarHorizontal",
+      requirements: ["Das Recht „Berichte lesen“."],
+      steps: [
+        "Wählen Sie in der Navigation `Standortvergleich`.",
+        "Wählen Sie oben den Zeitraum, zum Beispiel `Letzte 3 Monate`. Mit den Pfeilen springen Sie einen Zeitraum vor oder zurück.",
+        "Wählen Sie bei Bedarf rechts daneben die Schulen. Ohne Auswahl vergleicht moto alle Schulen.",
+        "Wählen Sie bei `Rangfolge` eine Kennzahl, zum Beispiel `Plätze belegt`. Die Schule mit der größten Zahl steht oben.",
+        "Wählen Sie bei `Kennzahlen je Schule` die Spalten, die Sie vergleichen wollen.",
+        "Wählen Sie `Herunterladen` und dann `CSV`, um die Tabelle zu speichern.",
+      ],
+      result:
+        "Sie sehen, welche Schule voller oder leerer ist als die anderen und wie weit sie vom Schnitt entfernt ist.",
+      notes: [
+        "„Ø“ ist der Durchschnitt je Tag. Bei „Kinder anwesend“ zählen nur Tage mit Check-ins.",
+        "Unter jeder Zahl steht der Abstand zum Schnitt der Schulen, zum Beispiel „12 Punkte über Schnitt“.",
+        "Unter den Schulen stehen zwei Zeilen: `Schnitt je Schule` und `Alle zusammen`.",
+        "„Aktive Kinder am Stichtag“ ist dieselbe Zahl wie unter `Stichtagszahlen`. moto nimmt den letzten Stichtag im Zeitraum.",
+        "Die Datei enthält genau die gewählten Schulen und Spalten.",
+        "Den Verlauf über die Zeit sehen Sie unter `Auslastung`.",
+      ],
+      differences: [
+        "Steht bei einer Schule „–“, fehlt ihr die Zahl im Zeitraum. Das ist so ohne Platzgrenze, ohne Check-in oder ohne Stichtag.",
+        "Steht `Bei einer Schule gibt es Check-ins erst ab …`, zählt „Kinder anwesend“ dort nur die Tage danach.",
+        "Bei `Alle zusammen` fehlt „Höchstens anwesend“. Die vollsten Tage der Schulen liegen an verschiedenen Tagen.",
+      ],
+      image: "/help/screens/traeger-standortvergleich.webp",
+      imageAlt:
+        "Die Seite Standortvergleich: oben Zeitraum und Schulen, darunter vier Kennzahlen, die Rangfolge als liegende Balken und die Tabelle je Schule.",
+      related: [
+        HELP_TOPICS.traegerUtilization,
+        HELP_TOPICS.traegerKeyDateCounts,
+      ],
+    };
+  } satisfies typeof authored_traegerSchoolComparisonTopic;
+
 /** `/traeger` (#4654): Absprung in eine Schule des Trägers. */
 export const traegerSchoolSwitchTopic =
   function traegerSchoolSwitchTopic(): HelpTopic {
@@ -14726,7 +14829,11 @@ export const traegerUtilizationTopic =
       image: "/help/screens/traeger-auslastung.webp",
       imageAlt:
         "Die Seite Auslastung: oben Zeitraum und Schule, darunter vier Kennzahlen und der Verlauf der belegten Plätze als Diagramm.",
-      related: [HELP_TOPICS.traegerOccupancy, HELP_TOPICS.traegerKeyDateCounts],
+      related: [
+        HELP_TOPICS.traegerOccupancy,
+        HELP_TOPICS.traegerKeyDateCounts,
+        HELP_TOPICS.traegerSchoolComparison,
+      ],
     };
   } satisfies typeof authored_traegerUtilizationTopic;
 
