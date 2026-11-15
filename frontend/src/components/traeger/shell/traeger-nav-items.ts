@@ -130,6 +130,14 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         concept: arrivalPickupConcept,
         right: REPORTS_RIGHT,
       },
+      {
+        // Berichte nach Vorlage zum Stichtag für Jugendamt und Kommune (#4716).
+        key: "berichte",
+        href: "/traeger/berichte",
+        label: "Berichte",
+        concept: reportsConcept,
+        right: REPORTS_RIGHT,
+      },
     ],
   },
   {

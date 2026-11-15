@@ -1801,6 +1801,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (t traegerReportTemplates) ReportTemplate(ctx context.Context, organizationID, templateID int64) (traegerview.ReportTemplate, error) {\n\ttemplate, err := t.reads.TraegerReportTemplate(ctx, organizationID, templateID)\n\tif errors.Is(err, organizationtenancy.ErrTraegerReportTemplateNotFound) {\n\t\treturn traegerview.ReportTemplate{}, traegerview.ErrReportTemplateNotFound\n\t}\n\tif err != nil {\n\t\treturn traegerview.ReportTemplate{}, err\n\t}\n\tdistricts := make(map[int64]string, len(template.Districts))\n\tfor _, district := range template.Districts {\n\t\tdistricts[district.SchoolID] = district.District\n\t}\n\treturn traegerview.ReportTemplate{ID: template.ID, Name: template.Name, Sections: template.Sections, Districts: districts}, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerReportTemplates.ReportTemplate",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (n traegerRoomNames) RoomsByTenant(ctx context.Context, schools []int64) (map[int64][]traegerview.NamedRoom, error) {\n\trooms, err := n.rooms.RoomsByTenant(ctx, schools)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64][]traegerview.NamedRoom, len(rooms))\n\tfor school, named := range rooms {\n\t\tfor _, room := range named {\n\t\t\tresult[school] = append(result[school], traegerview.NamedRoom{ID: room.ID, Name: room.Name, Capacity: room.Capacity})\n\t\t}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerRoomNames.RoomsByTenant",

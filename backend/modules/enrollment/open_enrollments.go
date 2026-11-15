@@ -19,4 +19,9 @@ func OpenEnrollmentChildStatuses() []string {
 // given schools.
 type OpenEnrollments interface {
 	OpenEnrollmentChildrenByTenant(ctx context.Context, schools []int64) (map[int64]int, error)
+	// EnrollmentDemandByTenant counts, for the Träger's key-date report
+	// (#4716, ADR 0242), the waiting children as above and the children on
+	// the waitlist (ChildStatusWaitlisted) of requests that are not
+	// withdrawn, as of now: the enrollment keeps no status history.
+	EnrollmentDemandByTenant(ctx context.Context, schools []int64) (open, waitlisted map[int64]int, err error)
 }

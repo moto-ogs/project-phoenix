@@ -36,7 +36,7 @@ const traegerBueroOnly = "Träger-Büro of the shared demo Träger: the seed ass
 // records of the Träger-Büro with their links and trail, ADR 0236 the
 // Abwesenheitsarten of the Träger and the Kontingente of its staff records,
 // ADR 0237 their contracts with Soll and holiday weeks, ADR 0238 their
-// Nachweise.
+// Nachweise, ADR 0242 the report templates of the Träger-Büro.
 var demoErasureExceptions = map[string]string{
 	"active.activity_session_attendance":             schoolContentUntil5559,
 	"active.activity_sessions":                       schoolContentUntil5559,
@@ -153,6 +153,7 @@ var demoErasureExceptions = map[string]string{
 	"platform.traeger_documents":                     traegerBueroOnly,
 	"platform.traeger_master_data_audit":             traegerBueroOnly,
 	"platform.traeger_profiles":                      traegerBueroOnly + "; invented master data of the demo Träger",
+	"platform.traeger_report_templates":              traegerBueroOnly + "; report templates of the demo Träger name schools and Sozialräume, no person (ADR 0242)",
 	"workforce.staff_proofs":                         traegerBueroOnly + "; the Nachweise of a staff record of the Träger go with their record (ADR 0238)",
 	"workforce.absence_allowance_changes":            traegerBueroOnly + "; the trail of a Kontingent goes with its staff record (ADR 0236)",
 	"workforce.absence_allowances":                   traegerBueroOnly + "; a Kontingent of a staff record goes with its record (ADR 0236)",
@@ -255,7 +256,8 @@ var demoErasureExceptions = map[string]string{
 // staff records with their trail (+3).
 // ADR 0237: the contracts of those staff records with their Soll and
 // holiday weeks (+3). ADR 0238: the Nachweise of those staff records (+1).
-const demoErasureExceptionBudget = 202
+// ADR 0242: the report templates of the Träger-Büro (+1).
+const demoErasureExceptionBudget = 203
 
 func TestDemoErasureExceptionsKeepTheirBudget(t *testing.T) {
 	t.Parallel()

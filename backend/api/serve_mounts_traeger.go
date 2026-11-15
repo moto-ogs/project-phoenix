@@ -111,7 +111,8 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 	if identity == nil || organizations == nil || persons == nil || staff == nil || audit.Trail == nil || audit.Log == nil || settings == nil || holidayCalendar == nil || holidayMail == nil || holidayMails == nil || holidayTraeger == nil || statistics == nil {
 		return nil, errors.New("traeger portal: identity, organizations, persons, staff, the access trail, the access log, the settings, the host schools' calendar, the holiday mail, its states, the Träger names and the statistics are required")
 	}
-	overview, arrivalPickup, err := traegerViewCompose.New(traegerview.Ports{
+	reportTemplates, reportTemplateReads := organizationTenancyCompose.NewTraegerReportTemplates()
+	overview, arrivalPickup, reports, err := traegerViewCompose.New(traegerview.Ports{
 		SchoolIDs: traegerSchoolIDs{organizations: organizations}, Trail: traegerAccessTrail{trail: audit.Trail},
 		Recorder: traegerAccessRecorder{log: audit.Log}, Holiday: traegerHolidayTrail{trail: enrollmentCompose.NewHolidayAccessTrail()}, Persons: traegerPersonDirectory{persons: persons}, Staff: traegerStaffDirectory{staff: staff},
 		Bureau:  traegerBureauAddresses{roles: identity},
@@ -120,7 +121,8 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 		KeyDates:    traegerKeyDateCounts{organizations: organizations},
 		Enrollments: enrollmentCompose.NewOpenEnrollments(), Alerts: traegerAlertSettings{settings: settings},
 		Occupancy: traegerOccupancyPorts(), Known: traegerKnownChildrenPorts(), Utilization: traegerUtilizationPorts(statistics),
-		Times: traegerArrivalPickupCounts{times: studentPresenceCompose.NewPresentStudents()},
+		Times:   traegerArrivalPickupCounts{times: studentPresenceCompose.NewPresentStudents()},
+		Reports: traegerReportPorts(reportTemplateReads),
 	})
 	if err != nil {
 		return nil, err
@@ -145,7 +147,9 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 	stepUp, _ := identity.(identityaccess.TraegerSessionStepUp)
 	return traegerportal.NewResource(TraegerPortalAuth(identity), TraegerPortalMFA(identity),
 		portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeTraeger), overviewRoutes, holidayPeriods,
-		traegerViewHTTP.NewAccessLogResource(overview), traegerSettings, masterData, identity, profiles, overviewRoutes, identity, stepUp), nil
+		traegerViewHTTP.NewAccessLogResource(overview), traegerSettings, masterData, identity, profiles, overviewRoutes, identity, stepUp,
+		traegerViewHTTP.NewReportResource(reports), organizationTenancyTraeger.NewReportTemplateResource(reportTemplates,
+			common.RequiresPermission(identityaccess.TraegerRightReportsRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage))), nil
 }
 
 // TraegerPortalSettings is the Träger level of the settings system as the

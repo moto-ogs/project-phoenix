@@ -158,6 +158,7 @@ const TRAEGER_PAGE_TITLES: ReadonlyArray<
   ["/belegung", "Belegung"],
   ["/auslastung", "Auslastung"],
   ["/ankunft-abholung", "Ankunft und Abholung"],
+  ["/berichte", "Berichte"],
   ["/ferien", "Ferienbetreuung"],
   ["/anmeldephasen", "Anmeldephasen"],
   ["/schliesstage", "Schließtage"],

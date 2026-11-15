@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "a1f2d26c30a1031554debcd9904e8d330c691b30c3ef3b31e68804435ca61aa1",
+  "catalogSHA256": "0e2c5495ae00bd7087e3333c31edcab9298c2b287b58fab50d4dd37e722633c2",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -27958,6 +27958,98 @@
         {
           "column": "organization_id",
           "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "platform.traeger_report_templates",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "sections",
+          "type": "ARRAY",
+          "udt": "_text",
+          "nullable": false
+        },
+        {
+          "name": "key_date_month",
+          "type": "smallint",
+          "udt": "int2",
+          "nullable": false
+        },
+        {
+          "name": "key_date_day",
+          "type": "smallint",
+          "udt": "int2",
+          "nullable": false
+        },
+        {
+          "name": "districts",
+          "type": "jsonb",
+          "udt": "jsonb",
+          "nullable": false
+        },
+        {
+          "name": "created_by",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "updated_by",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "created_by",
+          "targetTable": "auth.accounts",
+          "targetColumn": "id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        },
+        {
+          "column": "updated_by",
+          "targetTable": "auth.accounts",
           "targetColumn": "id"
         }
       ],

@@ -29,6 +29,13 @@
       "external_test_role": "module-behavior-test"
     },
     {
+      "path": "modules/traegerview/internal/adapters/reportexport",
+      "owner": "traeger-view",
+      "role": "adapter",
+      "internal_test_role": "module-internal-test",
+      "external_test_role": "module-behavior-test"
+    },
+    {
       "path": "modules/traegerview/internal/adapters/postgres",
       "owner": "traeger-view",
       "role": "postgres",
@@ -103,6 +110,29 @@
       "target_owner": "tenant-runtime",
       "target_role": "http",
       "target_package": "api/common"
+    },
+    {
+      "id": "traeger-view.adapter.public",
+      "description": "The export adapter renders the projection's public key-date report into its public report file (#4716, ADR 0242).",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "traeger-view",
+      "source_role": "adapter",
+      "target_owner": "traeger-view",
+      "target_role": "public"
+    },
+    {
+      "id": "traeger-view.adapter.document-rendering-lists",
+      "description": "The export adapter fills and renders the Document Rendering list contract for the key-date report as PDF, XLSX or CSV (#4716, ADR 0242).",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "traeger-view",
+      "source_role": "adapter",
+      "target_owner": "document-rendering",
+      "target_role": "contract",
+      "target_package": "modules/documentrendering/lists"
     },
     {
       "id": "traeger-view.http.identity-access.public",

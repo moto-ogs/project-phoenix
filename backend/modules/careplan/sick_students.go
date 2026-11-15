@@ -3,6 +3,8 @@ package careplan
 import (
 	"context"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // SickStudents answers the Träger's view of a school (#5686): the two marks of
@@ -17,4 +19,9 @@ type SickStudents interface {
 	SickDayStudentIDsByTenant(ctx context.Context, schools []int64, at time.Time) (map[int64][]int64, error)
 	// SickFlagMembershipIDsByTenant lists the memberships with the live sick flag.
 	SickFlagMembershipIDsByTenant(ctx context.Context, schools []int64) (map[int64][]int64, error)
+	// StatusDayCountsByTenant counts, for the Träger's key-date report
+	// (#4716, ADR 0242), the children with a sick and with an excused status
+	// day that stands for the day, summed over the weekdays of the window
+	// (both days included): one per child and day.
+	StatusDayCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date) (sick, excused map[int64]int, err error)
 }

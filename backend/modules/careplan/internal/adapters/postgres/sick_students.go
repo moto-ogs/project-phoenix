@@ -26,6 +26,15 @@ type sickStudents struct {
 const sickDayStudentIDsSQL = `SELECT DISTINCT tenant_id, student_id AS id FROM active.student_status_days
 WHERE tenant_id = ANY(?) AND date = ?::date AND status = 'sick' AND (cleared_at IS NULL OR (source = '` + statusSourceEndDay + `' AND cleared_source IS NULL))`
 
+// statusDayCountsSQL counts the status days that stand for the day, as the
+// sick days above, one per child, day and status, on Monday to Friday of the
+// window. It takes the school set and the window (from, to).
+const statusDayCountsSQL = `SELECT tenant_id, status, COUNT(DISTINCT (student_id, date))::int AS days FROM active.student_status_days
+WHERE tenant_id = ANY(?0) AND date BETWEEN ?1::date AND ?2::date AND status IN ('sick', 'excused')
+  AND date_part('isodow', date) < 6
+  AND (cleared_at IS NULL OR (source = '` + statusSourceEndDay + `' AND cleared_source IS NULL))
+GROUP BY tenant_id, status`
+
 const sickFlagMembershipIDsSQL = `SELECT tenant_id, membership_id AS id FROM users.student_care_profiles
 WHERE tenant_id = ANY(?) AND sick`
 
@@ -83,4 +92,31 @@ func (s sickStudents) SickFlagMembershipIDsByTenant(ctx context.Context, schools
 		return nil, fmt.Errorf("care plan postgres: sick flags: %w", err)
 	}
 	return idsByTenant(rows), nil
+}
+
+func (s sickStudents) StatusDayCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date) (map[int64]int, map[int64]int, error) {
+	sick, excused := map[int64]int{}, map[int64]int{}
+	if len(schools) == 0 {
+		return sick, excused, nil
+	}
+	db, err := s.database(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	var rows []struct {
+		TenantID int64  `bun:"tenant_id"`
+		Status   string `bun:"status"`
+		Days     int    `bun:"days"`
+	}
+	if err := db.NewRaw(statusDayCountsSQL, pgdialect.Array(schools), from, to).Scan(ctx, &rows); err != nil {
+		return nil, nil, fmt.Errorf("care plan postgres: status day counts: %w", err)
+	}
+	for _, row := range rows {
+		if row.Status == "sick" {
+			sick[row.TenantID] = row.Days
+		} else {
+			excused[row.TenantID] = row.Days
+		}
+	}
+	return sick, excused, nil
 }
