@@ -23,6 +23,10 @@ import { Loading } from "~/components/ui/loading";
 
 const logger = createLogger({ component: "CatererLoginPage" });
 
+function openCatererPortal() {
+  window.location.href = catererPath("/caterer");
+}
+
 const SHELL_COPY = {
   title: "Willkommen im Caterer-Portal",
   subtitle: "Melden Sie sich mit Ihrem Caterer-Konto an.",
@@ -34,9 +38,7 @@ export default function CatererLoginPage() {
   const [mfaStep, setMfaStep] = useState<MFAStep | null>(null);
   const isCheckingAuth = useLoginSessionCheck({
     logger,
-    onAccess: () => {
-      window.location.href = catererPath("/caterer");
-    },
+    onAccess: openCatererPortal,
   });
 
   // The BFF installed the session: after the password, the code or the

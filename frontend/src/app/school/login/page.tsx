@@ -26,6 +26,10 @@ import { Loading } from "~/components/ui/loading";
 
 const logger = createLogger({ component: "SchoolLoginPage" });
 
+function openSchoolPortal() {
+  window.location.href = schoolPath("/school");
+}
+
 const SHELL_COPY = {
   title: "Willkommen im Schulportal",
   subtitle: "Melden Sie sich mit Ihrem Konto für moto schule an.",
@@ -50,9 +54,7 @@ function LoginForm() {
   const isCheckingAuth = useLoginSessionCheck({
     logger,
     paused: enrollmentStep !== null,
-    onAccess: () => {
-      window.location.href = schoolPath("/school");
-    },
+    onAccess: openSchoolPortal,
   });
 
   const completeLogin = () => {

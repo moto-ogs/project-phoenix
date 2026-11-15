@@ -1,7 +1,7 @@
 "use client";
 
 import type { ErrorCode } from "~/lib/error-codes.generated";
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { Alert } from "~/components/ui/alert";
@@ -104,13 +104,14 @@ export default function HomePage() {
   const analyticsSchoolId = tenant?.tenantId?.toString() ?? null;
   // moto schule opens with this school picked.
   const schoolHandoffQuery = `?from=staff&tenant=${encodeURIComponent(tenantSlug)}`;
+  const prepareSmartRedirect = useCallback(() => {
+    logger.debug("valid session found, preparing smart redirect");
+    setAwaitingRedirect(true);
+  }, []);
   const isCheckingAuth = useLoginSessionCheck({
     logger,
     paused: enrollmentStep !== null,
-    onAccess: () => {
-      logger.debug("valid session found, preparing smart redirect");
-      setAwaitingRedirect(true);
-    },
+    onAccess: prepareSmartRedirect,
   });
 
   const trackLoginEvent = (
