@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { usePhoneViewport } from "~/test/helpers/viewport";
 import { Heatmap } from "./heatmap";
 
 const columns = [
@@ -76,5 +77,36 @@ describe("Heatmap", () => {
     expect(
       screen.getByText("Am meisten: Montag, 07:30 Uhr."),
     ).toBeInTheDocument();
+  });
+
+  it("keeps a tapped cell under the grid when the finger lifts", () => {
+    renderHeatmap();
+    const tuesday = screen.getAllByRole("cell")[3]!;
+    fireEvent.pointerDown(tuesday, { pointerType: "touch" });
+    fireEvent.pointerLeave(screen.getByRole("table"), { pointerType: "touch" });
+    expect(screen.getAllByText("Dienstag, 07:30 Uhr: 1 Kinder.")).toHaveLength(
+      2,
+    );
+  });
+
+  describe("on a phone", () => {
+    usePhoneViewport();
+
+    it("puts the rows on top and lets the columns run down", () => {
+      renderHeatmap();
+      const table = screen.getByRole("table", { name: "Ankunft je Wochentag" });
+      expect(
+        within(table).getByRole("columnheader", { name: "Montag" }),
+      ).toBeInTheDocument();
+      const half = within(table).getByRole("row", { name: /07:30 Uhr/ });
+      expect(
+        within(half)
+          .getAllByRole("cell")
+          .map((cell) => cell.textContent),
+      ).toEqual([
+        "12Montag, 07:30 Uhr: 12.4 Kinder.",
+        "1Dienstag, 07:30 Uhr: 1 Kinder.",
+      ]);
+    });
   });
 });

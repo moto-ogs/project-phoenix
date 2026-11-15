@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import { Z_LAYER } from "./overlay-styles";
 
@@ -9,7 +10,8 @@ import { Z_LAYER } from "./overlay-styles";
  * Wert groß ist (#4714). Gebaut als echte Tabelle, damit ein Screenreader
  * Zeile und Spalte jeder Zahl vorliest. Eine Farbe (`tone`) von hell nach
  * dunkel; null bleibt grau. Zahlen ab 1 stehen in der Zelle, der genaue Wert
- * in der Zeile unter dem Raster, sobald der Zeiger auf einer Zelle liegt.
+ * in der Zeile unter dem Raster, sobald der Zeiger auf einer Zelle liegt oder
+ * ein Finger auf sie tippt. Auf dem Telefon stehen die Zeilen als Spalten oben.
  */
 
 /** Hell nach dunkel, gleicher Farbton: die Stufen der Kit-Palette. */
@@ -39,17 +41,17 @@ export interface HeatmapColumn {
   readonly key: string;
   /** Vorgelesen als Spaltenkopf, zum Beispiel „07:30 bis 08:00 Uhr“. */
   readonly label: string;
-  /** Sichtbar über der Spalte; leer lässt den Strich weg. */
+  /** Sichtbar über der Spalte (auf dem Telefon vor der Zeile); leer lässt sie frei. */
   readonly tick?: string;
 }
 
 export interface HeatmapRow {
   readonly key: string;
-  /** Voller Name der Zeile, ab `sm` sichtbar. */
+  /** Voller Name der Zeile. */
   readonly label: string;
-  /** Kurzer Name auf dem Telefon, zum Beispiel „Mo“. */
+  /** Kurzer Name über der Spalte auf dem Telefon, zum Beispiel „Mo“. */
   readonly shortLabel?: string;
-  /** Eine Zeile Grau unter dem Namen, zum Beispiel „aus 4 Tagen“. */
+  /** Eine Zeile Grau unter dem Namen, zum Beispiel „aus 4 Tagen“; nicht auf dem Telefon. */
   readonly meta?: string;
   /** Ein Wert je Spalte, in der Reihenfolge von `columns`. */
   readonly values: readonly number[];
@@ -134,6 +136,67 @@ function shareOf(value: number, max: number): number {
   return 0.12 + 0.88 * Math.sqrt(Math.min(value / max, 1));
 }
 
+interface CellProps {
+  readonly row: HeatmapRow;
+  readonly column: HeatmapColumn;
+  readonly at: HeatmapCell;
+  readonly value: number;
+  readonly max: number;
+  readonly ramp: readonly string[];
+  readonly marked: boolean;
+  readonly hovered: boolean;
+  readonly compact: boolean;
+  readonly formatValue: HeatmapProps["formatValue"];
+  readonly describeCell: HeatmapProps["describeCell"];
+  readonly onActivate: (cell: HeatmapCell) => void;
+}
+
+function Cell({
+  row,
+  column,
+  at,
+  value,
+  max,
+  ramp,
+  marked,
+  hovered,
+  compact,
+  formatValue,
+  describeCell,
+  onActivate,
+}: CellProps) {
+  const share = shareOf(value, max);
+  const background = share > 0 ? rampColor(ramp, share) : undefined;
+  return (
+    <td
+      // Maus und Stift zeigen beim Darüberfahren, ein Finger beim Tippen.
+      onPointerEnter={(event) => {
+        if (event.pointerType !== "touch") onActivate(at);
+      }}
+      onPointerDown={(event) => {
+        if (event.pointerType === "touch") onActivate(at);
+      }}
+      className={`${compact ? "h-7" : "h-9 min-w-8"} rounded-md p-0 text-center align-middle font-semibold tabular-nums motion-safe:transition-shadow ${
+        background ? "" : "bg-gray-100"
+      } ${
+        hovered
+          ? "ring-2 ring-gray-900 ring-offset-1"
+          : marked
+            ? "ring-2 ring-gray-900/70"
+            : ""
+      }`}
+      style={
+        background
+          ? { backgroundColor: background, color: inkOn(background) }
+          : undefined
+      }
+    >
+      <span aria-hidden="true">{value > 0 ? formatValue(value) : ""}</span>
+      <span className="sr-only">{describeCell(row, column, value)}</span>
+    </td>
+  );
+}
+
 export function Heatmap({
   caption,
   columns,
@@ -146,6 +209,10 @@ export function Heatmap({
   legend,
 }: HeatmapProps) {
   const ramp = RAMPS[tone];
+  // Auf dem Telefon passen keine zwanzig Spalten nebeneinander: Dann stehen
+  // die Zeilen (Wochentage) oben und die Spalten (halbe Stunden) laufen nach
+  // unten, so dass die ganze Heatmap ohne Querscrollen zu sehen ist.
+  const vertical = useMediaQuery(BELOW_SM);
   const [active, setActive] = useState<HeatmapCell | null>(null);
   const max = useMemo(
     () => Math.max(0, ...rows.flatMap((row) => row.values)),
@@ -162,112 +229,134 @@ export function Heatmap({
         )
       : summary;
 
+  const cell = (rowIndex: number, columnIndex: number) => {
+    const row = rows[rowIndex];
+    const column = columns[columnIndex];
+    if (!row || !column) return null;
+    return (
+      <Cell
+        key={vertical ? row.key : column.key}
+        row={row}
+        column={column}
+        at={{ row: rowIndex, column: columnIndex }}
+        value={row.values[columnIndex] ?? 0}
+        max={max}
+        ramp={ramp}
+        marked={highlight?.row === rowIndex && highlight.column === columnIndex}
+        hovered={active?.row === rowIndex && active.column === columnIndex}
+        compact={vertical}
+        formatValue={formatValue}
+        describeCell={describeCell}
+        onActivate={setActive}
+      />
+    );
+  };
+
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <div className="-mx-1 overflow-x-auto px-1 pb-1">
         <table
-          className="w-full border-separate border-spacing-0.5 text-xs"
-          onPointerLeave={() => setActive(null)}
+          className={`w-full border-separate border-spacing-0.5 text-xs ${vertical ? "table-fixed" : ""}`}
+          onPointerLeave={(event) => {
+            if (event.pointerType !== "touch") setActive(null);
+          }}
         >
           <caption className="sr-only">{caption}</caption>
-          <thead>
-            <tr>
-              <th
-                scope="col"
-                className={`sticky left-0 ${Z_LAYER.raised} bg-white`}
-              >
-                <span className="sr-only">Zeile</span>
-              </th>
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  scope="col"
-                  className="h-5 min-w-8 p-0 text-left align-bottom font-normal whitespace-nowrap text-gray-500"
-                >
-                  <span className="sr-only">{column.label}</span>
-                  {column.tick ? (
-                    <span aria-hidden="true" className="tabular-nums">
-                      {column.tick}
-                    </span>
-                  ) : null}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, rowIndex) => (
-              <tr key={row.key}>
-                <th
-                  scope="row"
-                  className={`sticky left-0 ${Z_LAYER.raised} bg-white pr-3 text-left align-middle font-normal whitespace-nowrap`}
-                >
-                  <span className="block text-sm font-medium text-gray-900">
-                    {row.shortLabel ? (
-                      <>
-                        <span className="sm:hidden" aria-hidden="true">
-                          {row.shortLabel}
-                        </span>
-                        <span className="max-sm:sr-only">{row.label}</span>
-                      </>
-                    ) : (
-                      row.label
-                    )}
-                  </span>
-                  {row.meta ? (
-                    <span className="block text-xs text-gray-500 max-sm:hidden">
-                      {row.meta}
-                    </span>
-                  ) : null}
-                </th>
-                {columns.map((column, columnIndex) => {
-                  const value = row.values[columnIndex] ?? 0;
-                  const share = shareOf(value, max);
-                  const background =
-                    share > 0 ? rampColor(ramp, share) : undefined;
-                  const text = value > 0 ? formatValue(value) : "";
-                  const marked =
-                    highlight?.row === rowIndex &&
-                    highlight.column === columnIndex;
-                  const hovered =
-                    active?.row === rowIndex && active.column === columnIndex;
-                  return (
-                    <td
-                      key={column.key}
-                      onPointerEnter={() =>
-                        setActive({ row: rowIndex, column: columnIndex })
-                      }
-                      className={`h-9 min-w-8 rounded-md p-0 text-center align-middle font-semibold tabular-nums motion-safe:transition-shadow ${
-                        background ? "" : "bg-gray-100"
-                      } ${
-                        hovered
-                          ? "ring-2 ring-gray-900 ring-offset-1"
-                          : marked
-                            ? "ring-2 ring-gray-900/70"
-                            : ""
-                      }`}
-                      style={
-                        background
-                          ? {
-                              backgroundColor: background,
-                              color: inkOn(background),
-                            }
-                          : undefined
-                      }
+          {vertical ? (
+            <>
+              <thead>
+                <tr>
+                  <th scope="col" className="w-12">
+                    <span className="sr-only">Spalte</span>
+                  </th>
+                  {rows.map((row) => (
+                    <th
+                      key={row.key}
+                      scope="col"
+                      className="h-6 p-0 text-center align-bottom text-sm font-medium text-gray-900"
                     >
-                      <span aria-hidden="true">{text}</span>
-                      <span className="sr-only">
-                        {describeCell(row, column, value)}
+                      <span aria-hidden="true">
+                        {row.shortLabel ?? row.label}
                       </span>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
+                      <span className="sr-only">{row.label}</span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {columns.map((column, columnIndex) => (
+                  <tr key={column.key}>
+                    <th
+                      scope="row"
+                      className="pr-2 text-left align-middle font-normal whitespace-nowrap text-gray-500 tabular-nums"
+                    >
+                      <span className="sr-only">{column.label}</span>
+                      {column.tick ? (
+                        <span aria-hidden="true">{column.tick}</span>
+                      ) : null}
+                    </th>
+                    {rows.map((_, rowIndex) => cell(rowIndex, columnIndex))}
+                  </tr>
+                ))}
+              </tbody>
+            </>
+          ) : (
+            <>
+              <thead>
+                <tr>
+                  <th
+                    scope="col"
+                    className={`sticky left-0 ${Z_LAYER.raised} bg-white`}
+                  >
+                    <span className="sr-only">Zeile</span>
+                  </th>
+                  {columns.map((column) => (
+                    <th
+                      key={column.key}
+                      scope="col"
+                      className="h-5 min-w-8 p-0 text-left align-bottom font-normal whitespace-nowrap text-gray-500"
+                    >
+                      <span className="sr-only">{column.label}</span>
+                      {column.tick ? (
+                        <span aria-hidden="true" className="tabular-nums">
+                          {column.tick}
+                        </span>
+                      ) : null}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, rowIndex) => (
+                  <tr key={row.key}>
+                    <th
+                      scope="row"
+                      className={`sticky left-0 ${Z_LAYER.raised} bg-white pr-3 text-left align-middle font-normal whitespace-nowrap`}
+                    >
+                      <span className="block text-sm font-medium text-gray-900">
+                        {row.label}
+                      </span>
+                      {row.meta ? (
+                        <span className="block text-xs text-gray-500">
+                          {row.meta}
+                        </span>
+                      ) : null}
+                    </th>
+                    {columns.map((_, columnIndex) =>
+                      cell(rowIndex, columnIndex),
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </>
+          )}
         </table>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-        <p className="min-h-5 text-sm text-gray-700" aria-hidden="true">
+        <p
+          className="min-h-10 text-sm text-gray-700 sm:min-h-5"
+          aria-hidden="true"
+        >
           {readout}
         </p>
         <div
