@@ -32,6 +32,8 @@ const LIST_EXPORTS: Readonly<Record<string, string>> = {
   "/einstellungen/zugriffsprotokoll": "page",
   "/ferien/[id]/anmeldungen": "page",
   "/nachweise": "page",
+  "/personal": "page",
+  "/personal/einsatzplanung": "page",
   "/standortvergleich": "page",
   "/stichtagszahlen": "page",
   "/tagesmeldung": "page",
@@ -66,8 +68,6 @@ const PENDING_EXPORTS: Readonly<Record<string, string>> = {
   "/ferien": "#4718",
   "/ferien/[id]/plaetze": "#4718",
   "/ferien/[id]/vergabe": "#4718",
-  "/personal": "#4718",
-  "/personal/einsatzplanung": "#4718",
   "/schliesstage": "#4718",
   "/uebersicht": "#4718",
 };
@@ -77,7 +77,7 @@ const PENDING_EXPORTS: Readonly<Record<string, string>> = {
  * Download bekommt, und steigt nie. Eine neue Liste ohne Download passt so
  * nicht in das Register.
  */
-const PENDING_CEILING = 25;
+const PENDING_CEILING = 23;
 
 /**
  * Seiten ohne Liste: Formulare, Einstellungen, Einzelansichten, Anmeldung.

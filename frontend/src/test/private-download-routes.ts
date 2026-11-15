@@ -104,6 +104,8 @@ export const PRIVATE_DOWNLOAD_ROUTES = [
   ["traeger/schools/occupancy/export", "GET"],
   ["traeger/schools/comparison/export", "GET"],
   ["traeger/schools/utilization/export", "GET"],
+  ["traeger/staff-planning/export", "GET"],
   ["traeger/staff-proofs/export", "GET"],
+  ["traeger/staff-records/export", "GET"],
   ["week-protocols/[protocolId]/pdf", "GET"],
 ] as const;
