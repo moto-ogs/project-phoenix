@@ -34,7 +34,8 @@ export function traegerStaffContractsTopic(): HelpTopic {
       },
       {
         title: "Soll ändern",
-        description: "Zum Beispiel, wenn die Person ab dem nächsten Monat mehr Stunden hat.",
+        description:
+          "Zum Beispiel, wenn die Person ab dem nächsten Monat mehr Stunden hat.",
         steps: [
           "Wählen Sie beim Vertrag das Menü mit den drei Punkten. Wählen Sie `Soll ändern`.",
           "Wählen Sie bei `Gilt ab` den ersten Tag mit den neuen Stunden.",
@@ -43,7 +44,8 @@ export function traegerStaffContractsTopic(): HelpTopic {
       },
       {
         title: "Ferien-Soll eintragen",
-        description: "Für Ferienwochen mit anderen Stunden, zum Beispiel in der Ferienbetreuung.",
+        description:
+          "Für Ferienwochen mit anderen Stunden, zum Beispiel in der Ferienbetreuung.",
         steps: [
           "Wählen Sie beim Vertrag das Menü. Wählen Sie `Ferien-Soll eintragen`.",
           "Wählen Sie die Schule, die erste und, für mehrere Wochen, die letzte Woche.",

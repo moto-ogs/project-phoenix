@@ -26,6 +26,7 @@ export function traegerCareTimeOverrunsTopic(): HelpTopic {
       "Lesen Sie oben die Summen: `Kinder`, `Tage` und `Zusätzliche Zeit`.",
       "Lesen Sie unter `Je Schule` die Zahlen jeder Schule. Tippen Sie auf eine Spalte, um nach ihr zu sortieren.",
       "Mit der Rolle `Verwaltung` sehen Sie unter `Kinder` jedes Kind mit Namen. Das Kind mit der meisten zusätzlichen Zeit steht oben.",
+      "Jede Tabelle hat rechts oben `Herunterladen`. Wählen Sie `PDF`, `Excel` oder `CSV`. Die Datei gilt für den Monat und die gewählte Schule.",
     ],
     result:
       "Rote Zahlen zeigen Überschreitungen. Sprechen Sie mit den Eltern, oder ändern Sie die Buchung.",
@@ -36,7 +37,7 @@ export function traegerCareTimeOverrunsTopic(): HelpTopic {
       "Das Ist reicht vom ersten Einchecken bis zum letzten Auschecken des Tages.",
       "Eine Überschreitung ist mehr als 15 Minuten früher oder später als gebucht. Ein Tag ohne Buchung zählt ganz.",
       "Krank, entschuldigt, abgemeldet, Schließtage und Feiertage zählen nicht.",
-      "Jedes Mal, wenn Sie Namen sehen, steht das im Zugriffsprotokoll der Schule.",
+      "Jedes Mal, wenn Sie Namen sehen oder herunterladen, steht das im Zugriffsprotokoll der Schule.",
     ],
     differences: [
       "Fehlt der Bereich mit den Namen? Ihre Rolle hat das Recht `Verträge verwalten` nicht. Dann sehen Sie nur die Zahlen je Schule.",
