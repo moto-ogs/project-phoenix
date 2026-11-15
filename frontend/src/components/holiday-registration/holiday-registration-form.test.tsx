@@ -679,6 +679,40 @@ describe("HolidayRegistrationForm", () => {
     },
   );
 
+  // #7111: the step changed in place and the focus fell to <body>.
+  it("focuses the heading of each new step", async () => {
+    mockSubmit.mockResolvedValue(undefined);
+    renderForm(null, offer);
+    fillRegistration();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "Bitte prüfen Sie Ihre Angaben",
+      }),
+    ).toHaveFocus();
+
+    fireEvent.click(screen.getByRole("button", { name: "Zurück und ändern" }));
+    const formHeading = (await screen.findAllByRole("heading"))[0];
+    expect(formHeading).toHaveFocus();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Solve captcha" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Verbindlich anmelden" }),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "Ihre Anmeldung ist eingegangen",
+      }),
+    ).toHaveFocus();
+  });
+
   it("registers a holiday guest after the summary", async () => {
     mockSubmit.mockResolvedValue(undefined);
     const onStepChange = vi.fn();

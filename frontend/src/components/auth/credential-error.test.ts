@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
 import { presentError } from "~/lib/error-presentation";
-import { credentialError, LOGIN_REFUSALS } from "./credential-error";
+import {
+  credentialError,
+  LOGIN_CREDENTIAL_FIELDS,
+  LOGIN_REFUSALS,
+} from "./credential-error";
 
 describe("credentialError", () => {
   const refused = () => {
@@ -64,5 +68,52 @@ describe("credentialError", () => {
 
     expect(credentialError(forbidden, LOGIN_REFUSALS)).toBe(forbidden);
     expect(credentialError(crash, LOGIN_REFUSALS)).toBe(crash);
+  });
+
+  // #7111: a wrong password names no field, so the form had nothing to mark
+  // or focus and the focus fell to <body>. Both credential fields are marked:
+  // the answer must not tell which of them was wrong.
+  it("marks the credential fields of a refusal that names none", () => {
+    const bare = new ApiError("invalid credentials", 401, {
+      code: "identity.invalid_credentials",
+    });
+    const shown = credentialError(
+      bare,
+      LOGIN_REFUSALS,
+      LOGIN_CREDENTIAL_FIELDS,
+    );
+    expect((shown as ApiError).errors).toEqual([
+      { field: "email", reason: "invalid_credentials" },
+      { field: "password", reason: "invalid_credentials" },
+    ]);
+    expect(presentError(shown, "die Anmeldung").fields).toEqual([
+      "email",
+      "password",
+    ]);
+  });
+
+  it("keeps the fields the backend named", () => {
+    const shown = credentialError(
+      refused(),
+      LOGIN_REFUSALS,
+      LOGIN_CREDENTIAL_FIELDS,
+    );
+    expect((shown as ApiError).errors).toEqual([
+      { field: "password", reason: "wrong" },
+    ]);
+  });
+
+  // An inactive account is no input mistake: nothing to correct in a field.
+  it("marks no field for an inactive account", () => {
+    const inactive = new ApiError("inactive", 401, {
+      code: "identity.session_account_inactive",
+    });
+    const shown = credentialError(
+      inactive,
+      LOGIN_REFUSALS,
+      LOGIN_CREDENTIAL_FIELDS,
+    );
+    expect(shown).toBeInstanceOf(ApiError);
+    expect((shown as ApiError).errors).toBeUndefined();
   });
 });

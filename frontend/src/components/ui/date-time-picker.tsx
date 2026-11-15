@@ -49,6 +49,8 @@ export function DateTimePicker({
   dateAriaLabel = "Datum",
   timeAriaLabel = "Uhrzeit",
   invalid,
+  ariaDescribedBy,
+  name,
   // Clock used when a day is picked while the time half is still empty.
   // Deadlines usually want the end of the day, openings the start, so the
   // caller decides rather than silently getting midnight.
@@ -69,6 +71,10 @@ export function DateTimePicker({
   readonly dateAriaLabel?: string;
   readonly timeAriaLabel?: string;
   readonly invalid?: boolean;
+  /** Id of the caller's error hint; both the date and the time read it (#7111). */
+  readonly ariaDescribedBy?: string;
+  /** Form field name on the date, so a refused field can be focused. */
+  readonly name?: string;
   readonly defaultTime?: string;
   readonly calendarLayout?: "overlay" | "inline" | "popover";
   /** Hide the clear control. Use when the value is required. */
@@ -142,6 +148,8 @@ export function DateTimePicker({
         controlSize="compact"
         calendarLayout={calendarLayout}
         ariaLabel={dateAriaLabel}
+        ariaDescribedBy={ariaDescribedBy}
+        name={name}
         invalid={invalid}
         className="min-w-44 flex-1"
         placeholder="Datum wählen"
@@ -155,6 +163,7 @@ export function DateTimePicker({
           value={pendingTime ?? time}
           required={required}
           invalid={invalid}
+          describedBy={ariaDescribedBy}
           disabled={disabled || !day}
           minTime={
             day === minParts.day ? minParts.time || undefined : undefined

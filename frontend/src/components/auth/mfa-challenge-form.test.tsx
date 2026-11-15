@@ -81,6 +81,24 @@ describe("MFAChallengeForm", () => {
     expect(screen.getAllByRole("textbox").length).toBeGreaterThanOrEqual(6);
   });
 
+  // #7111: the back button removed the outline without a replacement, so a
+  // keyboard user could not see it had the focus.
+  it("leads back to the login with a visible focus ring", () => {
+    const onCancel = vi.fn();
+    render(
+      <MFAChallengeForm
+        {...defaultProps}
+        onSuccess={vi.fn()}
+        onCancel={onCancel}
+      />,
+    );
+    const back = screen.getByRole("button", { name: "Zurück zum Login" });
+    expect(back).toHaveClass("focus-visible:ring-2");
+    expect(back).not.toHaveClass("focus:outline-none");
+    fireEvent.click(back);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
   // #6955: the person decides with one of two answers. A complete code
   // alone sends nothing, so no device is remembered without a choice.
   it("waits for a choice once the code is complete", async () => {

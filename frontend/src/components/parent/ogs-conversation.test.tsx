@@ -374,12 +374,11 @@ describe("OgsConversation for screen readers (#7113)", () => {
     });
     render(<OgsConversation studentId="42" />);
 
-    // The log exists before the messages load; wait for the message in it,
-    // not only for the log (flaky under load otherwise).
+    const history = await screen.findByRole("log", {
+      name: "Nachrichtenverlauf",
+    });
     await waitFor(() =>
-      expect(
-        screen.getByRole("log", { name: "Nachrichtenverlauf" }),
-      ).toHaveTextContent("Felix ist abgeholt."),
+      expect(history).toHaveTextContent("Felix ist abgeholt."),
     );
   });
 });

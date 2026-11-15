@@ -56,7 +56,6 @@ type ParentSignInTranslate = ReturnType<typeof useTranslations<"parentSignIn">>;
 /** The code step in the parent's language (#7051). */
 function challengeCopy(t: ParentSignInTranslate): MFAChallengeCopy {
   return {
-    back: t("challenge.back"),
     backLabel: t("challenge.backLabel"),
     title: t("challenge.title"),
     sentTo: (email) =>

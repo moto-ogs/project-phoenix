@@ -61,16 +61,23 @@ export function FormErrorAlert({
         '[aria-invalid="true"], [data-form-invalid="true"]',
       );
     // happy-dom and older WebKit builds ship no scrollIntoView on divs.
-    if (field) field.scrollIntoView?.({ behavior: "smooth", block: "center" });
-    else
-      ref.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+    if (field) {
+      // The error path focuses the first marked field itself.
+      field.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      return;
+    }
+    ref.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+    // No field to correct (#7111): a submit button disabled while sending
+    // drops the focus to <body>, and the next Tab starts at the page top.
+    // The message takes it then; a person still working in a field keeps it.
+    if (focusWasLost()) ref.current?.focus({ preventScroll: true });
   }, [text, attempt]);
 
   if (!text) return null;
 
   if (detail?.notBookedModule && NotBookedAlert) {
     return (
-      <div ref={ref} className={className}>
+      <div ref={ref} tabIndex={-1} className={className}>
         <NotBookedAlert module={detail.notBookedModule} />
       </div>
     );
@@ -88,7 +95,7 @@ export function FormErrorAlert({
     );
 
   return (
-    <div ref={ref} className={className}>
+    <div ref={ref} tabIndex={-1} className={className}>
       <Alert
         type="error"
         message={text}
@@ -97,6 +104,13 @@ export function FormErrorAlert({
       />
     </div>
   );
+}
+
+/** Nothing holds the focus, or a control that was disabled while it had it. */
+function focusWasLost(): boolean {
+  const active = document.activeElement;
+  if (!active || active === document.body) return true;
+  return active instanceof HTMLElement && active.matches(":disabled");
 }
 
 /**

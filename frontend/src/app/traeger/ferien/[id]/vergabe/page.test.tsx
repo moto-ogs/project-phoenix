@@ -177,6 +177,64 @@ describe("holiday allocation page (#4700)", () => {
     );
   });
 
+  // #7111: the decided row and its button left the DOM with the focus.
+  it("focuses the week heading after a decision removed its row", async () => {
+    fetchBoard.mockResolvedValue(allocationBoard());
+    decide.mockResolvedValue(
+      allocationBoard({
+        weeks: [
+          allocationWeek({
+            pending: allocationWeek().pending.filter(
+              (entry) => entry.bookingId !== "100",
+            ),
+          }),
+        ],
+      }),
+    );
+    renderPage();
+
+    const trigger = await screen.findByRole("button", {
+      name: "Mia Muster: Platz geben",
+    });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Platz geben" }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Mia Muster: Platz geben" }),
+      ).not.toBeInTheDocument(),
+    );
+    const week = screen.getByRole("heading", { name: "05.07. bis 09.07.2027" });
+    await waitFor(() => expect(week).toHaveFocus());
+  });
+
+  it("focuses „Alles entschieden“ once no week is open", async () => {
+    fetchBoard.mockResolvedValue(allocationBoard());
+    decide.mockResolvedValue(
+      allocationBoard({ weeks: [allocationWeek({ pending: [] })] }),
+    );
+    renderPage();
+
+    // A click focuses its button in a browser; the dialog returns there.
+    const trigger = await screen.findByRole("button", {
+      name: "Vorschlag für die Woche 05.07. bis 09.07.2027 übernehmen",
+    });
+    trigger.focus();
+    fireEvent.click(trigger);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Vorschlag übernehmen" }),
+    );
+
+    const done = await screen.findByRole("heading", {
+      name: "Alles entschieden",
+    });
+    await waitFor(() => expect(done).toHaveFocus());
+  });
+
   it("takes over the proposal of a week after the confirmation", async () => {
     fetchBoard.mockResolvedValue(allocationBoard());
     decide.mockResolvedValue(
