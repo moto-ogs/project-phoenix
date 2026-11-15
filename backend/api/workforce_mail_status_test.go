@@ -73,7 +73,7 @@ func TestAbsenceMailsShowWhatBecameOfThem(t *testing.T) {
 		testpkg.Tenant(t), requester.ID, workforce.AbsenceTypeOther, day, day, workforce.AbsenceStatusQuestion, requester.ID).Scan(ctx, &absenceID))
 	inTenant := func(fn func(context.Context) error) {
 		t.Helper()
-		require.NoError(t, inSchool(ctx, db, testpkg.Tenant(t), fn))
+		require.NoError(t, inMailSchool(ctx, db, testpkg.Tenant(t), fn))
 	}
 	read := func(tenantCtx func(func(context.Context) error)) (map[int64]map[string]int, map[int64]string) {
 		t.Helper()
@@ -125,7 +125,7 @@ func TestAbsenceMailsShowWhatBecameOfThem(t *testing.T) {
 	// Another school reads none of it.
 	foreign, _ := testpkg.CreateTestTenant(t, db)
 	requests, decisions = read(func(fn func(context.Context) error) {
-		require.NoError(t, inSchool(testpkg.WithTenantRuntime(t, testpkg.TenantContext(foreign), db), db, foreign, fn))
+		require.NoError(t, inMailSchool(testpkg.WithTenantRuntime(t, testpkg.TenantContext(foreign), db), db, foreign, fn))
 	})
 	require.Empty(t, requests)
 	require.Empty(t, decisions)
@@ -177,7 +177,7 @@ func TestPayrollDispatchShowsWhatBecameOfItsMails(t *testing.T) {
 	overview := func() workforce.PayrollDispatchOverview {
 		t.Helper()
 		var out workforce.PayrollDispatchOverview
-		require.NoError(t, inSchool(ctx, db, testpkg.Tenant(t), func(txCtx context.Context) error {
+		require.NoError(t, inMailSchool(ctx, db, testpkg.Tenant(t), func(txCtx context.Context) error {
 			var err error
 			out, err = dispatch.Overview(txCtx)
 			return err
@@ -187,7 +187,7 @@ func TestPayrollDispatchShowsWhatBecameOfItsMails(t *testing.T) {
 	}
 	closeMonth := func(month int) {
 		t.Helper()
-		require.NoError(t, inSchool(ctx, db, testpkg.Tenant(t), func(txCtx context.Context) error {
+		require.NoError(t, inMailSchool(ctx, db, testpkg.Tenant(t), func(txCtx context.Context) error {
 			return dispatch.QueueAfterMonthClose(txCtx, workforce.PayrollDispatchTrigger{Year: 2026, Month: month, ClosedStaff: 3, ActorAccountID: 1, ActorName: "Lea Leitung"})
 		}))
 	}
@@ -221,7 +221,7 @@ func TestPayrollDispatchShowsWhatBecameOfItsMails(t *testing.T) {
 	querybudgets.AssertQueryBudget(t, "workforce.payroll_dispatch.overview", counter.Measurement(counter.Queries()))
 }
 
-// inSchool runs fn in a transaction of the school.
-func inSchool(ctx context.Context, db *bun.DB, tenantID int64, fn func(context.Context) error) error {
+// inMailSchool runs fn in a transaction of the school.
+func inMailSchool(ctx context.Context, db *bun.DB, tenantID int64, fn func(context.Context) error) error {
 	return tenant.WithTenantTx(ctx, db, tenantID, func(txCtx context.Context, _ bun.Tx) error { return fn(txCtx) })
 }
