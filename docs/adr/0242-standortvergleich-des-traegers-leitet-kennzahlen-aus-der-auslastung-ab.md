@@ -46,11 +46,12 @@ eine eingebettete Schnittstelle, ginge darüber.
    `metrics=` die gewählten Kennzahlen in ihrer Reihenfolge. Eine Schule eines
    anderen Trägers antwortet 404 `traeger.school_not_found`, wie bei der
    Auslastung.
-4. **Eigene Schnittstelle neben der Fassade.** `traegerview.SchoolComparisons`
-   hat eine Methode. Die Komposition gibt dasselbe Anwendungsobjekt als
-   `Overview` und als `SchoolComparisons` zurück; die HTTP-Ressource bekommt
-   beide. So wächst keine Fassade über zwölf Methoden, und das Compose-Budget
-   bleibt bei 20 Zeilen.
+4. **Berichte neben der Fassade.** `traegerview.SchoolComparisons` hat eine
+   Methode. Zusammen mit der Heatmap (`ArrivalPickupReport`, #4714) bildet sie
+   `traegerview.Reports`. Die Komposition gibt dasselbe Anwendungsobjekt als
+   `Overview` und als `Reports` zurück; die HTTP-Ressource bekommt beide. So
+   wächst keine Fassade über zwölf Methoden, und das Compose-Budget bleibt bei
+   20 Zeilen.
 5. **Recht und Protokoll.** Beide Routen brauchen „Berichte lesen“
    (`traeger_reports:read`) wie die Auslastung. Die Antwort trägt nur Zahlen und
    Schulnamen und steht nach ADR 0084 Abschnitt 7 nicht im Zugriffsprotokoll.
