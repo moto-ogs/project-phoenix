@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"time"
 
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	settingsValues "github.com/moto-ogs/project-phoenix/modules/settings"
@@ -75,7 +76,12 @@ func BuildDeliveryNotifications(
 	if err != nil {
 		return DeliveryNotifications{}, err
 	}
-	notifier := deliveryCompose.NewNotifier(settings, logger.With("service", "notifications"), deliveryCompose.NotificationDeliveryObserver(env.Observe.Delivery), delivery.Runtime.Store, env.Now, sse, push)
+	// A nil environment clock is the real one (RootEnvironment.Now).
+	clock := env.Now
+	if clock == nil {
+		clock = time.Now
+	}
+	notifier := deliveryCompose.NewNotifier(settings, logger.With("service", "notifications"), deliveryCompose.NotificationDeliveryObserver(env.Observe.Delivery), delivery.Runtime.Store, clock, sse, push)
 	feed, ok := notifier.(deliveryContract.NotificationFeed)
 	if !ok {
 		return DeliveryNotifications{}, fmt.Errorf("notification router does not serve the notification feed")
