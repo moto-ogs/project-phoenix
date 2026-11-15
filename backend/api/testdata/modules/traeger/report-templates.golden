@@ -1,0 +1,4 @@
+DELETE /traeger/report-templates/{id} -> basis
+GET /traeger/report-templates/ -> basis
+POST /traeger/report-templates/ -> basis
+PUT /traeger/report-templates/{id} -> basis

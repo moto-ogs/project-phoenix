@@ -22009,6 +22009,14 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger.ReportTemplateResource.TraegerRouter",
+      "binding_digest": "df8eeced2e55d69b8cad8877167fda8b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/traegerportal.TraegerRouter.TraegerRouter",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger.ReportTemplateResource.TraegerRouter",
+      "target_owner": "organization-tenancy"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/settings/http.TraegerSettingsResource.TraegerRouter",
       "binding_digest": "3a69e5295ed68656726dd378bf622c1a",
       "port": "github.com/moto-ogs/project-phoenix/modules/traegerportal.TraegerRouter.TraegerRouter",
@@ -22022,6 +22030,14 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/traegerportal.TraegerRouter.TraegerRouter",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/traegerview/http.AccessLogResource.TraegerRouter",
+      "target_owner": "traeger-view"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/traegerview/http.ReportResource.TraegerRouter",
+      "binding_digest": "d1724c447b0a5959d98b57ee786575ef",
+      "port": "github.com/moto-ogs/project-phoenix/modules/traegerportal.TraegerRouter.TraegerRouter",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/traegerview/http.ReportResource.TraegerRouter",
       "target_owner": "traeger-view"
     },
     {

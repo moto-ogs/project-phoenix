@@ -390,6 +390,9 @@ export const traegerKeys = {
   documentAudiences: () => "traeger-document-audiences",
   // Anmeldephasen und Angebote des Trägers (#4704): Entwürfe, Versionen und
   // das Ergebnis je Schule, keine Personendaten.
+  // Berichtsvorlagen (#4716): Name, Abschnitte, Stichtag und Sozialräume,
+  // keine Personendaten.
+  reportTemplates: () => "traeger-report-templates",
   catalogFamily: "traeger-catalog-phase-",
   catalogPhases: () => "traeger-catalog-phase-list",
   catalogPhase: (id: string) =>

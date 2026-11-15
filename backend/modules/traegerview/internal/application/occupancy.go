@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -28,7 +27,7 @@ func (o *Overview) Occupancy(ctx context.Context, organizationID int64) (traeger
 		if err != nil {
 			return err
 		}
-		reads, err := o.occupancyReads(adminCtx, ids, now)
+		reads, err := o.occupancyReads(adminCtx, ids, result.Day)
 		if err != nil {
 			return err
 		}
@@ -46,29 +45,46 @@ func (o *Overview) Occupancy(ctx context.Context, organizationID int64) (traeger
 
 // occupancyReads are the owners' answers for a school set, keyed by school.
 type occupancyReads struct {
+	careFormReads
+	groups map[int64]map[int64]int64
+	names  map[int64][]traegerview.NamedGroup
+}
+
+// careFormReads are the roster and the care form bookings of a day, the
+// part of the occupancy the key-date report shares (ADR 0246).
+type careFormReads struct {
 	roster   map[int64]map[int64]int64
-	groups   map[int64]map[int64]int64
-	names    map[int64][]traegerview.NamedGroup
 	bookings map[int64][]traegerview.CareOfferingBookings
 	children map[int64]map[int64]int64
 }
 
-func (o *Overview) occupancyReads(ctx context.Context, scope []int64, now time.Time) (occupancyReads, error) {
+func (o *Overview) occupancyReads(ctx context.Context, scope []int64, day calendar.Date) (occupancyReads, error) {
 	var reads occupancyReads
 	if len(scope) == 0 {
 		return reads, nil
 	}
 	var err error
-	if reads.roster, err = o.rosters.ActiveStudentMembershipsByTenant(ctx, scope, now); err != nil {
+	if reads.careFormReads, err = o.careFormReads(ctx, scope, day); err != nil {
 		return reads, err
 	}
 	if reads.groups, err = o.occupancy.Groups.MembershipGroupIDsByTenant(ctx, scope); err != nil {
 		return reads, err
 	}
-	if reads.names, err = o.occupancy.GroupNames.GroupsByTenant(ctx, scope); err != nil {
+	reads.names, err = o.occupancy.GroupNames.GroupsByTenant(ctx, scope)
+	return reads, err
+}
+
+// careFormReads reads the roster of the Stichtagszahl rule on day and the
+// care offerings with their bookings valid that day.
+func (o *Overview) careFormReads(ctx context.Context, scope []int64, day calendar.Date) (careFormReads, error) {
+	var reads careFormReads
+	if len(scope) == 0 {
+		return reads, nil
+	}
+	var err error
+	if reads.roster, err = o.rosters.ActiveStudentMembershipsByTenant(ctx, scope, day.BerlinMidnight()); err != nil {
 		return reads, err
 	}
-	day := calendar.DateFromTime(now)
 	var phases []int64
 	if reads.children, phases, err = o.occupancy.Children.BookedChildrenAndRunningPhases(ctx, scope, day); err != nil {
 		return reads, err

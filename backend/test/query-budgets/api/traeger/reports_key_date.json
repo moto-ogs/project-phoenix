@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.reports_key_date",
+  "max": 11,
+  "exact": true,
+  "description": "modules/traegerview — GET /traeger/reports/key-date with a template of every\nsection (#4716, ADR 0246): the Träger row, the school IDs of the Träger, the\nreport template, the school rows, the roster on the key date, the child of\neach approved enrollment with the running phases, the care offering\nbookings of the key date, the staff, the check-ins of the absence window,\nthe status days of the window and the waiting and waitlisted children for\nthe whole school set in one administrative transaction. Flat in the number\nof schools.",
+  "route": "GET /traeger/reports/key-date"
+}

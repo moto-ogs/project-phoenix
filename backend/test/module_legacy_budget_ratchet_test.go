@@ -313,7 +313,9 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0242: the working-time check and the Einsatzplanung sites of
 // modules/workforce/compose (+11).
 // ADR 0248: Communication's parent-letter child reader constructor (+6).
-const moduleComposeBudgetTotal = 13536
+// ADR 0246: the report templates of modules/organizationtenancy/compose (+5)
+// and the export adapter of modules/traegerview/compose (+1).
+const moduleComposeBudgetTotal = 13542
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -408,7 +410,8 @@ var moduleComposeBudgets = map[string]int{
 	// the operator provisioning (+10).
 	// ADR 0198: the narrow account-retention constructor (+13).
 	// Raised by ADR 0203: the data return retrieval and release constructors (+18).
-	"modules/organizationtenancy/compose": 374,
+	// ADR 0246: the report templates and their projection read (+5).
+	"modules/organizationtenancy/compose": 379,
 	// Added by ADR 0115: the Elternabrechnung's construction only.
 	// Raised by ADR 0119: the billing run constructor (+7).
 	// Raised by ADR 0121: the confirmation letter constructor (+8).
@@ -517,7 +520,8 @@ var moduleComposeBudgets = map[string]int{
 	"workflows/staffclock/compose":       36,
 	"workflows/staffoffboarding/compose": 74,
 	// Added by ADR 0104: construction of the Träger projection, no retained logic.
-	"modules/traegerview/compose": 20,
+	// ADR 0246: the export adapter of the key-date report (+1).
+	"modules/traegerview/compose": 21,
 	// Added by ADR 0076: construction and the ambient transaction guard.
 	"workflows/staffpersonmerge/compose": 31,
 	// Added by ADR 0215: the Träger catalog rollout and its runtime (ADR 0195).

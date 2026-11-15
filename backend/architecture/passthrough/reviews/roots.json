@@ -1301,6 +1301,11 @@
       "reason": "ADR 0214 (#6683): Consumer-port adapter of the Träger projection's registered children port; it translates Enrollment's registered holiday children into the projection's RegisteredChild vocabulary."
     },
     {
+      "decision": "0246",
+      "id": "api/traegerReportTemplates.ReportTemplate",
+      "reason": "ADR 0246 (#4716): Consumer-port adapter of the Träger projection's report template port; it translates the report template of Organisation \u0026 Tenancy into the projection's Sozialraum-by-school vocabulary and its not-found refusal."
+    },
+    {
       "decision": "0241",
       "id": "api/traegerRoomNames.RoomsByTenant",
       "reason": "ADR 0241 (#4713): Consumer-port adapter of the Träger projection's room names port; it translates the rooms of Facilities into the projection's NamedRoom vocabulary."

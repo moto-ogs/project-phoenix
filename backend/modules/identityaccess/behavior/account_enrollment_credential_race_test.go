@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,7 +27,7 @@ func newEnrollmentFixture(t *testing.T, prefix string) credentialFixture {
 	db := lockRacePool(t)
 	module := newMFATestModule(t, db, withDeliveringMailer(nil)...)
 	tenantID := testpkg.Tenant(t)
-	email := fmt.Sprintf("%s-%d@test.local", prefix, time.Now().UnixNano())
+	email := fmt.Sprintf("%s-%d@test.local", prefix, testpkg.UniqueSuffix())
 	account := testpkg.CreateTestAccountWithPassword(t, db, email, testPassword)
 	testpkg.EnsureAccountTenant(t, db, account.ID, tenantID)
 	return credentialFixture{db: db, module: module, tokenAuth: challengeTokenAuth(t, module), accountID: account.ID, tenantID: tenantID, email: email}

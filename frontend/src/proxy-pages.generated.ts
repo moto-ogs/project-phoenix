@@ -59,6 +59,7 @@ export const PORTAL_PAGES = {
     "/anmeldephasen",
     "/auslastung",
     "/belegung",
+    "/berichte",
     "/dokumente",
     "/einstellungen",
     "/ferien",

@@ -20,7 +20,8 @@ nötig: Die tenant-sicheren Lesezugriffe existieren bereits.
 Der Owner baut den Reader über `NewParentLetterChildren` bei seinen bestehenden
 Brief-Konstruktoren. Dieser Konstruktor und sein Port-Import benötigen genau
 sechs zusätzliche Zeilen in `modules/communication/composition`: Das
-Compose-Budget steigt von 376 auf 382, die Summe von 13530 auf 13536
+Compose-Budget steigt von 376 auf 382. Zusammen mit den sechs Zeilen aus
+ADR 0246 für Träger-Berichte steigt die Summe von 13530 auf 13542
 (ADR 0057 §5). Die Ausnahme gilt nur dieser Konstruktion; Importregeln,
 Root-Servicegraph-Grenze und übrige Budgets bleiben unverändert. Fachregeln und
 Briefinhalt ändern sich nicht.

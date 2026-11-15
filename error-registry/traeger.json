@@ -155,6 +155,24 @@
       "legacy": "traeger.no_membership"
     },
     {
+      "code": "traeger.report_template_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "traeger.report_template_invalid"
+    },
+    {
+      "code": "traeger.report_template_name_taken",
+      "class": "input",
+      "parameters": [],
+      "legacy": "traeger.report_template_name_taken"
+    },
+    {
+      "code": "traeger.report_template_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "traeger.report_template_not_found"
+    },
+    {
       "code": "traeger.school_not_found",
       "class": "permission",
       "parameters": [],

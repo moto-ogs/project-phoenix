@@ -1,0 +1,10 @@
+{
+  "api/traeger/report-templates": [
+    "GET traeger /traeger/report-templates/",
+    "POST traeger /traeger/report-templates/"
+  ],
+  "api/traeger/report-templates/[id]": [
+    "PUT traeger /traeger/report-templates/id%2F1",
+    "DELETE traeger /traeger/report-templates/id%2F1"
+  ]
+}
