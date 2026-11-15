@@ -268,8 +268,10 @@ func (rs *HolidayPeriodResource) withSchoolNames(next http.Handler) http.Handler
 	})
 }
 
-// exportRegistrations answers GET .../registrations/export?format=csv|xlsx:
-// one row per child and booked week of the filter.
+// exportRegistrations answers GET .../registrations/export?format=pdf|xlsx|csv:
+// one row per child and booked week of the filter. The PDF is for printing
+// and holds the columns a list on paper needs (#4718); Excel and CSV hold
+// every column.
 func (rs *HolidayPeriodResource) exportRegistrations(w http.ResponseWriter, r *http.Request) {
 	reviewer, ok := reviewerOf(w, r)
 	if !ok {
@@ -281,8 +283,8 @@ func (rs *HolidayPeriodResource) exportRegistrations(w http.ResponseWriter, r *h
 		return
 	}
 	format := lists.Format(strings.ToLower(strings.TrimSpace(r.URL.Query().Get("format"))))
-	if format != lists.FormatCSV && format != lists.FormatXLSX {
-		common.RenderError(w, r, common.ErrorInvalidRequest(fmt.Errorf("unsupported export format %q (use csv or xlsx)", format)))
+	if format != lists.FormatCSV && format != lists.FormatXLSX && format != lists.FormatPDF {
+		common.RenderError(w, r, common.ErrorInvalidRequest(fmt.Errorf("unsupported export format %q (use pdf, xlsx or csv)", format)))
 		return
 	}
 	filter, err := registrationFilter(r)
@@ -297,6 +299,9 @@ func (rs *HolidayPeriodResource) exportRegistrations(w http.ResponseWriter, r *h
 	}
 	names, _ := r.Context().Value(holidaySchoolNamesKey{}).(map[int64]string)
 	doc := holidayRegistrationDocument(export, filter, names)
+	if format == lists.FormatPDF {
+		doc.Columns = holidayRegistrationPrintColumns(doc.Columns)
+	}
 	file, err := lists.NewRenderer().Render(doc, format, "ferienanmeldungen-"+export.Period.Name)
 	if err != nil {
 		renderHolidayReviewError(w, r, err)
@@ -342,6 +347,26 @@ var holidayRegistrationColumns = []lists.Column{
 	{ID: "second_guardian_phone", Label: "Telefon zweites Elternteil"},
 	{ID: "debtor_number", Label: "Debitorennummer"},
 	{ID: "duplicate", Label: "Mögliche Doppelanmeldung"},
+}
+
+// holidayRegistrationPrintIDs are the columns of the printed list: who is
+// registered, for which week, school and time model, and whom to call. The
+// address, the e-mail, the second parent, the debtor number and the answers
+// to the form stay in Excel and CSV; paper keeps no more than the list on
+// site needs.
+var holidayRegistrationPrintIDs = map[lists.ColumnID]bool{
+	"status": true, "registration": true, "last_name": true, "first_name": true, "birth_date": true,
+	"school": true, "week": true, "host_school": true, "time_model": true, "lunch": true, "guardian": true, "phone": true,
+}
+
+func holidayRegistrationPrintColumns(columns []lists.Column) []lists.Column {
+	printed := make([]lists.Column, 0, len(holidayRegistrationPrintIDs))
+	for _, column := range columns {
+		if holidayRegistrationPrintIDs[column.ID] {
+			printed = append(printed, column)
+		}
+	}
+	return printed
 }
 
 func holidayRegistrationDocument(export capability.HolidayRegistrationExport, filter capability.HolidayRegistrationFilter, names map[int64]string) lists.Document {

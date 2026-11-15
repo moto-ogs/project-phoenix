@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	traegerViewHTTP "github.com/moto-ogs/project-phoenix/modules/traegerview/http"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 )
 
 // The lists and reports of the Träger-Portal are exported as PDF, Excel or
@@ -80,5 +81,20 @@ func traegerViewListRenderer(render SimpleListRenderer) traegerViewHTTP.ListRend
 			Rows: table.Rows, Footer: table.Footer, Filename: table.Filename,
 		}, format)
 		return traegerViewHTTP.ListFile{Data: file.Data, ContentType: file.ContentType, Filename: file.Filename}, err
+	}
+}
+
+// traegerStaffListRenderer binds the Personalstamm's export port.
+func traegerStaffListRenderer(render SimpleListRenderer) traegerstaff.ListRenderer {
+	return func(table traegerstaff.ListTable, format string) (traegerstaff.ListFile, error) {
+		columns := make([]traegerListColumn, len(table.Columns))
+		for i, column := range table.Columns {
+			columns[i] = traegerListColumn{ID: column.ID, Label: column.Label}
+		}
+		file, err := renderTraegerList(render, traegerList{
+			Title: table.Title, Subtitle: table.Subtitle, Filters: table.Filters, Columns: columns,
+			Rows: table.Rows, Footer: table.Footer, Filename: table.Filename,
+		}, format)
+		return traegerstaff.ListFile{Data: file.Data, ContentType: file.ContentType, Filename: file.Filename}, err
 	}
 }
