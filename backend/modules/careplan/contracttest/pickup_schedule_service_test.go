@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/careplantest"
-	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	timetable "github.com/moto-ogs/project-phoenix/modules/timetable"
 
 	"github.com/moto-ogs/project-phoenix/api"
@@ -474,12 +473,7 @@ func TestPickupScheduleService_GetUpcomingStudentPickupExceptions(t *testing.T) 
 
 	db := testpkg.SetupTestDB(t)
 
-	// The test root composes its pickups on the live day, so the upcoming
-	// read is composed here on decisionTestToday, the day the data is built on.
-	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
-	service, err := compose.NewPickupSchedules(db, owner, careplantest.NewStoredPickupBaselines(owner, emptyPickupBookings{}),
-		nil, nil, nil, func() calendar.Date { return decisionTestToday })
-	require.NoError(t, err)
+	service := setupPickupScheduleService(t, db)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("returns only upcoming exceptions", func(t *testing.T) {

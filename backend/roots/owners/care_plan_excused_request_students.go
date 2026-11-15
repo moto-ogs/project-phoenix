@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"time"
 
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -45,7 +47,8 @@ func NewExcusedAbsenceRequests(wiring ExcusedRequestWiring) (*carePlanCompose.Ex
 	}
 	today := wiring.Today
 	if today == nil {
-		today = careplan.Today
+		day := timezone.CalendarDateClock(wiring.Now)
+		today = func() careplan.Date { return careplan.Date(day()) }
 	}
 	return carePlanCompose.NewExcusedAbsenceRequests(carePlanCompose.ExcusedRequestDependencies{
 		CarePlan: wiring.CarePlan,

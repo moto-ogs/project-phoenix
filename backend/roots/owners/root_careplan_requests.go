@@ -133,7 +133,7 @@ func buildOfferingChanges(
 	deps.Planning = ManualPlanningReader{Query: PlanningQuery{DB: db}, CourseGroups: timetableOwner}
 	deps.Bookings = offerings.Bookings
 	deps.Shares = shares
-	deps.Today = env.Today
+	deps.Today, deps.Now = env.Today, env.Now
 	deps.Logger = env.Logger.With("service", "offering-change-requests")
 	changes, err := ComposeOfferingChanges(deps)
 	if err != nil {
