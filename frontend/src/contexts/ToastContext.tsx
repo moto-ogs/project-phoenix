@@ -726,15 +726,14 @@ function useApiErrorCore(
  * Fields without a named control, such as the signature pad, marked under
  * their `id` (#7111). Only those focusable from code (`tabindex`) count.
  */
-function fieldsById(
-  root: ParentNode,
-  failed: ReadonlySet<string>,
-): HTMLElement[] {
+function fieldsById(root: Node, failed: ReadonlySet<string>): HTMLElement[] {
+  // getElementById, not a `#id` selector: field names such as "704:1:x"
+  // are no valid selector.
   return [...failed]
-    .map((name) => root.querySelector<HTMLElement>(`#${CSS.escape(name)}`))
+    .map((name) => document.getElementById(name))
     .filter(
       (field): field is HTMLElement =>
-        field !== null && field.matches("[tabindex]"),
+        field !== null && root.contains(field) && field.matches("[tabindex]"),
     );
 }
 
