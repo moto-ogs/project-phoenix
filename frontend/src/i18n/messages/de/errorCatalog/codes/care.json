@@ -41,7 +41,7 @@
   "guardian_role_managed": "Diese Person ist erziehungsberechtigt. Ihre Angaben kann nur sie selbst oder die Schule ändern.",
   "guardian_shared_across_families": "Dieser Kontakt ist mehreren Familien zugeordnet und kann nur von der Schule geändert werden. Bitte wenden Sie sich an die Schule.",
   "guardian_social_worker_managed": "Diese Kontaktdaten werden von der Schule verwaltet. Für Änderungen wenden Sie sich bitte an die Schule.",
-  "invalid_credentials": "Für {object} fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+  "invalid_credentials": "Die E-Mail-Adresse oder das Passwort stimmt nicht. Bitte prüfen Sie Ihre Eingabe.",
   "invalid_poll_response": "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
   "invalid_recipients": "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
   "invalid_request_payload": "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",

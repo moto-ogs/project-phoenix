@@ -69,6 +69,16 @@ const PARENT_LOGIN_REFUSALS = [
   "identity.session_account_inactive",
 ] as const;
 
+/**
+ * The refusals that mean "this address and password do not match". Only
+ * these lead from the error to the password reset: an inactive account gets
+ * no new password that way (#3376).
+ */
+const WRONG_PASSWORD_REFUSALS: readonly string[] = [
+  "care.invalid_credentials",
+  "identity.invalid_credentials",
+];
+
 type ParentSignInTranslate = ReturnType<typeof useTranslations<"parentSignIn">>;
 
 /** The code step in the parent's language (#7051). */
@@ -135,6 +145,9 @@ function ParentLoginForm() {
   // Keine Schule des Kontos nutzt das Elternportal (#4895): kein Fehler der
   // Eingabe, die Schule entscheidet.
   const [portalNotBooked, setPortalNotBooked] = useState(false);
+  // Address and password did not match: the error offers the reset with
+  // the address already typed (#7106).
+  const [passwordRefused, setPasswordRefused] = useState(false);
   const locale = normalizeLocale(useLocale());
   const [isLoading, setIsLoading] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -184,11 +197,13 @@ function ParentLoginForm() {
       logger,
       // The stale session keeps the form locked: say so, and let
       // Wiederholen run the cleanup again.
-      onFailure: (cause) =>
+      onFailure: (cause) => {
+        setPasswordRefused(false);
         void showFormError(unavailableApiError(cause), {
           object: t("errorObject"),
           retry: () => setCleanupAttempt((current) => current + 1),
-        }),
+        });
+      },
     });
     if (!cleanup) return;
     setIsCleaningUp(true);
@@ -214,6 +229,7 @@ function ParentLoginForm() {
     formErrors.clear();
     setIsStaffAccount(false);
     setPortalNotBooked(false);
+    setPasswordRefused(false);
 
     try {
       const result = await portalPasswordLogin("parent", email, password);
@@ -241,6 +257,11 @@ function ParentLoginForm() {
         formErrors.invalid(t("errors.rateLimited"));
         return;
       }
+      setPasswordRefused(
+        err instanceof ApiError &&
+          err.status === 401 &&
+          WRONG_PASSWORD_REFUSALS.includes(err.code ?? ""),
+      );
       void formErrors.show(
         err instanceof ApiError
           ? credentialError(err, PARENT_LOGIN_REFUSALS)
@@ -256,6 +277,7 @@ function ParentLoginForm() {
   const backToCredentials = () => {
     setMfaStep(null);
     setPassword("");
+    setPasswordRefused(false);
     formErrors.clear();
   };
 
@@ -327,7 +349,22 @@ function ParentLoginForm() {
                 }
               />
             ) : (
-              <FormErrorAlert message={formErrors.error} />
+              <FormErrorAlert
+                message={formErrors.error}
+                action={
+                  passwordRefused ? (
+                    <Button
+                      type="button"
+                      variant="link_tone"
+                      size="compact"
+                      onClick={() => setIsResetModalOpen(true)}
+                      className="-ml-2.5 self-start"
+                    >
+                      {tReset("title")}
+                    </Button>
+                  ) : undefined
+                }
+              />
             )}
 
             <div className="space-y-4">
@@ -398,6 +435,7 @@ function ParentLoginForm() {
         isOpen={isResetModalOpen}
         onClose={() => setIsResetModalOpen(false)}
         onRequestReset={requestParentPasswordReset}
+        initialEmail={email}
         rateLimitStorageKey="parentPasswordResetRateLimitUntil"
         errorPath={resetErrors}
         formRef={resetFormRef}

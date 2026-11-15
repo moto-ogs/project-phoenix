@@ -41,7 +41,7 @@
   "guardian_role_managed": "Ky person është kujdestar ligjor. Të dhënat e tij mund t'i ndryshojë vetëm vetë ai ose shkolla.",
   "guardian_shared_across_families": "Ky kontakt përdoret nga disa familje dhe mund të ndryshohet vetëm nga shkolla. Kontaktoni shkollën.",
   "guardian_social_worker_managed": "Këto të dhëna kontakti menaxhohen nga shkolla. Për ndryshime kontaktoni shkollën.",
-  "invalid_credentials": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
+  "invalid_credentials": "Adresa e email-it ose fjalëkalimi nuk është i saktë. Kontrolloni të dhënat.",
   "invalid_poll_response": "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
   "invalid_recipients": "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
   "invalid_request_payload": "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
