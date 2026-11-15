@@ -91,6 +91,7 @@ type Resource struct {
 	organization   TraegerOrganizationRouter
 	schoolSessions identityaccess.TraegerSchoolSessions
 	stepUp         identityaccess.TraegerSessionStepUp
+	lists          common.ListRenderer
 }
 
 // NewResource builds the Träger-Portal resource: the school list, the
@@ -101,12 +102,13 @@ type Resource struct {
 // names of its people (#4693) and
 // schoolSessions the Absprung into a school (#4654), resets the password
 // reset (#5149) and stepUp the code step in the running session (#7068);
-// without them those routes answer 500.
-func NewResource(auth AuthRuntime, mfa MFARuntime, resets common.PasswordResetRoutes, schools, holidayPeriods, accessLog, settings, masterData TraegerRouter, accounts identityaccess.TraegerAccountManagement, profiles identityaccess.TraegerMemberProfiles, organization TraegerOrganizationRouter, schoolSessions identityaccess.TraegerSchoolSessions, stepUp identityaccess.TraegerSessionStepUp) *Resource {
-	if schools == nil || holidayPeriods == nil || accessLog == nil || settings == nil || masterData == nil || organization == nil {
-		panic("traeger portal: the school list, holiday period, access log, settings, master data and Träger routes are required")
+// without them those routes answer 500. lists renders the lists of the
+// Träger-Büro as PDF, Excel or CSV (#4718).
+func NewResource(auth AuthRuntime, mfa MFARuntime, resets common.PasswordResetRoutes, schools, holidayPeriods, accessLog, settings, masterData TraegerRouter, accounts identityaccess.TraegerAccountManagement, profiles identityaccess.TraegerMemberProfiles, organization TraegerOrganizationRouter, schoolSessions identityaccess.TraegerSchoolSessions, stepUp identityaccess.TraegerSessionStepUp, lists common.ListRenderer) *Resource {
+	if schools == nil || holidayPeriods == nil || accessLog == nil || settings == nil || masterData == nil || organization == nil || lists == nil {
+		panic("traeger portal: the school list, holiday period, access log, settings, master data and Träger routes and the list renderer are required")
 	}
-	return &Resource{auth: auth, mfa: mfa, resets: resets, schools: schools, holidayPeriods: holidayPeriods, accessLog: accessLog, settings: settings, masterData: masterData, accounts: accounts, profiles: profiles, organization: organization, schoolSessions: schoolSessions, stepUp: stepUp}
+	return &Resource{auth: auth, mfa: mfa, resets: resets, schools: schools, holidayPeriods: holidayPeriods, accessLog: accessLog, settings: settings, masterData: masterData, accounts: accounts, profiles: profiles, organization: organization, schoolSessions: schoolSessions, stepUp: stepUp, lists: lists}
 }
 
 var errLoginUnavailable = errors.New("the Träger sessions are not composed")
