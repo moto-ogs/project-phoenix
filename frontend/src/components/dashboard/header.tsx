@@ -210,9 +210,10 @@ function schoolRoleLabel(roles: readonly string[]): string {
 
 export interface HeaderProps {
   /**
-   * Die Glocke der Benachrichtigungen (#7148). Nur die Staff-Shell gibt sie
-   * mit: Der Kopf aller Portale importiert sie so nicht, und ihr Vollbild-
-   * Blatt landet nicht in den Bündeln von moto schule, Caterer und Träger.
+   * Die Glocke der Benachrichtigungen (#7148). Nur die Staff-Shell und die
+   * Eltern-Hülle (#7140) geben sie mit: Der Kopf aller Portale importiert sie
+   * so nicht, und ihr Vollbild-Blatt landet nicht in den Bündeln von moto
+   * schule, Caterer und Träger.
    */
   readonly notificationBell?: ReactNode;
 }
@@ -566,7 +567,7 @@ export function Header({ notificationBell }: HeaderProps = {}) {
             </div>
 
             {mode === "teacher" ? <StaffNewsButton /> : null}
-            {mode === "teacher" ? notificationBell : null}
+            {mode === "teacher" || mode === "parent" ? notificationBell : null}
             {/* User menu */}
             <AnchoredPopover
               open={isProfileMenuOpen}

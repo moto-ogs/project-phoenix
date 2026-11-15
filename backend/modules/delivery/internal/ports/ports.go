@@ -99,6 +99,23 @@ type FeedStore interface {
 	MarkFeedEntryRead(ctx context.Context, tenantID, accountID, entryID int64, now time.Time) (found bool, err error)
 	// MarkAllFeedEntriesRead marks every unread entry of the account read.
 	MarkAllFeedEntriesRead(ctx context.Context, tenantID, accountID int64, now time.Time) (int, error)
+	GuardianFeedStore
+}
+
+// GuardianFeedStore reads the feed of a guardian account across its schools
+// (#7140). Every statement runs on an administrative transaction and keeps
+// only the entries the account may still read: an active membership with
+// the guardian role in the entry's school and parent_portal.access for at
+// least one of the entry's children. A staff entry never reaches it.
+type GuardianFeedStore interface {
+	ListGuardianFeedEntries(ctx context.Context, accountID int64, after *domain.FeedCursor, limit int) ([]domain.FeedEntry, error)
+	CountUnreadGuardianFeedEntries(ctx context.Context, accountID int64) (int, error)
+	// MarkGuardianFeedEntryRead marks one readable entry of the account read
+	// and names its school; found is false for every other entry.
+	MarkGuardianFeedEntryRead(ctx context.Context, accountID, entryID int64, now time.Time) (tenantID int64, found bool, err error)
+	// MarkAllGuardianFeedEntriesRead marks every readable unread entry of
+	// the account read and names the schools of the entries it changed.
+	MarkAllGuardianFeedEntriesRead(ctx context.Context, accountID int64, now time.Time) (tenantIDs []int64, err error)
 }
 
 // RealtimeNotificationStore keeps the in-app notifications other API

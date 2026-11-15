@@ -239,7 +239,8 @@ const (
 	// that its notification feed changed (#7148): a new or updated entry, or a
 	// change of the read state from another device. It carries no content;
 	// clients refetch the feed and its unread count. Delivered with
-	// BroadcastToStaffAccounts to the account only.
+	// BroadcastToStaffAccounts, or BroadcastToGuardian for the parents
+	// portal (#7140), to the account only.
 	EventNotificationFeedChanged EventType = "notification_feed_changed"
 
 	// EventNotification carries a user-facing notification from the

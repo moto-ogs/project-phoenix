@@ -50,6 +50,9 @@ type DeliveryNotifications struct {
 	UnreportedAbsences deliveryContract.UnreportedAbsenceNotifier
 	// Feed serves an account its own notification feed (#7148).
 	Feed deliveryContract.NotificationFeed
+	// GuardianFeed serves a guardian account its feed across the schools of
+	// the family in the parents portal (#7140).
+	GuardianFeed deliveryContract.GuardianNotificationFeed
 }
 
 // BuildDeliveryNotifications binds the notification router over the realtime
@@ -86,6 +89,10 @@ func BuildDeliveryNotifications(
 	if !ok {
 		return DeliveryNotifications{}, fmt.Errorf("notification router does not serve the notification feed")
 	}
+	guardianFeed, err := deliveryCompose.NewTenantGuardianFeed(unit, db.Pool(), delivery.Runtime.Store, hub, logger.With("service", "guardian_notification_feed"), clock)
+	if err != nil {
+		return DeliveryNotifications{}, err
+	}
 	preferences, err := deliveryCompose.NewTenantPreferenceService(unit, consent, DeliveryPreferenceSettings(settings), db.Pool(), identity, securityruntime.HasPermission)
 	if err != nil {
 		return DeliveryNotifications{}, err
@@ -119,6 +126,7 @@ func BuildDeliveryNotifications(
 		AbsenceNotifier:  absences,
 		ResponsibleStaff: responsible,
 		Feed:             feed,
+		GuardianFeed:     guardianFeed,
 	}, nil
 }
 

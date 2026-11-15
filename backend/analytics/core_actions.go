@@ -633,6 +633,8 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/parent/me/news/{announcementId}/survey"}:                                                  notCaptured,
 	{http.MethodDelete, "/parent/me/notification-preferences/"}:                                                   notCaptured,
 	{http.MethodPut, "/parent/me/notification-preferences/{type}"}:                                                notCaptured,
+	{http.MethodPost, "/parent/me/notifications/feed/read-all"}:                                                   notCaptured,
+	{http.MethodPost, "/parent/me/notifications/feed/{id}/read"}:                                                  notCaptured,
 	{http.MethodPut, "/parent/me/profile"}:                                                                        notCaptured,
 	{http.MethodDelete, "/parent/me/push/subscriptions"}:                                                          notCaptured,
 	{http.MethodPost, "/parent/me/push/subscriptions"}:                                                            notCaptured,

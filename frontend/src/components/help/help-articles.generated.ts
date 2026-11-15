@@ -7303,6 +7303,10 @@ export const parentNewsTopic = function parentNewsTopic(): HelpTopic {
  * entscheiden: oben die Themen je Bereich, darunter der Knopf `Aktivieren`
  * unter `Benachrichtigungen auf diesem Gerät`. Die vier Schritte folgen der
  * Eltern-Anleitung `moto-eltern-push-benachrichtigungen.pdf`.
+ *
+ * Die `Hinweise` (#7140) stehen ohne Einstellung in moto: am Computer hinter
+ * der Glocke oben rechts, auf dem Telefon unter `Mehr`. Erster Hinweis ist
+ * die Absage einer Betreuung des Kindes.
  */
 export const parentNotificationsTopic =
   function parentNotificationsTopic(): HelpTopic {
@@ -7328,6 +7332,9 @@ export const parentNotificationsTopic =
       result:
         "moto meldet sich ab jetzt bei den gewählten Themen. Auch wenn die App geschlossen ist.",
       notes: [
+        "Jeder Hinweis steht auch in moto unter `Hinweise`, zum Beispiel wenn eine Betreuung Ihres Kindes ausfällt. Dafür müssen Sie nichts einschalten.",
+        "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder `Alle als gelesen markieren` wählen.",
+        "Auf dem Sperrbildschirm steht nie der Name Ihres Kindes. Was genau los ist, lesen Sie nach der Anmeldung in moto.",
         "Die Themen stehen unter `Kinder`, `Mitteilungen` und `Termine`.",
         "Sie können Themen später jederzeit ein- oder ausschalten.",
         "Sie brauchen beide Stellen: die Themen und den Knopf `Aktivieren`.",
@@ -7335,6 +7342,8 @@ export const parentNotificationsTopic =
       ],
       differences: [
         "Am Computer steht `Einstellungen` in der Navigation statt hinter `Mehr`.",
+        "Die `Hinweise` finden Sie am Computer hinter der Glocke oben rechts. Auf dem Telefon tippen Sie unten auf `Mehr` und dann auf `Hinweise`. Die Zahl daran zählt neue Hinweise.",
+        "Sie sehen nur Hinweise zu Kindern, für die Sie moto nutzen dürfen. Nimmt die Schule Ihnen dieses Recht, verschwinden auch ältere Hinweise zu diesem Kind.",
         "Ein Thema trägt `Von Ihrer Schule derzeit deaktiviert`? Dann nutzt Ihre OGS es nicht.",
         "Hat Ihre Schule alle Benachrichtigungen abgeschaltet, bleibt Ihre Auswahl gespeichert und gilt später wieder.",
         "Auf Android sind die Schritte gleich. Die Frage Ihres Geräts kann anders aussehen.",

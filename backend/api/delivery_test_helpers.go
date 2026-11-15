@@ -66,6 +66,8 @@ type DeliveryTestModule struct {
 	// hub its signals and the in-app notices go to.
 	Feed deliveryContract.NotificationFeed
 	Hub  *realtime.Hub
+	// GuardianFeed reads the feed of a guardian across its schools (#7140).
+	GuardianFeed deliveryContract.GuardianNotificationFeed
 }
 
 // NotificationPreferenceRouterForTests mounts the actual protected resources
@@ -77,7 +79,10 @@ func (m DeliveryTestModule) NotificationPreferenceRouterForTests() chi.Router {
 	notifications := NewNotificationHTTP(nil, nil, m.NotificationPreferences, m.Feed)
 	router.Mount("/api/notifications", notifications.Router())
 	router.Mount("/school/notifications", notifications.SchoolRouter())
-	parents := parentAPI.NewResource(parentAPI.ResourceConfig{Preferences: bindParentPreferences(m.NotificationPreferences)})
+	parents := parentAPI.NewResource(parentAPI.ResourceConfig{
+		Preferences: bindParentPreferences(m.NotificationPreferences),
+		Feed:        bindParentNotificationFeed(m.GuardianFeed),
+	})
 	router.Mount("/parent", parents.Router(ParentSessionChain))
 	return router
 }
@@ -141,8 +146,12 @@ func NewDeliveryTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return DeliveryTestModule{}, err
 	}
+	guardianFeed, err := deliveryCompose.NewTenantGuardianFeed(unit, db.Pool(), delivery.Store, hub, logger, time.Now)
+	if err != nil {
+		return DeliveryTestModule{}, err
+	}
 	return DeliveryTestModule{Runtime: delivery, EmailOutbox: deliveryCompose.NewEmailOutbox(deliveryCompose.NewDurableEmails(delivery.Module)),
-		Notifications: service, PushSubscriptions: push, NotificationPreferences: preferences, Feed: feed, Hub: hub}, nil
+		Notifications: service, PushSubscriptions: push, NotificationPreferences: preferences, Feed: feed, Hub: hub, GuardianFeed: guardianFeed}, nil
 }
 
 // newDeliveryTestRouter builds the notification router over the SSE, Web Push

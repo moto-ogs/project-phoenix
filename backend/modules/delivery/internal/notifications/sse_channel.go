@@ -82,6 +82,19 @@ func (c *sseChannel) signalFeed(tenantID int64, accountIDs []int64) error {
 	return c.broadcaster.BroadcastToStaffAccounts(tenantID, accountIDs, realtime.NewEvent(realtime.EventNotificationFeedChanged, "", realtime.EventData{}))
 }
 
+// signalGuardianFeed tells the accounts' open sessions of the parents portal
+// that their feed changed (#7140). Like the staff signal it carries no
+// content: the portal reloads the feed, whose read checks the children.
+func (c *sseChannel) signalGuardianFeed(tenantID int64, accountIDs []int64) error {
+	event := realtime.NewEvent(realtime.EventNotificationFeedChanged, "", realtime.EventData{})
+	for _, accountID := range accountIDs {
+		if err := c.broadcaster.BroadcastToGuardian(tenantID, accountID, event); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (c *sseChannel) getLogger() *slog.Logger {
 	if c.logger == nil {
 		return slog.Default()
@@ -111,6 +124,14 @@ func (c *sseChannel) Deliver(ctx context.Context, event Event) error {
 		stored.Scope = domain.RealtimeScopeAdmin
 		return c.broadcaster.BroadcastToTenantAdmins(audience.TenantID, c.relayable(ctx, sseEvent, stored, nil))
 	case ScopeGuardian:
+		if len(event.feedChanged) > 0 {
+			if err := c.signalGuardianFeed(audience.TenantID, event.feedChanged); err != nil {
+				return err
+			}
+		}
+		if event.feedOnly {
+			return nil
+		}
 		recipients, err := c.permittedGuardians(ctx, audience)
 		if err != nil || len(recipients) == 0 {
 			return err

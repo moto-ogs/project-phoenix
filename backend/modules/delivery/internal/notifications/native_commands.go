@@ -3,6 +3,7 @@ package notifications
 import (
 	"context"
 
+	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/devices"
 )
 
@@ -68,5 +69,13 @@ func notificationEventFromPublic(event devices.NotificationEvent) Event {
 		SchoolDeepLink: event.SchoolDeepLink,
 		Data:           event.Data,
 		Portal:         event.Portal,
+		Feed:           feedDeliveryFromPublic(event.Feed),
 	}
+}
+
+func feedDeliveryFromPublic(feed *devices.NotificationFeed) *contract.NotificationFeedDelivery {
+	if feed == nil {
+		return nil
+	}
+	return &contract.NotificationFeedDelivery{PushAccountIDs: feed.PushAccountIDs, Title: feed.Title, Body: feed.Body}
 }

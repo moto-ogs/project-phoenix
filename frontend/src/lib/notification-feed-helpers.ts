@@ -72,4 +72,5 @@ export function mapNotificationFeedPage(
  */
 export const NOTIFICATION_FEED_ANALYTICS_TYPES = [
   "instance_cancelled",
+  "parent_care_cancelled",
 ] as const;

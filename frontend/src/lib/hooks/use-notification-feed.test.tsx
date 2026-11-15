@@ -12,7 +12,10 @@ import {
 } from "~/lib/swr";
 import { resetSWRScope } from "~/lib/swr/scope";
 import { SWRConfig } from "~/lib/swr/testing";
-import { useNotificationFeed } from "./use-notification-feed";
+import {
+  PARENT_NOTIFICATION_FEED,
+  useNotificationFeed,
+} from "./use-notification-feed";
 
 vi.unmock("swr");
 const state = vi.hoisted(() => ({ session: null as Session | null }));
@@ -26,6 +29,12 @@ const api = vi.hoisted(() => ({
   fetchNotificationFeed: vi.fn(),
   markNotificationFeedEntryRead: vi.fn(),
   markAllNotificationFeedRead: vi.fn(),
+  parentNotificationFeedApi: {
+    fetchPage: vi.fn(),
+    fetchUnreadCount: vi.fn(),
+    markRead: vi.fn(),
+    markAllRead: vi.fn(),
+  },
 }));
 vi.mock("~/lib/notification-feed-api", () => ({
   ...api,
@@ -263,4 +272,29 @@ describe("notification feed reconciliation", () => {
       expect(feed.onUnreadCount).not.toHaveBeenCalled();
     },
   );
+});
+
+describe("parents portal feed (#7140)", () => {
+  it("reads and marks through the parents portal's own routes", async () => {
+    const parentApi = api.parentNotificationFeedApi;
+    parentApi.fetchPage.mockResolvedValue(page("parent-first"));
+    parentApi.markRead.mockResolvedValue(0);
+    const onUnreadCount = vi.fn();
+    const feed = renderHook(
+      () => useNotificationFeed(onUnreadCount, PARENT_NOTIFICATION_FEED),
+      { wrapper },
+    );
+    await advance();
+
+    expect(feed.result.current.items.map(({ entry }) => entry.id)).toEqual([
+      "parent-first",
+    ]);
+    await act(() =>
+      feed.result.current.markRead(feed.result.current.items[0]!),
+    );
+    expect(parentApi.markRead).toHaveBeenCalledWith("parent-first");
+    expect(api.fetchNotificationFeed).not.toHaveBeenCalled();
+    expect(api.markNotificationFeedEntryRead).not.toHaveBeenCalled();
+    expect(onUnreadCount).toHaveBeenLastCalledWith(0);
+  });
 });

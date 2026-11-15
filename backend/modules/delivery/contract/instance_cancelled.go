@@ -13,12 +13,19 @@ import (
 const NotificationInstanceCancelled = "instance_cancelled"
 
 // NotificationFeedDelivery asks the notification router to write an event
-// into the notification feed of every staff account of its audience (#7148).
-// PushAccountIDs are the recipients the producer lets a push reach; a push
-// follows only for an entry that is new, never for an update of a bundled
-// unread entry.
+// into the notification feed of every account of its audience: the staff
+// accounts of a staff event (#7148), or the guardian accounts of a guardian
+// event about the children of Audience.StudentIDs (#7140). PushAccountIDs are
+// the recipients the producer lets a push reach; a push follows only for an
+// entry that is new, never for an update of a bundled unread entry.
+//
+// Title and Body are the text of the entry when it may say more than the
+// push: a guardian reads the entry only after login, while the push shows on
+// the lock screen and stays free of child data. Empty takes the event's.
 type NotificationFeedDelivery struct {
 	PushAccountIDs []int64
+	Title          string
+	Body           string
 }
 
 // NotificationFeed serves an account its own notification feed in the
@@ -28,6 +35,19 @@ type NotificationFeed interface {
 	UnreadCount(ctx context.Context, tenantID, accountID int64) (int, error)
 	MarkRead(ctx context.Context, tenantID, accountID, entryID int64) (int, error)
 	MarkAllRead(ctx context.Context, tenantID, accountID int64) (int, error)
+}
+
+// GuardianNotificationFeed serves a guardian account its notification feed
+// across the schools of the family (#7140): the parents portal has no school
+// of its own. It opens its own administrative transaction and keeps only the
+// entries about children the account still holds parent_portal.access for.
+// A change of the read state is announced to the account's open sessions of
+// the parents portal.
+type GuardianNotificationFeed interface {
+	Page(ctx context.Context, accountID int64, cursor string, limit int) (NotificationFeedPage, error)
+	UnreadCount(ctx context.Context, accountID int64) (int, error)
+	MarkRead(ctx context.Context, accountID, entryID int64) (int, error)
+	MarkAllRead(ctx context.Context, accountID int64) (int, error)
 }
 
 // NotificationFeedPage is one page of the feed with the unread count;

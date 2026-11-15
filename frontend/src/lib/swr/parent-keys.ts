@@ -28,6 +28,11 @@ export const parentKeys = {
     `parent-meal-participation-${encodeURIComponent(schoolId)}-${encodeURIComponent(studentId)}-${from}-${to}-${asOf}`,
 
   shellChildren: () => "parent-shell-children",
+  // Die Glocke (#7140): Zähler und erste Seite der Hinweise des Kontos.
+  notificationFeed: {
+    firstPage: () => "parent-notification-feed-first-page",
+    unreadCount: () => "parent-notification-feed-unread",
+  },
   isChildResource: (key: string) =>
     key === "parent-shell-children" ||
     key.startsWith("parent-features-") ||

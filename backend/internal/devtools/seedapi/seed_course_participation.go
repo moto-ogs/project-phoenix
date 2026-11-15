@@ -111,7 +111,15 @@ func seedCourseOccurrence(rt *Runtime, courseIndex, dateIndex int, name string, 
 		return false, err
 	}
 	if courseIndex == 0 && dateIndex == 0 {
-		if _, err := rt.Client.Post(fmt.Sprintf("/api/timetable/instances/%d/cancel", instanceID), map[string]any{"reason": "Raum war belegt"}); err != nil {
+		// The families hear about it (#7140): the notice reaches the parents
+		// portal's news, its bell and, by preference, the phone.
+		if _, err := rt.Client.Post(fmt.Sprintf("/api/timetable/instances/%d/cancel", instanceID), map[string]any{
+			"reason": "Raum war belegt",
+			"guardian_notice": map[string]any{
+				"title":   name + " fällt aus",
+				"message": name + " fällt an diesem Termin aus. Ihr Kind wird in der OGS betreut.",
+			},
+		}); err != nil {
 			return false, fmt.Errorf("cancel course occurrence: %w", err)
 		}
 		return true, nil

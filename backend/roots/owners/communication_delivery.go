@@ -52,5 +52,13 @@ func communicationNotificationToDelivery(event communication.NotificationEvent) 
 		Priority: event.Priority, Title: event.Title, Body: event.Body,
 		DeepLink: event.DeepLink, SchoolDeepLink: event.SchoolDeepLink,
 		Data: event.Data, Portal: event.Portal,
+		Feed: communicationFeedToDelivery(event.Feed),
 	}
+}
+
+func communicationFeedToDelivery(feed *communication.NotificationFeed) *devices.NotificationFeed {
+	if feed == nil {
+		return nil
+	}
+	return &devices.NotificationFeed{PushAccountIDs: feed.PushAccountIDs, Title: feed.Title, Body: feed.Body}
 }

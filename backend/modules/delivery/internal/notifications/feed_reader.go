@@ -97,18 +97,7 @@ func (f *feedReader) read(ctx context.Context, tenantID, accountID int64, after 
 	if err != nil {
 		return FeedPage{}, err
 	}
-	if len(entries) > limit {
-		last := entries[limit-1]
-		page.NextCursor = encodeFeedCursor(domain.FeedCursor{UpdatedAt: last.UpdatedAt, ID: last.ID})
-		entries = entries[:limit]
-	}
-	page.Entries = make([]FeedEntry, 0, len(entries))
-	for _, entry := range entries {
-		page.Entries = append(page.Entries, FeedEntry{
-			ID: entry.ID, Type: entry.Type, Title: entry.Title, Body: entry.Body, DeepLink: entry.DeepLink,
-			CreatedAt: entry.CreatedAt, UpdatedAt: entry.UpdatedAt, ReadAt: entry.ReadAt,
-		})
-	}
+	page.Entries, page.NextCursor = feedPageEntries(entries, limit)
 	return page, nil
 }
 
