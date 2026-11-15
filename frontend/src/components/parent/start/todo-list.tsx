@@ -164,14 +164,14 @@ function TodoRow({ item }: Readonly<{ item: TodoItem }>) {
         </span>
       )}
       <ChevronRight
-        className="hidden size-[18px] shrink-0 text-gray-400 sm:block"
+        className="hidden size-[18px] shrink-0 text-gray-500 sm:block"
         aria-hidden="true"
       />
     </>
   );
 
   const shared =
-    "relative flex min-h-16 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-gray-50 active:bg-gray-100 focus-visible:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none focus-visible:-outline-offset-2";
+    "relative flex min-h-16 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-gray-50 active:bg-gray-100 focus-visible:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none focus-visible:-outline-offset-2";
 
   if (item.href) {
     return (

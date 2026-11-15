@@ -160,7 +160,7 @@ export function AnnouncementModal() {
         <>
           {header.title}
           {current.version && (
-            <span className="ml-2 text-gray-400">v{current.version}</span>
+            <span className="ml-2 text-gray-500">v{current.version}</span>
           )}
         </>
       }

@@ -57,7 +57,6 @@ import { OriginChip } from "~/components/ui/planning/origin-chip";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { SectionLabel } from "~/components/ui/section-label";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
-import { LOCATION_COLORS } from "~/lib/location-helper";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import {
   useAttendanceWebEnabled,
@@ -1048,7 +1047,7 @@ export function InstanceDetailModal({
         )}
       </div>
       {editDeferred && (
-        <div className="flex items-center justify-end gap-2 text-xs text-gray-400">
+        <div className="flex items-center justify-end gap-2 text-xs text-gray-500">
           <Pencil className="h-3.5 w-3.5" />
           <span>Bearbeiten kommt im nächsten Update</span>
         </div>
@@ -1458,10 +1457,7 @@ function StudentGroup({
                   : ""}
                 {student.note ? ` • ${student.note}` : ""}
                 {student.earlyPickupTime ? (
-                  <span
-                    className="font-semibold"
-                    style={{ color: LOCATION_COLORS.WARNING }}
-                  >
+                  <span className="text-moto-amber-strong font-semibold">
                     {` • Abholung ${student.earlyPickupTime} Uhr`}
                   </span>
                 ) : null}
@@ -1735,7 +1731,7 @@ interface RowProps {
 function Row({ icon, label, children }: RowProps) {
   return (
     <InsetPanel tone="white" className="flex items-start gap-3 text-sm">
-      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center text-gray-400">
+      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center text-gray-500">
         {icon}
       </span>
       <div className="flex min-w-0 flex-1 flex-col">

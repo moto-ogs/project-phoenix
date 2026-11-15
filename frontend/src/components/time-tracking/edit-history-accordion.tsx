@@ -120,7 +120,7 @@ const EDIT_COLUMNS: DataTableColumn<EditRow>[] = [
     render: (row) => {
       if (!row.firstOfSave) return null;
       return row.notes ? (
-        <span className="text-gray-400 italic">&ldquo;{row.notes}&rdquo;</span>
+        <span className="text-gray-500 italic">&ldquo;{row.notes}&rdquo;</span>
       ) : (
         "–"
       );
@@ -141,7 +141,7 @@ export function EditHistoryAccordion({
     return (
       <div className="flex items-center justify-center py-3">
         <SpinnerIcon className="h-4 w-4 text-gray-400" />
-        <span className="ml-2 text-xs text-gray-400">Laden...</span>
+        <span className="ml-2 text-xs text-gray-500">Laden...</span>
       </div>
     );
   }
@@ -188,7 +188,7 @@ export function EditHistoryAccordion({
       <div className="space-y-2 md:hidden">
         {rows.map(({ timestamp, dateStr, fieldEdits, notes, editorLabel }) => (
           <InsetPanel key={timestamp} tone="white">
-            <div className="mb-1.5 flex items-center justify-between text-xs text-gray-400">
+            <div className="mb-1.5 flex items-center justify-between text-xs text-gray-500">
               <span>{dateStr}</span>
               <span className="font-medium">{editorLabel}</span>
             </div>
@@ -201,7 +201,7 @@ export function EditHistoryAccordion({
                   <span className="text-moto-red line-through">
                     {formatEditValue(edit.fieldName, edit.oldValue)}
                   </span>
-                  <span className="text-gray-300">→</span>
+                  <span className="text-gray-500">→</span>
                   <span className="text-moto-green-strong font-medium">
                     {formatEditValue(edit.fieldName, edit.newValue)}
                   </span>
@@ -209,7 +209,7 @@ export function EditHistoryAccordion({
               ))}
             </div>
             {notes && (
-              <p className="mt-1.5 text-xs text-gray-400 italic">
+              <p className="mt-1.5 text-xs text-gray-500 italic">
                 &ldquo;{notes}&rdquo;
               </p>
             )}

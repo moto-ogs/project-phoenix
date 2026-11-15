@@ -467,7 +467,7 @@ export function SectionCard({
               (Icon && <IconTile icon={<Icon aria-hidden="true" />} />)}
             <div className="min-w-0">
               {kicker && (
-                <p className="text-moto-blue text-xs font-semibold tracking-wide uppercase">
+                <p className="text-moto-blue-strong text-xs font-semibold tracking-wide uppercase">
                   {kicker}
                 </p>
               )}

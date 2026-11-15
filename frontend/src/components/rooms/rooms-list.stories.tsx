@@ -48,10 +48,7 @@ export default meta;
 
 type Story = StoryObj<typeof RoomsList>;
 
-export const GroupedByBuilding: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
-};
+export const GroupedByBuilding: Story = {};
 
 export const Empty: Story = {
   args: { groupDefinitions: [] },

@@ -42,8 +42,6 @@ export default meta;
 type Story = StoryObj;
 
 export const WeekDays: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   render: () => (
     <ResourceGrid<DemoRow>
       ariaLabel="Wochenraster"
@@ -87,8 +85,6 @@ export const WeekDays: Story = {
 };
 
 export const HalfYearWeeks: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   render: () => (
     <ResourceGrid<DemoRow>
       ariaLabel="Halbjahresraster"

@@ -229,7 +229,7 @@ export function FilterPanel({
       className={`flex h-9 min-w-[84px] items-center justify-center rounded-md px-3 text-xs font-medium transition-all ${extraClass} ${
         selectedValues.includes(option.value)
           ? selectedOptionClass
-          : "text-gray-500 hover:text-gray-900"
+          : "text-gray-600 hover:text-gray-900"
       } `}
     >
       {content}

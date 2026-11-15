@@ -1146,7 +1146,7 @@ function VacationOpeningSummary({
       <span className="tabular-nums">
         {formatDayCount(opening.taken_before_days)} vor Einführung genommen
       </span>
-      <span className="text-gray-300">·</span>
+      <span className="text-gray-500">·</span>
       <span>Stichtag {formatDate(opening.effective_date)}</span>
     </InsetPanel>
   );

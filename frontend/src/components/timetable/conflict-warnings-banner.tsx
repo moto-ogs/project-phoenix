@@ -180,11 +180,11 @@ export function ConflictWarningsBanner({
       <SectionCard>
         <div role="status" className="flex items-center gap-2.5">
           <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100">
-            <TriangleAlert className="h-3.5 w-3.5 text-gray-400" aria-hidden />
+            <TriangleAlert className="h-3.5 w-3.5 text-gray-500" aria-hidden />
           </span>
           <p className="min-w-0 flex-1 text-xs text-gray-600">
             Keine offenen Konflikte {periodLabel}.{" "}
-            <span className="text-gray-400">
+            <span className="text-gray-500">
               {hiddenConflicts.length} ausgeblendet.
             </span>
           </p>
@@ -227,7 +227,7 @@ export function ConflictWarningsBanner({
           </span>{" "}
           {periodLabel} · doppelt eingeplante Kinder oder Personal.
           {hiddenConflicts.length > 0 && (
-            <span className="text-gray-400">
+            <span className="text-gray-500">
               {" "}
               {hiddenConflicts.length} ausgeblendet.
             </span>
@@ -293,7 +293,7 @@ export function ConflictWarningsBanner({
                 type="button"
                 onClick={() => setShowHidden((v) => !v)}
                 aria-expanded={showHidden}
-                className="text-xs text-gray-500 underline-offset-2 hover:text-gray-700 hover:underline focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none"
+                className="text-xs text-gray-500 underline-offset-2 hover:text-gray-700 hover:underline focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none"
               >
                 {showHidden
                   ? "Ausgeblendete Konflikte verbergen"

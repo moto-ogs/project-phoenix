@@ -188,7 +188,7 @@ export function TeamChatInbox({
     </>
   ) : null;
 
-  const emptyIcon = <MessagesSquare size={48} className="text-gray-400" />;
+  const emptyIcon = <MessagesSquare size={48} className="text-gray-500" />;
   const empty: TeamChatEmptyState | null = (() => {
     if (!chatEnabled) {
       return {
@@ -280,7 +280,7 @@ export function TeamChatInbox({
                   )}
                 </div>
                 {thread.last_message_at && (
-                  <span className="flex-shrink-0 text-xs whitespace-nowrap text-gray-400">
+                  <span className="flex-shrink-0 text-xs whitespace-nowrap text-gray-500">
                     {formatChatDateTime(thread.last_message_at)}
                   </span>
                 )}

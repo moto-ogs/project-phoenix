@@ -12,8 +12,6 @@ export default meta;
 type Story = StoryObj<typeof ChatBubble>;
 
 export const OwnMessage: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     body: "Klar, ich hole ihn um 15 Uhr ab.",
     own: true,
@@ -23,8 +21,6 @@ export const OwnMessage: Story = {
 };
 
 export const OtherMessage: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     body: "Kann mein Sohn heute etwas später abgeholt werden?",
     own: false,
@@ -34,8 +30,6 @@ export const OtherMessage: Story = {
 };
 
 export const WithReadReceipt: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     body: "Alles klar, kein Problem.",
     own: true,
@@ -46,8 +40,6 @@ export const WithReadReceipt: Story = {
 };
 
 export const LongWrappedMessage: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     body: "Das ist eine sehr lange Nachricht, die über mehrere Zeilen umgebrochen werden sollte, um zu prüfen, ob der Zeilenumbruch und das Wort-Wrapping korrekt funktionieren.",
     own: false,
@@ -57,8 +49,6 @@ export const LongWrappedMessage: Story = {
 };
 
 export const EventCard: StoryObj<typeof ChatEventCard> = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   render: (args) => <ChatEventCard {...args} />,
   args: {
     body: "Der Betreuungszeitraum wurde geändert.",

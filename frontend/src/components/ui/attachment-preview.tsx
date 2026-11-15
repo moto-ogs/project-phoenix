@@ -56,7 +56,7 @@ export function AttachmentPreview({
         type="button"
         onClick={onRemove}
         aria-label={removeLabel}
-        className="relative flex size-6 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none pointer-coarse:after:absolute pointer-coarse:after:-top-3 pointer-coarse:after:-right-3 pointer-coarse:after:-bottom-2 pointer-coarse:after:-left-2"
+        className="relative flex size-6 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none pointer-coarse:after:absolute pointer-coarse:after:-top-3 pointer-coarse:after:-right-3 pointer-coarse:after:-bottom-2 pointer-coarse:after:-left-2"
       >
         <X className="size-3.5" aria-hidden="true" />
       </button>
@@ -68,7 +68,7 @@ export function AttachmentPreview({
     </span>
   ) : null;
   const openFocus =
-    "transition-opacity focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none";
+    "transition-opacity focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none";
 
   if (previewUrl) {
     const picture = (

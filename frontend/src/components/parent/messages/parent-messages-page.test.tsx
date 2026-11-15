@@ -331,7 +331,7 @@ describe("ParentMessagesPage", () => {
       .find((element) => element.getAttribute("aria-hidden") === "true")!;
     expect(fullTimestamp).toHaveAttribute("aria-hidden", "true");
     expect(fullTimestamp.parentElement?.parentElement).toHaveClass(
-      "text-moto-blue",
+      "text-moto-blue-strong",
     );
 
     const readLink = screen.getByRole("link", {

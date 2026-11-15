@@ -3,16 +3,13 @@
     "aria-conditional-attr": "aria-expanded auf Tabellenzeilen der Zeiterfassung (4.1.2), #7112",
     "aria-prohibited-attr": "aria-label auf einem Element ohne Rolle, Aufsichtskarte (4.1.2), #7112",
     "aria-required-parent": "Kopf des Betreuungsplans ohne passende Elternrolle (1.3.1), #7112",
-    "color-contrast": "Kontraste, vor allem text-gray-400 als Text (1.4.3), #7110",
     "label-content-name-mismatch": "aria-label ersetzt sichtbaren Text (2.5.3), #7112"
   },
   "routes": {
     "eltern /": {
-      "color-contrast": 1,
       "label-content-name-mismatch": 1
     },
     "eltern / @mobil": {
-      "color-contrast": 1,
       "label-content-name-mismatch": 3
     },
     "eltern /login": {
@@ -22,12 +19,10 @@
       "label-content-name-mismatch": 1
     },
     "eltern /messages @mobil": {
-      "color-contrast": 1,
       "label-content-name-mismatch": 3
     },
     "tenant /active-supervisions": {
       "aria-prohibited-attr": 1,
-      "color-contrast": 2,
       "label-content-name-mismatch": 2
     },
     "tenant /active-supervisions @mobil": {
@@ -35,7 +30,6 @@
       "label-content-name-mismatch": 2
     },
     "tenant /activities": {
-      "color-contrast": 3,
       "label-content-name-mismatch": 3
     },
     "tenant /anmeldung": {
@@ -49,86 +43,65 @@
     },
     "tenant /betreuungsplan": {
       "aria-required-parent": 1,
-      "color-contrast": 21,
       "label-content-name-mismatch": 10
     },
     "tenant /calendar": {
-      "color-contrast": 4,
       "label-content-name-mismatch": 2
     },
     "tenant /calendar @mobil": {
-      "color-contrast": 2,
       "label-content-name-mismatch": 2
     },
     "tenant /database/personal": {
-      "color-contrast": 1,
       "label-content-name-mismatch": 1
     },
     "tenant /database/students": {
-      "color-contrast": 1,
       "label-content-name-mismatch": 2
     },
     "tenant /dienstplan": {
-      "color-contrast": 3,
       "label-content-name-mismatch": 4
     },
     "tenant /home": {
-      "color-contrast": 2,
       "label-content-name-mismatch": 3
     },
     "tenant /home @mobil": {
-      "color-contrast": 2,
       "label-content-name-mismatch": 3
     },
     "tenant /ogs-groups": {
-      "color-contrast": 3,
       "label-content-name-mismatch": 5
     },
     "tenant /ogs-groups @mobil": {
-      "color-contrast": 1,
       "label-content-name-mismatch": 5
     },
     "tenant /ogs-groups/overview @mobil": {
       "label-content-name-mismatch": 1
     },
     "tenant /rooms": {
-      "color-contrast": 1,
       "label-content-name-mismatch": 3
     },
-    "tenant /staff": {
-      "color-contrast": 1
-    },
     "tenant /students/[id]": {
-      "color-contrast": 5,
       "label-content-name-mismatch": 2
     },
     "tenant /students/[id] @mobil": {
       "label-content-name-mismatch": 1
     },
     "tenant /students/search": {
-      "color-contrast": 3,
       "label-content-name-mismatch": 6
     },
     "tenant /students/search @mobil": {
-      "color-contrast": 2,
       "label-content-name-mismatch": 6
     },
     "tenant /time-tracking": {
       "aria-conditional-attr": 1,
-      "color-contrast": 3,
       "label-content-name-mismatch": 2
     },
     "tenant /time-tracking @mobil": {
       "aria-conditional-attr": 1,
-      "color-contrast": 2,
       "label-content-name-mismatch": 2
     },
     "tenant /umfragen": {
-      "color-contrast": 1,
       "label-content-name-mismatch": 2
     },
     "tenant /vertretung": {
-      "color-contrast": 8,
       "label-content-name-mismatch": 5
     }
   }

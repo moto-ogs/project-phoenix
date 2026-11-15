@@ -56,8 +56,6 @@ const days = buildMonthDays(2026, 5);
 const todayISO = "2026-06-15";
 
 export const Empty: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     days,
     monthDate,
@@ -68,8 +66,6 @@ export const Empty: Story = {
 };
 
 export const WithInstances: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     days,
     monthDate,

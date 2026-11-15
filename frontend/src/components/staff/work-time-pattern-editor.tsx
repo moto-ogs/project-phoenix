@@ -136,7 +136,7 @@ export function WorkTimePatternEditor({
                   live
                 />
               </div>
-              <span className="text-xs text-gray-400">Dezimalstd.</span>
+              <span className="text-xs text-gray-500">Dezimalstd.</span>
               <div className="flex items-center gap-1 text-xs text-gray-500">
                 <label htmlFor={startId}>Start</label>
                 <div className="w-28">

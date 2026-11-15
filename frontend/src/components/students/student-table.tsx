@@ -108,7 +108,7 @@ function NameCell({
   );
 }
 
-const EMPTY = <span className="text-gray-400">–</span>;
+const EMPTY = <span className="text-gray-500">–</span>;
 
 export function nameColumn<T extends Student>(
   hrefFor: (student: T) => string,

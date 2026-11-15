@@ -40,8 +40,6 @@ export const WithCount: Story = {
 };
 
 export const WithStringCount: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     href: "#",
     label: "Benachrichtigungen",
@@ -71,8 +69,6 @@ export const Locked: Story = {
 };
 
 export const LongLabelWithCount: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   decorators: [
     (Story) => (
       <div className="w-56">

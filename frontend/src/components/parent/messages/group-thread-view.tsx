@@ -258,7 +258,7 @@ export function ParentGroupThreadView({
   const chatLink = chatChild ? (
     <NavigationLink
       href={parentPath(childConversationPath(chatChild))}
-      className="text-moto-blue text-sm font-semibold underline-offset-2 hover:underline"
+      className="text-moto-blue-strong text-sm font-semibold underline-offset-2 hover:underline"
     >
       {t("toChat")}
     </NavigationLink>

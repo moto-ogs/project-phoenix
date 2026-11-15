@@ -201,7 +201,7 @@ function WeekChartHeader({
       <h2 className="text-base font-bold text-gray-900 sm:text-lg">
         Wochenübersicht
       </h2>
-      <span className="text-xs text-gray-400">
+      <span className="text-xs text-gray-500">
         {chartData[0]?.label.split(" ")[1] ?? ""} –{" "}
         {chartData.at(-1)?.label.split(" ")[1] ?? ""}
       </span>

@@ -450,7 +450,7 @@ const READINESS_STATE = {
   },
   checking: {
     icon: CircleDashed,
-    className: "text-gray-400",
+    className: "text-gray-500",
     sr: "wird geprüft",
   },
 } as const;

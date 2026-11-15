@@ -36,7 +36,7 @@ describe("TrackingIndicators", () => {
 
     const svg = screen.getByLabelText("Mensa: ausstehend");
     expect(svg).toBeInTheDocument();
-    expect(svg).toHaveClass("text-gray-300");
+    expect(svg).toHaveClass("text-gray-500");
   });
 
   it("treats missing results as false (unmatched)", () => {

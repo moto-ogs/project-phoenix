@@ -197,7 +197,7 @@ export function CommandPalette({
         <div className="relative border-b border-gray-100 py-3 pr-14 pl-4 md:pl-6">
           <span
             aria-hidden="true"
-            className={`pointer-events-none absolute top-3 left-7 ${Z_LAYER.raised} flex h-12 items-center text-gray-400 md:left-9 [&>svg]:h-5 [&>svg]:w-5`}
+            className={`pointer-events-none absolute top-3 left-7 ${Z_LAYER.raised} flex h-12 items-center text-gray-500 md:left-9 [&>svg]:h-5 [&>svg]:w-5`}
           >
             <Search />
           </span>
@@ -228,7 +228,7 @@ export function CommandPalette({
           {busy && items.length > 0 ? (
             <span
               aria-hidden="true"
-              className={`pointer-events-none absolute top-3 right-17 ${Z_LAYER.raised} flex h-12 items-center text-gray-400`}
+              className={`pointer-events-none absolute top-3 right-17 ${Z_LAYER.raised} flex h-12 items-center text-gray-500`}
             >
               <SpinnerIcon className="h-4 w-4" />
             </span>
@@ -305,7 +305,7 @@ export function CommandPalette({
                           <ArrowRight
                             aria-hidden="true"
                             className={cn(
-                              "h-4 w-4 shrink-0 text-gray-400 transition-opacity",
+                              "h-4 w-4 shrink-0 text-gray-500 transition-opacity",
                               isActive ? "opacity-100" : "opacity-0",
                             )}
                           />

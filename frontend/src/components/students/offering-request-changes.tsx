@@ -98,10 +98,7 @@ export function OfferingRequestChanges({
           previewSelection !== undefined && previewSelection.new !== entry.new;
         const displayedNew = previewSelection?.new ?? entry.new;
         return (
-          <div
-            key={entry.offering_id}
-            className={`text-sm wrap-anywhere ${isRemoved ? "opacity-50" : ""}`}
-          >
+          <div key={entry.offering_id} className="text-sm wrap-anywhere">
             <span className="text-xs text-gray-500">{entry.label}: </span>
             {/* Eine Kursanfrage sieht sonst aus wie jede andere
                     Angebotsänderung (#3075). Das Mitarbeiterportal ist
@@ -112,8 +109,8 @@ export function OfferingRequestChanges({
               <StatusBadge tone="blue" label="Automatisch mitgebucht" />
             )}
             <div className="flex flex-wrap items-baseline gap-2">
-              <span className="text-gray-400 line-through">{entry.old}</span>
-              <span className="text-gray-400" aria-hidden="true">
+              <span className="text-gray-500 line-through">{entry.old}</span>
+              <span className="text-gray-500" aria-hidden="true">
                 →
               </span>
               <span
@@ -182,7 +179,7 @@ export function OfferingRequestChanges({
                 <span className="flex items-center gap-1.5 text-gray-700">
                   <Check
                     aria-hidden="true"
-                    className="size-3.5 shrink-0 text-gray-400"
+                    className="size-3.5 shrink-0 text-gray-500"
                     strokeWidth={2.5}
                   />
                   {line.days}

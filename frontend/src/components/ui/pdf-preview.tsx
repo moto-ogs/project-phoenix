@@ -80,7 +80,7 @@ export function PdfPreview({
         />
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
-          <FileText className="h-10 w-10 text-gray-400" aria-hidden="true" />
+          <FileText className="h-10 w-10 text-gray-500" aria-hidden="true" />
           <p className="max-w-xs text-sm text-gray-600">
             Auf diesem Gerät lässt sich die Datei hier nicht zeigen. Öffnen Sie
             sie in einem neuen Tab oder laden Sie sie herunter.

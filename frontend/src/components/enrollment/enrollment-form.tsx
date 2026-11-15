@@ -2070,7 +2070,7 @@ function BlockedOfferingCard({
       <div className="flex items-start gap-3">
         <span
           aria-hidden
-          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-gray-300 bg-gray-100 text-gray-400"
+          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-gray-300 bg-gray-100 text-gray-500"
         >
           <Lock className="h-3 w-3" />
         </span>

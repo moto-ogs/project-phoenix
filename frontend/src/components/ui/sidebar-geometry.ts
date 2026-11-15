@@ -74,7 +74,7 @@ const ROW_BASE = `group relative flex h-10 w-full items-center justify-start ove
 
 const ROW_ACTIVE = `bg-gray-100 font-semibold text-gray-900 ${ROW_BG_ACTIVE} ${ROW_PRESS}`;
 const ROW_INACTIVE = `font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 ${ROW_BG_IDLE} ${ROW_PRESS}`;
-const ROW_DISABLED = "font-medium text-gray-400";
+const ROW_DISABLED = "font-medium text-gray-500";
 
 /**
  * Zeilenklassen für Links und Bereichs-Schalter. Ein Aufrufpunkt für beide,
@@ -152,7 +152,7 @@ export function sidebarFadeClasses(visible: boolean): string {
 
 /** Der Chevron einer klappbaren Zeile; offen zeigt er nach oben. */
 export function sidebarChevronClasses(open: boolean, visible: boolean): string {
-  return `ml-2 h-4 w-4 shrink-0 text-gray-400 motion-safe:transition-[transform,opacity] motion-safe:duration-200 ${open ? "rotate-180" : ""} ${visible ? "opacity-100" : "opacity-0"}`;
+  return `ml-2 h-4 w-4 shrink-0 text-gray-500 motion-safe:transition-[transform,opacity] motion-safe:duration-200 ${open ? "rotate-180" : ""} ${visible ? "opacity-100" : "opacity-0"}`;
 }
 
 /**

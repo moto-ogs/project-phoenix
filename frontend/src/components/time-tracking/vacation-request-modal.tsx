@@ -449,7 +449,7 @@ export function VacationRequestModal({
                 maxLength={500}
                 placeholder="Zum Beispiel: Vertretung mit Kollegin XY abgestimmt"
               />
-              <p className="mt-1 text-right text-xs text-gray-400">
+              <p className="mt-1 text-right text-xs text-gray-500">
                 {note.length}/500
               </p>
             </div>

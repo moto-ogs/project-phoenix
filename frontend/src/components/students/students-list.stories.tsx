@@ -56,20 +56,13 @@ export default meta;
 
 type Story = StoryObj<typeof StudentsList>;
 
-export const GroupedByClass: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
-};
+export const GroupedByClass: Story = {};
 
 export const GroupedByGroup: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: { grouping: "group" },
 };
 
 export const SelectionMode: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     selectionMode: true,
     selectedStudentIds: new Set(["1", "3"]),

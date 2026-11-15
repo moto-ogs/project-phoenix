@@ -46,7 +46,7 @@ export function DatabaseDetailHeader({
         // to the moto-blue-soft/moto-blue tokens).
         <div
           aria-hidden
-          className="text-moto-blue bg-moto-blue-soft flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-semibold"
+          className="text-moto-blue-strong bg-moto-blue-soft flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-semibold"
         >
           {avatar}
         </div>

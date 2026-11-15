@@ -1122,7 +1122,7 @@ function ContactLine({
 }: Readonly<{ icon: ReactNode; text: string }>) {
   return (
     <p className="flex items-center gap-1.5 break-words">
-      <span className="shrink-0 text-gray-400">{icon}</span>
+      <span className="shrink-0 text-gray-500">{icon}</span>
       {text}
     </p>
   );

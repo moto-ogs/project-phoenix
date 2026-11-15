@@ -1406,7 +1406,7 @@ export function DataTable<T>({
                                       {canExpand ? (
                                         <ChevronRight
                                           aria-hidden="true"
-                                          className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${expanded ? "rotate-90" : ""}`}
+                                          className={`h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform ${expanded ? "rotate-90" : ""}`}
                                         />
                                       ) : (
                                         <span className="h-3.5 w-3.5 shrink-0" />

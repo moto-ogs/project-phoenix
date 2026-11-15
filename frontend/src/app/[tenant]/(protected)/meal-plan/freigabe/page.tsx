@@ -128,7 +128,7 @@ function columns(released: boolean): DataTableColumn<MealBillingChild>[] {
       render: (child) => {
         const count = child.registeredDays - child.mealDays;
         if (count === 0) {
-          return <span className="text-gray-400">–</span>;
+          return <span className="text-gray-500">–</span>;
         }
         return (
           <span className="text-moto-orange-strong">

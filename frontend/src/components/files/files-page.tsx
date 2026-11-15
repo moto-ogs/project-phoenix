@@ -64,7 +64,7 @@ const ACCEPTED_FILE_TYPES = ".pdf,.docx,.xlsx,.pptx,.png,.jpg,.jpeg";
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
 function visibilityIcon(visibility: FileFolder["visibility"]) {
-  const className = "h-3.5 w-3.5 text-gray-400";
+  const className = "h-3.5 w-3.5 text-gray-500";
   if (visibility === "admins") {
     return <Lock className={className} aria-hidden="true" />;
   }
@@ -169,7 +169,7 @@ export function FilesPage() {
             <FolderOpen
               className={cn(
                 "h-4 w-4 shrink-0",
-                active ? "text-white" : "text-gray-400",
+                active ? "text-white" : "text-gray-500",
               )}
               aria-hidden="true"
             />
@@ -315,7 +315,7 @@ export function FilesPage() {
                             href={tenantPath(
                               "/settings?tab=operations&highlight=files.staff_upload_enabled",
                             )}
-                            className="inline-flex min-h-6 items-center text-xs font-medium text-gray-500 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-800 hover:decoration-gray-500 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-1 focus-visible:outline-none"
+                            className="inline-flex min-h-6 items-center text-xs font-medium text-gray-500 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-800 hover:decoration-gray-500 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:ring-offset-1 focus-visible:outline-none"
                           >
                             Berechtigung ändern
                           </Link>
