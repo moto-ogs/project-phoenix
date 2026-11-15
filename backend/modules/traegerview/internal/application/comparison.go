@@ -124,13 +124,15 @@ func newestKeyDates(counts []traegerview.SchoolKeyDateCount, from, to calendar.D
 // schoolFigures derives the figures of one school from its series.
 func schoolFigures(school traegerview.SchoolUtilization) traegerview.ComparisonValues {
 	values := traegerview.ComparisonValues{}
+	if school.Places > 0 {
+		values[traegerview.ComparisonPlaces] = float64(school.Places)
+	}
 	days := len(school.Booked)
 	if days == 0 {
 		return values
 	}
 	bookedPlaces := sumInts(school.BookedPlaces)
 	if school.Places > 0 {
-		values[traegerview.ComparisonPlaces] = float64(school.Places)
 		values[traegerview.ComparisonPlacesRate] = float64(bookedPlaces) / float64(school.Places*days)
 		values[traegerview.ComparisonFreePlaces] = float64(school.Places) - float64(bookedPlaces)/float64(days)
 	}

@@ -84,6 +84,25 @@ func TestCompareSchoolsWithOneWeekdayHasNoChange(t *testing.T) {
 	assert.Nil(t, got.AttendanceFrom)
 }
 
+func TestCompareSchoolsWithOnlyWeekendDaysKeepsPlaces(t *testing.T) {
+	t.Parallel()
+	from, to := date(t, "2026-09-12"), date(t, "2026-09-13")
+	days := utilizationWeekdays(from, to)
+	require.Empty(t, days)
+	got := compareSchools([]traegerview.SchoolUtilization{
+		{School: traegerview.School{ID: 1}, Places: 10},
+		{School: traegerview.School{ID: 2}, Places: 20},
+		{School: traegerview.School{ID: 3}},
+	}, nil, from, to, len(days))
+
+	require.Len(t, got.Schools, 3)
+	assert.Equal(t, traegerview.ComparisonValues{traegerview.ComparisonPlaces: 10}, got.Schools[0].Values)
+	assert.Equal(t, traegerview.ComparisonValues{traegerview.ComparisonPlaces: 20}, got.Schools[1].Values)
+	assert.Empty(t, got.Schools[2].Values, "no figure without a place limit")
+	assert.Equal(t, traegerview.ComparisonValues{traegerview.ComparisonPlaces: 15}, got.Average)
+	assert.Equal(t, traegerview.ComparisonValues{traegerview.ComparisonPlaces: 30}, got.Together)
+}
+
 func TestComparisonScopeKeepsOnlySchoolsOfTheTraeger(t *testing.T) {
 	t.Parallel()
 	scope, err := comparisonScope([]int64{3, 1, 2}, nil)
