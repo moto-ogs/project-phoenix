@@ -114,6 +114,65 @@ export async function localMFACode(
   return code!;
 }
 
+/**
+ * Anmeldung im Träger- oder Schulportal (app/traeger/login, app/school/login).
+ * Gehört das Konto zu mehreren Trägern, fragt die Träger-Seite nach dem
+ * Träger; dann gilt der vorausgewählte erste.
+ * Danach verlangt das Portal den zweiten Faktor (#4651): den Code aus der
+ * Mail im lokalen Mailpit, beim ersten Mal mit Einrichtung.
+ */
+export async function loginToLocalMfaPortal(
+  page: Page,
+  origin: string,
+  credentials: Credentials,
+): Promise<void> {
+  const leftLogin = (url: URL) => !url.pathname.endsWith("/login");
+  const choice = page.locator('input[name="organization"]').first();
+  const code = page.locator('input[autocomplete="one-time-code"]').first();
+  const sendCode = page.getByRole("button", {
+    name: "Code an meine E-Mail senden",
+  });
+  await page.goto(`${origin}/login`, { waitUntil: "domcontentloaded" });
+  await page.fill("#email", credentials.email);
+  await page.fill("#password", credentials.password);
+  let notBefore = Date.now();
+  await page.click('button[type="submit"]');
+  // Welcher Schritt der Anmeldung als Nächstes kommt; höchstens 30 s.
+  const nextStep = async () => {
+    const deadline = Date.now() + 30_000;
+    while (Date.now() < deadline) {
+      if (leftLogin(new URL(page.url()))) return "fertig";
+      if (await choice.isVisible()) return "traeger";
+      if (await code.isVisible()) return "code";
+      if (await sendCode.isVisible()) return "einrichtung";
+      await page.waitForTimeout(250);
+    }
+    throw new Error("Die Anmeldung kam nach 30 s nicht weiter.");
+  };
+  let step = await nextStep();
+  if (step === "traeger") {
+    notBefore = Date.now();
+    await page.click('button[type="submit"]');
+    step = await nextStep();
+  }
+  if (step === "fertig") return;
+  if (step === "einrichtung") {
+    notBefore = Date.now();
+    await sendCode.click();
+  }
+  await code.waitFor({ timeout: 30_000 });
+  await code.fill(await localMFACode(credentials.email, notBefore));
+  if (step === "einrichtung") {
+    await page.getByRole("button", { name: "Weiter zum Dashboard" }).click();
+  } else {
+    const confirmOnce = page.getByRole("button", {
+      name: /^(?:Nur dieses Mal bestätigen|Nein, nur anmelden)/,
+    });
+    if (await confirmOnce.isVisible()) await confirmOnce.click();
+  }
+  await page.waitForURL(leftLogin, { timeout: 30_000 });
+}
+
 /** Complete the real UI MFA flow before a caller saves browser storage. */
 export async function loginToLocalTenant(
   page: Page,

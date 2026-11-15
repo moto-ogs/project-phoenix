@@ -1,7 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
+import { type Page } from "@playwright/test";
+import { readSeedParents } from "../scripts/seed-state";
+import { expect, test } from "./a11y/scan";
 import { frontendPort } from "./frontend-port";
 
 // Eltern-Chat auf einem kleinen Android-Handy (360 × 640, Touch). Nach dem
@@ -11,36 +10,8 @@ import { frontendPort } from "./frontend-port";
 // echte Seite zeigt: Kopf, Gruppennachrichten, Schnellaktionen und Schreibfeld
 // zusammen.
 
-interface SeedParent {
-  readonly email?: string;
-  readonly password?: string;
-  readonly student_ids?: readonly unknown[];
-}
-
-function seedParentWithOneChild(): SeedParent | null {
-  try {
-    const state = JSON.parse(
-      readFileSync(
-        join(process.cwd(), "..", "backend", ".seed-state.json"),
-        "utf8",
-      ),
-    ) as {
-      default_profile?: string;
-      profiles?: Record<string, { credentials?: { parents?: SeedParent[] } }>;
-    };
-    const profile = state.profiles?.[state.default_profile ?? ""];
-    return (
-      profile?.credentials?.parents?.find(
-        (parent) =>
-          parent.email && parent.password && parent.student_ids?.length === 1,
-      ) ?? null
-    );
-  } catch {
-    return null;
-  }
-}
-
-const parent = seedParentWithOneChild();
+const parent =
+  readSeedParents().find((candidate) => candidate.children === 1) ?? null;
 const parentsHost =
   process.env.NEXT_PUBLIC_PARENTS_HOSTNAME ??
   `eltern.localhost:${frontendPort}`;
@@ -65,8 +36,8 @@ async function openMessages(page: Page) {
   const composer = page.getByRole("textbox", { name: /Nachricht/ });
   await expect(email.or(composer).first()).toBeVisible({ timeout: 60_000 });
   if (await email.isVisible()) {
-    await email.fill(parent!.email!);
-    await page.locator("#parent-password").fill(parent!.password!);
+    await email.fill(parent!.email);
+    await page.locator("#parent-password").fill(parent!.password);
     await page.getByRole("button", { name: "Anmelden", exact: true }).click();
     await page.waitForURL((url) => !url.pathname.includes("/login"));
     await page.goto(`${base}/messages`, { waitUntil: "domcontentloaded" });
