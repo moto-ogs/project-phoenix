@@ -29,9 +29,14 @@ import (
 // the schools and the Dienstplan of the schools.
 func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.StaffAdmin, months workforce.TraegerStaffMonths, organizations HolidayOrganizations,
 	persons TraegerPersons, membership TraegerStaff, accessLog owners.DataAccessAppender, sites workforce.TraegerShiftSites,
+	identity identityaccess.Owner,
 ) error {
 	if staffAdmin == nil || months == nil {
 		return errors.New("traeger staff records: the personnel record and the school months are required")
+	}
+	springers, err := springerAccessOf(identity)
+	if err != nil {
+		return err
 	}
 	collaborators := workforce.TraegerStaffPorts{
 		Schools:     traegerStaffSchools{organizations: organizations},
@@ -42,6 +47,8 @@ func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.Staf
 		// The import log names colleagues like the export protocol (#4693).
 		Names:  parentBillingActorNames{names: owners.NewTraegerMemberNames()},
 		Months: months,
+		// The first block employs a Springer at the school (#7173).
+		Springers: traegerSpringerEmployments{access: springers},
 	}
 	records := staffAdmin.TraegerStaffRecords(collaborators)
 	requireStaff := common.RequiresPermission(identityaccess.TraegerRightStaffManage)
@@ -173,4 +180,32 @@ func (l traegerStaffAccessLog) RecordTraegerStaffAccess(ctx context.Context, acc
 		ActorAccountID: access.AccountID, ActorRole: traegerAccessActorRole, ResourceType: resource,
 		RangeStart: now, RangeEnd: now, Metadata: metadata,
 	})
+}
+
+// traegerSpringerEmployments employs a Springer at the blocking school
+// through Identity & Access, in the school's tenant transaction (ADR 0249).
+type traegerSpringerEmployments struct {
+	access identityaccess.SpringerAccess
+}
+
+func (e traegerSpringerEmployments) EmploySpringer(ctx context.Context, request workforce.SpringerEmploymentRequest) (int64, error) {
+	employment, err := e.access.GrantSpringerWindow(ctx, identityaccess.SpringerWindow{
+		AccountID: request.AccountID, FirstName: request.FirstName, LastName: request.LastName,
+		BlockID: request.BlockID, StartsAt: request.StartsAt, EndsAt: request.EndsAt,
+	})
+	return employment.StaffID, err
+}
+
+func (e traegerSpringerEmployments) EndSpringerAccess(ctx context.Context, blockID int64) error {
+	return e.access.EndSpringerWindow(ctx, blockID)
+}
+
+// springerAccessOf reads the Springer access, a capability of its own beside
+// the Identity & Access facade (ADR 0249), like the pool beside the records.
+func springerAccessOf(identity identityaccess.Owner) (identityaccess.SpringerAccess, error) {
+	springers, ok := identity.(identityaccess.SpringerAccess)
+	if !ok {
+		return nil, errors.New("traeger staff records: Identity & Access serves no Springer access")
+	}
+	return springers, nil
 }

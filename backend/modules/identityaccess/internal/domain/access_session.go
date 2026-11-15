@@ -25,5 +25,5 @@ func AccessSessionLive(head AccountSession, token AccessSession, now time.Time) 
 	}
 	scopeMatches := head.PortalScope == PortalScopeUnknown || head.PortalScope == PersistedPortalScope(token.Scope)
 	return token.FamilyID != "" && head.FamilyID == token.FamilyID && owner > 0 && head.AccountID == owner &&
-		scopeMatches && head.Expiry.After(now)
+		scopeMatches && head.Expiry.After(now) && !head.OutsideAccessWindow
 }

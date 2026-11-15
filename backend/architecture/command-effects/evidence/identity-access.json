@@ -11369,6 +11369,166 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "3dd8ebe4ca532b390720d5be1137cfc4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership.Offboarding.ReinstateStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "b24149a5f0b7ebbe948808a8a1f8a516",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership.Offboarding.ReinstateTeacher",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "8d67f8f2fc833fb49e5e194e2b75e141",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindPersonForMutation",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "1916596b1b30567c38a0d5c31dcf4c6d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LinkAccount",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "74554f21f5c63dae238481c2cdf93130",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LinkTag",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "14e64661faf7badb899f8c6836fa6c1c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindPersonForMutation",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "3e2c9f5d34f5ff02f327b3ffead09db6",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LinkAccount",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "72b54dc83b41ee95491bcb6e77f1aa67",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LinkTag",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "f3b2283f3bf9d2b137367fe2fa8ba368",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StaffPersonMergeLockKey",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "3a42a8fbda1f993da4978b7ac6890094",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.RowMissing",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "291076595aeed53037bd40061c5262b8",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByPersonID",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "fe3f72b3585400156237b181bd14210b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.CreateStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "2ffd9b3d1c4e4214e18b082d503a58b8",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.CreateTeacher",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "224c017cefe82db57bf646f21bc78ec3",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListTeachers",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "332badc0287cbac0a0cdd9c5282ac108",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.CreateStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "f3f86deb95cc149e97ea5327d07ac2bb",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.CreateTeacher",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "ce5b7a26a936242e0086f818eb60ebc0",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListTeachers",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "695a5978d717ec42497048d428284d14",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Teacher.IsDeleted",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "d80b10d5f8c38dfd269e7f65957be511",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.AcquireLock",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.SpringerAccess.GrantSpringerWindow",
+      "binding_digest": "971b8de62c1efa99672156657eed8642",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.OrderLock",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ClassifySchoolRoles",
       "binding_digest": "6e3cf37d5efd970adc63246bb98d06aa",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.StaffAccountQueries.ClassifySchoolRoles",

@@ -467,7 +467,8 @@ func (s *AccountAuthentication) resolveAccountTenantBySlug(ctx context.Context, 
 // resolveAccountTenantDefault picks the first active mapping whose school is
 // alive and active, in mapping order.
 func (s *AccountAuthentication) resolveAccountTenantDefaultInTransaction(ctx context.Context, accountID int64) (int64, int64, error) {
-	tenantIDs, _, err := s.store.ListActiveTenantIDs(ctx, accountID)
+	// A Springer's school without an open window is no default (ADR 0249).
+	tenantIDs, _, err := s.store.ListAdmittedTenantIDs(ctx, accountID)
 	if err != nil {
 		s.logger.Warn("failed to resolve account tenant",
 			slog.Int64("account_id", accountID),

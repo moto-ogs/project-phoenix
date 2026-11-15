@@ -47,8 +47,11 @@ type AccountSession struct {
 	RotatedAt            *time.Time
 	ReplacementTokenHash *string
 	RecoveryProofHash    []byte
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	// OutsideAccessWindow: the session's school maps the account windowed
+	// and no window is open now (ADR 0249). Only the family lookup reads it.
+	OutsideAccessWindow bool
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 // Validate normalizes an empty portal scope to unknown and rejects a session

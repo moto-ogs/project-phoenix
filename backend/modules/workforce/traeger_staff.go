@@ -374,4 +374,6 @@ type TraegerStaffPorts struct {
 	// Months is the school's month of an employment for the Stundenkonto
 	// (#4711).
 	Months TraegerStaffMonths
+	// Springers employs a Springer at the school that blocks them (#7173).
+	Springers SpringerEmployments
 }

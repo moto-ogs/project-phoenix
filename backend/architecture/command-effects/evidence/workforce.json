@@ -5665,6 +5665,22 @@
       "target_owner": "timetable-activities"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerSpringerEmployments.EmploySpringer",
+      "binding_digest": "7db1c44da20271532328d5bdb3d598e3",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.SpringerEmployments.EmploySpringer",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "target_owner": "identity-access"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerSpringerEmployments.EndSpringerAccess",
+      "binding_digest": "62784ba1e120fe9300c84e28b9f8af27",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.SpringerEmployments.EndSpringerAccess",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.EndSpringerWindow",
+      "target_owner": "identity-access"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffAdminAudit.RecordDataAccess",
       "binding_digest": "70de2c2bb0092790b73eeea93fdfb995",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffAdminAudit.RecordDataAccess",

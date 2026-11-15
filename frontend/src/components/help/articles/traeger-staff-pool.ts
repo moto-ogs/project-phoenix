@@ -45,7 +45,9 @@ export function traegerStaffPoolTopic(): HelpTopic {
       "Eine Schule sieht vom Springer nur den Namen, ob die Nachweise vollständig sind, und die geblockten Zeiten.",
       "Andere Schulen sehen nur, welche Schule geblockt hat. Einen Grund oder eine Gruppe speichert moto nicht.",
       "Jedes Anzeigen der Woche steht im Zugriffsprotokoll jeder betroffenen Schule.",
-      "Soll die Person an der Schule im Dienstplan stehen, tragen Sie die Schule in der Akte als Einsatzort ein.",
+      "Blockt eine Schule die Person zum ersten Mal, wird die Schule ein Einsatzort in der Akte. Die Schule plant sie dann im Dienstplan ein.",
+      "An dieser Schule meldet sich die Person nur in den geblockten Zeiten an. Heben Sie eine Blockung auf, endet auch dieser Zugang.",
+      "Die Person braucht dafür ein Konto bei moto. Hat sie keins, laden Sie sie an einer Schule ein.",
     ],
     differences: [
       "Die Seite zeigt `Personal beim Träger ist noch nicht freigeschaltet`: Das moto-Team schaltet es frei.",

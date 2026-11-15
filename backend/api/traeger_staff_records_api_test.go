@@ -90,7 +90,10 @@ func newTraegerStaffFixtureWith(t *testing.T, db *bun.DB, now func() time.Time, 
 	schoolRoutes := chi.NewRouter()
 	schoolRoutes.Handle("/staff-shifts/*", schoolShifts)
 	schoolRoutes.Mount("/api", tenantAPI)
-	require.NoError(t, mountTraegerStaffRoutes(router, tenantAPI, admin, workforceModule.TimeTracking.TraegerMonths, organizations, persons, membership, tenantAudit.DataAccessLog, sites))
+	// The first block employs a Springer through Identity & Access (#7173).
+	identity, err := lifecycleTestModule(testpkg.NewDatabase(t, db), unit, GuardianInvitationTestConfig{})
+	require.NoError(t, err)
+	require.NoError(t, mountTraegerStaffRoutes(router, tenantAPI, admin, workforceModule.TimeTracking.TraegerMonths, organizations, persons, membership, tenantAudit.DataAccessLog, sites, identity))
 	office := newTraegerOffice(t, db, portal, "Träger Personal", identityaccess.TraegerRolePersonnel)
 	return testpkg.SessionVerifier(router), portal, admin, unit, office, schoolRoutes
 }

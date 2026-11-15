@@ -464,6 +464,12 @@ type TraegerStaffPoolStore interface {
 	SchoolPoolProofs(ctx context.Context, recordIDs []int64) ([]domain.PoolProof, error)
 	BlockPoolSpringer(ctx context.Context, block domain.PoolBlock, accountID int64) (int64, error)
 	LiftSchoolPoolBlock(ctx context.Context, blockID, accountID int64) error
+	// PoolSpringerIdentity locks the record of a Springer until the tenant
+	// transaction ends and then reads who it is at the school (#7173).
+	PoolSpringerIdentity(ctx context.Context, recordID int64) (domain.PoolSpringerIdentity, bool, error)
+	// LinkPoolEmployment links a live employment of the school as an
+	// Einsatzort the pool created and writes it into the record's trail.
+	LinkPoolEmployment(ctx context.Context, recordID, staffID, accountID int64) error
 
 	TraegerPoolSpringers(ctx context.Context, organizationID int64, from, to calendar.Date) ([]domain.PoolSpringer, error)
 	TraegerPoolBlocks(ctx context.Context, organizationID int64, recordIDs []int64, from, to calendar.Date) ([]domain.PoolBlock, error)

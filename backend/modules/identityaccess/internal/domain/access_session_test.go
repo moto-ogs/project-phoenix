@@ -24,6 +24,7 @@ func TestAccessSessionLive(t *testing.T) {
 		{name: "another family", head: func(h AccountSession) AccountSession { h.FamilyID = "family-b"; return h }},
 		{name: "token without family", token: func(a AccessSession) AccessSession { a.FamilyID = ""; return a }},
 		{name: "token of another portal", token: func(a AccessSession) AccessSession { a.Scope = PortalParent.Claim; return a }},
+		{name: "a Springer's school outside every window (ADR 0249)", head: func(h AccountSession) AccountSession { h.OutsideAccessWindow = true; return h }},
 		{name: "legacy row without portal scope", head: func(h AccountSession) AccountSession { h.PortalScope = PortalScopeUnknown; return h }, want: true},
 		{
 			name:  "preview rests on the acting admin's family",

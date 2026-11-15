@@ -61,13 +61,8 @@ func (r factReads) school(ctx context.Context, s *AccountAuthentication, schoolI
 }
 
 func (r factReads) mapping(ctx context.Context, s *AccountAuthentication, accountID, tenantID int64) (bool, error) {
-	var mapped bool
-	var err error
-	if r.locked {
-		mapped, _, err = s.store.LockActiveTenantMappingShared(ctx, accountID, tenantID)
-	} else {
-		mapped, _, err = s.store.HasActiveAccountTenant(ctx, accountID, tenantID)
-	}
+	// A windowed mapping admits only while a window is open (ADR 0249).
+	mapped, _, err := s.store.AdmittedTenantMapping(ctx, accountID, tenantID, r.locked)
 	return mapped, err
 }
 

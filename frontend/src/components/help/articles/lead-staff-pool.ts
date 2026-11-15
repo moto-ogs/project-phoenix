@@ -47,7 +47,8 @@ export function leadStaffPoolTopic(): HelpTopic {
       "Eine Person ist zu jeder Zeit nur für eine Schule geblockt. Blocken zwei Schulen gleichzeitig, bekommt die erste die Person.",
       "Neben dem Namen steht, ob die Nachweise vollständig sind, etwa das Führungszeugnis.",
       "moto speichert keinen Grund und keine Gruppe zu einer Blockung.",
-      "Damit die Person in Ihrem Dienstplan steht, trägt die Personalverwaltung Ihre Schule als Einsatzort ein.",
+      "Nach der ersten Blockung steht die Person in Ihrem Dienstplan. Planen Sie dort ihre Schicht ein.",
+      "Die Person meldet sich bei Ihrer Schule nur in den geblockten Zeiten an, 30 Minuten vorher bis 30 Minuten danach. Sie sieht ihren Dienstplan und stempelt, mehr nicht.",
     ],
     differences: [
       "Eine graue Blockung nennt eine andere Schule. Zu dieser Zeit ist die Person dort.",

@@ -174,7 +174,7 @@ export function BlockSpringerModal({
         <Alert
           type="info"
           size="compact"
-          message="Andere Schulen sehen nur, dass Ihre Schule geblockt hat. In Ihren Dienstplan trägt die Personalverwaltung die Person ein."
+          message="Andere Schulen sehen nur, dass Ihre Schule geblockt hat. Danach können Sie die Person in Ihrem Dienstplan einplanen. Sie meldet sich nur in den geblockten Zeiten bei Ihnen an."
         />
       </form>
     </FormModal>

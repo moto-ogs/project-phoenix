@@ -326,6 +326,19 @@ func (s *fakeStore) ListActiveTenantIDs(_ context.Context, accountID int64) ([]i
 	return ids, stats(), nil
 }
 
+// AdmittedTenantMapping admits every active mapping: the fakes know no
+// windows (ADR 0249).
+func (s *fakeStore) AdmittedTenantMapping(ctx context.Context, accountID, tenantID int64, lock bool) (bool, domain.OperationStats, error) {
+	if lock {
+		return s.LockActiveTenantMappingShared(ctx, accountID, tenantID)
+	}
+	return s.HasActiveAccountTenant(ctx, accountID, tenantID)
+}
+
+func (s *fakeStore) ListAdmittedTenantIDs(ctx context.Context, accountID int64) ([]int64, domain.OperationStats, error) {
+	return s.ListActiveTenantIDs(ctx, accountID)
+}
+
 func (s *fakeStore) LockActiveTenantMappingShared(ctx context.Context, accountID, tenantID int64) (bool, domain.OperationStats, error) {
 	s.record("LockActiveTenantMappingShared")
 	if s.lockMappingErr != nil {

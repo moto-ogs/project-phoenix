@@ -72,6 +72,9 @@ func (t *TraegerStaff) BlockSpringer(ctx context.Context, actor workforce.School
 	if err != nil {
 		return workforce.PoolBlock{}, err
 	}
+	if err := t.employSpringer(ctx, block, actor); err != nil {
+		return workforce.PoolBlock{}, err
+	}
 	block.Own = true
 	return publicPoolBlock(block), nil
 }
@@ -89,7 +92,10 @@ func (t *TraegerStaff) LiftSchoolBlock(ctx context.Context, actor workforce.Scho
 	if !available {
 		return workforce.ErrTraegerStaffNotReleased
 	}
-	return t.store.LiftSchoolPoolBlock(ctx, blockID, actor.AccountID)
+	if err := t.store.LiftSchoolPoolBlock(ctx, blockID, actor.AccountID); err != nil {
+		return err
+	}
+	return t.endSpringerAccess(ctx, blockID)
 }
 
 // schoolPoolOpen refuses a write of a school whose Träger keeps no staff in
@@ -203,10 +209,11 @@ func (t *TraegerStaff) recordPoolAccess(ctx context.Context, actor workforce.Tra
 }
 
 // LiftTraegerBlock lifts a live block of any school of the Träger; the
-// school then sees it as lifted by the Personalverwaltung. The school's
-// access log names the lift and the Springer, in the school's own tenant
-// transaction after the lift committed; a failed entry fails the request,
-// the lift stays (ADR 0105: no transaction carries both).
+// school then sees it as lifted by the Personalverwaltung. The school's own
+// tenant transaction after the lift committed ends the Springer's access of
+// the block (ADR 0249) and names the lift and the Springer in the access
+// log; a failure there fails the request, the lift stays (ADR 0105: no
+// transaction carries both).
 func (t *TraegerStaff) LiftTraegerBlock(ctx context.Context, actor workforce.TraegerStaffActor, blockID int64) error {
 	if blockID <= 0 {
 		return workforce.ErrPoolBlockNotFound
@@ -221,6 +228,9 @@ func (t *TraegerStaff) LiftTraegerBlock(ctx context.Context, actor workforce.Tra
 		return err
 	}
 	return t.ports.Runtime.WithinSchool(ctx, lifted.SchoolID, func(ctx context.Context) error {
+		if err := t.endSpringerAccess(ctx, blockID); err != nil {
+			return err
+		}
 		return t.ports.Access.RecordTraegerStaffAccess(ctx, workforce.TraegerStaffAccess{
 			OrganizationID: actor.OrganizationID, AccountID: actor.AccountID, View: workforce.TraegerStaffViewPoolLift,
 			Rows: 1, RecordID: lifted.RecordID,

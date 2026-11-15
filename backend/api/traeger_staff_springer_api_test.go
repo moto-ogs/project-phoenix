@@ -1,0 +1,192 @@
+// Router-level test for the employment the first block of a Springer
+// creates (#7173, ADR 0089 section 9, ADR 0249): person, employment, the
+// system role springer and a windowed mapping at the blocking school, linked
+// as an Einsatzort of the record. Two first blocks at once create one
+// employment. Each block opens a window; lifting it closes the window, and
+// without an open window the school does not admit the Springer.
+package api
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
+	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/tenant"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+)
+
+// springerAt is what the first block left at one school for one account.
+type springerAt struct {
+	People, Memberships, Roles, Links, Windows int
+	Windowed                                   bool
+}
+
+func springerAtSchool(t *testing.T, db *bun.DB, schoolID, accountID, recordID int64) springerAt {
+	t.Helper()
+	var state springerAt
+	require.NoError(t, db.NewRaw(`SELECT
+		(SELECT count(*) FROM users.persons WHERE tenant_id = ?0 AND account_id = ?1 AND deleted_at IS NULL) AS people,
+		(SELECT count(*) FROM users.staff_school_memberships AS m JOIN users.persons AS p ON p.tenant_id = m.tenant_id AND p.id = m.person_id
+			WHERE m.tenant_id = ?0 AND p.account_id = ?1 AND m.deleted_at IS NULL) AS memberships,
+		(SELECT count(*) FROM auth.account_roles AS ar JOIN auth.roles AS r ON r.id = ar.role_id
+			WHERE ar.tenant_id = ?0 AND ar.account_id = ?1 AND r.name = 'springer' AND r.tenant_id IS NULL) AS roles,
+		(SELECT count(*) FROM workforce.staff_record_links WHERE school_id = ?0 AND staff_record_id = ?2 AND via_pool) AS links,
+		COALESCE((SELECT count(*) FROM auth.account_tenants AS mapping, jsonb_object_keys(mapping.access_windows)
+			WHERE mapping.tenant_id = ?0 AND mapping.account_id = ?1), 0) AS windows,
+		COALESCE((SELECT access_windowed FROM auth.account_tenants WHERE tenant_id = ?0 AND account_id = ?1 AND status = 'active'), false) AS windowed`,
+		schoolID, accountID, recordID).Scan(t.Context(), &state.People, &state.Memberships, &state.Roles, &state.Links, &state.Windows, &state.Windowed))
+	return state
+}
+
+func admitted(t *testing.T, db *bun.DB, accountID, schoolID int64) bool {
+	t.Helper()
+	var ok bool
+	require.NoError(t, db.NewRaw(`SELECT auth.account_tenant_admitted(?, ?)`, accountID, schoolID).Scan(t.Context(), &ok))
+	return ok
+}
+
+func TestStaffPoolFirstBlockEmploysTheSpringer(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	today := time.Date(2026, time.November, 18, 12, 0, 0, 0, calendar.Berlin)
+	router, _, _, unit, office, schoolRoutes := newTraegerStaffFixtureWith(t, db, func() time.Time { return today }, &StaffPlanningTestRules{})
+	school := testpkg.TenantRuntimeMiddleware(t, db)(schoolRoutes)
+	north, south := office.schools[0], office.schools[1]
+	west := testpkg.CreateTestSchoolInOrganization(t, db, office.organization, "Träger Personal OGS West")
+	staffRelease(t, db, office.organization)
+	manage := []string{permissions.TimeTrackingManage}
+
+	mira, miraAccount := testpkg.CreateTestStaffWithAccountForTenant(t, db, north, "Mira", "Springer")
+	_, southLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, south, "Sina", "Süd")
+	_, westLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, west, "Wim", "West")
+	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+		"members": []map[string]int64{{"school_id": north, "staff_id": mira.ID}},
+	})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	record := decode[staffRecordBody](t, rec).ID
+	rec = traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("/traeger/staff-records/%d/contracts", record), map[string]any{
+		"kind": "part_time", "starts_on": "2026-08-01", "pool": true,
+		"sites": []map[string]any{{"school_id": north, "staff_id": mira.ID, "weekday_minutes": []int{300, 300, 300, 300, 300}}},
+	})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+
+	block := func(schoolID, accountID int64, date, start, end string) *httptest.ResponseRecorder {
+		return poolSchoolRequest(t, school, schoolID, accountID, manage, http.MethodPost, "/api/staff-pool/blocks", map[string]any{
+			"staff_record_id": fmt.Sprint(record), "date": date, "start_time": start, "end_time": end,
+		})
+	}
+	blockID := func(rec *httptest.ResponseRecorder) int64 {
+		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		return *decode[struct {
+			ID *int64 `json:"id"`
+		}](t, rec).ID
+	}
+	account := miraAccount.ID
+
+	var first int64
+	t.Run("the first block employs the Springer at the school, windowed", func(t *testing.T) {
+		require.Equal(t, springerAt{}, springerAtSchool(t, db, south, account, record))
+		first = blockID(block(south, southLead.ID, "2026-11-19", "08:00", "13:00"))
+		assert.Equal(t, springerAt{People: 1, Memberships: 1, Roles: 1, Links: 1, Windows: 1, Windowed: true},
+			springerAtSchool(t, db, south, account, record))
+
+		var startsAt, endsAt time.Time
+		require.NoError(t, db.NewRaw(`SELECT (access_windows -> ?::text ->> 0)::timestamptz, (access_windows -> ?::text ->> 1)::timestamptz
+			FROM auth.account_tenants WHERE tenant_id = ? AND account_id = ?`, first, first, south, account).
+			Scan(t.Context(), &startsAt, &endsAt))
+		assert.Equal(t, time.Date(2026, time.November, 19, 7, 30, 0, 0, calendar.Berlin), startsAt.In(calendar.Berlin), "30 minutes before the block")
+		assert.Equal(t, time.Date(2026, time.November, 19, 13, 30, 0, 0, calendar.Berlin), endsAt.In(calendar.Berlin), "30 minutes after the block")
+
+		var firstName string
+		require.NoError(t, db.NewRaw(`SELECT first_name FROM users.persons WHERE tenant_id = ? AND account_id = ?`, south, account).Scan(t.Context(), &firstName))
+		assert.Equal(t, "Mira", firstName, "the person carries the names of the record")
+
+		var trail int
+		require.NoError(t, db.NewRaw(`SELECT count(*) FROM workforce.staff_record_changes
+			WHERE staff_record_id = ? AND kind = 'linked' AND field = 'school' AND school_id = ? AND account_id = ?`, record, south, southLead.ID).Scan(t.Context(), &trail))
+		assert.Equal(t, 1, trail, "the new Einsatzort is in the record's trail with the blocking lead (ADR 0089 section 6)")
+	})
+
+	t.Run("a further block of the school adds only its window", func(t *testing.T) {
+		blockID(block(south, southLead.ID, "2026-11-19", "14:00", "16:00"))
+		assert.Equal(t, springerAt{People: 1, Memberships: 1, Roles: 1, Links: 1, Windows: 2, Windowed: true},
+			springerAtSchool(t, db, south, account, record))
+	})
+
+	t.Run("two first blocks at once create one employment", func(t *testing.T) {
+		var wg sync.WaitGroup
+		codes := make([]int, 2)
+		for i, start := range []string{"08:00", "13:00"} {
+			wg.Go(func() {
+				end := map[string]string{"08:00": "12:00", "13:00": "16:00"}[start]
+				codes[i] = block(west, westLead.ID, "2026-11-20", start, end).Code
+			})
+		}
+		wg.Wait()
+		assert.Equal(t, []int{http.StatusCreated, http.StatusCreated}, codes)
+		assert.Equal(t, springerAt{People: 1, Memberships: 1, Roles: 1, Links: 1, Windows: 2, Windowed: true},
+			springerAtSchool(t, db, west, account, record))
+	})
+
+	t.Run("a regular Einsatzort stays unlimited and gets nothing", func(t *testing.T) {
+		before := springerAtSchool(t, db, north, account, record)
+		blockID(block(north, account, "2026-11-23", "08:00", "10:00"))
+		assert.Equal(t, before, springerAtSchool(t, db, north, account, record))
+		assert.False(t, before.Windowed)
+		assert.True(t, admitted(t, db, account, north), "the home school admits without a window")
+	})
+
+	t.Run("the school admits the Springer only while a window is open", func(t *testing.T) {
+		assert.False(t, admitted(t, db, account, south), "every window of the school lies ahead")
+		// A session at the school ends at its next request (the per-request
+		// family check, #5194) while no window is open.
+		identity, err := lifecycleTestModule(testpkg.NewDatabase(t, db), unit, GuardianInvitationTestConfig{})
+		require.NoError(t, err)
+		var family string
+		require.NoError(t, db.NewRaw(`INSERT INTO auth.tokens (account_id, token, expiry, family_id, generation, tenant_id, portal_scope, identifier)
+			SELECT ?, encode(sha256(convert_to(f, 'UTF8')), 'hex'), now() + interval '7 days', f, 0, ?, 'tenant', 'refresh'
+			FROM (SELECT gen_random_uuid()::text AS f) AS family RETURNING family_id`, account, south).Scan(t.Context(), &family))
+		session := identityaccess.AccessSession{AccountID: account, FamilyID: family}
+		ctx := tenant.WithUnitOfWork(t.Context(), unit)
+		assert.ErrorIs(t, identity.VerifyAccessSession(ctx, session), identityaccess.ErrInvalidToken, "no open window ends the session")
+		var ids []int64
+		require.NoError(t, db.NewRaw(`SELECT school.tenant_id FROM auth.active_school_ids_for_account(?) AS school
+			WHERE auth.account_tenant_admitted(?, school.tenant_id) ORDER BY 1`, account, account).Scan(t.Context(), &ids))
+		var mapped []int64
+		require.NoError(t, db.NewRaw(`SELECT tenant_id FROM auth.active_school_ids_for_account(?) ORDER BY 1`, account).Scan(t.Context(), &mapped))
+		assert.Subset(t, mapped, []int64{south, west}, "offboarding and the other counts still see every active mapping")
+		assert.NotEmpty(t, ids, "the account's unlimited school stays admitted")
+		assert.NotContains(t, ids, south, "sign-in chooses only the admitted schools")
+		assert.NotContains(t, ids, west, "sign-in chooses only the admitted schools")
+
+		_, err = db.ExecContext(t.Context(), `UPDATE auth.account_tenants
+			SET access_windows = access_windows || jsonb_build_object(?::text, jsonb_build_array(now() - interval '1 hour', now() + interval '1 hour'))
+			WHERE tenant_id = ? AND account_id = ?`, first, south, account)
+		require.NoError(t, err)
+		assert.True(t, admitted(t, db, account, south), "an open window admits")
+		assert.NoError(t, identity.VerifyAccessSession(ctx, session), "an open window keeps the session")
+	})
+
+	t.Run("lifting a block closes its window", func(t *testing.T) {
+		rec := poolSchoolRequest(t, school, south, southLead.ID, manage, http.MethodDelete, fmt.Sprintf("/api/staff-pool/blocks/%d", first), nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, 1, springerAtSchool(t, db, south, account, record).Windows)
+		assert.False(t, admitted(t, db, account, south), "the lifted block admits no more")
+
+		var westBlock int64
+		require.NoError(t, db.NewRaw(`SELECT min(id) FROM workforce.staff_pool_blocks WHERE school_id = ? AND lifted_at IS NULL`, west).Scan(t.Context(), &westBlock))
+		rec = traegerJSON(t, router, office.token, http.MethodDelete, fmt.Sprintf("/traeger/staff-pool/blocks/%d", westBlock), nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, 1, springerAtSchool(t, db, west, account, record).Windows, "the Personalverwaltung's lift closes the window at the school")
+	})
+}

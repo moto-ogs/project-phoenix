@@ -3,6 +3,7 @@ package workforce
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -132,4 +133,27 @@ type SchoolStaffPool interface {
 type TraegerStaffPool interface {
 	TraegerPoolWeek(ctx context.Context, actor TraegerStaffActor, weekStart calendar.Date) (PoolWeek, error)
 	LiftTraegerBlock(ctx context.Context, actor TraegerStaffActor, blockID int64) error
+}
+
+// SpringerEmploymentRequest gives a Springer the employment and the access
+// of one block at the school of the caller's tenant transaction (#7173,
+// ADR 0249). StartsAt and EndsAt bound the access, the block with its
+// margin.
+type SpringerEmploymentRequest struct {
+	AccountID int64
+	FirstName string
+	LastName  string
+	BlockID   int64
+	StartsAt  time.Time
+	EndsAt    time.Time
+}
+
+// SpringerEmployments creates the employment of a Springer at a blocking
+// school and the access of each block, in the caller's tenant transaction.
+// The root binds it to Identity & Access.
+type SpringerEmployments interface {
+	// EmploySpringer creates what is missing and returns the employment.
+	EmploySpringer(ctx context.Context, request SpringerEmploymentRequest) (staffID int64, err error)
+	// EndSpringerAccess ends the access of a lifted block.
+	EndSpringerAccess(ctx context.Context, blockID int64) error
 }

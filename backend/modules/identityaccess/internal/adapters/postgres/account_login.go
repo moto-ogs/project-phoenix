@@ -151,6 +151,53 @@ func (s *Store) ListActiveTenantIDs(ctx context.Context, accountID int64) ([]int
 	return ids, stats, nil
 }
 
+// ListAdmittedTenantIDs lists the active schools of the account whose
+// mapping admits it now (ADR 0249).
+func (s *Store) ListAdmittedTenantIDs(ctx context.Context, accountID int64) ([]int64, domain.OperationStats, error) {
+	db, err := s.database(ctx)
+	if err != nil {
+		return nil, domain.OperationStats{}, err
+	}
+	var ids []int64
+	started := time.Now()
+	err = db.NewRaw(`SELECT school.tenant_id FROM auth.active_school_ids_for_account(?) AS school
+		WHERE auth.account_tenant_admitted(?, school.tenant_id)`, accountID, accountID).Scan(ctx, &ids)
+	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started), Rows: int64(len(ids))}
+	if err != nil {
+		return nil, stats, fmt.Errorf("identity access postgres: list admitted tenant mappings: %w", err)
+	}
+	return ids, stats, nil
+}
+
+// AdmittedTenantMapping reports an active mapping that admits the account
+// now; with lock it pins the mapping row FOR SHARE like
+// LockActiveTenantMappingShared.
+func (s *Store) AdmittedTenantMapping(ctx context.Context, accountID, tenantID int64, lock bool) (bool, domain.OperationStats, error) {
+	db, err := s.database(ctx)
+	if err != nil {
+		return false, domain.OperationStats{}, err
+	}
+	var ones []int
+	started := time.Now()
+	query := db.NewSelect().
+		ColumnExpr("1").
+		TableExpr("auth.account_tenants").
+		Where("account_id = ?", accountID).
+		Where("tenant_id = ?", tenantID).
+		Where("status = ?", "active").
+		Where("auth.account_tenant_admitted(account_id, tenant_id)").
+		Limit(1)
+	if lock {
+		query = query.For("SHARE")
+	}
+	err = query.Scan(ctx, &ones)
+	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started), Rows: int64(len(ones))}
+	if err != nil {
+		return false, stats, fmt.Errorf("identity access postgres: admitted account mapping: %w", err)
+	}
+	return len(ones) > 0, stats, nil
+}
+
 // LockActiveTenantMappingShared reports an active mapping and pins its row
 // with FOR SHARE, so a revocation that deactivates it blocks until the
 // caller's transaction commits.
