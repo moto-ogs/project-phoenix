@@ -19,7 +19,7 @@ export function traegerSchoolComparisonTopic(): HelpTopic {
       "Wählen Sie bei Bedarf rechts daneben die Schulen. Ohne Auswahl vergleicht moto alle Schulen.",
       "Wählen Sie bei `Rangfolge` eine Kennzahl, zum Beispiel `Plätze belegt`. Die Schule mit der größten Zahl steht oben.",
       "Wählen Sie bei `Kennzahlen je Schule` die Spalten, die Sie vergleichen wollen.",
-      "Wählen Sie `Herunterladen` und dann `CSV`, um die Tabelle zu speichern.",
+      "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält die gewählten Schulen und Kennzahlen.",
     ],
     result:
       "Sie sehen, welche Schule voller oder leerer ist als die anderen und wie weit sie vom Schnitt entfernt ist.",
