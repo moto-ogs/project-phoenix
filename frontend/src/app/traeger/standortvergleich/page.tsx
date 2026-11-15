@@ -1,6 +1,6 @@
 "use client";
 
-// Standortvergleich des Träger-Portals (#4715, ADR 0242): ausgewählte
+// Standortvergleich des Träger-Portals (#4715, ADR 0244): ausgewählte
 // Kennzahlen der Schulen über einen gewählten Zeitraum nebeneinander. Oben
 // vier Zahlen für alle gewählten Schulen zusammen, darunter die Rangfolge
 // einer Kennzahl mit dem Schnitt der Schulen und die Tabelle aller gewählten

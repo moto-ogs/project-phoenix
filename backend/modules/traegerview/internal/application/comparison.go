@@ -11,7 +11,7 @@ import (
 var _ traegerview.SchoolComparisons = (*Overview)(nil)
 
 // SchoolComparison returns the key figures of the chosen schools of the
-// Träger side by side (#4715, ADR 0242). It reads the series of the
+// Träger side by side (#4715, ADR 0244). It reads the series of the
 // utilization without the rooms and the captured Stichtagszahlen in one
 // administrative transaction, so the read costs the same statements for 3
 // and for 100 schools. The answer holds counts only and is not written to the

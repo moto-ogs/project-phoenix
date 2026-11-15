@@ -2,6 +2,6 @@
   "scenario": "api.traeger.schools_comparison",
   "max": 8,
   "exact": true,
-  "description": "modules/traegerview — GET /traeger/schools/comparison (#4715, ADR 0242): the\nTräger row, the school IDs of the Träger, the school rows, the child of each\napproved enrollment with the running phases, the care offering bookings of\nthe window, the check-ins per day, and the Träger row with the captured\nStichtagszahlen of Organisation & Tenancy (the port of GET\n/traeger/schools/key-date-counts), in one administrative transaction. Flat in\nthe number of schools; the comparison reads no rooms.",
+  "description": "modules/traegerview — GET /traeger/schools/comparison (#4715, ADR 0244): the\nTräger row, the school IDs of the Träger, the school rows, the child of each\napproved enrollment with the running phases, the care offering bookings of\nthe window, the check-ins per day, and the Träger row with the captured\nStichtagszahlen of Organisation & Tenancy (the port of GET\n/traeger/schools/key-date-counts), in one administrative transaction. Flat in\nthe number of schools; the comparison reads no rooms.",
   "route": "GET /traeger/schools/comparison"
 }

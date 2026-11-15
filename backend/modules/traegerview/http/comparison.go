@@ -18,7 +18,7 @@ import (
 
 // comparison answers GET /traeger/schools/comparison?from=&to=&schools=: the
 // key figures of the chosen schools of the Träger side by side, with their
-// average and their figure together (#4715, ADR 0242). The answer holds
+// average and their figure together (#4715, ADR 0244). The answer holds
 // counts only, so the read is not written to the access log (ADR 0084
 // section 7).
 func (rs *Resource) comparison(w http.ResponseWriter, r *http.Request) {

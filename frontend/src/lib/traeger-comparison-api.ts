@@ -1,5 +1,5 @@
 /**
- * Client of the Träger's school comparison (#4715, ADR 0242): for a window
+ * Client of the Träger's school comparison (#4715, ADR 0244): for a window
  * and a choice of schools, eight key figures per school, their average over
  * the chosen schools and their figure together. Counts only, so nothing is
  * written to the access log. Backend int64 IDs leave as strings; a figure a

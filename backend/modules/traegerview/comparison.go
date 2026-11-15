@@ -7,7 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The comparison of the schools of a Träger (#4715, ADR 0242): for a window
+// The comparison of the schools of a Träger (#4715, ADR 0244): for a window
 // the Träger-Büro chooses, the same key figures for every chosen school side
 // by side, with the average of those schools and their figure together. The
 // figures derive from the series of the utilization (#4713, ADR 0241) and
@@ -98,7 +98,7 @@ type SchoolComparison struct {
 
 // Reports are the reports of the Träger-Portal beside Overview, which holds
 // the twelve methods a public facade may carry: the heatmap (#4714) and the
-// comparison of schools (#4715, ADR 0242).
+// comparison of schools (#4715, ADR 0244).
 type Reports interface {
 	ArrivalPickupReport
 	SchoolComparisons
