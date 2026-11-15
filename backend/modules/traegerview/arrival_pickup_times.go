@@ -107,8 +107,9 @@ type AttendanceDays struct {
 }
 
 // ArrivalPickupCounts reads the arrivals and pickups of the schools between
-// from and to (both included) at Student Presence. It joins the projection's
+// from and to (both included) at Student Presence, in slots of slotMinutes
+// (the projection owns the slot length, ArrivalPickupSlotMinutes). It joins the projection's
 // administrative transaction and reads only the given schools.
 type ArrivalPickupCounts interface {
-	ArrivalPickupCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date) ([]ArrivalPickupCount, []AttendanceDays, error)
+	ArrivalPickupCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date, slotMinutes int) ([]ArrivalPickupCount, []AttendanceDays, error)
 }

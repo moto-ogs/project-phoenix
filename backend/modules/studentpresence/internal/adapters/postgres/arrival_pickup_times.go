@@ -14,11 +14,16 @@ import (
 // heatmap (#4714) per school, ISO weekday and half hour of the Berlin wall
 // clock. Each child counts once a day: it arrives with its first check-in and
 // is picked up with its last check-out, which counts only when no attendance
-// of the day is still open.
+// of the day is still open. A stay nobody checked out is closed by the
+// nightly cleanup at 23:59:59 of its day (staleAttendanceCheckOut); it counts
+// as open, so a forgotten check-out never shows as a pickup at 23:30.
 const arrivalPickupSlotsSQL = `WITH child_days AS (
   SELECT tenant_id, date,
     min(check_in_time) AS arrived_at,
-    CASE WHEN bool_and(check_out_time IS NOT NULL) THEN max(check_out_time) END AS picked_up_at
+    CASE WHEN bool_and(
+      check_out_time IS NOT NULL
+      AND check_out_time <> (date + time '23:59:59') AT TIME ZONE 'Europe/Berlin'
+    ) THEN max(check_out_time) END AS picked_up_at
   FROM active.attendance
   WHERE tenant_id = ANY(?0) AND date BETWEEN ?1::date AND ?2::date
   GROUP BY tenant_id, student_id, date
@@ -49,7 +54,7 @@ WHERE tenant_id = ANY(?0) AND date BETWEEN ?1::date AND ?2::date
 GROUP BY 1, 2
 ORDER BY 1, 2`
 
-func (c presentStudents) ArrivalPickupTimesByTenant(ctx context.Context, schools []int64, from, to calendar.Date) ([]studentpresence.ArrivalPickupSlot, []studentpresence.AttendanceWeekday, error) {
+func (c presentStudents) ArrivalPickupTimesByTenant(ctx context.Context, schools []int64, from, to calendar.Date, slotMinutes int) ([]studentpresence.ArrivalPickupSlot, []studentpresence.AttendanceWeekday, error) {
 	db, err := c.adminDB(ctx, "arrival and pickup times")
 	if err != nil {
 		return nil, nil, err
@@ -61,7 +66,7 @@ func (c presentStudents) ArrivalPickupTimesByTenant(ctx context.Context, schools
 		Arrivals    int   `bun:"arrivals"`
 		Pickups     int   `bun:"pickups"`
 	}
-	if err := db.NewRaw(arrivalPickupSlotsSQL, pgdialect.Array(schools), from, to, studentpresence.OccupancySlotMinutes).Scan(ctx, &slots); err != nil {
+	if err := db.NewRaw(arrivalPickupSlotsSQL, pgdialect.Array(schools), from, to, slotMinutes).Scan(ctx, &slots); err != nil {
 		return nil, nil, fmt.Errorf("student presence postgres: arrival and pickup slots: %w", err)
 	}
 	var days []struct {

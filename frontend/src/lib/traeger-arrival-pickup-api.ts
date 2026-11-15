@@ -9,7 +9,7 @@ import { apiErrorFromBody, transportFetch } from "./api-error";
 import { filenameFromDisposition } from "./file-download";
 import type { TraegerSchool } from "./traeger-api";
 
-export interface ArrivalPickupCell {
+interface ArrivalPickupCell {
   /** Start of the half hour, minutes after midnight (Berlin wall clock). */
   readonly startMinute: number;
   /** Children who arrived in it on an average day. */

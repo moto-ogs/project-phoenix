@@ -35,7 +35,7 @@ func (o *Overview) ArrivalPickupTimes(ctx context.Context, organizationID int64,
 		var counts []traegerview.ArrivalPickupCount
 		var days []traegerview.AttendanceDays
 		if len(ids) > 0 {
-			if counts, days, err = o.times.ArrivalPickupCountsByTenant(adminCtx, ids, from, to); err != nil {
+			if counts, days, err = o.times.ArrivalPickupCountsByTenant(adminCtx, ids, from, to, traegerview.ArrivalPickupSlotMinutes); err != nil {
 				return err
 			}
 		}

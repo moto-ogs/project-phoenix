@@ -147,6 +147,7 @@ describe("TraegerArrivalPickupPage", () => {
       .closest(".relative");
     expect(perDay).toHaveTextContent(/^Kinder am Tag13So viele/);
     expect(screen.getByText("12.08.2026 bis 08.09.2026")).toBeInTheDocument();
+    expect(screen.queryByText("Schulen")).not.toBeInTheDocument();
 
     expect(
       within(arrivals).getByText(
@@ -198,7 +199,9 @@ describe("TraegerArrivalPickupPage", () => {
     renderPage();
 
     expect(
-      await screen.findByText("In diesem Zeitraum gibt es keine Check-ins."),
+      await screen.findByText(
+        "In diesem Zeitraum hat keine Schule Kinder eingecheckt.",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("table", { name: /Ankunft je Wochentag/ }),

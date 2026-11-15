@@ -85,7 +85,7 @@ func TestTraegerArrivalPickupTimesCountFirstArrivalAndLastPickupPerChildDay(t *t
 	foreignID := testpkg.CreateTestSchoolInOrganization(t, db, traegerOrganization(t, db, "Träger Fremd Ankunft", true), "OGS Fremd Ankunft")
 
 	bach := newArrivalSchool(t, db, bachID)
-	anna, ben := bach.child("Anna"), bach.child("Ben")
+	anna, ben, clara := bach.child("Anna"), bach.child("Ben"), bach.child("Clara")
 	// Anna leaves for lunch and comes back: one arrival at 07:40, one pickup at 15:10.
 	bach.stay(anna, arrivalMonday, wallClock(arrivalMonday, 7, 40), at(arrivalMonday, 12, 0))
 	bach.stay(anna, arrivalMonday, wallClock(arrivalMonday, 13, 0), at(arrivalMonday, 15, 10))
@@ -93,6 +93,10 @@ func TestTraegerArrivalPickupTimesCountFirstArrivalAndLastPickupPerChildDay(t *t
 	bach.stay(ben, arrivalMonday, wallClock(arrivalMonday, 7, 35), nil)
 	bach.stay(anna, arrivalNextMonday, wallClock(arrivalNextMonday, 11, 45), at(arrivalNextMonday, 16, 5))
 	bach.stay(ben, arrivalTuesday, wallClock(arrivalTuesday, 18, 10), at(arrivalTuesday, 18, 20))
+	// Nobody checked Clara out; the nightly cleanup closed her stay at
+	// 23:59:59. That is no pickup and must not stretch the axis to 23:30.
+	forgotten := arrivalTuesday.EndOfDay()
+	bach.stay(clara, arrivalTuesday, wallClock(arrivalTuesday, 7, 50), &forgotten)
 	// Outside the period and at another Träger: never counted.
 	bach.stay(ben, arrivalMonday.AddDays(-7), wallClock(arrivalMonday.AddDays(-7), 9, 0), nil)
 	foreign := newArrivalSchool(t, db, foreignID)
@@ -111,7 +115,7 @@ func TestTraegerArrivalPickupTimesCountFirstArrivalAndLastPickupPerChildDay(t *t
 	assert.Equal(t, arrivalMonday, got.From)
 	assert.Equal(t, arrivalNextMonday, got.To)
 	assert.Equal(t, 7*60, got.FirstMinute)
-	assert.Equal(t, 18*60, got.LastMinute, "the stay at 18:10 widens the axis")
+	assert.Equal(t, 18*60, got.LastMinute, "the stay at 18:10 widens the axis, the cleanup's 23:59:59 does not")
 	require.Len(t, got.Schools, 2)
 	assert.Equal(t, "OGS Am Bach", got.Schools[0].Name, "ordered by name")
 
@@ -127,6 +131,7 @@ func TestTraegerArrivalPickupTimesCountFirstArrivalAndLastPickupPerChildDay(t *t
 	assert.Equal(t, 1, tuesday.Days)
 	assert.InDelta(t, 1, arrivalCell(t, tuesday, 18, 0).Arrivals, 0.001)
 	assert.InDelta(t, 1, arrivalCell(t, tuesday, 18, 0).Pickups, 0.001)
+	assert.InDelta(t, 1, arrivalCell(t, tuesday, 7, 30).Arrivals, 0.001, "a stay the cleanup closed still counts its arrival")
 	require.NotNil(t, got.Schools[0].FirstDay)
 	assert.Equal(t, arrivalMonday, *got.Schools[0].FirstDay)
 	assert.Nil(t, got.Schools[1].FirstDay, "a school without attendance has no data")

@@ -15,8 +15,8 @@ type traegerArrivalPickupCounts struct {
 	times studentpresence.ArrivalPickupTimes
 }
 
-func (c traegerArrivalPickupCounts) ArrivalPickupCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date) ([]traegerview.ArrivalPickupCount, []traegerview.AttendanceDays, error) {
-	slots, weekdays, err := c.times.ArrivalPickupTimesByTenant(ctx, schools, from, to)
+func (c traegerArrivalPickupCounts) ArrivalPickupCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date, slotMinutes int) ([]traegerview.ArrivalPickupCount, []traegerview.AttendanceDays, error) {
+	slots, weekdays, err := c.times.ArrivalPickupTimesByTenant(ctx, schools, from, to, slotMinutes)
 	if err != nil {
 		return nil, nil, err
 	}

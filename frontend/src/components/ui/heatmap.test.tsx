@@ -82,7 +82,13 @@ describe("Heatmap", () => {
   it("keeps a tapped cell under the grid when the finger lifts", () => {
     renderHeatmap();
     const tuesday = screen.getAllByRole("cell")[3]!;
+    // A swipe starts on the cell and scrolls: no pointerup, nothing pinned.
     fireEvent.pointerDown(tuesday, { pointerType: "touch" });
+    fireEvent.pointerCancel(tuesday, { pointerType: "touch" });
+    expect(
+      screen.getByText("Am meisten: Montag, 07:30 Uhr."),
+    ).toBeInTheDocument();
+    fireEvent.pointerUp(tuesday, { pointerType: "touch" });
     fireEvent.pointerLeave(screen.getByRole("table"), { pointerType: "touch" });
     expect(screen.getAllByText("Dienstag, 07:30 Uhr: 1 Kinder.")).toHaveLength(
       2,

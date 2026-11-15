@@ -328,7 +328,7 @@ function PeakCell({ peak }: Readonly<{ peak: ArrivalPickupPeak | null }>) {
 }
 
 function schoolColumns(
-  from: string,
+  firstOfAll: string | null,
 ): DataTableColumn<TraegerSchoolArrivalPickup>[] {
   return [
     {
@@ -356,7 +356,7 @@ function schoolColumns(
         return (
           <span className="text-sm text-gray-900 tabular-nums">
             <span className="font-semibold">{days}</span>
-            {school.firstDay && school.firstDay > from ? (
+            {school.firstDay && firstOfAll && school.firstDay > firstOfAll ? (
               <span className="block text-xs text-gray-500">
                 ab {formatDate(school.firstDay)}
               </span>
@@ -415,7 +415,20 @@ export default function TraegerArrivalPickupPage() {
   const schools = times?.schools ?? [];
   const selected = schools.find((school) => school.id === schoolId) ?? null;
   const heatmap: ArrivalPickupHeatmap | null = selected ?? times?.all ?? null;
-  const columns = useMemo(() => schoolColumns(period.from), [period.from]);
+  // „ab …“ steht nur bei einer Schule, deren Daten später beginnen als die
+  // der anderen; ein Zeitraum, der am Wochenende beginnt, betrifft alle.
+  const firstOfAll = useMemo(
+    () =>
+      (times?.schools ?? []).reduce<string | null>(
+        (first, school) =>
+          school.firstDay && (first === null || school.firstDay < first)
+            ? school.firstDay
+            : first,
+        null,
+      ),
+    [times],
+  );
+  const columns = useMemo(() => schoolColumns(firstOfAll), [firstOfAll]);
 
   function changeRange(next: DateRange | undefined) {
     setRange(next);
@@ -481,12 +494,10 @@ export default function TraegerArrivalPickupPage() {
       info={
         <>
           Hier sehen Sie, wann Kinder an Ihren Schulen ankommen und wann sie
-          gehen. So planen Sie Personal für die vollen Zeiten. Als Ankunft zählt
-          das erste Einchecken eines Kindes am Tag, als Abholung das letzte
-          Auschecken. Jede Zahl ist der Durchschnitt eines Tages, zum Beispiel
-          aller Montage im Zeitraum. Es zählen nur Tage, an denen die Schule
-          Kinder eingecheckt hat. Heute zählt erst morgen mit. moto zeigt hier
-          keine Namen von Kindern.
+          gehen. So planen Sie Personal für die vollen Zeiten. Jede Zahl ist der
+          Durchschnitt eines Tages, zum Beispiel aller Montage im Zeitraum. Es
+          zählen nur Tage, an denen die Schule Kinder eingecheckt hat. Heute
+          zählt erst morgen mit. moto zeigt hier keine Namen von Kindern.
         </>
       }
       actions={
@@ -516,10 +527,6 @@ export default function TraegerArrivalPickupPage() {
               {
                 value: `${formatDate(times.from)} bis ${formatDate(times.to)}`,
                 label: "",
-              },
-              {
-                value: schools.length,
-                label: schools.length === 1 ? "Schule" : "Schulen",
               },
             ]}
           />
@@ -565,7 +572,11 @@ export default function TraegerArrivalPickupPage() {
         <SectionCard>
           <EmptyState
             icon={<CalendarOff className="h-12 w-12" aria-hidden="true" />}
-            title="In diesem Zeitraum gibt es keine Check-ins."
+            title={
+              selected
+                ? "Diese Schule hat in diesem Zeitraum keine Kinder eingecheckt."
+                : "In diesem Zeitraum hat keine Schule Kinder eingecheckt."
+            }
             description={
               selected
                 ? "Wählen Sie einen anderen Zeitraum oder alle Schulen."

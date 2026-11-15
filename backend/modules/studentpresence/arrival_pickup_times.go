@@ -36,12 +36,13 @@ type AttendanceWeekday struct {
 
 // ArrivalPickupTimes answers the Träger's heatmap of arrival and pickup
 // times (#4714) from the attendance of the schools between from and to, both
-// included. It names no child.
+// included, in slots of slotMinutes on the Berlin wall clock. It names no
+// child.
 //
 // The caller must run it in the administrative transaction; it reads only the
 // given schools.
 type ArrivalPickupTimes interface {
-	ArrivalPickupTimesByTenant(ctx context.Context, schools []int64, from, to calendar.Date) ([]ArrivalPickupSlot, []AttendanceWeekday, error)
+	ArrivalPickupTimesByTenant(ctx context.Context, schools []int64, from, to calendar.Date, slotMinutes int) ([]ArrivalPickupSlot, []AttendanceWeekday, error)
 }
 
 // TraegerPresence is what the Träger's views read of Student Presence: who is

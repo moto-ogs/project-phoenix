@@ -11,10 +11,10 @@ export function traegerArrivalPickupTimesTopic(): HelpTopic {
     title: "Ankunft und Abholung",
     question: "Wann kommen die Kinder an und wann gehen sie?",
     summary:
-      "Zwei Heatmaps zeigen je Wochentag und halbe Stunde, wie viele Kinder ankommen und gehen. So planen Sie Personal für die vollen Zeiten.",
+      "Farbige Felder zeigen je Wochentag und halbe Stunde, wie viele Kinder ankommen und gehen. So planen Sie Personal für die vollen Zeiten.",
     image: "/help/screens/ankunft-und-abholung.webp",
     imageAlt:
-      "Oben die Hauptzeiten Meiste Ankünfte und Meiste Abholungen. Darunter die grüne Heatmap Ankunft mit einer Zeile je Wochentag und einem Feld je halbe Stunde.",
+      "Oben die Hauptzeiten Meiste Ankünfte und Meiste Abholungen. Darunter die grünen Felder der Ankunft mit einer Zeile je Wochentag und einem Feld je halbe Stunde.",
     group: "auswertung",
     audience: "traeger",
     icon: "ClockAfternoon",
@@ -25,8 +25,8 @@ export function traegerArrivalPickupTimesTopic(): HelpTopic {
       "Wählen Sie in der Navigation `Ankunft und Abholung`.",
       "Wählen Sie oben den Zeitraum. Am Anfang sind es die letzten 4 Wochen bis gestern.",
       "Lesen Sie oben die Hauptzeiten: `Meiste Ankünfte` und `Meiste Abholungen`.",
-      "Lesen Sie die Heatmaps `Ankunft` und `Abholung`. Je dunkler ein Feld, desto mehr Kinder. Die Zahl im Feld ist der Durchschnitt eines Tages.",
-      "Zeigen Sie auf ein Feld oder tippen Sie darauf. Unter der Heatmap steht dann die genaue Zahl.",
+      "Lesen Sie die Felder unter `Ankunft` und `Abholung`. Je dunkler ein Feld, desto mehr Kinder. Die Zahl im Feld ist der Durchschnitt eines Tages.",
+      "Zeigen Sie auf ein Feld oder tippen Sie darauf. Darunter steht dann die genaue Zahl.",
       "Wählen Sie unter `Je Schule` eine Schule oder oben den Filter `Schule`. Dann sehen Sie nur diese Schule.",
       "Wählen Sie `Herunterladen` und dann `CSV`, um alle Zahlen als Tabelle zu speichern.",
     ],
@@ -41,9 +41,10 @@ export function traegerArrivalPickupTimesTopic(): HelpTopic {
       "Sie sehen nur Zahlen, keine Namen von Kindern.",
     ],
     differences: [
-      "Steht bei einer Schule unter `Tage` ein Datum wie `ab 03.11.2026`? Die Schule bewahrt Check-ins nicht länger auf. Die Zahlen beginnen an diesem Tag.",
+      "Steht bei einer Schule unter `Tage` ein Datum wie `ab 03.11.2026`? Diese Schule hat erst ab diesem Tag Kinder eingecheckt, später als die anderen Schulen. Zum Beispiel arbeitet sie erst seit diesem Tag mit moto, oder ältere Einträge sind schon gelöscht.",
       "Steht bei einem Wochentag `keine Daten`? An diesem Wochentag hat die Schule im Zeitraum kein Kind eingecheckt.",
       "Ist ein Kind noch da oder wurde nicht ausgecheckt, zählt seine Ankunft, aber keine Abholung.",
+      "Auf dem Telefon steht `Ankunft und Abholung` unter `Mehr`. Die Wochentage stehen dort oben, die Uhrzeiten laufen nach unten.",
       "Fehlt der Eintrag in der Navigation? Ihre Rolle hat das Recht `Berichte lesen` nicht.",
     ],
     related: [

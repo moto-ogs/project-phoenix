@@ -25,8 +25,8 @@ const RAMPS = {
   ],
   blue: [
     MOTO_COLOR_PALETTE.blue.soft,
-    "#B4CAF0",
     MOTO_COLOR_PALETTE.blue.light,
+    MOTO_COLOR_PALETTE.blue.base,
     MOTO_COLOR_PALETTE.blue.hover,
     MOTO_COLOR_PALETTE.blue.strong,
   ],
@@ -37,7 +37,7 @@ export type HeatmapTone = keyof typeof RAMPS;
 const INK_DARK = "#111827";
 const INK_LIGHT = "#FFFFFF";
 
-export interface HeatmapColumn {
+interface HeatmapColumn {
   readonly key: string;
   /** Vorgelesen als Spaltenkopf, zum Beispiel „07:30 bis 08:00 Uhr“. */
   readonly label: string;
@@ -170,10 +170,12 @@ function Cell({
   return (
     <td
       // Maus und Stift zeigen beim Darüberfahren, ein Finger beim Tippen.
+      // Ein Wischen zum Scrollen bricht den Zeiger ab (pointercancel) und
+      // endet ohne pointerup, hält also keine Zelle fest.
       onPointerEnter={(event) => {
         if (event.pointerType !== "touch") onActivate(at);
       }}
-      onPointerDown={(event) => {
+      onPointerUp={(event) => {
         if (event.pointerType === "touch") onActivate(at);
       }}
       className={`${compact ? "h-7" : "h-9 min-w-8"} rounded-md p-0 text-center align-middle font-semibold tabular-nums motion-safe:transition-shadow ${
