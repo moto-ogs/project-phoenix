@@ -1,0 +1,2 @@
+DELETE /traeger/staff-pool/blocks/{id} -> basis
+GET /traeger/staff-pool/ -> basis

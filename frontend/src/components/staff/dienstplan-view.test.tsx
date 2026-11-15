@@ -814,6 +814,26 @@ describe("DienstplanView", () => {
     expect(
       screen.getByRole("button", { name: "Halbjahr" }),
     ).toBeInTheDocument();
+    // Seit #4709 trägt das Menü auch die Springer des Trägers; der Export
+    // fehlt darin weiterhin.
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
+    expect(screen.getByText("Springer des Trägers")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Drucken oder exportieren"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers the Springer of the Träger only to who plans shifts (#4709)", () => {
+    mocks.hasPermission.mockImplementation(
+      (_session: unknown, permission: string) =>
+        permission !== "time_tracking:manage" && permission !== "users:read",
+    );
+    mockOverviewLoaded();
+
+    render(<DienstplanView />);
+
+    // Anker: die Seite steht, nur ohne Menü.
+    expect(screen.getByText("Dienstplan")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Weitere Aktionen" }),
     ).not.toBeInTheDocument();

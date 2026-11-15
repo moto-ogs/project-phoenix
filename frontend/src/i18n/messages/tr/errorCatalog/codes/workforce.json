@@ -118,5 +118,10 @@
   "traeger_planning_shift_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "traeger_month_closed_by_school": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "traeger_month_later_closed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
-  "traeger_month_not_kept": "{object} değiştirilemedi. Güncel durumu kontrol edin."
+  "traeger_month_not_kept": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "pool_block_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "pool_block_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "pool_block_taken": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "pool_springer_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "pool_springer_busy": "{object} değiştirilemedi. Güncel durumu kontrol edin."
 }

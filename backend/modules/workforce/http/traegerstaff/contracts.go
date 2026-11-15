@@ -47,6 +47,7 @@ type createContractRequest struct {
 	Kind     string            `json:"kind"`
 	StartsOn calendar.Date     `json:"starts_on"`
 	EndsOn   *calendar.Date    `json:"ends_on"`
+	Pool     bool              `json:"pool"`
 	Sites    []siteSollPayload `json:"sites"`
 }
 
@@ -68,7 +69,7 @@ func (rs *RecordsResource) createContract(w http.ResponseWriter, r *http.Request
 		return
 	}
 	detail, err := rs.contracts.CreateContract(r.Context(), session, id, workforce.TraegerContractInput{
-		Kind: req.Kind, StartsOn: req.StartsOn, EndsOn: req.EndsOn, Sites: sitesInput(req.Sites),
+		Kind: req.Kind, StartsOn: req.StartsOn, EndsOn: req.EndsOn, Pool: req.Pool, Sites: sitesInput(req.Sites),
 	})
 	respondContract(w, r, http.StatusCreated, detail, err, "Contract created successfully")
 }
@@ -76,6 +77,7 @@ func (rs *RecordsResource) createContract(w http.ResponseWriter, r *http.Request
 type updateContractRequest struct {
 	Kind   string         `json:"kind"`
 	EndsOn *calendar.Date `json:"ends_on"`
+	Pool   bool           `json:"pool"`
 }
 
 func (req *updateContractRequest) Bind(*http.Request) error { return nil }
@@ -90,7 +92,7 @@ func (rs *RecordsResource) updateContract(w http.ResponseWriter, r *http.Request
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerContractInvalid, "kind"))
 		return
 	}
-	detail, err := rs.contracts.UpdateContract(r.Context(), session, id, contractID, workforce.TraegerContractTermsInput{Kind: req.Kind, EndsOn: req.EndsOn})
+	detail, err := rs.contracts.UpdateContract(r.Context(), session, id, contractID, workforce.TraegerContractTermsInput{Kind: req.Kind, EndsOn: req.EndsOn, Pool: req.Pool})
 	respondContract(w, r, http.StatusOK, detail, err, "Contract updated successfully")
 }
 

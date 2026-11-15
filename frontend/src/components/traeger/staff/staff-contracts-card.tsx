@@ -274,6 +274,9 @@ function ContractPanel({
               label={contractPhaseLabel(contract, phase)}
               tone={CONTRACT_PHASE_TONES[phase]}
             />
+            {contract.pool ? (
+              <StatusBadge label="Vertretungspool" tone="blue" />
+            ) : null}
           </div>
           <p className="text-sm text-gray-500 tabular-nums">
             {contractTerm(contract)} ·{" "}
@@ -299,9 +302,9 @@ function ContractPanel({
               onClick: () => onOpen({ kind: "weeks", contract }),
             },
             {
-              label: ended ? "Vertrag ändern" : "Art oder Ende ändern",
+              label: "Vertrag ändern",
               description:
-                "Teilzeit, Vollzeit oder Minijob und der letzte Tag.",
+                "Teilzeit, Vollzeit oder Minijob, der letzte Tag und der Vertretungspool.",
               icon: <CalendarPlusIcon className="size-4" aria-hidden="true" />,
               onClick: () => onOpen({ kind: "terms", contract }),
             },

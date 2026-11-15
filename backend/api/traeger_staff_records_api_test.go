@@ -84,9 +84,12 @@ func newTraegerStaffFixtureWith(t *testing.T, db *bun.DB, now func() time.Time, 
 	}
 	workforceModule, _, err := NewWorkforceTestModule(testpkg.NewDatabase(t, db), unit, clocks...)
 	require.NoError(t, err)
-	require.NoError(t, mountTraegerStaffRoutes(router, admin, workforceModule.TimeTracking.TraegerMonths, organizations, persons, membership, tenantAudit.DataAccessLog, sites))
+	// The school's routes: its Dienstplan and the Vertretungspool (#4709).
+	tenantRoutes := chi.NewRouter()
+	tenantRoutes.Handle("/staff-shifts/*", schoolShifts)
+	require.NoError(t, mountTraegerStaffRoutes(router, tenantRoutes, admin, workforceModule.TimeTracking.TraegerMonths, organizations, persons, membership, tenantAudit.DataAccessLog, sites))
 	office := newTraegerOffice(t, db, portal, "Träger Personal", identityaccess.TraegerRolePersonnel)
-	return testpkg.SessionVerifier(router), portal, admin, unit, office, schoolShifts
+	return testpkg.SessionVerifier(router), portal, admin, unit, office, tenantRoutes
 }
 
 func staffRelease(t *testing.T, db *bun.DB, organization int64) {

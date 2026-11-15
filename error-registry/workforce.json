@@ -231,6 +231,36 @@
       "legacy": "personnel_number_taken"
     },
     {
+      "code": "workforce.pool_block_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.pool_block_invalid"
+    },
+    {
+      "code": "workforce.pool_block_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.pool_block_not_found"
+    },
+    {
+      "code": "workforce.pool_block_taken",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.pool_block_taken"
+    },
+    {
+      "code": "workforce.pool_springer_busy",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.pool_springer_busy"
+    },
+    {
+      "code": "workforce.pool_springer_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.pool_springer_not_found"
+    },
+    {
       "code": "workforce.qualification_type_name_taken",
       "class": "business_rejection",
       "parameters": [],

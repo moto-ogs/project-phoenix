@@ -70,11 +70,16 @@ func (seedTraegerStaffStep) Run(ctx context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
+	blocked, err := seedTraegerPoolBlock(rt.Client, rt.TenantAuth)
+	if err != nil {
+		return err
+	}
 	closed, err := seedTraegerMonthClose(rt.Client, auth, first)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("  Träger staff records: %d linked, %d contracts, %d imported, %d planned shifts, month closed: %t\n", linked, contracts, imported, planned, closed)
+	fmt.Printf("  Träger staff records: %d linked, %d contracts, %d imported, %d planned shifts, Springer blocked: %t, month closed: %t\n",
+		linked, contracts, imported, planned, blocked, closed)
 	return seedTraegerAbsences(ctx, rt, auth)
 }
 

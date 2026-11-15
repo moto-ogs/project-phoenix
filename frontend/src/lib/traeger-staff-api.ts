@@ -145,6 +145,8 @@ export interface StaffContract {
   readonly startsOn: string;
   /** Letzter Tag oder `null`, solange der Vertrag unbefristet läuft. */
   readonly endsOn: string | null;
+  /** Merkmal „Vertretungspool“: die Person ist Springer (#4709). */
+  readonly pool: boolean;
   readonly sites: readonly StaffContractSite[];
   readonly holidayWeeks: readonly StaffContractHolidayWeek[];
 }
@@ -170,6 +172,7 @@ export interface StaffContractInput {
   readonly kind: StaffContractKind;
   readonly startsOn: string;
   readonly endsOn: string | null;
+  readonly pool: boolean;
   readonly sites: readonly StaffContractSiteInput[];
 }
 
@@ -250,6 +253,7 @@ interface BackendContract {
   kind: StaffContractKind;
   starts_on: string;
   ends_on: string | null;
+  pool?: boolean;
   sites:
     | {
         school_id: number;
@@ -373,6 +377,7 @@ function mapContract(contract: BackendContract): StaffContract {
     kind: contract.kind,
     startsOn: contract.starts_on,
     endsOn: contract.ends_on,
+    pool: contract.pool ?? false,
     sites: (contract.sites ?? []).map((site) => ({
       schoolId: String(site.school_id),
       schoolName: site.school_name,
@@ -530,6 +535,7 @@ export async function createStaffContract(
         kind: input.kind,
         starts_on: input.startsOn,
         ends_on: input.endsOn,
+        pool: input.pool,
         sites: input.sites.map(siteBody),
       },
     }),
@@ -540,12 +546,16 @@ export async function createStaffContract(
 export async function updateStaffContract(
   recordId: string,
   contractId: string,
-  input: { readonly kind: StaffContractKind; readonly endsOn: string | null },
+  input: {
+    readonly kind: StaffContractKind;
+    readonly endsOn: string | null;
+    readonly pool: boolean;
+  },
 ): Promise<StaffRecordDetail> {
   return mapDetail(
     await traegerRequest<BackendDetail>(contractPath(recordId, contractId), {
       method: "PUT",
-      body: { kind: input.kind, ends_on: input.endsOn },
+      body: { kind: input.kind, ends_on: input.endsOn, pool: input.pool },
     }),
   );
 }

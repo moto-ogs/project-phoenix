@@ -178,6 +178,7 @@ var staffDataAccessResources = map[string]string{
 	workforceModule.StaffDataAccessFinancialView:    auditModels.ResourceTypeStaffFinancialView,
 	workforceModule.StaffDataAccessFinancialReveal:  auditModels.ResourceTypeStaffFinancialReveal,
 	workforceModule.StaffDataAccessDocumentDownload: auditModels.ResourceTypeStaffDocumentDownload,
+	workforceModule.StaffDataAccessPool:             auditModels.ResourceTypeTraegerStaffPool,
 }
 
 func (a staffAdminAudit) RecordMasterDataChange(ctx context.Context, change workforceModule.StaffMasterDataChange) error {
@@ -212,6 +213,9 @@ func (a staffAdminAudit) RecordDataAccess(ctx context.Context, access workforceM
 		return fmt.Errorf("unknown data access resource %q", access.Resource)
 	}
 	metadata := map[string]interface{}{"staff_id": access.StaffID}
+	if access.Resource == workforceModule.StaffDataAccessPool {
+		metadata = map[string]interface{}{"staff_record_ids": access.RecordIDs, "rows": len(access.RecordIDs)}
+	}
 	if access.Resource == workforceModule.StaffDataAccessDocumentDownload {
 		metadata["document_id"] = access.DocumentID
 		metadata["category"] = access.Category

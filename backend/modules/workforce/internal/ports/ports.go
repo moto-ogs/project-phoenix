@@ -450,6 +450,26 @@ type TraegerStaffStore interface {
 
 	TraegerProofStore
 	TraegerStaffImportStore
+	TraegerStaffPoolStore
+}
+
+// TraegerStaffPoolStore is the persistence of the Vertretungspool (#4709):
+// the school methods join the tenant transaction of one school and read
+// through the functions that answer only that school, the Träger methods
+// the Träger transaction.
+type TraegerStaffPoolStore interface {
+	SchoolPoolAvailable(ctx context.Context) (bool, error)
+	SchoolPoolSpringers(ctx context.Context, from, to calendar.Date) ([]domain.PoolSpringer, error)
+	SchoolPoolBlocks(ctx context.Context, recordIDs []int64, from, to calendar.Date) ([]domain.PoolBlock, error)
+	SchoolPoolProofs(ctx context.Context, recordIDs []int64) ([]domain.PoolProof, error)
+	BlockPoolSpringer(ctx context.Context, block domain.PoolBlock, accountID int64) (int64, error)
+	LiftSchoolPoolBlock(ctx context.Context, blockID, accountID int64) error
+
+	TraegerPoolSpringers(ctx context.Context, organizationID int64, from, to calendar.Date) ([]domain.PoolSpringer, error)
+	TraegerPoolBlocks(ctx context.Context, organizationID int64, recordIDs []int64, from, to calendar.Date) ([]domain.PoolBlock, error)
+	TraegerPoolBlockSites(ctx context.Context, organizationID int64, recordIDs []int64) ([]domain.PoolBlockSite, error)
+	TraegerPoolProofs(ctx context.Context, organizationID int64, recordIDs []int64) ([]domain.PoolProof, error)
+	LiftTraegerPoolBlock(ctx context.Context, organizationID, blockID, accountID int64) (domain.PoolBlockSite, error)
 }
 
 // TraegerStaffImportStore writes the records of a Personal-Import (#4724)

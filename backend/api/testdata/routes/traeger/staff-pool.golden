@@ -1,0 +1,2 @@
+DELETE /traeger/staff-pool/blocks/{id}
+GET /traeger/staff-pool/

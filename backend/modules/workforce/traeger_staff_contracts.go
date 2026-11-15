@@ -94,10 +94,12 @@ type TraegerContractHolidayWeek struct {
 // TraegerStaffContract is one contract of a record. EndsOn is its last day,
 // nil while open.
 type TraegerStaffContract struct {
-	ID           int64                        `json:"id"`
-	Kind         string                       `json:"kind"`
-	StartsOn     calendar.Date                `json:"starts_on"`
-	EndsOn       *calendar.Date               `json:"ends_on"`
+	ID       int64          `json:"id"`
+	Kind     string         `json:"kind"`
+	StartsOn calendar.Date  `json:"starts_on"`
+	EndsOn   *calendar.Date `json:"ends_on"`
+	// Pool marks a contract of the Vertretungspool (#4709).
+	Pool         bool                         `json:"pool"`
 	Sites        []TraegerContractSiteDetail  `json:"sites"`
 	HolidayWeeks []TraegerContractHolidayWeek `json:"holiday_weeks"`
 }
@@ -114,6 +116,7 @@ type TraegerContractInput struct {
 	Kind     string
 	StartsOn calendar.Date
 	EndsOn   *calendar.Date
+	Pool     bool
 	Sites    []TraegerContractSiteSoll
 }
 
@@ -122,6 +125,7 @@ type TraegerContractInput struct {
 type TraegerContractTermsInput struct {
 	Kind   string
 	EndsOn *calendar.Date
+	Pool   bool
 }
 
 // TraegerContractSollInput changes the Soll of the named Einsatzorte from

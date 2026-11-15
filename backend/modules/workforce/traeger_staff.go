@@ -339,6 +339,8 @@ type TraegerStaffAccess struct {
 	// RecordID the record a record view read, 0 for the overview.
 	StaffIDs []int64
 	RecordID int64
+	// RecordIDs names the records a pool view showed (#4709).
+	RecordIDs []int64
 }
 
 // TraegerStaffAccessLog writes an access entry in the caller's tenant

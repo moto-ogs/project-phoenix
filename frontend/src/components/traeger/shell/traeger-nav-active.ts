@@ -55,12 +55,13 @@ function isBillingAreaActive(href: string, pathname: string): boolean | null {
 }
 
 /**
- * Die Abwesenheitsarten (#4710) und die Einsatzplanung (#4708) liegen unter
- * /personal, sind aber keine Akte.
+ * Die Abwesenheitsarten (#4710), die Einsatzplanung (#4708) und der
+ * Vertretungspool (#4709) liegen unter /personal, sind aber keine Akte.
  */
 const STAFF_PAGES_BESIDE_RECORDS = [
   "/traeger/personal/abwesenheitsarten",
   "/traeger/personal/einsatzplanung",
+  "/traeger/personal/vertretungspool",
 ];
 
 function isStaffAbsenceTypesPath(pathname: string): boolean {

@@ -28,6 +28,11 @@ var seedTraegerContractPatterns = []struct {
 	{"minijob", []int{120, 0, 120, 0, 120}},
 }
 
+// seedTraegerPoolRecord marks the second and the fourth record as Springer
+// of the Vertretungspool (#4709), so every school of the demo Träger sees
+// two of them.
+func seedTraegerPoolRecord(i int) bool { return i == 1 || i == 3 }
+
 // seedTraegerEasterWeeks are the Easter holidays 2027 in NRW.
 var seedTraegerEasterWeeks = [2]string{"2027-03-22", "2027-03-29"}
 
@@ -76,7 +81,7 @@ func seedTraegerStaffContract(client *Client, auth AuthRef, recordID int64, i in
 		return false, nil
 	}
 	raw, err := client.PostWithAuth(auth, fmt.Sprintf("/traeger/staff-records/%d/contracts", recordID), map[string]any{
-		"kind": pattern.kind, "starts_on": seedTraegerContractStart, "sites": sites,
+		"kind": pattern.kind, "starts_on": seedTraegerContractStart, "sites": sites, "pool": seedTraegerPoolRecord(i),
 	})
 	if err != nil {
 		return false, fmt.Errorf("enter a contract of a Träger staff record: %w", err)

@@ -29,6 +29,7 @@ type staffContractRow struct {
 	Kind           string         `bun:"kind"`
 	StartsOn       calendar.Date  `bun:"starts_on"`
 	EndsOn         *calendar.Date `bun:"ends_on"`
+	Pool           bool           `bun:"pool"`
 	CreatedAt      time.Time      `bun:"created_at"`
 }
 
@@ -48,7 +49,7 @@ func (s *TraegerStaffStore) ListStaffContracts(ctx context.Context, organization
 		return nil, err
 	}
 	var rows []staffContractRow
-	if err := db.NewRaw(`SELECT id, organization_id, staff_record_id, kind, starts_on, ends_on, created_at FROM workforce.staff_contracts
+	if err := db.NewRaw(`SELECT id, organization_id, staff_record_id, kind, starts_on, ends_on, pool, created_at FROM workforce.staff_contracts
 		WHERE organization_id = ? AND staff_record_id = ? ORDER BY starts_on DESC, id DESC`, organizationID, recordID).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("workforce postgres: list staff contracts: %w", err)
 	}
@@ -61,7 +62,7 @@ func (s *TraegerStaffStore) ListStaffContracts(ctx context.Context, organization
 	for i, row := range rows {
 		contracts[i] = domain.TraegerStaffContract{
 			ID: row.ID, OrganizationID: row.OrganizationID, RecordID: row.StaffRecordID, Kind: row.Kind,
-			StartsOn: row.StartsOn, CreatedAt: row.CreatedAt,
+			StartsOn: row.StartsOn, Pool: row.Pool, CreatedAt: row.CreatedAt,
 		}
 		if row.EndsOn != nil {
 			contracts[i].EndsOn = *row.EndsOn
@@ -102,9 +103,9 @@ func (s *TraegerStaffStore) InsertStaffContract(ctx context.Context, contract do
 		return 0, err
 	}
 	var id int64
-	if err := db.NewRaw(`INSERT INTO workforce.staff_contracts (organization_id, staff_record_id, kind, starts_on, ends_on, created_by_account_id)
-		VALUES (?, ?, ?, ?, ?, ?) RETURNING id`, contract.OrganizationID, contract.RecordID, contract.Kind, contract.StartsOn,
-		optionalDate(contract.EndsOn), accountID).Scan(ctx, &id); err != nil {
+	if err := db.NewRaw(`INSERT INTO workforce.staff_contracts (organization_id, staff_record_id, kind, starts_on, ends_on, pool, created_by_account_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`, contract.OrganizationID, contract.RecordID, contract.Kind, contract.StartsOn,
+		optionalDate(contract.EndsOn), contract.Pool, accountID).Scan(ctx, &id); err != nil {
 		return 0, fmt.Errorf("workforce postgres: insert staff contract: %w", err)
 	}
 	return id, insertContractTargets(ctx, db, contract.OrganizationID, id, accountID, contract.Targets)
@@ -117,8 +118,8 @@ func (s *TraegerStaffStore) UpdateStaffContractTerms(ctx context.Context, contra
 	if err != nil {
 		return err
 	}
-	if _, err := db.ExecContext(ctx, `UPDATE workforce.staff_contracts SET kind = ?, ends_on = ? WHERE organization_id = ? AND id = ?`,
-		contract.Kind, optionalDate(contract.EndsOn), contract.OrganizationID, contract.ID); err != nil {
+	if _, err := db.ExecContext(ctx, `UPDATE workforce.staff_contracts SET kind = ?, ends_on = ?, pool = ? WHERE organization_id = ? AND id = ?`,
+		contract.Kind, optionalDate(contract.EndsOn), contract.Pool, contract.OrganizationID, contract.ID); err != nil {
 		return fmt.Errorf("workforce postgres: update staff contract: %w", err)
 	}
 	if contract.EndsOn.IsZero() {

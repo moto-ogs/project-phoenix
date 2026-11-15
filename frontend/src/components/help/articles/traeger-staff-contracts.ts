@@ -53,7 +53,7 @@ export function traegerStaffContractsTopic(): HelpTopic {
       {
         title: "Vertrag beenden",
         steps: [
-          "Wählen Sie beim Vertrag das Menü. Wählen Sie `Art oder Ende ändern`.",
+          "Wählen Sie beim Vertrag das Menü. Wählen Sie `Vertrag ändern`.",
           "Wählen Sie den `Letzten Tag`. Wählen Sie `Speichern`.",
         ],
       },

@@ -5666,7 +5666,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffAdminAudit.RecordDataAccess",
-      "binding_digest": "964d5562bac0d924c2be59f63d966e61",
+      "binding_digest": "70de2c2bb0092790b73eeea93fdfb995",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffAdminAudit.RecordDataAccess",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
@@ -7570,7 +7570,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerStaffAccessLog.RecordTraegerStaffAccess",
-      "binding_digest": "bfad3fa010dad5b6ca204c7cdbf08a2b",
+      "binding_digest": "1b25b896d7f01833020d2f7cfe5abf5e",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffAccessLog.RecordTraegerStaffAccess",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/auditlog/compose.Command.Append",
@@ -7578,7 +7578,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerStaffAccessLog.RecordTraegerStaffAccess",
-      "binding_digest": "d19b70e8861647b08017195b177b9da4",
+      "binding_digest": "d7a6f09ff52fe0861996ae83be6f04db",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffAccessLog.RecordTraegerStaffAccess",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.AppendStore.Append",
@@ -7586,7 +7586,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerStaffAccessLog.RecordTraegerStaffAccess",
-      "binding_digest": "a3c2060f66bf8c668328d05f45e9d398",
+      "binding_digest": "3a06d758150ed3b5fc0c314aaa29b2cf",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffAccessLog.RecordTraegerStaffAccess",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.Command.Append",
@@ -7594,7 +7594,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerStaffAccessLog.RecordTraegerStaffAccess",
-      "binding_digest": "5b7aee63c509bed88c7dd0dc7521cac8",
+      "binding_digest": "8ba08428204ffc0ded3b43c28fcd4561",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffAccessLog.RecordTraegerStaffAccess",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",

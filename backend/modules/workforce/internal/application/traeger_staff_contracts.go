@@ -25,7 +25,7 @@ var contractKindLabels = map[string]string{
 
 // CreateContract adds a contract with the first Soll of each Einsatzort.
 func (t *TraegerStaff) CreateContract(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, input workforce.TraegerContractInput) (workforce.TraegerStaffRecordDetail, error) {
-	contract := domain.TraegerStaffContract{OrganizationID: actor.OrganizationID, RecordID: recordID, Kind: input.Kind, StartsOn: input.StartsOn}
+	contract := domain.TraegerStaffContract{OrganizationID: actor.OrganizationID, RecordID: recordID, Kind: input.Kind, StartsOn: input.StartsOn, Pool: input.Pool}
 	if input.EndsOn != nil {
 		contract.EndsOn = *input.EndsOn
 	}
@@ -57,7 +57,7 @@ func (t *TraegerStaff) UpdateContract(ctx context.Context, actor workforce.Traeg
 			return contractWrite{}, err
 		}
 		changed := current
-		changed.Kind, changed.EndsOn = input.Kind, calendar.Date("")
+		changed.Kind, changed.EndsOn, changed.Pool = input.Kind, calendar.Date(""), input.Pool
 		if input.EndsOn != nil {
 			changed.EndsOn = *input.EndsOn
 		}
@@ -384,6 +384,9 @@ func contractText(contract domain.TraegerStaffContract) string {
 	text := fmt.Sprintf("%s ab %s", contractKindLabels[contract.Kind], contract.StartsOn.Format("02.01.2006"))
 	if !contract.EndsOn.IsZero() {
 		text += " bis " + contract.EndsOn.Format("02.01.2006")
+	}
+	if contract.Pool {
+		text += ", Vertretungspool"
 	}
 	return text
 }

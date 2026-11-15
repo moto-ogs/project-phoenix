@@ -112,6 +112,8 @@ import type { leadMissingMenuTopic as authored_leadMissingMenuTopic } from "./ar
 
 import type { leadRosterDeviationTopic as authored_leadRosterDeviationTopic } from "./articles/lead-roster-deviation";
 
+import type { leadStaffPoolTopic as authored_leadStaffPoolTopic } from "./articles/lead-staff-pool";
+
 import type { leadSurveysTopic as authored_leadSurveysTopic } from "./articles/lead-surveys";
 
 import type { leadTeacherAccessTopic as authored_leadTeacherAccessTopic } from "./articles/lead-teacher-access";
@@ -423,6 +425,8 @@ import type { traegerSharedDocumentsTopic as authored_traegerSharedDocumentsTopi
 import type { traegerStaffContractsTopic as authored_traegerStaffContractsTopic } from "./articles/traeger-staff-contracts";
 
 import type { traegerStaffPlanningTopic as authored_traegerStaffPlanningTopic } from "./articles/traeger-staff-planning";
+
+import type { traegerStaffPoolTopic as authored_traegerStaffPoolTopic } from "./articles/traeger-staff-pool";
 
 import type { traegerStaffProofsTopic as authored_traegerStaffProofsTopic } from "./articles/traeger-staff-proofs";
 
@@ -2153,6 +2157,8 @@ export const dutyRosterTopic = function dutyRosterTopic(): HelpTopic {
       "Die Vorlage `Stundenübersicht` druckt diese Stunden als Liste.",
       "Eine Serie lässt Ferien, Schließtage und Feiertage aus. Arbeitet die Person auch in den Ferien, setzen Sie bei der Serie das Häkchen `Auch in den Ferien und an Schließtagen planen`.",
       "An Feiertagen plant eine Serie nie eine Schicht.",
+      // #4709: der Vertretungspool des Trägers.
+      "Fehlt jemand, finden Sie im Drei-Punkte-Menü `Springer des Trägers`. Dort blocken Sie eine Fachkraft Ihres Trägers für einen Tag.",
     ],
     differences: [
       "Eine neue Schicht auf einem Schließtag löst eine Rückfrage aus.",
@@ -2171,6 +2177,7 @@ export const dutyRosterTopic = function dutyRosterTopic(): HelpTopic {
       HELP_TOPICS.leadWorkTimeReview,
       HELP_TOPICS.leadCarePlan,
       HELP_TOPICS.leadInviteStaff,
+      HELP_TOPICS.leadStaffPool,
     ],
   };
 } satisfies typeof authored_dutyRosterTopic;
@@ -4277,6 +4284,67 @@ export const leadRosterDeviationTopic =
       related: [HELP_TOPICS.leadCarePlan, HELP_TOPICS.leadEnrollmentSetup],
     };
   } satisfies typeof authored_leadRosterDeviationTopic;
+
+/**
+ * `/dienstplan/springer` (#4709, ADR 0248): die Springer aus dem
+ * Vertretungspool des Trägers sehen, blocken und eine eigene Blockung
+ * aufheben.
+ */
+export const leadStaffPoolTopic = function leadStaffPoolTopic(): HelpTopic {
+  return {
+    id: HELP_TOPICS.leadStaffPool,
+    title: "Springer des Trägers blocken",
+    question: "Wie blocke ich einen Springer für meine Schule?",
+    summary:
+      "Springer sind Fachkräfte Ihres Trägers, die an jeder seiner Schulen einspringen. Sie blocken eine Person für einen Tag und eine Zeit.",
+    group: "planung",
+    audience: "lead",
+    icon: "UsersThree",
+    requirements: [
+      "Sie dürfen den Dienstplan bearbeiten.",
+      "Ihr Träger führt sein Personal in moto und hat Springer angelegt.",
+    ],
+    instructionGroups: [
+      {
+        title: "Einen Springer blocken",
+        steps: [
+          "Öffnen Sie `Dienstplan`.",
+          "Wählen Sie oben rechts das Menü und dort `Springer des Trägers`.",
+          "Wählen Sie mit den Pfeilen die Woche.",
+          "Wählen Sie in der Zeile der Person einen freien Tag.",
+          "Tragen Sie `Beginn` und `Ende` ein.",
+          "Wählen Sie `Blocken`.",
+        ],
+      },
+      {
+        title: "Eine Blockung aufheben",
+        steps: [
+          "Wählen Sie die grüne Blockung `Ihre Schule`.",
+          "Wählen Sie `Aufheben`.",
+        ],
+      },
+    ],
+    steps: [],
+    result:
+      "Die Person ist zu dieser Zeit für Ihre Schule geblockt. Andere Schulen sehen nur, dass Ihre Schule geblockt hat.",
+    notes: [
+      "Eine Person ist zu jeder Zeit nur für eine Schule geblockt. Blocken zwei Schulen gleichzeitig, bekommt die erste die Person.",
+      "Neben dem Namen steht, ob die Nachweise vollständig sind, etwa das Führungszeugnis.",
+      "moto speichert keinen Grund und keine Gruppe zu einer Blockung.",
+      "Damit die Person in Ihrem Dienstplan steht, trägt die Personalverwaltung Ihre Schule als Einsatzort ein.",
+    ],
+    differences: [
+      "Eine graue Blockung nennt eine andere Schule. Zu dieser Zeit ist die Person dort.",
+      "`Vom Träger aufgehoben`: Die Personalverwaltung hat Ihre Blockung aufgehoben. Die Zeit ist wieder frei.",
+      "`Nicht im Pool`: An diesem Tag ist die Person nicht im Vertretungspool.",
+      "`Ihr Träger führt sein Personal nicht in moto`: Dann gibt es keine Springer. Vertretungen planen Sie wie bisher im Dienstplan.",
+    ],
+    troubleshootingDetails: [
+      "„Diese Person ist zu dieser Zeit schon geblockt“: Eine andere Schule war schneller. Wählen Sie eine andere Zeit.",
+    ],
+    related: [HELP_TOPICS.leadDutyRoster, HELP_TOPICS.leadSubstitutionPlan],
+  };
+} satisfies typeof authored_leadStaffPoolTopic;
 
 /**
  * `/umfragen` mit `surveys:manage`: Umfragen mit Fragebogen an Eltern oder
@@ -14490,7 +14558,7 @@ export const traegerStaffContractsTopic =
         {
           title: "Vertrag beenden",
           steps: [
-            "Wählen Sie beim Vertrag das Menü. Wählen Sie `Art oder Ende ändern`.",
+            "Wählen Sie beim Vertrag das Menü. Wählen Sie `Vertrag ändern`.",
             "Wählen Sie den `Letzten Tag`. Wählen Sie `Speichern`.",
           ],
         },
@@ -14600,6 +14668,64 @@ export const traegerStaffPlanningTopic =
       ],
     };
   } satisfies typeof authored_traegerStaffPlanningTopic;
+
+/**
+ * `/traeger/personal/vertretungspool` (#4709, ADR 0248): wer Springer ist,
+ * jede Blockung der Woche und das Aufheben einer Blockung.
+ */
+export const traegerStaffPoolTopic =
+  function traegerStaffPoolTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.traegerStaffPool,
+      title: "Vertretungspool des Trägers",
+      question: "Wie lege ich Springer an und sehe, wer sie geblockt hat?",
+      summary:
+        "Springer springen an allen Ihren Schulen ein. Jede Schule blockt sie für einen Tag und eine Zeit. Sie sehen jede Blockung.",
+      group: "personal",
+      audience: "traeger",
+      icon: "ArrowsLeftRight",
+      requirements: [
+        "Sie haben die Rolle `Personal`.",
+        "Die Person hat eine Personalakte mit Arbeitsvertrag.",
+      ],
+      instructionGroups: [
+        {
+          title: "Eine Person zum Springer machen",
+          steps: [
+            "Öffnen Sie `Personalakten` und dort die Akte der Person.",
+            "Legen Sie einen Arbeitsvertrag an, oder wählen Sie beim Vertrag `Vertrag ändern`.",
+            "Schalten Sie `Vertretungspool` ein und speichern Sie.",
+          ],
+        },
+        {
+          title: "Blockungen ansehen und aufheben",
+          steps: [
+            "Wählen Sie in der Navigation `Vertretungspool`.",
+            "Wählen Sie mit den Pfeilen die Woche.",
+            "Wählen Sie eine Blockung und dann `Aufheben`.",
+          ],
+        },
+      ],
+      steps: [],
+      result:
+        "Alle Ihre Schulen sehen die Person und können sie blocken. Heben Sie eine Blockung auf, sieht die Schule „Vom Träger aufgehoben“.",
+      notes: [
+        "Eine Person ist zu jeder Zeit nur für eine Schule geblockt.",
+        "Eine Schule sieht vom Springer nur den Namen, ob die Nachweise vollständig sind, und die geblockten Zeiten.",
+        "Andere Schulen sehen nur, welche Schule geblockt hat. Einen Grund oder eine Gruppe speichert moto nicht.",
+        "Jedes Anzeigen der Woche steht im Zugriffsprotokoll jeder betroffenen Schule.",
+        "Soll die Person an der Schule im Dienstplan stehen, tragen Sie die Schule in der Akte als Einsatzort ein.",
+      ],
+      differences: [
+        "Die Seite zeigt `Personal beim Träger ist noch nicht freigeschaltet`: Das moto-Team schaltet es frei.",
+      ],
+      related: [
+        HELP_TOPICS.traegerStaffRecords,
+        HELP_TOPICS.traegerStaffContracts,
+        HELP_TOPICS.traegerStaffPlanning,
+      ],
+    };
+  } satisfies typeof authored_traegerStaffPoolTopic;
 
 /**
  * `/traeger/nachweise` (#4707, ADR 0238): Nachweise der Personalakten mit
