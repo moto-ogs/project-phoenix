@@ -282,9 +282,9 @@ describe("TraegerDailyAttendancePage", () => {
         "tagesmeldung-mv-2026-09-02-bis-2026-09-08.csv",
       ),
     );
-    expect(mockDownload).toHaveBeenCalledWith({
-      from: "2026-09-02",
-      to: "2026-09-08",
-    });
+    expect(mockDownload).toHaveBeenCalledWith(
+      { from: "2026-09-02", to: "2026-09-08" },
+      "csv",
+    );
   });
 });

@@ -129,6 +129,9 @@ func TestTraegerDailyAttendanceReportsTheSchoolsInMecklenburgVorpommernOnly(t *t
 	}
 	assert.Equal(t, 1, dailyExportLogged(t, db, hafen.school, office.ID), "the export stands in the school's access log")
 	assert.Zero(t, dailyExportLogged(t, db, nrwID, office.ID), "the school outside the report read nothing")
+	// #4718: PDF and Excel too, each logged like the CSV.
+	assertTraegerListFormats(t, router, answer.AccessToken, "/traeger/schools/daily-attendance/export?"+dailyPeriod, "tagesmeldung-mv-2026-09-11-bis-2026-09-14")
+	assert.Equal(t, 3, dailyExportLogged(t, db, hafen.school, office.ID), "every format of the export stands in the access log")
 
 	frame := traegerOccupancyRequest(t, router, "/traeger/organization/", answer.AccessToken, nil)
 	require.Equal(t, http.StatusOK, frame.Code, frame.Body.String())

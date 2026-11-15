@@ -34,6 +34,7 @@ const LIST_EXPORTS: Readonly<Record<string, string>> = {
   "/nachweise": "page",
   "/standortvergleich": "page",
   "/stichtagszahlen": "page",
+  "/tagesmeldung": "page",
   "/vertraege": "page",
   "/zeitvergleich": "page",
 };

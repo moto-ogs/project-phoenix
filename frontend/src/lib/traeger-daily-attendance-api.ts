@@ -6,7 +6,11 @@
  */
 
 import { apiErrorFromBody, transportFetch } from "./api-error";
-import { filenameFromDisposition } from "./file-download";
+import {
+  downloadTraegerList,
+  type TraegerListFile,
+  type TraegerListFormat,
+} from "./traeger-list-export";
 import type { TraegerSchool } from "./traeger-api";
 
 /** The longest period of one report, as in the backend: a month. */
@@ -173,22 +177,13 @@ export async function fetchTraegerDailyAttendance(
 }
 
 /** The CSV file of the period, with the file name the backend chose. */
-export async function downloadTraegerDailyAttendance(
+export function downloadTraegerDailyAttendance(
   period: DailyAttendancePeriod,
-): Promise<{ readonly blob: Blob; readonly filename: string | null }> {
-  const response = await transportFetch(
-    `/api/traeger/schools/daily-attendance/export?${query(period)}`,
-    { credentials: "include", cache: "no-store" },
+  format: TraegerListFormat,
+): Promise<TraegerListFile> {
+  return downloadTraegerList(
+    "/api/traeger/schools/daily-attendance/export",
+    format,
+    { from: period.from, to: period.to },
   );
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      await readJson(response),
-    );
-  }
-  return {
-    blob: await response.blob(),
-    filename: filenameFromDisposition(response),
-  };
 }

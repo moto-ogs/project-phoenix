@@ -12276,7 +12276,7 @@ export const traegerDailyAttendanceTopic =
         "Lesen Sie oben die Zahlen: `Kinder am Tag`, `Verweildauer`, `Längster Tag` und `Abwesend gemeldet`.",
         "Lesen Sie unter `Je Tag`, wie viele Kinder an jedem Tag da waren und wie viele krank, entschuldigt oder auf Klassenfahrt waren.",
         "Wählen Sie oben den Filter `Schule`, um nur eine Schule zu sehen.",
-        "Wählen Sie `Herunterladen` und dann `CSV`. Diese Datei reichen Sie beim Land ein.",
+        "Wählen Sie `Herunterladen` und dann `CSV`. Diese Datei reichen Sie beim Land ein. `PDF` und `Excel` sind für Ihre eigene Ablage.",
       ],
       result:
         "Sie haben die Datei mit einer Zeile je Kind und Tag. Sie enthält keine Namen.",
