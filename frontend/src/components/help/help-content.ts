@@ -129,6 +129,7 @@ function leadTopics(
     articles.emailDeliveryTopic(),
     articles.parentAnnouncementTopic(),
     articles.parentLetterTopic(),
+    articles.parentLetterPerChildTopic(),
     articles.schoolTraegerDocumentsTopic(),
     articles.parentSurveyTopic(),
     articles.leadSurveysTopic(),

@@ -254,7 +254,7 @@ func TestPreviewLetterFillsOneChildAndLogsTheAccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PreviewLetter: %v", err)
 	}
-	if preview.Body != "Hallo Emil aus der 3a" || preview.Child.StudentID != 103 {
+	if preview.Body != "Hallo Emil aus der Klasse 3a" || preview.Child.StudentID != 103 {
 		t.Fatalf("preview = %+v", preview)
 	}
 	if len(f.access.entries) != 1 || f.access.entries[0].Kind != communication.ParentLetterAccessPreview || *f.access.entries[0].StudentID != 103 {

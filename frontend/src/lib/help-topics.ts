@@ -135,6 +135,7 @@ export const HELP_TOPICS = {
   leadClassListEntries: "kinder-ohne-ogs-betreuung-erfassen",
   leadParentAnnouncement: "elternmitteilung-veroeffentlichen",
   leadParentLetter: "elternbrief-versenden",
+  leadParentLetterPerChild: "elternbrief-mit-angaben-jedes-kindes",
   leadParentSurvey: "elternumfrage-erstellen",
   leadSurveys: "umfrage-mit-fragebogen-erstellen",
   leadParentDeclaration: "elternerklaerung-einholen",

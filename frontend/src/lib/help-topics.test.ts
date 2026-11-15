@@ -625,7 +625,7 @@ describe("getParentHelpTopicForPath", () => {
     // 101 seit #4808: Nachweise wie Erste Hilfe im Blick behalten.
     // 103 seit #4692: Dokumente vom Träger finden.
     // 107 seit #6954: Mit der Suche finden.
-    expect(leadTopics).toHaveLength(107);
+    expect(leadTopics).toHaveLength(108);
     expect(
       leadTopics.every(
         (topic) =>

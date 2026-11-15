@@ -178,6 +178,7 @@ export const HELP_TOPIC_AUDIENCE = {
   [HELP_TOPICS.leadClassListEntries]: "lead",
   [HELP_TOPICS.leadParentAnnouncement]: "lead",
   [HELP_TOPICS.leadParentLetter]: "lead",
+  [HELP_TOPICS.leadParentLetterPerChild]: "lead",
   [HELP_TOPICS.leadParentSurvey]: "lead",
   [HELP_TOPICS.leadSurveys]: "lead",
   [HELP_TOPICS.leadParentDeclaration]: "lead",

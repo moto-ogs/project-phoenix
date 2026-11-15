@@ -198,6 +198,8 @@ import type { parentHolidayRegistrationTopic as authored_parentHolidayRegistrati
 
 import type { parentInstallAppTopic as authored_parentInstallAppTopic } from "./articles/parent-install-app";
 
+import type { parentLetterPerChildTopic as authored_parentLetterPerChildTopic } from "./articles/parent-letter-per-child";
+
 import type { parentLetterTopic as authored_parentLetterTopic } from "./articles/parent-letter";
 
 import type { parentLoginTopic as authored_parentLoginTopic } from "./articles/parent-login";
@@ -6821,6 +6823,61 @@ export const parentInstallAppTopic =
   } satisfies typeof authored_parentInstallAppTopic;
 
 /**
+ * Serienbriefe (#4813): ein Elternbrief, der jedes Kind mit seinen eigenen
+ * Angaben nennt, und alle Briefe eines Versands als PDF zum Drucken.
+ */
+export const parentLetterPerChildTopic =
+  function parentLetterPerChildTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.leadParentLetterPerChild,
+      title: "Einen Elternbrief mit den Angaben jedes Kindes schreiben",
+      question: "Wie nenne ich in einem Elternbrief jedes Kind mit Namen?",
+      summary:
+        "moto setzt für jedes Kind Name, Klasse, Gruppe, Betreuungstage und Abholzeit in den Brief. Alle Briefe gibt es auch als PDF zum Drucken.",
+      group: "elternarbeit",
+      audience: "lead",
+      icon: "NotePencil",
+      steps: [
+        "Klappen Sie in der Seitenleiste `Eltern` auf.",
+        "Öffnen Sie `Mitteilungen`.",
+        "Wählen Sie oben `Elternbriefe`.",
+        "Wählen Sie oben rechts `+ Elternbrief`.",
+        "Schreiben Sie bei `Text` den Brief.",
+        "Setzen Sie die Schreibmarke an die Stelle für eine Angabe. Wählen Sie unter `Für jedes Kind einsetzen` zum Beispiel `Vorname`.",
+        "Prüfen Sie den Brief unter `So liest die Familie den Brief`. Wählen Sie dort ein anderes Kind, wenn Sie möchten.",
+        "Wählen Sie unten `Weiter`, dann die Empfänger, dann `Veröffentlichen`.",
+      ],
+      instructionGroups: [
+        {
+          title: "Alle Briefe drucken",
+          description: "Für Familien, die den Brief auf Papier brauchen.",
+          steps: [
+            "Öffnen Sie den veröffentlichten Elternbrief.",
+            "Wählen Sie oben im Kasten `Elternbrief` den Knopf `Briefe drucken`.",
+            "Drucken Sie das PDF. Jedes Kind hat einen eigenen Brief mit Name und Logo der Schule.",
+          ],
+        },
+      ],
+      result:
+        "Jede Familie bekommt einen Brief je Kind, mit den Angaben ihres eigenen Kindes. Geschwister bekommen je Kind einen Brief.",
+      notes: [
+        "moto schreibt den Brief beim Veröffentlichen fest. Ändern sich danach Gruppe oder Abholzeit, bleibt der Brief, wie er war.",
+        "Fehlt bei einem Kind eine Angabe, bleibt die Stelle leer. Steht in einer Zeile nur diese Angabe, zum Beispiel `Abholzeit:`, lässt moto die ganze Zeile weg.",
+        "Gesundheitsangaben gibt es als Platzhalter nicht.",
+        "Briefe ohne Platzhalter druckt moto genauso, einen je Kind.",
+      ],
+      troubleshootingDetails: [
+        "moto meldet `Diesen Platzhalter kennt moto nicht`? Nehmen Sie den Platzhalter heraus. Setzen Sie ihn mit den Knöpfen unter `Für jedes Kind einsetzen` neu ein.",
+        "Im Betreff geht kein Platzhalter. Schreiben Sie ihn in den Text.",
+      ],
+      related: [
+        HELP_TOPICS.leadParentLetter,
+        HELP_TOPICS.leadParentAnnouncement,
+      ],
+    };
+  } satisfies typeof authored_parentLetterPerChildTopic;
+
+/**
  * Elternbrief: Mitteilung, die zusaetzlich per E-Mail geht und von den Eltern
  * bestaetigt wird (page.tsx:171).
  */
@@ -6856,6 +6913,7 @@ export const parentLetterTopic = function parentLetterTopic(): HelpTopic {
       "Reicht eine Nachricht ohne E-Mail und ohne Bestätigung? Nehmen Sie stattdessen eine Mitteilung. Dort sind beides Schalter.",
     ],
     related: [
+      HELP_TOPICS.leadParentLetterPerChild,
       HELP_TOPICS.leadParentAnnouncement,
       HELP_TOPICS.leadParentSurvey,
       HELP_TOPICS.leadInviteGuardians,
@@ -7191,6 +7249,7 @@ export const parentNewsTopic = function parentNewsTopic(): HelpTopic {
     ],
     result: "Erledigte Einträge wandern von `Offen` zu `Erledigt`.",
     notes: [
+      "Haben Sie mehrere Kinder an der Schule? Manche Elternbriefe gibt es für jedes Kind einzeln. Oben im Brief wählen Sie dann den Namen des Kindes.",
       "Die Bestätigung heißt `Lesebestätigung`. Damit bestätigen Sie nur, dass Sie den Brief gelesen haben.",
       "Bei mehreren Kindern zeigt moto, wie viele Antworten noch fehlen.",
       "Angehängte Dateien öffnen Sie, indem Sie auf den Namen tippen.",
@@ -10190,14 +10249,17 @@ export const teacherParentLettersTopic =
         "Öffnen Sie `Elternbriefe`.",
         "Wählen Sie `Neuer Elternbrief`.",
         "Wählen Sie die Klasse.",
-        "Geben Sie `Betreff` und `Text` ein.",
+        "Geben Sie den `Betreff` ein.",
         "Wählen Sie unter `Was sollen die Eltern tun?`: `Nur zur Information`, `Mit Lesebestätigung` oder `Einverständnis mit Unterschrift`.",
+        "Schreiben Sie den `Text`.",
         "Wählen Sie `Senden`.",
       ],
       result:
         "Die Eltern der Klasse sehen den Brief sofort. Als Absender sehen sie Ihren Namen, die Klasse und die Schule.",
       notes: [
         "Wählen Sie den Brief in der Liste. Dort sehen Sie, wer gelesen, bestätigt oder zugestimmt hat.",
+        "Bei `Mit Lesebestätigung` setzen Sie unter `Für jedes Kind einsetzen` Angaben wie den Vornamen in den Text. Jede Familie liest dann den Brief mit den Angaben ihres Kindes. Unter `So liest die Familie den Brief` sehen Sie ihn vorher.",
+        "Für Familien ohne moto wählen Sie im gesendeten Brief `Briefe drucken`. Das PDF hat einen Brief je Kind.",
         "Ein gesendeter Brief lässt sich nicht mehr ändern. Sie können ihn über `Zurückziehen` zurücknehmen.",
         "Die OGS sieht Ihre Briefe in ihrer Übersicht. Ändern kann sie nur Sie.",
         "Unter `Empfänger` steht bei jeder Mail, was aus ihr geworden ist. Steht dort `Adresse prüfen`, sagen Sie der OGS Bescheid. Sie korrigiert die Adresse.",

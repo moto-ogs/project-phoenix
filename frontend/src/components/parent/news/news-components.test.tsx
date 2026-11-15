@@ -1091,3 +1091,76 @@ describe("NewsDetailModal errors", () => {
     );
   });
 });
+
+describe("Elternbrief per child (#4813)", () => {
+  it("shows each own child's letter and switches between siblings", () => {
+    render(
+      <NewsDetailModal
+        item={announcement({
+          delivery_mode: "letter",
+          requires_acknowledgement: true,
+          body: "Liebe Eltern von Lina, Lina ist in der Gruppe Füchse.",
+          letters: [
+            {
+              student_id: "10",
+              first_name: "Lina",
+              last_name: "Muster",
+              body: "Liebe Eltern von Lina, Lina ist in der Gruppe Füchse.",
+            },
+            {
+              student_id: "11",
+              first_name: "Ben",
+              last_name: "Muster",
+              body: "Liebe Eltern von Ben, Ben ist in der Gruppe Igel.",
+            },
+          ],
+        })}
+        onClose={vi.fn()}
+        onUpdated={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("Liebe Eltern von Lina, Lina ist in der Gruppe Füchse."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Jedes Ihrer Kinder hat einen eigenen Brief."),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Ben" }));
+
+    expect(
+      screen.getByText("Liebe Eltern von Ben, Ben ist in der Gruppe Igel."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Liebe Eltern von Lina, Lina ist in der Gruppe Füchse.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows a single child's letter without a switch", () => {
+    render(
+      <NewsDetailModal
+        item={announcement({
+          delivery_mode: "letter",
+          body: "Liebe Eltern von Emil.",
+          letters: [
+            {
+              student_id: "12",
+              first_name: "Emil",
+              last_name: "Weber",
+              body: "Liebe Eltern von Emil.",
+            },
+          ],
+        })}
+        onClose={vi.fn()}
+        onUpdated={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Liebe Eltern von Emil.")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Jedes Ihrer Kinder hat einen eigenen Brief."),
+    ).not.toBeInTheDocument();
+  });
+});

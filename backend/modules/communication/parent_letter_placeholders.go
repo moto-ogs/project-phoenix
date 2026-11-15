@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
 )
 
 // Serienbriefe (#4813): an Elternbrief of the school may name each child
@@ -29,11 +31,11 @@ const (
 )
 
 var parentLetterPlaceholders = []ParentLetterPlaceholder{
-	{Name: letterPlaceholderFirstName, Label: "Vorname des Kindes", Example: "Lina"},
-	{Name: letterPlaceholderLastName, Label: "Nachname des Kindes", Example: "Muster"},
-	{Name: letterPlaceholderClass, Label: "Klasse", Example: "3a"},
+	{Name: letterPlaceholderFirstName, Label: "Vorname", Example: "Lina"},
+	{Name: letterPlaceholderLastName, Label: "Nachname", Example: "Muster"},
+	{Name: letterPlaceholderClass, Label: "Klasse", Example: "Klasse 3a"},
 	{Name: letterPlaceholderGroup, Label: "Gruppe", Example: "Füchse"},
-	{Name: letterPlaceholderCareDays, Label: "Gebuchte Betreuungstage", Example: "Montag, Dienstag und Donnerstag"},
+	{Name: letterPlaceholderCareDays, Label: "Betreuungstage", Example: "Montag, Dienstag und Donnerstag"},
 	{Name: letterPlaceholderPickupTime, Label: "Abholzeit", Example: "15:30 Uhr"},
 }
 
@@ -62,7 +64,9 @@ func (c ParentLetterChild) value(name string) string {
 	case letterPlaceholderLastName:
 		return c.LastName
 	case letterPlaceholderClass:
-		return c.SchoolClass
+		// The school spells its classes "3a" or "Klasse 3a"; the letter
+		// always reads "Klasse 3a".
+		return collation.SchoolClassLabel(c.SchoolClass)
 	case letterPlaceholderGroup:
 		return c.Group
 	case letterPlaceholderCareDays:

@@ -9,7 +9,7 @@ import (
 
 func TestFillParentLetterWritesEachChildsOwnValues(t *testing.T) {
 	t.Parallel()
-	body := "Liebe Eltern von {{vorname}} {{nachname}},\n\n{{vorname}} geht in die Klasse {{klasse}} und in die Gruppe {{gruppe}}.\nGebuchte Tage: {{betreuungstage}}\nAbholzeit: {{abholzeit}}"
+	body := "Liebe Eltern von {{vorname}} {{nachname}},\n\n{{vorname}} geht in die {{klasse}} und in die Gruppe {{gruppe}}.\nGebuchte Tage: {{betreuungstage}}\nAbholzeit: {{abholzeit}}"
 	lina := communication.ParentLetterChild{
 		FirstName: "Lina", LastName: "Muster", SchoolClass: "3a", Group: "Füchse",
 		CareDays: "Montag, Dienstag und Donnerstag", PickupTime: "15:30 Uhr",
@@ -23,7 +23,7 @@ func TestFillParentLetterWritesEachChildsOwnValues(t *testing.T) {
 
 func TestFillParentLetterLeavesOutALineWhoseValuesAreAllEmpty(t *testing.T) {
 	t.Parallel()
-	body := "Hallo {{vorname}},\nAbholzeit: {{abholzeit}}\nGruppe {{gruppe}}, Klasse {{klasse}}\nBis bald"
+	body := "Hallo {{vorname}},\nAbholzeit: {{abholzeit}}\nGruppe {{gruppe}}, {{klasse}}\nBis bald"
 	got := communication.FillParentLetter(body, communication.ParentLetterChild{FirstName: "Ben", SchoolClass: "2b"})
 	want := "Hallo Ben,\nGruppe , Klasse 2b\nBis bald"
 	if got != want {

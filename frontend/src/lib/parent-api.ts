@@ -1152,10 +1152,23 @@ interface ParentReaders {
 // One parent-news feed entry (#1669). read/acknowledged are THIS guardian's
 // state; requires_acknowledgement tells the app whether to offer the
 // "gelesen und bestätigt" action.
+/** The letter one of the family's children got (#4813). */
+export interface ParentAnnouncementLetter {
+  readonly student_id: string;
+  readonly first_name: string;
+  readonly last_name: string;
+  readonly body: string;
+}
+
 export interface ParentAnnouncement {
   readonly id: string;
   readonly title: string;
   readonly body: string;
+  /**
+   * An Elternbrief that names each child (#4813): one letter per own child,
+   * body is the first. Absent for every other announcement.
+   */
+  readonly letters?: readonly ParentAnnouncementLetter[];
   readonly priority: "info" | "important";
   readonly link_url?: string;
   readonly requires_acknowledgement: boolean;
