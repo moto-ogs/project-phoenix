@@ -21,13 +21,8 @@ vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: null, status: "unauthenticated" }),
 }));
 
-const stableSearchParams = { get: () => null };
-vi.mock("next/navigation", () => ({
-  useSearchParams: () => stableSearchParams,
-}));
-
-vi.mock("~/lib/caterer-api", () => ({
-  loginCaterer: (...args: unknown[]) => mockLogin(...args),
+vi.mock("~/lib/portal-password-login", () => ({
+  portalPasswordLogin: (...args: unknown[]) => mockLogin(...args),
 }));
 
 vi.mock("~/lib/caterer-url", () => ({

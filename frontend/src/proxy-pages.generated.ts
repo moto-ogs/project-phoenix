@@ -71,6 +71,7 @@ export const PORTAL_PAGES = {
     "/reset-password",
     "/schliesstage",
     "/schulen",
+    "/standortvergleich",
     "/stichtagszahlen",
     "/uebersicht",
     "/vertraege",

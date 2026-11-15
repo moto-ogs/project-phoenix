@@ -1,8 +1,8 @@
 /**
- * Opens „Passwort vergessen?“ on the Träger login page: the way a reset link
- * without token points to a new link.
+ * Opens „Passwort vergessen?“ on a login page: the way a reset link without
+ * token points to a new link.
  */
-export const TRAEGER_FORGOT_PASSWORD_PARAM = "passwort-vergessen";
+export const FORGOT_PASSWORD_PARAM = "passwort-vergessen";
 
 /**
  * Asks the Träger login page for a sign-in with code (#6955): a school whose

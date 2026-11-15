@@ -14,7 +14,10 @@
   "staffLoginLink": "Go to the school login",
   "errors": {
     "rateLimited": "Too many login attempts. Please try again later.",
-    "notAGuardian": "This account belongs to school staff. Please sign in through the school login."
+    "notAGuardian": "This account belongs to school staff. Please sign in through the school login.",
+    "missingEmail": "Please enter your email address.",
+    "missingPassword": "Please enter your password.",
+    "missingCredentials": "Please enter your email address and password."
   },
   "errorObject": "signing in"
 }

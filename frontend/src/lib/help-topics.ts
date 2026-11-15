@@ -273,6 +273,7 @@ export const HELP_TOPICS = {
   traegerKeyDateCounts: "stichtagszahlen-der-schulen-ansehen",
   traegerOccupancy: "belegung-der-schulen-ansehen",
   traegerUtilization: "auslastung-ueber-die-zeit-ansehen",
+  traegerSchoolComparison: "schulen-miteinander-vergleichen",
   traegerReports: "berichte-zum-stichtag-erstellen",
   teacherSettings: "als-lehrkraft-benachrichtigungen-einstellen",
   teacherClassDay: "meinen-klassentag-ansehen",

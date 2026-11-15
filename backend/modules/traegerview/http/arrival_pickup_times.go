@@ -60,7 +60,7 @@ func (rs *Resource) readArrivalPickupTimes(w http.ResponseWriter, r *http.Reques
 		common.RenderError(w, r, common.ErrorInvalidRequest(fmt.Errorf("%w: from and to must be dates (YYYY-MM-DD)", traegerview.ErrInvalidArrivalPickupPeriod)))
 		return traegerview.ArrivalPickupTimes{}, false
 	}
-	times, err := rs.arrivalPickup.ArrivalPickupTimes(r.Context(), principal.OrganizationID(), from, to)
+	times, err := rs.reports.ArrivalPickupTimes(r.Context(), principal.OrganizationID(), from, to)
 	switch {
 	case errors.Is(err, traegerview.ErrInvalidArrivalPickupPeriod):
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))

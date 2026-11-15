@@ -14,7 +14,10 @@
   "staffLoginLink": "Okul girişine git",
   "errors": {
     "rateLimited": "Çok fazla giriş denemesi. Lütfen daha sonra tekrar deneyin.",
-    "notAGuardian": "Bu hesap bir okulun personeline ait. Lütfen okul girişinden giriş yapın."
+    "notAGuardian": "Bu hesap bir okulun personeline ait. Lütfen okul girişinden giriş yapın.",
+    "missingEmail": "Lütfen e-posta adresinizi girin.",
+    "missingPassword": "Lütfen şifrenizi girin.",
+    "missingCredentials": "Lütfen e-posta adresinizi ve şifrenizi girin."
   },
   "errorObject": "giriş"
 }

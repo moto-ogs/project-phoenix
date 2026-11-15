@@ -1,123 +1,23 @@
-// lib/auth-service.ts
-import { isAxiosError } from "axios";
 import api from "./api-transport";
 import { createLogger } from "~/lib/logger";
 
-// Logger instance for auth service
 const logger = createLogger({ component: "AuthService" });
 import {
   mapRoleResponse,
   mapPermissionResponse,
   type Role,
   type Permission,
-  type PasswordResetConfirmRequest,
   type BackendRole,
   type BackendPermission,
 } from "./auth-helpers";
-import type { AxiosError } from "axios";
-import {
-  type ApiError,
-  apiErrorFromBody,
-  apiErrorFromText,
-  transportFetch,
-  unavailableApiError,
-} from "./api-error";
-import { parseRetryAfter } from "./retry-after";
+import { apiErrorFromText } from "./api-error";
 
-// Generic API response interface
 interface ApiResponse<T> {
   success: boolean;
   message: string;
   data: T;
 }
 
-interface PasswordResetResponse {
-  message: string;
-}
-
-type ApiErrorResponseBody = Record<string, unknown>;
-
-async function buildFetchApiError(
-  response: Response,
-  fallbackMessage: string,
-): Promise<ApiError> {
-  let text = "";
-
-  try {
-    text = await response.text();
-  } catch (readError) {
-    logger.warn("failed to parse password reset error response", {
-      error: readError instanceof Error ? readError.message : String(readError),
-    });
-  }
-
-  // A real ApiError with code, field errors and request ID, so the shared
-  // error path can show the catalog text (#2517). The envelope's `detail`
-  // becomes the diagnostic message.
-  const apiError = apiErrorFromText(fallbackMessage, response.status, text);
-
-  const retryAfterSeconds = parseRetryAfter(
-    response.headers.get("Retry-After"),
-  );
-  if (retryAfterSeconds !== null) {
-    apiError.retryAfterSeconds = retryAfterSeconds;
-  }
-
-  return apiError;
-}
-
-function buildAxiosApiError(
-  error: AxiosError<ApiErrorResponseBody>,
-  fallbackMessage: string,
-): ApiError {
-  if (!error.response) {
-    return unavailableApiError(error);
-  }
-
-  let message = fallbackMessage;
-
-  const data = error.response.data;
-  if (data) {
-    if (typeof data === "string") {
-      message = data;
-    }
-  } else if (error.message) {
-    message = error.message;
-  }
-
-  const apiError = apiErrorFromBody(
-    message,
-    error.response.status,
-    typeof data === "object" ? data : undefined,
-  );
-
-  const headers = error.response.headers as Record<string, unknown> | undefined;
-  const retryAfterHeader = headers ? headers["retry-after"] : undefined;
-  let retryAfterValue: string | null = null;
-  if (Array.isArray(retryAfterHeader)) {
-    const firstString = retryAfterHeader.find(
-      (value): value is string => typeof value === "string",
-    );
-    if (firstString) {
-      retryAfterValue = firstString;
-    }
-  } else if (typeof retryAfterHeader === "string") {
-    retryAfterValue = retryAfterHeader;
-  }
-
-  const retryAfterSeconds = parseRetryAfter(retryAfterValue);
-  if (retryAfterSeconds !== null) {
-    apiError.retryAfterSeconds = retryAfterSeconds;
-  }
-
-  return apiError;
-}
-
-// ============================================================================
-// Generic Auth API Helper
-// ============================================================================
-
-// The remaining callers only read (GET) and replace (PUT).
 type HttpMethod = "GET" | "PUT";
 
 interface AuthFetchOptions<TBackend, TFrontend> {
@@ -174,7 +74,6 @@ async function executeBrowserFetch<TBackend>(
     );
   }
 
-  // Handle 204 No Content and empty responses (void endpoints)
   if (response.status === 204) {
     return null;
   }
@@ -238,7 +137,6 @@ async function authFetch<TBackend, TFrontend = void>(
         errorPrefix,
       );
 
-      // Handle void responses (204/empty body)
       if (responseData === null) {
         return undefined as TFrontend;
       }
@@ -349,66 +247,6 @@ function extractNestedRoles(response: unknown): BackendRole[] {
 }
 
 export const authService = {
-  resetPassword: async (
-    data: PasswordResetConfirmRequest,
-  ): Promise<PasswordResetResponse> => {
-    const useProxyApi = globalThis.window !== undefined;
-    const url = "/api/auth/password-reset/confirm";
-    const fallbackMessage = "Fehler beim Zurücksetzen des Passworts";
-    const payload = {
-      token: data.token,
-      new_password: data.newPassword,
-      confirm_password: data.confirmPassword,
-    };
-
-    try {
-      if (useProxyApi) {
-        const response = await transportFetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-          throw await buildFetchApiError(response, fallbackMessage);
-        }
-
-        try {
-          return (await response.json()) as PasswordResetResponse;
-        } catch {
-          return { message: "Password reset successfully" };
-        }
-      }
-
-      const response = await api.post<PasswordResetResponse>(url, payload);
-      if (response.data && typeof response.data.message === "string") {
-        return response.data;
-      }
-
-      return { message: "Password reset successfully" };
-    } catch (error) {
-      const apiError = error as ApiError | undefined;
-
-      if (apiError?.status !== undefined) {
-        throw apiError;
-      }
-
-      if (globalThis.window === undefined && isAxiosError(error)) {
-        throw buildAxiosApiError(
-          error as AxiosError<ApiErrorResponseBody>,
-          fallbackMessage,
-        );
-      }
-
-      logger.error("password reset confirm error", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      const fallbackError = new Error(fallbackMessage) as ApiError;
-      throw fallbackError;
-    }
-  },
-
-  // Admin endpoints - Role management
   getRoles: async (filters?: { name?: string }): Promise<Role[]> => {
     const params = new URLSearchParams();
     if (filters?.name) params.append("name", filters.name);
@@ -439,7 +277,6 @@ export const authService = {
       errorPrefix: "Replace role permissions",
     }),
 
-  // Admin endpoints - Permission management
   getPermissions: async (filters?: {
     resource?: string;
     action?: string;
@@ -458,7 +295,6 @@ export const authService = {
     );
   },
 
-  // Admin endpoints - Account role assignment
   /**
    * Macht `roleId` zur einzigen Systemrolle des Kontos an dieser Schule.
    * Andere Systemrollen entfernt das Backend; Elternzugang (guardian) bleibt.

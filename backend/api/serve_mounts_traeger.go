@@ -113,7 +113,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 		return nil, errors.New("traeger portal: identity, organizations, persons, staff, the access trail, the access log, the settings, the host schools' calendar, the holiday mail, its states, the Träger names and the statistics are required")
 	}
 	reportTemplates, reportTemplateReads := organizationTenancyCompose.NewTraegerReportTemplates()
-	overview, arrivalPickup, reports, err := traegerViewCompose.New(traegerview.Ports{
+	overview, reports, keyDateReports, err := traegerViewCompose.New(traegerview.Ports{
 		SchoolIDs: traegerSchoolIDs{organizations: organizations}, Trail: traegerAccessTrail{trail: audit.Trail},
 		Recorder: traegerAccessRecorder{log: audit.Log}, Holiday: traegerHolidayTrail{trail: enrollmentCompose.NewHolidayAccessTrail()}, Persons: traegerPersonDirectory{persons: persons}, Staff: traegerStaffDirectory{staff: staff},
 		Bureau:  traegerBureauAddresses{roles: identity},
@@ -139,7 +139,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 		identityaccess.TraegerRightSettingsManage, identityaccess.TraegerRightStaffManage, identityaccess.TraegerRightBillingManage)
 	masterData := organizationTenancyTraeger.NewMasterDataResource(organizationTenancyCompose.NewTraegerMasterData(), organizationTenancyCompose.NewTraegerDocumentTemplates(),
 		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage))
-	overviewRoutes := traegerViewHTTP.NewResource(overview, arrivalPickup)
+	overviewRoutes := traegerViewHTTP.NewResource(overview, reports)
 	// The names of the Träger-Büro (#4693); a route-sized test identity
 	// without them answers 500 on those routes, the serving root refuses it.
 	profiles, _ := identity.(identityaccess.TraegerMemberProfiles)
@@ -149,7 +149,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 	return traegerportal.NewResource(TraegerPortalAuth(identity), TraegerPortalMFA(identity),
 		portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeTraeger), overviewRoutes, holidayPeriods,
 		traegerViewHTTP.NewAccessLogResource(overview), traegerSettings, masterData, identity, profiles, overviewRoutes, identity, stepUp,
-		traegerViewHTTP.NewReportResource(reports), organizationTenancyTraeger.NewReportTemplateResource(reportTemplates,
+		traegerViewHTTP.NewReportResource(keyDateReports), organizationTenancyTraeger.NewReportTemplateResource(reportTemplates,
 			common.RequiresPermission(identityaccess.TraegerRightReportsRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage))), nil
 }
 

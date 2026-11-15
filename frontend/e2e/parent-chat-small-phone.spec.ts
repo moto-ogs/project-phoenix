@@ -37,7 +37,7 @@ async function openMessages(page: Page) {
   await expect(email.or(composer).first()).toBeVisible({ timeout: 60_000 });
   if (await email.isVisible()) {
     await email.fill(parent!.email);
-    await page.locator("#parent-password").fill(parent!.password);
+    await page.locator("#password").fill(parent!.password);
     await page.getByRole("button", { name: "Anmelden", exact: true }).click();
     await page.waitForURL((url) => !url.pathname.includes("/login"));
     await page.goto(`${base}/messages`, { waitUntil: "domcontentloaded" });
