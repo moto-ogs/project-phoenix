@@ -9,6 +9,7 @@ const (
 	settingActiveWindowStart                   = "notifications.active_window_start"
 	settingActiveWindowEnd                     = "notifications.active_window_end"
 	settingAbsenceReportedEnabled              = "notifications.absence_reported_enabled"
+	settingInstanceCancelledEnabled            = "notifications.instance_cancelled_enabled"
 	settingOnDutyOnly                          = "notifications.on_duty_only"
 	settingRemindersPickupUpcomingEnabled      = "reminders.pickup_upcoming_enabled"
 	settingRemindersPickupOverdueEnabled       = "reminders.pickup_overdue_enabled"

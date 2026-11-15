@@ -1,5 +1,12 @@
 import type { SSEEvent } from "~/lib/sse-types";
 
+/**
+ * Fenster-Ereignis, das `useGlobalSSE` bei `notification_feed_changed` und
+ * nach einem Wiederverbinden schickt: Zähler und Liste der Glocke laden neu
+ * (#7148).
+ */
+export const NOTIFICATION_FEED_REFRESH_EVENT = "notification-feed-refresh";
+
 export interface PhoenixNotificationDetail {
   title: string | null;
   body: string | null;

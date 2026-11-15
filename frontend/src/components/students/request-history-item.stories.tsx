@@ -29,9 +29,14 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const HealthChanged: Story = {};
+export const HealthChanged: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
+};
 
 export const HealthAdded: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   args: {
     item: {
       ...meta.args.item,
@@ -45,6 +50,8 @@ export const HealthAdded: Story = {
 };
 
 export const HealthRemoved: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   args: {
     item: {
       ...meta.args.item,

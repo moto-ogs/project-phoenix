@@ -805,6 +805,41 @@ describe("filterAnalyticsEvent", () => {
     });
   });
 
+  // Glocke im Staff-Portal (#7148): Typ des Eintrags ja, Inhalt und IDs nie.
+  it("keeps the bell events with an allowlisted notification type only", () => {
+    for (const event of [
+      "notification_bell_opened",
+      "notification_feed_entry_clicked",
+      "notification_feed_all_read",
+    ]) {
+      const result = filterAnalyticsEvent(
+        ogs,
+        capture(event, {
+          school_id: "42",
+          notification_type: "instance_cancelled",
+        }),
+      );
+      expect(result?.event).toBe(event);
+      expect(result?.properties.notification_type).toBe("instance_cancelled");
+    }
+
+    const leaked = filterAnalyticsEvent(
+      ogs,
+      capture("notification_feed_entry_clicked", {
+        school_id: "42",
+        notification_type: "Termin Schach am 20.11. abgesagt",
+        entry_id: "4711",
+        title: "Termin abgesagt",
+        deep_link: "/mein-dienstplan?d=2026-11-20",
+      }),
+    );
+    expect(leaked?.event).toBe("notification_feed_entry_clicked");
+    expect(leaked?.properties).not.toHaveProperty("notification_type");
+    expect(leaked?.properties).not.toHaveProperty("entry_id");
+    expect(leaked?.properties).not.toHaveProperty("title");
+    expect(leaked?.properties).not.toHaveProperty("deep_link");
+  });
+
   it("drops a free-text role or a non-numeric school", () => {
     const result = filterAnalyticsEvent(
       ogs,

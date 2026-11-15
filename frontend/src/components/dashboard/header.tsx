@@ -3,7 +3,7 @@
 "use client";
 
 import { AT_LEAST_LG } from "~/lib/hooks/use-media-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -37,7 +37,6 @@ import { isDemoBuild } from "~/lib/demo-access";
 import { BrandLink, BreadcrumbDivider } from "./header/brand-link";
 import { RefreshButton } from "./header/refresh-button";
 import { SchoolSearchSlot } from "~/components/search/school-search-slot";
-import { RemindersBell } from "./header/reminders-bell";
 import { StaffNewsButton } from "./header/staff-news-button";
 import { SessionWarning } from "./header/session-warning";
 import {
@@ -207,7 +206,16 @@ function schoolRoleLabel(roles: readonly string[]): string {
     : "Lehrkraft";
 }
 
-export function Header() {
+export interface HeaderProps {
+  /**
+   * Die Glocke der Benachrichtigungen (#7148). Nur die Staff-Shell gibt sie
+   * mit: Der Kopf aller Portale importiert sie so nicht, und ihr Vollbild-
+   * Blatt landet nicht in den Bündeln von moto schule, Caterer und Träger.
+   */
+  readonly notificationBell?: ReactNode;
+}
+
+export function Header({ notificationBell }: HeaderProps = {}) {
   const { breadcrumb } = useBreadcrumb();
   const {
     studentName,
@@ -556,7 +564,7 @@ export function Header() {
             </div>
 
             {mode === "teacher" ? <StaffNewsButton /> : null}
-            {mode === "teacher" ? <RemindersBell /> : null}
+            {mode === "teacher" ? notificationBell : null}
             {/* User menu */}
             <AnchoredPopover
               open={isProfileMenuOpen}

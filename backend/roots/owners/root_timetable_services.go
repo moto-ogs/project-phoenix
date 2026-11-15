@@ -66,7 +66,7 @@ func BuildTimetableLifecycle(
 	people PeopleRows, careRows TimetableCareRows, presence PresenceOwner, supervisions studentpresence.SupervisionRecords,
 	shifts timetablePorts.ConflictShifts, schedules CarePlanSchedules, carePlan careplan.Capability, active studentpresence.Presence,
 	materialization timetable.MaterializationCapability, notices communication.CareCancellationPublisher, settings settingsCompose.BatchSettingsService,
-	sickReports timetablePorts.SickReportReader,
+	sickReports timetablePorts.SickReportReader, staffNotices timetablePorts.StaffCancellationNotices,
 ) (TimetableLifecycle, error) {
 	repos := owner.Repositories
 	rows := days.Rows
@@ -91,7 +91,7 @@ func BuildTimetableLifecycle(
 		StaffRepo: NewTimetableStaff(people.Staff), ActiveGroupRepo: presence.SessionRecords, SupervisorRepo: supervisions,
 		Presence: presence.Presence, ActiveService: active, CareDayLocks: carePlan,
 		Materialization: materialization, SickReports: sickReports, RecurrenceLock: owner.RecurrenceLock,
-		StartConflicts: conflicts, SubstituteConflicts: substituteConflicts,
+		StartConflicts: conflicts, SubstituteConflicts: substituteConflicts, StaffNotices: staffNotices,
 		Logger: env.Logger.With("service", "instance-lifecycle"), Now: env.Now,
 		// Development and test seed profiles create completed instances at
 		// the current clock time; dedicated tests cover the policy.

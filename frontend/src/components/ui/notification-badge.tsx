@@ -26,12 +26,19 @@ export function NotificationBadge({
   tone,
   ariaLabel,
   size = "md",
+  max = 99,
   className,
 }: Readonly<{
   count: number;
   tone: NotificationBadgeTone;
   ariaLabel: string;
   size?: NotificationBadgeSize;
+  /**
+   * Größte ausgeschriebene Zahl; darüber steht „max+“. Die Glocke im Kopf
+   * zeigt ab 10 „9+“ (#7148), damit das kleine Abzeichen auf dem Symbol
+   * nicht breiter als das Symbol wird.
+   */
+  max?: number;
   className?: string;
 }>) {
   if (count <= 0) return null;
@@ -41,7 +48,7 @@ export function NotificationBadge({
       className={`${TONE_CLASSES[tone]} ${SIZE_CLASSES[size]} inline-flex items-center justify-center rounded-full font-bold ${className ?? ""}`}
       aria-label={ariaLabel}
     >
-      {count > 99 ? "99+" : count}
+      {count > max ? `${max}+` : count}
     </span>
   );
 }

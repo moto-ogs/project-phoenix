@@ -97,7 +97,12 @@ type SSEEventType =
   // Unlike every other event this is NOT a cache-invalidation trigger: the
   // payload carries display-safe title/body/deep_link that clients render
   // directly (toast). See backend/realtime/events.go EventNotification.
-  | "notification";
+  | "notification"
+  // Benachrichtigungs-Feed (#7148): ein Eintrag kam dazu, wurde gebündelt
+  // aktualisiert oder sein Gelesen-Status änderte sich, auch auf einem
+  // anderen Gerät desselben Kontos. Ohne Inhalt; Glocke und Zähler laden neu.
+  // See backend/realtime/events.go EventNotificationFeedChanged.
+  | "notification_feed_changed";
 
 // SSE Connection Status
 export type ConnectionStatus = "connected" | "reconnecting" | "failed" | "idle";

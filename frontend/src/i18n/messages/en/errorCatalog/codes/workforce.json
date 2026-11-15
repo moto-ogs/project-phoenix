@@ -22,6 +22,7 @@
   "later_month_closed": "{object} could not be changed. Please check its current status.",
   "manager_controlled_absence": "You cannot access {object}. Please contact the school.",
   "month_closed": "{object} could not be changed. Please check its current status.",
+  "month_closed_by_traeger": "{object} could not be changed. Please check its current status.",
   "month_not_closable": "{object} could not be saved. Please check your entries.",
   "month_not_closed": "{object} could not be changed. Please check its current status.",
   "no_active_break": "{object} could not be changed. Please check its current status.",
@@ -114,5 +115,8 @@
   "shift_planning_off": "{object} could not be changed. Please check its current status.",
   "shift_working_time_warning": "{object} could not be changed. Please check its current status.",
   "traeger_planning_site_invalid": "{object} could not be saved. Please check your entries.",
-  "traeger_planning_shift_not_found": "{object} could not be saved. Please check your entries."
+  "traeger_planning_shift_not_found": "{object} could not be saved. Please check your entries.",
+  "traeger_month_closed_by_school": "{object} could not be changed. Please check its current status.",
+  "traeger_month_later_closed": "{object} could not be changed. Please check its current status.",
+  "traeger_month_not_kept": "{object} could not be changed. Please check its current status."
 }

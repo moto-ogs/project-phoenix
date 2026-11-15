@@ -610,7 +610,7 @@ jobs:
       matrix:
         scenario: [profiles, isolation, queue]
     # Each scenario owns its database and operator MFA mailbox. The isolation
-    # scenario still seeds both schools sequentially into the SAME database;
+    # scenario seeds both schools side by side into the SAME database;
     # profiles retains the complete coverage ratchet after the standing demo;
     # queue separately verifies all three prospect schools and parent access.
     # Database reads repeatedly stalled on the cached runner, including while
@@ -1045,33 +1045,71 @@ jobs:
           "${RUNNER_TEMP}/devtools" simulate status --profile anmeldung-buchungen
 
       # The public demo (#3456) seeds one such school per visitor into a
-      # database that already holds others. The duration is what a visitor
-      # waits for, so it is printed per school. The second school sorts before
-      # the first by name, as a new order sorts before older demo schools on
-      # the demo server: the Träger pages then list its contracts first, and
-      # its seed must not use rules that only reach the earlier school.
-      - name: Seed two demo schools into the same database and simulate their day
+      # database that already holds others, up to three at once. The duration
+      # is what a visitor waits for, so it is printed per school. The second
+      # school sorts before the first by name, as a new order sorts before
+      # older demo schools on the demo server: the Träger pages then list its
+      # contracts first, and its seed must not use rules that only reach the
+      # earlier school.
+      #
+      # Both schools seed side by side: one after the other took 30 s longer
+      # on four cores (#6962). The Träger steps act on every school of the
+      # Träger, so the two processes run them one at a time (--traeger-lock).
+      # The second seed starts once the first has created the Träger and its
+      # school: both sign in as the same operator, and a new MFA challenge
+      # voids the open one; and demo-smoke-zwei stays the older school. Each
+      # seed's output is printed in a group of its own when it ends. The
+      # simulations follow one after the other: each moves the shared clock.
+      - name: Seed two demo schools side by side into the same database and simulate their day
         if: ${{ matrix.scenario == 'isolation' }}
         working-directory: backend
         run: |
-          for slug in demo-smoke-zwei demo-smoke-eins; do
-            started=$(date +%s)
-            "${RUNNER_TEMP}/devtools" seed \
+          started=$(date +%s)
+          seed_school() {
+            "${RUNNER_TEMP}/bg-start" "seed-$1" "${RUNNER_TEMP}/devtools" seed \
               --email "${OPERATOR_EMAIL}" \
               --password "${OPERATOR_PASSWORD}" \
               --pin "${OGS_DEVICE_PIN}" \
               --url http://localhost:8080 \
               --profile vollbetrieb \
-              --tenant-slug "${slug}" \
-              --school-name "OGS ${slug}" \
+              --tenant-slug "$1" \
+              --school-name "OGS $1" \
               --staff-password 'SeedSmoke1234%' \
-              --state "${RUNNER_TEMP}/${slug}.seed-state.json"
-            seeded=$(date +%s)
+              --state "${RUNNER_TEMP}/$1.seed-state.json" \
+              --traeger-lock "${RUNNER_TEMP}/traeger.lock"
+          }
+          seed_school demo-smoke-zwei
+          bootstrapped='^School admin authenticated$'
+          for _ in $(seq 1 1500); do
+            grep -q "${bootstrapped}" "${RUNNER_TEMP}/seed-demo-smoke-zwei.log" 2>/dev/null && break
+            test -s "${RUNNER_TEMP}/seed-demo-smoke-zwei.status" && break
+            sleep 0.2
+          done
+          if ! grep -q "${bootstrapped}" "${RUNNER_TEMP}/seed-demo-smoke-zwei.log"; then
+            echo "demo-smoke-zwei has not created its school; demo-smoke-eins does not start"
+            "${RUNNER_TEMP}/bg-wait" seed-demo-smoke-zwei 900 || true
+            exit 1
+          fi
+          echo "demo-smoke-eins starts $(( $(date +%s) - started ))s after demo-smoke-zwei"
+          seed_school demo-smoke-eins
+          failed=0
+          for slug in demo-smoke-zwei demo-smoke-eins; do
+            echo "::group::Seed of ${slug}"
+            "${RUNNER_TEMP}/bg-wait" "seed-${slug}" 900 || failed=1
+            echo "::endgroup::"
+          done
+          for slug in demo-smoke-zwei demo-smoke-eins; do
+            if test -s "${RUNNER_TEMP}/seed-${slug}.status"; then
+              echo "demo school ${slug}: seeded $(( $(stat -c %Y "${RUNNER_TEMP}/seed-${slug}.status") - started ))s after the start"
+            fi
+          done
+          test "${failed}" = 0
+          for slug in demo-smoke-zwei demo-smoke-eins; do
+            simulated=$(date +%s)
             "${RUNNER_TEMP}/devtools" simulate full-day --profile vollbetrieb \
               --state "${RUNNER_TEMP}/${slug}.seed-state.json" \
               --clock-command "${RUNNER_TEMP}/set-clock"
-            finished=$(date +%s)
-            echo "demo school ${slug}: seed $((seeded - started))s, full day $((finished - seeded))s"
+            echo "demo school ${slug}: full day $(( $(date +%s) - simulated ))s"
           done
           # Both schools share the demo Träger, as every demo order on the
           # demo server does: each bills its own contracts in a run of its

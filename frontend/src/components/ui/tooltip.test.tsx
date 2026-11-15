@@ -45,7 +45,7 @@ describe("Tooltip", () => {
     link.focus();
     fireEvent.keyDown(link, { key: "Escape" });
 
-    expect(bubble).toHaveStyle({ visibility: "hidden", opacity: 0 });
+    expect(bubble).toHaveStyle({ visibility: "hidden", opacity: "0" });
     expect(link).not.toHaveFocus();
   });
 });

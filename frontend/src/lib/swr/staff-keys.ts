@@ -38,6 +38,15 @@ export const absenceMailKeys = {
     `own-absence-request-mails-${waitingIds.join(",")}`,
 } as const;
 
+/**
+ * Die Personen, deren Monat der Träger abschließt (#4711), je Monat. Der
+ * Abschluss der Schule ändert sie nicht; ein neuer Monat lädt neu.
+ */
+export const traegerMonthStaffKeys = {
+  month: (year: number, month: number) =>
+    `staff-month-close-traeger-staff-${year}-${month}`,
+} as const;
+
 /** Nachweise der Mitarbeitenden (#4808). */
 export const staffQualificationKeys = {
   types: () => "database-qualification-types",

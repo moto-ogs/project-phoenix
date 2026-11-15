@@ -227,6 +227,28 @@ describe("useGlobalSSE — authentication gate", () => {
 });
 
 // ---------------------------------------------------------------------------
+// notification_feed_changed → the bell refetches count and list (#7148)
+// ---------------------------------------------------------------------------
+
+describe("useGlobalSSE — notification_feed_changed dispatch", () => {
+  it("dispatches notification-feed-refresh and no messaging refresh", () => {
+    renderHook(() => useGlobalSSE());
+
+    const feed = vi.fn();
+    const messages = vi.fn();
+    window.addEventListener("notification-feed-refresh", feed);
+    window.addEventListener("messages-unread-refresh", messages);
+
+    fireSSE(makeEvent("notification_feed_changed", {}));
+
+    expect(feed).toHaveBeenCalledTimes(1);
+    expect(messages).not.toHaveBeenCalled();
+    window.removeEventListener("notification-feed-refresh", feed);
+    window.removeEventListener("messages-unread-refresh", messages);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // parent_message / parent_message_read events → window event fan-out
 // ---------------------------------------------------------------------------
 

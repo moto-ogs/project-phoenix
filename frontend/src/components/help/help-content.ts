@@ -279,6 +279,7 @@ const TRAEGER_TOPICS: readonly HelpTopic[] = [
   articles.traegerAbsenceTypesTopic(),
   articles.traegerStaffContractsTopic(),
   articles.traegerStaffPlanningTopic(),
+  articles.traegerStaffTimeAccountTopic(),
   articles.traegerSharedDocumentsTopic(),
   articles.traegerCareTimeOverrunsTopic(),
   articles.traegerArrivalPickupTimesTopic(),
@@ -349,6 +350,7 @@ export function getHelpTopics(
     ...TRAEGER_TOPICS,
     articles.errorMessagesTopic(),
     articles.analyticsConsentTopic(),
+    articles.staffNotificationsTopic(),
   ];
 
   const hidden = hiddenHelpTopicIds(presenceMode, groupMode, nfcEnabled);

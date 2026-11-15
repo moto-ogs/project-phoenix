@@ -13,6 +13,8 @@ import (
 func TestRetireDirectPermissionsMigrationRoundTrip(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
+	// The notification feed (#7148) extends the erasure at the head; it goes first.
+	require.NoError(t, notificationFeedDown(t.Context(), db))
 	// The message attachments (1.15.936, #6685) extend the erasure functions
 	// this test restores; they go first.
 	// The pickup change notices (1.15.960, #6855) extend the erasure of 1.15.956; they go first.

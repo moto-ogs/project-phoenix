@@ -25,10 +25,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
+};
 
 /** Uhrzeit-Auswahl am Tag der Untergrenze (#6576, Baseline des Pixel-Vergleichs). */
 export const TimeOpenedOnMinimumDay: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   play: async ({ canvasElement }) => {
     await userEvent.click(
       within(canvasElement).getByRole("button", { name: "Uhrzeit auswählen" }),

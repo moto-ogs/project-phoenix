@@ -161,7 +161,7 @@ func mountSchoolPortalRoutes(
 		Logger: logger.With("service", "staffnotice"),
 	}), func(ctx context.Context) int64 { return timeTrackingIdentity(ctx).AccountID })
 	// Notification abstraction (#1624).
-	notificationRoutes := NewNotificationHTTP(notifications.Notifier, devices.PushSubscriptions, notifications.Preferences)
+	notificationRoutes := NewNotificationHTTP(notifications.Notifier, devices.PushSubscriptions, notifications.Preferences, notifications.Feed)
 	// The class-day surface reads the class-day projection (#2701): the day
 	// report over Enrollment's day roster and the arrival-exception write
 	// seam (#2970) behind its one public capability.

@@ -53,7 +53,7 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 		r.With(common.RequiresPermission(identityaccess.TraegerRightContractsManage)).Get("/{id}/utilization/children", rs.utilizationChildren)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/arrival-pickup-times", rs.arrivalPickupTimes)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/arrival-pickup-times/export", rs.arrivalPickupTimesExport)
-		// The comparison of the schools is a report too (#4715, ADR 0244).
+		// The comparison of the schools is a report too (#4715, ADR 0245).
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/comparison", rs.comparison)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/comparison/export", rs.comparisonExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/{id}", rs.getSchool)

@@ -280,6 +280,10 @@
     {
       "name": "platform.realtime_notifications",
       "write_owner": "delivery-platform"
+    },
+    {
+      "name": "platform.notification_feed_entries",
+      "write_owner": "delivery-platform"
     }
   ],
   "rules": [

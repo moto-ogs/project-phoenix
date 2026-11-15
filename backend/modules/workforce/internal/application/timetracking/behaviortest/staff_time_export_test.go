@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -223,6 +224,43 @@ func TestMonthExportRows_YearSpansMonths(t *testing.T) {
 	assert.Equal(t, 1, rows[0].Month)
 	assert.Equal(t, int(f.today.Month()), rows[int(f.today.Month())-1].Month)
 	assert.Equal(t, rows[0].StaffID, rows[int(f.today.Month())-1].StaffID)
+}
+
+// traegerContracts keeps staff for the Träger in the months it names, as
+// a contract of the Träger with a Soll at the school does (#4711).
+type traegerContracts map[int][]int64
+
+func (c traegerContracts) TraegerKeptStaffByMonth(_ context.Context, staffIDs []int64, first, last calendar.Date) (map[calendar.Date][]int64, error) {
+	kept := map[calendar.Date][]int64{}
+	for day := calendar.NewDate(first.Year(), first.Month(), 1); !day.After(last); day = calendar.NewDate(day.Year(), day.Month()+1, 1) {
+		for _, id := range c[int(day.Month())] {
+			if slices.Contains(staffIDs, id) {
+				kept[day] = append(kept[day], id)
+			}
+		}
+	}
+	return kept, nil
+}
+
+// TestMonthExportRows_LeaveOutTheTraegersStaff pins decision E6 of #4711:
+// the Träger closes and pays a person with its contract, so the school's
+// payroll file carries no row for her month, and still the other months.
+func TestMonthExportRows_LeaveOutTheTraegersStaff(t *testing.T) {
+	t.Parallel()
+
+	f := newOverviewFixture(t, 2)
+	paid := f.staff[0]
+	svc := f.newOverviewService(wtmIntSettings{accountStart: calendar.NewDate(f.today.Year(), f.today.Month(), 1).String()},
+		timetracking.WithOverviewTraeger(traegerContracts{int(f.today.Month()): {paid}}))
+
+	rows, err := testpkg.TenantQuery2(t, f.ctx, f.db, svc.GetMonthExportRows, f.today.Year(), int(f.today.Month()))
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	assert.Equal(t, f.staff[1], rows[0].StaffID)
+
+	rows, err = testpkg.TenantQuery2(t, f.ctx, f.db, svc.GetMonthExportRows, f.today.Year(), 0)
+	require.NoError(t, err)
+	assert.Len(t, rows, 2*int(f.today.Month())-1, "only the month the contract covers is left out")
 }
 
 func TestMonthExportRows_RejectsFutureMonth(t *testing.T) {

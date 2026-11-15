@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import type { Activity } from "~/lib/activity-api";
+import { ProfileProvider } from "~/lib/profile-context";
+import { TeacherShellProvider } from "~/lib/shell-auth-context";
 
 import { ActivityManagementModal } from "./activity-management-modal";
 
@@ -30,6 +32,17 @@ const meta = {
   parameters: {
     layout: "fullscreen",
   },
+  // Die Warteliste prüft Änderungsrechte über useShellAuth (#7108: ohne
+  // Shell-Provider brach die Story beim Rendern ab).
+  decorators: [
+    (Story) => (
+      <ProfileProvider>
+        <TeacherShellProvider>
+          <Story />
+        </TeacherShellProvider>
+      </ProfileProvider>
+    ),
+  ],
 } satisfies Meta<typeof ActivityManagementModal>;
 
 export default meta;

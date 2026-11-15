@@ -2248,6 +2248,28 @@ class StaffMonthCloseService {
     return (json.data ?? []).map(mapMonthCloseSnapshotResponse);
   }
 
+  /** The staff whose month the Träger closes (#4711): a contract of the
+   *  Träger covers the month, so the school's close leaves them out. */
+  async getTraegerStaff(year: number, month: number): Promise<string[]> {
+    const params = new URLSearchParams({
+      year: String(year),
+      month: String(month),
+    });
+    const response = await sessionFetch(
+      `/api/staff/time-tracking/month-close/traeger-staff?${params}`,
+    );
+    if (!response.ok) {
+      throw await apiErrorFromResponse(
+        response,
+        `Failed to fetch the staff the Träger closes: ${response.statusText}`,
+      );
+    }
+    const json = (await response.json()) as {
+      data: { staff_ids: number[] | null } | null;
+    };
+    return (json.data?.staff_ids ?? []).map(String);
+  }
+
   /** Freezes the month for the whole school in one transaction. */
   async closeMonth(payload: {
     year: number;

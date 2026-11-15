@@ -245,6 +245,8 @@ var coreActions = map[RouteKey]CoreAction{
 	// "Als gelesen bestätigen" auf der Kinderkachel (#6486).
 	{http.MethodPost, "/api/messages/threads/{threadId}/handled"}:                            event("parent_message_confirmed_for_team"),
 	{http.MethodPut, "/api/notifications/email-subscriptions/{type}"}:                        notCaptured,
+	{http.MethodPost, "/api/notifications/feed/read-all"}:                                    notCaptured,
+	{http.MethodPost, "/api/notifications/feed/{id}/read"}:                                   notCaptured,
 	{http.MethodDelete, "/api/notifications/preferences/"}:                                   notCaptured,
 	{http.MethodPut, "/api/notifications/preferences/{type}"}:                                notCaptured,
 	{http.MethodDelete, "/api/notifications/push/subscriptions"}:                             notCaptured,

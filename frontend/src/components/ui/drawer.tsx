@@ -73,10 +73,24 @@ const directionContentClasses: Record<DrawerDirection, string> = {
   left: "fixed inset-y-0 left-0 flex h-full w-full max-w-lg flex-col",
 };
 
+// Ein Blatt über die ganze Höhe des Telefons (#7148): für eine lange Liste,
+// die man lesen und scrollen will, etwa die Hinweise der Glocke. Die
+// Obergrenze von 90vh des normalen Blatts ließe dort einen Streifen der
+// Seite stehen, und `mt-24` schöbe den Kopf unter die Daumenhöhe.
+const FULL_SCREEN_BOTTOM_CLASSES =
+  "fixed inset-0 flex h-dvh max-h-dvh flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]";
+
+type DrawerContentProps = React.ComponentPropsWithoutRef<
+  typeof DrawerPrimitive.Content
+> & {
+  /** Nur von unten: das Blatt füllt den ganzen Bildschirm, ohne Rundung. */
+  readonly fullScreen?: boolean;
+};
+
 const DrawerContent = React.forwardRef<
   React.ComponentRef<typeof DrawerPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, ...props }, ref) => {
+  DrawerContentProps
+>(({ className, children, fullScreen = false, ...props }, ref) => {
   const direction = React.useContext(DrawerDirectionContext);
   const sheetRef = React.useRef<HTMLDivElement | null>(null);
   useSheetAboveKeyboard(sheetRef, direction === "bottom");
@@ -91,7 +105,9 @@ const DrawerContent = React.forwardRef<
         }}
         className={cn(
           `${Z_LAYER.sheet} border-0 bg-white`,
-          directionContentClasses[direction],
+          fullScreen && direction === "bottom"
+            ? FULL_SCREEN_BOTTOM_CLASSES
+            : directionContentClasses[direction],
           className,
         )}
         {...props}

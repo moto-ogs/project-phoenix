@@ -11,6 +11,21 @@ interface UseRequirePermissionReturn {
   readonly isReady: boolean;
   /** True while the session is still loading. Useful for showing a spinner instead of a flash of empty page. */
   readonly isLoading: boolean;
+  /**
+   * True once the session is loaded and the permission is missing. Only
+   * reachable with `redirectWhenDenied: false`; otherwise the hook redirects.
+   */
+  readonly isDenied: boolean;
+}
+
+interface UseRequirePermissionOptions {
+  /**
+   * Redirect a caller without the permission to the home page (default). A
+   * page that a link from outside opens, such as a notification's deep link
+   * (#7148), passes false and explains the missing access itself instead of
+   * dropping the person on another page without a word.
+   */
+  readonly redirectWhenDenied?: boolean;
 }
 
 /**
@@ -34,6 +49,7 @@ interface UseRequirePermissionReturn {
 export function useRequirePermission(
   permission:
     string | readonly string[] | ((session: Session | null) => boolean),
+  { redirectWhenDenied = true }: UseRequirePermissionOptions = {},
 ): UseRequirePermissionReturn {
   const { data: session, status } = useSession({ required: true });
   const tenantPath = useTenantAwarePath();
@@ -45,12 +61,14 @@ export function useRequirePermission(
           hasPermission(session, p),
         );
 
-  if (status === "authenticated" && !allowed) {
+  const denied = status === "authenticated" && !allowed;
+  if (denied && redirectWhenDenied) {
     redirect(tenantPath("/home"));
   }
 
   return {
     isReady: status === "authenticated" && allowed,
     isLoading: status === "loading",
+    isDenied: denied,
   };
 }

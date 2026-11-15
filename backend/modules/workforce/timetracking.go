@@ -649,14 +649,17 @@ type MonthSummary struct {
 	BalanceMinutes        int `json:"balance_minutes"`
 	ClosingBalanceMinutes int `json:"closing_balance_minutes"`
 
-	IsClosed                    bool       `json:"is_closed"`
-	ClosedAt                    *time.Time `json:"closed_at,omitempty"`
-	ClosedBy                    *int64     `json:"closed_by,omitempty"`
-	CloseReason                 string     `json:"close_reason,omitempty"`
-	FrozenClosingBalanceMinutes *int       `json:"frozen_closing_balance_minutes,omitempty"`
-	DriftMinutes                int        `json:"drift_minutes"`
-	CarryInFrozen               bool       `json:"carry_in_frozen"`
-	CarryInFrozenFromMonth      *string    `json:"carry_in_frozen_from_month,omitempty"`
+	IsClosed bool       `json:"is_closed"`
+	ClosedAt *time.Time `json:"closed_at,omitempty"`
+	ClosedBy *int64     `json:"closed_by,omitempty"`
+	// ClosedByTraeger marks a close of the Personalverwaltung of the
+	// Träger (#4711); only the Träger reopens it.
+	ClosedByTraeger             bool    `json:"closed_by_traeger"`
+	CloseReason                 string  `json:"close_reason,omitempty"`
+	FrozenClosingBalanceMinutes *int    `json:"frozen_closing_balance_minutes,omitempty"`
+	DriftMinutes                int     `json:"drift_minutes"`
+	CarryInFrozen               bool    `json:"carry_in_frozen"`
+	CarryInFrozenFromMonth      *string `json:"carry_in_frozen_from_month,omitempty"`
 }
 
 // WorkTimeMonths is the Monatskarte read model.
@@ -701,10 +704,12 @@ type StaffMonthBalanceSnapshot struct {
 	AdjustmentMinutes     int        `json:"adjustment_minutes"`
 	ClosedAt              time.Time  `json:"closed_at"`
 	ClosedBy              int64      `json:"closed_by"`
+	ClosedByAccountID     int64      `json:"-"`
 	CloseReason           string     `json:"close_reason,omitempty"`
 	Source                string     `json:"source"`
 	ReopenedAt            *time.Time `json:"reopened_at,omitempty"`
 	ReopenedBy            *int64     `json:"reopened_by,omitempty"`
+	ReopenedByAccountID   *int64     `json:"-"`
 	ReopenReason          string     `json:"reopen_reason,omitempty"`
 	// PayrollRules is the JSON of the wage types, rules and absence type
 	// mapping in force at the close (#4807); nil books with the current ones.
@@ -725,6 +730,9 @@ type MonthClosing interface {
 	CloseMonth(ctx context.Context, closedBy int64, year, month int, reason string) (*MonthCloseResult, error)
 	ReopenMonth(ctx context.Context, staffID, reopenedBy int64, year, month int, reason string) error
 	ListMonthStatus(ctx context.Context, year, month int) ([]*StaffMonthBalanceSnapshot, error)
+	// TraegerMonthStaff lists the staff a contract of the Träger covers in
+	// the month: the Träger closes them, not the school (#4711).
+	TraegerMonthStaff(ctx context.Context, year, month int) ([]int64, error)
 }
 
 // StaffOverview serves the tenant-wide time-tracking views.

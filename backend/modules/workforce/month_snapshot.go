@@ -9,6 +9,9 @@ const (
 	SnapshotSourceAdmin     = "admin"
 	SnapshotSourceScheduler = "scheduler"
 	SnapshotSourceMigration = "migration"
+	// SnapshotSourceTraeger is a close of the Personalverwaltung of the
+	// Träger (#4711); only the Träger reopens it.
+	SnapshotSourceTraeger = "traeger"
 )
 
 // MonthSnapshots stores frozen carry balances and their reopening history.

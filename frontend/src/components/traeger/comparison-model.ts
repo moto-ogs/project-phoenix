@@ -2,7 +2,7 @@
  * Reine Rechnung des Standortvergleichs (#4715): Namen und Schreibweise der
  * Kennzahlen, die Rangfolge einer Kennzahl und der Abstand einer Schule zum
  * Schnitt. Die Zahlen selbst rechnet das Backend (`traegerview.SchoolComparison`,
- * ADR 0244); eine Schule ohne Wert hat „–“, nie 0.
+ * ADR 0245); eine Schule ohne Wert hat „–“, nie 0.
  */
 
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";

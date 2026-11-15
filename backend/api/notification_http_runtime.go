@@ -29,6 +29,7 @@ func notificationHTTPRuntime() notificationsHTTP.Runtime {
 	}
 	runtime.Permissions = sessiontoken.PermissionsFromCtx
 	runtime.Respond = common.Respond
+	runtime.ParseIDParam = common.ParseIDParam
 	return runtime
 }
 
