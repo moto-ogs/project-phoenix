@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.staff_proofs",
+  "max": 9,
+  "exact": true,
+  "description": "modules/workforce — GET /traeger/staff-proofs/ (#4707) at a Träger with two\nschools: the Träger's schools, the binding of the Träger transaction, its\nrelease, the kinds, the records, their links and the proofs in one statement\neach; then per school only the binding of its tenant transaction for the\naccess entry. Flat in the number of records and proofs; one tenant\ntransaction per school (ADR 0089 sections 6 and 7).",
+  "route": "GET /traeger/staff-proofs/"
+}

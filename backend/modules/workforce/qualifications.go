@@ -91,6 +91,10 @@ type QualificationOverviewRow struct {
 type StaffQualificationOverview interface {
 	QualificationOverview(ctx context.Context) ([]QualificationOverviewRow, error)
 	StaffQualificationStatus(ctx context.Context, staffID int64) ([]QualificationEntry, error)
+	// StaffTraegerProofs is the status of the Träger's proofs of an
+	// employment its Träger keeps in a record (#4707, ADR 0089 section 7),
+	// empty for every other employment.
+	StaffTraegerProofs(ctx context.Context, staffID int64) ([]SchoolTraegerProof, error)
 }
 
 // QualificationStaffMember is a live staff member with the contact the
@@ -175,6 +179,11 @@ type QualificationReminderPorts struct {
 	Schools     PayrollSchools
 	FrontendURL string
 	Logger      *slog.Logger
+	// Traeger lists the active Träger and TraegerRuntime opens their
+	// transactions; with both set the Nachweise of the Personalstamm warn
+	// too (#4707).
+	Traeger        func(ctx context.Context) ([]int64, error)
+	TraegerRuntime TraegerStaffRuntime
 }
 
 // QualificationReminders sends the reminders that are due in the school of

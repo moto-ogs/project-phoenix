@@ -33,6 +33,8 @@ export const staffQualificationKeys = {
   entries: (staffId: string) =>
     `staff-qualification-entries-${encodeURIComponent(staffId)}`,
   own: () => "own-staff-qualifications",
+  traeger: (staffId: string) =>
+    `staff-traeger-proofs-${encodeURIComponent(staffId)}`,
 } as const;
 
 /**

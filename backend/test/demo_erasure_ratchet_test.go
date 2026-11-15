@@ -35,7 +35,8 @@ const traegerBueroOnly = "Träger-Büro of the shared demo Träger: the seed ass
 // the format each of its recipients receives. ADR 0233 adds the staff
 // records of the Träger-Büro with their links and trail, ADR 0236 the
 // Abwesenheitsarten of the Träger and the Kontingente of its staff records,
-// ADR 0237 their contracts with Soll and holiday weeks.
+// ADR 0237 their contracts with Soll and holiday weeks, ADR 0238 their
+// Nachweise.
 var demoErasureExceptions = map[string]string{
 	"active.activity_session_attendance":             schoolContentUntil5559,
 	"active.activity_sessions":                       schoolContentUntil5559,
@@ -152,6 +153,7 @@ var demoErasureExceptions = map[string]string{
 	"platform.traeger_documents":                     traegerBueroOnly,
 	"platform.traeger_master_data_audit":             traegerBueroOnly,
 	"platform.traeger_profiles":                      traegerBueroOnly + "; invented master data of the demo Träger",
+	"workforce.staff_proofs":                         traegerBueroOnly + "; the Nachweise of a staff record of the Träger go with their record (ADR 0238)",
 	"workforce.absence_allowance_changes":            traegerBueroOnly + "; the trail of a Kontingent goes with its staff record (ADR 0236)",
 	"workforce.absence_allowances":                   traegerBueroOnly + "; a Kontingent of a staff record goes with its record (ADR 0236)",
 	"workforce.absence_types":                        traegerBueroOnly + "; the Abwesenheitsarten of the Träger go with the Träger (ADR 0236)",
@@ -252,8 +254,8 @@ var demoErasureExceptions = map[string]string{
 // ADR 0236: the Abwesenheitsarten of the Träger and the Kontingente of its
 // staff records with their trail (+3).
 // ADR 0237: the contracts of those staff records with their Soll and
-// holiday weeks (+3).
-const demoErasureExceptionBudget = 201
+// holiday weeks (+3). ADR 0238: the Nachweise of those staff records (+1).
+const demoErasureExceptionBudget = 202
 
 func TestDemoErasureExceptionsKeepTheirBudget(t *testing.T) {
 	t.Parallel()

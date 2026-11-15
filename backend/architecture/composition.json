@@ -16428,6 +16428,7 @@
       "timetable-cleanup",
       "timetable-materialization",
       "token-cleanup",
+      "traeger-staff-proof-reminders",
       "visit-cleanup",
       "week-protocols"
     ],
@@ -16536,6 +16537,7 @@
     "timetable-cleanup",
     "timetable-materialization",
     "token-cleanup",
+    "traeger-staff-proof-reminders",
     "visit-cleanup",
     "week-protocols"
   ]

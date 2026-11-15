@@ -108,8 +108,11 @@ type WorkforcePlanning struct {
 	// QualificationReminders sends the Nachweis reminders (#4808); the
 	// Worker roots compose it once the notifications exist.
 	QualificationReminders workforceModule.QualificationReminders
-	SickReports            WorkforceAbsenceWrites
-	TimeTrackingCleanup    workforceCompose.TimeTrackingCleanupService
+	// TraegerProofReminders warns before a proof of a Träger's Personalstamm
+	// expires (#4707); composed with the Nachweis reminders.
+	TraegerProofReminders workforceModule.TraegerProofReminders
+	SickReports           WorkforceAbsenceWrites
+	TimeTrackingCleanup   workforceCompose.TimeTrackingCleanupService
 }
 
 // WorkforceAbsenceWrites are the absence writes that may cascade an absence

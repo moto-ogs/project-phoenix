@@ -37,6 +37,7 @@ export function getTraegerHelpTopicForPath(pathname: string): HelpTopicId {
     return HELP_TOPICS.traegerAbsenceTypes;
   }
   if (onPage(page, "/personal")) return HELP_TOPICS.traegerStaffRecords;
+  if (onPage(page, "/nachweise")) return HELP_TOPICS.traegerStaffProofs;
   if (onPage(page, "/konto")) return HELP_TOPICS.traegerProfile;
   if (onPage(page, "/einstellungen/mitglieder")) {
     return HELP_TOPICS.traegerAccounts;

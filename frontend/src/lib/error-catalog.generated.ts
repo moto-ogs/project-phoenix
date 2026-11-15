@@ -2003,6 +2003,16 @@ export const ERROR_CATALOG = {
         "An der Schule {school} gilt an diesen Tagen schon ein anderer Arbeitsvertrag. Beenden Sie den anderen Vertrag zuerst oder wählen Sie andere Tage.",
       "workforce.traeger_holiday_week_school_override":
         "Die Schule {school} hat für die Woche ab dem {day} schon eine eigene Sonderarbeitszeit. Bitte bitten Sie die Schule, diese zu löschen, oder wählen Sie eine andere Woche.",
+      "workforce.traeger_proof_invalid":
+        "Der Nachweis lässt sich so nicht speichern. Bitte prüfen Sie das markierte Feld.",
+      "workforce.traeger_proof_mapping_invalid":
+        "Diese Nachweisart gibt es an der Schule nicht mehr. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_proof_not_found":
+        "Diesen Nachweis gibt es nicht mehr. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_proof_type_name_taken":
+        "Eine Nachweisart mit diesem Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
+      "workforce.traeger_proof_type_not_found":
+        "Diese Nachweisart gibt es nicht mehr oder sie ist archiviert. Bitte laden Sie die Seite neu.",
       "workforce.traeger_staff_already_linked":
         "Eine dieser Personen hat schon eine Personalakte. Bitte laden Sie die Seite neu.",
       "workforce.traeger_staff_link_invalid":

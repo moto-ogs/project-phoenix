@@ -14,6 +14,7 @@ import {
   schoolCount,
   staffChangeText,
 } from "~/components/traeger/staff/staff-record-format";
+import { StaffProofsCard } from "~/components/traeger/staff/staff-proofs-card";
 import { StaffAbsenceAccountsCard } from "~/components/traeger/staff/staff-absence-accounts-card";
 import { Button } from "~/components/ui/button";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
@@ -503,6 +504,16 @@ export default function TraegerStaffRecordPage() {
             </SectionCard>
           </div>
 
+          <StaffProofsCard
+            recordId={record.id}
+            personName={staffName(record)}
+            proofs={record.proofs}
+            onChanged={(proofs) =>
+              setRecord((current) =>
+                current ? { ...current, proofs } : current,
+              )
+            }
+          />
           <StaffAbsenceAccountsCard recordId={record.id} />
           <StaffContractsCard record={record} onChanged={setRecord} />
 

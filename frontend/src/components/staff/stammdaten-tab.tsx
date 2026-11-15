@@ -26,6 +26,7 @@ import { staffQualificationService } from "~/lib/staff-qualification-api";
 import {
   mergeQualificationEntries,
   QualificationEntryList,
+  TraegerProofStatusList,
 } from "~/components/staff/qualification-entry-list";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import {
@@ -157,6 +158,16 @@ export function StammdatenTab({
     canViewSections ? staffQualificationKeys.entries(staffId) : null,
     () => staffQualificationService.staffEntries(staffId),
   );
+  // Was der Träger für die Person an Nachweisen führt (#4707); leer für
+  // jede Person ohne Personalakte des Trägers.
+  const {
+    data: traegerProofs,
+    error: traegerProofsError,
+    mutate: mutateTraegerProofs,
+  } = useSWRAuth(
+    canViewSections ? staffQualificationKeys.traeger(staffId) : null,
+    () => staffQualificationService.traegerProofs(staffId),
+  );
   const {
     data: qualificationTypes,
     error: qualificationTypesError,
@@ -212,6 +223,11 @@ export function StammdatenTab({
     canViewSections ? qualificationEntriesError : undefined,
     "die Nachweise",
     mutateQualificationEntries,
+  );
+  const traegerProofsLoadError = useSwrLoadError(
+    canViewSections ? traegerProofsError : undefined,
+    "die Nachweise beim Träger",
+    mutateTraegerProofs,
   );
   const qualificationTypesLoadError = useSwrLoadError(
     canEditSections ? qualificationTypesError : undefined,
@@ -740,12 +756,23 @@ export function StammdatenTab({
                 <DataFieldSkeleton />
                 <DataFieldSkeleton />
               </DataGrid>
-            ) : qualificationList.length === 0 ? (
-              <p className="text-sm text-gray-400">
-                Keine Qualifikationen hinterlegt.
-              </p>
             ) : (
-              <QualificationEntryList entries={qualificationList} />
+              <div className="space-y-4">
+                {traegerProofsError ? (
+                  <LoadErrorAlert error={traegerProofsLoadError} />
+                ) : traegerProofs && traegerProofs.length > 0 ? (
+                  <TraegerProofStatusList proofs={traegerProofs} />
+                ) : null}
+                {qualificationList.length === 0 ? (
+                  <p className="text-sm text-gray-400">
+                    {traegerProofs && traegerProofs.length > 0
+                      ? "Die Schule hat keine eigenen Qualifikationen hinterlegt."
+                      : "Keine Qualifikationen hinterlegt."}
+                  </p>
+                ) : (
+                  <QualificationEntryList entries={qualificationList} />
+                )}
+              </div>
             )}
           </SectionCard>
         </>

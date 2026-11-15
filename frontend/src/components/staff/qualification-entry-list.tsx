@@ -1,11 +1,14 @@
 "use client";
 
+import { InsetPanel } from "~/components/ui/inset-panel";
+import { SectionLabel } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { formatDate } from "~/lib/date-helpers";
 import type { StammdatenQualifikation } from "~/lib/staff-api";
 import {
   QUALIFICATION_STATUS_LABELS,
   type QualificationEntry,
+  type TraegerProofStatus,
 } from "~/lib/staff-qualification-api";
 
 /**
@@ -87,5 +90,54 @@ export function QualificationEntryList({
         );
       })}
     </ul>
+  );
+}
+
+/**
+ * Die Nachweise, die der Träger für die Person führt (#4707, ADR 0089
+ * Abschnitt 7): nur Art, Stand und Ablaufdatum. Eintragen und erneuern
+ * kann sie nur die Personalverwaltung des Trägers; die Schule sieht sie und
+ * bekommt die Erinnerung vor dem Ablauf. Reine Anzeige.
+ */
+export function TraegerProofStatusList({
+  proofs,
+}: {
+  readonly proofs: readonly TraegerProofStatus[];
+}) {
+  return (
+    <InsetPanel padding="md" className="space-y-2">
+      <div>
+        <SectionLabel as="h4">Vom Träger geführt</SectionLabel>
+        <p className="mt-0.5 text-xs text-gray-500">
+          Nur zur Information. Eintragen und erneuern kann die
+          Personalverwaltung des Trägers.
+        </p>
+      </div>
+      <ul className="divide-y divide-gray-100">
+        {proofs.map((proof) => {
+          const status = QUALIFICATION_STATUS_LABELS[proof.status];
+          return (
+            <li
+              key={proof.typeName}
+              className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-800">
+                  {proof.typeName}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  {proof.status === "missing"
+                    ? "Pflicht beim Träger, noch nicht eingetragen"
+                    : proof.expiresOn
+                      ? `gültig bis ${formatDate(proof.expiresOn)}`
+                      : "läuft nicht ab"}
+                </p>
+              </div>
+              <StatusBadge label={status.label} tone={status.tone} />
+            </li>
+          );
+        })}
+      </ul>
+    </InsetPanel>
   );
 }

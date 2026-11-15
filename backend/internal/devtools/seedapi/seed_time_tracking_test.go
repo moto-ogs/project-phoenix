@@ -170,7 +170,7 @@ func TestFullDemoWorkflowDeferHistoryLeavesOutDeferredSteps(t *testing.T) {
 	}
 	// Only a full seed links staff records of the Träger: a demo order's
 	// school employs the visitor (ADR 0233 point 9).
-	fullOnly := []Step{seedTraegerStaffStep{}}
+	fullOnly := []Step{seedTraegerStaffStep{}, seedTraegerStaffProofStep{}}
 	for _, step := range fullOnly {
 		assert.True(t, contains(full, step), "%T runs in a full seed", step)
 		assert.False(t, contains(deferred, step), "%T never runs in a demo order", step)

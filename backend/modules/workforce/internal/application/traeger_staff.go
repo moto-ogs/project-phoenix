@@ -224,6 +224,7 @@ func (t *TraegerStaff) Record(ctx context.Context, actor workforce.TraegerStaffA
 	}
 	var record domain.TraegerStaffRecord
 	var changes []domain.TraegerStaffChange
+	var proofs []workforce.TraegerStaffProof
 	var contracts []domain.TraegerStaffContract
 	err = t.released(ctx, actor, func(ctx context.Context) error {
 		if record, err = t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, false); err != nil {
@@ -233,6 +234,10 @@ func (t *TraegerStaff) Record(ctx context.Context, actor workforce.TraegerStaffA
 			return err
 		}
 		changes, err = t.store.ListStaffChanges(ctx, actor.OrganizationID, recordID, changeTrailLimit)
+		if err != nil {
+			return err
+		}
+		proofs, err = t.recordProofs(ctx, actor.OrganizationID, recordID)
 		return err
 	})
 	if err != nil {
@@ -251,6 +256,7 @@ func (t *TraegerStaff) Record(ctx context.Context, actor workforce.TraegerStaffA
 		TraegerStaffRecordSummary: summarize(record, names, reads),
 		Financial:                 maskedRecordFinancial(record),
 		Changes:                   make([]workforce.TraegerStaffChange, 0, len(changes)),
+		Proofs:                    proofs,
 		Contracts:                 publicContracts(contracts, names, openFrom),
 	}
 	for _, change := range changes {

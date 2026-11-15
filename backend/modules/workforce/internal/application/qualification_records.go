@@ -65,23 +65,33 @@ type Qualifications struct {
 	*QualificationTypes
 	*QualificationList
 	*QualificationReminders
+	// TraegerProofs warns before a proof of the Personalstamm expires
+	// (#4707); nil without the Träger ports.
+	TraegerProofs *TraegerProofReminders
 }
 
 // NewQualifications composes the Nachweise. staff may be nil for a root
 // that needs only the kinds; RunDue then fails instead of guessing.
-func NewQualifications(store ports.Store, clock ports.Clock, staff workforce.QualificationStaff, bound workforce.QualificationReminderPorts) (*Qualifications, error) {
+// keptByTraeger reads the Träger's proofs of the school's employments
+// (#4707): the list shows their status and the reminders leave mapped kinds
+// to them.
+func NewQualifications(store ports.Store, clock ports.Clock, staff workforce.QualificationStaff, bound workforce.QualificationReminderPorts, keptByTraeger ports.TraegerStaffStore) (*Qualifications, error) {
 	result := &Qualifications{QualificationTypes: NewQualificationTypes(store, clock)}
 	if staff == nil {
 		return result, nil
 	}
-	result.QualificationList = NewQualificationList(store, clock, staff)
+	result.QualificationList = NewQualificationList(store, clock, staff, keptByTraeger)
 	if bound.Staff == nil {
 		bound.Staff = staff
 	}
 	if bound.Notify == nil {
 		return result, nil
 	}
-	reminders, err := NewQualificationReminders(store, clock, bound)
+	reminders, err := NewQualificationReminders(store, clock, bound, keptByTraeger)
 	result.QualificationReminders = reminders
+	if err != nil || bound.Traeger == nil {
+		return result, err
+	}
+	result.TraegerProofs, err = newTraegerProofReminders(keptByTraeger, clock, reminders, bound)
 	return result, err
 }

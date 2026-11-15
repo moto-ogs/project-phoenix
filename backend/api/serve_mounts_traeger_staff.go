@@ -19,9 +19,10 @@ import (
 )
 
 // mountTraegerStaffRoutes serves the Personalstamm of ADR 0089 (#4705) at
-// /traeger/staff-records and the Abwesenheitsarten of the Träger (#4710) at
-// /traeger/absence-types behind the Träger right „Personal“, over the
-// personnel record staffAdmin the root built for the schools.
+// /traeger/staff-records, its Nachweise (#4707) at /traeger/staff-proofs and
+// the Abwesenheitsarten of the Träger (#4710) at /traeger/absence-types behind
+// the Träger right „Personal“, over the personnel record staffAdmin the root
+// built for the schools.
 func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, organizations HolidayOrganizations,
 	persons TraegerPersons, membership TraegerStaff, accessLog owners.DataAccessAppender,
 ) error {
@@ -35,11 +36,17 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 		Access:      traegerStaffAccessLog{log: accessLog},
 		Runtime:     traegerDocumentRuntime{},
 	}
+	records := staffAdmin.TraegerStaffRecords(collaborators)
 	requireStaff := common.RequiresPermission(identityaccess.TraegerRightStaffManage)
 	absences := staffAdmin.TraegerAbsenceTypes(collaborators)
-	resource := traegerstaff.NewRecordsResource(staffAdmin.TraegerStaffRecords(collaborators), staffAdmin.TraegerStaffContracts(collaborators),
-		absences, requireStaff)
+	resource := traegerstaff.NewRecordsResource(records, staffAdmin.TraegerStaffContracts(collaborators), absences, requireStaff)
 	root.Mount("/traeger/staff-records", resource.TraegerRouter(ProtectedTraegerRoutes))
+	// The Personalstamm serves its Nachweise over the same records (#4707).
+	proofs, ok := records.(workforce.TraegerStaffProofs)
+	if !ok {
+		return errors.New("traeger staff records: the Personalstamm serves no Nachweise")
+	}
+	root.Mount("/traeger/staff-proofs", traegerstaff.NewProofsResource(proofs, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
 	// The Träger's Abwesenheitsarten and Kontingente (#4710).
 	root.Mount("/traeger/absence-types", traegerstaff.NewAbsenceTypesResource(absences, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
 	return nil

@@ -55,6 +55,9 @@
   "api/staff/[id]/time-tracking/sessions/[sessionId]/edits": [
     "GET tenant /api/staff/id%2F1/time-tracking/sessions/sessionId%2F1/edits"
   ],
+  "api/staff/[id]/traeger-proofs": [
+    "GET tenant /api/staff/id%2F1/traeger-proofs"
+  ],
   "api/staff/absence-types": [
     "GET tenant /api/absence-types",
     "POST tenant /api/absence-types"

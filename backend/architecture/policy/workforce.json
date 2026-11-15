@@ -337,6 +337,18 @@
       "write_owner": "workforce"
     },
     {
+      "name": "workforce.staff_proof_type_mappings",
+      "write_owner": "workforce"
+    },
+    {
+      "name": "workforce.staff_proof_types",
+      "write_owner": "workforce"
+    },
+    {
+      "name": "workforce.staff_proofs",
+      "write_owner": "workforce"
+    },
+    {
       "name": "workforce.staff_record_changes",
       "write_owner": "workforce"
     },

@@ -163,6 +163,7 @@ const TRAEGER_PAGE_TITLES: ReadonlyArray<
   ["/dokumente", "Dokumente"],
   ["/personal/abwesenheitsarten", "Abwesenheitsarten"],
   ["/personal", "Personalakten"],
+  ["/nachweise", "Personalnachweise"],
   // Die drei Bereiche der Abrechnung (#5145): die genaueren Adressen zuerst,
   // denn der erste Treffer gewinnt.
   ["/abrechnung/familien", "Familien und Zahlung"],

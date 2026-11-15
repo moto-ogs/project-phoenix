@@ -171,8 +171,8 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
     ],
   },
   {
-    // Personal über alle Schulen (ADR 0089): heute die Personalakten (#4705);
-    // Verträge, Nachweise und Planung kommen hier hinzu.
+    // Personal über alle Schulen (ADR 0089): die Personalakten (#4705) und
+    // ihre Nachweise (#4707); Verträge und Planung kommen hier hinzu.
     key: "personal",
     label: "Personal",
     items: [
@@ -182,6 +182,16 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         label: "Personalakten",
         shortLabel: "Personal",
         concept: staffConcept,
+        right: STAFF_RIGHT,
+      },
+      {
+        // Führungszeugnis, Masernschutz und die Arten des Trägers mit
+        // Ablaufwarnung (#4707).
+        key: "personalnachweise",
+        href: "/traeger/nachweise",
+        label: "Personalnachweise",
+        shortLabel: "Nachweise",
+        concept: documentsConcept,
         right: STAFF_RIGHT,
       },
       {

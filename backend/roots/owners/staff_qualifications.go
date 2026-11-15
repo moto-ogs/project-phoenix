@@ -16,6 +16,7 @@ import (
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
+	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 // Nachweise (#4808): the root binds Workforce's qualification ports to the
@@ -98,23 +99,31 @@ func qualificationContact(row *peopleValues.StaffWithRoleInfo) workforce.Qualifi
 	return workforce.QualificationStaffMember{StaffID: row.StaffID, FirstName: row.FirstName, LastName: row.LastName, AccountID: row.AccountID, Email: row.Email}
 }
 
-// BuildQualificationReminders composes the Nachweis reminders of the Worker.
+// BuildQualificationReminders composes the Nachweis reminders of the Worker
+// and the warnings before a proof of a Träger's Personalstamm expires
+// (#4707): the Leitung of each Einsatzort and the person get them in the
+// school's tenant transaction.
 func BuildQualificationReminders(
 	db transactionruntime.Database, notifications DeliveryNotifications, staff QualificationStaffRows,
 	outbox OutboxEnqueuer, mailFrom email.Email, mailIdentity email.ReplyToResolver,
 	schools organizationtenancy.Query, frontendURL string, logger *slog.Logger,
-) (workforce.QualificationReminders, error) {
+) (workforce.QualificationReminders, workforce.TraegerProofReminders, error) {
 	if notifications.Notifier == nil || notifications.Preferences == nil || staff == nil || outbox.Runtime == nil || schools == nil {
-		return nil, errors.New("qualification reminders: notifications, staff, delivery and schools are required")
+		return nil, nil, errors.New("qualification reminders: notifications, staff, delivery and schools are required")
 	}
 	logger = logger.With("service", "qualification_reminders")
-	return workforceCompose.NewQualifications(db.Pool(), NewQualificationStaff(staff, false), workforce.QualificationReminderPorts{
+	qualifications, err := workforceCompose.NewQualifications(db.Pool(), NewQualificationStaff(staff, false), workforce.QualificationReminderPorts{
 		Staff:       NewQualificationStaff(staff, false),
 		Notify:      qualificationNotifier(notifications, logger),
 		Mail:        qualificationMailOutbox{outbox: outbox, from: mailFrom, identity: mailIdentity, logger: logger},
 		Schools:     payrollSchools{schools: schools},
 		FrontendURL: frontendURL, Logger: logger,
+		Traeger: careContractTraeger{organizations: schools}.ActiveTraegerIDs, TraegerRuntime: CareContractRuntime{},
 	}, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	return qualifications, qualifications.TraegerProofs, nil
 }
 
 // qualificationNotifier sends a reminder to the recipients who did not
@@ -197,8 +206,20 @@ func (w *WorkforcePlanning) WithQualificationReminders(
 		return built
 	}
 	var err error
-	w.QualificationReminders, err = BuildQualificationReminders(db, notifications, staff, outbox, mailFrom, mailIdentity, schools, env.Links.FrontendURL, env.Logger)
+	w.QualificationReminders, w.TraegerProofReminders, err = BuildQualificationReminders(db, notifications, staff, outbox, mailFrom, mailIdentity, schools, env.Links.FrontendURL, env.Logger)
 	return err
+}
+
+// traegerProofRemindersJob binds the Worker's job over the unit of work the
+// transactions open on; a composition without the reminders leaves the job
+// out.
+func traegerProofRemindersJob(reminders workforce.TraegerProofReminders, unit tenant.UnitOfWork) schedulerPorts.TraegerStaffProofReminders {
+	if reminders == nil {
+		return nil
+	}
+	return func(ctx context.Context) error {
+		return reminders.RunDue(tenant.WithUnitOfWork(ctx, unit))
+	}
 }
 
 // qualificationRemindersJob binds the Worker's job; a composition without

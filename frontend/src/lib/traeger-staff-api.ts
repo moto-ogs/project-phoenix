@@ -9,6 +9,11 @@
  * steht im Zugriffsprotokoll der Schulen. Backend-IDs werden hier zu Strings.
  */
 import { traegerRequest } from "~/lib/traeger-api";
+import {
+  mapStaffProof,
+  type BackendProof,
+  type StaffProof,
+} from "~/lib/traeger-staff-proofs-api";
 
 const BASE = "/api/traeger/staff-records";
 
@@ -91,8 +96,7 @@ export interface StaffFinancial {
 }
 
 /** Die Felder eines Vertragseintrags im Verlauf (#4706). */
-type StaffContractChangeField =
-  "contract" | "contract_soll" | "holiday_week";
+type StaffContractChangeField = "contract" | "contract_soll" | "holiday_week";
 
 export interface StaffChange {
   readonly kind: "linked" | "not_chosen" | "changed" | "added" | "removed";
@@ -144,6 +148,8 @@ export interface StaffContract {
 export interface StaffRecordDetail extends StaffRecordSummary {
   readonly financial: StaffFinancial;
   readonly changes: readonly StaffChange[];
+  /** Der Stand jeder Nachweisart des Trägers an der Akte (#4707). */
+  readonly proofs: readonly StaffProof[];
   readonly contracts: readonly StaffContract[];
   /** Schulen, die eine gespeicherte Änderung noch nicht erreicht hat. */
   readonly unsyncedSchools: readonly string[];
@@ -264,6 +270,7 @@ interface BackendDetail extends BackendSummary {
   contracts?: BackendContract[] | null;
   unsynced_schools?: string[] | null;
   financial: BackendFinancial;
+  proofs?: BackendProof[] | null;
   changes:
     | {
         kind: StaffChange["kind"];
@@ -350,6 +357,7 @@ function mapDetail(record: BackendDetail): StaffRecordDetail {
       schoolName: change.school_name ?? "",
       occurredAt: change.occurred_at,
     })),
+    proofs: (record.proofs ?? []).map(mapStaffProof),
     contracts: (record.contracts ?? []).map(mapContract),
     unsyncedSchools: record.unsynced_schools ?? [],
   };

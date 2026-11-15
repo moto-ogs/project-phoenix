@@ -268,6 +268,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/invite",
   "/konto",
   "/login",
+  "/nachweise",
   "/personal",
   "/personal/:id",
   "/personal/abwesenheitsarten",

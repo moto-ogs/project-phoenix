@@ -6,9 +6,9 @@ import (
 )
 
 // traegerStaffCoreActions classifies the writing routes of the staff records
-// of a Träger (#4705). They belong to the Träger, not to a school, so like
-// the other Träger-Portal routes they count for no school yet. init merges
-// the table into coreActions.
+// of a Träger (#4705) and their Nachweise (#4707). They belong to the
+// Träger, not to a school, so like the other Träger-Portal routes they count
+// for no school yet. init merges the table into coreActions.
 var traegerStaffCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/staff-records/"}:                      notCaptured,
 	{http.MethodPost, "/traeger/staff-records/link-preview"}:          notCaptured,
@@ -16,6 +16,12 @@ var traegerStaffCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPut, "/traeger/staff-records/{id}/personnel-number"}:  notCaptured,
 	{http.MethodPost, "/traeger/staff-records/{id}/financial/reveal"}: notCaptured,
 	{http.MethodPut, "/traeger/staff-records/{id}/financial"}:         notCaptured,
+	// The Nachweise of the records (#4707).
+	{http.MethodPost, "/traeger/staff-proofs/types"}:                   notCaptured,
+	{http.MethodPut, "/traeger/staff-proofs/types/{id}"}:               notCaptured,
+	{http.MethodPut, "/traeger/staff-proofs/school-kinds"}:             notCaptured,
+	{http.MethodPut, "/traeger/staff-proofs/records/{id}/{typeId}"}:    notCaptured,
+	{http.MethodDelete, "/traeger/staff-proofs/records/{id}/{typeId}"}: notCaptured,
 	// The Abwesenheitsarten and Kontingente of the Träger (#4710).
 	{http.MethodPost, "/traeger/absence-types/"}:                              notCaptured,
 	{http.MethodPut, "/traeger/absence-types/{id}"}:                           notCaptured,
