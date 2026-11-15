@@ -306,7 +306,10 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0232: the import of existing contracts of modules/carecontract/compose
 // (+6) and its debtor numbers of modules/parentbilling/compose (+5).
 // ADR 0234: the note search of modules/peopledirectory/compose (+2).
-const moduleComposeBudgetTotal = 13485
+// ADR 0241: the utilization reads of modules/careplan/compose (+7),
+// modules/facilities/compose (+13) and modules/studentpresence/compose (+7)
+// add exactly 27 LOC.
+const moduleComposeBudgetTotal = 13512
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -336,7 +339,8 @@ var moduleComposeBudgets = map[string]int{
 	// comments (±0).
 	// ADR 0225: the Stammdaten decision's class follow-up port (+3).
 	// Lowered by #7104: the injected clocks fit in shortened comments (-3).
-	"modules/careplan/compose":             1688, // ADR 0220: +13, the pickup change team constructor
+	// ADR 0241: the booking intervals of the utilization (+7).
+	"modules/careplan/compose":             1695, // ADR 0220: +13, the pickup change team constructor
 	"modules/careplan/requestfeed/compose": 53,
 	// Raised by ADR 0102: the class-trip status-day seam (#4799).
 	"modules/classday/compose": 210,
@@ -374,8 +378,9 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0231: the registration answers constructor (+5).
 	"modules/enrollment/compose": 639,
 	// ADR 0218: the Träger scope and the recipient rekey (+33).
-	"modules/exporttransfer/compose":               182,
-	"modules/facilities/compose":                   184,
+	"modules/exporttransfer/compose": 182,
+	// ADR 0241: the rooms of the utilization (+13).
+	"modules/facilities/compose":                   197,
 	"modules/facilities/compose/repositoryadapter": 11,
 	"modules/feedback/compose":                     61,
 	"modules/filestorage/compose":                  211,
@@ -462,7 +467,8 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0125: the dev-tools presence history constructor (+7).
 	// ADR 0151: the school figure constructor (+13).
 	// ADR 0156: the contract Soll port (+4).
-	"modules/studentpresence/compose":                 266,
+	// ADR 0241: the presence series of the utilization (+7).
+	"modules/studentpresence/compose":                 273,
 	"modules/studentpresence/compose/presenceservice": 110,
 	"modules/supervisiondashboard/compose":            11,
 	// Raised by ADR 0128: the student template days constructor (+5), by

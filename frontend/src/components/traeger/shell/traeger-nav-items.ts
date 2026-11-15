@@ -38,7 +38,7 @@ const ACCOUNTS_RIGHT = "traeger_accounts:manage";
 const ENROLLMENT_RIGHT = "traeger_enrollment:manage";
 /** Das Recht, das die Betreuungsverträge öffnet (#4678). */
 const CONTRACTS_RIGHT = "traeger_contracts:manage";
-/** Das Recht, das „Länger als gebucht“ ohne Namen öffnet (#4683). */
+/** Das Recht, das „Länger als gebucht“ ohne Namen (#4683) und die Auslastung (#4713) öffnet. */
 const REPORTS_RIGHT = "traeger_reports:read";
 /** Das Recht, das die Abrechnungsläufe öffnet (#4668). */
 const BILLING_RIGHT = "traeger_billing:manage";
@@ -110,6 +110,14 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         label: "Belegung",
         concept: utilizationConcept,
         right: OVERVIEW_RIGHT,
+      },
+      {
+        // Belegung, Anwesenheit und Räume über Wochen und Monate (#4713).
+        key: "auslastung",
+        href: "/traeger/auslastung",
+        label: "Auslastung",
+        concept: utilizationConcept,
+        right: REPORTS_RIGHT,
       },
     ],
   },

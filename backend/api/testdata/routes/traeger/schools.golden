@@ -3,4 +3,7 @@ GET /traeger/schools/alerts
 GET /traeger/schools/key-date-counts
 GET /traeger/schools/occupancy
 GET /traeger/schools/occupancy/export
+GET /traeger/schools/utilization
+GET /traeger/schools/utilization/export
 GET /traeger/schools/{id}
+GET /traeger/schools/{id}/utilization/children

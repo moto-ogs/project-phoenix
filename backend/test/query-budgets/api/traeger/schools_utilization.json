@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.schools_utilization",
+  "max": 8,
+  "exact": true,
+  "description": "modules/traegerview — GET /traeger/schools/utilization (#4713, ADR 0241): the\nTräger row, the school IDs of the Träger, the school rows, the child of each\napproved enrollment with the running phases, the care offering bookings of\nthe window, the check-ins per day, the room days and the room names for the\nwhole school set in one administrative transaction. Flat in the number of\nschools.",
+  "route": "GET /traeger/schools/utilization"
+}
