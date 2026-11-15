@@ -129,8 +129,9 @@ func cmpOrText(value, fallback string) string {
 }
 
 // FillParentLetter writes the values of one child into text. A line whose
-// placeholders all print nothing is left out, so a missing pickup time
-// leaves no "Abholzeit:" behind; any other line keeps its words.
+// placeholders all print nothing and whose other words are at most a label
+// ("Abholzeit:") is left out, so a missing pickup time leaves no bare label
+// behind; a line with a sentence keeps its words.
 func FillParentLetter(text string, child ParentLetterChild) string {
 	if !HasParentLetterPlaceholders(text) {
 		return text
@@ -147,12 +148,19 @@ func FillParentLetter(text string, child ParentLetterChild) string {
 			}
 			return value
 		})
-		if used > 0 && filled == 0 {
+		if used > 0 && filled == 0 && onlyLabel(letterPlaceholderPattern.ReplaceAllString(line, "")) {
 			continue
 		}
 		kept = append(kept, out)
 	}
 	return strings.Join(kept, "\n")
+}
+
+// onlyLabel reports whether the words of a line around its placeholders are
+// nothing or a bare label such as "Abholzeit:", not a sentence.
+func onlyLabel(rest string) bool {
+	rest = strings.TrimSpace(rest)
+	return rest == "" || (strings.HasSuffix(rest, ":") && !strings.ContainsAny(rest, ".!?"))
 }
 
 // ParentLetterPlaceholderError refuses a text whose placeholders a letter

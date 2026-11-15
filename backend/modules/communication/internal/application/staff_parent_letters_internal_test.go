@@ -334,14 +334,17 @@ func TestPreviewLetterForATeacherShowsOnlyChildrenOfHerClasses(t *testing.T) {
 	}
 }
 
-func TestPublishPersonalLetterLogsTheReadOfEveryChild(t *testing.T) {
+func TestPublishLetterLogsTheReadOfEveryChild(t *testing.T) {
 	t.Parallel()
-	f := newPersonalLetterFixture(personalLetterBody)
-	if _, err := f.service.Publish(context.Background(), 42); err != nil {
-		t.Fatalf("Publish: %v", err)
-	}
-	if len(f.access.entries) != 1 || f.access.entries[0].Kind != communication.ParentLetterAccessPublish || f.access.entries[0].ChildCount != 3 {
-		t.Fatalf("access entries = %+v, want one publish read of 3 children", f.access.entries)
+	// A letter without placeholders also freezes each child's name and class.
+	for _, body := range []string{personalLetterBody, "Liebe Eltern, am Freitag ist Sommerfest."} {
+		f := newPersonalLetterFixture(body)
+		if _, err := f.service.Publish(context.Background(), 42); err != nil {
+			t.Fatalf("Publish: %v", err)
+		}
+		if len(f.access.entries) != 1 || f.access.entries[0].Kind != communication.ParentLetterAccessPublish || f.access.entries[0].ChildCount != 3 {
+			t.Fatalf("%q: access entries = %+v, want one publish read of 3 children", body, f.access.entries)
+		}
 	}
 }
 
@@ -368,7 +371,7 @@ func TestPrintLettersOfAnOlderLetterUsesItsTextForEveryRecordedChild(t *testing.
 func TestLetterMailOfAnAddressWithoutOwnCopyShowsNoPlaceholder(t *testing.T) {
 	t.Parallel()
 	bodies := letterMailBodies{7: {StudentID: 7, Body: "Hallo Lina"}}
-	if got := bodies.bodyFor([]int64{99}, "Hallo {{vorname}},\nbis bald"); got != "bis bald" {
+	if got := bodies.bodyFor([]int64{99}, "Hallo {{vorname}},\nAbholzeit: {{abholzeit}}\nbis bald"); got != "Hallo ,\nbis bald" {
 		t.Fatalf("bodyFor = %q, want the letter without any placeholder line", got)
 	}
 }

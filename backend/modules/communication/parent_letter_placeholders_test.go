@@ -31,6 +31,16 @@ func TestFillParentLetterLeavesOutALineWhoseValuesAreAllEmpty(t *testing.T) {
 	}
 }
 
+func TestFillParentLetterKeepsTheWordsOfASentenceAroundAnEmptyValue(t *testing.T) {
+	t.Parallel()
+	body := "Bitte morgen Sportsachen mitbringen. Abholzeit: {{abholzeit}}\nWir holen {{vorname}} ab."
+	got := communication.FillParentLetter(body, communication.ParentLetterChild{})
+	want := "Bitte morgen Sportsachen mitbringen. Abholzeit: \nWir holen  ab."
+	if got != want {
+		t.Fatalf("filled letter:\n%q\nwant\n%q", got, want)
+	}
+}
+
 func TestFillParentLetterKeepsTextWithoutPlaceholders(t *testing.T) {
 	t.Parallel()
 	body := "Liebe Eltern,\n\nam Freitag ist Sommerfest.\n"

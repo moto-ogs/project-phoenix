@@ -47,6 +47,9 @@ func TestParentLetterCopiesGoWithTheSchoolAndRollBack(t *testing.T) {
 		assert.NotEqual(t, "users.parent_announcement_letter_copies", entry.Name)
 	}
 	erases("the erasure works after the rollback")
+	var demoErasure string
+	require.NoError(t, db.NewRaw(`SELECT pg_get_functiondef('platform.erase_closed_demo_visitors()'::regprocedure)`).Scan(ctx, &demoErasure))
+	assert.NotContains(t, demoErasure, "parent_announcement_letter_copies", "the demo visitor erasure deletes from no dropped table")
 
 	require.NoError(t, parentLetterCopiesUp(ctx, db))
 	require.NoError(t, applyRepeatableDefinitions(ctx, db))

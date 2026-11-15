@@ -88,10 +88,10 @@ func parentLetterCopiesUp(ctx context.Context, db *bun.DB) error {
 // erasure plan with the letter copies; the repeatable preflight checks it.
 const parentLetterCopiesFingerprint = "f603cf6dfc91488b5edb2f07de529d081f8635b29656c2589a46d3f973dbd1f3"
 
-// parentLetterCopiesErasureLines are the lines the repeatable school
-// erasure carries for the copies, per function. The down takes them out of
-// the installed functions again, so a school erasure after the rollback
-// still runs.
+// parentLetterCopiesErasureLines are the lines the repeatable school and
+// demo visitor erasures carry for the copies, per function. The down takes
+// them out of the installed functions again, so an erasure after the
+// rollback still runs.
 var parentLetterCopiesErasureLines = map[string]string{
 	"platform.school_erasure_plan()":                     `  {"name": "users.parent_announcement_letter_copies","predicate": "r.tenant_id = $1"},` + "\n",
 	"platform.school_erasure_preflight(bigint,bigint)":   "    users.parent_announcement_letter_copies,\n",
@@ -99,6 +99,10 @@ var parentLetterCopiesErasureLines = map[string]string{
 	"platform.school_erasure_delete(bigint)": "   SELECT count(*) INTO v_count FROM users.parent_announcement_letter_copies AS r WHERE r.tenant_id = p_school_id; " +
 		"DELETE FROM users.parent_announcement_letter_copies AS r WHERE r.tenant_id = p_school_id; " +
 		"v_counts := v_counts || jsonb_build_object('users.parent_announcement_letter_copies', v_count);\n",
+	"platform.erase_closed_demo_visitors()": "\t\t\t\t\t-- A letter copy names the child and carries the text the\n" +
+		"\t\t\t\t\t-- visitor wrote for it (#4813); like the mail, every one goes.\n" +
+		"\t\t\t\t\tDELETE FROM users.parent_announcement_letter_copies\n" +
+		"\t\t\t\t\tWHERE tenant_id = ANY (hidden_schools);\n",
 	"platform.school_erasure_preview(bigint,bigint)": " v_counts := v_counts || jsonb_build_object('users.parent_announcement_letter_copies'," +
 		"(SELECT count(*) FROM users.parent_announcement_letter_copies AS r WHERE r.tenant_id = p_school));\n",
 }

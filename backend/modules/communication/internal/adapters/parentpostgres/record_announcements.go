@@ -329,7 +329,7 @@ func (r *announcementRepository) ResolveDeliveryRecipients(ctx context.Context, 
 		rows = append(rows, &communication.PortalAnnouncementDeliveryRecipient{
 			GuardianProfileID: value.GuardianProfileID, AccountID: value.AccountID, FirstName: value.FirstName,
 			LastName: value.LastName, Email: value.Email, HasPortalAccess: value.HasPortalAccess,
-			PortalLocale: value.PortalLocale,
+			PortalLocale: value.PortalLocale, StudentIDs: value.StudentIDs,
 		})
 	}
 	return rows, nil

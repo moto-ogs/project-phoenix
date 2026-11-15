@@ -522,7 +522,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentLetterLogos.ParentLetterLogo",
-      "binding_digest": "9cb88df3f47ba6eeb7b45b66f66dba3d",
+      "binding_digest": "d43f2aff0c83d32f8c3ad237d32ebb11",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterLogos.ParentLetterLogo",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/objects.ResolveStoredPath",

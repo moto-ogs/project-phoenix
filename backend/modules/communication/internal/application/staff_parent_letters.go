@@ -50,10 +50,10 @@ func (s *service) freezeLetterCopies(ctx context.Context, a *StaffParentAnnounce
 	if err := s.letters.Copies.ReplaceParentLetterCopies(ctx, tenantID, a.ID, copies); err != nil {
 		return fmt.Errorf("announcement: write letter copies: %w", err)
 	}
-	if len(byStudent) > 0 && s.letters.Access != nil {
-		// The publication read every reached child's values (#4813).
+	if len(copies) > 0 && s.letters.Access != nil {
+		// The publication froze a letter with each reached child's data (#4813).
 		if err := s.recordLetterAccess(ctx, communication.ParentLetterAccess{
-			Kind: communication.ParentLetterAccessPublish, AnnouncementID: &a.ID, ChildCount: len(byStudent),
+			Kind: communication.ParentLetterAccessPublish, AnnouncementID: &a.ID, ChildCount: len(copies),
 		}); err != nil {
 			return err
 		}

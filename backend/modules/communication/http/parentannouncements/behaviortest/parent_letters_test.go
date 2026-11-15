@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -79,6 +78,9 @@ func TestParentLettersNameEachChildAndStayWithTheirFamily(t *testing.T) {
 		_, err = db.NewRaw(`UPDATE users.persons SET first_name = ?, last_name = ? WHERE id = ?`, family.first, family.sur, family.chain.PersonID).Exec(ctx)
 		require.NoError(t, err)
 	}
+	// Lina's guardian may also pick Emil up, without portal access to him:
+	// that link reaches the mail, but not Emil's letter.
+	testpkg.CreateTestStudentGuardianLink(t, db, emil.StudentID, lina.GuardianProfileID, "pickup_only")
 	values := fixedLetterChildren{
 		lina.StudentID: {StudentID: lina.StudentID, FirstName: "Lina", LastName: "Muster", SchoolClass: "1a", Group: "Füchse", PickupTime: "15:30 Uhr"},
 		emil.StudentID: {StudentID: emil.StudentID, FirstName: "Emil", LastName: "Weber", SchoolClass: "1a", Group: "Igel"},
@@ -189,11 +191,19 @@ func TestParentLettersNameEachChildAndStayWithTheirFamily(t *testing.T) {
 	}
 	require.NoError(t, db.NewRaw(`SELECT payload FROM platform.email_outbox WHERE related_entity_id = ? ORDER BY id`, created.Data.ID).Scan(ctx, &mails))
 	require.Len(t, mails, 2)
+	mailTo := map[string]string{}
 	for _, mail := range mails {
-		text := string(mail.Payload)
-		require.NotContains(t, text, "{{")
-		require.False(t, strings.Contains(text, "Lina") && strings.Contains(text, "Emil"), "a mail names both families: %s", text)
+		var payload struct {
+			Body  string `json:"body"`
+			Email string `json:"recipient_email"`
+		}
+		require.NoError(t, json.Unmarshal(mail.Payload, &payload))
+		require.NotContains(t, payload.Body, "{{")
+		mailTo[payload.Email] = payload.Body
 	}
+	require.Equal(t, "Liebe Eltern von Lina,\n\nLina ist in der Gruppe Füchse.\nAbholzeit: 15:30 Uhr", mailTo[lina.Email],
+		"Lina's guardian reads Lina's letter only, not Emil's, whom they only pick up")
+	require.Equal(t, "Liebe Eltern von Emil,\n\nEmil ist in der Gruppe Igel.", mailTo[emil.Email])
 
 	// The school prints every letter of the dispatch as one PDF; another
 	// school does not reach it.

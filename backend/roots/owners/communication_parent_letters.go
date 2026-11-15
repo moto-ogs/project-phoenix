@@ -1,11 +1,15 @@
 package owners
 
 import (
+	"bytes"
 	"context"
+	"image/png"
 	"os"
 	"sort"
 	"strings"
 	"time"
+
+	"golang.org/x/image/webp"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -257,16 +261,31 @@ func (parentLetterLogos) ParentLetterLogo(_ context.Context, logoURL string) []b
 		return nil
 	}
 	data, err := os.ReadFile(path) //nolint:gosec // the path is resolved inside the upload folder
-	if err != nil || !embeddableLetterLogo(data) {
+	if err != nil {
 		return nil
 	}
-	return data
+	return letterLogoImage(data)
 }
 
-// embeddableLetterLogo accepts the PNG and JPEG images the letter layout
-// embeds; a WebP upload prints without a logo.
-func embeddableLetterLogo(data []byte) bool {
-	return strings.HasPrefix(string(data), "\x89PNG\r\n\x1a\n") || strings.HasPrefix(string(data), "\xff\xd8\xff")
+// letterLogoImage is the logo as the letter layout embeds it: PNG and JPEG
+// as uploaded, a WebP upload converted to PNG. Anything else prints no logo.
+func letterLogoImage(data []byte) []byte {
+	text := string(data)
+	switch {
+	case strings.HasPrefix(text, "\x89PNG\r\n\x1a\n"), strings.HasPrefix(text, "\xff\xd8\xff"):
+		return data
+	case len(text) >= 12 && text[:4] == "RIFF" && text[8:12] == "WEBP":
+		decoded, err := webp.Decode(bytes.NewReader(data))
+		if err != nil {
+			return nil
+		}
+		var out bytes.Buffer
+		if png.Encode(&out, decoded) != nil {
+			return nil
+		}
+		return out.Bytes()
+	}
+	return nil
 }
 
 // parentLetterAccessLog writes each read of children's data through a

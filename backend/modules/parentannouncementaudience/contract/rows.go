@@ -112,8 +112,8 @@ type ParentAnnouncementDeliveryRecipient struct {
 	Email             string
 	HasPortalAccess   bool
 	PortalLocale      string
-	// StudentIDs are the reached children this guardian is linked to
-	// (#4813): a mail names only these children.
+	// StudentIDs are the reached children this guardian is linked to with
+	// parent_portal.access (#4813): a mail names only these children.
 	StudentIDs []int64
 }
 
