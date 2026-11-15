@@ -154,8 +154,7 @@ function SchoolSetupWizardForAdmin({
   }, []);
   const visible = state !== null && !state.completed && !state.dismissed;
   // Die Zahl der Personen ohne Soll (#6919) lädt erst, wenn der Schritt in
-  // der offenen Checkliste aufgeklappt ist: Die Rechnung geht über alle
-  // Zeitkonten und gehört nicht in jeden Seitenaufruf.
+  // der offenen Checkliste aufgeklappt ist: Vorher zeigt sie niemand an.
   const workTime = useWorkTimeCoverage(
     visible && view === "checklist" && expanded === "worktime",
   );
@@ -165,8 +164,7 @@ function SchoolSetupWizardForAdmin({
   // Aufklappen; wer schneller klickt, wartet kurz auf sie. Scheitert sie,
   // öffnet die Tour den laufenden Monat, und der Grund steht im Schritt.
   const startWorkTimeTour = async () => {
-    const counted =
-      workTime.coverage ?? (await workTime.retry().catch(() => undefined));
+    const counted = workTime.coverage ?? (await workTime.retry());
     tour.start(
       "worktime",
       staffWithoutTargetHref(counted?.year, counted?.month),

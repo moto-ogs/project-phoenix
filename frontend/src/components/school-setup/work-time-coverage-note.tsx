@@ -10,6 +10,7 @@ import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { notBookedModuleOf } from "~/lib/module-not-booked";
 import type { PayrollTargetCoverage } from "~/lib/payroll-api";
+import { monthYearLabel } from "~/lib/time-account-links";
 
 /** Die Soll-Prüfung, wie der Schritt „Arbeitszeitmodelle“ sie zeigt. */
 export interface WorkTimeCoverageState {
@@ -17,16 +18,6 @@ export interface WorkTimeCoverageState {
   readonly coverage: PayrollTargetCoverage | undefined;
   readonly error: unknown;
   readonly retry: () => unknown;
-}
-
-const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", {
-  month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-});
-
-function monthLabel(year: number, month: number): string {
-  return MONTH_FORMATTER.format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
 /**
@@ -76,7 +67,7 @@ export function WorkTimeCoverageNote({
   }
 
   const { staffTotal: total, staffWithoutTarget: missing } = coverage;
-  const month = monthLabel(coverage.year, coverage.month);
+  const month = monthYearLabel(coverage.year, coverage.month);
   if (total === 0) {
     return (
       <InsetPanel className="text-sm text-gray-700">

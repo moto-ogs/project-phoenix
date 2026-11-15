@@ -307,8 +307,10 @@ export function useSetupTour<K extends string>(
       const onTourPage = pathname.endsWith(tourDefinition.path);
       const index = onTourPage ? firstPageStop(tourDefinition.stops) : 0;
       // Eine Tour ohne Weg durch die Seitenleiste öffnet ihre Seite selbst,
-      // etwa die Zeitkonten gleich mit dem Filter „ohne Soll“ (#6919).
-      if (!onTourPage && !tourDefinition.stops[index]?.nav) {
+      // etwa die Zeitkonten gleich mit dem Filter „ohne Soll“ (#6919). Eine
+      // mitgegebene Adresse gilt auch für die, die schon auf der Seite sind:
+      // Sonst fehlten ihnen Filter und Monat.
+      if (!tourDefinition.stops[index]?.nav && (!onTourPage || href)) {
         routerRef.current.push(pageHref(tourDefinition, { href }));
       }
       setTour({ step, index, href });

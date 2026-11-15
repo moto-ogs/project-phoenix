@@ -1211,7 +1211,7 @@ describe("SchoolSetupWizard", () => {
     it("opens the current month when the count cannot be loaded", async () => {
       setupState = workTimeNext();
       workTime.coverage = undefined;
-      workTime.retry.mockRejectedValue(new ApiError("boom", 503));
+      workTime.retry.mockResolvedValue(undefined);
       render(<SchoolSetupWizard />);
 
       fireEvent.click(screen.getByRole("button", { name: "Zeig es mir" }));
@@ -1223,7 +1223,7 @@ describe("SchoolSetupWizard", () => {
       );
     });
 
-    it("starts at the Zeitkonten tab when the person is on the staff page", async () => {
+    it("opens the filtered month also for a person already on the staff page", async () => {
       setupState = workTimeNext();
       pathname = "/staff";
       const tab = visibleElement(document.createElement("button"));
@@ -1238,7 +1238,9 @@ describe("SchoolSetupWizard", () => {
       expect(
         await screen.findByRole("dialog", { name: "Zeitkonten öffnen" }),
       ).toBeInTheDocument();
-      expect(push).not.toHaveBeenCalled();
+      expect(push).toHaveBeenCalledWith(
+        "/staff?view=accounts&filter=ohne-soll&month=2026-08",
+      );
     });
   });
 

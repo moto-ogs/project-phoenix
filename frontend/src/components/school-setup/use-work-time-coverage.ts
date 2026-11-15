@@ -13,7 +13,7 @@ import type { PayrollTargetCoverage } from "~/lib/payroll-api";
 export function useWorkTimeCoverage(enabled: boolean): {
   coverage: PayrollTargetCoverage | undefined;
   error: unknown;
-  /** Lädt neu und liefert die Zahl; scheitert mit dem Fehler des Abrufs. */
+  /** Lädt neu und liefert die Zahl; scheitert der Abruf, kommt nichts. */
   retry: () => Promise<PayrollTargetCoverage | undefined>;
 } {
   const { data, error, mutate } = useSWRAuth<PayrollTargetCoverage>(
