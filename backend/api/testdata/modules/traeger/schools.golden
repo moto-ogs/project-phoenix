@@ -7,6 +7,7 @@ GET /traeger/schools/comparison/export -> basis
 GET /traeger/schools/daily-attendance -> basis
 GET /traeger/schools/daily-attendance/export -> basis
 GET /traeger/schools/key-date-counts -> basis
+GET /traeger/schools/key-date-counts/export -> basis
 GET /traeger/schools/occupancy -> basis
 GET /traeger/schools/occupancy/export -> basis
 GET /traeger/schools/utilization -> basis

@@ -141,7 +141,8 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 		identityaccess.TraegerRightSettingsManage, identityaccess.TraegerRightStaffManage, identityaccess.TraegerRightBillingManage)
 	masterData := organizationTenancyTraeger.NewMasterDataResource(organizationTenancyCompose.NewTraegerMasterData(), organizationTenancyCompose.NewTraegerDocumentTemplates(),
 		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage))
-	overviewRoutes := traegerViewHTTP.NewResource(overview, reports)
+	traegerLists := traegerViewListRenderer(NewSimpleListRenderer())
+	overviewRoutes := traegerViewHTTP.NewResource(overview, reports, traegerLists)
 	// The names of the Träger-Büro (#4693); a route-sized test identity
 	// without them answers 500 on those routes, the serving root refuses it.
 	profiles, _ := identity.(identityaccess.TraegerMemberProfiles)
@@ -150,7 +151,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 	stepUp, _ := identity.(identityaccess.TraegerSessionStepUp)
 	return traegerportal.NewResource(TraegerPortalAuth(identity), TraegerPortalMFA(identity),
 		portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeTraeger), overviewRoutes, holidayPeriods,
-		traegerViewHTTP.NewAccessLogResource(overview), traegerSettings, masterData, identity, profiles, overviewRoutes, identity, stepUp), nil
+		traegerViewHTTP.NewAccessLogResource(overview, traegerLists), traegerSettings, masterData, identity, profiles, overviewRoutes, identity, stepUp), nil
 }
 
 // TraegerPortalSettings is the Träger level of the settings system as the

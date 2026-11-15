@@ -1,16 +1,12 @@
 package traegerviewhttp
 
 import (
-	"bytes"
-	"encoding/csv"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // occupancy answers GET /traeger/schools/occupancy: the children of every
@@ -26,23 +22,28 @@ func (rs *Resource) occupancy(w http.ResponseWriter, r *http.Request) {
 }
 
 // occupancyExport answers GET /traeger/schools/occupancy/export: the same
-// figures as CSV, one row per school and figure, for planning in a
-// spreadsheet.
+// figures as PDF, Excel or CSV (format=, CSV without one), one row per
+// school and figure, for every school or one (school=ID). A school of
+// another Träger and an unknown ID answer 404 traeger.school_not_found.
 func (rs *Resource) occupancyExport(w http.ResponseWriter, r *http.Request) {
+	format, schoolID, ok := readExportOptions(w, r)
+	if !ok {
+		return
+	}
 	occupancy, ok := rs.readOccupancy(w, r)
 	if !ok {
 		return
 	}
-	data, err := occupancyCSV(occupancy)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
+	schoolName := ""
+	if schoolID > 0 {
+		school, found := findSchool(occupancy.Schools, schoolID, func(s traegerview.SchoolOccupancy) traegerview.School { return s.School })
+		if !found {
+			renderSchoolNotFound(w, r)
+			return
+		}
+		occupancy.Schools, schoolName = []traegerview.SchoolOccupancy{school}, school.Name
 	}
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", textnorm.ContentDisposition("attachment", fmt.Sprintf("belegung-%s.csv", occupancy.Day)))
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(data)
+	writeList(w, r, rs.lists, format, occupancyTable(occupancy, schoolName))
 }
 
 func (rs *Resource) readOccupancy(w http.ResponseWriter, r *http.Request) (traegerview.Occupancy, bool) {
@@ -72,23 +73,19 @@ const (
 	occupancyRowWithoutCareForm = "Ohne Betreuungsform"
 )
 
-// occupancyCSV writes one row per school and figure: the school, its town,
+// occupancyTable is one row per school and figure: the school, its town,
 // the kind of the row, the name of the group or offer, the children and the
 // places of the offer. A spreadsheet filters and sums it by kind.
-func occupancyCSV(occupancy traegerview.Occupancy) ([]byte, error) {
-	var buf bytes.Buffer
-	buf.WriteString("\xEF\xBB\xBF")
-	writer := csv.NewWriter(&buf)
-	writer.Comma = ';'
+func occupancyTable(occupancy traegerview.Occupancy, schoolName string) ListTable {
 	day := occupancy.Day.Format("02.01.2006")
-	rows := [][]string{{"Datum", "Schule", "Ort", "Art", "Name", "Kinder", "Plätze"}}
+	var rows [][]string
 	for _, school := range occupancy.Schools {
 		row := func(kind, name string, children int, capacity *int) []string {
 			places := ""
 			if capacity != nil {
 				places = strconv.Itoa(*capacity)
 			}
-			return []string{day, csvSafe(school.Name), csvSafe(school.City), kind, csvSafe(name), strconv.Itoa(children), places}
+			return []string{day, school.Name, school.City, kind, name, strconv.Itoa(children), places}
 		}
 		rows = append(rows, row(occupancyRowTotal, "", school.Children, nil))
 		for _, group := range school.Groups {
@@ -100,8 +97,24 @@ func occupancyCSV(occupancy traegerview.Occupancy) ([]byte, error) {
 		}
 		rows = append(rows, row(occupancyRowWithoutCareForm, "", school.WithoutCareForm, nil))
 	}
-	if err := writer.WriteAll(rows); err != nil {
-		return nil, err
+	return ListTable{
+		Title: "Belegung", Subtitle: "Stand " + day,
+		Filters: []string{schoolFilterLabel(schoolName)},
+		Columns: []ListColumn{
+			{ID: "day", Label: "Datum", SpreadsheetOnly: true}, {ID: "school", Label: "Schule"}, {ID: "city", Label: "Ort"},
+			{ID: "kind", Label: "Art"}, {ID: "name", Label: "Name"}, {ID: "children", Label: "Kinder"}, {ID: "places", Label: "Plätze"},
+		},
+		Rows: rows, Filename: "belegung-" + occupancy.Day.String(),
 	}
-	return buf.Bytes(), nil
+}
+
+// findSchool returns the entry of the school with the ID.
+func findSchool[T any](entries []T, schoolID int64, school func(T) traegerview.School) (T, bool) {
+	for _, entry := range entries {
+		if school(entry).ID == schoolID {
+			return entry, true
+		}
+	}
+	var none T
+	return none, false
 }

@@ -1,8 +1,6 @@
 package traegerviewhttp
 
 import (
-	"bytes"
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"math"
@@ -13,7 +11,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // comparison answers GET /traeger/schools/comparison?from=&to=&schools=: the
@@ -30,10 +27,15 @@ func (rs *Resource) comparison(w http.ResponseWriter, r *http.Request) {
 }
 
 // comparisonExport answers GET /traeger/schools/comparison/export: the same
-// comparison as CSV, one row per school, then the average and the figure
-// together. metrics=a,b keeps those figures in that order; without it the
-// file holds every figure.
+// comparison as PDF, Excel or CSV (format=, CSV without one; #4718), one row
+// per school, then the average and the figure together. metrics=a,b keeps
+// those figures in that order; without it the file holds every figure.
 func (rs *Resource) comparisonExport(w http.ResponseWriter, r *http.Request) {
+	format, err := listFormat(r)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
 	metrics, err := comparisonMetrics(r.URL.Query().Get("metrics"))
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
@@ -43,17 +45,7 @@ func (rs *Resource) comparisonExport(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	data, err := comparisonCSV(comparison, metrics)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", textnorm.ContentDisposition("attachment",
-		fmt.Sprintf("standortvergleich-%s-bis-%s.csv", comparison.From, comparison.To)))
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(data)
+	writeList(w, r, rs.lists, format, comparisonTable(comparison, metrics))
 }
 
 func (rs *Resource) readComparison(w http.ResponseWriter, r *http.Request) (traegerview.SchoolComparison, bool) {
@@ -150,34 +142,35 @@ const (
 	comparisonRowTogether = "Alle zusammen"
 )
 
-// comparisonCSV writes one row per school, then the average and the figure
+// comparisonTable is one row per school, then the average and the figure
 // together. A missing figure stays empty, so a spreadsheet never reads a gap
 // as 0; decimals carry a comma, as German spreadsheets expect.
-func comparisonCSV(comparison traegerview.SchoolComparison, metrics []string) ([]byte, error) {
-	var buf bytes.Buffer
-	buf.WriteString("\xEF\xBB\xBF")
-	writer := csv.NewWriter(&buf)
-	writer.Comma = ';'
-	head := []string{"Schule", "Ort"}
+func comparisonTable(comparison traegerview.SchoolComparison, metrics []string) ListTable {
+	columns := []ListColumn{{ID: "school", Label: "Schule"}, {ID: "city", Label: "Ort"}}
 	for _, key := range metrics {
-		head = append(head, comparisonColumns[key].head)
+		columns = append(columns, ListColumn{ID: key, Label: comparisonColumns[key].head})
 	}
-	rows := [][]string{head}
 	row := func(name, city string, values traegerview.ComparisonValues) []string {
-		line := []string{csvSafe(name), csvSafe(city)}
+		line := []string{name, city}
 		for _, key := range metrics {
 			line = append(line, comparisonValue(comparisonColumns[key], values, key))
 		}
 		return line
 	}
+	rows := make([][]string, 0, len(comparison.Schools)+2)
+	names := make([]string, 0, len(comparison.Schools))
 	for _, school := range comparison.Schools {
 		rows = append(rows, row(school.Name, school.City, school.Values))
+		names = append(names, school.Name)
 	}
 	rows = append(rows, row(comparisonRowAverage, "", comparison.Average), row(comparisonRowTogether, "", comparison.Together))
-	if err := writer.WriteAll(rows); err != nil {
-		return nil, err
+	from, to := comparison.From.Format("02.01.2006"), comparison.To.Format("02.01.2006")
+	return ListTable{
+		Title: "Standortvergleich", Subtitle: from + " bis " + to,
+		Filters: []string{"Schulen: " + strings.Join(names, ", "), periodLabel(from, to)},
+		Columns: columns, Rows: rows,
+		Filename: fmt.Sprintf("standortvergleich-%s-bis-%s", comparison.From, comparison.To),
 	}
-	return buf.Bytes(), nil
 }
 
 func comparisonValue(column comparisonColumn, values traegerview.ComparisonValues, key string) string {
