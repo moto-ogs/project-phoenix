@@ -20,7 +20,7 @@ interface SeedProfile {
   };
 }
 
-type SeedAccountRole = "admin" | "betreuer";
+type SeedAccountRole = "admin" | "betreuer" | "lehrkraft";
 
 /**
  * Kontoart im Seed-Profil; ohne Angabe die Schul-Leitung (`admin`).

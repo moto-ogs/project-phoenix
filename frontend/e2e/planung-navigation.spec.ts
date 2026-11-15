@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./a11y/scan";
 
 import {
   MISSING_SEED_ACCESS,

@@ -1,7 +1,8 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { expect, test } from "./a11y/scan";
 import { frontendPort } from "./frontend-port";
 
 // Eltern-Chat auf einem kleinen Android-Handy (360 × 640, Touch). Nach dem
