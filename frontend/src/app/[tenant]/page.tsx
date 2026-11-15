@@ -14,6 +14,7 @@ import { FieldLabel } from "~/components/ui/field-label";
 import { Input } from "~/components/ui/input";
 import {
   credentialError,
+  LOGIN_CREDENTIAL_FIELDS,
   LOGIN_REFUSALS,
   PASSKEY_LOGIN_REFUSALS,
 } from "~/components/auth/credential-error";
@@ -302,10 +303,13 @@ function LoginForm() {
         reason: (code && LOGIN_FAILURE_REASONS[code]) ?? "error",
       });
       // Vor der Anmeldung heißt 401 "abgelehnt", nicht "Sitzung abgelaufen".
-      void formErrors.show(credentialError(err, LOGIN_REFUSALS), {
-        object: "die Anmeldung",
-        retry: () => latestSubmitRef.current(),
-      });
+      void formErrors.show(
+        credentialError(err, LOGIN_REFUSALS, LOGIN_CREDENTIAL_FIELDS),
+        {
+          object: "die Anmeldung",
+          retry: () => latestSubmitRef.current(),
+        },
+      );
       // A 4xx is the backend rejecting the login (wrong password, no access
       // to this school), not a defect, so it stays out of Sentry issues.
       const status = errorStatus(err);

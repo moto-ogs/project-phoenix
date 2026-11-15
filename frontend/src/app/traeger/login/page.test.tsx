@@ -533,4 +533,24 @@ describe("TraegerLoginPage", () => {
     expect(mockSignIn).not.toHaveBeenCalled();
     assign.mockRestore();
   });
+
+  // #7111: focus stayed on <body> and no field carried aria-invalid.
+  it("marks both credential fields and focuses the e-mail after a wrong password", async () => {
+    mockLogin.mockRejectedValue(
+      new ApiError("invalid username or password", 401, {
+        code: "identity.invalid_credentials",
+      }),
+    );
+    render(<TraegerLoginPage />);
+
+    submitCredentials();
+
+    const email = screen.getByTestId("input-email");
+    await waitFor(() => expect(email).toHaveFocus());
+    expect(email).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByTestId("input-password")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
 });

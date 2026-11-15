@@ -452,6 +452,61 @@ describe("HomePage (Login)", () => {
     assign.mockRestore();
   });
 
+  // #7111: the refusal names no field, so focus fell to <body>. Both
+  // credential fields are marked and the first of them takes the focus.
+  it("marks both credential fields and focuses the e-mail after a wrong password", async () => {
+    global.fetch = mockFetchResponse(401, {
+      error: "Invalid credentials",
+      code: "identity.invalid_credentials",
+    });
+
+    render(<HomePage />);
+    const email = await screen.findByTestId("input-email");
+    const password = screen.getByTestId("input-password");
+
+    await act(async () => {
+      fireEvent.change(email, { target: { value: "test@example.com" } });
+      fireEvent.change(password, { target: { value: "wrongpassword" } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /anmelden/i }));
+    });
+
+    await waitFor(() => expect(email).toHaveFocus());
+    expect(email).toHaveAttribute("aria-invalid", "true");
+    expect(password).toHaveAttribute("aria-invalid", "true");
+  });
+
+  // A switched-off account names no field: the message takes the focus.
+  it("focuses the message when the refusal concerns no field", async () => {
+    global.fetch = mockFetchResponse(401, {
+      error: "account is inactive",
+      code: "identity.session_account_inactive",
+    });
+
+    render(<HomePage />);
+    const email = await screen.findByTestId("input-email");
+    await act(async () => {
+      fireEvent.change(email, { target: { value: "off@example.com" } });
+      fireEvent.change(screen.getByTestId("input-password"), {
+        target: { value: "correct-password" },
+      });
+    });
+    const submit = screen.getByRole("button", { name: /anmelden/i });
+    submit.focus();
+    await act(async () => {
+      fireEvent.click(submit);
+      // The browser's focus fixup moves focus off the button disabled while
+      // sending, to <body>; happy-dom does not run it.
+      submit.blur();
+    });
+
+    // Alert is mocked in this file; FormErrorAlert around it is real.
+    const alert = await screen.findByTestId("alert-error");
+    await waitFor(() => expect(document.activeElement).toContainElement(alert));
+    expect(email).not.toHaveAttribute("aria-invalid", "true");
+  });
+
   // Backend answers 401 + code "identity.session_account_inactive" once the password was
   // accepted but the account is switched off — which is what offboarding
   // leaves behind. Regression guard for #3376: the generic credentials error

@@ -20,6 +20,7 @@ import { useSearchParams } from "next/navigation";
 import { AuthShell, MotoBrand } from "~/components/auth/auth-shell";
 import {
   credentialError,
+  LOGIN_CREDENTIAL_FIELDS,
   LOGIN_REFUSALS,
 } from "~/components/auth/credential-error";
 import { MFAChallengeForm } from "~/components/auth/mfa-challenge-form";
@@ -228,10 +229,13 @@ function LoginForm() {
       // Ein falsches Passwort und ein ausgeschaltetes Konto haben eigene
       // Katalogtexte; vor der Anmeldung heißt 401 "abgelehnt". Ein Konto
       // ohne Zugang zum Träger-Portal kommt als traeger.no_membership.
-      void formErrors.show(credentialError(err, LOGIN_REFUSALS), {
-        object: "die Anmeldung",
-        retry: () => latestSubmitRef.current(),
-      });
+      void formErrors.show(
+        credentialError(err, LOGIN_REFUSALS, LOGIN_CREDENTIAL_FIELDS),
+        {
+          object: "die Anmeldung",
+          retry: () => latestSubmitRef.current(),
+        },
+      );
       logger.error("traeger login failed", {
         error: err instanceof Error ? err.message : String(err),
         status: errorStatus(err),

@@ -12,6 +12,7 @@ import { useSearchParams } from "next/navigation";
 import { AuthShell, MotoBrand } from "~/components/auth/auth-shell";
 import {
   credentialError,
+  LOGIN_CREDENTIAL_FIELDS,
   LOGIN_REFUSALS,
   PASSKEY_LOGIN_REFUSALS,
 } from "~/components/auth/credential-error";
@@ -126,10 +127,13 @@ function LoginForm() {
     } catch (cause) {
       // A wrong password, a switched-off account and too many tries have
       // texts of their own; before the login a 401 means "refused".
-      void formErrors.show(credentialError(cause, LOGIN_REFUSALS), {
-        object: "die Anmeldung",
-        retry: () => latestSubmitRef.current(),
-      });
+      void formErrors.show(
+        credentialError(cause, LOGIN_REFUSALS, LOGIN_CREDENTIAL_FIELDS),
+        {
+          object: "die Anmeldung",
+          retry: () => latestSubmitRef.current(),
+        },
+      );
       logger.error("caterer_login_failed", {
         error: cause instanceof Error ? cause.message : String(cause),
         status: errorStatus(cause),

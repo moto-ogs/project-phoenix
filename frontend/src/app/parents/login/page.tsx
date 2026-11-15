@@ -14,6 +14,7 @@ import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Alert } from "~/components/ui/alert";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FieldLabel } from "~/components/ui/field-label";
 import { Input } from "~/components/ui/input";
 import {
@@ -26,7 +27,10 @@ import { PasswordResetModal } from "~/components/auth/password-reset-modal";
 import { LanguageSwitcher } from "~/components/parent/language-switcher";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError, unavailableApiError } from "~/lib/api-error";
-import { credentialError } from "~/components/auth/credential-error";
+import {
+  credentialError,
+  LOGIN_CREDENTIAL_FIELDS,
+} from "~/components/auth/credential-error";
 import {
   MFAChallengeForm,
   type MFAChallengeCopy,
@@ -266,7 +270,7 @@ function ParentLoginForm() {
       );
       void formErrors.show(
         err instanceof ApiError
-          ? credentialError(err, PARENT_LOGIN_REFUSALS)
+          ? credentialError(err, PARENT_LOGIN_REFUSALS, LOGIN_CREDENTIAL_FIELDS)
           : unavailableApiError(err),
         {
           object: t("errorObject"),
@@ -382,11 +386,16 @@ function ParentLoginForm() {
                   disabled={isSessionSettling}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  error={formErrors.fieldError("email")}
                 />
               </div>
 
               <div className="text-left">
-                <FieldLabel htmlFor="parent-password" required>
+                <FieldLabel
+                  htmlFor="parent-password"
+                  required
+                  invalid={Boolean(formErrors.fieldError("password"))}
+                >
                   {t("passwordLabel")}
                 </FieldLabel>
                 <Input
@@ -399,9 +408,19 @@ function ParentLoginForm() {
                   disabled={isSessionSettling}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  aria-invalid={Boolean(formErrors.fieldError("password"))}
+                  aria-describedby={
+                    formErrors.fieldError("password")
+                      ? "parent-password-error"
+                      : undefined
+                  }
                   revealable
                   showPasswordLabel={t("showPassword")}
                   hidePasswordLabel={t("hidePassword")}
+                />
+                <FieldErrorHint
+                  id="parent-password-error"
+                  message={formErrors.fieldError("password")}
                 />
               </div>
 
