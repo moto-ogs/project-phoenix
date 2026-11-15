@@ -1099,7 +1099,7 @@ function ParticipationWeek({
                       <fieldset
                         ref={dayEditorRef}
                         tabIndex={-1}
-                        className="mt-3 rounded-xl focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none"
+                        className="mt-3 rounded-xl focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none"
                       >
                         <legend className="sr-only">
                           {t("editDayRegistration", { date: fullDate(date) })}

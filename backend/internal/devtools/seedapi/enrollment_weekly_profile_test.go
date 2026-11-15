@@ -112,6 +112,12 @@ func (m *weeklyProfileAPIMock) serve(t *testing.T, w seedHTTPResponseWriter, r *
 		_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"periods": []any{}}})
 		return true
 	}
+	// The Träger report template step (#4716) reads the templates the
+	// Träger already has.
+	if r.Method == "GET" && r.URL.Path == "/traeger/report-templates/" {
+		_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []any{}})
+		return true
+	}
 	// The Träger master data step (#4653) uploads a multipart logo and reads
 	// the bank accounts it already has.
 	if strings.HasPrefix(r.URL.Path, "/traeger/master-data/") {

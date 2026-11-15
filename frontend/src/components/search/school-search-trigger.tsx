@@ -115,7 +115,7 @@ function SchoolSearchButton({
           <Search aria-hidden="true" className="h-4 w-4 text-gray-500" />
           <span className="text-gray-600">Überall suchen</span>
           {shortcut ? (
-            <span className="ml-6 text-xs text-gray-400">{shortcut}</span>
+            <span className="ml-6 text-xs text-gray-500">{shortcut}</span>
           ) : null}
         </Button>
       ) : null}

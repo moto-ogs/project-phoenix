@@ -166,7 +166,7 @@ function DatevReportPanel({
       </p>
       {report.staffSkipped.length > 0 && (
         <div>
-          <p className="text-moto-orange font-medium">
+          <p className="text-moto-orange-strong font-medium">
             {`Export gesperrt: Personalnummer fehlt (${report.staffSkipped.length}):`}
           </p>
           <ul className="list-inside list-disc">
@@ -185,7 +185,7 @@ function DatevReportPanel({
         </p>
       )}
       {report.openMonth && (
-        <p className="text-moto-orange font-medium">
+        <p className="text-moto-orange-strong font-medium">
           Der Monat ist noch nicht abgeschlossen; die Werte sind ein
           Zwischenstand, nicht final.
         </p>

@@ -217,7 +217,7 @@ function PlannedShiftsInfo({
     <div className="-mt-3 mb-5 space-y-1 text-sm text-gray-500">
       {active.map((shift) => (
         <div key={shift.id} className="flex flex-wrap items-center gap-1.5">
-          <span className="text-gray-400">Geplant:</span>
+          <span className="text-gray-500">Geplant:</span>
           {shift.shiftTypeName && (
             // Schichtart pill: the color is tenant-defined data the backend
             // embeds (#1844), not a brand hue; without one the pill falls
@@ -234,7 +234,7 @@ function PlannedShiftsInfo({
             <StatusBadge label="Vertretung" tone="blue" compact />
           )}
           {shift.breakMinutes > 0 && (
-            <span className="text-gray-400">
+            <span className="text-gray-500">
               · Pause {shift.breakMinutes} min
             </span>
           )}
@@ -243,7 +243,7 @@ function PlannedShiftsInfo({
       {cancelled.map((shift) => (
         <div
           key={shift.id}
-          className="flex flex-wrap items-center gap-1.5 text-gray-400"
+          className="flex flex-wrap items-center gap-1.5 text-gray-500"
         >
           <span className="tabular-nums line-through">
             {shift.startTime}–{shift.endTime}
@@ -368,7 +368,7 @@ function getBreakButtonClassName(
   if (isOnBreak) return `${base} border-moto-orange text-moto-orange`;
   if (breakMins > 0)
     return `${base} border-moto-orange text-moto-orange hover:bg-moto-orange/10`;
-  return `${base} border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-500`;
+  return `${base} border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-500`;
 }
 
 // Returns formatted duration for today footer
@@ -512,10 +512,10 @@ function renderTimerContent(
   ) {
     return (
       <>
-        <span className="text-moto-orange text-4xl font-light tabular-nums">
+        <span className="text-moto-orange-strong text-4xl font-light tabular-nums">
           {formatCountdown(countdownRemainingSecs)}
         </span>
-        <span className="text-moto-orange mt-0.5 text-xs font-medium">
+        <span className="text-moto-orange-strong mt-0.5 text-xs font-medium">
           Pause ({plannedBreakDurationMins} Min)
         </span>
         <span className="text-moto-amber-strong mt-0.5 text-center text-xs font-medium">
@@ -530,10 +530,10 @@ function renderTimerContent(
   if (isOnBreak) {
     return (
       <>
-        <span className="text-moto-orange text-4xl font-light tabular-nums">
+        <span className="text-moto-orange-strong text-4xl font-light tabular-nums">
           {formatCountdown(activeBreakElapsedSecs)}
         </span>
-        <span className="text-moto-orange mt-0.5 text-xs font-medium">
+        <span className="text-moto-orange-strong mt-0.5 text-xs font-medium">
           Pause läuft
         </span>
       </>
@@ -1024,7 +1024,7 @@ function ClockInCard({
               </Button>
             )}
 
-            <span className="text-xs text-gray-400 sm:text-sm">
+            <span className="text-xs text-gray-500 sm:text-sm">
               {mode === null
                 ? "Bitte Status wählen"
                 : mode === "absent"
@@ -1210,7 +1210,7 @@ function ClockInCard({
               <span className="w-12 shrink-0 text-center text-gray-600 tabular-nums">
                 {formatTime(currentSession.checkInTime)}
               </span>
-              <span className="shrink-0 text-gray-300">&rarr;</span>
+              <span className="shrink-0 text-gray-500">&rarr;</span>
               <span className="w-12 shrink-0 text-center text-gray-600 tabular-nums">
                 {formatTime(currentSession.checkOutTime)}
               </span>
@@ -1253,7 +1253,7 @@ function ClockInCard({
             </div>
           </div>
         ) : (
-          <div className="mt-4 flex flex-col gap-y-1 text-xs text-gray-400 sm:flex-row sm:flex-wrap sm:gap-x-6">
+          <div className="mt-4 flex flex-col gap-y-1 text-xs text-gray-500 sm:flex-row sm:flex-wrap sm:gap-x-6">
             <span>
               Heute:{" "}
               <span className="font-medium text-gray-600">
@@ -1500,7 +1500,7 @@ function BreakActivityLog({
         {formatTimeFromDate(seg.start)}
       </span>
       <span
-        className={`shrink-0 ${seg.type === "break" && seg.isActive ? "text-moto-orange/60" : "text-gray-300"}`}
+        className={`shrink-0 ${seg.type === "break" && seg.isActive ? "text-moto-orange/60" : "text-gray-500"}`}
       >
         &rarr;
       </span>

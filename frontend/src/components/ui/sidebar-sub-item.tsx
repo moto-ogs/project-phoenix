@@ -45,7 +45,7 @@ export function SidebarSubItem({
       ariaLabel={badge.ariaLabel}
     />
   ) : count === undefined ? null : (
-    <span className="text-xs text-gray-400">{count}</span>
+    <span className="text-xs text-gray-600">{count}</span>
   );
   return (
     <NavigationLink

@@ -1,7 +1,7 @@
 "use client";
 
 import { CloseIcon } from "~/components/ui/close-icon";
-import type { MouseEventHandler } from "react";
+import type { FocusEventHandler, MouseEventHandler } from "react";
 import { Alert, type AlertType } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { RequestIdButton } from "~/components/ui/request-id-button";
@@ -35,6 +35,9 @@ interface ToastProps {
   readonly touchFriendly: boolean;
   readonly onMouseEnter?: MouseEventHandler<HTMLDivElement>;
   readonly onMouseLeave?: MouseEventHandler<HTMLDivElement>;
+  /** Focus entering or leaving the toast; the provider pauses its timer. */
+  readonly onFocus?: FocusEventHandler<HTMLDivElement>;
+  readonly onBlur?: FocusEventHandler<HTMLDivElement>;
 }
 
 /**
@@ -59,6 +62,8 @@ export function Toast({
   touchFriendly,
   onMouseEnter,
   onMouseLeave,
+  onFocus,
+  onBlur,
 }: Readonly<ToastProps>) {
   // Wiederholen und Vorgangskennung stehen unter der Meldung, bündig mit
   // ihrem Text (wie im Fehlerkasten); -ml-2.5 nimmt das Polster des ersten
@@ -120,6 +125,8 @@ export function Toast({
     <div
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      onFocus={onFocus}
+      onBlur={onBlur}
       className={cn(
         "pointer-events-auto w-full transition-[opacity,transform]",
         reducedMotion ? "" : `${TOAST_FADE_CLASS} ease-out`,

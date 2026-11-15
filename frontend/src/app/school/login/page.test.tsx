@@ -27,7 +27,8 @@ vi.mock("~/lib/school-url", () => ({
   schoolPath: (path: string) => path,
 }));
 
-vi.mock("~/components/auth/password-reset-modal", () => ({
+vi.mock("~/components/auth/password-reset-modal", async (actual) => ({
+  ...(await actual<object>()),
   PasswordResetModal: () => null,
 }));
 
@@ -56,6 +57,7 @@ describe("SchoolLoginPage error path", () => {
   beforeEach(() => {
     mockLogin.mockReset();
     mockSearchParamsGet.mockReturnValue(null);
+    window.history.replaceState({}, "", "/login");
   });
 
   // The backend answers a wrong password with 401 identity.invalid_credentials.
@@ -136,9 +138,7 @@ describe("SchoolLoginPage error path", () => {
   });
 
   it("shows an expired session as a notice", async () => {
-    mockSearchParamsGet.mockImplementation((key) =>
-      key === "error" ? "SessionExpired" : null,
-    );
+    window.history.replaceState({}, "", "/login?error=SessionExpired");
     render(<SchoolLoginPage />);
 
     await waitFor(() =>

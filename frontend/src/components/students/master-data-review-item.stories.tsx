@@ -33,12 +33,12 @@ type Story = StoryObj<typeof meta>;
 // In Storybook there is no backend, so the request fails and the card
 // gracefully falls into its error state (caught in a try/catch — no crash).
 export const Default: Story = {
-  // axe meldet hier noch color-contrast, label-content-name-mismatch; Behebung in #7110, #7112.
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
   parameters: { a11y: { test: "todo" } },
 };
 
 export const DepartureModes: Story = {
-  // axe meldet hier noch color-contrast, label-content-name-mismatch; Behebung in #7110, #7112.
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
   parameters: { a11y: { test: "todo" } },
   args: {
     row: {

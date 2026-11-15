@@ -803,7 +803,7 @@ export function StaffSessionTable({
           {row.session?.check_in_time ? (
             row.hasMultipleBlocks ? (
               <span title={multiBlockBoundsHint}>
-                <span className="mr-1 text-xs text-gray-400">ab</span>
+                <span className="mr-1 text-xs text-gray-500">ab</span>
                 <span>{formatTimeOnly(row.session.check_in_time)}</span>
               </span>
             ) : (
@@ -827,7 +827,7 @@ export function StaffSessionTable({
           ) : row.lastSession?.check_out_time ? (
             row.hasMultipleBlocks ? (
               <span title={multiBlockBoundsHint}>
-                <span className="mr-1 text-xs text-gray-400">bis</span>
+                <span className="mr-1 text-xs text-gray-500">bis</span>
                 <span>{formatTimeOnly(row.lastSession.check_out_time)}</span>
               </span>
             ) : (
@@ -873,7 +873,7 @@ export function StaffSessionTable({
             "–"
           )}
           {!row.targetUnresolved && row.projected?.isOverride && (
-            <span className="block text-xs text-gray-400">
+            <span className="block text-xs text-gray-500">
               {row.closingReason
                 ? "Sonderarbeitszeit · Schließtag"
                 : "Sonderarbeitszeit"}
@@ -1068,7 +1068,7 @@ export function StaffSessionTable({
             {
               columnKey: "date",
               content: (
-                <span className="whitespace-nowrap text-gray-400">
+                <span className="whitespace-nowrap text-gray-500">
                   Block {blockIndex + 1}
                 </span>
               ),
@@ -1242,7 +1242,6 @@ export function StaffSessionTable({
         rowTone={(row) =>
           row.isToday ? "today" : row.isWeekend ? "muted" : null
         }
-        rowClassName={(row) => (row.isFuture ? "opacity-40" : "")}
         emptyState="In diesem Zeitraum gibt es keine Tage."
       />
       {!isAdminView && (
@@ -1363,13 +1362,13 @@ function PlannedShiftCell({
   readonly shifts: readonly StaffShift[] | undefined;
 }) {
   if (!shifts || shifts.length === 0) {
-    return <span className="text-gray-300">–</span>;
+    return <span className="text-gray-500">–</span>;
   }
   return (
     <div className="space-y-0.5">
       {shifts.map((shift) =>
         shift.cancelled ? (
-          <div key={shift.id} className="text-gray-400">
+          <div key={shift.id} className="text-gray-500">
             <span className="line-through">
               {shift.startTime}–{shift.endTime}
             </span>{" "}
@@ -1491,11 +1490,11 @@ function SourceBadges({
   readonly sessions: readonly StaffHistorySession[];
 }) {
   if (sessions.length === 0) {
-    return <span className="text-xs text-gray-300">–</span>;
+    return <span className="text-xs text-gray-500">–</span>;
   }
   const sources = [...new Set(sessions.map((s) => s.source ?? "app"))];
   if (sources.length > 1) {
-    return <span className="text-xs text-gray-300">–</span>;
+    return <span className="text-xs text-gray-500">–</span>;
   }
   const source = sources[0];
   if (source === "nfc") {
@@ -1503,7 +1502,7 @@ function SourceBadges({
   }
   if (source === "unknown") {
     // Pre-Migration Legacy-Row (Tristan PR #1398).
-    return <span className="text-xs text-gray-400">–</span>;
+    return <span className="text-xs text-gray-500">–</span>;
   }
   return <StatusBadge label="App" tone="gray" />;
 }
@@ -1560,7 +1559,7 @@ function HintBadges({
   readonly laborHints?: readonly LaborHint[];
 }) {
   if (sessions.length === 0) {
-    return <span className="text-xs text-gray-300">–</span>;
+    return <span className="text-xs text-gray-500">–</span>;
   }
   const pills: {
     key: string;
@@ -1591,7 +1590,7 @@ function HintBadges({
   }
   pills.push(...creditPills(sessions));
   if (pills.length === 0 && laborHints.length === 0) {
-    return <span className="text-xs text-gray-300">–</span>;
+    return <span className="text-xs text-gray-500">–</span>;
   }
   return (
     <div className="flex flex-wrap gap-1">

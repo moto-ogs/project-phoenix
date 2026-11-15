@@ -47,7 +47,7 @@ describe("OverflowMenu", () => {
     });
     expect(smallTrigger.className).toContain("size-6");
     expect(smallTrigger.className).toContain("pointer-coarse:size-11");
-    expect(smallTrigger.className).toContain("text-gray-400");
+    expect(smallTrigger.className).toContain("text-gray-500");
     expect(smallTrigger.className).not.toContain("size-9");
   });
 

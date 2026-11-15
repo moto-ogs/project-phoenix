@@ -112,6 +112,11 @@ export interface DataTableHeading {
    * skips no level.
    */
   readonly level?: 2 | 3;
+  /**
+   * A control at the right of the title row, inside the surface: a choice
+   * that shapes the table, such as its columns. Like `SectionCard`'s action.
+   */
+  readonly action?: ReactNode;
 }
 
 /**
@@ -588,6 +593,11 @@ function SurfaceHeading({ heading }: Readonly<{ heading: DataTableHeading }>) {
       {heading.count === undefined ? null : (
         <StatusBadge tone="gray" compact label={String(heading.count)} />
       )}
+      {heading.action ? (
+        <div className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
+          {heading.action}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1396,7 +1406,7 @@ export function DataTable<T>({
                                       {canExpand ? (
                                         <ChevronRight
                                           aria-hidden="true"
-                                          className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${expanded ? "rotate-90" : ""}`}
+                                          className={`h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform ${expanded ? "rotate-90" : ""}`}
                                         />
                                       ) : (
                                         <span className="h-3.5 w-3.5 shrink-0" />

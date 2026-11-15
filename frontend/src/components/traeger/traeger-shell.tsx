@@ -27,17 +27,20 @@ import { TraegerTestSystemNotice } from "./traeger-test-system-notice";
 export function TraegerShell({
   children,
   testSystem = false,
+  federalStates,
 }: {
   readonly children: React.ReactNode;
   /** Ein Test-Träger (#4658) bekommt über der Kopfzeile einen Hinweis. */
   readonly testSystem?: boolean;
+  /** Die Bundesländer der Schulen; die Tagesmeldung gibt es nur für M-V (#4717). */
+  readonly federalStates?: readonly string[];
 }) {
   return (
     <PortalShell
       header={<Header />}
       topLayer={testSystem ? <TraegerTestSystemNotice /> : null}
-      sidebar={<TraegerSidebar />}
-      bottomNav={<TraegerBottomNav />}
+      sidebar={<TraegerSidebar federalStates={federalStates} />}
+      bottomNav={<TraegerBottomNav federalStates={federalStates} />}
       // Eine Flex-Spalte bis zur Inhaltshülle, wie im Personal- und
       // Schul-Portal: die letzte Fläche einer Seite reicht dann bis zur
       // Unterkante (TENANT-PAGE-SPEC, Regel 6).

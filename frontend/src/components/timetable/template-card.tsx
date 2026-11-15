@@ -212,7 +212,7 @@ export function TemplateCard({
                 className={`flex h-6 w-7 items-center justify-center rounded-full text-xs font-semibold ${
                   active
                     ? "bg-gray-900 text-white"
-                    : "bg-gray-100 text-gray-400"
+                    : "bg-gray-100 text-gray-600"
                 }`}
               >
                 {weekdayShort(wd)}
@@ -235,7 +235,7 @@ export function TemplateCard({
           </div>
           {targetSummary ? (
             <div className="flex items-start gap-2">
-              <Users className="mt-0.5 h-3.5 w-3.5 text-gray-400" aria-hidden />
+              <Users className="mt-0.5 h-3.5 w-3.5 text-gray-500" aria-hidden />
               <span className="line-clamp-2" title={targetSummary}>
                 {targetSummary}
               </span>
@@ -246,13 +246,13 @@ export function TemplateCard({
             <span className="truncate">{template.roomName ?? "Kein Raum"}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Palette className="h-3.5 w-3.5 text-gray-400" aria-hidden />
+            <Palette className="h-3.5 w-3.5 text-gray-500" aria-hidden />
             <span className="truncate">
               {template.planningTrackName ?? "Keine Planungsspur"}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Users className="h-3.5 w-3.5 text-gray-400" aria-hidden />
+            <Users className="h-3.5 w-3.5 text-gray-500" aria-hidden />
             <span>
               {template.type === "duty" ? (
                 "Dienst ohne Kinder"

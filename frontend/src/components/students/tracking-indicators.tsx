@@ -47,7 +47,7 @@ export function TrackingIndicators({
               />
             ) : (
               <Circle
-                className="h-4 w-4 text-gray-300"
+                className="h-4 w-4 text-gray-500"
                 aria-label={`${label}: ausstehend`}
               />
             )}

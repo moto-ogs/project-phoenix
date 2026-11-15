@@ -361,6 +361,9 @@ export const traegerKeys = {
   // Ankunft und Abholung eines Zeitraums (#4714): Durchschnitte, keine Kinder.
   arrivalPickupTimes: (from: string, to: string) =>
     `traeger-arrival-pickup-times-${from}-${to}`,
+  // Tagesmeldung Mecklenburg-Vorpommern eines Zeitraums (#4717): Zahlen, keine Kinder.
+  dailyAttendance: (from: string, to: string) =>
+    `traeger-daily-attendance-${from}-${to}`,
   periodsFamily: "traeger-holiday-period-",
   periods: () => "traeger-holiday-period-list",
   period: (id: string) =>
@@ -380,6 +383,9 @@ export const traegerKeys = {
   documentAudiences: () => "traeger-document-audiences",
   // Anmeldephasen und Angebote des Trägers (#4704): Entwürfe, Versionen und
   // das Ergebnis je Schule, keine Personendaten.
+  // Berichtsvorlagen (#4716): Name, Abschnitte, Stichtag und Sozialräume,
+  // keine Personendaten.
+  reportTemplates: () => "traeger-report-templates",
   catalogFamily: "traeger-catalog-phase-",
   catalogPhases: () => "traeger-catalog-phase-list",
   catalogPhase: (id: string) =>

@@ -258,7 +258,7 @@ export function ParentGroupThreadView({
   const chatLink = chatChild ? (
     <NavigationLink
       href={parentPath(childConversationPath(chatChild))}
-      className="text-moto-blue text-sm font-semibold underline-offset-2 hover:underline"
+      className="text-moto-blue-strong text-sm font-semibold underline-offset-2 hover:underline"
     >
       {t("toChat")}
     </NavigationLink>
@@ -278,7 +278,12 @@ export function ParentGroupThreadView({
       {loadError && <LoadErrorAlert error={loadError} />}
 
       <SectionCard>
-        <div className="space-y-2.5" data-testid="group-thread-messages">
+        <div
+          className="space-y-2.5"
+          data-testid="group-thread-messages"
+          role="log"
+          aria-label={tm("historyLabel")}
+        >
           {thread.messages.map((message) => (
             <ChatBubble
               key={message.id}

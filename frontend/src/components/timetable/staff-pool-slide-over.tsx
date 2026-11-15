@@ -431,7 +431,7 @@ function PoolSection({
         className="rounded-lg px-3"
         title={
           <span className="inline-flex items-center gap-1.5">
-            <span className="text-gray-400">{icon}</span>
+            <span className="text-gray-500">{icon}</span>
             {title}
           </span>
         }

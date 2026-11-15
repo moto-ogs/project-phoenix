@@ -102,6 +102,7 @@
   "contributionExemption": "Sosyal yardım nedeniyle muaf: {note}",
   "contributionChildTotal": "Toplam",
   "contributionTotal": "Genel toplam",
+  "contributionUpdated": "Ücret yeniden hesaplandı. Genel toplam: {total}",
   "benefitsLabel": "Sosyal yardım alıyoruz, örneğin Bürgergeld, konut yardımı (Wohngeld) veya çocuk ek ödeneği (Kinderzuschlag).",
   "benefitsHint": "O zaman tatil bakımı ücretsizdir. Kurumun bunun için bir belgeye ihtiyacı var.",
   "benefitsProofLabel": "Yardım belgesi",

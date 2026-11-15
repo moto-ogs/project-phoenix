@@ -170,6 +170,12 @@ export function MessageComposer({
     pendingRef.current = pending;
   }, [pending]);
   const fileInput = useRef<HTMLInputElement>(null);
+  const field = useRef<HTMLTextAreaElement>(null);
+  const root = useRef<HTMLDivElement>(null);
+  // Nach dem Senden gehört der Fokus wieder ins Feld (#7113): der Knopf wird
+  // gesperrt und das Feld während des Sendens auch, der Browser setzt den
+  // Fokus sonst auf die Seite zurück.
+  const refocusAfterSend = useRef(false);
   // Eine abgelehnte Datei meldet der Composer selbst, über dem Feld.
   const attachError = useApiFormError();
 
@@ -242,6 +248,7 @@ export function MessageComposer({
     (value.trim().length === 0 && ready.length === 0);
 
   const send = () => {
+    refocusAfterSend.current = true;
     attachError.clear();
     const sent = pending;
     setPending([]);
@@ -263,6 +270,17 @@ export function MessageComposer({
 
   const parent = tone === "parent";
   const inputLocked = externallyDisabled || sending;
+  // Ohne Abhängigkeiten: nicht jeder Chat sperrt das Feld beim Senden, dann
+  // wechselt `inputLocked` nie und der Fokus kommt nach dem nächsten Rendern.
+  useEffect(() => {
+    if (!refocusAfterSend.current || inputLocked) return;
+    refocusAfterSend.current = false;
+    // Wer inzwischen woanders hingegangen ist, bleibt dort.
+    const active = document.activeElement;
+    if (active && active !== document.body && !root.current?.contains(active))
+      return;
+    field.current?.focus({ preventScroll: true });
+  });
   const atLimit = pending.length >= MAX_MESSAGE_ATTACHMENTS;
   const { dragging, dropProps } = useFileDrop({
     onFiles: addFiles,
@@ -311,7 +329,7 @@ export function MessageComposer({
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div ref={root} className="flex flex-col gap-2">
       <FormErrorAlert message={attachError.error} />
       <div className="flex items-end gap-2">
         {/* Ein Rahmen für alles, was zur Nachricht gehört: Anhänge, Text und
@@ -323,7 +341,7 @@ export function MessageComposer({
         <div
           {...(attachments ? dropProps : {})}
           className={cn(
-            "relative flex min-w-0 flex-1 flex-col rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 transition-shadow duration-200 ring-inset focus-within:ring-2 focus-within:ring-gray-400",
+            "relative flex min-w-0 flex-1 flex-col rounded-2xl bg-white shadow-sm ring-1 ring-gray-500/80 transition-shadow duration-200 ring-inset focus-within:ring-2 focus-within:ring-gray-900",
             inputLocked && "bg-gray-50",
           )}
         >
@@ -393,6 +411,7 @@ export function MessageComposer({
                 {fieldLabel}
               </label>
               <Textarea
+                ref={field}
                 id="message-composer"
                 name="message-composer"
                 autoGrow
@@ -482,7 +501,7 @@ export function MessageComposer({
       />
       {value.length >= COUNTER_VISIBLE_FROM ? (
         <span
-          className={`self-end ${parent ? "text-[15px]" : "text-xs"} ${value.length >= MAX_MESSAGE_LEN ? "text-moto-red" : "text-gray-400"}`}
+          className={`self-end ${parent ? "text-[15px]" : "text-xs"} ${value.length >= MAX_MESSAGE_LEN ? "text-moto-red" : "text-gray-500"}`}
         >
           {value.length}/{MAX_MESSAGE_LEN}
         </span>

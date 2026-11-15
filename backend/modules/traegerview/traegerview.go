@@ -280,6 +280,11 @@ type Ports struct {
 	Utilization UtilizationPorts
 	// Times are the arrivals and pickups behind the heatmap (#4714).
 	Times ArrivalPickupCounts
+	// Reports are the reads behind the key-date report (#4716, ADR 0246).
+	Reports ReportPorts
+	// Daily are the reads behind the daily attendance report of
+	// Mecklenburg-Vorpommern (#4717).
+	Daily DailyAttendancePorts
 }
 
 // Overview answers the Träger-Portal reads.

@@ -246,7 +246,7 @@ export function InstanceBlock({
 
   // Kurzer Block: genau eine Zeile Platz, Ort und Namen teilen sie sich.
   const infoLine = (
-    <span className="flex min-w-0 items-baseline gap-1 text-xs text-gray-500">
+    <span className="flex min-w-0 items-baseline gap-1 text-xs text-gray-600">
       {placeLine !== "" && (
         <span
           className={`truncate ${hasStaffNames ? "max-w-[50%] shrink-0" : ""}`}
@@ -259,7 +259,7 @@ export function InstanceBlock({
     </span>
   );
   const inlineNames = (
-    <span className="flex min-w-0 flex-1 items-baseline gap-1 text-xs text-gray-500">
+    <span className="flex min-w-0 flex-1 items-baseline gap-1 text-xs text-gray-600">
       <span aria-hidden="true">·</span>
       <BlockStaffNames entries={staffEntries} className="flex-1" />
     </span>
@@ -268,7 +268,7 @@ export function InstanceBlock({
   // Spalte rücken die Namen in die nächste Zeile, statt dass beide Hälften
   // unlesbar gekürzt werden.
   const wrappingInfoLine = (
-    <span className="flex min-w-0 flex-wrap items-baseline gap-x-1 text-xs text-gray-500">
+    <span className="flex min-w-0 flex-wrap items-baseline gap-x-1 text-xs text-gray-600">
       {placeLine !== "" && (
         <span className="max-w-full truncate">
           {placeLine}
@@ -288,14 +288,14 @@ export function InstanceBlock({
       {!isCancelled &&
         height >= SPLIT_INFO_MIN_HEIGHT_PX &&
         placeLine !== "" && (
-          <span className="truncate text-xs text-gray-500">{placeLine}</span>
+          <span className="truncate text-xs text-gray-600">{placeLine}</span>
         )}
       {!isCancelled && height >= SPLIT_INFO_MIN_HEIGHT_PX && (
         <BlockStaffNames entries={staffEntries} />
       )}
 
       {!isCancelled && (coverage || isActive || !isCompact) && (
-        <span className="flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+        <span className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600">
           {isActive && <StatusDot className="bg-moto-green" label="läuft" />}
           {coverage}
           {/* Vor den Zahlen, damit das Abschneiden schmaler Blöcke es nicht

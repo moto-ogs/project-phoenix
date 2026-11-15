@@ -190,7 +190,7 @@ export function ChatBubble({
       ) : (
         <>
           <p
-            className={`mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 px-1 text-xs text-gray-400 ${
+            className={`mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 px-1 text-xs text-gray-500 ${
               own ? "justify-end" : ""
             }`}
           >
@@ -253,7 +253,7 @@ export function ChatEventCard({
       className="mx-auto flex max-w-[90%] flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-gray-700"
     >
       <span>{body}</span>
-      <span className="text-xs text-gray-400">
+      <span className="text-xs text-gray-500">
         {formatChatTime(createdAt, locale)}
       </span>
       {action && (

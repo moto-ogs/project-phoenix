@@ -14,7 +14,10 @@
   "staffLoginLink": "Do logowania dla szkoły",
   "errors": {
     "rateLimited": "Zbyt wiele prób logowania. Proszę spróbować ponownie później.",
-    "notAGuardian": "To konto należy do pracownika szkoły. Proszę zalogować się przez logowanie dla szkoły."
+    "notAGuardian": "To konto należy do pracownika szkoły. Proszę zalogować się przez logowanie dla szkoły.",
+    "missingEmail": "Proszę podać adres e-mail.",
+    "missingPassword": "Proszę podać hasło.",
+    "missingCredentials": "Proszę podać adres e-mail i hasło."
   },
   "errorObject": "logowanie"
 }

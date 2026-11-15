@@ -95,8 +95,6 @@ async function openCalendar(canvasElement: HTMLElement, name: RegExp) {
 
 /** Offener Kalender mit gewähltem Tag (#6576, Baseline des Pixel-Vergleichs). */
 export const Opened: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   render: () => <SingleWithValueDemo />,
   play: async ({ canvasElement }) => {
     await openCalendar(canvasElement, /\d{2}\.\d{2}\.\d{4}/);
@@ -105,8 +103,6 @@ export const Opened: Story = {
 
 /** Offener Kalender im Mehrfach-Modus. */
 export const MultipleModeOpened: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   render: () => <MultipleDemo />,
   play: async ({ canvasElement }) => {
     await openCalendar(canvasElement, /Datum auswählen/);
@@ -115,8 +111,6 @@ export const MultipleModeOpened: Story = {
 
 /** Monats- und Jahresauswahl im Kalenderkopf, Monatsliste offen. */
 export const MonthMenuOpened: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   render: () => <MonthYearDemo />,
   play: async ({ canvasElement }) => {
     await openCalendar(canvasElement, /\d{2}\.\d{2}\.\d{4}/);
@@ -127,8 +121,6 @@ export const MonthMenuOpened: Story = {
 
 /** Kalender aus einem Dialog: bleibt im Fokusbereich des Dialogs. */
 export const InDialogOpened: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   render: () => <InDialogDemo />,
   play: async () => {
     const dialog = await screen.findByRole("dialog");

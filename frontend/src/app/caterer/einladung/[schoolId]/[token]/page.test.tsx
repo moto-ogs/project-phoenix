@@ -5,7 +5,7 @@ import "@testing-library/jest-dom/vitest";
 const mocks = vi.hoisted(() => ({
   fetchCatererInvitation: vi.fn(),
   acceptCatererInvitation: vi.fn(),
-  loginCaterer: vi.fn(),
+  portalPasswordLogin: vi.fn(),
   signIn: vi.fn(),
 }));
 
@@ -18,7 +18,10 @@ vi.mock("next-auth/react", () => ({ signIn: mocks.signIn }));
 vi.mock("~/lib/caterer-api", () => ({
   fetchCatererInvitation: mocks.fetchCatererInvitation,
   acceptCatererInvitation: mocks.acceptCatererInvitation,
-  loginCaterer: mocks.loginCaterer,
+}));
+
+vi.mock("~/lib/portal-password-login", () => ({
+  portalPasswordLogin: mocks.portalPasswordLogin,
 }));
 
 vi.mock("~/lib/caterer-url", () => ({
@@ -62,7 +65,7 @@ describe("CatererInvitationPage", () => {
     vi.clearAllMocks();
     mocks.fetchCatererInvitation.mockResolvedValue(invitation);
     mocks.acceptCatererInvitation.mockResolvedValue(undefined);
-    mocks.loginCaterer.mockResolvedValue({ status: "authenticated" });
+    mocks.portalPasswordLogin.mockResolvedValue({ status: "authenticated" });
     mocks.signIn.mockResolvedValue({ ok: true });
     Object.defineProperty(window, "location", {
       value: { href: "https://caterer.example.test/einladung" },
@@ -140,7 +143,8 @@ describe("CatererInvitationPage", () => {
       credential,
     );
     await waitFor(() =>
-      expect(mocks.loginCaterer).toHaveBeenCalledWith(
+      expect(mocks.portalPasswordLogin).toHaveBeenCalledWith(
+        "caterer",
         "kueche@example.test",
         credential,
       ),
@@ -152,7 +156,9 @@ describe("CatererInvitationPage", () => {
 
   it("promises no sign-in when the automatic sign-in fails", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    mocks.loginCaterer.mockRejectedValue(new Error("BFF session refused"));
+    mocks.portalPasswordLogin.mockRejectedValue(
+      new Error("BFF session refused"),
+    );
     const submit = await renderPage();
     fillPasswords(acceptedCredential());
 
@@ -162,14 +168,14 @@ describe("CatererInvitationPage", () => {
     expect(screenStatus).toHaveTextContent("Konto erstellt");
     expect(screenStatus).toHaveTextContent("Sie werden gleich weitergeleitet.");
     expect(screenStatus).not.toHaveTextContent("angemeldet");
-    await waitFor(() => expect(mocks.loginCaterer).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.portalPasswordLogin).toHaveBeenCalled());
     await vi.advanceTimersByTimeAsync(1600);
     expect(window.location.href).toBe("/caterer/login");
   });
 
   it("asks the already mailed code of two-factor sign-in on the page (#4497)", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    mocks.loginCaterer.mockResolvedValue({
+    mocks.portalPasswordLogin.mockResolvedValue({
       status: "mfa_required",
       challengeToken: "challenge",
       maskedEmail: "k***@example.test",
@@ -181,14 +187,14 @@ describe("CatererInvitationPage", () => {
     fireEvent.click(submit);
 
     expect(await screen.findByText("Konto erstellt")).toBeInTheDocument();
-    await waitFor(() => expect(mocks.loginCaterer).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.portalPasswordLogin).toHaveBeenCalled());
     await vi.advanceTimersByTimeAsync(1600);
     // The sign-in mailed its code: it is asked here, not mailed again by
     // the login page.
     expect(await screen.findByText("Code-Eingabe")).toBeInTheDocument();
     expect(screen.getByText("k***@example.test")).toBeInTheDocument();
     expect(window.location.href).toBe("https://caterer.example.test/einladung");
-    expect(mocks.loginCaterer).toHaveBeenCalledOnce();
+    expect(mocks.portalPasswordLogin).toHaveBeenCalledOnce();
     expect(mocks.signIn).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Zurück zum Login" }));

@@ -22,6 +22,7 @@ import (
 	organizationTenancyTraeger "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
 	parentBillingCompose "github.com/moto-ogs/project-phoenix/modules/parentbilling/compose"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	schoolMembershipCompose "github.com/moto-ogs/project-phoenix/modules/schoolmembership/compose"
 	settingsHTTP "github.com/moto-ogs/project-phoenix/modules/settings/http"
@@ -85,8 +86,8 @@ type TraegerAudit struct {
 // #4649) at /traeger: the public sign-in and the Träger route group, which
 // accepts only Träger sessions. Token refresh and logout go through the
 // shared scope-preserving /auth/refresh and /auth/logout.
-func mountTraegerPortalRoutes(root chi.Router, limiters authRateLimiters, identity TraegerPortalIdentity, organizations organizationtenancy.TraegerMembershipQuery, persons TraegerPersons, staff TraegerStaff, audit TraegerAudit, settings TraegerPortalSettings, healthData enrollment.HolidayHealthCipher, holidayCalendar enrollment.HolidaySchoolCalendar, holidayMail enrollment.TraegerMailOutbox, holidayMails enrollment.HolidayMailStates, holidayTraeger enrollment.HolidayTraegerDirectory, statistics studentpresence.StatisticsReports) error {
-	portal, err := NewTraegerPortalHTTP(identity, organizations, persons, staff, audit, settings, healthData, holidayCalendar, holidayMail, holidayMails, holidayTraeger, statistics)
+func mountTraegerPortalRoutes(root chi.Router, limiters authRateLimiters, identity TraegerPortalIdentity, organizations organizationtenancy.TraegerMembershipQuery, persons TraegerPersons, staff TraegerStaff, audit TraegerAudit, settings TraegerPortalSettings, healthData enrollment.HolidayHealthCipher, holidayCalendar enrollment.HolidaySchoolCalendar, holidayMail enrollment.TraegerMailOutbox, holidayMails enrollment.HolidayMailStates, holidayTraeger enrollment.HolidayTraegerDirectory, statistics studentpresence.StatisticsReports, today func() calendar.Date, calendarSchools traegercalendar.Schools) error {
+	portal, err := NewTraegerPortalHTTP(identity, organizations, persons, staff, audit, settings, healthData, holidayCalendar, holidayMail, holidayMails, holidayTraeger, statistics, today, calendarSchools)
 	if err != nil {
 		return err
 	}
@@ -106,27 +107,33 @@ func mountTraegerPortalRoutes(root chi.Router, limiters authRateLimiters, identi
 // the Träger and the host schools in that mail, like the mail of a booking
 // that moved up (#6437). holidayMails names the receipt and acceptance mails
 // that did not reach the parents (#6737). statistics reads the children of
-// one school by name for the utilization over time (#4713).
-func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organizationtenancy.TraegerMembershipQuery, persons TraegerPersons, staff TraegerStaff, audit TraegerAudit, settings TraegerPortalSettings, healthData enrollment.HolidayHealthCipher, holidayCalendar enrollment.HolidaySchoolCalendar, holidayMail enrollment.TraegerMailOutbox, holidayMails enrollment.HolidayMailStates, holidayTraeger enrollment.HolidayTraegerDirectory, statistics studentpresence.StatisticsReports) (*traegerportal.Resource, error) {
-	if identity == nil || organizations == nil || persons == nil || staff == nil || audit.Trail == nil || audit.Log == nil || settings == nil || holidayCalendar == nil || holidayMail == nil || holidayMails == nil || holidayTraeger == nil || statistics == nil {
-		return nil, errors.New("traeger portal: identity, organizations, persons, staff, the access trail, the access log, the settings, the host schools' calendar, the holiday mail, its states, the Träger names and the statistics are required")
+// one school by name for the utilization over time (#4713). today is the
+// root's day clock of the allocation billing. calendarSchools
+// names the federal state of each school for the daily attendance report of
+// Mecklenburg-Vorpommern (#4717).
+func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organizationtenancy.TraegerMembershipQuery, persons TraegerPersons, staff TraegerStaff, audit TraegerAudit, settings TraegerPortalSettings, healthData enrollment.HolidayHealthCipher, holidayCalendar enrollment.HolidaySchoolCalendar, holidayMail enrollment.TraegerMailOutbox, holidayMails enrollment.HolidayMailStates, holidayTraeger enrollment.HolidayTraegerDirectory, statistics studentpresence.StatisticsReports, today func() calendar.Date, calendarSchools traegercalendar.Schools) (*traegerportal.Resource, error) {
+	if identity == nil || organizations == nil || persons == nil || staff == nil || audit.Trail == nil || audit.Log == nil || settings == nil || holidayCalendar == nil || holidayMail == nil || holidayMails == nil || holidayTraeger == nil || statistics == nil || calendarSchools == nil {
+		return nil, errors.New("traeger portal: identity, organizations, persons, staff, the access trail, the access log, the settings, the host schools' calendar, the holiday mail, its states, the Träger names, the statistics and the schools' federal states are required")
 	}
-	overview, arrivalPickup, err := traegerViewCompose.New(traegerview.Ports{
+	reportTemplates, reportTemplateReads := organizationTenancyCompose.NewTraegerReportTemplates()
+	presence, sick := studentPresenceCompose.NewPresentStudents(), carePlanCompose.NewSickStudents()
+	overview, reports, keyDateReports, err := traegerViewCompose.New(traegerview.Ports{
 		SchoolIDs: traegerSchoolIDs{organizations: organizations}, Trail: traegerAccessTrail{trail: audit.Trail},
 		Recorder: traegerAccessRecorder{log: audit.Log}, Holiday: traegerHolidayTrail{trail: enrollmentCompose.NewHolidayAccessTrail()}, Persons: traegerPersonDirectory{persons: persons}, Staff: traegerStaffDirectory{staff: staff},
 		Bureau:  traegerBureauAddresses{roles: identity},
-		Rosters: schoolMembershipCompose.NewSchoolRosters(), Present: studentPresenceCompose.NewPresentStudents(),
-		Sick: carePlanCompose.NewSickStudents(), OnSite: workforceCompose.NewOnSiteStaff(),
+		Rosters: schoolMembershipCompose.NewSchoolRosters(), Present: presence,
+		Sick: sick, OnSite: workforceCompose.NewOnSiteStaff(),
 		KeyDates:    traegerKeyDateCounts{organizations: organizations},
 		Enrollments: enrollmentCompose.NewOpenEnrollments(), Alerts: traegerAlertSettings{settings: settings},
 		Occupancy: traegerOccupancyPorts(), Known: traegerKnownChildrenPorts(), Utilization: traegerUtilizationPorts(statistics),
-		Times: traegerArrivalPickupCounts{times: studentPresenceCompose.NewPresentStudents()},
+		Times: traegerArrivalPickupCounts{times: presence}, Daily: traegerDailyAttendancePorts(presence, sick, calendarSchools),
+		Reports: traegerReportPorts(reportTemplateReads),
 	})
 	if err != nil {
 		return nil, err
 	}
 	review, places, allocation, records := enrollmentCompose.NewHolidayRegistrationReview(healthData, holidayMail, holidayTraeger, holidayCalendar, holidayMails)
-	_, allocationBilling := parentBillingCompose.NewHolidayContributions(parentBillingHolidayRegistrations{review: review}, parentBillingSettings{settings: settings})
+	_, allocationBilling := parentBillingCompose.NewHolidayContributions(parentBillingHolidayRegistrations{review: review}, parentBillingSettings{settings: settings}, today)
 	decide := newHolidayAllocation(allocationBilling, review, places, allocation)
 	_, wishes := enrollmentCompose.NewHolidayWishes(healthData)
 	holidayPeriods := enrollmentAPI.NewHolidayPeriodResource(enrollmentCompose.NewHolidayPeriods(nil, holidayCalendar), review, records, wishes, places, allocation, decide, holidaySchoolNames{overview: overview},
@@ -136,7 +143,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 		identityaccess.TraegerRightSettingsManage, identityaccess.TraegerRightStaffManage, identityaccess.TraegerRightBillingManage)
 	masterData := organizationTenancyTraeger.NewMasterDataResource(organizationTenancyCompose.NewTraegerMasterData(), organizationTenancyCompose.NewTraegerDocumentTemplates(),
 		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage))
-	overviewRoutes := traegerViewHTTP.NewResource(overview, arrivalPickup)
+	overviewRoutes := traegerViewHTTP.NewResource(overview, reports)
 	// The names of the Träger-Büro (#4693); a route-sized test identity
 	// without them answers 500 on those routes, the serving root refuses it.
 	profiles, _ := identity.(identityaccess.TraegerMemberProfiles)
@@ -145,7 +152,9 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 	stepUp, _ := identity.(identityaccess.TraegerSessionStepUp)
 	return traegerportal.NewResource(TraegerPortalAuth(identity), TraegerPortalMFA(identity),
 		portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeTraeger), overviewRoutes, holidayPeriods,
-		traegerViewHTTP.NewAccessLogResource(overview), traegerSettings, masterData, identity, profiles, overviewRoutes, identity, stepUp), nil
+		traegerViewHTTP.NewAccessLogResource(overview), traegerSettings, masterData, identity, profiles, overviewRoutes, identity, stepUp,
+		traegerViewHTTP.NewReportResource(keyDateReports), organizationTenancyTraeger.NewReportTemplateResource(reportTemplates,
+			common.RequiresPermission(identityaccess.TraegerRightReportsRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage))), nil
 }
 
 // TraegerPortalSettings is the Träger level of the settings system as the

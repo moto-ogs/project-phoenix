@@ -229,7 +229,7 @@ export function DeletedEntityCard({
         <StatusBadge tone="red" compact label="Gelöscht" />
       </div>
       <div className="mt-3 flex items-center justify-between gap-3">
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-500">
           Gelöscht {deletedAt ? getRelativeTime(deletedAt) : ""}
         </p>
         <div className="flex flex-col items-end gap-1">

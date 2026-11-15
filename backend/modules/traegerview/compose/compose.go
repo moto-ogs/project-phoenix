@@ -6,15 +6,16 @@ package compose
 import (
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview/internal/adapters/postgres"
+	"github.com/moto-ogs/project-phoenix/modules/traegerview/internal/adapters/reportexport"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview/internal/application"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// New builds the Träger projection: its overview and its heatmap (#4714).
-func New(ports traegerview.Ports) (traegerview.Overview, traegerview.ArrivalPickupReport, error) {
-	overview, err := application.New(ports, postgres.New(postgres.AmbientAdminDB), tenant.WithinAdmin)
+// New builds the Träger projection, its time-based reports and its key-date reports.
+func New(ports traegerview.Ports) (traegerview.Overview, traegerview.Reports, traegerview.KeyDateReports, error) {
+	overview, err := application.New(ports, postgres.New(postgres.AmbientAdminDB), reportexport.New(), tenant.WithinAdmin)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return overview, overview, nil
+	return overview, overview, overview, nil
 }

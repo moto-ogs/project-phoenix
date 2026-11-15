@@ -150,7 +150,7 @@ function PreviewInput({ field }: Readonly<{ field: FormField }>) {
       <div className="mt-3 flex h-10 items-center justify-between rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-500 shadow-sm">
         <span className="min-w-0 truncate">Bitte wählen</span>
         <ChevronDown
-          className="h-4 w-4 shrink-0 text-gray-400"
+          className="h-4 w-4 shrink-0 text-gray-500"
           aria-hidden="true"
         />
       </div>

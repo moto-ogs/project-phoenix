@@ -266,7 +266,7 @@ func TestLiftSuppressionWithoutProviderFreesTheSchoolsList(t *testing.T) {
 	assert.Equal(t, 1, store.deleted)
 }
 
-// Strato and Brevo have no provider list to ask: the school's list is the only
+// Plain SMTP has no provider list to ask: the school's list is the only
 // block, so it is what lifting clears. The next refusal of the server puts the
 // address back (#5934).
 func TestLiftSuppressionWorksWithoutAProvider(t *testing.T) {

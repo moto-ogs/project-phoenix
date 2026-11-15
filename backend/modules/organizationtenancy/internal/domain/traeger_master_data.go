@@ -107,6 +107,8 @@ const (
 	// TraegerAuditSubjectTemplate is a document template (#4677); a save
 	// creates its next version.
 	TraegerAuditSubjectTemplate = "template"
+	// TraegerAuditSubjectReportTemplate is a report template (#4716).
+	TraegerAuditSubjectReportTemplate = "report_template"
 
 	TraegerAuditActionRead   = "read"
 	TraegerAuditActionSet    = "set"

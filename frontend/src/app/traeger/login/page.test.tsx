@@ -392,6 +392,37 @@ describe("TraegerLoginPage", () => {
     });
   });
 
+  it("opens a later choice without the error of an earlier one", async () => {
+    const choices = {
+      status: "organization_selection_required",
+      organizations: [
+        { id: "7", name: "Träger Nord" },
+        { id: "9", name: "Träger Süd" },
+      ],
+    };
+    mockLogin
+      .mockResolvedValueOnce(choices)
+      .mockRejectedValueOnce(
+        new ApiError("no membership", 403, { code: "traeger.no_membership" }),
+      )
+      .mockResolvedValueOnce(choices);
+    render(<TraegerLoginPage />);
+
+    submitCredentials();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Träger öffnen" }),
+    );
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Mit einem anderen Konto anmelden" }),
+    );
+    submitCredentials();
+
+    // Anker: die neue Auswahl steht da.
+    expect(await screen.findByLabelText("Träger Süd")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("asks which Träger to open and resubmits with the choice", async () => {
     mockLogin
       .mockResolvedValueOnce({
@@ -473,13 +504,12 @@ describe("TraegerLoginPage", () => {
   });
 
   it("opens the reset dialog when a reset link without token leads here", async () => {
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "passwort-vergessen" ? "1" : null,
-    );
+    window.history.replaceState({}, "", "/traeger/login?passwort-vergessen=1");
     render(<TraegerLoginPage />);
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog.querySelector("#reset-email")).not.toBeNull();
+    expect(window.location.search).toBe("");
   });
 
   // An empty field is named before anything is sent.
@@ -532,5 +562,25 @@ describe("TraegerLoginPage", () => {
     expect(assign).not.toHaveBeenCalled();
     expect(mockSignIn).not.toHaveBeenCalled();
     assign.mockRestore();
+  });
+
+  // #7111: focus stayed on <body> and no field carried aria-invalid.
+  it("marks both credential fields and focuses the e-mail after a wrong password", async () => {
+    mockLogin.mockRejectedValue(
+      new ApiError("invalid username or password", 401, {
+        code: "identity.invalid_credentials",
+      }),
+    );
+    render(<TraegerLoginPage />);
+
+    submitCredentials();
+
+    const email = screen.getByTestId("input-email");
+    await waitFor(() => expect(email).toHaveFocus());
+    expect(email).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByTestId("input-password")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
   });
 });

@@ -230,7 +230,7 @@ function DayCard({
             />
           )}
           <ChevronRight
-            className={`h-4 w-4 text-gray-400 transition-transform ${expanded ? "rotate-90" : ""}`}
+            className={`h-4 w-4 text-gray-500 transition-transform ${expanded ? "rotate-90" : ""}`}
           />
         </div>
       </button>
@@ -253,7 +253,9 @@ function DayCard({
                         {slot.startTime}–{slot.endTime}
                       </span>
                       {slot.isUnplanned && (
-                        <span className="text-moto-orange ml-2">ungeplant</span>
+                        <span className="text-moto-orange-strong ml-2">
+                          ungeplant
+                        </span>
                       )}
                     </div>
                     <span className="font-medium text-gray-600">
@@ -444,7 +446,7 @@ const HISTORY_COLUMNS: DataTableColumn<AttendanceHistoryDay>[] = [
           compact
         />
       ) : (
-        <span className="text-gray-400">–</span>
+        <span className="text-gray-500">–</span>
       ),
   },
   {
@@ -475,12 +477,12 @@ function daySlotRows(
           <>
             <div className="flex items-center gap-2">
               <span className="font-medium text-gray-700">{slot.title}</span>
-              <span className="text-gray-400 tabular-nums">
+              <span className="text-gray-500 tabular-nums">
                 {slot.startTime}
                 {slot.endTime && <>–{slot.endTime}</>}
               </span>
               {slot.isUnplanned && (
-                <span className="text-moto-orange">ungeplant</span>
+                <span className="text-moto-orange-strong">ungeplant</span>
               )}
             </div>
             {/* Die Bemerkung aus der Betreuung (#2898): ruhige Information
@@ -586,7 +588,7 @@ function dayRoomRows(day: AttendanceHistoryDay): DataTableExtraRow[] {
       },
       {
         columnKey: "duration",
-        content: <span className="text-gray-400">–</span>,
+        content: <span className="text-gray-500">–</span>,
       },
     ],
   }));
@@ -634,7 +636,7 @@ function dayRoomRows(day: AttendanceHistoryDay): DataTableExtraRow[] {
                 {formatDuration(v.durationMinutes)}
               </span>
             ) : (
-              <span className="text-gray-400">–</span>
+              <span className="text-gray-500">–</span>
             ),
         },
       ],

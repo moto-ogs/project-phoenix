@@ -204,7 +204,7 @@ function ClassLink({
         )}
       </span>
       <ChevronRight
-        className="h-5 w-5 shrink-0 text-gray-400"
+        className="h-5 w-5 shrink-0 text-gray-500"
         aria-hidden="true"
       />
     </TileCard>

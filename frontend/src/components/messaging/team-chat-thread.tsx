@@ -432,6 +432,8 @@ export function TeamChatThread({
         <div
           ref={scrollRef}
           data-chat-scroll=""
+          role="log"
+          aria-label="Nachrichtenverlauf"
           className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1"
         >
           {threadLoadFailed && messages.length > 0 && (
@@ -522,7 +524,7 @@ export function TeamChatThread({
     statsLoading: showSkeleton,
     state,
     empty: {
-      icon: <MessagesSquare size={48} className="text-gray-400" />,
+      icon: <MessagesSquare size={48} className="text-gray-500" />,
       title: DISABLED_TITLE,
       description: DISABLED_DESCRIPTION,
     },

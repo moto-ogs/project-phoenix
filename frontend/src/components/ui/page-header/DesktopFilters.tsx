@@ -192,7 +192,7 @@ function DropdownFilter({
       menuClassName="min-w-48"
       unstyledTrigger
       className={cn(
-        "flex h-10 items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-medium whitespace-nowrap shadow-sm transition-all hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-gray-400 aria-expanded:bg-gray-50",
+        "flex h-10 items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-medium whitespace-nowrap shadow-sm transition-all hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-gray-600 aria-expanded:bg-gray-50",
         isFiltered && "ring-moto-blue ring-2 ring-offset-1",
       )}
       renderTrigger={({ open }) => (

@@ -121,7 +121,7 @@ function HolidayCareChipBody({
       <ActionHint text={`${sentence} Öffnet die Ferienwochen.`}>
         <NavigationLink
           href={href}
-          className={`inline-flex max-w-full min-w-0 rounded-full transition-[filter] hover:brightness-95 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-1 focus-visible:outline-none ${className ?? ""}`}
+          className={`inline-flex max-w-full min-w-0 rounded-full transition-[filter] hover:brightness-95 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:ring-offset-1 focus-visible:outline-none ${className ?? ""}`}
         >
           {badge}
           <span className="sr-only">{holidayCareLabel(day)}</span>

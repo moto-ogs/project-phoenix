@@ -620,12 +620,12 @@ export function CalendarPeriodModal({
                               {phase.name}
                             </span>
                             {linkedElsewhere && (
-                              <span className="text-moto-orange shrink-0 text-xs">
+                              <span className="text-moto-orange-strong shrink-0 text-xs">
                                 Mit anderem Zeitraum verknüpft
                               </span>
                             )}
                             {!phase.is_active && (
-                              <span className="shrink-0 text-xs text-gray-400">
+                              <span className="shrink-0 text-xs text-gray-500">
                                 Inaktiv
                               </span>
                             )}

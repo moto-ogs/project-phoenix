@@ -446,7 +446,7 @@ describe("PickupTimeIcon", () => {
 
     const svg = container.querySelector("svg");
     expect(svg?.className).toContain("lucide-clock");
-    expect(svg?.className).toContain("text-gray-400");
+    expect(svg?.className).toContain("text-gray-500");
     expect(svg).not.toHaveAttribute("data-moto-duotone-tone");
   });
 });

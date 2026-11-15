@@ -35,5 +35,6 @@
   "emptyLeadershipDescription": "Napisz pierwszą wiadomość do kierownictwa. Pozostali pracownicy jej nie widzą.",
   "leadershipUnstaffed": "Obecnie nikt z kierownictwa tego nie czyta. Prosimy napisać do całego zespołu {careTerm}.",
   "leadershipUnavailable": "Wiadomości tylko do kierownictwa nie są tu obecnie możliwe. Prosimy napisać do całego zespołu {careTerm}.",
-  "readersUnnamedLeader": "administracja szkoły"
+  "readersUnnamedLeader": "administracja szkoły",
+  "historyLabel": "Historia wiadomości"
 }

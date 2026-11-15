@@ -171,6 +171,13 @@ export function OgsConversation({
   const [draft, setDraft] = useState("");
   const draftRevision = useRef(0);
   const care = useChildCare(studentId);
+  // `care.loading` is also true while the care of the child reloads in the
+  // background (after a send, on an SSE event); its features stay meanwhile.
+  // Only the first load replaces the composer with a skeleton: unmounting it
+  // took the focus and the field away from the person typing (#7113).
+  const [careKnownFor, setCareKnownFor] = useState<string | null>(null);
+  if (!care.loading && careKnownFor !== studentId) setCareKnownFor(studentId);
+  const careKnown = careKnownFor === studentId;
   const [today, setToday] = useState<ChildToday>(UNKNOWN_CHILD_TODAY);
   const [activeModal, setActiveModal] = useState<OgsActionKey | null>(null);
   const sending = send.pending;
@@ -613,6 +620,8 @@ export function OgsConversation({
         <div
           ref={scrollRef}
           data-chat-scroll=""
+          role="log"
+          aria-label={tm("historyLabel")}
           className="flex-1 space-y-2.5 overflow-y-auto bg-gray-50/60 px-3 py-3 sm:px-5 sm:py-4"
         >
           {/* Keep already-loaded messages on screen even if a later background
@@ -752,14 +761,14 @@ export function OgsConversation({
               a school with messaging off, gets a read-only history instead of a
               composer that always 403s on send.
 
-              Gate on care.loading FIRST: features start at DEFAULT_FEATURES
+              Gate on the first care load FIRST: features start at DEFAULT_FEATURES
               (notes_enabled = false) until getChildFeatures resolves, so without
               this guard a messaging-enabled school would flash the read-only
               fallback on first paint before flipping to the composer.
 
               Without the conversation nobody knows who would read a message
               (#5200): no composer then; a failed load above offers the retry. */}
-          {care.loading || (loading && !thread) ? (
+          {!careKnown || (loading && !thread) ? (
             <div
               data-testid="parent-conversation-composer-skeleton"
               aria-hidden="true"
@@ -1047,7 +1056,7 @@ function GroupThreadReference({
     <div className="mb-1 flex justify-end">
       <NavigationLink
         href={parentPath(`/parents/messages/group/${groupThreadId}`)}
-        className="text-moto-blue max-w-[85%] truncate text-xs font-medium underline-offset-2 hover:underline"
+        className="text-moto-blue-strong max-w-[85%] truncate text-xs font-medium underline-offset-2 hover:underline"
       >
         {t("answerTo", { title: title ?? "" })}
       </NavigationLink>

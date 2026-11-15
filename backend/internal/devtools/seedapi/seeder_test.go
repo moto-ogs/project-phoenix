@@ -1198,6 +1198,12 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 				`"documents":[{"registration_id":9,"children":[{"child_id":91,"total_cents":4500}]}]}}`)
 			return
 		}
+		// The Träger report template step (#4716) reads the templates the
+		// Träger already has.
+		if r.Method == seedHTTPMethodGet && r.URL.Path == "/traeger/report-templates/" {
+			_, _ = fmt.Fprint(w, `{"status":"success","data":[]}`)
+			return
+		}
 		// The Träger master data step (#4653) uploads a multipart logo and
 		// reads the bank accounts it already has.
 		if strings.HasPrefix(r.URL.Path, "/traeger/master-data/") {

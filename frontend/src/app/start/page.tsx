@@ -59,7 +59,7 @@ export default function StartPage() {
       <section className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-6xl items-center">
         <div className="grid w-full gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
-            <p className="text-moto-green text-xs font-semibold tracking-[0.16em] uppercase">
+            <p className="text-moto-green-strong text-xs font-semibold tracking-[0.16em] uppercase">
               Los geht&apos;s
             </p>
             <h1 className="mt-4 max-w-2xl text-4xl font-semibold tracking-normal text-gray-950 sm:text-5xl">

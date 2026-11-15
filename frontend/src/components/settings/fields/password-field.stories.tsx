@@ -20,8 +20,6 @@ async function mockRevealFn(_key: string): Promise<string | null> {
 }
 
 export const NotSet: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     hasValue: false,
     settingKey: "security.device_pin",

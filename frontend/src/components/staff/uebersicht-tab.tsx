@@ -435,7 +435,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
                 return (
                   <div
                     key={point.key}
-                    className={`flex items-center justify-between gap-3 text-sm ${point.value === 0 ? "opacity-40" : ""}`}
+                    className="flex items-center justify-between gap-3 text-sm"
                   >
                     <span className="flex items-center gap-2 text-gray-700">
                       <StatusDot color={point.color} size="lg" decorative />
@@ -443,7 +443,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
                     </span>
                     <span className="text-gray-500 tabular-nums">
                       {point.value} {point.value === 1 ? "Tag" : "Tage"}
-                      <span className="ml-2 text-gray-400">
+                      <span className="ml-2 text-gray-500">
                         ({percentage}%)
                       </span>
                     </span>

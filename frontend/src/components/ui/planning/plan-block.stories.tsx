@@ -18,22 +18,15 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
-};
+export const Default: Story = {};
 
 export const WithCoverage: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     footer: <CoverageIndicator state="gap" current={1} total={3} />,
   },
 };
 
 export const Compact: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     size: "compact",
   },
@@ -53,32 +46,24 @@ export const Hatched: Story = {
 };
 
 export const Cancelled: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     status: "cancelled",
   },
 };
 
 export const Selected: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     selected: true,
   },
 };
 
 export const WithoutShiftType: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     color: undefined,
   },
 };
 
 export const NonInteractive: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     interactive: false,
   },

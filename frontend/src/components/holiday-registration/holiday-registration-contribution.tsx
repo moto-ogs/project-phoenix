@@ -13,6 +13,7 @@ import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ContributionBreakdown } from "~/components/holiday-contribution/contribution-breakdown";
 import { FileUploadInput } from "~/components/enrollment/enrollment-file-upload";
+import { ScreenReaderStatus } from "~/components/ui/screen-reader-status";
 import { SectionCard } from "~/components/ui/section-card";
 import { formatDate } from "~/lib/date-helpers";
 import type { FormField } from "~/lib/enrollment-form-schema-api";
@@ -85,6 +86,13 @@ export function HolidayRegistrationContribution({
     null,
   );
   const [failed, setFailed] = useState(false);
+  // A new quote after a change or a retry is said once in a polite region
+  // (#7113, WCAG 4.1.3); the first answer stands on the screen when the
+  // step opens.
+  const answeredBefore = useRef(false);
+  const [announced, setAnnounced] = useState<
+    { readonly totalCents: number } | "failed" | null
+  >(null);
   // Whether the Träger offers the exemption; it stays while a new quote is
   // computed, so the checkbox does not vanish under the pointer.
   const [exemptionOffered, setExemptionOffered] = useState(false);
@@ -107,6 +115,7 @@ export function HolidayRegistrationContribution({
     // arrives.
     setContribution(null);
     setFailed(false);
+    setAnnounced(null);
     try {
       const quoted = await quoteHolidayContribution(
         token,
@@ -117,6 +126,10 @@ export function HolidayRegistrationContribution({
       if (request === latest.current) {
         setContribution(quoted);
         setExemptionOffered(quoted.exemptionAvailable);
+        if (answeredBefore.current) {
+          setAnnounced({ totalCents: quoted.totalCents });
+        }
+        answeredBefore.current = true;
       }
     } catch (err) {
       if (request !== latest.current) return;
@@ -126,6 +139,8 @@ export function HolidayRegistrationContribution({
       });
       setContribution(null);
       setFailed(true);
+      if (answeredBefore.current) setAnnounced("failed");
+      answeredBefore.current = true;
     }
   }, [token, children, benefitsDeclared, ageRanks]);
 
@@ -195,6 +210,18 @@ export function HolidayRegistrationContribution({
             registrations (#6692); the parents learn it where they see the
             contribution. */}
         <p>{t("contributionDebtorNumberText")}</p>
+        <ScreenReaderStatus
+          data-testid="contribution-announcement"
+          message={
+            announced === "failed"
+              ? t("contributionError")
+              : announced
+                ? t("contributionUpdated", {
+                    total: euro.format(announced.totalCents / 100),
+                  })
+                : ""
+          }
+        />
         {failed ? (
           <div className="space-y-2">
             <p>{t("contributionError")}</p>

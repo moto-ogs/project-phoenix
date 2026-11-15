@@ -319,7 +319,7 @@ function GroupMessageContent() {
       }
     >
       <SectionCard title="Nachrichten">
-        <div className="space-y-3">
+        <div className="space-y-3" role="log" aria-label="Nachrichtenverlauf">
           {(data?.messages ?? []).map((message) => (
             <ChatBubble
               key={message.id}

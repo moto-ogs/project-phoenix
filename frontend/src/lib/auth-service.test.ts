@@ -2,11 +2,7 @@
 // Tests for the auth service methods that still have callers
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type {
-  BackendRole,
-  BackendPermission,
-  PasswordResetConfirmRequest,
-} from "./auth-helpers";
+import type { BackendRole, BackendPermission } from "./auth-helpers";
 
 // Mock dependencies
 vi.mock("next-auth/react", () => ({
@@ -29,7 +25,6 @@ import { authService } from "./auth-service";
 
 const mockedGetSession = vi.mocked(getSession);
 const mockedApiGet = vi.mocked(api.get);
-const mockedApiPost = vi.mocked(api.post);
 const mockedApiPut = vi.mocked(api.put);
 
 // Sample test data
@@ -60,128 +55,6 @@ describe("authService", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-  });
-
-  describe("Password reset", () => {
-    describe("resetPassword", () => {
-      const confirmRequest: PasswordResetConfirmRequest = {
-        token: "reset-token",
-        newPassword: "newpassword123",
-        confirmPassword: "newpassword123",
-      };
-
-      it("confirms password reset in server context", async () => {
-        mockedApiPost.mockResolvedValueOnce({
-          data: { message: "Password reset successfully" },
-        });
-
-        const result = await authService.resetPassword(confirmRequest);
-
-        expect(result.message).toBe("Password reset successfully");
-      });
-
-      it("classifies a server-side network failure as unavailable", async () => {
-        mockedApiPost.mockRejectedValueOnce({
-          isAxiosError: true,
-          message: "Network Error",
-        });
-
-        await expect(
-          authService.resetPassword(confirmRequest),
-        ).rejects.toMatchObject({
-          status: 503,
-          code: "general.unavailable",
-        });
-      });
-
-      it("confirms password reset in browser context", async () => {
-        vi.stubGlobal("window", {});
-
-        const mockResponse = {
-          ok: true,
-          json: async () => ({ message: "Password reset successfully" }),
-        };
-        vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-        const result = await authService.resetPassword(confirmRequest);
-
-        expect(result.message).toBe("Password reset successfully");
-      });
-
-      it("returns default message when response has no message", async () => {
-        vi.stubGlobal("window", {});
-
-        const mockResponse = {
-          ok: true,
-          json: async () => {
-            throw new Error("No JSON");
-          },
-        };
-        vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-        const result = await authService.resetPassword(confirmRequest);
-
-        expect(result.message).toBe("Password reset successfully");
-      });
-
-      it("handles 429 rate limit with Retry-After header", async () => {
-        vi.stubGlobal("window", {});
-
-        const mockResponse = {
-          ok: false,
-          status: 429,
-          headers: new Headers({
-            "Retry-After": "60",
-            "Content-Type": "application/json",
-          }),
-          json: async () => ({ error: "Too many requests" }),
-        };
-        vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-        try {
-          await authService.resetPassword(confirmRequest);
-        } catch (error) {
-          const apiError = error as Error & {
-            status?: number;
-            retryAfterSeconds?: number;
-          };
-          expect(apiError.status).toBe(429);
-          expect(apiError.retryAfterSeconds).toBe(60);
-        }
-      });
-
-      it("keeps structured errors from problem JSON responses", async () => {
-        vi.stubGlobal("window", {});
-        vi.stubGlobal(
-          "fetch",
-          vi.fn().mockResolvedValueOnce(
-            new Response(
-              JSON.stringify({
-                error: "The reset link is invalid",
-                code: "identity.password_reset_link_invalid",
-                errors: [{ field: "token", reason: "invalid" }],
-                details: { source: "reset" },
-                instance: "req-reset-1",
-              }),
-              {
-                status: 400,
-                headers: { "Content-Type": "application/problem+json" },
-              },
-            ),
-          ),
-        );
-
-        await expect(
-          authService.resetPassword(confirmRequest),
-        ).rejects.toMatchObject({
-          status: 400,
-          code: "identity.password_reset_link_invalid",
-          errors: [{ field: "token", reason: "invalid" }],
-          details: { source: "reset" },
-          requestId: "req-reset-1",
-        });
-      });
-    });
   });
 
   describe("Role management", () => {

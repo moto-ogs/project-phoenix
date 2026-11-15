@@ -102,6 +102,7 @@
   "contributionExemption": "Zwolnienie z powodu świadczeń: {note}",
   "contributionChildTotal": "Suma",
   "contributionTotal": "Razem",
+  "contributionUpdated": "Opłata została przeliczona. Razem: {total}",
   "benefitsLabel": "Otrzymujemy świadczenia, na przykład Bürgergeld, dodatek mieszkaniowy (Wohngeld) lub dodatek na dziecko (Kinderzuschlag).",
   "benefitsHint": "Wtedy opieka w ferie jest bezpłatna. Organizator potrzebuje na to dowodu.",
   "benefitsProofLabel": "Dokument potwierdzający świadczenia",

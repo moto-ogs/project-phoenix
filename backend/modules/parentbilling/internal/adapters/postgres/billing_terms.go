@@ -135,7 +135,7 @@ func (s *Store) SaveServiceTerms(ctx context.Context, organizationID, accountID 
 		return err
 	}
 	row := &serviceTermsRow{OrganizationID: organizationID, Service: terms.Service, PaymentMethod: terms.PaymentMethod,
-		DueDays: terms.DueDays, UpdatedByAccountID: accountRef(accountID), UpdatedAt: time.Now()}
+		DueDays: terms.DueDays, UpdatedByAccountID: accountRef(accountID)}
 	if terms.BundleWith != "" {
 		row.BundleWith = &terms.BundleWith
 	}
@@ -176,7 +176,7 @@ func (s *Store) SaveFamilyBilling(ctx context.Context, organizationID, accountID
 		OrganizationID: organizationID, FamilyEmail: family.FamilyEmail, CareContractID: idRef(family.ContractID),
 		RecipientKind: family.RecipientKind, SecondFirstName: family.SecondFirstName, SecondLastName: family.SecondLastName,
 		PayerFirstName: family.PayerFirstName, PayerLastName: family.PayerLastName, PayerEmail: family.PayerEmail,
-		DueDay: family.DueDay, DebtorNumber: textRef(family.DebtorNumber), UpdatedByAccountID: accountRef(accountID), UpdatedAt: time.Now(),
+		DueDay: family.DueDay, DebtorNumber: textRef(family.DebtorNumber), UpdatedByAccountID: accountRef(accountID),
 	}
 	if family.PaymentMethod != "" {
 		row.PaymentMethod = &family.PaymentMethod
@@ -459,7 +459,7 @@ func (s *Store) SetFamilyDebtorNumbers(ctx context.Context, organizationID, acco
 	for i, number := range numbers {
 		rows[i] = familyBillingRow{OrganizationID: organizationID, FamilyEmail: number.FamilyEmail, CareContractID: idRef(number.ContractID),
 			RecipientKind: parentbilling.RecipientApplicant, DebtorNumber: textRef(number.DebtorNumber),
-			UpdatedByAccountID: accountRef(accountID), UpdatedAt: time.Now()}
+			UpdatedByAccountID: accountRef(accountID)}
 	}
 	var saved []familyBillingRow
 	if err := db.NewInsert().Model(&rows).

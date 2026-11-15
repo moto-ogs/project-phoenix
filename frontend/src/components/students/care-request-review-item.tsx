@@ -375,8 +375,8 @@ function RequestDiffRows({
     <div key={entry.label} className="text-sm">
       <span className="text-xs text-gray-500">{entry.label}: </span>
       <div className="flex flex-wrap items-baseline gap-2">
-        <span className="text-gray-400 line-through">{entry.old}</span>
-        <span className="text-gray-400" aria-hidden="true">
+        <span className="text-gray-500 line-through">{entry.old}</span>
+        <span className="text-gray-500" aria-hidden="true">
           →
         </span>
         <span className="font-medium text-gray-900">{entry.new}</span>

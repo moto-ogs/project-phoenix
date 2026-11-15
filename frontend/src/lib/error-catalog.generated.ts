@@ -1831,6 +1831,12 @@ export const ERROR_CATALOG = {
         "Diese Person gehört nicht mehr zum Träger-Büro. Bitte laden Sie die Seite neu.",
       "traeger.no_membership":
         "Ihr Konto hat keinen Zugang zum Träger-Portal. Bitte wenden Sie sich an das moto-Team.",
+      "traeger.report_template_invalid":
+        "Bitte prüfen Sie die Angaben der Vorlage.",
+      "traeger.report_template_name_taken":
+        "Eine Vorlage mit diesem Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
+      "traeger.report_template_not_found":
+        "Diese Vorlage gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "traeger.school_not_found":
         "Diese Schule gehört nicht zu Ihrem Träger. Bitte laden Sie die Seite neu.",
       "traeger.school_requires_code":
@@ -2797,6 +2803,12 @@ export const ERROR_CATALOG = {
         "This person no longer belongs to the Träger office. Please reload the page.",
       "traeger.no_membership":
         "Your account has no access to the Träger portal. Please contact the moto team.",
+      "traeger.report_template_invalid":
+        "Please check the details of the template.",
+      "traeger.report_template_name_taken":
+        "A template with this name already exists. Please choose another name.",
+      "traeger.report_template_not_found":
+        "This template no longer exists. Please reload the page.",
       "traeger.school_not_found":
         "This school does not belong to your Träger. Please reload the page.",
       "traeger.school_requires_code":
@@ -3408,6 +3420,11 @@ export const ERROR_CATALOG = {
         "Бронирование изменилось. Обновите страницу.",
       "traeger.access_log_export_too_large":
         "В экспорте больше {limit} записей. Выберите более короткий период или другие фильтры.",
+      "traeger.report_template_invalid": "Проверьте данные шаблона.",
+      "traeger.report_template_name_taken":
+        "Шаблон с таким названием уже есть. Выберите другое название.",
+      "traeger.report_template_not_found":
+        "Этого шаблона больше нет. Обновите страницу.",
       "traeger.shared_document_not_found":
         "Организация больше не открывает доступ к этому документу. Обновите страницу.",
       "workforce.payroll_wage_type_name_taken":
@@ -4028,6 +4045,12 @@ export const ERROR_CATALOG = {
         "Rezervimi ka ndryshuar. Ju lutemi ngarkoni përsëri faqen.",
       "traeger.access_log_export_too_large":
         "Eksporti ka më shumë se {limit} hyrje. Zgjidhni një periudhë më të shkurtër ose më shumë filtra.",
+      "traeger.report_template_invalid":
+        "Ju lutemi kontrolloni të dhënat e shabllonit.",
+      "traeger.report_template_name_taken":
+        "Një shabllon me këtë emër ekziston tashmë. Ju lutemi zgjidhni një emër tjetër.",
+      "traeger.report_template_not_found":
+        "Ky shabllon nuk ekziston më. Ju lutemi rifreskoni faqen.",
       "traeger.shared_document_not_found":
         "Ofruesi nuk e ndan më këtë dokument. Ju lutemi rifreskoni faqen.",
       "workforce.payroll_wage_type_name_taken":
@@ -4634,6 +4657,11 @@ export const ERROR_CATALOG = {
         "Rezerwacja została zmieniona. Odśwież stronę.",
       "traeger.access_log_export_too_large":
         "Eksport ma ponad {limit} wpisów. Wybierz krótszy okres lub więcej filtrów.",
+      "traeger.report_template_invalid": "Sprawdź dane szablonu.",
+      "traeger.report_template_name_taken":
+        "Szablon o tej nazwie już istnieje. Wybierz inną nazwę.",
+      "traeger.report_template_not_found":
+        "Ten szablon już nie istnieje. Odśwież stronę.",
       "traeger.shared_document_not_found":
         "Organizator nie udostępnia już tego dokumentu. Odśwież stronę.",
       "workforce.payroll_wage_type_name_taken":
@@ -5247,6 +5275,12 @@ export const ERROR_CATALOG = {
         "Rezervasyon değişti. Lütfen sayfayı yeniden yükleyin.",
       "traeger.access_log_export_too_large":
         "Dışa aktarma {limit} kayıttan fazla içeriyor. Lütfen daha kısa bir dönem veya daha fazla filtre seçin.",
+      "traeger.report_template_invalid":
+        "Lütfen şablonun bilgilerini kontrol edin.",
+      "traeger.report_template_name_taken":
+        "Bu adda bir şablon zaten var. Lütfen başka bir ad seçin.",
+      "traeger.report_template_not_found":
+        "Bu şablon artık yok. Lütfen sayfayı yenileyin.",
       "traeger.shared_document_not_found":
         "Kurum bu belgeyi artık paylaşmıyor. Lütfen sayfayı yenileyin.",
       "workforce.payroll_wage_type_name_taken":
@@ -5851,6 +5885,11 @@ export const ERROR_CATALOG = {
         "Бронювання змінилося. Оновіть сторінку.",
       "traeger.access_log_export_too_large":
         "В експорті понад {limit} записів. Виберіть коротший період або інші фільтри.",
+      "traeger.report_template_invalid": "Перевірте дані шаблону.",
+      "traeger.report_template_name_taken":
+        "Шаблон із такою назвою вже є. Виберіть іншу назву.",
+      "traeger.report_template_not_found":
+        "Цього шаблону більше немає. Оновіть сторінку.",
       "traeger.shared_document_not_found":
         "Організація більше не відкриває доступ до цього документа. Оновіть сторінку.",
       "workforce.payroll_wage_type_name_taken":
