@@ -43,7 +43,7 @@ const (
 // It normalizes in place (in.ResponseType is set to the canonical "none" and
 // stray options/deadlines on a non-poll are cleared) so the caller can persist
 // the input as-is.
-func normalizePollOptions(in *Input) ([]*StaffParentAnnouncementOption, error) {
+func normalizePollOptions(in *Input, now time.Time) ([]*StaffParentAnnouncementOption, error) {
 	if strings.TrimSpace(in.ResponseType) == "" {
 		in.ResponseType = StaffParentAnnouncementResponseNone
 	}
@@ -76,7 +76,7 @@ func normalizePollOptions(in *Input) ([]*StaffParentAnnouncementOption, error) {
 	if len(out) > maxPollOptions {
 		return nil, fmt.Errorf("%w: a poll allows at most %d options", ErrValidation, maxPollOptions)
 	}
-	if in.ResponseDeadline != nil && !in.ResponseDeadline.After(time.Now()) {
+	if in.ResponseDeadline != nil && !in.ResponseDeadline.After(now) {
 		return nil, fmt.Errorf("%w: response_deadline must be in the future", ErrValidation)
 	}
 	// A deadline after the announcement disappears from the feed would be
@@ -144,7 +144,7 @@ func (s *service) RemindUnanswered(ctx context.Context, id int64) (int, error) {
 	if !a.IsPublished() || !a.Active {
 		return 0, ErrPollNotOpen
 	}
-	now := time.Now()
+	now := s.now()
 	if a.ExpiresAt != nil && !a.ExpiresAt.After(now) {
 		return 0, ErrPollNotOpen
 	}

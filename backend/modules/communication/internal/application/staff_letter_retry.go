@@ -205,7 +205,7 @@ func (s *service) resendableAnnouncement(ctx context.Context, id int64) (*StaffP
 	if !a.IsPublished() || !a.Active {
 		return nil, ErrNotPublished
 	}
-	if a.ExpiresAt != nil && !a.ExpiresAt.After(time.Now()) {
+	if a.ExpiresAt != nil && !a.ExpiresAt.After(s.now()) {
 		return nil, ErrNotPublished
 	}
 	return a, nil

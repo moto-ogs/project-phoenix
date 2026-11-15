@@ -21,7 +21,7 @@ func (s *service) DeleteExpiredParentAnnouncements(ctx context.Context, retentio
 	if retentionDays <= 0 {
 		return 0, fmt.Errorf("%w, got %d", ErrRetentionWindow, retentionDays)
 	}
-	return s.DeleteExpired(ctx, calendar.TodayDate().AddDays(-retentionDays).BerlinMidnight())
+	return s.DeleteExpired(ctx, calendar.CalendarDateClock(s.now)().AddDays(-retentionDays).BerlinMidnight())
 }
 
 // DeleteExpired deletes the announcements of the school in context that

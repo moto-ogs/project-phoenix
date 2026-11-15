@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 )
 
 // Cancellation notice (#2601).
@@ -199,7 +198,7 @@ func (s *service) publishCancellationTargets(ctx context.Context, a *StaffParent
 	if err := s.repo.ReplaceTargets(ctx, a.GetTenantID(), a.ID, targets); err != nil {
 		return fmt.Errorf("announcement: set cancellation notice targets: %w", err)
 	}
-	now := time.Now()
+	now := s.now()
 	published, err := s.repo.PublishIfDraft(ctx, a.ID, now)
 	if err != nil {
 		return fmt.Errorf("announcement: publish cancellation notice: %w", err)

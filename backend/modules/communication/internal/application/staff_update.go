@@ -2,19 +2,20 @@ package application
 
 import (
 	"context"
+	"time"
 )
 
 // prepareCreate validates a new announcement: the common fields, the shape of
 // a class letter (#4800), the poll options and the reminder.
-func prepareCreate(ctx context.Context, in *Input) ([]*StaffParentAnnouncementTarget, []*StaffParentAnnouncementOption, error) {
-	targets, err := normalizeInput(in)
+func prepareCreate(ctx context.Context, in *Input, now time.Time) ([]*StaffParentAnnouncementTarget, []*StaffParentAnnouncementOption, error) {
+	targets, err := normalizeInput(in, now)
 	if err != nil {
 		return nil, nil, err
 	}
 	if err := normalizeClassLetter(ctx, in, in.Sender, targets); err != nil {
 		return nil, nil, err
 	}
-	options, err := normalizePollOptions(in)
+	options, err := normalizePollOptions(in, now)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -28,7 +29,7 @@ func prepareCreate(ctx context.Context, in *Input) ([]*StaffParentAnnouncementTa
 // fields. A declaration with submissions keeps its delivery mode so its
 // status and guardian proof remain reachable.
 func (s *service) prepareUpdate(ctx context.Context, a *StaffParentAnnouncement, in *Input) ([]*StaffParentAnnouncementTarget, []*StaffParentAnnouncementOption, error) {
-	targets, err := normalizeInput(in)
+	targets, err := normalizeInput(in, s.now())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -43,7 +44,7 @@ func (s *service) prepareUpdate(ctx context.Context, a *StaffParentAnnouncement,
 	if err := s.guardDeclarationSettingsChange(ctx, a, in); err != nil {
 		return nil, nil, err
 	}
-	options, err := normalizePollOptions(in)
+	options, err := normalizePollOptions(in, s.now())
 	if err != nil {
 		return nil, nil, err
 	}
