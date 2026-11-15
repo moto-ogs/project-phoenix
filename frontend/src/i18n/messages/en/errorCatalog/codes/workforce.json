@@ -109,5 +109,10 @@
   "traeger_staff_release_exists": "{object} could not be changed. Please check its current status.",
   "traeger_staff_release_in_use": "{object} could not be changed. Please check its current status.",
   "traeger_staff_release_invalid": "{object} could not be saved. Please check your entries.",
-  "traeger_staff_release_not_found": "{object} could not be saved. Please check your entries."
+  "traeger_staff_release_not_found": "{object} could not be saved. Please check your entries.",
+  "shift_overlaps_other_site": "{object} could not be changed. Please check its current status.",
+  "shift_planning_off": "{object} could not be changed. Please check its current status.",
+  "shift_working_time_warning": "{object} could not be changed. Please check its current status.",
+  "traeger_planning_site_invalid": "{object} could not be saved. Please check your entries.",
+  "traeger_planning_shift_not_found": "{object} could not be saved. Please check your entries."
 }

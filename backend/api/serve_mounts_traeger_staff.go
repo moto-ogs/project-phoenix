@@ -20,11 +20,12 @@ import (
 
 // mountTraegerStaffRoutes serves the Personalstamm of ADR 0089 (#4705) at
 // /traeger/staff-records, its Nachweise (#4707) at /traeger/staff-proofs and
-// the Abwesenheitsarten of the Träger (#4710) at /traeger/absence-types behind
-// the Träger right „Personal“, over the personnel record staffAdmin the root
-// built for the schools.
+// the Abwesenheitsarten of the Träger (#4710) at /traeger/absence-types and
+// the Einsatzplanung (#4708) at /traeger/staff-planning behind the Träger
+// right „Personal“, over the personnel record staffAdmin the root built for
+// the schools and the Dienstplan of the schools.
 func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, organizations HolidayOrganizations,
-	persons TraegerPersons, membership TraegerStaff, accessLog owners.DataAccessAppender,
+	persons TraegerPersons, membership TraegerStaff, accessLog owners.DataAccessAppender, sites workforce.TraegerShiftSites,
 ) error {
 	if staffAdmin == nil {
 		return errors.New("traeger staff records: the personnel record is required")
@@ -57,6 +58,9 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 	root.Mount("/traeger/staff-record-imports", traegerstaff.NewImportsResource(imports, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
 	// The Träger's Abwesenheitsarten and Kontingente (#4710).
 	root.Mount("/traeger/absence-types", traegerstaff.NewAbsenceTypesResource(absences, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
+	// The Einsatzplanung over all Einsatzorte (#4708).
+	planning := staffAdmin.TraegerStaffPlanning(collaborators, sites)
+	root.Mount("/traeger/staff-planning", traegerstaff.NewPlanningResource(planning, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
 	return nil
 }
 

@@ -109,5 +109,10 @@
   "traeger_staff_release_exists": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "traeger_staff_release_in_use": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "traeger_staff_release_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
-  "traeger_staff_release_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin."
+  "traeger_staff_release_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "shift_overlaps_other_site": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "shift_planning_off": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "shift_working_time_warning": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "traeger_planning_site_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "traeger_planning_shift_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin."
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/planexport"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -154,6 +155,9 @@ type ShiftPlanningDependencies struct {
 	// Today overrides the calendar-day clock the materializer and the sick
 	// state of shift writes compare against; nil keeps timezone.TodayDate.
 	Today func() calendar.Date
+	// PlanRules (nil: ArbZG defaults) and WorkingTimeAudit feed the working-time check (ADR 0242).
+	PlanRules        planning.PlanRuleSettings
+	WorkingTimeAudit func(context.Context, workforce.ShiftWorkingTimeOverride) error
 }
 
 // ShiftPlanning is the composed Dienstplan side of Workforce: the public
@@ -193,6 +197,8 @@ func NewShiftPlanning(deps ShiftPlanningDependencies) (*ShiftPlanning, error) {
 	if deps.ShiftMoveAudit != nil {
 		shiftOptions = append(shiftOptions, planning.WithStaffShiftDeviationEvents(deps.ShiftMoveAudit))
 	}
+	shiftOptions = append(shiftOptions, planning.WithStaffShiftPlanGuard(postgres.New(postgres.DatabaseRuntime(deps.DB)),
+		deps.PlanRules, deps.Holidays, planning.WorkingTimeOverrideAudit(deps.WorkingTimeAudit)))
 	lockStaffShifts := NewStaffShiftLock(deps.DB)
 	shifts := planning.NewStaffShiftService(deps.Workforce, deps.Staff, shiftTypes, lockStaffShifts, logger, shiftOptions...)
 
@@ -232,4 +238,9 @@ func (p *ShiftPlanning) Planning(planExport planexport.Service) workforce.StaffS
 	return planning.NewStaffShiftPlanning(planning.PlanningDependencies{
 		Shifts: p.shifts, Series: p.series, Overview: p.overview, PlanExport: planExport,
 	})
+}
+
+// TraegerSites binds the Einsatzplanung of the Träger to each school's Dienstplan (ADR 0242).
+func (p *ShiftPlanning) TraegerSites(public workforce.StaffShiftPlanning) workforce.TraegerShiftSites {
+	return planning.NewTraegerSites(p.shifts, public)
 }

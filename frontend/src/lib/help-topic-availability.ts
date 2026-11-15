@@ -291,6 +291,7 @@ export const HELP_TOPIC_AUDIENCE = {
   [HELP_TOPICS.traegerStaffRecords]: "traeger",
   [HELP_TOPICS.traegerStaffProofs]: "traeger",
   [HELP_TOPICS.traegerAbsenceTypes]: "traeger",
+  [HELP_TOPICS.traegerStaffPlanning]: "traeger",
   [HELP_TOPICS.traegerStaffContracts]: "traeger",
   [HELP_TOPICS.schoolTraegerDocuments]: "lead",
   [HELP_TOPICS.traegerSchoolSwitch]: "traeger",

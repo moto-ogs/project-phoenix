@@ -10152,11 +10152,44 @@
     },
     {
       "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.ApplyCancellation",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.ApplyCancellation",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftPlanning.ApplyCancellation. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.CreateSeries",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.CreateSeries",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftPlanning.CreateSeries. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.CreateShift",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.CreateShift",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftPlanning.CreateShift. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.MoveShift",
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.MoveShift",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftPlanning.MoveShift. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftPlanning.MoveShift. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176); #4708 writes the working-time override entry of a move confirmed despite a warning before the move event, in the same unit (ADR 0242).",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
       "target_owner": "audit-platform"
@@ -10180,6 +10213,28 @@
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.IndexCalendarWeeks",
       "target_owner": "timetable-activities"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.SplitSeries",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.SplitSeries",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftPlanning.SplitSeries. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.UpdateShift",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.UpdateShift",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftPlanning.UpdateShift. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce.Capability.ListStaffTargetOverrides",
@@ -10503,6 +10558,28 @@
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMemberNames.ListTraegerMemberNames",
       "target_owner": "organization-tenancy"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.ChangeShift",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffPlanning.ChangeShift",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/application.TraegerStaff.ChangeShift. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.PlanShift",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffPlanning.PlanShift",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/application.TraegerStaff.PlanShift. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinSchool",
@@ -21234,6 +21311,16 @@
       "target_owner": "timetable-activities"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.StaffPlanningRules",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.PlanRuleSettings.StaffPlanningRules",
+      "reason": "Read-only settings resolution: the working-time check reads the Träger values of the Einsatzplanung through the settings owner's named question (#4708); no write.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.StaffPlanningRules",
+      "target_owner": "settings-platform"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.CapStaffShiftSeries",
       "classification": "platform",
@@ -22265,11 +22352,77 @@
     },
     {
       "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftSeriesService.CreateSeries",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftSeriesService.CreateSeries",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftSeriesService.CreateSeries. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftSeriesService.SplitSeries",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftSeriesService.SplitSeries",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftSeriesService.SplitSeries. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.ApplyCancellation",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.ApplyCancellation",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftService.ApplyCancellation. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.CreateShift",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.CreateShift",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftService.CreateShift. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.MoveShift",
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.MoveShift",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftService.MoveShift. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftService.MoveShift. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); #4708 writes the working-time override entry of a move confirmed despite a warning before the move event, in the same unit (ADR 0242).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.UpdateShift",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.UpdateShift",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftService.UpdateShift. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.UpdateShiftWithOptions",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.UpdateShiftWithOptions",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DeviationEventRepository.Create (audit-platform) through modules/workforce/internal/planning.staffShiftService.UpdateShiftWithOptions. A shift planned despite a working-time warning appends its Änderungsprotokoll entry in the caller's tenant unit (#4708, ADR 0242); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
       "target_owner": "audit-platform"

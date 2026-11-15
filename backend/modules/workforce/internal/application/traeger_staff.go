@@ -27,6 +27,9 @@ type TraegerStaff struct {
 	lock  ports.Transaction
 	clock ports.Clock
 	warn  func(message string, args ...any)
+	// sites is the Dienstplan of each school the Einsatzplanung plans in
+	// (#4708); nil outside the Einsatzplanung.
+	sites workforce.TraegerShiftSites
 }
 
 // TraegerStaffDependencies are the collaborators of the Personalstamm the

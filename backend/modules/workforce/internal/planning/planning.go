@@ -99,8 +99,9 @@ func (p staffShiftPlanning) UpdateShift(ctx context.Context, input workforce.Upd
 		return workforce.PlannedShift{}, err
 	}
 	shift.ID = input.ID
-	actor := input.ActorStaffID
-	shift.UpdatedBy = &actor
+	if actor := input.ActorStaffID; actor > 0 {
+		shift.UpdatedBy = &actor
+	}
 	updated, err := p.deps.Shifts.UpdateShiftWithOptions(ctx, shift, StaffShiftUpdateOptions{
 		PreserveExistingNotes:        input.PreserveExistingNotes,
 		PreserveExistingShiftType:    input.PreserveExistingShiftType,
@@ -128,7 +129,7 @@ func (p staffShiftPlanning) MoveShift(ctx context.Context, input workforce.MoveS
 	moved, err := p.deps.Shifts.MoveShift(ctx, MoveShiftInput{
 		ShiftID: input.ShiftID, SourceStaffID: input.SourceStaffID, TargetStaffID: input.TargetStaffID,
 		Date: date, StartTime: start, EndTime: end, BreakMinutes: input.BreakMinutes, ShiftTypeID: input.ShiftTypeID,
-		ActorStaffID: input.ActorStaffID, ActorAccountID: input.ActorAccountID,
+		ActorStaffID: input.ActorStaffID, ActorAccountID: input.ActorAccountID, WorkingTime: input.WorkingTime,
 	})
 	if err != nil {
 		return workforce.PlannedShift{}, mapPlanningError(err)
@@ -141,7 +142,7 @@ func (p staffShiftPlanning) ApplyCancellation(ctx context.Context, input workfor
 		PreserveSeriesOverride: input.PreserveSeriesOverride,
 		ShiftID:                input.ShiftID, Cancelled: input.Cancelled, ChangeReason: input.ChangeReason,
 		ActorStaffID: input.ActorStaffID, ApplyOriginEdits: input.ApplyOriginEdits,
-		BreakMinutes: input.BreakMinutes, ShiftTypeID: input.ShiftTypeID,
+		BreakMinutes: input.BreakMinutes, ShiftTypeID: input.ShiftTypeID, WorkingTime: input.WorkingTime,
 	}
 	if input.ApplyOriginEdits {
 		start, end, err := planningWindow(input.StartTime, input.EndTime)
@@ -181,6 +182,7 @@ func (p staffShiftPlanning) CreateSeries(ctx context.Context, input workforce.Cr
 		return workforce.StaffShiftSeriesResult{}, err
 	}
 	series.CreatedBy = input.ActorStaffID
+	series.WorkingTime = input.WorkingTime
 	result, err := p.deps.Series.CreateSeries(ctx, series)
 	if err != nil {
 		return workforce.StaffShiftSeriesResult{}, mapPlanningError(err)
@@ -220,7 +222,7 @@ func (p staffShiftPlanning) SplitSeries(ctx context.Context, input workforce.Spl
 		Weekdays: weekdays, StartTime: start, EndTime: end, BreakMinutes: input.BreakMinutes,
 		ShiftTypeID: input.ShiftTypeID, ShiftTypeIDSet: input.ShiftTypeIDSet, Notes: input.Notes,
 		ValidUntil: validUntil, ValidUntilSet: input.ValidUntilSet, WeekPattern: input.WeekPattern,
-		IncludeSchoolBreaks: input.IncludeSchoolBreaks, ActorStaffID: input.ActorStaffID,
+		IncludeSchoolBreaks: input.IncludeSchoolBreaks, ActorStaffID: input.ActorStaffID, WorkingTime: input.WorkingTime,
 	})
 	if err != nil {
 		return workforce.StaffShiftSeriesResult{}, mapPlanningError(err)
@@ -303,11 +305,18 @@ func shiftInputToModel(input workforce.StaffShiftInput) (*workforce.ShiftRecord,
 	if err != nil {
 		return nil, err
 	}
-	return &workforce.ShiftRecord{
+	shift := &workforce.ShiftRecord{
 		StaffID: input.StaffID, Date: date, StartTime: start, EndTime: end,
 		BreakMinutes: input.BreakMinutes, ShiftTypeID: input.ShiftTypeID, Notes: input.Notes,
 		Cancelled: input.Cancelled, ChangeReason: input.ChangeReason, OriginShiftID: input.OriginShiftID,
-	}, nil
+		WorkingTime: input.WorkingTime,
+	}
+	// The Träger-Portal plans without a staff member of the school (#4708).
+	if account := input.TraegerAccountID; account > 0 {
+		shift.PlannedByTraeger = true
+		shift.TraegerAccountID = &account
+	}
+	return shift, nil
 }
 
 func seriesInputToModel(input workforce.StaffShiftSeriesInput) (*StaffShiftSeries, error) {
@@ -353,7 +362,7 @@ func plannedShiftToCapability(shift *workforce.ShiftRecord) workforce.PlannedShi
 		ShiftTypeID: shift.ShiftTypeID, Notes: shift.Notes, SeriesID: shift.SeriesID, Detached: shift.Detached, SeriesOverride: shift.SeriesOverride,
 		Cancelled: shift.Cancelled, ChangeReason: shift.ChangeReason, OriginShiftID: shift.OriginShiftID,
 		SickAbsenceID: shift.SickAbsenceID, CreatedBy: shift.CreatedBy, UpdatedBy: shift.UpdatedBy,
-		CreatedAt: shift.CreatedAt, UpdatedAt: shift.UpdatedAt,
+		PlannedByTraeger: shift.PlannedByTraeger, CreatedAt: shift.CreatedAt, UpdatedAt: shift.UpdatedAt,
 	}}
 	if shift.SeriesOccurrenceDate != nil {
 		value.SeriesOccurrenceDate = shift.SeriesOccurrenceDate.String()

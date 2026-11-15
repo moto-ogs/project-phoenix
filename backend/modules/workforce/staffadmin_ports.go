@@ -105,6 +105,7 @@ type staffAdminTraeger interface {
 	TraegerStaffRecords(collaborators TraegerStaffPorts) TraegerStaffRecords
 	TraegerAbsenceTypes(collaborators TraegerStaffPorts) TraegerAbsenceTypes
 	TraegerStaffContracts(collaborators TraegerStaffPorts) TraegerStaffContracts
+	TraegerStaffPlanning(collaborators TraegerStaffPorts, sites TraegerShiftSites) TraegerStaffPlanning
 }
 
 // StaffTraegerKeep tells the school whether its Träger keeps an employment
@@ -254,6 +255,15 @@ func (a *StaffAdmin) TraegerStaffContracts(collaborators TraegerStaffPorts) Trae
 // 0089) over this personnel record; the root binds the collaborators.
 func (a *StaffAdmin) TraegerStaffRecords(collaborators TraegerStaffPorts) TraegerStaffRecords {
 	return a.traeger.TraegerStaffRecords(collaborators)
+}
+
+// TraegerStaffPlanning is the Einsatzplanung of the Träger (#4708, ADR 0089
+// section 8) over the same collaborators and the Dienstplan of each school.
+func (a *StaffAdmin) TraegerStaffPlanning(collaborators TraegerStaffPorts, sites TraegerShiftSites) TraegerStaffPlanning {
+	if sites == nil {
+		panic("workforce traeger planning: the Dienstplan of the schools is required")
+	}
+	return a.traeger.TraegerStaffPlanning(collaborators, sites)
 }
 
 // TraegerAbsenceTypes is the Träger's Abwesenheitsarten and Kontingente

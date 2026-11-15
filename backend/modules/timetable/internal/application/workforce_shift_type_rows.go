@@ -69,7 +69,7 @@ func shiftToCapability(shift *scheduleModels.StaffShift) ports.WorkforceShift {
 		ShiftTypeID: shift.ShiftTypeID, Notes: shift.Notes, SeriesID: shift.SeriesID, Detached: shift.Detached, SeriesOverride: shift.SeriesOverride,
 		Cancelled: shift.Cancelled, ChangeReason: shift.ChangeReason, OriginShiftID: shift.OriginShiftID,
 		SickAbsenceID: shift.SickAbsenceID, CreatedBy: shift.CreatedBy, UpdatedBy: shift.UpdatedBy,
-		CreatedAt: shift.CreatedAt, UpdatedAt: shift.UpdatedAt,
+		PlannedByTraeger: shift.PlannedByTraeger, CreatedAt: shift.CreatedAt, UpdatedAt: shift.UpdatedAt,
 	}
 	if shift.SeriesOccurrenceDate != nil {
 		value.SeriesOccurrenceDate = shift.SeriesOccurrenceDate.String()
@@ -108,6 +108,7 @@ func applyShiftToRow(shift *scheduleModels.StaffShift, value ports.WorkforceShif
 	shift.OriginShiftID = value.OriginShiftID
 	shift.SickAbsenceID = value.SickAbsenceID
 	shift.CreatedBy = value.CreatedBy
+	shift.PlannedByTraeger = value.PlannedByTraeger
 	shift.UpdatedBy = value.UpdatedBy
 }
 

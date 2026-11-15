@@ -261,6 +261,7 @@ export const HELP_TOPICS = {
   traegerStaffRecords: "personalakten-ueber-alle-schulen",
   traegerStaffProofs: "personalnachweise-mit-ablaufwarnung",
   traegerAbsenceTypes: "abwesenheitsarten-und-kontingente-des-traegers",
+  traegerStaffPlanning: "einsatzplanung-des-traegers",
   traegerStaffContracts: "arbeitsvertrag-und-soll",
   schoolTraegerDocuments: "dokumente-vom-traeger-in-der-ogs",
   traegerSchoolSwitch: "in-eine-schule-wechseln",

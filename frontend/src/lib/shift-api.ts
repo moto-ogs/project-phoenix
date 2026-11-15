@@ -16,6 +16,7 @@ import {
   type StaffScheduleOverview,
   type StaffShift,
 } from "./shift-helpers";
+import { workingTimeBody, type WorkingTimeConfirmation } from "./working-time";
 
 interface ShiftPayload {
   staffId: string;
@@ -37,6 +38,8 @@ interface ShiftPayload {
   changeReason?: string | null;
   /** Id of the shift this one covers as a replacement (#1841). Create-only. */
   originShiftId?: string | null;
+  /** Answer to the working-time warnings of a refused save (#4708). */
+  workingTime?: WorkingTimeConfirmation;
 }
 
 interface MoveShiftPayload {
@@ -50,6 +53,8 @@ interface MoveShiftPayload {
   endTime: string;
   breakMinutes: number;
   shiftTypeId: string | null;
+  /** Answer to the working-time warnings of a refused save (#4708). */
+  workingTime?: WorkingTimeConfirmation;
 }
 
 /** One replacement (Vertretung) covering part of a cancelled shift's gap. */
@@ -80,6 +85,8 @@ interface CancellationPayload {
   shiftTypeId: string | null;
   /** Only meaningful when cancelling; ignored (must be empty) on reactivation. */
   replacements: ReplacementPayload[];
+  /** Answer to the working-time warnings of a refused save (#4708). */
+  workingTime?: WorkingTimeConfirmation;
 }
 
 interface SeriesPayload {
@@ -101,6 +108,8 @@ interface SeriesPayload {
   validUntil: string | null;
   /** Also plan in the Ferien and on closing days; holidays stay free (#3820). */
   includeSchoolBreaks: boolean;
+  /** Answer to the working-time warnings of a refused save (#4708). */
+  workingTime?: WorkingTimeConfirmation;
 }
 
 /** Edited fields applied from the effective date on ("Ab jetzt dauerhaft" and
@@ -125,6 +134,8 @@ interface SeriesSplitPayload {
   validUntil?: string | null;
   /** Ferien and closing days opt-in (#3820); omitted keeps the stored one. */
   includeSchoolBreaks?: boolean;
+  /** Answer to the working-time warnings of a refused save (#4708). */
+  workingTime?: WorkingTimeConfirmation;
 }
 
 /** The stored rule behind a series shift — weekdays, rhythm, window, and
@@ -223,6 +234,7 @@ function toBackendBody(payload: ShiftPayload) {
     ...(payload.originShiftId != null
       ? { origin_shift_id: payload.originShiftId }
       : {}),
+    ...workingTimeBody(payload.workingTime),
   };
 }
 
@@ -355,6 +367,7 @@ class StaffShiftService {
           payload.shiftTypeId != null
             ? Number.parseInt(payload.shiftTypeId, 10)
             : null,
+        ...workingTimeBody(payload.workingTime),
       }),
     });
     return readShift(response);
@@ -400,6 +413,7 @@ class StaffShiftService {
             shift_type_id:
               r.shiftTypeId != null ? Number.parseInt(r.shiftTypeId, 10) : null,
           })),
+          ...workingTimeBody(payload.workingTime),
         }),
       },
     );
@@ -448,6 +462,7 @@ class StaffShiftSeriesService {
         valid_from: payload.validFrom,
         valid_until: payload.validUntil,
         include_school_breaks: payload.includeSchoolBreaks,
+        ...workingTimeBody(payload.workingTime),
       }),
     });
     return readSeriesResult(response);
@@ -492,6 +507,7 @@ class StaffShiftSeriesService {
           ...(payload.includeSchoolBreaks !== undefined
             ? { include_school_breaks: payload.includeSchoolBreaks }
             : {}),
+          ...workingTimeBody(payload.workingTime),
         }),
       },
     );

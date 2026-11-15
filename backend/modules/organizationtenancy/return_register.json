@@ -30662,7 +30662,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "updated_by",
@@ -30732,6 +30732,12 @@
         },
         {
           "name": "series_override",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "planned_by_traeger",
           "type": "boolean",
           "udt": "bool",
           "nullable": false

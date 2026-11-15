@@ -66,7 +66,11 @@ func (seedTraegerStaffStep) Run(ctx context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("  Träger staff records: %d linked, %d contracts, %d imported\n", linked, contracts, imported)
+	planned, err := seedTraegerPlanning(rt.Client, auth)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("  Träger staff records: %d linked, %d contracts, %d imported, %d planned shifts\n", linked, contracts, imported, planned)
 	return seedTraegerAbsences(ctx, rt, auth)
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { ClosingDayChip } from "~/components/planning/closing-day-marker";
 import { FieldLabel } from "~/components/ui/field-label";
@@ -20,6 +20,7 @@ import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { useClosingDaysState } from "~/lib/hooks/use-closing-days";
 import { createLogger } from "~/lib/logger";
 import { staffShiftService } from "~/lib/shift-api";
+import { useWorkingTimeConfirmation } from "./working-time-confirmation";
 import type { StaffScheduleStaff, StaffShift } from "~/lib/shift-helpers";
 import {
   isShiftTypeOffered,
@@ -89,6 +90,12 @@ export function ShiftMoveDialog({
   const moveInFlightRef = useRef(false);
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
+  // Rückfrage bei einem Verstoß gegen eine Arbeitszeitregel (#4708).
+  const workingTime = useWorkingTimeConfirmation();
+  const { reset: resetWorkingTime } = workingTime;
+  useEffect(() => {
+    if (isOpen) resetWorkingTime();
+  }, [isOpen, resetWorkingTime]);
   // „Wiederholen“ verschiebt mit dem aktuellen Formularstand.
   const latestMoveRef = useRef<() => void>(() => undefined);
 
@@ -216,6 +223,7 @@ export function ShiftMoveDialog({
         endTime,
         breakMinutes: breakMinutes ?? 0,
         shiftTypeId: resolvedShiftTypeId,
+        workingTime: workingTime.current(),
       });
       finishSuccess();
     } catch (err: unknown) {
@@ -228,6 +236,7 @@ export function ShiftMoveDialog({
       setConfirmOpen(false);
       moveInFlightRef.current = false;
       setIsMoving(false);
+      if (workingTime.intercept(err, () => executeMove())) return;
       await formErrors.show(err, {
         object: "die Schicht",
         retry: () => latestMoveRef.current(),
@@ -282,7 +291,7 @@ export function ShiftMoveDialog({
       {/* Hidden while the confirmation is open — both share the same fixed
           z-index, so stacking them would bury this modal's footer. */}
       <Modal
-        isOpen={isOpen && !confirmOpen}
+        isOpen={isOpen && !confirmOpen && !workingTime.isOpen}
         onClose={onClose}
         title="Schicht verschieben"
         footer={footer}
@@ -413,6 +422,7 @@ export function ShiftMoveDialog({
           )}
         </div>
       </ConfirmationModal>
+      {workingTime.dialog}
     </>
   );
 }
