@@ -113,3 +113,12 @@ type AttendanceDays struct {
 type ArrivalPickupCounts interface {
 	ArrivalPickupCountsByTenant(ctx context.Context, schools []int64, from, to calendar.Date, slotMinutes int) ([]ArrivalPickupCount, []AttendanceDays, error)
 }
+
+// ArrivalPickupReport answers the heatmap of the Träger-Portal (#4714). It
+// stands apart from Overview so that each facade stays small (#2580).
+type ArrivalPickupReport interface {
+	// ArrivalPickupTimes returns the heatmap of arrival and pickup times of
+	// every school of the Träger between from and to. An invalid period is
+	// ErrInvalidArrivalPickupPeriod.
+	ArrivalPickupTimes(ctx context.Context, organizationID int64, from, to calendar.Date) (ArrivalPickupTimes, error)
+}

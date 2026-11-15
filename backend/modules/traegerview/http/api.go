@@ -18,15 +18,17 @@ import (
 
 // Resource serves the Träger projection routes.
 type Resource struct {
-	overview traegerview.Overview
+	overview      traegerview.Overview
+	arrivalPickup traegerview.ArrivalPickupReport
 }
 
-// NewResource builds the resource.
-func NewResource(overview traegerview.Overview) *Resource {
-	if overview == nil {
-		panic("traeger view http: the overview is required")
+// NewResource builds the resource. arrivalPickup answers the heatmap of
+// arrival and pickup times (#4714).
+func NewResource(overview traegerview.Overview, arrivalPickup traegerview.ArrivalPickupReport) *Resource {
+	if overview == nil || arrivalPickup == nil {
+		panic("traeger view http: the overview and the arrival and pickup times are required")
 	}
-	return &Resource{overview: overview}
+	return &Resource{overview: overview, arrivalPickup: arrivalPickup}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/schools inside the

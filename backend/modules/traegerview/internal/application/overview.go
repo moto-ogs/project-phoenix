@@ -43,7 +43,10 @@ type Overview struct {
 	withinAdmin func(context.Context, func(context.Context) error) error
 }
 
-var _ traegerview.Overview = (*Overview)(nil)
+var (
+	_ traegerview.Overview            = (*Overview)(nil)
+	_ traegerview.ArrivalPickupReport = (*Overview)(nil)
+)
 
 // New builds the overview. withinAdmin opens the administrative transaction
 // the projection reads in; it is the Träger-Portal's only one (ADR 0084).
