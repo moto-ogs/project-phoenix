@@ -25,18 +25,28 @@ const TRAEGER_DIR = path.join(SRC_DIR, "app", "traeger");
  * Wert die Komponente unter `src/`, die den Download der Liste trägt.
  */
 const LIST_EXPORTS: Readonly<Record<string, string>> = {
+  "/": "page",
   "/abrechnung/[id]": "components/traeger/billing-run-overview-card.tsx",
   "/ankunft-abholung": "page",
+  "/anmeldephasen": "page",
   "/auslastung": "page",
   "/belegung": "page",
+  "/dokumente": "page",
+  "/einstellungen/briefkopf/vorlagen": "page",
+  "/einstellungen/mitglieder": "page",
   "/einstellungen/zugriffsprotokoll": "page",
+  "/ferien": "page",
   "/ferien/[id]/anmeldungen": "page",
+  "/ferien/[id]/plaetze": "page",
+  "/ferien/[id]/vergabe": "page",
   "/nachweise": "page",
   "/personal": "page",
   "/personal/einsatzplanung": "page",
+  "/schliesstage": "page",
   "/standortvergleich": "page",
   "/stichtagszahlen": "page",
   "/tagesmeldung": "page",
+  "/uebersicht": "page",
   "/vertraege": "page",
   "/zeitvergleich": "page",
 };
@@ -47,7 +57,6 @@ const LIST_EXPORTS: Readonly<Record<string, string>> = {
  * nach `LIST_EXPORTS` um. Eine neue Liste kommt nie hierher.
  */
 const PENDING_EXPORTS: Readonly<Record<string, string>> = {
-  "/": "#4718",
   "/abrechnung": "#4718",
   "/abrechnung/exporte": "#4718",
   "/abrechnung/familien": "#4718",
@@ -61,15 +70,6 @@ const PENDING_EXPORTS: Readonly<Record<string, string>> = {
   "/abrechnung/monatsbeitraege": "#4718",
   "/abrechnung/monatsbeitraege/[id]": "#4718",
   "/abrechnung/nachweise": "#4718",
-  "/anmeldephasen": "#4718",
-  "/dokumente": "#4718",
-  "/einstellungen/briefkopf/vorlagen": "#4718",
-  "/einstellungen/mitglieder": "#4718",
-  "/ferien": "#4718",
-  "/ferien/[id]/plaetze": "#4718",
-  "/ferien/[id]/vergabe": "#4718",
-  "/schliesstage": "#4718",
-  "/uebersicht": "#4718",
 };
 
 /**
@@ -77,7 +77,7 @@ const PENDING_EXPORTS: Readonly<Record<string, string>> = {
  * Download bekommt, und steigt nie. Eine neue Liste ohne Download passt so
  * nicht in das Register.
  */
-const PENDING_CEILING = 23;
+const PENDING_CEILING = 13;
 
 /**
  * Seiten ohne Liste: Formulare, Einstellungen, Einzelansichten, Anmeldung.
