@@ -372,4 +372,9 @@ type TraegerStaffPorts struct {
 	// Months is the school's month of an employment for the Stundenkonto
 	// (#4711).
 	Months TraegerStaffMonths
+	// Exports are the school's months and days for the payroll file and the
+	// time export, Payroll the Träger's payroll values (#4712); nil outside
+	// the exports.
+	Exports TraegerStaffExportSchool
+	Payroll TraegerPayrollSettingsReader
 }

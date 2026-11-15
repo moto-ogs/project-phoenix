@@ -76,6 +76,24 @@ func TestTraegerLevelKeysOfVersionOne(t *testing.T) {
 		config.KeyStaffPlanningCheckBreaks: true, config.KeyStaffPlanningEnabled: true,
 		config.KeyStaffPlanningMaxDailyHours: true, config.KeyStaffPlanningMinRestHours: true,
 	}
+	// The payroll file of the Träger (#4712): its DATEV client, a Lohnart
+	// per category and kind of contract and the unit of each day category,
+	// written with the right Personal.
+	payroll := []string{config.KeyTraegerPayrollConsultantNumber, config.KeyTraegerPayrollClientNumber}
+	for _, category := range config.TraegerPayrollCategories {
+		for _, kind := range config.TraegerPayrollContractKinds {
+			payroll = append(payroll, config.TraegerPayrollWageTypeKey(category, kind))
+		}
+	}
+	for _, category := range config.TraegerPayrollDayCategories {
+		payroll = append(payroll, config.TraegerPayrollUnitKey(category))
+	}
+	assert.Len(t, payroll, 2+7*5+3)
+	for _, key := range payroll {
+		staffRight[key] = true
+	}
+	wantTraeger = append(wantTraeger, payroll...)
+	sort.Strings(wantTraeger)
 	var got, gotTraeger []string
 	for key, definition := range config.DefaultRegistry().AllDefinitions() {
 		switch definition.Levels {

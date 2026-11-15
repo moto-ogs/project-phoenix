@@ -4,10 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
-	"golang.org/x/text/encoding"
-	"golang.org/x/text/encoding/charmap"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 )
 
 // DATEV writers (#1417 2b, final part). Both serialize the UNCHANGED
@@ -59,17 +57,6 @@ type DatevExportReport struct {
 	// OpenMonth is true when at least one exported month row is not closed:
 	// the values are current, not final.
 	OpenMonth bool `json:"open_month"`
-}
-
-// datevLine is one Bewegungsdaten booking before serialization.
-type datevLine struct {
-	personnelNumber string
-	lohnart         string
-	// exactly one of hoursMinutes / days / amountCents is set, mirroring the
-	// configured unit; amounts come from the school's own wage types (#4807)
-	hoursMinutes *int
-	days         *float64
-	amountCents  *int
 }
 
 // datevCategoryValue picks the ONE MonthExportRow field a category exports.
@@ -238,123 +225,29 @@ func appendDatevRowLines(lines []datevLine, configured []PayrollExportCategory, 
 		if !ok {
 			continue
 		}
-		line := datevLine{personnelNumber: row.PersonnelNumber, lohnart: category.Number}
+		line := datevLine{PersonnelNumber: row.PersonnelNumber, WageType: category.Number}
 		if useDays {
 			d := days
-			line.days = &d
+			line.Days = &d
 		} else {
 			m := minutes
-			line.hoursMinutes = &m
+			line.HoursMinutes = &m
 		}
 		lines = append(lines, line)
 	}
 	return lines
 }
 
-// datevHours renders minutes as decimal hours with a German comma ("160,00").
-func datevHours(minutes int) string {
-	return formatExportMinutes(minutes, ExportTimeDecimal)
-}
-
-// datevDays renders a day count with a German comma ("1,5").
-func datevDays(days float64) string {
-	return formatExportDays(days)
-}
-
-// --- LODAS ------------------------------------------------------------------
-
-// LODAS record types: 1 = hour bookings, 2 = day bookings. The field order of
-// the data lines is fixed by this [Satzbeschreibung]; both tables are from the
-// Schnittstellenhandbuch (u_lod_bwd_buchung_stunden / u_lod_bwd_buchung_tage).
-const (
-	lodasRecordHours = "1"
-	lodasRecordDays  = "2"
-	// lodasRecordAmount books an amount of the school's own wage types
-	// (#4807) into the standard table with Bearbeitungsschlüssel 02
-	// (Bruttowerte). Declared only when the file carries an amount, so a file
-	// without one stays byte-identical.
-	lodasRecordAmount   = "3"
-	lodasAmountBSNumber = "02"
-)
+// datevLine is one Bewegungsdaten booking before serialization; the
+// writers are shared with the Träger's file (#4712).
+type datevLine = domain.DatevPayrollLine
 
 func writeDatevLodas(lines []datevLine, status *PayrollExportConfiguration, year, month int) []byte {
-	period := fmt.Sprintf("01.%02d.%04d", month, year)
-	var b strings.Builder
-	b.WriteString("[Allgemein]\n")
-	b.WriteString("Ziel=LODAS\n")
-	b.WriteString("Version_SST=1.0\n")
-	b.WriteString("BeraterNr=" + status.Beraternummer + "\n")
-	b.WriteString("MandantenNr=" + status.Mandantennummer + "\n")
-	b.WriteString("Feldtrennzeichen=;\n")
-	b.WriteString("Zahlenkomma=,\n")
-	b.WriteString("Datumsformat=TT.MM.JJJJ\n")
-	b.WriteString("\n[Satzbeschreibung]\n")
-	b.WriteString(lodasRecordHours + ";u_lod_bwd_buchung_stunden;pnr#bwd;abrechnung_zeitraum#bwd;stunden#bwd;la_eigene#bwd;\n")
-	b.WriteString(lodasRecordDays + ";u_lod_bwd_buchung_tage;pnr#bwd;abrechnung_zeitraum#bwd;tage#bwd;la_eigene#bwd;\n")
-	if datevLinesCarryAmounts(lines) {
-		b.WriteString(lodasRecordAmount + ";u_lod_bwd_buchung_standard;pnr#bwd;abrechnung_zeitraum#bwd;bs_wert_butab#bwd;bs_nr#bwd;la_eigene#bwd;\n")
-	}
-	b.WriteString("\n[Bewegungsdaten]\n")
-	for _, line := range lines {
-		if line.amountCents != nil {
-			b.WriteString(strings.Join([]string{lodasRecordAmount, line.personnelNumber, period, formatExportCents(*line.amountCents), lodasAmountBSNumber, line.lohnart}, ";") + ";\n")
-			continue
-		}
-		if line.days != nil {
-			b.WriteString(strings.Join([]string{lodasRecordDays, line.personnelNumber, period, datevDays(*line.days), line.lohnart}, ";") + ";\n")
-			continue
-		}
-		b.WriteString(strings.Join([]string{lodasRecordHours, line.personnelNumber, period, datevHours(*line.hoursMinutes), line.lohnart}, ";") + ";\n")
-	}
-	return encodeDatevANSI(b.String())
-}
-
-// --- Lohn und Gehalt --------------------------------------------------------
-
-// The 11-field Bewegungsdaten layout. Kalendertag stays empty: the bookings
-// are month aggregates, the Abrechnungszeitraum is chosen at import time.
-// Ausfallschlüssel, Wert, factors and cost centers stay empty — we book
-// amounts per Lohnart, nothing else.
-var datevLugHeader = []string{
-	"Personalnummer", "Kalendertag", "Ausfallschluessel", "Lohnartennummer",
-	"Stundenanzahl", "Tagesanzahl", "Wert",
-	"Abw. Faktor", "Abw. Lohnveraenderung", "Kostenstellennummer", "Kostentraeger",
+	return domain.WriteDatevLodas(lines, status.Beraternummer, status.Mandantennummer, year, month)
 }
 
 func writeDatevLug(lines []datevLine) []byte {
-	var b strings.Builder
-	b.WriteString(strings.Join(datevLugHeader, ";") + "\n")
-	for _, line := range lines {
-		hours, days, value := "", "", ""
-		switch {
-		case line.amountCents != nil:
-			value = formatExportCents(*line.amountCents)
-		case line.days != nil:
-			days = datevDays(*line.days)
-		default:
-			hours = datevHours(*line.hoursMinutes)
-		}
-		fields := []string{line.personnelNumber, "", "", line.lohnart, hours, days, value, "", "", "", ""}
-		b.WriteString(strings.Join(fields, ";") + "\n")
-	}
-	return encodeDatevANSI(b.String())
-}
-
-// --- encoding ---------------------------------------------------------------
-
-// encodeDatevANSI converts to Windows-1252 with CR/LF line ends — the
-// encoding the LODAS Schnittstellenhandbuch prescribes ("ANSI-Code", CR/LF
-// record ends) and the Lohn und Gehalt import default. Characters outside
-// CP1252 are substitution-encoded rather than failing the whole file.
-func encodeDatevANSI(s string) []byte {
-	s = strings.ReplaceAll(s, "\n", "\r\n")
-	encoder := encoding.ReplaceUnsupported(charmap.Windows1252.NewEncoder())
-	out, err := encoder.Bytes([]byte(s))
-	if err != nil {
-		// ReplaceUnsupported never errors; keep the fallback total anyway.
-		return []byte(s)
-	}
-	return out
+	return domain.WriteDatevLug(lines)
 }
 
 // --- service entry points ---------------------------------------------------

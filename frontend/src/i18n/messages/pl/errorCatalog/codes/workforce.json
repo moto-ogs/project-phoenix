@@ -118,5 +118,6 @@
   "traeger_planning_shift_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "traeger_month_closed_by_school": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "traeger_month_later_closed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
-  "traeger_month_not_kept": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
+  "traeger_month_not_kept": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "traeger_payroll_not_ready": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
 }

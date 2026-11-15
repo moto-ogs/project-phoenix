@@ -213,12 +213,32 @@ func (s *workSessionService) DayExportRowsByStaffIDs(ctx context.Context, staffI
 	if len(staffIDs) == 0 {
 		return result, nil
 	}
+	responsesByStaff, absencesByStaff, err := s.loadDayExport(ctx, staffIDs, from, to)
+	if err != nil {
+		return nil, err
+	}
+	for _, staffID := range staffIDs {
+		absences := clampAbsencesToRange(absencesByStaff[staffID], from, to)
+		merged := s.buildExportRows(responsesByStaff[staffID], absences)
+		rows := make([]DayExportRow, 0, len(merged))
+		for _, row := range merged {
+			rows = append(rows, DayExportRow{Date: row.Date, Cells: row.Row})
+		}
+		result[staffID] = rows
+	}
+	return result, nil
+}
 
+// loadDayExport loads the blocks and absences of the staff members in the
+// range with a constant number of repository calls: the blocks with their
+// breaks per staff member in check-in order, the absences with the school's
+// own wording.
+func (s *workSessionService) loadDayExport(ctx context.Context, staffIDs []int64, from, to calendar.Date) (map[int64][]*SessionResponse, map[int64][]*StaffAbsence, error) {
 	sessionsByStaffRecords, err := s.repo.ListWorkSessions(ctx, workforce.WorkSessionFilter{StaffIDs: staffIDs, DateFrom: from.String(), DateTo: to.String(), Order: workSessionOrder(workforce.WorkSessionOrderStaffID, workforce.WorkSessionOrderDate, workforce.WorkSessionOrderCheckInTime)})
 	sessionsByStaff := workSessionsByStaff(sessionsByStaffRecords)
 	err = rowReadError("get history by staff IDs", err, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get sessions for export: %w", err)
+		return nil, nil, fmt.Errorf("failed to get sessions for export: %w", err)
 	}
 
 	absencesByStaff := make(map[int64][]*StaffAbsence, len(staffIDs))
@@ -227,7 +247,7 @@ func (s *workSessionService) DayExportRowsByStaffIDs(ctx context.Context, staffI
 		absencesByStaff = staffAbsencesByID(absenceValues)
 		err = rowReadError("get absences by staff IDs and date range", err, nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get absences for export: %w", err)
+			return nil, nil, fmt.Errorf("failed to get absences for export: %w", err)
 		}
 		allAbsences := make([]*StaffAbsence, 0)
 		for _, absences := range absencesByStaff {
@@ -244,23 +264,13 @@ func (s *workSessionService) DayExportRowsByStaffIDs(ctx context.Context, staffI
 	}
 	responses, err := s.buildDayExportSessionResponses(ctx, allSessions)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	responsesByStaff := make(map[int64][]*SessionResponse, len(staffIDs))
 	for _, response := range responses {
 		responsesByStaff[response.StaffID] = append(responsesByStaff[response.StaffID], response)
 	}
-
-	for _, staffID := range staffIDs {
-		absences := clampAbsencesToRange(absencesByStaff[staffID], from, to)
-		merged := s.buildExportRows(responsesByStaff[staffID], absences)
-		rows := make([]DayExportRow, 0, len(merged))
-		for _, row := range merged {
-			rows = append(rows, DayExportRow{Date: row.Date, Cells: row.Row})
-		}
-		result[staffID] = rows
-	}
-	return result, nil
+	return responsesByStaff, absencesByStaff, nil
 }
 
 func (s *workSessionService) buildDayExportSessionResponses(ctx context.Context, sessions []*WorkSession) ([]*SessionResponse, error) {

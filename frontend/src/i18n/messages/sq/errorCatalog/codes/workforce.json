@@ -118,5 +118,6 @@
   "traeger_planning_shift_not_found": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "traeger_month_closed_by_school": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "traeger_month_later_closed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
-  "traeger_month_not_kept": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
+  "traeger_month_not_kept": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "traeger_payroll_not_ready": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
 }
