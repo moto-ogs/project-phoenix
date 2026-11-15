@@ -33,6 +33,7 @@ type service struct {
 	// attachments is the file side of #2890, injected after construction (the
 	// two services point at each other).
 	attachments AttachmentPurger
+	letters     communication.ParentLetters
 	logger      *slog.Logger
 	now         func() time.Time
 }
@@ -455,6 +456,8 @@ type mailSpec struct {
 	// idempotencyKey ties one queued mail to one address; nil = no key (the
 	// original publish path never had one and keeps that behaviour).
 	idempotencyKey func(address string) string
+	// letters are the frozen letters of a personalised Elternbrief (#4813).
+	letters letterMailBodies
 }
 
 func publishMailSpec(a *StaffParentAnnouncement) mailSpec {
@@ -578,27 +581,6 @@ func (s *service) cancelPendingReminderPushes(ctx context.Context, id int64) err
 	return nil
 }
 
-// dropDeliveryRows removes the recipient matrix of a retracted or deleted
-// announcement. A republish resolves the audience live and writes a fresh set,
-// so keeping the old rows would only show a matrix for a wording parents never
-// saw — and would strand recipients who have since been unlinked.
-func (s *service) dropDeliveryRows(ctx context.Context, tenantID, id int64) error {
-	if s.deliveries == nil {
-		return nil
-	}
-	dropped, err := s.deliveries.DeleteForEntity(ctx, tenantID, relatedEntityTypeAnnouncement, id)
-	if err != nil {
-		return fmt.Errorf("announcement: drop delivery rows: %w", err)
-	}
-	if dropped > 0 {
-		s.logger.Info("parent announcement delivery rows dropped",
-			slog.Int64("announcement_id", id),
-			slog.Int64("dropped", dropped),
-		)
-	}
-	return nil
-}
-
 func (s *service) Unpublish(ctx context.Context, id int64) (*StaffParentAnnouncement, error) {
 	a, err := s.repo.FindByID(ctx, id)
 	if err != nil {
@@ -627,6 +609,9 @@ func (s *service) Unpublish(ctx context.Context, id int64) (*StaffParentAnnounce
 			return nil, err
 		}
 		if err := s.dropDeliveryRows(ctx, a.GetTenantID(), id); err != nil {
+			return nil, err
+		}
+		if err := s.dropLetterCopies(ctx, a.GetTenantID(), id); err != nil {
 			return nil, err
 		}
 		a.PublishedAt = nil
@@ -742,6 +727,10 @@ func normalizeInput(in *Input, now time.Time) ([]*StaffParentAnnouncementTarget,
 		return nil, fmt.Errorf("%w: at least one target required", ErrValidation)
 	}
 	if err := normalizeDelivery(in, now); err != nil {
+		return nil, err
+	}
+	// A letter names each child with the listed placeholders (#4813).
+	if err := communication.CheckParentLetterPlaceholders(in.DeliveryMode == StaffParentAnnouncementDeliveryLetter, in.Title, in.Body); err != nil {
 		return nil, err
 	}
 

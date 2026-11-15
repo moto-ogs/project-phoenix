@@ -389,6 +389,9 @@ func (r *announcementRepository) ListFeedForAccount(ctx context.Context, account
 			ReadAt: value.ReadAt, AcknowledgedAt: value.AcknowledgedAt, Ended: value.Ended,
 		})
 	}
+	if err := r.attachLetterCopies(ctx, accountID, rows); err != nil {
+		return nil, err
+	}
 	return rows, nil
 }
 

@@ -174,6 +174,7 @@ func mountSchoolPortalRoutes(
 	// announcement resource, narrowed by the caller's class reach.
 	parentLetters := announcementAPI.NewResource(announcements, newDeclarationReports())
 	parentLetters.Classes = classLetterCaller{caller.Caller()}
+	parentLetters.Letters = owners.NewParentLetterPrinter()
 	school.ParentLetters = parentLetters
 	tenant.Mount("/staff-messages", staffMessaging.Router(ProtectedTenantRoutesWith(staffAttachments.Register)))
 	tenant.Mount("/staff-notices", staffNotices.Router(ProtectedTenantRoutes))

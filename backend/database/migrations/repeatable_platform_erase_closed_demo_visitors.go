@@ -177,6 +177,10 @@ AS $function$
 					-- requester). The school is no one's but the visitor's (#5521).
 					DELETE FROM platform.email_delivery
 					WHERE tenant_id = ANY (hidden_schools);
+					-- A letter copy names the child and carries the text the
+					-- visitor wrote for it (#4813); like the mail, every one goes.
+					DELETE FROM users.parent_announcement_letter_copies
+					WHERE tenant_id = ANY (hidden_schools);
 					DELETE FROM platform.email_outbox
 					WHERE tenant_id = ANY (hidden_schools);
 					-- A push of the school copies the endpoint and keys of the

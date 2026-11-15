@@ -91,7 +91,7 @@ func newLocalePushFixtureFor(t *testing.T, locales []string, perLocale int, sche
 	require.NoError(t, err)
 	service, err := owners.BuildParentAnnouncements(owners.RootEnvironment{Logger: slog.Default(), Links: owners.ServiceLinks{ParentsURL: "http://localhost"}},
 		settings.Settings, delivery.EmailOutbox, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes,
-		owners.DeliveryNotifications{Notifier: notifier}, repos.MessagingRepositories, files)
+		owners.DeliveryNotifications{Notifier: notifier}, repos.MessagingRepositories, files, communication.ParentLetters{})
 	require.NoError(t, err)
 
 	_, viewer := testpkg.CreateTestStaffWithAccount(t, db, "Teacher", "Locale")

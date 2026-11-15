@@ -72,6 +72,8 @@ func TestPickupChangeTeamNoticesMigrationRoundTrip(t *testing.T) {
 		return definition
 	}
 	// The room archive (#6845) changes the fingerprint at the head; it goes first.
+	// The letter copies (#4813) add a table to the erasure at the head; they go first.
+	require.NoError(t, parentLetterCopiesDown(t.Context(), db))
 	require.NoError(t, roomsArchiveDown(ctx, db))
 	require.True(t, exists())
 	assert.Contains(t, preflight(), pickupChangeTeamNoticesFingerprint)

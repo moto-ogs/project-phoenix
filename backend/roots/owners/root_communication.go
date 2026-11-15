@@ -43,8 +43,10 @@ func BuildParentEventEmitter(
 func BuildParentAnnouncements(
 	env RootEnvironment, settings settingsCompose.BatchSettingsService, outbox *deliveryCompose.EmailOutbox, module deliveryModule.Capability, outcomes deliveryModule.EmailOutcomes,
 	notifications DeliveryNotifications, messaging parentStore.MessagingRepositories,
-	attachments communication.ParentAnnouncementAttachmentPurger,
+	attachments communication.ParentAnnouncementAttachmentPurger, letters communication.ParentLetters,
 ) (communication.ParentAnnouncementCapability, error) {
+	// The copies of a letter live beside the announcement (#4813).
+	letters.Copies = messaging.ParentAnnouncement
 	return communicationCompose.NewParentAnnouncementsWithAttachments(communicationCompose.ParentAnnouncementConfig{
 		Repo: messaging.ParentAnnouncement, Settings: settingsValues.NewParentAnnouncementValues(settings), Outbox: OutboxEnqueuer{Outbox: outbox},
 		PushOutbox: deliveryCompose.NewDurablePushOutbox(module), Notifier: BindCommunicationNotificationSender(notifications.Notifier),
@@ -54,6 +56,7 @@ func BuildParentAnnouncements(
 		Logger: env.Logger.With("service", "announcement"), Now: env.Now,
 		// The surveys (#4781) ask the colleagues of the team chat.
 		SurveyStaff: messaging.StaffMessageRead,
+		Letters:     letters,
 	}, attachments, CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 }
 

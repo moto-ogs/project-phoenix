@@ -27,7 +27,10 @@ type PortalAnnouncementFeedItem struct {
 	Options                 []*PortalParentAnnouncementOption  `json:"options,omitempty"`
 	Children                []*PortalAnnouncementPollChild     `json:"children,omitempty"`
 	Declaration             *PortalAnnouncementFeedDeclaration `json:"-"`
-	Poll                    bool                               `json:"-"`
+	// Letters are the account's own children's letters of a personalised
+	// Elternbrief (#4813), one per child.
+	Letters []ParentLetterCopy `json:"-"`
+	Poll    bool               `json:"-"`
 	// Ended marks an answered declaration the school no longer shows (#6290).
 	Ended bool `json:"-"`
 }

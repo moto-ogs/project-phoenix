@@ -243,6 +243,7 @@ AS $function$ SELECT $manifest$[
   {"name": "users.surveys","predicate": "r.tenant_id = $1"},
   {"name": "users.parent_announcement_declaration_submissions","predicate": "r.tenant_id = $1"},
   {"name": "users.parent_announcement_declaration_versions","predicate": "r.tenant_id = $1"},
+  {"name": "users.parent_announcement_letter_copies","predicate": "r.tenant_id = $1"},
   {"name": "users.parent_announcement_options","predicate": "r.tenant_id = $1"},
   {"name": "users.parent_announcement_reads","predicate": "r.tenant_id = $1"},
   {"name": "users.parent_announcement_responses","predicate": "r.tenant_id = $1"},

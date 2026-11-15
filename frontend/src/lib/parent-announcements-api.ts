@@ -840,3 +840,81 @@ export function announcementAttachmentDownloadUrl(
 ): string {
   return `${ATTACHMENTS_BASE}/${encodeURIComponent(announcementId)}/${encodeURIComponent(attachmentId)}/download`;
 }
+
+// --- Serienbriefe (#4813) ----------------------------------------------------
+
+/** A value an Elternbrief can name for each child, written {{name}}. */
+export interface LetterPlaceholder {
+  name: string;
+  label: string;
+  example: string;
+}
+
+/** The letter text filled with one child's values, before it is sent. */
+export interface LetterPreview {
+  body: string;
+  child: {
+    student_id: string;
+    first_name: string;
+    last_name: string;
+    school_class: string;
+  };
+}
+
+/** The fixed list of placeholders a letter may name. */
+export async function fetchLetterPlaceholders(
+  base = BASE,
+): Promise<LetterPlaceholder[]> {
+  const data = await request<LetterPlaceholder[]>(
+    `${base}/letter-placeholders`,
+    undefined,
+    "Die Platzhalter konnten nicht geladen werden",
+  );
+  return data ?? [];
+}
+
+/**
+ * Fills a letter text for one child of the school. Reads the child's data,
+ * so the backend writes the access to the data access log.
+ */
+export async function previewLetter(
+  body: string,
+  studentId: string,
+  base = BASE,
+): Promise<LetterPreview> {
+  const data = await request<LetterPreview>(
+    `${base}/letter-preview`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body, student_id: studentId }),
+    },
+    "Die Vorschau konnte nicht erstellt werden",
+  );
+  if (!data) throw missingBody("Die Vorschau konnte nicht erstellt werden");
+  return data;
+}
+
+/** Download address of every letter of a dispatch as one PDF. */
+export function letterPrintUrl(id: string, base = BASE): string {
+  return `${base}/${encodeURIComponent(id)}/letters-pdf`;
+}
+
+/**
+ * Downloads every letter of a published Elternbrief as one PDF to print, one
+ * letter per child, under the file name the backend chose.
+ */
+export async function downloadLetterPrint(
+  id: string,
+  base = BASE,
+): Promise<void> {
+  const response = await transportFetch(letterPrintUrl(id, base));
+  if (!response.ok) {
+    await throwApiError(response, "Die Briefe konnten nicht erstellt werden");
+  }
+  const blob = await response.blob();
+  downloadBlob(
+    blob,
+    filenameFromDisposition(response) ?? `elternbriefe-${id}.pdf`,
+  );
+}

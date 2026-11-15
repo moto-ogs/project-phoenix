@@ -32,16 +32,15 @@ type ParentAnnouncementConfig struct {
 	ParentsURL   string
 	Logger       *slog.Logger
 	SurveyStaff  deliveryPorts.SurveyStaff // with it, the surveys (#4781)
+	Letters      communication.ParentLetters
 	Now          func() time.Time
 }
 
 type ParentAnnouncementEmailConfig communication.MailRendererConfig
 
-// NewParentAnnouncementsWithAttachments composes the parent announcements
-// over the file side of their attachments, which File Storage builds from
-// its database and object store before it builds its attachment routes
-// over these announcements (#4080). A missing file side is a construction
-// error.
+// NewParentAnnouncementsWithAttachments composes the announcements over the
+// file side File Storage builds before its attachment routes over them
+// (#4080). A missing file side is a construction error.
 func NewParentAnnouncementsWithAttachments(cfg ParentAnnouncementConfig, attachments communication.ParentAnnouncementAttachmentPurger, runtime deliveryPorts.Runtime, policy deliveryPorts.ParentDeliveryPolicy) (communication.ParentAnnouncementCapability, error) {
 	if attachments == nil {
 		return nil, errors.New("parent announcements compose: the attachment purger is required")
@@ -54,6 +53,7 @@ func NewParentAnnouncementsWithAttachments(cfg ParentAnnouncementConfig, attachm
 		Repo: records.NewRepository(cfg.Repo), Settings: cfg.Settings, Outbox: cfg.Outbox, PushOutbox: cfg.PushOutbox, Notifier: deliveryPorts.NewNotificationSender(cfg.Notifier),
 		Series: cfg.Series, Preferences: cfg.Preferences, Deliveries: deliveries,
 		ParentsURL: cfg.ParentsURL, Logger: cfg.Logger, Fingerprints: cfg.Fingerprints, Signatures: cfg.Signatures, Attachments: attachments, Now: cfg.Now,
+		Letters: cfg.Letters,
 	}, runtime, policy)), cfg.Repo, cfg.SurveyStaff)
 }
 

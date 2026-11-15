@@ -19,6 +19,8 @@ func TestGroupWeekProtocolsMigrationRoundTrip(t *testing.T) {
 	// this test restores; they go first.
 	// The pickup change notices (1.15.960, #6855) extend the erasure of 1.15.956; they go first.
 	// The room archive (#6845) turns room keys into NO ACTION; it goes first.
+	// The letter copies (#4813) add a table to the erasure at the head; they go first.
+	require.NoError(t, parentLetterCopiesDown(t.Context(), db))
 	require.NoError(t, roomsArchiveDown(t.Context(), db))
 	require.NoError(t, pickupChangeTeamNoticesDown(t.Context(), db))
 	// The note notices (1.15.956, #6854) extend the erasure of 1.15.942; they go first.

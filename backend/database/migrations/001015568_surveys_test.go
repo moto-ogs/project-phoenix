@@ -46,6 +46,8 @@ func TestSurveysRollbackPreservesSchoolErasure(t *testing.T) {
 	// The message attachments (1.15.936, #6685) extend the erasure functions
 	// this test restores; they go first.
 	// The pickup change notices (1.15.960, #6855) extend the erasure of 1.15.956; they go first.
+	// The letter copies (#4813) add a table to the erasure at the head; they go first.
+	require.NoError(t, parentLetterCopiesDown(t.Context(), db))
 	require.NoError(t, pickupChangeTeamNoticesDown(t.Context(), db))
 	// The note notices (1.15.956, #6854) extend the erasure of 1.15.942; they go first.
 	require.NoError(t, studentNoteTeamNoticesDown(t.Context(), db))

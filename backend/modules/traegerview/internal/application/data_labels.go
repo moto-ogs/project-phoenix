@@ -43,6 +43,8 @@ var dataLabels = map[string]string{
 	"holiday_home_school_bookings":        "Ferienbuchungen eigener Kinder an anderen OGS",
 	"guardian_email_stop":                 "Mails an einen Elternteil gestoppt oder wieder freigegeben",
 	"guardian_email_lift":                 "Sperre einer Mail-Adresse aufgehoben",
+	"parent_letter_preview":               "Vorschau eines Elternbriefs für ein Kind",
+	"parent_letter_print":                 "Alle Elternbriefe eines Versands (PDF)",
 	"care_contract_applications":          "Angenommene Anmeldungen für Betreuungsverträge",
 	"care_contracts":                      "Betreuungsverträge",
 	"care_time_overruns":                  "Kinder mit längerer Betreuung als gebucht",
