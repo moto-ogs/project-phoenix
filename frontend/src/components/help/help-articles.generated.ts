@@ -10699,11 +10699,11 @@ export const traegerAccessLogTopic =
           ],
         },
         {
-          title: "Als CSV herunterladen",
-          description: "Für einen Nachweis, zum Beispiel in einer Tabelle.",
+          title: "Herunterladen",
+          description: "Für einen Nachweis, zum Ablegen oder für eine Tabelle.",
           steps: [
             "Stellen Sie die Filter ein.",
-            "Wählen Sie `Herunterladen` und dann `CSV`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
             "moto lädt eine Datei mit allen Einträgen zu den Filtern herunter.",
           ],
         },
@@ -10850,7 +10850,7 @@ export const traegerArrivalPickupTimesTopic =
         "Lesen Sie die Felder unter `Ankunft` und `Abholung`. Je dunkler ein Feld, desto mehr Kinder. Die Zahl im Feld ist der Durchschnitt eines Tages.",
         "Zeigen Sie auf ein Feld oder tippen Sie darauf. Darunter steht dann die genaue Zahl.",
         "Wählen Sie unter `Je Schule` eine Schule oder oben den Filter `Schule`. Dann sehen Sie nur diese Schule.",
-        "Wählen Sie `Herunterladen` und dann `CSV`, um alle Zahlen als Tabelle zu speichern.",
+        "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
       ],
       result:
         "Sie sehen, wann an jeder Schule viele Kinder kommen und gehen. Planen Sie für diese Zeiten mehr Personal ein.",
@@ -11375,6 +11375,17 @@ export const traegerCareContractsTopic =
             "Wählen Sie auf der Vertragsseite in der Karte `Unterschrift` den Knopf `Papiervertrag erfassen`.",
             "Prüfen Sie `Unterschrieben von` und `Unterschrieben am`. Wählen Sie mit `PDF wählen` die Datei.",
             "Wählen Sie `Vertrag abschließen`. Der Vertrag ist dann `Aktiv`. Mit `Papiervertrag laden` holen Sie das PDF später wieder.",
+          ],
+        },
+        {
+          title: "Verträge herunterladen",
+          description:
+            "Zum Ablegen, für eine Tabelle oder ein anderes Programm.",
+          steps: [
+            "Wählen Sie in der Navigation `Verträge`.",
+            "Wählen Sie bei Bedarf einen Status, einen Betreuungsort oder suchen Sie.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält alle Verträge zu Ihrer Auswahl. Jeder Download steht im Zugriffsprotokoll der Schulen.",
           ],
         },
         {
@@ -12050,6 +12061,7 @@ export const traegerCareTimeOverrunsTopic =
         "Lesen Sie oben die Summen: `Kinder`, `Tage` und `Zusätzliche Zeit`.",
         "Lesen Sie unter `Je Schule` die Zahlen jeder Schule. Tippen Sie auf eine Spalte, um nach ihr zu sortieren.",
         "Mit der Rolle `Verwaltung` sehen Sie unter `Kinder` jedes Kind mit Namen. Das Kind mit der meisten zusätzlichen Zeit steht oben.",
+        "Jede Tabelle hat rechts oben `Herunterladen`. Wählen Sie `PDF`, `Excel` oder `CSV`. Die Datei gilt für den Monat und die gewählte Schule.",
       ],
       result:
         "Rote Zahlen zeigen Überschreitungen. Sprechen Sie mit den Eltern, oder ändern Sie die Buchung.",
@@ -12060,7 +12072,7 @@ export const traegerCareTimeOverrunsTopic =
         "Das Ist reicht vom ersten Einchecken bis zum letzten Auschecken des Tages.",
         "Eine Überschreitung ist mehr als 15 Minuten früher oder später als gebucht. Ein Tag ohne Buchung zählt ganz.",
         "Krank, entschuldigt, abgemeldet, Schließtage und Feiertage zählen nicht.",
-        "Jedes Mal, wenn Sie Namen sehen, steht das im Zugriffsprotokoll der Schule.",
+        "Jedes Mal, wenn Sie Namen sehen oder herunterladen, steht das im Zugriffsprotokoll der Schule.",
       ],
       differences: [
         "Fehlt der Bereich mit den Namen? Ihre Rolle hat das Recht `Verträge verwalten` nicht. Dann sehen Sie nur die Zahlen je Schule.",
@@ -13356,7 +13368,8 @@ export const traegerHolidayRegistrationReviewTopic =
           title: "Exportieren",
           steps: [
             "Stellen Sie die Filter ein, zum Beispiel eine Schule.",
-            "Wählen Sie `Herunterladen` und dann `Excel` oder `CSV`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die PDF ist zum Ausdrucken. Sie enthält Kind, Woche, Zeitmodell, Mittagessen und Telefon. Adresse, E-Mail und die Antworten im Formular stehen nur in Excel und CSV.",
           ],
         },
         {
@@ -13615,6 +13628,8 @@ export const traegerKeyDateCountsTopic =
         "Lesen Sie oben die Summe für alle Schulen.",
         "Lesen Sie darunter die Zahlen jeder Schule.",
         "Wählen Sie unter `Alle Monate` einen Monat, um seine Zahlen zu sehen.",
+        "Wählen Sie bei Bedarf oben eine Schule. Die Summe zeigt dann nur diese Schule.",
+        "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monate, für alle Schulen oder die gewählte Schule.",
       ],
       result:
         "Sie sehen für jede Schule, wie viele aktive Kinder und aktive Geräte moto am Stichtag gezählt hat.",
@@ -13721,7 +13736,8 @@ export const traegerOccupancyTopic =
         "Wählen Sie in der Navigation `Belegung`.",
         "Lesen Sie oben die Summe für alle Schulen und die freien Plätze.",
         "Wählen Sie einen Reiter: `Schulen`, `Gruppen` oder `Betreuungsformen`.",
-        "Wählen Sie `Herunterladen` und dann `CSV`, um alle Zahlen als Tabelle zu speichern.",
+        "Wählen Sie bei Bedarf oben eine Schule.",
+        "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
       ],
       result:
         "Sie sehen für jede Schule, wie viele Kinder in welcher Gruppe sind und welches Betreuungsangebot sie heute gebucht haben. Sie sehen auch, wo noch Plätze frei sind.",
@@ -13796,7 +13812,7 @@ export const traegerSchoolComparisonTopic =
         "Wählen Sie bei Bedarf rechts daneben die Schulen. Ohne Auswahl vergleicht moto alle Schulen.",
         "Wählen Sie bei `Rangfolge` eine Kennzahl, zum Beispiel `Plätze belegt`. Die Schule mit der größten Zahl steht oben.",
         "Wählen Sie bei `Kennzahlen je Schule` die Spalten, die Sie vergleichen wollen.",
-        "Wählen Sie `Herunterladen` und dann `CSV`, um die Tabelle zu speichern.",
+        "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält die gewählten Schulen und Kennzahlen.",
       ],
       result:
         "Sie sehen, welche Schule voller oder leerer ist als die anderen und wie weit sie vom Schnitt entfernt ist.",
@@ -14447,7 +14463,7 @@ export const traegerStaffProofsTopic =
           steps: [
             "Wählen Sie in der Navigation `Personalnachweise`.",
             "Im Reiter `Ablaufliste` sehen Sie alle offenen Nachweise. Das Dringendste steht oben.",
-            "Wählen Sie oben rechts das Symbol zum Herunterladen. Wählen Sie `CSV`.",
+            "Wählen Sie oben rechts `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Nachweise.",
           ],
         },
         {
@@ -14726,7 +14742,7 @@ export const traegerUtilizationTopic =
         "Wählen Sie einen Reiter: `Schulen`, `Betreuungsformen` oder `Räume`.",
         "Wählen Sie eine Zeile der Tabelle. Das Diagramm zeigt dann den Verlauf dieser Zeile.",
         "Wählen Sie über dem Diagramm `Tage`, `Wochen` oder `Monate`.",
-        "Wählen Sie `Herunterladen` und dann `CSV`, um alle Zahlen je Tag als Tabelle zu speichern.",
+        "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Zahlen je Tag. Mit einer gewählten Schule nur diese Schule.",
       ],
       result:
         "Sie sehen, wie voll die Plätze im Durchschnitt waren, an welchem Tag am meisten los war und welche Betreuungsformen voll waren.",
