@@ -142,6 +142,9 @@ type StaffWorkSchedule struct {
 	RotationAnchorDate string `json:"rotation_anchor_date,omitempty"`
 	ValidFrom          string `json:"valid_from"`
 	ValidUntil         string `json:"valid_until,omitempty"`
+	// KeptByTraeger is set on the current schedule: a contract of the
+	// Träger governs the Soll (#4706, ADR 0237).
+	KeptByTraeger bool `json:"-"`
 }
 
 // StaffWorkScheduleEntry is one weekday of a schedule version being written.

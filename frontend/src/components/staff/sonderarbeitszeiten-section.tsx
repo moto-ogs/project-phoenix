@@ -18,6 +18,7 @@ import {
 } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
 import { SegmentedControl } from "~/components/ui/segmented-control";
+import { StatusBadge } from "~/components/ui/status-badge";
 import {
   useApiFormError,
   useApiLoadError,
@@ -331,7 +332,15 @@ export function SonderarbeitszeitenSection({
       key: "range",
       header: "Zeitraum",
       stacked: "title",
-      render: formatRange,
+      render: (row) =>
+        row.keptByTraeger ? (
+          <span className="inline-flex flex-wrap items-center gap-2">
+            {formatRange(row)}
+            <StatusBadge label="vom Träger" tone="gray" />
+          </span>
+        ) : (
+          formatRange(row)
+        ),
       sortValue: (row) => row.startDate,
     },
     {

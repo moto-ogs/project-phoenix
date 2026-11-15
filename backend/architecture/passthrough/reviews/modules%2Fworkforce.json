@@ -101,9 +101,19 @@
       "reason": "ADR 0233 (#4705): the public facade of the personnel record answers the school's question whether its Träger keeps an employment through the Träger side the composition binds."
     },
     {
+      "decision": "0237",
+      "id": "modules/workforce/StaffAdmin.StaffSollKeptByTraeger",
+      "reason": "ADR 0237 (#4706): the public facade answers the school's question whether a contract of its Träger keeps the Soll of an employment through the Träger side the composition binds."
+    },
+    {
       "decision": "0090",
       "id": "modules/workforce/StaffAdmin.StaffStammdaten",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0237",
+      "id": "modules/workforce/StaffAdmin.TraegerStaffContracts",
+      "reason": "ADR 0237 (#4706): the public facade composes the Arbeitsverträge of the Personalstamm over the same personnel record; the root binds only the collaborators."
     },
     {
       "decision": "0233",

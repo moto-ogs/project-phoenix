@@ -34,7 +34,7 @@ const traegerBueroOnly = "Träger-Büro of the shared demo Träger: the seed ass
 // handover journal of the Träger-Büro, which no visitor reaches; ADR 0222
 // the format each of its recipients receives. ADR 0233 adds the staff
 // records of the Träger-Büro with their links and trail, ADR 0236 their
-// Nachweise.
+// Nachweise, ADR 0237 their contracts with Soll and holiday weeks.
 var demoErasureExceptions = map[string]string{
 	"active.activity_session_attendance":             schoolContentUntil5559,
 	"active.activity_sessions":                       schoolContentUntil5559,
@@ -152,6 +152,9 @@ var demoErasureExceptions = map[string]string{
 	"platform.traeger_master_data_audit":             traegerBueroOnly,
 	"platform.traeger_profiles":                      traegerBueroOnly + "; invented master data of the demo Träger",
 	"workforce.staff_proofs":                         traegerBueroOnly + "; the Nachweise of a staff record of the Träger go with their record (ADR 0236)",
+	"workforce.staff_contract_holiday_weeks":         traegerBueroOnly + "; the Ferien-Soll of a contract of the Träger names a school by plain id and goes with its contract (ADR 0237)",
+	"workforce.staff_contract_targets":               traegerBueroOnly + "; the Soll of a contract of the Träger names a school by plain id and goes with its contract (ADR 0237)",
+	"workforce.staff_contracts":                      traegerBueroOnly + "; the contracts of a staff record go with the record or the Träger (ADR 0237)",
 	"workforce.staff_record_changes":                 traegerBueroOnly + "; the trail of a staff record of the Träger goes with its record (ADR 0233)",
 	"workforce.staff_record_links":                   traegerBueroOnly + "; an Einsatzort of a staff record names a school by plain id and goes with its record (ADR 0233)",
 	"workforce.staff_records":                        traegerBueroOnly + "; the staff records of the Träger go with the Träger or when the Personalverwaltung dissolves them (ADR 0233)",
@@ -243,8 +246,9 @@ var demoErasureExceptions = map[string]string{
 // ADR 0222: the format each recipient of the Träger-Büro receives (+1).
 // ADR 0233: the staff records of the Träger-Büro with their links and
 // trail (+3).
-// ADR 0236: the Nachweise of those staff records (+1).
-const demoErasureExceptionBudget = 196
+// ADR 0237: the contracts of those staff records with their Soll and
+// holiday weeks (+3). ADR 0236: the Nachweise of those staff records (+1).
+const demoErasureExceptionBudget = 199
 
 func TestDemoErasureExceptionsKeepTheirBudget(t *testing.T) {
 	t.Parallel()

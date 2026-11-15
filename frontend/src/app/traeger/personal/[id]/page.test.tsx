@@ -10,6 +10,7 @@ const { api, mockPush } = vi.hoisted(() => ({
     revealStaffFinancial: vi.fn(),
     updateStaffFinancial: vi.fn(),
     dissolveStaffRecord: vi.fn(),
+    createStaffContract: vi.fn(),
   },
   mockPush: vi.fn(),
 }));
@@ -75,6 +76,36 @@ const RECORD: StaffRecordDetail = {
       issuedOn: "",
       noRelevantEntry: false,
       expiresOn: "",
+    },
+  ],
+  contracts: [],
+  unsyncedSchools: [],
+};
+
+const CONTRACT = {
+  id: "9",
+  kind: "part_time" as const,
+  startsOn: "2026-08-01",
+  endsOn: null,
+  sites: [
+    {
+      schoolId: "1",
+      schoolName: "OGS Nord",
+      staffId: "11",
+      changeableFrom: "2026-09-01",
+      soll: [
+        { validFrom: "2026-10-01", weekdayMinutes: [360, 360, 360, 0, 0] },
+        { validFrom: "2026-08-01", weekdayMinutes: [300, 300, 300, 300, 0] },
+      ],
+    },
+  ],
+  holidayWeeks: [
+    {
+      schoolId: "1",
+      schoolName: "OGS Nord",
+      staffId: "11",
+      weekStart: "2026-10-12",
+      weekdayMinutes: [420, 420, 420, 420, 300],
     },
   ],
 };
@@ -173,5 +204,54 @@ describe("TraegerStaffRecordPage", () => {
       await screen.findByText("DE89370400440532013000"),
     ).toBeInTheDocument();
     expect(api.revealStaffFinancial).toHaveBeenCalledWith("5");
+  });
+
+  it("shows a contract with today's Soll, its history and the holiday weeks", async () => {
+    api.fetchStaffRecord.mockResolvedValue({
+      ...RECORD,
+      contracts: [CONTRACT],
+    });
+    renderPage();
+    expect(await screen.findByText("Teilzeit")).toBeInTheDocument();
+    expect(screen.getByText("Läuft")).toBeInTheDocument();
+    // Am Testtag (09.09.2026) gilt das Soll vom 01.08.: 20 Std. pro Woche.
+    expect(screen.getAllByText("20 Std.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Geplant")).toBeInTheDocument();
+    expect(screen.getByText("12.10.2026 bis 16.10.2026")).toBeInTheDocument();
+    expect(
+      screen.getByText(/frühestens ab dem 01\.09\.2026/),
+    ).toBeInTheDocument();
+  });
+
+  it("creates a contract with the Soll of each live school", async () => {
+    api.createStaffContract.mockResolvedValue({
+      ...RECORD,
+      contracts: [CONTRACT],
+    });
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Vertrag anlegen/ }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Arbeitsvertrag anlegen",
+    });
+    // Ohne ersten Tag und ohne Stunden geht nichts weg.
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Vertrag anlegen" }),
+    );
+    expect(
+      await within(dialog).findByText("Bitte den ersten Tag wählen."),
+    ).toBeInTheDocument();
+    expect(api.createStaffContract).not.toHaveBeenCalled();
+    // Nur die laufende Beschäftigung bekommt Felder.
+    expect(within(dialog).getByText("OGS Nord")).toBeInTheDocument();
+    expect(within(dialog).queryByText("OGS Süd")).not.toBeInTheDocument();
+    fireEvent.change(
+      within(dialog).getByLabelText(/am Montag an der Schule OGS Nord/),
+      {
+        target: { value: "5,5" },
+      },
+    );
+    expect(within(dialog).getByText("5,5 Std. pro Woche")).toBeInTheDocument();
   });
 });

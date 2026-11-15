@@ -95,12 +95,54 @@ export interface StaffFinancial {
   readonly socialSecurityNumber: string | null;
 }
 
+/** Die Felder eines Vertragseintrags im Verlauf (#4706). */
+type StaffContractChangeField = "contract" | "contract_soll" | "holiday_week";
+
 export interface StaffChange {
-  readonly kind: "linked" | "not_chosen" | "changed";
-  readonly field: StaffRecordField | "school";
+  readonly kind: "linked" | "not_chosen" | "changed" | "added" | "removed";
+  readonly field: StaffRecordField | "school" | StaffContractChangeField;
   readonly value: string;
   readonly schoolName: string;
   readonly occurredAt: string;
+}
+
+/** Die Art eines Arbeitsvertrags (#4706). */
+export type StaffContractKind = "part_time" | "full_time" | "minijob";
+
+/** Ein Soll ab einem Tag, Montag bis Freitag in Minuten. */
+interface StaffContractSoll {
+  readonly validFrom: string;
+  readonly weekdayMinutes: readonly number[];
+}
+
+/** Ein Einsatzort eines Vertrags mit dem Verlauf seines Solls. */
+export interface StaffContractSite {
+  readonly schoolId: string;
+  readonly schoolName: string;
+  readonly staffId: string;
+  /** Neuestes Soll zuerst. */
+  readonly soll: readonly StaffContractSoll[];
+  /** Ab diesem Tag lässt die Schule eine Änderung noch zu. */
+  readonly changeableFrom: string;
+}
+
+/** Das Ferien-Soll einer Woche (Montag) an einem Einsatzort. */
+export interface StaffContractHolidayWeek {
+  readonly schoolId: string;
+  readonly schoolName: string;
+  readonly staffId: string;
+  readonly weekStart: string;
+  readonly weekdayMinutes: readonly number[];
+}
+
+export interface StaffContract {
+  readonly id: string;
+  readonly kind: StaffContractKind;
+  readonly startsOn: string;
+  /** Letzter Tag oder `null`, solange der Vertrag unbefristet läuft. */
+  readonly endsOn: string | null;
+  readonly sites: readonly StaffContractSite[];
+  readonly holidayWeeks: readonly StaffContractHolidayWeek[];
 }
 
 export interface StaffRecordDetail extends StaffRecordSummary {
@@ -108,6 +150,31 @@ export interface StaffRecordDetail extends StaffRecordSummary {
   readonly changes: readonly StaffChange[];
   /** Der Stand jeder Nachweisart des Trägers an der Akte (#4707). */
   readonly proofs: readonly StaffProof[];
+  readonly contracts: readonly StaffContract[];
+  /** Schulen, die eine gespeicherte Änderung noch nicht erreicht hat. */
+  readonly unsyncedSchools: readonly string[];
+}
+
+/** Das Soll eines Einsatzorts in einer Eingabe. */
+export interface StaffContractSiteInput {
+  readonly schoolId: string;
+  readonly staffId: string;
+  readonly weekdayMinutes: readonly number[];
+}
+
+export interface StaffContractInput {
+  readonly kind: StaffContractKind;
+  readonly startsOn: string;
+  readonly endsOn: string | null;
+  readonly sites: readonly StaffContractSiteInput[];
+}
+
+export interface StaffHolidayWeeksInput {
+  readonly schoolId: string;
+  readonly staffId: string;
+  readonly fromWeek: string;
+  readonly toWeek: string;
+  readonly weekdayMinutes: readonly number[];
 }
 
 interface StaffFieldOption {
@@ -174,7 +241,34 @@ interface BackendFinancial {
   social_security_number: string | null;
 }
 
+interface BackendContract {
+  id: number;
+  kind: StaffContractKind;
+  starts_on: string;
+  ends_on: string | null;
+  sites:
+    | {
+        school_id: number;
+        school_name: string;
+        staff_id: number;
+        changeable_from: string;
+        soll: { valid_from: string; weekday_minutes: number[] }[] | null;
+      }[]
+    | null;
+  holiday_weeks:
+    | {
+        school_id: number;
+        school_name: string;
+        staff_id: number;
+        week_start: string;
+        weekday_minutes: number[];
+      }[]
+    | null;
+}
+
 interface BackendDetail extends BackendSummary {
+  contracts?: BackendContract[] | null;
+  unsynced_schools?: string[] | null;
   financial: BackendFinancial;
   proofs?: BackendProof[] | null;
   changes:
@@ -264,8 +358,42 @@ function mapDetail(record: BackendDetail): StaffRecordDetail {
       occurredAt: change.occurred_at,
     })),
     proofs: (record.proofs ?? []).map(mapStaffProof),
+    contracts: (record.contracts ?? []).map(mapContract),
+    unsyncedSchools: record.unsynced_schools ?? [],
   };
 }
+
+function mapContract(contract: BackendContract): StaffContract {
+  return {
+    id: String(contract.id),
+    kind: contract.kind,
+    startsOn: contract.starts_on,
+    endsOn: contract.ends_on,
+    sites: (contract.sites ?? []).map((site) => ({
+      schoolId: String(site.school_id),
+      schoolName: site.school_name,
+      staffId: String(site.staff_id),
+      changeableFrom: site.changeable_from,
+      soll: (site.soll ?? []).map((soll) => ({
+        validFrom: soll.valid_from,
+        weekdayMinutes: soll.weekday_minutes,
+      })),
+    })),
+    holidayWeeks: (contract.holiday_weeks ?? []).map((week) => ({
+      schoolId: String(week.school_id),
+      schoolName: week.school_name,
+      staffId: String(week.staff_id),
+      weekStart: week.week_start,
+      weekdayMinutes: week.weekday_minutes,
+    })),
+  };
+}
+
+const siteBody = (site: StaffContractSiteInput) => ({
+  school_id: site.schoolId,
+  staff_id: site.staffId,
+  weekday_minutes: site.weekdayMinutes,
+});
 
 function mapStaffOverview(data: BackendOverview): StaffOverview {
   return {
@@ -381,6 +509,113 @@ export async function updateStaffFinancial(
       social_security_number: values.socialSecurityNumber,
     },
   });
+}
+
+const contractPath = (recordId: string, contractId: string, suffix = "") =>
+  recordPath(recordId, `/contracts/${encodeURIComponent(contractId)}${suffix}`);
+
+/** Legt einen Arbeitsvertrag mit dem ersten Soll je Einsatzort an (#4706). */
+export async function createStaffContract(
+  recordId: string,
+  input: StaffContractInput,
+): Promise<StaffRecordDetail> {
+  return mapDetail(
+    await traegerRequest<BackendDetail>(recordPath(recordId, "/contracts"), {
+      method: "POST",
+      body: {
+        kind: input.kind,
+        starts_on: input.startsOn,
+        ends_on: input.endsOn,
+        sites: input.sites.map(siteBody),
+      },
+    }),
+  );
+}
+
+/** Ändert Art und letzten Tag eines Vertrags. */
+export async function updateStaffContract(
+  recordId: string,
+  contractId: string,
+  input: { readonly kind: StaffContractKind; readonly endsOn: string | null },
+): Promise<StaffRecordDetail> {
+  return mapDetail(
+    await traegerRequest<BackendDetail>(contractPath(recordId, contractId), {
+      method: "PUT",
+      body: { kind: input.kind, ends_on: input.endsOn },
+    }),
+  );
+}
+
+/** Setzt ein neues Soll ab einem Tag für die genannten Einsatzorte. */
+export async function changeStaffContractSoll(
+  recordId: string,
+  contractId: string,
+  validFrom: string,
+  sites: readonly StaffContractSiteInput[],
+): Promise<StaffRecordDetail> {
+  return mapDetail(
+    await traegerRequest<BackendDetail>(
+      contractPath(recordId, contractId, "/soll"),
+      {
+        method: "POST",
+        body: { valid_from: validFrom, sites: sites.map(siteBody) },
+      },
+    ),
+  );
+}
+
+/** Trägt das Ferien-Soll für eine oder mehrere Wochen ein. */
+export async function addStaffHolidayWeeks(
+  recordId: string,
+  contractId: string,
+  input: StaffHolidayWeeksInput,
+): Promise<StaffRecordDetail> {
+  return mapDetail(
+    await traegerRequest<BackendDetail>(
+      contractPath(recordId, contractId, "/holiday-weeks"),
+      {
+        method: "POST",
+        body: {
+          school_id: input.schoolId,
+          staff_id: input.staffId,
+          from_week: input.fromWeek,
+          to_week: input.toWeek,
+          weekday_minutes: input.weekdayMinutes,
+        },
+      },
+    ),
+  );
+}
+
+/** Löscht eine Ferienwoche an einem Einsatzort. */
+export async function deleteStaffHolidayWeek(
+  recordId: string,
+  contractId: string,
+  schoolId: string,
+  weekStart: string,
+): Promise<StaffRecordDetail> {
+  return mapDetail(
+    await traegerRequest<BackendDetail>(
+      contractPath(
+        recordId,
+        contractId,
+        `/holiday-weeks/${encodeURIComponent(schoolId)}/${encodeURIComponent(weekStart)}`,
+      ),
+      { method: "DELETE" },
+    ),
+  );
+}
+
+/** Löscht einen Vertrag, der noch nicht gezählt hat. */
+export async function deleteStaffContract(
+  recordId: string,
+  contractId: string,
+): Promise<StaffRecordDetail> {
+  return mapDetail(
+    await traegerRequest<BackendDetail>(contractPath(recordId, contractId), {
+      method: "DELETE",
+    }),
+  );
 }
 
 export async function dissolveStaffRecord(id: string): Promise<void> {

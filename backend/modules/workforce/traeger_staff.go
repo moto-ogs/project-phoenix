@@ -261,6 +261,12 @@ type TraegerStaffRecordDetail struct {
 	// Proofs is the state of every live kind of the Träger at the record
 	// (#4707).
 	Proofs []TraegerStaffProof `json:"proofs"`
+	// Contracts are the Arbeitsverträge of the record (#4706), newest first.
+	Contracts []TraegerStaffContract `json:"contracts"`
+	// UnsyncedSchools names the Einsatzorte a contract change was saved for
+	// but could not reach yet; the next change of the record brings them up
+	// to date (ADR 0237 section 4). Empty after every complete write.
+	UnsyncedSchools []string `json:"unsynced_schools,omitempty"`
 }
 
 // TraegerStaffRecords is the Personalstamm in the Träger-Portal. Every

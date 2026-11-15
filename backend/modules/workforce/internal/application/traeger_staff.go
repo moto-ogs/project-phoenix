@@ -22,16 +22,33 @@ type TraegerStaff struct {
 	subjects ports.StaffSubjects
 	audit    ports.StaffAdminAudit
 	bank     workforce.BankDataCipher
-	clock    ports.Clock
+	// lock serializes the Soll mirror with every other Soll writer of the
+	// school (#4706); clock names the day the first open month counts from.
+	lock  ports.Transaction
+	clock ports.Clock
+	warn  func(message string, args ...any)
+}
+
+// TraegerStaffDependencies are the collaborators of the Personalstamm the
+// personnel record shares with it.
+type TraegerStaffDependencies struct {
+	Subjects ports.StaffSubjects
+	Audit    ports.StaffAdminAudit
+	Bank     workforce.BankDataCipher
+	Lock     ports.Transaction
+	Clock    ports.Clock
+	Warn     func(message string, args ...any)
 }
 
 // NewTraegerStaff composes the Personalstamm; every collaborator is required.
-func NewTraegerStaff(store ports.TraegerStaffStore, collaborators workforce.TraegerStaffPorts, subjects ports.StaffSubjects, audit ports.StaffAdminAudit, bank workforce.BankDataCipher, clock ports.Clock) *TraegerStaff {
+func NewTraegerStaff(store ports.TraegerStaffStore, collaborators workforce.TraegerStaffPorts, dependencies TraegerStaffDependencies) *TraegerStaff {
 	if store == nil || collaborators.Schools == nil || collaborators.Employments == nil || collaborators.Persons == nil || collaborators.Access == nil ||
-		collaborators.Runtime == nil || subjects == nil || audit == nil || bank == nil || clock == nil {
+		collaborators.Runtime == nil || dependencies.Subjects == nil || dependencies.Audit == nil || dependencies.Bank == nil ||
+		dependencies.Lock == nil || dependencies.Clock == nil || dependencies.Warn == nil {
 		panic("workforce traeger staff: all dependencies are required")
 	}
-	return &TraegerStaff{store: store, ports: collaborators, subjects: subjects, audit: audit, bank: bank, clock: clock}
+	return &TraegerStaff{store: store, ports: collaborators, subjects: dependencies.Subjects, audit: dependencies.Audit, bank: dependencies.Bank,
+		lock: dependencies.Lock, clock: dependencies.Clock, warn: dependencies.Warn}
 }
 
 // changeTrailLimit bounds the trail a record detail shows.
@@ -208,11 +225,16 @@ func (t *TraegerStaff) Record(ctx context.Context, actor workforce.TraegerStaffA
 	var record domain.TraegerStaffRecord
 	var changes []domain.TraegerStaffChange
 	var proofs []workforce.TraegerStaffProof
+	var contracts []domain.TraegerStaffContract
 	err = t.released(ctx, actor, func(ctx context.Context) error {
 		if record, err = t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, false); err != nil {
 			return err
 		}
-		if changes, err = t.store.ListStaffChanges(ctx, actor.OrganizationID, recordID, changeTrailLimit); err != nil {
+		if contracts, err = t.store.ListStaffContracts(ctx, actor.OrganizationID, recordID); err != nil {
+			return err
+		}
+		changes, err = t.store.ListStaffChanges(ctx, actor.OrganizationID, recordID, changeTrailLimit)
+		if err != nil {
 			return err
 		}
 		proofs, err = t.recordProofs(ctx, actor.OrganizationID, recordID)
@@ -225,12 +247,17 @@ func (t *TraegerStaff) Record(ctx context.Context, actor workforce.TraegerStaffA
 	if err != nil {
 		return workforce.TraegerStaffRecordDetail{}, err
 	}
+	openFrom, _, err := t.readOpenDays(ctx, record.Links, false)
+	if err != nil {
+		return workforce.TraegerStaffRecordDetail{}, err
+	}
 	names := schoolNames(schools)
 	detail := workforce.TraegerStaffRecordDetail{
 		TraegerStaffRecordSummary: summarize(record, names, reads),
 		Financial:                 maskedRecordFinancial(record),
 		Changes:                   make([]workforce.TraegerStaffChange, 0, len(changes)),
 		Proofs:                    proofs,
+		Contracts:                 publicContracts(contracts, names, openFrom),
 	}
 	for _, change := range changes {
 		detail.Changes = append(detail.Changes, publicChange(change, names))

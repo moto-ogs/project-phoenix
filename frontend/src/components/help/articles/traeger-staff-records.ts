@@ -72,7 +72,7 @@ export function traegerStaffRecordsTopic(): HelpTopic {
     ],
     steps: [],
     result:
-      "Die Akte gilt für alle Schulen der Person. Jede Schule sieht die Personalnummer des Trägers und kann sie nicht mehr ändern. Die Bank- und Steuerdaten ziehen von den Schulen in die Akte. Die Schulen sehen nur noch: „führt der Träger“. Planung, Zeiten und Abwesenheiten bleiben an jeder Schule wie bisher.",
+      "Die Akte gilt für alle Schulen der Person. Jede Schule sieht die Personalnummer des Trägers und kann sie nicht mehr ändern. Die Bank- und Steuerdaten ziehen von den Schulen in die Akte. Die Schulen sehen nur noch: „führt der Träger“. Planung, Zeiten und Abwesenheiten bleiben an jeder Schule wie bisher. Vertrag und Soll tragen Sie danach in der Akte ein.",
     notes: [
       "Ein Wert, den Sie beim Verknüpfen nicht wählen, bleibt mit seiner Schule im `Verlauf` der Akte.",
       "Jede Schule sieht weiter nur ihr eigenes Personal. Sie sieht keine Akte und keine anderen Schulen.",
@@ -88,6 +88,10 @@ export function traegerStaffRecordsTopic(): HelpTopic {
       "„Diese Personalnummer ist schon vergeben“: Eine andere Akte oder eine andere Person an einer der Schulen hat die Nummer. Ändern Sie zuerst die andere Nummer.",
       "„Eine dieser Personen hat schon eine Personalakte“: Laden Sie die Seite neu. Vielleicht hat jemand den Vorschlag gerade verknüpft.",
     ],
-    related: [HELP_TOPICS.traegerAccounts, HELP_TOPICS.traegerAccessLog],
+    related: [
+      HELP_TOPICS.traegerStaffContracts,
+      HELP_TOPICS.traegerAccounts,
+      HELP_TOPICS.traegerAccessLog,
+    ],
   };
 }

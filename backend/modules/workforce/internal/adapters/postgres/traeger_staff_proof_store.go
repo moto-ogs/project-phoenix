@@ -143,7 +143,7 @@ func dateText(day *calendar.Date) string {
 	return day.String()
 }
 
-func optionalDate(value string) (*calendar.Date, error) {
+func optionalProofDate(value string) (*calendar.Date, error) {
 	if value == "" {
 		return nil, nil
 	}
@@ -209,11 +209,11 @@ func (s *TraegerStaffStore) SaveProof(ctx context.Context, proof domain.TraegerP
 	if err != nil {
 		return fmt.Errorf("workforce postgres: proof presented_on: %w", err)
 	}
-	issued, err := optionalDate(proof.IssuedOn)
+	issued, err := optionalProofDate(proof.IssuedOn)
 	if err != nil {
 		return fmt.Errorf("workforce postgres: proof issued_on: %w", err)
 	}
-	expires, err := optionalDate(proof.ExpiresOn)
+	expires, err := optionalProofDate(proof.ExpiresOn)
 	if err != nil {
 		return fmt.Errorf("workforce postgres: proof expires_on: %w", err)
 	}
