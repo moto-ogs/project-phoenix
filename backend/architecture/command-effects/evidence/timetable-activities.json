@@ -9129,6 +9129,22 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Owner.BlockEducationGroups",
+      "binding_digest": "2eef4db4e743348713d19b841d40ab0c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.BlockGroupQuery.BlockEducationGroups",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Owner.BlockEducationGroups",
+      "binding_digest": "72588c72a13f12f76057f35e332960ee",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.BlockGroupQuery.BlockEducationGroups",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Owner.AcknowledgeConflict",
       "binding_digest": "2eef4db4e743348713d19b841d40ab0c",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.Capability.AcknowledgeConflict",
@@ -29041,6 +29057,54 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "binding_digest": "6fc91edfbaddd769e846435bc9c69fad",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListGroupAssignments",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "binding_digest": "b7ce5fe6d9f5985bbb4c0cc6ac028571",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListTeachers",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "binding_digest": "0640461da43b91b8a53c1870402927c4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListGroupAssignments",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "binding_digest": "7540302ea3030d1fd932d906878e0f5c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListTeachers",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "binding_digest": "4c6d61fbb6530f4527f1208b417cd1df",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListGroupAssignments",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "binding_digest": "2f0bd3a9575ad1f2a32ba0ac9e4f52b3",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListTeachers",
+      "target_owner": "school-membership"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGuardianNotices.NoticeReach",
       "binding_digest": "ed7d2d4fc890ab51e0abdf444fd35b22",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GuardianNotices.NoticeReach",
@@ -31550,6 +31614,38 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingAnnouncer.AnnounceStaffingChanged",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/realtime.Broadcaster.BroadcastToTenant",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.BlockGroupQuery.BlockEducationGroups",
+      "binding_digest": "2eef4db4e743348713d19b841d40ab0c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingBlockGroups.BlockEducationGroups",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.BlockGroupQuery.BlockEducationGroups",
+      "binding_digest": "72588c72a13f12f76057f35e332960ee",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingBlockGroups.BlockEducationGroups",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffingNotices.NotifyStaffingChanged",
+      "binding_digest": "5efb0fbeed0e50bbcd03a3847f81ba0e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingNotices.NotifyStaffingChanged",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffingNotices.NotifyStaffingChanged",
+      "binding_digest": "ca979d8aa8d23a4247d2659f1d8ea36c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingNotices.NotifyStaffingChanged",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
       "target_owner": "delivery-platform"
     },
     {
