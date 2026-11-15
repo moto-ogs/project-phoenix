@@ -233,9 +233,12 @@ describe("SEPA import approval", () => {
   // focus on them; the heading of the new step takes it now.
   it("focuses the heading of each new step", async () => {
     await choose();
-    expect(
-      screen.getByRole("heading", { name: "Prüfen und übernehmen" }),
-    ).toHaveFocus();
+    // The step moves the focus in an effect after its render: wait for it.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Prüfen und übernehmen" }),
+      ).toHaveFocus(),
+    );
 
     api.applySepaImport.mockResolvedValue({ ...preview, applied: true });
     fireEvent.click(importButton()!);
