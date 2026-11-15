@@ -23,6 +23,10 @@ import {
   validityLabel,
 } from "~/components/traeger/family-children-format";
 import { FamilyChildrenModal } from "~/components/traeger/family-children-modal";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { ChevronDown, ChevronUp, Trash2, TriangleAlert } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -46,6 +50,7 @@ import {
 import { parentsConcept } from "~/lib/concepts/parents";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   type FamilyChildren,
@@ -349,6 +354,19 @@ export default function TraegerKinderzahlPage() {
         ) : null
       }
       statsLoading={!data && !pageLoad.error}
+      actions={
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerList("/api/traeger/family-children/export", format)
+          }
+          scope={traegerExportScope()}
+          ariaLabel="Kinderzahl herunterladen"
+          tooltip="Zeigt die Formate für alle Familien, ohne Suche. Jeder Download steht im Zugriffsprotokoll."
+          fallbackName="kinderzahl"
+          errorObject="die Kinderzahl der Familien"
+          unavailable={families.length === 0}
+        />
+      }
       search={{
         value: search,
         onChange: setSearch,

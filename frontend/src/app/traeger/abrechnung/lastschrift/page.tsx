@@ -16,11 +16,16 @@ import {
   SepaMandatesCard,
   useSepaMandates,
 } from "~/components/traeger/sepa-mandates-card";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { ButtonLink } from "~/components/ui/button";
 import type { FilterConfig } from "~/components/ui/page-header/types";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ListSkeleton } from "~/components/ui/page-skeletons";
 import { hasPermission } from "~/lib/auth-utils";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 type Show = "in_force" | "revoked" | "all";
@@ -90,14 +95,27 @@ export default function TraegerLastschriftPage() {
       tabs={billingTabs("lastschrift")}
       actions={
         canBill ? (
-          <ButtonLink
-            href={traegerPath("/traeger/abrechnung/lastschrift/import")}
-            variant="outline"
-            size="md"
-            tooltip="Öffnet den Import bestehender Mandate aus einer CSV-Datei."
-          >
-            Mandate importieren
-          </ButtonLink>
+          <>
+            <TraegerListExportMenu
+              download={(format) =>
+                downloadTraegerList("/api/traeger/sepa-mandates/export", format)
+              }
+              scope={traegerExportScope()}
+              ariaLabel="SEPA-Mandate herunterladen"
+              tooltip="Zeigt die Formate für alle Mandate, ohne Suche und Filter. Jeder Download wird protokolliert."
+              fallbackName="sepa-mandate"
+              errorObject="die SEPA-Mandate"
+              unavailable={!mandates || mandates.length === 0}
+            />
+            <ButtonLink
+              href={traegerPath("/traeger/abrechnung/lastschrift/import")}
+              variant="outline"
+              size="md"
+              tooltip="Öffnet den Import bestehender Mandate aus einer CSV-Datei."
+            >
+              Mandate importieren
+            </ButtonLink>
+          </>
         ) : null
       }
       error={error}

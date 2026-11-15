@@ -11080,6 +11080,16 @@ export const traegerBillingRunTopic =
             "Wählen Sie ein Dokument, um seinen Abrechnungslauf zu öffnen. Dort stornieren Sie oder schreiben gut.",
           ],
         },
+        {
+          title: "Listen herunterladen",
+          description:
+            "Die Liste der Läufe, die Familien und die Dokumente einer Familie laden Sie als Datei herunter.",
+          steps: [
+            "Für die Läufe wählen Sie `Abrechnungsläufe` und dann den Reiter `Ferien`. Für die Familien wählen Sie `Familien und Zahlung`. Für die Dokumente einer Familie öffnen Sie die Familie.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Bei den Abrechnungsläufen gilt der gewählte Ferienzeitraum. Bei den Familien enthält die Datei alle Familien, ohne Suche und Filter.",
+            "Die Liste der Familien und die Dokumente einer Familie enthalten personenbezogene Daten. Jeder Download wird protokolliert.",
+          ],
+        },
       ],
       result:
         "Jede Rechnung hat ihre Nummer. Die Nummern sind lückenlos. Ausgestellte Rechnungen und ihre Schreiben lassen sich nicht mehr ändern. Die Übersicht zeigt jede Position je Familie, die Summe jeder Rechnung und die Gesamtsumme. Storno und Gutschrift stehen dort als eigene Zeilen mit Minusbetrag und der Nummer der Rechnung.",
@@ -11572,6 +11582,14 @@ export const traegerCareCostSharesTopic =
             "Schicken Sie die Liste an den Kostenträger.",
           ],
         },
+        {
+          title: "Alle Anteile herunterladen",
+          steps: [
+            "Wählen Sie `Familien und Zahlung` und dann den Reiter `Kostenübernahmen`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Kinder, ohne Suche und Filter.",
+            "Die Datei enthält personenbezogene Daten. Jeder Download steht im Zugriffsprotokoll.",
+          ],
+        },
       ],
       result:
         "Der Monatslauf rechnet erst alle Ermäßigungen aus. Danach zieht er den Anteil des Kostenträgers ab. Die Rechnung zeigt den Monatsbeitrag, den Anteil und den Rest. Ein Anteil für die Mensa zieht vom Mensa-Betrag ab. Übernimmt der Kostenträger alles, steht auf der Rechnung `Beitragsfrei` und 0 €.",
@@ -11719,7 +11737,7 @@ export const traegerCareMonthsTopic =
           description:
             "Sie können eine Rechnung aus diesem Lauf nehmen. Sie kommt im nächsten Lauf dieses Monats wieder. Hat ein Kind eine Rechnung für die Betreuung und eine eigene `Mensa-Rechnung`, schließen Sie jede für sich aus.",
           steps: [
-            "Wählen Sie bei `Monatslauf` den Knopf `Prüfliste` und dann `Excel` oder `CSV`. Die Liste hat je Position eine Zeile. Rechnungsnummern stehen noch nicht darin.",
+            "Wählen Sie bei `Monatslauf` den Knopf `Prüfliste` und dann `PDF`, `Excel` oder `CSV`. Die Liste hat je Position eine Zeile. Rechnungsnummern stehen noch nicht darin.",
             "Stimmt eine Rechnung noch nicht, wählen Sie in ihrer Zeile das Menü mit den drei Punkten und dann `Ausschließen`.",
             "Prüfen Sie im Fenster, welche Rechnung Sie ausschließen. Dort steht zum Beispiel `Mensa-Rechnung` und darunter, ob die Betreuungsrechnung des Kindes im Lauf bleibt. Steht die Mensa auf der Rechnung der Betreuung, wird sie mit ausgeschlossen.",
             "Schreiben Sie bei `Grund`, warum, zum Beispiel „Kündigung wird noch geprüft“. Wählen Sie `Ausschließen`.",
@@ -11806,6 +11824,13 @@ export const traegerCareMonthsTopic =
             "Wurde die Rechnung weder gesendet noch zum Drucken heruntergeladen, bekommt die Familie kein Storno. Sie sieht nichts davon.",
             "Wählen Sie in der Meldung über den Rechnungen `Neu ausstellen`. Ein passender Prüflauf öffnet sich, sonst ein neuer Lauf. Ein neuer Lauf enthält nur Schulen mit noch offenen Stornos. Geben Sie ihn frei und senden Sie das neue Schreiben. Verteilen sich die Stornos auf mehrere Prüfläufe, wiederholen Sie `Neu ausstellen`. Sind alle Rechnungen neu ausgestellt, verschwindet die Meldung im alten Lauf.",
             "Die neue Rechnung übernimmt die Änderungen der stornierten Rechnung, zum Beispiel einen geänderten Betrag oder Empfänger. Im Verlauf steht dann `Übernommen aus` mit der alten Nummer. Passt eine Änderung nicht mehr, nehmen Sie sie dort zurück.",
+          ],
+        },
+        {
+          title: "Liste der Monatsläufe herunterladen",
+          steps: [
+            "Wählen Sie `Abrechnungsläufe` und dann den Reiter `Monatsbeiträge`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monatsläufe.",
           ],
         },
       ],
@@ -11908,6 +11933,16 @@ export const traegerCareNoticesTopic =
             "Die Vorschau zeigt nur Kinder, bei denen sich etwas geändert hat. Sie stehen als `Änderungsbescheid`.",
             "Der Änderungsbescheid nennt den alten Bescheid. Je Zeile steht `bisher`, `neu` und `Zu-/Abgang`.",
             "Stellen Sie die Bescheide aus. Von da an gilt für diese Monate der Änderungsbescheid.",
+          ],
+        },
+        {
+          title: "Listen herunterladen",
+          description:
+            "Die Jahresläufe, die Bescheide eines Laufs und den Versand laden Sie als Datei herunter.",
+          steps: [
+            "Wählen Sie `Abrechnungsläufe` und dann den Reiter `Jahresbescheide`. Für die Bescheide öffnen Sie einen Jahreslauf, für den Versand dort `An Familien senden`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Bescheide und der Versand enthalten personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },
       ],
@@ -12023,6 +12058,14 @@ export const traegerCareReductionsTopic =
             "Für einen weiteren Zeitraum wählen Sie `Einkommensstufe eintragen` oder `Alleinerziehend eintragen`.",
             "Beenden Sie den bisherigen Zeitraum, bevor der neue beginnt. Zeiträume derselben Art dürfen sich nicht überschneiden.",
             "Wählen Sie `Nachweis speichern`.",
+          ],
+        },
+        {
+          title: "Kinderzahl und Nachweise herunterladen",
+          steps: [
+            "Wählen Sie `Familien und Zahlung` und dann den Reiter `Kinderzahl` oder `Nachweise`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält die ganze Liste, ohne Suche.",
+            "Die Datei enthält personenbezogene Daten. Jeder Download steht im Zugriffsprotokoll.",
           ],
         },
       ],
@@ -12748,6 +12791,13 @@ export const traegerFinanceExportsTopic =
             "Wählen Sie `Abrechnung`, dann den Reiter `Exporte`.",
             "Wählen Sie beim Lauf `Sollstellung`. Die Datei wird heruntergeladen.",
             "Geben Sie die Datei an Ihre Kämmerei. Oder lassen Sie moto sie übergeben, siehe „Exporte an Empfänger übergeben“.",
+          ],
+        },
+        {
+          title: "Läufe und Exportprotokoll herunterladen",
+          steps: [
+            "Wählen Sie `Familien und Zahlung` und dann den Reiter `Exporte`.",
+            "Wählen Sie bei `Dateien je Lauf` oder `Exportprotokoll` den Knopf `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
           ],
         },
       ],
@@ -14140,6 +14190,14 @@ export const traegerSepaMandatesTopic =
             "Wählen Sie beim Mandat das Menü mit den drei Punkten und dann `Widerrufen`.",
             "Wählen Sie bei `Widerruf erhalten am` den Tag, an dem der Widerruf kam.",
             "Wählen Sie `Widerrufen`.",
+          ],
+        },
+        {
+          title: "Mandate herunterladen",
+          steps: [
+            "Wählen Sie `Familien und Zahlung` und dann den Reiter `Lastschrift`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Mandate, auch die widerrufenen.",
+            "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },
       ],

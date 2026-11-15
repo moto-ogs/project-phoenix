@@ -21,6 +21,10 @@ import {
   billingAreaTitle,
   billingTabs,
 } from "~/components/traeger/billing-family-format";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -44,6 +48,7 @@ import {
   deleteCareCostShare,
   fetchCareCostShares,
 } from "~/lib/traeger-care-cost-shares-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 // Menu icons as in the OGS menus; defined once, outside render.
@@ -312,6 +317,19 @@ export default function TraegerKostentraegerPage() {
         ) : null
       }
       statsLoading={!data && !pageLoad.error}
+      actions={
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerList("/api/traeger/care-cost-shares/export", format)
+          }
+          scope={traegerExportScope()}
+          ariaLabel="Anteile der Kostenträger herunterladen"
+          tooltip="Zeigt die Formate für alle Kinder, ohne Suche und Filter. Jeder Download steht im Zugriffsprotokoll."
+          fallbackName="kostentraeger-anteile"
+          errorObject="die Anteile der Kostenträger"
+          unavailable={!data || data.contracts.length === 0}
+        />
+      }
       search={{
         value: search,
         onChange: setSearch,

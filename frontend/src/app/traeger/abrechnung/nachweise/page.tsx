@@ -16,6 +16,10 @@ import {
   EVIDENCE_KIND_LABELS,
   type EvidenceTarget,
 } from "~/components/traeger/care-evidence-modal";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -31,6 +35,7 @@ import {
 } from "~/contexts/ToastContext";
 import { berlinTodayISO, formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   type CareEvidence,
@@ -282,6 +287,19 @@ export default function TraegerNachweisePage() {
         ) : null
       }
       statsLoading={!data && !pageLoad.error}
+      actions={
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerList("/api/traeger/care-evidences/export", format)
+          }
+          scope={traegerExportScope()}
+          ariaLabel="Nachweise herunterladen"
+          tooltip="Zeigt die Formate für alle Verträge, ohne Suche. Jeder Download steht im Zugriffsprotokoll."
+          fallbackName="nachweise-ermaessigung"
+          errorObject="die Nachweise"
+          unavailable={!data || data.contracts.length === 0}
+        />
+      }
       search={{
         value: search,
         onChange: setSearch,
