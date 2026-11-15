@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	deliveryPorts "github.com/moto-ogs/project-phoenix/modules/communication/internal/application"
 	records "github.com/moto-ogs/project-phoenix/modules/communication/internal/staffannouncements"
+	"github.com/moto-ogs/project-phoenix/modules/communication/ports"
 )
 
 // ParentAnnouncementOutbox is the mail outbox of the announcements.
@@ -59,4 +60,9 @@ func NewParentAnnouncementsWithAttachments(cfg ParentAnnouncementConfig, attachm
 
 func NewParentAnnouncementRenderer(cfg ParentAnnouncementEmailConfig) communication.MailRenderer {
 	return communication.MailRenderer(deliveryPorts.NewAnnouncementRenderer(deliveryPorts.EmailConfig(cfg)))
+}
+
+// NewParentLetterChildren composes the tenant-scoped child-value reader.
+func NewParentLetterChildren(sources ports.ParentLetterSources, now func() time.Time) communication.ParentLetterChildren {
+	return deliveryPorts.NewParentLetterChildren(sources, now)
 }

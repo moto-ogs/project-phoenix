@@ -4811,6 +4811,31 @@
       "reason": "ADR 0113 addendum (#4703): Consumer-port adapter of the parents portal's holiday wish statement port; it translates the workflow's claim into Enrollment's claim and the sealed statement into the wish and its proof, in the caller's tenant transaction."
     },
     {
+      "decision": "0217",
+      "id": "roots/owners/parentLetterArrivals.GetWeeklySchedulesByStudentIDsForDate",
+      "reason": "Root binding maps one source capability into Communication-owned letter values; preserves context, date and errors without joining sources or deriving care days or pickup text (ADR 0068, #4813)."
+    },
+    {
+      "decision": "0217",
+      "id": "roots/owners/parentLetterGroups.GroupNames",
+      "reason": "Root binding maps one source capability into Communication-owned letter values; preserves context, date and errors without joining sources or deriving care days or pickup text (ADR 0068, #4813)."
+    },
+    {
+      "decision": "0217",
+      "id": "roots/owners/parentLetterPickups.GetWeeklySchedulesByStudentIDsForDate",
+      "reason": "Root binding maps one source capability into Communication-owned letter values; preserves context, date and errors without joining sources or deriving care days or pickup text (ADR 0068, #4813)."
+    },
+    {
+      "decision": "0217",
+      "id": "roots/owners/parentLetterStudents.ListStudentNamesByID",
+      "reason": "Root binding maps one source capability into Communication-owned letter values; preserves context, date and errors without joining sources or deriving care days or pickup text (ADR 0068, #4813)."
+    },
+    {
+      "decision": "0217",
+      "id": "roots/owners/parentLetterStudents.ListStudentsByID",
+      "reason": "Root binding maps one source capability into Communication-owned letter values; preserves context, date and errors without joining sources or deriving care days or pickup text (ADR 0068, #4813)."
+    },
+    {
       "decision": "0171",
       "id": "roots/owners/parentMandateParties.Recipients",
       "reason": "Consumer-port adapter of the parents' SEPA mandate (#4696): it reads the billing party of the checked contract from the Betreuungsvertrag and translates it into the Elternabrechnung's recipient, the proposal for the account holder."

@@ -6736,6 +6736,41 @@
     },
     {
       "build": "production",
+      "evidence": "func (s parentLetterArrivals) GetWeeklySchedulesByStudentIDsForDate(ctx context.Context, ids []int64, date calendar.Date) ([]*ports.ParentLetterArrival, error) {\n\tschedules, err := s.source.GetWeeklySchedulesByStudentIDsForDate(ctx, ids, date)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tout := make([]*ports.ParentLetterArrival, len(schedules))\n\tfor i, schedule := range schedules {\n\t\tif schedule != nil {\n\t\t\tout[i] = \u0026ports.ParentLetterArrival{StudentID: schedule.StudentID, Weekday: schedule.Weekday}\n\t\t}\n\t}\n\treturn out, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/parentLetterArrivals.GetWeeklySchedulesByStudentIDsForDate",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s parentLetterGroups) GroupNames(ctx context.Context, ids []int64) (map[int64]string, error) {\n\tgroups, err := s.source.ListGroupsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tnames := make(map[int64]string, len(groups))\n\tfor _, group := range groups {\n\t\tnames[group.ID] = group.Name\n\t}\n\treturn names, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/parentLetterGroups.GroupNames",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s parentLetterPickups) GetWeeklySchedulesByStudentIDsForDate(ctx context.Context, ids []int64, date calendar.Date) ([]*ports.ParentLetterPickup, error) {\n\tschedules, err := s.source.GetWeeklySchedulesByStudentIDsForDate(ctx, ids, date)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tout := make([]*ports.ParentLetterPickup, len(schedules))\n\tfor i, schedule := range schedules {\n\t\tif schedule != nil {\n\t\t\tout[i] = \u0026ports.ParentLetterPickup{StudentID: schedule.StudentID, Weekday: schedule.Weekday, PickupTime: schedule.PickupTime}\n\t\t}\n\t}\n\treturn out, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/parentLetterPickups.GetWeeklySchedulesByStudentIDsForDate",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s parentLetterStudents) ListStudentNamesByID(ctx context.Context, ids []int64) ([]ports.ParentLetterStudentName, error) {\n\tnames, err := s.source.ListStudentNamesByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tout := make([]ports.ParentLetterStudentName, 0, len(names))\n\tfor _, name := range names {\n\t\tout = append(out, ports.ParentLetterStudentName{StudentID: name.StudentID, FirstName: name.FirstName, LastName: name.LastName})\n\t}\n\treturn out, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/parentLetterStudents.ListStudentNamesByID",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s parentLetterStudents) ListStudentsByID(ctx context.Context, ids []int64) ([]ports.ParentLetterStudent, error) {\n\tstudents, err := s.source.ListStudentsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tout := make([]ports.ParentLetterStudent, 0, len(students))\n\tfor _, student := range students {\n\t\tout = append(out, ports.ParentLetterStudent{ID: student.ID, SchoolClass: student.SchoolClass, GroupID: student.GroupID})\n\t}\n\treturn out, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/parentLetterStudents.ListStudentsByID",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (p parentMandateParties) Recipients(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareRecipient, error) {\n\tparties, err := p.billing.BillingRecipients(ctx, organizationID, contractIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\trecipients := make(map[int64]parentbilling.CareRecipient, len(parties))\n\tfor contractID, party := range parties {\n\t\trecipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email}\n\t}\n\treturn recipients, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/parentMandateParties.Recipients",
