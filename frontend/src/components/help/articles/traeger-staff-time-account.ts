@@ -3,7 +3,7 @@ import { HELP_TOPICS } from "~/lib/help-topics";
 
 /**
  * Das Stundenkonto einer Personalakte über alle Schulen und der
- * Monatsabschluss des Trägers (#4711, ADR 0240).
+ * Monatsabschluss des Trägers (#4711, ADR 0242).
  */
 export function traegerStaffTimeAccountTopic(): HelpTopic {
   return {

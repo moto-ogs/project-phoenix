@@ -141,7 +141,7 @@ describe("StaffTimeAccountCard", () => {
     ).toHaveAttribute("aria-disabled", "true");
   });
 
-  // ADR 0240 point 4: a close that stopped halfway can be finished and
+  // ADR 0242 point 4: a close that stopped halfway can be finished and
   // undone; a month only the schools closed offers no reopen.
   it("offers reopen exactly where the Träger closed a school", async () => {
     api.fetchTraegerTimeAccount.mockResolvedValue(

@@ -1,6 +1,6 @@
 "use client";
 
-// Das Stundenkonto einer Personalakte (#4711, ADR 0240): Soll, Ist und Saldo
+// Das Stundenkonto einer Personalakte (#4711, ADR 0242): Soll, Ist und Saldo
 // eines Monats über alle Schulen der Person, je Schule eine Zeile. Mit einem
 // Arbeitsvertrag beim Träger schließt die Personalverwaltung den Monat hier
 // ab, in jeder Schule, die der Vertrag abdeckt, und nur sie öffnet ihn
@@ -269,7 +269,7 @@ export function StaffTimeAccountCard({
 
   // Abschließen, solange eine Schule mit Vertrag offen ist; wieder öffnen,
   // sobald der Träger an einer Schule abgeschlossen hat, auch nach einem
-  // halb fertigen Abschluss (ADR 0240 Punkt 4).
+  // halb fertigen Abschluss (ADR 0242 Punkt 4).
   const canReopen =
     account?.schools.some((school) => school.closedByTraeger) ?? false;
   const headAction = (

@@ -12,7 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The Stundenkonto of a Personalakte over all schools (#4711, ADR 0240).
+// The Stundenkonto of a Personalakte over all schools (#4711, ADR 0242).
 // Each school computes the month of its employment in its own tenant
 // transaction, as its Monatskarte does; the Träger sums them. A contract of
 // the Träger with a Soll at a school makes the Personalverwaltung close that
@@ -46,7 +46,7 @@ func (t *TraegerStaff) monthOrThisMonth(year, month int) (int, int) {
 // closed month or a running month stops the close before any school is
 // written. A school that was closed already stays as it is. A school that
 // fails anyway (a race after the checks) leaves the schools before it closed;
-// a second close finishes the rest (ADR 0240 point 4).
+// a second close finishes the rest (ADR 0242 point 4).
 func (t *TraegerStaff) CloseTimeAccountMonth(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, change workforce.TraegerMonthChange) (workforce.TraegerTimeAccount, error) {
 	links, account, err := t.readTimeAccount(ctx, actor, recordID, change.Year, change.Month)
 	if err != nil {

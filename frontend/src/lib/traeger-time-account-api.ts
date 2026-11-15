@@ -1,6 +1,6 @@
 /**
  * Das Stundenkonto einer Personalakte über alle Schulen und der
- * Monatsabschluss des Trägers (#4711, ADR 0240).
+ * Monatsabschluss des Trägers (#4711, ADR 0242).
  *
  * Jede Schule rechnet ihre Monatskarte selbst; das Konto ist die Summe. Mit
  * einem Arbeitsvertrag beim Träger schließt die Personalverwaltung den Monat
