@@ -47,8 +47,10 @@ const PENDING_EXPORTS: Readonly<Record<string, string>> = {
   "/abrechnung": "#4718",
   "/abrechnung/exporte": "#4718",
   "/abrechnung/familien": "#4718",
+  "/abrechnung/familien/[id]": "#4718",
   "/abrechnung/jahresbescheide": "#4718",
   "/abrechnung/jahresbescheide/[id]": "#4718",
+  "/abrechnung/jahresbescheide/[id]/versand": "#4718",
   "/abrechnung/kinderzahl": "#4718",
   "/abrechnung/kostentraeger": "#4718",
   "/abrechnung/lastschrift": "#4718",
@@ -57,6 +59,7 @@ const PENDING_EXPORTS: Readonly<Record<string, string>> = {
   "/abrechnung/nachweise": "#4718",
   "/anmeldephasen": "#4718",
   "/dokumente": "#4718",
+  "/einstellungen/briefkopf/vorlagen": "#4718",
   "/einstellungen/mitglieder": "#4718",
   "/ferien": "#4718",
   "/ferien/[id]/plaetze": "#4718",
@@ -67,7 +70,18 @@ const PENDING_EXPORTS: Readonly<Record<string, string>> = {
   "/uebersicht": "#4718",
 };
 
-/** Seiten ohne Liste: Formulare, Einstellungen, Einzelansichten, Anmeldung. */
+/**
+ * Die Obergrenze von `PENDING_EXPORTS`: Sie sinkt mit jeder Liste, die ihren
+ * Download bekommt, und steigt nie. Eine neue Liste ohne Download passt so
+ * nicht in das Register.
+ */
+const PENDING_CEILING = 25;
+
+/**
+ * Seiten ohne Liste: Formulare, Einstellungen, Einzelansichten, Anmeldung.
+ * Eine Seite mit eigener Tabelle (`<DataTable`) ist eine Liste und steht nie
+ * hier.
+ */
 const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/abrechnung/[id]/faelligkeiten": "Formular",
   "/abrechnung/ermaessigungen": "Einstellungen",
@@ -76,10 +90,8 @@ const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/abrechnung/exporte/empfaenger/neu": "Formular",
   "/abrechnung/exporte/feldzuordnung": "Einstellungen",
   "/abrechnung/exporte/konten": "Einstellungen",
-  "/abrechnung/familien/[id]": "Einzelansicht",
   "/abrechnung/jahresbescheide/[id]/bescheid/[contractId]": "Dokument",
   "/abrechnung/jahresbescheide/[id]/lastschrift": "Schritt eines Laufs",
-  "/abrechnung/jahresbescheide/[id]/versand": "Schritt eines Laufs",
   "/abrechnung/lastschrift/[contractId]": "Einzelansicht",
   "/abrechnung/lastschrift/import": "Import",
   "/abrechnung/mensa": "Einstellungen",
@@ -97,7 +109,6 @@ const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/einstellungen": "Einstellungen",
   "/einstellungen/abrechnung": "Einstellungen",
   "/einstellungen/briefkopf": "Einstellungen",
-  "/einstellungen/briefkopf/vorlagen": "Einstellungen",
   "/einstellungen/briefkopf/vorlagen/[kind]": "Einstellungen",
   "/einstellungen/dokumentarten": "Einstellungen",
   "/ferien/[id]": "Einzelansicht",
@@ -184,6 +195,23 @@ describe("Downloads der Listen im Träger-Portal (#4718)", () => {
       })
       .map((page) => page.route);
     expect(missing).toEqual([]);
+  });
+
+  it("only shrinks the pending register", () => {
+    expect(Object.keys(PENDING_EXPORTS).length).toBeLessThanOrEqual(
+      PENDING_CEILING,
+    );
+  });
+
+  it("keeps every page with a table out of NOT_A_LIST", () => {
+    const tables = pages
+      .filter((page) => page.route in NOT_A_LIST)
+      .filter((page) => page.source.includes("<DataTable"))
+      .map((page) => page.route);
+    expect(
+      tables,
+      "Eine Seite mit Tabelle ist eine Liste: Sie bekommt den Download.",
+    ).toEqual([]);
   });
 
   it("moves a pending list once it has its download", () => {

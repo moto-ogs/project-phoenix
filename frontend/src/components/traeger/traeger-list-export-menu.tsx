@@ -113,6 +113,7 @@ export function TraegerListExportMenu({
       busyKey={busy}
       unavailable={unavailable}
       onSelect={(option) => {
+        // The menu holds only the list formats; Word is none of them.
         if (option.format && option.format !== "docx") {
           void download(option.format);
         }
