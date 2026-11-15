@@ -73,6 +73,10 @@ const regeneration: AbsenceType = {
   isActive: true,
   allowanceEnabled: true,
   carryoverUntil: null,
+  requestable: false,
+  keptByTraeger: false,
+  offered: true,
+  schoolLimitDays: null,
 };
 const conversion: AbsenceType = {
   id: "13",
@@ -81,6 +85,10 @@ const conversion: AbsenceType = {
   isActive: false,
   allowanceEnabled: true,
   carryoverUntil: null,
+  requestable: false,
+  keptByTraeger: false,
+  offered: true,
+  schoolLimitDays: null,
 };
 const trip: AbsenceType = {
   id: "14",
@@ -89,6 +97,10 @@ const trip: AbsenceType = {
   isActive: true,
   allowanceEnabled: false,
   carryoverUntil: null,
+  requestable: false,
+  keptByTraeger: false,
+  offered: true,
+  schoolLimitDays: null,
 };
 
 function vacationQuota(year: number, remaining: number) {

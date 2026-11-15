@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -43,6 +44,12 @@ func absenceTypesRuntime(resolveActor func(context.Context) (int64, error)) abse
 // renderAbsenceTypesFailure renders the failure with the shared envelope; the
 // error's own wording is the message, as it was before the cutover.
 func renderAbsenceTypesFailure(w http.ResponseWriter, r *http.Request, kind absencetypesHTTP.FailureKind, err error) {
+	// What the Träger keeps of its types (#4710) has its own code, so the
+	// school reads why it cannot change it.
+	if errors.Is(err, workforce.ErrAbsenceTypeKeptByTraeger) {
+		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeWorkforceAbsenceTypeKeptByTraeger))
+		return
+	}
 	switch kind {
 	case absencetypesHTTP.FailureInvalid:
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))

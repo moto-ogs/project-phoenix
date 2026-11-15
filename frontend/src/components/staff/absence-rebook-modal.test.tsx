@@ -70,6 +70,10 @@ const sickLeave: AbsenceType = {
   isActive: true,
   allowanceEnabled: true,
   carryoverUntil: "03-31",
+  requestable: false,
+  keptByTraeger: false,
+  offered: true,
+  schoolLimitDays: null,
 };
 
 function friday(id: number, day: string): StaffAbsenceRow {

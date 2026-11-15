@@ -356,7 +356,7 @@ func (s *Service) StaffAbsenceTypeInUse(ctx context.Context, id int64) (bool, er
 // The unique index remains the final arbiter when concurrent names race.
 func (s *Service) CreateAbsenceType(ctx context.Context, input workforce.CreateAbsenceType) (workforce.StaffAbsenceType, error) {
 	fields := domain.StaffAbsenceTypeFields{
-		Name: input.Name, AllowanceEnabled: input.AllowanceEnabled, CarryoverUntil: input.CarryoverUntil,
+		Name: input.Name, AllowanceEnabled: input.AllowanceEnabled, CarryoverUntil: input.CarryoverUntil, Requestable: input.Requestable,
 	}
 	fields.BaseType, fields.IsActive = domain.AbsenceTypeOther, true
 	if err := fields.Normalize(); err != nil {
@@ -374,8 +374,7 @@ func (s *Service) CreateAbsenceType(ctx context.Context, input workforce.CreateA
 
 func (s *Service) checkAbsenceTypeName(ctx context.Context, candidate string, excludeID int64) error {
 	name := strings.ToLower(strings.TrimSpace(candidate))
-	switch name {
-	case "urlaub", "krank", "krankmeldung", "fortbildung", "sonstige", "sonstiges", "freizeitausgleich", "sonstige abwesenheit":
+	if domain.IsReservedAbsenceTypeName(name) {
 		return domain.ErrAbsenceTypeNameReserved
 	}
 	existing, err := s.ListStaffAbsenceTypes(ctx)
@@ -406,11 +405,14 @@ func (s *Service) UpdateAbsenceType(ctx context.Context, input workforce.UpdateA
 	if err != nil {
 		return absenceTypeToPublic(domain.StaffAbsenceType{}), MapError(fmt.Errorf("lock absence type: database error during lock staff absence type: %w", err))
 	}
+	if err := checkSchoolDeviation(existing, input); err != nil {
+		return absenceTypeToPublic(domain.StaffAbsenceType{}), err
+	}
 	fields := domain.StaffAbsenceTypeFields{
 		Name: existing.Name, BaseType: existing.BaseType, IsActive: existing.IsActive,
-		AllowanceEnabled: existing.AllowanceEnabled, CarryoverUntil: existing.CarryoverUntil,
+		AllowanceEnabled: existing.AllowanceEnabled, CarryoverUntil: existing.CarryoverUntil, Requestable: existing.Requestable,
 	}
-	if name != nil {
+	if name != nil && existing.TraegerAbsenceTypeID == nil {
 		if err := s.renameAbsenceType(ctx, id, existing.Name, *name, &fields); err != nil {
 			return absenceTypeToPublic(domain.StaffAbsenceType{}), MapError(err)
 		}
@@ -421,6 +423,15 @@ func (s *Service) UpdateAbsenceType(ctx context.Context, input workforce.UpdateA
 	}
 	existing.Name, existing.IsActive = fields.Name, fields.IsActive
 	existing.AllowanceEnabled, existing.CarryoverUntil = fields.AllowanceEnabled, fields.CarryoverUntil
+	if input.Requestable != nil {
+		existing.Requestable = *input.Requestable
+	}
+	if input.Offered != nil {
+		existing.Offered = *input.Offered
+	}
+	if input.SchoolLimit != nil {
+		existing.SchoolLimitDays = input.SchoolLimit.Days
+	}
 	updated, err := s.UpdateStaffAbsenceType(ctx, existing)
 	if err != nil {
 		if errors.Is(err, workforce.ErrAbsenceTypeNotFound) {
@@ -431,6 +442,41 @@ func (s *Service) UpdateAbsenceType(ctx context.Context, input workforce.UpdateA
 		return absenceTypeToPublic(domain.StaffAbsenceType{}), MapError(fmt.Errorf("database error during update staff absence type: %w", err))
 	}
 	return updated, nil
+}
+
+// checkSchoolDeviation keeps what the Träger keeps of its types (#4710): a
+// school changes only whether it offers the type and its limit per person
+// and year; its own types know no deviation.
+func checkSchoolDeviation(existing workforce.StaffAbsenceType, input workforce.UpdateAbsenceType) error {
+	if existing.TraegerAbsenceTypeID == nil {
+		if input.Offered != nil || input.SchoolLimit != nil {
+			return &workforce.InvalidAbsenceTypeError{Reason: "Nur eine Art des Trägers kann an einer Schule abweichen."}
+		}
+		return nil
+	}
+	changes := func(value *bool, current bool) bool { return value != nil && *value != current }
+	if (input.Name != nil && strings.TrimSpace(*input.Name) != existing.Name) || changes(input.IsActive, existing.IsActive) ||
+		changes(input.AllowanceEnabled, existing.AllowanceEnabled) || changes(input.Requestable, existing.Requestable) ||
+		(input.CarryoverUntil != nil && *input.CarryoverUntil != existing.CarryoverUntil) {
+		return workforce.ErrAbsenceTypeKeptByTraeger
+	}
+	return checkSchoolLimit(existing, input.SchoolLimit)
+}
+
+// checkSchoolLimit accepts a limit only on a type with a Kontingent, in
+// whole or half days.
+func checkSchoolLimit(existing workforce.StaffAbsenceType, limit *workforce.SchoolLimitPatch) error {
+	if limit == nil || limit.Days == nil {
+		return nil
+	}
+	if !existing.AllowanceEnabled {
+		return &workforce.InvalidAbsenceTypeError{Reason: "Eine Grenze gibt es nur bei einer Art mit Kontingent."}
+	}
+	days := *limit.Days
+	if days < 0 || days > 366 || days*2 != float64(int(days*2)) {
+		return &workforce.InvalidAbsenceTypeError{Reason: "Die Grenze braucht ganze oder halbe Tage zwischen 0 und 366."}
+	}
+	return nil
 }
 
 // renameAbsenceType sets the normalized new name on fields. The name must be
@@ -473,7 +519,7 @@ func applyAbsenceTypeSettings(fields *domain.StaffAbsenceTypeFields, isActive, a
 func (s *Service) CreateStaffAbsenceType(ctx context.Context, fields workforce.StaffAbsenceTypeFields) (workforce.StaffAbsenceType, error) {
 	storedFields := domain.StaffAbsenceTypeFields{
 		Name: fields.Name, BaseType: fields.BaseType, IsActive: fields.IsActive,
-		AllowanceEnabled: fields.AllowanceEnabled, CarryoverUntil: fields.CarryoverUntil,
+		AllowanceEnabled: fields.AllowanceEnabled, CarryoverUntil: fields.CarryoverUntil, Requestable: fields.Requestable,
 	}
 	var result domain.StaffAbsenceType
 	var err error
@@ -497,7 +543,8 @@ func (s *Service) UpdateStaffAbsenceType(ctx context.Context, value workforce.St
 	}
 	storedValue := domain.StaffAbsenceType{
 		ID: value.ID, TenantID: value.TenantID, Name: value.Name, BaseType: value.BaseType, IsActive: value.IsActive,
-		AllowanceEnabled: value.AllowanceEnabled, CarryoverUntil: value.CarryoverUntil,
+		AllowanceEnabled: value.AllowanceEnabled, CarryoverUntil: value.CarryoverUntil, Requestable: value.Requestable,
+		TraegerAbsenceTypeID: value.TraegerAbsenceTypeID, Offered: value.Offered, SchoolLimitDays: value.SchoolLimitDays,
 	}
 	var result domain.StaffAbsenceType
 	var err error

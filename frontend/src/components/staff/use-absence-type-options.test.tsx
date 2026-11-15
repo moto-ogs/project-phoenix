@@ -27,6 +27,10 @@ const REGENERATIONSTAG: AbsenceType = {
   isActive: true,
   allowanceEnabled: true,
   carryoverUntil: null,
+  requestable: false,
+  keptByTraeger: false,
+  offered: true,
+  schoolLimitDays: null,
 };
 
 const SONDERURLAUB: AbsenceType = {
@@ -36,6 +40,10 @@ const SONDERURLAUB: AbsenceType = {
   isActive: true,
   allowanceEnabled: true,
   carryoverUntil: null,
+  requestable: false,
+  keptByTraeger: false,
+  offered: true,
+  schoolLimitDays: null,
 };
 
 describe("useAbsenceTypeOptions", () => {
@@ -60,6 +68,29 @@ describe("useAbsenceTypeOptions", () => {
     );
     expect(result.current.options).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ value: "custom:8" })]),
+    );
+  });
+
+  it("offers a requestable type to staff and hides one the school does not offer (#4710)", () => {
+    absenceTypes.current = [
+      { ...REGENERATIONSTAG, requestable: true, keptByTraeger: true },
+      {
+        ...SONDERURLAUB,
+        allowanceEnabled: false,
+        keptByTraeger: true,
+        offered: false,
+      },
+    ];
+
+    const { result } = renderHook(() =>
+      useAbsenceTypeOptions(false, STANDARD_ABSENCE_OPTIONS),
+    );
+
+    expect(result.current.options).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ value: "custom:7", requestable: true }),
+        expect.objectContaining({ value: "custom:8", inactive: true }),
+      ]),
     );
   });
 });

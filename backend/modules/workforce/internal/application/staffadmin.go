@@ -480,6 +480,14 @@ func (a *StaffAdmin) StaffSollKeptByTraeger(ctx context.Context, staffID int64) 
 	return len(kept) > 0, MapStaffAdminError(err)
 }
 
+// TraegerAbsenceTypes composes the Träger's Abwesenheitsarten and
+// Kontingente (#4710) over the same Personalstamm.
+func (a *StaffAdmin) TraegerAbsenceTypes(collaborators workforce.TraegerStaffPorts) workforce.TraegerAbsenceTypes {
+	return NewTraegerStaff(a.traeger, collaborators, TraegerStaffDependencies{
+		Subjects: a.subjects, Audit: a.audit, Bank: a.bank, Lock: a.transaction, Clock: a.clock, Warn: a.warn,
+	})
+}
+
 func (a *StaffAdmin) keptByTraeger(ctx context.Context, staffID int64) (bool, error) {
 	kept, err := a.traeger.KeptStaffIDs(ctx, []int64{staffID})
 	return len(kept) > 0, err

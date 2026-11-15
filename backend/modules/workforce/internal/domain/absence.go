@@ -282,9 +282,20 @@ type StaffAbsenceType struct {
 	// CarryoverUntil is "MM-DD" in the following year until which a yearly
 	// rest stays usable, or "" when it expires on 31.12. (#3257).
 	CarryoverUntil string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	// Requestable lets staff request the type; the Leitung decides.
+	Requestable bool
+	// TraegerAbsenceTypeID names the Träger's type this row carries at the
+	// school (#4710); Offered and SchoolLimitDays are the school's deviation.
+	TraegerAbsenceTypeID *int64
+	Offered              bool
+	SchoolLimitDays      *float64
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
+
+// KeptByTraeger reports whether the Träger keeps the name, allowance, rest
+// rule and Requestable of the type.
+func (t StaffAbsenceType) KeptByTraeger() bool { return t.TraegerAbsenceTypeID != nil }
 
 // StaffAbsenceTypeFields is the writable part of an absence type.
 type StaffAbsenceTypeFields struct {
@@ -293,6 +304,7 @@ type StaffAbsenceTypeFields struct {
 	IsActive         bool
 	AllowanceEnabled bool
 	CarryoverUntil   string
+	Requestable      bool
 }
 
 // Normalize trims the name and defaults the base type, then validates. The

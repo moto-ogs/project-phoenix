@@ -1,0 +1,3 @@
+GET /traeger/absence-types/ -> basis
+POST /traeger/absence-types/ -> basis
+PUT /traeger/absence-types/{id} -> basis

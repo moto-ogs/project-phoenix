@@ -19,7 +19,8 @@ import (
 )
 
 // mountTraegerStaffRoutes serves the Personalstamm of ADR 0089 (#4705) at
-// /traeger/staff-records behind the Träger right „Personal“, over the
+// /traeger/staff-records and the Abwesenheitsarten of the Träger (#4710) at
+// /traeger/absence-types behind the Träger right „Personal“, over the
 // personnel record staffAdmin the root built for the schools.
 func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, organizations HolidayOrganizations,
 	persons TraegerPersons, membership TraegerStaff, accessLog owners.DataAccessAppender,
@@ -34,9 +35,13 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 		Access:      traegerStaffAccessLog{log: accessLog},
 		Runtime:     traegerDocumentRuntime{},
 	}
+	requireStaff := common.RequiresPermission(identityaccess.TraegerRightStaffManage)
+	absences := staffAdmin.TraegerAbsenceTypes(collaborators)
 	resource := traegerstaff.NewRecordsResource(staffAdmin.TraegerStaffRecords(collaborators), staffAdmin.TraegerStaffContracts(collaborators),
-		common.RequiresPermission(identityaccess.TraegerRightStaffManage))
+		absences, requireStaff)
 	root.Mount("/traeger/staff-records", resource.TraegerRouter(ProtectedTraegerRoutes))
+	// The Träger's Abwesenheitsarten and Kontingente (#4710).
+	root.Mount("/traeger/absence-types", traegerstaff.NewAbsenceTypesResource(absences, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
 	return nil
 }
 

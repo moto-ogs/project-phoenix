@@ -23,6 +23,10 @@ type allowanceAccounts struct {
 	absenceType  domain.StaffAbsenceType
 	entitlements map[int]float64
 	uses         []domain.AllowanceUse
+	// pooled accounts hold the Träger's Kontingent of a Personalakte over
+	// all its schools (#4710); local marks the bookings at this school.
+	pooled bool
+	local  map[int64]bool
 }
 
 func (a allowanceAccounts) ledger(today string, extra ...domain.AllowanceUse) domain.AllowanceLedger {
@@ -46,6 +50,15 @@ func (s *Service) findAllowanceType(ctx context.Context, absenceTypeID int64) (d
 // loadAllowanceAccounts reads the claims and bookings behind the accounts of
 // firstYear..lastYear.
 func (s *Service) loadAllowanceAccounts(ctx context.Context, staffID int64, absenceType domain.StaffAbsenceType, firstYear, lastYear int) (allowanceAccounts, error) {
+	if absenceType.KeptByTraeger() {
+		pooled, err := s.poolAccountsFor(ctx, staffID, []domain.StaffAbsenceType{absenceType}, firstYear, lastYear)
+		if err != nil {
+			return allowanceAccounts{}, err
+		}
+		if accounts, ok := pooled[absenceType.ID]; ok {
+			return accounts, nil
+		}
+	}
 	accounts := allowanceAccounts{absenceType: absenceType}
 	err := s.run(ctx, "staff_absence_type_entitlements", func(ctx context.Context, stats *domain.OperationStats) error {
 		var queryStats domain.OperationStats
@@ -151,9 +164,13 @@ func (s *Service) PreviewAllowanceBooking(ctx context.Context, staffID, absenceT
 		return allowancePreviewsToPublic(nil, err)
 	}
 	// Overlapping bookings are merged by the writer, so only coverage beyond
-	// what the day already holds is new.
+	// what the day already holds is new. The writer merges only bookings of
+	// this school: a day another Einsatzort booked counts again (#4710).
 	covered := make(map[string]float64)
 	for _, use := range accounts.uses {
+		if accounts.pooled && !accounts.local[use.AbsenceID] {
+			continue
+		}
 		covered[use.Day] = max(covered[use.Day], use.Days)
 	}
 	additional := make([]domain.AllowanceUse, 0, len(requested))
@@ -288,6 +305,9 @@ func (s *Service) allowancePreviews(
 	if len(after.Overdrawn(before)) > 0 {
 		return previews, domain.ErrAbsenceTypeAllowanceExceeded
 	}
+	if accounts.schoolLimitExceeded(additional) {
+		return previews, workforce.ErrAbsenceTypeSchoolLimitExceeded
+	}
 	return previews, nil
 }
 
@@ -303,7 +323,9 @@ func (s *Service) AllowanceSummary(ctx context.Context, staffID, absenceTypeID i
 	if err != nil {
 		return allowanceSummaryToPublic(domain.AbsenceTypeAllowanceSummary{}), MapError(err)
 	}
-	return allowanceSummaryToPublic(accounts.ledger(s.clock.Today()).Summary(staffID, absenceTypeID, year)), MapError(nil)
+	summary := allowanceSummaryToPublic(accounts.ledger(s.clock.Today()).Summary(staffID, absenceTypeID, year))
+	summary.KeptByTraeger = accounts.pooled
+	return summary, MapError(nil)
 }
 
 // AllowanceAccounts is AllowanceSummary for every active type with an
@@ -351,17 +373,27 @@ func (s *Service) allowanceAccountsFor(
 	if err != nil {
 		return nil, MapError(err)
 	}
+	domainTypes := make([]domain.StaffAbsenceType, 0, len(types))
+	for _, absenceType := range types {
+		domainTypes = append(domainTypes, domain.StaffAbsenceType(absenceType))
+	}
+	pooled, err := s.poolAccountsFor(ctx, staffID, domainTypes, year, year)
+	if err != nil {
+		return nil, MapError(err)
+	}
 	today := s.clock.Today()
 	result := make([]workforce.AbsenceTypeAllowanceAccount, 0, len(types))
 	for i, absenceType := range types {
-		accounts := allowanceAccounts{absenceType: domain.StaffAbsenceType(absenceType), entitlements: entitlements[absenceType.ID]}
-		if err := s.addAllowanceUses(&accounts, absences, windows[i][0], windows[i][1]); err != nil {
-			return nil, MapError(err)
+		accounts, ok := pooled[absenceType.ID]
+		if !ok {
+			accounts = allowanceAccounts{absenceType: domain.StaffAbsenceType(absenceType), entitlements: entitlements[absenceType.ID]}
+			if err := s.addAllowanceUses(&accounts, absences, windows[i][0], windows[i][1]); err != nil {
+				return nil, MapError(err)
+			}
 		}
-		result = append(result, workforce.AbsenceTypeAllowanceAccount{
-			AbsenceType: absenceType,
-			Summary:     allowanceSummaryToPublic(accounts.ledger(today).Summary(staffID, absenceType.ID, year)),
-		})
+		summary := allowanceSummaryToPublic(accounts.ledger(today).Summary(staffID, absenceType.ID, year))
+		summary.KeptByTraeger = accounts.pooled
+		result = append(result, workforce.AbsenceTypeAllowanceAccount{AbsenceType: absenceType, Summary: summary})
 	}
 	return result, nil
 }
@@ -385,6 +417,17 @@ func (s *Service) SetAllowance(ctx context.Context, input workforce.SetAbsenceTy
 	}
 	if !absenceType.AllowanceEnabled {
 		return allowanceSummaryToPublic(domain.AbsenceTypeAllowanceSummary{}), MapError(&domain.InvalidAbsenceAllowanceError{Reason: "diese Abwesenheitsart hat kein Kontingent"})
+	}
+	// The Träger keeps the Kontingent of a person with a Personalakte for its
+	// own types (#4710); the school changes only those of everybody else.
+	if absenceType.KeptByTraeger() {
+		recordID, err := s.absencePoolRecord(ctx, storedInput.StaffID)
+		if err != nil {
+			return allowanceSummaryToPublic(domain.AbsenceTypeAllowanceSummary{}), MapError(err)
+		}
+		if recordID != 0 {
+			return allowanceSummaryToPublic(domain.AbsenceTypeAllowanceSummary{}), workforce.ErrAbsenceTypeKeptByTraeger
+		}
 	}
 	if err := storedInput.Validate(); err != nil {
 		return allowanceSummaryToPublic(domain.AbsenceTypeAllowanceSummary{}), MapError(err)

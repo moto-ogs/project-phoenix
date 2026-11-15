@@ -585,12 +585,21 @@ export function AbwesenheitenTab({
               year={year}
               retired={!entry.type.isActive}
               entitled={entry.summary.entitledDays}
+              // Den Anspruch einer Person mit Personalakte legt der Träger
+              // fest, über alle ihre Schulen (#4710).
+              entitledHint={
+                entry.summary.keptByTraeger
+                  ? "vom Träger, alle Schulen"
+                  : undefined
+              }
               taken={entry.summary.takenDays}
               reserved={entry.summary.reservedDays}
               remaining={entry.summary.remainingDays}
               footer={<AllowanceExpiryNote summary={entry.summary} />}
               onEdit={
-                canEditQuota ? () => setEditing(entry.type.id) : undefined
+                canEditQuota && !entry.summary.keptByTraeger
+                  ? () => setEditing(entry.type.id)
+                  : undefined
               }
               editForm={
                 editing === entry.type.id ? (

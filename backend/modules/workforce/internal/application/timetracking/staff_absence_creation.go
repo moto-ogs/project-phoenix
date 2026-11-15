@@ -29,11 +29,65 @@ func (s *staffAbsenceService) CreateOwnAbsence(ctx context.Context, staffID int6
 		if err != nil {
 			return nil, err
 		}
+		// A type the school or its Träger marked as requestable goes to the
+		// Leitung as a request (#4710); other types with a Kontingent stay
+		// with the Leitung.
+		if absenceType.Requestable {
+			return s.requestAbsence(ctx, staffID, req)
+		}
 		if absenceType.AllowanceEnabled {
 			return nil, ErrManagerControlledAbsence
 		}
 	}
 	return s.CreateAbsenceFor(ctx, staffID, staffID, actorAccountID, req)
+}
+
+// requestAbsence files a request for a requestable type. It holds its days
+// in the Kontingent until the Leitung decides, so the check counts the
+// other open requests too; the plans change only once it is approved.
+func (s *staffAbsenceService) requestAbsence(ctx context.Context, staffID int64, req CreateAbsenceRequest) (*StaffAbsenceResponse, error) {
+	dateStart, dateEnd, err := parseDateRange(req.DateStart, req.DateEnd)
+	if err != nil {
+		return nil, err
+	}
+	if isBeforeLocalToday(dateStart, time.Now()) {
+		return nil, workforce.ErrVacationRequestInPast
+	}
+	// Gates first, then the type's row, as every booking takes them (#6702).
+	if err := s.lockVacationRequestRange(ctx, staffID, dateStart, dateEnd); err != nil {
+		return nil, err
+	}
+	_, typeID, baseType, err := s.resolveAbsenceTypeSelection(ctx, req.AbsenceTypeID, req.AbsenceType)
+	if err != nil {
+		return nil, err
+	}
+	req.AbsenceTypeID, req.AbsenceType = typeID, baseType
+	if _, _, err := s.admitAbsenceRange(ctx, staffID, req); err != nil {
+		return nil, err
+	}
+	workingDays := countWorkingDays(dateStart, dateEnd, req.HalfDay, req.HalfDay)
+	if workingDays <= 0 {
+		return nil, workforce.ErrAbsenceNoWorkingDays
+	}
+	now := time.Now()
+	absence := &StaffAbsence{
+		StaffID: staffID, AbsenceType: baseType, AbsenceTypeID: typeID, DateStart: dateStart, DateEnd: dateEnd,
+		HalfDay: req.HalfDay, StartHalfDay: req.HalfDay, EndHalfDay: req.HalfDay, Note: req.Note,
+		Status: AbsenceStatusRequested, CreatedBy: staffID, WorkingDays: &workingDays, RequestedAt: now,
+	}
+	absence.CreatedAt, absence.UpdatedAt = now, now
+	absence.SetTenantID(tenant.FromContext(ctx))
+	command := StaffAbsenceToCapability(absence)
+	created, err := s.absenceRepo.CreateStaffAbsence(ctx, &command)
+	if err = absenceWriteError("create", err); err != nil {
+		return nil, fmt.Errorf("failed to create absence request: %w", err)
+	}
+	applyAbsenceToRecord(absence, created)
+	if err := s.notifyAbsenceRequested(ctx, absence); err != nil {
+		return nil, fmt.Errorf("enqueue absence mail: %w", err)
+	}
+	s.broadcastTimeTrackingChanged(ctx)
+	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
 }
 
 func (s *staffAbsenceService) CreateAbsenceFor(ctx context.Context, subjectStaffID, createdByStaffID int64, actorAccountID *int64, req CreateAbsenceRequest) (*StaffAbsenceResponse, error) {

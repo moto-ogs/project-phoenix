@@ -10,6 +10,9 @@ const CodeWorkforceAbsenceNotOwned = "workforce.absence_not_owned"
 const CodeWorkforceAbsenceOverlap = "workforce.absence_overlap"
 const CodeWorkforceAbsenceRebookingBlocked = "workforce.absence_rebooking_blocked"
 const CodeWorkforceAbsenceTypeInactive = "workforce.absence_type_inactive"
+const CodeWorkforceAbsenceTypeKeptByTraeger = "workforce.absence_type_kept_by_traeger"
+const CodeWorkforceAbsenceTypeNotOffered = "workforce.absence_type_not_offered"
+const CodeWorkforceAbsenceTypeSchoolLimitExceeded = "workforce.absence_type_school_limit_exceeded"
 const CodeWorkforceAdjustmentInClosedMonth = "workforce.adjustment_in_closed_month"
 const CodeWorkforceAlreadyCheckedIn = "workforce.already_checked_in"
 const CodeWorkforceAlreadyCheckedOut = "workforce.already_checked_out"
@@ -74,6 +77,11 @@ const CodeWorkforceTargetOverrideHoursInvalid = "workforce.target_override_hours
 const CodeWorkforceTargetOverrideOverlap = "workforce.target_override_overlap"
 const CodeWorkforceTargetOverrideRangeInvalid = "workforce.target_override_range_invalid"
 const CodeWorkforceTargetOverrideTooLong = "workforce.target_override_too_long"
+const CodeWorkforceTraegerAbsenceAllowanceBelowBooked = "workforce.traeger_absence_allowance_below_booked"
+const CodeWorkforceTraegerAbsenceTypeInUse = "workforce.traeger_absence_type_in_use"
+const CodeWorkforceTraegerAbsenceTypeInvalid = "workforce.traeger_absence_type_invalid"
+const CodeWorkforceTraegerAbsenceTypeNameTaken = "workforce.traeger_absence_type_name_taken"
+const CodeWorkforceTraegerAbsenceTypeNotFound = "workforce.traeger_absence_type_not_found"
 const CodeWorkforceTraegerContractInvalid = "workforce.traeger_contract_invalid"
 const CodeWorkforceTraegerContractMonthClosed = "workforce.traeger_contract_month_closed"
 const CodeWorkforceTraegerContractNotFound = "workforce.traeger_contract_not_found"
@@ -106,6 +114,9 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforceAbsenceOverlap, "business_rejection"},
 	{CodeWorkforceAbsenceRebookingBlocked, "business_rejection"},
 	{CodeWorkforceAbsenceTypeInactive, "business_rejection"},
+	{CodeWorkforceAbsenceTypeKeptByTraeger, "business_rejection"},
+	{CodeWorkforceAbsenceTypeNotOffered, "business_rejection"},
+	{CodeWorkforceAbsenceTypeSchoolLimitExceeded, "business_rejection"},
 	{CodeWorkforceAdjustmentInClosedMonth, "input"},
 	{CodeWorkforceAlreadyCheckedIn, "business_rejection"},
 	{CodeWorkforceAlreadyCheckedOut, "business_rejection"},
@@ -170,6 +181,11 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforceTargetOverrideOverlap, "business_rejection"},
 	{CodeWorkforceTargetOverrideRangeInvalid, "input"},
 	{CodeWorkforceTargetOverrideTooLong, "input"},
+	{CodeWorkforceTraegerAbsenceAllowanceBelowBooked, "business_rejection"},
+	{CodeWorkforceTraegerAbsenceTypeInUse, "business_rejection"},
+	{CodeWorkforceTraegerAbsenceTypeInvalid, "input"},
+	{CodeWorkforceTraegerAbsenceTypeNameTaken, "business_rejection"},
+	{CodeWorkforceTraegerAbsenceTypeNotFound, "input"},
 	{CodeWorkforceTraegerContractInvalid, "input"},
 	{CodeWorkforceTraegerContractMonthClosed, "business_rejection"},
 	{CodeWorkforceTraegerContractNotFound, "input"},

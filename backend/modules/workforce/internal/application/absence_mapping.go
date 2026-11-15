@@ -55,7 +55,8 @@ func absencesToPublic(values []domain.StaffAbsence) []workforce.StaffAbsence {
 func absenceTypeToPublic(value domain.StaffAbsenceType) workforce.StaffAbsenceType {
 	return workforce.StaffAbsenceType{
 		ID: value.ID, TenantID: value.TenantID, Name: value.Name, BaseType: value.BaseType, IsActive: value.IsActive,
-		AllowanceEnabled: value.AllowanceEnabled, CarryoverUntil: value.CarryoverUntil,
+		AllowanceEnabled: value.AllowanceEnabled, CarryoverUntil: value.CarryoverUntil, Requestable: value.Requestable,
+		TraegerAbsenceTypeID: value.TraegerAbsenceTypeID, Offered: value.Offered, SchoolLimitDays: value.SchoolLimitDays,
 		CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
 }

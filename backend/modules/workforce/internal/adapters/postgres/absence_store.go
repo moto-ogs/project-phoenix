@@ -63,6 +63,11 @@ type staffAbsenceTypeRow struct {
 	IsActive         bool    `bun:"is_active,notnull"`
 	AllowanceEnabled bool    `bun:"allowance_enabled,notnull"`
 	CarryoverUntil   *string `bun:"carryover_until"`
+	Requestable      bool    `bun:"requestable,notnull"`
+	// TraegerAbsenceTypeID is written by the Träger's mirror only (#4710).
+	TraegerAbsenceTypeID *int64   `bun:"traeger_absence_type_id"`
+	Offered              bool     `bun:"offered,notnull"`
+	SchoolLimitDays      *float64 `bun:"school_limit_days"`
 	// WageTypeID is written by the payroll rules (#4807) only; the absence
 	// type writes leave it out of their column lists.
 	WageTypeID *int64    `bun:"wage_type_id"`
@@ -472,6 +477,7 @@ func (s *Store) CreateStaffAbsenceType(ctx context.Context, fields domain.StaffA
 	row := &staffAbsenceTypeRow{
 		TenantID: scope.TenantID, Name: fields.Name, BaseType: fields.BaseType, IsActive: fields.IsActive,
 		AllowanceEnabled: fields.AllowanceEnabled, CarryoverUntil: nullableCarryover(fields.CarryoverUntil),
+		Requestable: fields.Requestable, Offered: true,
 	}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -498,11 +504,12 @@ func (s *Store) UpdateStaffAbsenceType(ctx context.Context, value domain.StaffAb
 	row := &staffAbsenceTypeRow{
 		ID: value.ID, TenantID: value.TenantID, Name: value.Name, BaseType: value.BaseType, IsActive: value.IsActive,
 		AllowanceEnabled: value.AllowanceEnabled, CarryoverUntil: nullableCarryover(value.CarryoverUntil),
+		Requestable: value.Requestable, Offered: value.Offered, SchoolLimitDays: value.SchoolLimitDays,
 	}
 	query := db.NewUpdate().
 		Model(row).
 		ModelTableExpr(tableStaffAbsenceTypes+` AS "staff_absence_type"`).
-		Column("name", "is_active", "allowance_enabled", "carryover_until").
+		Column("name", "is_active", "allowance_enabled", "carryover_until", "requestable", "offered", "school_limit_days").
 		Set("updated_at = NOW()").
 		Where(`"staff_absence_type".id = ?`, value.ID).
 		Returning("*")
@@ -595,7 +602,9 @@ func staffAbsencesToDomain(rows []staffAbsenceRow) []domain.StaffAbsence {
 func staffAbsenceTypeToDomain(row staffAbsenceTypeRow) domain.StaffAbsenceType {
 	value := domain.StaffAbsenceType{
 		ID: row.ID, TenantID: row.TenantID, Name: row.Name, BaseType: row.BaseType, IsActive: row.IsActive,
-		AllowanceEnabled: row.AllowanceEnabled, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		AllowanceEnabled: row.AllowanceEnabled, Requestable: row.Requestable,
+		TraegerAbsenceTypeID: row.TraegerAbsenceTypeID, Offered: row.Offered, SchoolLimitDays: row.SchoolLimitDays,
+		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 	}
 	if row.CarryoverUntil != nil {
 		value.CarryoverUntil = *row.CarryoverUntil

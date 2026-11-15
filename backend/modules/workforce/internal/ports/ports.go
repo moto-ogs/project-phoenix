@@ -260,6 +260,15 @@ type AbsenceStore interface {
 	// StaffEntitlementsByAbsenceType returns every yearly claim of one person,
 	// keyed by type and year.
 	StaffEntitlementsByAbsenceType(ctx context.Context, staffID int64) (map[int64]map[int]float64, domain.OperationStats, error)
+	// AbsencePoolRecord returns the Personalakte that keeps the school's
+	// employment, 0 without one (#4710).
+	AbsencePoolRecord(ctx context.Context, staffID int64) (int64, domain.OperationStats, error)
+	// AbsencePoolClaims holds the Kontingente of the Träger's types of a
+	// record until the transaction ends and reads their claims.
+	AbsencePoolClaims(ctx context.Context, recordID int64, traegerTypeIDs []int64) (map[int64]domain.AbsencePoolType, domain.OperationStats, error)
+	// AbsencePoolUses reads the bookings of those types at every Einsatzort
+	// of the record that overlap [from, to].
+	AbsencePoolUses(ctx context.Context, recordID int64, traegerTypeIDs []int64, from, to string) ([]domain.AbsencePoolUse, domain.OperationStats, error)
 	UpsertStaffAbsenceTypeAllowance(context.Context, domain.SetAbsenceTypeAllowance) (domain.OperationStats, error)
 	RecordStaffAbsenceTypeAllowanceChange(context.Context, domain.SetAbsenceTypeAllowance, *float64) (domain.OperationStats, error)
 	FindStaffAbsence(context.Context, int64) (domain.StaffAbsence, bool, domain.OperationStats, error)
@@ -390,6 +399,15 @@ type TraegerStaffStore interface {
 	ListStaffChanges(ctx context.Context, organizationID, recordID int64, limit int) ([]domain.TraegerStaffChange, error)
 	DeleteStaffRecord(ctx context.Context, organizationID, recordID int64) error
 
+	// The Abwesenheitsarten and Kontingente of the Träger (#4710).
+	ListTraegerAbsenceTypes(ctx context.Context, organizationID int64) ([]domain.TraegerAbsenceType, error)
+	FindTraegerAbsenceType(ctx context.Context, organizationID, id int64, forUpdate bool) (domain.TraegerAbsenceType, error)
+	SaveTraegerAbsenceType(ctx context.Context, value domain.TraegerAbsenceType) (domain.TraegerAbsenceType, error)
+	TraegerAbsencePool(ctx context.Context, organizationID, recordID int64, typeIDs []int64, from, to string, lock bool) (map[int64]domain.AbsencePoolType, []domain.AbsencePoolUse, error)
+	SaveTraegerAbsenceAllowance(ctx context.Context, organizationID, accountID int64, input workforce.SetTraegerAbsenceAllowance, previous *float64) error
+	SchoolAbsenceTypes(ctx context.Context) ([]domain.StaffAbsenceType, error)
+	SchoolAbsenceTypeInUse(ctx context.Context, schoolTypeID int64) (bool, error)
+	CarryTraegerAbsenceType(ctx context.Context, schoolTypeID int64, value domain.TraegerAbsenceType) error
 	TraegerStaffContractStore
 
 	TraegerStaffKeep

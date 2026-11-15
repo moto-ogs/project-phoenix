@@ -111,6 +111,11 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0236",
+      "id": "modules/workforce/StaffAdmin.TraegerAbsenceTypes",
+      "reason": "ADR 0236 (#4710): the public facade composes the Träger's Abwesenheitsarten and Kontingente over the same Personalstamm; the root binds only the collaborators."
+    },
+    {
       "decision": "0237",
       "id": "modules/workforce/StaffAdmin.TraegerStaffContracts",
       "reason": "ADR 0237 (#4706): the public facade composes the Arbeitsverträge of the Personalstamm over the same personnel record; the root binds only the collaborators."
@@ -214,11 +219,6 @@
       "decision": "0090",
       "id": "modules/workforce/internal/application/PayrollDispatch.Overview",
       "reason": "Owner-edge translation of the payroll dispatch row (#4805) onto the public PayrollDispatchView: derives the correction flag from the sequence and leaves the file, lease and link fingerprint out; no forwarding without translation."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/workforce/internal/application/Service.AllowanceSummary",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
       "decision": "0090",
