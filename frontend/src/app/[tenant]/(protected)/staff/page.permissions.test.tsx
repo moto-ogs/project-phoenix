@@ -25,6 +25,7 @@ const mutateDocumentDirectory = vi.hoisted(() => vi.fn());
 const globalMutate = vi.hoisted(() => vi.fn());
 const monthCloseRequest = vi.hoisted(() => ({
   error: null as Error | null,
+  snapshots: [] as unknown[],
 }));
 const documentDirectoryRequest = vi.hoisted(() => ({
   error: null as Error | null,
@@ -52,8 +53,13 @@ vi.mock("~/lib/swr", () => ({
     // Genau wie useSWRAuth selbst: ein null-Key fetcht nicht.
     if (key !== null) void fetcher();
     if (key?.includes("staff-month-close-")) {
+      const traegerStaff = key.includes("traeger-staff");
       return {
-        data: monthCloseRequest.error ? undefined : [],
+        data: monthCloseRequest.error
+          ? undefined
+          : traegerStaff
+            ? []
+            : monthCloseRequest.snapshots,
         isLoading: false,
         error: monthCloseRequest.error,
         mutate: mutateMonthClose,
@@ -134,6 +140,7 @@ describe("/staff — Berechtigungs-Split", () => {
     mutateDocumentDirectory.mockReset().mockResolvedValue(undefined);
     globalMutate.mockReset().mockResolvedValue(undefined);
     monthCloseRequest.error = null;
+    monthCloseRequest.snapshots = [];
     documentDirectoryRequest.error = null;
     documentDirectoryRequest.data = [];
     staffListRequest.data = undefined;
@@ -441,6 +448,31 @@ describe("/staff — Berechtigungs-Split", () => {
       true,
     );
     expect(isAffectedKey("tenant:staff-list")).toBe(false);
+  });
+
+  // #4711: Ein Abschluss des Trägers betrifft nur seine Personen. Die Schule
+  // hat ihren Monat damit nicht abgeschlossen.
+  it("zählt Abschlüsse des Trägers nicht als Abschluss der Schule", () => {
+    monthCloseRequest.snapshots = [
+      {
+        staffId: "12",
+        year: 2026,
+        month: 8,
+        closingBalanceMinutes: 0,
+        closedAt: "2026-09-01T08:00:00Z",
+        closedBy: "0",
+        closeReason: "Lohnabrechnung",
+        source: "traeger",
+      },
+    ];
+    mockSession(["time_tracking:manage"]);
+    render(<StaffPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Vorheriger Monat" }));
+    expect(
+      screen.getByRole("button", { name: "Monat abschließen" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Abgeschlossen am/)).not.toBeInTheDocument();
   });
 
   it("zeigt einen fehlgeschlagenen Abschlussstatus mit Retry statt Abschlussaktionen", async () => {

@@ -1082,6 +1082,8 @@ export interface MonthCloseSnapshot {
   closedAt: string;
   closedBy: string;
   closeReason: string;
+  /** "traeger" when the Personalverwaltung of the Träger closed it (#4711). */
+  source: string;
 }
 
 export function mapMonthCloseSnapshotResponse(
@@ -1095,6 +1097,7 @@ export function mapMonthCloseSnapshotResponse(
     closedAt: data.closed_at,
     closedBy: data.closed_by.toString(),
     closeReason: data.close_reason ?? "",
+    source: data.source,
   };
 }
 

@@ -409,6 +409,7 @@ export function StaffTimeAccountCard({
             columns={columns}
             rows={[...account.schools]}
             getRowKey={(school) => school.schoolId}
+            stackedOnMobile
             emptyState="Die Person arbeitet an keiner Schule mehr."
           />
         </>

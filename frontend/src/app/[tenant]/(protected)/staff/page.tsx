@@ -449,12 +449,17 @@ function StaffPageContent() {
     "die Anzeige des Monatsabschlusses",
     mutateMonthClose,
   );
+  // Abschlüsse des Trägers (#4711) gehören nicht zum Abschluss der Schule:
+  // Sie betreffen nur Personen mit Vertrag beim Träger.
+  const schoolSnapshots = monthCloseSnapshots?.filter(
+    (snapshot) => snapshot.source !== "traeger",
+  );
   const monthClose =
-    !monthCloseStatusError && monthCloseSnapshots
+    !monthCloseStatusError && schoolSnapshots
       ? {
-          closed: monthCloseSnapshots.length > 0,
-          closedAt: monthCloseSnapshots[0]?.closedAt ?? "",
-          closedCount: monthCloseSnapshots.length,
+          closed: schoolSnapshots.length > 0,
+          closedAt: schoolSnapshots[0]?.closedAt ?? "",
+          closedCount: schoolSnapshots.length,
         }
       : null;
 
