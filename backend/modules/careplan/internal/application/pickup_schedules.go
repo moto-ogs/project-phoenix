@@ -40,7 +40,7 @@ func NewPickupSchedules(schedules ports.PickupScheduleRepository, exceptions por
 		day = today
 	}
 	return &pickupScheduleService{
-		effectiveTimeCore: newEffectiveTimeCore(schedules, exceptions, notes, tx, PickupTimeDomain{}, day),
+		effectiveTimeCore: newEffectiveTimeCore(schedules, exceptions, notes, tx, PickupTimeDomain{}),
 		scheduleRepo:      schedules, autoExcusal: auto, PickupBaselineReader: baselines, tx: tx,
 		students: students, departures: departures, logger: logger, today: day,
 	}

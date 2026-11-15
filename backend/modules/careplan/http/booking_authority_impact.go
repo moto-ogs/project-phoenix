@@ -37,15 +37,16 @@ type BookingAuthorityImpactConfig struct {
 	// WithinSchool runs fn in the tenant transaction of the school.
 	WithinSchool func(ctx context.Context, schoolID int64, fn func(context.Context) error) error
 	Surface      Surface
-	// Today is the day the impact is evaluated on; the Berlin calendar day when nil.
+	// Today is the day the impact is previewed on; nil is the real Berlin
+	// day.
 	Today func() calendar.Date
 }
 
 type bookingAuthorityImpact struct {
-	today        func() calendar.Date
 	authority    BookingAuthority
 	withinSchool func(ctx context.Context, schoolID int64, fn func(context.Context) error) error
 	surface      Surface
+	today        func() calendar.Date
 }
 
 // NewBookingAuthorityImpact returns the GET handler of
@@ -62,7 +63,7 @@ func NewBookingAuthorityImpact(cfg BookingAuthorityImpactConfig) http.Handler {
 	if today == nil {
 		today = calendar.TodayDate
 	}
-	return &bookingAuthorityImpact{today: today, authority: cfg.Authority, withinSchool: cfg.WithinSchool, surface: surface}
+	return &bookingAuthorityImpact{authority: cfg.Authority, withinSchool: cfg.WithinSchool, surface: surface, today: today}
 }
 
 func (h *bookingAuthorityImpact) ServeHTTP(w http.ResponseWriter, r *http.Request) {

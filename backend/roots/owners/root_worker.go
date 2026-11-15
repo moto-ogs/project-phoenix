@@ -340,7 +340,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return nil
 		},
 		func() (err error) {
-			carePlan, err = ComposeCarePlan(db, persons, CarePlanStatusSlots(timetableRepos.InstanceStudent))
+			carePlan, err = ComposeCarePlan(db, persons, CarePlanStatusSlots(timetableRepos.InstanceStudent), env.Now)
 			return
 		},
 		func() (err error) { appointments, err = BuildServeAppointments(db); return },
@@ -368,7 +368,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		func() (err error) { classArrivals, err = BuildClassArrivals(db, env.Logger); return },
 		func() (err error) {
 			studentAudit = peopleCompose.NewStudentAuditService(tokens.AuditActor, NewStudentAuditFor(persons))
-			carePlanRows, err = BuildCarePlanRows(db, env.Logger, env.Now, studentAudit, carePlan, persons, membership, timetableOwner, calendar, classArrivals, people)
+			carePlanRows, err = BuildCarePlanRows(db, env.Logger, studentAudit, carePlan, persons, membership, timetableOwner, calendar, classArrivals, people, env.Now)
 			return
 		},
 		func() (err error) {
@@ -412,7 +412,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			schedules, err = BuildCarePlanSchedules(db, env.Logger, env.Now, carePlan, persons, carePlanRows, classArrivals,
+			schedules, err = BuildCarePlanSchedules(db, env.Logger, carePlan, persons, carePlanRows, classArrivals,
 				enrollment.ApprovedOfferings, settings.Service, timetableRows.RecurrenceLock.LockRecurrenceWrites, presence.Presence, timetableRows.StudentTemplateDays)
 			return
 		},

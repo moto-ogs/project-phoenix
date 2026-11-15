@@ -260,15 +260,15 @@ func (rs *Resource) listCareWithdrawals(w http.ResponseWriter, r *http.Request) 
 		renderError(w, r, careExitErrorRenderer(err))
 		return
 	}
-	respondCareWithdrawalPage(w, r, rows, total, filter, rs.todayDate(), "Offene Abmeldungen geladen")
+	rs.respondCareWithdrawalPage(w, r, rows, total, filter, "Offene Abmeldungen geladen")
 }
 
 // respondCareWithdrawalPage writes one page of withdrawal tasks in the
 // response type that never carries the exit reason.
-func respondCareWithdrawalPage(w http.ResponseWriter, r *http.Request, rows []careplan.WithdrawalCompletion, total int, filter careplan.CareWithdrawalFilter, today calendar.Date, message string) {
+func (rs *Resource) respondCareWithdrawalPage(w http.ResponseWriter, r *http.Request, rows []careplan.WithdrawalCompletion, total int, filter careplan.CareWithdrawalFilter, message string) {
 	out := make([]careWithdrawalResponse, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, toCareWithdrawalResponse(row, today))
+		out = append(out, toCareWithdrawalResponse(row, rs.today()))
 	}
 	common.Respond(w, r, http.StatusOK, map[string]any{
 		"items": out, "total": total, "page": filter.Page, "page_size": filter.PageSize,
@@ -305,7 +305,7 @@ func (rs *Resource) listStudentResolvedCareWithdrawals(w http.ResponseWriter, r 
 		renderError(w, r, careExitErrorRenderer(err))
 		return
 	}
-	respondCareWithdrawalPage(w, r, rows, total, filter, rs.todayDate(), "Abgeschlossene Abmeldungen geladen")
+	rs.respondCareWithdrawalPage(w, r, rows, total, filter, "Abgeschlossene Abmeldungen geladen")
 }
 
 func optionalPositiveQueryID(r *http.Request, key string) (int64, error) {

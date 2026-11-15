@@ -16,7 +16,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (m *OfferingBookings) LockCareOfferingBookings(ctx context.Context, childIDs []int64) (err error) {\n\tstarted := time.Now()\n\tdefer func() {\n\t\tm.observe(\"lock\", \"command\", started, int64(len(childIDs)), -1, err)\n\t}()\n\treturn m.engine.LockCareOfferingBookings(ctx, childIDs)\n}",
+      "evidence": "func (m *OfferingBookings) LockCareOfferingBookings(ctx context.Context, childIDs []int64) (err error) {\n\tstarted := time.Now()\n\tdefer func() {\n\t\tm.observe(\"lock\", \"command\", time.Since(started), int64(len(childIDs)), -1, err)\n\t}()\n\treturn m.engine.LockCareOfferingBookings(ctx, childIDs)\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/OfferingBookings.LockCareOfferingBookings",
       "owner": "modules/careplan"
@@ -226,21 +226,21 @@
     },
     {
       "build": "production",
-      "evidence": "func (r CompanionEdges) CompanionDaysCoveredExcluding(ctx context.Context, studentIDs []int64, excludeID int64) (map[int64]map[string]bool, error) {\n\tstarted := time.Now()\n\tcovered, stats, err := r.store.CompanionDaysCoveredExcluding(ctx, studentIDs, excludeID)\n\tr.observeCompanions(\"companion_days_covered_excluding\", started, stats, err)\n\treturn covered, err\n}",
+      "evidence": "func (r CompanionEdges) CompanionDaysCoveredExcluding(ctx context.Context, studentIDs []int64, excludeID int64) (map[int64]map[string]bool, error) {\n\tstarted := time.Now()\n\tcovered, stats, err := r.store.CompanionDaysCoveredExcluding(ctx, studentIDs, excludeID)\n\tr.observeCompanions(\"companion_days_covered_excluding\", time.Since(started), stats, err)\n\treturn covered, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/CompanionEdges.CompanionDaysCoveredExcluding",
       "owner": "modules/careplan"
     },
     {
       "build": "production",
-      "evidence": "func (r CompanionEdges) DeleteCompanionEdges(ctx context.Context, edgeIDs []int64) error {\n\tstarted := time.Now()\n\tstats, err := r.store.DeleteCompanionEdges(ctx, edgeIDs)\n\tr.observeCompanions(\"delete_companion_edges\", started, stats, err)\n\treturn err\n}",
+      "evidence": "func (r CompanionEdges) DeleteCompanionEdges(ctx context.Context, edgeIDs []int64) error {\n\tstarted := time.Now()\n\tstats, err := r.store.DeleteCompanionEdges(ctx, edgeIDs)\n\tr.observeCompanions(\"delete_companion_edges\", time.Since(started), stats, err)\n\treturn err\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/CompanionEdges.DeleteCompanionEdges",
       "owner": "modules/careplan"
     },
     {
       "build": "production",
-      "evidence": "func (r CompanionEdges) ListCompanionEdges(ctx context.Context, studentID int64) ([]careplan.CompanionEdge, error) {\n\tstarted := time.Now()\n\tvalues, stats, err := r.store.ListCompanionEdges(ctx, studentID)\n\tr.observeCompanions(\"list_companion_edges\", started, stats, err)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]careplan.CompanionEdge, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, careplan.CompanionEdge(value))\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (r CompanionEdges) ListCompanionEdges(ctx context.Context, studentID int64) ([]careplan.CompanionEdge, error) {\n\tstarted := time.Now()\n\tvalues, stats, err := r.store.ListCompanionEdges(ctx, studentID)\n\tr.observeCompanions(\"list_companion_edges\", time.Since(started), stats, err)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]careplan.CompanionEdge, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, careplan.CompanionEdge(value))\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/CompanionEdges.ListCompanionEdges",
       "owner": "modules/careplan"
@@ -499,7 +499,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) CountStudentScheduleRows(ctx context.Context, studentID int64) (int, error) {\n\tif studentID \u003c= 0 {\n\t\treturn 0, invalid(careplan.ErrInvalidStudentSchedule, \"student ID is required\")\n\t}\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) (int, domain.OperationStats, error) {\n\t\treturn s.statusQueries.CountStudentScheduleRows(txCtx, studentID)\n\t})\n\ts.observeRequest(\"count_student_schedule_rows\", started, stats, err)\n\treturn value, err\n}",
+      "evidence": "func (s *Service) CountStudentScheduleRows(ctx context.Context, studentID int64) (int, error) {\n\tif studentID \u003c= 0 {\n\t\treturn 0, invalid(careplan.ErrInvalidStudentSchedule, \"student ID is required\")\n\t}\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) (int, domain.OperationStats, error) {\n\t\treturn s.statusQueries.CountStudentScheduleRows(txCtx, studentID)\n\t})\n\ts.observeRequest(\"count_student_schedule_rows\", time.Since(started), stats, err)\n\treturn value, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/Service.CountStudentScheduleRows",
       "owner": "modules/careplan"
@@ -632,7 +632,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) DeleteExpiredStudentStatusDays(ctx context.Context, retentionDays int) (int, error) {\n\tif retentionDays \u003c= 0 {\n\t\treturn 0, fmt.Errorf(\"%w, got %d\", careplan.ErrStatusDayRetentionWindow, retentionDays)\n\t}\n\tcutoff := careplan.Date(calendar.TodayDate().AddDays(-retentionDays))\n\treturn requestCommandValue(s, ctx, \"delete_expired_student_status_days\", func(txCtx context.Context) (int, domain.OperationStats, error) {\n\t\tdeleted, stats, err := s.statusDays.DeleteStudentStatusDaysBefore(txCtx, cutoff)\n\t\treturn int(deleted), stats, err\n\t})\n}",
+      "evidence": "func (s *Service) DeleteExpiredStudentStatusDays(ctx context.Context, retentionDays int) (int, error) {\n\tif retentionDays \u003c= 0 {\n\t\treturn 0, fmt.Errorf(\"%w, got %d\", careplan.ErrStatusDayRetentionWindow, retentionDays)\n\t}\n\tcutoff := careplan.Date(s.today().AddDays(-retentionDays))\n\treturn requestCommandValue(s, ctx, \"delete_expired_student_status_days\", func(txCtx context.Context) (int, domain.OperationStats, error) {\n\t\tdeleted, stats, err := s.statusDays.DeleteStudentStatusDaysBefore(txCtx, cutoff)\n\t\treturn int(deleted), stats, err\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/Service.DeleteExpiredStudentStatusDays",
       "owner": "modules/careplan"
@@ -772,21 +772,21 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) ListArrivalExceptions(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.ArrivalException, error) {\n\tfilter = normalizeStudentScheduleFilter(filter)\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.ArrivalException, domain.OperationStats, error) {\n\t\treturn s.statusQueries.ListArrivalExceptions(txCtx, filter)\n\t})\n\ts.observeRequest(\"list_arrival_exceptions\", started, stats, err)\n\treturn value, err\n}",
+      "evidence": "func (s *Service) ListArrivalExceptions(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.ArrivalException, error) {\n\tfilter = normalizeStudentScheduleFilter(filter)\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.ArrivalException, domain.OperationStats, error) {\n\t\treturn s.statusQueries.ListArrivalExceptions(txCtx, filter)\n\t})\n\ts.observeRequest(\"list_arrival_exceptions\", time.Since(started), stats, err)\n\treturn value, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/Service.ListArrivalExceptions",
       "owner": "modules/careplan"
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) ListArrivalNotes(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.ArrivalNote, error) {\n\tfilter = normalizeStudentScheduleFilter(filter)\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.ArrivalNote, domain.OperationStats, error) {\n\t\treturn s.statusQueries.ListArrivalNotes(txCtx, filter)\n\t})\n\ts.observeRequest(\"list_arrival_notes\", started, stats, err)\n\treturn value, err\n}",
+      "evidence": "func (s *Service) ListArrivalNotes(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.ArrivalNote, error) {\n\tfilter = normalizeStudentScheduleFilter(filter)\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.ArrivalNote, domain.OperationStats, error) {\n\t\treturn s.statusQueries.ListArrivalNotes(txCtx, filter)\n\t})\n\ts.observeRequest(\"list_arrival_notes\", time.Since(started), stats, err)\n\treturn value, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/Service.ListArrivalNotes",
       "owner": "modules/careplan"
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) ListArrivalSchedules(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.ArrivalSchedule, error) {\n\tfilter = normalizeStudentScheduleFilter(filter)\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.ArrivalSchedule, domain.OperationStats, error) {\n\t\treturn s.statusQueries.ListArrivalSchedules(txCtx, filter)\n\t})\n\ts.observeRequest(\"list_arrival_schedules\", started, stats, err)\n\treturn value, err\n}",
+      "evidence": "func (s *Service) ListArrivalSchedules(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.ArrivalSchedule, error) {\n\tfilter = normalizeStudentScheduleFilter(filter)\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.ArrivalSchedule, domain.OperationStats, error) {\n\t\treturn s.statusQueries.ListArrivalSchedules(txCtx, filter)\n\t})\n\ts.observeRequest(\"list_arrival_schedules\", time.Since(started), stats, err)\n\treturn value, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/Service.ListArrivalSchedules",
       "owner": "modules/careplan"
@@ -842,7 +842,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) ListDepartureExceptions(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.DepartureException, error) {\n\tfilter = normalizeStudentScheduleFilter(filter)\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.DepartureException, domain.OperationStats, error) {\n\t\treturn s.statusQueries.ListDepartureExceptions(txCtx, filter)\n\t})\n\ts.observeRequest(\"list_departure_exceptions\", started, stats, err)\n\treturn value, err\n}",
+      "evidence": "func (s *Service) ListDepartureExceptions(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.DepartureException, error) {\n\tfilter = normalizeStudentScheduleFilter(filter)\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.DepartureException, domain.OperationStats, error) {\n\t\treturn s.statusQueries.ListDepartureExceptions(txCtx, filter)\n\t})\n\ts.observeRequest(\"list_departure_exceptions\", time.Since(started), stats, err)\n\treturn value, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/Service.ListDepartureExceptions",
       "owner": "modules/careplan"
@@ -884,21 +884,21 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) ListPickupExceptions(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.PickupException, error) {\n\tfilter = normalizeStudentScheduleFilter(filter)\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.PickupException, domain.OperationStats, error) {\n\t\treturn s.statusQueries.ListPickupExceptions(txCtx, filter)\n\t})\n\ts.observeRequest(\"list_pickup_exceptions\", started, stats, err)\n\treturn value, err\n}",
+      "evidence": "func (s *Service) ListPickupExceptions(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.PickupException, error) {\n\tfilter = normalizeStudentScheduleFilter(filter)\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.PickupException, domain.OperationStats, error) {\n\t\treturn s.statusQueries.ListPickupExceptions(txCtx, filter)\n\t})\n\ts.observeRequest(\"list_pickup_exceptions\", time.Since(started), stats, err)\n\treturn value, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/Service.ListPickupExceptions",
       "owner": "modules/careplan"
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) ListPickupNotes(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.PickupNote, error) {\n\tfilter = normalizeStudentScheduleFilter(filter)\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.PickupNote, domain.OperationStats, error) {\n\t\treturn s.statusQueries.ListPickupNotes(txCtx, filter)\n\t})\n\ts.observeRequest(\"list_pickup_notes\", started, stats, err)\n\treturn value, err\n}",
+      "evidence": "func (s *Service) ListPickupNotes(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.PickupNote, error) {\n\tfilter = normalizeStudentScheduleFilter(filter)\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.PickupNote, domain.OperationStats, error) {\n\t\treturn s.statusQueries.ListPickupNotes(txCtx, filter)\n\t})\n\ts.observeRequest(\"list_pickup_notes\", time.Since(started), stats, err)\n\treturn value, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/Service.ListPickupNotes",
       "owner": "modules/careplan"
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) ListPickupSchedules(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.PickupSchedule, error) {\n\tfilter = normalizeStudentScheduleFilter(filter)\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.PickupSchedule, domain.OperationStats, error) {\n\t\treturn s.statusQueries.ListPickupSchedules(txCtx, filter)\n\t})\n\ts.observeRequest(\"list_pickup_schedules\", started, stats, err)\n\treturn value, err\n}",
+      "evidence": "func (s *Service) ListPickupSchedules(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.PickupSchedule, error) {\n\tfilter = normalizeStudentScheduleFilter(filter)\n\tstarted := time.Now()\n\tvalue, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.PickupSchedule, domain.OperationStats, error) {\n\t\treturn s.statusQueries.ListPickupSchedules(txCtx, filter)\n\t})\n\ts.observeRequest(\"list_pickup_schedules\", time.Since(started), stats, err)\n\treturn value, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/Service.ListPickupSchedules",
       "owner": "modules/careplan"
@@ -1038,7 +1038,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) SaveDepartureException(ctx context.Context, v careplan.DepartureException) (result careplan.DepartureException, err error) {\n\tif !validateDepartureException(v) {\n\t\treturn careplan.DepartureException{}, scheduleInvalid()\n\t}\n\tstarted := time.Now()\n\tvar stats domain.OperationStats\n\terr = s.withinTenant(ctx, func(tx context.Context) error {\n\t\tresult, stats, err = s.statusQueries.SaveDepartureException(tx, v)\n\t\treturn err\n\t})\n\ts.observeRequest(\"save_departure_exception\", started, stats, err)\n\treturn result, err\n}",
+      "evidence": "func (s *Service) SaveDepartureException(ctx context.Context, v careplan.DepartureException) (result careplan.DepartureException, err error) {\n\tif !validateDepartureException(v) {\n\t\treturn careplan.DepartureException{}, scheduleInvalid()\n\t}\n\tstarted := time.Now()\n\tvar stats domain.OperationStats\n\terr = s.withinTenant(ctx, func(tx context.Context) error {\n\t\tresult, stats, err = s.statusQueries.SaveDepartureException(tx, v)\n\t\treturn err\n\t})\n\ts.observeRequest(\"save_departure_exception\", time.Since(started), stats, err)\n\treturn result, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/Service.SaveDepartureException",
       "owner": "modules/careplan"
@@ -1150,7 +1150,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *StudentDocuments) QueueStudentDocumentFileCleanup(ctx context.Context, studentID int64, storedName string) error {\n\tif studentID \u003c= 0 || strings.TrimSpace(storedName) == \"\" {\n\t\treturn fmt.Errorf(\"%w: cleanup file details are required\", careplan.ErrStudentDocumentInvalid)\n\t}\n\tcleanup := careplan.CareDocumentCleanup{OwnerID: studentID, FilenameStored: storedName, RetryAfter: time.Now().Add(studentDocumentCleanupDelay)}\n\treturn s.transaction(ctx, func(txCtx context.Context) error {\n\t\t_, err := s.records.QueueCareDocumentCleanup(txCtx, cleanup)\n\t\treturn err\n\t})\n}",
+      "evidence": "func (s *StudentDocuments) QueueStudentDocumentFileCleanup(ctx context.Context, studentID int64, storedName string) error {\n\tif studentID \u003c= 0 || strings.TrimSpace(storedName) == \"\" {\n\t\treturn fmt.Errorf(\"%w: cleanup file details are required\", careplan.ErrStudentDocumentInvalid)\n\t}\n\tcleanup := careplan.CareDocumentCleanup{OwnerID: studentID, FilenameStored: storedName, RetryAfter: s.now().Add(studentDocumentCleanupDelay)}\n\treturn s.transaction(ctx, func(txCtx context.Context) error {\n\t\t_, err := s.records.QueueCareDocumentCleanup(txCtx, cleanup)\n\t\treturn err\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/StudentDocuments.QueueStudentDocumentFileCleanup",
       "owner": "modules/careplan"

@@ -22,9 +22,10 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// setupPickupScheduleService creates a PickupScheduleService with real database connection
-func setupPickupScheduleService(t *testing.T, db *bun.DB) careplan.PickupScheduleService {
-	serviceFactorySchedules, err := api.NewTestCarePlanSchedules(testpkg.NewDatabase(t, db), slog.Default(), decisionTestClock)
+// setupPickupScheduleService creates a PickupScheduleService with real database connection,
+// with Care Plan's clock pinned to clocks when given.
+func setupPickupScheduleService(t *testing.T, db *bun.DB, clocks ...func() time.Time) careplan.PickupScheduleService {
+	serviceFactorySchedules, err := api.NewTestCarePlanSchedules(testpkg.NewDatabase(t, db), slog.Default(), clocks...)
 	require.NoError(t, err, "Failed to create service factory")
 	return serviceFactorySchedules.Pickups
 }
@@ -388,7 +389,7 @@ func TestPickupScheduleService_ReclaimGuardianPickupRejectsSharedPartialAbsence(
 	db := testpkg.SetupTestDB(t)
 
 	repoFactory := api.NewRepositoryTestFactory(testpkg.NewDatabase(t, db))
-	serviceFactorySchedules, err := api.NewTestCarePlanSchedules(testpkg.NewDatabase(t, db), slog.Default())
+	serviceFactorySchedules, err := api.NewTestCarePlanSchedules(testpkg.NewDatabase(t, db), slog.Default(), decisionTestClock)
 	require.NoError(t, err)
 	ctx := testpkg.Ctx(t)
 	student := testpkg.CreateTestStudent(t, db, "Guardian", fmt.Sprintf("Partial-%d", time.Now().UnixNano()), "1a")
@@ -442,13 +443,12 @@ func TestPickupScheduleService_GetStudentPickupExceptions(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	service := setupPickupScheduleService(t, db)
+	service := setupPickupScheduleService(t, db, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("returns all exceptions for student", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, db, "Test", "Student", "1a")
 
-		// Use consistent base date to avoid any timezone edge cases
 		baseDate := decisionTestToday
 		for i := -2; i <= 2; i++ {
 			exception := &careplan.PickupException{
@@ -473,13 +473,12 @@ func TestPickupScheduleService_GetUpcomingStudentPickupExceptions(t *testing.T) 
 
 	db := testpkg.SetupTestDB(t)
 
-	service := setupPickupScheduleService(t, db)
+	service := setupPickupScheduleService(t, db, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("returns only upcoming exceptions", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, db, "Test", "Student", "1a")
 
-		// Use consistent base date to avoid timezone edge cases
 		baseDate := decisionTestToday
 
 		for i := -5; i < 0; i++ {
@@ -722,7 +721,7 @@ func TestPickupScheduleService_DeleteStudentPickupException(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	service := setupPickupScheduleService(t, db)
+	service := setupPickupScheduleService(t, db, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("deletes exception by ID", func(t *testing.T) {
@@ -784,7 +783,7 @@ func TestPickupScheduleService_GetStudentPickupData(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	service := setupPickupScheduleService(t, db)
+	service := setupPickupScheduleService(t, db, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("returns combined schedule and exception data", func(t *testing.T) {
@@ -1231,7 +1230,7 @@ func TestPickupScheduleService_GetStudentPickupNotes(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	service := setupPickupScheduleService(t, db)
+	service := setupPickupScheduleService(t, db, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("returns all notes for student", func(t *testing.T) {
@@ -1387,7 +1386,7 @@ func TestPickupScheduleService_DeleteAllStudentPickupNotes(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	service := setupPickupScheduleService(t, db)
+	service := setupPickupScheduleService(t, db, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("deletes all notes for student", func(t *testing.T) {

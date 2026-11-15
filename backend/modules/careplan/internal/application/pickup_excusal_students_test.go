@@ -5,12 +5,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // recordingExcusalLocker records the tenant unit of work and the student

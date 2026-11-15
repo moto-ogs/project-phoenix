@@ -69,7 +69,7 @@ func (rs *Resource) listDepartureExceptions(ctx context.Context, studentID int64
 	if hasRange {
 		filter.From, filter.To = careplan.Date(from), careplan.Date(to)
 	} else {
-		filter.UpcomingFrom = careplan.Date(rs.todayDate())
+		filter.UpcomingFrom = careplan.Date(rs.today())
 	}
 	rows, err := rs.PickupScheduleService.ListDayDepartures(ctx, filter)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/careplantest"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
+	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -68,9 +69,11 @@ func TestNativeArrivalExceptionAndNoteUseOwnerRecords(t *testing.T) {
 	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
 	student := testpkg.CreateTestStudent(t, db, "Arrival", "Exception", "1a")
 	staff := testpkg.CreateTestStaff(t, db, "Arrival", "Author")
-	service, err := compose.NewArrivalSchedules(db, owner, nil, nil, compose.ArrivalScheduleDependencies{Today: arrivalTestToday})
+	service, err := compose.NewArrivalSchedules(db, owner, nil, nil, compose.ArrivalScheduleDependencies{
+		Today: func() calendar.Date { return decisionTestToday },
+	})
 	require.NoError(t, err)
-	date := arrivalTestMonday.AddDays(7)
+	date := decisionTestToday.AddDays(7)
 	clock := time.Date(1, 1, 1, 12, 45, 0, 0, time.UTC)
 	row, err := service.CreateOrReclaimException(ctx, student.ID, date, &clock, nil, staff.ID, nil)
 	require.NoError(t, err)

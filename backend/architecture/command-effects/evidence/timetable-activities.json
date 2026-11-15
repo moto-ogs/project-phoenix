@@ -27121,14 +27121,6 @@
       "target_owner": "timetable-block-display"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.CareArrivalExceptionRows.FindUpcomingByStudentID",
-      "binding_digest": "fc457621473199e1b5d7cda47ce244a4",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CareArrivalExceptionRows.FindUpcomingByStudentID",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Today",
-      "target_owner": "care-plan"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindCareBoundsByIDs",
       "binding_digest": "b155bf6715ff40473e16b66c2a6ade61",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CareBoundReader.FindCareBoundsByIDs",
@@ -27190,14 +27182,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CareDays.ResolveForRange",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareDayQuery.ResolveForRange",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.CarePickupExceptionRows.FindUpcomingByStudentID",
-      "binding_digest": "fc457621473199e1b5d7cda47ce244a4",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CarePickupExceptionRows.FindUpcomingByStudentID",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Today",
       "target_owner": "care-plan"
     },
     {
@@ -31551,38 +31535,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/realtime.Broadcaster.BroadcastToTenant",
       "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.CareArrivalExceptionRows.FindUpcomingByStudentID",
-      "binding_digest": "fc457621473199e1b5d7cda47ce244a4",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StudentArrivalExceptionRecords.FindUpcomingByStudentID",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Today",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CareArrivalExceptionRows.FindUpcomingByStudentID",
-      "binding_digest": "fc457621473199e1b5d7cda47ce244a4",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StudentArrivalExceptionRecords.FindUpcomingByStudentID",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Today",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.CarePickupExceptionRows.FindUpcomingByStudentID",
-      "binding_digest": "fc457621473199e1b5d7cda47ce244a4",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StudentPickupExceptionRecords.FindUpcomingByStudentID",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Today",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CarePickupExceptionRows.FindUpcomingByStudentID",
-      "binding_digest": "fc457621473199e1b5d7cda47ce244a4",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StudentPickupExceptionRecords.FindUpcomingByStudentID",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Today",
-      "target_owner": "care-plan"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.AlignPlannedInstanceStaff",

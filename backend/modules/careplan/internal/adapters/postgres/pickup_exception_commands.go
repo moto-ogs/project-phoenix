@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
@@ -25,7 +24,7 @@ func (s *Store) UpdatePickupException(ctx context.Context, v careplan.PickupExce
 	}
 	row := pickupExceptionFromPublic(v)
 	row.TenantID = tid
-	row.UpdatedAt = time.Now()
+	row.UpdatedAt = s.currentTime()
 	return execGuarded(ctx, db.NewUpdate().Model(&row).ModelTableExpr(`schedule.student_pickup_exceptions AS "student_pickup_exception"`).Where(`"student_pickup_exception".id = ?`, row.ID).Where(`"student_pickup_exception".tenant_id = ?`, tid), "update pickup exception", careplan.ErrStudentScheduleNotFound)
 }
 func (s *Store) DeletePickupException(ctx context.Context, id int64) (domain.OperationStats, error) {

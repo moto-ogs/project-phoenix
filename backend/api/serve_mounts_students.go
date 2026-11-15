@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/modules/auditlog"
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
@@ -51,6 +53,10 @@ import (
 	deleteStudentsHTTP "github.com/moto-ogs/project-phoenix/workflows/studentdeletion/http"
 )
 
+// carePlanToday is the Berlin day of the real clock the review queues
+// decide on.
+func carePlanToday() carePlanModule.Date { return carePlanModule.Date(calendar.TodayDate()) }
+
 // requestReviewDependencies binds native owner capabilities for the staff projection.
 func requestReviewDependencies(
 	db transactionruntime.Database, persons peopledirectory.Capability, reviewPolicy *owners.ParentRequestReviewPolicy, caller *owners.CallerRows,
@@ -85,7 +91,7 @@ func requestReviewDependencies(
 		owners.StudentDirectoryReader(),
 		persons,
 		reviewScope,
-		carePlanModule.Today,
+		carePlanToday,
 		func(observation carePlanCompose.Observation) {
 			observability.ObserveCarePlanOperation(observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows, observation.Stats.Conflicts, observation.Stats.StatementDuration, carePlanModule.ErrorCode(observation.Err), observation.Err)
 		})
@@ -99,7 +105,7 @@ func requestReviewDependencies(
 		func(ctx context.Context) (bool, error) {
 			return settings.ResolveBool(ctx, reviewsettings.BookingsAuthoritative)
 		},
-		carePlanModule.Today,
+		carePlanToday,
 		func(observation carePlanCompose.Observation) {
 			observability.ObserveCarePlanOperation(observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows, observation.Stats.Conflicts, observation.Stats.StatementDuration, carePlanModule.ErrorCode(observation.Err), observation.Err)
 		},
@@ -110,14 +116,14 @@ func requestReviewDependencies(
 	if err != nil {
 		return requestreviewcompose.ProjectionDependencies{}, nil, fmt.Errorf("care schedule reviews: %w", err)
 	}
-	careQueue, err := reviewbindings.NewCareScheduleQueue(careReviews, carePlanModule.Today)
+	careQueue, err := reviewbindings.NewCareScheduleQueue(careReviews, carePlanToday)
 	if err != nil {
 		return requestreviewcompose.ProjectionDependencies{}, nil, fmt.Errorf("care schedule review queue: %w", err)
 	}
 	offeringReviews, err := NewRequestReviewOfferings(db,
 		persons,
 		reviewScope,
-		carePlanModule.Today,
+		carePlanToday,
 		func(observation carePlanCompose.Observation) {
 			observability.ObserveCarePlanOperation(observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows, observation.Stats.Conflicts, observation.Stats.StatementDuration, carePlanModule.ErrorCode(observation.Err), observation.Err)
 		},
@@ -127,7 +133,7 @@ func requestReviewDependencies(
 	if err != nil {
 		return requestreviewcompose.ProjectionDependencies{}, nil, fmt.Errorf("offering reviews: %w", err)
 	}
-	offeringQueue, err := reviewbindings.NewOfferingQueue(offeringReviews, carePlanModule.Today)
+	offeringQueue, err := reviewbindings.NewOfferingQueue(offeringReviews, carePlanToday)
 	if err != nil {
 		return requestreviewcompose.ProjectionDependencies{}, nil, fmt.Errorf("offering review queue: %w", err)
 	}
@@ -145,7 +151,7 @@ func requestReviewDependencies(
 	if err != nil {
 		return requestreviewcompose.ProjectionDependencies{}, nil, fmt.Errorf("master data review queue: %w", err)
 	}
-	excusedQueue, err := reviewbindings.NewExcusedQueue(excused, carePlanModule.Today)
+	excusedQueue, err := reviewbindings.NewExcusedQueue(excused, carePlanToday)
 	if err != nil {
 		return requestreviewcompose.ProjectionDependencies{}, nil, fmt.Errorf("excused review queue: %w", err)
 	}

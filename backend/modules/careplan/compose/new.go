@@ -5,6 +5,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/internal/careplanning"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -12,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/application"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	careplanPorts "github.com/moto-ogs/project-phoenix/modules/careplan/ports"
+	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
@@ -33,6 +35,7 @@ type Dependencies struct {
 	StudentLock      careplanning.StudentLock
 	StudentNotFound  error
 	StudentDirectory StudentDirectory
+	Now              func() time.Time
 }
 
 func New(dependencies Dependencies) (careplan.Owner, error) {
@@ -41,13 +44,14 @@ func New(dependencies Dependencies) (careplan.Owner, error) {
 		return nil, errors.New("care plan compose: database, observer, ambient database resolver, people directory, status-student directory, status-slot directory, student lock, and student directory are required")
 	}
 	postgres.BindCareLocks(dependencies.DB, dependencies.StudentLock, dependencies.StudentNotFound, dependencies.AmbientDB)
-	store := postgres.New(postgres.CarePlanDatabase(dependencies.DB))
+	store := postgres.New(postgres.CarePlanDatabase(dependencies.DB)).WithClock(dependencies.Now)
 	return application.NewService(application.Dependencies{
 		OfferingBookings: NewOfferingBookings(),
 		Store:            store, Requests: postgres.NewRequestStore(store, dependencies.StudentDirectory),
 		StatusDays:  postgres.NewStatusDayStore(store, dependencies.StatusStudents, dependencies.StatusSlots),
 		Withdrawals: postgres.NewDirectoryStore(store, dependencies.StudentDirectory), Observe: dependencies.Observe, People: dependencies.People,
 		Runtime: engineRuntime{EngineLocks: postgres.EngineLocks{DB: dependencies.DB}},
+		Today:   calendar.CalendarDateClock(dependencies.Now),
 	}), nil
 }
 

@@ -126,7 +126,7 @@ func TestCareExit_BinarySchoolWithNfcAndGroups(t *testing.T) {
 	device := testpkg.CreateTestDevice(t, db, "kiosk-altenberge")
 	// The child is at the OGS on their last care day, and is still checked in
 	// when the day ends — the case the effect pass has to close cleanly.
-	attendance := testpkg.CreateTestAttendance(t, db, student.ID, staff.ID, device.ID, today.BerlinMidnight().Add(9*time.Hour), nil)
+	attendance := testpkg.CreateTestAttendance(t, db, student.ID, staff.ID, device.ID, time.Now().Add(-3*time.Hour), nil)
 
 	endCare(t, ctx, svc, actorID, careplan.CareExitInput{
 		StudentIDs:  []int64{student.ID},
@@ -212,7 +212,7 @@ func TestCareExit_FullSchoolWithPlanOfferingsAndParents(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	// RFID tag release runs through the People Directory composition (#2661).
 	timetableRepos := testTimetableRepositories(db)
-	svc := newCareLifecycleService(t, db)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
 	actorID := careActor(t, db)
 
 	chain := testpkg.CreateTestParentGuardianChain(t, db)

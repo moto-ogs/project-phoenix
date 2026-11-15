@@ -11,8 +11,6 @@ import (
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// NewClassArrivalExceptions binds the class arrival exceptions to the class
-// timetable and the student classes; today is the Berlin calendar day when nil.
 func NewClassArrivalExceptions(records timetable.ClassArrivalExceptions, students peopledirectory.StudentClassRecords, today func() timezone.Date) (careplan.ClassArrivalExceptions, error) {
 	if records == nil || students == nil {
 		return nil, errors.New("class arrival exceptions: timetable and students are required")

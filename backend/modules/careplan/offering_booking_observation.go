@@ -13,8 +13,8 @@ type OfferingBookingObservation struct {
 	Err        error
 }
 
-func (m *OfferingBookings) observe(operation, kind string, started time.Time, inputRows, outputRows int64, err error) {
+func (m *OfferingBookings) observe(operation, kind string, elapsed time.Duration, inputRows, outputRows int64, err error) {
 	if m.observer != nil {
-		m.observer(OfferingBookingObservation{Operation: operation, Kind: kind, Duration: time.Since(started), InputRows: inputRows, OutputRows: outputRows, Err: err})
+		m.observer(OfferingBookingObservation{Operation: operation, Kind: kind, Duration: elapsed, InputRows: inputRows, OutputRows: outputRows, Err: err})
 	}
 }

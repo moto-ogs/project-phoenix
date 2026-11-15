@@ -41,7 +41,7 @@ func (s *statusDayStore) ArchiveStudentStatusFlags(ctx context.Context, value ca
 	started := time.Now()
 	_, err = db.NewInsert().Model(&rows).ModelTableExpr("active.student_status_days").
 		On("CONFLICT DO NOTHING").Exec(ctx)
-	stats := requestStats(started, int64(len(rows)))
+	stats := requestStats(time.Since(started), int64(len(rows)))
 	if err != nil {
 		return 0, stats, requestDBError("archive status flag", err)
 	}
@@ -82,7 +82,7 @@ func (s *statusDayStore) carryStatusFlags(ctx context.Context, db bun.IDB, tenan
 	started := time.Now()
 	err := db.NewInsert().Model(&rows).ModelTableExpr("active.student_status_days").
 		On("CONFLICT DO NOTHING").Returning("id, student_id").Scan(ctx, &inserted)
-	writeStats := requestStats(started, int64(len(inserted)))
+	writeStats := requestStats(time.Since(started), int64(len(inserted)))
 	stats.Queries += writeStats.Queries
 	stats.Rows += writeStats.Rows
 	stats.StatementDuration += writeStats.StatementDuration

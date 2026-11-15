@@ -128,7 +128,9 @@ func composeFeedback(db transactionruntime.Database, settings *feedbackCompose.S
 	})
 }
 
-func ComposeCarePlan(db transactionruntime.Database, persons peopleModule.Capability, slots carePlanCompose.StatusSlotDirectory) (carePlanModule.Owner, error) {
+// ComposeCarePlan composes the Care Plan owner; now stamps its writes and
+// dates its retention, nil is the real clock.
+func ComposeCarePlan(db transactionruntime.Database, persons peopleModule.Capability, slots carePlanCompose.StatusSlotDirectory, now func() time.Time) (carePlanModule.Owner, error) {
 	profiles, err := carePlanCompose.NewStudentProfiles(db.Pool(), StudentDirectoryReader(), func(carePlanCompose.Observation) {})
 	if err != nil {
 		return nil, err
@@ -138,8 +140,8 @@ func ComposeCarePlan(db transactionruntime.Database, persons peopleModule.Capabi
 		return nil, err
 	}
 	return carePlanCompose.New(carePlanCompose.Dependencies{
-		StudentDirectory: StudentDirectoryReader(),
-		DB:               db.Pool(), AmbientDB: carePlanCompose.TenantAmbientDatabase(db.Pool()),
+		StudentDirectory: StudentDirectoryReader(), Now: now,
+		DB: db.Pool(), AmbientDB: carePlanCompose.TenantAmbientDatabase(db.Pool()),
 		StatusStudents: statusStudents, StatusSlots: slots,
 		People: carePlanStudentNames(func(ctx context.Context, ids []int64) ([]carePlanPorts.StudentName, error) {
 			values, err := persons.ListStudentNamesByID(ctx, ids)

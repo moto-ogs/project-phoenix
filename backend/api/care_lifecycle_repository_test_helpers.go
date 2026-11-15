@@ -84,7 +84,8 @@ type CareLifecycleTestConfig struct {
 	LockCareBookingWrites func(context.Context) error
 	// Today defaults to the Berlin calendar day of Now.
 	Today func() owner0.Date
-	// Now stamps the lifecycle's records and defaults to the real clock.
+	// Now stamps the lifecycle's withdrawals and closed presence; nil is
+	// the real clock.
 	Now func() time.Time
 	// PlanningStaffing hears about committed care ends (#5554); nil
 	// announces nothing.

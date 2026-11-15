@@ -33,9 +33,11 @@ type OfferingChangeDependencies struct {
 	Ledger    ports.RequestLedger
 	Shares    ports.ShareVisibility
 
-	Today func() calendar.Date
-	// Now stamps decisions and confirmations; the real clock when nil.
+	// Now is the instant clock of decision recency and withdrawal
+	// confirmations; Today the day clock of the reviews. A nil Today
+	// follows Now, a nil Now is the real clock.
 	Now    func() time.Time
+	Today  func() calendar.Date
 	Logger *slog.Logger
 }
 
@@ -56,11 +58,11 @@ func NewOfferingChanges(deps OfferingChangeDependencies) (*OfferingChanges, erro
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
-	if deps.Now == nil {
-		deps.Now = time.Now
-	}
 	if deps.Today == nil {
 		deps.Today = calendar.CalendarDateClock(deps.Now)
+	}
+	if deps.Now == nil {
+		deps.Now = time.Now
 	}
 	return &OfferingChanges{deps: deps}, nil
 }

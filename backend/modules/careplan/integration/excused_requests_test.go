@@ -20,14 +20,10 @@ import (
 )
 
 // The excused-absence request workflow (#3093) over the real Care Plan
-// tables. The calendar and the workflow's instant clock are pinned so no
-// assertion depends on the wall clock. The store still stamps created_at and
-// reviewed_at with the real clock, which is always later than excusedNow, so
-// an instant before excusedNow is older than any request; the fixtures that
-// must be newer than a request still use time.Now.
+// tables. The calendar is pinned so no assertion depends on the wall clock;
+// only a reported_at instant newer than created_at uses time.Now.
 var (
 	excusedToday    = careplan.Date("2026-08-24")
-	excusedNow      = calendar.Date(excusedToday).BerlinMidnight().Add(10 * time.Hour)
 	excusedTomorrow = careplan.Date("2026-08-25")
 	excusedIn3Days  = careplan.Date("2026-08-27")
 	excusedIn4Days  = careplan.Date("2026-08-28")
@@ -58,7 +54,6 @@ func newExcusedRequests(t *testing.T, repos *api.PeopleRepositorySuiteFactory, c
 	requests, err := owners.NewExcusedAbsenceRequests(owners.ExcusedRequestWiring{
 		CarePlan: capability, Students: repos.Student, Persons: repos.Person,
 		Scope: careplantest.SchoolWideReviewScope, Today: func() careplan.Date { return excusedToday },
-		Now: func() time.Time { return excusedNow },
 	})
 	require.NoError(t, err)
 	return requests
@@ -224,7 +219,9 @@ func TestExcusedRequestQueueBadgeAndParentList(t *testing.T) {
 	}))
 
 	require.NoError(t, f.inTenant(t, func(ctx context.Context) error {
-		rows, err := f.requests.ListForStudent(ctx, f.chain.StudentID, excusedNow.Add(-24*time.Hour))
+		// Every decision of this test lies after the pinned day, so the
+		// recent window holds them all; a withdrawn row stays out by status.
+		rows, err := f.requests.ListForStudent(ctx, f.chain.StudentID, calendar.Date(excusedPast).BerlinMidnight())
 		require.NoError(t, err)
 		statuses := map[int64]string{}
 		for _, row := range rows {
@@ -354,7 +351,8 @@ func TestExcusedRequestApproveRefusedWhenNewerStatusExists(t *testing.T) {
 func TestExcusedRequestApproveOverwritesOlderStatus(t *testing.T) {
 	t.Parallel()
 	f := newExcusedFixture(t)
-	f.upsertStatusDay(t, excusedIn3Days, careplan.StudentStatusDaySick, excusedNow.Add(-24*time.Hour))
+	// Reported on a pinned past day, before the request is created.
+	f.upsertStatusDay(t, excusedIn3Days, careplan.StudentStatusDaySick, calendar.Date(excusedPast).BerlinMidnight())
 	pending := f.createPending(t, []careplan.Date{excusedIn3Days}, "Arzttermin")
 	f.approve(t, pending.ID)
 	days := f.activeStatusDays(t)

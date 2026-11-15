@@ -59,9 +59,9 @@ type CareLifecycleDependencies struct {
 	// Fingerprint hashes the binding preview content into its token.
 	Fingerprint func([]byte) string
 	Logger      *slog.Logger
-	// Today defaults to the Berlin calendar day of Now.
-	Today func() calendar.Date
-	// Now stamps the lifecycle's records; the real clock when nil.
+	Today       func() calendar.Date
+	// Now is the instant clock of the lifecycle's timestamps; nil is the
+	// real clock.
 	Now func() time.Time
 }
 
@@ -94,22 +94,21 @@ func NewCareLifecycle(deps CareLifecycleDependencies) (*CareLifecycle, error) {
 		deps.LockCareBookingWrites == nil || deps.BookingsAuthoritative == nil || deps.Fingerprint == nil {
 		return nil, errors.New("care lifecycle: records, source bookings, directory, unit of work, booking lock, booking setting and fingerprint are required")
 	}
-	logger := deps.Logger
-	if logger == nil {
-		logger = slog.Default()
-	}
 	now := deps.Now
 	if now == nil {
 		now = time.Now
 	}
-	today := deps.Today
-	if today == nil {
-		today = calendar.CalendarDateClock(now)
+	if deps.Today == nil {
+		deps.Today = calendar.CalendarDateClock(deps.Now)
+	}
+	logger := deps.Logger
+	if logger == nil {
+		logger = slog.Default()
 	}
 	return &CareLifecycle{
 		owners: owners, records: deps.Records, sourceBookings: deps.SourceBookings, directory: deps.Directory, unit: deps.Unit,
 		lockCareBookingWrites: deps.LockCareBookingWrites, bookingsAuthoritative: deps.BookingsAuthoritative,
-		fingerprint: deps.Fingerprint, planningStaffing: owners.PlanningStaffing, logger: logger, today: today, now: now,
+		fingerprint: deps.Fingerprint, planningStaffing: owners.PlanningStaffing, logger: logger, today: deps.Today, now: now,
 	}, nil
 }
 

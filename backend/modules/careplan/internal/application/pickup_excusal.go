@@ -19,7 +19,7 @@ type PickupAutoExcusalSyncer struct {
 	preview    ports.PartialAbsencePreview
 	extensions ports.PickupExtensions
 	locker     ports.PickupExcusalLocker
-	// today is the first day a weekly resync re-derives.
+	// today is the first day a resync re-derives exceptions from.
 	today func() calendar.Date
 }
 

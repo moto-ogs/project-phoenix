@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/token"
 	"io/fs"
 	"path/filepath"
 	"sort"
@@ -29,7 +30,9 @@ import (
 // calendar.Now (package sharedkernel/calendar under any import name) in
 // non-test .go files below modules/ and workflows/, per owner directory
 // (modules/<owner>, workflows/<workflow>). time.Since and time.Until measure
-// durations on the monotonic clock and are not counted. The roots (api,
+// durations on the monotonic clock and are not counted, and so is a
+// stopwatch start: a time.Now() assigned to a local variable that is only
+// ever read by time.Since (stopwatchStarts, #7104). The roots (api,
 // roots, cmd) wire the real clock and are out of scope.
 //
 // Budget semantics, as the other owner ratchets in this package:
@@ -43,52 +46,51 @@ import (
 //
 //	cd backend && ../scripts/run-go-toolchain.sh go test -tags=testhooks ./test/ \
 //	  -run '^TestModuleLiveClockRatchet$' -count=1 -v
+//
+// Re-measured 2026-11-15 for #7104: not counting stopwatch starts lowered
+// the sum from 1,646 to 814 calls; Care Plan then took its clock from its
+// composition (129 to 1).
 var moduleLiveClockBudget = map[string]int{
-	"modules/appointments":                 17,
-	"modules/auditlog":                     20,
-	"modules/carecontract":                 3,
-	"modules/careplan":                     139,
+	"modules/appointments": 5,
+	"modules/auditlog":     15,
+	"modules/carecontract": 3,
+	// PickupBaselineQueries.HasBookedOfferingPickupForWeekday: the public
+	// PickupBaselineReader method names no day.
+	"modules/careplan":                     1,
 	"modules/classday":                     14,
-	"modules/communication":                25,
+	"modules/communication":                15,
 	"modules/dataimport":                   55,
-	"modules/delivery":                     57,
-	"modules/devicefleet":                  34,
+	"modules/delivery":                     44,
+	"modules/devicefleet":                  12,
 	"modules/devicescan":                   6,
 	"modules/documentrendering":            1,
 	"modules/enrollment":                   63,
-	"modules/facilities":                   16,
-	"modules/feedback":                     8,
-	"modules/filestorage":                  34,
-	"modules/identityaccess":               269,
-	"modules/mealplan":                     14,
+	"modules/facilities":                   2,
+	"modules/feedback":                     1,
+	"modules/filestorage":                  32,
+	"modules/identityaccess":               83,
+	"modules/mealplan":                     1,
 	"modules/operatordashboard":            2,
-	"modules/organizationtenancy":          37,
+	"modules/organizationtenancy":          7,
 	"modules/parentbilling":                7,
-	"modules/peopledirectory":              97,
+	"modules/peopledirectory":              12,
 	"modules/planexport":                   2,
 	"modules/presenceprojection":           15,
 	"modules/requestreview":                1,
-	"modules/schedulerruntime":             42,
-	"modules/schoolcalendar":               19,
-	"modules/schoolmembership":             37,
-	"modules/schoolstructure":              29,
-	"modules/settings":                     5,
-	"modules/staffannouncementaudience":    4,
+	"modules/schedulerruntime":             36,
+	"modules/schoolcalendar":               5,
+	"modules/schoolmembership":             2,
+	"modules/schoolstructure":              3,
+	"modules/settings":                     3,
 	"modules/statistics":                   6,
-	"modules/studentpresence":              207,
-	"modules/timetable":                    152,
+	"modules/studentpresence":              86,
+	"modules/timetable":                    45,
 	"modules/traegerview":                  1,
-	"modules/transactionruntime":           1,
-	"modules/workforce":                    125,
+	"modules/workforce":                    62,
 	"workflows/catererportal":              2,
-	"workflows/gradetransition":            1,
 	"workflows/holidayclosurenotification": 1,
-	"workflows/openroommove":               2,
 	"workflows/parentportal":               19,
-	"workflows/sessionend":                 1,
 	"workflows/shiftplansync":              2,
-	"workflows/staffoffboarding":           1,
-	"workflows/studentdeletion":            1,
 }
 
 const calendarImportPath = "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -175,10 +177,11 @@ func countLiveClockCalls(path string) (int, error) {
 			calendarNames[name] = true
 		}
 	}
+	stopwatches := stopwatchStarts(file, timeNames)
 	calls := 0
 	ast.Inspect(file, func(node ast.Node) bool {
 		call, ok := node.(*ast.CallExpr)
-		if !ok {
+		if !ok || stopwatches[call] {
 			return true
 		}
 		selector, ok := call.Fun.(*ast.SelectorExpr)
@@ -196,6 +199,104 @@ func countLiveClockCalls(path string) (int, error) {
 		return true
 	})
 	return calls, nil
+}
+
+// stopwatchStarts returns the time.Now calls that only start a duration
+// measurement: each is assigned inside a function to a variable declared in
+// that function, and every other reference to that name in the function is
+// either the sole argument of time.Since or the target of another such start
+// read. time.Since reads the clock again, so a fixed test clock cannot change
+// what such a variable measures. A variable that is passed on, compared or
+// stored stays counted, because the code then decides on the instant itself.
+// Names are matched per function without resolving shadowing: a name reused
+// for anything else in the same function counts all its start reads, and
+// package-level variables are never stopwatches.
+func stopwatchStarts(file *ast.File, timeNames map[string]bool) map[*ast.CallExpr]bool {
+	result := map[*ast.CallExpr]bool{}
+	for _, decl := range file.Decls {
+		if function, ok := decl.(*ast.FuncDecl); ok && function.Body != nil {
+			for call := range functionStopwatchStarts(function, timeNames) {
+				result[call] = true
+			}
+		}
+	}
+	return result
+}
+
+func functionStopwatchStarts(function *ast.FuncDecl, timeNames map[string]bool) map[*ast.CallExpr]bool {
+	isTimeCall := func(expr ast.Expr, name string) (*ast.CallExpr, bool) {
+		call, ok := expr.(*ast.CallExpr)
+		if !ok {
+			return nil, false
+		}
+		selector, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok || selector.Sel.Name != name {
+			return nil, false
+		}
+		pkg, ok := selector.X.(*ast.Ident)
+		return call, ok && timeNames[pkg.Name]
+	}
+	declared := map[string]bool{}
+	starts := map[string][]*ast.CallExpr{}
+	allowed := map[*ast.Ident]bool{}
+	record := func(target *ast.Ident, value ast.Expr) {
+		if call, ok := isTimeCall(value, "Now"); ok && len(call.Args) == 0 {
+			starts[target.Name] = append(starts[target.Name], call)
+			allowed[target] = true
+		}
+	}
+	ast.Inspect(function, func(node ast.Node) bool {
+		switch node := node.(type) {
+		case *ast.AssignStmt:
+			if node.Tok == token.DEFINE {
+				for _, lhs := range node.Lhs {
+					if ident, ok := lhs.(*ast.Ident); ok {
+						declared[ident.Name] = true
+					}
+				}
+			}
+			if len(node.Lhs) == 1 && len(node.Rhs) == 1 {
+				if target, ok := node.Lhs[0].(*ast.Ident); ok {
+					record(target, node.Rhs[0])
+				}
+			}
+		case *ast.ValueSpec:
+			for _, name := range node.Names {
+				declared[name.Name] = true
+			}
+			if len(node.Names) == 1 && len(node.Values) == 1 {
+				record(node.Names[0], node.Values[0])
+			}
+		case *ast.Field:
+			for _, name := range node.Names {
+				declared[name.Name] = true
+			}
+		case *ast.CallExpr:
+			if _, ok := isTimeCall(node, "Since"); ok && len(node.Args) == 1 {
+				if arg, ok := node.Args[0].(*ast.Ident); ok {
+					allowed[arg] = true
+				}
+			}
+		}
+		return true
+	})
+	disqualified := map[string]bool{}
+	ast.Inspect(function, func(node ast.Node) bool {
+		if ident, ok := node.(*ast.Ident); ok && starts[ident.Name] != nil && !allowed[ident] {
+			disqualified[ident.Name] = true
+		}
+		return true
+	})
+	result := map[*ast.CallExpr]bool{}
+	for name, calls := range starts {
+		if !declared[name] || disqualified[name] {
+			continue
+		}
+		for _, call := range calls {
+			result[call] = true
+		}
+	}
+	return result
 }
 
 func fileHasBuildTag(file *ast.File, tag string) bool {
@@ -286,16 +387,56 @@ func hook() time.Time { return time.Now() }
 import "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 func run() { _ = calendar.Now() }
 `)
+	// Stopwatches: a start read only ever measured with time.Since is not a
+	// clock the code decides on. Any other use of the name in the function
+	// counts it (shadowed: both), and a package-level variable always counts.
+	writeCalendarFixtureSourceAt(t, root, "workflows/timed/timed.go", `package timed
+import "time"
+func observe(time.Duration) {}
+func record(time.Time) {}
+func measured() {
+	started := time.Now()
+	observe(time.Since(started))
+	started = time.Now()
+	defer func() { observe(time.Since(started)) }()
+	var begin = time.Now()
+	observe(time.Since(begin))
+}
+func forwarded() {
+	started := time.Now()
+	record(started)
+}
+func compared() {
+	started := time.Now()
+	observe(time.Since(started))
+	if started.Weekday() == time.Sunday {
+		return
+	}
+}
+func shadowed() {
+	started := time.Now()
+	observe(time.Since(started))
+	{
+		started := time.Now()
+		record(started)
+	}
+}
+var since = time.Now()
+func packageLevel() {
+	observe(time.Since(since))
+	since = time.Now()
+}
+`)
 
 	measured, err := measureModuleLiveClockCalls(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]int{"modules/sample": 3, "workflows/flow": 1}
+	want := map[string]int{"modules/sample": 3, "workflows/flow": 1, "workflows/timed": 6}
 	if fmt.Sprint(measured) != fmt.Sprint(want) {
 		t.Fatalf("measured %v, want %v", measured, want)
 	}
-	problems := compareModuleLiveClockBudget(measured, map[string]int{"modules/sample": 2, "workflows/flow": 2, "modules/gone": 1})
+	problems := compareModuleLiveClockBudget(measured, map[string]int{"modules/sample": 2, "workflows/flow": 2, "workflows/timed": 6, "modules/gone": 1})
 	joined := strings.Join(problems, "\n")
 	for _, fragment := range []string{
 		"modules/sample: 3 direct clock calls, budget 2; inject",
@@ -306,7 +447,7 @@ func run() { _ = calendar.Now() }
 			t.Errorf("problems %q lack %q", joined, fragment)
 		}
 	}
-	if problems := compareModuleLiveClockBudget(measured, map[string]int{"workflows/flow": 1}); len(problems) != 1 ||
+	if problems := compareModuleLiveClockBudget(measured, map[string]int{"workflows/flow": 1, "workflows/timed": 6}); len(problems) != 1 ||
 		!strings.Contains(problems[0], "modules/sample: 3 direct clock call(s) and no budget") {
 		t.Errorf("unbudgeted owner problems = %v", problems)
 	}

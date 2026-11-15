@@ -98,7 +98,7 @@ func (s *Store) FindStudentStatusDay(ctx context.Context, id int64, activeOnly b
 	}
 	started := time.Now()
 	err = query.Scan(ctx)
-	stats := requestStats(started, 1)
+	stats := requestStats(time.Since(started), 1)
 	if errors.Is(err, sql.ErrNoRows) {
 		stats.Rows = 0
 		return careplan.StudentStatusDay{}, false, stats, nil
@@ -128,7 +128,7 @@ func (s *Store) ListStudentStatusDays(ctx context.Context, filter careplan.Stude
 	}
 	started := time.Now()
 	err = query.Scan(ctx)
-	stats := requestStats(started, int64(len(rows)))
+	stats := requestStats(time.Since(started), int64(len(rows)))
 	if err != nil {
 		return nil, stats, requestDBError("list student status days", err)
 	}
@@ -190,7 +190,7 @@ func (s *statusDayStore) CountStudentStatusDays(ctx context.Context, options *ca
 	}
 	started := time.Now()
 	count, err := query.Count(ctx)
-	stats := requestStats(started, int64(count))
+	stats := requestStats(time.Since(started), int64(count))
 	if err != nil {
 		return 0, stats, requestDBError("count student status days", err)
 	}
@@ -280,7 +280,7 @@ func (s *statusDayStore) ExistingStudentStatusDayIDs(ctx context.Context, ids []
 		ColumnExpr(`"student_status_day".id`).Where(`"student_status_day".id IN (?)`, bun.List(ids)), "student_status_day", tenantID)
 	started := time.Now()
 	err = query.Scan(ctx, &result)
-	stats := requestStats(started, int64(len(result)))
+	stats := requestStats(time.Since(started), int64(len(result)))
 	if err != nil {
 		return nil, stats, requestDBError("list existing student status day ids", err)
 	}
@@ -310,7 +310,7 @@ func (s *statusDayStore) CountCarePlanDeletionRecords(ctx context.Context, stude
 		tenantID, studentID, tenantID, studentID, tenantID, studentID)
 	started := time.Now()
 	err = query.Scan(ctx, &counts)
-	stats := requestStats(started, 1)
+	stats := requestStats(time.Since(started), 1)
 	if err != nil {
 		return counts, stats, requestDBError("count care plan deletion records", err)
 	}
@@ -346,7 +346,7 @@ func (s *statusDayStore) UpsertStudentStatusDay(ctx context.Context, value carep
 		Returning("*")
 	started := time.Now()
 	err = query.Scan(ctx)
-	writeStats := requestStats(started, 1)
+	writeStats := requestStats(time.Since(started), 1)
 	stats.Queries += writeStats.Queries
 	stats.StatementDuration += writeStats.StatementDuration
 	if err != nil {
@@ -368,14 +368,14 @@ func (s *statusDayStore) UpsertStudentStatusDay(ctx context.Context, value carep
 // caller holds the student-day lock.
 func (s *statusDayStore) replaceStandingStatusDays(ctx context.Context, db bun.IDB, tenantID int64, row *studentStatusDayRow) (carePlanCompose.RequestStoreStats, error) {
 	var ids []int64
-	query := withTenant(clearStatusDays(db, time.Now(), row.Source, row.ReportedBy).
+	query := withTenant(clearStatusDays(db, s.currentTime(), row.Source, row.ReportedBy).
 		Where(`"student_status_day".student_id = ?`, row.StudentID).Where(`"student_status_day".date = ?`, row.Date).
 		Where(`"student_status_day".status <> ?`, row.Status).
 		Where(standingStatusDaySQL), "student_status_day", tenantID).
 		Returning(`"student_status_day".id`)
 	started := time.Now()
 	err := query.Scan(ctx, &ids)
-	stats := requestStats(started, int64(len(ids)))
+	stats := requestStats(time.Since(started), int64(len(ids)))
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return stats, requestDBError("replace standing student status days", err)
 	}
@@ -401,7 +401,7 @@ func (s *statusDayStore) recordClearedStatusDay(ctx context.Context, db bun.IDB,
 	started := time.Now()
 	err := db.NewInsert().Model(row).ModelTableExpr("active.student_status_days").
 		On("CONFLICT (tenant_id, student_id, date, status) DO NOTHING").Returning("*").Scan(ctx)
-	stats := requestStats(started, 1)
+	stats := requestStats(time.Since(started), 1)
 	if err == nil {
 		return statusDayToPublic(row), stats, nil
 	}
@@ -415,7 +415,7 @@ func (s *statusDayStore) recordClearedStatusDay(ctx context.Context, db bun.IDB,
 	err = withTenant(db.NewSelect().Model(existing).ModelTableExpr(`active.student_status_days AS "student_status_day"`).
 		Where(`"student_status_day".student_id = ?`, row.StudentID).Where(`"student_status_day".date = ?`, row.Date).
 		Where(`"student_status_day".status = ?`, row.Status), "student_status_day", row.TenantID).Scan(ctx)
-	readStats := requestStats(readStarted, 1)
+	readStats := requestStats(time.Since(readStarted), 1)
 	stats.Queries += readStats.Queries
 	stats.Rows += readStats.Rows
 	stats.StatementDuration += readStats.StatementDuration
@@ -501,7 +501,7 @@ func (s *statusDayStore) standingStatusDayIDs(ctx context.Context, studentID int
 		Where(standingStatusDaySQL), "student_status_day", tenantID)
 	started := time.Now()
 	err = query.Scan(ctx, &ids)
-	stats := requestStats(started, int64(len(ids)))
+	stats := requestStats(time.Since(started), int64(len(ids)))
 	if err != nil {
 		return nil, stats, requestDBError("find standing student status day ids", err)
 	}
@@ -524,7 +524,7 @@ func (s *statusDayStore) ClearStudentStatusDayByID(ctx context.Context, id int64
 		Where(`"student_status_day".id = ?`, id).Where(`"student_status_day".cleared_at IS NULL`), "student_status_day", tenantID)
 	started := time.Now()
 	result, err := query.Exec(ctx)
-	writeStats := requestStats(started, 0)
+	writeStats := requestStats(time.Since(started), 0)
 	if err != nil {
 		return stats, requestDBError("mark student status day cleared by id", err)
 	}
@@ -593,7 +593,7 @@ func (s *statusDayStore) DeleteStudentStatusDaysBefore(ctx context.Context, cuto
 	}
 	started := time.Now()
 	if _, err := db.ExecContext(ctx, `SELECT set_config('app.retention_purge', 'on', true)`); err != nil {
-		return 0, requestStats(started, 0), requestDBError("mark status day retention purge", err)
+		return 0, requestStats(time.Since(started), 0), requestDBError("mark status day retention purge", err)
 	}
 	result, err := db.NewDelete().
 		TableExpr("active.student_status_days").
@@ -601,16 +601,16 @@ func (s *statusDayStore) DeleteStudentStatusDaysBefore(ctx context.Context, cuto
 		Where("date < ?", calendarDate(cutoff)).
 		Exec(ctx)
 	if err != nil {
-		return 0, requestStats(started, 0), requestDBError("delete expired student status days", err)
+		return 0, requestStats(time.Since(started), 0), requestDBError("delete expired student status days", err)
 	}
 	if _, err := db.ExecContext(ctx, `SELECT set_config('app.retention_purge', 'off', true)`); err != nil {
-		return 0, requestStats(started, 0), requestDBError("unmark status day retention purge", err)
+		return 0, requestStats(time.Since(started), 0), requestDBError("unmark status day retention purge", err)
 	}
 	deleted, err := result.RowsAffected()
 	if err != nil {
-		return 0, requestStats(started, 0), requestDBError("count expired student status days", err)
+		return 0, requestStats(time.Since(started), 0), requestDBError("count expired student status days", err)
 	}
-	stats := requestStats(started, deleted)
+	stats := requestStats(time.Since(started), deleted)
 	stats.Queries = 3
 	return deleted, stats, nil
 }

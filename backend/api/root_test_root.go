@@ -181,7 +181,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return nil
 		},
 		func() (err error) {
-			carePlan, err = owners.ComposeCarePlan(db, persons, owners.CarePlanStatusSlots(timetableRepos.InstanceStudent))
+			carePlan, err = owners.ComposeCarePlan(db, persons, owners.CarePlanStatusSlots(timetableRepos.InstanceStudent), env.Now)
 			return
 		},
 		func() error { operatorAuditLog = owners.NewOperatorAuditLog(db); return nil },
@@ -206,7 +206,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		func() (err error) { classArrivals, err = owners.BuildClassArrivals(db, env.Logger); return },
 		func() (err error) {
 			studentAudit = peopleCompose.NewStudentAuditService(tokens.AuditActor, owners.NewStudentAuditFor(persons))
-			carePlanRows, err = owners.BuildCarePlanRows(db, env.Logger, env.Now, studentAudit, carePlan, persons, membership, timetableOwner, calendar, classArrivals, people)
+			carePlanRows, err = owners.BuildCarePlanRows(db, env.Logger, studentAudit, carePlan, persons, membership, timetableOwner, calendar, classArrivals, people, env.Now)
 			return
 		},
 		func() (err error) {
@@ -250,7 +250,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return
 		},
 		func() (err error) {
-			schedules, err = owners.BuildCarePlanSchedules(db, env.Logger, env.Now, carePlan, persons, carePlanRows, classArrivals,
+			schedules, err = owners.BuildCarePlanSchedules(db, env.Logger, carePlan, persons, carePlanRows, classArrivals,
 				enrollment.ApprovedOfferings, settings.Service, timetableRows.RecurrenceLock.LockRecurrenceWrites, presence.Presence, timetableRows.StudentTemplateDays)
 			return
 		},

@@ -87,7 +87,7 @@ func TestCareWithdrawalLifecycle_CompletionEndsBookingsFromEveryEnrollmentReques
 		StudentID: &studentID, FirstBookinglessDay: firstGap,
 		Trigger:               careplan.WithdrawalTriggerDirectSchool,
 		SourceRequestChildID:  &requestChildIDs[0],
-		WithdrawalConfirmedBy: &actorID, WithdrawalConfirmedRole: "admin", WithdrawalConfirmedAt: decisionTestClock(),
+		WithdrawalConfirmedBy: &actorID, WithdrawalConfirmedRole: "admin", WithdrawalConfirmedAt: time.Now(),
 	}
 	require.NoError(t, api.SeedPendingCareWithdrawal(ctx, api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).CareWithdrawal, completion))
 
@@ -127,8 +127,8 @@ func TestCareWithdrawalLifecycle_ConcurrentCompletionWritesOneResult(t *testing.
 	svc := newCareLifecycleService(t, db)
 	actorID := careActor(t, db)
 	student := testpkg.CreateTestStudent(t, db, "Mika", "Parallel", "3a")
-	completion := testpkg.CreateTestCareWithdrawalCompletion(t, db, student.ID, actorID, decisionTestToday.AddDays(1))
-	input := careplan.CareExitInput{LastCareDay: decisionTestToday, Reason: careplan.CareExitReasonNoCareNeed}
+	completion := testpkg.CreateTestCareWithdrawalCompletion(t, db, student.ID, actorID, calendar.TodayDate().AddDays(1))
+	input := careplan.CareExitInput{LastCareDay: calendar.TodayDate(), Reason: careplan.CareExitReasonNoCareNeed}
 	preview, err := svc.PreviewWithdrawalCareEnd(ctx, completion.ID, input)
 	require.NoError(t, err)
 
@@ -172,8 +172,8 @@ func TestCareWithdrawalLifecycle_ResolvedCompletionIsAConflict(t *testing.T) {
 	svc := newCareLifecycleService(t, db)
 	actorID := careActor(t, db)
 	student := testpkg.CreateTestStudent(t, db, "Mila", "Erledigt", "3a")
-	completion := testpkg.CreateTestCareWithdrawalCompletion(t, db, student.ID, actorID, decisionTestToday)
-	changed, err := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).CareWithdrawal.MarkResolved(ctx, completion.ID, actorID, decisionTestClock())
+	completion := testpkg.CreateTestCareWithdrawalCompletion(t, db, student.ID, actorID, calendar.TodayDate())
+	changed, err := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).CareWithdrawal.MarkResolved(ctx, completion.ID, actorID, time.Now())
 	require.NoError(t, err)
 	require.True(t, changed)
 
@@ -224,7 +224,7 @@ func TestCareWithdrawalLifecycle_CancellingLaterOrdinaryExitDoesNotRestoreOldTas
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	svc := newCareLifecycleService(t, db)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
 	actorID := careActor(t, db)
 	student := testpkg.CreateTestStudent(t, db, "Nele", "Neuer Austritt", "2b")
 	firstGap := decisionTestToday.AddDays(2)

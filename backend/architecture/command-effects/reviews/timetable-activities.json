@@ -36290,16 +36290,6 @@
       "target_owner": "timetable-block-display"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.CareArrivalExceptionRows.FindUpcomingByStudentID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CareArrivalExceptionRows.FindUpcomingByStudentID",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/careplan.Today (care-plan) through modules/timetable/internal/application.CareArrivalExceptionRows.FindUpcomingByStudentID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Today",
-      "target_owner": "care-plan"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindCareBoundsByIDs",
       "classification": "query",
       "effect": "query",
@@ -36379,16 +36369,6 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/careplan.CareDayQuery.ResolveForRange; modules/careplan/care_days.go:13. May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareDayQuery.ResolveForRange",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.CarePickupExceptionRows.FindUpcomingByStudentID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CarePickupExceptionRows.FindUpcomingByStudentID",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/careplan.Today (care-plan) through modules/timetable/internal/application.CarePickupExceptionRows.FindUpcomingByStudentID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Today",
       "target_owner": "care-plan"
     },
     {
@@ -42132,46 +42112,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/realtime.Broadcaster.BroadcastToTenant",
       "target_owner": "delivery-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.CareArrivalExceptionRows.FindUpcomingByStudentID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StudentArrivalExceptionRecords.FindUpcomingByStudentID",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/careplan.Today (care-plan) through modules/timetable/internal/application.CareArrivalExceptionRows.FindUpcomingByStudentID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Today",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CareArrivalExceptionRows.FindUpcomingByStudentID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StudentArrivalExceptionRecords.FindUpcomingByStudentID",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/careplan.Today (care-plan) through modules/timetable/ports.CareArrivalExceptionRows.FindUpcomingByStudentID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Today",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.CarePickupExceptionRows.FindUpcomingByStudentID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StudentPickupExceptionRecords.FindUpcomingByStudentID",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/careplan.Today (care-plan) through modules/timetable/internal/application.CarePickupExceptionRows.FindUpcomingByStudentID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Today",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CarePickupExceptionRows.FindUpcomingByStudentID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StudentPickupExceptionRecords.FindUpcomingByStudentID",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/careplan.Today (care-plan) through modules/timetable/ports.CarePickupExceptionRows.FindUpcomingByStudentID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.Today",
-      "target_owner": "care-plan"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.AlignPlannedInstanceStaff",

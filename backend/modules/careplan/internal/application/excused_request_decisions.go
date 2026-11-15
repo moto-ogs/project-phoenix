@@ -164,7 +164,7 @@ func (w *ExcusedRequests) recordDecision(ctx context.Context, requestID, personI
 // terminal state. It applies nothing.
 func (w *ExcusedRequests) MarkDone(ctx context.Context, requestID int64, expectedVersion, reason string, reviewedBy int64) (err error) {
 	started := time.Now()
-	defer func() { w.done("excused_request_mark_done", started, err) }()
+	defer func() { w.done("excused_request_mark_done", time.Since(started), err) }()
 	if requestID <= 0 {
 		return careplan.ErrExcusedRequestNotFound
 	}
@@ -221,7 +221,7 @@ func (w *ExcusedRequests) MarkDone(ctx context.Context, requestID int64, expecte
 // approved re-runs the ordinary apply.
 func (w *ExcusedRequests) Correct(ctx context.Context, requestID int64, approve bool, expectedVersion, reason string, reviewedBy int64) (err error) {
 	started := time.Now()
-	defer func() { w.done("excused_request_correct", started, err) }()
+	defer func() { w.done("excused_request_correct", time.Since(started), err) }()
 	if requestID <= 0 {
 		return careplan.ErrExcusedRequestNotFound
 	}

@@ -129,8 +129,8 @@ func (s *requestStore) CloseOpenCareRequests(ctx context.Context, studentIDs []i
 	return total, stats, nil
 }
 
-func requestStats(started time.Time, rows int64) carePlanCompose.RequestStoreStats {
-	return carePlanCompose.RequestStoreStats{Queries: 1, Rows: rows, StatementDuration: time.Since(started)}
+func requestStats(elapsed time.Duration, rows int64) carePlanCompose.RequestStoreStats {
+	return carePlanCompose.RequestStoreStats{Queries: 1, Rows: rows, StatementDuration: elapsed}
 }
 
 func requestDBError(op string, err error) error {
@@ -184,7 +184,7 @@ func (s *requestStore) FindExcusedAbsenceRequest(ctx context.Context, id int64, 
 	}
 	started := time.Now()
 	err = query.Scan(ctx)
-	stats := requestStats(started, 1)
+	stats := requestStats(time.Since(started), 1)
 	if errors.Is(err, sql.ErrNoRows) {
 		stats.Rows = 0
 		return careplan.ExcusedAbsenceRequest{}, false, stats, nil
@@ -236,7 +236,7 @@ func (s *requestStore) ListExcusedAbsenceRequests(ctx context.Context, filter ca
 	query = applyExcusedRequestOptions(s.directory, query, filter)
 	started := time.Now()
 	err = query.Scan(ctx)
-	stats := requestStats(started, int64(len(rows)))
+	stats := requestStats(time.Since(started), int64(len(rows)))
 	if err != nil {
 		return nil, stats, requestDBError("list excused absence requests", err)
 	}
@@ -269,7 +269,7 @@ func (s *requestStore) CreateExcusedAbsenceRequest(ctx context.Context, value ca
 	row.TenantID = tenantID
 	started := time.Now()
 	err = db.NewInsert().Model(row).ModelTableExpr("active.excused_absence_requests").Returning("*").Scan(ctx)
-	stats := requestStats(started, 1)
+	stats := requestStats(time.Since(started), 1)
 	if err != nil {
 		stats.Rows = 0
 		if isUniqueViolation(err) {
@@ -290,7 +290,7 @@ func (s *requestStore) LockExcusedAbsenceRequests(ctx context.Context, studentID
 	}
 	started := time.Now()
 	_, err = db.NewRaw("SELECT pg_advisory_xact_lock(?, ?)", excusedRequestLockClass, int32(studentID)).Exec(ctx)
-	stats := requestStats(started, 0)
+	stats := requestStats(time.Since(started), 0)
 	if err != nil {
 		return stats, requestDBError("lock student excused requests", err)
 	}
@@ -308,7 +308,7 @@ func (s *requestStore) UpdatePendingExcusedAbsenceRequest(ctx context.Context, i
 	}
 	query := withTenant(db.NewUpdate().Model((*excusedAbsenceRequestRow)(nil)).
 		ModelTableExpr(`active.excused_absence_requests AS "excused_absence_request"`).
-		Set("dates = ?", rowDates).Set("note = ?", note).Set("absence_status = ?", absenceStatus).Set("updated_at = ?", time.Now()).
+		Set("dates = ?", rowDates).Set("note = ?", note).Set("absence_status = ?", absenceStatus).Set("updated_at = ?", s.currentTime()).
 		Where(`"excused_absence_request".id = ?`, id).Where(`"excused_absence_request".status = ?`, requestPending), "excused_absence_request", tenantID)
 	return execRequest(ctx, query, "update pending excused absence request", careplan.ErrExcusedRequestNotPending)
 }
@@ -318,7 +318,7 @@ func (s *requestStore) DecideExcusedAbsenceRequest(ctx context.Context, value ca
 	if err != nil {
 		return carePlanCompose.RequestStoreStats{}, err
 	}
-	now := time.Now()
+	now := s.currentTime()
 	query := db.NewUpdate().Model((*excusedAbsenceRequestRow)(nil)).
 		ModelTableExpr(`active.excused_absence_requests AS "excused_absence_request"`).
 		Set("status = ?", value.Status).Set("decision_reason = ?", value.Reason).Set("updated_at = ?", now).
@@ -365,7 +365,7 @@ func (s *requestStore) FindCareScheduleRequest(ctx context.Context, id int64, lo
 	}
 	started := time.Now()
 	err = query.Scan(ctx)
-	stats := requestStats(started, 1)
+	stats := requestStats(time.Since(started), 1)
 	if errors.Is(err, sql.ErrNoRows) {
 		stats.Rows = 0
 		return careplan.CareScheduleChangeRequest{}, false, stats, nil
@@ -417,7 +417,7 @@ func (s *requestStore) ListCareScheduleRequests(ctx context.Context, filter care
 	}
 	started := time.Now()
 	err = query.Scan(ctx)
-	stats := requestStats(started, int64(len(rows)))
+	stats := requestStats(time.Since(started), int64(len(rows)))
 	if err != nil {
 		return nil, stats, requestDBError("list care schedule change requests", err)
 	}
@@ -463,7 +463,7 @@ func (s *requestStore) CreateCareScheduleRequest(ctx context.Context, value care
 	row.TenantID = tenantID
 	started := time.Now()
 	err = db.NewInsert().Model(row).ModelTableExpr("schedule.care_schedule_change_requests").Returning("*").Scan(ctx)
-	stats := requestStats(started, 1)
+	stats := requestStats(time.Since(started), 1)
 	if err != nil {
 		stats.Rows = 0
 		if isUniqueViolation(err) {
@@ -481,7 +481,7 @@ func (s *requestStore) UpdatePendingCareScheduleRequest(ctx context.Context, id 
 	}
 	query := withTenant(db.NewUpdate().Model((*careScheduleRequestRow)(nil)).
 		ModelTableExpr(`schedule.care_schedule_change_requests AS "care_schedule_change_request"`).
-		Set("payload = ?", payload).Set("updated_at = ?", time.Now()).
+		Set("payload = ?", payload).Set("updated_at = ?", s.currentTime()).
 		Where(`"care_schedule_change_request".id = ?`, id).Where(`"care_schedule_change_request".status = ?`, requestPending), "care_schedule_change_request", tenantID)
 	return execRequest(ctx, query, "update pending care schedule change request", careplan.ErrCareScheduleRequestNotPending)
 }
@@ -491,7 +491,7 @@ func (s *requestStore) DecideCareScheduleRequest(ctx context.Context, value care
 	if err != nil {
 		return carePlanCompose.RequestStoreStats{}, err
 	}
-	now := time.Now()
+	now := s.currentTime()
 	query := db.NewUpdate().Model((*careScheduleRequestRow)(nil)).
 		ModelTableExpr(`schedule.care_schedule_change_requests AS "care_schedule_change_request"`).
 		Set("status = ?", value.Status).Set("decision_reason = ?", value.Reason).Set("updated_at = ?", now).
@@ -524,7 +524,7 @@ func (s *requestStore) UpdateCareScheduleRequestSnapshot(ctx context.Context, id
 	}
 	query := withTenant(db.NewUpdate().Model((*careScheduleRequestRow)(nil)).
 		ModelTableExpr(`schedule.care_schedule_change_requests AS "care_schedule_change_request"`).
-		Set("decision_snapshot = ?", snapshot).Set("updated_at = ?", time.Now()).
+		Set("decision_snapshot = ?", snapshot).Set("updated_at = ?", s.currentTime()).
 		Where(`"care_schedule_change_request".id = ?`, id), "care_schedule_change_request", tenantID)
 	return execRequest(ctx, query, "update care request decision snapshot", careplan.ErrCareScheduleRequestNotFound)
 }
@@ -543,7 +543,7 @@ func (s *requestStore) FindStudentDataRequest(ctx context.Context, id int64, loc
 	}
 	started := time.Now()
 	err = query.Scan(ctx)
-	stats := requestStats(started, 1)
+	stats := requestStats(time.Since(started), 1)
 	if errors.Is(err, sql.ErrNoRows) {
 		stats.Rows = 0
 		return careplan.StudentDataChangeRequest{}, false, stats, nil
@@ -605,7 +605,7 @@ func (s *requestStore) ListStudentDataRequests(ctx context.Context, filter carep
 	}
 	started := time.Now()
 	err = query.Scan(ctx)
-	stats := requestStats(started, int64(len(rows)))
+	stats := requestStats(time.Since(started), int64(len(rows)))
 	if err != nil {
 		return nil, stats, requestDBError("list student data change requests", err)
 	}
@@ -637,7 +637,7 @@ func (s *requestStore) HasPendingStudentDataRequest(ctx context.Context, student
 		Where(`"student_data_change_request".status = ?`, requestPending), "student_data_change_request", tenantID)
 	started := time.Now()
 	exists, err := query.Exists(ctx)
-	stats := requestStats(started, 0)
+	stats := requestStats(time.Since(started), 0)
 	if exists {
 		stats.Rows = 1
 	}
@@ -656,7 +656,7 @@ func (s *requestStore) CreateStudentDataRequest(ctx context.Context, value carep
 	row.TenantID = tenantID
 	started := time.Now()
 	err = db.NewInsert().Model(row).ModelTableExpr("users.student_data_change_requests").Returning("*").Scan(ctx)
-	stats := requestStats(started, 1)
+	stats := requestStats(time.Since(started), 1)
 	if err != nil {
 		stats.Rows = 0
 		if isUniqueViolation(err) {
@@ -674,7 +674,7 @@ func (s *requestStore) UpdatePendingStudentDataRequest(ctx context.Context, id i
 	}
 	query := withTenant(db.NewUpdate().Model((*studentDataRequestRow)(nil)).
 		ModelTableExpr(`users.student_data_change_requests AS "student_data_change_request"`).
-		Set("new_value = ?", value).Set("updated_at = ?", time.Now()).
+		Set("new_value = ?", value).Set("updated_at = ?", s.currentTime()).
 		Where(`"student_data_change_request".id = ?`, id).Where(`"student_data_change_request".status = ?`, requestPending), "student_data_change_request", tenantID)
 	return execRequest(ctx, query, "update pending student data change request", careplan.ErrStudentDataRequestNotPending)
 }
@@ -684,7 +684,7 @@ func (s *requestStore) DecideStudentDataRequest(ctx context.Context, value carep
 	if err != nil {
 		return carePlanCompose.RequestStoreStats{}, err
 	}
-	now := time.Now()
+	now := s.currentTime()
 	query := db.NewUpdate().Model((*studentDataRequestRow)(nil)).
 		ModelTableExpr(`users.student_data_change_requests AS "student_data_change_request"`).
 		Set("status = ?", value.Status).Set("review_reason = ?", value.Reason).
@@ -717,7 +717,7 @@ func execRequest(ctx context.Context, query interface {
 }, op string, noRows error) (carePlanCompose.RequestStoreStats, error) {
 	started := time.Now()
 	result, err := query.Exec(ctx)
-	stats := requestStats(started, 0)
+	stats := requestStats(time.Since(started), 0)
 	if err != nil {
 		return stats, requestDBError(op, err)
 	}
