@@ -435,7 +435,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
                 return (
                   <div
                     key={point.key}
-                    className={`flex items-center justify-between gap-3 text-sm ${point.value === 0 ? "opacity-40" : ""}`}
+                    className="flex items-center justify-between gap-3 text-sm"
                   >
                     <span className="flex items-center gap-2 text-gray-700">
                       <StatusDot color={point.color} size="lg" decorative />

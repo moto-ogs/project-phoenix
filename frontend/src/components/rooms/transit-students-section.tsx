@@ -414,7 +414,7 @@ export function TransitStudentsSection({
             type="button"
             onClick={() => setCollapsibleExpanded((current) => !current)}
             aria-expanded={isExpanded}
-            className="group flex w-full min-w-0 items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:outline-none"
+            className="group flex w-full min-w-0 items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none"
           >
             <ConceptIconTile
               concept={transitConcept}

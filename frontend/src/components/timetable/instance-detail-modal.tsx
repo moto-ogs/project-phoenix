@@ -57,7 +57,6 @@ import { OriginChip } from "~/components/ui/planning/origin-chip";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { SectionLabel } from "~/components/ui/section-label";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
-import { LOCATION_COLORS } from "~/lib/location-helper";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import {
   useAttendanceWebEnabled,
@@ -1458,10 +1457,7 @@ function StudentGroup({
                   : ""}
                 {student.note ? ` • ${student.note}` : ""}
                 {student.earlyPickupTime ? (
-                  <span
-                    className="font-semibold"
-                    style={{ color: LOCATION_COLORS.WARNING }}
-                  >
+                  <span className="text-moto-amber-strong font-semibold">
                     {` • Abholung ${student.earlyPickupTime} Uhr`}
                   </span>
                 ) : null}

@@ -98,10 +98,7 @@ export function OfferingRequestChanges({
           previewSelection !== undefined && previewSelection.new !== entry.new;
         const displayedNew = previewSelection?.new ?? entry.new;
         return (
-          <div
-            key={entry.offering_id}
-            className={`text-sm wrap-anywhere ${isRemoved ? "opacity-50" : ""}`}
-          >
+          <div key={entry.offering_id} className="text-sm wrap-anywhere">
             <span className="text-xs text-gray-500">{entry.label}: </span>
             {/* Eine Kursanfrage sieht sonst aus wie jede andere
                     Angebotsänderung (#3075). Das Mitarbeiterportal ist

@@ -151,10 +151,7 @@ function AttendanceTag({ instance }: { readonly instance: CarePlanInstance }) {
   }
   if (status === "present") {
     return (
-      <span
-        className="inline-flex items-center gap-1 text-xs font-medium"
-        style={{ color: LOCATION_COLORS.GROUP_ROOM }}
-      >
+      <span className="text-moto-green-strong inline-flex items-center gap-1 text-xs font-medium">
         <Check className="h-3 w-3" aria-hidden="true" /> anwesend
         {isUnplanned ? " (spontan)" : ""}
       </span>

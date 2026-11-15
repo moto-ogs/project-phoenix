@@ -231,9 +231,9 @@ function TagesplanRow({
   const metaParts: ReactNode[] = [
     instance.status === "completed" ? "Beendet" : null,
     missed ? "Nicht gestartet" : null,
-    over && !cancelled && !missed && instance.status !== "completed"
-      ? "Vorbei"
-      : null,
+    // Ein Dienst wird nie gestartet: „Beendet" und „Nicht gestartet"
+    // passen nicht, er ist schlicht vorbei.
+    ended && isDuty ? "Vorbei" : null,
     isDuty ? "Dienst" : null,
     room ? (
       <Fragment key="room">

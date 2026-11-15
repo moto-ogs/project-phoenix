@@ -1103,7 +1103,7 @@ export function CareScheduleManager({
             </Button>
           </div>
           {isCurrentWeek ? (
-            <span className="absolute left-1/2 hidden h-9 -translate-x-1/2 items-center justify-center rounded-full bg-gray-100 px-3 text-sm font-semibold text-gray-500 sm:inline-flex">
+            <span className="absolute left-1/2 hidden h-9 -translate-x-1/2 items-center justify-center rounded-full bg-gray-100 px-3 text-sm font-semibold text-gray-600 sm:inline-flex">
               Aktuelle Woche
             </span>
           ) : (

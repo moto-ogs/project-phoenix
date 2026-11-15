@@ -1242,7 +1242,6 @@ export function StaffSessionTable({
         rowTone={(row) =>
           row.isToday ? "today" : row.isWeekend ? "muted" : null
         }
-        rowClassName={(row) => (row.isFuture ? "opacity-40" : "")}
         emptyState="In diesem Zeitraum gibt es keine Tage."
       />
       {!isAdminView && (

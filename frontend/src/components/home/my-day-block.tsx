@@ -259,7 +259,9 @@ function BlockRow({
   const meta: ReactNode[] = [
     block.status === "completed" ? "Beendet" : null,
     missed ? "Nicht gestartet" : null,
-    ended && !missed ? "Vorbei" : null,
+    // Ein Dienst wird nie gestartet: „Beendet" und „Nicht gestartet"
+    // passen nicht, er ist schlicht vorbei.
+    ended && isDuty ? "Vorbei" : null,
     room ? (
       <Fragment key="room">
         <MotoConceptIcon

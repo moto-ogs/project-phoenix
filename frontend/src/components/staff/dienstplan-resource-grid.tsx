@@ -208,10 +208,7 @@ function AssignmentCard({
     );
   } else if (assignment.isSubstitute) {
     assignmentStatus = (
-      <span
-        className="mt-1 block text-xs font-semibold"
-        style={{ color: LOCATION_COLORS.OTHER_ROOM }}
-      >
+      <span className="text-moto-blue-strong mt-1 block text-xs font-semibold">
         Vertretung
       </span>
     );

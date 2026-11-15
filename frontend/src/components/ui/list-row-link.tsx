@@ -125,26 +125,21 @@ export function ListRowLink({
     <span className="flex shrink-0 items-center gap-2">{badge}</span>
   ) : null;
 
+  // Nebentext: auf dem grünen Grund der Auswahl reicht gray-500 nicht für
+  // 4,5:1 (#7110), dort eine Stufe dunkler.
+  const mutedTone = selected ? "text-gray-600" : "text-gray-500";
+  const subtitleTone = unread ? "text-gray-700" : mutedTone;
   const text = stacked ? (
     <span className={cn("min-w-0 flex-1 space-y-0.5", contentClassName)}>
       <span className="flex min-w-0 items-center justify-between gap-2">
-        <span
-          className={cn(
-            "min-w-0 truncate text-xs font-medium",
-            selected ? "text-gray-600" : "text-gray-500",
-          )}
-        >
+        <span className={cn("min-w-0 truncate text-xs font-medium", mutedTone)}>
           {overline}
         </span>
         {meta != null ? (
           <span
             className={cn(
               "shrink-0 text-xs tabular-nums",
-              unread
-                ? "text-moto-blue-strong font-semibold"
-                : selected
-                  ? "text-gray-600"
-                  : "text-gray-500",
+              unread ? "text-moto-blue-strong font-semibold" : mutedTone,
             )}
           >
             {metaLabel ? (
@@ -174,13 +169,7 @@ export function ListRowLink({
           className={cn(
             "block min-w-0 text-sm",
             wrapSubtitle ? "break-words whitespace-normal" : "truncate",
-            // Auf dem grünen Grund der Auswahl reicht gray-500 nicht für
-            // 4,5:1 (#7110).
-            unread
-              ? "text-gray-700"
-              : selected
-                ? "text-gray-600"
-                : "text-gray-500",
+            subtitleTone,
           )}
         >
           {subtitle}
@@ -199,19 +188,7 @@ export function ListRowLink({
         {title}
       </span>
       {subtitle ? (
-        <span
-          className={cn(
-            "block text-xs",
-            // Auf dem grünen Grund der Auswahl reicht gray-500 nicht für
-            // 4,5:1 (#7110).
-            unread
-              ? "text-gray-700"
-              : selected
-                ? "text-gray-600"
-                : "text-gray-500",
-            framed && "mt-1",
-          )}
-        >
+        <span className={cn("block text-xs", subtitleTone, framed && "mt-1")}>
           {subtitle}
         </span>
       ) : null}
