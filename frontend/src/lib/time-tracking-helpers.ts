@@ -654,33 +654,7 @@ export function mapWorkSessionEditResponse(
   };
 }
 
-/**
- * Formats duration in minutes to human-readable string
- * @param minutes - Duration in minutes
- * @returns Formatted string like "6h 30min" or "0min" or "--"
- */
-export function formatDuration(minutes: number | null | undefined): string {
-  if (minutes === null || minutes === undefined || Number.isNaN(minutes)) {
-    return "--";
-  }
-
-  if (minutes === 0) {
-    return "0min";
-  }
-
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-
-  if (hours === 0) {
-    return `${mins}min`;
-  }
-
-  if (mins === 0) {
-    return `${hours}h`;
-  }
-
-  return `${hours}h ${mins}min`;
-}
+export { formatDuration } from "~/lib/duration-format";
 
 /** A time field the person emptied (#6293). */
 export const TIME_REQUIRED_HINT = "Bitte eine Uhrzeit eintragen.";

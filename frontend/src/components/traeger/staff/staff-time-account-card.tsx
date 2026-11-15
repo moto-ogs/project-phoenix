@@ -10,8 +10,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Lock, LockOpen } from "lucide-react";
 
 import { MonthCloseReasonModal } from "~/components/staff/month-close-modal";
-import { formatSignedDuration } from "~/components/staff/staff-time-views";
-import { monthLabel } from "~/components/time-tracking/monatskarte";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -24,7 +22,11 @@ import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
-import { formatDuration } from "~/lib/time-tracking-helpers";
+import {
+  formatDuration,
+  formatSignedDuration,
+  monthLabel,
+} from "~/lib/duration-format";
 import {
   closeTraegerTimeAccountMonth,
   fetchTraegerTimeAccount,

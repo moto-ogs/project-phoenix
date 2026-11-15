@@ -27,25 +27,9 @@ import {
   formatDuration,
 } from "~/lib/time-tracking-helpers";
 import type { MonthSummary } from "~/lib/time-tracking-helpers";
+import { monthLabel } from "~/lib/duration-format";
 
-const MONTH_NAMES = [
-  "Januar",
-  "Februar",
-  "März",
-  "April",
-  "Mai",
-  "Juni",
-  "Juli",
-  "August",
-  "September",
-  "Oktober",
-  "November",
-  "Dezember",
-] as const;
-
-export function monthLabel(year: number, month: number): string {
-  return `${MONTH_NAMES[month - 1] ?? ""} ${year}`;
-}
+export { monthLabel };
 
 function formatDays(days: number): string {
   const value = days.toLocaleString("de-DE", { maximumFractionDigits: 1 });
