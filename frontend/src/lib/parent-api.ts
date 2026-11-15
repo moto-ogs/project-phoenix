@@ -1153,7 +1153,7 @@ interface ParentReaders {
 // state; requires_acknowledgement tells the app whether to offer the
 // "gelesen und bestätigt" action.
 /** The letter one of the family's children got (#4813). */
-export interface ParentAnnouncementLetter {
+interface ParentAnnouncementLetter {
   readonly student_id: string;
   readonly first_name: string;
   readonly last_name: string;

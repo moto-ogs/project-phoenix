@@ -22,7 +22,7 @@ import { useSWRAuth } from "~/lib/swr";
 import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 
 /** A child the preview can show. */
-export interface LetterPreviewChild {
+interface LetterPreviewChild {
   readonly value: string;
   readonly label: string;
 }

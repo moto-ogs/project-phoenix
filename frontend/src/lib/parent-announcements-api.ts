@@ -896,7 +896,7 @@ export async function previewLetter(
 }
 
 /** Download address of every letter of a dispatch as one PDF. */
-export function letterPrintUrl(id: string, base = BASE): string {
+function letterPrintUrl(id: string, base = BASE): string {
   return `${base}/${encodeURIComponent(id)}/letters-pdf`;
 }
 
