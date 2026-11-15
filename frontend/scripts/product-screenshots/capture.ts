@@ -157,8 +157,8 @@ async function login(
   try {
     if (portal === "eltern") {
       await page.goto(`${origin}/login`, { waitUntil: "domcontentloaded" });
-      await page.fill("#parent-email", credentials.email);
-      await page.fill("#parent-password", credentials.password);
+      await page.fill("#email", credentials.email);
+      await page.fill("#password", credentials.password);
       await page.click('button[type="submit"]');
       await page.waitForURL((url) => !url.pathname.startsWith("/login"), {
         timeout: 30_000,

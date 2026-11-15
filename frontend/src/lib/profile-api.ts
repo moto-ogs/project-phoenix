@@ -119,7 +119,7 @@ export async function uploadAvatar(file: File): Promise<Profile> {
 
     if (response.status === 401) {
       clearSessionCache();
-      const { handleAuthFailure } = await import("./auth-api");
+      const { handleAuthFailure } = await import("./auth-failure");
       const refreshed = await handleAuthFailure();
       // The session lookup persists the rotated cookie before the retry.
       if (refreshed && hasSessionAccess(await getCachedSession())) {

@@ -56,7 +56,7 @@ describe("ResetPasswordPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockToken = "valid-reset-token";
-    vi.mocked(confirmPasswordReset).mockResolvedValue({ message: "success" });
+    vi.mocked(confirmPasswordReset).mockResolvedValue(undefined);
     mockUseTenant.mockReturnValue({
       tenantSlug: "demo-school",
       tenant: null,
@@ -122,28 +122,16 @@ describe("ResetPasswordPage", () => {
     expect(backLink).toHaveAttribute("href", "/");
   });
 
-  it("disables inputs when token is missing", async () => {
+  it("offers a new link instead of the form when the token is missing", () => {
     mockToken = null;
 
     render(<ResetPasswordPage />);
 
-    await waitFor(() => {
-      expect(screen.getByLabelText("Neues Passwort")).toBeDisabled();
-      expect(screen.getByLabelText("Passwort bestätigen")).toBeDisabled();
-    });
-  });
-
-  it("disables submit button when token is missing", async () => {
-    mockToken = null;
-
-    render(<ResetPasswordPage />);
-
-    await waitFor(() => {
-      const submitButton = screen.getByRole("button", {
-        name: /Passwort ändern/i,
-      });
-      expect(submitButton).toBeDisabled();
-    });
+    // Anker: der Weg zum neuen Link steht da.
+    expect(
+      screen.getByRole("link", { name: "Neuen Link anfordern" }),
+    ).toHaveAttribute("href", "/?passwort-vergessen=1");
+    expect(screen.queryByLabelText("Neues Passwort")).not.toBeInTheDocument();
   });
 
   it("has password visibility toggle buttons", () => {
@@ -206,6 +194,7 @@ describe("ResetPasswordPage", () => {
 
     await waitFor(() => {
       expect(confirmPasswordReset).toHaveBeenCalledWith(
+        "tenant",
         "valid-reset-token",
         "ValidPass1!",
         "ValidPass1!",

@@ -6,46 +6,41 @@ import React, {
   useLayoutEffect,
   useRef,
   useState,
-  type RefObject,
 } from "react";
 import { Modal } from "~/components/ui/modal";
 import { Button } from "~/components/ui/button";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { SpinnerIcon } from "~/components/ui/icons";
-import { Input, type InputControlSize } from "~/components/ui/input";
-import type { DatabaseFormErrorPath } from "~/components/database/database-form";
-import { wireErrorCode } from "~/lib/api-error";
-import { requestPasswordReset, type ApiError } from "~/lib/auth-api";
+import { Input } from "~/components/ui/input";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { ApiError, wireErrorCode } from "~/lib/api-error";
+import { requestPasswordReset } from "~/lib/auth-api";
+import type { PasswordResetPortal } from "~/lib/portal-paths";
 import { looksLikeEmail } from "~/lib/email-format";
+import { errorStatus } from "~/lib/expected-failure";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "PasswordReset" });
 
+/**
+ * The end of the wait after too many requests. Storage is per origin, and
+ * every portal has its own host, so one key serves them all.
+ */
+const RATE_LIMIT_STORAGE_KEY = "passwordResetRateLimitUntil";
+
 interface PasswordResetModalProps {
+  readonly portal: PasswordResetPortal;
   readonly isOpen: boolean;
   readonly onClose: () => void;
-  readonly onRequestReset?: (email: string) => Promise<{ message: string }>;
-  readonly rateLimitStorageKey?: string;
-  /** Matches the reset field to the owning login form. */
-  readonly inputControlSize?: InputControlSize;
   readonly copy?: PasswordResetModalCopy;
   /**
-   * The owner's shared API error path (`useApiFormError`), handed in by the
-   * page (#2517). A failed request shows the
-   * catalog text of its code in the dialog, a field error marks the address,
-   * and the wait after too many requests is read from the code.
-   */
-  readonly errorPath: DatabaseFormErrorPath;
-  /** The element `errorPath` searches for a refused field to focus. */
-  readonly formRef?: RefObject<HTMLFormElement | null>;
-  /**
    * The address the login form already holds. Each opening starts with it,
-   * so nobody types it twice after a refused password (#7106).
+   * so nobody types it twice (#7106).
    */
   readonly initialEmail?: string;
 }
 
-interface PasswordResetModalCopy {
+export interface PasswordResetModalCopy {
   readonly title: string;
   readonly description: string;
   readonly emailLabel: string;
@@ -63,11 +58,11 @@ interface PasswordResetModalCopy {
    * Senden des Links"), and the wait shown next to the button after too
    * many requests.
    */
-  readonly errorObject?: string;
-  readonly rateLimitWait?: (countdown: string) => string;
+  readonly errorObject: string;
+  readonly rateLimitWait: (countdown: string) => string;
 }
 
-const DEFAULT_PASSWORD_RESET_MODAL_COPY: Required<PasswordResetModalCopy> = {
+export const DEFAULT_PASSWORD_RESET_MODAL_COPY: PasswordResetModalCopy = {
   title: "Passwort zurücksetzen",
   description:
     "Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.",
@@ -130,16 +125,14 @@ const formatCountdown = (totalSeconds: number): string => {
 };
 
 export function PasswordResetModal({
+  portal,
   isOpen,
   onClose,
-  onRequestReset = requestPasswordReset,
-  rateLimitStorageKey = "passwordResetRateLimitUntil",
-  inputControlSize = "large",
   copy = DEFAULT_PASSWORD_RESET_MODAL_COPY,
-  errorPath,
-  formRef,
   initialEmail = "",
 }: PasswordResetModalProps) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const errorPath = useApiFormError(formRef);
   const [email, setEmail] = useState(isOpen ? initialEmail.trim() : "");
   // The dialog stays mounted while closed: each opening takes the login
   // form's address anew.
@@ -156,17 +149,16 @@ export function PasswordResetModal({
   const clearPathError = errorPath.clear;
 
   useEffect(() => {
-    if (typeof globalThis === "undefined") return;
-    const stored = globalThis.localStorage.getItem(rateLimitStorageKey);
+    const stored = globalThis.localStorage.getItem(RATE_LIMIT_STORAGE_KEY);
     if (!stored) return;
 
     const timestamp = Number(stored);
     if (!Number.isNaN(timestamp) && timestamp > Date.now()) {
       setRateLimitUntil(timestamp);
     } else if (!Number.isNaN(timestamp)) {
-      globalThis.localStorage.removeItem(rateLimitStorageKey);
+      globalThis.localStorage.removeItem(RATE_LIMIT_STORAGE_KEY);
     }
-  }, [rateLimitStorageKey]);
+  }, []);
 
   useEffect(() => {
     if (!rateLimitUntil) {
@@ -179,9 +171,7 @@ export function PasswordResetModal({
       if (rateLimitUntil <= now) {
         setRateLimitUntil(null);
         setSecondsRemaining(0);
-        if (typeof globalThis !== "undefined") {
-          globalThis.localStorage.removeItem(rateLimitStorageKey);
-        }
+        globalThis.localStorage.removeItem(RATE_LIMIT_STORAGE_KEY);
         clearPathError();
       } else {
         // The catalog text stays in the alert; the countdown runs next to
@@ -193,13 +183,12 @@ export function PasswordResetModal({
     updateCountdown();
     const intervalId = globalThis.setInterval(updateCountdown, 1000);
     return () => globalThis.clearInterval(intervalId);
-  }, [rateLimitStorageKey, rateLimitUntil, clearPathError]);
+  }, [rateLimitUntil, clearPathError]);
 
   const rateLimitActive =
     rateLimitUntil !== null && rateLimitUntil > Date.now();
 
   const handleClose = useCallback(() => {
-    setEmail("");
     clearPathError();
     setIsSuccess(false);
     setIsLoading(false);
@@ -212,18 +201,14 @@ export function PasswordResetModal({
     const retryUntil = Date.now() + retrySeconds * 1000;
     setRateLimitUntil(retryUntil);
     setSecondsRemaining(retrySeconds);
-    if (typeof globalThis !== "undefined") {
-      // This is a numeric rate-limit expiry, not an authentication token.
-      globalThis.localStorage.setItem(
-        rateLimitStorageKey,
-        retryUntil.toString(),
-      );
-    }
-    return retrySeconds;
+    // This is a numeric rate-limit expiry, not an authentication token.
+    globalThis.localStorage.setItem(
+      RATE_LIMIT_STORAGE_KEY,
+      retryUntil.toString(),
+    );
   };
 
-  const errorObject =
-    copy.errorObject ?? DEFAULT_PASSWORD_RESET_MODAL_COPY.errorObject;
+  const errorObject = copy.errorObject;
 
   const submit = async () => {
     const path = errorPath;
@@ -235,22 +220,30 @@ export function PasswordResetModal({
     }
     setIsLoading(true);
     try {
-      await onRequestReset(address);
+      await requestPasswordReset(portal, address);
       setIsSuccess(true);
     } catch (err) {
-      const apiError = err as ApiError | undefined;
       if (
-        wireErrorCode(apiError?.code) === "identity.password_reset_rate_limited"
+        err instanceof ApiError &&
+        wireErrorCode(err.code) === "identity.password_reset_rate_limited"
       ) {
         logger.warn("password_reset_rate_limited", {
           error: "rate_limit_exceeded",
         });
-        startRateLimit(apiError?.retryAfterSeconds);
+        startRateLimit(err.retryAfterSeconds);
         void path.show(err, { object: errorObject });
       } else {
-        logger.error("password_reset_failed", {
+        const status = errorStatus(err);
+        const failure = {
           error: err instanceof Error ? err.message : String(err),
-        });
+          status,
+        };
+        // A refused address is no defect.
+        if (status !== undefined && status >= 400 && status < 500) {
+          logger.warn("password_reset_failed", failure);
+        } else {
+          logger.error("password_reset_failed", failure);
+        }
         void path.show(err, {
           object: errorObject,
           retry: () => latestSubmitRef.current(),
@@ -314,16 +307,15 @@ export function PasswordResetModal({
               <FormErrorAlert message={errorPath.error} />
               {rateLimitActive ? (
                 <p className="text-sm text-gray-600" role="status">
-                  {(
-                    copy.rateLimitWait ??
-                    DEFAULT_PASSWORD_RESET_MODAL_COPY.rateLimitWait
-                  )(formatCountdown(Math.max(secondsRemaining, 0)))}
+                  {copy.rateLimitWait(
+                    formatCountdown(Math.max(secondsRemaining, 0)),
+                  )}
                 </p>
               ) : null}
 
               <div className="text-left">
                 <Input
-                  controlSize={inputControlSize}
+                  controlSize="touch"
                   id="reset-email"
                   name="email"
                   type="email"

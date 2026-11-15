@@ -14,7 +14,10 @@
   "staffLoginLink": "Shko te hyrja e shkollës",
   "errors": {
     "rateLimited": "Shumë përpjekje hyrjeje. Ju lutemi provoni më vonë.",
-    "notAGuardian": "Kjo llogari i përket personelit të shkollës. Ju lutemi përdorni hyrjen e shkollës."
+    "notAGuardian": "Kjo llogari i përket personelit të shkollës. Ju lutemi përdorni hyrjen e shkollës.",
+    "missingEmail": "Ju lutemi shkruani adresën tuaj të email-it.",
+    "missingPassword": "Ju lutemi shkruani fjalëkalimin tuaj.",
+    "missingCredentials": "Ju lutemi shkruani adresën e email-it dhe fjalëkalimin."
   },
   "errorObject": "hyrja"
 }

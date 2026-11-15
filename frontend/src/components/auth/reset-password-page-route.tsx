@@ -7,7 +7,7 @@ import { Loading } from "~/components/ui/loading";
 export function ResetPasswordPageRoute() {
   return (
     <Suspense fallback={<Loading />}>
-      <ResetPasswordPageContent />
+      <ResetPasswordPageContent portal="tenant" />
     </Suspense>
   );
 }
