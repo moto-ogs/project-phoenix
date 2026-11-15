@@ -5,14 +5,11 @@
  * to the access log; the browser only asks for it and saves it.
  */
 
-import type { ExportFileFormat } from "~/components/ui/export-formats";
-
 import { apiErrorFromBody, transportFetch } from "./api-error";
 import { filenameFromDisposition } from "./file-download";
-import { readJson } from "./traeger-api";
 
 /** The formats of a Träger list export. */
-export type TraegerListFormat = Exclude<ExportFileFormat, "docx">;
+export type TraegerListFormat = "pdf" | "xlsx" | "csv";
 
 /** The formats in the order of the download menu. */
 export const TRAEGER_LIST_FORMATS: readonly TraegerListFormat[] = [
@@ -49,11 +46,22 @@ export async function downloadTraegerList(
     throw apiErrorFromBody(
       `Request failed (${response.status})`,
       response.status,
-      await readJson(response),
+      await errorBody(response),
     );
   }
   return {
     blob: await response.blob(),
     filename: filenameFromDisposition(response),
   };
+}
+
+/** The error body of a refused download; null for an empty or broken one. */
+async function errorBody(response: Response): Promise<unknown> {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
 }
