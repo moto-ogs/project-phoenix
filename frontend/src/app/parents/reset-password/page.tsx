@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { ResetPasswordPageContent } from "~/components/auth/reset-password-page-content";
 import { AuthShellSkeleton } from "~/components/auth/auth-shell";
 import { buildParentAuthShellCopy } from "~/components/auth/parent-auth-shell-copy";
-import { confirmParentPasswordReset } from "~/lib/auth-api";
 import { parentPath } from "~/lib/parent-url";
 
 const parentLoginPath = "/parents/login";
@@ -26,7 +25,7 @@ export default function ParentResetPasswordPage() {
   return (
     <Suspense fallback={<AuthShellSkeleton />}>
       <ResetPasswordPageContent
-        confirmReset={confirmParentPasswordReset}
+        portal="parent"
         successRedirectPath={loginPath}
         backHref={loginPath}
         backLabel={t("backToLogin")}

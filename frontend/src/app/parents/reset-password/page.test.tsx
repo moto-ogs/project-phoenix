@@ -34,10 +34,9 @@ vi.mock("~/lib/parent-url", () => ({
   parentPath: (path: string) => `https://parents.example.com${path}`,
 }));
 
-const confirmParentPasswordReset = vi.fn();
+const confirmPasswordReset = vi.fn();
 vi.mock("~/lib/auth-api", () => ({
-  confirmParentPasswordReset: (...args: unknown[]) =>
-    confirmParentPasswordReset(...args),
+  confirmPasswordReset: (...args: unknown[]) => confirmPasswordReset(...args),
 }));
 
 import ParentResetPasswordPage from "./page";
@@ -70,7 +69,7 @@ describe("ParentResetPasswordPage", () => {
   });
 
   it("shows a failed reset with the translated object of the shared path", async () => {
-    confirmParentPasswordReset.mockRejectedValue(
+    confirmPasswordReset.mockRejectedValue(
       new ApiError("diag", 503, { code: "general.unavailable" }),
     );
     render(<ParentResetPasswordPage />);

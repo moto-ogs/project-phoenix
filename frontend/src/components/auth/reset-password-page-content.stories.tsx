@@ -4,6 +4,7 @@ import { ResetPasswordPageContent } from "~/components/auth/reset-password-page-
 const meta: Meta<typeof ResetPasswordPageContent> = {
   title: "components/auth/ResetPasswordPageContent",
   component: ResetPasswordPageContent,
+  args: { portal: "tenant" },
   parameters: {
     nextjs: {
       appDirectory: true,

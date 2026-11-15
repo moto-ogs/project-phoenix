@@ -1,23 +1,14 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { useRef, type ComponentProps } from "react";
+import type { ComponentProps } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { PasswordResetModal } from "./password-reset-modal";
 
-/** The modal on the shared error path, as every owner mounts it. */
 function ResetModal(
-  props: Omit<
-    ComponentProps<typeof PasswordResetModal>,
-    "errorPath" | "formRef"
-  >,
+  props: Omit<ComponentProps<typeof PasswordResetModal>, "portal">,
 ) {
-  const formRef = useRef<HTMLFormElement>(null);
-  const errorPath = useApiFormError(formRef);
-  return (
-    <PasswordResetModal {...props} errorPath={errorPath} formRef={formRef} />
-  );
+  return <PasswordResetModal portal="tenant" {...props} />;
 }
 
 function rateLimited(retryAfterSeconds: number): ApiError {
@@ -98,8 +89,8 @@ vi.mock("~/components/ui/alert", () => ({
 
 const mockRequestPasswordReset = vi.fn();
 vi.mock("~/lib/auth-api", () => ({
-  requestPasswordReset: (email: string): unknown =>
-    mockRequestPasswordReset(email),
+  requestPasswordReset: (portal: string, email: string): unknown =>
+    mockRequestPasswordReset(portal, email),
 }));
 
 const localStorageMock = (() => {
@@ -138,21 +129,6 @@ describe("PasswordResetModal", () => {
 
     expect(screen.getByText(/Passwort zurücksetzen/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/E-Mail-Adresse/i)).toBeInTheDocument();
-  });
-
-  it("uses the requested email input size", () => {
-    render(
-      <ResetModal
-        isOpen={true}
-        onClose={mockOnClose}
-        inputControlSize="compact"
-      />,
-    );
-
-    expect(screen.getByTestId("input-reset-email")).toHaveAttribute(
-      "data-control-size",
-      "compact",
-    );
   });
 
   it("keeps a stable modal close handler while typing", () => {
@@ -266,7 +242,10 @@ describe("PasswordResetModal", () => {
     expect(await screen.findByTestId("alert-error")).toHaveTextContent(
       catalogText("general.input", "das Senden des Links"),
     );
-    expect(mockRequestPasswordReset).toHaveBeenCalledWith("test@example.com");
+    expect(mockRequestPasswordReset).toHaveBeenCalledWith(
+      "tenant",
+      "test@example.com",
+    );
   });
 
   it("handles rate limit errors with countdown", async () => {

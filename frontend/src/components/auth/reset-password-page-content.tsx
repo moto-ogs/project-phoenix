@@ -18,7 +18,7 @@ import { Loading } from "~/components/ui/loading";
 import { useApiFormError } from "~/contexts/ToastContext";
 import Link from "next/link";
 import { CheckIcon, SpinnerIcon } from "~/components/ui/icons";
-import { confirmPasswordReset } from "~/lib/auth-api";
+import { confirmPasswordReset, type PasswordResetPortal } from "~/lib/auth-api";
 import { errorStatus } from "~/lib/expected-failure";
 import { createLogger } from "~/lib/logger";
 import { useTenantSafe } from "~/lib/tenant-context";
@@ -29,14 +29,8 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 
 const logger = createLogger({ component: "ResetPasswordPage" });
 
-type ConfirmPasswordReset = (
-  token: string,
-  password: string,
-  confirmPassword: string,
-) => Promise<{ message: string }>;
-
 interface ResetPasswordPageContentProps {
-  readonly confirmReset?: ConfirmPasswordReset;
+  readonly portal: PasswordResetPortal;
   readonly successRedirectPath?: string;
   readonly backHref?: string;
   readonly backLabel?: string;
@@ -175,14 +169,14 @@ function PasswordField({
 }
 
 export function ResetPasswordPageContent({
-  confirmReset = confirmPasswordReset,
+  portal,
   successRedirectPath = "/",
   backHref = "/",
   backLabel = "Zurück zur Anmeldung",
   copy = DEFAULT_RESET_PASSWORD_PAGE_COPY,
   testimonialPanelCopy,
   noTokenAction,
-}: ResetPasswordPageContentProps = {}) {
+}: ResetPasswordPageContentProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   // Fehler über den gemeinsamen Weg (#2517): Katalogtext je Code, Feldfehler
@@ -263,7 +257,7 @@ export function ResetPasswordPageContent({
     setIsLoading(true);
 
     try {
-      await confirmReset(token, password, confirmPassword);
+      await confirmPasswordReset(portal, token, password, confirmPassword);
       setIsSuccess(true);
 
       setTimeout(() => {

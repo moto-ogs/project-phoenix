@@ -1,6 +1,6 @@
 // lib/auth-api.ts
 import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
-import { portalAuthPath } from "./portal-paths";
+import { portalAuthPath, type PortalKey } from "./portal-paths";
 export { handleAuthFailure, refreshToken } from "./auth-failure";
 import { createLogger } from "~/lib/logger";
 import { parseRetryAfter } from "./retry-after";
@@ -46,188 +46,55 @@ export async function buildApiError(
   return apiError;
 }
 
-/**
- * Request a password reset email for the given email address
- * @param email - The email address to send the reset link to
- * @returns Promise with success message or error
- */
-async function requestPasswordResetAt(
-  endpoint: string,
-  email: string,
-): Promise<{ message: string }> {
-  try {
-    const response = await transportFetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email }),
-    });
+/** A portal with a "Passwort vergessen?": every portal but the operator's. */
+export type PasswordResetPortal = Exclude<PortalKey, "operator">;
 
-    if (!response.ok) {
-      throw await buildApiError(
-        response,
-        "Fehler beim Senden der Passwort-Zurücksetzen-E-Mail",
-      );
-    }
-
-    return (await response.json()) as { message: string };
-  } catch (error) {
-    logger.error("password reset request error", { error: String(error) });
-    throw error;
-  }
-}
-
+/** Asks the portal to e-mail a reset link; the link lands on its own host. */
 export async function requestPasswordReset(
+  portal: PasswordResetPortal,
   email: string,
 ): Promise<{ message: string }> {
-  return requestPasswordResetAt(
-    portalAuthPath("tenant", "password-reset"),
-    email,
+  const response = await transportFetch(
+    portalAuthPath(portal, "password-reset"),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    },
   );
-}
-
-export async function requestParentPasswordReset(
-  email: string,
-): Promise<{ message: string }> {
-  return requestPasswordResetAt(
-    portalAuthPath("parent", "password-reset"),
-    email,
-  );
-}
-
-/**
- * Password reset from the school portal (#2207): same account-level reset
- * as the staff flow, but through a school-host route — the proxy blocks
- * /api/auth/* on the school host, so the request needs its own path.
- */
-export async function requestSchoolPasswordReset(
-  email: string,
-): Promise<{ message: string }> {
-  return requestPasswordResetAt(
-    portalAuthPath("school", "password-reset"),
-    email,
-  );
-}
-
-/**
- * Confirm password reset with token and new password
- * @param token - The reset token from the email link
- * @param password - The new password
- * @returns Promise with success message or error
- */
-export async function confirmPasswordReset(
-  token: string,
-  password: string,
-  confirmPassword: string,
-): Promise<{ message: string }> {
-  try {
-    const { authService } = await import("./auth-service");
-    return await authService.resetPassword({
-      token,
-      newPassword: password,
-      confirmPassword,
-    });
-  } catch (error) {
-    logger.error("password reset confirmation error", { error: String(error) });
-    throw error;
+  if (!response.ok) {
+    throw await buildApiError(
+      response,
+      "Fehler beim Senden der Passwort-Zurücksetzen-E-Mail",
+    );
   }
+  return (await response.json()) as { message: string };
 }
 
-export async function confirmParentPasswordReset(
+/** Sets the new password with the token from the portal's reset link. */
+export async function confirmPasswordReset(
+  portal: PasswordResetPortal,
   token: string,
   password: string,
   confirmPassword: string,
 ): Promise<{ message: string }> {
-  return confirmPasswordResetAt(
-    portalAuthPath("parent", "password-reset/confirm"),
-    token,
-    password,
-    confirmPassword,
+  const response = await transportFetch(
+    portalAuthPath(portal, "password-reset/confirm"),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token,
+        new_password: password,
+        confirm_password: confirmPassword,
+      }),
+    },
   );
-}
-
-export async function confirmSchoolPasswordReset(
-  token: string,
-  password: string,
-  confirmPassword: string,
-): Promise<{ message: string }> {
-  return confirmPasswordResetAt(
-    portalAuthPath("school", "password-reset/confirm"),
-    token,
-    password,
-    confirmPassword,
-  );
-}
-
-/** The caterer portal's reset: the link lands on the caterer host (ADR 0077). */
-export async function requestCatererPasswordReset(
-  email: string,
-): Promise<{ message: string }> {
-  return requestPasswordResetAt(
-    portalAuthPath("caterer", "password-reset"),
-    email,
-  );
-}
-
-export async function confirmCatererPasswordReset(
-  token: string,
-  password: string,
-  confirmPassword: string,
-): Promise<{ message: string }> {
-  return confirmPasswordResetAt(
-    portalAuthPath("caterer", "password-reset/confirm"),
-    token,
-    password,
-    confirmPassword,
-  );
-}
-
-/** The Träger-Portal's reset: the link lands on the Träger host (#5149). */
-export async function requestTraegerPasswordReset(
-  email: string,
-): Promise<{ message: string }> {
-  return requestPasswordResetAt(
-    portalAuthPath("traeger", "password-reset"),
-    email,
-  );
-}
-
-export async function confirmTraegerPasswordReset(
-  token: string,
-  password: string,
-  confirmPassword: string,
-): Promise<{ message: string }> {
-  return confirmPasswordResetAt(
-    portalAuthPath("traeger", "password-reset/confirm"),
-    token,
-    password,
-    confirmPassword,
-  );
-}
-
-async function confirmPasswordResetAt(
-  endpoint: string,
-  token: string,
-  password: string,
-  confirmPassword: string,
-): Promise<{ message: string }> {
-  const response = await transportFetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      token,
-      new_password: password,
-      confirm_password: confirmPassword,
-    }),
-  });
-
   if (!response.ok) {
     throw await buildApiError(
       response,
       "Fehler beim Zurücksetzen des Passworts",
     );
   }
-
   return (await response.json()) as { message: string };
 }

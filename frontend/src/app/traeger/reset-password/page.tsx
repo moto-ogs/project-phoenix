@@ -6,8 +6,7 @@ import {
   ResetPasswordPageContent,
 } from "~/components/auth/reset-password-page-content";
 import { AuthShellSkeleton } from "~/components/auth/auth-shell";
-import { confirmTraegerPasswordReset } from "~/lib/auth-api";
-import { TRAEGER_FORGOT_PASSWORD_PARAM } from "~/lib/traeger-login-params";
+import { FORGOT_PASSWORD_PARAM } from "~/lib/login-params";
 import { traegerPath } from "~/lib/traeger-url";
 
 // Without a token the page shows no form, only the way to a new link: the
@@ -24,14 +23,14 @@ export default function TraegerResetPasswordPage() {
   return (
     <Suspense fallback={<AuthShellSkeleton />}>
       <ResetPasswordPageContent
-        confirmReset={confirmTraegerPasswordReset}
+        portal="traeger"
         successRedirectPath={loginPath}
         backHref={loginPath}
         backLabel="Zurück zur Anmeldung"
         copy={TRAEGER_RESET_COPY}
         noTokenAction={{
           label: "Neuen Link anfordern",
-          href: `${loginPath}?${TRAEGER_FORGOT_PASSWORD_PARAM}=1`,
+          href: `${loginPath}?${FORGOT_PASSWORD_PARAM}=1`,
           subtitle: "Dafür brauchen Sie einen neuen Link.",
         }}
       />

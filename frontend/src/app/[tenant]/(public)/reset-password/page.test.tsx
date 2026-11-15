@@ -206,6 +206,7 @@ describe("ResetPasswordPage", () => {
 
     await waitFor(() => {
       expect(confirmPasswordReset).toHaveBeenCalledWith(
+        "tenant",
         "valid-reset-token",
         "ValidPass1!",
         "ValidPass1!",

@@ -3,9 +3,7 @@ import {
   refreshToken,
   handleAuthFailure,
   requestPasswordReset,
-  requestParentPasswordReset,
   confirmPasswordReset,
-  confirmParentPasswordReset,
   type ApiError,
 } from "./auth-api";
 import { runTenantSessionEnd } from "./tenant-session-end";
@@ -13,13 +11,6 @@ import { runTenantSessionEnd } from "./tenant-session-end";
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
   signOut: vi.fn(),
-}));
-
-// Mock auth-service
-vi.mock("./auth-service", () => ({
-  authService: {
-    resetPassword: vi.fn(),
-  },
 }));
 
 // Helper to setup browser environment
@@ -449,7 +440,7 @@ describe("auth-api", () => {
         json: () => Promise.resolve(mockResponse),
       });
 
-      const result = await requestPasswordReset("test@example.com");
+      const result = await requestPasswordReset("tenant", "test@example.com");
 
       expect(result).toEqual(mockResponse);
       expect(global.fetch).toHaveBeenCalledWith("/api/auth/password-reset", {
@@ -474,9 +465,9 @@ describe("auth-api", () => {
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
-      await expect(requestPasswordReset("test@example.com")).rejects.toThrow(
-        "Fehler beim Senden der Passwort-Zurücksetzen-E-Mail",
-      );
+      await expect(
+        requestPasswordReset("tenant", "test@example.com"),
+      ).rejects.toThrow("Fehler beim Senden der Passwort-Zurücksetzen-E-Mail");
     });
 
     it("throws ApiError with text error message", async () => {
@@ -491,9 +482,9 @@ describe("auth-api", () => {
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
-      await expect(requestPasswordReset("test@example.com")).rejects.toThrow(
-        "Internal server error",
-      );
+      await expect(
+        requestPasswordReset("tenant", "test@example.com"),
+      ).rejects.toThrow("Internal server error");
     });
 
     it("throws ApiError with retryAfterSeconds from Retry-After header (numeric)", async () => {
@@ -510,7 +501,7 @@ describe("auth-api", () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
 
       try {
-        await requestPasswordReset("test@example.com");
+        await requestPasswordReset("tenant", "test@example.com");
         expect.fail("Should have thrown");
       } catch (error) {
         const apiError = error as ApiError;
@@ -535,7 +526,7 @@ describe("auth-api", () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
 
       try {
-        await requestPasswordReset("test@example.com");
+        await requestPasswordReset("tenant", "test@example.com");
         expect.fail("Should have thrown");
       } catch (error) {
         const apiError = error as ApiError;
@@ -557,108 +548,58 @@ describe("auth-api", () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       vi.spyOn(console, "warn").mockImplementation(() => {});
 
-      await expect(requestPasswordReset("test@example.com")).rejects.toThrow(
-        "Fehler beim Senden der Passwort-Zurücksetzen-E-Mail",
-      );
+      await expect(
+        requestPasswordReset("tenant", "test@example.com"),
+      ).rejects.toThrow("Fehler beim Senden der Passwort-Zurücksetzen-E-Mail");
     });
   });
 
-  describe("requestParentPasswordReset", () => {
-    it("posts to the parent password reset endpoint", async () => {
-      const mockResponse = { message: "Password reset email sent" };
+  describe("each portal's own endpoints", () => {
+    it.each([
+      ["tenant", "/api/auth"],
+      ["parent", "/api/parent/auth"],
+      ["school", "/api/school/auth"],
+      ["caterer", "/api/caterer/auth"],
+      ["traeger", "/api/traeger/auth"],
+    ] as const)(
+      "%s posts the request and the confirmation under %s",
+      async (portal, base) => {
+        global.fetch = vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ message: "ok" }),
+        });
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-      });
+        await requestPasswordReset(portal, "person@example.com");
+        await confirmPasswordReset(
+          portal,
+          "token",
+          "Str0ngP@ss1",
+          "Str0ngP@ss1",
+        );
 
-      const result = await requestParentPasswordReset("parent@example.com");
-
-      expect(result).toEqual(mockResponse);
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/parent/auth/password-reset",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email: "parent@example.com" }),
-        },
-      );
-    });
+        expect(global.fetch).toHaveBeenNthCalledWith(
+          1,
+          `${base}/password-reset`,
+          expect.objectContaining({
+            body: JSON.stringify({ email: "person@example.com" }),
+          }),
+        );
+        expect(global.fetch).toHaveBeenNthCalledWith(
+          2,
+          `${base}/password-reset/confirm`,
+          expect.objectContaining({
+            body: JSON.stringify({
+              token: "token",
+              new_password: "Str0ngP@ss1",
+              confirm_password: "Str0ngP@ss1",
+            }),
+          }),
+        );
+      },
+    );
   });
 
   describe("confirmPasswordReset", () => {
-    it("calls authService.resetPassword with correct params", async () => {
-      const { authService } = await import("./auth-service");
-      vi.mocked(authService.resetPassword).mockResolvedValue({
-        message: "Password reset successful",
-      });
-
-      const result = await confirmPasswordReset(
-        "reset-token",
-        "newPassword123",
-        "newPassword123",
-      );
-
-      expect(result).toEqual({ message: "Password reset successful" });
-      expect(authService.resetPassword).toHaveBeenCalledWith({
-        token: "reset-token",
-        newPassword: "newPassword123",
-        confirmPassword: "newPassword123",
-      });
-    });
-
-    it("throws error when authService.resetPassword fails", async () => {
-      const { authService } = await import("./auth-service");
-      vi.mocked(authService.resetPassword).mockRejectedValue(
-        new Error("Invalid token"),
-      );
-
-      vi.spyOn(console, "error").mockImplementation(() => {});
-
-      await expect(
-        confirmPasswordReset(
-          "invalid-token",
-          "newPassword123",
-          "newPassword123",
-        ),
-      ).rejects.toThrow("Invalid token");
-    });
-  });
-
-  describe("confirmParentPasswordReset", () => {
-    it("posts reset confirmation to the parent endpoint", async () => {
-      const mockResponse = { message: "Password reset successful" };
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-      });
-
-      const result = await confirmParentPasswordReset(
-        "reset-token",
-        "newPassword123!",
-        "newPassword123!",
-      );
-
-      expect(result).toEqual(mockResponse);
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/parent/auth/password-reset/confirm",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            token: "reset-token",
-            new_password: "newPassword123!",
-            confirm_password: "newPassword123!",
-          }),
-        },
-      );
-    });
-
     it("throws a typed ApiError carrying the backend status on failure", async () => {
       // The reset page branches on status (410 expired / 404 not found / 400
       // invalid) to pick its German error copy. If this client swallowed the
@@ -673,12 +614,13 @@ describe("auth-api", () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
 
       try {
-        await confirmParentPasswordReset(
+        await confirmPasswordReset(
+          "parent",
           "expired",
           "Str0ngP@ss1",
           "Str0ngP@ss1",
         );
-        expect.fail("expected confirmParentPasswordReset to reject");
+        expect.fail("expected confirmPasswordReset to reject");
       } catch (error) {
         const apiError = error as ApiError;
         expect(apiError.status).toBe(410);
@@ -702,7 +644,7 @@ describe("auth-api", () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
 
       try {
-        await requestPasswordReset("test@example.com");
+        await requestPasswordReset("tenant", "test@example.com");
         expect.fail("Should have thrown");
       } catch (error) {
         const apiError = error as ApiError;
@@ -724,7 +666,7 @@ describe("auth-api", () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
 
       try {
-        await requestPasswordReset("test@example.com");
+        await requestPasswordReset("tenant", "test@example.com");
         expect.fail("Should have thrown");
       } catch (error) {
         const apiError = error as ApiError;
@@ -748,7 +690,7 @@ describe("auth-api", () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
 
       try {
-        await requestPasswordReset("test@example.com");
+        await requestPasswordReset("tenant", "test@example.com");
         expect.fail("Should have thrown");
       } catch (error) {
         const apiError = error as ApiError;
@@ -770,7 +712,7 @@ describe("auth-api", () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
 
       try {
-        await requestPasswordReset("test@example.com");
+        await requestPasswordReset("tenant", "test@example.com");
         expect.fail("Should have thrown");
       } catch (error) {
         const apiError = error as ApiError;
@@ -797,7 +739,7 @@ describe("auth-api", () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
 
       await expect(
-        requestPasswordReset("test@example.com"),
+        requestPasswordReset("tenant", "test@example.com"),
       ).rejects.toMatchObject({
         status: 409,
         code: "identity.email_conflict",
@@ -819,9 +761,9 @@ describe("auth-api", () => {
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
-      await expect(requestPasswordReset("test@example.com")).rejects.toThrow(
-        "Fehler beim Senden der Passwort-Zurücksetzen-E-Mail",
-      );
+      await expect(
+        requestPasswordReset("tenant", "test@example.com"),
+      ).rejects.toThrow("Fehler beim Senden der Passwort-Zurücksetzen-E-Mail");
     });
 
     it("does not read a legacy message field as the diagnostic", async () => {
@@ -836,9 +778,9 @@ describe("auth-api", () => {
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
-      await expect(requestPasswordReset("test@example.com")).rejects.toThrow(
-        "Fehler beim Senden der Passwort-Zurücksetzen-E-Mail",
-      );
+      await expect(
+        requestPasswordReset("tenant", "test@example.com"),
+      ).rejects.toThrow("Fehler beim Senden der Passwort-Zurücksetzen-E-Mail");
     });
 
     it("uses fallback message for empty JSON response", async () => {
@@ -853,9 +795,9 @@ describe("auth-api", () => {
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
-      await expect(requestPasswordReset("test@example.com")).rejects.toThrow(
-        "Fehler beim Senden der Passwort-Zurücksetzen-E-Mail",
-      );
+      await expect(
+        requestPasswordReset("tenant", "test@example.com"),
+      ).rejects.toThrow("Fehler beim Senden der Passwort-Zurücksetzen-E-Mail");
     });
 
     it("uses fallback for empty text response", async () => {
@@ -870,9 +812,9 @@ describe("auth-api", () => {
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
-      await expect(requestPasswordReset("test@example.com")).rejects.toThrow(
-        "Fehler beim Senden der Passwort-Zurücksetzen-E-Mail",
-      );
+      await expect(
+        requestPasswordReset("tenant", "test@example.com"),
+      ).rejects.toThrow("Fehler beim Senden der Passwort-Zurücksetzen-E-Mail");
     });
 
     // Locks in the typed-code propagation added in Issue #1368: backend
@@ -898,7 +840,7 @@ describe("auth-api", () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
 
       try {
-        await requestPasswordReset("test@example.com");
+        await requestPasswordReset("tenant", "test@example.com");
         throw new Error("expected requestPasswordReset to reject");
       } catch (err) {
         const apiErr = err as { code?: string; status?: number };
@@ -934,7 +876,7 @@ describe("auth-api", () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
 
       try {
-        await requestPasswordReset("test@example.com");
+        await requestPasswordReset("tenant", "test@example.com");
         throw new Error("expected requestPasswordReset to reject");
       } catch (err) {
         const apiErr = err as {

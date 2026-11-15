@@ -18,11 +18,11 @@ const mocks = vi.hoisted(() => ({
   signOut: vi.fn(),
   useSession: vi.fn(),
   searchParamsGet: vi.fn((_key: string) => null as string | null),
-  requestParentPasswordReset: vi.fn(),
+  requestPasswordReset: vi.fn(),
 }));
 
 vi.mock("~/lib/auth-api", () => ({
-  requestParentPasswordReset: mocks.requestParentPasswordReset,
+  requestPasswordReset: mocks.requestPasswordReset,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -143,6 +143,7 @@ describe("ParentLoginPage i18n", () => {
     // The shared error path reads the page language from <html lang>, which
     // the parents layout sets to the parent's locale.
     document.documentElement.lang = "en";
+    window.history.replaceState({}, "", "/login");
     mocks.searchParamsGet.mockReturnValue(null);
     mocks.useSession.mockReturnValue({
       status: "unauthenticated",
@@ -405,7 +406,7 @@ describe("ParentLoginPage i18n", () => {
 
   it("shows a failed reset request in the dialog in the parent's language", async () => {
     const { ApiError } = await import("~/lib/api-error");
-    mocks.requestParentPasswordReset.mockRejectedValue(
+    mocks.requestPasswordReset.mockRejectedValue(
       new ApiError("diag", 503, { code: "general.unavailable" }),
     );
     render(<ParentLoginPage />);
@@ -635,9 +636,7 @@ describe("ParentLoginPage i18n", () => {
     });
 
     it("keeps the session-expired notice until an error replaces it", async () => {
-      mocks.searchParamsGet.mockImplementation((key: string) =>
-        key === "error" ? "SessionExpired" : null,
-      );
+      window.history.replaceState({}, "", "/login?error=SessionExpired");
       mocks.login.mockRejectedValue(
         await refusal(401, "identity.invalid_credentials"),
       );
@@ -648,6 +647,12 @@ describe("ParentLoginPage i18n", () => {
       ).toBeInTheDocument();
 
       await act(async () => {
+        fireEvent.change(screen.getByLabelText("Email address"), {
+          target: { value: "parent@example.com" },
+        });
+        fireEvent.change(screen.getByLabelText("Password"), {
+          target: { value: "password123" },
+        });
         fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
       });
 

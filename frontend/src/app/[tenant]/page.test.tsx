@@ -74,7 +74,8 @@ vi.mock("~/components/auth/smart-redirect", () => ({
 }));
 
 // Mock PasswordResetModal
-vi.mock("~/components/auth/password-reset-modal", () => ({
+vi.mock("~/components/auth/password-reset-modal", async (actual) => ({
+  ...(await actual<object>()),
   PasswordResetModal: ({
     isOpen,
     onClose,
@@ -314,14 +315,9 @@ describe("HomePage (Login)", () => {
 
     render(<HomePage />);
 
-    // Login form is hidden while checking auth
-    const formContainer = document.querySelector(
-      "div[class*='transition-opacity']",
-    );
-    expect(formContainer).toHaveClass("hidden");
-
-    // Loading spinner is visible with checking message
-    expect(screen.getByText("Sitzung wird überprüft...")).toBeInTheDocument();
+    // Anker: die Ladeanzeige steht statt des Formulars.
+    expect(screen.getByTestId("loading")).toBeInTheDocument();
+    expect(screen.queryByTestId("input-email")).not.toBeInTheDocument();
   });
 
   it("posts login credentials then reads the token-free session", async () => {
@@ -371,9 +367,6 @@ describe("HomePage (Login)", () => {
 
   it("removes stale session-expired query params before refreshing the provider", async () => {
     mockUpdateSession.mockResolvedValue(browserSession);
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "error" ? "SessionExpired" : null,
-    );
     window.history.pushState(
       {},
       "",
@@ -902,7 +895,7 @@ describe("HomePage (Login)", () => {
       fireEvent.click(screen.getByRole("button", { name: /anmelden/i }));
     });
 
-    expect(screen.getByText("Anmeldung läuft...")).toBeInTheDocument();
+    expect(screen.getByText("Anmeldung läuft …")).toBeInTheDocument();
   });
 });
 
@@ -1045,13 +1038,9 @@ describe("Stripped session", () => {
     await waitFor(() => {
       expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
     });
-    await waitFor(() => {
-      const submitButton = screen.getByRole("button", { name: /anmelden/i });
-      const formContainer = submitButton.closest(
-        "div[class*='transition-opacity']",
-      );
-      expect(formContainer).toHaveClass("opacity-100");
-    });
+    expect(
+      await screen.findByRole("button", { name: /anmelden/i }),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId("smart-redirect")).not.toBeInTheDocument();
     expect(mockSignIn).not.toHaveBeenCalled();
   });
@@ -1083,6 +1072,12 @@ describe("Form error handling", () => {
     });
 
     await act(async () => {
+      fireEvent.change(screen.getByTestId("input-email"), {
+        target: { value: "test@example.com" },
+      });
+      fireEvent.change(screen.getByTestId("input-password"), {
+        target: { value: "password123" },
+      });
       fireEvent.click(screen.getByRole("button", { name: /anmelden/i }));
     });
 
@@ -1104,6 +1099,12 @@ describe("Form error handling", () => {
     });
 
     await act(async () => {
+      fireEvent.change(screen.getByTestId("input-email"), {
+        target: { value: "test@example.com" },
+      });
+      fireEvent.change(screen.getByTestId("input-password"), {
+        target: { value: "password123" },
+      });
       fireEvent.click(screen.getByRole("button", { name: /anmelden/i }));
     });
 
@@ -1144,9 +1145,7 @@ describe("Deliberate logout suppression", () => {
 
   it("suppresses error when deliberateLogout flag is set", async () => {
     sessionStorage.setItem("deliberateLogout", "1");
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "error" ? "SessionRequired" : null,
-    );
+    window.history.pushState({}, "", "/?error=SessionRequired");
 
     await act(async () => {
       render(<HomePage />);
@@ -1163,9 +1162,7 @@ describe("Deliberate logout suppression", () => {
   it.each(["SessionRequired", "SessionExpired"])(
     "shows the session-expired error for %s when deliberateLogout flag is not set",
     async (urlError) => {
-      mockSearchParamsGet.mockImplementation((key: string) =>
-        key === "error" ? urlError : null,
-      );
+      window.history.pushState({}, "", `/?error=${urlError}`);
 
       await act(async () => {
         render(<HomePage />);
@@ -1179,9 +1176,7 @@ describe("Deliberate logout suppression", () => {
   );
 
   it("shows no session error for an unrelated error param", async () => {
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "error" ? "UnknownError" : null,
-    );
+    window.history.pushState({}, "", "/?error=UnknownError");
 
     await act(async () => {
       render(<HomePage />);
@@ -1197,9 +1192,7 @@ describe("Deliberate logout suppression", () => {
 
   it("consumes the deliberateLogout flag after reading it", async () => {
     sessionStorage.setItem("deliberateLogout", "1");
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "error" ? "SessionExpired" : null,
-    );
+    window.history.pushState({}, "", "/?error=SessionExpired");
 
     await act(async () => {
       render(<HomePage />);
@@ -1210,9 +1203,7 @@ describe("Deliberate logout suppression", () => {
 
   it("cleans up URL params after deliberate logout", async () => {
     sessionStorage.setItem("deliberateLogout", "1");
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "error" ? "SessionRequired" : null,
-    );
+    window.history.pushState({}, "", "/?error=SessionRequired");
     window.history.pushState(
       {},
       "",

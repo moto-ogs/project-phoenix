@@ -1,9 +1,14 @@
 import { ApiError } from "~/lib/api-error";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 
-/** The 401 refusals of a password login, in every portal. */
+/**
+ * The 401 refusals of a password login, in every portal; the parents
+ * portal names a wrong password with its care code (portalauth
+ * ParentLoginRules).
+ */
 export const LOGIN_REFUSALS = [
   "identity.invalid_credentials",
+  "care.invalid_credentials",
   "identity.session_account_inactive",
 ] as const satisfies readonly ErrorCode[];
 

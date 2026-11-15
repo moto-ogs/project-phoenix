@@ -88,6 +88,17 @@ vi.mock("~/components/ui/loading", () => ({
 
 import OperatorLoginPage from "./page";
 
+/** Fills both fields: the form names an empty field before sending. */
+function submitFilled() {
+  fireEvent.change(screen.getByLabelText("E-Mail-Adresse"), {
+    target: { value: "op@example.com" },
+  });
+  fireEvent.change(screen.getByLabelText("Passwort"), {
+    target: { value: "password123" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Anmelden/i }));
+}
+
 describe("OperatorLoginPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -198,7 +209,7 @@ describe("OperatorLoginPage", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText("Anmeldung läuft...")).toBeInTheDocument();
+      expect(screen.getByText("Anmeldung läuft …")).toBeInTheDocument();
     });
 
     await act(async () => {
@@ -339,7 +350,9 @@ describe("OperatorLoginPage", () => {
     });
   });
 
-  it("shows the rate limit by its class code (HTTP 429)", async () => {
+  // The limiter's 429 carries only the class code, whose text would ask to
+  // try again at once.
+  it("shows the limiter's 429 as too many attempts", async () => {
     global.fetch = mockOperatorFetchResponse(429, {
       status: "error",
       error: "Too many requests",
@@ -347,12 +360,11 @@ describe("OperatorLoginPage", () => {
 
     render(<OperatorLoginPage />);
 
-    const submitButton = screen.getByRole("button", { name: /Anmelden/i });
-    fireEvent.click(submitButton);
+    submitFilled();
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(
-        catalogText("general.unavailable", "die Anmeldung"),
+        "Zu viele Anmeldeversuche. Bitte versuchen Sie es später erneut.",
       );
     });
   });
@@ -362,8 +374,7 @@ describe("OperatorLoginPage", () => {
 
     render(<OperatorLoginPage />);
 
-    const submitButton = screen.getByRole("button", { name: /Anmelden/i });
-    fireEvent.click(submitButton);
+    submitFilled();
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(
@@ -377,8 +388,7 @@ describe("OperatorLoginPage", () => {
 
     render(<OperatorLoginPage />);
 
-    const submitButton = screen.getByRole("button", { name: /Anmelden/i });
-    fireEvent.click(submitButton);
+    submitFilled();
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(
@@ -391,7 +401,7 @@ describe("OperatorLoginPage", () => {
     global.fetch = mockOperatorFetchResponse(500, { code: "general.server" });
 
     render(<OperatorLoginPage />);
-    fireEvent.click(screen.getByRole("button", { name: /Anmelden/i }));
+    submitFilled();
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(
@@ -428,7 +438,7 @@ describe("OperatorLoginPage", () => {
       );
     mockUpdate.mockRejectedValueOnce(new Error("safe session read failed"));
     render(<OperatorLoginPage />);
-    fireEvent.click(screen.getByRole("button", { name: /Anmelden/i }));
+    submitFilled();
     expect(
       await screen.findByRole("heading", { name: "Code-Eingabe" }),
     ).toBeInTheDocument();
@@ -453,7 +463,7 @@ describe("OperatorLoginPage", () => {
     render(<OperatorLoginPage />);
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Ihre Anmeldung ist abgelaufen. Bitte melden Sie sich erneut an.",
+      "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
     );
     expect(window.location.search).toBe("");
   });

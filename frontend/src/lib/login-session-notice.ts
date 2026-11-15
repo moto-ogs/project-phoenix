@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Session } from "next-auth";
-import { signOut } from "next-auth/react";
-import type { ReadonlyURLSearchParams } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
+import { useLatest } from "~/lib/hooks/use-latest";
+import { hasSessionAccess } from "~/lib/session-access";
 import { DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
 
 const SESSION_ERRORS = new Set(["SessionRequired", "SessionExpired"]);
@@ -25,10 +26,11 @@ export function clearSessionErrorFromUrl() {
  * redirect to the login with ?error=SessionRequired before the page
  * unloads, so a deliberate logout shows no notice.
  */
-export function useSessionExpiredNotice(searchParams: ReadonlyURLSearchParams) {
+export function useSessionExpiredNotice() {
   const [sessionExpired, setSessionExpired] = useState(false);
   useEffect(() => {
-    if (!SESSION_ERRORS.has(searchParams.get("error") ?? "")) return;
+    const error = new URL(window.location.href).searchParams.get("error");
+    if (!SESSION_ERRORS.has(error ?? "")) return;
     let deliberate = false;
     try {
       deliberate = sessionStorage.getItem(DELIBERATE_LOGOUT_KEY) === "1";
@@ -38,7 +40,7 @@ export function useSessionExpiredNotice(searchParams: ReadonlyURLSearchParams) {
     }
     if (!deliberate) setSessionExpired(true);
     clearSessionErrorFromUrl();
-  }, [searchParams]);
+  }, []);
   return [sessionExpired, setSessionExpired] as const;
 }
 
@@ -81,4 +83,42 @@ export function signOutStaleSession({
       onFailure?.(cause);
     },
   );
+}
+
+/**
+ * The session a login page opens with: a stale one is signed out, one with
+ * access calls `onAccess` (unless `paused`, while a later step such as the
+ * second-factor setup runs). Answers whether the check still runs.
+ */
+export function useLoginSessionCheck({
+  logger,
+  onAccess,
+  paused = false,
+}: {
+  readonly logger: StaleSessionSignOut["logger"];
+  readonly onAccess: () => void;
+  readonly paused?: boolean;
+}): boolean {
+  const { data: session, status } = useSession();
+  const [checking, setChecking] = useState(true);
+  const started = useRef(false);
+  const onAccessRef = useLatest(onAccess);
+
+  useEffect(() => {
+    const cleanup = signOutStaleSession({ status, session, started, logger });
+    if (cleanup) {
+      void cleanup.then(() => setChecking(false));
+      return;
+    }
+    // The layout's server snapshot carries no token (#4991); a session
+    // without an error grants access, and the JWT callback renews its
+    // tokens server-side (#5005). The check stays up while the page leaves.
+    if (status === "authenticated" && hasSessionAccess(session) && !paused) {
+      onAccessRef.current();
+      return;
+    }
+    if (status !== "loading") setChecking(false);
+  }, [status, session, paused, logger, onAccessRef]);
+
+  return checking || status === "loading";
 }

@@ -245,10 +245,3 @@ export function toAssignableRoleOptions(roles: Role[]): RoleOption[] {
       systemName: role.name?.toLowerCase() ?? "",
     }));
 }
-
-// Request types
-export interface PasswordResetConfirmRequest {
-  token: string;
-  newPassword: string;
-  confirmPassword: string;
-}

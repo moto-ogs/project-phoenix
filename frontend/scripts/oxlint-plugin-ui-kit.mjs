@@ -6039,10 +6039,10 @@ const TOOLTIP_EXEMPT = [
   "src/components/auth/invitation-page-route.tsx",
   "src/components/auth/mfa-challenge-form.tsx",
   "src/components/auth/mfa-enrollment-screen.tsx",
+  "src/components/auth/password-login-form.tsx",
   "src/components/auth/password-reset-modal.tsx",
   "src/components/auth/reset-password-page-content.tsx",
   "src/components/auth/reset-password-page-route.tsx",
-  "src/components/auth/tenant-password-reset-modal.tsx",
   // Öffentliche Seiten.
   "src/app/[tenant]/(public)/",
   "src/app/page.tsx",

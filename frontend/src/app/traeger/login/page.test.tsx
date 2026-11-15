@@ -473,13 +473,12 @@ describe("TraegerLoginPage", () => {
   });
 
   it("opens the reset dialog when a reset link without token leads here", async () => {
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "passwort-vergessen" ? "1" : null,
-    );
+    window.history.replaceState({}, "", "/traeger/login?passwort-vergessen=1");
     render(<TraegerLoginPage />);
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog.querySelector("#reset-email")).not.toBeNull();
+    expect(window.location.search).toBe("");
   });
 
   // An empty field is named before anything is sent.

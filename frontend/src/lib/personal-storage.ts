@@ -110,7 +110,6 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   // Sperrzeit für die nächste Anfrage „Passwort vergessen“; entsteht vor der
   // Anmeldung und trägt nur einen Zeitpunkt, weder Konto noch Adresse.
   "passwordResetRateLimitUntil",
-  "parentPasswordResetRateLimitUntil",
   // Hinweise auf diesem Gerät und die öffentliche Demo.
   "schulhof-banner-dismissed",
   "moto-pwa-install-hint-*",

@@ -21,9 +21,16 @@ import { catalogText } from "~/test/error-catalog-text";
 // ---------------------------------------------------------------------------
 
 const mocks = vi.hoisted(() => ({
+  confirmPasswordReset: vi.fn(),
   push: vi.fn(),
   token: null as string | null,
   tenant: null as unknown,
+}));
+
+// The page posts through its portal's confirmation; each test stands in a
+// confirmation of its own.
+vi.mock("~/lib/auth-api", () => ({
+  confirmPasswordReset: mocks.confirmPasswordReset,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -101,11 +108,15 @@ function renderContent(
     backLabel: string;
   }> = {},
 ) {
+  const confirmReset =
+    overrides.confirmReset ?? vi.fn().mockResolvedValue({ message: "ok" });
+  mocks.confirmPasswordReset.mockImplementation(
+    (_portal: string, token: string, password: string, confirm: string) =>
+      confirmReset(token, password, confirm),
+  );
   return render(
     <ResetPasswordPageContent
-      confirmReset={
-        overrides.confirmReset ?? vi.fn().mockResolvedValue({ message: "ok" })
-      }
+      portal="tenant"
       successRedirectPath={overrides.successRedirectPath ?? "/login"}
       backHref={overrides.backHref ?? "/login"}
       backLabel={overrides.backLabel ?? "BACK_LABEL"}
@@ -444,7 +455,7 @@ describe("ResetPasswordPageContent — UI affordances", () => {
 
 describe("ResetPasswordPageContent — default copy", () => {
   it("renders the German default chrome when no copy prop is supplied", () => {
-    render(<ResetPasswordPageContent confirmReset={vi.fn()} />);
+    render(<ResetPasswordPageContent portal="tenant" />);
 
     expect(screen.getByText("Neues Passwort festlegen")).toBeInTheDocument();
     expect(screen.getByText("Passwort-Anforderungen:")).toBeInTheDocument();
