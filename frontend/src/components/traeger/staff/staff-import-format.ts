@@ -107,7 +107,7 @@ export function staffImportDoneDescription(counts: StaffImportCounts): string {
   const open = counts.conflict + counts.invalid;
   const sentences = [
     counts.duplicate > 0
-      ? `${staffImportRowsLabel(counts.duplicate)} waren schon vorhanden.`
+      ? `${staffImportRowsLabel(counts.duplicate)} ${counts.duplicate === 1 ? "war" : "waren"} schon vorhanden.`
       : "",
     open > 0
       ? `${staffImportRowsLabel(open)} ${open === 1 ? "blieb" : "blieben"} draußen. Korrigieren Sie sie in der Datei und laden Sie die Datei noch einmal.`
