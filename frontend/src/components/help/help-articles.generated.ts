@@ -14326,7 +14326,7 @@ export const traegerUtilizationTopic =
         "Wählen Sie oben den Zeitraum, zum Beispiel `Dieses Schuljahr`. Mit den Pfeilen springen Sie einen Zeitraum vor oder zurück.",
         "Wählen Sie bei Bedarf eine Schule. Ohne Auswahl sehen Sie alle Schulen zusammen.",
         "Wählen Sie einen Reiter: `Schulen`, `Betreuungsformen` oder `Räume`.",
-        "Tippen Sie auf eine Zeile der Tabelle. Das Diagramm zeigt dann den Verlauf dieser Zeile.",
+        "Wählen Sie eine Zeile der Tabelle. Das Diagramm zeigt dann den Verlauf dieser Zeile.",
         "Wählen Sie über dem Diagramm `Tage`, `Wochen` oder `Monate`.",
         "Wählen Sie `Herunterladen` und dann `CSV`, um alle Zahlen je Tag als Tabelle zu speichern.",
       ],
@@ -14338,9 +14338,9 @@ export const traegerUtilizationTopic =
           description:
             "Die Zahlen sind immer zusammengefasst. Die Namen sehen Sie nur für eine Schule und nur, wenn Sie sie öffnen.",
           steps: [
-            "Wählen Sie oben eine Schule oder tippen Sie im Reiter `Schulen` auf eine Zeile.",
+            "Wählen Sie oben eine Schule oder im Reiter `Schulen` eine Zeile.",
             "Wählen Sie unten bei `Kinder mit Namen` den Knopf `Namen anzeigen`.",
-            "Sie sehen für jedes Kind, an wie vielen Betreuungstagen es da war.",
+            "Sie sehen für jedes Kind, an wie vielen Betreuungstagen es da war. moto zählt ab dem ersten Check-in der Schule im Zeitraum.",
           ],
           ordered: true,
         },
@@ -14354,10 +14354,14 @@ export const traegerUtilizationTopic =
         "Wenn Sie die Namen öffnen, steht das im Zugriffsprotokoll der Schule.",
       ],
       differences: [
+        "Steht `Check-ins gibt es erst ab …`, hat die Schule für die Tage davor keine Check-ins. Dann zeigt moto für diese Tage keine Anwesenheit.",
         "Steht `Raumbesuche gibt es erst ab …`, bewahrt die Schule Raumbesuche nur wenige Wochen auf. Ältere Zahlen gibt es nicht mehr.",
         "Fehlen die Räume einer Schule, ist dort das Anwesenheitsprotokoll ausgeschaltet. Dann zählt moto keine Raumbesuche.",
         "Steht bei `Kinder mit Namen` nur ein Hinweis, fehlt Ihnen das Recht „Verträge verwalten“. Es gehört zur Rolle Verwaltung.",
       ],
+      image: "/help/screens/traeger-auslastung.webp",
+      imageAlt:
+        "Die Seite Auslastung: oben Zeitraum und Schule, darunter vier Kennzahlen und der Verlauf der belegten Plätze als Diagramm.",
       related: [HELP_TOPICS.traegerOccupancy, HELP_TOPICS.traegerKeyDateCounts],
     };
   } satisfies typeof authored_traegerUtilizationTopic;
