@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   credentialError,
+  LOGIN_CREDENTIAL_FIELDS,
   INVALID_CREDENTIALS,
   LOGIN_REFUSALS,
   PASSKEY_LOGIN_REFUSALS,
@@ -173,7 +174,7 @@ export function useLoginAttempt(
       );
       void errors.show(
         err instanceof ApiError
-          ? credentialError(err, refusals)
+          ? credentialError(err, refusals, LOGIN_CREDENTIAL_FIELDS)
           : unavailableApiError(err),
         { object, retry },
       );

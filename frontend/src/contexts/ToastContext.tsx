@@ -634,8 +634,12 @@ function useApiErrorCore(
         HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
       >("input[name], textarea[name], select[name]");
       // The first failed field in page order, the one FormErrorAlert brings
-      // into view, not the first key the server happened to list.
-      const control = [...controls].find((item) => failed.has(item.name));
+      // into view, not the first key the server happened to list. A field
+      // without a named control (the signature pad) counts by its `id`.
+      const control = firstInPageOrder([
+        ...[...controls].filter((item) => failed.has(item.name)),
+        ...fieldsById(formRef?.current ?? document.body, failed),
+      ]);
       // A CustomSelect or DatePicker carries its value in a hidden input next
       // to its trigger (combobox or the date button).
       const target =
@@ -758,6 +762,27 @@ function useApiErrorCore(
     setFieldErrors,
     invalidatePendingShow,
   };
+}
+
+/**
+ * Fields without a named control, such as the signature pad, marked under
+ * their `id` (#7111). Only those focusable from code (`tabindex`) count.
+ */
+function fieldsById(root: Node, failed: ReadonlySet<string>): HTMLElement[] {
+  // getElementById, not a `#id` selector: field names such as "704:1:x"
+  // are no valid selector.
+  return [...failed]
+    .map((name) => document.getElementById(name))
+    .filter(
+      (field): field is HTMLElement =>
+        field !== null && root.contains(field) && field.matches("[tabindex]"),
+    );
+}
+
+function firstInPageOrder<T extends Element>(elements: readonly T[]) {
+  return [...elements].sort((a, b) =>
+    a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
+  )[0];
 }
 
 /** Opt-in display path for actions without a form (#2510). */

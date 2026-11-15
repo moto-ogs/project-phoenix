@@ -5022,6 +5022,28 @@ describe("EnrollmentForm — fixed pickup times", () => {
     await waitFor(() => expect(input).toHaveFocus());
   });
 
+  // #7111: the picker can carry the field name and the error id, but the
+  // form passed neither, so a refused birth date was never focused.
+  it("focuses and describes a birth date the backend refuses", async () => {
+    mockSubmitEnrollment.mockRejectedValueOnce(
+      new ApiError("date_of_birth is invalid", 400, {
+        code: "general.input",
+        errors: [{ field: "children.0.date_of_birth", reason: "invalid" }],
+      }),
+    );
+    await renderForm({ initialDraft: draftWithPickup({ mon: "14:45" }) });
+    await waitForLoaded();
+
+    fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
+
+    const day = await screen.findByRole("combobox", {
+      name: "Tag",
+      description: /./,
+    });
+    await waitFor(() => expect(day).toHaveFocus());
+    expect(day).toHaveAttribute("aria-invalid", "true");
+  });
+
   it("marks, scrolls, and focuses a required custom date field", async () => {
     const customSchema = pickupSchema();
     customSchema.fields = [

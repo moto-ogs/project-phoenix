@@ -31,6 +31,7 @@
   "earlyStart": "Bakım, cayma süresi bitmeden başlamalı.",
   "earlyStartHint": "Daha sonra cayarsanız, o zamana kadarki bakımı orantılı olarak ödersiniz.",
   "signatureRequired": "Lütfen imzalayın ve imzanızı onaylayın.",
+  "checkFields": "Lütfen işaretli alanları kontrol edin.",
   "submit": "Sözleşmeyi bağlayıcı olarak imzala",
   "submitting": "İmzalanıyor …",
   "submitObject": "imza",

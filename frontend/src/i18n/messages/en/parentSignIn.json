@@ -58,7 +58,6 @@
     "removeObject": "removing the device"
   },
   "challenge": {
-    "back": "Back",
     "backLabel": "Back to sign-in",
     "title": "Enter code",
     "sentTo": "We sent a 6-digit code to <b>{email}</b>. The code is valid for 10 minutes.",

@@ -23,6 +23,7 @@ import { PdfPreview, useObjectUrl } from "~/components/ui/pdf-preview";
 import { SectionCard } from "~/components/ui/section-card";
 import { ParentFamilyChildrenCard } from "./parent-family-children-card";
 import { SignaturePad } from "~/components/ui/signature-pad";
+import { useStepFocus } from "~/components/ui/use-step-focus";
 import {
   CardGridSkeleton,
   SkeletonRegion,
@@ -75,6 +76,14 @@ export function ContractSigningView({
   const [gone, setGone] = useState(false);
   const loadError = useApiLoadError();
   const { show: showLoadError, clear: clearLoadError } = loadError;
+  const signed = view
+    ? Boolean(view.signature) || view.status !== "versendet"
+    : null;
+  // Signing replaces the form with the confirmation (#7111): its heading
+  // takes the focus from the send button that is gone. Loading is no step.
+  const stepRef = useStepFocus<HTMLDivElement>(
+    signed === null ? null : signed ? "signed" : "sign",
+  );
 
   const load = useCallback(async () => {
     try {
@@ -113,11 +122,11 @@ export function ContractSigningView({
         <CardGridSkeleton cards={3} className="grid grid-cols-1 gap-5" />
       </SkeletonRegion>
     );
-  if (view.signature || view.status !== "versendet") {
+  if (signed) {
     // The mail link closes with the signature (#4679); the number stays
     // changeable in the parents portal.
     return (
-      <div className="space-y-5">
+      <div ref={stepRef} className="space-y-5">
         <SignedConfirmation view={view} />
         {source.kind === "inbox" ? (
           <ParentFamilyChildrenCard source={source} />
@@ -126,7 +135,7 @@ export function ContractSigningView({
     );
   }
   return (
-    <div className="space-y-5">
+    <div ref={stepRef} className="space-y-5">
       <ContractFacts view={view} />
       <ParentFamilyChildrenCard source={source} />
       <BookedCare view={view} />
@@ -311,7 +320,15 @@ function SignForm({
   const submit = async () => {
     setSubmitted(true);
     formError.clear();
-    if (!notice || !signature) return;
+    if (!notice || !signature) {
+      // The alert names the problem, the focus goes to the first missing
+      // field (#7111); the hints at the fields stay as they are.
+      formError.invalid(t("checkFields"), {
+        ...(notice ? {} : { [NOTICE_FIELD]: t("noticeRequired") }),
+        ...(signature ? {} : { [SIGNATURE_FIELD]: t("signatureRequired") }),
+      });
+      return;
+    }
     setSaving(true);
     try {
       onSigned(

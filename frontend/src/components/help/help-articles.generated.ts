@@ -2277,7 +2277,7 @@ export const editStudentTopic = function editStudentTopic(): HelpTopic {
  * Lohnbüro, Abwesenheitsanträge und, für den Träger, der Versand der Schreiben.
  * Hier steht, was jedes Wort bedeutet und wer als Nächstes handelt.
  * `Versendet` heißt nur: Die Mail ist raus. `Zugestellt` meldet erst der
- * Mail-Dienst, und ohne ihn (Strato, Brevo, Notweg) bleibt es bei `Versendet`.
+ * Mail-Dienst, und ohne ihn (reines SMTP, Notweg) bleibt es bei `Versendet`.
  */
 export const emailDeliveryTopic = function emailDeliveryTopic(): HelpTopic {
   return {

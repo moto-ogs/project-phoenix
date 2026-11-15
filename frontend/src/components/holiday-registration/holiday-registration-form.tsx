@@ -14,6 +14,7 @@ import { Button, ButtonLink } from "~/components/ui/button";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { SectionCard } from "~/components/ui/section-card";
+import { useStepFocus } from "~/components/ui/use-step-focus";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import {
@@ -117,6 +118,8 @@ export function HolidayRegistrationForm({
   const [statusToken, setStatusToken] = useState("");
   const fieldError = (name: string) => errorPath.fieldError(name) ?? undefined;
   const accountFieldsetRef = useRef<HTMLFieldSetElement>(null);
+  // Each step takes the place of the last one: its heading takes the focus.
+  const stepRef = useStepFocus<HTMLDivElement>(step);
   const [accountError, setAccountError] = useState<string | undefined>();
   const asksForAccount = parentAccount === "ask";
   const invalidate = useInvalidateMatching();
@@ -216,66 +219,70 @@ export function HolidayRegistrationForm({
 
   if (step === "done") {
     return (
-      <SectionCard title={t("doneTitle")}>
-        <div className="space-y-5">
-          <div className="space-y-2 text-sm text-gray-700">
-            <p>{t("doneText", { email: draft.guardian.email.trim() })}</p>
-            <p>{t("doneNext")}</p>
-          </div>
-          <HolidayRegistrationPlacements
-            childDrafts={draft.children}
-            weeks={offer.weeks}
-            placements={placements}
-          />
-          {asksForAccount && draft.parentAccountRequested === true ? (
-            // The second mail goes out for every address; the text does
-            // not say whether an account already exists (ADR 0216).
-            <Alert
-              type="info"
-              announce="off"
-              title={t("doneAccountTitle")}
-              message={t("doneAccountText", {
-                email: draft.guardian.email.trim(),
-              })}
-            />
-          ) : null}
-          {statusToken || parentAccount === "signed-in" ? (
-            <div className="flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:items-center">
-              {statusToken ? (
-                // Der Stand der Anmeldung über den geheimen Link, den auch
-                // die Eingangsmail trägt (#6676).
-                <ButtonLink
-                  href={parentPath(holidayRegistrationStatusPath(statusToken))}
-                  variant={
-                    parentAccount === "signed-in" ? "outline" : "primary"
-                  }
-                  size="md"
-                  className="max-sm:w-full"
-                  tooltip={t("doneToStatusHint")}
-                >
-                  {t("doneToStatus")}
-                </ButtonLink>
-              ) : null}
-              {parentAccount === "signed-in" ? (
-                <ButtonLink
-                  href={parentPath("/parents/ferienanmeldungen")}
-                  variant="primary"
-                  size="md"
-                  className="max-sm:w-full"
-                  tooltip={t("doneToRegistrationsHint")}
-                >
-                  {t("doneToRegistrations")}
-                </ButtonLink>
-              ) : null}
+      <div ref={stepRef}>
+        <SectionCard title={t("doneTitle")}>
+          <div className="space-y-5">
+            <div className="space-y-2 text-sm text-gray-700">
+              <p>{t("doneText", { email: draft.guardian.email.trim() })}</p>
+              <p>{t("doneNext")}</p>
             </div>
-          ) : null}
-          {statusToken ? (
-            <p className="text-sm leading-6 text-gray-600">
-              {t("doneStatusHint")}
-            </p>
-          ) : null}
-        </div>
-      </SectionCard>
+            <HolidayRegistrationPlacements
+              childDrafts={draft.children}
+              weeks={offer.weeks}
+              placements={placements}
+            />
+            {asksForAccount && draft.parentAccountRequested === true ? (
+              // The second mail goes out for every address; the text does
+              // not say whether an account already exists (ADR 0216).
+              <Alert
+                type="info"
+                announce="off"
+                title={t("doneAccountTitle")}
+                message={t("doneAccountText", {
+                  email: draft.guardian.email.trim(),
+                })}
+              />
+            ) : null}
+            {statusToken || parentAccount === "signed-in" ? (
+              <div className="flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:items-center">
+                {statusToken ? (
+                  // Der Stand der Anmeldung über den geheimen Link, den auch
+                  // die Eingangsmail trägt (#6676).
+                  <ButtonLink
+                    href={parentPath(
+                      holidayRegistrationStatusPath(statusToken),
+                    )}
+                    variant={
+                      parentAccount === "signed-in" ? "outline" : "primary"
+                    }
+                    size="md"
+                    className="max-sm:w-full"
+                    tooltip={t("doneToStatusHint")}
+                  >
+                    {t("doneToStatus")}
+                  </ButtonLink>
+                ) : null}
+                {parentAccount === "signed-in" ? (
+                  <ButtonLink
+                    href={parentPath("/parents/ferienanmeldungen")}
+                    variant="primary"
+                    size="md"
+                    className="max-sm:w-full"
+                    tooltip={t("doneToRegistrationsHint")}
+                  >
+                    {t("doneToRegistrations")}
+                  </ButtonLink>
+                ) : null}
+              </div>
+            ) : null}
+            {statusToken ? (
+              <p className="text-sm leading-6 text-gray-600">
+                {t("doneStatusHint")}
+              </p>
+            ) : null}
+          </div>
+        </SectionCard>
+      </div>
     );
   }
 
@@ -284,52 +291,57 @@ export function HolidayRegistrationForm({
     // while the parent reads the summary, so Turnstile renews its token
     // instead of a stale one from the form step being sent.
     return (
-      <HolidayRegistrationSummary
-        token={token}
-        draft={draft}
-        offer={offer}
-        submitting={submitting}
-        canSubmit={captchaToken !== ""}
-        securityCheck={
-          offer.captchaSiteKey ? (
-            <Turnstile
-              siteKey={offer.captchaSiteKey}
-              options={{ theme: "light" }}
-              onSuccess={setCaptchaToken}
-              onExpire={() => setCaptchaToken("")}
-              onError={() => setCaptchaToken("")}
-            />
-          ) : (
-            <p className="text-sm text-gray-700">{t("captchaMissing")}</p>
-          )
-        }
-        accountQuestion={
-          asksForAccount ? (
-            <HolidayRegistrationAccountQuestion
-              value={draft.parentAccountRequested}
-              email={draft.guardian.email}
-              error={accountError}
-              fieldsetRef={accountFieldsetRef}
-              onChange={(parentAccountRequested) => {
-                setAccountError(undefined);
-                setDraft((current) => ({ ...current, parentAccountRequested }));
-              }}
-            />
-          ) : null
-        }
-        onBack={() => {
-          setCaptchaToken("");
-          setAccountError(undefined);
-          setStep("form");
-        }}
-        onSubmit={() => void submit()}
-        onBenefitsDeclaredChange={(benefitsDeclared) =>
-          setDraft((current) => ({ ...current, benefitsDeclared }))
-        }
-        onBenefitsProofsChange={(benefitsProofs) =>
-          setDraft((current) => ({ ...current, benefitsProofs }))
-        }
-      />
+      <div ref={stepRef}>
+        <HolidayRegistrationSummary
+          token={token}
+          draft={draft}
+          offer={offer}
+          submitting={submitting}
+          canSubmit={captchaToken !== ""}
+          securityCheck={
+            offer.captchaSiteKey ? (
+              <Turnstile
+                siteKey={offer.captchaSiteKey}
+                options={{ theme: "light" }}
+                onSuccess={setCaptchaToken}
+                onExpire={() => setCaptchaToken("")}
+                onError={() => setCaptchaToken("")}
+              />
+            ) : (
+              <p className="text-sm text-gray-700">{t("captchaMissing")}</p>
+            )
+          }
+          accountQuestion={
+            asksForAccount ? (
+              <HolidayRegistrationAccountQuestion
+                value={draft.parentAccountRequested}
+                email={draft.guardian.email}
+                error={accountError}
+                fieldsetRef={accountFieldsetRef}
+                onChange={(parentAccountRequested) => {
+                  setAccountError(undefined);
+                  setDraft((current) => ({
+                    ...current,
+                    parentAccountRequested,
+                  }));
+                }}
+              />
+            ) : null
+          }
+          onBack={() => {
+            setCaptchaToken("");
+            setAccountError(undefined);
+            setStep("form");
+          }}
+          onSubmit={() => void submit()}
+          onBenefitsDeclaredChange={(benefitsDeclared) =>
+            setDraft((current) => ({ ...current, benefitsDeclared }))
+          }
+          onBenefitsProofsChange={(benefitsProofs) =>
+            setDraft((current) => ({ ...current, benefitsProofs }))
+          }
+        />
+      </div>
     );
   }
 
@@ -348,237 +360,243 @@ export function HolidayRegistrationForm({
     isNamedRelationshipType(type) ? t(`relationshipTypes.${type}`) : "";
 
   return (
-    <form
-      ref={formRef}
-      noValidate
-      className="space-y-6"
-      onSubmit={(event) => {
-        event.preventDefault();
-        toSummary();
-      }}
-    >
-      <FormErrorAlert message={errorPath.error} />
+    <div ref={stepRef}>
+      <form
+        ref={formRef}
+        noValidate
+        className="space-y-6"
+        onSubmit={(event) => {
+          event.preventDefault();
+          toSummary();
+        }}
+      >
+        <FormErrorAlert message={errorPath.error} />
 
-      <SectionCard title={t("childrenTitle")} description={t("childrenText")}>
-        <div className="space-y-4">
-          {offer.holidayWishMode === "off" ? null : (
-            <Alert
-              type="info"
-              announce="off"
-              title={t("wishRuleTitle")}
-              message={t(
-                offer.holidayWishMode === "wish_only"
-                  ? "wishRuleWishOnly"
-                  : "wishRulePriority",
+        <SectionCard title={t("childrenTitle")} description={t("childrenText")}>
+          <div className="space-y-4">
+            {offer.holidayWishMode === "off" ? null : (
+              <Alert
+                type="info"
+                announce="off"
+                title={t("wishRuleTitle")}
+                message={t(
+                  offer.holidayWishMode === "wish_only"
+                    ? "wishRuleWishOnly"
+                    : "wishRulePriority",
+                )}
+              />
+            )}
+            {family && family.children.length > 0 ? (
+              <KnownChildPicker
+                known={family.children}
+                draft={draft}
+                offer={offer}
+                onToggle={(known) =>
+                  setDraft(
+                    withKnownContacts(
+                      toggleKnownChild(draft, known, offer),
+                      family,
+                      relationshipLabel,
+                    ),
+                  )
+                }
+              />
+            ) : null}
+            {draft.children.map((child, index) => (
+              <ChildCard
+                key={child.key}
+                index={index}
+                child={child}
+                offer={offer}
+                removable={draft.children.length > 1}
+                questions={childQuestions}
+                questionContext={childContext(draft, child, offer.form)}
+                fieldError={fieldError}
+                onChange={(next) =>
+                  setDraft({
+                    ...draft,
+                    children: draft.children.map((current, i) =>
+                      i === index ? next : current,
+                    ),
+                  })
+                }
+                onRemove={() =>
+                  setDraft(
+                    withKnownContacts(
+                      {
+                        ...draft,
+                        children: draft.children.filter((_, i) => i !== index),
+                      },
+                      family,
+                      relationshipLabel,
+                    ),
+                  )
+                }
+              />
+            ))}
+            {draft.children.length < MAX_CHILDREN ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    children: [...draft.children, emptyChild()],
+                  })
+                }
+                tooltip={t("addChildHint")}
+              >
+                {t("addChild")}
+              </Button>
+            ) : null}
+          </div>
+        </SectionCard>
+
+        <SectionCard title={t("guardianTitle")} description={t("guardianText")}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input
+              name="guardian.first_name"
+              required
+              label={t("firstName")}
+              autoComplete="given-name"
+              maxLength={100}
+              value={draft.guardian.firstName}
+              hint={accountHint(
+                draft.guardian.firstName,
+                family?.guardian.firstName,
               )}
-            />
-          )}
-          {family && family.children.length > 0 ? (
-            <KnownChildPicker
-              known={family.children}
-              draft={draft}
-              offer={offer}
-              onToggle={(known) =>
-                setDraft(
-                  withKnownContacts(
-                    toggleKnownChild(draft, known, offer),
-                    family,
-                    relationshipLabel,
-                  ),
-                )
+              error={fieldError("guardian.first_name")}
+              onChange={(event) =>
+                setGuardian({ firstName: event.target.value })
               }
             />
-          ) : null}
-          {draft.children.map((child, index) => (
-            <ChildCard
-              key={child.key}
-              index={index}
-              child={child}
-              offer={offer}
-              removable={draft.children.length > 1}
-              questions={childQuestions}
-              questionContext={childContext(draft, child, offer.form)}
-              fieldError={fieldError}
-              onChange={(next) =>
-                setDraft({
-                  ...draft,
-                  children: draft.children.map((current, i) =>
-                    i === index ? next : current,
-                  ),
-                })
-              }
-              onRemove={() =>
-                setDraft(
-                  withKnownContacts(
-                    {
-                      ...draft,
-                      children: draft.children.filter((_, i) => i !== index),
-                    },
-                    family,
-                    relationshipLabel,
-                  ),
-                )
+            <Input
+              name="guardian.last_name"
+              required
+              label={t("lastName")}
+              autoComplete="family-name"
+              maxLength={100}
+              value={draft.guardian.lastName}
+              hint={accountHint(
+                draft.guardian.lastName,
+                family?.guardian.lastName,
+              )}
+              error={fieldError("guardian.last_name")}
+              onChange={(event) =>
+                setGuardian({ lastName: event.target.value })
               }
             />
-          ))}
-          {draft.children.length < MAX_CHILDREN ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              onClick={() =>
-                setDraft({
-                  ...draft,
-                  children: [...draft.children, emptyChild()],
-                })
-              }
-              tooltip={t("addChildHint")}
-            >
-              {t("addChild")}
-            </Button>
-          ) : null}
-        </div>
-      </SectionCard>
+            <Input
+              name="guardian.email"
+              required
+              type="email"
+              label={t("email")}
+              autoComplete="email"
+              maxLength={254}
+              value={draft.guardian.email}
+              hint={accountHint(draft.guardian.email, family?.guardian.email)}
+              error={fieldError("guardian.email")}
+              onChange={(event) => setGuardian({ email: event.target.value })}
+            />
+            <Input
+              name="guardian.phone"
+              required
+              type="tel"
+              label={t("phone")}
+              autoComplete="tel"
+              maxLength={40}
+              value={draft.guardian.phone}
+              hint={accountHint(draft.guardian.phone, family?.guardian.phone)}
+              error={fieldError("guardian.phone")}
+              onChange={(event) => setGuardian({ phone: event.target.value })}
+            />
+          </div>
+        </SectionCard>
 
-      <SectionCard title={t("guardianTitle")} description={t("guardianText")}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input
-            name="guardian.first_name"
-            required
-            label={t("firstName")}
-            autoComplete="given-name"
-            maxLength={100}
-            value={draft.guardian.firstName}
-            hint={accountHint(
-              draft.guardian.firstName,
-              family?.guardian.firstName,
-            )}
-            error={fieldError("guardian.first_name")}
-            onChange={(event) => setGuardian({ firstName: event.target.value })}
-          />
-          <Input
-            name="guardian.last_name"
-            required
-            label={t("lastName")}
-            autoComplete="family-name"
-            maxLength={100}
-            value={draft.guardian.lastName}
-            hint={accountHint(
-              draft.guardian.lastName,
-              family?.guardian.lastName,
-            )}
-            error={fieldError("guardian.last_name")}
-            onChange={(event) => setGuardian({ lastName: event.target.value })}
-          />
-          <Input
-            name="guardian.email"
-            required
-            type="email"
-            label={t("email")}
-            autoComplete="email"
-            maxLength={254}
-            value={draft.guardian.email}
-            hint={accountHint(draft.guardian.email, family?.guardian.email)}
-            error={fieldError("guardian.email")}
-            onChange={(event) => setGuardian({ email: event.target.value })}
-          />
-          <Input
-            name="guardian.phone"
-            required
-            type="tel"
-            label={t("phone")}
-            autoComplete="tel"
-            maxLength={40}
-            value={draft.guardian.phone}
-            hint={accountHint(draft.guardian.phone, family?.guardian.phone)}
-            error={fieldError("guardian.phone")}
-            onChange={(event) => setGuardian({ phone: event.target.value })}
-          />
-        </div>
-      </SectionCard>
-
-      {asksForAddress(offer.form) ? (
-        <GuardianAddressCard
-          address={draft.guardianAddress}
-          required={offer.form.addressRequirement === "required"}
-          known={family?.guardian.address}
-          fieldError={fieldError}
-          onChange={(guardianAddress) =>
-            setDraft({ ...draft, guardianAddress })
-          }
-        />
-      ) : null}
-
-      <SecondGuardianCard
-        guardian={draft.secondGuardian}
-        known={draft.secondGuardianPrefill?.values}
-        fieldError={fieldError}
-        onChange={(secondGuardian) => setDraft({ ...draft, secondGuardian })}
-      />
-      {familyQuestions.some((field) =>
-        isFieldVisible(field, familyContext(draft, offer.form)),
-      ) ? (
-        <SectionCard title={t("familyQuestionsTitle")}>
-          <HolidayQuestions
-            fields={familyQuestions}
-            answers={draft.answers}
-            context={familyContext(draft, offer.form)}
-            prefix=""
+        {asksForAddress(offer.form) ? (
+          <GuardianAddressCard
+            address={draft.guardianAddress}
+            required={offer.form.addressRequirement === "required"}
+            known={family?.guardian.address}
             fieldError={fieldError}
-            onChange={(key, value) =>
-              setDraft({
-                ...draft,
-                answers: { ...draft.answers, [key]: value },
-              })
+            onChange={(guardianAddress) =>
+              setDraft({ ...draft, guardianAddress })
             }
           />
-        </SectionCard>
-      ) : null}
+        ) : null}
 
-      <HolidayRegistrationCriteria
-        offer={offer}
-        draft={draft}
-        fieldError={fieldError}
-        onChange={setDraft}
-      />
+        <SecondGuardianCard
+          guardian={draft.secondGuardian}
+          known={draft.secondGuardianPrefill?.values}
+          fieldError={fieldError}
+          onChange={(secondGuardian) => setDraft({ ...draft, secondGuardian })}
+        />
+        {familyQuestions.some((field) =>
+          isFieldVisible(field, familyContext(draft, offer.form)),
+        ) ? (
+          <SectionCard title={t("familyQuestionsTitle")}>
+            <HolidayQuestions
+              fields={familyQuestions}
+              answers={draft.answers}
+              context={familyContext(draft, offer.form)}
+              prefix=""
+              fieldError={fieldError}
+              onChange={(key, value) =>
+                setDraft({
+                  ...draft,
+                  answers: { ...draft.answers, [key]: value },
+                })
+              }
+            />
+          </SectionCard>
+        ) : null}
 
-      <ContactList
-        contacts={draft.contacts}
-        max={MAX_CONTACTS}
-        fieldError={fieldError}
-        onChange={(contacts) => setDraft(withEditedContacts(draft, contacts))}
-      />
+        <HolidayRegistrationCriteria
+          offer={offer}
+          draft={draft}
+          fieldError={fieldError}
+          onChange={setDraft}
+        />
 
-      <HolidayRegistrationLegal
-        token={token}
-        blocks={offer.form.legalBlocks ?? []}
-        accepted={draft.legalAcceptances ?? {}}
-        fieldError={fieldError}
-        onChange={(key, checked) =>
-          setDraft({
-            ...draft,
-            legalAcceptances: { ...draft.legalAcceptances, [key]: checked },
-          })
-        }
-      />
-      <HolidayRegistrationDeclaration
-        texts={offer.consentTexts}
-        draft={draft}
-        binding={offer.binding}
-        hasHealth={hasHealthInfo(draft, offer.form)}
-        fieldError={fieldError}
-        onChange={(patch) => setDraft({ ...draft, ...patch })}
-      />
+        <ContactList
+          contacts={draft.contacts}
+          max={MAX_CONTACTS}
+          fieldError={fieldError}
+          onChange={(contacts) => setDraft(withEditedContacts(draft, contacts))}
+        />
 
-      <Button
-        type="submit"
-        variant="primary"
-        size="md"
-        className="w-full"
-        tooltip={t("toSummaryHint")}
-      >
-        {t("toSummary")}
-      </Button>
-    </form>
+        <HolidayRegistrationLegal
+          token={token}
+          blocks={offer.form.legalBlocks ?? []}
+          accepted={draft.legalAcceptances ?? {}}
+          fieldError={fieldError}
+          onChange={(key, checked) =>
+            setDraft({
+              ...draft,
+              legalAcceptances: { ...draft.legalAcceptances, [key]: checked },
+            })
+          }
+        />
+        <HolidayRegistrationDeclaration
+          texts={offer.consentTexts}
+          draft={draft}
+          binding={offer.binding}
+          hasHealth={hasHealthInfo(draft, offer.form)}
+          fieldError={fieldError}
+          onChange={(patch) => setDraft({ ...draft, ...patch })}
+        />
+
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          className="w-full"
+          tooltip={t("toSummaryHint")}
+        >
+          {t("toSummary")}
+        </Button>
+      </form>
+    </div>
   );
 }

@@ -58,7 +58,6 @@
     "removeObject": "heqja e pajisjes"
   },
   "challenge": {
-    "back": "Mbrapa",
     "backLabel": "Mbrapa te hyrja",
     "title": "Shkruani kodin",
     "sentTo": "Ju dërguam një kod 6-shifror te <b>{email}</b>. Kodi vlen 10 minuta.",

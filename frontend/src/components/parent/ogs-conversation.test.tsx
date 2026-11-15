@@ -377,7 +377,9 @@ describe("OgsConversation for screen readers (#7113)", () => {
     const history = await screen.findByRole("log", {
       name: "Nachrichtenverlauf",
     });
-    expect(history).toHaveTextContent("Felix ist abgeholt.");
+    await waitFor(() =>
+      expect(history).toHaveTextContent("Felix ist abgeholt."),
+    );
   });
 });
 

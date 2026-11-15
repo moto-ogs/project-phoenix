@@ -25,6 +25,7 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
+import { useStepFocus } from "~/components/ui/use-step-focus";
 import { EditActions } from "~/components/ui/edit-actions";
 import {
   SlideOver,
@@ -148,6 +149,11 @@ function SchoolParentConferences() {
   const conferences = data?.conferences ?? [];
   const classes = data?.classes ?? [];
   const selected = conferences.find((row) => row.id === selectedId) ?? null;
+  // A row click shows the day above the list (#7111): its heading takes the
+  // focus, and after a deletion the list heading. The first load is no step.
+  const detailFocus = useStepFocus<HTMLDivElement>(
+    data ? (selected?.id ?? "list") : null,
+  );
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ParentConference | null>(null);
@@ -495,81 +501,85 @@ function SchoolParentConferences() {
       ) : null}
 
       {selected ? (
-        <SectionCard
-          title={`Elternsprechtag ${schoolClassLabel(selected.school_class)} am ${formatDate(selected.date)}`}
-          description={`${selected.start_time}–${selected.end_time} Uhr${selected.location ? ` · ${selected.location}` : ""} · ${selected.booked_count} von ${selected.slots.length} Zeitfenstern gebucht`}
-          action={
-            <div className="flex flex-wrap gap-2 print:hidden">
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                className="gap-1.5"
-                onClick={() => window.print()}
-                tooltip="Öffnet das Druckfenster für die Liste der Zeitfenster."
-              >
-                <Printer className="h-4 w-4" aria-hidden />
-                Drucken
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                onClick={() => openEdit(selected)}
-                tooltip="Öffnet den Elternsprechtag zum Ändern."
-              >
-                Ändern
-              </Button>
-              <Button
-                type="button"
-                variant="outline_danger"
-                size="md"
-                onClick={() => {
-                  deleteErrors.clear();
-                  setDeleteTarget(selected);
-                }}
-                tooltip="Löscht den Tag und sagt alle Buchungen ab. moto fragt vorher nach."
-              >
-                Löschen
-              </Button>
-            </div>
-          }
-        >
-          <DataTable
-            columns={slotColumns}
-            rows={[...selected.slots]}
-            getRowKey={(row) => row.start_time}
-            stackedOnMobile
-          />
-          <p className="mt-4 text-sm text-gray-600 print:hidden">
-            Eltern buchen, verschieben oder sagen ab, bis 24 Stunden vor dem
-            Termin. Danach melden sie sich bei Ihnen.
-          </p>
-        </SectionCard>
+        <div ref={detailFocus}>
+          <SectionCard
+            title={`Elternsprechtag ${schoolClassLabel(selected.school_class)} am ${formatDate(selected.date)}`}
+            description={`${selected.start_time}–${selected.end_time} Uhr${selected.location ? ` · ${selected.location}` : ""} · ${selected.booked_count} von ${selected.slots.length} Zeitfenstern gebucht`}
+            action={
+              <div className="flex flex-wrap gap-2 print:hidden">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  className="gap-1.5"
+                  onClick={() => window.print()}
+                  tooltip="Öffnet das Druckfenster für die Liste der Zeitfenster."
+                >
+                  <Printer className="h-4 w-4" aria-hidden />
+                  Drucken
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={() => openEdit(selected)}
+                  tooltip="Öffnet den Elternsprechtag zum Ändern."
+                >
+                  Ändern
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline_danger"
+                  size="md"
+                  onClick={() => {
+                    deleteErrors.clear();
+                    setDeleteTarget(selected);
+                  }}
+                  tooltip="Löscht den Tag und sagt alle Buchungen ab. moto fragt vorher nach."
+                >
+                  Löschen
+                </Button>
+              </div>
+            }
+          >
+            <DataTable
+              columns={slotColumns}
+              rows={[...selected.slots]}
+              getRowKey={(row) => row.start_time}
+              stackedOnMobile
+            />
+            <p className="mt-4 text-sm text-gray-600 print:hidden">
+              Eltern buchen, verschieben oder sagen ab, bis 24 Stunden vor dem
+              Termin. Danach melden sie sich bei Ihnen.
+            </p>
+          </SectionCard>
+        </div>
       ) : null}
 
-      <SectionCard title="Meine Elternsprechtage" className="print:hidden">
-        {error && loadError ? (
-          <LoadErrorAlert error={loadError} />
-        ) : (
-          <DataTable
-            columns={conferenceColumns}
-            rows={[...conferences]}
-            getRowKey={(row) => row.id}
-            isLoading={isLoading && !data}
-            stackedOnMobile
-            defaultSortKey="date"
-            defaultSortDirection="asc"
-            onRowClick={(row) => select(row.id)}
-            emptyState={
-              <EmptyState
-                title="Noch kein Elternsprechtag"
-                description="Legen Sie einen Tag an. Dann buchen die Eltern Ihrer Klasse ein Zeitfenster."
-              />
-            }
-          />
-        )}
-      </SectionCard>
+      <div ref={selected ? undefined : detailFocus}>
+        <SectionCard title="Meine Elternsprechtage" className="print:hidden">
+          {error && loadError ? (
+            <LoadErrorAlert error={loadError} />
+          ) : (
+            <DataTable
+              columns={conferenceColumns}
+              rows={[...conferences]}
+              getRowKey={(row) => row.id}
+              isLoading={isLoading && !data}
+              stackedOnMobile
+              defaultSortKey="date"
+              defaultSortDirection="asc"
+              onRowClick={(row) => select(row.id)}
+              emptyState={
+                <EmptyState
+                  title="Noch kein Elternsprechtag"
+                  description="Legen Sie einen Tag an. Dann buchen die Eltern Ihrer Klasse ein Zeitfenster."
+                />
+              }
+            />
+          )}
+        </SectionCard>
+      </div>
     </TenantPage>
   );
 }
