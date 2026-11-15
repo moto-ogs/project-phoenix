@@ -195,6 +195,7 @@ export const nodeLogicTestFiles = [
   "src/lib/parent-holiday-registration-entries.test.ts",
   "src/lib/parent-messages-api.test.ts",
   "src/lib/parent-request-reason.test.ts",
+  "src/lib/page-titles.test.ts",
   "src/lib/payroll-api.test.ts",
   "src/lib/permission-labels.test.ts",
   "src/lib/personal-calendar-api.test.ts",

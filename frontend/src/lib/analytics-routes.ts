@@ -337,8 +337,6 @@ function matchTemplate(
   return matchersBySurface[surface](pathname);
 }
 
-const withoutPrefix = pathBelow;
-
 function resolveOnSurface(
   surface: AnalyticsRouteSurface,
   pathname: string,
@@ -347,22 +345,22 @@ function resolveOnSurface(
     case "parents":
       return matchTemplate(
         "parents",
-        withoutPrefix(pathname, "/parents") ?? pathname,
+        pathBelow(pathname, "/parents") ?? pathname,
       );
     case "school":
       return matchTemplate(
         "school",
-        withoutPrefix(pathname, "/school") ?? pathname,
+        pathBelow(pathname, "/school") ?? pathname,
       );
     case "caterer":
       return matchTemplate(
         "caterer",
-        withoutPrefix(pathname, "/caterer") ?? pathname,
+        pathBelow(pathname, "/caterer") ?? pathname,
       );
     case "traeger":
       return matchTemplate(
         "traeger",
-        withoutPrefix(pathname, "/traeger") ?? pathname,
+        pathBelow(pathname, "/traeger") ?? pathname,
       );
     case "ogs": {
       // Path routing (`/<slug>/dashboard`) puts the tenant slug first. A
@@ -377,14 +375,14 @@ function resolveOnSurface(
       );
     }
     case "public": {
-      if (withoutPrefix(pathname, "/operator")) return null;
-      const parentsPath = withoutPrefix(pathname, "/parents");
+      if (pathBelow(pathname, "/operator")) return null;
+      const parentsPath = pathBelow(pathname, "/parents");
       if (parentsPath) return matchTemplate("parents", parentsPath);
-      const schoolPath = withoutPrefix(pathname, "/school");
+      const schoolPath = pathBelow(pathname, "/school");
       if (schoolPath) return matchTemplate("school", schoolPath);
-      const catererPath = withoutPrefix(pathname, "/caterer");
+      const catererPath = pathBelow(pathname, "/caterer");
       if (catererPath) return matchTemplate("caterer", catererPath);
-      const traegerPath = withoutPrefix(pathname, "/traeger");
+      const traegerPath = pathBelow(pathname, "/traeger");
       if (traegerPath) return matchTemplate("traeger", traegerPath);
       return (
         matchTemplate("public", pathname) ?? resolveOnSurface("ogs", pathname)

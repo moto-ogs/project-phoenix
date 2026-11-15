@@ -63,9 +63,7 @@ function hostConfig() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const requestHeaders = await headers();
-  const host =
-    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "";
+  const host = requestHost(await headers());
   const config = hostConfig();
   const variant = resolveFaviconVariant(host, config);
   const parentCopy = isParentsHost(host, config)
@@ -94,14 +92,20 @@ function requestHost(requestHeaders: Headers): string {
   return (raw.split(",")[0] ?? "").trim();
 }
 
+/** Host name without port; an unparsable Host header names no portal. */
+function hostnameOf(host: string): string {
+  if (host === "" || !URL.canParse(`http://${host}`)) return "";
+  return new URL(`http://${host}`).hostname;
+}
+
 async function pageTitleProps() {
   const host = requestHost(await headers());
   const config = hostConfig();
-  const hostname = host === "" ? "" : new URL(`http://${host}`).hostname;
+  const hostname = hostnameOf(host);
   // isParentsHost also knows the legacy parents host.
   const portal = isParentsHost(host, config)
     ? "parent"
-    : host === ""
+    : hostname === ""
       ? "tenant"
       : configuredPortalOfHost(host);
   const hostSurface = pageTitleSurfaceOf(portal, hostname, config.tenantDomain);

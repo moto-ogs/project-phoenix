@@ -2,6 +2,12 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import dePageTitles from "~/i18n/messages/de/pageTitles.json";
+import enPageTitles from "~/i18n/messages/en/pageTitles.json";
+import plPageTitles from "~/i18n/messages/pl/pageTitles.json";
+import ruPageTitles from "~/i18n/messages/ru/pageTitles.json";
+import sqPageTitles from "~/i18n/messages/sq/pageTitles.json";
+import trPageTitles from "~/i18n/messages/tr/pageTitles.json";
+import ukPageTitles from "~/i18n/messages/uk/pageTitles.json";
 import { appRoot, collectPageRoutes } from "~/test/page-routes";
 import {
   formatPageTitle,
@@ -14,6 +20,16 @@ import {
   resolvePageTitle,
   type PageTitleSurface,
 } from "./page-titles";
+
+const LOCALE_PAGE_TITLES = {
+  de: dePageTitles,
+  en: enPageTitles,
+  pl: plPageTitles,
+  ru: ruPageTitles,
+  sq: sqPageTitles,
+  tr: trPageTitles,
+  uk: ukPageTitles,
+};
 
 const PORTAL_DIRECTORIES = [
   "[tenant]",
@@ -42,7 +58,7 @@ const PAGE_TREES: ReadonlyArray<{
 ];
 
 function germanTitles(surface: PageTitleSurface): Record<string, string> {
-  return surface === "parents" ? {} : { ...GERMAN_PAGE_TITLES[surface] };
+  return { ...GERMAN_PAGE_TITLES[surface] };
 }
 
 function localizedTitles(surface: PageTitleSurface): Record<string, string> {
@@ -130,6 +146,18 @@ describe("page title registry", () => {
     }
   });
 
+  it.each(Object.entries(LOCALE_PAGE_TITLES))(
+    "names each translated page once in %s",
+    (_locale, catalog) => {
+      for (const titles of Object.values(LOCALIZED_PAGE_TITLES)) {
+        const texts = Object.values(titles).map(
+          (key) => (catalog.pages as Record<string, string>)[key],
+        );
+        expect(new Set(texts).size).toBe(texts.length);
+      }
+    },
+  );
+
   it("finds a German text for every localized title", () => {
     const keys = Object.values(LOCALIZED_PAGE_TITLES).flatMap((titles) =>
       Object.values(titles),
@@ -181,10 +209,12 @@ describe("resolvePageTitle", () => {
   });
 
   it("strips the school's slug of path routing", () => {
-    expect(resolvePageTitle("ogs", "/school-a/students/42")).toMatchObject({
+    expect(resolvePageTitle("public", "/school-a/students/42")).toMatchObject({
+      surface: "ogs",
       template: "/students/:id",
     });
-    expect(resolvePageTitle("ogs", "/school-a")).toMatchObject({
+    expect(resolvePageTitle("public", "/school-a")).toMatchObject({
+      surface: "ogs",
       template: "/",
     });
     expect(resolvePageTitle("public", "/school-a/home")).toMatchObject({
@@ -194,9 +224,15 @@ describe("resolvePageTitle", () => {
   });
 
   it("names an unknown page of a school as not found", () => {
-    expect(resolvePageTitle("ogs", "/school-a/gibt/es/nicht")).toMatchObject({
+    // The server render sees the browser path, so a single unknown segment
+    // on the school's host is no login slug.
+    expect(resolvePageTitle("ogs", "/gibtsnicht")).toMatchObject({
       template: OGS_NOT_FOUND_TEMPLATE,
     });
+    expect(resolvePageTitle("ogs", "/gibt/es/nicht")).toMatchObject({
+      template: OGS_NOT_FOUND_TEMPLATE,
+    });
+    expect(resolvePageTitle("ogs", "/")).toMatchObject({ template: "/" });
   });
 
   it("finds the portal in the path on the bare domain", () => {
@@ -297,6 +333,13 @@ describe("formatPageTitle", () => {
         section: "Monatsbeiträge",
       }),
     ).toBe("Monatsbeiträge – Träger – moto");
+    expect(
+      formatPageTitle({
+        page: "Klassenliste – Datenverwaltung",
+        portal: "OGS",
+        section: "Klassenliste",
+      }),
+    ).toBe("Klassenliste – Datenverwaltung – OGS – moto");
   });
 });
 

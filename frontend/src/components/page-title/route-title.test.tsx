@@ -1,5 +1,10 @@
 import { render, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { releaseFakeTimers } from "~/test/clock";
+import {
+  expectIdleRenderBudget,
+  RENDER_BUDGET_MAX_COMMITS,
+} from "~/test/render-budget";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { RouteTitle } from "./route-title";
 
@@ -71,5 +76,31 @@ describe("RouteTitle", () => {
     );
 
     await waitFor(() => expect(document.title).toBe("Kindakte – OGS – moto"));
+  });
+
+  // Render-Budget (#2939): RouteTitle wraps every page from the root layout,
+  // and a page reports its tab from an effect; that must not loop.
+  describe("render budget", () => {
+    afterEach(() => {
+      releaseFakeTimers();
+    });
+
+    it(`commits at most ${RENDER_BUDGET_MAX_COMMITS} times in idle with a reported tab`, async () => {
+      vi.useFakeTimers();
+
+      await expectIdleRenderBudget(
+        <RouteTitle hostSurface="ogs" messages={MESSAGES}>
+          <TenantPage
+            title="Kindakte"
+            tabs={{
+              value: "history",
+              inUrl: true,
+              onChange: () => undefined,
+              items: TABS,
+            }}
+          />
+        </RouteTitle>,
+      );
+    });
   });
 });

@@ -86,6 +86,15 @@ describe("RootLayout", () => {
     );
   });
 
+  it("renders with an unparsable Host header", async () => {
+    headerState.host = "bad host[";
+    navigationState.pathname = "/start";
+
+    render(await RootLayout({ children: <div>Test</div> }));
+
+    await waitFor(() => expect(document.title).toBe("Erstgespräch – moto"));
+  });
+
   describe("metadata", () => {
     // #7109: every page names itself through RouteTitle; a shared title
     // here would give 100 pages the same tab name again.

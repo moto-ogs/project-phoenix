@@ -12,6 +12,7 @@
  * two pages of one portal share a title.
  */
 
+import { PORTAL_ROUTES, type PortalKey } from "./portal-paths";
 import { createRouteTemplateMatcher, pathBelow } from "./route-templates";
 
 export type PageTitleSurface =
@@ -36,8 +37,10 @@ export const OGS_NOT_FOUND_TEMPLATE = "/:not-found*";
 
 /** Pages of the German-only portals, by route template. */
 export const GERMAN_PAGE_TITLES: Readonly<
-  Record<Exclude<PageTitleSurface, "parents">, Readonly<Record<string, string>>>
+  Record<PageTitleSurface, Readonly<Record<string, string>>>
 > = {
+  // The parents portal is translated: LOCALIZED_PAGE_TITLES.
+  parents: {},
   ogs: {
     // Tenant host outside (protected): login, display, invitation.
     "/": "Anmelden",
@@ -370,10 +373,8 @@ const SURFACES: readonly PageTitleSurface[] = [
 ];
 
 function templatesOf(surface: PageTitleSurface): string[] {
-  const german =
-    surface === "parents" ? {} : (GERMAN_PAGE_TITLES[surface] ?? {});
   return [
-    ...Object.keys(german),
+    ...Object.keys(GERMAN_PAGE_TITLES[surface]),
     ...Object.keys(LOCALIZED_PAGE_TITLES[surface] ?? {}),
   ].filter((template) => template !== OGS_NOT_FOUND_TEMPLATE);
 }
@@ -389,11 +390,11 @@ const metadataMatcher = createRouteTemplateMatcher(METADATA_TITLE_TEMPLATES);
 
 /** Portal hosts serve their pages without the `/<portal>` namespace. */
 const PORTAL_PREFIXES: ReadonlyArray<readonly [PageTitleSurface, string]> = [
-  ["parents", "/parents"],
-  ["school", "/school"],
-  ["caterer", "/caterer"],
-  ["traeger", "/traeger"],
-  ["operator", "/operator"],
+  ["parents", PORTAL_ROUTES.parent.appPrefix],
+  ["school", PORTAL_ROUTES.school.appPrefix],
+  ["caterer", PORTAL_ROUTES.caterer.appPrefix],
+  ["traeger", PORTAL_ROUTES.traeger.appPrefix],
+  ["operator", PORTAL_ROUTES.operator.appPrefix],
 ];
 
 function route(
@@ -403,14 +404,21 @@ function route(
   return template ? { kind: "route", surface, template } : null;
 }
 
-function resolveOgs(pathname: string): ResolvedPageTitle {
+/**
+ * A school's page. On its own host the path is the page (`/home`); with path
+ * routing on the bare domain the slug comes first (`/<slug>/home`) and the
+ * slug alone is the school's login.
+ */
+function resolveOgs(pathname: string, pathRouting: boolean): ResolvedPageTitle {
   const direct = matchers.ogs(pathname);
   if (direct) return { kind: "route", surface: "ogs", template: direct };
-  // Path routing (`/<slug>/home`) and the server render of a tenant host
-  // put the school's slug first; the slug alone is the school's login.
   const segments = pathname.split("/").filter(Boolean);
   const slugless = `/${segments.slice(1).join("/")}`;
-  const template = segments.length === 1 ? "/" : matchers.ogs(slugless);
+  const template = !pathRouting
+    ? null
+    : segments.length === 1
+      ? "/"
+      : matchers.ogs(slugless);
   return {
     kind: "route",
     surface: "ogs",
@@ -442,14 +450,16 @@ export function resolvePageTitle(
       : rawPathname;
   if (metadataMatcher(pathname)) return { kind: "metadata" };
 
-  if (hostSurface === "ogs") return resolveOgs(pathname);
+  if (hostSurface === "ogs") return resolveOgs(pathname, false);
   if (hostSurface !== "public") return resolveOnPortal(hostSurface, pathname);
 
   for (const [surface, prefix] of PORTAL_PREFIXES) {
     const below = pathBelow(pathname, prefix);
     if (below) return route(surface, matchers[surface](below));
   }
-  return route("public", matchers.public(pathname)) ?? resolveOgs(pathname);
+  return (
+    route("public", matchers.public(pathname)) ?? resolveOgs(pathname, true)
+  );
 }
 
 /** `<Abschnitt> – <Seite> – <Portal> – moto`, without empty or repeated parts. */
@@ -458,7 +468,13 @@ export function formatPageTitle(parts: {
   readonly portal?: string | null;
   readonly section?: string | null;
 }): string {
-  const ordered = [parts.section, parts.page, parts.portal, PAGE_TITLE_BRAND];
+  // A section the page title already starts with adds nothing
+  // („Klassenliste“ before „Klassenliste – Datenverwaltung“).
+  const section =
+    parts.section && parts.page.split(" – ")[0] === parts.section.trim()
+      ? null
+      : parts.section;
+  const ordered = [section, parts.page, parts.portal, PAGE_TITLE_BRAND];
   return ordered
     .filter((part): part is string => Boolean(part?.trim()))
     .filter((part, index, all) => all.indexOf(part) === index)
@@ -488,8 +504,7 @@ export function pageTitleText(
       section,
     });
   }
-  const german =
-    surface === "parents" ? undefined : GERMAN_PAGE_TITLES[surface][template];
+  const german = GERMAN_PAGE_TITLES[surface][template];
   if (german === undefined) return PAGE_TITLE_BRAND;
   return formatPageTitle({
     page: german,
@@ -506,7 +521,7 @@ export function pageTitleText(
  * a school's subdomain is the OGS portal, every other host the bare domain.
  */
 export function pageTitleSurfaceOf(
-  portal: "tenant" | "parent" | "school" | "caterer" | "traeger" | "operator",
+  portal: PortalKey,
   hostname: string,
   tenantDomain: string,
 ): PageTitleSurface {
