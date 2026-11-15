@@ -21,6 +21,8 @@ type Resource struct {
 	NotificationsService Service
 	PushService          PushSubscriptionService
 	PreferenceService    PreferenceService
+	// FeedService serves the notification feed of the staff portal (#7148).
+	FeedService FeedService
 }
 
 // NewResource builds the notifications HTTP resource.
@@ -28,6 +30,7 @@ func NewResource(
 	service Service,
 	pushService PushSubscriptionService,
 	preferenceService PreferenceService,
+	feed FeedService,
 	runtime Runtime,
 ) *Resource {
 	return &Resource{
@@ -35,6 +38,7 @@ func NewResource(
 		NotificationsService: service,
 		PushService:          pushService,
 		PreferenceService:    preferenceService,
+		FeedService:          feed,
 	}
 }
 
@@ -73,6 +77,9 @@ func (rs *Resource) Router() chi.Router {
 		// has no such type.
 		r.With(withTx).Get("/email-subscriptions/{type}", rs.getEmailSubscription)
 		r.With(withTx).Put("/email-subscriptions/{type}", rs.setEmailSubscription)
+		// The notification feed (#7148) belongs to the staff portal; the
+		// school portal gets its own in a later step.
+		rs.registerFeedRoutes(r, withTx)
 	})
 
 	return r

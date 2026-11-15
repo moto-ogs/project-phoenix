@@ -84,3 +84,17 @@ func TestPickupChangeReachesOnlyTheChildsTeam(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []int64{absenceAccountA, absenceAdmin, declinedAccount}, got)
 }
+
+// TestInstanceCancelledNoticeFollowsTheRight pins the right the cancellation
+// notice (#7148) restates: every staff role holds it, so the switch is offered
+// to everyone who can be planned for a block, and the push is on by default.
+func TestInstanceCancelledNoticeFollowsTheRight(t *testing.T) {
+	t.Parallel()
+	def, ok := notifications.GetType(notifications.TypeInstanceCancelled)
+	require.True(t, ok)
+	assert.Equal(t, permissions.ActivitiesRead, def.Permission)
+	assert.True(t, def.DefaultOn)
+	assert.Equal(t, notifications.PortalStaff, def.Portal)
+	assert.Equal(t, notifications.GroupAppointments, def.Group)
+	assert.False(t, def.SchoolPortal, "the feed of moto schule follows later")
+}

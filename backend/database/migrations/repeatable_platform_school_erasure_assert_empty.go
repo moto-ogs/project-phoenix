@@ -342,6 +342,8 @@ AS $function$
     UNION ALL
     SELECT 1 FROM platform.email_suppressions AS r WHERE r.tenant_id = p_school_id
     UNION ALL
+    SELECT 1 FROM platform.notification_feed_entries AS r WHERE r.tenant_id = p_school_id
+    UNION ALL
     SELECT 1 FROM platform.push_outbox AS r WHERE r.tenant_id = p_school_id
     UNION ALL
     SELECT 1 FROM platform.realtime_notifications AS r WHERE r.tenant_id = p_school_id

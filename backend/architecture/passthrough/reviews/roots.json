@@ -736,6 +736,11 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0075",
+      "id": "api/notificationFeed.Page",
+      "reason": "ADR 0075 consumer-port adapter (#7148): translates Delivery's notification feed page onto the feed port of the HTTP adapter; the count and read-state calls reach Delivery's reader unchanged through the embedded interface. No decision or SQL."
+    },
+    {
       "decision": "0090",
       "id": "api/notificationNotifier.Notify",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."

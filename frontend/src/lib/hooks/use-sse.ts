@@ -198,6 +198,9 @@ export function useSSE(
           // it has to be registered here or its useGlobalSSE branch is dead and
           // the team badge only refreshes on focus.
           "staff_message",
+          // Notification feed of the account (#7148): named, so it has to be
+          // registered here or the bell only refreshes by polling.
+          "notification_feed_changed",
           // Named SSE events MUST be registered here or the browser's EventSource
           // never delivers them (onmessage fires only for UNNAMED events). Both of
           // these are sent as NAMED events by the backend and consumed by their

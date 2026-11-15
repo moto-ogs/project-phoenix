@@ -6,7 +6,7 @@ import { DienstplanPersonWeekGrid } from "~/components/staff/dienstplan-person-w
 import { DienstplanGridSkeleton } from "~/components/staff/dienstplan-skeleton";
 import { OwnWeekAgenda } from "~/components/time-tracking/own-week-agenda";
 import { OwnWeekHoursCard } from "~/components/time-tracking/own-week-hours-card";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import { errorAlertActions } from "~/components/ui/form-error-alert";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
@@ -43,6 +43,7 @@ import { indexShiftTypes } from "~/lib/shift-type-helpers";
 import { useSWRAuth } from "~/lib/swr";
 import { timeTrackingKeys } from "~/lib/swr/portal-keys";
 import { useModuleBooked } from "~/lib/tenant-context";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 import { timeTrackingService } from "~/lib/time-tracking-api";
 import { formatWeekLabel } from "~/lib/timetable-helpers";
 
@@ -60,7 +61,38 @@ const ALLOWED_URL_PARAMS = ["d"] as const;
 const EMPTY_SHIFTS: readonly StaffShift[] = [];
 
 export function OwnDienstplanView() {
-  const { isReady } = useRequirePermission("time_tracking:own");
+  // Kein stilles Umleiten: ein Hinweis der Glocke (#7148) führt hierher, und
+  // wer ohne eigenen Dienstplan auf der Startseite landete, wüsste nicht,
+  // warum.
+  const { isReady, isDenied } = useRequirePermission("time_tracking:own", {
+    redirectWhenDenied: false,
+  });
+  const tenantPath = useTenantAwarePath();
+
+  if (isDenied) {
+    return (
+      <TenantPage
+        title="Mein Dienstplan"
+        testId="own-dienstplan-page"
+        empty={{
+          icon: <MotoConceptIcon concept={staffPlanConcept} size={48} />,
+          title: "Sie haben keinen Zugriff auf einen eigenen Dienstplan.",
+          description:
+            "Fragen Sie Ihre Leitung, wenn Sie Ihre Schichten hier sehen möchten.",
+          action: (
+            <ButtonLink
+              href={tenantPath("/home")}
+              variant="outline"
+              size="md"
+              tooltip="Öffnet die Startseite von moto."
+            >
+              Zur Startseite
+            </ButtonLink>
+          ),
+        }}
+      />
+    );
+  }
 
   if (!isReady) {
     return (

@@ -59,6 +59,11 @@ const permissionStaffStammdaten = "staff:stammdaten"
 // TestStudentPickupChangedNoticeFollowsTheRight pin it to the registry.
 const permissionUsersRead = "users:read"
 
+// permissionActivitiesRead restates the right every staff role holds, the
+// guest included: a cancelled appointment reaches whoever was planned for it
+// (#7148). TestInstanceCancelledNoticeFollowsTheRight pins it to the registry.
+const permissionActivitiesRead = "activities:read"
+
 // Groups the profile page renders as headings, in this order.
 const (
 	GroupPickup       = "abholung"
@@ -142,6 +147,11 @@ const (
 	// TypeParentBillingDocument announces a document of the Träger in the
 	// inbox of the parents portal (#4671), such as a confirmation letter.
 	TypeParentBillingDocument = "parent_billing_document"
+
+	// TypeInstanceCancelled tells the staff of an appointment's or offering's
+	// staffing that it was cancelled (#7148). It writes the notification feed
+	// and pushes while the cancellation takes effect within 14 days.
+	TypeInstanceCancelled = contract.NotificationInstanceCancelled
 
 	// TypeEnrollmentSubmitted is the e-mail "Neue Anmeldung" (#3780) to the
 	// enrollment managers who switched it on in the Anmeldungen overview.
@@ -292,6 +302,24 @@ func init() {
 	registerParentMessageTypes()
 	registerParentStatusTypes()
 	registerSchoolTypes()
+	registerStaffAppointmentTypes()
+}
+
+// registerStaffAppointmentTypes registers the staff notices about the
+// appointments a person is planned for (#7148). They also write the
+// notification feed; the person's switch decides only the push.
+func registerStaffAppointmentTypes() {
+	RegisterType(TypeDefinition{
+		Key:         TypeInstanceCancelled,
+		Label:       "Absage eines Termins",
+		Description: "Wenn ein Termin oder Angebot abgesagt wird, für den Sie eingeplant sind. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Absagen in den nächsten 14 Tagen.",
+		Group:       GroupAppointments,
+		Portal:      PortalStaff,
+		TenantGate:  settingInstanceCancelledEnabled,
+		SortOrder:   1,
+		Permission:  permissionActivitiesRead,
+		DefaultOn:   true,
+	})
 }
 
 func registerPickupTypes() {

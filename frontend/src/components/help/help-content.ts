@@ -349,6 +349,7 @@ export function getHelpTopics(
     ...TRAEGER_TOPICS,
     articles.errorMessagesTopic(),
     articles.analyticsConsentTopic(),
+    articles.staffNotificationsTopic(),
   ];
 
   const hidden = hiddenHelpTopicIds(presenceMode, groupMode, nfcEnabled);
