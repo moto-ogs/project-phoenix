@@ -241,6 +241,7 @@ guards=(
   src/lib/help-topics.test.ts
   src/lib/loading-boundaries.test.ts
   src/lib/navigation-sync.test.ts
+  src/lib/page-titles.test.ts
   src/lib/personal-storage.test.ts
   src/lib/browser-token-ratchet.test.ts
   src/components/ui/tenant-page-scaffold.test.ts
