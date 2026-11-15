@@ -285,6 +285,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/reset-password",
   "/schliesstage",
   "/schulen/:id",
+  "/standortvergleich",
   "/stichtagszahlen",
   "/uebersicht",
   "/vertraege",

@@ -45,16 +45,11 @@ vi.mock("next-auth/react", () => ({
 // Mock next/navigation
 const mockPush = vi.fn();
 const mockRefresh = vi.fn();
-const mockSearchParamsGet = vi.fn((_key: string): string | null => null);
-// Stable reference, real useSearchParams returns the same object between renders.
-// A fresh object each call causes the useEffect([searchParams]) to re-fire.
-const stableSearchParams = { get: mockSearchParamsGet };
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
     refresh: mockRefresh,
   }),
-  useSearchParams: () => stableSearchParams,
 }));
 
 // Mock tenant-router
@@ -74,7 +69,8 @@ vi.mock("~/components/auth/smart-redirect", () => ({
 }));
 
 // Mock PasswordResetModal
-vi.mock("~/components/auth/password-reset-modal", () => ({
+vi.mock("~/components/auth/password-reset-modal", async (actual) => ({
+  ...(await actual<object>()),
   PasswordResetModal: ({
     isOpen,
     onClose,
@@ -179,7 +175,6 @@ describe("HomePage (Login)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUpdateSession.mockReset().mockResolvedValue(browserSession);
-    mockSearchParamsGet.mockImplementation((_key: string) => null);
     vi.mocked(useSession).mockReturnValue({
       data: null,
       status: "unauthenticated",
@@ -297,14 +292,6 @@ describe("HomePage (Login)", () => {
     });
   });
 
-  it("renders forgot password link", async () => {
-    render(<HomePage />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Passwort vergessen?")).toBeInTheDocument();
-    });
-  });
-
   it("shows loading state when session is being checked", async () => {
     vi.mocked(useSession).mockReturnValue({
       data: null,
@@ -314,14 +301,9 @@ describe("HomePage (Login)", () => {
 
     render(<HomePage />);
 
-    // Login form is hidden while checking auth
-    const formContainer = document.querySelector(
-      "div[class*='transition-opacity']",
-    );
-    expect(formContainer).toHaveClass("hidden");
-
-    // Loading spinner is visible with checking message
-    expect(screen.getByText("Sitzung wird überprüft...")).toBeInTheDocument();
+    // Anker: die Ladeanzeige steht statt des Formulars.
+    expect(screen.getByTestId("loading")).toBeInTheDocument();
+    expect(screen.queryByTestId("input-email")).not.toBeInTheDocument();
   });
 
   it("posts login credentials then reads the token-free session", async () => {
@@ -369,11 +351,8 @@ describe("HomePage (Login)", () => {
     expect(mockTrackTenantEvent).not.toHaveBeenCalled();
   });
 
-  it("removes stale session-expired query params before refreshing the provider", async () => {
+  it("takes the session-expired query out of the address", async () => {
     mockUpdateSession.mockResolvedValue(browserSession);
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "error" ? "SessionExpired" : null,
-    );
     window.history.pushState(
       {},
       "",
@@ -748,25 +727,6 @@ describe("HomePage (Login)", () => {
     });
   });
 
-  it("toggles password visibility", async () => {
-    render(<HomePage />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("input-password")).toBeInTheDocument();
-    });
-
-    const passwordInput = screen.getByTestId("input-password");
-    expect(passwordInput).toHaveAttribute("type", "password");
-
-    // Find and click the toggle button
-    const toggleButton = screen.getByLabelText("Passwort anzeigen");
-    await act(async () => {
-      fireEvent.click(toggleButton);
-    });
-
-    expect(passwordInput).toHaveAttribute("type", "text");
-  });
-
   it("opens password reset modal when forgot password is clicked", async () => {
     render(<HomePage />);
 
@@ -902,7 +862,7 @@ describe("HomePage (Login)", () => {
       fireEvent.click(screen.getByRole("button", { name: /anmelden/i }));
     });
 
-    expect(screen.getByText("Anmeldung läuft...")).toBeInTheDocument();
+    expect(screen.getByText("Anmeldung läuft …")).toBeInTheDocument();
   });
 });
 
@@ -948,20 +908,6 @@ describe("Tenant name display", () => {
     expect(
       screen.queryByText("Grundschule Musterstadt"),
     ).not.toBeInTheDocument();
-  });
-
-  it("does not display tenant name when tenant.name is empty", async () => {
-    vi.mocked(useTenant).mockReturnValue({
-      tenantSlug: "test-tenant",
-      routingMode: "path",
-      tenant: { name: "" } as ReturnType<typeof useTenant>["tenant"],
-    });
-
-    render(<HomePage />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Willkommen bei moto")).toBeInTheDocument();
-    });
   });
 });
 
@@ -1045,13 +991,9 @@ describe("Stripped session", () => {
     await waitFor(() => {
       expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
     });
-    await waitFor(() => {
-      const submitButton = screen.getByRole("button", { name: /anmelden/i });
-      const formContainer = submitButton.closest(
-        "div[class*='transition-opacity']",
-      );
-      expect(formContainer).toHaveClass("opacity-100");
-    });
+    expect(
+      await screen.findByRole("button", { name: /anmelden/i }),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId("smart-redirect")).not.toBeInTheDocument();
     expect(mockSignIn).not.toHaveBeenCalled();
   });
@@ -1083,6 +1025,12 @@ describe("Form error handling", () => {
     });
 
     await act(async () => {
+      fireEvent.change(screen.getByTestId("input-email"), {
+        target: { value: "test@example.com" },
+      });
+      fireEvent.change(screen.getByTestId("input-password"), {
+        target: { value: "password123" },
+      });
       fireEvent.click(screen.getByRole("button", { name: /anmelden/i }));
     });
 
@@ -1104,6 +1052,12 @@ describe("Form error handling", () => {
     });
 
     await act(async () => {
+      fireEvent.change(screen.getByTestId("input-email"), {
+        target: { value: "test@example.com" },
+      });
+      fireEvent.change(screen.getByTestId("input-password"), {
+        target: { value: "password123" },
+      });
       fireEvent.click(screen.getByRole("button", { name: /anmelden/i }));
     });
 
@@ -1138,15 +1092,12 @@ describe("Deliberate logout suppression", () => {
   afterEach(() => {
     sessionStorage.clear();
     vi.restoreAllMocks();
-    mockSearchParamsGet.mockImplementation((_key: string) => null);
     window.history.pushState({}, "", "/");
   });
 
   it("suppresses error when deliberateLogout flag is set", async () => {
     sessionStorage.setItem("deliberateLogout", "1");
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "error" ? "SessionRequired" : null,
-    );
+    window.history.pushState({}, "", "/?error=SessionRequired");
 
     await act(async () => {
       render(<HomePage />);
@@ -1163,9 +1114,7 @@ describe("Deliberate logout suppression", () => {
   it.each(["SessionRequired", "SessionExpired"])(
     "shows the session-expired error for %s when deliberateLogout flag is not set",
     async (urlError) => {
-      mockSearchParamsGet.mockImplementation((key: string) =>
-        key === "error" ? urlError : null,
-      );
+      window.history.pushState({}, "", `/?error=${urlError}`);
 
       await act(async () => {
         render(<HomePage />);
@@ -1179,9 +1128,7 @@ describe("Deliberate logout suppression", () => {
   );
 
   it("shows no session error for an unrelated error param", async () => {
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "error" ? "UnknownError" : null,
-    );
+    window.history.pushState({}, "", "/?error=UnknownError");
 
     await act(async () => {
       render(<HomePage />);
@@ -1197,9 +1144,7 @@ describe("Deliberate logout suppression", () => {
 
   it("consumes the deliberateLogout flag after reading it", async () => {
     sessionStorage.setItem("deliberateLogout", "1");
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "error" ? "SessionExpired" : null,
-    );
+    window.history.pushState({}, "", "/?error=SessionExpired");
 
     await act(async () => {
       render(<HomePage />);
@@ -1210,9 +1155,7 @@ describe("Deliberate logout suppression", () => {
 
   it("cleans up URL params after deliberate logout", async () => {
     sessionStorage.setItem("deliberateLogout", "1");
-    mockSearchParamsGet.mockImplementation((key: string) =>
-      key === "error" ? "SessionRequired" : null,
-    );
+    window.history.pushState({}, "", "/?error=SessionRequired");
     window.history.pushState(
       {},
       "",

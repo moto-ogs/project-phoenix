@@ -112,7 +112,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 	if identity == nil || organizations == nil || persons == nil || staff == nil || audit.Trail == nil || audit.Log == nil || settings == nil || holidayCalendar == nil || holidayMail == nil || holidayMails == nil || holidayTraeger == nil || statistics == nil {
 		return nil, errors.New("traeger portal: identity, organizations, persons, staff, the access trail, the access log, the settings, the host schools' calendar, the holiday mail, its states, the Träger names and the statistics are required")
 	}
-	overview, arrivalPickup, err := traegerViewCompose.New(traegerview.Ports{
+	overview, reports, err := traegerViewCompose.New(traegerview.Ports{
 		SchoolIDs: traegerSchoolIDs{organizations: organizations}, Trail: traegerAccessTrail{trail: audit.Trail},
 		Recorder: traegerAccessRecorder{log: audit.Log}, Holiday: traegerHolidayTrail{trail: enrollmentCompose.NewHolidayAccessTrail()}, Persons: traegerPersonDirectory{persons: persons}, Staff: traegerStaffDirectory{staff: staff},
 		Bureau:  traegerBureauAddresses{roles: identity},
@@ -137,7 +137,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 		identityaccess.TraegerRightSettingsManage, identityaccess.TraegerRightStaffManage, identityaccess.TraegerRightBillingManage)
 	masterData := organizationTenancyTraeger.NewMasterDataResource(organizationTenancyCompose.NewTraegerMasterData(), organizationTenancyCompose.NewTraegerDocumentTemplates(),
 		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage))
-	overviewRoutes := traegerViewHTTP.NewResource(overview, arrivalPickup)
+	overviewRoutes := traegerViewHTTP.NewResource(overview, reports)
 	// The names of the Träger-Büro (#4693); a route-sized test identity
 	// without them answers 500 on those routes, the serving root refuses it.
 	profiles, _ := identity.(identityaccess.TraegerMemberProfiles)

@@ -71,8 +71,8 @@ test("Anmeldeformular leer und nach leerem Absenden", async ({
 test("Eltern-Login und Startseite", async ({ page }) => {
   test.skip(!parent, "Elternkonto in backend/.seed-state.json fehlt");
   await page.goto(`${parentsBase}/login`, { waitUntil: "domcontentloaded" });
-  await page.locator("#parent-email").fill(parent!.email);
-  await page.locator("#parent-password").fill(parent!.password);
+  await page.locator("#email").fill(parent!.email);
+  await page.locator("#password").fill(parent!.password);
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/login"), {
     timeout: 60_000,

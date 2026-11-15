@@ -7,6 +7,7 @@
 import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 import type { SettingsSchema } from "./settings-api";
 import { filenameFromDisposition } from "./file-download";
+import { portalAuthPath } from "./portal-paths";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 import { type TraegerRole, traegerRoles } from "./traeger-roles";
 
@@ -213,7 +214,7 @@ export async function traegerLogin(input: {
   if (input.organizationId !== undefined) {
     body.organization_id = Number(input.organizationId);
   }
-  const response = await transportFetch("/api/traeger/auth/login", {
+  const response = await transportFetch(portalAuthPath("traeger", "login"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",

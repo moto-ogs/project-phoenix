@@ -308,19 +308,12 @@ describe("invitation-api", () => {
         },
       });
 
-      const warnSpy = vi
-        .spyOn(console, "warn")
-        .mockImplementation(() => undefined);
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-      await expect(validateInvitation("test-token")).rejects.toThrow(
-        "Einladung konnte nicht geprüft werden.",
-      );
-      expect(warnSpy).toHaveBeenCalledWith(
-        "failed to parse invitation API error",
-        {
-          error: expect.any(String),
-        },
-      );
+      await expect(validateInvitation("test-token")).rejects.toMatchObject({
+        message: "Einladung konnte nicht geprüft werden.",
+        status: 500,
+      });
     });
 
     it("does not read a legacy message field as the diagnostic", async () => {

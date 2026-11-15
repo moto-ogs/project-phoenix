@@ -18,17 +18,17 @@ import (
 
 // Resource serves the Träger projection routes.
 type Resource struct {
-	overview      traegerview.Overview
-	arrivalPickup traegerview.ArrivalPickupReport
+	overview traegerview.Overview
+	reports  traegerview.Reports
 }
 
-// NewResource builds the resource. arrivalPickup answers the heatmap of
-// arrival and pickup times (#4714).
-func NewResource(overview traegerview.Overview, arrivalPickup traegerview.ArrivalPickupReport) *Resource {
-	if overview == nil || arrivalPickup == nil {
-		panic("traeger view http: the overview and the arrival and pickup times are required")
+// NewResource builds the resource. reports answers the heatmap of arrival
+// and pickup times (#4714) and the comparison of schools (#4715).
+func NewResource(overview traegerview.Overview, reports traegerview.Reports) *Resource {
+	if overview == nil || reports == nil {
+		panic("traeger view http: the overview and the reports are required")
 	}
-	return &Resource{overview: overview, arrivalPickup: arrivalPickup}
+	return &Resource{overview: overview, reports: reports}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/schools inside the
@@ -53,6 +53,9 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 		r.With(common.RequiresPermission(identityaccess.TraegerRightContractsManage)).Get("/{id}/utilization/children", rs.utilizationChildren)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/arrival-pickup-times", rs.arrivalPickupTimes)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/arrival-pickup-times/export", rs.arrivalPickupTimesExport)
+		// The comparison of the schools is a report too (#4715, ADR 0245).
+		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/comparison", rs.comparison)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/comparison/export", rs.comparisonExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/{id}", rs.getSchool)
 	})
 	return r
