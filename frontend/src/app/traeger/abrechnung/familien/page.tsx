@@ -43,10 +43,7 @@ import {
 } from "~/components/traeger/child-debtor-numbers-modal";
 import { FamilyDebtorNumberModal } from "~/components/traeger/family-debtor-number-modal";
 import { useDebtorNumberSettings } from "~/components/traeger/use-debtor-number-format";
-import {
-  TraegerListExportMenu,
-  traegerExportScope,
-} from "~/components/traeger/traeger-list-export-menu";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
@@ -590,7 +587,7 @@ export default function TraegerBillingFamiliesPage() {
           download={(format) =>
             downloadTraegerList("/api/traeger/billing-families/export", format)
           }
-          scope={traegerExportScope()}
+          scope="Alle Familien, ohne Suche und Filter"
           ariaLabel="Familien herunterladen"
           tooltip="Zeigt die Formate für alle Familien, ohne Suche und Filter. Jeder Download wird protokolliert."
           fallbackName="familien"

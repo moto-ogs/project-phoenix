@@ -21,10 +21,7 @@ import {
   billingAreaTitle,
   billingTabs,
 } from "~/components/traeger/billing-family-format";
-import {
-  TraegerListExportMenu,
-  traegerExportScope,
-} from "~/components/traeger/traeger-list-export-menu";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -322,7 +319,7 @@ export default function TraegerKostentraegerPage() {
           download={(format) =>
             downloadTraegerList("/api/traeger/care-cost-shares/export", format)
           }
-          scope={traegerExportScope()}
+          scope="Alle Anteile, ohne Suche und Filter"
           ariaLabel="Anteile der Kostenträger herunterladen"
           tooltip="Zeigt die Formate für alle Kinder, ohne Suche und Filter. Jeder Download steht im Zugriffsprotokoll."
           fallbackName="kostentraeger-anteile"

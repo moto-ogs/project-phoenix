@@ -23,10 +23,7 @@ import {
   validityLabel,
 } from "~/components/traeger/family-children-format";
 import { FamilyChildrenModal } from "~/components/traeger/family-children-modal";
-import {
-  TraegerListExportMenu,
-  traegerExportScope,
-} from "~/components/traeger/traeger-list-export-menu";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { ChevronDown, ChevronUp, Trash2, TriangleAlert } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -359,7 +356,7 @@ export default function TraegerKinderzahlPage() {
           download={(format) =>
             downloadTraegerList("/api/traeger/family-children/export", format)
           }
-          scope={traegerExportScope()}
+          scope="Alle Familien, ohne Suche und Filter"
           ariaLabel="Kinderzahl herunterladen"
           tooltip="Zeigt die Formate für alle Familien, ohne Suche. Jeder Download steht im Zugriffsprotokoll."
           fallbackName="kinderzahl"

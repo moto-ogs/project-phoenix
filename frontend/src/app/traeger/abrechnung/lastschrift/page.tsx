@@ -16,10 +16,7 @@ import {
   SepaMandatesCard,
   useSepaMandates,
 } from "~/components/traeger/sepa-mandates-card";
-import {
-  TraegerListExportMenu,
-  traegerExportScope,
-} from "~/components/traeger/traeger-list-export-menu";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { ButtonLink } from "~/components/ui/button";
 import type { FilterConfig } from "~/components/ui/page-header/types";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
@@ -100,7 +97,7 @@ export default function TraegerLastschriftPage() {
               download={(format) =>
                 downloadTraegerList("/api/traeger/sepa-mandates/export", format)
               }
-              scope={traegerExportScope()}
+              scope="Alle Mandate, ohne Suche und Filter"
               ariaLabel="SEPA-Mandate herunterladen"
               tooltip="Zeigt die Formate für alle Mandate, ohne Suche und Filter. Jeder Download wird protokolliert."
               fallbackName="sepa-mandate"

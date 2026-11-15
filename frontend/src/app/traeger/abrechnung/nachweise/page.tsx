@@ -16,10 +16,7 @@ import {
   EVIDENCE_KIND_LABELS,
   type EvidenceTarget,
 } from "~/components/traeger/care-evidence-modal";
-import {
-  TraegerListExportMenu,
-  traegerExportScope,
-} from "~/components/traeger/traeger-list-export-menu";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -292,7 +289,7 @@ export default function TraegerNachweisePage() {
           download={(format) =>
             downloadTraegerList("/api/traeger/care-evidences/export", format)
           }
-          scope={traegerExportScope()}
+          scope="Alle Nachweise, ohne Suche"
           ariaLabel="Nachweise herunterladen"
           tooltip="Zeigt die Formate für alle Verträge, ohne Suche. Jeder Download steht im Zugriffsprotokoll."
           fallbackName="nachweise-ermaessigung"
