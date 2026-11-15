@@ -1,10 +1,7 @@
 import { type Page } from "@playwright/test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 
-import { readSeedAccess } from "../scripts/seed-state";
+import { readSeedAccess, readSeedParents } from "../scripts/seed-state";
 import { expect, test } from "./a11y/scan";
-import { frontendPort } from "./frontend-port";
 import { loginToLocalMfaPortal } from "./local-tenant-login";
 import { tenantBase } from "./tenant-session";
 
@@ -14,44 +11,18 @@ import { tenantBase } from "./tenant-session";
 // Absenden, Startseiten von Eltern, Träger und Schulportal. Sie prüft nur,
 // dass die Seite da ist; die Verstöße zählt der Fixture-Wrapper.
 
-interface Credentials {
-  readonly email: string;
-  readonly password: string;
+function origin(hostVariable: string): string {
+  const host = process.env[hostVariable];
+  if (!host) throw new Error(`${hostVariable} fehlt (playwright.config.ts).`);
+  return `http://${host}`;
 }
 
-function seedParent(): Credentials | null {
-  try {
-    const state = JSON.parse(
-      readFileSync(
-        join(process.cwd(), "..", "backend", ".seed-state.json"),
-        "utf8",
-      ),
-    ) as {
-      default_profile?: string;
-      profiles?: Record<
-        string,
-        { credentials?: { parents?: Array<Partial<Credentials>> } }
-      >;
-    };
-    const parent = state.profiles?.[
-      state.default_profile ?? ""
-    ]?.credentials?.parents?.find((entry) => entry.email && entry.password);
-    return parent ? { email: parent.email!, password: parent.password! } : null;
-  } catch {
-    return null;
-  }
-}
-
-function origin(hostVariable: string, fallback: string): string {
-  return `http://${process.env[hostVariable] ?? `${fallback}.localhost:${frontendPort}`}`;
-}
-
-const parent = seedParent();
+const parent = readSeedParents()[0] ?? null;
 const traeger = readSeedAccess({ role: "school_admin" });
 const lehrkraft = readSeedAccess({ role: "lehrkraft" });
-const parentsBase = origin("NEXT_PUBLIC_PARENTS_HOSTNAME", "eltern");
-const traegerBase = origin("NEXT_PUBLIC_TRAEGER_HOSTNAME", "traeger");
-const schoolBase = origin("NEXT_PUBLIC_SCHOOL_HOSTNAME", "schule");
+const parentsBase = origin("NEXT_PUBLIC_PARENTS_HOSTNAME");
+const traegerBase = origin("NEXT_PUBLIC_TRAEGER_HOSTNAME");
+const schoolBase = origin("NEXT_PUBLIC_SCHOOL_HOSTNAME");
 
 if (process.env.CI && !(parent && traeger && lehrkraft && tenantBase)) {
   throw new Error(
