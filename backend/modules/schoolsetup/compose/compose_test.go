@@ -28,7 +28,12 @@ func newHarness(t *testing.T) *harness {
 	db := testpkg.SetupTestDB(t)
 	settings := api.NewSettingsTestService(testpkg.SettingsRuntime(t, db))
 	h := &harness{db: db}
-	service, err := api.NewSchoolSetupTestService(api.SchoolSetupSettings{Settings: settings})
+	// Workforce is not part of this composition: the working-time step
+	// (#6919) sees a school with Zeiterfassung whose one staff member has no
+	// Soll yet. Its own count is tested in the root binding.
+	service, err := api.NewSchoolSetupTestService(api.SchoolSetupSettings{Settings: settings}, func(context.Context) (schoolsetup.WorkTimeTargets, error) {
+		return schoolsetup.WorkTimeTargets{Booked: true, StaffTotal: 1, StaffWithoutTarget: 1}, nil
+	})
 	require.NoError(t, err)
 	h.router = schoolsetuphttp.NewResource(service, harnessRuntime(db)).Router()
 	return h

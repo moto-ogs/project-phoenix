@@ -38,7 +38,7 @@ func TestWizardRunsFromFirstStepToCompletion(t *testing.T) {
 	require.Equal(t, http.StatusConflict, response.Code)
 	assert.Equal(t, "school.setup_incomplete", response.Header().Get("X-Conflict-Code"))
 
-	for _, key := range []string{"team", "rooms", "groups", "guardians"} {
+	for _, key := range []string{"team", "rooms", "groups", "guardians", "worktime"} {
 		response, _ = h.do(t, admin.ID, http.MethodPut, "/steps/"+key, map[string]any{"skipped": true})
 		require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 	}

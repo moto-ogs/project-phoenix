@@ -421,6 +421,30 @@ type TraegerStaffStore interface {
 	DeleteRelease(ctx context.Context, organizationID int64) (bool, error)
 
 	TraegerProofStore
+	TraegerStaffImportStore
+}
+
+// TraegerStaffImportStore writes the records of a Personal-Import (#4724)
+// in bulk in the Träger transaction and reads its trail entries.
+type TraegerStaffImportStore interface {
+	// LockStaffRecords locks every record of the Träger until the Träger
+	// transaction ends, in one statement: an edit of a record waits for the
+	// import, and the import checks its rows against what it then writes.
+	LockStaffRecords(ctx context.Context, organizationID int64) error
+	// ReserveStaffRecordIDs draws count record IDs in one statement, so the
+	// bank values can be sealed to their record before the insert.
+	ReserveStaffRecordIDs(ctx context.Context, organizationID int64, count int) ([]int64, error)
+	// InsertStaffRecords inserts records with their reserved IDs in one
+	// statement. A number another record holds fails with
+	// domain.ErrStaffPersonnelNumberTaken.
+	InsertStaffRecords(ctx context.Context, organizationID int64, records []domain.TraegerStaffRecord) error
+	// FillStaffRecordFinancial sets the sealed bank and tax values of each
+	// record where it has none yet, in one statement; a value the record
+	// got meanwhile stays.
+	FillStaffRecordFinancial(ctx context.Context, organizationID int64, records []domain.TraegerStaffRecord) error
+	// StaffImportEvents reads the imports of the Träger from the trail,
+	// newest first, at most limit.
+	StaffImportEvents(ctx context.Context, organizationID int64, limit int) ([]domain.StaffImportEvent, error)
 }
 
 // TraegerProofStore is the persistence of the Nachweise (#4707): kinds,

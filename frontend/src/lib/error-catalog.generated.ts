@@ -2017,6 +2017,14 @@ export const ERROR_CATALOG = {
         "Diese Nachweisart gibt es nicht mehr oder sie ist archiviert. Bitte laden Sie die Seite neu.",
       "workforce.traeger_staff_already_linked":
         "Eine dieser Personen hat schon eine Personalakte. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_staff_import_changed":
+        "Seit der Vorschau hat sich etwas an den Personalakten geändert. Bitte prüfen Sie die Vorschau noch einmal und übernehmen Sie dann.",
+      "workforce.traeger_staff_import_file_invalid":
+        "moto kann die Datei nicht lesen. Bitte wählen Sie eine CSV-Datei mit Überschriften in der ersten Zeile und mindestens einer Person.",
+      "workforce.traeger_staff_import_file_too_large":
+        "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
+      "workforce.traeger_staff_import_mapping_invalid":
+        "Die Zuordnung der Spalten passt nicht zur Datei. Bitte wählen Sie für jedes Pflichtfeld eine Spalte.",
       "workforce.traeger_staff_link_invalid":
         "Die Personen lassen sich so nicht verknüpfen. Bitte prüfen Sie Ihre Auswahl.",
       "workforce.traeger_staff_not_released":

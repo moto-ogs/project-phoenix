@@ -99,8 +99,12 @@ export interface StaffFinancial {
 type StaffContractChangeField = "contract" | "contract_soll" | "holiday_week";
 
 export interface StaffChange {
-  readonly kind: "linked" | "not_chosen" | "changed" | "added" | "removed";
-  readonly field: StaffRecordField | "school" | StaffContractChangeField;
+  /** `imported`: angelegt oder ergänzt vom Personal-Import (#4724). */
+  readonly kind:
+    "linked" | "not_chosen" | "changed" | "added" | "removed" | "imported";
+  /** `record`: die ganze Akte, die der Personal-Import angelegt hat. */
+  readonly field:
+    StaffRecordField | "school" | "record" | StaffContractChangeField;
   readonly value: string;
   readonly schoolName: string;
   readonly occurredAt: string;

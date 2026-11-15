@@ -8,8 +8,8 @@ import (
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 )
 
-func NewSchoolSetupTestService(settings schoolsetup.Settings) (schoolsetup.Service, error) {
-	return schoolSetupCompose.New(schoolSetupCompose.Dependencies{Settings: settings, Store: settingsCompose.NewSchoolSetupRepository[schoolsetup.State](schoolSetupCompose.AmbientRuntime{})})
+func NewSchoolSetupTestService(settings schoolsetup.Settings, workTime schoolsetup.WorkTime) (schoolsetup.Service, error) {
+	return schoolSetupCompose.New(schoolSetupCompose.Dependencies{Settings: settings, WorkTime: workTime, Store: settingsCompose.NewSchoolSetupRepository[schoolsetup.State](schoolSetupCompose.AmbientRuntime{})})
 }
 
 func NewStaffOnboardingTestService() (schoolsetup.StaffOnboardingService, error) {
