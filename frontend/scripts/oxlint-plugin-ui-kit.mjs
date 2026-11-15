@@ -6,6 +6,7 @@ import {
   buttonRatchetAllowlist,
   buttonRatchetBaseline,
 } from "./ui-kit-button-baseline.mjs";
+import { contrastRatchetBaseline } from "./ui-kit-contrast-baseline.mjs";
 
 // UI-kit drift ratchet (issue #1629).
 //
@@ -75,6 +76,12 @@ import {
 //                                     Tailwind never generates them
 //   ui-kit/no-white-on-warm-fill    — no white text on orange (SCHOOLYARD) or
 //                                     amber (WARNING) fills
+//
+// Two more are shrink-only per file, not hard-zero (#7108, baseline in
+// ui-kit-contrast-baseline.json, `pnpm run ui-kit:contrast-baseline`):
+//
+//   ui-kit/no-gray-400-text         — text-gray-400 as text colour
+//   ui-kit/no-gray-400-focus-ring   — ring-gray-400 as focus ring
 //
 // ui-kit/no-uppercase-label (#5590, hard-zero): no `uppercase
 // tracking-*` class chain outside the kit; group headings use SectionLabel.
@@ -3138,7 +3145,7 @@ function makeRatchetRule({
       const key = fileKey(context);
       if (
         EXEMPT_FILE_RE.test(key) ||
-        key.endsWith(kitFile) ||
+        (kitFile !== null && key.endsWith(kitFile)) ||
         (exemptDir !== null && key.startsWith(exemptDir)) ||
         exemptDirs.some((dir) => key.startsWith(dir)) ||
         exemptFiles.includes(key) ||
@@ -6484,6 +6491,100 @@ const menuItemNeedsDescription = {
   },
 };
 
+// --- Kontrast-Ratsche gegen gray-400 (#7108) ---------------------------------
+//
+// text-gray-400 (#99a1af) erreicht auf Weiß 2,6:1, auf gray-50 2,5:1: unter
+// den 4,5:1 für Text (WCAG 1.4.3) und unter den 3:1 für einen Fokusring
+// (WCAG 1.4.11). Beide Regeln zählen je Datei gegen
+// ui-kit-contrast-baseline.json; die Baseline darf nur sinken
+// (`pnpm run ui-kit:contrast-baseline`).
+//
+// - no-gray-400-text: jede Klasse text-gray-400 in einem String, auch mit
+//   Zustand (hover:, placeholder:) oder Deckkraft. Nicht gezählt: disabled-
+//   Zustände (WCAG nimmt inaktive Bedienelemente aus) und die Farbe eines
+//   Symbols (Element `…Icon` oder `svg`), das neben seinem Text steht.
+// - no-gray-400-focus-ring: ring-gray-400 unter einem focus-Zustand.
+
+const GRAY_400_TEXT_RE =
+  /(?<![\w:/-])((?:[\w-]+:)*)!?text-gray-400(?:\/[\w.[\]]+)?!?(?![\w/-])/g;
+const GRAY_400_RING_RE =
+  /(?<![\w:/-])((?:[\w-]+:)*)!?ring-gray-400(?:\/[\w.[\]]+)?!?(?![\w/-])/g;
+const ICON_ELEMENT_RE = /(?:Icon|^svg)$/;
+
+function classOfIconElement(node) {
+  let current = node.parent;
+  while (current) {
+    if (current.type === "JSXAttribute") {
+      const opening = current.parent;
+      return (
+        current.name?.name === "className" &&
+        opening?.type === "JSXOpeningElement" &&
+        ICON_ELEMENT_RE.test(jsxName(opening.name) ?? "")
+      );
+    }
+    if (
+      current.type === "JSXOpeningElement" ||
+      current.type === "JSXElement" ||
+      current.type === "Program"
+    ) {
+      return false;
+    }
+    current = current.parent;
+  }
+  return false;
+}
+
+function makeGray400Rule({ ruleName, description, message, regex, counts }) {
+  return makeRatchetRule({
+    ruleName,
+    description,
+    message,
+    baselines: contrastRatchetBaseline,
+    allowlist: [],
+    countEnv: "UI_KIT_CONTRAST_RATCHET",
+    kitFile: null,
+    onlySrc: true,
+    detect: ({ found }) => {
+      const check = (node, text) => {
+        regex.lastIndex = 0;
+        for (const match of text.matchAll(regex)) {
+          if (counts(match[1].split(":").filter(Boolean), node)) found(node);
+        }
+      };
+      return {
+        Literal(node) {
+          if (typeof node.value === "string") check(node, node.value);
+        },
+        TemplateLiteral(node) {
+          for (const quasi of node.quasis) check(node, quasi.value.raw);
+        },
+      };
+    },
+  });
+}
+
+const noGray400Text = makeGray400Rule({
+  ruleName: "no-gray-400-text",
+  description:
+    "Disallow text-gray-400 as a text colour; it misses WCAG AA contrast on white.",
+  message:
+    "text-gray-400 ist als Schrift zu blass (2,6:1 auf Weiß, nötig 4,5:1). Für Nebentext text-gray-500 oder dunkler nehmen (#7108).",
+  regex: GRAY_400_TEXT_RE,
+  counts: (variants, node) =>
+    !variants.some((variant) => variant.includes("disabled")) &&
+    !classOfIconElement(node),
+});
+
+const noGray400FocusRing = makeGray400Rule({
+  ruleName: "no-gray-400-focus-ring",
+  description:
+    "Disallow ring-gray-400 as a focus ring; it misses the 3:1 contrast a focus indicator needs.",
+  message:
+    "ring-gray-400 ist als Fokusring zu blass (2,6:1 auf Weiß, nötig 3:1). Den Fokusring des Kits nehmen: focus-visible:ring-gray-600 wie Input, besser gleich den Kit-Baustein (#7108).",
+  regex: GRAY_400_RING_RE,
+  counts: (variants) => variants.some((variant) => variant.includes("focus")),
+});
+
 export default {
   meta: { name: "ui-kit" },
   rules: {
@@ -6499,6 +6600,8 @@ export default {
     "no-dynamic-color-class": noDynamicColorClass,
     "no-generic-brand-colors": noGenericBrandColors,
     "no-grey-button-fill": noGreyButtonFill,
+    "no-gray-400-focus-ring": noGray400FocusRing,
+    "no-gray-400-text": noGray400Text,
     "no-hand-rolled-button": noHandRolledButton,
     "no-hand-rolled-copy-field": noHandRolledCopyField,
     "no-own-spinner": noOwnSpinner,

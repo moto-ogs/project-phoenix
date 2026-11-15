@@ -1,8 +1,8 @@
-# Frontend tests: clock, timers, absence assertions, kit pixel comparison
+# Frontend tests: clock, timers, absence assertions, kit pixel comparison, Storybook a11y
 
 Read before writing or diagnosing a date- or time-sensitive Vitest test, a
 test that asserts something is absent, or before proving that a kit change
-is invisible.
+is invisible, or when a Storybook a11y test fails.
 Paths start at `frontend/`; commands run from `frontend/`.
 
 ## Projects
@@ -241,3 +241,27 @@ baseline's selection unless given its own.
 - Chrome updates itself, and another build renders differently. The baseline
   records the version; `compare` refuses a different one. Take a new baseline
   then.
+
+## Storybook tests and a11y
+
+`pnpm run test:storybook` renders every story in Chromium
+(`vitest.storybook.config.ts`, `@storybook/addon-vitest`) and runs its `play`
+function and the axe check of `@storybook/addon-a11y` (#7108). A render
+error, a failing `play` or an axe violation fails the story.
+`.storybook/preview.tsx` sets `a11y.test: "error"` for all stories.
+
+- CI runs the step „Storybook tests (a11y)“ in „Frontend quality“
+  (`scripts/storybook-test-changed.mjs`). A pull request tests the stories
+  whose imports it changes (`vitest related`); a change to `.storybook/`,
+  `src/styles/`, `package.json`, the lockfile or the config runs all
+  stories, as do pushes and the nightly run. Locally the full run took about
+  100 s on 16 cores; a selection `pnpm exec vitest related --run -c
+  vitest.storybook.config.ts <files>`.
+- A story with known violations sets `parameters: { a11y: { test: "todo" } }`
+  with a comment above it: `// axe meldet hier noch <Regeln>; Behebung in
+  #<Issue>.` (contrast #7110, names and semantics #7112).
+  `scripts/storybook-a11y.node-test.mjs` fails an exception without an issue.
+  Remove the exception when the issue fixes the story; never add one to make
+  a new story pass.
+- A story that leaves the page (a real `redirect()`) carries
+  `tags: ["!test"]`; it would close the test browser.

@@ -13,6 +13,8 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   args: {
     value: "2026-06-10",
     onChange: () => undefined,
@@ -20,6 +22,8 @@ export const Default: Story = {
 };
 
 export const Empty: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   args: {
     value: "",
     onChange: () => undefined,
@@ -27,6 +31,8 @@ export const Empty: Story = {
 };
 
 export const EmptyWithLabel: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   args: {
     value: "",
     onChange: () => undefined,
@@ -35,6 +41,8 @@ export const EmptyWithLabel: Story = {
 };
 
 export const Disabled: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   args: {
     value: "2026-06-10",
     onChange: () => undefined,
@@ -43,6 +51,8 @@ export const Disabled: Story = {
 };
 
 export const Interactive: Story = {
+  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
+  parameters: { a11y: { test: "todo" } },
   args: {
     value: "2026-06-10",
     onChange: () => undefined,

@@ -8,6 +8,8 @@ import { mockSessionData } from "./fixtures/session";
 import type { TenantInfo } from "~/lib/tenant-api";
 import deMessages from "~/i18n/messages/de.generated";
 
+import { configure } from "storybook/test";
+
 import "~/styles/globals.css";
 import "./fonts.css";
 
@@ -28,6 +30,11 @@ const storybookTenant: TenantInfo = {
   messagingEnabled: true,
 };
 
+// Die Storybook-Tests (#7108) laufen alle Stories parallel; unter dieser Last
+// öffnete ein Kalender im ersten Vollauf erst nach der Standardsekunde von
+// findBy*. Fünf Sekunden fangen das ab, ein echter Fehler bleibt rot.
+configure({ asyncUtilTimeout: 5000 });
+
 const preview: Preview = {
   // Schriften vor jedem Render laden, wie next/font es in der App vorab tut.
   // Sonst misst ein Baustein beim Mounten mit der Ersatzschrift und misst
@@ -44,7 +51,7 @@ const preview: Preview = {
   ],
   parameters: {
     a11y: {
-      test: "todo",
+      test: "error",
     },
     controls: {
       matchers: {

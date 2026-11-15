@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
+import { useApiFormError } from "~/contexts/ToastContext";
 import type { Room } from "~/lib/room-helpers";
 import { RoomStammdatenTab } from "./room-stammdaten-tab";
 
@@ -22,6 +23,12 @@ const meta: Meta<typeof RoomStammdatenTab> = {
   args: {
     room,
     onSave: async () => {},
+  },
+  // Der Tab zeigt Speicherfehler über den Fehlerpfad der Seite (#7108: ohne
+  // ihn brach die Story beim Rendern ab).
+  render: function Render(args) {
+    const errorPath = useApiFormError();
+    return <RoomStammdatenTab {...args} errorPath={errorPath} />;
   },
 };
 
