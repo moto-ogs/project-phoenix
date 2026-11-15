@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -190,9 +191,11 @@ func TestTraegerKeyDateReportFollowsItsTemplate(t *testing.T) {
 	assert.Nil(t, keyDateSchoolOf(t, report, fixture.linden).District)
 	require.Len(t, report.Districts, 2, "Nord and the schools without a Sozialraum")
 	assert.Equal(t, "Nord", report.Districts[0].Name)
+	assert.False(t, report.Districts[0].Unmapped)
 	assert.Equal(t, 1, report.Districts[0].Schools)
 	assert.Equal(t, park.Figures, report.Districts[0].Figures)
 	assert.Equal(t, traegerview.UnmappedDistrict, report.Districts[1].Name)
+	assert.True(t, report.Districts[1].Unmapped)
 	assert.Equal(t, 1, report.Districts[1].Schools)
 	assert.Equal(t, 2, report.Total.Schools)
 
@@ -210,7 +213,7 @@ func TestTraegerKeyDateReportFollowsItsTemplate(t *testing.T) {
 	}
 	csv := traegerOccupancyRequest(t, router, keyDateReportPath+"/export"+keyDateReportQuery(template.ID)+"&format=csv", fixture.token, nil)
 	lines := strings.Split(strings.TrimPrefix(csv.Body.String(), "\xEF\xBB\xBF"), "\n")
-	assert.Equal(t, "Standort;Ort;Sozialraum;Betreuungsform;Kinder;Ohne Betreuungsform;Plätze;Belegte Plätze;Freie Plätze;Offene Anmeldungen;Warteliste;Nachfrage", lines[0])
+	assert.Equal(t, "Standort;Ort;Sozialraum;Betreuungsform;Stichtag;Kinder;Ohne Betreuungsform;Plätze;Belegte Plätze;Freie Plätze;Offene Anmeldungen;Warteliste;Nachfrage;Anmeldungen Stand", lines[0])
 	for _, line := range []string{
 		"OGS Am Park;;Nord;;3;1;10;2;8;1;1;4",
 		"Summe Nord;;Nord;;3;1;10;2;8;1;1;4",
@@ -220,7 +223,9 @@ func TestTraegerKeyDateReportFollowsItsTemplate(t *testing.T) {
 		"OGS Am Park;;Nord;Ohne Betreuungsform;1;;;;;;;",
 		"Gesamt;;;Frühbetreuung;1;;;;;;;",
 	} {
-		assert.Contains(t, lines, line)
+		cells := slices.Insert(strings.Split(line, ";"), 4, report.KeyDate.String())
+		cells = append(cells, calendar.DateFromTime(report.AsOf).String())
+		assert.Contains(t, lines, strings.Join(cells, ";"))
 	}
 	assert.NotContains(t, csv.Body.String(), "Fremd")
 	unsupported := traegerOccupancyRequest(t, router, keyDateReportPath+"/export"+keyDateReportQuery(0)+"&format=docx", fixture.token, nil)

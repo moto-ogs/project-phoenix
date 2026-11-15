@@ -63,8 +63,20 @@ const REPORT: KeyDateReport = {
     },
   ],
   districts: [
-    { name: "Nord", schools: 1, figures: FIGURES, careForms: [] },
-    { name: "Ohne Sozialraum", schools: 1, figures: FIGURES, careForms: [] },
+    {
+      name: "Nord",
+      unmapped: false,
+      schools: 1,
+      figures: FIGURES,
+      careForms: [],
+    },
+    {
+      name: "Ohne Sozialraum",
+      unmapped: true,
+      schools: 1,
+      figures: FIGURES,
+      careForms: [],
+    },
   ],
   total: { name: "", schools: 2, figures: FIGURES, careForms: [] },
 };
@@ -117,6 +129,22 @@ describe("report rows", () => {
   it("falls back to schools without a district", () => {
     const plain = { ...REPORT, districts: [] };
     expect(reportRows(plain, "districts")).toHaveLength(2);
+  });
+
+  it("keeps named and unassigned districts distinct even with the same label", () => {
+    const report = {
+      ...REPORT,
+      districts: REPORT.districts.map((group) => ({
+        ...group,
+        name: "Ohne Sozialraum",
+      })),
+    };
+    const rows = reportRows(report, "districts");
+    expect(rows.map((row) => row.name)).toEqual([
+      "Ohne Sozialraum",
+      "Ohne Sozialraum",
+    ]);
+    expect(new Set(rows.map((row) => row.key)).size).toBe(2);
   });
 
   it("names the schools whose check-ins start inside the absence window", () => {

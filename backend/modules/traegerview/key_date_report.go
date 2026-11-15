@@ -180,6 +180,7 @@ type KeyDateSchool struct {
 // sums.
 type KeyDateDistrict struct {
 	Name      string            `json:"name"`
+	Unmapped  bool              `json:"unmapped"` // Distinguishes unassigned schools from a district with the fallback name.
 	Schools   int               `json:"schools"`
 	Figures   KeyDateFigures    `json:"figures"`
 	CareForms []KeyDateCareForm `json:"care_forms"`

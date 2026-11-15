@@ -606,7 +606,8 @@ function TraegerReportsContent() {
     setKeyDate(null);
   };
 
-  const loading = report === null && !pageLoad.error;
+  const reportError = !templateKnown ? templatesError : pageLoad.error;
+  const loading = report === null && !reportError;
   const keyYear = parseISODate(shownKeyDate).getFullYear();
   const keyMonth = parseISODate(shownKeyDate).getMonth() + 1;
   const keyDay = parseISODate(shownKeyDate).getDate();
@@ -678,7 +679,7 @@ function TraegerReportsContent() {
         ) : null
       }
       statsLoading={onReportTab && loading}
-      error={onReportTab ? pageLoad.error : templatesError}
+      error={onReportTab ? reportError : templatesError}
       empty={
         onReportTab && report && schoolCount === 0
           ? {

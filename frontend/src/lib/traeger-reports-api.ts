@@ -81,6 +81,10 @@ interface ReportGroup {
   readonly careForms: readonly ReportCareForm[];
 }
 
+interface ReportDistrict extends ReportGroup {
+  readonly unmapped: boolean;
+}
+
 export interface KeyDateReport {
   readonly keyDate: string;
   readonly asOf: string;
@@ -90,7 +94,7 @@ export interface KeyDateReport {
   readonly absenceWindow: { readonly from: string; readonly to: string } | null;
   readonly schools: readonly ReportSchool[];
   /** Die Sozialräume, leer ohne Zuordnung in der Vorlage. */
-  readonly districts: readonly ReportGroup[];
+  readonly districts: readonly ReportDistrict[];
   readonly total: ReportGroup;
 }
 
@@ -137,6 +141,7 @@ interface BackendCareForm {
 }
 
 interface BackendGroup {
+  readonly unmapped?: boolean;
   readonly name?: string;
   readonly schools?: number;
   readonly figures?: BackendFigures;
@@ -253,7 +258,10 @@ function reportFromBackend(body: BackendReport): KeyDateReport {
       figures: figuresFromBackend(school.figures),
       careForms: careFormsFromBackend(school.care_forms),
     })),
-    districts: (body.districts ?? []).map(groupFromBackend),
+    districts: (body.districts ?? []).map((group) => ({
+      ...groupFromBackend(group),
+      unmapped: group.unmapped ?? false,
+    })),
     total: groupFromBackend(body.total),
   };
 }

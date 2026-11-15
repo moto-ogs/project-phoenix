@@ -188,8 +188,8 @@ const TEMPLATE_REPORT: KeyDateReport = {
     district: index === 0 ? "Nord" : "Süd",
   })),
   districts: [
-    { name: "Nord", schools: 1, figures: BACH, careForms: [] },
-    { name: "Süd", schools: 1, figures: LINDE, careForms: [] },
+    { name: "Nord", unmapped: false, schools: 1, figures: BACH, careForms: [] },
+    { name: "Süd", unmapped: false, schools: 1, figures: LINDE, careForms: [] },
   ],
 };
 
@@ -347,6 +347,42 @@ describe("TraegerReportsPage", () => {
     expect(
       screen.getByRole("button", { name: "Wiederholen" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows a failed prerequisite template load on the report tab and retries it", async () => {
+    mockSearch.value = "vorlage=12";
+    const retry = vi.fn();
+    mockTemplates.mockReturnValue({
+      templates: null,
+      error: {
+        message: "Die Vorlagen konnten nicht geladen werden.",
+        retry: { label: "Wiederholen", onClick: retry },
+      },
+      mutate: retry,
+    });
+    const view = renderPage();
+    expect(
+      await screen.findByText("Die Vorlagen konnten nicht geladen werden."),
+    ).toBeInTheDocument();
+    expect(mockFetchReport).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    expect(retry).toHaveBeenCalledOnce();
+
+    mockFetchReport.mockResolvedValue(TEMPLATE_REPORT);
+    mockTemplates.mockReturnValue({
+      templates: [TEMPLATE],
+      error: null,
+      mutate: retry,
+    });
+    view.rerender(
+      <ToastProvider>
+        <TraegerReportsPage />
+      </ToastProvider>,
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Belegung und Nachfrage" }),
+    ).toBeInTheDocument();
+    expect(mockFetchReport).toHaveBeenCalledWith("2026-03-01", "12");
   });
 
   it("lists templates read-only without the settings right", async () => {

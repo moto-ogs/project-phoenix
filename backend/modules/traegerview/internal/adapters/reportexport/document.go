@@ -33,24 +33,30 @@ import (
 
 // The columns of the export.
 const (
-	reportColumnSchool       lists.ColumnID = "school"
-	reportColumnCity         lists.ColumnID = "city"
-	reportColumnDistrict     lists.ColumnID = "district"
-	reportColumnCareForm     lists.ColumnID = "care_form"
-	reportColumnChildren     lists.ColumnID = "children"
-	reportColumnWithoutForm  lists.ColumnID = "without_care_form"
-	reportColumnStaff        lists.ColumnID = "staff"
-	reportColumnPerStaff     lists.ColumnID = "children_per_staff"
-	reportColumnPresent      lists.ColumnID = "present_days"
-	reportColumnSick         lists.ColumnID = "sick_days"
-	reportColumnExcused      lists.ColumnID = "excused_days"
-	reportColumnAbsenceRate  lists.ColumnID = "absence_rate"
-	reportColumnPlaces       lists.ColumnID = "places"
-	reportColumnBookedPlaces lists.ColumnID = "booked_places"
-	reportColumnFreePlaces   lists.ColumnID = "free_places"
-	reportColumnOpen         lists.ColumnID = "open"
-	reportColumnWaitlisted   lists.ColumnID = "waitlisted"
-	reportColumnDemand       lists.ColumnID = "demand"
+	reportColumnSchool         lists.ColumnID = "school"
+	reportColumnCity           lists.ColumnID = "city"
+	reportColumnDistrict       lists.ColumnID = "district"
+	reportColumnCareForm       lists.ColumnID = "care_form"
+	reportColumnChildren       lists.ColumnID = "children"
+	reportColumnWithoutForm    lists.ColumnID = "without_care_form"
+	reportColumnStaff          lists.ColumnID = "staff"
+	reportColumnPerStaff       lists.ColumnID = "children_per_staff"
+	reportColumnPresent        lists.ColumnID = "present_days"
+	reportColumnSick           lists.ColumnID = "sick_days"
+	reportColumnExcused        lists.ColumnID = "excused_days"
+	reportColumnAbsenceRate    lists.ColumnID = "absence_rate"
+	reportColumnPlaces         lists.ColumnID = "places"
+	reportColumnBookedPlaces   lists.ColumnID = "booked_places"
+	reportColumnFreePlaces     lists.ColumnID = "free_places"
+	reportColumnOpen           lists.ColumnID = "open"
+	reportColumnWaitlisted     lists.ColumnID = "waitlisted"
+	reportColumnDemand         lists.ColumnID = "demand"
+	reportColumnKeyDate        lists.ColumnID = "key_date"
+	reportColumnDemandAsOf     lists.ColumnID = "demand_as_of"
+	reportColumnAbsenceFrom    lists.ColumnID = "absence_from"
+	reportColumnAbsenceTo      lists.ColumnID = "absence_to"
+	reportColumnAttendanceFrom lists.ColumnID = "attendance_from"
+	reportColumnAttendanceNote lists.ColumnID = "attendance_note"
 )
 
 // The labels of the rows and blocks the export adds.
@@ -70,7 +76,7 @@ var reportSectionColumns = map[string][]lists.Column{
 	},
 	traegerview.ReportSectionStaff: {
 		{ID: reportColumnStaff, Label: "Personal"},
-		{ID: reportColumnPerStaff, Label: "Kinder je Fachkraft"},
+		{ID: reportColumnPerStaff, Label: "Kinder je Person"},
 	},
 	traegerview.ReportSectionAbsences: {
 		{ID: reportColumnPresent, Label: "Anwesenheitstage"},
@@ -149,6 +155,21 @@ func keyDateReportDocument(report traegerview.KeyDateReport) lists.Document {
 	if children {
 		doc.Rows = append(doc.Rows, keyDateCareFormRows(report, grouped)...)
 	}
+	// CSV omits document headings and filters. Keep reference dates in the
+	// data itself, also on subtotal and care-form rows copied elsewhere.
+	for _, row := range doc.Rows {
+		if len(row.Values) == 0 {
+			continue
+		}
+		row.Values[reportColumnKeyDate] = report.KeyDate.String()
+		if slices.Contains(report.Sections, traegerview.ReportSectionDemand) {
+			row.Values[reportColumnDemandAsOf] = calendar.DateFromTime(report.AsOf).String()
+		}
+		if report.AbsenceWindow != nil {
+			row.Values[reportColumnAbsenceFrom] = report.AbsenceWindow.From.String()
+			row.Values[reportColumnAbsenceTo] = report.AbsenceWindow.To.String()
+		}
+	}
 	return doc
 }
 
@@ -161,6 +182,13 @@ func keyDateReportHeader(report traegerview.KeyDateReport) []string {
 			window = report.AbsenceWindow.From.Format("02.01.2006") + " bis " + report.AbsenceWindow.To.Format("02.01.2006")
 		}
 		header = append(header, "Fehlzeiten-Zeitraum: "+window)
+		header = append(header, "Fehlzeiten zählen nur Tage mit gespeicherten Check-ins.")
+		for _, school := range report.Schools {
+			if attendanceNote(report, school) != "" {
+				header = append(header, "Bei Schulen mit Datenlücken sind die Fehlzeiten unvollständig.")
+				break
+			}
+		}
 	}
 	if slices.Contains(report.Sections, traegerview.ReportSectionDemand) {
 		header = append(header, "Stand der Anmeldungen: "+calendar.DateFromTime(report.AsOf).Format("02.01.2006"))
@@ -176,6 +204,7 @@ func keyDateReportColumns(sections []string, grouped, children bool) []lists.Col
 	if children {
 		columns = append(columns, lists.Column{ID: reportColumnCareForm, Label: "Betreuungsform"})
 	}
+	columns = append(columns, lists.Column{ID: reportColumnKeyDate, Label: "Stichtag"})
 	for _, section := range traegerview.ReportSections() {
 		if slices.Contains(sections, section) {
 			columns = append(columns, reportSectionColumns[section]...)
@@ -184,6 +213,17 @@ func keyDateReportColumns(sections []string, grouped, children bool) []lists.Col
 	// The block of care forms prints the places of each form.
 	if children && !slices.Contains(sections, traegerview.ReportSectionDemand) {
 		columns = append(columns, lists.Column{ID: reportColumnPlaces, Label: "Plätze"})
+	}
+	if slices.Contains(sections, traegerview.ReportSectionDemand) {
+		columns = append(columns, lists.Column{ID: reportColumnDemandAsOf, Label: "Anmeldungen Stand"})
+	}
+	if slices.Contains(sections, traegerview.ReportSectionAbsences) {
+		columns = append(columns,
+			lists.Column{ID: reportColumnAbsenceFrom, Label: "Fehlzeiten von"},
+			lists.Column{ID: reportColumnAbsenceTo, Label: "Fehlzeiten bis"},
+			lists.Column{ID: reportColumnAttendanceFrom, Label: "Check-ins ab"},
+			lists.Column{ID: reportColumnAttendanceNote, Label: "Datenumfang"},
+		)
 	}
 	return columns
 }
@@ -199,7 +239,7 @@ func keyDateSchoolRows(report traegerview.KeyDateReport, grouped bool) []lists.R
 	// values of it, so every title stands in a row of its own.
 	rows := []lists.Row{{GroupTitle: reportAllSchoolsGroup}}
 	for _, school := range report.Schools {
-		rows = append(rows, keyDateFigureRow(school.Name, school.City, "", report.Sections, school.Figures))
+		rows = append(rows, keyDateSchoolRow(report, school, ""))
 	}
 	return append(rows, total)
 }
@@ -211,10 +251,10 @@ func keyDateDistrictRows(report traegerview.KeyDateReport) []lists.Row {
 	for _, district := range report.Districts {
 		rows = append(rows, lists.Row{GroupTitle: lists.SanitizeUserText(district.Name)})
 		for _, school := range report.Schools {
-			if schoolDistrict(school) != district.Name {
+			if !schoolInDistrict(school, district) {
 				continue
 			}
-			rows = append(rows, keyDateFigureRow(school.Name, school.City, district.Name, report.Sections, school.Figures))
+			rows = append(rows, keyDateSchoolRow(report, school, district.Name))
 		}
 		rows = append(rows, keyDateFigureRow(reportSumLabel+district.Name, "", district.Name, report.Sections, district.Figures))
 	}
@@ -257,11 +297,35 @@ func keyDateCareFormRows(report traegerview.KeyDateReport, grouped bool) []lists
 	return rows
 }
 
-func schoolDistrict(school traegerview.KeyDateSchool) string {
+func schoolInDistrict(school traegerview.KeyDateSchool, district traegerview.KeyDateDistrict) bool {
 	if school.District == nil {
-		return traegerview.UnmappedDistrict
+		return district.Unmapped
 	}
-	return *school.District
+	return !district.Unmapped && *school.District == district.Name
+}
+
+func keyDateSchoolRow(report traegerview.KeyDateReport, school traegerview.KeyDateSchool, district string) lists.Row {
+	row := keyDateFigureRow(school.Name, school.City, district, report.Sections, school.Figures)
+	if slices.Contains(report.Sections, traegerview.ReportSectionAbsences) {
+		if school.AttendanceFrom != nil {
+			row.Values[reportColumnAttendanceFrom] = school.AttendanceFrom.String()
+		}
+		row.Values[reportColumnAttendanceNote] = attendanceNote(report, school)
+	}
+	return row
+}
+
+func attendanceNote(report traegerview.KeyDateReport, school traegerview.KeyDateSchool) string {
+	if report.AbsenceWindow == nil {
+		return ""
+	}
+	if school.AttendanceFrom == nil || school.AttendanceFrom.After(report.AbsenceWindow.To) {
+		return "Keine Check-ins im Zeitraum gespeichert."
+	}
+	if school.AttendanceFrom.After(report.AbsenceWindow.From) {
+		return "Check-ins sind erst ab " + school.AttendanceFrom.Format("02.01.2006") + " gespeichert. Frühere Tage fehlen."
+	}
+	return ""
 }
 
 // keyDateFigureRow prints the figures of the sections of one school, one
@@ -329,17 +393,10 @@ func keyDateReportRecords(report traegerview.KeyDateReport) lists.RecordDocument
 // keyDateSchoolGroups prints the cards of the schools: one group of all
 // schools without a Sozialraum, else a group per Sozialraum closed by its sum.
 func keyDateSchoolGroups(report traegerview.KeyDateReport) []lists.RecordGroup {
-	card := func(school traegerview.KeyDateSchool) lists.Record {
-		title := school.Name
-		if school.City != "" {
-			title += ", " + school.City
-		}
-		return keyDateRecord(title, report.Sections, school.Figures, school.CareForms)
-	}
 	if len(report.Districts) == 0 {
 		group := lists.RecordGroup{Title: reportAllSchoolsGroup}
 		for _, school := range report.Schools {
-			group.Records = append(group.Records, card(school))
+			group.Records = append(group.Records, keyDateSchoolRecord(report, school))
 		}
 		return []lists.RecordGroup{group}
 	}
@@ -347,14 +404,34 @@ func keyDateSchoolGroups(report traegerview.KeyDateReport) []lists.RecordGroup {
 	for _, district := range report.Districts {
 		group := lists.RecordGroup{Title: lists.SanitizeUserText(district.Name)}
 		for _, school := range report.Schools {
-			if schoolDistrict(school) == district.Name {
-				group.Records = append(group.Records, card(school))
+			if schoolInDistrict(school, district) {
+				group.Records = append(group.Records, keyDateSchoolRecord(report, school))
 			}
 		}
 		group.Records = append(group.Records, keyDateRecord(reportSumLabel+district.Name, report.Sections, district.Figures, district.CareForms))
 		groups = append(groups, group)
 	}
 	return groups
+}
+
+func keyDateSchoolRecord(report traegerview.KeyDateReport, school traegerview.KeyDateSchool) lists.Record {
+	title := school.Name
+	if school.City != "" {
+		title += ", " + school.City
+	}
+	record := keyDateRecord(title, report.Sections, school.Figures, school.CareForms)
+	if !slices.Contains(report.Sections, traegerview.ReportSectionAbsences) || report.AbsenceWindow == nil {
+		return record
+	}
+	from := "–"
+	if school.AttendanceFrom != nil {
+		from = school.AttendanceFrom.Format("02.01.2006")
+	}
+	record.Fields = append(record.Fields, lists.Field{Label: "Check-ins ab", Value: from})
+	if note := attendanceNote(report, school); note != "" {
+		record.Fields = append(record.Fields, lists.Field{Label: "Datenumfang", Value: note})
+	}
+	return record
 }
 
 // keyDateRecord is one card: a line per section of the report and, with the
@@ -378,7 +455,7 @@ func sectionFields(section string, figures traegerview.KeyDateFigures) []lists.F
 	case traegerview.ReportSectionChildren:
 		return []lists.Field{{Label: "Kinder", Value: strconv.Itoa(figures.Children) + " · davon ohne Betreuungsform " + strconv.Itoa(figures.WithoutCareForm)}}
 	case traegerview.ReportSectionStaff:
-		return []lists.Field{{Label: "Personal", Value: strconv.Itoa(figures.Staff) + " · " + decimalOrDash(figures.ChildrenPerStaff, "") + " Kinder je Fachkraft"}}
+		return []lists.Field{{Label: "Personal", Value: strconv.Itoa(figures.Staff) + " · " + decimalOrDash(figures.ChildrenPerStaff, "") + " Kinder je Person"}}
 	case traegerview.ReportSectionAbsences:
 		return []lists.Field{{Label: "Fehlzeiten", Value: strconv.Itoa(figures.PresentDays) + " Tage anwesend · " + strconv.Itoa(figures.SickDays) + " krank · " +
 			strconv.Itoa(figures.ExcusedDays) + " entschuldigt · Fehlquote " + decimalOrDash(figures.AbsenceRate, " %")}}

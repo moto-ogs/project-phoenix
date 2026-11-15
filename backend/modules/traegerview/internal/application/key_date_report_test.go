@@ -124,3 +124,18 @@ func TestAggregateKeyDateSchoolsSumsSozialraeumeAndTheTotal(t *testing.T) {
 	assert.Empty(t, unmapped, "without any Sozialraum the report has none")
 	assert.NotNil(t, unmapped)
 }
+
+func TestAggregateKeyDateSchoolsDistinguishesNamedAndUnmappedDistricts(t *testing.T) {
+	t.Parallel()
+	name := traegerview.UnmappedDistrict
+	districts, total := aggregateKeyDateSchools([]traegerview.KeyDateSchool{
+		{ID: 1, District: &name, Figures: traegerview.KeyDateFigures{Children: 3}},
+		{ID: 2, Figures: traegerview.KeyDateFigures{Children: 7}},
+	})
+	require.Len(t, districts, 2)
+	assert.False(t, districts[0].Unmapped)
+	assert.True(t, districts[1].Unmapped)
+	assert.Equal(t, 3, districts[0].Figures.Children)
+	assert.Equal(t, 7, districts[1].Figures.Children)
+	assert.Equal(t, 10, total.Figures.Children)
+}

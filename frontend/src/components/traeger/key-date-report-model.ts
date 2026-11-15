@@ -183,7 +183,9 @@ export function reportRows(
 ): ReportRow[] {
   if (grouping === "districts" && report.districts.length > 0) {
     return report.districts.map((group) => ({
-      key: `district:${group.name}`,
+      key: group.unmapped
+        ? "district:unmapped"
+        : `district:named:${group.name}`,
       name: group.name,
       detail: schoolsLabel(group.schools),
       district: null,

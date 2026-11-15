@@ -282,7 +282,7 @@ func aggregateKeyDateSchools(schools []traegerview.KeyDateSchool) ([]traegerview
 	}
 	if len(unmapped) > 0 {
 		sum := sumKeyDateSchools(unmapped)
-		districts = append(districts, traegerview.KeyDateDistrict{Name: traegerview.UnmappedDistrict, Schools: sum.Schools, Figures: sum.Figures, CareForms: sum.CareForms})
+		districts = append(districts, traegerview.KeyDateDistrict{Name: traegerview.UnmappedDistrict, Unmapped: true, Schools: sum.Schools, Figures: sum.Figures, CareForms: sum.CareForms})
 	}
 	return districts, traegerview.KeyDateTotal(total)
 }
