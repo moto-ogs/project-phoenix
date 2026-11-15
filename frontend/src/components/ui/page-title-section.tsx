@@ -1,11 +1,11 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   type ReactNode,
 } from "react";
 
@@ -15,20 +15,28 @@ export interface PageTitleSection {
   readonly label: string;
 }
 
-type SetPageTitleSection = (section: PageTitleSection | null) => void;
+interface PageTitleSectionTarget {
+  /** The path the title currently names. */
+  readonly pathname: string;
+  readonly onSection: (section: PageTitleSection | null) => void;
+}
 
-const PageTitleSectionContext = createContext<SetPageTitleSection | null>(null);
+const PageTitleSectionContext = createContext<PageTitleSectionTarget | null>(
+  null,
+);
 
 /** Receives the section a page reports; `RouteTitle` mounts it. */
 export function PageTitleSectionProvider({
+  pathname,
   onSection,
   children,
-}: {
-  readonly onSection: SetPageTitleSection;
-  readonly children: ReactNode;
-}) {
+}: PageTitleSectionTarget & { readonly children: ReactNode }) {
+  const target = useMemo(
+    () => ({ pathname, onSection }),
+    [pathname, onSection],
+  );
   return (
-    <PageTitleSectionContext.Provider value={onSection}>
+    <PageTitleSectionContext.Provider value={target}>
       {children}
     </PageTitleSectionContext.Provider>
   );
@@ -38,16 +46,18 @@ export function PageTitleSectionProvider({
  * Puts the part of a page the address selects in front of the page title,
  * for example the tab of a record (`?tab=…`): „Verlauf – Kindakte – OGS –
  * moto“. Pass null when the address selects nothing. Without a provider
- * (tests, stories) nothing happens.
+ * (tests, stories) nothing happens; the hook reads no router state itself.
  */
 export function usePageTitleSection(label: string | null | undefined): void {
-  const onSection = useContext(PageTitleSectionContext);
-  const pathname = usePathname() ?? "/";
+  const target = useContext(PageTitleSectionContext);
+  const pathname = target?.pathname;
+  const onSection = target?.onSection;
   const report = useCallback(
     (next: string | null) => {
-      onSection?.(next ? { pathname, label: next } : null);
+      if (!onSection || pathname === undefined) return;
+      onSection(next ? { pathname, label: next } : null);
     },
-    [pathname, onSection],
+    [onSection, pathname],
   );
 
   useEffect(() => {

@@ -43,7 +43,7 @@ export function RouteTitle({
   const title = pageTitleText(resolved, messages, activeSection);
 
   return (
-    <PageTitleSectionProvider onSection={setSection}>
+    <PageTitleSectionProvider pathname={pathname} onSection={setSection}>
       {title !== null && <title>{title}</title>}
       {children}
     </PageTitleSectionProvider>

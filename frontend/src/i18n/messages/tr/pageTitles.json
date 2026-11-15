@@ -1,7 +1,6 @@
 {
   "portals": {
-    "parents": "Veli",
-    "ogs": "OGS"
+    "parents": "Veli"
   },
   "pages": {
     "start": "Ana sayfa",
@@ -17,7 +16,7 @@
     "children": "Çocuklar",
     "childProfile": "Çocuk profili",
     "conference": "Veli görüşme günü",
-    "demo": "Demo",
+    "demo": "Demoyu deneyin",
     "documents": "Belgeler",
     "contractEnd": "Sözleşmeyi feshet veya geri al",
     "contract": "Bakım sözleşmesi",

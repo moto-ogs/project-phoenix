@@ -1,7 +1,6 @@
 {
   "portals": {
-    "parents": "Батьки",
-    "ogs": "OGS"
+    "parents": "Батьки"
   },
   "pages": {
     "start": "Головна",
@@ -17,7 +16,7 @@
     "children": "Діти",
     "childProfile": "Профіль дитини",
     "conference": "День консультацій",
-    "demo": "Демо",
+    "demo": "Спробувати демо",
     "documents": "Документи",
     "contractEnd": "Розірвати або відкликати договір",
     "contract": "Договір про догляд",

@@ -1,7 +1,6 @@
 {
   "portals": {
-    "parents": "Rodzice",
-    "ogs": "OGS"
+    "parents": "Rodzice"
   },
   "pages": {
     "start": "Strona główna",
@@ -17,7 +16,7 @@
     "children": "Dzieci",
     "childProfile": "Profil dziecka",
     "conference": "Dzień konsultacji",
-    "demo": "Demo",
+    "demo": "Wypróbuj demo",
     "documents": "Dokumenty",
     "contractEnd": "Wypowiedz lub odwołaj umowę",
     "contract": "Umowa o opiekę",

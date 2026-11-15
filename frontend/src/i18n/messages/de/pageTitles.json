@@ -1,7 +1,6 @@
 {
   "portals": {
-    "parents": "Eltern",
-    "ogs": "OGS"
+    "parents": "Eltern"
   },
   "pages": {
     "start": "Start",
@@ -17,7 +16,7 @@
     "children": "Kinder",
     "childProfile": "Kinderprofil",
     "conference": "Elternsprechtag",
-    "demo": "Demo",
+    "demo": "Demo ausprobieren",
     "documents": "Dokumente",
     "contractEnd": "Vertrag kündigen oder widerrufen",
     "contract": "Betreuungsvertrag",

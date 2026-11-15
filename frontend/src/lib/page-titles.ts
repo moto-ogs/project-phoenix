@@ -18,10 +18,10 @@ export type PageTitleSurface =
   "ogs" | "parents" | "school" | "caterer" | "traeger" | "operator" | "public";
 
 /** Suffix of every title. */
-export const PAGE_TITLE_BRAND = "moto";
+const PAGE_TITLE_BRAND = "moto";
 
 /** Portal part of the title for the German-only portals. */
-export const GERMAN_PORTAL_TITLES: Readonly<
+const GERMAN_PORTAL_TITLES: Readonly<
   Record<Exclude<PageTitleSurface, "parents" | "public">, string>
 > = {
   ogs: "OGS",
@@ -479,7 +479,12 @@ export function pageTitleText(
   if (key !== undefined) {
     return formatPageTitle({
       page: localized.pages[key] ?? PAGE_TITLE_BRAND,
-      portal: localized.portals[surface] ?? null,
+      // "OGS" is the school's own word for its care, the same in every
+      // language; only the parents portal has a translated name.
+      portal:
+        surface === "ogs"
+          ? GERMAN_PORTAL_TITLES.ogs
+          : (localized.portals[surface] ?? null),
       section,
     });
   }

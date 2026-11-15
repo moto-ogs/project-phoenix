@@ -1,7 +1,6 @@
 {
   "portals": {
-    "parents": "Parents",
-    "ogs": "OGS"
+    "parents": "Parents"
   },
   "pages": {
     "start": "Home",
@@ -17,7 +16,7 @@
     "children": "Children",
     "childProfile": "Child profile",
     "conference": "Parent-teacher day",
-    "demo": "Demo",
+    "demo": "Try the demo",
     "documents": "Documents",
     "contractEnd": "Cancel or withdraw contract",
     "contract": "Care contract",
