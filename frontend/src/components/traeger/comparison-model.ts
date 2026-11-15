@@ -11,7 +11,8 @@ import type {
   ComparisonValues,
 } from "~/lib/traeger-comparison-api";
 
-type MetricFormat = "count" | "average" | "share" | "change";
+/** `number` hat höchstens eine Nachkommastelle, `change` ein Vorzeichen. */
+type MetricFormat = "number" | "share" | "change";
 
 export interface ComparisonMetricInfo {
   readonly key: ComparisonMetric;
@@ -28,7 +29,7 @@ export const COMPARISON_METRIC_INFO: readonly ComparisonMetricInfo[] = [
     key: "places",
     label: "Plätze",
     hint: "Summe der Platzgrenzen aller Betreuungsformen",
-    format: "count",
+    format: "number",
   },
   {
     key: "places_rate",
@@ -40,13 +41,13 @@ export const COMPARISON_METRIC_INFO: readonly ComparisonMetricInfo[] = [
     key: "free_places",
     label: "Freie Plätze",
     hint: "Plätze ohne Buchung, im Schnitt je Tag",
-    format: "average",
+    format: "number",
   },
   {
     key: "booked",
     label: "Kinder gebucht",
     hint: "Gebuchte Kinder, im Schnitt je Tag",
-    format: "average",
+    format: "number",
   },
   {
     key: "booked_change",
@@ -58,19 +59,19 @@ export const COMPARISON_METRIC_INFO: readonly ComparisonMetricInfo[] = [
     key: "present",
     label: "Kinder anwesend",
     hint: "Kinder mit Check-in, im Schnitt je Tag mit Check-ins",
-    format: "average",
+    format: "number",
   },
   {
     key: "present_peak",
     label: "Höchstens anwesend",
     hint: "Die meisten Kinder mit Check-in an einem Tag",
-    format: "count",
+    format: "number",
   },
   {
     key: "active_students",
     label: "Aktive Kinder am Stichtag",
     hint: "Kinder am letzten Stichtag im Zeitraum, wie in den Stichtagszahlen",
-    format: "count",
+    format: "number",
   },
 ];
 
@@ -112,16 +113,15 @@ export function formatMetric(
       return `${WHOLE.format(value * 100)} %`;
     case "change":
       return SIGNED.format(value);
-    case "average":
-      return DECIMAL.format(value);
-    case "count":
+    case "number":
       return DECIMAL.format(value);
   }
 }
 
 /**
- * Der Abstand zum Schnitt in Worten: „12 Punkte über Ø“, „2,5 unter Ø“,
- * „wie Ø“. `null`, wenn eine der Zahlen fehlt oder es nur eine Schule gibt.
+ * Der Abstand zum Schnitt der Schulen in Worten: „12 Punkte über Schnitt“,
+ * „2,5 unter Schnitt“, „wie Schnitt“. „Ø“ heißt auf der Seite dagegen
+ * „je Tag“. `null`, wenn eine der Zahlen fehlt oder es nur eine Schule gibt.
  */
 export function deviationLabel(
   key: ComparisonMetric,
@@ -136,11 +136,11 @@ export function deviationLabel(
   const delta = share ? (value - average) * 100 : value - average;
   const rounded = Math.round(delta * 10) / 10;
   const size = share ? Math.round(Math.abs(delta)) : Math.abs(rounded);
-  if (size === 0) return "wie Ø";
+  if (size === 0) return "wie Schnitt";
   const amount = share
     ? `${WHOLE.format(size)} ${size === 1 ? "Punkt" : "Punkte"}`
     : DECIMAL.format(size);
-  return `${amount} ${delta > 0 ? "über" : "unter"} Ø`;
+  return `${amount} ${delta > 0 ? "über" : "unter"} Schnitt`;
 }
 
 export interface RankingEntry {

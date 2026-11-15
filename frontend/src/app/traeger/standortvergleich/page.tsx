@@ -647,8 +647,8 @@ export default function TraegerComparisonPage() {
         stackedOnMobile
         emptyState={
           <EmptyState
-            title="Keine Schule gewählt"
-            description="Wählen Sie oben mindestens eine Schule."
+            title="Keine Schule im Vergleich"
+            description="Sobald Ihrem Träger Schulen zugeordnet sind, stehen sie hier."
           />
         }
       />

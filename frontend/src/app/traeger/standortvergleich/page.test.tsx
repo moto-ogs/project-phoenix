@@ -171,7 +171,9 @@ describe("TraegerComparisonPage", () => {
       .getByRole("link", { name: "OGS Am Bach" })
       .closest("tr") as HTMLElement;
     expect(within(bach).getByText("95 %")).toBeInTheDocument();
-    expect(within(bach).getByText("20 Punkte über Ø")).toBeInTheDocument();
+    expect(
+      within(bach).getByText("20 Punkte über Schnitt"),
+    ).toBeInTheDocument();
     expect(within(bach).getByText("am 08.09.2026")).toBeInTheDocument();
     const linden = within(table)
       .getByRole("link", { name: "OGS Lindenweg" })

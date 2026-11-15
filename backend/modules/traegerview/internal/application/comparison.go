@@ -107,7 +107,7 @@ func compareSchools(schools []traegerview.SchoolUtilization, keyDates []traegerv
 }
 
 // newestKeyDates picks, per school, the newest captured Stichtagszahl whose
-// key date lies in the window. counts arrive newest month first.
+// key date lies in the window.
 func newestKeyDates(counts []traegerview.SchoolKeyDateCount, from, to calendar.Date) map[int64]traegerview.KeyDateCount {
 	newest := map[int64]traegerview.KeyDateCount{}
 	for _, count := range counts {
@@ -128,13 +128,13 @@ func schoolFigures(school traegerview.SchoolUtilization) traegerview.ComparisonV
 	if days == 0 {
 		return values
 	}
-	bookedPlaces := sum(school.BookedPlaces)
+	bookedPlaces := sumInts(school.BookedPlaces)
 	if school.Places > 0 {
 		values[traegerview.ComparisonPlaces] = float64(school.Places)
 		values[traegerview.ComparisonPlacesRate] = float64(bookedPlaces) / float64(school.Places*days)
 		values[traegerview.ComparisonFreePlaces] = float64(school.Places) - float64(bookedPlaces)/float64(days)
 	}
-	values[traegerview.ComparisonBooked] = float64(sum(school.Booked)) / float64(days)
+	values[traegerview.ComparisonBooked] = float64(sumInts(school.Booked)) / float64(days)
 	if days > 1 {
 		values[traegerview.ComparisonBookedChange] = float64(school.Booked[days-1] - school.Booked[0])
 	}
@@ -154,18 +154,23 @@ func schoolFigures(school traegerview.SchoolUtilization) traegerview.ComparisonV
 	return values
 }
 
+// figureTotal adds the figure key over the schools that have it; count is
+// the number of those schools.
+func figureTotal(schools []traegerview.ComparedSchool, key string) (total float64, count int) {
+	for _, school := range schools {
+		if value, ok := school.Values[key]; ok {
+			total += value
+			count++
+		}
+	}
+	return total, count
+}
+
 // averageFigures is the mean of each figure over the schools that have it.
 func averageFigures(schools []traegerview.ComparedSchool) traegerview.ComparisonValues {
 	average := traegerview.ComparisonValues{}
 	for _, key := range traegerview.ComparisonKeys {
-		total, count := 0.0, 0
-		for _, school := range schools {
-			if value, ok := school.Values[key]; ok {
-				total += value
-				count++
-			}
-		}
-		if count > 0 {
+		if total, count := figureTotal(schools, key); count > 0 {
 			average[key] = total / float64(count)
 		}
 	}
@@ -180,14 +185,7 @@ func togetherFigures(series []traegerview.SchoolUtilization, schools []traegervi
 		traegerview.ComparisonPlaces, traegerview.ComparisonFreePlaces, traegerview.ComparisonBooked,
 		traegerview.ComparisonBookedChange, traegerview.ComparisonPresent, traegerview.ComparisonActiveStudents,
 	} {
-		total, found := 0.0, false
-		for _, school := range schools {
-			if value, ok := school.Values[key]; ok {
-				total += value
-				found = true
-			}
-		}
-		if found {
+		if total, count := figureTotal(schools, key); count > 0 {
 			together[key] = total
 		}
 	}
@@ -195,7 +193,7 @@ func togetherFigures(series []traegerview.SchoolUtilization, schools []traegervi
 	for _, school := range series {
 		if school.Places > 0 {
 			placeDays += school.Places * len(school.BookedPlaces)
-			bookedPlaces += sum(school.BookedPlaces)
+			bookedPlaces += sumInts(school.BookedPlaces)
 		}
 	}
 	if placeDays > 0 {
@@ -204,7 +202,8 @@ func togetherFigures(series []traegerview.SchoolUtilization, schools []traegervi
 	return together
 }
 
-func sum(values []int) int {
+// sumInts adds the counts of a series.
+func sumInts(values []int) int {
 	total := 0
 	for _, value := range values {
 		total += value

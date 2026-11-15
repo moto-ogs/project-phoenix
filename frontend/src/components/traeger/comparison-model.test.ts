@@ -35,11 +35,13 @@ describe("formatMetric", () => {
 describe("deviationLabel", () => {
   it("names the distance to the average in plain words", () => {
     expect(deviationLabel("places_rate", 0.92, 0.8, 3)).toBe(
-      "12 Punkte über Ø",
+      "12 Punkte über Schnitt",
     );
-    expect(deviationLabel("places_rate", 0.79, 0.8, 3)).toBe("1 Punkt unter Ø");
-    expect(deviationLabel("booked", 15.5, 18, 3)).toBe("2,5 unter Ø");
-    expect(deviationLabel("booked", 18.02, 18, 3)).toBe("wie Ø");
+    expect(deviationLabel("places_rate", 0.79, 0.8, 3)).toBe(
+      "1 Punkt unter Schnitt",
+    );
+    expect(deviationLabel("booked", 15.5, 18, 3)).toBe("2,5 unter Schnitt");
+    expect(deviationLabel("booked", 18.02, 18, 3)).toBe("wie Schnitt");
   });
 
   it("says nothing without both figures or with one school", () => {

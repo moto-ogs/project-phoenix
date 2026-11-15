@@ -136,11 +136,11 @@ type comparisonColumn struct {
 var comparisonColumns = map[string]comparisonColumn{
 	traegerview.ComparisonPlaces:         {head: "Plätze"},
 	traegerview.ComparisonPlacesRate:     {head: "Plätze belegt (%)", decimal: true, percent: true},
-	traegerview.ComparisonFreePlaces:     {head: "Freie Plätze (Ø)", decimal: true},
-	traegerview.ComparisonBooked:         {head: "Kinder gebucht (Ø)", decimal: true},
-	traegerview.ComparisonBookedChange:   {head: "Kinder gebucht: Veränderung"},
-	traegerview.ComparisonPresent:        {head: "Kinder anwesend (Ø)", decimal: true},
-	traegerview.ComparisonPresentPeak:    {head: "Kinder anwesend: höchstens"},
+	traegerview.ComparisonFreePlaces:     {head: "Freie Plätze (Ø je Tag)", decimal: true},
+	traegerview.ComparisonBooked:         {head: "Kinder gebucht (Ø je Tag)", decimal: true},
+	traegerview.ComparisonBookedChange:   {head: "Veränderung gebucht"},
+	traegerview.ComparisonPresent:        {head: "Kinder anwesend (Ø je Tag)", decimal: true},
+	traegerview.ComparisonPresentPeak:    {head: "Höchstens anwesend"},
 	traegerview.ComparisonActiveStudents: {head: "Aktive Kinder am Stichtag"},
 }
 
@@ -187,6 +187,10 @@ func comparisonValue(column comparisonColumn, values traegerview.ComparisonValue
 	}
 	if column.percent {
 		value *= 100
+	}
+	// A value that rounds to zero is written without a sign, never "-0,0".
+	if math.Abs(value) < 0.05 {
+		value = 0
 	}
 	// A count stays whole; its average over schools may not be.
 	if !column.decimal && value == math.Trunc(value) {

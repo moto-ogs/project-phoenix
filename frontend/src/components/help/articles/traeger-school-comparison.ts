@@ -24,8 +24,8 @@ export function traegerSchoolComparisonTopic(): HelpTopic {
     result:
       "Sie sehen, welche Schule voller oder leerer ist als die anderen und wie weit sie vom Schnitt entfernt ist.",
     notes: [
-      "„Ø“ ist der Durchschnitt je Wochentag im Zeitraum.",
-      "Unter jeder Zahl steht der Abstand zum Schnitt, zum Beispiel „12 Punkte über Ø“.",
+      "„Ø“ ist der Durchschnitt je Tag. Bei „Kinder anwesend“ zählen nur Tage mit Check-ins.",
+      "Unter jeder Zahl steht der Abstand zum Schnitt der Schulen, zum Beispiel „12 Punkte über Schnitt“.",
       "Unter den Schulen stehen zwei Zeilen: `Schnitt je Schule` und `Alle zusammen`.",
       "„Aktive Kinder am Stichtag“ ist dieselbe Zahl wie unter `Stichtagszahlen`. moto nimmt den letzten Stichtag im Zeitraum.",
       "Die Datei enthält genau die gewählten Schulen und Spalten.",
