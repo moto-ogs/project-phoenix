@@ -100,4 +100,25 @@ describe("PasswordLoginForm", () => {
       screen.queryByRole("button", { name: "Passwort vergessen?" }),
     ).not.toBeInTheDocument();
   });
+
+  it("lets a newer empty-field message replace the page's refusal", async () => {
+    render(
+      <PasswordLoginForm
+        portal="school"
+        onSubmit={() => Promise.resolve()}
+        refusal={<p>REFUSAL_OF_THE_LAST_ATTEMPT</p>}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Anmelden" }));
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Bitte geben Sie E-Mail-Adresse und Passwort ein.",
+    );
+    expect(
+      screen.queryByText("REFUSAL_OF_THE_LAST_ATTEMPT"),
+    ).not.toBeInTheDocument();
+  });
 });

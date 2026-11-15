@@ -102,6 +102,8 @@ export default function HomePage() {
   const tenantLoginImageUrl = tenant?.settings?.loginImageUrl;
   const hasTenantLoginLogo = Boolean(tenantLoginImageUrl);
   const analyticsSchoolId = tenant?.tenantId?.toString() ?? null;
+  // moto schule opens with this school picked.
+  const schoolHandoffQuery = `?from=staff&tenant=${encodeURIComponent(tenantSlug)}`;
   const isCheckingAuth = useLoginSessionCheck({
     logger,
     paused: enrollmentStep !== null,
@@ -160,9 +162,7 @@ export default function HomePage() {
       redirectUrl =
         portal === "parents"
           ? parentsPortalLoginUrl("?from=staff")
-          : schoolPortalLoginUrl(
-              `?from=staff&tenant=${encodeURIComponent(tenantSlug)}`,
-            );
+          : schoolPortalLoginUrl(schoolHandoffQuery);
     } catch (urlErr) {
       logger.error("portal_url_unavailable", {
         portal,
@@ -331,9 +331,7 @@ export default function HomePage() {
             onRedirect={(path) => {
               logger.info("redirecting based on user permissions", { path });
               if (isSchoolPortalHandoffPath(path)) {
-                window.location.href = schoolPortalLoginUrl(
-                  `?from=staff&tenant=${encodeURIComponent(tenantSlug)}`,
-                );
+                window.location.href = schoolPortalLoginUrl(schoolHandoffQuery);
                 return;
               }
               router.push(path);

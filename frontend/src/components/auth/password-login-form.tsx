@@ -214,9 +214,10 @@ export function PasswordLoginForm({
   const sending = pending || leaving;
   const busy = locked || sending;
 
+  const offersPasskey = onPasskey !== undefined;
   useEffect(() => {
-    if (onPasskey) setPasskeySupported(isPasskeySupported());
-  }, [onPasskey]);
+    if (offersPasskey) setPasskeySupported(isPasskeySupported());
+  }, [offersPasskey]);
 
   // A reset link without token leads here to ask for a new link: the dialog
   // opens at once, and the address forgets the request.
@@ -289,7 +290,11 @@ export function PasswordLoginForm({
         className="space-y-6"
         aria-busy={locked || undefined}
       >
-        {refusal ?? (
+        {/* The form's own error is the newer answer: a page's refusal of
+            an earlier attempt gives way to it. */}
+        {refusal && !errors.error ? (
+          refusal
+        ) : (
           <FormErrorAlert
             message={errors.error}
             action={
@@ -307,10 +312,10 @@ export function PasswordLoginForm({
             }
           />
         )}
+        {failed ? null : notice}
         {!failed && sessionExpired ? (
           <Alert type="info" message={copy.sessionExpired} />
         ) : null}
-        {failed ? null : notice}
 
         <div className="space-y-4">
           <div className="text-left">

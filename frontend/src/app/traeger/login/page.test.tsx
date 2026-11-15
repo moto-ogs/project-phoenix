@@ -392,6 +392,37 @@ describe("TraegerLoginPage", () => {
     });
   });
 
+  it("opens a later choice without the error of an earlier one", async () => {
+    const choices = {
+      status: "organization_selection_required",
+      organizations: [
+        { id: "7", name: "Träger Nord" },
+        { id: "9", name: "Träger Süd" },
+      ],
+    };
+    mockLogin
+      .mockResolvedValueOnce(choices)
+      .mockRejectedValueOnce(
+        new ApiError("no membership", 403, { code: "traeger.no_membership" }),
+      )
+      .mockResolvedValueOnce(choices);
+    render(<TraegerLoginPage />);
+
+    submitCredentials();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Träger öffnen" }),
+    );
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Mit einem anderen Konto anmelden" }),
+    );
+    submitCredentials();
+
+    // Anker: die neue Auswahl steht da.
+    expect(await screen.findByLabelText("Träger Süd")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("asks which Träger to open and resubmits with the choice", async () => {
     mockLogin
       .mockResolvedValueOnce({

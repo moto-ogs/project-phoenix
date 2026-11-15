@@ -166,10 +166,12 @@ export function portalSignInPage(portal: PortalKey): string {
 }
 
 /**
- * A hosted portal's login page as the browser reaches it: `/login` on the
- * portal's own host, the prefixed page elsewhere (the proxy redirects it).
+ * A portal's login page as the browser reaches it: `/login` on the portal's
+ * own host, the prefixed page elsewhere (the proxy redirects it); the
+ * tenant's login is its start page.
  */
-export function portalLoginPath(portal: HostedPortalKey): string {
+export function portalLoginPath(portal: PortalKey): string {
+  if (portal === "tenant") return portalSignInPage(portal);
   const onOwnHost =
     typeof window === "undefined" ||
     window.location.host === PORTAL_ROUTES[portal].hostname();

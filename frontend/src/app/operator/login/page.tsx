@@ -40,6 +40,12 @@ export default function OperatorLoginPage() {
   const { data: session, status, update } = useSession();
   const cleanupStartedRef = useRef(false);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
+  // Only the first answer counts: update() after a sign-in loads again and
+  // must not unmount the step that waits for it.
+  const [sessionKnown, setSessionKnown] = useState(false);
+  useEffect(() => {
+    if (status !== "loading") setSessionKnown(true);
+  }, [status]);
 
   useEffect(() => {
     const cleanup = signOutStaleSession({
@@ -65,7 +71,7 @@ export default function OperatorLoginPage() {
   }
 
   if (
-    status === "loading" ||
+    (status === "loading" && !sessionKnown) ||
     isCleaningUp ||
     (status === "authenticated" && session?.error !== undefined)
   ) {

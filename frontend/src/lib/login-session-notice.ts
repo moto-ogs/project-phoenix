@@ -120,5 +120,7 @@ export function useLoginSessionCheck({
     if (status !== "loading") setChecking(false);
   }, [status, session, paused, logger, onAccessRef]);
 
-  return checking || status === "loading";
+  // Only the first answer counts: a later "loading" (useSession's update()
+  // after a sign-in) must not unmount the step that is waiting for it.
+  return checking;
 }

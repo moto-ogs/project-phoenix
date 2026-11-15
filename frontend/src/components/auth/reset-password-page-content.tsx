@@ -81,7 +81,7 @@ export interface ResetPasswordPageCopy {
   readonly submit: string;
 }
 
-export const DEFAULT_RESET_PASSWORD_PAGE_COPY: ResetPasswordPageCopy = {
+const DEFAULT_RESET_PASSWORD_PAGE_COPY: ResetPasswordPageCopy = {
   missingToken:
     "Der Link ist unvollständig. Bitte fordern Sie einen neuen Link an.",
   requestNewLink: "Neuen Link anfordern",
@@ -199,7 +199,7 @@ export function ResetPasswordPageContent({
   ) : null;
 
   const token = searchParams.get("token");
-  const loginPath = portal === "tenant" ? "/" : portalLoginPath(portal);
+  const loginPath = portalLoginPath(portal);
 
   const ruleMessages: Record<PasswordRuleKey, string> = {
     length: copy.passwordTooShort,

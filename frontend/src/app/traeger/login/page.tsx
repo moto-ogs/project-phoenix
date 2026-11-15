@@ -191,6 +191,7 @@ function LoginForm() {
   });
 
   const backToCredentials = () => {
+    choice.errors.clear();
     setChoices(null);
     setSelectedId(null);
     setMfaStep(null);
