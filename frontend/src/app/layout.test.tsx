@@ -84,6 +84,26 @@ describe("RootLayout", () => {
     await waitFor(() => expect(document.title).toBe("Kalender – moto"));
   });
 
+  it.each([
+    ["/login", "Anmelden – moto"],
+    ["/home", "Startseite – moto"],
+    ["/school-a", "Anmelden – moto"],
+    ["/school-a/home", "Startseite – moto"],
+    ["/school-a/home/", "Startseite – moto"],
+    ["/school-a/students/42", "Kindakte – moto"],
+    ["/other-school/home", "Seite nicht gefunden – moto"],
+    ["/school-a-unknown/home", "Seite nicht gefunden – moto"],
+    ["/school-a/gibtsnicht", "Seite nicht gefunden – moto"],
+    ["/school-a/login", "Seite nicht gefunden – moto"],
+  ])("renders the tenant-host title for %s", async (pathname, title) => {
+    headerState.host = "school-a.moto-app.de";
+    navigationState.pathname = pathname;
+
+    render(await RootLayout({ children: <div>Test</div> }));
+
+    await waitFor(() => expect(document.title).toBe(title));
+  });
+
   it("renders with an unparsable Host header", async () => {
     headerState.host = "bad host[";
     navigationState.pathname = "/start";

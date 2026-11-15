@@ -426,10 +426,12 @@ function resolveOnPortal(
  * The page a browser path shows on the host's surface. `public` is the bare
  * domain and local path routing: there the portal namespace is part of the
  * path (`/parents/children`). Returns null for a path no page serves.
+ * On an OGS host, only that host's tenant prefix is an alias of the page.
  */
 export function resolvePageTitle(
   hostSurface: PageTitleSurface,
   rawPathname: string,
+  tenantSlug: string | null = null,
 ): ResolvedPageTitle | null {
   const pathname =
     rawPathname.length > 1
@@ -437,7 +439,17 @@ export function resolvePageTitle(
       : rawPathname;
   if (metadataMatcher(pathname)) return { kind: "metadata" };
 
-  if (hostSurface === "ogs") return resolveOgs(pathname, false);
+  if (hostSurface === "ogs") {
+    // The proxy accepts /login and already-prefixed paths on a tenant host.
+    // A foreign slug must not turn an unknown path into a known page.
+    const appPath =
+      pathname === "/login"
+        ? "/"
+        : tenantSlug
+          ? (pathBelow(pathname, `/${tenantSlug}`) ?? pathname)
+          : pathname;
+    return resolveOgs(appPath, false);
+  }
   if (hostSurface !== "public") return resolveOnPortal(hostSurface, pathname);
 
   for (const [surface, prefix] of PORTAL_PREFIXES) {

@@ -24,18 +24,20 @@ import {
  */
 export function RouteTitle({
   hostSurface,
+  tenantSlug = null,
   messages,
   children,
 }: {
   readonly hostSurface: PageTitleSurface;
+  readonly tenantSlug?: string | null;
   readonly messages: LocalizedPageTitleMessages;
   readonly children: ReactNode;
 }) {
   const pathname = usePathname() ?? "/";
   const [section, setSection] = useState<PageTitleSection | null>(null);
   const resolved = useMemo(
-    () => resolvePageTitle(hostSurface, pathname),
-    [hostSurface, pathname],
+    () => resolvePageTitle(hostSurface, pathname, tenantSlug),
+    [hostSurface, pathname, tenantSlug],
   );
   // A section belongs to the page that reported it; after a navigation the
   // old one no longer counts, even before the old page's cleanup ran.

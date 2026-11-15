@@ -12,6 +12,7 @@ import {
   type LocalizedPageTitleMessages,
 } from "~/lib/page-titles";
 import { configuredPortalOfHost } from "~/lib/portal-paths";
+import { tenantSlugFromHost } from "~/lib/tenant-host";
 import {
   faviconMetadata,
   isParentsHost,
@@ -114,6 +115,7 @@ async function pageTitleProps() {
   };
   return {
     hostSurface,
+    tenantSlug: hostSurface === "ogs" ? tenantSlugFromHost(host) : null,
     messages: messages.pageTitles ?? { pages: {} },
   };
 }
