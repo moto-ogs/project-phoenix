@@ -231,7 +231,7 @@ export function SuggestInput({
               <span
                 aria-hidden="true"
                 className={cn(
-                  `pointer-events-none absolute top-0 left-3 ${Z_LAYER.raised} flex items-center text-gray-400 [&>svg]:h-4 [&>svg]:w-4`,
+                  `pointer-events-none absolute top-0 left-3 ${Z_LAYER.raised} flex items-center text-gray-500 [&>svg]:h-4 [&>svg]:w-4`,
                   compact ? "h-10" : "h-12",
                 )}
               >

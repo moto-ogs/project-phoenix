@@ -121,6 +121,12 @@ export function DayFlowBlock() {
             <ul className="space-y-2">
               {shown.map((block) => {
                 const mine = showMine && block.isAssigned;
+                // Beendete Blöcke treten über grauere Schrift zurück, nicht
+                // über Deckkraft (WCAG 1.4.3, #7110); „Beendet" steht rechts.
+                const strong =
+                  block.status === "completed"
+                    ? "text-gray-600"
+                    : "text-gray-900";
                 return (
                   <li key={block.id}>
                     {/* Jede Zeile führt in den Tagesplan, wo der Block bedient
@@ -128,23 +134,24 @@ export function DayFlowBlock() {
                     <ListRow
                       href={dayPlanHref}
                       aria-label={`${block.title}${mine ? " (Mein Block)" : ""}: unter Heute öffnen`}
-                      className={
-                        block.status === "completed" ? "opacity-60" : undefined
-                      }
                       style={blockTintStyle(block, mine)}
                       trailing={<BlockState block={block} now={now} />}
                     >
-                      <span className="w-24 flex-shrink-0 text-sm font-medium text-gray-900 tabular-nums">
+                      <span
+                        className={`w-24 flex-shrink-0 text-sm font-medium tabular-nums ${strong}`}
+                      >
                         {blockTimeRange(block)}
                       </span>
                       {/* Eine Zeile je Block: zweizeilige Einträge lassen in
                         eine Karte dieser Höhe nur zwei ganz hinein, und zwei
                         Blöcke sind kein Tagesablauf. */}
                       <p className="min-w-0 flex-1 truncate text-sm">
-                        <span className="font-medium text-gray-900">
+                        <span className={`font-medium ${strong}`}>
                           {block.title}
                         </span>
-                        <span className="text-gray-500">
+                        <span
+                          className={mine ? "text-gray-600" : "text-gray-500"}
+                        >
                           {[
                             block.roomName ? (
                               <Fragment key="room">

@@ -433,7 +433,7 @@ function ExportColumnCheckbox({
       <span className="min-w-0 flex-1 leading-snug">
         <span className="flex items-center gap-1.5">
           <span>{column.label}</span>
-          <Info className="h-3.5 w-3.5 text-gray-400" aria-hidden />
+          <Info className="h-3.5 w-3.5 text-gray-500" aria-hidden />
         </span>
         <span className="mt-0.5 block text-xs leading-snug font-normal text-gray-500">
           {column.description}

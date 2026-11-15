@@ -520,7 +520,8 @@ describe("TagesplanView", () => {
 
     render(<TagesplanView />);
 
-    expect(screen.getByText("Dienst")).toBeInTheDocument();
+    // Der beendete Dienst um 08:00 nennt seinen Zustand in Worten (#7110).
+    expect(screen.getByText("Vorbei · Dienst")).toBeInTheDocument();
     expect(screen.getByText("Dienst · Mensa")).toBeInTheDocument();
     expect(screen.queryByText(/Kinder/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Nicht gestartet/)).not.toBeInTheDocument();

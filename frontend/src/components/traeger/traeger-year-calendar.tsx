@@ -109,7 +109,7 @@ export function TraegerYearCalendar({
                 <span
                   key={weekday}
                   aria-hidden
-                  className="text-xs font-medium text-gray-400"
+                  className="text-xs font-medium text-gray-500"
                 >
                   {weekday}
                 </span>
@@ -131,7 +131,7 @@ export function TraegerYearCalendar({
                     role={label ? "img" : undefined}
                     className={cn(
                       "flex h-7 items-center justify-center rounded-md text-xs tabular-nums",
-                      !mark && day.weekend && "bg-gray-50 text-gray-400",
+                      !mark && day.weekend && "bg-gray-50 text-gray-500",
                       !mark && !day.weekend && "text-gray-700",
                       mark?.kind === "holiday" &&
                         "bg-moto-blue-soft text-moto-blue-strong font-semibold",

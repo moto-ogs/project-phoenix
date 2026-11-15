@@ -61,7 +61,7 @@ function fieldLabel(field: string): string {
 
 function ValueText({ value }: { readonly value: string }) {
   if (value.trim() === "") {
-    return <span className="text-gray-400 italic">leer</span>;
+    return <span className="text-gray-500 italic">leer</span>;
   }
   return <span className="break-words whitespace-pre-wrap">{value}</span>;
 }
@@ -77,7 +77,7 @@ const CHANGE_COLUMNS: DataTableColumn<StudentFieldChange>[] = [
     render: (entry) => (
       <span className="text-gray-600">
         {formatDate(entry.changed_at)}
-        <span className="ml-1 text-gray-400">
+        <span className="ml-1 text-gray-500">
           {formatTime(entry.changed_at)}
         </span>
       </span>

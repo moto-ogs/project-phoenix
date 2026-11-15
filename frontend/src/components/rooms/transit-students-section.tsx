@@ -431,7 +431,7 @@ export function TransitStudentsSection({
               </span>
             </span>
             <ChevronDown
-              className={`h-4 w-4 shrink-0 text-gray-400 transition-transform group-hover:text-gray-600 ${
+              className={`h-4 w-4 shrink-0 text-gray-500 transition-transform group-hover:text-gray-600 ${
                 isExpanded ? "rotate-180" : ""
               }`}
               aria-hidden="true"

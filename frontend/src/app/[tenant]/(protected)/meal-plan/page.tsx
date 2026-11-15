@@ -71,9 +71,9 @@ const logger = createLogger({ component: "MealPlanPage" });
 // boundary, so the fields stay clean — no box-in-box). field-sizing:content
 // lets them grow so long dish names wrap instead of being clipped.
 const dishFieldClass =
-  "block w-full resize-none border-0 bg-transparent p-0 text-base leading-snug font-medium text-gray-900 shadow-none ring-0 placeholder:font-normal placeholder:text-gray-400 read-only:bg-transparent read-only:text-gray-900 focus:ring-0 focus:outline-none focus-visible:ring-0 [field-sizing:content]";
+  "block w-full resize-none border-0 bg-transparent p-0 text-base leading-snug font-medium text-gray-900 shadow-none ring-0 placeholder:font-normal placeholder:text-gray-500 read-only:bg-transparent read-only:text-gray-900 focus:ring-0 focus:outline-none focus-visible:ring-0 [field-sizing:content]";
 const noteFieldClass =
-  "mt-1.5 block w-full resize-none border-0 bg-transparent p-0 text-sm leading-snug text-gray-500 shadow-none ring-0 placeholder:text-gray-400 read-only:bg-transparent focus:ring-0 focus:outline-none focus-visible:ring-0 [field-sizing:content]";
+  "mt-1.5 block w-full resize-none border-0 bg-transparent p-0 text-sm leading-snug text-gray-500 shadow-none ring-0 placeholder:text-gray-500 read-only:bg-transparent focus:ring-0 focus:outline-none focus-visible:ring-0 [field-sizing:content]";
 
 interface DishDraft {
   clientId?: string;

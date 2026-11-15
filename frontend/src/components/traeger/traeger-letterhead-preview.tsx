@@ -94,7 +94,7 @@ export function TraegerLetterheadPreview({
               unoptimized
             />
           ) : (
-            <span className="text-gray-400">Kein Logo</span>
+            <span className="text-gray-500">Kein Logo</span>
           )}
         </div>
         {/* Like the PDF: each entered line is one line, the first one bold
@@ -117,7 +117,7 @@ export function TraegerLetterheadPreview({
               </p>
             ))
           ) : (
-            <p className="text-gray-400">Noch kein Absender</p>
+            <p className="text-gray-500">Noch kein Absender</p>
           )}
         </address>
       </div>
@@ -192,7 +192,7 @@ export function TraegerLetterheadPreview({
               </Fragment>
             ))
           ) : (
-            <span className="text-gray-400">noch nicht eingetragen</span>
+            <span className="text-gray-500">noch nicht eingetragen</span>
           )}
         </p>
       )}
@@ -225,7 +225,7 @@ export function TraegerLetterheadPreview({
           </p>
         ) : null}
         {footer.length === 0 && !defaultAccount ? (
-          <p className="text-gray-400">Noch keine Fußzeile</p>
+          <p className="text-gray-500">Noch keine Fußzeile</p>
         ) : null}
       </figcaption>
     </figure>

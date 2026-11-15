@@ -320,12 +320,12 @@ function VertretungDayListRow({
   // "Ganzer Tag" blendet ungestörte Positionen gedämpft grau ein, ohne
   // Störungsvermerke — die Vermerke selbst bleiben
   // ohnehin aus, weil ihre Bedingungen für eine ungestörte Zeile nie zutreffen.
-  const titleClass = isDisturbed ? "text-gray-900" : "text-gray-400";
+  const titleClass = isDisturbed ? "text-gray-900" : "text-gray-500";
   const placeLine = blockPlaceLine(instance);
   const staffEntries = isCancelled
     ? []
     : blockStaffEntries(instance.staff, staffNames);
-  const timeClass = isDisturbed ? "text-gray-500" : "text-gray-400";
+  const timeClass = isDisturbed ? "text-gray-500" : "text-gray-500";
   // Das Datenmodell kennt nur "Ersatz für diesen Block", nicht "Ersatz für
   // diese abwesende Person". Namen daher nur blockweit aggregiert ausgeben.
   const substituteNames = hasAbsence

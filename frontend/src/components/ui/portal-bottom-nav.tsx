@@ -20,7 +20,7 @@ import type { MotoConcept } from "~/lib/moto-concepts";
 const ITEM = `relative ${Z_LAYER.raised} flex min-h-[44px] items-center justify-center gap-2.5 rounded-full py-2.5 transition-colors duration-200`;
 const ITEM_ACTIVE = "bg-gray-100 text-gray-900";
 const ITEM_IDLE = "text-gray-500 hover:text-gray-700";
-const ITEM_IDLE_QUIET = "text-gray-400 hover:text-gray-600";
+const ITEM_IDLE_QUIET = "text-gray-500 hover:text-gray-600";
 
 /** Erst messen, dann animieren: Die erste Position springt nicht ins Bild. */
 const INDICATOR_ANIMATION_DELAY_MS = 100;
@@ -416,7 +416,7 @@ export function PortalNavSheetLink({
       {badge}
       {plain ? null : (
         <ChevronRight
-          className="h-5 w-5 shrink-0 text-gray-400"
+          className="h-5 w-5 shrink-0 text-gray-500"
           aria-hidden="true"
         />
       )}

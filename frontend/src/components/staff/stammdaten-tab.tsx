@@ -87,7 +87,7 @@ function Value({
   readonly emptyText?: string;
 }) {
   if (value) return <>{value}</>;
-  return <span className="font-normal text-gray-400">{emptyText}</span>;
+  return <span className="font-normal text-gray-500">{emptyText}</span>;
 }
 
 /**
@@ -99,7 +99,7 @@ function TraegerKeepsNotice({ what }: { readonly what: string }) {
   return (
     <InsetPanel className="flex items-start gap-2">
       <Lock
-        className="mt-0.5 h-4 w-4 shrink-0 text-gray-400"
+        className="mt-0.5 h-4 w-4 shrink-0 text-gray-500"
         aria-hidden="true"
       />
       <p className="text-sm text-gray-600">
@@ -764,7 +764,7 @@ export function StammdatenTab({
                   <TraegerProofStatusList proofs={traegerProofs} />
                 ) : null}
                 {qualificationList.length === 0 ? (
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-gray-500">
                     {traegerProofs && traegerProofs.length > 0
                       ? "Die Schule hat keine eigenen Qualifikationen hinterlegt."
                       : "Keine Qualifikationen hinterlegt."}
@@ -918,7 +918,7 @@ export function StammdatenTab({
         <SectionCard title="Bank & Steuer">
           <InsetPanel className="flex items-start gap-2">
             <Lock
-              className="mt-0.5 h-4 w-4 shrink-0 text-gray-400"
+              className="mt-0.5 h-4 w-4 shrink-0 text-gray-500"
               aria-hidden="true"
             />
             <p className="text-sm text-gray-500">

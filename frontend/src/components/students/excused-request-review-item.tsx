@@ -234,7 +234,7 @@ export function ExcusedRequestReviewItem({
                     ? `ab ${partialAbsenceFromByDate[date]} Uhr entschuldigt`
                     : currentStatusLabel(currentStatusByDate[date])}
                 </span>
-                <span className="text-gray-400" aria-hidden="true">
+                <span className="text-gray-500" aria-hidden="true">
                   {" → "}
                 </span>
                 <span className="font-medium text-gray-900">
@@ -255,7 +255,7 @@ export function ExcusedRequestReviewItem({
           {row.note.trim() ? (
             <span className="font-medium text-gray-900">{row.note}</span>
           ) : (
-            <span className="text-gray-400">–</span>
+            <span className="text-gray-500">–</span>
           )}
         </div>
       </ReviewDiffPanel>

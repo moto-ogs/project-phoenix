@@ -645,7 +645,7 @@ function ArrangeTile({
     >
       <span className="flex w-full items-center gap-2">
         <GripVertical
-          className="h-4 w-4 shrink-0 text-gray-400"
+          className="h-4 w-4 shrink-0 text-gray-500"
           aria-hidden="true"
         />
         <MotoConceptIcon concept={definition.concept} size={20} />
@@ -876,7 +876,7 @@ function AddBlockModal({
                   </span>
                 </span>
                 <Plus
-                  className="mt-1 h-4 w-4 shrink-0 text-gray-400"
+                  className="mt-1 h-4 w-4 shrink-0 text-gray-500"
                   aria-hidden="true"
                 />
               </ChoiceTile>

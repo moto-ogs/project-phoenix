@@ -283,7 +283,7 @@ export function GuardianInvitationAcceptForm({ token, invitation }: Props) {
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
                   requirement.met
                     ? "border-moto-green bg-moto-green/10 text-moto-green-strong"
-                    : "border-gray-300 bg-white text-gray-400"
+                    : "border-gray-300 bg-white text-gray-500"
                 }`}
                 aria-hidden="true"
               >

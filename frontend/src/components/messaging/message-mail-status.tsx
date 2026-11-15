@@ -88,7 +88,7 @@ export function MessageMailBadge({ outcome }: { outcome?: MailOutcome }) {
   if (!copy) return null;
   return (
     <span className="inline-flex items-center gap-1">
-      <Envelope className="h-3.5 w-3.5 text-gray-400" />
+      <Envelope className="h-3.5 w-3.5 text-gray-500" />
       <span>E-Mail</span>
       <StatusBadge
         label={copy.label}
@@ -131,7 +131,7 @@ export function GroupMessageMailBadges({
       className="inline-flex flex-wrap items-center gap-1"
       data-testid="group-message-mails"
     >
-      <Envelope className="h-3.5 w-3.5 text-gray-400" />
+      <Envelope className="h-3.5 w-3.5 text-gray-500" />
       <span>E-Mails</span>
       <MailOutcomeBadges counts={counts} />
     </span>

@@ -567,7 +567,7 @@ export function DienstplanResourceGrid({
             ? "Serie, für diese Woche angepasst"
             : "Teil einer Serie"
         }
-        className={shift.detached ? "text-moto-amber" : "text-gray-400"}
+        className={shift.detached ? "text-moto-amber" : "text-gray-500"}
       />
     ) : undefined;
 
@@ -630,20 +630,17 @@ export function DienstplanResourceGrid({
         ) : (
           <>
             {isReplacement && (
-              <p
-                className="text-xs font-medium"
-                style={{ color: LOCATION_COLORS.OTHER_ROOM }}
-              >
+              <p className="text-moto-blue-strong text-xs font-medium">
                 Vertretung{shift.changeReason ? ` · ${shift.changeReason}` : ""}
               </p>
             )}
             {shift.breakMinutes > 0 && (
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-600">
                 Pause {shift.breakMinutes} min
               </p>
             )}
             {shift.plannedByTraeger && (
-              <p className="text-xs text-gray-500">Vom Träger geplant</p>
+              <p className="text-xs text-gray-600">Vom Träger geplant</p>
             )}
           </>
         )}

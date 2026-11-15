@@ -225,7 +225,7 @@ export function SelectionBulkPickupModal({
                 className="w-32"
               />
               {!times[day.value] ? (
-                <span className="text-xs text-gray-400 italic">
+                <span className="text-xs text-gray-500 italic">
                   nicht ändern
                 </span>
               ) : null}

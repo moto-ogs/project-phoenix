@@ -58,7 +58,7 @@ function FinancialCell({ row }: Readonly<{ row: StaffImportRow }>) {
     row.taxIdMasked ? "Steuer-ID" : "",
     row.socialSecurityNumberMasked ? "SV-Nummer" : "",
   ].filter(Boolean);
-  if (parts.length === 0) return <span className="text-gray-400">–</span>;
+  if (parts.length === 0) return <span className="text-gray-500">–</span>;
   return (
     <span className="block text-sm text-gray-700">
       {row.ibanMasked ? (
@@ -81,7 +81,7 @@ function NotesCell({ row }: Readonly<{ row: StaffImportRow }>) {
     ...(note ? [note] : []),
     ...row.problems.map(staffImportProblemText),
   ];
-  if (lines.length === 0) return <span className="text-gray-400">–</span>;
+  if (lines.length === 0) return <span className="text-gray-500">–</span>;
   return (
     <ul className="space-y-0.5 text-sm text-gray-700">
       {lines.map((line) => (

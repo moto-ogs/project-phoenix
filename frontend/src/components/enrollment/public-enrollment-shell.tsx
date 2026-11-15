@@ -103,7 +103,7 @@ export function PublicEnrollmentSteps({
                   ? "border-moto-green/30 bg-moto-green/15 text-moto-green-strong"
                   : active
                     ? "border-gray-900 bg-gray-900 text-white"
-                    : "border-gray-200 bg-white text-gray-400"
+                    : "border-gray-200 bg-white text-gray-500"
               }`}
             >
               {done ? (

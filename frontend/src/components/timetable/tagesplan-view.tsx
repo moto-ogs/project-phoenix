@@ -207,8 +207,10 @@ function TagesplanRow({
     instance.status === "planned" &&
     (dayIsPast || (isToday && effectiveEndTime <= nowHHMM));
   const missed = ended && !isDuty;
-  // Vorbei ist vorbei: gedimmte Zeilen lassen das Laufende und Kommende von
-  // selbst hervortreten — statt eines Etiketts an jeder Zeile.
+  // Vorbei ist vorbei: grauere Zeilen lassen das Laufende und Kommende von
+  // selbst hervortreten. Abgeblendet wird über die Schriftfarbe statt über
+  // Deckkraft, damit der Text lesbar bleibt (WCAG 1.4.3, #7110); die
+  // Metazeile nennt den Zustand zusätzlich in Worten.
   const over =
     instance.status === "completed" ||
     ended ||
@@ -220,12 +222,18 @@ function TagesplanRow({
   // heraus. Sieht jemand ohnehin nur die eigene Einteilung, wäre jede Zeile
   // hinterlegt und die Farbe sagte nichts mehr.
   const mine = showMine && instance.isAssigned;
+  // Auf der Blockfarbe des eigenen Blocks erreicht gray-500 keine 4,5:1
+  // (#7110); Nebentext wird dort eine Stufe dunkler.
+  const muted = mine ? "text-gray-600" : "text-gray-500";
 
   // Der Raum trägt sein Konzeptsymbol mitten in der Metazeile. Die Symbole
   // sind Schmuck: der Text daneben sagt schon, was gemeint ist.
   const metaParts: ReactNode[] = [
     instance.status === "completed" ? "Beendet" : null,
     missed ? "Nicht gestartet" : null,
+    over && !cancelled && !missed && instance.status !== "completed"
+      ? "Vorbei"
+      : null,
     isDuty ? "Dienst" : null,
     room ? (
       <Fragment key="room">
@@ -242,13 +250,13 @@ function TagesplanRow({
   ].filter(Boolean);
 
   const timeColumn = (
-    <span
-      className={`${parallel ? TIME_PARALLEL_CLASS : TIME_CLASS} ${over ? "opacity-50" : ""}`}
-    >
-      <span className="block text-sm font-semibold text-gray-900 tabular-nums">
+    <span className={parallel ? TIME_PARALLEL_CLASS : TIME_CLASS}>
+      <span
+        className={`block text-sm font-semibold tabular-nums ${over ? "text-gray-600" : "text-gray-900"}`}
+      >
         {instance.startTime}
       </span>
-      <span className="block text-xs text-gray-500 tabular-nums">
+      <span className={`block text-xs tabular-nums ${muted}`}>
         {blockEndLine(instance)}
       </span>
     </span>
@@ -258,7 +266,7 @@ function TagesplanRow({
       {instance.title}
       <OwnBlockHint mine={mine} />
       {instance.planningTrackName ? (
-        <span className="ml-2 text-xs font-normal text-gray-500">
+        <span className={`ml-2 text-xs font-normal ${muted}`}>
           {instance.planningTrackName}
         </span>
       ) : null}
@@ -276,13 +284,13 @@ function TagesplanRow({
             : "Fällt aus"}
         </span>
       ) : null}
-      <span className="block truncate text-xs text-gray-500">
+      <span className={`block truncate text-xs ${muted}`}>
         {metaParts.flatMap((part, index) =>
           index === 0 ? [part] : [" · ", part],
         )}
       </span>
       {staff && !cancelled ? (
-        <span className="block truncate text-xs text-gray-400">
+        <span className={`block truncate text-xs ${muted}`}>
           <MotoConceptIcon
             concept={staffConcept}
             size={14}
@@ -297,10 +305,12 @@ function TagesplanRow({
     <>
       {timeColumn}
       <span
-        className={`${parallel ? "w-full min-w-0 @xs:w-auto @xs:flex-1" : "min-w-0 flex-1"} ${over ? "opacity-50" : ""}`}
+        className={
+          parallel ? "w-full min-w-0 @xs:w-auto @xs:flex-1" : "min-w-0 flex-1"
+        }
       >
         <span
-          className={`block truncate text-sm text-gray-900 ${running ? "font-semibold" : "font-medium"}`}
+          className={`block truncate text-sm ${over ? "text-gray-600" : "text-gray-900"} ${running ? "font-semibold" : "font-medium"}`}
         >
           {titleContent}
         </span>
@@ -327,10 +337,7 @@ function TagesplanRow({
     </Button>
   ) : null;
 
-  const edgeStyle = {
-    ...blockRowStyle(instance, mine),
-    ...(over ? { opacity: 0.9 } : {}),
-  };
+  const edgeStyle = blockRowStyle(instance, mine);
 
   // In einer schmalen Spalte stehen Zeit, Inhalt und Aktion untereinander;
   // Badge, Chevron und Starten-Knopf rücken zusammen ans Ende.

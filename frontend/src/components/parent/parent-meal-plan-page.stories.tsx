@@ -227,8 +227,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Populated: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   beforeEach: () =>
     mockParentMealPlan({
       childrenData: childrenWithMealPlans,
@@ -240,8 +238,6 @@ export const Populated: Story = {
 };
 
 export const WithRegistration: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   beforeEach: () => {
     const felix: Child = {
       ...childrenWithMealPlans[0]!,
@@ -259,8 +255,6 @@ export const WithRegistration: Story = {
 };
 
 export const EmptyWeek: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   beforeEach: () =>
     mockParentMealPlan({
       childrenData: [childrenWithMealPlans[0]!],
@@ -269,8 +263,6 @@ export const EmptyWeek: Story = {
 };
 
 export const NoEnabledSchools: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   beforeEach: () =>
     mockParentMealPlan({
       childrenData: [childrenWithMealPlans[0]!],
@@ -279,8 +271,6 @@ export const NoEnabledSchools: Story = {
 };
 
 export const LoadError: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   beforeEach: () =>
     mockParentMealPlan({
       childrenData: [],

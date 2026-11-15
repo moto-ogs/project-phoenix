@@ -1260,7 +1260,7 @@ function OGSGroupPageContent() {
                           key={teacherHintKey(hint)}
                           icon={
                             <StickyNote
-                              className="h-3.5 w-3.5 text-gray-400"
+                              className="h-3.5 w-3.5 text-gray-500"
                               aria-hidden="true"
                             />
                           }

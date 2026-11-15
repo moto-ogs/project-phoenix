@@ -226,8 +226,9 @@ function BlockRow({
   const cancelled = block.status === "cancelled";
   const startable =
     block.status === "planned" && canStartPlannedInstance(block, new Date());
-  // Vorbei ist vorbei: gedimmt, damit das Laufende und Kommende von selbst
-  // hervortritt — wie im Tagesplan.
+  // Vorbei ist vorbei: grauere Schrift (statt Deckkraft, WCAG 1.4.3, #7110)
+  // lässt das Laufende und Kommende von selbst hervortreten — wie im
+  // Tagesplan; die Metazeile nennt den Zustand zusätzlich in Worten.
   // Ein Dienst (#3822) wird nie gestartet und hat keine Kinder.
   const isDuty = block.isDuty === true;
   const ended =
@@ -258,6 +259,7 @@ function BlockRow({
   const meta: ReactNode[] = [
     block.status === "completed" ? "Beendet" : null,
     missed ? "Nicht gestartet" : null,
+    ended && !missed ? "Vorbei" : null,
     room ? (
       <Fragment key="room">
         <MotoConceptIcon
@@ -291,7 +293,6 @@ function BlockRow({
       )}
       <ListRow
         density="compact"
-        className={over ? "opacity-60" : undefined}
         trailing={
           <>
             {startable ? (
@@ -312,7 +313,7 @@ function BlockRow({
             )}
             {running && block.activeGroupId && (
               <ChevronRight
-                className="h-4 w-4 text-gray-400"
+                className="h-4 w-4 text-gray-500"
                 aria-hidden="true"
               />
             )}
@@ -325,7 +326,9 @@ function BlockRow({
           className="flex min-w-0 flex-1 items-center gap-3"
         >
           <span className="w-14 shrink-0 sm:w-16">
-            <span className="block text-sm font-semibold text-gray-900 tabular-nums">
+            <span
+              className={`block text-sm font-semibold tabular-nums ${over ? "text-gray-600" : "text-gray-900"}`}
+            >
               {block.startTime}
             </span>
             <span className="block text-xs text-gray-500 tabular-nums">
@@ -334,7 +337,7 @@ function BlockRow({
           </span>
           <span className="min-w-0 flex-1">
             <span
-              className={`block truncate text-sm text-gray-900 ${running ? "font-semibold" : "font-medium"}`}
+              className={`block truncate text-sm ${over ? "text-gray-600" : "text-gray-900"} ${running ? "font-semibold" : "font-medium"}`}
             >
               {block.title}
               {block.isSubstitute && (

@@ -53,7 +53,7 @@ const OPTION_BASE_CLASS =
   "flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition-colors";
 const OPTION_IDLE_CLASS = "text-gray-700 hover:bg-gray-50";
 const OPTION_ACTIVE_CLASS = "bg-gray-50 font-medium text-gray-900";
-const OPTION_DISABLED_CLASS = "cursor-not-allowed text-gray-400";
+const OPTION_DISABLED_CLASS = "cursor-not-allowed text-gray-500";
 
 /**
  * The size a caller may pick for a select. Without one it is `compact`
@@ -150,7 +150,7 @@ export function ListboxChevron({ open }: Readonly<{ open: boolean }>) {
     <ChevronDown
       aria-hidden="true"
       className={cn(
-        "h-4 w-4 shrink-0 text-gray-400 transition-transform",
+        "h-4 w-4 shrink-0 text-gray-500 transition-transform",
         open && "rotate-180",
       )}
     />
@@ -1135,7 +1135,7 @@ export function ListboxDropdown<K extends string>({
                       placeholder={searchPlaceholder}
                       aria-label={searchPlaceholder}
                       aria-controls={listboxId}
-                      className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-300 focus:outline-none"
+                      className="h-9 w-full rounded-lg border border-gray-500 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-600 focus:outline-none"
                     />
                   </div>
                 ) : null}

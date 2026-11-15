@@ -270,7 +270,7 @@ export default function GuardianPickerPanel({
         <>
           {/* Search input */}
           <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <Input
               type="text"
               controlSize="compact"
@@ -309,13 +309,13 @@ export default function GuardianPickerPanel({
               )}
 
             {!loading && query.trim().length < MIN_QUERY_LENGTH && (
-              <p className="px-1 py-4 text-center text-xs text-gray-400">
+              <p className="px-1 py-4 text-center text-xs text-gray-500">
                 Mindestens {MIN_QUERY_LENGTH} Zeichen eingeben.
               </p>
             )}
 
             {!loading && results.length >= GUARDIAN_PICKER_RESULT_LIMIT && (
-              <p className="px-1 pt-1 text-center text-xs text-gray-400">
+              <p className="px-1 pt-1 text-center text-xs text-gray-500">
                 Viele Treffer – bitte den Namen weiter eingrenzen.
               </p>
             )}
@@ -355,7 +355,7 @@ export default function GuardianPickerPanel({
                     )}
                     {guardian.linkedChildrenCount !== undefined &&
                       guardian.linkedChildrenCount > 0 && (
-                        <p className="truncate text-xs text-gray-400">
+                        <p className="truncate text-xs text-gray-500">
                           {linkedChildrenLabel(guardian.linkedChildrenCount)}
                         </p>
                       )}

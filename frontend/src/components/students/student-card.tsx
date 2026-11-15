@@ -444,7 +444,7 @@ export function ActivityIcon() {
 }
 
 export function DepartureModeIcon() {
-  return <Route className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />;
+  return <Route className="h-3.5 w-3.5 text-gray-500" aria-hidden="true" />;
 }
 
 /**
@@ -510,7 +510,7 @@ export function StudentInfoRow({
  * matter whether it shows a time, a dash, or a colored status.
  */
 export function PickupTimeIcon() {
-  return <Clock className="h-3.5 w-3.5 text-gray-400" />;
+  return <Clock className="h-3.5 w-3.5 text-gray-500" />;
 }
 
 /** Icon for exception indicator */
@@ -538,7 +538,7 @@ export function AbsenceIcon() {
  *   3. Neither → show "Abholzeit: –" fallback
  */
 function ArrivalTimeIcon() {
-  return <LogIn className="h-3.5 w-3.5 text-gray-400" />;
+  return <LogIn className="h-3.5 w-3.5 text-gray-500" />;
 }
 
 function renderTimeStatusIcon(
@@ -761,7 +761,7 @@ export function StudentAbsenceRow({
       {/* The one-line phone list has no room for the note (#3834). */}
       {note && variant !== "compact" ? (
         <StudentInfoRow
-          icon={<StickyNote className="h-3.5 w-3.5 text-gray-400" />}
+          icon={<StickyNote className="h-3.5 w-3.5 text-gray-500" />}
           wrap
           variant={variant}
         >

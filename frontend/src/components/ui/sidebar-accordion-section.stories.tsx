@@ -42,8 +42,6 @@ export const ExpandedWithChildren: Story = {
 };
 
 export const ExpandedEmpty: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     isExpanded: true,
     isActive: true,

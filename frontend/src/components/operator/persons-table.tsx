@@ -58,7 +58,7 @@ export function PersonTags({
 }>) {
   if (!person.isStaff && !person.isStudent && !person.hasRfidCard) {
     return emptyPlaceholder ? (
-      <span className="text-xs text-gray-400">–</span>
+      <span className="text-xs text-gray-500">–</span>
     ) : null;
   }
   return (
@@ -124,7 +124,7 @@ export function PersonsTable({
           row.accountEmail ? (
             <span className="text-gray-600">{row.accountEmail}</span>
           ) : (
-            <span className="text-xs text-gray-400">–</span>
+            <span className="text-xs text-gray-500">–</span>
           ),
         sortValue: (row) => (row.accountEmail ?? "").toLowerCase(),
       },

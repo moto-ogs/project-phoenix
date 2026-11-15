@@ -64,7 +64,7 @@ export function PlanAddAffordance({
       className={[
         // pointer-events-none: das umschließende Element des Aufrufers trägt
         // den Klick, die Fläche darf ihn nie abfangen.
-        "pointer-events-none flex w-full items-center justify-center rounded-md border border-dashed border-gray-200 text-gray-400 transition group-hover:border-gray-300 group-hover:text-gray-600",
+        "pointer-events-none flex w-full items-center justify-center rounded-md border border-dashed border-gray-200 text-gray-500 transition group-hover:border-gray-300 group-hover:text-gray-600",
         SIZE_CLASS[size],
         REVEAL_CLASS,
         className ?? "",

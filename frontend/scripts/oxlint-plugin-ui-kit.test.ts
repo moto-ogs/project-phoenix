@@ -2753,20 +2753,18 @@ describe.concurrent(
       expect(status).toBe(0);
     });
 
-    it("allows a baselined file its count and fails one more", async () => {
-      const allowed = contrastRatchetBaseline["no-gray-400-text"]?.[baselined];
-      expect(allowed).toBe(1);
-      const atBaseline = await lintSource(
+    // #7110 hat die Baseline auf null gesenkt: jede Datei, auch eine
+    // früher gezählte, darf keinen Fund mehr haben.
+    it("holds every file at zero, also a formerly baselined one", async () => {
+      for (const counts of Object.values(contrastRatchetBaseline)) {
+        expect(counts).toEqual({});
+      }
+      const { status, output } = await lintSource(
         'export const a = "text-gray-400";',
         baselined,
       );
-      const overBaseline = await lintSource(
-        'export const a = "text-gray-400";\nexport const b = "text-gray-400";',
-        baselined,
-      );
-      expect(atBaseline.output).not.toMatch(TEXT);
-      expect(overBaseline.status).toBe(1);
-      expect(overBaseline.output).toContain("erlaubt sind 1");
+      expect(status).toBe(1);
+      expect(output.match(TEXT)).toHaveLength(1);
     });
   },
 );

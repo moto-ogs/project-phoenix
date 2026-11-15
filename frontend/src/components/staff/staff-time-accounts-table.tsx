@@ -291,7 +291,7 @@ export function StaffTimeAccountsTable({
               title="Tage mit zu kurzer Pause oder mehr als 10 Std. Arbeit. Die Tage stehen in der Zeiterfassung der Person."
             />
           ) : (
-            <span className="text-gray-400">–</span>
+            <span className="text-gray-500">–</span>
           ),
       },
       {
@@ -304,7 +304,7 @@ export function StaffTimeAccountsTable({
             {row.remainingVacationDays.toLocaleString("de-DE", {
               maximumFractionDigits: 1,
             })}{" "}
-            <span className="text-xs text-gray-400">Tage</span>
+            <span className="text-xs text-gray-500">Tage</span>
           </span>
         ),
       },

@@ -326,7 +326,7 @@ describe("DienstplanResourceGrid status mapping", () => {
       shiftsByStaff: shiftMap("2026-07-06", [baseShift({ seriesId: "5" })]),
     });
     expect(screen.getByLabelText("Teil einer Serie")).toHaveClass(
-      "text-gray-400",
+      "text-gray-500",
     );
     unmount();
 

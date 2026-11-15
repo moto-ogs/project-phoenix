@@ -49,7 +49,7 @@ export function RoomOccupancyPanel({ rooms, totals }: RoomOccupancyPanelProps) {
       </div>
 
       {rooms.length === 0 ? (
-        <p className="py-10 text-center text-2xl text-gray-400">
+        <p className="py-10 text-center text-2xl text-gray-500">
           Keine Räume eingerichtet.
         </p>
       ) : (
@@ -72,7 +72,7 @@ export function RoomOccupancyPanel({ rooms, totals }: RoomOccupancyPanelProps) {
                   >
                     {room.student_count}
                     {hasCapacity && (
-                      <span className="text-xl font-medium text-gray-400">
+                      <span className="text-xl font-medium text-gray-500">
                         {" "}
                         / {room.capacity}
                       </span>

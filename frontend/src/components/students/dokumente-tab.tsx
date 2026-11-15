@@ -82,14 +82,14 @@ function documentIcon(contentType: string) {
   if (contentType.startsWith("image/")) {
     return (
       <FileImage
-        className="h-4 w-4 shrink-0 text-gray-400"
+        className="h-4 w-4 shrink-0 text-gray-500"
         aria-hidden="true"
       />
     );
   }
   if (contentType === "application/pdf") {
     return (
-      <FileText className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+      <FileText className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
     );
   }
   return (
