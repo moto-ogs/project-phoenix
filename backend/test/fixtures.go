@@ -2671,25 +2671,7 @@ type (
 // leaves behind: a slot absence the day status owns. The package clone owns it.
 func CreateTestStudentStatusDay(tb testing.TB, db *bun.DB, studentID int64, date calendar.Date, status string) *StudentStatusDayRow {
 	tb.Helper()
-
-	row := &StudentStatusDayRow{
-		StudentID:  studentID,
-		Date:       date,
-		Status:     status,
-		ReportedAt: time.Now(),
-		Source:     "manual", // absencerecords.StudentStatusSourceManual
-	}
-	row.TenantID = fixtureTenantID(tb)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err := db.NewInsert().
-		Model(row).
-		ModelTableExpr(`active.student_status_days`).
-		Exec(ctx)
-	require.NoError(tb, err, "Failed to create test student status day")
-	return row
+	return CreateTestStudentStatusDayForTenant(tb, db, fixtureTenantID(tb), studentID, date, status)
 }
 
 // InstanceStaffOpts controls optional fields for CreateTestInstanceStaff.

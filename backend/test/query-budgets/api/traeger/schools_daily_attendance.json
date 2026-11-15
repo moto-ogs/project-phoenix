@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.schools_daily_attendance",
+  "max": 7,
+  "exact": true,
+  "description": "modules/traegerview — GET /traeger/schools/daily-attendance (#4717):\nthe Träger's schools and their federal state (one batched settings read)\nbefore the administrative transaction, then the Träger row, the school IDs,\nthe rows of the schools in Mecklenburg-Vorpommern, their care days per child\nand their status days for the whole school set. Flat in the number of\nschools.",
+  "route": "GET /traeger/schools/daily-attendance"
+}

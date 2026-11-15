@@ -14,6 +14,9 @@
   "api/traeger/schools/arrival-pickup-times": [
     "GET traeger /traeger/schools/arrival-pickup-times"
   ],
+  "api/traeger/schools/daily-attendance": [
+    "GET traeger /traeger/schools/daily-attendance"
+  ],
   "api/traeger/schools/key-date-counts": [
     "GET traeger /traeger/schools/key-date-counts"
   ],

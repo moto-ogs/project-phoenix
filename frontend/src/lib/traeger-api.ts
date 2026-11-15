@@ -1216,12 +1216,15 @@ export interface TraegerOrganization {
   readonly name: string;
   /** A test Träger with invented sample data (#4658). */
   readonly testSystem: boolean;
+  /** The federal states of its schools, each once (#4717). */
+  readonly federalStates: readonly string[];
 }
 
 interface BackendTraegerOrganization {
   id: number;
   name: string;
   test_system?: boolean;
+  federal_states?: string[] | null;
 }
 
 /** The Träger of the signed-in person's session. */
@@ -1236,6 +1239,7 @@ export async function fetchTraegerOrganization(): Promise<TraegerOrganization> {
     id: String(organization.id),
     name: organization.name,
     testSystem: organization.test_system ?? false,
+    federalStates: organization.federal_states ?? [],
   };
 }
 

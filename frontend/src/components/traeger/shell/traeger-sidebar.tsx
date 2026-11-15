@@ -29,7 +29,12 @@ import { useTraegerReturnHref } from "./traeger-return-path";
  * Einstellungen mit dem Rückweg zur App (#5685). Abmelden sitzt im Profil-Menü
  * der geteilten Kopfzeile, die auf jeder Breite sichtbar ist.
  */
-export function TraegerSidebar() {
+export function TraegerSidebar({
+  federalStates,
+}: {
+  /** Die Bundesländer der Schulen des Trägers, für Einträge wie die Tagesmeldung (#4717). */
+  readonly federalStates?: readonly string[];
+}) {
   const pathname = usePathname() ?? "";
   const { data: session } = useSession();
   const settingsItems = traegerSettingsNavItemsFor(session ?? null);
@@ -80,7 +85,7 @@ export function TraegerSidebar() {
         </>
       }
     >
-      {traegerNavGroupsFor(session ?? null).map((group) => (
+      {traegerNavGroupsFor(session ?? null, federalStates).map((group) => (
         <PortalSidebarGroup key={group.key} label={group.label}>
           {group.items.map((item) => (
             <PortalSidebarLink

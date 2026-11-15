@@ -71,6 +71,7 @@ export const PORTAL_PAGES = {
     "/schliesstage",
     "/schulen",
     "/stichtagszahlen",
+    "/tagesmeldung",
     "/uebersicht",
     "/vertraege",
     "/zeitvergleich",
