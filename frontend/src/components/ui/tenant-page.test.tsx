@@ -101,6 +101,54 @@ describe("TenantPage", () => {
     expect(screen.getByText("Inhalt")).toBeInTheDocument();
   });
 
+  // #6722: Eine Seite, die nur `overflowMenu` übergibt (Gruppennachricht),
+  // hatte auf dem Telefon kein Menü: die mobile Suchzeile entstand nur mit
+  // Suche oder Filtern. Das Kebab steht dann neben dem Titel, auf jeder
+  // Breite, statt allein in einer eigenen Zeile.
+  it("stellt ein Kebab ohne Suche und Filter neben den Titel, auf jeder Breite", () => {
+    render(
+      <TenantPage
+        title="Ausflug Freitag"
+        stats="Klasse 3a · 4 von 12 Familien haben gelesen"
+        overflowMenu={[
+          { label: "Schließen", noDescription: "Test", onClick: vi.fn() },
+        ]}
+      />,
+    );
+
+    const kebabs = screen.getAllByRole("button", { name: "Weitere Aktionen" });
+    expect(kebabs).toHaveLength(1);
+    const kebab = kebabs[0]!;
+    const heading = screen.getByRole("heading", { level: 1 });
+    const titleRow = heading.closest("header")!.firstElementChild!;
+    expect(titleRow.contains(heading)).toBe(true);
+    expect(titleRow.contains(kebab)).toBe(true);
+    for (let el: Element | null = kebab; el; el = el.parentElement) {
+      expect(el.className).not.toMatch(
+        /(^|\s)(hidden|lg:hidden|xl:hidden)(\s|$)/,
+      );
+    }
+  });
+
+  it("stellt mit Suchfeld das Kebab weiter in die Suchzeile", () => {
+    render(
+      <TenantPage
+        title="Kinder"
+        search={{ value: "", onChange: vi.fn() }}
+        overflowMenu={[
+          { label: "Exportieren", noDescription: "Test", onClick: vi.fn() },
+        ]}
+      />,
+    );
+
+    const heading = screen.getByRole("heading", { level: 1 });
+    const titleRow = heading.closest("header")!.firstElementChild!;
+    const kebabs = screen.getAllByRole("button", { name: "Weitere Aktionen" });
+    // Telefon- und Desktop-Fassung der Suchzeile, keine im Titel.
+    expect(kebabs).toHaveLength(2);
+    for (const kebab of kebabs) expect(titleRow.contains(kebab)).toBe(false);
+  });
+
   // #5531: Die Kopfkarte setzt ihre Bedienhöhe über Nachfahren-Selektoren.
   // Ein Link in Button-Optik muss davon genauso erfasst sein wie ein Knopf,
   // sonst steht er mit 32 oder 36 px neben 40-px-Knöpfen.

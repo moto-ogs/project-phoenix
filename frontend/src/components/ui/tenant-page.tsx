@@ -570,12 +570,21 @@ function TenantPageView({
   overlays,
   testId,
 }: TenantPageProps) {
-  const hasSearchRow =
+  const hasOverflowMenu = (overflowMenu?.length ?? 0) > 0;
+  const searchRowHasControls =
     search !== undefined ||
     (filters?.length ?? 0) > 0 ||
-    (overflowMenu?.length ?? 0) > 0 ||
     primaryAction != null ||
     badge !== undefined;
+  // Ohne Suche, Filter, Zähler und Hauptaktion trüge die Suchzeile nur das
+  // Kebab: eine Zeile mit einem Symbol (Regel 4), und auf dem Telefon gab es
+  // sie gar nicht (#6722). Ein `searchSlot` ersetzt die Suchzeile ganz. In
+  // beiden Fällen steht das Kebab neben dem Titel, wo die Regel es vorsieht.
+  const kebabInTitleRow =
+    hasOverflowMenu && (searchSlot != null || !searchRowHasControls);
+  const hasSearchRow =
+    searchRowHasControls || (hasOverflowMenu && !kebabInTitleRow);
+  const hasHeadActions = actions != null || kebabInTitleRow;
 
   const headRef = useRef<HTMLElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -671,7 +680,7 @@ function TenantPageView({
               // Sind die Knöpfe zusammen breiter als der Kopf, brechen sie
               // in der Gruppe um, statt die Seite seitlich scrollen zu
               // lassen (#4975).
-              actions
+              hasHeadActions
                 ? "ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2"
                 : "contents",
               // Unter sm gilt: JEDE Zeile ist voll. Ein einzelner Textknopf
@@ -681,6 +690,9 @@ function TenantPageView({
             )}
           >
             {actions}
+            {kebabInTitleRow && overflowMenu && (
+              <OverflowMenu items={overflowMenu} />
+            )}
             <MobilePageHelpTarget />
           </div>
         </div>
