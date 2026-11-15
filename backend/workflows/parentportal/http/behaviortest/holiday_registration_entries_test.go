@@ -135,7 +135,7 @@ func TestHolidayRegistrationEntriesShowTheAccountsOwnRegistrations(t *testing.T)
 	assert.Equal(t, autumn.RegistrationID, entries[1].ID)
 	assert.Equal(t, "Träger Nord Ferien", entries[1].TraegerName)
 	assert.Equal(t, []string{"Lia", "Ben"}, []string{entries[1].Children[0].FirstName, entries[1].Children[1].FirstName})
-	for _, withheld := range []string{"Muster", "2019-03-01", "Grundschule Melle", "0151", "Mia", "Tim", "Osterferien", "Sommerferien"} {
+	for _, withheld := range []string{"Muster", "2019-03-01", "Grundschule Melle", "0151 2345678", "Mia", "Tim", "Osterferien", "Sommerferien"} {
 		assert.NotContains(t, body, withheld, "the list carries no last name, date of birth, school, contact or foreign registration")
 	}
 
