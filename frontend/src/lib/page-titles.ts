@@ -235,6 +235,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/schliesstage": "Schließtage und Feiertage",
     "/schulen/:id": "Schule",
     "/stichtagszahlen": "Stichtagszahlen",
+    "/tagesmeldung": "Tagesmeldung",
     "/uebersicht": "Dashboard",
     "/vertraege": "Verträge",
     "/vertraege/:id": "Vertrag",

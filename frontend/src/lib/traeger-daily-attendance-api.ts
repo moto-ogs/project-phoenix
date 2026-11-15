@@ -9,9 +9,6 @@ import { apiErrorFromBody, transportFetch } from "./api-error";
 import { filenameFromDisposition } from "./file-download";
 import type { TraegerSchool } from "./traeger-api";
 
-/** The federal state the report is for (ISO 3166-2). */
-export const MECKLENBURG_VORPOMMERN = "DE-MV";
-
 /** The longest period of one report, as in the backend: a month. */
 export const DAILY_ATTENDANCE_MAX_DAYS = 31;
 

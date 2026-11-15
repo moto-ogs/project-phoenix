@@ -460,7 +460,7 @@ export default function TraegerDailyAttendancePage() {
           />
           <ExportMenu
             ariaLabel="Tagesmeldung herunterladen"
-            tooltip="Lädt die Datei für das Land herunter. Sie enthält keine Namen."
+            tooltip="Speichert die Datei für das Land. Sie enthält keine Namen."
             options={EXPORT_FORMATS}
             busyKey={exporting ? "csv" : null}
             unavailable={!report || schools.length === 0}
