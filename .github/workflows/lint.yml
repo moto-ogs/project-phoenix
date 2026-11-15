@@ -229,19 +229,6 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
-      # The Storybook tests below need Chromium. Its download and system
-      # packages run beside the quality checks instead of before them.
-      - name: Start Chromium install for Storybook tests
-        working-directory: frontend
-        run: |
-          (if pnpm exec playwright install --with-deps --only-shell chromium \
-              > "$RUNNER_TEMP/chromium-install.log" 2>&1; then
-             status=0
-           else
-             status=$?
-           fi
-           echo "$status" > "$RUNNER_TEMP/chromium-install.exit") &
-
       - name: Frontend quality (shared with pre-push)
         run: bash scripts/check-quality.sh frontend
 
@@ -251,28 +238,53 @@ jobs:
         working-directory: frontend
         run: pnpm run build-storybook
 
-      - name: Wait for Chromium install
-        run: |
-          # A hung install fails after 5 min instead of the job timeout.
-          for _ in $(seq 300); do
-            [ -f "$RUNNER_TEMP/chromium-install.exit" ] && break
-            sleep 1
-          done
-          if [ ! -f "$RUNNER_TEMP/chromium-install.exit" ]; then
-            cat "$RUNNER_TEMP/chromium-install.log"
-            echo "Chromium install did not finish within 5 minutes." >&2
-            exit 1
-          fi
-          cat "$RUNNER_TEMP/chromium-install.log"
-          exit "$(cat "$RUNNER_TEMP/chromium-install.exit")"
+  # Every story renders in Chromium and fails on an axe violation (#7108).
+  # A pull request tests the stories its changes import; the nightly run tests
+  # all of them (scripts/storybook-test-changed.mjs). Inside "Frontend quality"
+  # the full run of all 284 story files took 221-345 s and that job 311-474 s
+  # (#6962, 15.11.2026); it starts in about 40 % of frontend pull requests.
+  # The run is CPU-bound on four cores: three quarters of it is the fresh
+  # iframe each file gets. More workers made it slower, a shared iframe let
+  # one file's state change what the next one renders. Hosted runners are
+  # free for this repository, so the files are split over three of them.
+  storybook-tests:
+    name: Storybook tests (${{ matrix.shard }}/3)
+    if: ${{ inputs.run-frontend }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Every story renders in Chromium and fails on an axe violation (#7108).
-      # A pull request tests the stories its changes import; pushes and the
-      # nightly run test all of them (scripts/storybook-test-changed.mjs).
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: "pnpm"
+          cache-dependency-path: "frontend/pnpm-lock.yaml"
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+
       - name: Storybook tests (a11y)
         working-directory: frontend
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          STORYBOOK_SHARD: ${{ matrix.shard }}/3
         run: node scripts/storybook-test-changed.mjs
 
   # The regular build of the tested tree: on pull requests GitHub's synthetic

@@ -109,7 +109,25 @@ export function needsFullRun(changed) {
   }
 }
 
-const config = ["-c", "vitest.storybook.config.ts"];
+/**
+ * CI verteilt die Story-Dateien auf mehrere Runner (STORYBOOK_SHARD=1/3);
+ * ein ungültiger Wert bricht ab, statt still alle oder keine zu prüfen.
+ */
+export function shardArgs(value) {
+  const shard = value?.trim();
+  if (!shard) return [];
+  const match = /^(\d+)\/(\d+)$/.exec(shard);
+  const [index, count] = match ? [Number(match[1]), Number(match[2])] : [];
+  if (!match || index < 1 || index > count)
+    throw new Error(`STORYBOOK_SHARD ungültig: ${shard}`);
+  return [`--shard=${index}/${count}`];
+}
+
+const config = [
+  "-c",
+  "vitest.storybook.config.ts",
+  ...shardArgs(process.env.STORYBOOK_SHARD),
+];
 
 function run(args) {
   const result = spawnSync("pnpm", ["exec", "vitest", ...args], {
