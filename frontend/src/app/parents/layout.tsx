@@ -34,8 +34,9 @@ export const viewport: Viewport = {
 export async function generateMetadata(): Promise<Metadata> {
   const locale = (await getLocale()) as AppLocale;
   const copy = getParentAppMetadata(locale);
+  // The tab title comes from RouteTitle in the root layout (#7109); the app
+  // name stays the name of the installed app.
   return {
-    title: copy.name,
     description: copy.description,
     appleWebApp: {
       capable: true,

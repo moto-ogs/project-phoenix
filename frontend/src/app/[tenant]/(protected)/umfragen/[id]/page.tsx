@@ -265,6 +265,7 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
         value: tab,
         onChange: (next: string) =>
           updateUrlParams({ reiter: next === "auswertung" ? null : next }),
+        inUrl: true,
         items: [
           { value: "auswertung", label: "Auswertung" },
           { value: "fragebogen", label: "Fragebogen" },

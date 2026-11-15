@@ -89,6 +89,8 @@ export function useChildScopeTabs({
   const tabs: TenantPageProps["tabs"] = items
     ? {
         label: "Welche Kinder",
+        // Gruppe und Raum stehen in der Adresse, also auch im Seitentitel.
+        inUrl: true,
         items,
         value: activeChildScope({ selectedGroupIds, roomId, ownGroupIds }),
         onChange: (scope) => {
