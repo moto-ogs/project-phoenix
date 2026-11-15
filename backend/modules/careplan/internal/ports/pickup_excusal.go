@@ -12,7 +12,8 @@ import (
 type PickupExcusalStore interface {
 	FindByID(context.Context, int64) (*careplan.PickupException, error)
 	FindByStudentIDAndDate(context.Context, int64, calendar.Date) (*careplan.PickupException, error)
-	FindUpcomingByStudentID(context.Context, int64) ([]*careplan.PickupException, error)
+	// FindUpcomingByStudentID lists the student's pickup exceptions from the given day on.
+	FindUpcomingByStudentID(context.Context, int64, calendar.Date) ([]*careplan.PickupException, error)
 	Update(context.Context, *careplan.PickupException) error
 }
 type PartialAbsenceBlocks interface {

@@ -14,16 +14,20 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/careplantest"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // The excused-absence request workflow (#3093) over the real Care Plan
-// tables. The calendar is pinned so no assertion depends on the wall clock;
-// only reported_at instants, which the workflow compares with created_at,
-// use time.Now.
+// tables. The calendar and the workflow's instant clock are pinned so no
+// assertion depends on the wall clock. The store still stamps created_at and
+// reviewed_at with the real clock, which is always later than excusedNow, so
+// an instant before excusedNow is older than any request; the fixtures that
+// must be newer than a request still use time.Now.
 var (
 	excusedToday    = careplan.Date("2026-08-24")
+	excusedNow      = calendar.Date(excusedToday).BerlinMidnight().Add(10 * time.Hour)
 	excusedTomorrow = careplan.Date("2026-08-25")
 	excusedIn3Days  = careplan.Date("2026-08-27")
 	excusedIn4Days  = careplan.Date("2026-08-28")
@@ -54,6 +58,7 @@ func newExcusedRequests(t *testing.T, repos *api.PeopleRepositorySuiteFactory, c
 	requests, err := owners.NewExcusedAbsenceRequests(owners.ExcusedRequestWiring{
 		CarePlan: capability, Students: repos.Student, Persons: repos.Person,
 		Scope: careplantest.SchoolWideReviewScope, Today: func() careplan.Date { return excusedToday },
+		Now: func() time.Time { return excusedNow },
 	})
 	require.NoError(t, err)
 	return requests
@@ -219,7 +224,7 @@ func TestExcusedRequestQueueBadgeAndParentList(t *testing.T) {
 	}))
 
 	require.NoError(t, f.inTenant(t, func(ctx context.Context) error {
-		rows, err := f.requests.ListForStudent(ctx, f.chain.StudentID, time.Now().Add(-24*time.Hour))
+		rows, err := f.requests.ListForStudent(ctx, f.chain.StudentID, excusedNow.Add(-24*time.Hour))
 		require.NoError(t, err)
 		statuses := map[int64]string{}
 		for _, row := range rows {
@@ -349,7 +354,7 @@ func TestExcusedRequestApproveRefusedWhenNewerStatusExists(t *testing.T) {
 func TestExcusedRequestApproveOverwritesOlderStatus(t *testing.T) {
 	t.Parallel()
 	f := newExcusedFixture(t)
-	f.upsertStatusDay(t, excusedIn3Days, careplan.StudentStatusDaySick, time.Now().Add(-24*time.Hour))
+	f.upsertStatusDay(t, excusedIn3Days, careplan.StudentStatusDaySick, excusedNow.Add(-24*time.Hour))
 	pending := f.createPending(t, []careplan.Date{excusedIn3Days}, "Arzttermin")
 	f.approve(t, pending.ID)
 	days := f.activeStatusDays(t)

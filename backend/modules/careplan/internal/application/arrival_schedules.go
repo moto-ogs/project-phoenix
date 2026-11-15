@@ -24,18 +24,27 @@ type arrivalScheduleService struct {
 	students     ports.ArrivalBulkStudents
 	classes      ports.ArrivalClassPlans
 	logger       *slog.Logger
+	// today is the school day the weekly plan is projected and written on.
+	today func() calendar.Date
 }
 
+// NewArrivalSchedules builds the arrival schedules deciding on today, the
+// Berlin calendar day when nil.
 func NewArrivalSchedules(schedules ports.ArrivalScheduleRepository, exceptions ports.EffectiveExceptionRepository[*careplan.ArrivalException],
-	notes ports.EffectiveNoteRepository[*careplan.ArrivalNote], baselines careplan.ArrivalBaselineReader, rules ports.ArrivalScheduleRules, tx ports.EffectiveTimeTransaction, students ports.ArrivalBulkStudents, classes ports.ArrivalClassPlans, classExceptions careplan.ClassArrivalExceptions, logger *slog.Logger) careplan.ArrivalScheduleService {
+	notes ports.EffectiveNoteRepository[*careplan.ArrivalNote], baselines careplan.ArrivalBaselineReader, rules ports.ArrivalScheduleRules, tx ports.EffectiveTimeTransaction, students ports.ArrivalBulkStudents, classes ports.ArrivalClassPlans, classExceptions careplan.ClassArrivalExceptions, logger *slog.Logger,
+	today func() calendar.Date,
+) careplan.ArrivalScheduleService {
+	if today == nil {
+		today = calendar.TodayDate
+	}
 	if classExceptions == nil {
-		classExceptions = NewClassArrivalExceptions(nil, nil)
+		classExceptions = NewClassArrivalExceptions(nil, nil, today)
 	}
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &arrivalScheduleService{effectiveTimeCore: newEffectiveTimeCore(schedules, exceptions, notes, tx, ArrivalTimeDomain{}),
-		scheduleRepo: schedules, baselines: baselines, rules: rules, tx: tx, students: students, classes: classes, ClassArrivalExceptions: classExceptions, logger: logger}
+	return &arrivalScheduleService{effectiveTimeCore: newEffectiveTimeCore(schedules, exceptions, notes, tx, ArrivalTimeDomain{}, today),
+		scheduleRepo: schedules, baselines: baselines, rules: rules, tx: tx, students: students, classes: classes, ClassArrivalExceptions: classExceptions, logger: logger, today: today}
 }
 
 // projectedWeeklySchedules flattens the projected week into the sorted row
@@ -138,7 +147,7 @@ func (s *arrivalScheduleService) GetStudentArrivalSchedules(
 	ctx context.Context,
 	studentID int64,
 ) ([]*careplan.ArrivalSchedule, error) {
-	from := weekStart(calendar.TodayDate())
+	from := weekStart(s.today())
 	return s.projectedWeekRange(ctx, []int64{studentID}, from, from.AddDays(4))
 }
 
@@ -150,7 +159,7 @@ func (s *arrivalScheduleService) GetWeeklySchedulesByStudentIDsAndWeekday(
 	if weekday < 1 || weekday > 5 {
 		return nil, nil
 	}
-	date := weekStart(calendar.TodayDate()).AddDays(weekday - 1)
+	date := weekStart(s.today()).AddDays(weekday - 1)
 	rows, err := s.projectedWeeklySchedules(ctx, studentIDs, date)
 	if err != nil {
 		return nil, err
@@ -186,7 +195,7 @@ func (s *arrivalScheduleService) GetStudentArrivalScheduleForWeekday(
 	if s.baselines == nil {
 		return stored, err
 	}
-	date := weekStart(calendar.TodayDate()).AddDays(weekday - 1)
+	date := weekStart(s.today()).AddDays(weekday - 1)
 	week, err := s.projectedWeek(ctx, []int64{studentID}, date)
 	if err != nil {
 		return nil, err
@@ -247,7 +256,7 @@ func (s *arrivalScheduleService) preserveInactiveBookingRows(
 	if s.baselines == nil {
 		return rows, nil
 	}
-	today := calendar.TodayDate()
+	today := s.today()
 	projection, err := s.baselines.Project(ctx, []int64{studentID}, today, today)
 	if err != nil {
 		return nil, &careplan.ScheduleError{Op: "preserve inactive booking arrival rows", Err: err}
@@ -536,7 +545,7 @@ func (s *arrivalScheduleService) GetStudentArrivalData(
 	ctx context.Context,
 	studentID int64,
 ) (*careplan.StudentArrivalData, error) {
-	from := weekStart(calendar.TodayDate())
+	from := weekStart(s.today())
 	return s.GetStudentArrivalDataForDateRange(ctx, studentID, from, from.AddDays(4))
 }
 

@@ -582,7 +582,7 @@ func TestListPickupChangeRequestsReturnsTheParentsOwn(t *testing.T) {
 	date := calendar.NewDate(2026, 8, 24).AddDays(6)
 	req := seedPickupChangeRequest(t, f, date)
 
-	rows, err := testpkg.TenantQuery2(t, ctx, f.db, f.svc.ListPickupChangeRequests, f.chain.StudentID, time.Now().AddDate(0, -2, 0))
+	rows, err := testpkg.TenantQuery2(t, ctx, f.db, f.svc.ListPickupChangeRequests, f.chain.StudentID, decisionTestClock().AddDate(0, -2, 0))
 	require.NoError(t, err)
 
 	found := false

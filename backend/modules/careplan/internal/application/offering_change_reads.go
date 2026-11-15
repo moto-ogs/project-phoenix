@@ -55,7 +55,7 @@ func (s *OfferingChanges) lastDecisionForStudent(ctx context.Context, studentID 
 	if err != nil {
 		return nil, fmt.Errorf("offering change: list requests: %w", err)
 	}
-	cutoff := time.Now().AddDate(0, 0, -offeringDecisionRecencyDays)
+	cutoff := s.deps.Now().AddDate(0, 0, -offeringDecisionRecencyDays)
 	for _, row := range rows {
 		if row.ReviewedAt == nil || (row.Status != careplan.OfferingChangeApproved && row.Status != careplan.OfferingChangeRejected) {
 			continue

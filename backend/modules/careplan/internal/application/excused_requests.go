@@ -38,11 +38,13 @@ const (
 // and are then skipped, exactly like the legacy service tolerated unwired
 // effects.
 type ExcusedRequestDependencies struct {
-	CarePlan    careplan.Capability
-	Students    ports.ExcusedRequestStudents
-	Scope       careplan.ReviewScopeResolver
-	Hooks       ports.TransactionHooks
-	Today       func() careplan.Date
+	CarePlan careplan.Capability
+	Students ports.ExcusedRequestStudents
+	Scope    careplan.ReviewScopeResolver
+	Hooks    ports.TransactionHooks
+	Today    func() careplan.Date
+	// Now stamps the status days a decision writes; the real clock when nil.
+	Now         func() time.Time
 	Observe     ports.Observer
 	Logger      *slog.Logger
 	Messenger   ports.RequestMessenger
@@ -65,6 +67,7 @@ type ExcusedRequests struct {
 	scope           careplan.ReviewScopeResolver
 	hooks           ports.TransactionHooks
 	today           func() careplan.Date
+	now             func() time.Time
 	observe         ports.Observer
 	logger          *slog.Logger
 	messenger       ports.RequestMessenger
@@ -85,9 +88,12 @@ func NewExcusedRequests(deps ExcusedRequestDependencies) (*ExcusedRequests, erro
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
 	return &ExcusedRequests{
 		carePlan: deps.CarePlan, students: deps.Students, scope: deps.Scope, hooks: deps.Hooks,
-		today: deps.Today, observe: deps.Observe, logger: deps.Logger,
+		today: deps.Today, now: deps.Now, observe: deps.Observe, logger: deps.Logger,
 		messenger: deps.Messenger, broadcaster: deps.Broadcaster, notifier: deps.Notifier,
 		ledger: deps.Ledger, shares: deps.Shares, partialAbsences: deps.PartialAbsences,
 	}, nil

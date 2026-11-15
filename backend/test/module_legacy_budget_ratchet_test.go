@@ -306,7 +306,7 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0232: the import of existing contracts of modules/carecontract/compose
 // (+6) and its debtor numbers of modules/parentbilling/compose (+5).
 // ADR 0234: the note search of modules/peopledirectory/compose (+2).
-const moduleComposeBudgetTotal = 13488
+const moduleComposeBudgetTotal = 13485
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -335,7 +335,8 @@ var moduleComposeBudgets = map[string]int{
 	// #4704 (ADR 0215): the Träger offering constructors fit in shortened
 	// comments (±0).
 	// ADR 0225: the Stammdaten decision's class follow-up port (+3).
-	"modules/careplan/compose":             1691, // ADR 0220: +13, the pickup change team constructor
+	// Lowered by #7104: the injected clocks fit in shortened comments (-3).
+	"modules/careplan/compose":             1688, // ADR 0220: +13, the pickup change team constructor
 	"modules/careplan/requestfeed/compose": 53,
 	// Raised by ADR 0102: the class-trip status-day seam (#4799).
 	"modules/classday/compose": 210,

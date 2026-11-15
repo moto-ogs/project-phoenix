@@ -47,7 +47,7 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/appointments":                 17,
 	"modules/auditlog":                     20,
 	"modules/carecontract":                 3,
-	"modules/careplan":                     177,
+	"modules/careplan":                     139,
 	"modules/classday":                     14,
 	"modules/communication":                39,
 	"modules/dataimport":                   55,

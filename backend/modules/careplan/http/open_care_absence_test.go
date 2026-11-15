@@ -11,7 +11,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -116,12 +115,12 @@ func TestAbsenceWriter_DetailFlags(t *testing.T) {
 func TestAbsenceWriter_ParentExcusedRequestDecidable(t *testing.T) {
 	t.Parallel()
 
-	tc := setupStudentsRoute(t)
+	tc := setupStudentsRoute(t, fixedCalendarClock)
 
 	chain := testpkg.CreateTestParentGuardianChain(t, tc.db)
 	_, account := testpkg.CreateTestStaffWithAccount(t, tc.db, "Queue", "Staff")
 
-	day := calendar.TodayDate().AddDays(3)
+	day := studentsTestToday.AddDays(3)
 	var pending *excusedrequests.Request
 	require.NoError(t, testpkg.WithTenantTx(t, adminTenantCtx(chain.TenantID), tc.db, chain.TenantID,
 		func(txCtx context.Context, _ bun.Tx) error {

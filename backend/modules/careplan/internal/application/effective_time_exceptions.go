@@ -70,7 +70,7 @@ func (c *effectiveTimeCore[S, E, N, D]) upcomingExceptions(
 	ctx context.Context,
 	studentID int64,
 ) ([]E, error) {
-	rows, err := c.exceptions.FindUpcomingByStudentID(ctx, studentID)
+	rows, err := c.exceptions.FindUpcomingByStudentID(ctx, studentID, c.today())
 	if err != nil {
 		return nil, &careplan.ScheduleError{
 			Op:  c.operation("get upcoming student %s exceptions"),

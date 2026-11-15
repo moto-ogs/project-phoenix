@@ -118,8 +118,8 @@ func (r EffectiveRecords[T, P]) FindByStudentIDsAndDate(ctx context.Context, ids
 	}
 	return r.rows(ctx, careplan.StudentScheduleFilter{StudentIDs: ids, Date: careplan.Date(date)})
 }
-func (r EffectiveRecords[T, P]) FindUpcomingByStudentID(ctx context.Context, id int64) ([]*T, error) {
-	return r.rows(ctx, careplan.StudentScheduleFilter{StudentIDs: []int64{id}, UpcomingFrom: careplan.Date(calendar.TodayDate())})
+func (r EffectiveRecords[T, P]) FindUpcomingByStudentID(ctx context.Context, id int64, from calendar.Date) ([]*T, error) {
+	return r.rows(ctx, careplan.StudentScheduleFilter{StudentIDs: []int64{id}, UpcomingFrom: careplan.Date(from)})
 }
 func (r EffectiveRecords[T, P]) Create(ctx context.Context, row *T) error {
 	if err := P(row).Validate(); err != nil {

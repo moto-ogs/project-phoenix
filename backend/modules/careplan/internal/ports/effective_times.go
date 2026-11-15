@@ -27,7 +27,8 @@ type EffectiveExceptionRepository[E EffectiveTimeEntity] interface {
 	FindByID(context.Context, int64) (E, error)
 	FindByIDForUpdate(context.Context, int64) (E, error)
 	FindByStudentID(context.Context, int64) ([]E, error)
-	FindUpcomingByStudentID(context.Context, int64) ([]E, error)
+	// FindUpcomingByStudentID lists the student's exceptions from the given day on.
+	FindUpcomingByStudentID(context.Context, int64, calendar.Date) ([]E, error)
 	FindByStudentIDAndDate(context.Context, int64, calendar.Date) (E, error)
 	FindByStudentIDsAndDate(context.Context, []int64, calendar.Date) ([]E, error)
 	Create(context.Context, E) error
