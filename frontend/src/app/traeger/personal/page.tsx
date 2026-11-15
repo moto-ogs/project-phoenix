@@ -14,6 +14,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { StaffLinkModal } from "~/components/traeger/staff/staff-link-modal";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import {
   STAFF_MATCH_LABELS,
   STAFF_MATCH_TONES,
@@ -31,6 +32,7 @@ import { staffConcept } from "~/lib/concepts/staff";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import {
+  downloadStaffRecordList,
   fetchStaffOverview,
   staffName,
   type StaffCandidate,
@@ -296,17 +298,28 @@ export default function TraegerStaffRecordsPage() {
       }
       statsLoading={!overview && !pageLoad.error}
       actions={
-        released ? (
-          <ButtonLink
-            href={traegerPath("/traeger/personal/import")}
-            className="gap-2"
-            variant="outline"
-            size="md"
-            tooltip="Öffnet den Import für Personal aus einer CSV-Datei."
-          >
-            <UploadSimpleIcon className="h-4 w-4" aria-hidden="true" />
-            Personal importieren
-          </ButtonLink>
+        overview && released ? (
+          <>
+            <TraegerListExportMenu
+              download={downloadStaffRecordList}
+              scope="Alle Akten"
+              ariaLabel="Personalakten herunterladen"
+              tooltip="Zeigt die Formate für alle Akten. Jeder Download steht im Zugriffsprotokoll der Schulen."
+              fallbackName="personalakten"
+              errorObject="die Personalakten"
+              unavailable={overview.records.length === 0}
+            />
+            <ButtonLink
+              href={traegerPath("/traeger/personal/import")}
+              className="gap-2"
+              variant="outline"
+              size="md"
+              tooltip="Öffnet den Import für Personal aus einer CSV-Datei."
+            >
+              <UploadSimpleIcon className="h-4 w-4" aria-hidden="true" />
+              Personal importieren
+            </ButtonLink>
+          </>
         ) : undefined
       }
       error={pageLoad.error}

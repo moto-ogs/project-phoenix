@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -234,6 +236,31 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 		assert.Positive(t, entries[south])
 	})
 
+	// #4718: the shown week as PDF, Excel and CSV, one row per person and a
+	// column per day, logged as its own view at every school it shows.
+	t.Run("the export holds the shown week and logs its own view", func(t *testing.T) {
+		before := staffAccessViews(t, db, office.organization, workforce.TraegerStaffViewPlanningExport)
+		rec := traegerJSON(t, router, office.token, http.MethodGet, "/traeger/staff-planning/export?week=2026-11-25", nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, "text/csv; charset=utf-8", rec.Header().Get("Content-Type"))
+		body := strings.TrimPrefix(rec.Body.String(), "\xEF\xBB\xBF")
+		lines := strings.Split(strings.TrimSpace(body), "\n")
+		require.Len(t, lines, 2, body)
+		assert.Equal(t, "Woche ab;Nachname;Vorname;Einsatzorte;Montag, 23.11.;Dienstag, 24.11.;Mittwoch, 25.11.;Donnerstag, 26.11.;"+
+			"Freitag, 27.11.;Samstag, 28.11.;Sonntag, 29.11.;Geplant (Stunden);Soll (Stunden);Hinweise", strings.TrimSpace(lines[0]))
+		assert.Equal(t, "23.11.2026;Sommer;Mira;Träger Personal OGS Nord, Träger Personal OGS Süd;"+
+			`"08:00–13:00 Träger Personal OGS Nord; 13:30–18:00 Träger Personal OGS Süd";12:00–17:00 Träger Personal OGS Nord;;;;;;14,5;24;1`,
+			strings.TrimSpace(lines[1]))
+		after := staffAccessViews(t, db, office.organization, workforce.TraegerStaffViewPlanningExport)
+		assert.Equal(t, map[int64]int{north: before[north] + 1, south: before[south] + 1}, after)
+
+		assertTraegerListFormats(t, router, office.token, "/traeger/staff-planning/export?week=2026-11-25", "einsatzplanung-2026-11-23")
+		logged := staffAccessViews(t, db, office.organization, workforce.TraegerStaffViewPlanningExport)
+		assert.Equal(t, after[north]+2, logged[north], "the PDF and the Excel export are logged like the CSV")
+		rec = traegerJSON(t, router, office.token, http.MethodGet, "/traeger/staff-planning/export?week=kw48", nil)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	})
+
 	t.Run("a change keeps the school and clears the warning", func(t *testing.T) {
 		rec := traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("%s/%d", shifts, afternoonID), map[string]any{
 			"school_id": strconv.FormatInt(south, 10), "date": "2026-11-23", "start_time": "14:00", "end_time": "18:00",
@@ -255,6 +282,8 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 	t.Run("no role without the right and no other Träger reaches the plan", func(t *testing.T) {
 		billing := newTraegerOffice(t, db, portal, "Träger Abrechnung", identityaccess.TraegerRoleBilling)
 		rec := traegerJSON(t, router, billing.token, http.MethodGet, "/traeger/staff-planning/", nil)
+		assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+		rec = traegerJSON(t, router, billing.token, http.MethodGet, "/traeger/staff-planning/export", nil)
 		assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 		other := newTraegerOffice(t, db, portal, "Anderer Träger", identityaccess.TraegerRolePersonnel)
 		staffRelease(t, db, other.organization)

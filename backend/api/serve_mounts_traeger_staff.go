@@ -48,14 +48,15 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 	if !ok {
 		return errors.New("traeger staff records: the Personalstamm serves no Stundenkonto")
 	}
-	resource := traegerstaff.NewRecordsResource(records, staffAdmin.TraegerStaffContracts(collaborators), absences, timeAccounts, requireStaff)
+	lists := traegerListRenderer(NewSimpleListRenderer())
+	resource := traegerstaff.NewRecordsResource(records, staffAdmin.TraegerStaffContracts(collaborators), absences, timeAccounts, requireStaff, lists)
 	root.Mount("/traeger/staff-records", resource.TraegerRouter(ProtectedTraegerRoutes))
 	// The Personalstamm serves its Nachweise over the same records (#4707).
 	proofs, ok := records.(workforce.TraegerStaffProofs)
 	if !ok {
 		return errors.New("traeger staff records: the Personalstamm serves no Nachweise")
 	}
-	root.Mount("/traeger/staff-proofs", traegerstaff.NewProofsResource(proofs, requireStaff, traegerListRenderer(NewSimpleListRenderer())).TraegerRouter(ProtectedTraegerRoutes))
+	root.Mount("/traeger/staff-proofs", traegerstaff.NewProofsResource(proofs, requireStaff, lists).TraegerRouter(ProtectedTraegerRoutes))
 	// The Personal-Import fills the same records from a file (#4724).
 	imports, ok := records.(workforce.TraegerStaffImports)
 	if !ok {
@@ -66,7 +67,7 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 	root.Mount("/traeger/absence-types", traegerstaff.NewAbsenceTypesResource(absences, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
 	// The Einsatzplanung over all Einsatzorte (#4708).
 	planning := staffAdmin.TraegerStaffPlanning(collaborators, sites)
-	root.Mount("/traeger/staff-planning", traegerstaff.NewPlanningResource(planning, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
+	root.Mount("/traeger/staff-planning", traegerstaff.NewPlanningResource(planning, requireStaff, lists).TraegerRouter(ProtectedTraegerRoutes))
 	return nil
 }
 

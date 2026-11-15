@@ -178,8 +178,9 @@ func (t *TraegerStaff) readSchool(ctx context.Context, staffIDs []int64, withFin
 }
 
 // Overview lists the release, the schools, the records and the proposals.
-// Without the release it shows the schools only and reads no person.
-func (t *TraegerStaff) Overview(ctx context.Context, actor workforce.TraegerStaffActor) (workforce.TraegerStaffOverview, error) {
+// Without the release it shows the schools only and reads no person. view
+// names the access entry of every school it shows.
+func (t *TraegerStaff) Overview(ctx context.Context, actor workforce.TraegerStaffActor, view string) (workforce.TraegerStaffOverview, error) {
 	schools, err := t.ports.Schools.TraegerSchools(ctx, actor.OrganizationID)
 	if err != nil {
 		return workforce.TraegerStaffOverview{}, err
@@ -198,7 +199,7 @@ func (t *TraegerStaff) Overview(ctx context.Context, actor workforce.TraegerStaf
 	if err != nil || overview.Release == nil {
 		return overview, err
 	}
-	reads, err := t.readSchools(ctx, actor, staffView{name: workforce.TraegerStaffViewOverview}, schoolIDs(schools), nil, false)
+	reads, err := t.readSchools(ctx, actor, staffView{name: view}, schoolIDs(schools), nil, false)
 	if err != nil {
 		return workforce.TraegerStaffOverview{}, err
 	}

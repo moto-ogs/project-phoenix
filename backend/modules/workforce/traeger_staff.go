@@ -56,9 +56,11 @@ const (
 )
 
 // The access log views of the Träger-Portal on staff data (ADR 0084
-// section 7, ADR 0089 section 6).
+// section 7, ADR 0089 section 6); the overview export is the download of
+// the records list as PDF, Excel or CSV (#4718).
 const (
 	TraegerStaffViewOverview        = "staff_overview"
+	TraegerStaffViewOverviewExport  = "staff_overview_export"
 	TraegerStaffViewRecord          = "staff_record"
 	TraegerStaffViewLinkPreview     = "staff_link_preview"
 	TraegerStaffViewFinancial       = "staff_financial_view"
@@ -274,7 +276,9 @@ type TraegerStaffRecordDetail struct {
 // read of personal data writes an access log entry in the tenant of every
 // school whose data it shows (ADR 0084 section 7).
 type TraegerStaffRecords interface {
-	Overview(ctx context.Context, actor TraegerStaffActor) (TraegerStaffOverview, error)
+	// Overview lists the records and the proposals; view names the access
+	// entry, the page or its export.
+	Overview(ctx context.Context, actor TraegerStaffActor, view string) (TraegerStaffOverview, error)
 	Record(ctx context.Context, actor TraegerStaffActor, recordID int64) (TraegerStaffRecordDetail, error)
 	PreviewLink(ctx context.Context, actor TraegerStaffActor, request TraegerStaffLinkRequest) (TraegerStaffLinkPreview, error)
 	Link(ctx context.Context, actor TraegerStaffActor, request TraegerStaffLinkRequest) (TraegerStaffRecordDetail, error)
