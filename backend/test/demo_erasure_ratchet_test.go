@@ -36,7 +36,8 @@ const traegerBueroOnly = "Träger-Büro of the shared demo Träger: the seed ass
 // records of the Träger-Büro with their links and trail, ADR 0236 the
 // Abwesenheitsarten of the Träger and the Kontingente of its staff records,
 // ADR 0237 their contracts with Soll and holiday weeks, ADR 0238 their
-// Nachweise, ADR 0246 the report templates of the Träger-Büro.
+// Nachweise, ADR 0246 the report templates of the Träger-Büro, ADR 0248
+// the blocks of the Springer of the Vertretungspool.
 var demoErasureExceptions = map[string]string{
 	"active.activity_session_attendance":             schoolContentUntil5559,
 	"active.activity_sessions":                       schoolContentUntil5559,

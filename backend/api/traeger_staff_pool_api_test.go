@@ -124,9 +124,9 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 	}
 	springer, fixed := record(mira.ID, true), record(jonas.ID, false)
 
-	week := "/staff-pool/?week=2026-11-16"
+	week := "/api/staff-pool/?week=2026-11-16"
 	block := func(schoolID, accountID int64, recordID int64, date, start, end string) *httptest.ResponseRecorder {
-		return poolSchoolRequest(t, school, schoolID, accountID, manage, http.MethodPost, "/staff-pool/blocks", map[string]any{
+		return poolSchoolRequest(t, school, schoolID, accountID, manage, http.MethodPost, "/api/staff-pool/blocks", map[string]any{
 			"staff_record_id": fmt.Sprint(recordID), "date": date, "start_time": start, "end_time": end,
 		})
 	}
@@ -178,7 +178,7 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 		assert.True(t, own.Own)
 		require.NotNil(t, own.ID)
 		assert.Equal(t, http.StatusNotFound, poolSchoolRequest(t, school, west, westLead.ID, manage, http.MethodDelete,
-			fmt.Sprintf("/staff-pool/blocks/%d", southBlock), nil).Code, "a school lifts only its own blocks")
+			fmt.Sprintf("/api/staff-pool/blocks/%d", southBlock), nil).Code, "a school lifts only its own blocks")
 	})
 
 	t.Run("a block needs a Springer, a day from today and an end after the start", func(t *testing.T) {
@@ -232,7 +232,7 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 	t.Run("no role without the right and no other Träger reaches the pool", func(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, poolSchoolRequest(t, school, south, southLead.ID, []string{permissions.UsersRead}, http.MethodGet, week, nil).Code)
 		assert.Equal(t, http.StatusForbidden, poolSchoolRequest(t, school, south, southLead.ID, []string{permissions.UsersRead}, http.MethodPost,
-			"/staff-pool/blocks", map[string]any{"staff_record_id": fmt.Sprint(springer), "date": "2026-11-20", "start_time": "08:00", "end_time": "09:00"}).Code)
+			"/api/staff-pool/blocks", map[string]any{"staff_record_id": fmt.Sprint(springer), "date": "2026-11-20", "start_time": "08:00", "end_time": "09:00"}).Code)
 		billing := newTraegerOffice(t, db, portal, "Träger Abrechnung Pool", identityaccess.TraegerRoleBilling)
 		assert.Equal(t, http.StatusForbidden, traegerJSON(t, router, billing.token, http.MethodGet, "/traeger/staff-pool/", nil).Code)
 
@@ -318,7 +318,7 @@ func TestStaffPoolWeekQueryBudget(t *testing.T) {
 			"sites": []map[string]any{{"school_id": north, "staff_id": member.ID, "weekday_minutes": []int{120, 120, 120, 120, 120}}},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		rec = poolSchoolRequest(t, school, south, southLead.ID, []string{permissions.TimeTrackingManage}, http.MethodPost, "/staff-pool/blocks",
+		rec = poolSchoolRequest(t, school, south, southLead.ID, []string{permissions.TimeTrackingManage}, http.MethodPost, "/api/staff-pool/blocks",
 			map[string]any{"staff_record_id": fmt.Sprint(id), "date": date, "start_time": "08:00", "end_time": "12:00"})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	}
@@ -332,7 +332,7 @@ func TestStaffPoolWeekQueryBudget(t *testing.T) {
 	readSchool := func() testpkg.QueryMeasurement {
 		claims := testutil.DefaultTestClaims()
 		claims.ID, claims.TenantID, claims.IsAdmin, claims.Permissions = int(southLead.ID), south, false, []string{permissions.TimeTrackingManage}
-		req := httptest.NewRequest(http.MethodGet, "/staff-pool/?week=2026-11-23", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/staff-pool/?week=2026-11-23", nil)
 		req.Header.Set("Authorization", "Bearer "+testutil.MintTestJWT(t, claims))
 		return measure(school, req)
 	}
