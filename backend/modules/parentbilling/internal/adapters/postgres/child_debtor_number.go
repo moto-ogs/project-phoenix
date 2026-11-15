@@ -89,7 +89,7 @@ func (s *Store) SaveChildDebtorNumbers(ctx context.Context, organizationID, acco
 		rows[i] = childDebtorNumberRow{OrganizationID: organizationID, FamilyEmail: parentbilling.FamilyKey(number.FamilyEmail),
 			ChildKey:       parentbilling.ChildKey(number.ChildFirstName, number.ChildLastName, number.ChildBirthDate),
 			ChildFirstName: number.ChildFirstName, ChildLastName: number.ChildLastName, ChildBirthDate: number.ChildBirthDate,
-			DebtorNumber: number.DebtorNumber, LastUsedOn: usedOn, UpdatedByAccountID: accountRef(accountID), UpdatedAt: time.Now()}
+			DebtorNumber: number.DebtorNumber, LastUsedOn: usedOn, UpdatedByAccountID: accountRef(accountID)}
 	}
 	query := db.NewInsert().Model(&rows)
 	if onlyNew {

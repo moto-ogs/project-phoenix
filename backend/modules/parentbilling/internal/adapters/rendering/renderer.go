@@ -8,6 +8,7 @@ package rendering
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
@@ -18,6 +19,8 @@ import (
 type Renderer struct {
 	letters lists.LetterRenderer
 	tables  lists.Renderer
+	// now stamps the creation time of an overview (#7104).
+	now func() time.Time
 }
 
 var (
@@ -26,9 +29,10 @@ var (
 	_ application.TableRenderer  = (*Renderer)(nil)
 )
 
-// NewRenderer returns the renderer over Document Rendering.
+// NewRenderer returns the renderer over Document Rendering; an overview
+// carries the time of the real clock.
 func NewRenderer() *Renderer {
-	return &Renderer{letters: lists.NewLetterRenderer(), tables: lists.NewRenderer()}
+	return &Renderer{letters: lists.NewLetterRenderer(), tables: lists.NewRenderer(), now: time.Now}
 }
 
 // RenderLetter renders one letter as a PDF.

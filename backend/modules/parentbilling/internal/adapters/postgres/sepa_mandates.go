@@ -140,7 +140,7 @@ func (s *Store) SaveSEPACreditor(ctx context.Context, organizationID, accountID 
 	}
 	row := &sepaCreditorRow{OrganizationID: organizationID, CreditorID: creditor.CreditorID,
 		PrenotificationDays: creditor.PrenotificationDays, MissingMandate: creditor.MissingMandate,
-		UpdatedByAccountID: accountRef(accountID), UpdatedAt: time.Now()}
+		UpdatedByAccountID: accountRef(accountID)}
 	if _, err := db.NewInsert().Model(row).
 		On("CONFLICT (organization_id) DO UPDATE").
 		Set("creditor_id = EXCLUDED.creditor_id").Set("prenotification_days = EXCLUDED.prenotification_days").
