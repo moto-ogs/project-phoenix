@@ -10735,7 +10735,7 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0240",
+      "approval_adr": "0242",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
       "classification": "debt",
       "effect": "lock",
@@ -10768,7 +10768,7 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0240",
+      "approval_adr": "0242",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.AssignWorkTimeModel",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -10814,7 +10814,7 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0240",
+      "approval_adr": "0242",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.StaffWorkTimeFacts",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -13049,7 +13049,7 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0240",
+      "approval_adr": "0242",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Service.AssignWorkTimeModel",
       "classification": "debt",
       "effect": "lock",
@@ -13082,7 +13082,7 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0240",
+      "approval_adr": "0242",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Service.AssignWorkTimeModel",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -16224,7 +16224,7 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0240",
+      "approval_adr": "0242",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.Service.StaffWorkTimeFacts",
       "classification": "unresolved",
       "effect": "unresolved",
