@@ -46,11 +46,13 @@ const swrCache = vi.hoisted(() => ({
 }));
 vi.mock("~/lib/swr", async () => {
   const React = await import("react");
+  const { onSWRScopeReset } = await import("~/lib/swr/scope");
   const write = (key: string, next: { data?: unknown; error?: unknown }) => {
     swrCache.entries.set(key, next);
     for (const listener of swrCache.listeners) listener();
   };
   return {
+    onSWRScopeReset,
     useLiveRefreshInterval: (fallback: number) => fallback,
     useSWRAuth: <T,>(key: string | null, fetcher: () => Promise<T>) => {
       const entry = React.useSyncExternalStore(

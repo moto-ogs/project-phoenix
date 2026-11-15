@@ -10,12 +10,12 @@ import {
   NOTIFICATION_FEED_REFRESH_EVENT,
 } from "~/lib/notification-feed-api";
 import type { NotificationFeedEntry } from "~/lib/notification-feed-helpers";
-import { useLiveRefreshInterval, useSWRAuth } from "~/lib/swr";
+import { onSWRScopeReset, useLiveRefreshInterval, useSWRAuth } from "~/lib/swr";
 import { notificationFeedKeys } from "~/lib/swr/portal-keys";
 
-// Ohne verbundenen Live-Kanal holt die Glocke den Zähler jede Minute; mit
+// Ohne verbundenen Live-Kanal holt die Glocke den Stand jede Minute; mit
 // Kanal reicht der Abgleich alle fünf Minuten (useLiveRefreshInterval).
-const UNREAD_FALLBACK_INTERVAL_MS = 60 * 1000;
+const FEED_FALLBACK_INTERVAL_MS = 60 * 1000;
 
 // Das Live-Ereignis zu einem Gelesen-Status kann kurz vor dem Speichern
 // eintreffen (#7148); ein Abruf erst nach einer kurzen Pause sieht den
@@ -49,7 +49,7 @@ export function useNotificationFeedUnread(
   /** Nur im Staff-Portal; die untere Leiste dient auch anderen Portalen. */
   enabled = true,
 ) {
-  const refreshInterval = useLiveRefreshInterval(UNREAD_FALLBACK_INTERVAL_MS);
+  const refreshInterval = useLiveRefreshInterval(FEED_FALLBACK_INTERVAL_MS);
   const { data, mutate } = useSWRAuth<number>(
     enabled ? notificationFeedKeys.unreadCount() : null,
     fetchNotificationFeedUnreadCount,
@@ -90,17 +90,6 @@ export interface NotificationFeedItem {
  * schickt danach das Live-Ereignis, und die Liste lädt den bestätigten Stand.
  */
 export function useNotificationFeed(onUnreadCount: (count: number) => void) {
-  const first = useSWRAuth(notificationFeedKeys.firstPage(), () =>
-    fetchNotificationFeed(),
-  );
-  const firstMutate = first.mutate;
-  // Die erste Seite bringt den Zähler mit: das Abzeichen übernimmt ihn, damit
-  // Liste und Zahl nach einem Abruf zusammenpassen.
-  const firstUnread = first.data?.unreadCount;
-  useEffect(() => {
-    if (firstUnread !== undefined) onUnreadCount(firstUnread);
-  }, [firstUnread, onUnreadCount]);
-
   const [extra, setExtra] = useState<readonly NotificationFeedEntry[]>([]);
   // undefined: der nächste Cursor ist der der ersten Seite.
   const [extraCursor, setExtraCursor] = useState<string | null | undefined>(
@@ -115,20 +104,55 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
     () => new Map(),
   );
   const [allReadUpTo, setAllReadUpTo] = useState<string | null>(null);
-  // Ein Nachladen, das ein Live-Ereignis überholt hat, hängt nichts mehr an.
+  // Überholte Seiten gehören weder zum neuen Listenstand noch zur Sitzung.
   const generation = useRef(0);
+  const sessionGeneration = useRef(0);
+
+  const resetPagination = useCallback(() => {
+    generation.current += 1;
+    setExtra([]);
+    setExtraCursor(undefined);
+    setLoadingMore(false);
+    setLoadMoreError(null);
+  }, []);
+
+  useEffect(
+    () =>
+      onSWRScopeReset(() => {
+        sessionGeneration.current += 1;
+        resetPagination();
+        setLocallyRead(new Map());
+        setAllReadUpTo(null);
+      }),
+    [resetPagination],
+  );
+
+  const refreshInterval = useLiveRefreshInterval(FEED_FALLBACK_INTERVAL_MS);
+  const first = useSWRAuth(
+    notificationFeedKeys.firstPage(),
+    () => fetchNotificationFeed(),
+    {
+      refreshInterval,
+      // Auch bei verlorenen Live-Ereignissen stimmen Seiten und Cursor
+      // nach dem nächsten Abgleich wieder mit der ersten Seite überein.
+      onSuccess: resetPagination,
+    },
+  );
+  const firstMutate = first.mutate;
+  // Die erste Seite bringt den Zähler mit: das Abzeichen übernimmt ihn, damit
+  // Liste und Zahl nach einem Abruf zusammenpassen.
+  const firstUnread = first.data?.unreadCount;
+  useEffect(() => {
+    if (firstUnread !== undefined) onUnreadCount(firstUnread);
+  }, [firstUnread, onUnreadCount]);
 
   useEffect(
     () =>
       onFeedRefresh(() => {
-        generation.current += 1;
-        setExtra([]);
-        setExtraCursor(undefined);
-        setLoadingMore(false);
-        setLoadMoreError(null);
+        resetPagination();
         void firstMutate();
       }),
-    [firstMutate],
+    [firstMutate, resetPagination],
   );
 
   const nextCursor =
@@ -171,11 +195,14 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
   const markRead = useCallback(
     async (item: NotificationFeedItem) => {
       if (!item.unread) return;
+      const started = sessionGeneration.current;
       const { id, updatedAt } = item.entry;
       setLocallyRead((current) => new Map(current).set(id, updatedAt));
       try {
-        onUnreadCount(await markNotificationFeedEntryRead(id));
+        const count = await markNotificationFeedEntryRead(id);
+        if (sessionGeneration.current === started) onUnreadCount(count);
       } catch {
+        if (sessionGeneration.current !== started) return;
         // Bewusst ohne Meldung: der Klick führt trotzdem zum Ziel, und der
         // Eintrag steht wieder als ungelesen da. Ein zweiter Klick versucht
         // es noch einmal.
@@ -191,8 +218,10 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
 
   /** Wirft bei einem Fehler; der Aufrufer zeigt ihn als Meldung. */
   const markAllRead = useCallback(async () => {
+    const started = sessionGeneration.current;
     const upTo = latestUpdate(items);
     const count = await markAllNotificationFeedRead();
+    if (sessionGeneration.current !== started) return;
     setAllReadUpTo(upTo);
     onUnreadCount(count);
   }, [items, onUnreadCount]);
