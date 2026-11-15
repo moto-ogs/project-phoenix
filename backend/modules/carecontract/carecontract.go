@@ -259,6 +259,9 @@ type ContractFilter struct {
 	Search   string
 	Offset   int
 	Limit    int
+	// Export reads every contract of the filter for a file (#4718): at most
+	// ContractExportLimit, Offset and Limit ignored, recorded as an export.
+	Export bool
 }
 
 type ContractSummary struct {
@@ -419,7 +422,9 @@ const (
 // transaction: the Träger transaction, then the tenant transaction of each
 // school whose contracts they showed, for its access log (ADR 0088 section 7).
 type Contracts interface {
-	// ListContracts lists the contracts of the filter, newest first.
+	// ListContracts lists the contracts of the filter, newest first. With
+	// Export it holds every contract of the filter or refuses one with more
+	// than ContractExportLimit.
 	ListContracts(ctx context.Context, reviewer Reviewer, filter ContractFilter) (ContractList, error)
 	Contract(ctx context.Context, reviewer Reviewer, contractID int64) (ContractDetail, error)
 	// ContractDocument answers the PDF: the stored one once sent, before
@@ -439,6 +444,10 @@ type Contracts interface {
 	// stores nothing.
 	VersionDocument(ctx context.Context, reviewer Reviewer, contractID int64, number int) (File, error)
 }
+
+// ContractExportLimit is the most contracts one export holds; a filter with
+// more is refused with an invalid selection, never cut short.
+const ContractExportLimit = 5000
 
 // Intake creates contracts from the accepted applications and keeps the
 // templates of the offerings. It reads each school in that school's tenant

@@ -36,7 +36,7 @@ func NewCareTimeOverrunHTTP(organizations HolidayOrganizations, statistics stude
 	})
 	return careContractHTTP.NewOverrunResource(evaluations,
 		common.RequiresPermission(identityaccess.TraegerRightReportsRead),
-		common.RequiresPermission(identityaccess.TraegerRightContractsManage))
+		common.RequiresPermission(identityaccess.TraegerRightContractsManage), careContractListRenderer(NewSimpleListRenderer()))
 }
 
 // careContractCareTimes reads a school's overrun list from Soll und Ist in
