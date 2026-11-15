@@ -51,11 +51,20 @@ describe("LetterSendState announces the end of a send (#7113)", () => {
 
   it("does not announce a state that was already done when the page opened", () => {
     render(<LetterSendState summary={counts({ sent: 3, notSent: 0 })} />);
+    // Anker: the counts are on the screen, so the region is rendered too.
     expect(
       screen.getByText("3 von 3 Schreiben gesendet", { selector: "p" }),
     ).toBeInTheDocument();
     expect(
       screen.getByTestId("letter-send-announcement"),
     ).toBeEmptyDOMElement();
+  });
+
+  it("announces a send that finished before the page saw it on its way", () => {
+    const { rerender } = render(<LetterSendState summary={counts({})} />);
+    rerender(<LetterSendState summary={counts({ sent: 3, notSent: 0 })} />);
+    expect(screen.getByTestId("letter-send-announcement")).toHaveTextContent(
+      "Der Versand ist fertig. 3 von 3 Schreiben gesendet.",
+    );
   });
 });

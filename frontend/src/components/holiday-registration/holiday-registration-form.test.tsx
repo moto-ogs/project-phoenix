@@ -798,6 +798,7 @@ describe("HolidayRegistrationForm", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
+    // Anker: the first amount is shown, so the quote has arrived.
     expect((await screen.findAllByText("45,00 €")).length).toBeGreaterThan(0);
     const region = screen.getByTestId("contribution-announcement");
     expect(region).toHaveAttribute("role", "status");
@@ -812,6 +813,27 @@ describe("HolidayRegistrationForm", () => {
     await waitFor(() =>
       expect(region).toHaveTextContent(
         "Der Beitrag ist neu berechnet. Gesamt: 0,00 €",
+      ),
+    );
+  });
+
+  it("announces the amount a retry brings after a failed first quote (#7113)", async () => {
+    mockQuote
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockImplementation((_token, _children, declared: boolean) =>
+        Promise.resolve(quoted(declared)),
+      );
+    renderForm();
+    fillRegistration();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Noch einmal versuchen" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("contribution-announcement")).toHaveTextContent(
+        "Der Beitrag ist neu berechnet. Gesamt: 45,00 €",
       ),
     );
   });

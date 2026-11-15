@@ -270,6 +270,8 @@ export function MessageComposer({
 
   const parent = tone === "parent";
   const inputLocked = externallyDisabled || sending;
+  // Ohne Abhängigkeiten: nicht jeder Chat sperrt das Feld beim Senden, dann
+  // wechselt `inputLocked` nie und der Fokus kommt nach dem nächsten Rendern.
   useEffect(() => {
     if (!refocusAfterSend.current || inputLocked) return;
     refocusAfterSend.current = false;
