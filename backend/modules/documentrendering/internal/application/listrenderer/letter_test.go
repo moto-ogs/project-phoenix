@@ -52,8 +52,8 @@ func traceLetter(t *testing.T, letter listrecords.Letter) (int, []string) {
 	if err != nil {
 		t.Fatalf("newLetterLayout: %v", err)
 	}
-	if err := layout.run(); err != nil {
-		t.Fatalf("run: %v", err)
+	if err := layout.fit(); err != nil {
+		t.Fatalf("fit: %v", err)
 	}
 	return layout.page, layout.trace
 }
@@ -109,6 +109,31 @@ func TestLetterContinuesOnTheNextPage(t *testing.T) {
 	}
 	if trace[len(trace)-1] != "Ganztag im Quartier e.V." {
 		t.Fatalf("the closing must end the letter, got %q", trace[len(trace)-1])
+	}
+}
+
+// A letter that must fit on one page (#4813) sets a body that runs onto a
+// second page in smaller type; one too long even for that continues.
+func TestOnePageLetterFitsALongBodyOnOnePage(t *testing.T) {
+	t.Parallel()
+
+	letter := sampleLetter()
+	letter.Blocks = []listrecords.LetterBlock{{Text: strings.Repeat("Am Freitag fahren wir mit der Gruppe in den Zoo. Bitte geben Sie Ihrem Kind etwas zu trinken mit. ", 32)}}
+	if pages, _ := traceLetter(t, letter); pages != 2 {
+		t.Fatalf("pages = %d, want 2 in the normal type", pages)
+	}
+	letter.OnePage = true
+	pages, trace := traceLetter(t, letter)
+	if pages != 1 {
+		t.Fatalf("one-page letter: pages = %d, want 1", pages)
+	}
+	if trace[len(trace)-1] != "Ganztag im Quartier e.V." {
+		t.Fatalf("the closing must end the letter, got %q", trace[len(trace)-1])
+	}
+
+	letter.Blocks = append(letter.Blocks, listrecords.LetterBlock{Text: strings.Repeat("Ein langer Hinweis für die Eltern.\n", 70)})
+	if pages, _ := traceLetter(t, letter); pages < 2 {
+		t.Fatalf("too long for one page: pages = %d, want it to continue", pages)
 	}
 }
 

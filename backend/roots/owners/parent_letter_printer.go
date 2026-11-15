@@ -42,7 +42,7 @@ func (p ParentLetterPrinter) PrintLetters(sheets parentLetterSheets, filenameBas
 	for _, sheet := range sheets.Letters {
 		letter := lists.Letter{
 			Title: sheets.Title, Logo: sheet.Logo, Sender: sheet.Sender, Recipient: sheet.Recipient,
-			Subject: sheet.Subject, Footer: sheet.Footer,
+			Subject: sheet.Subject, Footer: sheet.Footer, OnePage: true,
 			Facts:  make([]lists.LetterFact, 0, len(sheet.Facts)),
 			Blocks: make([]lists.LetterBlock, 0, len(sheet.Paragraphs)),
 		}

@@ -1066,7 +1066,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentLetterPrinter.PrintLetters",
-      "binding_digest": "6709cae1842dd629c28676f48640a77e",
+      "binding_digest": "a8ac0039a2a58fac2b5a6c421082ab92",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements.LetterPrinter.PrintLetters",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.LetterRenderer.CombineLetters",
@@ -1074,7 +1074,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentLetterPrinter.PrintLetters",
-      "binding_digest": "ad73d79782f2c6c8a65b3370dbcb76ea",
+      "binding_digest": "2cc921555c4f49384547a757ebb3c026",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements.LetterPrinter.PrintLetters",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.LetterRenderer.RenderLetter",

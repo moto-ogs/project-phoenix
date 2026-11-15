@@ -157,10 +157,15 @@ func FillParentLetter(text string, child ParentLetterChild) string {
 }
 
 // onlyLabel reports whether the words of a line around its placeholders are
-// nothing or a bare label such as "Abholzeit:", not a sentence.
+// nothing or a bare label such as "Abholzeit:" or "Gebuchte Tage:": at most
+// three words before a colon, with no punctuation of a sentence.
 func onlyLabel(rest string) bool {
 	rest = strings.TrimSpace(rest)
-	return rest == "" || (strings.HasSuffix(rest, ":") && !strings.ContainsAny(rest, ".!?"))
+	if rest == "" {
+		return true
+	}
+	label, isLabel := strings.CutSuffix(rest, ":")
+	return isLabel && !strings.ContainsAny(label, ".,;:!?") && len(strings.Fields(label)) <= 3
 }
 
 // ParentLetterPlaceholderError refuses a text whose placeholders a letter

@@ -35,6 +35,10 @@ type Letter struct {
 	Closing []string
 	// Footer is printed at the foot of every page, one line each.
 	Footer []string
+	// OnePage sets the body in smaller type, down to 8 points, until the
+	// letter fits on one page, as each child's letter of a dispatch must
+	// (#4813). A longer body continues on the next page in normal type.
+	OnePage bool
 }
 
 // LetterFact is a label with its value. Bold prints the line in the
