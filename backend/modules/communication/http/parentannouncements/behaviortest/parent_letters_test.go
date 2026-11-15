@@ -203,7 +203,7 @@ func TestParentLettersNameEachChildAndStayWithTheirFamily(t *testing.T) {
 	require.True(t, bytes.HasPrefix(rec.Body.Bytes(), []byte("%PDF")))
 	require.Contains(t, rec.Header().Get("Content-Disposition"), "attachment")
 	require.Equal(t, http.StatusNotFound, send(http.MethodGet, base+"/letters-pdf", foreignAdmin, nil).Code)
-	require.Equal(t, []string{communication.ParentLetterAccessPreview, communication.ParentLetterAccessPrint}, access.kinds)
+	require.Equal(t, []string{communication.ParentLetterAccessPreview, communication.ParentLetterAccessPublish, communication.ParentLetterAccessPrint}, access.kinds)
 
 	// Unpublishing retracts the letters.
 	require.Equal(t, http.StatusOK, send(http.MethodPost, base+"/unpublish", admin, nil).Code)

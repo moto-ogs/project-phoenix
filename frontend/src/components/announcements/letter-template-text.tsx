@@ -14,6 +14,11 @@ const PLACEHOLDER_LABELS: Readonly<Record<string, string>> = {
   abholzeit: "Abholzeit",
 };
 
+/** Whether a letter text names any placeholder. */
+export function hasLetterPlaceholders(text: string): boolean {
+  return /\{\{[^{}]*\}\}/.test(text);
+}
+
 function labelOf(token: string): string {
   const name = token.replace(/[{}\s]/g, "").toLowerCase();
   return PLACEHOLDER_LABELS[name] ?? name;

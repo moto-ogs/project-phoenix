@@ -623,6 +623,16 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentLetterAccessLog.RecordParentLetterAccess",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterAccessLog.RecordParentLetterAccess",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope: reads what a Serienbrief names per child, or the signed-in account the access log names, in the caller's transaction (#4813).",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",
+      "target_owner": "identity-access"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentLetterChildren.ParentLetterChildren",
       "classification": "query",
       "effect": "query",
@@ -641,6 +651,16 @@
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentsByID",
       "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentLetterChildren.ParentLetterChildren",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentLetterChildren.ParentLetterChildren",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/careplan.ArrivalScheduleService.GetWeeklySchedulesByStudentIDsForDate: reads what a Serienbrief names per child, or the signed-in account the access log names, in the caller's transaction (#4813).",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ArrivalScheduleService.GetWeeklySchedulesByStudentIDsForDate",
+      "target_owner": "care-plan"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentLetterChildren.ParentLetterChildren",

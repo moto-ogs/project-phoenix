@@ -216,13 +216,8 @@ func (rs *Resource) classLetterPreview(w http.ResponseWriter, r *http.Request) {
 		renderClassLetterError(w, r, err)
 		return
 	}
-	rs.respondLetterPreview(w, r, func(class string) bool {
-		wanted := strings.TrimSpace(class)
-		for _, reached := range classes {
-			if wanted != "" && strings.EqualFold(strings.TrimSpace(reached), wanted) {
-				return true
-			}
-		}
-		return false
-	})
+	if classes == nil {
+		classes = []string{} // no class in reach: no child to preview
+	}
+	rs.respondLetterPreview(w, r, classes)
 }

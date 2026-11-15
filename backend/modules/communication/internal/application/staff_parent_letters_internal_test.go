@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	deliveryPolicy "github.com/moto-ogs/project-phoenix/roots/communicationtest"
@@ -237,10 +238,10 @@ func TestPrintLettersReturnsTheSchoolAndLogsTheAccess(t *testing.T) {
 	if printed.SchoolName != "OGS Testschule" || string(printed.Logo) != "png" || len(printed.Copies) != 3 {
 		t.Fatalf("print = %q, logo %q, %d letters; want the school, its logo and 3 letters", printed.SchoolName, printed.Logo, len(printed.Copies))
 	}
-	if len(f.access.entries) != 1 {
-		t.Fatalf("logged %d accesses, want 1", len(f.access.entries))
+	if len(f.access.entries) != 2 {
+		t.Fatalf("logged %d accesses, want the publish and the print", len(f.access.entries))
 	}
-	entry := f.access.entries[0]
+	entry := f.access.entries[1]
 	if entry.Kind != communication.ParentLetterAccessPrint || entry.ActorAccountID != 5 || entry.ChildCount != 3 || entry.AnnouncementID == nil || *entry.AnnouncementID != 42 {
 		t.Fatalf("access entry = %+v", entry)
 	}
@@ -250,7 +251,7 @@ func TestPreviewLetterFillsOneChildAndLogsTheAccess(t *testing.T) {
 	t.Parallel()
 	f := newPersonalLetterFixture(personalLetterBody)
 
-	preview, err := f.service.PreviewParentLetter(context.Background(), 5, "Hallo {{vorname}} aus der {{klasse}}", 103)
+	preview, err := f.service.PreviewParentLetter(context.Background(), 5, "Hallo {{vorname}} aus der {{klasse}}", 103, nil)
 	if err != nil {
 		t.Fatalf("PreviewLetter: %v", err)
 	}
@@ -260,11 +261,11 @@ func TestPreviewLetterFillsOneChildAndLogsTheAccess(t *testing.T) {
 	if len(f.access.entries) != 1 || f.access.entries[0].Kind != communication.ParentLetterAccessPreview || *f.access.entries[0].StudentID != 103 {
 		t.Fatalf("access entries = %+v, want one preview of child 103", f.access.entries)
 	}
-	if _, err := f.service.PreviewParentLetter(context.Background(), 5, "Hallo {{vorname}}", 999); !errors.Is(err, ErrNotFound) {
+	if _, err := f.service.PreviewParentLetter(context.Background(), 5, "Hallo {{vorname}}", 999, nil); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("preview for an unknown child: err = %v, want ErrNotFound", err)
 	}
 	var placeholders *communication.ParentLetterPlaceholderError
-	if _, err := f.service.PreviewParentLetter(context.Background(), 5, "Hallo {{allergien}}", 103); !errors.As(err, &placeholders) {
+	if _, err := f.service.PreviewParentLetter(context.Background(), 5, "Hallo {{allergien}}", 103, nil); !errors.As(err, &placeholders) {
 		t.Fatalf("preview with an unknown placeholder: err = %v, want ParentLetterPlaceholderError", err)
 	}
 	if len(f.access.entries) != 1 {
@@ -314,5 +315,69 @@ func TestSavingRefusesPlaceholdersALetterCannotFill(t *testing.T) {
 	in.Body = "Liebe Eltern von {{vorname}} {{nachname}} ({{klasse}}, {{gruppe}}): {{betreuungstage}}, {{abholzeit}}"
 	if _, err := normalizeInput(&in, staffTestNow); err != nil {
 		t.Fatalf("a letter with every known placeholder: %v", err)
+	}
+}
+
+func TestPreviewLetterForATeacherShowsOnlyChildrenOfHerClasses(t *testing.T) {
+	t.Parallel()
+	f := newPersonalLetterFixture(personalLetterBody)
+
+	if _, err := f.service.PreviewParentLetter(context.Background(), 5, "Hallo {{vorname}}", 102, []string{"3a"}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("preview of a child outside the classes: err = %v, want ErrNotFound", err)
+	}
+	if len(f.access.entries) != 0 {
+		t.Fatalf("a refused preview logged an access: %+v", f.access.entries)
+	}
+	preview, err := f.service.PreviewParentLetter(context.Background(), 5, "Hallo {{vorname}}", 101, []string{" 3A "})
+	if err != nil || preview.Body != "Hallo Lina" {
+		t.Fatalf("preview of a child of the class = %+v, %v", preview, err)
+	}
+}
+
+func TestPublishPersonalLetterLogsTheReadOfEveryChild(t *testing.T) {
+	t.Parallel()
+	f := newPersonalLetterFixture(personalLetterBody)
+	if _, err := f.service.Publish(context.Background(), 42); err != nil {
+		t.Fatalf("Publish: %v", err)
+	}
+	if len(f.access.entries) != 1 || f.access.entries[0].Kind != communication.ParentLetterAccessPublish || f.access.entries[0].ChildCount != 3 {
+		t.Fatalf("access entries = %+v, want one publish read of 3 children", f.access.entries)
+	}
+}
+
+func TestPrintLettersOfAnOlderLetterUsesItsTextForEveryRecordedChild(t *testing.T) {
+	t.Parallel()
+	f := newPersonalLetterFixture("Liebe Eltern, am Freitag ist Sommerfest.")
+	published := staffTestNow.Add(-time.Hour)
+	f.repo.announcement.PublishedAt = &published // published before the copies existed
+
+	printed, err := f.service.PrintParentLetters(context.Background(), 5, 42)
+	if err != nil {
+		t.Fatalf("PrintParentLetters: %v", err)
+	}
+	if len(printed.Copies) != 3 || printed.Copies[0].Body != "Liebe Eltern, am Freitag ist Sommerfest." {
+		t.Fatalf("copies = %+v, want the one text for each of the 3 recorded children", printed.Copies)
+	}
+
+	f.repo.children = nil
+	if _, err := f.service.PrintParentLetters(context.Background(), 5, 42); !errors.Is(err, communication.ErrParentLetterNotPrintable) {
+		t.Fatalf("a letter that reached nobody: err = %v, want ErrParentLetterNotPrintable", err)
+	}
+}
+
+func TestLetterMailOfAnAddressWithoutOwnCopyShowsNoPlaceholder(t *testing.T) {
+	t.Parallel()
+	bodies := letterMailBodies{7: {StudentID: 7, Body: "Hallo Lina"}}
+	if got := bodies.bodyFor([]int64{99}, "Hallo {{vorname}},\nbis bald"); got != "bis bald" {
+		t.Fatalf("bodyFor = %q, want the letter without any placeholder line", got)
+	}
+}
+
+func TestReminderWordingNamesNoPlaceholder(t *testing.T) {
+	t.Parallel()
+	text := "Morgen ist Wandertag, {{vorname}}."
+	var placeholders *communication.ParentLetterPlaceholderError
+	if err := checkReminderPlaceholders(&text); !errors.As(err, &placeholders) {
+		t.Fatalf("err = %v, want ParentLetterPlaceholderError", err)
 	}
 }

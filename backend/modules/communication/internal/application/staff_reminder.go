@@ -76,6 +76,9 @@ func normalizeReminder(in *Input) error {
 	if in.ReminderText != nil && len([]rune(*in.ReminderText)) > maxReminderTextLen {
 		return fmt.Errorf("%w: reminder_text is at most %d characters", ErrValidation, maxReminderTextLen)
 	}
+	if err := checkReminderPlaceholders(in.ReminderText); err != nil {
+		return err
+	}
 	if in.ResponseType == StaffParentAnnouncementResponseSingleChoice ||
 		in.ResponseType == StaffParentAnnouncementResponseMultiChoice {
 		return fmt.Errorf("%w: polls do not support a scheduled reminder", ErrValidation)
@@ -340,7 +343,17 @@ func (s *service) enqueueTrackedReminderEmails(ctx context.Context, a *StaffPare
 		recipients = append(recipients, &letterRecipient{src: r, reachability: classifyReachability(r, a)})
 	}
 	s.applyEmailOptOuts(ctx, a, recipients)
-	return s.queueLetterMailsAs(ctx, a, recipients, reminderLetterMailSpec(a))
+	spec := reminderLetterMailSpec(a)
+	// Without its own wording the reminder carries the letter again: each
+	// address the frozen letters of its own children (#4813).
+	if a.ReminderText == nil || *a.ReminderText == "" {
+		letters, err := s.personalLetterBodies(ctx, a)
+		if err != nil {
+			return 0, err
+		}
+		spec.letters = letters
+	}
+	return s.queueLetterMailsAs(ctx, a, recipients, spec)
 }
 
 func reminderUpdateText(a *StaffParentAnnouncement, in ReminderInput, now time.Time) (*string, error) {
@@ -351,6 +364,9 @@ func reminderUpdateText(a *StaffParentAnnouncement, in ReminderInput, now time.T
 		}
 		if text != nil && len([]rune(*text)) > maxReminderTextLen {
 			return nil, fmt.Errorf("%w: reminder_text is at most %d characters", ErrValidation, maxReminderTextLen)
+		}
+		if err := checkReminderPlaceholders(text); err != nil {
+			return nil, err
 		}
 		if err := validateReminder(in.ReminderAt, a.ExpiresAt, now); err != nil {
 			return nil, err

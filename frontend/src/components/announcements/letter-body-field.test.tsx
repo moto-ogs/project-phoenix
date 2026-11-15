@@ -63,7 +63,7 @@ describe("LetterBodyField", () => {
 
     expect(
       screen.getByText(
-        "Diesen Platzhalter kennt moto nicht: {{allergien}}. Bitte nehmen Sie nur Platzhalter aus der Liste.",
+        "Diese Platzhalter kennt moto nicht: {{allergien}}. Bitte nehmen Sie nur Platzhalter aus der Liste.",
       ),
     ).toBeInTheDocument();
     expect(

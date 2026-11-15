@@ -159,7 +159,7 @@ export function LetterBodyField({
             type="warning"
             size="compact"
             announce="polite"
-            message={`Diesen Platzhalter kennt moto nicht: ${unknown
+            message={`Diese Platzhalter kennt moto nicht: ${unknown
               .map((name) => `{{${name}}}`)
               .join(", ")}. Bitte nehmen Sie nur Platzhalter aus der Liste.`}
           />

@@ -251,7 +251,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		},
 		func() (err error) {
 			announcements, err = owners.BuildParentAnnouncements(env, settings.Service, delivery.Outbox, owners.DeliveryModuleOf(delivery), delivery.Runtime.EmailOutcomes,
-				notifications, messaging, purger, owners.NewParentLetters(persons, groups, schedules.Pickups, audit.Persistence.DataAccessLog, env.Now))
+				notifications, messaging, purger, owners.BuildParentLetters(persons, groups, schedules, audit, tokens, env.Now))
 			return
 		},
 		func() error {

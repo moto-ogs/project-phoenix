@@ -50,6 +50,14 @@ func (s *service) freezeLetterCopies(ctx context.Context, a *StaffParentAnnounce
 	if err := s.letters.Copies.ReplaceParentLetterCopies(ctx, tenantID, a.ID, copies); err != nil {
 		return fmt.Errorf("announcement: write letter copies: %w", err)
 	}
+	if len(byStudent) > 0 && s.letters.Access != nil {
+		// The publication read every reached child's values (#4813).
+		if err := s.recordLetterAccess(ctx, communication.ParentLetterAccess{
+			Kind: communication.ParentLetterAccessPublish, AnnouncementID: &a.ID, ChildCount: len(byStudent),
+		}); err != nil {
+			return err
+		}
+	}
 	s.logger.Info("parent letter copies written",
 		slog.Int64("announcement_id", a.ID),
 		slog.Int("child_count", len(copies)),
@@ -120,7 +128,9 @@ func (b letterMailBodies) bodyFor(studentIDs []int64, fallback string) string {
 	}
 	switch len(parts) {
 	case 0:
-		return ""
+		// The address belongs to no reached child any more (a link changed
+		// after publication): the letter without any child's values.
+		return communication.FillParentLetter(fallback, communication.ParentLetterChild{})
 	case 1:
 		return parts[0].Body
 	}
@@ -157,12 +167,12 @@ func addressChildren(recipients []*letterRecipient) map[string][]int64 {
 
 // PreviewParentLetter fills a letter text for one child of the school,
 // before it is saved or sent. The read is written to the data access log.
-func (s *service) PreviewParentLetter(ctx context.Context, actorAccountID int64, body string, studentID int64) (*communication.ParentLetterPreview, error) {
-	preview, err := s.previewLetter(ctx, actorAccountID, body, studentID)
+func (s *service) PreviewParentLetter(ctx context.Context, actorAccountID int64, body string, studentID int64, classes []string) (*communication.ParentLetterPreview, error) {
+	preview, err := s.previewLetter(ctx, actorAccountID, body, studentID, classes)
 	return preview, mapParentAnnouncementError(err)
 }
 
-func (s *service) previewLetter(ctx context.Context, actorAccountID int64, body string, studentID int64) (*communication.ParentLetterPreview, error) {
+func (s *service) previewLetter(ctx context.Context, actorAccountID int64, body string, studentID int64, classes []string) (*communication.ParentLetterPreview, error) {
 	if err := communication.CheckParentLetterPlaceholders(true, "", body); err != nil {
 		return nil, err
 	}
@@ -171,7 +181,7 @@ func (s *service) previewLetter(ctx context.Context, actorAccountID int64, body 
 		return nil, err
 	}
 	child, ok := values[studentID]
-	if !ok {
+	if !ok || !inLetterClasses(child.SchoolClass, classes) {
 		return nil, ErrNotFound
 	}
 	if err := s.recordLetterAccess(ctx, communication.ParentLetterAccess{
@@ -201,9 +211,12 @@ func (s *service) printLetters(ctx context.Context, actorAccountID, id int64) (*
 		return nil, communication.ErrParentLetterNotPrintable
 	}
 	tenantID := a.GetTenantID()
-	copies, err := s.letters.Copies.ParentLetterCopies(ctx, tenantID, id)
+	copies, err := s.printCopies(ctx, a)
 	if err != nil {
-		return nil, fmt.Errorf("announcement: read letter copies for print: %w", err)
+		return nil, err
+	}
+	if len(copies) == 0 {
+		return nil, communication.ErrParentLetterNotPrintable
 	}
 	schoolName, err := s.repo.SchoolName(ctx, tenantID)
 	if err != nil {
@@ -236,4 +249,53 @@ func (s *service) recordLetterAccess(ctx context.Context, access communication.P
 		return fmt.Errorf("announcement: record letter access: %w", err)
 	}
 	return nil
+}
+
+// checkReminderPlaceholders refuses placeholders in the wording of a
+// reminder: it goes to every family alike and is never filled per child.
+func checkReminderPlaceholders(text *string) error {
+	if text == nil {
+		return nil
+	}
+	return communication.CheckParentLetterPlaceholders(false, "", *text)
+}
+
+// inLetterClasses reports whether a child's class is one of classes; nil
+// classes admit every child of the school.
+func inLetterClasses(class string, classes []string) bool {
+	if classes == nil {
+		return true
+	}
+	wanted := strings.TrimSpace(class)
+	for _, reached := range classes {
+		if wanted != "" && strings.EqualFold(strings.TrimSpace(reached), wanted) {
+			return true
+		}
+	}
+	return false
+}
+
+// printCopies are the letters of a dispatch: the frozen copies, or for a
+// letter published before the copies existed (#4813) and naming nobody, its
+// one text for every child the publication recorded.
+func (s *service) printCopies(ctx context.Context, a *StaffParentAnnouncement) ([]communication.ParentLetterCopy, error) {
+	tenantID := a.GetTenantID()
+	copies, err := s.letters.Copies.ParentLetterCopies(ctx, tenantID, a.ID)
+	if err != nil {
+		return nil, fmt.Errorf("announcement: read letter copies for print: %w", err)
+	}
+	if len(copies) > 0 || communication.HasParentLetterPlaceholders(a.Body) {
+		return copies, nil
+	}
+	reached, err := s.repo.LetterChildStatuses(ctx, tenantID, a.ID)
+	if err != nil {
+		return nil, fmt.Errorf("announcement: letter children for print: %w", err)
+	}
+	for _, child := range reached {
+		copies = append(copies, communication.ParentLetterCopy{
+			AnnouncementID: a.ID, StudentID: child.StudentID, FirstName: child.FirstName, LastName: child.LastName,
+			SchoolClass: child.SchoolClass, Body: a.Body, PublishedAt: *a.PublishedAt,
+		})
+	}
+	return copies, nil
 }

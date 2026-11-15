@@ -53,7 +53,11 @@ const (
 	// an Elternbrief as one PDF (#4813). StudentID stays NULL; metadata
 	// carries announcement_id and child_count.
 	ResourceTypeParentLetterPrint = "parent_letter_print"
-	ResourceTypeGuardianEmailLift = "guardian_email_lift"
+	// ResourceTypeParentLetterPublish records the read of every reached
+	// child's values when a letter naming each child is published (#4813).
+	// StudentID stays NULL; metadata carries announcement_id and child_count.
+	ResourceTypeParentLetterPublish = "parent_letter_publish"
+	ResourceTypeGuardianEmailLift   = "guardian_email_lift"
 	// ResourceTypeGuardianFinancialView records serving the MASKED bank
 	// details of one guardian (#2608). StudentID stays NULL; metadata carries
 	// guardian_profile_id.

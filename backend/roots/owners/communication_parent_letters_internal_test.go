@@ -16,15 +16,19 @@ func letterPickup(weekday, hour, minute int) *careplan.PickupSchedule {
 func TestLetterCareWeekWritesDaysAndPickupTime(t *testing.T) {
 	t.Parallel()
 	cases := map[string]struct {
-		week         []*careplan.PickupSchedule
+		week         letterCareWeekPlan
 		days, pickup string
 	}{
-		"no plan": {nil, "", ""},
-		"one day": {[]*careplan.PickupSchedule{letterPickup(3, 15, 0)}, "Mittwoch", "15:00 Uhr"},
-		"same time": {[]*careplan.PickupSchedule{letterPickup(4, 15, 30), letterPickup(1, 15, 30), letterPickup(2, 15, 30)},
+		"no plan": {letterCareWeekPlan{}, "", ""},
+		"one day": {letterCareWeekPlan{pickups: []*careplan.PickupSchedule{letterPickup(3, 15, 0)}}, "Mittwoch", "15:00 Uhr"},
+		"same time": {letterCareWeekPlan{pickups: []*careplan.PickupSchedule{letterPickup(4, 15, 30), letterPickup(1, 15, 30), letterPickup(2, 15, 30)}},
 			"Montag, Dienstag und Donnerstag", "15:30 Uhr"},
-		"times differ": {[]*careplan.PickupSchedule{letterPickup(1, 15, 0), letterPickup(5, 13, 45)},
+		"times differ": {letterCareWeekPlan{pickups: []*careplan.PickupSchedule{letterPickup(1, 15, 0), letterPickup(5, 13, 45)}},
 			"Montag und Freitag", "Mo 15:00 Uhr, Fr 13:45 Uhr"},
+		// Care Plan counts a weekday with only an arrival as booked.
+		"arrival only day": {letterCareWeekPlan{pickups: []*careplan.PickupSchedule{letterPickup(1, 15, 0)}, arrivalDays: []int{1, 3}},
+			"Montag und Mittwoch", "15:00 Uhr"},
+		"arrivals without pickups": {letterCareWeekPlan{arrivalDays: []int{2}}, "Dienstag", ""},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

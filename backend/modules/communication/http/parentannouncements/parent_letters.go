@@ -104,10 +104,10 @@ func (rs *Resource) letterPreview(w http.ResponseWriter, r *http.Request) {
 	rs.respondLetterPreview(w, r, nil)
 }
 
-// respondLetterPreview answers the preview; allowed, when set, narrows the
-// children to the classes the caller reaches and answers any other child as
-// not found.
-func (rs *Resource) respondLetterPreview(w http.ResponseWriter, r *http.Request, allowed func(class string) bool) {
+// respondLetterPreview answers the preview; classes, when set, narrows the
+// children to the classes the caller reaches: the service answers any other
+// child as not found before it reads or logs anything about it.
+func (rs *Resource) respondLetterPreview(w http.ResponseWriter, r *http.Request, classes []string) {
 	body, studentID, ok := decodeLetterPreview(w, r)
 	if !ok {
 		return
@@ -117,13 +117,9 @@ func (rs *Resource) respondLetterPreview(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	claims := sessiontoken.ClaimsFromCtx(r.Context())
-	preview, err := rs.ParentLetters.PreviewParentLetter(r.Context(), int64(claims.ID), body, studentID)
+	preview, err := rs.ParentLetters.PreviewParentLetter(r.Context(), int64(claims.ID), body, studentID, classes)
 	if err != nil {
 		renderAnnouncementError(w, r, err)
-		return
-	}
-	if allowed != nil && !allowed(preview.Child.SchoolClass) {
-		renderAnnouncementError(w, r, announcementService.ErrParentAnnouncementNotFound)
 		return
 	}
 	common.Respond(w, r, http.StatusOK, letterPreviewResponse{

@@ -35,15 +35,40 @@ type ParentLetterPickups interface {
 	GetWeeklySchedulesByStudentIDsForDate(ctx context.Context, studentIDs []int64, date calendar.Date) ([]*careplan.PickupSchedule, error)
 }
 
-// NewParentLetters binds the Serienbrief ports of the announcements.
-func NewParentLetters(students ParentLetterStudents, groups schoolstructure.Query, pickups ParentLetterPickups, accessLog DataAccessAppender, now func() time.Time) communication.ParentLetters {
+// ParentLetterArrivals is the Care Plan read of the weekly arrival plan. A
+// weekday with an arrival or a pickup is a booked care day (Care Plan's
+// CareDayNotScheduled: "no arrival and no pickup plans the weekday").
+type ParentLetterArrivals interface {
+	GetWeeklySchedulesByStudentIDsForDate(ctx context.Context, studentIDs []int64, date calendar.Date) ([]*careplan.ArrivalSchedule, error)
+}
+
+// ParentLetterSources are the owner reads a parent letter names per child.
+type ParentLetterSources struct {
+	Students ParentLetterStudents
+	Groups   schoolstructure.Query
+	Pickups  ParentLetterPickups
+	Arrivals ParentLetterArrivals
+}
+
+// BuildParentLetters binds the Serienbrief ports over the owners a root has
+// built: the People Directory, the school structure, Care Plan's weekly plans,
+// the access log and the signed-in account of the request.
+func BuildParentLetters(students ParentLetterStudents, groups schoolstructure.Query, schedules CarePlanSchedules, audit AuditOwner, tokens TokenAdapter, now func() time.Time) communication.ParentLetters {
+	return NewParentLetters(ParentLetterSources{Students: students, Groups: groups, Pickups: schedules.Pickups, Arrivals: schedules.Arrivals},
+		audit.Persistence.DataAccessLog, func(ctx context.Context) int64 { claims, _ := tokens.Claims(ctx); return claims.AccountID }, now)
+}
+
+// NewParentLetters binds the Serienbrief ports of the announcements. actor
+// names the signed-in account the access log attributes a read to; a read
+// without one (no request) is not logged as nobody's.
+func NewParentLetters(sources ParentLetterSources, accessLog DataAccessAppender, actor func(context.Context) int64, now func() time.Time) communication.ParentLetters {
 	if now == nil {
 		now = time.Now
 	}
 	return communication.ParentLetters{
-		Children: parentLetterChildren{students: students, groups: groups, pickups: pickups, now: now},
+		Children: parentLetterChildren{students: sources.Students, groups: sources.Groups, pickups: sources.Pickups, arrivals: sources.Arrivals, now: now},
 		Logos:    parentLetterLogos{},
-		Access:   parentLetterAccessLog{writer: accessLog},
+		Access:   parentLetterAccessLog{writer: accessLog, actor: actor},
 	}
 }
 
@@ -51,6 +76,7 @@ type parentLetterChildren struct {
 	students ParentLetterStudents
 	groups   schoolstructure.Query
 	pickups  ParentLetterPickups
+	arrivals ParentLetterArrivals
 	now      func() time.Time
 }
 
@@ -70,7 +96,7 @@ func (c parentLetterChildren) ParentLetterChildren(ctx context.Context, studentI
 	if err != nil {
 		return nil, err
 	}
-	weeks, err := c.pickupWeeks(ctx, studentIDs)
+	weeks, err := c.careWeeks(ctx, studentIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -122,18 +148,40 @@ func (c parentLetterChildren) groupNames(ctx context.Context, students []peopled
 	return names, nil
 }
 
-func (c parentLetterChildren) pickupWeeks(ctx context.Context, studentIDs []int64) (map[int64][]*careplan.PickupSchedule, error) {
-	schedules, err := c.pickups.GetWeeklySchedulesByStudentIDsForDate(ctx, studentIDs, calendar.DateFromTime(c.now()))
+// careWeeks reads both weekly plans of today: the pickup plan gives the
+// times, and a weekday with only an arrival is a booked day without one.
+func (c parentLetterChildren) careWeeks(ctx context.Context, studentIDs []int64) (map[int64]letterCareWeekPlan, error) {
+	date := calendar.DateFromTime(c.now())
+	pickups, err := c.pickups.GetWeeklySchedulesByStudentIDsForDate(ctx, studentIDs, date)
 	if err != nil {
 		return nil, err
 	}
-	weeks := map[int64][]*careplan.PickupSchedule{}
-	for _, schedule := range schedules {
-		if schedule != nil {
-			weeks[schedule.StudentID] = append(weeks[schedule.StudentID], schedule)
+	arrivals, err := c.arrivals.GetWeeklySchedulesByStudentIDsForDate(ctx, studentIDs, date)
+	if err != nil {
+		return nil, err
+	}
+	weeks := map[int64]letterCareWeekPlan{}
+	for _, pickup := range pickups {
+		if pickup != nil {
+			week := weeks[pickup.StudentID]
+			week.pickups = append(week.pickups, pickup)
+			weeks[pickup.StudentID] = week
+		}
+	}
+	for _, arrival := range arrivals {
+		if arrival != nil {
+			week := weeks[arrival.StudentID]
+			week.arrivalDays = append(week.arrivalDays, arrival.Weekday)
+			weeks[arrival.StudentID] = week
 		}
 	}
 	return weeks, nil
+}
+
+// letterCareWeekPlan is one child's weekly plan.
+type letterCareWeekPlan struct {
+	pickups     []*careplan.PickupSchedule
+	arrivalDays []int
 }
 
 var letterWeekdayNames = map[int]string{1: "Montag", 2: "Dienstag", 3: "Mittwoch", 4: "Donnerstag", 5: "Freitag", 6: "Samstag", 7: "Sonntag"}
@@ -142,26 +190,37 @@ var letterWeekdayShort = map[int]string{1: "Mo", 2: "Di", 3: "Mi", 4: "Do", 5: "
 // letterCareWeek writes the booked weekdays and the pickup time of a weekly
 // plan: "Montag, Dienstag und Donnerstag" and "15:30 Uhr", or per day
 // "Mo 15:00 Uhr, Di 16:00 Uhr" when the times differ.
-func letterCareWeek(week []*careplan.PickupSchedule) (string, string) {
-	sort.Slice(week, func(i, j int) bool { return week[i].Weekday < week[j].Weekday })
-	days := make([]string, 0, len(week))
-	perDay := make([]string, 0, len(week))
+func letterCareWeek(week letterCareWeekPlan) (string, string) {
+	booked := map[int]bool{}
+	for _, day := range week.arrivalDays {
+		booked[day] = true
+	}
+	pickups := append([]*careplan.PickupSchedule(nil), week.pickups...)
+	sort.Slice(pickups, func(i, j int) bool { return pickups[i].Weekday < pickups[j].Weekday })
+	perDay := make([]string, 0, len(pickups))
 	clocks := map[string]bool{}
 	clock := ""
-	for _, day := range week {
-		name, ok := letterWeekdayNames[day.Weekday]
-		if !ok {
+	for _, day := range pickups {
+		if _, ok := letterWeekdayNames[day.Weekday]; !ok {
 			continue
 		}
+		booked[day.Weekday] = true
 		clock = day.PickupTime.Format("15:04")
 		clocks[clock] = true
-		days = append(days, name)
 		perDay = append(perDay, letterWeekdayShort[day.Weekday]+" "+clock+" Uhr")
 	}
-	switch {
-	case len(days) == 0:
-		return "", ""
-	case len(clocks) == 1:
+	days := make([]string, 0, len(booked))
+	for weekday := 1; weekday <= 7; weekday++ {
+		if booked[weekday] {
+			if name, ok := letterWeekdayNames[weekday]; ok {
+				days = append(days, name)
+			}
+		}
+	}
+	switch len(clocks) {
+	case 0:
+		return germanList(days), ""
+	case 1:
 		return germanList(days), clock + " Uhr"
 	}
 	return germanList(days), strings.Join(perDay, ", ")
@@ -214,9 +273,16 @@ func embeddableLetterLogo(data []byte) bool {
 // letter to the school's data access log.
 type parentLetterAccessLog struct {
 	writer DataAccessAppender
+	actor  func(context.Context) int64
 }
 
 func (a parentLetterAccessLog) RecordParentLetterAccess(ctx context.Context, access communication.ParentLetterAccess) error {
+	if access.ActorAccountID <= 0 && a.actor != nil {
+		access.ActorAccountID = a.actor(ctx)
+	}
+	if access.ActorAccountID <= 0 {
+		return nil // no signed-in account: nobody to attribute the read to
+	}
 	entry := &auditModels.DataAccessLog{
 		ActorAccountID: access.ActorAccountID, ActorRole: "staff", StudentID: access.StudentID,
 		RangeStart: access.AccessedAt, RangeEnd: access.AccessedAt, AccessedAt: access.AccessedAt,
@@ -225,6 +291,8 @@ func (a parentLetterAccessLog) RecordParentLetterAccess(ctx context.Context, acc
 	switch access.Kind {
 	case communication.ParentLetterAccessPrint:
 		entry.ResourceType = auditModels.ResourceTypeParentLetterPrint
+	case communication.ParentLetterAccessPublish:
+		entry.ResourceType = auditModels.ResourceTypeParentLetterPublish
 	default:
 		entry.ResourceType = auditModels.ResourceTypeParentLetterPreview
 	}

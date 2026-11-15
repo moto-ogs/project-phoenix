@@ -29,7 +29,10 @@ import {
 } from "~/components/ui/segmented-control";
 import { LetterStatusPanel } from "~/components/announcements/letter-status-panel";
 import { LetterPrintButton } from "~/components/announcements/letter-print-button";
-import { LetterTemplateText } from "~/components/announcements/letter-template-text";
+import {
+  LetterTemplateText,
+  hasLetterPlaceholders,
+} from "~/components/announcements/letter-template-text";
 import { DeclarationStatusPanel } from "~/components/announcements/declaration-status-panel";
 import type { Group } from "~/lib/api";
 import type { Activity } from "~/lib/activity-helpers";
@@ -593,7 +596,7 @@ export function AnnouncementDetail({
   const poll = isPoll(announcement);
   const letter = isLetter(announcement);
   // A letter that names each child (#4813) shows where moto fills in.
-  const personalLetter = letter && /\{\{[^{}]*\}\}/.test(announcement.body);
+  const personalLetter = letter && hasLetterPlaceholders(announcement.body);
   const declaration = isDeclaration(announcement);
   const chips = targetChips(announcement.targets, groups, activities);
   const sender = classLetterSenderLine(announcement);

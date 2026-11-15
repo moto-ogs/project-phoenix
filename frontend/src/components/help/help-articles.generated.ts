@@ -6867,7 +6867,7 @@ export const parentLetterPerChildTopic =
         "Briefe ohne Platzhalter druckt moto genauso, einen je Kind.",
       ],
       troubleshootingDetails: [
-        "moto meldet `Diesen Platzhalter kennt moto nicht`? Nehmen Sie den Platzhalter heraus. Setzen Sie ihn mit den Knöpfen unter `Für jedes Kind einsetzen` neu ein.",
+        "moto meldet `Diese Platzhalter kennt moto nicht`? Nehmen Sie den Platzhalter heraus. Setzen Sie ihn mit den Knöpfen unter `Für jedes Kind einsetzen` neu ein.",
         "Im Betreff geht kein Platzhalter. Schreiben Sie ihn in den Text.",
       ],
       related: [

@@ -65,6 +65,9 @@ type ParentLetterAccess struct {
 const (
 	ParentLetterAccessPreview = "preview"
 	ParentLetterAccessPrint   = "print"
+	// ParentLetterAccessPublish is the read of every reached child's values
+	// when a letter that names each child is published.
+	ParentLetterAccessPublish = "publish"
 )
 
 // ParentLetterAccessLog writes each read of children's data through a
@@ -92,9 +95,11 @@ type ParentLetterPrint struct {
 }
 
 // ParentLetterCapability fills, shows and prints the letters of a school.
-// actorAccountID is the account the access log names.
+// actorAccountID is the account the access log names. A preview with classes
+// shows only a child of one of them (a Lehrkraft's reach); nil admits every
+// child of the school.
 type ParentLetterCapability interface {
-	PreviewParentLetter(ctx context.Context, actorAccountID int64, body string, studentID int64) (*ParentLetterPreview, error)
+	PreviewParentLetter(ctx context.Context, actorAccountID int64, body string, studentID int64, classes []string) (*ParentLetterPreview, error)
 	PrintParentLetters(ctx context.Context, actorAccountID, announcementID int64) (*ParentLetterPrint, error)
 }
 
