@@ -40,10 +40,7 @@ vi.mock("~/lib/file-download", async (importOriginal) => ({
   downloadBlob: mockDownloadBlob,
 }));
 // recharts measures its container, which jsdom does not lay out.
-vi.mock("~/components/traeger/comparison-chart", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/components/traeger/comparison-chart")
-  >()),
+vi.mock("~/components/traeger/comparison-chart", () => ({
   ComparisonChart: ({
     entries,
   }: {

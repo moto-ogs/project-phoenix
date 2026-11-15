@@ -31,8 +31,8 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { StatCard } from "~/components/ui/stat-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import NavigationLink from "~/components/ui/navigation-link";
-import { COMPARISON_CHART_COLORS } from "~/components/traeger/comparison-chart";
 import {
+  COMPARISON_CHART_COLORS,
   COMPARISON_METRIC_INFO,
   type ComparisonRow,
   comparisonRows,

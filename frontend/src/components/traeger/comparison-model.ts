@@ -5,6 +5,7 @@
  * ADR 0242); eine Schule ohne Wert hat „–“, nie 0.
  */
 
+import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import type {
   ComparedSchool,
   ComparisonMetric,
@@ -12,6 +13,17 @@ import type {
 } from "~/lib/traeger-comparison-api";
 
 /** `number` hat höchstens eine Nachkommastelle, `change` ein Vorzeichen. */
+/**
+ * Die Farben der Rangfolge; die Legende der Seite nimmt dieselben. Sie stehen
+ * hier und nicht im Diagramm, damit die Seite recharts erst mit dem Diagramm
+ * lädt.
+ */
+export const COMPARISON_CHART_COLORS = {
+  value: MOTO_COLOR_PALETTE.green.base,
+  full: MOTO_COLOR_PALETTE.orange.base,
+  average: MOTO_COLOR_PALETTE.neutral.strong,
+} as const;
+
 type MetricFormat = "number" | "share" | "change";
 
 export interface ComparisonMetricInfo {

@@ -22,20 +22,13 @@ import {
   ChartTooltipContent,
 } from "~/components/ui/chart";
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
-import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import type { ComparisonMetric } from "~/lib/traeger-comparison-api";
 import {
+  COMPARISON_CHART_COLORS,
   formatMetric,
   metricInfo,
   type RankingEntry,
 } from "./comparison-model";
-
-/** Die Farben des Diagramms; die Legende der Seite nimmt dieselben. */
-export const COMPARISON_CHART_COLORS = {
-  value: MOTO_COLOR_PALETTE.green.base,
-  full: MOTO_COLOR_PALETTE.orange.base,
-  average: MOTO_COLOR_PALETTE.neutral.strong,
-} as const;
 
 /** Höhe je Schule; so bleiben auch 30 Schulen lesbar. */
 const ROW_HEIGHT = 36;
