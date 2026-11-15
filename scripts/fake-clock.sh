@@ -77,11 +77,6 @@ fi
 
 PHX_CLOCK_OFFSET_SECONDS=$((target_seconds - $(date +%s)))
 export PHX_CLOCK_OFFSET_SECONDS
-if ((PHX_CLOCK_OFFSET_SECONDS < 0)); then
-  # The idle-watcher tests of internal/testdb compare lease file times, which
-  # stay real, with Go's clock and fail when it runs behind the real one.
-  echo "fake-clock: $target lies in the past; internal/testdb's idle tests expect a clock ahead" >&2
-fi
 # A server from scripts/fake-clock-postgres.sh moves with Go. Its clock shim
 # rereads the file about once a second. Fixed width: a Docker Desktop bind
 # mount can show new content with the old length for a few seconds, so wait
