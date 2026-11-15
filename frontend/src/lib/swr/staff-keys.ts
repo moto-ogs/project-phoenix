@@ -56,6 +56,8 @@ export const staffQualificationKeys = {
 export const workTimeModelKeys = {
   catalog: () => "database-work-time-models",
   picker: () => "work-time-models",
+  /** Vorlage, Soll und Sperren je Person für den Zuordnungsdialog (#6921). */
+  staffFacts: () => "work-time-model-staff-facts",
 } as const;
 
 /** Monatskarte einer Person (#1842). Derselbe Schlüssel, den

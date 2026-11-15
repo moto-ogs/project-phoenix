@@ -939,6 +939,37 @@ function mapWorkTimeModel(m: BackendWorkTimeModel): WorkTimeModel {
   };
 }
 
+/**
+ * Was über die Zuordnung einer Vorlage an eine Person entscheidet (#6921).
+ * Eine Person ohne Eintrag hat keine Vorlage, kein Soll, keinen Vertrag des
+ * Trägers und keinen abgeschlossenen Monat.
+ */
+export interface StaffWorkTimeFact {
+  staffId: string;
+  workTimeModelId: string | null;
+  /** Es gibt schon ein Soll: ein früheres Startdatum geht dann nicht. */
+  hasSchedule: boolean;
+  /** Ein laufender Vertrag des Trägers legt das Soll fest. */
+  sollKeptByTraeger: boolean;
+  /** Letzter abgeschlossener Monat („YYYY-MM“), sonst `null`. */
+  closedThrough: string | null;
+}
+
+interface BackendStaffWorkTimeFact {
+  staff_id: number;
+  work_time_model_id: number | null;
+  has_schedule: boolean;
+  soll_kept_by_traeger: boolean;
+  closed_through: string | null;
+}
+
+export interface WorkTimeModelAssignmentResult {
+  assignedStaffIds: string[];
+  unchangedStaffIds: string[];
+  /** Erster Tag des neuen Solls, „YYYY-MM-DD“. */
+  validFrom: string;
+}
+
 async function readWorkTimeModel(
   response: Response,
   fallback: string,
@@ -1013,6 +1044,70 @@ class WorkTimeModelService {
       response,
       "Vorlage konnte nicht wieder angeboten werden",
     );
+  }
+
+  /** Für den Zuordnungsdialog: Vorlage, Soll und Sperren je Person. */
+  async staffFacts(): Promise<StaffWorkTimeFact[]> {
+    const response = await sessionFetch(`/api/work-time-models/assignments`);
+    if (!response.ok) {
+      throw await apiErrorFromResponse(
+        response,
+        "Die Zuordnungen konnten nicht geladen werden",
+      );
+    }
+    const json = (await response.json()) as {
+      data: BackendStaffWorkTimeFact[] | null;
+    };
+    return (json.data ?? []).map((fact) => ({
+      staffId: fact.staff_id.toString(),
+      workTimeModelId:
+        fact.work_time_model_id === null
+          ? null
+          : fact.work_time_model_id.toString(),
+      hasSchedule: fact.has_schedule,
+      sollKeptByTraeger: fact.soll_kept_by_traeger,
+      closedThrough: fact.closed_through ?? null,
+    }));
+  }
+
+  /**
+   * Ordnet die Vorlage mehreren Personen auf einmal zu. Ohne `validFrom`
+   * gilt das neue Soll ab heute.
+   */
+  async assign(
+    id: string,
+    staffIds: readonly string[],
+    validFrom?: string,
+  ): Promise<WorkTimeModelAssignmentResult> {
+    const response = await sessionFetch(
+      `/api/work-time-models/${id}/assignments`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          staff_ids: staffIds.map(Number),
+          ...(validFrom ? { valid_from: validFrom } : {}),
+        }),
+      },
+    );
+    if (!response.ok) {
+      throw await apiErrorFromResponse(
+        response,
+        "Die Vorlage konnte nicht zugeordnet werden",
+      );
+    }
+    const json = (await response.json()) as {
+      data: {
+        assigned_staff_ids: number[] | null;
+        unchanged_staff_ids: number[] | null;
+        valid_from: string;
+      };
+    };
+    return {
+      assignedStaffIds: (json.data.assigned_staff_ids ?? []).map(String),
+      unchangedStaffIds: (json.data.unchanged_staff_ids ?? []).map(String),
+      validFrom: json.data.valid_from,
+    };
   }
 
   async remove(id: string): Promise<void> {
