@@ -14,9 +14,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// Consumer-owned ports of the offering-change review and the pickup
-// adjustment (#3561), re-exported so the composition root can implement them
-// without reaching into the module.
+// Consumer-owned ports of the offering-change review and the pickup adjustment (#3561),
+// re-exported so the composition root can implement them without reaching into the module.
 type (
 	OfferingChangeRows       = ports.OfferingChangeRows
 	OfferingChangeCatalog    = ports.OfferingChangeCatalog
@@ -59,8 +58,7 @@ type OfferingChangeDependencies struct {
 	Logger *slog.Logger
 }
 
-// NewOfferingChanges composes the offering-change review over the tenant
-// runtime's transaction hooks.
+// NewOfferingChanges composes the offering-change review over the tenant runtime's transaction hooks.
 func NewOfferingChanges(deps OfferingChangeDependencies) (careplan.OfferingChangeCapability, error) {
 	if deps.Bookings == nil {
 		return nil, errors.New("offering changes: booking materialization is required")
@@ -73,9 +71,8 @@ func NewOfferingChanges(deps OfferingChangeDependencies) (careplan.OfferingChang
 	})
 }
 
-// PickupAdjustmentDependencies bind the pickup adjustment to Care Plan's
-// schedule services and records, the offering-change review, and the People
-// Directory, Audit Platform and Security Runtime through ports.
+// PickupAdjustmentDependencies bind the pickup adjustment to Care Plan's schedule services and records,
+// the offering-change review, and the People Directory, Audit Platform and Security Runtime through ports.
 type PickupAdjustmentDependencies struct {
 	PickupSchedules  careplan.PickupScheduleService
 	ArrivalSchedules careplan.ArrivalScheduleService
@@ -90,8 +87,7 @@ type PickupAdjustmentDependencies struct {
 	Today       func() calendar.Date
 }
 
-// NewPickupAdjustments composes the pickup adjustment over the tenant
-// runtime.
+// NewPickupAdjustments composes the pickup adjustment over the tenant runtime.
 func NewPickupAdjustments(deps PickupAdjustmentDependencies) (careplan.PickupAdjustments, error) {
 	return application.NewPickupAdjustments(application.PickupAdjustmentDependencies{
 		PickupSchedules: deps.PickupSchedules, ArrivalSchedules: deps.ArrivalSchedules, Records: deps.Records,
@@ -100,8 +96,7 @@ func NewPickupAdjustments(deps PickupAdjustmentDependencies) (careplan.PickupAdj
 	})
 }
 
-// tenantUnitOfWork runs a pickup adjustment in the tenant transaction of the
-// request, joining the one the tenant middleware opened.
+// tenantUnitOfWork runs a pickup adjustment in the request's tenant transaction, joining the middleware's.
 type tenantUnitOfWork struct{}
 
 func (tenantUnitOfWork) TenantID(ctx context.Context) int64 { return tenant.FromContext(ctx) }

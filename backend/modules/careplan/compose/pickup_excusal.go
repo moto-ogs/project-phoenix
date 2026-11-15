@@ -29,9 +29,7 @@ type PickupExcusalDependencies struct {
 	Blocks     PartialAbsenceBlocks
 	Preview    PartialAbsencePreview
 	Extensions PickupExtensions
-	// Today is the first day a weekly resync re-derives; the Berlin calendar
-	// day when nil.
-	Today func() calendar.Date
+	Today      func() calendar.Date
 }
 
 func NewPickupAutoExcusal(deps PickupExcusalDependencies) (careplan.PickupAutoExcusal, error) {

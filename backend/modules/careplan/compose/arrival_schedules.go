@@ -28,9 +28,7 @@ type ArrivalScheduleDependencies struct {
 	Classes         ArrivalClassPlans
 	ClassExceptions careplan.ClassArrivalExceptions
 	Logger          *slog.Logger
-	// Today is the school day the weekly plan is projected and written on;
-	// the Berlin calendar day when nil.
-	Today func() calendar.Date
+	Today           func() calendar.Date
 }
 
 func NewArrivalSchedules(db *bun.DB, records carePlanBindingPorts.ArrivalScheduleRecords, baselines careplan.ArrivalBaselineReader, rules ArrivalScheduleRules, deps ArrivalScheduleDependencies) (careplan.ArrivalScheduleService, error) {

@@ -58,25 +58,18 @@ type CareLifecycleDependencies struct {
 	// BookingsAuthoritative resolves the school's booking-led care setting.
 	BookingsAuthoritative func(context.Context) (bool, error)
 	// Fingerprint returns the lowercase hexadecimal SHA-256 of the content.
-	Fingerprint func([]byte) string
-	Logger      *slog.Logger
-	// Today defaults to the Berlin calendar day of Now.
-	Today func() calendar.Date
-	// Now stamps the lifecycle's records and defaults to the real clock.
+	Fingerprint      func([]byte) string
+	Logger           *slog.Logger
+	Today            func() calendar.Date
 	Now              func() time.Time
 	StudentDirectory StudentDirectory
 }
 
-// NewCareLifecycle composes the one care-lifecycle capability.
-// Workflow entries belong to their transport consumer, not these dependencies.
-// Root binds resumption separately so this capability cannot invoke it.
+// NewCareLifecycle composes the one care-lifecycle capability. Workflow entries belong to their
+// transport consumer; root binds resumption separately so this capability cannot invoke it.
 func NewCareLifecycle(deps CareLifecycleDependencies) (careplan.CareLifecycle, error) {
 	if deps.DB == nil || deps.StudentDirectory == nil {
 		return nil, errors.New("care lifecycle compose: database and student directory are required")
-	}
-	today := deps.Today
-	if today == nil {
-		today = calendar.CalendarDateClock(deps.Now)
 	}
 	return application.NewCareLifecycle(application.CareLifecycleDependencies{
 		Owners: deps.Owners, Records: deps.Records, SourceBookings: NewOfferingBookings(),
@@ -86,7 +79,7 @@ func NewCareLifecycle(deps CareLifecycleDependencies) (careplan.CareLifecycle, e
 		BookingsAuthoritative: deps.BookingsAuthoritative,
 		Fingerprint:           deps.Fingerprint,
 		Logger:                deps.Logger,
-		Today:                 today,
+		Today:                 deps.Today,
 		Now:                   deps.Now,
 	})
 }
@@ -107,9 +100,8 @@ type StudentDocumentDependencies struct {
 	Signatures  ports.StudentAccidentSignatures
 }
 
-// NewStudentDocuments composes the child document capability with the
-// accident reports kept among the documents (#4771). Every command commits
-// its own tenant transaction before it returns.
+// NewStudentDocuments composes the child document capability with the accident reports kept among
+// the documents (#4771). Every command commits its own tenant transaction before it returns.
 func NewStudentDocuments(deps StudentDocumentDependencies) (application.StudentDocumentsBinding, error) {
 	if deps.DB == nil {
 		return application.StudentDocumentsBinding{}, errors.New("care plan documents compose: database is required")
@@ -124,8 +116,7 @@ func NewStudentDocuments(deps StudentDocumentDependencies) (application.StudentD
 	return application.StudentDocumentsBinding{StudentDocuments: documents, DocumentFileRecords: application.DocumentFileRecords{Records: deps.Records}}, nil
 }
 
-// ownTenantTransaction runs every command in a transaction of its own for the
-// request's school, committed before the command returns.
+// ownTenantTransaction runs every command in its own transaction for the request's school, committed before it returns.
 func ownTenantTransaction(db *bun.DB) ports.UnitOfWork {
 	return postgres.OwnTenantTransactionBinding(db, tenant.WithTenantTx)
 }

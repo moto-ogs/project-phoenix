@@ -11,9 +11,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 )
 
-// Consumer-owned ports of the Stammdaten decision and the cross-kind parent
-// request commands (#3354), re-exported so the composition root can
-// implement them without reaching into the module.
+// Consumer-owned ports of the Stammdaten decision and the cross-kind parent request commands (#3354),
+// re-exported so the composition root can implement them without reaching into the module.
 type (
 	MasterDataRecords        = ports.MasterDataRecords
 	MasterDataFieldReviews   = careplan.MasterDataFieldReviews
@@ -63,8 +62,7 @@ type MasterDataDecisionDependencies struct {
 	ClassChanges MasterDataClassChanges
 }
 
-// NewMasterDataDecisions composes the decision over Care Plan's own request
-// rows and the tenant runtime's transaction hooks.
+// NewMasterDataDecisions composes the decision over Care Plan's own request rows and the tenant runtime's transaction hooks.
 func NewMasterDataDecisions(deps MasterDataDecisionDependencies) (*MasterDataDecisions, error) {
 	if deps.CarePlan == nil {
 		return nil, errors.New("care plan master data decisions: care plan capability is required")

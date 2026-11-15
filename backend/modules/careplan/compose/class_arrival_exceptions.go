@@ -12,8 +12,6 @@ import (
 type ClassArrivalExceptionStore = ports.ClassArrivalExceptionStore
 type ClassArrivalStudents = ports.ClassArrivalStudents
 
-// NewClassArrivalExceptions builds the class arrival exceptions; today bounds
-// the editable days and is the Berlin calendar day when nil.
 func NewClassArrivalExceptions(store ClassArrivalExceptionStore, students ClassArrivalStudents, today func() calendar.Date) (careplan.ClassArrivalExceptions, error) {
 	if store != nil && students == nil {
 		return nil, errors.New("class arrival exceptions: student directory is required")
