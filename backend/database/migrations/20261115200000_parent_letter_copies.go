@@ -8,7 +8,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-const parentLetterCopiesVersion = "20261115140000"
+const parentLetterCopiesVersion = "20261115200000"
 
 func init() {
 	MigrationRegistry.Register(&Migration{
