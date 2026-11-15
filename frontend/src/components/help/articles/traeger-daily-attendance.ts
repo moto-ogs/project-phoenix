@@ -12,6 +12,9 @@ export function traegerDailyAttendanceTopic(): HelpTopic {
     question: "Wie melde ich die tägliche An- und Abwesenheit an das Land?",
     summary:
       "Für Schulen in Mecklenburg-Vorpommern zeigt moto je Tag, wer da war und wer gefehlt hat. Die Datei für das Land laden Sie mit einem Klick herunter.",
+    image: "/help/screens/tagesmeldung-mecklenburg-vorpommern.webp",
+    imageAlt:
+      "Oben die Zahlen Kinder am Tag, Verweildauer, Längster Tag und Abwesend gemeldet. Darunter die Tabelle Je Tag mit einer Zeile je Tag.",
     group: "auswertung",
     audience: "traeger",
     icon: "SealCheck",

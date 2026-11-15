@@ -34,6 +34,7 @@ var dataLabels = map[string]string{
 	"time_tracking_export":                "Arbeitszeiten des Personals (Export)",
 	"traeger_access_log":                  "Zugriffsprotokoll im Träger-Portal",
 	"traeger_access_log_export":           "Zugriffsprotokoll im Träger-Portal (Export)",
+	"traeger_daily_attendance":            "Tagesmeldung Mecklenburg-Vorpommern (Zahlen je Tag)",
 	"traeger_daily_attendance_export":     "Tagesmeldung Mecklenburg-Vorpommern (Export ohne Namen)",
 	"holiday_prefill":                     "Angaben eines Kindes für die Ferienanmeldung",
 	"holiday_participants":                "Teilnehmerliste einer Ferienwoche",

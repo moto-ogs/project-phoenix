@@ -3,7 +3,7 @@
  * period limit. The page and its tests share them.
  */
 
-import { parseISODate, toISODate } from "~/lib/date-helpers";
+import { formatDuration, parseISODate, toISODate } from "~/lib/date-helpers";
 import {
   DAILY_ATTENDANCE_MAX_DAYS,
   type DailyAttendanceFigures,
@@ -28,11 +28,7 @@ export function isWeekend(date: string): boolean {
 
 /** „5 Std. 20 Min.“, „45 Min.“; „–“ without a value. */
 export function durationLabel(minutes: number | null): string {
-  if (minutes === null) return "–";
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  if (hours === 0) return `${rest} Min.`;
-  return rest === 0 ? `${hours} Std.` : `${hours} Std. ${rest} Min.`;
+  return minutes === null ? "–" : formatDuration(minutes);
 }
 
 /** The children reported absent: sick, excused and on a class trip. */

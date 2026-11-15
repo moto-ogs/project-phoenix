@@ -14,11 +14,18 @@ var _ traegerview.DailyAttendanceReport = (*Overview)(nil)
 
 // DailyAttendance returns the daily attendance report of the Träger's
 // schools in Mecklenburg-Vorpommern (#4717). Every owner is read once for the
-// whole school set. The answer holds figures and school names, no child, so
-// it is not written to the access log (ADR 0084 section 7).
-func (o *Overview) DailyAttendance(ctx context.Context, organizationID int64, from, to calendar.Date) (traegerview.DailyAttendance, error) {
-	data, err := o.dailyAttendanceData(ctx, organizationID, from, to)
+// whole school set. The answer names no child, yet a day with one child shows
+// that child's times, so each school with child-days records the read in its
+// access log before the answer leaves.
+func (o *Overview) DailyAttendance(ctx context.Context, viewer traegerview.Viewer, from, to calendar.Date) (traegerview.DailyAttendance, error) {
+	if viewer.AccountID <= 0 {
+		return traegerview.DailyAttendance{}, traegerview.ErrTraegerRequired
+	}
+	data, err := o.dailyAttendanceData(ctx, viewer.OrganizationID, from, to)
 	if err != nil {
+		return traegerview.DailyAttendance{}, err
+	}
+	if err := o.recordDailyAttendance(ctx, viewer, traegerview.ResourceTypeTraegerDailyAttendance, "list", data, shownChildDays(data)); err != nil {
 		return traegerview.DailyAttendance{}, err
 	}
 	return buildDailyAttendance(data), nil
@@ -40,11 +47,29 @@ func (o *Overview) DailyAttendanceExport(ctx context.Context, viewer traegerview
 	for _, record := range export.Records {
 		shown[record.SchoolID]++
 	}
-	span := window{from: data.from.BerlinMidnight(), to: data.to.AddDays(1).BerlinMidnight()}
-	if err := o.record(ctx, viewer, traegerview.ResourceTypeTraegerDailyAttendanceExport, span, shown, "export", 0); err != nil {
+	if err := o.recordDailyAttendance(ctx, viewer, traegerview.ResourceTypeTraegerDailyAttendanceExport, "export", data, shown); err != nil {
 		return traegerview.DailyAttendanceExport{}, err
 	}
 	return export, nil
+}
+
+// recordDailyAttendance writes a read of the report to the access log of
+// every school with rows, for the Berlin days of its period.
+func (o *Overview) recordDailyAttendance(ctx context.Context, viewer traegerview.Viewer, resourceType, view string, data dailyAttendanceData, shown map[int64]int) error {
+	span := window{from: data.from.BerlinMidnight(), to: data.to.AddDays(1).BerlinMidnight()}
+	return o.record(ctx, viewer, resourceType, span, shown, view, 0)
+}
+
+// shownChildDays counts the child-days, present or absent, of each school.
+func shownChildDays(data dailyAttendanceData) map[int64]int {
+	shown := map[int64]int{}
+	for _, day := range data.days {
+		shown[day.SchoolID]++
+	}
+	for _, absence := range data.absences {
+		shown[absence.SchoolID]++
+	}
+	return shown
 }
 
 // FederalStates returns the federal states of the Träger's schools, each

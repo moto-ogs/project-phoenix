@@ -362,10 +362,14 @@ export const TRAEGER_HELP_NAV = {
   concept: helpConcept,
 } as const satisfies Omit<TraegerNavItem, "right">;
 
-/** Die Gruppen der Hauptnavigation; eine Gruppe ohne erlaubtes Ziel fehlt. */
 /** Ohne bekannte Bundesländer fehlen die Einträge eines Bundeslands. */
 const NO_FEDERAL_STATES: readonly string[] = [];
 
+/**
+ * Die Gruppen der Hauptnavigation; eine Gruppe ohne erlaubtes Ziel fehlt.
+ * Ein Eintrag mit Bundesland fehlt, solange keine Schule des Trägers dort
+ * liegt (#4717).
+ */
 export function traegerNavGroupsFor(
   session: Session | null,
   federalStates: readonly string[] = NO_FEDERAL_STATES,

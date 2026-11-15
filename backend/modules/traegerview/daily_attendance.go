@@ -39,9 +39,12 @@ const FederalStateMecklenburgVorpommern = "DE-MV"
 // DailyAttendanceMaxDays bounds the period of one report: a month.
 const DailyAttendanceMaxDays = 31
 
-// ResourceTypeTraegerDailyAttendanceExport is the access log entry of the
-// report's file at each school it holds rows of.
-const ResourceTypeTraegerDailyAttendanceExport = "traeger_daily_attendance_export"
+// The access log entries of the report at each school it shows: the
+// figures per day and the file.
+const (
+	ResourceTypeTraegerDailyAttendance       = "traeger_daily_attendance"
+	ResourceTypeTraegerDailyAttendanceExport = "traeger_daily_attendance_export"
+)
 
 // The statuses of a DailyAttendanceRecord.
 const (
@@ -185,10 +188,12 @@ type SchoolStates interface {
 // stays small (#2580).
 type DailyAttendanceReport interface {
 	// DailyAttendance returns the figures of the Träger's schools in
-	// Mecklenburg-Vorpommern between from and to. They name no child, so
-	// the read is not written to the access log (ADR 0084 section 7). An
-	// invalid period is ErrInvalidDailyAttendancePeriod.
-	DailyAttendance(ctx context.Context, organizationID int64, from, to calendar.Date) (DailyAttendance, error)
+	// Mecklenburg-Vorpommern between from and to. They name no child, but
+	// on a day with one child the first arrival and the longest stay are
+	// that child's times, so the access log of each school with children
+	// records the read with the viewer's account. An invalid period is
+	// ErrInvalidDailyAttendancePeriod.
+	DailyAttendance(ctx context.Context, viewer Viewer, from, to calendar.Date) (DailyAttendance, error)
 	// DailyAttendanceExport returns one record per child and day. A record
 	// names no child, yet the rows of a small school are close to its
 	// children, so the access log of each school with rows records the

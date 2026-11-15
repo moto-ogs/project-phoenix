@@ -16,14 +16,14 @@ import (
 
 // dailyAttendance answers GET /traeger/schools/daily-attendance: the daily
 // attendance report of the Träger's schools in Mecklenburg-Vorpommern
-// between the days from and to (#4717). It holds figures, no child, so the
-// read is not written to the access log (ADR 0084 section 7).
+// between the days from and to (#4717). It names no child; the projection
+// still records the read in the access log of each school with children.
 func (rs *Resource) dailyAttendance(w http.ResponseWriter, r *http.Request) {
 	viewer, from, to, ok := dailyAttendanceRequest(w, r)
 	if !ok {
 		return
 	}
-	report, err := rs.daily.DailyAttendance(r.Context(), viewer.OrganizationID, from, to)
+	report, err := rs.daily.DailyAttendance(r.Context(), viewer, from, to)
 	if !renderDailyAttendanceError(w, r, err) {
 		common.Respond(w, r, http.StatusOK, report, "Daily attendance retrieved successfully")
 	}
@@ -36,10 +36,6 @@ func (rs *Resource) dailyAttendance(w http.ResponseWriter, r *http.Request) {
 func (rs *Resource) dailyAttendanceExport(w http.ResponseWriter, r *http.Request) {
 	viewer, from, to, ok := dailyAttendanceRequest(w, r)
 	if !ok {
-		return
-	}
-	if viewer.AccountID <= 0 {
-		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
 		return
 	}
 	export, err := rs.daily.DailyAttendanceExport(r.Context(), viewer, from, to)
@@ -62,7 +58,7 @@ func (rs *Resource) dailyAttendanceExport(w http.ResponseWriter, r *http.Request
 // period of a request.
 func dailyAttendanceRequest(w http.ResponseWriter, r *http.Request) (traegerview.Viewer, calendar.Date, calendar.Date, bool) {
 	principal, err := common.CurrentPrincipal(r.Context())
-	if err != nil || principal.OrganizationID() <= 0 {
+	if err != nil || principal.OrganizationID() <= 0 || principal.AccountID() <= 0 {
 		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
 		return traegerview.Viewer{}, "", "", false
 	}

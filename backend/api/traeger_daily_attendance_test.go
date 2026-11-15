@@ -37,13 +37,18 @@ func mvSchool(t *testing.T, db *bun.DB, organization int64, name string) arrival
 	return newArrivalSchool(t, db, school)
 }
 
-func dailyExportLogged(t *testing.T, db *bun.DB, school, account int64) int {
+func dailyLogged(t *testing.T, db *bun.DB, resourceType string, school, account int64) int {
 	t.Helper()
 	var count int
 	require.NoError(t, db.NewRaw(`SELECT count(*) FROM audit.data_access_log
 		WHERE tenant_id = ? AND actor_account_id = ? AND resource_type = ? AND actor_role = 'traeger'`,
-		school, account, traegerview.ResourceTypeTraegerDailyAttendanceExport).Scan(context.Background(), &count))
+		school, account, resourceType).Scan(context.Background(), &count))
 	return count
+}
+
+func dailyExportLogged(t *testing.T, db *bun.DB, school, account int64) int {
+	t.Helper()
+	return dailyLogged(t, db, traegerview.ResourceTypeTraegerDailyAttendanceExport, school, account)
 }
 
 func TestTraegerDailyAttendanceReportsTheSchoolsInMecklenburgVorpommernOnly(t *testing.T) {
@@ -99,6 +104,9 @@ func TestTraegerDailyAttendanceReportsTheSchoolsInMecklenburgVorpommernOnly(t *t
 	assert.Equal(t, dailySaturday, school.Days[1].Date)
 	assert.Equal(t, 1, school.Days[2].Excused)
 	assert.Equal(t, 2, school.Summary.DaysWithChildren)
+	assert.Equal(t, 1, dailyLogged(t, db, traegerview.ResourceTypeTraegerDailyAttendance, hafen.school, office.ID),
+		"a day with one child shows that child's times, so the read stands in the access log")
+	assert.Zero(t, dailyLogged(t, db, traegerview.ResourceTypeTraegerDailyAttendance, nrwID, office.ID), "the school outside the report read nothing")
 
 	export := traegerOccupancyRequest(t, router, "/traeger/schools/daily-attendance/export?"+dailyPeriod, answer.AccessToken, nil)
 	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
@@ -150,6 +158,7 @@ func TestTraegerDailyAttendanceNeedsTheReportsRightAndAPeriod(t *testing.T) {
 			assert.NotContains(t, rec.Body.String(), "Hort Ohne Recht")
 		}
 		assert.Zero(t, dailyExportLogged(t, db, school.school, account), "a refused export reads nothing")
+		assert.Zero(t, dailyLogged(t, db, traegerview.ResourceTypeTraegerDailyAttendance, school.school, account), "a refused read reads nothing")
 	}
 
 	_, reader := signIn(identityaccess.TraegerRoleReadOnly)
@@ -179,18 +188,27 @@ func TestTraegerDailyAttendanceQueryBudgetIsFlat(t *testing.T) {
 	testpkg.CreateTestTraegerMember(t, db, organization, account.ID, identityaccess.TraegerRoleReadOnly)
 	code, answer := traegerSignIn(t, router, account.Email, password, 0)
 	require.Equal(t, http.StatusOK, code)
-	read := func() testpkg.QueryMeasurement {
+	// The reads are flat; the access log adds one tenant unit per school
+	// with children (ADR 0084 section 7), counted apart.
+	read := func() (testpkg.QueryMeasurement, int) {
 		counter := testpkg.CaptureQueriesForContext(t, db)
 		rec := traegerOccupancyRequest(t, router, "/traeger/schools/daily-attendance?"+dailyPeriod, answer.AccessToken, counter)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		return counter.Measurement(counter.Matching(func(sql string) bool {
-			return strings.HasPrefix(sql, "select") || strings.HasPrefix(sql, "with")
+		reads := counter.Measurement(counter.Matching(func(sql string) bool {
+			return (strings.HasPrefix(sql, "select") || strings.HasPrefix(sql, "with")) && !strings.Contains(sql, "set_config")
 		}))
+		logged := len(counter.Matching(func(sql string) bool {
+			return strings.HasPrefix(sql, "insert") && strings.Contains(sql, "data_access_log")
+		}))
+		return reads, logged
 	}
-	three := read()
+	three, loggedThree := read()
 	for _, name := range []string{"Hort Vier", "Hort Fünf"} {
 		addSchool(name)
 	}
-	assert.Len(t, read().Statements, len(three.Statements), "the report reads the same statements for any number of schools")
+	five, loggedFive := read()
+	assert.Len(t, five.Statements, len(three.Statements), "the report reads the same statements for any number of schools")
+	assert.Equal(t, 3, loggedThree, "one access log entry per school with children")
+	assert.Equal(t, 5, loggedFive)
 	querybudgets.AssertQueryBudget(t, "api.traeger.schools_daily_attendance", three)
 }

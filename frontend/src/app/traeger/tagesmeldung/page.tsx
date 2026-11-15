@@ -43,11 +43,15 @@ import { childrenConcept } from "~/lib/concepts/children";
 import { pickupConcept } from "~/lib/concepts/pickup";
 import { presentConcept } from "~/lib/concepts/present";
 import { sickConcept } from "~/lib/concepts/sick";
-import { formatDate, formatTime, toISODate } from "~/lib/date-helpers";
+import {
+  formatDate,
+  formatTime,
+  parseISODate,
+  toISODate,
+} from "~/lib/date-helpers";
 import { downloadBlob } from "~/lib/file-download";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
-import { parseISODate } from "~/lib/date-helpers";
 import {
   DAILY_ATTENDANCE_MAX_DAYS,
   type DailyAttendanceDay,
@@ -488,7 +492,7 @@ export default function TraegerDailyAttendancePage() {
       <Alert
         type="info"
         title="Das Land legt das Format noch fest"
-        message="Bis dahin enthält die Datei je Kind und Tag: Einrichtung, Datum, Status, Ankunft, Abholung und Minuten. Sie enthält keine Namen."
+        message="Bis dahin enthält die Datei je Kind und Tag: Einrichtung, Ort, Datum, laufende Nummer, Status, Ankunft, Abholung und Minuten. Sie enthält keine Namen."
       />
       {clamped ? (
         <Alert
