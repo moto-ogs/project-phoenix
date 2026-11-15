@@ -122,6 +122,7 @@ function HolidayRegistrationCard({
                             ends: formatDate(week.lastDay, false, locale),
                           }),
                           week.timeModelName,
+                          week.lunch ? tr("summaryLunch") : "",
                         ]
                           .filter(Boolean)
                           .join(" · ")}
@@ -156,6 +157,7 @@ function HolidayRegistrationCard({
               variant="outline"
               size="md"
               className="shrink-0 max-sm:w-full"
+              tooltip={t("toDocumentsTooltip")}
             >
               {t("toDocuments")}
             </ButtonLink>

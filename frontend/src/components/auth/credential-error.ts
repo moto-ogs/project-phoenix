@@ -22,12 +22,14 @@ export const INVITATION_REFUSALS = [
 /**
  * The 401 refusals of an MFA step, in every portal: a wrong or expired code
  * (verify, resend, enrollment confirm), and the credential check of the
- * token exchange after a correct code. Any other 401 there is an expired
- * challenge or enrollment session and leads to the login screen.
+ * token exchange after a correct code, also under the parents portal's care
+ * code. Any other 401 there is an expired challenge or enrollment session
+ * and leads to the login screen.
  */
 export const MFA_STEP_REFUSALS = [
   "identity.mfa_code_invalid",
   "identity.invalid_credentials",
+  "care.invalid_credentials",
   "identity.session_account_inactive",
 ] as const satisfies readonly ErrorCode[];
 

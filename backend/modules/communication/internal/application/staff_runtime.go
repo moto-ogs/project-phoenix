@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"log/slog"
+	"time"
 )
 
 // Runtime identifies the school of the ambient transaction.
@@ -16,7 +17,12 @@ func NewService(cfg ServiceConfig, runtime Runtime, policy ParentDeliveryPolicy)
 	if logger == nil {
 		logger = slog.Default()
 	}
+	now := cfg.Now
+	if now == nil {
+		now = time.Now
+	}
 	return &service{
+		now:            now,
 		deliveryPolicy: policy,
 		runtime:        runtime,
 		repo:           cfg.Repo,

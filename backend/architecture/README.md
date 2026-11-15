@@ -965,7 +965,8 @@ all new `unknown` labels before running `check`; do not label locking/audited
 reads as queries. `check` enforces canonical generator JSON and one effect per
 target method without rewriting files. E1–E5, workflow-backed bindings, known
 coordination debt and unresolved bindings remain distinct. Callable fields and
-parameters resolve to their root closures, generic instances to their origin,
+parameters resolve to their root closures (injected clocks, `func() time.Time`
+and `func() calendar.Date`, record no effect), generic instances to their origin,
 and platform protocol entries are classified `platform`
 ([ADR 0098](../../docs/adr/0098-command-effect-binding-flow-and-platform-protocols.md)). See the
 [ADR 0083 domain-source addendum](../../docs/adr/0083-ratchets-protect-invariants-and-expose-command-effects.md#domain-source-expansion-2026-10-23-4739)
@@ -2847,11 +2848,10 @@ transaction the module operations join. The `models/platform` MFA repository
 contracts and their `database/repositories/platform` adapters are deleted;
 the MFA models remain as the retained port's value types. The operator
 passkey records (#2724), `platform.operator_passkey_credentials` and
-`platform.operator_passkey_sessions`, follow the same shape through the
-public `OperatorPasskeyRecords` capability. The retained `services/platform`
-operator passkey service keeps the WebAuthn ceremonies, the origin check and
-the token exchange and reaches the rows through the `OperatorPasskeyRecords`
-port the root binds to the public module. A ceremony completes at most once,
+`platform.operator_passkey_sessions`, follow the same shape. The owner's
+operator passkey ceremonies keep the WebAuthn verification, the origin check
+and the token exchange and reach the rows through their own record service;
+the owner serves the ceremonies, not the rows. A ceremony completes at most once,
 in one administrative transaction with the credential insert or use record
 the module operations join: a refused ceremony commits and stays spent, a
 failed read or write rolls back and leaves the ceremony open. Only the
@@ -2859,10 +2859,9 @@ owner's not-found outcomes become an invalid session or a missing passkey,
 so store failures reach the caller as errors. The `models/platform`
 passkey repository contracts and their adapter are deleted; the passkey
 models remain as the retained port's value types. The school-portal passkeys
-(`auth.passkey_credentials`, `auth.passkey_sessions`) follow the same shape
-through `AccountPasskeyRecords`: the retained `services/auth` passkey service
-keeps the ceremonies, the tenant-origin check and the school-membership gate
-and reaches the rows through its own `PasskeyRecords` port. A credential
+(`auth.passkey_credentials`, `auth.passkey_sessions`) follow the same shape:
+the owner's school-portal ceremonies keep the tenant-origin check and the
+school-membership gate and reach the rows through their own record service. A credential
 belongs to the account and carries no school; the ceremony records the school
 whose portal started it, and login refuses a school the account has no access
 to. Their `modules/identityaccess/legacy/authmodels` models and `modules/identityaccess/legacy/authpostgres` adapter are

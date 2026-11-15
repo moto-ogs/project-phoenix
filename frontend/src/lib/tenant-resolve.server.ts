@@ -17,6 +17,7 @@ export interface TenantResolveResponse {
   student_photos_enabled?: boolean;
   booked_modules?: string[];
   parent_messaging_enabled?: boolean;
+  parent_message_card_badge_enabled?: boolean;
   staff_messaging_enabled?: boolean;
   display_enabled?: boolean;
   caldav_enabled?: boolean;
@@ -40,6 +41,7 @@ export interface TenantResolveResponse {
   early_checkout_note_tolerance_minutes?: number;
   weekend_follows_friday?: boolean;
   child_search_only_navigation?: boolean;
+  simple_staff_navigation?: boolean;
   care_facility_term?: string;
 }
 

@@ -25,12 +25,15 @@ import (
 
 type Resource struct {
 	service       calendarService.FullService
+	mails         calendarService.StaffAppointmentMails
 	logger        *slog.Logger
 	calDAVHandler http.Handler
 }
 
-func NewResource(service calendarService.FullService, logger *slog.Logger) *Resource {
-	resource := &Resource{service: service, logger: logger}
+// NewResource wires the calendar routes. mails says what became of an
+// appointment's guardian e-mails (#7058); nil leaves its route unmounted.
+func NewResource(service calendarService.FullService, mails calendarService.StaffAppointmentMails, logger *slog.Logger) *Resource {
+	resource := &Resource{service: service, mails: mails, logger: logger}
 	resource.calDAVHandler = mustNewStaffCalDAVHandler(service, logger)
 	return resource
 }
@@ -50,6 +53,10 @@ func (rs *Resource) Router(configureSession func(chi.Router)) chi.Router {
 		r.With(own, withTx).Get("/appointments/{appointmentId}/ics", rs.appointmentICS)
 		r.With(manage, withTx).Post("/appointments", rs.createAppointment)
 		r.With(manage, withTx).Get("/appointments/{appointmentId}", rs.getAppointmentDetail)
+		if rs.mails != nil {
+			// A read of its own, so the detail polls it without reloading.
+			r.With(manage, withTx).Get("/appointments/{appointmentId}/mails", rs.getAppointmentMails)
+		}
 		r.With(manage, withTx).Put("/appointments/{appointmentId}", rs.updateAppointment)
 		r.With(manage, withTx).Delete("/appointments/{appointmentId}", rs.deleteAppointment)
 		r.With(manage, withTx).Post("/appointments/{appointmentId}/cancel", rs.cancelAppointment)
@@ -139,8 +146,20 @@ func serviceTargets(targets []appointmentTargetRequest) []calendarService.Appoin
 	return out
 }
 
-type responseRequest struct {
-	Status string `json:"status"`
+// occurrenceDateQuery reads the optional occurrence_date query parameter:
+// the date of a series whose answers are asked for (#6987). It reports
+// false after rendering the error of an invalid date.
+func occurrenceDateQuery(w http.ResponseWriter, r *http.Request) (calendarService.Date, bool) {
+	raw := r.URL.Query().Get("occurrence_date")
+	if raw == "" {
+		return "", true
+	}
+	date, err := timezone.ParseDate(raw)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid occurrence date")))
+		return "", false
+	}
+	return calendarService.Date(date), true
 }
 
 func (rs *Resource) listMy(w http.ResponseWriter, r *http.Request) {
@@ -247,6 +266,19 @@ func (rs *Resource) getAppointmentDetail(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, http.StatusOK, detail, "Appointment detail retrieved")
 }
 
+func (rs *Resource) getAppointmentMails(w http.ResponseWriter, r *http.Request) {
+	appointmentID, ok := common.ParsePositiveInt64IDWithError(w, r, "appointmentId", "invalid appointment ID")
+	if !ok {
+		return
+	}
+	mails, err := rs.mails.StaffAppointmentMails(r.Context(), appointmentID)
+	if err != nil {
+		renderCalendarError(w, r, err)
+		return
+	}
+	common.Respond(w, r, http.StatusOK, mails, "Appointment mails retrieved")
+}
+
 func (rs *Resource) updateAppointment(w http.ResponseWriter, r *http.Request) {
 	appointmentID, ok := common.ParsePositiveInt64IDWithError(w, r, "appointmentId", "invalid appointment ID")
 	if !ok {
@@ -335,7 +367,11 @@ func (rs *Resource) appointmentOverview(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
-	overview, err := rs.service.GetStaffAppointmentOverview(r.Context(), appointmentID)
+	occurrenceDate, ok := occurrenceDateQuery(w, r)
+	if !ok {
+		return
+	}
+	overview, err := rs.service.GetStaffAppointmentOverview(r.Context(), appointmentID, occurrenceDate)
 	if err != nil {
 		renderCalendarError(w, r, err)
 		return
@@ -369,12 +405,12 @@ func (rs *Resource) respond(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var req responseRequest
+	var req calendarService.InvitationAnswer
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	if err := rs.service.RespondToStaffInvitation(r.Context(), recipientID, req.Status); err != nil {
+	if err := rs.service.RespondToStaffInvitation(r.Context(), recipientID, req); err != nil {
 		renderCalendarError(w, r, err)
 		return
 	}
@@ -434,6 +470,8 @@ func renderCalendarError(w http.ResponseWriter, r *http.Request, err error) {
 		common.RenderError(w, r, common.ErrorNotFound(err))
 	case errors.Is(err, calendarService.ErrConflict):
 		common.RenderError(w, r, common.ErrorConflict(err))
+	case errors.Is(err, calendarService.ErrOccurrenceUnavailable):
+		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeCalendarOccurrenceUnavailable))
 	case errors.Is(err, calendarService.ErrParentConferenceSlotTaken):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeSchoolParentConferenceSlotTaken))
 	default:

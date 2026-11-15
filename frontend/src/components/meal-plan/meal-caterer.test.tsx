@@ -103,11 +103,7 @@ describe("MealCaterer", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "Widerrufen" }));
     expect(mocks.revokeMealCatererInvitation).not.toHaveBeenCalled();
     const dialog = await screen.findByRole("dialog");
-    fireEvent.click(
-      Array.from(dialog.querySelectorAll("button")).find(
-        (button) => button.textContent === "Widerrufen",
-      )!,
-    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Widerrufen" }));
     await waitFor(() =>
       expect(mocks.revokeMealCatererInvitation).toHaveBeenCalledWith("5"),
     );
@@ -228,6 +224,32 @@ describe("MealCaterer", () => {
     expect(
       screen.queryByRole("button", { name: "Belieferung beenden" }),
     ).not.toBeInTheDocument();
+  });
+
+  // #5960: the school sees whether its invitation reached the caterer.
+  it("shows what became of each invitation's mail", async () => {
+    mocks.getMealCaterer.mockResolvedValue({
+      supply: null,
+      invitations: [
+        { ...invitation, mailOutcome: "undeliverable" },
+        {
+          ...invitation,
+          id: "6",
+          email: "zweite@example.com",
+          mailOutcome: "delivered",
+        },
+      ],
+    });
+    render(<MealCaterer canManageSupply />, { wrapper: ToastProvider });
+
+    expect(await screen.findByText("Nicht zustellbar")).toBeInTheDocument();
+    // Desktop shows the note as a sub-row, the phone rows in the cell.
+    expect(
+      screen.getAllByText(
+        "Die Mail kam nicht an. Stimmt die Adresse nicht, widerrufen Sie die Einladung und laden Sie neu ein.",
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText("Zugestellt")).toBeInTheDocument();
   });
 
   it("tells non-admins that only admins invite a caterer", async () => {
@@ -409,11 +431,7 @@ describe("reload after a write (#6652)", () => {
     );
     fireEvent.click(screen.getByRole("menuitem", { name: "Widerrufen" }));
     const dialog = await screen.findByRole("dialog");
-    fireEvent.click(
-      Array.from(dialog.querySelectorAll("button")).find(
-        (button) => button.textContent === "Widerrufen",
-      )!,
-    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Widerrufen" }));
 
     await expectReloadOnly(
       mocks.revokeMealCatererInvitation,

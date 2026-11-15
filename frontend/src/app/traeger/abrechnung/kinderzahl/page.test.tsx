@@ -130,5 +130,8 @@ describe("TraegerKinderzahlPage", () => {
     expect(
       await screen.findByText(/Noch keine Geschwisterregel zählt diese Zahl/),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Zu den Ermäßigungen" }),
+    ).toHaveAttribute("href", "/abrechnung/ermaessigungen");
   });
 });

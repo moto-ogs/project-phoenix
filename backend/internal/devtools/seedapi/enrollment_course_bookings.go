@@ -48,8 +48,17 @@ func withSeedCourseBookings(offerings map[string]int64, childFirstName, childLas
 func seedEnrollmentChildAnswers(childFirstName, childLastName string) map[string]any {
 	answers := map[string]any{"allergies": "keine", "swimming_permission": true}
 	switch childFirstName + " " + childLastName {
-	case "Luka Berisha":
+	case "Luka Berisha", "Ben Hartmann":
 		answers["allergies"] = "Laktoseintoleranz. Bitte keine Milchprodukte beim Mittagessen."
+	// A few different answers make the filter list them as choices beside
+	// "Angabe vorhanden" (#7012); Felix is written once in capitals, which
+	// the filter reads as the same answer.
+	case "Felix Schneider":
+		answers["allergies"] = "NÜSSE"
+	case "Zofia Kowalczyk", "Omar Al-Hassan":
+		answers["allergies"] = "Nüsse"
+	case "Clara Neumann":
+		answers["allergies"] = "Heuschnupfen im Frühjahr"
 	case "Emma Klein", "Anastasia Smirnow":
 		answers["swimming_permission"] = false
 	}

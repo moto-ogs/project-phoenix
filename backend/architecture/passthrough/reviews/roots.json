@@ -402,11 +402,6 @@
     },
     {
       "decision": "0090",
-      "id": "api/calendarPeriodUsage.UsageCounts",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "api/capabilityError.Error",
       "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
     },
@@ -676,6 +671,11 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0075",
+      "id": "api/groupLiveSettings.StudentCardActivitiesEnabled",
+      "reason": "ADR 0075 consumer-port adapter (#6487): binds the live-group projection Settings port to the tenant setting operations.student_card_activities_enabled, the same shape as StudentPhotosEnabled."
+    },
+    {
       "decision": "0090",
       "id": "api/groupLiveSettings.StudentPhotosEnabled",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
@@ -734,6 +734,11 @@
       "decision": "0212",
       "id": "api/messageAttachmentUnits.PrepareMessageAttachment",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0075",
+      "id": "api/notificationFeed.Page",
+      "reason": "ADR 0075 consumer-port adapter (#7148): translates Delivery's notification feed page onto the feed port of the HTTP adapter; the count and read-state calls reach Delivery's reader unchanged through the embedded interface. No decision or SQL."
     },
     {
       "decision": "0090",
@@ -946,6 +951,11 @@
       "reason": "ADR 0158 (#4684): Consumer-port adapter of the Elternabrechnung's settings port; it reads the month rule of the Träger through the Settings Platform's Träger level in the caller's Träger transaction and translates the keyed text into the port's answer."
     },
     {
+      "decision": "0121",
+      "id": "api/parentBillingSettings.DebtorNumberScope",
+      "reason": "ADR 0121 addendum (#5621), extended by #7007: Consumer-port adapter of the Elternabrechnung's settings port; it reads whom the Träger's debtor numbers name through the Settings Platform's Träger level in the caller's Träger transaction and translates the keyed text into the port's scope, the payer for any value it does not know."
+    },
+    {
       "decision": "0115",
       "id": "api/parentBillingSettings.HolidayChain",
       "reason": "ADR 0115 addendum (#5664): Consumer-port adapter of the Elternabrechnung's settings port; it reads how the Träger ranks siblings and when a cost bearer takes over through the Settings Platform's Träger level in the caller's Träger transaction and translates the two keys into the chain settings of the Elternabrechnung."
@@ -1009,6 +1019,11 @@
       "decision": "0090",
       "id": "api/pickupBaselineProjection.RegularPickup",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0234",
+      "id": "api/schoolSearchActivities.ActivityGroupIDs",
+      "reason": "Owner-edge translation at the root (ADR 0075 floor shape): reduces the note card's enrollment read (studentActiveEnrollments) to the activity IDs the school search projection's care team question needs (ADR 0234)."
     },
     {
       "decision": "0090",
@@ -1266,9 +1281,24 @@
       "reason": "ADR 0109 (#4655): root translation of the People Directory persons behind staff IDs into the Träger projection's person vocabulary."
     },
     {
+      "decision": "0241",
+      "id": "api/traegerPresenceSeries.AttendanceCountsByTenant",
+      "reason": "ADR 0241 (#4713): Consumer-port adapter of the Träger projection's presence series port; it translates Student Presence's check-ins per school and day into the projection's DailyCounts vocabulary."
+    },
+    {
       "decision": "0214",
       "id": "api/traegerRegisteredChildren.RegisteredChildren",
       "reason": "ADR 0214 (#6683): Consumer-port adapter of the Träger projection's registered children port; it translates Enrollment's registered holiday children into the projection's RegisteredChild vocabulary."
+    },
+    {
+      "decision": "0241",
+      "id": "api/traegerRoomNames.RoomsByTenant",
+      "reason": "ADR 0241 (#4713): Consumer-port adapter of the Träger projection's room names port; it translates the rooms of Facilities into the projection's NamedRoom vocabulary."
+    },
+    {
+      "decision": "0233",
+      "id": "api/traegerSchoolEmployments.SchoolEmployments",
+      "reason": "ADR 0233 (#4705): Consumer-port adapter that reads the live employments of one school from School Membership for the staff records of the Träger; external caregivers stay out (ADR 0089 section 1)."
     },
     {
       "decision": "0090",
@@ -1279,6 +1309,11 @@
       "decision": "0090",
       "id": "api/traegerSchoolIDs.ListTraegerSchoolIDs",
       "reason": "#4657: root translation of a deactivated, deleted or unknown Träger at Organisation \u0026 Tenancy onto the Träger projection's ErrTraegerUnavailable, which ends the Träger session with 401."
+    },
+    {
+      "decision": "0233",
+      "id": "api/traegerSchoolPersons.SchoolPersons",
+      "reason": "ADR 0233 (#4705): Consumer-port adapter that reads the persons behind those employments from the People Directory and translates them into Workforce's TraegerSchoolPerson."
     },
     {
       "decision": "0090",
@@ -1529,6 +1564,11 @@
       "decision": "0090",
       "id": "roots/owners/CallerRows.TeacherRow",
       "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
+    },
+    {
+      "decision": "0088",
+      "id": "roots/owners/CareContractDebtorNumbers.DebtorNumberScope",
+      "reason": "Consumer-port adapter of the Betreuungsvertrag (#4723): it reads at the Elternabrechnung whom the debtor numbers of the Träger name, in the Träger transaction of an import of contracts, and maps the scope into the Betreuungsvertrag's words; an unknown scope is an error."
     },
     {
       "decision": "0126",
@@ -1783,11 +1823,6 @@
     {
       "decision": "0090",
       "id": "roots/owners/EducationCaregivers.ListActiveCaregivers",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/EducationRooms.FindRoom",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

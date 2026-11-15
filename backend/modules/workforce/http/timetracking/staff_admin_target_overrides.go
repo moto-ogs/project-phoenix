@@ -91,6 +91,9 @@ func (rs *StaffAdminResource) createTargetOverride(w http.ResponseWriter, r *htt
 	if !ok {
 		return
 	}
+	if !rs.refuseSollKeptByTraeger(w, r, staffID) {
+		return
+	}
 	fields, ok := decodeTargetOverride(w, r)
 	if !ok {
 		return
@@ -118,6 +121,9 @@ func (rs *StaffAdminResource) deleteTargetOverride(w http.ResponseWriter, r *htt
 	overrideID, err := parseInt64Param(r, "overrideId")
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
+	if !rs.refuseSollKeptByTraeger(w, r, staffID) {
 		return
 	}
 	if err := rs.targetOverrides.DeleteStaffTargetOverride(r.Context(), staffID, overrideID); err != nil {

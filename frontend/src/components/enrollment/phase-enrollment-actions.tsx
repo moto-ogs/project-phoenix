@@ -48,6 +48,7 @@ import {
 import { PublicLinkCopyButton } from "~/components/enrollment/public-link-copy-button";
 import {
   existingChildChoiceDescription,
+  existingChildChoiceOf,
   existingChildChoiceOptions,
   renewedChildNameOf,
   sendWithExistingChildChoice,
@@ -175,6 +176,7 @@ export function LateInviteModal({
                   url={generatedUrl}
                   componentId={`LateInvite:${phase.id}:${generatedUrl}`}
                   label="Nachzügler-Link kopieren"
+                  tooltip="Kopiert den Link, damit Sie ihn dieser Familie geben können."
                   qrCode={{
                     title: "QR-Code für den Nachzügler-Link",
                     fileName: "qr-code-nachzuegler-anmeldung",
@@ -186,7 +188,13 @@ export function LateInviteModal({
         ) : null}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" size="md" onClick={onClose}>
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            onClick={onClose}
+            noTooltip="Schließen schließt nur das Fenster, ohne etwas zu ändern."
+          >
             Schließen
           </Button>
           <Button
@@ -194,6 +202,7 @@ export function LateInviteModal({
             size="md"
             isLoading={loading}
             loadingText="Erstelle..."
+            tooltip="Erstellt einen 14 Tage gültigen Link, den Sie selbst weitergeben."
           >
             Link erstellen
           </Button>
@@ -423,6 +432,7 @@ export function ManualApprovedEnrollmentModal({
                     url={statusUrl}
                     componentId={`ManualEnrollment:${phase.id}:${statusUrl}`}
                     label="Statuslink kopieren"
+                    tooltip="Kopiert den Link zur Statusseite, die die Eltern sehen."
                     qrCode={{
                       title: "QR-Code für den Statuslink",
                       fileName: "qr-code-anmeldung-status",
@@ -489,6 +499,11 @@ export function ManualApprovedEnrollmentModal({
               showBlockedOfferings
               offeringBookingStats={bookingStats}
               submitLabel="Kind anlegen und freigeben"
+              submitTooltip={
+                sendNotification
+                  ? "Legt das Kind an, sagt den Platz verbindlich zu und benachrichtigt die Eltern."
+                  : "Legt das Kind an und sagt den Platz verbindlich zu, ohne E-Mail."
+              }
             />
           ) : null}
         </div>
@@ -504,9 +519,7 @@ export function ManualApprovedEnrollmentModal({
           onClose={() => answerExistingChildQuestion(null)}
           onSelect={(value) =>
             answerExistingChildQuestion(
-              value === "new"
-                ? { createNewStudent: true }
-                : { existingStudentId: value },
+              existingChildChoiceOf(value, existingChildQuestion.subject),
             )
           }
         />

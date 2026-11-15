@@ -22,18 +22,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.AttachmentDigests",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.AttachmentPurger.AttachmentDigests",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CountAttachments",
       "classification": "query",
       "effect": "query",
@@ -55,18 +43,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CountAttachments",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.AttachmentPurger.CountAttachments",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.QueueAttachmentCleanupForAnnouncement",
       "classification": "query",
       "effect": "query",
@@ -75,18 +51,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.QueueAttachmentCleanupForAnnouncement",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.AttachmentPurger.QueueAttachmentCleanupForAnnouncement",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.AttachmentDigests",
@@ -110,18 +74,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.AttachmentDigests",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.AttachmentDigests",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CleanupOrphanedFiles",
       "classification": "query",
       "effect": "query",
@@ -143,18 +95,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CleanupOrphanedFiles",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.CleanupOrphanedFiles",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CountAttachments",
       "classification": "query",
       "effect": "query",
@@ -174,18 +114,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CountAttachments",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.CountAttachments",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CreateFolder",
@@ -219,18 +147,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CreateFolder",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.CreateFolder",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.DeleteAttachment",
       "classification": "query",
       "effect": "query",
@@ -261,18 +177,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.DeleteAttachment",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.DeleteAttachment",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.DeleteFile",
@@ -327,18 +231,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.DeleteFile",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.DeleteFile",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.DeleteFolder",
       "classification": "query",
       "effect": "query",
@@ -358,18 +250,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.DeleteFolder",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.DeleteFolder",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListAttachments",
@@ -393,18 +273,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListAttachments",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.ListAttachments",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListAudienceOptions",
       "classification": "query",
       "effect": "query",
@@ -424,18 +292,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListAudienceOptions",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.ListAudienceOptions",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListFiles",
@@ -490,18 +346,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListFiles",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.ListFiles",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListFolders",
       "classification": "query",
       "effect": "query",
@@ -543,18 +387,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListFolders",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.ListFolders",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.OpenAttachment",
       "classification": "query",
       "effect": "query",
@@ -574,18 +406,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.OpenAttachment",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.OpenAttachment",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.OpenFile",
@@ -629,18 +449,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.OpenFile",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.OpenFile",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.QueueAttachmentCleanupForAnnouncement",
       "classification": "query",
       "effect": "query",
@@ -649,18 +457,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.QueueAttachmentCleanupForAnnouncement",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.QueueAttachmentCleanupForAnnouncement",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.UpdateFolder",
@@ -694,18 +490,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.UpdateFolder",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.UpdateFolder",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.UploadAttachment",
       "classification": "query",
       "effect": "query",
@@ -725,18 +509,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.UploadAttachment",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.UploadAttachment",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.UploadFile",
@@ -789,18 +561,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.UploadFile",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.UploadFile",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/filestorage/internal/application.Dependencies.Now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "adr": "0098",

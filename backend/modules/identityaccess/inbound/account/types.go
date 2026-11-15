@@ -53,6 +53,11 @@ type TenantResolveResponse struct {
 	// the school has parent-OGS messaging turned off, instead of composing into a
 	// 403 dead-end. Defaults to false when the setting is missing/unresolvable.
 	ParentMessagingEnabled bool `json:"parent_messaging_enabled"`
+	// ParentMessageCardBadgeEnabled is the resolved
+	// operations.parent_message_card_badge_enabled setting (#6486), only true
+	// while parent messaging itself is on. Every staff member's child cards
+	// follow it, also without config:read.
+	ParentMessageCardBadgeEnabled bool `json:"parent_message_card_badge_enabled"`
 	// StaffMessagingEnabled is the tenant's resolved
 	// operations.staff_messaging_enabled setting — the OGS-internal colleague
 	// chat (#2598). Shell metadata like the flags above so non-admin staff (no
@@ -156,6 +161,12 @@ type TenantResolveResponse struct {
 	// staff member's navigation follows it, also without config:read. A lookup
 	// error fails the shell request.
 	ChildSearchOnlyNavigation bool `json:"child_search_only_navigation"`
+	// SimpleStaffNavigation is the tenant's resolved
+	// operations.simple_staff_navigation setting (#6956): staff who do not
+	// lead the school see only the pages of the daily care work. Shell
+	// metadata because every staff member's navigation follows it, also
+	// without config:read. A lookup error fails the shell request.
+	SimpleStaffNavigation bool `json:"simple_staff_navigation"`
 	// CareFacilityTerm is the school's resolved enrollment.care_facility_term
 	// setting (#6042), "OGS" by default. The public enrollment form, its
 	// status page and the embedded parent form fill it into their fixed
@@ -175,6 +186,7 @@ type tenantShellSettings struct {
 	studentPhotosEnabled      bool
 	bookedModules             []settings.ModuleKey
 	parentMessagingEnabled    bool
+	parentMessageCardBadge    bool
 	staffMessagingEnabled     bool
 	displayEnabled            bool
 	calDAVEnabled             bool
@@ -194,6 +206,7 @@ type tenantShellSettings struct {
 	earlyCheckoutTolerance    int
 	weekendFollowsFriday      bool
 	childSearchOnlyNavigation bool
+	simpleStaffNavigation     bool
 	careFacilityTerm          string
 }
 

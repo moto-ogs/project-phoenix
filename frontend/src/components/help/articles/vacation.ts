@@ -1,5 +1,6 @@
 import type { HelpTopic } from "../help-types";
 import { HELP_TOPICS } from "~/lib/help-topics";
+import { SIMPLE_NAV_DIFFERENCE } from "../help-article-shared";
 
 export function vacationTopic(): HelpTopic {
   return {
@@ -24,10 +25,14 @@ export function vacationTopic(): HelpTopic {
       "Der Antrag erscheint unter `Meine Anträge`. Dort sehen Sie, ob er offen, genehmigt, abgelehnt oder zur Rückfrage zurückgegeben wurde.",
     differences: [
       "Krankheit, Fortbildung und andere Abwesenheiten melden Sie über `Abwesend` in der Stempeluhr. Dafür stellen Sie keinen Urlaubsantrag.",
+      SIMPLE_NAV_DIFFERENCE,
     ],
     notes: [
       "Einen offenen oder zukünftigen genehmigten Antrag können Sie stornieren.",
+      "Ist der Antrag genehmigt, fallen Ihre Schichten an den ganzen Urlaubstagen aus. Im Betreuungsplan stehen Sie dann als abwesend. Das Team sieht dort nur `Abwesenheit`.",
+      "Stornieren Sie einen genehmigten Antrag, plant moto Sie an diesen Tagen wieder ein.",
       "Bei einer `Rückfrage` schreiben Sie eine Antwort und wählen `Antwort senden & erneut einreichen`.",
+      "Unter einem offenen Antrag steht `Mail an die Leitung`, wenn die Schule die Leitung per Mail informiert. Kam eine Mail nicht an, sagen Sie der Leitung direkt Bescheid.",
     ],
     related: [HELP_TOPICS.ownAbsence, HELP_TOPICS.correctWorkTime],
   };

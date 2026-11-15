@@ -128,6 +128,9 @@ type staffWorkScheduleRow struct {
 	ValidUntil         *calendarDate `bun:"valid_until,type:date"`
 	CreatedAt          time.Time     `bun:"created_at,notnull"`
 	UpdatedAt          time.Time     `bun:"updated_at,notnull"`
+	// KeptByTraeger is read only by CurrentStaffSchedule: whether a contract
+	// of the Träger governs the employment's Soll (#4706, ADR 0237).
+	KeptByTraeger bool `bun:"kept_by_traeger,scanonly"`
 }
 
 // --- work-time templates ---
@@ -406,6 +409,14 @@ func (s *Store) DeleteWorkTimeModel(ctx context.Context, id int64) (bool, domain
 
 // --- staff schedules ---
 
+// staffSollKeptExpr tells, in the statement that reads the schedule, whether
+// a contract of the Träger that has not ended names the employment (#4706).
+// The school reads only the Soll of its own employments (RLS).
+const staffSollKeptExpr = `EXISTS (SELECT FROM workforce.staff_contract_targets AS target
+	JOIN workforce.staff_contracts AS contract ON contract.id = target.contract_id
+	WHERE target.school_id = "staff_work_schedule".tenant_id AND target.membership_id = "staff_work_schedule".staff_id
+	  AND (contract.ends_on IS NULL OR contract.ends_on >= (now() AT TIME ZONE 'Europe/Berlin')::date))`
+
 func (s *Store) CurrentStaffSchedule(ctx context.Context, staffID int64) ([]domain.StaffWorkSchedule, domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
@@ -415,6 +426,8 @@ func (s *Store) CurrentStaffSchedule(ctx context.Context, staffID int64) ([]doma
 	query := withTenant(db.NewSelect().
 		Model(&rows).
 		ModelTableExpr(tableStaffWorkSchedules+` AS "staff_work_schedule"`).
+		ColumnExpr(`"staff_work_schedule".*`).
+		ColumnExpr(staffSollKeptExpr+` AS kept_by_traeger`).
 		Where("staff_id = ?", staffID).
 		Where("valid_until IS NULL").
 		OrderExpr("day_of_week ASC"), "staff_work_schedule", scope)
@@ -537,9 +550,12 @@ func (s *Store) CloseStaffSchedules(ctx context.Context, staffIDs []int64, until
 	if err != nil {
 		return domain.OperationStats{}, err
 	}
+	// A version that starts after until exists only as the Träger's mirror
+	// of a future contract Soll (#4706). It ends on its own first day: an
+	// empty version no day reads, never a last day before its first.
 	query := db.NewUpdate().
 		TableExpr(tableStaffWorkSchedules).
-		Set("valid_until = ?", calendarDate(until)).
+		Set("valid_until = GREATEST(?::date, valid_from)", calendarDate(until)).
 		Set("updated_at = ?", time.Now()).
 		Where("staff_id IN (?)", bun.List(staffIDs)).
 		Where("valid_until IS NULL")
@@ -630,6 +646,7 @@ func staffSchedulesToDomain(rows []staffWorkScheduleRow) []domain.StaffWorkSched
 			ValidFrom:          string(row.ValidFrom),
 			ValidUntil:         calendarDateString(row.ValidUntil),
 			CreatedAt:          row.CreatedAt, UpdatedAt: row.UpdatedAt,
+			KeptByTraeger: row.KeptByTraeger,
 		})
 	}
 	return result
@@ -666,10 +683,14 @@ func scanOne(ctx context.Context, query *bun.SelectQuery, operation string) (boo
 	return true, stats, nil
 }
 
-func scanAll(ctx context.Context, query *bun.SelectQuery, operation string) (domain.OperationStats, error) {
+// scanAll runs one read into the query's model or, for a raw query, into
+// dest.
+func scanAll(ctx context.Context, query interface {
+	Scan(context.Context, ...any) error
+}, operation string, dest ...any) (domain.OperationStats, error) {
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
-	err := query.Scan(ctx)
+	err := query.Scan(ctx, dest...)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return stats, fmt.Errorf("workforce postgres: %s: %w", operation, err)

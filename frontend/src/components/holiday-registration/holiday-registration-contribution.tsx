@@ -22,9 +22,10 @@ import {
   type NewUploadValue,
   type UploadValue,
 } from "~/lib/enrollment-uploads";
-import type {
-  ContributionLine,
-  HolidayContribution,
+import {
+  type ContributionLine,
+  type HolidayContribution,
+  lunchPriceOf,
 } from "~/lib/holiday-contribution";
 import {
   type HolidayRegistrationOffer,
@@ -142,6 +143,22 @@ export function HolidayRegistrationContribution({
   );
   const label = (line: ContributionLine): string => {
     switch (line.kind) {
+      case "meal": {
+        const price = lunchPriceOf(line);
+        const lunch =
+          price === null
+            ? t("contributionLunch")
+            : t("contributionLunchCount", {
+                count: line.bookedDays ?? 0,
+                price: euro.format(price / 100),
+              });
+        return line.weekStartsOn && line.weekEndsOn
+          ? `${t("weekRange", {
+              starts: formatDate(line.weekStartsOn, false, locale),
+              ends: formatDate(line.weekEndsOn, false, locale),
+            })} · ${lunch}`
+          : lunch;
+      }
       case "base":
         return line.weekStartsOn && line.weekEndsOn
           ? `${t("weekRange", {
@@ -186,6 +203,7 @@ export function HolidayRegistrationContribution({
               variant="outline"
               size="md"
               onClick={() => void load()}
+              tooltip={t("contributionRetryHint")}
             >
               {t("contributionRetry")}
             </Button>

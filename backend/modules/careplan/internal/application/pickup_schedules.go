@@ -23,17 +23,26 @@ type pickupScheduleService struct {
 	students   ports.PickupBulkStudents
 	departures careplan.DepartureExceptions
 	logger     *slog.Logger
+	// today is the school day the weekly plan is projected and written on.
+	today func() calendar.Date
 }
 
+// NewPickupSchedules builds the pickup schedules deciding on today, the
+// Berlin calendar day when nil.
 func NewPickupSchedules(schedules ports.PickupScheduleRepository, exceptions ports.EffectiveExceptionRepository[*careplan.PickupException],
 	notes ports.EffectiveNoteRepository[*careplan.PickupNote], tx ports.PickupScheduleTransaction,
 	baselines careplan.PickupBaselineReader, auto careplan.PickupAutoExcusal,
 	students ports.PickupBulkStudents, departures careplan.DepartureExceptions, logger *slog.Logger,
+	today func() calendar.Date,
 ) careplan.PickupScheduleService {
+	day := calendar.TodayDate
+	if today != nil {
+		day = today
+	}
 	return &pickupScheduleService{
 		effectiveTimeCore: newEffectiveTimeCore(schedules, exceptions, notes, tx, PickupTimeDomain{}),
 		scheduleRepo:      schedules, autoExcusal: auto, PickupBaselineReader: baselines, tx: tx,
-		students: students, departures: departures, logger: logger,
+		students: students, departures: departures, logger: logger, today: day,
 	}
 }
 
@@ -54,7 +63,7 @@ func (s *pickupScheduleService) GetStudentPickupSchedules(
 	ctx context.Context,
 	studentID int64,
 ) ([]*careplan.PickupSchedule, error) {
-	rows, err := s.projectedWeeklySchedules(ctx, []int64{studentID}, calendar.TodayDate())
+	rows, err := s.projectedWeeklySchedules(ctx, []int64{studentID}, s.today())
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +78,7 @@ func (s *pickupScheduleService) GetWeeklySchedulesByStudentIDsAndWeekday(
 	if weekday < 1 || weekday > 5 {
 		return nil, &careplan.ScheduleError{Op: "get student pickup schedules for weekday", Err: errors.New("invalid weekday")}
 	}
-	rows, err := s.projectedWeeklySchedules(ctx, studentIDs, calendar.TodayDate())
+	rows, err := s.projectedWeeklySchedules(ctx, studentIDs, s.today())
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +95,7 @@ func (s *pickupScheduleService) GetWeeklySchedulesByStudentIDs(
 	ctx context.Context,
 	studentIDs []int64,
 ) ([]*careplan.PickupSchedule, error) {
-	return s.projectedWeeklySchedules(ctx, studentIDs, calendar.TodayDate())
+	return s.projectedWeeklySchedules(ctx, studentIDs, s.today())
 }
 
 func (s *pickupScheduleService) GetWeeklySchedulesByStudentIDsForDate(
@@ -105,7 +114,7 @@ func (s *pickupScheduleService) GetStudentPickupScheduleForWeekday(
 	if weekday < 1 || weekday > 5 {
 		return nil, &careplan.ScheduleError{Op: "get student pickup schedule for weekday", Err: errors.New("invalid weekday")}
 	}
-	rows, err := s.projectedWeeklySchedules(ctx, []int64{studentID}, calendar.TodayDate())
+	rows, err := s.projectedWeeklySchedules(ctx, []int64{studentID}, s.today())
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +176,7 @@ func (s *pickupScheduleService) upsertUnlessBooked(ctx context.Context, row *car
 	if err := row.Validate(); err != nil {
 		return &careplan.ScheduleError{Op: "upsert student pickup schedule", Err: err}
 	}
-	date := nextISOWeekday(calendar.TodayDate(), row.Weekday)
+	date := nextISOWeekday(s.today(), row.Weekday)
 	projection, err := s.Project(ctx, []int64{row.StudentID}, date, date)
 	if err != nil {
 		return &careplan.ScheduleError{Op: "upsert student pickup schedule", Err: err}
@@ -197,7 +206,7 @@ func (s *pickupScheduleService) UpsertBulkStudentPickupSchedules(
 	studentID int64,
 	rows []*careplan.PickupSchedule,
 ) error {
-	return s.UpsertBulkStudentPickupSchedulesForDate(ctx, studentID, calendar.TodayDate(), rows)
+	return s.UpsertBulkStudentPickupSchedulesForDate(ctx, studentID, s.today(), rows)
 }
 
 func (s *pickupScheduleService) UpsertBulkStudentPickupSchedulesForDate(
@@ -247,7 +256,7 @@ func (s *pickupScheduleService) withWeeklyResync(
 		if err := s.tx.LockStudent(txCtx, studentID); err != nil {
 			return err
 		}
-		today := calendar.TodayDate()
+		today := s.today()
 		before, err := s.autoExcusal.SnapshotWeeklyPickups(txCtx, studentID, today)
 		if err != nil {
 			return err

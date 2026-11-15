@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/moto-ogs/project-phoenix/realtime"
 
 	scanBindings "github.com/moto-ogs/project-phoenix/roots/devicescanbinding"
@@ -156,6 +158,12 @@ type ActiveSessionEnd struct {
 	SessionEnd sessionend.Command
 }
 
+// arrivalDependenciesAt pins the arrival schedules to the test graph's clock.
+func arrivalDependenciesAt(deps careplanCompose.ArrivalScheduleDependencies, clocks []func() time.Time) careplanCompose.ArrivalScheduleDependencies {
+	deps.Today = calendar.CalendarDateClock(clocks...)
+	return deps
+}
+
 func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, clocks ...func() time.Time) (
 	ActiveTestModule, ActiveTimetable, ActiveSettings, ActivePresence, ActiveEducation, ActivePeople, *owners.CallerRows,
 	ActiveDeviceScan, DeviceTestModule, ActiveFacilities, ActiveSupervision, ActiveSessionEnd, activityContract.ActivityService, error,
@@ -281,11 +289,11 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return fail(err)
 	}
-	pickups, err := careplanCompose.NewPickupSchedules(db.Pool(), carePlan, pickup, autoExcusal, pickupStudents, logger)
+	pickups, err := careplanCompose.NewPickupSchedules(db.Pool(), carePlan, pickup, autoExcusal, pickupStudents, logger, calendar.CalendarDateClock(clocks...))
 	if err != nil {
 		return fail(err)
 	}
-	classExceptions, err := owners.NewClassArrivalExceptions(classArrivalQueries, students)
+	classExceptions, err := owners.NewClassArrivalExceptions(classArrivalQueries, students, calendar.CalendarDateClock(clocks...))
 	if err != nil {
 		return fail(err)
 	}
@@ -293,7 +301,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return fail(err)
 	}
-	arrivals, err := careplanCompose.NewArrivalSchedules(db.Pool(), carePlan, arrival, arrivalRules, arrivalDeps)
+	arrivals, err := careplanCompose.NewArrivalSchedules(db.Pool(), carePlan, arrival, arrivalRules, arrivalDependenciesAt(arrivalDeps, clocks))
 	if err != nil {
 		return fail(err)
 	}

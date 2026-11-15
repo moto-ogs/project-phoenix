@@ -9,7 +9,11 @@ import {
 import "@testing-library/jest-dom/vitest";
 
 vi.unmock("next-intl");
+// The test setup resolves app paths for the test school everywhere; here the
+// layout itself has to (#6577).
+vi.unmock("~/components/ui/page-path");
 
+import { TenantPage } from "~/components/ui/tenant-page";
 import ProtectedLayout from "./layout";
 
 // The layout now includes authenticated navigation data intent. Keep the real
@@ -85,7 +89,7 @@ describe("ProtectedLayout", () => {
 
   it("renders children inside BreadcrumbProvider and AppShell", () => {
     render(
-      <ProtectedLayout>
+      <ProtectedLayout parentAttention={null}>
         <div data-testid="child">Content</div>
       </ProtectedLayout>,
     );
@@ -96,9 +100,22 @@ describe("ProtectedLayout", () => {
     expect(screen.getByTestId("child")).toBeInTheDocument();
   });
 
+  it("führt den Rückweg einer Seite in die Schule", () => {
+    render(
+      <ProtectedLayout parentAttention={null}>
+        <TenantPage title="Raum 1" back backHref="/rooms" />
+      </ProtectedLayout>,
+    );
+
+    expect(screen.getByRole("link", { name: "Zurück" })).toHaveAttribute(
+      "href",
+      "/test-tenant/rooms",
+    );
+  });
+
   it("nests AppShell inside BreadcrumbProvider", () => {
     render(
-      <ProtectedLayout>
+      <ProtectedLayout parentAttention={null}>
         <span>Nested</span>
       </ProtectedLayout>,
     );
@@ -127,7 +144,7 @@ describe("ProtectedLayout", () => {
     shellAuth.current = { status: "authenticated", user: { id: "5" } };
 
     render(
-      <ProtectedLayout>
+      <ProtectedLayout parentAttention={null}>
         <div>Geschützter Inhalt</div>
       </ProtectedLayout>,
     );
@@ -168,7 +185,7 @@ describe("ProtectedLayout", () => {
     localStorage.setItem("moto-pwa-install-hint-visits", "1");
 
     render(
-      <ProtectedLayout>
+      <ProtectedLayout parentAttention={null}>
         <div>Geschützter Inhalt</div>
       </ProtectedLayout>,
     );

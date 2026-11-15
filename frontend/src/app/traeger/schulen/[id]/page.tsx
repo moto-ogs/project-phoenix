@@ -11,6 +11,7 @@ import {
   SCHOOL_SWITCH_MISSING_HINT,
   useOpenTraegerSchool,
 } from "~/components/traeger/use-open-traeger-school";
+import { TraegerCodeStepModal } from "~/components/traeger/traeger-code-step-modal";
 import { useTraegerSchool } from "~/components/traeger/use-traeger-school";
 import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
@@ -26,7 +27,10 @@ import { sickConcept } from "~/lib/concepts/sick";
 import { staffConcept } from "~/lib/concepts/staff";
 import { supervisionConcept } from "~/lib/concepts/supervision";
 import type { TraegerSchoolView } from "~/lib/traeger-api";
-import { TRAEGER_HANDOFF_OPEN } from "~/lib/traeger-handoff";
+import {
+  TRAEGER_HANDOFF_OPEN,
+  TRAEGER_HANDOFF_OPEN_HINT,
+} from "~/lib/traeger-handoff";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
@@ -163,7 +167,7 @@ function MasterDataTab({
 export default function TraegerSchoolPage() {
   const params = useParams<{ id: string }>();
   const { school, error } = useTraegerSchool(params?.id ?? "");
-  const { canOpen, opening, open } = useOpenTraegerSchool();
+  const { canOpen, opening, open, codeStepModal } = useOpenTraegerSchool();
   const [tab, setTab] = useState<SchoolTab>("uebersicht");
 
   return (
@@ -202,7 +206,7 @@ export default function TraegerSchoolPage() {
             size="md"
             className="gap-2"
             aria-label={`${TRAEGER_HANDOFF_OPEN}: ${school.name}, neuer Tab`}
-            title="Öffnet in einem neuen Tab"
+            tooltip={TRAEGER_HANDOFF_OPEN_HINT}
             disabled={opening !== null}
             onClick={() => void open(school)}
           >
@@ -229,6 +233,7 @@ export default function TraegerSchoolPage() {
       ) : (
         <MasterDataTab school={school} />
       )}
+      <TraegerCodeStepModal {...codeStepModal} />
     </TenantPage>
   );
 }

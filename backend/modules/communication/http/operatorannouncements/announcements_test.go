@@ -18,6 +18,7 @@ import (
 	platform "github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // Test constants used in mock assertions (not DB-dependent)
@@ -191,7 +192,7 @@ func TestCreateAnnouncement_InvalidExpiresAt(t *testing.T) {
 func TestUpdateAnnouncement_InvalidExpiresAt(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := operatorTestNow
 	mockService := &mockAnnouncementService{
 		getAnnouncementFn: func(ctx context.Context, id int64) (*platform.Announcement, error) {
 			announcement := &platform.Announcement{
@@ -255,7 +256,7 @@ func callIDHandler(handler idHandlerFunc, method, path, id string) *httptest.Res
 
 // existingAnnouncement returns a mock getAnnouncementFn that always returns a valid announcement.
 func existingAnnouncement() func(ctx context.Context, id int64) (*platform.Announcement, error) {
-	now := time.Now()
+	now := operatorTestNow
 	return func(ctx context.Context, id int64) (*platform.Announcement, error) {
 		a := &platform.Announcement{
 			Title: "Title", Content: "Content",
@@ -357,7 +358,7 @@ func TestUpdateAnnouncement_WithOrgAndTenantTargeting(t *testing.T) {
 func TestCreateAnnouncement_ResponseIncludesTargetingFields(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := operatorTestNow
 	mock := &mockAnnouncementService{
 		createFn: func(_ context.Context, a *platform.Announcement, _ int64, _ net.IP) error {
 			a.ID = testAnnouncementID
@@ -393,7 +394,7 @@ func TestCreateAnnouncement_ResponseIncludesTargetingFields(t *testing.T) {
 func TestGetAnnouncement_ResponseIncludesTargetingFields(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := operatorTestNow
 	mock := &mockAnnouncementService{
 		getAnnouncementFn: func(_ context.Context, _ int64) (*platform.Announcement, error) {
 			a := &platform.Announcement{
@@ -427,7 +428,7 @@ func TestGetAnnouncement_ResponseIncludesTargetingFields(t *testing.T) {
 func TestListAnnouncements_IncludesOrgAndTenantIDs(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := operatorTestNow
 	mock := &mockAnnouncementService{
 		listFn: func(_ context.Context, _ bool) ([]*platform.Announcement, error) {
 			a := &platform.Announcement{
@@ -464,7 +465,7 @@ func TestListAnnouncements_IncludesOrgAndTenantIDs(t *testing.T) {
 func TestAnnouncementResponse_NilOrgAndTenantIDsDefaultToEmptyArrays(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := operatorTestNow
 	mock := &mockAnnouncementService{
 		listFn: func(_ context.Context, _ bool) ([]*platform.Announcement, error) {
 			a := &platform.Announcement{
@@ -503,7 +504,7 @@ func TestAnnouncementResponse_NilOrgAndTenantIDsDefaultToEmptyArrays(t *testing.
 func TestAnnouncementResponse_Status(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := operatorTestNow
 	publishedAt := now.Add(-1 * time.Hour)
 	publishedAtOld := now.Add(-48 * time.Hour)
 	expiredAt := now.Add(-1 * time.Hour)
@@ -677,8 +678,8 @@ func TestUpdateAnnouncement_InvalidDataError(t *testing.T) {
 func TestUpdateAnnouncement_ClearExpiresAt(t *testing.T) {
 	t.Parallel()
 
-	expiresAt := time.Now().Add(24 * time.Hour)
-	now := time.Now()
+	expiresAt := operatorTestNow.Add(24 * time.Hour)
+	now := operatorTestNow
 	mock := &mockAnnouncementService{
 		getAnnouncementFn: func(_ context.Context, _ int64) (*platform.Announcement, error) {
 			a := &platform.Announcement{
@@ -723,7 +724,7 @@ func TestUpdateAnnouncement_SetValidExpiresAt(t *testing.T) {
 		},
 	}
 	resource := operatorannouncements.NewAnnouncementsResource(mock)
-	future := time.Now().Add(72 * time.Hour).Format(time.RFC3339)
+	future := operatorTestNow.Add(72 * time.Hour).Format(time.RFC3339)
 	body, _ := json.Marshal(map[string]any{
 		"title": "T", "content": "C",
 		"type": platform.TypeAnnouncement, "severity": platform.SeverityInfo, "expires_at": &future,
@@ -744,7 +745,7 @@ func TestUpdateAnnouncement_SetActiveFlag(t *testing.T) {
 
 	mock := &mockAnnouncementService{
 		getAnnouncementFn: func(_ context.Context, _ int64) (*platform.Announcement, error) {
-			now := time.Now()
+			now := operatorTestNow
 			a := &platform.Announcement{
 				Title: "T", Content: "C",
 				Type: platform.TypeAnnouncement, Severity: platform.SeverityInfo, Active: true,
@@ -903,7 +904,7 @@ func TestGetStats_InvalidID(t *testing.T) {
 func TestGetViewDetails_ResponseStructure(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := operatorTestNow
 	mock := &mockAnnouncementService{
 		getViewDetailsFn: func(_ context.Context, _ int64) ([]*platform.AnnouncementViewDetail, error) {
 			return []*platform.AnnouncementViewDetail{
@@ -995,3 +996,8 @@ func TestGetAnnouncement_NotFound(t *testing.T) {
 	rr := callIDHandler(resource.GetAnnouncement, http.MethodGet, "/announcements/999", "999")
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
+
+// operatorTestNow is the fixed instant of the announcement fixtures, a
+// Wednesday 10:00 in Berlin (#7104). It lies in the past, so an announcement
+// that expired before it stays expired for the handler's real clock.
+var operatorTestNow = calendar.NewDate(2026, time.January, 14).BerlinMidnight().Add(10 * time.Hour)

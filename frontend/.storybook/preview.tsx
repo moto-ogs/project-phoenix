@@ -8,7 +8,10 @@ import { mockSessionData } from "./fixtures/session";
 import type { TenantInfo } from "~/lib/tenant-api";
 import deMessages from "~/i18n/messages/de.generated";
 
+import { configure } from "storybook/test";
+
 import "~/styles/globals.css";
+import "./fonts.css";
 
 // Fake tenant metadata satisfying TenantInfo (see ~/lib/tenant-api) so
 // components reading tenant context (LOCATION_COLORS-driven badges, feature
@@ -27,10 +30,28 @@ const storybookTenant: TenantInfo = {
   messagingEnabled: true,
 };
 
+// Die Storybook-Tests (#7108) laufen alle Stories parallel; unter dieser Last
+// öffnete ein Kalender im ersten Vollauf erst nach der Standardsekunde von
+// findBy*. Fünf Sekunden fangen das ab, ein echter Fehler bleibt rot.
+configure({ asyncUtilTimeout: 5000 });
+
 const preview: Preview = {
+  // Schriften vor jedem Render laden, wie next/font es in der App vorab tut.
+  // Sonst misst ein Baustein beim Mounten mit der Ersatzschrift und misst
+  // nicht neu: der Unterstrich der damaligen NavigationTabs saß im Pixel-Vergleich
+  // (#6562) in etwa jedem fünften Lauf 18 px zu weit links.
+  loaders: [
+    async () => {
+      await Promise.all([
+        document.fonts.load('1em "Inter Storybook"'),
+        document.fonts.load('700 1em "Kalam Storybook"'),
+      ]);
+      return {};
+    },
+  ],
   parameters: {
     a11y: {
-      test: "todo",
+      test: "error",
     },
     controls: {
       matchers: {

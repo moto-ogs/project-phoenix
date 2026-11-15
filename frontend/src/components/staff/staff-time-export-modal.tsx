@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import type { FormErrorInput } from "~/components/ui/form-error";
 import {
   FormErrorAlert,
@@ -21,10 +21,12 @@ import {
   fetchSFTPStatus,
   transferExportViaSFTP,
   transferFailureMessage,
+  transferFailureSettingsHref,
   type SFTPStatus,
   type TransferOutcome,
 } from "~/lib/sftp-export-api";
 import { createLogger } from "~/lib/logger";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 import { Loading } from "~/components/ui/loading";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
@@ -63,6 +65,9 @@ interface Props {
   /** Der in der Tabelle angezeigte Monat — Vorauswahl des Zeitraums. */
   readonly year: number;
   readonly month: number;
+  /** May the viewer change the settings? Then a failed transfer links
+   *  to the setting it names (#7054). */
+  readonly canOpenSettings?: boolean;
 }
 
 // Chip-Gruppe im Stil der Saldo-Presets der Zeitkonten-Tabelle: sichtbare
@@ -73,12 +78,16 @@ function OptionGroup<T extends string>({
   value,
   onChange,
   disabled,
+  disabledReason,
 }: {
   readonly label: string;
-  readonly options: readonly { id: T; label: string }[];
+  /** `hint`: was die Wahl außer der Einstellung auslöst (#6771). */
+  readonly options: readonly { id: T; label: string; hint?: string }[];
   readonly value: T;
   readonly onChange: (value: T) => void;
   readonly disabled?: boolean;
+  /** Warum die Gruppe gesperrt ist; Pflicht, sobald `disabled` gesetzt ist. */
+  readonly disabledReason?: string;
 }) {
   return (
     <div>
@@ -91,7 +100,14 @@ function OptionGroup<T extends string>({
             size="compact"
             variant={value === option.id && !disabled ? "primary" : "outline"}
             disabled={disabled}
+            disabledReason={disabledReason}
             onClick={() => onChange(option.id)}
+            {...(option.hint
+              ? { tooltip: option.hint }
+              : {
+                  noTooltip:
+                    "Wählt nur eine Einstellung für den Export, das Wort nennt sie.",
+                })}
           >
             {option.label}
           </Button>
@@ -99,6 +115,23 @@ function OptionGroup<T extends string>({
       </div>
     </div>
   );
+}
+
+const DATEV_HINT =
+  "Zeigt vor dem Export eine Vorschau, fehlende Personalnummern sperren ihn.";
+
+const DATEV_FIXED_REASON =
+  "Eine DATEV-Datei enthält immer die Monatssummen eines Monats.";
+
+/** Warum eine DATEV-Datei noch nicht heruntergeladen werden kann. */
+function datevBlockedReason(state: DatevReportState): string {
+  if (state.status === "failed") {
+    return "Beheben Sie zuerst den Fehler bei der Vorschau oben.";
+  }
+  if (state.status === "ready") {
+    return "Tragen Sie zuerst die fehlenden Personalnummern ein.";
+  }
+  return "moto lädt noch die Vorschau der DATEV-Datei.";
 }
 
 // Vorab-Bericht für die DATEV-Formate: dieselbe Berechnung wie die Datei,
@@ -169,6 +202,12 @@ function transferFailure(state: TransferState): string | null {
   return transferFailureMessage(state.outcome.reason);
 }
 
+// The setting a failed transfer names (#7054); `null` without one.
+function transferSettingsHref(state: TransferState): string | null {
+  if (state.status !== "done" || state.outcome.transferred) return null;
+  return transferFailureSettingsHref(state.outcome.reason);
+}
+
 // Ergebnis der Übertragung. Jeder Fehlschlag, der Anfrage selbst wie der
 // Übertragung, steht im Fehlerkasten des Dialogs.
 function TransferResultPanel({ state }: { readonly state: TransferState }) {
@@ -195,7 +234,13 @@ function TransferResultPanel({ state }: { readonly state: TransferState }) {
 //
 // Die Übertragung an die Gegenstelle (#3050) nutzt dieselbe Auswahl und
 // dieselbe Datei; sie erzeugt keinen zweiten Export.
-export function StaffTimeExportModal({ isOpen, onClose, year, month }: Props) {
+export function StaffTimeExportModal({
+  isOpen,
+  onClose,
+  year,
+  month,
+  canOpenSettings = false,
+}: Props) {
   const [scope, setScope] = useState<Scope>("month");
   const [granularity, setGranularity] = useState<Granularity>("month");
   const [format, setFormat] = useState<FileFormat>("csv");
@@ -206,6 +251,8 @@ export function StaffTimeExportModal({ isOpen, onClose, year, month }: Props) {
     status: "idle",
   });
   const transferErrors = useApiFormError();
+  const tenantPath = useTenantAwarePath();
+  const settingsHref = transferSettingsHref(transferState);
   const reportLoad = useApiLoadError();
   const showReportError = reportLoad.show;
   const clearReportError = reportLoad.clear;
@@ -354,6 +401,11 @@ export function StaffTimeExportModal({ isOpen, onClose, year, month }: Props) {
       activeReportState.report.staffSkipped.length > 0);
   const transferring = transferState.status === "running";
   const exportDisabled = datevBlocked || transferring;
+  // Während der Übertragung bleibt der Knopf nativ gesperrt; nur die
+  // fachliche Sperre der DATEV-Datei nennt einen Grund (#6771).
+  const exportBlockedReason = datevBlocked
+    ? datevBlockedReason(activeReportState)
+    : undefined;
 
   return (
     <Modal
@@ -362,7 +414,13 @@ export function StaffTimeExportModal({ isOpen, onClose, year, month }: Props) {
       title="Zeitkonten exportieren"
       footer={
         <div className="flex justify-end gap-2">
-          <Button type="button" size="md" variant="outline" onClick={onClose}>
+          <Button
+            type="button"
+            size="md"
+            variant="outline"
+            onClick={onClose}
+            noTooltip="Abbrechen schließt den Dialog, ohne etwas zu exportieren."
+          >
             Abbrechen
           </Button>
           <Button
@@ -370,7 +428,13 @@ export function StaffTimeExportModal({ isOpen, onClose, year, month }: Props) {
             size="md"
             variant="primary"
             disabled={exportDisabled}
+            disabledReason={transferring ? undefined : exportBlockedReason}
             onClick={delivery === "sftp" ? handleTransfer : handleExport}
+            tooltip={
+              delivery === "sftp"
+                ? "Schickt die Datei sofort an die eingerichtete Gegenstelle."
+                : "Lädt die Datei herunter und schließt den Dialog."
+            }
           >
             {delivery === "sftp"
               ? transferring
@@ -384,6 +448,21 @@ export function StaffTimeExportModal({ isOpen, onClose, year, month }: Props) {
       <div className="space-y-4">
         <FormErrorAlert
           message={transferErrors.error ?? transferFailure(transferState)}
+          action={
+            // Only someone who may change the settings gets the link; a
+            // new tab keeps this dialog and its choices.
+            settingsHref && !transferErrors.error && canOpenSettings ? (
+              <ButtonLink
+                href={tenantPath(settingsHref)}
+                newTab
+                variant="surface"
+                size="compact"
+                tooltip="Öffnet die Übertragung der Zeitkonten in den Einstellungen in einem neuen Tab."
+              >
+                Zu den Einstellungen
+              </ButtonLink>
+            ) : undefined
+          }
         />
         <p className="text-sm text-gray-600">
           Export für alle Mitarbeitenden. Die Werte entsprechen der
@@ -399,6 +478,7 @@ export function StaffTimeExportModal({ isOpen, onClose, year, month }: Props) {
           value={datev ? "month" : scope}
           onChange={setScope}
           disabled={datev}
+          disabledReason={DATEV_FIXED_REASON}
         />
         <OptionGroup
           label="Detailgrad"
@@ -409,14 +489,19 @@ export function StaffTimeExportModal({ isOpen, onClose, year, month }: Props) {
           value={datev ? "month" : granularity}
           onChange={setGranularity}
           disabled={datev}
+          disabledReason={DATEV_FIXED_REASON}
         />
         <OptionGroup
           label="Dateiformat"
           options={[
             { id: "csv", label: "CSV" },
             { id: "xlsx", label: "Excel" },
-            { id: "datev_lodas", label: "DATEV LODAS" },
-            { id: "datev_lug", label: "DATEV Lohn und Gehalt" },
+            { id: "datev_lodas", label: "DATEV LODAS", hint: DATEV_HINT },
+            {
+              id: "datev_lug",
+              label: "DATEV Lohn und Gehalt",
+              hint: DATEV_HINT,
+            },
           ]}
           value={format}
           onChange={setFormat}
@@ -442,6 +527,7 @@ export function StaffTimeExportModal({ isOpen, onClose, year, month }: Props) {
               value={delivery}
               onChange={setDelivery}
               disabled={!sftpStatus.ready}
+              disabledReason="Ein Admin muss die Übertragung zuerst in den Einstellungen fertig einrichten."
             />
             {!sftpStatus.ready && (
               <p className="mt-1.5 text-xs text-gray-500">
@@ -475,6 +561,7 @@ export function StaffTimeExportModal({ isOpen, onClose, year, month }: Props) {
             value={timeFormat}
             onChange={setTimeFormat}
             disabled={granularity === "day"}
+            disabledReason="Zeitangaben lassen sich nur bei Monatssummen wählen."
           />
         )}
         {!datev && granularity === "day" && (

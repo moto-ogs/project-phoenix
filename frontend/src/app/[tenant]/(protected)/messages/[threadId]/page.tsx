@@ -37,11 +37,20 @@ import { TenantPage } from "~/components/ui/tenant-page";
 import NavigationLink from "~/components/ui/navigation-link";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { MessageComposer } from "~/components/messaging/message-composer";
-import { ChatBubble, ChatEventCard } from "~/components/messaging/chat-bubble";
+import {
+  ChatBubble,
+  ChatEventCard,
+  type ChatEventAction,
+} from "~/components/messaging/chat-bubble";
 import { PickupRequestDetailModal } from "~/components/messaging/pickup-request-detail-modal";
 import { RequestStatusBadge } from "~/components/messaging/request-status-badge";
 import { useChatViewportLock } from "~/lib/hooks/use-chat-viewport-lock";
 import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
+import { useThreadMails } from "~/lib/hooks/use-message-mails";
+import {
+  MessageMailBadge,
+  messageMailNote,
+} from "~/components/messaging/message-mail-status";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSwitchedOffWhileOpen } from "~/lib/hooks/use-switched-off-while-open";
 import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
@@ -292,21 +301,21 @@ function MessageThreadContent() {
   // Other request pills keep the deep-link to the queue while still open.
   // Either action needs the review scope to reach the child (#3886).
   const [openRequestId, setOpenRequestId] = useState<string | null>(null);
-  const eventAction = (
-    message: Message,
-  ): { label: string; onClick: () => void } | undefined => {
+  const eventAction = (message: Message): ChatEventAction | undefined => {
     if (!canReviewRequests) return undefined;
     if (!requestPillCoveredByReview(message, reviewCoverage)) return undefined;
     const pickupRef = pickupRequestRef(message);
     if (pickupRef) {
       return {
         label: "Anfrage ansehen",
+        description: "Zeigt die Anfrage der Eltern, ohne etwas zu ändern.",
         onClick: () => setOpenRequestId(pickupRef),
       };
     }
     if (requestStillOpen(message)) {
       return {
         label: "Anfrage bearbeiten",
+        description: "Öffnet die offenen Anfragen der Eltern zum Entscheiden.",
         onClick: () => router.push("/anfragen"),
       };
     }
@@ -332,9 +341,15 @@ function MessageThreadContent() {
   // After "Als ungelesen markieren" the page is on its way to the inbox. A
   // refetch now would open the thread again and end the mark at once, so the
   // SSE refresh stands down while leaving.
+  // What became of the e-mail of each OGS message (#7058); follows a send
+  // and every live refresh of the conversation.
+  const threadMails = useThreadMails(threadId);
+  const refreshMails = threadMails.refresh;
   const refreshThread = useCallback(() => {
-    if (!leavingAsUnreadRef.current) void mutate();
-  }, [mutate]);
+    if (leavingAsUnreadRef.current) return;
+    void mutate();
+    void refreshMails();
+  }, [mutate, refreshMails]);
   useMessagesActivity({
     onMatch: refreshThread,
     threadId,
@@ -449,6 +464,7 @@ function MessageThreadContent() {
       },
     });
     sendArrived.current = outcome.status !== "failed";
+    if (outcome.status !== "failed") void refreshMails();
     if (outcome.status === "done") {
       attempt.complete(clientMessageId);
       sentFiles.current = [];
@@ -583,6 +599,7 @@ function MessageThreadContent() {
               onClick={() =>
                 router.push(`/students/${thread.student_id}?from=/messages`)
               }
+              tooltip="Öffnet die Akte des Kindes."
               className="flex-shrink-0"
             >
               <MotoConceptIcon
@@ -597,6 +614,8 @@ function MessageThreadContent() {
               items={[
                 {
                   label: MARK_UNREAD_LABEL,
+                  description:
+                    "Für das ganze Team, bis jemand die Unterhaltung öffnet",
                   onClick: () => void handleMarkUnread(),
                 },
               ]}
@@ -658,6 +677,14 @@ function MessageThreadContent() {
                             ? "Gelesen"
                             : undefined
                         }
+                        mailStatus={
+                          <MessageMailBadge
+                            outcome={threadMails.mails[message.id]}
+                          />
+                        }
+                        mailNote={messageMailNote(
+                          threadMails.mails[message.id],
+                        )}
                       />
                     </div>
                   ),
@@ -677,6 +704,7 @@ function MessageThreadContent() {
             </div>
           )}
 
+          <LoadErrorAlert error={threadMails.loadError} className="mt-3" />
           <FormErrorAlert message={sendError.error} className="mt-3" />
 
           {/* Wer mitliest, steht direkt über dem Schreibfeld (#5200). Die
@@ -706,6 +734,7 @@ function MessageThreadContent() {
                 attachments={{
                   uploadUrl: PARENT_MESSAGE_ATTACHMENTS.uploadUrl,
                 }}
+                sendHint={`Schickt die Nachricht sofort an ${thread?.guardian_name ?? "die Eltern"}.`}
                 placeholder="Nachricht an die Eltern schreiben…"
               />
             ) : (

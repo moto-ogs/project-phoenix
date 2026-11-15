@@ -27,6 +27,7 @@ type Store interface {
 	Statuses(context.Context, int64, domain.Transport, string, int64) ([]domain.Intent, error)
 	TraegerEmailStatuses(context.Context, int64, string, int64) ([]domain.Intent, error)
 	TraegerEmailStatusesByKey(context.Context, int64, []string) ([]domain.Intent, error)
+	TraegerEmailStatusesOf(context.Context, int64, string, []int64, []string) ([]domain.Intent, error)
 	RetryFailedTraegerEmails(context.Context, int64, []string) (int64, error)
 	UnresolvedHolidayClosureEmails(context.Context, int64) ([]domain.Intent, error)
 	EmailStatus(context.Context, int64, int64) (domain.Intent, bool, error)
@@ -56,8 +57,10 @@ type RetentionStore interface {
 	// DeleteExpiredEmailDeliveryEvents removes the events of the mails that
 	// ended before the instant, including those of cleared key-only mails.
 	DeleteExpiredEmailDeliveryEvents(ctx context.Context, tenantID int64, before time.Time) (int, error)
-	// DeleteUnheldEmailSuppressions removes marked addresses nobody at the
-	// school holds any more. Every other mark stays until the school checked it.
+	// DeleteUnheldEmailSuppressions removes marked addresses the school no
+	// longer knows: no guardian with a child in care, no staff or other account
+	// and no open application holds them (#5960). Every other mark stays until
+	// the school checked it.
 	DeleteUnheldEmailSuppressions(ctx context.Context, tenantID int64) (int, error)
 	// DeleteExpiredEmailDeliveryLogs removes the delivery logs of the
 	// expired mails and the logs without a mail written before the instant.
@@ -72,6 +75,30 @@ type RetentionStore interface {
 	// DeleteExpiredRealtimeNotifications removes the in-app notifications
 	// stored for other API processes before the instant (#5504).
 	DeleteExpiredRealtimeNotifications(ctx context.Context, tenantID int64, before time.Time) (int, error)
+	// DeleteExpiredFeedEntries removes the feed entries last updated before
+	// the instant (#7148).
+	DeleteExpiredFeedEntries(ctx context.Context, tenantID int64, before time.Time) (int, error)
+}
+
+// FeedStore keeps the notification feed of the accounts of a school
+// (#7148). Every statement runs on the school's tenant transaction, so
+// row-level security binds it to that school, and is scoped to one account
+// except the publication, which writes one entry per recipient.
+type FeedStore interface {
+	// PublishFeedEntries updates the recipients' unread entry of the same
+	// type and object last updated at or after bundleSince, and adds an entry
+	// for every other recipient.
+	PublishFeedEntries(ctx context.Context, tenantID int64, content domain.FeedEntryContent, accountIDs []int64, now, bundleSince time.Time) (domain.FeedWrite, error)
+	// ListFeedEntries returns up to limit entries of the account after the
+	// cursor, newest update first; a nil cursor starts at the newest.
+	ListFeedEntries(ctx context.Context, tenantID, accountID int64, after *domain.FeedCursor, limit int) ([]domain.FeedEntry, error)
+	CountUnreadFeedEntries(ctx context.Context, tenantID, accountID int64) (int, error)
+	// MarkFeedEntryRead marks one entry of the account read; found is false
+	// for an entry of another account or school. An entry read before stays
+	// as it is.
+	MarkFeedEntryRead(ctx context.Context, tenantID, accountID, entryID int64, now time.Time) (found bool, err error)
+	// MarkAllFeedEntriesRead marks every unread entry of the account read.
+	MarkAllFeedEntriesRead(ctx context.Context, tenantID, accountID int64, now time.Time) (int, error)
 }
 
 // RealtimeNotificationStore keeps the in-app notifications other API

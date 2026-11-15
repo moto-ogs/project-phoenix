@@ -44,7 +44,9 @@ type careMonth struct {
 	// deviations are the family deviations the invoices took (#4689).
 	deviations []parentbilling.FamilyBilling
 	// mandates are the SEPA mandates the invoices took (#4695).
-	mandates       []parentbilling.SEPAMandate
+	mandates []parentbilling.SEPAMandate
+	// childNumbers are the numbers of children the invoices took (#7007).
+	childNumbers   []parentbilling.ChildDebtorNumber
 	invoices       []parentbilling.CareInvoice
 	unpriced       []parentbilling.CareUnpriced
 	duplicates     []parentbilling.CareDuplicate
@@ -153,7 +155,7 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 			continue
 		}
 		invoice.Recipient = in.recipients[contractID]
-		invoice.FamilyEmail = parentbilling.FamilyKey(invoice.Recipient.Email)
+		invoice.FamilyEmail = parentbilling.ContractFamilyKey(invoice.Recipient.Email, contractID)
 		invoice.Service = parentbilling.ServiceCare
 		result.invoices = append(result.invoices, invoice)
 		chained = append(chained, &careChainEntry{child: childOf[contractID], birthDate: byContract[contractID][0].ChildBirthDate})
@@ -210,10 +212,7 @@ func appendInForce(places []careContractPlace, in careMonthInput, versions []par
 		return places
 	}
 	head := versions[0]
-	family := parentbilling.FamilyKey(in.recipients[head.ContractID].Email)
-	if family == "" {
-		family = "contract:" + strconv.FormatInt(head.ContractID, 10)
-	}
+	family := parentbilling.ContractFamilyKey(in.recipients[head.ContractID].Email, head.ContractID)
 	return append(places, careContractPlace{family: family, child: child, school: head.SchoolID})
 }
 

@@ -139,7 +139,7 @@ func (s *service) UpdateReminder(ctx context.Context, id int64, in ReminderInput
 	if a.ReminderSent() {
 		return nil, ErrReminderAlreadySent
 	}
-	text, err := reminderUpdateText(a, in)
+	text, err := reminderUpdateText(a, in, s.now())
 	if err != nil {
 		return nil, err
 	}
@@ -343,7 +343,7 @@ func (s *service) enqueueTrackedReminderEmails(ctx context.Context, a *StaffPare
 	return s.queueLetterMailsAs(ctx, a, recipients, reminderLetterMailSpec(a))
 }
 
-func reminderUpdateText(a *StaffParentAnnouncement, in ReminderInput) (*string, error) {
+func reminderUpdateText(a *StaffParentAnnouncement, in ReminderInput, now time.Time) (*string, error) {
 	text := normalizeReminderText(in.ReminderText)
 	if in.ReminderAt != nil {
 		if a.IsPoll() {
@@ -352,7 +352,7 @@ func reminderUpdateText(a *StaffParentAnnouncement, in ReminderInput) (*string, 
 		if text != nil && len([]rune(*text)) > maxReminderTextLen {
 			return nil, fmt.Errorf("%w: reminder_text is at most %d characters", ErrValidation, maxReminderTextLen)
 		}
-		if err := validateReminder(in.ReminderAt, a.ExpiresAt, time.Now()); err != nil {
+		if err := validateReminder(in.ReminderAt, a.ExpiresAt, now); err != nil {
 			return nil, err
 		}
 	} else {

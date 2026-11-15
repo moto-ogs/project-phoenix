@@ -30,6 +30,19 @@ describe("isTraegerNavActive", () => {
     ).toBe(true);
   });
 
+  it("marks the Abwesenheitsarten, not the Personalakten, below /personal (#4710)", () => {
+    for (const path of [
+      "/personal/abwesenheitsarten",
+      "/traeger/personal/abwesenheitsarten",
+    ]) {
+      expect(
+        isTraegerNavActive("/traeger/personal/abwesenheitsarten", path),
+      ).toBe(true);
+      expect(isTraegerNavActive("/traeger/personal", path)).toBe(false);
+    }
+    expect(isTraegerNavActive("/traeger/personal", "/personal/5")).toBe(true);
+  });
+
   it("does not mark a page whose path only starts the same", () => {
     expect(
       isTraegerNavActive("/traeger/einstellungen/abrechnung", "/abrechnung"),

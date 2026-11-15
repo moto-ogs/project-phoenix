@@ -6,7 +6,7 @@
 // der das Konto eine Schul-Portal-Rolle hält.
 
 import { useEffect, useLayoutEffect, useRef, useState, Suspense } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { AuthShell, MotoBrand } from "~/components/auth/auth-shell";
 import {
@@ -27,7 +27,12 @@ import { portalNotBookedExplanation } from "~/lib/portal-not-booked";
 import { hasSessionAccess } from "~/lib/session-access";
 import { requestSchoolPasswordReset } from "~/lib/auth-api";
 import { schoolPath } from "~/lib/school-url";
-import { DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
+import {
+  clearSessionErrorFromUrl,
+  signOutStaleSession,
+  useSessionExpiredNotice,
+} from "~/lib/login-session-notice";
+import type { MFAStep } from "~/lib/sign-in-answer";
 import { login as loginApi } from "~/lib/mfa-api";
 import { errorStatus } from "~/lib/expected-failure";
 import { createLogger } from "~/lib/logger";
@@ -36,38 +41,14 @@ import { Loading } from "~/components/ui/loading";
 
 const logger = createLogger({ component: "SchoolLoginPage" });
 
-interface MFAStep {
-  challengeToken: string;
-  maskedEmail: string;
-  trustedDeviceEnabled: boolean;
-  trustedDeviceDays: number;
-}
-
 interface MFAEnrollmentStep {
   enrollmentToken: string;
   email: string;
 }
 
-function clearSessionErrorFromUrl() {
-  const url = new URL(window.location.href);
-  const hadSessionError =
-    url.searchParams.get("error") === "SessionRequired" ||
-    url.searchParams.get("error") === "SessionExpired";
-
-  if (!hadSessionError) return;
-
-  url.searchParams.delete("error");
-  url.searchParams.delete("callbackUrl");
-
-  const nextUrl = `${url.pathname}${url.search}${url.hash}`;
-  window.history.replaceState({}, "", nextUrl);
-}
-
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  // Ein Hinweis, kein Fehler: die Sitzung ist abgelaufen (aus der URL).
-  const [sessionExpired, setSessionExpired] = useState(false);
   // Fehler laufen über den gemeinsamen Weg: Katalogtext je Code im
   // Fehlerkasten des Formulars, Feldfehler am Feld.
   const formRef = useRef<HTMLFormElement>(null);
@@ -86,31 +67,23 @@ function LoginForm() {
   const [enrollmentStep, setEnrollmentStep] =
     useState<MFAEnrollmentStep | null>(null);
   const searchParams = useSearchParams();
+  const [sessionExpired, setSessionExpired] =
+    useSessionExpiredNotice(searchParams);
   const targetTenantSlug = searchParams.get("tenant") ?? undefined;
   const { data: session, status } = useSession();
 
-  // Guard against calling signOut multiple times during stale session cleanup
   const isCleaningSessionRef = useRef(false);
 
   useEffect(() => {
     const checkAndRedirect = async () => {
-      // Irrecoverable session error (refresh token rejected): clear the
-      // stale cookie so a fresh login isn't shadowed by retry loops.
-      if (
-        status === "authenticated" &&
-        session?.error &&
-        !isCleaningSessionRef.current
-      ) {
-        isCleaningSessionRef.current = true;
-        logger.debug("clearing_stale_session", { error: session.error });
-        try {
-          await signOut({ redirect: false });
-        } catch (err) {
-          isCleaningSessionRef.current = false;
-          logger.warn("signout_during_cleanup_failed", {
-            error: err instanceof Error ? err.message : String(err),
-          });
-        }
+      const cleanup = signOutStaleSession({
+        status,
+        session,
+        started: isCleaningSessionRef,
+        logger,
+      });
+      if (cleanup) {
+        await cleanup;
         setCheckingAuth(false);
         return;
       }
@@ -133,24 +106,6 @@ function LoginForm() {
 
     void checkAndRedirect();
   }, [status, session, enrollmentStep]);
-
-  // Session-abgelaufen-Hinweis, außer nach bewusstem Logout.
-  useEffect(() => {
-    const urlError = searchParams.get("error");
-    if (urlError === "SessionRequired" || urlError === "SessionExpired") {
-      let deliberate = false;
-      try {
-        deliberate = sessionStorage.getItem(DELIBERATE_LOGOUT_KEY) === "1";
-        sessionStorage.removeItem(DELIBERATE_LOGOUT_KEY);
-      } catch {
-        // sessionStorage unavailable
-      }
-      if (!deliberate) {
-        setSessionExpired(true);
-      }
-      clearSessionErrorFromUrl();
-    }
-  }, [searchParams]);
 
   const isCheckingAuth = checkingAuth || status === "loading";
   const isSubmitting = isLoading || awaitingRedirect;
@@ -181,18 +136,13 @@ function LoginForm() {
       });
 
       if (response.status === "mfa_required") {
-        setMfaStep({
-          challengeToken: response.challenge_token,
-          maskedEmail: response.masked_email,
-          trustedDeviceEnabled: response.trusted_device_enabled ?? true,
-          trustedDeviceDays: response.trusted_device_days ?? 90,
-        });
+        setMfaStep(response);
         return;
       }
 
       if (response.status === "mfa_enrollment_required") {
         setEnrollmentStep({
-          enrollmentToken: response.access_token,
+          enrollmentToken: response.enrollmentToken,
           email,
         });
         return;

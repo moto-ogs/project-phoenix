@@ -82,9 +82,11 @@ func computeHolidayContribution(children []parentbilling.HolidayChild, rules hol
 // sees it: its children, whether its exemption applies and the cost bearer
 // that takes over its contribution (#5627).
 type holidayMember struct {
-	children  []parentbilling.HolidayChild
-	exemption bool
-	bearer    *parentbilling.CostBearer
+	children []parentbilling.HolidayChild
+	// lunchChildren, when set, prices lunch independently of frozen care weeks.
+	lunchChildren []parentbilling.HolidayChild
+	exemption     bool
+	bearer        *parentbilling.CostBearer
 }
 
 // computeHolidaySiblings runs the chain over the registrations of a sibling
@@ -115,14 +117,20 @@ func computeHolidaySiblings(members []holidayMember, rules holidayRules) []paren
 	}
 	applySiblingRule(ranked, rules.sibling, chain.SiblingRank)
 	for m, member := range members {
-		finishHolidayContribution(&results[m], rules, member.bearer)
+		children := member.children
+		if member.lunchChildren != nil {
+			children = member.lunchChildren
+		}
+		finishHolidayContribution(&results[m], rules, member.bearer, placedHolidayChildren(children))
 	}
 	return results
 }
 
 // finishHolidayContribution applies the exemption or the cost takeover of
-// one registration to what the sibling rule left and sums its children.
-func finishHolidayContribution(result *parentbilling.HolidayContribution, rules holidayRules, bearer *parentbilling.CostBearer) {
+// one registration to what the sibling rule left, adds the lunch of its
+// children after the chain (#5631) and sums them. children run parallel to
+// the children of the result.
+func finishHolidayContribution(result *parentbilling.HolidayContribution, rules holidayRules, bearer *parentbilling.CostBearer, children []parentbilling.HolidayChild) {
 	switch {
 	case result.BenefitsExemption:
 		for i := range result.Children {
@@ -135,7 +143,31 @@ func finishHolidayContribution(result *parentbilling.HolidayContribution, rules 
 		}
 	}
 	for i := range result.Children {
+		addHolidayMealLines(&result.Children[i], children[i])
 		result.TotalCents += result.Children[i].TotalCents
+	}
+}
+
+// addHolidayMealLines writes one meal line per booked week with lunch, in
+// the order of the weeks, after every line of the chain: the lunch is no
+// part of the chain, so the family pays it in full whatever the chain left
+// of the care (ADR 0115 addendum, #5631). A booking on the waiting list has
+// no lunch yet; child holds placed bookings only. A selected lunch whose
+// care days are all closed is a line without lunches and without an amount:
+// it freezes the selection, so a day that opens again adds no charge.
+func addHolidayMealLines(contribution *parentbilling.HolidayChildContribution, child parentbilling.HolidayChild) {
+	bookings := slices.Clone(child.Bookings)
+	slices.SortStableFunc(bookings, func(a, b parentbilling.HolidayBooking) int { return a.WeekStartsOn.Compare(b.WeekStartsOn) })
+	for _, booking := range bookings {
+		if !booking.Lunch && booking.LunchDays <= 0 {
+			continue
+		}
+		startsOn, endsOn, lunches := booking.WeekStartsOn, booking.WeekEndsOn, booking.LunchDays
+		contribution.Lines = append(contribution.Lines, parentbilling.HolidayContributionLine{
+			Kind: parentbilling.LineMeal, AmountCents: booking.LunchCents,
+			WeekStartsOn: &startsOn, WeekEndsOn: &endsOn, WeekID: booking.WeekID, BookedDays: &lunches,
+		})
+		contribution.TotalCents += booking.LunchCents
 	}
 }
 

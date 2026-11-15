@@ -168,9 +168,10 @@ func TestDecisionService_ApprovalRollsBackEveryOwnerAfterMaterialization(t *test
 	require.NoError(t, err)
 	require.Len(t, submitted.Children, 1)
 
-	// The offering runs on Tuesdays; the occurrence must not lie in the past or
-	// the approval projects no roster row for it.
-	testpkg.CreateTestActivityInstance(t, env.db, nextWeekday(calendar.TodayDate(), time.Tuesday), room.ID, testpkg.ActivityInstanceOpts{
+	// The offering runs on Tuesdays; the occurrence must lie within the phase
+	// and not before the env's day (decisionTestToday), or the approval
+	// projects no roster row for it.
+	testpkg.CreateTestActivityInstance(t, env.db, nextWeekday(calendar.Date(env.sourcePhase.ServiceStartDate), time.Tuesday), room.ID, testpkg.ActivityInstanceOpts{
 		ActivityGroupID: &group.ID, CalendarPeriodID: &period.ID,
 	})
 	before := approvalOwnerSnapshot(t, ctx, env.db, testpkg.Tenant(t))

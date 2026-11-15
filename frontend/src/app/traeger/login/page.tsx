@@ -7,8 +7,15 @@
 // das Träger-Portal nicht. „Passwort vergessen?“ schickt den Link auf den
 // Träger-Host (#5149).
 
-import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { signOut, useSession } from "next-auth/react";
+import {
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { AuthShell, MotoBrand } from "~/components/auth/auth-shell";
 import {
@@ -32,9 +39,25 @@ import { requestTraegerPasswordReset } from "~/lib/auth-api";
 import { hasSessionAccess } from "~/lib/session-access";
 import { errorStatus } from "~/lib/expected-failure";
 import { createLogger } from "~/lib/logger";
-import { DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
-import { traegerLogin, type TraegerChoice } from "~/lib/traeger-api";
-import { TRAEGER_FORGOT_PASSWORD_PARAM } from "~/lib/traeger-login-params";
+import {
+  clearSessionErrorFromUrl,
+  signOutStaleSession,
+  useSessionExpiredNotice,
+} from "~/lib/login-session-notice";
+import { endTraegerSession } from "~/lib/shell-auth-context";
+import {
+  clearTraegerSignInWithCode,
+  isTraegerSignInWithCodeRequested,
+  requestTraegerSignInWithCode,
+  serverTraegerSignInWithCode,
+  subscribeTraegerSignInWithCode,
+} from "~/lib/traeger-sign-in-with-code";
+import type { MFAStep, TraegerChoice } from "~/lib/sign-in-answer";
+import { traegerLogin } from "~/lib/traeger-api";
+import {
+  TRAEGER_FORGOT_PASSWORD_PARAM,
+  TRAEGER_SIGN_IN_WITH_CODE_PARAM,
+} from "~/lib/traeger-login-params";
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerLoginPage" });
@@ -44,25 +67,6 @@ const SHELL_COPY = {
   subtitle: "Melden Sie sich mit Ihrem moto-Konto an.",
 } as const;
 
-function clearSessionErrorFromUrl() {
-  const url = new URL(window.location.href);
-  const error = url.searchParams.get("error");
-  if (error !== "SessionRequired" && error !== "SessionExpired") return;
-  url.searchParams.delete("error");
-  url.searchParams.delete("callbackUrl");
-  window.history.replaceState(
-    {},
-    "",
-    `${url.pathname}${url.search}${url.hash}`,
-  );
-}
-
-interface MFAStep {
-  readonly challengeToken: string;
-  readonly maskedEmail: string;
-  readonly organizationId: string;
-}
-
 interface EnrollmentStep {
   readonly enrollmentToken: string;
   readonly organizationId: string;
@@ -71,7 +75,14 @@ interface EnrollmentStep {
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [sessionExpired, setSessionExpired] = useState(false);
+  // A school asked for a sign-in with code (#6955): the next sign-in in
+  // this tab ignores the remembered device. Read, never consumed, while
+  // rendering; the server renders no hint.
+  const withCode = useSyncExternalStore(
+    subscribeTraegerSignInWithCode,
+    isTraegerSignInWithCodeRequested,
+    serverTraegerSignInWithCode,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [awaitingRedirect, setAwaitingRedirect] = useState(false);
   const [choices, setChoices] = useState<readonly TraegerChoice[] | null>(null);
@@ -85,24 +96,49 @@ function LoginForm() {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const resetFormRef = useRef<HTMLFormElement>(null);
   const resetErrors = useApiFormError(resetFormRef);
+  // Ending a session a sign-in with code is to replace (#6955).
+  const endErrors = useApiFormError();
+  const [endingSession, setEndingSession] = useState(false);
   const latestSubmitRef = useRef<() => void>(() => undefined);
   const isCleaningSessionRef = useRef(false);
   const searchParams = useSearchParams();
+  const [sessionExpired, setSessionExpired] =
+    useSessionExpiredNotice(searchParams);
   const { data: session, status } = useSession();
+
+  // A school tab sends the person here to sign in with code (#6955): the
+  // request holds for this tab, and the address forgets it. Declared before
+  // the session effect below, which reads it in the same commit.
+  useEffect(() => {
+    if (searchParams.get(TRAEGER_SIGN_IN_WITH_CODE_PARAM) !== "1") return;
+    requestTraegerSignInWithCode();
+    const url = new URL(window.location.href);
+    url.searchParams.delete(TRAEGER_SIGN_IN_WITH_CODE_PARAM);
+    window.history.replaceState(
+      {},
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+  }, [searchParams]);
 
   // An existing Träger session goes straight to the school list; a session
   // the backend no longer refreshes is cleared so a new login is not
-  // shadowed by it.
+  // shadowed by it. A session a sign-in with code is to replace stays until
+  // the person ends it with the button below: a page visit alone never
+  // signs out (#6955). The request is read from storage here, since the
+  // effect above may have set it in this same commit.
   useEffect(() => {
     if (status !== "authenticated") return;
-    if (session?.error && !isCleaningSessionRef.current) {
-      isCleaningSessionRef.current = true;
-      void signOut({ redirect: false }).catch((err: unknown) => {
-        isCleaningSessionRef.current = false;
-        logger.warn("signout_during_cleanup_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
+    if (session?.error) {
+      void signOutStaleSession({
+        status,
+        session,
+        started: isCleaningSessionRef,
+        logger,
       });
+      return;
+    }
+    if (hasSessionAccess(session) && isTraegerSignInWithCodeRequested()) {
       return;
     }
     // The layout's server snapshot carries no token (#4991) and redirects
@@ -115,22 +151,6 @@ function LoginForm() {
       window.location.href = traegerPath("/traeger");
     }
   }, [status, session, enrollmentStep]);
-
-  useEffect(() => {
-    const urlError = searchParams.get("error");
-    if (urlError !== "SessionRequired" && urlError !== "SessionExpired") {
-      return;
-    }
-    let deliberate = false;
-    try {
-      deliberate = sessionStorage.getItem(DELIBERATE_LOGOUT_KEY) === "1";
-      sessionStorage.removeItem(DELIBERATE_LOGOUT_KEY);
-    } catch {
-      // sessionStorage unavailable: show the note, it does no harm.
-    }
-    if (!deliberate) setSessionExpired(true);
-    clearSessionErrorFromUrl();
-  }, [searchParams]);
 
   // A reset link without token leads here to ask for a new link: the dialog
   // opens at once, and the address forgets the request.
@@ -149,6 +169,8 @@ function LoginForm() {
   const isSubmitting = isLoading || awaitingRedirect;
 
   const completeLogin = async () => {
+    // The sign-in is complete: the next one may use the device again.
+    clearTraegerSignInWithCode();
     clearSessionErrorFromUrl();
     setAwaitingRedirect(true);
     window.location.href = traegerPath("/traeger");
@@ -178,10 +200,12 @@ function LoginForm() {
     setIsLoading(true);
     setSessionExpired(false);
     try {
+      const ignoreTrustedDevice = isTraegerSignInWithCodeRequested();
       const result = await traegerLogin({
         email,
         password,
         organizationId: choices ? (selectedId ?? undefined) : undefined,
+        ...(ignoreTrustedDevice && { ignoreTrustedDevice: true }),
       });
       if (result.status === "organization_selection_required") {
         setChoices(result.organizations);
@@ -189,11 +213,7 @@ function LoginForm() {
         return;
       }
       if (result.status === "mfa_required") {
-        setMfaStep({
-          challengeToken: result.challengeToken,
-          maskedEmail: result.maskedEmail,
-          organizationId: result.organizationId,
-        });
+        setMfaStep(result);
         return;
       }
       if (result.status === "mfa_enrollment_required") {
@@ -242,6 +262,50 @@ function LoginForm() {
     );
   }
 
+  // A school asked for a sign-in with code while a Träger session is still
+  // open (#6955). Only the person ends it: the button runs the portal's
+  // logout (revoke, clear, barrier) and opens this page again without it.
+  if (withCode && hasSessionAccess(session) && session.user.scope === "org") {
+    const endSession = async () => {
+      setEndingSession(true);
+      endErrors.clear();
+      try {
+        await endTraegerSession();
+      } catch (err) {
+        setEndingSession(false);
+        void endErrors.show(err, {
+          object: "die Abmeldung",
+          retry: () => void endSession(),
+        });
+      }
+    };
+    return (
+      <AuthShell {...SHELL_COPY} variant="tenant" brand={<MotoBrand />}>
+        <div className="space-y-6">
+          {endErrors.error ? (
+            <FormErrorAlert message={endErrors.error} />
+          ) : null}
+          <Alert
+            type="info"
+            message="Die Schule verlangt eine Anmeldung mit Code. Melden Sie sich dafür zuerst ab."
+          />
+          <Button
+            type="button"
+            variant="primary"
+            size="field"
+            className="w-full"
+            isLoading={endingSession}
+            loadingText="Sie werden abgemeldet …"
+            tooltip="Meldet Sie ab. Danach melden Sie sich mit dem Code aus Ihrer E-Mail an."
+            onClick={() => void endSession()}
+          >
+            Abmelden und mit Code anmelden
+          </Button>
+        </div>
+      </AuthShell>
+    );
+  }
+
   if (mfaStep) {
     return (
       <AuthShell {...SHELL_COPY} variant="tenant" brand={<MotoBrand />}>
@@ -250,7 +314,8 @@ function LoginForm() {
           challengeToken={mfaStep.challengeToken}
           maskedEmail={mfaStep.maskedEmail}
           organizationId={mfaStep.organizationId}
-          trustedDeviceEnabled={false}
+          trustedDeviceEnabled={mfaStep.trustedDeviceEnabled}
+          trustedDeviceDays={mfaStep.trustedDeviceDays}
           onSuccess={completeLogin}
           onCancel={backToCredentials}
         />
@@ -291,6 +356,11 @@ function LoginForm() {
             <Alert
               type="info"
               message="Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
+            />
+          ) : withCode ? (
+            <Alert
+              type="info"
+              message="Die Schule verlangt eine Anmeldung mit Code. Geben Sie nach dem Passwort den Code aus Ihrer E-Mail ein."
             />
           ) : null}
 

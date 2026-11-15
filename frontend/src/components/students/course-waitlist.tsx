@@ -10,8 +10,11 @@
 import { createContext, useContext, useMemo } from "react";
 
 import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
-import { ResponsiveActionList } from "~/components/ui/responsive-action-list";
+import { Button, ButtonLink } from "~/components/ui/button";
+import {
+  ResponsiveActionList,
+  ResponsiveActionRow,
+} from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { formatDate } from "~/lib/date-helpers";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -156,9 +159,9 @@ function CourseWaitlistBlock({
       <p className="mb-2 text-sm text-gray-600">{occupancyLine(waitlist)}</p>
       <ResponsiveActionList>
         {waitlist.entries.map((entry) => (
-          <li
+          <ResponsiveActionRow
             key={entry.requestId}
-            className="flex flex-col gap-2 py-2 sm:col-span-2 sm:grid sm:grid-cols-subgrid sm:items-center"
+            className="py-2 first:pt-2 last:pb-2"
           >
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2 text-sm text-gray-900">
@@ -180,12 +183,13 @@ function CourseWaitlistBlock({
                 variant="surface"
                 size="compact"
                 aria-label={`Anfrage von ${entry.studentName} öffnen`}
+                tooltip="Öffnet die Anfrage dieses Kindes mit allen Angaben."
                 onClick={() => onOpenRequest(entry.studentId, entry.requestId)}
               >
                 Zur Anfrage
               </Button>
             </div>
-          </li>
+          </ResponsiveActionRow>
         ))}
       </ResponsiveActionList>
     </section>
@@ -250,10 +254,16 @@ export function RequestWaitlistPlaces({
 export function CourseWaitlistSummary({
   waitlist,
   participantNames,
+  requestsHref,
 }: Readonly<{
   waitlist: CourseWaitlist;
   /** Kinder, die heute in der AG sind; fehlt die Liste, bleibt sie weg. */
   participantNames?: readonly string[];
+  /**
+   * Die Seite „Anfragen“, wenn die Person sie öffnen darf (#7054). Öffnet in
+   * einem neuen Tab: die Übersicht steht in einem Fenster mit Eingaben.
+   */
+  requestsHref?: string;
 }>) {
   const limit = waitlist.participantLimit;
   const occupancy =
@@ -275,6 +285,19 @@ export function CourseWaitlistSummary({
         <Alert
           type="info"
           message={`${freeSlotSentence(waitlist)} Geben Sie die Anfrage unter „Anfragen“ frei.`}
+          action={
+            requestsHref ? (
+              <ButtonLink
+                href={requestsHref}
+                newTab
+                variant="surface"
+                size="compact"
+                tooltip="Öffnet die Anfragen in einem neuen Tab."
+              >
+                Zu den Anfragen
+              </ButtonLink>
+            ) : undefined
+          }
         />
       )}
       {waitlist.entries.length === 0 ? (

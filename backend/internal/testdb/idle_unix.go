@@ -33,6 +33,15 @@ type idleServer struct {
 	Project string
 	Docker  string
 	run     func(context.Context, ...string) ([]byte, error)
+	// now is the clock users stamp the lease file with; nil is realNow.
+	now func() time.Time
+}
+
+func (s idleServer) clock() time.Time {
+	if s.now != nil {
+		return s.now()
+	}
+	return realNow()
 }
 
 // HoldServer protects a local test server for this process's entire lifetime.
@@ -84,7 +93,7 @@ func HoldServer(ctx context.Context, cfg *Config) error {
 		}
 	}()
 	// Record brief users that begin and end between watcher polls.
-	now := time.Now()
+	now := realNow()
 	if err := os.Chtimes(lease.Name(), now, now); err != nil {
 		return err
 	}
@@ -160,7 +169,7 @@ func holdRegisteredIdleServers(ctx context.Context, cache, project string, held 
 		if err != nil {
 			return fmt.Errorf("protect registered test server: %w", err)
 		}
-		now := time.Now()
+		now := realNow()
 		if err := os.Chtimes(lease.Name(), now, now); err != nil {
 			_ = lease.Close()
 			return err
@@ -324,8 +333,11 @@ func closeInheritedIdleFiles(singleton *os.File, fdDir string, log io.Writer) {
 	}
 }
 
+// watchIdle measures idle time on the clock users stamp the lease file with
+// (realNow): under scripts/fake-clock.sh Go's clock is moved, the file times
+// are not, and mixing both keeps the server up forever or stops it early.
 func watchIdle(ctx context.Context, dir string, singleton *os.File, idle, poll time.Duration, server idleServer) error {
-	lastUsed := time.Now()
+	lastUsed := server.clock()
 	for {
 		select {
 		case <-ctx.Done():
@@ -337,7 +349,7 @@ func watchIdle(ctx context.Context, dir string, singleton *os.File, idle, poll t
 			return err
 		}
 		if lease == nil {
-			lastUsed = time.Now()
+			lastUsed = server.clock()
 			continue
 		}
 		info, err := lease.Stat()
@@ -348,14 +360,14 @@ func watchIdle(ctx context.Context, dir string, singleton *os.File, idle, poll t
 		if info.ModTime().After(lastUsed) {
 			lastUsed = info.ModTime()
 		}
-		if time.Since(lastUsed) < idle {
+		if server.clock().Sub(lastUsed) < idle {
 			_ = lease.Close()
 			continue
 		}
 		done, err := server.stopIdle(ctx)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "testdb idle: %v\n", err)
-			lastUsed = time.Now() // Docker/inspection failures are not permission to stop.
+			lastUsed = server.clock() // Docker/inspection failures are not permission to stop.
 			// Do not leave a background helper behind for legacy servers.
 			done = errors.Is(err, errIdleUnmanaged)
 		}

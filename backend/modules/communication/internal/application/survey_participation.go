@@ -141,7 +141,7 @@ func (s *surveyService) submit(ctx context.Context, survey *communication.Survey
 	if err != nil {
 		return err
 	}
-	recorded, err := s.store.RecordSubmission(ctx, survey.TenantID, survey.ID, accountID, !survey.Anonymous, clean)
+	recorded, err := s.store.RecordSubmission(ctx, survey.TenantID, survey.ID, accountID, !survey.Anonymous, clean, s.now)
 	if err != nil {
 		return err
 	}

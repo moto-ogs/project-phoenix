@@ -85,9 +85,8 @@ type Store interface {
 	ActiveDuplicateChildren(context.Context, int64, string, []enrollment.DuplicateChildKey, int64) ([]enrollment.DuplicateChildKey, error)
 	HasActiveRequestForMatchedStudent(context.Context, int64, int64, int64) (bool, error)
 	CountPhaseRequests(context.Context, int64) (int, error)
-	DeletePhaseRequests(context.Context, int64) (int, error)
 	FullyRejectedRequestsBefore(context.Context, time.Time) ([]int64, error)
-	SettledRequestsBefore(ctx context.Context, withdrawnCutoff, rejectedCutoff time.Time) ([]int64, error)
+	SettledRequestsBefore(ctx context.Context, withdrawnCutoff, rejectedCutoff time.Time, today calendar.Date) ([]int64, error)
 	DeleteRequest(context.Context, int64) error
 	CreateRequestGuardian(context.Context, *enrollment.RequestGuardian) error
 	RequestGuardians(context.Context, []int64) ([]*enrollment.RequestGuardian, error)

@@ -104,7 +104,7 @@ func newDisplayRouter(t *testing.T, db *bun.DB, clocks ...func() time.Time) http
 	presence, err := presenceCompose.New(presenceCompose.Dependencies{DB: db, Observe: func(presenceCompose.Observation) {}})
 	require.NoError(t, err)
 	settings := RootCompositions.Settings(t, testpkg.NewDatabase(t, db))
-	pickup, err := careplanCompose.NewPickupSchedules(db, carePlan, newPickupBaselineService(carePlan, approvedOfferings), nil, nil, nil)
+	pickup, err := careplanCompose.NewPickupSchedules(db, carePlan, newPickupBaselineService(carePlan, approvedOfferings), nil, nil, nil, nil)
 	require.NoError(t, err)
 	dashboard.PickupSchedule = pickup
 	dependencies := fleetInputs

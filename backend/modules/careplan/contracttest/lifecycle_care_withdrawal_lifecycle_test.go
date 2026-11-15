@@ -224,10 +224,10 @@ func TestCareWithdrawalLifecycle_CancellingLaterOrdinaryExitDoesNotRestoreOldTas
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	svc := newCareLifecycleService(t, db)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
 	actorID := careActor(t, db)
 	student := testpkg.CreateTestStudent(t, db, "Nele", "Neuer Austritt", "2b")
-	firstGap := calendar.TodayDate().AddDays(2)
+	firstGap := decisionTestToday.AddDays(2)
 	completion := testpkg.CreateTestCareWithdrawalCompletion(t, db, student.ID, actorID, firstGap)
 	withdrawal := careplan.CareExitInput{
 		LastCareDay: firstGap.AddDays(-1), Reason: careplan.CareExitReasonNoCareNeed,

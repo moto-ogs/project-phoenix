@@ -1,10 +1,6 @@
-import {
-  expect,
-  type APIRequestContext,
-  type Page,
-  test,
-} from "@playwright/test";
+import { type APIRequestContext, type Page } from "@playwright/test";
 
+import { expect, test } from "./a11y/scan";
 import {
   loginToTenant,
   MISSING_SEED_ACCESS,
@@ -68,6 +64,13 @@ function addDaysISO(iso: string, days: number): string {
   const d = parseISODate(iso);
   d.setDate(d.getDate() + days);
   return toISODate(d);
+}
+// Der Tag selbst, wenn er ein Wochentag ist, sonst der folgende Montag.
+function schoolDayOnOrAfter(iso: string): string {
+  const weekday = parseISODate(iso).getDay(); // So = 0, Sa = 6
+  if (weekday === 6) return addDaysISO(iso, 2);
+  if (weekday === 0) return addDaysISO(iso, 1);
+  return iso;
 }
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -366,7 +369,7 @@ test.describe("Dienstplan UI-Flow", () => {
     if (!access) return;
     test.setTimeout(60000);
 
-    // Feste, weit in der Zukunft liegende Woche (kollidiert mit keinen Testdaten).
+    // Feste Woche: Beschriftung und Wochen-Pfeil hängen nicht am heutigen Tag.
     const monday = "2026-08-17"; // Montag, KW 34
     const kw = getWeekNumber(parseISODate(monday));
     await openWeek(page, monday);
@@ -596,20 +599,17 @@ test.describe("Dienstplan UI-Flow", () => {
     test("Krank-Flow: 'Für heute abwesend melden' navigiert nach /vertretung; 'Krank melden' storniert die Schicht", async ({
       page,
     }) => {
-      // 23:30 UTC on the previous date is 00:30 CET / 01:30 CEST today.
-      // Freeze Date only, not UI/network timers. Backend still sees real TODAY.
-      await page.clock.setFixedTime(new Date(`${TODAY}T00:30:00+01:00`));
-      if (!access) return;
-      // Beide Teilflüsse hängen am echten Heute: 6a navigiert nach
+      // Beide Teilflüsse hängen am Heute des Browsers: 6a navigiert nach
       // /vertretung?d=heute, 6b storniert die heutige Schicht per Krankmeldung
       // und erwartet den "Fällt aus"-Block im Wochenraster. Das Raster rendert
-      // nur Mo-Fr — am Wochenende hat die heutige Schicht keine Spalte, der
-      // Block kann nie erscheinen. Deshalb Skip statt Datums-Verbiegung.
-      const todayWeekday = parseISODate(TODAY).getDay();
-      test.skip(
-        todayWeekday === 0 || todayWeekday === 6,
-        "Krank-Flow braucht ein Heute innerhalb Mo-Fr (Wochenraster ohne Sa/So)",
-      );
+      // nur Mo-Fr. Fällt das echte Heute auf ein Wochenende, ist das Heute des
+      // Browsers deshalb der folgende Montag (#4027); Schicht und Krankmeldung
+      // tragen dieses Datum, das Backend braucht dafür nicht denselben Tag.
+      const day = schoolDayOnOrAfter(TODAY);
+      // 23:30 UTC on the previous date is 00:30 CET / 01:30 CEST on `day`.
+      // Freeze Date only, not UI/network timers. Backend still sees real TODAY.
+      await page.clock.setFixedTime(new Date(`${day}T00:30:00+01:00`));
+      if (!access) return;
       // Flow 6a wechselt auf /vertretung — der erste Kompiliervorgang dieser Route
       // im Next-Dev-Server kann kalt spürbar dauern, daher großzügiges Budget.
       test.setTimeout(180000);
@@ -619,7 +619,7 @@ test.describe("Dienstplan UI-Flow", () => {
       await page.setViewportSize({ width: 1280, height: 1200 });
       const staff = await fetchNonAdminStaff(page.request);
       // Schicht heute (die Krankmeldung storniert reguläre Schichten im Zeitraum).
-      const from = mondayOf(TODAY);
+      const from = mondayOf(day);
       const to = addDaysISO(from, 4);
       const [person] = await findStaffWithEmptyRange(
         page.request,
@@ -638,11 +638,11 @@ test.describe("Dienstplan UI-Flow", () => {
       try {
         await createShift(page.request, {
           staffId: person.id,
-          date: TODAY,
+          date: day,
           start: "12:00",
           end: "16:00",
         });
-        await openWeek(page, TODAY);
+        await openWeek(page, day);
 
         // (b) Krank melden -> SickReportModal -> speichern -> "Fällt aus".
         await openPersonMenu(page, person);
@@ -675,7 +675,7 @@ test.describe("Dienstplan UI-Flow", () => {
         await page.waitForURL((url) => url.pathname.endsWith("/vertretung"), {
           timeout: 60000,
         });
-        expect(new URL(page.url()).searchParams.get("d")).toBe(TODAY);
+        expect(new URL(page.url()).searchParams.get("d")).toBe(day);
       } finally {
         await cleanupOwnedRecords(page.request);
       }

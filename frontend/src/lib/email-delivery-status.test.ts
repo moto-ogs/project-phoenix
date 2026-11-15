@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   correctedAddressCopy,
   guardianAddressNextStep,
+  mailOutcomeGroups,
   mailStatusCopy,
 } from "./email-delivery-status";
 
@@ -22,6 +23,15 @@ describe("mailStatusCopy", () => {
       expect(mailStatusCopy(outcome)?.label).not.toBe("Zugestellt");
     }
     expect(mailStatusCopy("delivered")?.label).toBe("Zugestellt");
+  });
+
+  it("never calls a reported mail undelivered (#6999)", () => {
+    expect(mailStatusCopy("complained")?.label).toBe(
+      "Als unerwünscht gemeldet",
+    );
+    expect(mailStatusCopy("complained")?.label).not.toBe(
+      mailStatusCopy("undeliverable")?.label,
+    );
   });
 
   it("lets the mark of an address outrank the mail", () => {
@@ -100,6 +110,13 @@ describe("mailStatusCopy", () => {
     expect(mailStatusCopy("held_by_stop")?.explanation).toMatch(/gestoppt/);
     expect(mailStatusCopy("held_by_stop")?.explanation).not.toMatch(/Adresse/);
   });
+
+  it("names the departed family, not the address, and offers no resend", () => {
+    const copy = mailStatusCopy("held_by_departure");
+    expect(copy?.label).toBe("Nicht gesendet");
+    expect(copy?.explanation).toMatch(/Kein Kind/);
+    expect(copy?.explanation).not.toMatch(/Adresse|neu senden/);
+  });
 });
 
 describe("correctedAddressCopy", () => {
@@ -112,5 +129,38 @@ describe("correctedAddressCopy", () => {
     );
     expect(correctedAddressCopy("undeliverable")).toBeNull();
     expect(correctedAddressCopy("")).toBeNull();
+  });
+});
+
+describe("mailOutcomeGroups (#7058)", () => {
+  it("puts the mails that need attention first and counts them in German", () => {
+    expect(
+      mailOutcomeGroups({ delivered: 11, undeliverable: 1, accepted: 2 }),
+    ).toEqual([
+      { count: 1, label: "1 nicht zustellbar", tone: "red" },
+      { count: 2, label: "2 versendet", tone: "gray" },
+      { count: 11, label: "11 zugestellt", tone: "green" },
+    ]);
+  });
+
+  it("merges the kinds of mail that stayed back into one group", () => {
+    expect(
+      mailOutcomeGroups({ blocked: 1, held_by_stop: 1, held_by_departure: 1 }),
+    ).toEqual([{ count: 3, label: "3 nicht gesendet", tone: "gray" }]);
+  });
+
+  it("speaks of one mail on its way and of several", () => {
+    expect(mailOutcomeGroups({ queued: 1 })[0]?.label).toBe("1 wird gesendet");
+    expect(mailOutcomeGroups({ queued: 4 })[0]?.label).toBe(
+      "4 werden gesendet",
+    );
+  });
+
+  it("shows nothing for no mail and drops outcomes it does not know", () => {
+    expect(mailOutcomeGroups(undefined)).toEqual([]);
+    expect(mailOutcomeGroups({})).toEqual([]);
+    expect(
+      mailOutcomeGroups({ ["teleported" as "queued"]: 2, delivered: 1 }),
+    ).toEqual([{ count: 1, label: "1 zugestellt", tone: "green" }]);
   });
 });

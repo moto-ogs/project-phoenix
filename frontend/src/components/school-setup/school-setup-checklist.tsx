@@ -27,6 +27,10 @@ import {
   type SchoolSetupNextTopic,
 } from "./school-setup-steps";
 import { SETUP_TOURS } from "./setup-tours";
+import {
+  WorkTimeCoverageNote,
+  type WorkTimeCoverageState,
+} from "./work-time-coverage-note";
 
 // Auf dem Handy links: rechts unten sitzt dort der grüne „+“-Knopf der
 // Datenseiten (DatabaseCreateAction), über der unteren Navigation.
@@ -51,6 +55,7 @@ export function SetupBeacon({ open, onOpen }: BeaconProps) {
         variant="success"
         size="md"
         onClick={onOpen}
+        tooltip="Öffnet die Checkliste mit den ersten Schritten."
         aria-label={
           open === 0
             ? "Erste Schritte öffnen, alles erledigt"
@@ -142,6 +147,11 @@ interface SetupChecklistStep<K extends string> extends SetupChecklistStepState {
   readonly helpTopic?: HelpTopicId;
   readonly hasTour: boolean;
   /**
+   * Der Stand des Schritts in Zahlen, unter den Hinweisen, etwa wie viele
+   * Personen noch kein Soll haben. Nur im aufgeklappten Schritt.
+   */
+  readonly detail?: ReactNode;
+  /**
    * Ein vorausgesetzter Schritt, der noch fehlt, etwa: erst ein Kind, dann
    * Eltern. Statt „Zeig es mir“ führt ein Knopf zu diesem Schritt.
    */
@@ -172,6 +182,8 @@ interface SetupChecklistProps<K extends string> {
   readonly finished: ReactNode;
   /** Beschriftung des Knopfs, der die fertige Checkliste schließt. */
   readonly finishLabel: string;
+  /** Was der Abschluss-Knopf bewirkt, etwa für wen die Checkliste verschwindet. */
+  readonly finishTooltip: string;
   readonly onFinish: () => void;
   readonly onExpand: (step: K | null) => void;
   readonly onStartTour: (step: K) => void;
@@ -196,6 +208,7 @@ export function SetupChecklist<K extends string>({
   replayDone = false,
   finished: finishedContent,
   finishLabel,
+  finishTooltip,
   onFinish,
   onExpand,
   onStartTour,
@@ -223,6 +236,7 @@ export function SetupChecklist<K extends string>({
             size="icon"
             onClick={onCollapse}
             aria-label="Checkliste einklappen"
+            tooltip="Klappt die Checkliste zu einem Knopf am unteren Rand ein."
           >
             <CaretDownIcon size={18} aria-hidden />
           </Button>
@@ -312,6 +326,7 @@ export function SetupChecklist<K extends string>({
                           </p>
                         )}
                       </div>
+                      {step.detail}
                       {notice && (
                         <p
                           className="text-sm font-medium text-gray-900"
@@ -327,6 +342,7 @@ export function SetupChecklist<K extends string>({
                             variant="primary"
                             size="compact"
                             onClick={() => onExpand(blockedBy.step)}
+                            tooltip="Klappt den Schritt auf, der zuerst erledigt sein muss."
                           >
                             Zu „{blockedBy.title}“
                           </Button>
@@ -337,6 +353,11 @@ export function SetupChecklist<K extends string>({
                               variant={step.done ? "outline" : "primary"}
                               size="compact"
                               onClick={() => onStartTour(step.key)}
+                              tooltip={
+                                step.done
+                                  ? "Startet die Tour zu diesem Schritt noch einmal."
+                                  : "Startet eine Tour, die Sie Schritt für Schritt hinführt."
+                              }
                             >
                               {step.done ? "Noch einmal zeigen" : "Zeig es mir"}
                             </Button>
@@ -347,6 +368,7 @@ export function SetupChecklist<K extends string>({
                             href={helpHref(step.helpTopic)}
                             variant="outline"
                             size="compact"
+                            tooltip="Öffnet die Anleitung zu diesem Schritt in der Hilfe."
                           >
                             Anleitung lesen
                           </ButtonLink>
@@ -358,6 +380,11 @@ export function SetupChecklist<K extends string>({
                             size="compact"
                             disabled={busy}
                             onClick={() => onSkip(step.key, !step.skipped)}
+                            tooltip={
+                              step.skipped
+                                ? "Nimmt den Schritt wieder zu den offenen Schritten."
+                                : "Lässt den Schritt aus und zählt ihn für den Abschluss mit."
+                            }
                           >
                             {step.skipped
                               ? "Doch nicht überspringen"
@@ -386,6 +413,7 @@ export function SetupChecklist<K extends string>({
             className="w-full"
             disabled={busy}
             onClick={onFinish}
+            tooltip={finishTooltip}
           >
             {finishLabel}
           </Button>
@@ -396,6 +424,7 @@ export function SetupChecklist<K extends string>({
             size="compact"
             disabled={busy}
             onClick={onDismiss}
+            tooltip="Blendet die Checkliste für Sie aus. moto fragt vorher nach."
           >
             Nicht mehr anzeigen
           </Button>
@@ -410,6 +439,8 @@ export function SetupChecklist<K extends string>({
 
 interface SchoolSetupChecklistProps {
   readonly steps: readonly SchoolSetupStep[];
+  /** Die Soll-Prüfung des Schritts „Arbeitszeitmodelle“ (#6919). */
+  readonly workTime: WorkTimeCoverageState;
   readonly expanded: SchoolSetupStepKey | null;
   readonly busy: boolean;
   /** Warum die letzte Änderung scheiterte, vom gemeinsamen Fehlerweg. */
@@ -436,6 +467,7 @@ export function SchoolSetupChecklist({
   helpHref,
   helpGroupHref,
   busy,
+  workTime,
   onComplete,
   ...rest
 }: SchoolSetupChecklistProps) {
@@ -456,6 +488,10 @@ export function SchoolSetupChecklist({
       hints: content.hints,
       helpTopic: content.helpTopic,
       hasTour: SETUP_TOURS[step.key] !== undefined,
+      detail:
+        step.key === "worktime" ? (
+          <WorkTimeCoverageNote {...workTime} />
+        ) : undefined,
       blockedBy: blocked
         ? {
             step: required.step,
@@ -504,6 +540,7 @@ export function SchoolSetupChecklist({
         </>
       }
       finishLabel="Abschließen"
+      finishTooltip="Blendet die Checkliste sofort für alle aus."
       onFinish={onComplete}
     />
   );

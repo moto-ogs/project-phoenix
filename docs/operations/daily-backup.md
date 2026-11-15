@@ -22,8 +22,8 @@ fehlenden Erfolg seit 26 Stunden und Fehler der letzten 30 Minuten. Fehlerausgab
 werden nicht weitergegeben, weil sie SQL, Dateinamen oder Secrets enthalten
 können. Die Abschlusszeile benennt nur den fehlgeschlagenen Schritt.
 
-**Lokal getestet:** `devbox run -- node --test scripts/daily-backup.integration.test.mjs`
-nutzt einen isolierten PostgreSQL-17-Cluster ohne Netzwerk, ein lokales
+**Lokal getestet:** `devbox run -- node --test scripts/daily-backup.integration.test.mjs scripts/daily-backup-roles-*.integration.test.mjs`
+(Hauptablauf und die Rollen-Matrix, je Rollenprofil eine Datei) nutzt einen isolierten PostgreSQL-17-Cluster ohne Netzwerk, ein lokales
 rclone-Ziel und ein zur Laufzeit erzeugtes Wegwerf-Schlüsselpaar. Es prüft
 Wiederherstellung nach Volume-Verlust, Rollen-Dumps ohne Passwörter, anschließend
 SCRAM-Anmeldung mit neu gesetzten Passwörtern aller drei LOGIN-Rollen, Mandantentrennung
@@ -444,7 +444,7 @@ weder den Produktionshost noch den Monitoring-Host dafür gelesen.
 
    `phoenix_tenant` und `phoenix_admin` sind NOLOGIN und benötigen kein Passwort.
    Auch außerhalb der Demo existiert `phoenix_demo`; sein Wert ist erforderlich.
-   Eng begrenzte Ausnahme für [persönliche Diagnosezugänge](diagnose-lesezugang-3840.md)
+   Eng begrenzte Ausnahme für persönliche Diagnosezugänge
    und interne [Lösch-/Aufbewahrungszugänge](tenant-erasure.md) sowie den
    [Freigabezugang der Datenrückgabe](auskunft-und-rueckgabe.md#8-paket-zum-abruf-freigeben-art-30-abs-2-data-act):
    Ausschließliche Mitgliedschaft in **genau einer** der Gruppen `phoenix_diagnostics`,
@@ -467,8 +467,8 @@ weder den Produktionshost noch den Monitoring-Host dafür gelesen.
    Alle anderen unbekannten LOGIN-Rollen werden weiterhin abgewiesen.
    Vor Wiederholung deren Zweck/Mapping klären und das Verfahren gezielt erweitern.
    Persönliche Diagnosezugänge nach Restore **bewusst einzeln neu freischalten**:
-   Auftrag und Schulwahl bestätigen, Rechte und MFA-Netzweg/HBA nach dem
-   Diagnose-Runbook prüfen, Passwort neu setzen, erst danach LOGIN aktivieren.
+   Auftrag und Schulwahl bestätigen, Rechte und Netzweg/HBA prüfen, Passwort
+   neu setzen, erst danach LOGIN aktivieren.
    Nicht benötigte Zugänge bleiben gesperrt.
    **Lösch-/Aufbewahrungs-Logins ebenfalls bewusst einzeln neu freischalten:**
    Auftrag, Zuständigkeit und benötigte Gruppenrolle erneut prüfen. Keine

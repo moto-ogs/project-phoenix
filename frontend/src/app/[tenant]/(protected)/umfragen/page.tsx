@@ -129,6 +129,7 @@ function SurveysContent() {
       variant="primary"
       size="md"
       onClick={() => setCreating(true)}
+      tooltip="Öffnet das Formular für eine neue Umfrage."
       className="gap-1.5"
     >
       <Plus className="h-4 w-4" aria-hidden />
@@ -265,6 +266,7 @@ function SurveysContent() {
         canManage
           ? {
               value: view,
+              inUrl: true,
               onChange: (next) =>
                 updateUrlParams({ ansicht: next === "alle" ? null : next }),
               items: [

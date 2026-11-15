@@ -43,5 +43,5 @@ func NewQualifications(db *bun.DB, staff workforce.QualificationStaff, bound wor
 	if now == nil {
 		now = time.Now
 	}
-	return application.NewQualifications(postgres.New(postgres.DatabaseRuntime(db)), application.Clock{Time: now}, staff, bound)
+	return application.NewQualifications(postgres.New(postgres.DatabaseRuntime(db)), application.Clock{Time: now}, staff, bound, postgres.NewTraegerStaffStore())
 }

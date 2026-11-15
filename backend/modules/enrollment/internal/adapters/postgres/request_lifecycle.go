@@ -46,22 +46,6 @@ func (r *Store) CountPhaseRequests(ctx context.Context, id int64) (int, error) {
 	}
 	return int(count), nil
 }
-func (r *Store) DeletePhaseRequests(ctx context.Context, id int64) (int, error) {
-	tenantID, err := r.tenantID(ctx)
-	if err != nil {
-		return 0, err
-	}
-	db, err := r.resolve(ctx)
-	if err != nil {
-		return 0, err
-	}
-	result, err := db.NewDelete().TableExpr("enrollment.requests").Where("tenant_id = ? AND phase_id = ?", tenantID, id).Exec(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("failed to delete phase requests: %w", err)
-	}
-	count, err := result.RowsAffected()
-	return int(count), err
-}
 func (r *Store) DeleteRequest(ctx context.Context, id int64) error {
 	tenantID, err := r.tenantID(ctx)
 	if err != nil {
@@ -92,9 +76,9 @@ func (r *Store) DeleteRequest(ctx context.Context, id int64) error {
 // A rejection
 // keeps the window of rejected enrollments; fully rejected requests stay
 // with FullyRejectedRequestsBefore. A lapsed or declined renewal stays while
-// the care of its source phase runs: the end-of-year warning counts the
-// child as decided only through it (PhaseExpirySnapshots).
-func (r *Store) SettledRequestsBefore(ctx context.Context, withdrawnCutoff, rejectedCutoff time.Time) ([]int64, error) {
+// the care of its source phase runs on today: the end-of-year warning counts
+// the child as decided only through it (PhaseExpirySnapshots).
+func (r *Store) SettledRequestsBefore(ctx context.Context, withdrawnCutoff, rejectedCutoff time.Time, today calendar.Date) ([]int64, error) {
 	tenantID, err := r.tenantID(ctx)
 	if err != nil {
 		return nil, err
@@ -113,7 +97,7 @@ func (r *Store) SettledRequestsBefore(ctx context.Context, withdrawnCutoff, reje
 			JOIN enrollment.requests AS source_request ON source_request.id = source.request_id AND source_request.tenant_id = source.tenant_id
 			JOIN enrollment.phases AS source_phase ON source_phase.id = source_request.phase_id AND source_phase.tenant_id = source_request.tenant_id
 			WHERE renewal.request_id = request.id AND renewal.tenant_id = request.tenant_id
-			  AND source_phase.service_end_date >= ?)`, calendar.TodayDate()).
+			  AND source_phase.service_end_date >= ?)`, today).
 		GroupExpr("request.id").
 		Having("BOOL_OR(rc.status = ?)", enrollment.ChildStatusWithdrawn).
 		Having("BOOL_AND(rc.created_student_id IS NULL)").

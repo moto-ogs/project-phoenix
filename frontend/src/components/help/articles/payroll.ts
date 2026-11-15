@@ -21,7 +21,7 @@ export function payrollTopic(): HelpTopic {
       {
         title: "Lohnarten und DATEV eintragen",
         steps: [
-          "Klappen Sie in der Seitenleiste `Planung` auf.",
+          "Klappen Sie in der Seitenleiste `Verwaltung` auf.",
           "Öffnen Sie `Abrechnung`.",
           "Prüfen Sie oben unter `Vollständigkeit`, was noch fehlt.",
           "Tragen Sie unter `Feste Lohnarten` die Nummern Ihres Lohnsystems ein.",
@@ -76,6 +76,7 @@ export function payrollTopic(): HelpTopic {
       "Die Feiertage nimmt moto aus dem Bundesland der Schule.",
       "Ist ein Sonntag auch Feiertag, zählt die höhere Regel. Nachtarbeit zählt zusätzlich.",
       "Ein abgeschlossener Monat behält die Lohnarten und Regeln, die beim Abschluss galten.",
+      "Personen mit Arbeitsvertrag beim Träger fehlen in der Monatsdatei der Schule. Ihren Lohn rechnet der Träger ab.",
       "Eine Lohnart, die eine Regel oder Abwesenheitsart noch nutzt, lässt sich nicht archivieren.",
       "Per `E-Mail` bekommt das Lohnbüro einen Link, keinen Anhang. Der Link gilt 14 Tage und funktioniert nur einmal.",
       "Öffnen Sie einen Monat wieder und schließen ihn erneut ab, geht die Datei noch einmal raus. Ihr Name enthält dann „korrektur“.",
@@ -85,12 +86,14 @@ export function payrollTopic(): HelpTopic {
       "`Soll (Arbeitszeit)` prüft den Vormonat, bis er abgeschlossen ist. Danach prüft es den laufenden Monat.",
       "Eine Kategorie oder eigene Lohnart ohne Lohnartnummer wird nicht exportiert. `Vollständigkeit` nennt sie.",
       "Dieselbe Nummer bei mehreren Kategorien ist erlaubt, führt aber meist zu doppelten Stunden. moto warnt davor.",
+      "Führt Ihr Träger eine Person in seiner Personalakte, kommt ihre Personalnummer vom Träger. Ändern kann sie nur die Personalverwaltung des Trägers.",
     ],
     troubleshootingDetails: [
       "Der Export erzeugt keine Datei? Dann fehlt oben unter `Vollständigkeit` noch etwas.",
       "Ein Krankheitstag zählt 0 Stunden? Dann fehlt das Soll. `Vollständigkeit` zählt bei `Soll (Arbeitszeit)` alle Personen ohne Soll im laufenden Monat.",
       "`Zuschlagsregel anlegen` lässt sich nicht tippen? Dann fehlt noch eine eigene Lohnart.",
-      "Unter `Letzter Versand` steht `Nicht gesendet` oder `Fehlgeschlagen`? Darunter steht der Grund. Wer die Zeiterfassung des Teams verwaltet, bekommt dazu eine E-Mail.",
+      "Unter `Letzter Versand` steht `Nicht gesendet` oder `Fehlgeschlagen`? Darunter steht der Grund. Wer die Zeiterfassung des Teams verwaltet, bekommt dazu eine E-Mail. Ob sie ankam, steht bei `Hinweis an die Leitung`.",
+      "Unter `Letzter Versand` steht `Nicht zustellbar`? Die Mail mit dem Link kam beim Lohnbüro nicht an. Prüfen Sie die `E-Mail-Adresse des Lohnbüros`. `Versendet` heißt: Die Mail ist raus, eine Meldung aus dem Postfach fehlt noch.",
       "Der `Versandweg` `SFTP` braucht die Gegenstelle aus den Einstellungen unter `Kalender und Export` bei `Zeitkonten übertragen`.",
     ],
     related: [

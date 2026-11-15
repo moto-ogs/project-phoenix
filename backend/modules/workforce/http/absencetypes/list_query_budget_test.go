@@ -62,6 +62,8 @@ func TestAbsenceTypesListQueryBudgetIsFlat(t *testing.T) {
 			expected = append([]map[string]any{{
 				"id": fmt.Sprint(created.ID), "name": name, "base_type": workforce.AbsenceTypeOther,
 				"is_active": active, "allowance_enabled": allowance, "carryover_until": carryoverDTO,
+				// A school's own type (#4710): not the Träger's, offered, no limit.
+				"requestable": false, "kept_by_traeger": false, "offered": true, "school_limit_days": nil,
 			}}, expected...)
 		}
 		for _, suffix := range []string{"", "?include_usage=false", "?include_usage=true"} {

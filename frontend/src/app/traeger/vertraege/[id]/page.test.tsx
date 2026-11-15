@@ -389,15 +389,21 @@ describe("TraegerVertragPage", () => {
 
       expect(await screen.findByText(text)).toBeInTheDocument();
       expect(screen.queryByText(/Prüfen Sie die Adresse/)).toBeNull();
-      expect(
-        screen.getByRole("button", { name: "Erneut senden" }),
-      ).toBeDisabled();
+      const resend = screen.getByRole("button", { name: "Erneut senden" });
+      expect(resend).toHaveAttribute("aria-disabled", "true");
+      expect(resend).toHaveAccessibleDescription(expect.stringMatching(/\S/));
+      fireEvent.click(resend);
+      expect(api.sendCareContracts).not.toHaveBeenCalled();
     },
   );
 
   it.each([
     ["unsubscribed", "Abgemeldet", /abgemeldet/],
-    ["complained", "Nicht zustellbar", /unerwünscht/],
+    [
+      "complained",
+      "Als unerwünscht gemeldet",
+      /hat eine Mail als unerwünscht gemeldet/,
+    ],
   ] as const)(
     "does not read a %s mail as sent",
     async (outcome, label, text) => {
@@ -419,6 +425,9 @@ describe("TraegerVertragPage", () => {
       expect(await screen.findByText(label)).toBeInTheDocument();
       expect(screen.getByText(text)).toBeInTheDocument();
       expect(screen.queryByText("Gesendet")).toBeNull();
+      // The notice names „Versand“ for another address and leads there.
+      fireEvent.click(screen.getByRole("button", { name: "Zum Versand" }));
+      expect(screen.getByRole("heading", { name: "Versand" })).toHaveFocus();
     },
   );
 
@@ -463,10 +472,13 @@ describe("TraegerVertragPage", () => {
     renderPage();
     expect(
       await screen.findByRole("button", { name: "Erneut senden" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
     expect(
       screen.getByText(/Die Mail wartet auf den Versand/),
     ).toBeInTheDocument();
+    // The notice leads to the card it names (#7054).
+    fireEvent.click(screen.getByRole("button", { name: "Zum Versand" }));
+    expect(screen.getByRole("heading", { name: "Versand" })).toHaveFocus();
     // Checking the delivery sits with the mail history in „Versand“.
     fireEvent.click(
       screen.getByRole("button", { name: "Versand aktualisieren" }),
@@ -676,6 +688,8 @@ describe("TraegerVertragPage", () => {
         "Ab 01.03.2027 gilt Version 2. Eine Änderung der Betreuung ist freigegeben. Was sich ändert, steht unten unter „Versionen“.",
       ),
     ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Zu den Versionen" }));
+    expect(screen.getByRole("heading", { name: "Versionen" })).toHaveFocus();
     expect(screen.getByText("Gilt jetzt")).toBeInTheDocument();
     expect(screen.getByText("Gilt ab 01.03.2027")).toBeInTheDocument();
     expect(

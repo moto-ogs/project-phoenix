@@ -18,17 +18,24 @@ import (
 )
 
 // AdminAbsenceWrites are the manager's absence writes on a staff member's
-// behalf that may cascade a sick report into the plans (#1843). The root
-// binds the shift-plan-sync workflow's entry (#4825).
+// behalf that may cascade an absence into the plans (#1843), the approval of
+// a request among them (#6847). The root binds the shift-plan-sync
+// workflow's entry (#4825).
 type AdminAbsenceWrites interface {
+	ApproveAbsence(ctx context.Context, absenceID, actorAccountID, decidedByStaffID int64, note string) (*workforce.StaffAbsenceResponse, error)
 	CreateAbsenceFor(ctx context.Context, subjectStaffID, createdByStaffID int64, actorAccountID *int64, request workforce.CreateAbsenceRequest) (*workforce.StaffAbsenceResponse, error)
 	DeleteAbsenceFor(ctx context.Context, subjectStaffID, actorStaffID int64, actorAccountID *int64, absenceID int64) error
+	// AbsencePlanGaps and SyncAbsencePlan serve the take-over of absences
+	// whose plan effect predates #6847 (#7021).
+	AbsencePlanGaps(ctx context.Context) ([]workforce.AbsencePlanGap, error)
+	SyncAbsencePlan(ctx context.Context, absenceID, actorStaffID int64, actorAccountID *int64) (bool, error)
 }
 
 // StaffAdminResource serves the workforce half of /api/staff.
 type StaffAdminResource struct {
 	uploads              common.UploadStorage
 	PersonService        workforce.StaffDirectory
+	traegerKeep          workforce.StaffTraegerKeep
 	StaffDocumentService workforce.StaffDocuments
 	OffboardingCleanup   workforce.DocumentCleanupQueue
 	documentFiles        workforce.StaffDocumentFileRecovery
@@ -59,6 +66,9 @@ type StaffAdminResource struct {
 	// qualificationTypes and qualifications serve the Nachweise (#4808).
 	qualificationTypes workforce.StaffQualificationTypes
 	qualifications     workforce.StaffQualificationOverview
+	// absenceMails says what became of the decision mails (#7058); nil
+	// leaves the route away.
+	absenceMails workforce.AbsenceMailStatus
 
 	logger *slog.Logger
 }
@@ -67,8 +77,11 @@ type StaffAdminResource struct {
 // resource. Schedules is the Workforce query the schedule views read the
 // assigned template and the running schedule version from.
 type StaffAdminDependencies struct {
-	Uploads            common.UploadStorage
-	Staff              workforce.StaffDirectory
+	Uploads common.UploadStorage
+	Staff   workforce.StaffDirectory
+	// TraegerKeep tells which employments the Träger keeps in its staff
+	// records (#4705); nil reports none, the writes refuse them regardless.
+	TraegerKeep        workforce.StaffTraegerKeep
 	Documents          workforce.StaffDocuments
 	OffboardingCleanup workforce.DocumentCleanupQueue
 	// DocumentFiles removes the stored staff document files; required.
@@ -98,6 +111,9 @@ type StaffAdminDependencies struct {
 	// both are required.
 	QualificationTypes workforce.StaffQualificationTypes
 	Qualifications     workforce.StaffQualificationOverview
+	// AbsenceMails serves the mail status of the decisions (#7058);
+	// optional.
+	AbsenceMails workforce.AbsenceMailStatus
 
 	Logger *slog.Logger
 }
@@ -135,6 +151,7 @@ func NewStaffAdminResource(deps StaffAdminDependencies) *StaffAdminResource {
 	return &StaffAdminResource{
 		uploads:              deps.Uploads,
 		PersonService:        deps.Staff,
+		traegerKeep:          deps.TraegerKeep,
 		StaffDocumentService: deps.Documents,
 		OffboardingCleanup:   deps.OffboardingCleanup,
 		documentFiles:        deps.DocumentFiles,
@@ -156,6 +173,7 @@ func NewStaffAdminResource(deps StaffAdminDependencies) *StaffAdminResource {
 		identity:             deps.Identity,
 		qualificationTypes:   deps.QualificationTypes,
 		qualifications:       deps.Qualifications,
+		absenceMails:         deps.AbsenceMails,
 		logger:               logger,
 	}
 }
@@ -287,6 +305,7 @@ func (rs *StaffAdminResource) registerCrossStaffRoutes(r chi.Router, withTx comm
 		Get("/time-tracking/payroll-dispatch", rs.getPayrollDispatch)
 
 	r.With(timeTracking, withTx).Get("/time-tracking/month-close", rs.listMonthCloseStatus)
+	r.With(timeTracking, withTx).Get("/time-tracking/month-close/traeger-staff", rs.listTraegerMonthStaff)
 	r.With(timeTracking, withTx).Post("/time-tracking/month-close", rs.closeMonth)
 	r.With(timeTracking, withTx).Post("/{id}/time-tracking/month-close/reopen", rs.reopenMonth)
 }
@@ -308,6 +327,16 @@ func (rs *StaffAdminResource) registerAbsenceRoutes(r chi.Router, withTx common.
 	r.With(vacation, withTx).Post("/absences/{absenceId}/approve", rs.approveAbsence)
 	r.With(vacation, withTx).Post("/absences/{absenceId}/deny", rs.denyAbsence)
 	r.With(vacation, withTx).Post("/absences/{absenceId}/question", rs.questionAbsence)
+	// Whether the decision mails reached the applicants (#7058).
+	if rs.absenceMails != nil {
+		r.With(vacation, withTx).Get("/absences/mails", rs.getAbsenceDecisionMails)
+	}
+	// Absences in force whose shifts and blocks still lack their effect, and
+	// the take-over of one of them (#7021). Both permissions cascade absences
+	// into the plans (approval, booking), so either reaches them. One absence
+	// per request keeps the locks of two absences out of one transaction.
+	r.With(either, withTx).Get("/absences/plan-gaps", rs.listAbsencePlanGaps)
+	r.With(either, withTx).Post("/absences/{absenceId}/plan-sync", rs.syncAbsencePlan)
 
 	// The vacation quota belongs to the time-tracking tier, not to the
 	// personnel record: reading is vacation:approve or time_tracking:manage,

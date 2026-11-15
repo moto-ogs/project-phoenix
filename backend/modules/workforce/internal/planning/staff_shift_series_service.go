@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
@@ -69,6 +70,9 @@ type SplitSeriesInput struct {
 	// closing days (#3820).
 	IncludeSchoolBreaks *bool
 	ActorStaffID        int64
+	// WorkingTime confirms the working-time warnings of the occurrences
+	// (#4708).
+	WorkingTime workforce.WorkingTimeConfirmation
 }
 
 // StaffShiftSeriesService manages recurring shift series (#1889). Series
@@ -113,6 +117,9 @@ type staffShiftSeriesService struct {
 	// sickReports cancels the occurrences on a staff member's full sick days
 	// (#6302). Nil plans every occurrence.
 	sickReports SickReportReader
+	// guard checks the occurrences over all Einsatzorte of a Personalakte
+	// (#4708). Nil checks nothing.
+	guard *planGuard
 }
 
 // NewStaffShiftSeriesService creates a new staff shift series service.
@@ -140,6 +147,11 @@ func NewStaffShiftSeriesService(
 		lockStaffShifts: lockStaffShifts,
 		logger:          logger,
 		today:           calendar.TodayDate,
+	}
+	// The series checks its occurrences with the working-time check of the
+	// shift service (#4708).
+	if shifts, ok := shiftService.(*staffShiftService); ok {
+		service.guard = shifts.guard
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -345,13 +357,31 @@ func (s *staffShiftSeriesService) materializeSeries(ctx context.Context, series 
 		candidates = append(candidates, candidate)
 	}
 
-	_, err = s.shiftRepo.CreateStaffShifts(ctx, ShiftCapabilities(candidates))
+	result.created, err = s.writeSeriesCandidates(ctx, series, candidates, &result)
+	return result, err
+}
+
+// writeSeriesCandidates checks the occurrences over all Einsatzorte of the
+// person (#4708), writes the ones that remain and records a confirmed
+// working-time violation. Occurrences overlapping another Einsatzort are
+// reported as skipped.
+func (s *staffShiftSeriesService) writeSeriesCandidates(ctx context.Context, series *StaffShiftSeries, candidates []*workforce.ShiftRecord, result *seriesMaterialization) (int, error) {
+	candidates, skipped, override, err := s.guard.checkSeries(ctx, series.StaffID, candidates, series.WorkingTime)
 	if err != nil {
-		err = shiftWriteError("bulk create staff shifts", err)
-		return result, err
+		return 0, err
 	}
-	result.created = len(candidates)
-	return result, nil
+	result.skipped = append(result.skipped, skipped...)
+	slices.SortFunc(result.skipped, calendar.Date.Compare)
+	written, err := s.shiftRepo.CreateStaffShifts(ctx, ShiftCapabilities(candidates))
+	if err != nil {
+		return 0, shiftWriteError("bulk create staff shifts", err)
+	}
+	if override != nil {
+		if err := s.guard.recordSeries(ctx, override, shiftsToRows(written), series.CreatedBy); err != nil {
+			return 0, err
+		}
+	}
+	return len(candidates), nil
 }
 
 // seriesWindow is the inclusive range a series materializes over:
@@ -400,9 +430,9 @@ func indexSeriesShifts(existing []*workforce.ShiftRecord, seriesID int64) (map[c
 	return byDate, owned
 }
 
-// seriesCandidate is the occurrence of d. sickAbsenceID names the sick report
-// covering d as a full sick day, zero when the staff member is not sick then.
-func seriesCandidate(series *StaffShiftSeries, d calendar.Date, sickAbsenceID int64) *workforce.ShiftRecord {
+// seriesCandidate is the occurrence of d. stamp names the absence covering d
+// as a full absence day, the zero stamp when the staff member works then.
+func seriesCandidate(series *StaffShiftSeries, d calendar.Date, stamp absenceStamp) *workforce.ShiftRecord {
 	seriesID := series.ID
 	occurrenceDate := d
 	candidate := &workforce.ShiftRecord{
@@ -417,8 +447,8 @@ func seriesCandidate(series *StaffShiftSeries, d calendar.Date, sickAbsenceID in
 		SeriesOccurrenceDate: &occurrenceDate,
 		CreatedBy:            series.CreatedBy,
 	}
-	if sickAbsenceID > 0 {
-		applySickReport(candidate, sickAbsenceID)
+	if stamp.absenceID > 0 {
+		applySickReport(candidate, stamp)
 	}
 	return candidate
 }
@@ -458,6 +488,10 @@ func hasFutureSeriesOccurrence(series *StaffShiftSeries, period *SeriesPeriod, t
 func (s *staffShiftSeriesService) CreateSeries(ctx context.Context, series *StaffShiftSeries) (*SeriesResult, error) {
 	if err := series.Validate(); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrSeriesInvalid, err.Error())
+	}
+	// A Träger that plans outside moto allows no new shift (ADR 0089 §8).
+	if err := s.guard.ensurePlanningOn(ctx); err != nil {
+		return nil, err
 	}
 	staff, err := s.staffRepo.FindByID(ctx, series.StaffID)
 	if err != nil {
@@ -517,10 +551,7 @@ func (s *staffShiftSeriesService) ensureShiftTypeActive(ctx context.Context, id 
 	if err != nil {
 		return err
 	}
-	if !shiftType.IsActive {
-		return ErrShiftTypeInactive
-	}
-	return nil
+	return shiftTypeOfferable(shiftType)
 }
 
 func (s *staffShiftSeriesService) loadSeries(ctx context.Context, id int64) (*StaffShiftSeries, error) {

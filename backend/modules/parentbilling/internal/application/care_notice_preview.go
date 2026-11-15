@@ -167,7 +167,7 @@ func retainFailedAssessments(final, review careMonth, previous map[int64]parentb
 		if invoice, assessed := months[month]; assessed {
 			// Keep the assessment, not an outdated contract party.
 			invoice.Recipient = recipients[contractID]
-			invoice.FamilyEmail = parentbilling.FamilyKey(invoice.Recipient.Email)
+			invoice.FamilyEmail = parentbilling.ContractFamilyKey(invoice.Recipient.Email, contractID)
 			drafts = append(drafts, invoice)
 		}
 	}
@@ -298,14 +298,15 @@ func appendNew[T any](list, entries []T) []T {
 // those of a monthly invoice (#4689): the family's deviation, else the terms
 // of the monthly care.
 func (n *CareFeeNotices) withPayments(ctx context.Context, organizationID int64, notices []parentbilling.CareNotice, issuedOn calendar.Date) error {
-	payments, err := readInvoicePayments(ctx, n.billing.store, organizationID, 0, 0)
+	// A notice names no debtor number: the payer's terms are enough.
+	payments, err := readInvoicePayments(ctx, n.billing.store, organizationID, 0, 0, parentbilling.DebtorNumberScopePayer, false)
 	if err != nil {
 		return err
 	}
 	for i := range notices {
 		family := notices[i].FamilyEmail
 		if family == "" {
-			family = parentbilling.FamilyKey(notices[i].Recipient.Email)
+			family = parentbilling.ContractFamilyKey(notices[i].Recipient.Email, notices[i].ContractID)
 		}
 		invoice := parentbilling.CareInvoice{Recipient: notices[i].Recipient, Service: parentbilling.ServiceCare,
 			FamilyEmail: family}

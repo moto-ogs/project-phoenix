@@ -38,11 +38,13 @@ const (
 // and are then skipped, exactly like the legacy service tolerated unwired
 // effects.
 type ExcusedRequestDependencies struct {
-	CarePlan    careplan.Capability
-	Students    ports.ExcusedRequestStudents
-	Scope       careplan.ReviewScopeResolver
-	Hooks       ports.TransactionHooks
-	Today       func() careplan.Date
+	CarePlan careplan.Capability
+	Students ports.ExcusedRequestStudents
+	Scope    careplan.ReviewScopeResolver
+	Hooks    ports.TransactionHooks
+	Today    func() careplan.Date
+	// Now stamps written and cleared status days; nil is the real clock.
+	Now         func() time.Time
 	Observe     ports.Observer
 	Logger      *slog.Logger
 	Messenger   ports.RequestMessenger
@@ -65,6 +67,7 @@ type ExcusedRequests struct {
 	scope           careplan.ReviewScopeResolver
 	hooks           ports.TransactionHooks
 	today           func() careplan.Date
+	now             func() time.Time
 	observe         ports.Observer
 	logger          *slog.Logger
 	messenger       ports.RequestMessenger
@@ -85,16 +88,19 @@ func NewExcusedRequests(deps ExcusedRequestDependencies) (*ExcusedRequests, erro
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
 	return &ExcusedRequests{
 		carePlan: deps.CarePlan, students: deps.Students, scope: deps.Scope, hooks: deps.Hooks,
-		today: deps.Today, observe: deps.Observe, logger: deps.Logger,
+		today: deps.Today, now: deps.Now, observe: deps.Observe, logger: deps.Logger,
 		messenger: deps.Messenger, broadcaster: deps.Broadcaster, notifier: deps.Notifier,
 		ledger: deps.Ledger, shares: deps.Shares, partialAbsences: deps.PartialAbsences,
 	}, nil
 }
 
-func (w *ExcusedRequests) done(operation string, started time.Time, err error) {
-	w.observe(ports.Observation{Operation: operation, Duration: time.Since(started), Err: err})
+func (w *ExcusedRequests) done(operation string, elapsed time.Duration, err error) {
+	w.observe(ports.Observation{Operation: operation, Duration: elapsed, Err: err})
 }
 
 var _ careplan.ExcusedAbsenceRequests = (*ExcusedRequests)(nil)
@@ -117,7 +123,7 @@ func (w *ExcusedRequests) CreateRequestForStatus(ctx context.Context, studentID,
 
 func (w *ExcusedRequests) Submit(ctx context.Context, input careplan.ExcusedRequestCreateInput) (result *careplan.ExcusedAbsenceRequest, err error) {
 	started := time.Now()
-	defer func() { w.done("excused_request_create", started, err) }()
+	defer func() { w.done("excused_request_create", time.Since(started), err) }()
 	sorted, trimmed, err := validateAbsenceRequestInput(input.Dates, input.Note, input.AbsenceStatus, input.NoteRequired)
 	if err != nil {
 		return nil, err
@@ -216,7 +222,7 @@ func (w *ExcusedRequests) emitCreatedRequestPill(ctx context.Context, req *carep
 // stranger must not learn that the id exists.
 func (w *ExcusedRequests) EditRequest(ctx context.Context, input careplan.ExcusedRequestEditInput) (result *careplan.ExcusedAbsenceRequest, err error) {
 	started := time.Now()
-	defer func() { w.done("excused_request_edit", started, err) }()
+	defer func() { w.done("excused_request_edit", time.Since(started), err) }()
 	// Check ownership before acquiring a child lock: the portal caller may
 	// already hold input.StudentID, and an unrelated request must not make it
 	// lock a second (possibly lower-ID) child.
@@ -279,7 +285,7 @@ func (w *ExcusedRequests) EditRequest(ctx context.Context, input careplan.Excuse
 
 func (w *ExcusedRequests) ListForStudent(ctx context.Context, studentID int64, recentSince time.Time) (result []*careplan.ExcusedAbsenceRequest, err error) {
 	started := time.Now()
-	defer func() { w.done("excused_request_list_for_student", started, err) }()
+	defer func() { w.done("excused_request_list_for_student", time.Since(started), err) }()
 	// Pending first (any age) then recently-decided, deduped by id. The parent
 	// view shows pending requests indefinitely and rejected ones for a short
 	// window so a parent learns their request was declined.
@@ -321,7 +327,7 @@ func (w *ExcusedRequests) ListForStudent(ctx context.Context, studentID int64, r
 // the badge broadcast run after commit.
 func (w *ExcusedRequests) Decide(ctx context.Context, input careplan.ExcusedRequestDecideInput) (result *careplan.ExcusedRequestReviewItem, err error) {
 	started := time.Now()
-	defer func() { w.done("excused_request_decide", started, err) }()
+	defer func() { w.done("excused_request_decide", time.Since(started), err) }()
 	if input.RequestID <= 0 {
 		return nil, careplan.ErrExcusedRequestNotFound
 	}

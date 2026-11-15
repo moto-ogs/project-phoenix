@@ -26,13 +26,16 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// Monday 4 to Friday 8 January 2027, the week by days of the fixture.
+// Monday 5 to Friday 9 January 2099, the week by days of the fixture. The
+// host school reads a week only until its last day has passed by
+// PostgreSQL's clock (enrollment.holiday_host_week), so the weeks lie ahead
+// on every day the suite runs.
 const (
-	dayMonday    = "2027-01-04"
-	dayTuesday   = "2027-01-05"
-	dayWednesday = "2027-01-06"
-	dayThursday  = "2027-01-07"
-	dayFriday    = "2027-01-08"
+	dayMonday    = "2099-01-05"
+	dayTuesday   = "2099-01-06"
+	dayWednesday = "2099-01-07"
+	dayThursday  = "2099-01-08"
+	dayFriday    = "2099-01-09"
 )
 
 type dayOfferBody struct {
@@ -79,12 +82,12 @@ func newDayFixture(t *testing.T, name string) dayFixture {
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, name, identityaccess.TraegerRoleAdministration)
 	body := map[string]any{
-		"name": "Winterferien 2027", "registration_opens_on": "2020-01-01", "registration_closes_on": "2099-12-31",
+		"name": "Winterferien 2099", "registration_opens_on": "2020-01-01", "registration_closes_on": "2099-12-31",
 		"binding": true, "notes": "", "max_days_per_child": 3,
 		"weeks": []map[string]any{
 			{"starts_on": dayMonday, "ends_on": dayFriday, "host_school_id": office.schools[0], "booking_unit": "day",
 				"time_models": []map[string]any{{"name": "bis 13 Uhr", "starts_at": "08:00", "ends_at": "13:00", "price_cents": 1500}}},
-			{"starts_on": "2027-01-11", "ends_on": "2027-01-15", "host_school_id": office.schools[1],
+			{"starts_on": "2099-01-12", "ends_on": "2099-01-16", "host_school_id": office.schools[1],
 				"time_models": []map[string]any{{"name": "bis 13 Uhr", "starts_at": "08:00", "ends_at": "13:00", "price_cents": 4500}}},
 		},
 	}
@@ -218,7 +221,7 @@ func TestHolidayDayBookingPlacesEachDayAndBillsItsDays(t *testing.T) {
 func (d dayFixture) hostedDays(t *testing.T) map[string]int {
 	t.Helper()
 	today := &atomic.Value{}
-	today.Store(calendar.NewDate(2027, 1, 1))
+	today.Store(calendar.NewDate(2099, 1, 1))
 	router := newHolidayHostRouter(t, d.holidayRegistrationFixture, today)
 	_, account := testpkg.CreateTestStaffWithAccountForTenant(t, d.db, d.office.schools[0], "Paul", "Planung")
 	token := testpkg.MintTestJWT(t, sessiontoken.AppClaims{
@@ -283,7 +286,7 @@ func TestHolidayChildDayLimitRefusesMoreDaysThanThePeriodAllows(t *testing.T) {
 	assert.Equal(t, map[string]any{"limit": float64(3), "child": float64(1)}, refusal.Details)
 
 	rec = publicJSON(t, d.public, http.MethodPost, registrationPath(d.period.PublicToken),
-		d.registration("ole.samstag@example.org", "Ole", d.days("2027-01-09")))
+		d.registration("ole.samstag@example.org", "Ole", d.days("2099-01-10")))
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, fields := registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_registration_invalid", code)

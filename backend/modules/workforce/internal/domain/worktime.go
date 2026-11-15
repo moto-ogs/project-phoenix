@@ -116,8 +116,11 @@ type StaffWorkSchedule struct {
 	ValidFrom          string
 	// ValidUntil is exclusive, empty while the version is current.
 	ValidUntil string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	// KeptByTraeger is set by the current-schedule read: a contract of the
+	// Träger governs the Soll (#4706).
+	KeptByTraeger bool
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // StaffWorkScheduleFields is the writable part of one schedule version row.

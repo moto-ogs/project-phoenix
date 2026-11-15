@@ -44,6 +44,8 @@ describe("secure Chrome (#5612)", () => {
       }),
     ).toEqual({ args: ["--x"], channel: "chrome", chromiumSandbox: true });
     expect(secureChromeUse()).toEqual({
+      locale: "de-DE",
+      timezoneId: "Europe/Berlin",
       channel: "chrome",
       launchOptions: { channel: "chrome", chromiumSandbox: true },
     });

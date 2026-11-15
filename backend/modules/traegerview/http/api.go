@@ -18,15 +18,17 @@ import (
 
 // Resource serves the Träger projection routes.
 type Resource struct {
-	overview traegerview.Overview
+	overview      traegerview.Overview
+	arrivalPickup traegerview.ArrivalPickupReport
 }
 
-// NewResource builds the resource.
-func NewResource(overview traegerview.Overview) *Resource {
-	if overview == nil {
-		panic("traeger view http: the overview is required")
+// NewResource builds the resource. arrivalPickup answers the heatmap of
+// arrival and pickup times (#4714).
+func NewResource(overview traegerview.Overview, arrivalPickup traegerview.ArrivalPickupReport) *Resource {
+	if overview == nil || arrivalPickup == nil {
+		panic("traeger view http: the overview and the arrival and pickup times are required")
 	}
-	return &Resource{overview: overview}
+	return &Resource{overview: overview, arrivalPickup: arrivalPickup}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/schools inside the
@@ -42,6 +44,15 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/alerts", rs.schoolsAlerts)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/occupancy", rs.occupancy)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/occupancy/export", rs.occupancyExport)
+		// The utilization over time is a report (#4713, ADR 0241): the
+		// figures need "Berichte lesen", the children by name "Verträge
+		// verwalten", the right that already opens the children of Soll und
+		// Ist (ADR 0156).
+		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/utilization", rs.utilization)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/utilization/export", rs.utilizationExport)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightContractsManage)).Get("/{id}/utilization/children", rs.utilizationChildren)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/arrival-pickup-times", rs.arrivalPickupTimes)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/arrival-pickup-times/export", rs.arrivalPickupTimesExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/{id}", rs.getSchool)
 	})
 	return r

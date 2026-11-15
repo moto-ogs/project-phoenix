@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { ClosingDayChip } from "~/components/planning/closing-day-marker";
 import { FieldLabel } from "~/components/ui/field-label";
@@ -20,13 +20,21 @@ import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { useClosingDaysState } from "~/lib/hooks/use-closing-days";
 import { createLogger } from "~/lib/logger";
 import { staffShiftService } from "~/lib/shift-api";
+import { useWorkingTimeConfirmation } from "./working-time-confirmation";
 import type { StaffScheduleStaff, StaffShift } from "~/lib/shift-helpers";
-import type { ShiftType } from "~/lib/shift-type-helpers";
+import {
+  isShiftTypeOffered,
+  shiftTypeOptionLabel,
+  type ShiftType,
+} from "~/lib/shift-type-helpers";
 
 const logger = createLogger({ component: "ShiftMoveDialog" });
 const STAFF_SHIFT_MAX_BREAK_MINUTES = 300;
 const INACTIVE_TYPE_MOVE_MESSAGE =
   "Diese Dienstart ist inaktiv. Bitte wählen Sie für die andere Person eine aktive Dienstart oder „Keine Dienstart“.";
+// #6845: eine entfernte Dienstart behalten nur die schon geplanten Dienste.
+const ARCHIVED_TYPE_MOVE_MESSAGE =
+  "Diese Dienstart wurde entfernt. Bitte wählen Sie für die andere Person eine andere Dienstart oder „Keine Dienstart“.";
 
 // "Verschieben nach": move one
 // materialized shift to another person and/or day in one confirmed, atomic
@@ -82,6 +90,12 @@ export function ShiftMoveDialog({
   const moveInFlightRef = useRef(false);
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
+  // Rückfrage bei einem Verstoß gegen eine Arbeitszeitregel (#4708).
+  const workingTime = useWorkingTimeConfirmation();
+  const { reset: resetWorkingTime } = workingTime;
+  useEffect(() => {
+    if (isOpen) resetWorkingTime();
+  }, [isOpen, resetWorkingTime]);
   // „Wiederholen“ verschiebt mit dem aktuellen Formularstand.
   const latestMoveRef = useRef<() => void>(() => undefined);
 
@@ -99,11 +113,8 @@ export function ShiftMoveDialog({
       { value: "", label: "Keine Dienstart" },
     ];
     for (const type of shiftTypes) {
-      if (type.isActive || type.id === shift.shiftTypeId) {
-        opts.push({
-          value: type.id,
-          label: type.isActive ? type.name : `${type.name} (inaktiv)`,
-        });
+      if (isShiftTypeOffered(type) || type.id === shift.shiftTypeId) {
+        opts.push({ value: type.id, label: shiftTypeOptionLabel(type) });
       }
     }
     return opts;
@@ -122,7 +133,12 @@ export function ShiftMoveDialog({
   const movingToOtherPerson = targetStaffId !== shift.staffId;
   const selectedShiftType = shiftTypes.find((type) => type.id === shiftTypeId);
   const inactiveTypeBlocksMove =
-    movingToOtherPerson && selectedShiftType?.isActive === false;
+    movingToOtherPerson &&
+    selectedShiftType !== undefined &&
+    !isShiftTypeOffered(selectedShiftType);
+  const typeMoveMessage = selectedShiftType?.archivedAt
+    ? ARCHIVED_TYPE_MOVE_MESSAGE
+    : INACTIVE_TYPE_MOVE_MESSAGE;
   const targetClosingDayState = useClosingDaysState(targetDate, targetDate);
   const closingDayLookupLoading = targetClosingDayState.isLoading;
   const canSubmit =
@@ -132,6 +148,19 @@ export function ShiftMoveDialog({
     breakValid &&
     !inactiveTypeBlocksMove &&
     !closingDayLookupLoading;
+  // Fachliche Sperre; das Nachladen der Schließtage zählt nicht als Grund.
+  const submitBlockedReason =
+    targetStaffId === ""
+      ? "Wählen Sie zuerst eine Person aus."
+      : targetDate === ""
+        ? "Wählen Sie zuerst einen Tag aus."
+        : !timesValid
+          ? "Prüfen Sie zuerst Beginn und Ende."
+          : !breakValid
+            ? "Prüfen Sie zuerst die Pause."
+            : inactiveTypeBlocksMove
+              ? "Wählen Sie zuerst eine aktive Dienstart aus."
+              : undefined;
 
   // Schließtag am Zieltag (#2032): Hinweis im Formular und in der ohnehin
   // vorhandenen Bestätigung — verschoben wird trotzdem, nichts wird gesperrt.
@@ -171,7 +200,7 @@ export function ShiftMoveDialog({
       return;
     }
     if (inactiveTypeBlocksMove) {
-      formErrors.invalid(INACTIVE_TYPE_MOVE_MESSAGE, {
+      formErrors.invalid(typeMoveMessage, {
         shift_type_id: "Bitte eine aktive Dienstart wählen.",
       });
       return;
@@ -194,6 +223,7 @@ export function ShiftMoveDialog({
         endTime,
         breakMinutes: breakMinutes ?? 0,
         shiftTypeId: resolvedShiftTypeId,
+        workingTime: workingTime.current(),
       });
       finishSuccess();
     } catch (err: unknown) {
@@ -206,6 +236,7 @@ export function ShiftMoveDialog({
       setConfirmOpen(false);
       moveInFlightRef.current = false;
       setIsMoving(false);
+      if (workingTime.intercept(err, () => executeMove())) return;
       await formErrors.show(err, {
         object: "die Schicht",
         retry: () => latestMoveRef.current(),
@@ -237,6 +268,7 @@ export function ShiftMoveDialog({
         size="md"
         onClick={onClose}
         disabled={isMoving}
+        noTooltip="Abbrechen schließt den Dialog, ohne etwas zu ändern."
       >
         Abbrechen
       </Button>
@@ -246,6 +278,8 @@ export function ShiftMoveDialog({
         size="md"
         onClick={handleSubmit}
         disabled={isMoving || !canSubmit}
+        disabledReason={isMoving ? undefined : submitBlockedReason}
+        tooltip="Verschiebt die Schicht, moto fragt vorher nach."
       >
         Verschieben
       </Button>
@@ -257,7 +291,7 @@ export function ShiftMoveDialog({
       {/* Hidden while the confirmation is open — both share the same fixed
           z-index, so stacking them would bury this modal's footer. */}
       <Modal
-        isOpen={isOpen && !confirmOpen}
+        isOpen={isOpen && !confirmOpen && !workingTime.isOpen}
         onClose={onClose}
         title="Schicht verschieben"
         footer={footer}
@@ -347,7 +381,7 @@ export function ShiftMoveDialog({
             </Field>
           )}
           {inactiveTypeBlocksMove && (
-            <Alert type="warning" message={INACTIVE_TYPE_MOVE_MESSAGE} />
+            <Alert type="warning" message={typeMoveMessage} />
           )}
         </div>
       </Modal>
@@ -388,6 +422,7 @@ export function ShiftMoveDialog({
           )}
         </div>
       </ConfirmationModal>
+      {workingTime.dialog}
     </>
   );
 }

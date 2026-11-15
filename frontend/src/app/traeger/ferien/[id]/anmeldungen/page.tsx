@@ -59,6 +59,10 @@ import type {
   FilterConfig,
 } from "~/components/ui/page-header/types";
 import { StatusBadge } from "~/components/ui/status-badge";
+import {
+  HolidayRegistrationMailProblemBadge,
+  useHolidayRegistrationMailProblems,
+} from "~/components/traeger/holiday-registration-mail-problems";
 import { holidayPlacementStatus } from "~/components/traeger/holiday-placement";
 import { HOLIDAY_PDF_HEALTH_KEY } from "~/components/traeger/use-holiday-registration-pdf";
 import { holidayDeletionNotice } from "~/components/traeger/holiday-registration-retention";
@@ -69,7 +73,10 @@ import {
   planHolidayBulkConfirmation,
   registrationCount,
 } from "~/components/traeger/holiday-bulk-confirm-model";
-import { useHolidayPeriodBillingHref } from "~/components/traeger/use-holiday-period-billing-href";
+import {
+  HOLIDAY_BILLING_HINT,
+  useHolidayPeriodBillingHref,
+} from "~/components/traeger/use-holiday-period-billing-href";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { billingConcept } from "~/lib/concepts/billing";
 import { TenantPage } from "~/components/ui/tenant-page";
@@ -101,6 +108,7 @@ import {
   type HolidayRegistrationList,
   type HolidayWishFilter,
   type HolidayRegistrationStatus,
+  type HolidayRegistrationMailProblem,
   type HolidayRegistrationSummary,
   TRAEGER_HEALTH_RIGHT,
 } from "~/lib/traeger-holiday-registrations-api";
@@ -222,6 +230,7 @@ function columns(
   siblings: SiblingView,
   wishRule: boolean,
   known: ReadonlyMap<string, string>,
+  mails: ReadonlyMap<string, readonly HolidayRegistrationMailProblem[]>,
 ): DataTableColumn<HolidayRegistrationSummary>[] {
   return [
     {
@@ -377,6 +386,9 @@ function columns(
           {registration.frozen ? (
             <StatusBadge tone="gray" label="Eingefroren" />
           ) : null}
+          <HolidayRegistrationMailProblemBadge
+            problems={mails.get(registration.id) ?? []}
+          />
         </div>
       ),
       sortValue: (registration) => registration.status,
@@ -681,6 +693,14 @@ export default function TraegerHolidayRegistrationsPage() {
     ),
   );
 
+  // A confirmation sends the acceptance mail: the states ask again.
+  const mails = useHolidayRegistrationMailProblems(
+    periodId,
+    loadedRegistrations
+      .map((registration) => `${registration.id}:${registration.status}`)
+      .join("|"),
+  );
+
   const openBulkConfirmation = () => {
     if (merging || loading || selected.size === 0) return;
     setBulkPlan(
@@ -885,7 +905,12 @@ export default function TraegerHolidayRegistrationsPage() {
       actions={
         <>
           {billingHref ? (
-            <ButtonLink href={billingHref} variant="outline" size="md">
+            <ButtonLink
+              href={billingHref}
+              variant="outline"
+              size="md"
+              tooltip={HOLIDAY_BILLING_HINT}
+            >
               <MotoConceptIcon
                 concept={billingConcept}
                 size={18}
@@ -934,6 +959,7 @@ export default function TraegerHolidayRegistrationsPage() {
           siblings,
           wishRule,
           known,
+          mails,
         )}
         rows={[...registrationsShown]}
         getRowKey={(registration) => registration.id}
@@ -1021,6 +1047,7 @@ export default function TraegerHolidayRegistrationsPage() {
                 variant="primary"
                 size="compact"
                 disabled={loading || merging}
+                tooltip="moto fragt vorher nach, dann bekommen die Eltern eine Bestätigung per E-Mail."
                 onClick={openBulkConfirmation}
                 className="max-sm:grow"
               >

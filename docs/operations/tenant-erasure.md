@@ -394,4 +394,4 @@ Symlinks und konkurrierende Schreiber. Restore-/Fristprüfung:
 Der zweite Test stellt einen echten PostgreSQL-Dump zweier synthetischer
 Schulen wieder her und prüft außerdem, dass später gelöschte IDs nicht erneut
 vergeben werden können. Der breitere Backup-Gesamttest bleibt
-`devbox run -- node --test scripts/daily-backup.integration.test.mjs`.
+`devbox run -- node --test scripts/daily-backup.integration.test.mjs scripts/daily-backup-roles-*.integration.test.mjs`.

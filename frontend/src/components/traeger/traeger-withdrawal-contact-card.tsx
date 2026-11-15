@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
+import { JumpButton } from "~/components/ui/jump-button";
 import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
 import { EditActions } from "~/components/ui/edit-actions";
 import {
@@ -32,6 +33,7 @@ import {
   type WithdrawalReachSource,
   type WithdrawalReachValue,
 } from "~/lib/traeger-withdrawal-contact";
+import { TRAEGER_CONTACT_FIELD_IDS } from "./traeger-contact-card";
 
 const logger = createLogger({ component: "TraegerWithdrawalContactCard" });
 
@@ -200,6 +202,20 @@ export function TraegerWithdrawalContactCard({
           <Alert
             type="warning"
             message={`Die Widerrufsbelehrung braucht Telefon und E-Mail. Es fehlt: ${missing.join(" und ")}. Bitte tragen Sie sie hier oder bei der Ansprechperson ein.`}
+            action={
+              canEdit ? (
+                <JumpButton
+                  targetId={
+                    reach.phone.source === "missing"
+                      ? TRAEGER_CONTACT_FIELD_IDS.phone
+                      : TRAEGER_CONTACT_FIELD_IDS.email
+                  }
+                  tooltip="Springt zu Telefon und E-Mail der Ansprechperson."
+                >
+                  Zur Ansprechperson
+                </JumpButton>
+              ) : undefined
+            }
           />
         ) : null}
 

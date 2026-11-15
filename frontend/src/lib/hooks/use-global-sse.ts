@@ -46,7 +46,10 @@ import { useTenantSafe } from "~/lib/tenant-context";
 import { useSSE } from "~/lib/hooks/use-sse";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import { berlinTodayISO } from "~/lib/date-helpers";
-import { dispatchPhoenixNotification } from "~/lib/notification-events";
+import {
+  dispatchPhoenixNotification,
+  NOTIFICATION_FEED_REFRESH_EVENT,
+} from "~/lib/notification-events";
 import {
   SEARCH_STUDENTS_ALL_GROUPS_KEY,
   SEARCH_STUDENTS_KEY_PREFIX,
@@ -936,6 +939,8 @@ export function useGlobalSSE(): SSEHookState {
             // created, edited or deleted planned block announces only
             // staffing_deviation_changed (#5017).
             key.includes("active-supervision-dashboard-") ||
+            // Group cards project today's offerings from the same instances.
+            key.includes(groupKeys.liveFamily) ||
             key.includes("database-calendar-periods-list") ||
             // Children planned by hand without a booking (#5102): a removal,
             // „Bleibt so“ and every series write announce this event, and the
@@ -1308,6 +1313,19 @@ export function useGlobalSSE(): SSEHookState {
           break;
         }
 
+        // Der Feed des Kontos änderte sich (#7148): neuer oder gebündelter
+        // Eintrag, oder ein Gelesen-Status, auch von einem anderen Gerät.
+        // Die Glocke hält ihre Daten unter dem Schlüssel der Sitzung und lädt
+        // auf dieses Fenster-Ereignis Zähler und Liste neu.
+        case "notification_feed_changed": {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent(NOTIFICATION_FEED_REFRESH_EVENT),
+            );
+          }
+          break;
+        }
+
         // A counterpart read a conversation. Handled identically to a new
         // message on the staff side: the sidebar badge must refresh (a staff
         // member reading in another tab dropped the count) and any open
@@ -1519,6 +1537,7 @@ export function useGlobalSSE(): SSEHookState {
     }
     window.dispatchEvent(new CustomEvent("messages-unread-refresh"));
     window.dispatchEvent(new CustomEvent("team-messages-unread-refresh"));
+    window.dispatchEvent(new CustomEvent(NOTIFICATION_FEED_REFRESH_EVENT));
     announceChangeRequestsChanged();
   }, [accepts, flushInvalidations]);
   useLayoutEffect(() => {

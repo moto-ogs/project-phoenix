@@ -83,7 +83,7 @@ func (f masterDataFixture) queue(t *testing.T, scope careplanCompose.ReviewScope
 		testpkg.StudentDirectory{},
 		owners.MustNewPeopleDirectory(testpkg.MustDatabase(f.db)),
 		scope,
-		careplan.Today,
+		func() careplan.Date { return careplan.Date(decisionTestToday) },
 		ignoreReviewObservation)
 	require.NoError(t, err)
 	return queue

@@ -27,11 +27,18 @@ func nativeClassArrivalPlans(t *testing.T) careplanCompose.ArrivalClassPlans {
 	return owners.ClassArrivalPlans(classes)
 }
 
+// arrivalTestMonday is the fixed Monday of the arrival suites.
+const arrivalTestMonday = decisionTestToday
+
+// arrivalTestToday is the day clock of the arrival suites.
+func arrivalTestToday() calendar.Date { return arrivalTestMonday }
+
 func nativeArrivalSchedules(t *testing.T, records carePlanBindingPorts.ArrivalScheduleRecords, baselines careplan.ArrivalBaselineReader, classes careplanCompose.ArrivalClassPlans, exceptions careplan.ClassArrivalExceptions) careplan.ArrivalScheduleService {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	rules, deps, err := owners.ArrivalScheduleBinding(owners.MustNewPeopleDirectory(testpkg.MustDatabase(db)), classes, exceptions, nil)
 	require.NoError(t, err)
+	deps.Today = arrivalTestToday
 	service, err := careplanCompose.NewArrivalSchedules(db, records, baselines, rules, deps)
 	require.NoError(t, err)
 	return service
@@ -137,7 +144,7 @@ func TestArrivalSchedulesForDateUseTheRequestedProjectionDate(t *testing.T) {
 	staff := testpkg.CreateTestStaff(t, db, "Betreuung", "Export")
 	setClassArrivalTimes(t, "8d", map[string]string{"mon": "11:45"})
 	testpkg.CreateTestArrivalSchedule(t, db, student.ID, timetable.WeekdayMonday, staff.ID, "")
-	monday := mondayOnOrAfter(calendar.TodayDate())
+	monday := arrivalTestMonday
 
 	rows, err := svc.GetWeeklySchedulesByStudentIDsForDate(ctx, []int64{student.ID}, monday)
 	require.NoError(t, err)
@@ -183,7 +190,7 @@ func TestArrivalDataForDateRangeKeepsMidweekBookingStart(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	svc := nativeArrivalSchedules(t, repos.CarePlan(), tuesdayOnlyArrivalBaseline{}, nativeClassArrivalPlans(t), nil)
 	student := testpkg.CreateTestStudent(t, db, "Mitte", "Woche", "8f")
-	monday := mondayOnOrAfter(calendar.TodayDate())
+	monday := arrivalTestMonday
 
 	data, err := svc.GetStudentArrivalDataForDateRange(ctx, student.ID, monday, monday.AddDays(4))
 	require.NoError(t, err)
@@ -215,7 +222,7 @@ func TestArrivalExceptionsDoNotCreateUnbookedCareDays(t *testing.T) {
 	svc := nativeArrivalSchedules(t, repos.CarePlan(), tuesdayOnlyArrivalBaseline{}, nativeClassArrivalPlans(t), nil)
 	student := testpkg.CreateTestStudent(t, db, "Ohne", "Buchung", "8k")
 	staff := testpkg.CreateTestStaff(t, db, "Betreuung", "Ausnahme")
-	monday := mondayOnOrAfter(calendar.TodayDate())
+	monday := arrivalTestMonday
 	arrivalTime := time.Date(2000, time.January, 1, 11, 45, 0, 0, time.UTC)
 	// The booking-authoritative baseline only returns Tuesday. Monday must stay
 	// unplanned even when the stored exception has an arrival time.
@@ -280,7 +287,7 @@ func TestArrivalDataForDateRangeKeepsOneRowPerWeekday(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	svc := nativeArrivalSchedules(t, repos.CarePlan(), tuesdayOnlyArrivalBaseline{}, nativeClassArrivalPlans(t), nil)
 	student := testpkg.CreateTestStudent(t, db, "Bereich", "Woche", "8g")
-	monday := mondayOnOrAfter(calendar.TodayDate())
+	monday := arrivalTestMonday
 
 	data, err := svc.GetStudentArrivalDataForDateRange(ctx, student.ID, monday, monday.AddDays(8))
 	require.NoError(t, err)
@@ -325,7 +332,7 @@ func TestArrivalDataForWeekendRangeReadsFridayRows(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	svc := nativeArrivalSchedules(t, repos.CarePlan(), weekendFridayArrivalBaseline{}, nativeClassArrivalPlans(t), nil)
 	student := testpkg.CreateTestStudent(t, db, "Wochenende", "Freitag", "8n")
-	saturday := mondayOnOrAfter(calendar.TodayDate()).AddDays(5)
+	saturday := arrivalTestMonday.AddDays(5)
 
 	data, err := svc.GetStudentArrivalDataForDateRange(ctx, student.ID, saturday, saturday.AddDays(1))
 	require.NoError(t, err)
@@ -371,7 +378,7 @@ func TestArrivalDataForDateRangeDropsCareDayAfterBookingEnds(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	svc := nativeArrivalSchedules(t, repos.CarePlan(), firstMondayOnlyArrivalBaseline{}, nativeClassArrivalPlans(t), nil)
 	student := testpkg.CreateTestStudent(t, db, "Ende", "Buchung", "8l")
-	monday := mondayOnOrAfter(calendar.TodayDate())
+	monday := arrivalTestMonday
 
 	data, err := svc.GetStudentArrivalDataForDateRange(ctx, student.ID, monday, monday.AddDays(7))
 

@@ -4,7 +4,10 @@ import {
   type BrowserContext,
   type Page,
 } from "@playwright/test";
-import { localMFACode, loginToLocalTenant } from "../../e2e/local-tenant-login";
+import {
+  loginToLocalMfaPortal,
+  loginToLocalTenant,
+} from "../../e2e/local-tenant-login";
 import { secureLaunchOptions } from "../secure-chrome";
 
 import { accessForShot, type Credentials, type StackAccess } from "./access";
@@ -144,59 +147,6 @@ function loadingIndicators(page: Page): Promise<string[]> {
 /** Wohin ein kaputter Shot sein Bild legt; der Workflow lädt es hoch. */
 const FAILURE_DIR = "test-results/product-screenshots";
 
-/**
- * Anmeldung im Träger-Portal (app/traeger/login). Gehört das Konto zu mehreren
- * Trägern, fragt die Seite nach dem Träger; dann gilt der vorausgewählte erste.
- * Danach verlangt das Portal den zweiten Faktor (#4651): den Code aus der
- * Mail im lokalen Mailpit, beim ersten Mal mit Einrichtung.
- */
-async function loginToTraeger(
-  page: Page,
-  origin: string,
-  credentials: Credentials,
-): Promise<void> {
-  const leftLogin = (url: URL) => !url.pathname.endsWith("/login");
-  const choice = page.locator('input[name="organization"]').first();
-  const code = page.locator('input[autocomplete="one-time-code"]').first();
-  const sendCode = page.getByRole("button", {
-    name: "Code an meine E-Mail senden",
-  });
-  await page.goto(`${origin}/login`, { waitUntil: "domcontentloaded" });
-  await page.fill("#email", credentials.email);
-  await page.fill("#password", credentials.password);
-  let notBefore = Date.now();
-  await page.click('button[type="submit"]');
-  // Welcher Schritt der Anmeldung als Nächstes kommt; höchstens 30 s.
-  const nextStep = async () => {
-    const deadline = Date.now() + 30_000;
-    while (Date.now() < deadline) {
-      if (leftLogin(new URL(page.url()))) return "fertig";
-      if (await choice.isVisible()) return "traeger";
-      if (await code.isVisible()) return "code";
-      if (await sendCode.isVisible()) return "einrichtung";
-      await page.waitForTimeout(250);
-    }
-    throw new Error("Die Träger-Anmeldung kam nach 30 s nicht weiter.");
-  };
-  let step = await nextStep();
-  if (step === "traeger") {
-    notBefore = Date.now();
-    await page.click('button[type="submit"]');
-    step = await nextStep();
-  }
-  if (step === "fertig") return;
-  if (step === "einrichtung") {
-    notBefore = Date.now();
-    await sendCode.click();
-  }
-  await code.waitFor({ timeout: 30_000 });
-  await code.fill(await localMFACode(credentials.email, notBefore));
-  if (step === "einrichtung") {
-    await page.getByRole("button", { name: "Weiter zum Dashboard" }).click();
-  }
-  await page.waitForURL(leftLogin, { timeout: 30_000 });
-}
-
 async function login(
   context: BrowserContext,
   portal: Portal,
@@ -216,7 +166,7 @@ async function login(
       return;
     }
     if (portal === "traeger") {
-      await loginToTraeger(page, origin, credentials);
+      await loginToLocalMfaPortal(page, origin, credentials);
       return;
     }
     // `domcontentloaded`: der Dev-Server hält SSE-Verbindungen offen, das

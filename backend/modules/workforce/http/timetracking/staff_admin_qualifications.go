@@ -85,6 +85,9 @@ func (rs *StaffAdminResource) registerQualificationRoutes(r chi.Router, withTx c
 	r.With(stammdaten, withTx).Put("/qualification-types/{typeId}", rs.updateQualificationType)
 	r.With(stammdaten, withTx).Get("/qualifications", rs.listQualificationOverview)
 	r.With(qualificationRead, withTx).Get("/{id}/qualifications", rs.getStaffQualifications)
+	// What the school sees of the Träger's proofs of a person the Träger
+	// keeps (#4707): status and expiry per kind, never the proof.
+	r.With(qualificationRead, withTx).Get("/{id}/traeger-proofs", rs.getStaffTraegerProofs)
 	// Every signed-in staff member reads their own Nachweise; the handler
 	// resolves the caller and never takes a staff id from the request.
 	r.With(withTx).Get("/me/qualifications", rs.getOwnQualifications)
@@ -157,6 +160,30 @@ func (rs *StaffAdminResource) getStaffQualifications(w http.ResponseWriter, r *h
 		return
 	}
 	rs.respondQualificationEntries(w, r, id)
+}
+
+// TraegerProofResponse is one kind of the Träger's proofs on the wire.
+type TraegerProofResponse struct {
+	TypeName  string         `json:"type_name"`
+	Status    string         `json:"status"`
+	ExpiresOn *calendar.Date `json:"expires_on"`
+}
+
+func (rs *StaffAdminResource) getStaffTraegerProofs(w http.ResponseWriter, r *http.Request) {
+	id, ok := common.ParseInt64IDWithError(w, r, "id", common.MsgInvalidStaffID)
+	if !ok {
+		return
+	}
+	proofs, err := rs.qualifications.StaffTraegerProofs(r.Context(), id)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInternalServer(err))
+		return
+	}
+	resp := make([]TraegerProofResponse, 0, len(proofs))
+	for _, proof := range proofs {
+		resp = append(resp, TraegerProofResponse{TypeName: proof.TypeName, Status: proof.Status, ExpiresOn: optionalDate(proof.ExpiresOn)})
+	}
+	common.Respond(w, r, http.StatusOK, resp, "Träger proofs retrieved successfully")
 }
 
 // getOwnQualifications answers the caller's own Nachweise. An account

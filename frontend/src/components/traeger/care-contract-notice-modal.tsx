@@ -48,6 +48,9 @@ import { traegerPath } from "~/lib/traeger-url";
 import { createLogger } from "~/lib/logger";
 import { TERMINATION_KIND_LABELS } from "./care-contract-format";
 
+/** The settings area with the texts of the contract mails. */
+const CONTRACT_SETTINGS_PATH = "/traeger/einstellungen?bereich=vertraege";
+
 /** No answer arrived, or a gateway gave up: the request may have run. */
 function connectionLost(err: unknown): boolean {
   return (
@@ -141,15 +144,19 @@ export function RecordNoticeModal({
 
   const extraordinary =
     kind === "kuendigung" && terminationKind === "ausserordentlich";
+  // Nur eine fehlende Angabe sperrt fachlich; solange die Termine laden,
+  // bleibt der Knopf ohne Grund gesperrt.
+  const missingText =
+    !choices || optionsError
+      ? undefined
+      : kind === "widerruf" && !dispatchedOn
+        ? "Tragen Sie zuerst ein, wann die Eltern den Widerruf abgesendet haben."
+        : extraordinary && !reason.trim()
+          ? "Tragen Sie zuerst den Grund der Eltern ein."
+          : undefined;
 
   const submit = async () => {
-    if (
-      !choices ||
-      optionsError ||
-      (kind === "widerruf" && !dispatchedOn) ||
-      (extraordinary && !reason.trim())
-    )
-      return;
+    if (!choices || optionsError || missingText) return;
     formErrors.clear();
     const recordedMessage =
       kind === "widerruf"
@@ -225,6 +232,7 @@ export function RecordNoticeModal({
             size="md"
             onClick={onClose}
             disabled={saving}
+            noTooltip="Abbrechen schließt nur das Fenster, ohne etwas einzutragen."
           >
             Abbrechen
           </Button>
@@ -237,9 +245,10 @@ export function RecordNoticeModal({
               saving ||
               !choices ||
               Boolean(optionsError) ||
-              (kind === "widerruf" && !dispatchedOn) ||
-              (extraordinary && !reason.trim())
+              Boolean(missingText)
             }
+            disabledReason={missingText}
+            tooltip={`Trägt ${kind === "widerruf" ? "den Widerruf" : "die Kündigung"} ein und schickt den Eltern sofort eine Bestätigung.`}
             isLoading={saving}
             loadingText="Wird eingetragen …"
           >
@@ -439,12 +448,11 @@ export function RecordNoticeModal({
             // letter template „Bestätigung der Kündigung“. A new tab keeps
             // this dialog and its entries.
             <ButtonLink
-              href={traegerPath("/traeger/einstellungen?bereich=vertraege")}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Text der E-Mail ansehen, neuer Tab"
+              href={traegerPath(CONTRACT_SETTINGS_PATH)}
+              newTab
               variant="ghost_tone"
               size="compact"
+              tooltip="Öffnet die Einstellungen mit dem Text der E-Mail in einem neuen Tab."
               // Under the message on a phone: the label starts with the text.
               className="max-sm:-ml-2.5"
             >
@@ -518,6 +526,7 @@ export function SetNoticeEndModal({
             size="md"
             onClick={onClose}
             disabled={saving}
+            noTooltip="Abbrechen schließt nur das Fenster, ohne etwas einzutragen."
           >
             Abbrechen
           </Button>
@@ -527,6 +536,8 @@ export function SetNoticeEndModal({
             variant="primary"
             size="md"
             disabled={saving || !endsOn}
+            disabledReason="Wählen Sie zuerst den letzten Tag des Vertrags."
+            tooltip="Legt das Vertragsende fest und teilt es den Eltern mit."
             isLoading={saving}
             loadingText="Wird eingetragen …"
           >
@@ -653,6 +664,18 @@ export function RejectReasonModal({
         <Alert
           type="info"
           message="Die Eltern bekommen eine Mitteilung mit dem neuen Vertragsende per E-Mail und in der Eltern-App. Den Text legen Sie unter Einstellungen › Allgemein › Betreuungsverträge fest."
+          action={
+            // A new tab keeps this dialog open (#7054).
+            <ButtonLink
+              href={traegerPath(CONTRACT_SETTINGS_PATH)}
+              newTab
+              variant="surface"
+              size="compact"
+              tooltip="Öffnet den Text der Mitteilung in den Einstellungen in einem neuen Tab."
+            >
+              Zur Einstellung
+            </ButtonLink>
+          }
         />
         <Alert
           type="warning"

@@ -55,6 +55,6 @@ func NewTestExcusedAbsenceRequests(
 	}
 	return owners.NewExcusedAbsenceRequestService(
 		options.CarePlan, people.Students, people.Persons, scope, emitter, broadcaster,
-		people.Events, nil, nil, nil, options.Logger, options.Today, options.PartialAbsences,
+		people.Events, nil, nil, nil, options.Logger, options.Today, nil, options.PartialAbsences,
 	)
 }

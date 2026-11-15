@@ -35,10 +35,34 @@ import type { TimeAccountRow } from "~/lib/staff-overview-api";
  *  freie Zahlenfelder, die niemand ausfüllt; die Freieingabe bleibt darunter
  *  für den Rest. `null` heißt "keine Grenze". */
 export const saldoPresets = [
-  { id: "all", label: "Alle", min: null, max: null },
-  { id: "minus", label: "Minusstunden", min: null, max: -1 },
-  { id: "plus", label: "Plusstunden", min: 1, max: null },
-  { id: "plus20", label: "über +20 Std.", min: 20 * 60 + 1, max: null },
+  {
+    id: "all",
+    label: "Alle",
+    hint: "Zeigt alle Personen, egal wie ihr Saldo steht.",
+    min: null,
+    max: null,
+  },
+  {
+    id: "minus",
+    label: "Minusstunden",
+    hint: "Zeigt nur Personen mit Minusstunden.",
+    min: null,
+    max: -1,
+  },
+  {
+    id: "plus",
+    label: "Plusstunden",
+    hint: "Zeigt nur Personen mit Plusstunden.",
+    min: 1,
+    max: null,
+  },
+  {
+    id: "plus20",
+    label: "über +20 Std.",
+    hint: "Zeigt nur Personen mit mehr als 20 Plusstunden.",
+    min: 20 * 60 + 1,
+    max: null,
+  },
 ] as const;
 
 export type SaldoPresetId = (typeof saldoPresets)[number]["id"];
@@ -89,6 +113,9 @@ interface Props {
   readonly onNextMonth: () => void;
   readonly canGoNextMonth: boolean;
   readonly monthClose: MonthCloseState | null;
+  /** Personen, deren Monat der Träger abschließt (#4711): ein Vertrag des
+   *  Trägers deckt den Monat ab, der Abschluss der Schule lässt sie aus. */
+  readonly traegerStaff?: ReadonlySet<string>;
   /** Ladefehler des Abschlussstatus, am besten aus `useApiLoadError` (mit
    *  Wiederholen und Vorgangskennung, #2514). */
   readonly monthCloseError: FormErrorInput;
@@ -131,6 +158,7 @@ export function StaffTimeAccountsTable({
   onNextMonth,
   canGoNextMonth,
   monthClose,
+  traegerStaff,
   monthCloseError,
   onRetryMonthClose,
   monthIsOver,
@@ -189,8 +217,13 @@ export function StaffTimeAccountsTable({
         header: "Name",
         sortValue: (row) => `${row.lastName} ${row.firstName}`,
         render: (row) => (
-          <span className="font-medium text-gray-900">
-            {row.lastName}, {row.firstName}
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <span className="font-medium text-gray-900">
+              {row.lastName}, {row.firstName}
+            </span>
+            {traegerStaff?.has(row.staffId) ? (
+              <StatusBadge label="Schließt der Träger ab" tone="blue" compact />
+            ) : null}
           </span>
         ),
       },
@@ -276,7 +309,7 @@ export function StaffTimeAccountsTable({
         ),
       },
     ],
-    [],
+    [traegerStaff],
   );
 
   // Der Hinweis zum Monatsabschluss gehört in den Kartenkopf, nicht als
@@ -304,6 +337,7 @@ export function StaffTimeAccountsTable({
             variant="ghost"
             onClick={onPrevMonth}
             aria-label="Vorheriger Monat"
+            tooltip="Zeigt die Zeitkonten des Vormonats."
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -313,7 +347,9 @@ export function StaffTimeAccountsTable({
             variant="ghost"
             onClick={onNextMonth}
             disabled={!canGoNextMonth}
+            disabledReason="Der laufende Monat ist der neueste Monat mit Zeitkonten."
             aria-label="Nächster Monat"
+            tooltip="Zeigt die Zeitkonten des Folgemonats."
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -349,6 +385,7 @@ export function StaffTimeAccountsTable({
                 onShowCustomSaldoChange(false);
                 onSaldoPresetChange(preset.id);
               }}
+              tooltip={preset.hint}
             >
               {preset.label}
             </Button>
@@ -365,6 +402,11 @@ export function StaffTimeAccountsTable({
               onShowCustomSaldoChange(!showCustomSaldo);
             }}
             aria-expanded={showCustomSaldo}
+            tooltip={
+              showCustomSaldo
+                ? "Blendet das Feld aus und hebt die eigene Grenze auf."
+                : "Blendet ein Feld für eine eigene Grenze beim Saldo ein."
+            }
           >
             {showCustomSaldo ? "Grenze ausblenden" : "Eigene Grenze"}
           </Button>
@@ -374,7 +416,11 @@ export function StaffTimeAccountsTable({
             variant={onlyWithHints ? "primary" : "outline"}
             onClick={() => setOnlyWithHints((value) => !value)}
             aria-pressed={onlyWithHints}
-            title="Nur Personen mit zu kurzer Pause oder mehr als 10 Std. Arbeit an einem Tag"
+            tooltip={
+              onlyWithHints
+                ? "Zeigt wieder alle Personen, auch ohne Hinweise."
+                : "Zeigt nur Personen mit zu kurzer Pause oder über 10 Std. Arbeit."
+            }
           >
             Mit Hinweisen
           </Button>
@@ -384,6 +430,7 @@ export function StaffTimeAccountsTable({
               size="compact"
               variant="outline"
               onClick={onExport}
+              tooltip="Öffnet die Auswahl von Zeitraum und Format für den Export."
             >
               <Download className="mr-1 h-3 w-3" />
               Exportieren
@@ -395,7 +442,7 @@ export function StaffTimeAccountsTable({
               size="compact"
               variant="ghost"
               onClick={onOpeningBalances}
-              title="Stundenkonto- und Urlaubsstände aus dem Altsystem übernehmen"
+              tooltip="Öffnet die Übernahme von Stunden und Urlaub aus dem bisherigen System."
             >
               Eröffnungssalden importieren
             </Button>
@@ -407,11 +454,8 @@ export function StaffTimeAccountsTable({
               variant="outline"
               onClick={onCloseMonth}
               disabled={!monthIsOver}
-              title={
-                monthIsOver
-                  ? undefined
-                  : "Der laufende Monat kann erst nach Monatsende abgeschlossen werden."
-              }
+              disabledReason="Den laufenden Monat können Sie erst ab dem 1. des Folgemonats abschließen."
+              tooltip="Öffnet ein Fenster, um die Konten aller Personen zum Monatsende festzuschreiben."
             >
               <Lock className="mr-1 h-3 w-3" />
               Monat abschließen
@@ -428,6 +472,7 @@ export function StaffTimeAccountsTable({
               size="compact"
               variant="ghost"
               onClick={onCloseMonth}
+              tooltip="Öffnet ein Fenster, um wieder geöffnete Konten erneut festzuschreiben."
             >
               Erneut abschließen
             </Button>
@@ -447,6 +492,7 @@ export function StaffTimeAccountsTable({
               size="compact"
               variant="outline"
               onClick={onRetryMonthClose}
+              tooltip="Lädt den Stand des Monatsabschlusses neu."
             >
               Abschlussstatus erneut laden
             </Button>
@@ -474,7 +520,11 @@ export function StaffTimeAccountsTable({
       <LoadErrorAlert error={error} />
 
       {withoutTargetCount > 0 && (
-        <div ref={withoutTargetRef} className="scroll-mt-24">
+        <div
+          ref={withoutTargetRef}
+          className="scroll-mt-24"
+          data-setup-tour="time-accounts-without-target"
+        >
           <Alert
             type="warning"
             announce="off"
@@ -494,6 +544,11 @@ export function StaffTimeAccountsTable({
                 variant="ghost_tone"
                 onClick={() => setOnlyWithoutTarget((value) => !value)}
                 aria-pressed={showOnlyWithoutTarget}
+                tooltip={
+                  showOnlyWithoutTarget
+                    ? "Zeigt wieder alle Personen in der Tabelle."
+                    : "Zeigt nur die Personen ohne Soll in diesem Monat."
+                }
               >
                 {showOnlyWithoutTarget ? "Alle zeigen" : "Nur diese zeigen"}
               </Button>

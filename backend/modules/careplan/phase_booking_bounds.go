@@ -62,7 +62,7 @@ type CareOfferingBookingBounds struct {
 func (m *OfferingBookings) FollowPhaseBookingBounds(ctx context.Context, move PhaseBoundsMove) (err error) {
 	started := time.Now()
 	changed := int64(0)
-	defer func() { m.observe("follow_phase", "command", started, 1, changed, err) }()
+	defer func() { m.observe("follow_phase", "command", time.Since(started), 1, changed, err) }()
 
 	if err := move.validate(); err != nil {
 		return err

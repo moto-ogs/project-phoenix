@@ -4,7 +4,9 @@
 // route (savePayrollSetting) using the setting keys this status carries.
 
 import { apiErrorFromResponse } from "./api-error";
+import type { MailOutcome, MailOutcomeCounts } from "./email-delivery-status";
 import { sessionFetch } from "./session-cache";
+import { monthYearLabel } from "./time-account-links";
 import { transferFailureMessage } from "./sftp-export-api";
 
 interface BackendPayrollCategoryStatus {
@@ -217,6 +219,8 @@ interface BackendPayrollDispatchView {
   finished_at?: string;
   download_expires_at?: string;
   downloaded_at?: string;
+  link_mail?: MailOutcome;
+  notice_mails?: MailOutcomeCounts;
 }
 
 export interface PayrollDispatchView {
@@ -235,6 +239,10 @@ export interface PayrollDispatchView {
   finishedAt: string | null;
   downloadExpiresAt: string | null;
   downloadedAt: string | null;
+  /** Was aus der Mail mit dem Link ans Lohnbüro wurde (#7058). */
+  linkMail: MailOutcome | null;
+  /** Die Hinweise an die Leitung, nach Ergebnis gezählt (#7058). */
+  noticeMails: MailOutcomeCounts | null;
 }
 
 function mapPayrollDispatch(
@@ -255,6 +263,8 @@ function mapPayrollDispatch(
     finishedAt: data.finished_at ?? null,
     downloadExpiresAt: data.download_expires_at ?? null,
     downloadedAt: data.downloaded_at ?? null,
+    linkMail: data.link_mail ?? null,
+    noticeMails: data.notice_mails ?? null,
   };
 }
 
@@ -361,13 +371,5 @@ export function payrollDispatchReasonText(
   return DISPATCH_REASON_TEXTS[reason] ?? DISPATCH_REASON_TEXTS.internal_error!;
 }
 
-const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", {
-  month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-});
-
 /** „September 2026“ für Jahr und Monat (1 bis 12). */
-export function payrollMonthLabel(year: number, month: number): string {
-  return MONTH_FORMATTER.format(new Date(Date.UTC(year, month - 1, 1)));
-}
+export const payrollMonthLabel = monthYearLabel;

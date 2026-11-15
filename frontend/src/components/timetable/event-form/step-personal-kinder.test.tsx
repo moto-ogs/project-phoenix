@@ -148,6 +148,16 @@ describe("StepPersonalKinder — Klassenfilter (#2482)", () => {
     expect(screen.queryByText("Kinder eingrenzen")).not.toBeInTheDocument();
   });
 
+  it("links the hint to „Angebote“ for someone who may manage them", () => {
+    renderStep({
+      form: sourcedForm({ sourceCareOfferingIds: [] }),
+      canManageOfferings: true,
+    });
+    expect(
+      screen.getByRole("link", { name: "Zu den Angeboten, neuer Tab" }),
+    ).toHaveAttribute("href", "/test-tenant/care-offerings");
+  });
+
   it("offers the class filter with a selected source", () => {
     renderStep({ form: sourcedForm() });
     expect(screen.getByText("Kinder eingrenzen")).toBeInTheDocument();

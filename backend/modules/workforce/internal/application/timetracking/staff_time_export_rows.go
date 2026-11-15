@@ -52,21 +52,62 @@ func (s *staffOverviewService) GetMonthExportRows(ctx context.Context, year, mon
 		return nil, err
 	}
 
+	paidByTraeger, err := s.traegerPaidStaff(ctx, staffMembers, firstKey, lastKey)
+	if err != nil {
+		return nil, err
+	}
 	rows := make([]MonthExportRow, 0, len(staffMembers))
 	for _, staff := range staffMembers {
 		for key := firstKey; !lastKey.before(key); key = key.next() {
-			summary, err := monthSvc.GetMonthSummary(ctx, staff.ID, key.Year, key.Month)
-			if err != nil {
-				return nil, fmt.Errorf("failed to compute month summary for staff %d: %w", staff.ID, err)
+			if paidByTraeger[key][staff.ID] {
+				continue
 			}
-			row := buildMonthExportRow(staff, summary)
-			if err := payroll.apply(&row, summary, prefetch, key); err != nil {
+			row, err := exportMonthRow(ctx, monthSvc, payroll, prefetch, staff, key)
+			if err != nil {
 				return nil, err
 			}
 			rows = append(rows, row)
 		}
 	}
 	return rows, nil
+}
+
+// exportMonthRow computes one staff member's month and its payroll columns.
+func exportMonthRow(ctx context.Context, monthSvc WorkTimeMonthService, payroll *exportPayroll, prefetch *monthPrefetch, staff OverviewStaff, key monthKey) (MonthExportRow, error) {
+	summary, err := monthSvc.GetMonthSummary(ctx, staff.ID, key.Year, key.Month)
+	if err != nil {
+		return MonthExportRow{}, fmt.Errorf("failed to compute month summary for staff %d: %w", staff.ID, err)
+	}
+	row := buildMonthExportRow(staff, summary)
+	if err := payroll.apply(&row, summary, prefetch, key); err != nil {
+		return MonthExportRow{}, err
+	}
+	return row, nil
+}
+
+// traegerPaidStaff names, per month, the staff a contract of the Träger
+// covers: the Träger closes and pays them, so the school's payroll file
+// leaves them out (#4711, decision E6). One read for the whole range.
+func (s *staffOverviewService) traegerPaidStaff(ctx context.Context, staffMembers []OverviewStaff, firstKey, lastKey monthKey) (map[monthKey]map[int64]bool, error) {
+	result := map[monthKey]map[int64]bool{}
+	if s.traeger == nil {
+		return result, nil
+	}
+	staffIDs := make([]int64, 0, len(staffMembers))
+	for _, staff := range staffMembers {
+		staffIDs = append(staffIDs, staff.ID)
+	}
+	kept, err := s.traeger.TraegerKeptStaffByMonth(ctx, staffIDs, firstKey.firstDay(), lastKey.lastDay())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the staff the traeger pays: %w", err)
+	}
+	for key := firstKey; !lastKey.before(key); key = key.next() {
+		result[key] = map[int64]bool{}
+		for _, id := range kept[key.firstDay()] {
+			result[key][id] = true
+		}
+	}
+	return result, nil
 }
 
 // exportMonthRange validates the requested export period and returns its

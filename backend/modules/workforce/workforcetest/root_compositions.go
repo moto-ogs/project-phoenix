@@ -33,13 +33,18 @@ type AdminCapabilities struct {
 	AbsenceWrites AbsenceWrites
 }
 
-// AbsenceWrites are the absence writes that may cascade a sick report.
+// AbsenceWrites are the absence writes that may cascade an absence into the
+// plans (#1843, #6847).
 type AbsenceWrites interface {
+	ApproveAbsence(ctx context.Context, absenceID, actorAccountID, decidedByStaffID int64, note string) (*workforce.StaffAbsenceResponse, error)
+	CancelAbsence(ctx context.Context, staffID, actorAccountID, absenceID int64) error
 	CreateOwnAbsence(ctx context.Context, staffID int64, actorAccountID *int64, request workforce.CreateAbsenceRequest) (*workforce.StaffAbsenceResponse, error)
 	CreateAbsenceFor(ctx context.Context, subjectStaffID, createdByStaffID int64, actorAccountID *int64, request workforce.CreateAbsenceRequest) (*workforce.StaffAbsenceResponse, error)
 	UpdateAbsence(ctx context.Context, staffID int64, actorAccountID *int64, absenceID int64, request workforce.UpdateAbsenceRequest) (*workforce.StaffAbsenceResponse, error)
 	DeleteOwnAbsence(ctx context.Context, staffID int64, actorAccountID *int64, absenceID int64) error
 	DeleteAbsenceFor(ctx context.Context, subjectStaffID, actorStaffID int64, actorAccountID *int64, absenceID int64) error
+	AbsencePlanGaps(ctx context.Context) ([]workforce.AbsencePlanGap, error)
+	SyncAbsencePlan(ctx context.Context, absenceID, actorStaffID int64, actorAccountID *int64) (bool, error)
 }
 
 // Rows read back the native values the route suites assert on: the staff
@@ -79,4 +84,16 @@ var (
 	// ComposePayrollRules composes the wage type maintenance of /payroll
 	// over db with the root's settings audit (#4807).
 	ComposePayrollRules func(t *testing.T, db *bun.DB) workforce.PayrollRules
+	// ComposeMailOutbox composes Delivery's real outbox over db as the root
+	// binds it for Workforce's mails (#7058).
+	ComposeMailOutbox func(t *testing.T, db *bun.DB) MailOutbox
 )
+
+// MailOutbox is Delivery's outbox for the absence request mails (#7058).
+type MailOutbox struct {
+	// Status reads what became of the absence request mails.
+	Status workforce.AbsenceMailStatus
+	// Enqueue puts one absence mail into the outbox the way the absence
+	// notifications do, for the school of ctx and in its transaction.
+	Enqueue func(ctx context.Context, relatedType string, absenceID int64, address string) error
+}

@@ -231,7 +231,7 @@ func handleBulkEffectiveTimes[T, R any](
 		return
 	}
 
-	date := calendar.TodayDate()
+	date := rs.today()
 	if req.Date != nil && *req.Date != "" {
 		date, _ = calendar.ParseDate(*req.Date)
 	}

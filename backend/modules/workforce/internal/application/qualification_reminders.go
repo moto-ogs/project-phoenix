@@ -27,11 +27,26 @@ type QualificationReminders struct {
 	records qualificationRecords
 	ports   workforce.QualificationReminderPorts
 	logger  *slog.Logger
+	// keptByTraeger reads the Träger's proofs of the school's employments a
+	// record keeps (#4707); nil reads none.
+	keptByTraeger schoolTraegerProofs
+}
+
+// schoolTraegerProofs is what a school reads of its Träger's proofs (ADR
+// 0089 section 7), in its tenant transaction.
+type schoolTraegerProofs interface {
+	SchoolTraegerProofStatus(ctx context.Context) ([]domain.SchoolTraegerProofStatus, error)
 }
 
 // NewQualificationReminders builds the reminders; every port but Logger is
 // required.
-func NewQualificationReminders(store ports.Store, clock ports.Clock, bound workforce.QualificationReminderPorts) (*QualificationReminders, error) {
+//
+// keptByTraeger, when set, lets the reminders leave out a qualification
+// whose kind the school mapped onto a kind of its Träger, for an employment
+// the Träger keeps in a record: the Träger's proof reminds instead
+// (decision E4 of 13.11.2026, #4707). A school without such a Träger reads
+// no row and keeps every reminder.
+func NewQualificationReminders(store ports.Store, clock ports.Clock, bound workforce.QualificationReminderPorts, keptByTraeger schoolTraegerProofs) (*QualificationReminders, error) {
 	if bound.Staff == nil || bound.Notify == nil || bound.Mail == nil || bound.Schools == nil {
 		return nil, fmt.Errorf("qualification reminders: staff, notify, mail and schools are required")
 	}
@@ -39,7 +54,7 @@ func NewQualificationReminders(store ports.Store, clock ports.Clock, bound workf
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &QualificationReminders{records: newQualificationRecords(store, clock), ports: bound, logger: logger.With("service", "qualification_reminders")}, nil
+	return &QualificationReminders{records: newQualificationRecords(store, clock), ports: bound, logger: logger.With("service", "qualification_reminders"), keptByTraeger: keptByTraeger}, nil
 }
 
 // dueReminder is one reminder the snapshot found due.
@@ -100,8 +115,15 @@ func (r *QualificationReminders) dueReminders(ctx context.Context, today calenda
 	for _, kind := range types {
 		byID[kind.ID] = kind
 	}
+	takenOver, err := r.takenOverByTraeger(ctx)
+	if err != nil {
+		return nil, err
+	}
 	var due []dueReminder
 	for _, q := range qualifications {
+		if q.TypeID != nil && takenOver[[2]int64{q.StaffID, *q.TypeID}] {
+			continue
+		}
 		lead, name := domain.DefaultReminderLeadWeeks, q.Name
 		if q.TypeID != nil {
 			if kind, ok := byID[*q.TypeID]; ok {
@@ -115,11 +137,55 @@ func (r *QualificationReminders) dueReminders(ctx context.Context, today calenda
 	return due, nil
 }
 
+// takenOverByTraeger names the employment and school kind pairs whose
+// reminder the Träger's proof sends.
+func (r *QualificationReminders) takenOverByTraeger(ctx context.Context) (map[[2]int64]bool, error) {
+	pairs, err := takenOverByTraeger(ctx, r.keptByTraeger)
+	if err != nil {
+		return nil, fmt.Errorf("read the Träger's proofs for qualification reminders: %w", err)
+	}
+	return pairs, nil
+}
+
+// takenOverByTraeger reads which school kinds of which employments the
+// Träger's proofs cover: the kinds mapped onto a Träger kind, for the
+// employments a record keeps (decision E4, #4707). Nil reads none.
+func takenOverByTraeger(ctx context.Context, reader schoolTraegerProofs) (map[[2]int64]bool, error) {
+	if reader == nil {
+		return nil, nil
+	}
+	statuses, err := reader.SchoolTraegerProofStatus(ctx)
+	if err != nil {
+		return nil, err
+	}
+	pairs := map[[2]int64]bool{}
+	for _, status := range statuses {
+		for _, kind := range status.SchoolTypeIDs {
+			pairs[[2]int64{status.StaffID, kind}] = true
+		}
+	}
+	return pairs, nil
+}
+
 func (r *QualificationReminders) remind(ctx context.Context, tenantID int64, school workforce.PayrollSchool, managers []workforce.QualificationStaffMember, reminder dueReminder) error {
+	q := reminder.qualification
+	key := fmt.Sprintf("staff-qualification-%d-%s-%s", q.ID, q.ExpiresOn, reminder.stage)
+	if sent, err := r.send(ctx, tenantID, school, managers, reminder, key, true); err != nil || !sent {
+		return err
+	}
+	_, err := r.claim(ctx, q.ID, reminder.stage, q.ExpiresOn)
+	return err
+}
+
+// send delivers one reminder in the school of the tenant transaction: the
+// notice and mail to the Leitung and, with toPerson, to the person. It
+// reports false when the notification window held a notice back; the
+// idempotency keys under key keep a repeat from sending twice.
+func (r *QualificationReminders) send(ctx context.Context, tenantID int64, school workforce.PayrollSchool, managers []workforce.QualificationStaffMember, reminder dueReminder, key string, toPerson bool) (bool, error) {
 	q := reminder.qualification
 	person, err := r.ports.Staff.StaffContact(ctx, q.StaffID)
 	if err != nil {
-		return fmt.Errorf("read staff contact for qualification reminder: %w", err)
+		return false, fmt.Errorf("read staff contact for qualification reminder: %w", err)
 	}
 	managerAccounts := make([]int64, 0, len(managers))
 	isManager := false
@@ -129,28 +195,27 @@ func (r *QualificationReminders) remind(ctx context.Context, tenantID int64, sch
 		}
 		isManager = isManager || (person.AccountID > 0 && manager.AccountID == person.AccountID)
 	}
-	key := fmt.Sprintf("staff-qualification-%d-%s-%s", q.ID, q.ExpiresOn, reminder.stage)
 	notice := qualificationNotice(reminder, false)
 	notice.TenantID, notice.StaffID, notice.QualificationID = tenantID, q.StaffID, q.ID
 	notice.IdempotencyKey, notice.RecipientAccountIDs = key, managerAccounts
 	notice.DeepLink = fmt.Sprintf("/staff/%d", q.StaffID)
 	if sent, err := r.notify(ctx, notice); err != nil || !sent {
-		return err
+		return false, err
 	}
 	// A person who manages the Stammdaten already got the Leitung's notice.
-	if person.AccountID > 0 && !isManager {
+	toPerson = toPerson && !isManager
+	if person.AccountID > 0 && toPerson {
 		own := qualificationNotice(reminder, true)
 		own.TenantID, own.StaffID, own.QualificationID = tenantID, q.StaffID, q.ID
 		own.IdempotencyKey, own.RecipientAccountIDs, own.DeepLink = key+"-own", []int64{person.AccountID}, "/profile"
 		if sent, err := r.notify(ctx, own); err != nil || !sent {
-			return err
+			return false, err
 		}
 	}
-	if err := r.mail(ctx, tenantID, school, managers, person, isManager, reminder, key); err != nil {
-		return err
+	if err := r.mail(ctx, tenantID, school, managers, person, !toPerson, reminder, key); err != nil {
+		return false, err
 	}
-	_, err = r.claim(ctx, q.ID, reminder.stage, q.ExpiresOn)
-	return err
+	return true, nil
 }
 
 func (r *QualificationReminders) notify(ctx context.Context, notice workforce.QualificationNotice) (bool, error) {

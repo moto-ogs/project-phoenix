@@ -212,6 +212,9 @@ function describeEvent(event: AuditLogEvent): string {
 }
 
 function actorLabel(event: AuditLogEvent): string {
+  // Abschluss und Wiederöffnen des Trägers (#4711) haben kein Personal der
+  // Schule als Urheber.
+  if (event.detail.by_traeger === true) return "Personalverwaltung des Trägers";
   if (event.actorIsSystem) return "System";
   if (!event.actorName) return "Unbekannt";
   return event.actorIsSelf ? `${event.actorName} (selbst)` : event.actorName;
@@ -431,7 +434,7 @@ export function StaffAuditLog({ staffOptions }: StaffAuditLogProps) {
             onChange={setFrom}
             max={to || undefined}
             calendarLayout="popover"
-            controlSize="md"
+            controlSize="compact"
             className="w-44"
           />
         </div>
@@ -443,7 +446,7 @@ export function StaffAuditLog({ staffOptions }: StaffAuditLogProps) {
             onChange={setTo}
             min={from || undefined}
             calendarLayout="popover"
-            controlSize="md"
+            controlSize="compact"
             className="w-44"
           />
         </div>
@@ -481,6 +484,7 @@ export function StaffAuditLog({ staffOptions }: StaffAuditLogProps) {
             variant="outline"
             onClick={loadMore}
             disabled={isLoading}
+            tooltip="Hängt ältere Einträge des Protokolls unten an die Liste an."
           >
             Weitere Einträge laden
           </Button>

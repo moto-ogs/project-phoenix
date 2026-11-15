@@ -497,6 +497,54 @@
       "target_owner": "staff-directory-view"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentGroupMessageMailOutcomes",
+      "binding_digest": "16bce66686cb2f925bb9645b098ba157",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentGroupMessageMailOutcomes",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentGroupMessageMailOutcomes",
+      "binding_digest": "632bfa694490bfddf489a5af9adf9d9f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentGroupMessageMailOutcomes",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentGroupMessageMailOutcomes",
+      "binding_digest": "6df184c3142d7f5791519ca1a26a587d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentGroupMessageMailOutcomes",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentMessageMailOutcomes",
+      "binding_digest": "d8242c001c0a55f33f381a640114d1aa",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentMessageMailOutcomes",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentMessageMailOutcomes",
+      "binding_digest": "ff0d24d89c029da1fa436f399f48abb6",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentMessageMailOutcomes",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentMessageMailOutcomes",
+      "binding_digest": "de0e1f8bcea80908c6cb2a9a4a4d63b2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentMessageMailOutcomes",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication.parentMessagePeople.FindParentMessageStudent",
       "binding_digest": "dae9502cb525a008d4ead0c07ff9dc28",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessagePeople.FindParentMessageStudent",
@@ -1074,7 +1122,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.announcementDeliveryAdapter.ListForEntity",
-      "binding_digest": "065fd3734504dadd802f2b1e140926b4",
+      "binding_digest": "596eeb6f8ee61328c916b91ce984ea5e",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentAnnouncementDeliveryRecorder.ListForEntity",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/contract.ProviderBlockBudget.Attempt",
@@ -1082,7 +1130,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.announcementDeliveryAdapter.ListForEntity",
-      "binding_digest": "226f68cf7fecd40db82a0b23e6696236",
+      "binding_digest": "24a93e2d9b78ac961e5b3de060d5abc8",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentAnnouncementDeliveryRecorder.ListForEntity",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.EmailOutcome.HeldAtProvider",
@@ -1090,7 +1138,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.announcementDeliveryAdapter.ListForEntity",
-      "binding_digest": "a7dcf788bc8d3d02106bf458d2bf5a89",
+      "binding_digest": "3403f8547783342901efb84e5098853f",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentAnnouncementDeliveryRecorder.ListForEntity",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EmailDeliveryStatuses",
@@ -1098,7 +1146,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.announcementDeliveryAdapter.ListForEntity",
-      "binding_digest": "68b51f66553b711685d9008b4cb43198",
+      "binding_digest": "5d3e99f5d7cbaef525d6de3f863968ba",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentAnnouncementDeliveryRecorder.ListForEntity",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.ProviderEmailBlocks",

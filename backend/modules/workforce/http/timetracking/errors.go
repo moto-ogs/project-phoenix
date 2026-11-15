@@ -82,6 +82,11 @@ var absenceErrorRules = []common.ErrorRule{
 	// bad selection, not a server fault — the client has to pick another one.
 	{Target: workforce.ErrAbsenceTypeInactive, Render: conflictWithCode(common.CodeWorkforceAbsenceTypeInactive)},
 	{Target: workforce.ErrAbsenceTypeNotFound, Render: common.ErrorInvalidRequest},
+	// A requestable type (#4710): the school's deviation and the Kontingent
+	// over all schools of the Personalakte refuse a request.
+	{Target: workforce.ErrAbsenceTypeNotOffered, Render: conflictWithCode(common.CodeWorkforceAbsenceTypeNotOffered)},
+	{Target: workforce.ErrAbsenceTypeSchoolLimitExceeded, Render: conflictWithCode(common.CodeWorkforceAbsenceTypeSchoolLimitExceeded)},
+	{Target: workforce.ErrAbsenceTypeAllowanceExceeded, Render: conflictWithCode(common.CodeWorkforceAbsenceAllowanceExceeded)},
 	// Kontingente may not go negative (#3256).
 	{Target: workforce.ErrVacationQuotaExceeded, Render: conflictWithCode(common.CodeWorkforceVacationQuotaExceeded)},
 	{Target: workforce.ErrAllowanceBookingOverlap, Render: conflictWithCode(common.CodeWorkforceAbsenceOverlap)},

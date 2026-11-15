@@ -26,7 +26,9 @@ func (s *InstanceLifecycleService) Cancel(ctx context.Context, instanceID int64,
 }
 
 // cancel cancels one block; lockStaff is false when the caller already holds
-// the staff rows of every block it cancels (BulkCancelPlanned).
+// the staff rows of every block it cancels (BulkCancelPlanned). A single
+// cancellation tells the planned staff in its transaction (#7148); the bulk
+// cancellation of a period removes its blocks and tells nobody per block.
 func (s *InstanceLifecycleService) cancel(ctx context.Context, instanceID int64, reason *string, actorAccountID *int64, lockStaff bool) (*scheduleModel.ActivityInstance, error) {
 	if !s.hasTx(ctx) {
 		var result *scheduleModel.ActivityInstance
@@ -71,6 +73,11 @@ func (s *InstanceLifecycleService) cancel(ctx context.Context, instanceID int64,
 		actorAccountID: actorAccountID,
 	}); err != nil {
 		return nil, err
+	}
+	if lockStaff {
+		if err := s.noticeStaffOfCancellation(ctx, instance, actorAccountID); err != nil {
+			return nil, err
+		}
 	}
 	s.broadcastInstanceEvent(ctx, LifecycleEventInstanceCancelled, instance, nil, nil)
 	return instance, nil

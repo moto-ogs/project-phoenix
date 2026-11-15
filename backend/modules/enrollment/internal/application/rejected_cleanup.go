@@ -8,13 +8,14 @@ import (
 	"time"
 
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // RejectedRequestCleaner finds and deletes fully rejected requests.
 type RejectedRequestCleaner interface {
 	DeleteRequestTree(context.Context, int64) error
 	FullyRejectedRequestsBefore(ctx context.Context, cutoff time.Time) ([]int64, error)
-	SettledRequestsBefore(ctx context.Context, withdrawnCutoff, rejectedCutoff time.Time) ([]int64, error)
+	SettledRequestsBefore(ctx context.Context, withdrawnCutoff, rejectedCutoff time.Time, today calendar.Date) ([]int64, error)
 	RequestByID(context.Context, int64, bool) (*enrollmentNative.Request, error)
 	DeleteRequest(ctx context.Context, requestID int64) error
 }
@@ -53,6 +54,9 @@ type RejectedCleanupDependencies struct {
 	Audit       EnrollmentDeletionAudit
 	Runtime     Runtime
 	Logger      *slog.Logger
+	// Today is the school day the source phase of a lapsed renewal is still
+	// running on; nil reads the real Berlin day.
+	Today func() calendar.Date
 }
 
 // RejectedCleanup removes rejected enrollment data after its
@@ -67,6 +71,9 @@ var _ enrollmentNative.RejectedEnrollmentCleaner = (*RejectedCleanup)(nil)
 func NewRejectedCleanup(deps RejectedCleanupDependencies) *RejectedCleanup {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
+	}
+	if deps.Today == nil {
+		deps.Today = calendar.TodayDate
 	}
 	return &RejectedCleanup{deps: deps}
 }

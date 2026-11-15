@@ -13,14 +13,20 @@ import (
 type ClassArrivalExceptions struct {
 	store    ports.ClassArrivalExceptionStore
 	students ports.ClassArrivalStudents
+	// today is the school day before which an exception lies in the past.
+	today func() calendar.Date
 }
 
-// A missing store preserves the optional endpoint's explicit not-configured error.
-func NewClassArrivalExceptions(store ports.ClassArrivalExceptionStore, students ports.ClassArrivalStudents) *ClassArrivalExceptions {
+// A missing store preserves the optional endpoint's explicit not-configured
+// error. A nil today is the real Berlin day.
+func NewClassArrivalExceptions(store ports.ClassArrivalExceptionStore, students ports.ClassArrivalStudents, today func() calendar.Date) *ClassArrivalExceptions {
 	if store != nil && students == nil {
 		panic("care plan: class arrival student directory is required")
 	}
-	return &ClassArrivalExceptions{store: store, students: students}
+	if today == nil {
+		today = calendar.TodayDate
+	}
+	return &ClassArrivalExceptions{store: store, students: students, today: today}
 }
 
 var _ careplan.ClassArrivalExceptions = (*ClassArrivalExceptions)(nil)
@@ -64,7 +70,7 @@ func (s *ClassArrivalExceptions) UpsertClassArrivalException(
 		return nil, &careplan.ScheduleError{Op: opUpsertClassArrivalException, Err: careplan.ErrClassArrivalExceptionNotConfigured}
 	}
 	class := strings.TrimSpace(input.SchoolClass)
-	if input.Date.Before(calendar.TodayDate()) {
+	if input.Date.Before(s.today()) {
 		return nil, &careplan.ScheduleError{Op: opUpsertClassArrivalException, Err: careplan.ErrClassArrivalExceptionPastDate}
 	}
 	careDay, err := calendar.IsCareWeekday(ctx, input.Date)
@@ -111,7 +117,7 @@ func (s *ClassArrivalExceptions) DeleteClassArrivalException(
 	if s.store == nil {
 		return &careplan.ScheduleError{Op: opDeleteClassArrivalException, Err: careplan.ErrClassArrivalExceptionNotConfigured}
 	}
-	if date.Before(calendar.TodayDate()) {
+	if date.Before(s.today()) {
 		return &careplan.ScheduleError{Op: opDeleteClassArrivalException, Err: careplan.ErrClassArrivalExceptionPastDate}
 	}
 	deleted, err := s.store.Delete(ctx, strings.TrimSpace(schoolClass), calendar.Date(date))
@@ -130,7 +136,7 @@ func (s *ClassArrivalExceptions) requireActiveClass(ctx context.Context, class, 
 	if class == "" {
 		return &careplan.ScheduleError{Op: op, Err: careplan.ErrClassArrivalExceptionClassNotFound}
 	}
-	active, err := s.students.HasActiveClass(ctx, class, calendar.TodayDate())
+	active, err := s.students.HasActiveClass(ctx, class, s.today())
 	if err != nil {
 		return &careplan.ScheduleError{Op: op, Err: fmt.Errorf("failed to find students for school class %s: %w", class, err)}
 	}

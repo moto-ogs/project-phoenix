@@ -17,8 +17,10 @@ import (
 // thresholds of the hints on the Träger dashboard (#4675), the confirmations
 // of a termination and a withdrawal of a care contract (#4682); how the contracts
 // of a school come about is "beide" (#4680: Träger value with a school
-// override); everything else stays at the school. A change of these lists is
-// a product
+// override), and so is the retention of parent contacts without a child
+// (#5960); the switch and the working-time rules of the Einsatzplanung are
+// "traeger" and written with the right Personal (#4708, ADR 0242);
+// everything else stays at the school. A change of these lists is a product
 // decision.
 func TestTraegerLevelKeysOfVersionOne(t *testing.T) {
 	t.Parallel()
@@ -27,6 +29,8 @@ func TestTraegerLevelKeysOfVersionOne(t *testing.T) {
 		config.KeyEnrollmentLegalAGBText, config.KeyEnrollmentLegalDSGVOEnabled, config.KeyEnrollmentLegalDSGVOText,
 		config.KeyEnrollmentLegalEmailContactEnabled, config.KeyEnrollmentLegalEmailContactText,
 		config.KeyEnrollmentLegalPhotoEnabled, config.KeyEnrollmentLegalPhotoText, config.KeyEnrollmentLegalTermsEnabled,
+		// How long parent contacts outlive their last child (#5960).
+		config.KeyGDPRGuardianRetentionDays,
 		config.KeyGuardianParentCanRemove, config.KeyGuardianParentInviteMode, config.KeyParentCareModeRequestEnabled,
 		config.KeyParentCarePickupRequestEnabled, config.KeyParentGuardianManagementEnabled,
 		config.KeyParentMasterDataEditEnabled, config.KeyParentMasterDataRequestEnabled,
@@ -58,10 +62,19 @@ func TestTraegerLevelKeysOfVersionOne(t *testing.T) {
 		// The format of a debtor number (#6675).
 		config.KeyParentBillingDebtorNumberDigitsOnly, config.KeyParentBillingDebtorNumberMaxDigits,
 		config.KeyParentBillingDebtorNumberMinDigits, config.KeyParentBillingDebtorNumberOnConfirm,
+		// Whom the debtor numbers name (#7007).
+		config.KeyParentBillingDebtorNumberScope,
 		// The SEPA mandate in the parents portal (#4696).
 		config.KeyParentBillingOnlineMandate,
 		config.KeyParentBillingPaymentText, config.KeyParentBillingSiblingRank,
+		// The Einsatzplanung and its working-time rules (#4708).
+		config.KeyStaffPlanningCheckBreaks, config.KeyStaffPlanningEnabled,
+		config.KeyStaffPlanningMaxDailyHours, config.KeyStaffPlanningMinRestHours,
 		config.KeyTraegerAlertChildrenPerStaff, config.KeyTraegerAlertOpenEnrollments, config.KeyTraegerAlertSickPercent,
+	}
+	staffRight := map[string]bool{
+		config.KeyStaffPlanningCheckBreaks: true, config.KeyStaffPlanningEnabled: true,
+		config.KeyStaffPlanningMaxDailyHours: true, config.KeyStaffPlanningMinRestHours: true,
 	}
 	var got, gotTraeger []string
 	for key, definition := range config.DefaultRegistry().AllDefinitions() {
@@ -71,6 +84,10 @@ func TestTraegerLevelKeysOfVersionOne(t *testing.T) {
 			assert.Equal(t, config.TraegerRightSettings, definition.TraegerWriteRight, "%s is written with the right Einstellungen", key)
 		case config.LevelTraeger:
 			gotTraeger = append(gotTraeger, key)
+			if staffRight[key] {
+				assert.Equal(t, config.TraegerRightStaff, definition.TraegerWriteRight, "%s is written with the right Personal", key)
+				continue
+			}
 			assert.Equal(t, config.TraegerRightSettings, definition.TraegerWriteRight, "%s is written with the right Einstellungen", key)
 		case config.LevelSchool:
 		default:

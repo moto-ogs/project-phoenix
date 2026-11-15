@@ -45,6 +45,18 @@ export function parentMessageTopic(): HelpTopic {
         ],
       },
       {
+        title: "Neues von den Eltern direkt an der Kinderkachel bearbeiten",
+        description:
+          "Das geht nur, wenn die Schule unter `Einstellungen` den Schalter `Neue Elternnachrichten auf der Kinderkachel` eingeschaltet hat. Die blaue Zahl oben rechts an der Kachel zählt neue Nachrichten und offene Anfragen der Eltern.",
+        steps: [
+          "Tippen Sie auf die blaue Zahl an der Kinderkachel, zum Beispiel in Ihrer Gruppe.",
+          "Lesen Sie die Elternnachrichten. Auch frühere Nachrichten sind sichtbar.",
+          "Wählen Sie `Als gelesen bestätigen`. Dann sieht das ganze Team die Nachricht nicht mehr als neu.",
+          "Oder wählen Sie `Antworten`. moto öffnet dann die Unterhaltung.",
+          "Eine offene Anfrage geben Sie unten im selben Fenster frei oder lehnen sie ab.",
+        ],
+      },
+      {
         title: "Eine Unterhaltung wieder als ungelesen markieren",
         description:
           "So sieht das ganze Team: Hier ist noch etwas offen. Die Eltern merken davon nichts.",
@@ -83,6 +95,7 @@ export function parentMessageTopic(): HelpTopic {
       "Sehen Sie `Nachrichten` nicht? Vielleicht ist die Funktion ausgeschaltet.",
       "Schaltet die Schule Eltern-Nachrichten während einer offenen Unterhaltung aus? Der Verlauf bleibt lesbar. Statt des Schreibfelds erscheint ein Hinweis. Sie können nicht mehr antworten.",
       "Möglicherweise fehlt Ihnen auch der Zugriff auf die betroffenen Kinder.",
+      "Zählt die blaue Zahl an der Kinderkachel keine Anfragen? Dann dürfen Sie Anfragen für dieses Kind nicht entscheiden. Sie sehen dort nur die Nachrichten.",
       "Fehlen bei einer Anfrage `Anfrage ansehen` oder `Anfrage bearbeiten`? Dann dürfen Sie die Anfrage für dieses Kind nicht prüfen.",
       "Steht beim Kind `Kein Eltern-Zugang`? Dann kann niemand die Nachricht in der Eltern-App lesen. Den Zugang der Eltern legen Sie beim Kind fest.",
       "Steht bei einer Unterhaltung `Nur Leitung`? Dann lesen sie nur die Bezugsperson und die Leitung. Begonnen hat sie die Bezugsperson oder jemand aus der Leitung. Ohne das Recht `Vertrauliche Elternnachrichten lesen` sehen Sie solche Unterhaltungen nicht.",
@@ -94,10 +107,15 @@ export function parentMessageTopic(): HelpTopic {
       "Schreiben Sie persönliche Angaben nur in die Unterhaltung der richtigen Bezugsperson.",
       "Mit `Nur ungelesen` sehen Sie nur neue Unterhaltungen.",
       "Eine als ungelesen markierte Unterhaltung bleibt für alle ungelesen, bis jemand aus dem Team sie öffnet oder antwortet.",
+      "Unter Ihrer Nachricht steht hinter `E-Mail`, was aus der Mail an die Eltern wurde, zum Beispiel `Zugestellt` oder `Nicht zustellbar`. Kam sie nicht an, steht darunter, was Sie tun können.",
       "Die Eltern sehen `Gelesen` erst, wenn jemand aus dem Team die Unterhaltung öffnet.",
       "Die Nachrichten stehen immer im Posteingang, auch wenn Ihre Zahl sie nicht zählt.",
       "Über `Zum Kinderprofil` wechseln Sie direkt zu den Angaben des Kindes.",
     ],
-    related: [HELP_TOPICS.parentRequests, HELP_TOPICS.studentSearch],
+    related: [
+      HELP_TOPICS.parentRequests,
+      HELP_TOPICS.studentSearch,
+      HELP_TOPICS.leadEmailDelivery,
+    ],
   };
 }

@@ -25,12 +25,15 @@ import {
 import { FamilyChildrenModal } from "~/components/traeger/family-children-modal";
 import { ChevronDown, ChevronUp, Trash2, TriangleAlert } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import { ResponsiveActionList } from "~/components/ui/responsive-action-list";
+import {
+  ResponsiveActionList,
+  ResponsiveActionRow,
+} from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
@@ -43,6 +46,7 @@ import {
 import { parentsConcept } from "~/lib/concepts/parents";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { traegerPath } from "~/lib/traeger-url";
 import {
   type FamilyChildren,
   type FamilyChildrenSet,
@@ -283,6 +287,8 @@ export default function TraegerKinderzahlPage() {
               label: family.count?.confirmedChildren
                 ? "Kinderzahl ändern"
                 : "Kinderzahl bestätigen",
+              description:
+                "Öffnet ein Fenster, um die Kinderzahl zu bestätigen oder zu ändern",
               onClick: () => setChecking(family),
             },
             ...(family.count
@@ -290,6 +296,8 @@ export default function TraegerKinderzahlPage() {
                   {
                     label: "Kinderzahl entfernen",
                     icon: <Trash2 className="size-4" aria-hidden />,
+                    description:
+                      "moto fragt vorher nach, dann zählen neue Läufe nur Kinder mit Vertrag",
                     destructive: true,
                     onClick: () => setRemoving(family),
                   },
@@ -392,6 +400,16 @@ export default function TraegerKinderzahlPage() {
         <Alert
           type="info"
           message="Noch keine Geschwisterregel zählt diese Zahl. Schalten Sie das bei der Regel unter „Ermäßigungen“ ein."
+          action={
+            <ButtonLink
+              href={traegerPath("/traeger/abrechnung/ermaessigungen")}
+              variant="surface"
+              size="compact"
+              tooltip="Öffnet die Ermäßigungen mit den Geschwisterregeln."
+            >
+              Zu den Ermäßigungen
+            </ButtonLink>
+          }
         />
       ) : null}
       {data && toCheck.length > 0 ? (
@@ -411,10 +429,7 @@ export default function TraegerKinderzahlPage() {
           <ResponsiveActionList>
             {(checksExpanded ? toCheck : toCheck.slice(0, INITIAL_CHECKS)).map(
               (family) => (
-                <li
-                  key={family.recipientEmail}
-                  className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:col-span-2 sm:grid sm:grid-cols-subgrid sm:items-center"
-                >
+                <ResponsiveActionRow key={family.recipientEmail}>
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900">
                       {familyName(family)}
@@ -433,12 +448,13 @@ export default function TraegerKinderzahlPage() {
                       variant="surface"
                       size="compact"
                       aria-label={`Kinderzahl von ${familyName(family)} prüfen`}
+                      tooltip="Öffnet ein Fenster, um die Kinderzahl zu bestätigen oder zu ändern."
                       onClick={() => setChecking(family)}
                     >
                       Prüfen
                     </Button>
                   </div>
-                </li>
+                </ResponsiveActionRow>
               ),
             )}
           </ResponsiveActionList>
@@ -449,6 +465,11 @@ export default function TraegerKinderzahlPage() {
               size="compact"
               className="mt-3"
               aria-expanded={checksExpanded}
+              tooltip={
+                checksExpanded
+                  ? "Zeigt wieder nur die ersten Familien der Liste."
+                  : "Zeigt alle Familien, deren Kinderzahl Sie prüfen müssen."
+              }
               onClick={() => setChecksExpanded((open) => !open)}
             >
               {checksExpanded ? (

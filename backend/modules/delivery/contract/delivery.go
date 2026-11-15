@@ -97,6 +97,9 @@ type EmailDeliveryStatus struct {
 	MailedTo    *string          `json:"mailed_to,omitempty"`
 	AddressMark EmailAddressMark `json:"address_mark,omitempty"`
 	Stopped     bool             `json:"stopped,omitempty"`
+	// Departed is the current departure hold at RecipientEmail, not the outcome
+	// of an earlier mail. It clears when the school knows that address again.
+	Departed bool `json:"-"`
 	// StopShared says another holder of the address carries no stop, so mail to the
 	// address still goes out.
 	StopShared bool `json:"stop_shared,omitempty"`
@@ -200,6 +203,9 @@ type Enqueued struct {
 var (
 	ErrCancelled = errors.New("delivery: provider cancelled the intent")
 	ErrDeferred  = errors.New("delivery: provider deferred the intent")
+	// ErrThrottled refines ErrDeferred: the mail server asked to send later
+	// (#6737). The worker waits longer the older the mail is.
+	ErrThrottled = errors.New("delivery: provider throttled the intent")
 	// ErrPermanent marks a rejection that no retry can change. The intent
 	// dead-letters on this attempt, so the failure is still reported.
 	ErrPermanent = errors.New("delivery: provider rejected the intent permanently")
@@ -238,6 +244,12 @@ var ErrEmailSuppressionStaysAtProvider = errors.New("delivery: the provider keep
 type Status struct {
 	IdempotencyKey *string
 	ID             int64
+	// Kind is the template of the intent; RelatedID the entity it was
+	// enqueued for, nil without one (#6976).
+	Kind      string
+	RelatedID *int64
+	// CreatedAt is when the intent was enqueued (#6976).
+	CreatedAt      time.Time
 	Transport      Transport
 	State          State
 	Attempts       int
@@ -282,14 +294,17 @@ type Observation struct {
 // it goes to a family of one of its schools. A Träger's billing letter does not,
 // and neither does mail to staff. An unlisted template goes out.
 var parentMailTemplates = map[string]bool{
-	"guardian_invitation":                true,
-	"guardian_welcome":                   true,
-	"parent_announcement":                true,
-	"parent_message":                     true,
-	"enrollment_submitted":               true,
-	"enrollment_approved":                true,
-	"enrollment_waitlisted":              true,
-	"enrollment_rejected":                true,
+	"guardian_invitation":   true,
+	"guardian_welcome":      true,
+	"parent_announcement":   true,
+	"parent_message":        true,
+	"enrollment_submitted":  true,
+	"enrollment_approved":   true,
+	"enrollment_waitlisted": true,
+	"enrollment_rejected":   true,
+	// The digest names the decisions on several children of one request: the
+	// same news to the same family as the three mails above (#7058).
+	"enrollment_decision_digest":         true,
 	"enrollment_rollover_opt_in":         true,
 	"enrollment_rollover_opt_out":        true,
 	"enrollment_change_request_question": true,
@@ -310,6 +325,25 @@ var parentMailTemplates = map[string]bool{
 
 // IsParentMail reports whether a mail template goes to parents.
 func IsParentMail(template string) bool { return parentMailTemplates[template] }
+
+// distributionMailTemplates are the school's mailings to its families: letters,
+// messages, appointments, and the invitation to the parent portal (#5960). They
+// stop once no child of the recipient is in care at the school any more. Mail a
+// family needs individually goes on: care contracts and their notices, billing
+// letters, decisions on an application, and sign-in and password mail.
+var distributionMailTemplates = map[string]bool{
+	"guardian_invitation":   true,
+	"parent_announcement":   true,
+	"parent_message":        true,
+	"appointment_published": true,
+	"appointment_updated":   true,
+	"appointment_cancelled": true,
+	"appointment_reminder":  true,
+}
+
+// IsDistributionMail reports whether a mail template is one of the school's
+// mailings that end when the family's last child left. Each is a parent mail.
+func IsDistributionMail(template string) bool { return distributionMailTemplates[template] }
 
 // HolidayClosureMailRecovery exposes only the key and whether a retry needs outcome clarification.
 type HolidayClosureMailRecovery struct {

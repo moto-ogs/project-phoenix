@@ -135,9 +135,51 @@
     },
     {
       "build": "production",
+      "evidence": "func (a *StaffAdmin) StaffKeptByTraeger(ctx context.Context, staffID int64) (bool, error) {\n\treturn a.traeger.StaffKeptByTraeger(ctx, staffID)\n}",
+      "form": "unchanged-forward-evidence",
+      "id": "modules/workforce/StaffAdmin.StaffKeptByTraeger",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
+      "evidence": "func (a *StaffAdmin) StaffSollKeptByTraeger(ctx context.Context, staffID int64) (bool, error) {\n\treturn a.traeger.StaffSollKeptByTraeger(ctx, staffID)\n}",
+      "form": "unchanged-forward-evidence",
+      "id": "modules/workforce/StaffAdmin.StaffSollKeptByTraeger",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
       "evidence": "func (a *StaffAdmin) StaffStammdaten(ctx context.Context, staffID int64) (*StaffStammdaten, error) {\n\treturn a.engine.StaffStammdaten(ctx, staffID)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/workforce/StaffAdmin.StaffStammdaten",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
+      "evidence": "func (a *StaffAdmin) TraegerAbsenceTypes(collaborators TraegerStaffPorts) TraegerAbsenceTypes {\n\treturn a.traeger.TraegerAbsenceTypes(collaborators)\n}",
+      "form": "unchanged-forward-evidence",
+      "id": "modules/workforce/StaffAdmin.TraegerAbsenceTypes",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
+      "evidence": "func (a *StaffAdmin) TraegerStaffContracts(collaborators TraegerStaffPorts) TraegerStaffContracts {\n\treturn a.traeger.TraegerStaffContracts(collaborators)\n}",
+      "form": "unchanged-forward-evidence",
+      "id": "modules/workforce/StaffAdmin.TraegerStaffContracts",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
+      "evidence": "func (a *StaffAdmin) TraegerStaffPlanning(collaborators TraegerStaffPorts, sites TraegerShiftSites) TraegerStaffPlanning {\n\tif sites == nil {\n\t\tpanic(\"workforce traeger planning: the Dienstplan of the schools is required\")\n\t}\n\treturn a.traeger.TraegerStaffPlanning(collaborators, sites)\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/workforce/StaffAdmin.TraegerStaffPlanning",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
+      "evidence": "func (a *StaffAdmin) TraegerStaffRecords(collaborators TraegerStaffPorts) TraegerStaffRecords {\n\treturn a.traeger.TraegerStaffRecords(collaborators)\n}",
+      "form": "unchanged-forward-evidence",
+      "id": "modules/workforce/StaffAdmin.TraegerStaffRecords",
       "owner": "modules/workforce"
     },
     {
@@ -205,6 +247,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (rs *ReleaseResource) Withdraw(w http.ResponseWriter, r *http.Request) {\n\torganizationID, ok := common.ParseInt64IDWithError(w, r, \"id\", \"invalid organization ID\")\n\tif !ok {\n\t\treturn\n\t}\n\trs.write(w, r, ReleaseWithdrawn, \"\", func(ctx context.Context, _ int64) error {\n\t\treturn rs.releases.WithdrawRelease(ctx, organizationID)\n\t}, func() {\n\t\tcommon.Respond(w, r, http.StatusOK, map[string]int64{\"organization_id\": organizationID}, \"Staff release withdrawn successfully\")\n\t})\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/workforce/http/traegerstaff/ReleaseResource.Withdraw",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
       "evidence": "func (a Assignments) AssignedStaffIDs(ctx context.Context, workTimeModelID int64) ([]int64, error) {\n\tids, err := a.Store.StaffOnWorkTimeModel(ctx, workTimeModelID)\n\tif err != nil || len(ids) == 0 {\n\t\treturn ids, err\n\t}\n\treturn a.Live(ctx, ids)\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/adapters/postgres/Assignments.AssignedStaffIDs",
@@ -257,20 +306,6 @@
       "evidence": "func (r *groupSubstitutionRepository) Update(ctx context.Context, entity *GroupSubstitution) error {\n\tif entity == nil {\n\t\treturn errors.New(\"group_substitution cannot be nil or zero value\")\n\t}\n\tupdated, err := r.workforce.UpdateGroupSubstitution(ctx, substitutionToWorkforce(entity))\n\tif err != nil {\n\t\tif errors.Is(err, workforce.ErrGroupSubstitutionNotFound) {\n\t\t\treturn rowsAffectedError(\"update group_substitution\")\n\t\t}\n\t\treturn writeError(\"update\", err)\n\t}\n\tapplySubstitutionToLegacy(entity, updated)\n\treturn nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/adapters/substitutions/groupSubstitutionRepository.Update",
-      "owner": "modules/workforce"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *PayrollDispatch) Overview(ctx context.Context) (workforce.PayrollDispatchOverview, error) {\n\tlatest, err := s.deps.Store.LatestPayrollDispatch(ctx)\n\tif err != nil || latest == nil {\n\t\treturn workforce.PayrollDispatchOverview{}, err\n\t}\n\tview := workforce.PayrollDispatchView{Year: latest.Year, Month: latest.Month, Correction: latest.Correction \u003e 0, Channel: latest.Channel, Format: latest.Format, Recipient: latest.Recipient, State: latest.State, Reason: latest.Reason, Attempts: latest.Attempts, Filename: latest.Filename, CreatedAt: latest.CreatedAt, FinishedAt: latest.FinishedAt, DownloadExpiresAt: latest.DownloadExpiresAt, DownloadedAt: latest.DownloadedAt}\n\treturn workforce.PayrollDispatchOverview{Latest: \u0026view}, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/workforce/internal/application/PayrollDispatch.Overview",
-      "owner": "modules/workforce"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *Service) AllowanceSummary(ctx context.Context, staffID, absenceTypeID int64, year int) (workforce.AbsenceTypeAllowanceSummary, error) {\n\tif staffID \u003c= 0 || year \u003c 2000 || year \u003e 2100 {\n\t\treturn allowanceSummaryToPublic(domain.AbsenceTypeAllowanceSummary{}), MapError(domain.ErrAbsenceTypeAllowanceInvalid)\n\t}\n\tabsenceType, err := s.findAllowanceType(ctx, absenceTypeID)\n\tif err != nil {\n\t\treturn allowanceSummaryToPublic(domain.AbsenceTypeAllowanceSummary{}), MapError(err)\n\t}\n\taccounts, err := s.loadAllowanceAccounts(ctx, staffID, absenceType, year, year)\n\tif err != nil {\n\t\treturn allowanceSummaryToPublic(domain.AbsenceTypeAllowanceSummary{}), MapError(err)\n\t}\n\treturn allowanceSummaryToPublic(accounts.ledger(s.clock.Today()).Summary(staffID, absenceTypeID, year)), MapError(nil)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/workforce/internal/application/Service.AllowanceSummary",
       "owner": "modules/workforce"
     },
     {
@@ -765,6 +800,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (c monthClosingCapability) TraegerMonthStaff(ctx context.Context, year, month int) ([]int64, error) {\n\tstaffIDs, err := c.closing.TraegerMonthStaff(ctx, year, month)\n\treturn staffIDs, mapTimeTrackingFailure(err)\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/workforce/internal/application/timetracking/monthClosingCapability.TraegerMonthStaff",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
       "evidence": "func (c monthSnapshotCapability) ClosedMonthSnapshots(ctx context.Context, year, month int) ([]*MonthSnapshot, error) {\n\tvalues, err := c.MonthSnapshots.ClosedMonthSnapshots(ctx, year, month)\n\treturn consumerMonthSnapshots(values), err\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/timetracking/monthSnapshotCapability.ClosedMonthSnapshots",
@@ -796,20 +838,6 @@
       "evidence": "func (c staffAbsenceCapability) AbsencesForRange(ctx context.Context, staffID int64, from, to string) ([]*workforce.StaffAbsenceResponse, error) {\n\tfromDate, toDate, err := parseCapabilityRange(from, to)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tvalues, err := c.absences.GetAbsencesForRange(ctx, staffID, fromDate, toDate)\n\tif err != nil {\n\t\treturn nil, mapTimeTrackingFailure(err)\n\t}\n\treturn publicAbsenceResponses(values), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/timetracking/staffAbsenceCapability.AbsencesForRange",
-      "owner": "modules/workforce"
-    },
-    {
-      "build": "production",
-      "evidence": "func (c staffAbsenceCapability) ApproveAbsence(ctx context.Context, absenceID, actorAccountID, decidedByStaffID int64, note string) (*workforce.StaffAbsenceResponse, error) {\n\treturn c.absence(c.absences.ApproveAbsence(ctx, absenceID, actorAccountID, decidedByStaffID, note))\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/workforce/internal/application/timetracking/staffAbsenceCapability.ApproveAbsence",
-      "owner": "modules/workforce"
-    },
-    {
-      "build": "production",
-      "evidence": "func (c staffAbsenceCapability) CancelAbsence(ctx context.Context, staffID, actorAccountID, absenceID int64) error {\n\treturn mapTimeTrackingFailure(c.absences.CancelAbsence(ctx, staffID, actorAccountID, absenceID))\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/workforce/internal/application/timetracking/staffAbsenceCapability.CancelAbsence",
       "owner": "modules/workforce"
     },
     {
@@ -982,6 +1010,20 @@
     },
     {
       "build": "production",
+      "evidence": "func (c traegerMonthCapability) CloseMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string) (bool, error) {\n\tclosed, err := c.closing.CloseMonthForTraeger(ctx, staffID, accountID, year, month, reason)\n\treturn closed, mapTimeTrackingFailure(err)\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/workforce/internal/application/timetracking/traegerMonthCapability.CloseMonthForTraeger",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
+      "evidence": "func (c traegerMonthCapability) ReopenMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string) error {\n\treturn mapTimeTrackingFailure(c.closing.ReopenMonthForTraeger(ctx, staffID, accountID, year, month, reason))\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/workforce/internal/application/timetracking/traegerMonthCapability.ReopenMonthForTraeger",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
       "evidence": "func (c workSessionCapability) CheckIn(ctx context.Context, staffID int64, status, source, reason string) (*workforce.WorkSession, error) {\n\tsession, err := c.sessions.CheckIn(ctx, staffID, status, source, reason)\n\tif err != nil {\n\t\treturn nil, classifyCheckInError(ctx, err)\n\t}\n\treturn publicWorkSession(session), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/timetracking/workSessionCapability.CheckIn",
@@ -1129,6 +1171,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (e *StaffChoiceError) Error() string {\n\treturn e.Field + \": \" + e.Err.Error()\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/workforce/internal/domain/StaffChoiceError.Error",
+      "owner": "modules/workforce"
+    },
+    {
+      "build": "production",
       "evidence": "func (c StaffDocumentFileCleanup) Validate() error {\n\tif c.StaffID \u003c= 0 {\n\t\treturn invalidStaffRecord(\"staff_id is required\")\n\t}\n\tif c.FilenameStored == \"\" {\n\t\treturn invalidStaffRecord(\"filename_stored is required\")\n\t}\n\tif c.RetryAfter.IsZero() {\n\t\treturn invalidStaffRecord(\"retry_after is required\")\n\t}\n\treturn nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/domain/StaffDocumentFileCleanup.Validate",
@@ -1171,7 +1220,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (a shiftTypeAdministration) DeleteShiftType(ctx context.Context, id int64) error {\n\treturn mapShiftTypeError(a.types.DeleteShiftType(ctx, id))\n}",
+      "evidence": "func (a shiftTypeAdministration) DeleteShiftType(ctx context.Context, id int64) (workforce.ShiftTypeRemoval, error) {\n\tremoval, err := a.types.DeleteShiftType(ctx, id)\n\treturn removal, mapShiftTypeError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/planning/shiftTypeAdministration.DeleteShiftType",
       "owner": "modules/workforce"
@@ -1192,7 +1241,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p staffShiftPlanning) CreateSeries(ctx context.Context, input workforce.CreateStaffShiftSeries) (workforce.StaffShiftSeriesResult, error) {\n\tseries, err := seriesInputToModel(input.StaffShiftSeriesInput)\n\tif err != nil {\n\t\treturn workforce.StaffShiftSeriesResult{}, err\n\t}\n\tseries.CreatedBy = input.ActorStaffID\n\tresult, err := p.deps.Series.CreateSeries(ctx, series)\n\tif err != nil {\n\t\treturn workforce.StaffShiftSeriesResult{}, mapPlanningError(err)\n\t}\n\treturn seriesResultToCapability(result), nil\n}",
+      "evidence": "func (p staffShiftPlanning) CreateSeries(ctx context.Context, input workforce.CreateStaffShiftSeries) (workforce.StaffShiftSeriesResult, error) {\n\tseries, err := seriesInputToModel(input.StaffShiftSeriesInput)\n\tif err != nil {\n\t\treturn workforce.StaffShiftSeriesResult{}, err\n\t}\n\tseries.CreatedBy = input.ActorStaffID\n\tseries.WorkingTime = input.WorkingTime\n\tresult, err := p.deps.Series.CreateSeries(ctx, series)\n\tif err != nil {\n\t\treturn workforce.StaffShiftSeriesResult{}, mapPlanningError(err)\n\t}\n\treturn seriesResultToCapability(result), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/planning/staffShiftPlanning.CreateSeries",
       "owner": "modules/workforce"

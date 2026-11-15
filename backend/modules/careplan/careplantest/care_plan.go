@@ -39,7 +39,7 @@ func NewArrivalQueries(tb TB, db *bun.DB, records careplan.Capability) careplan.
 // NewPickupQueries binds schedule reads for fixtures without pickup mutations.
 func NewPickupQueries(tb TB, db *bun.DB, records careplan.Capability, baselines careplan.PickupBaselineReader) careplan.PickupScheduleService {
 	tb.Helper()
-	queries, err := carePlanCompose.NewPickupSchedules(db, records, baselines, nil, nil, nil)
+	queries, err := carePlanCompose.NewPickupSchedules(db, records, baselines, nil, nil, nil, nil)
 	if err != nil {
 		tb.Fatalf("compose test pickup queries: %v", err)
 	}

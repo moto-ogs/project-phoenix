@@ -56,6 +56,7 @@ export function staffQualificationsTopic(): HelpTopic {
     differences: [
       "Ein alter Eintrag ohne Art steht als `Sonstiges` da. moto ordnet ihn nicht selbst zu. Wählen Sie die Art im Reiter `Stammdaten` aus.",
       "Status `Fehlt` heißt: Die Art ist Pflicht, und die Person hat noch keinen Nachweis davon.",
+      "Bei einer Person steht `Vom Träger geführt`: Ihr Träger führt die Nachweise der Person in seiner Personalakte. Sie sehen dort nur den Stand. Eintragen kann die Personalverwaltung des Trägers. Vor dem Ablauf bekommen Sie trotzdem eine Erinnerung.",
     ],
     notes: [
       "moto speichert nur Art und Datum, keine Inhalte. Beim Führungszeugnis halten Sie so fest, dass Sie es eingesehen haben.",

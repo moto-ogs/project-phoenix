@@ -48,6 +48,7 @@ type BillingPositionKind =
   | "sibling"
   | "benefits_exemption"
   | "cost_takeover"
+  | "meal"
   | "correction"
   | "credit";
 
@@ -83,6 +84,8 @@ export interface BillingPosition {
   /** Cost takeover (#5627): the cost bearer and the name the invoice copied. */
   readonly costBearerId?: string | null;
   readonly costBearerName?: string;
+  /** The lunches a meal position prices (#5631); null otherwise. */
+  readonly bookedDays?: number | null;
 }
 
 interface BillingCorrection {
@@ -139,6 +142,11 @@ export interface BillingDocument {
   readonly number: string;
   readonly issuedOn: string | null;
   readonly registrationId: string;
+  /**
+   * The child of the registration a holiday invoice per child bills
+   * (#7007); empty for an invoice of the whole registration.
+   */
+  readonly registrationChildId: string;
   readonly recipientFirstName: string;
   readonly recipientLastName: string;
   readonly recipientEmail: string;
@@ -254,6 +262,7 @@ interface BackendPosition {
   note: string;
   cost_bearer_id?: number | null;
   cost_bearer_name?: string;
+  booked_days?: number | null;
 }
 
 interface BackendDocumentLink {
@@ -276,6 +285,7 @@ interface BackendDocument {
   number: string;
   issued_on: string | null;
   registration_id: number;
+  registration_child_id?: number;
   recipient_first_name: string;
   recipient_last_name: string;
   recipient_email: string;
@@ -386,6 +396,7 @@ function positionFromBackend(position: BackendPosition): BillingPosition {
       ? String(position.cost_bearer_id)
       : null,
     costBearerName: position.cost_bearer_name ?? "",
+    bookedDays: position.booked_days ?? null,
   };
 }
 
@@ -416,6 +427,9 @@ function documentFromBackend(document: BackendDocument): BillingDocument {
     number: document.number,
     issuedOn: document.issued_on,
     registrationId: String(document.registration_id),
+    registrationChildId: document.registration_child_id
+      ? String(document.registration_child_id)
+      : "",
     recipientFirstName: document.recipient_first_name,
     recipientLastName: document.recipient_last_name,
     recipientEmail: document.recipient_email,

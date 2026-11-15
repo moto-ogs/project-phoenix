@@ -212,12 +212,12 @@ func TestCareExit_FullSchoolWithPlanOfferingsAndParents(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	// RFID tag release runs through the People Directory composition (#2661).
 	timetableRepos := testTimetableRepositories(db)
-	svc := newCareLifecycleService(t, db)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
 	actorID := careActor(t, db)
 
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	studentID := chain.StudentID
-	today := calendar.TodayDate()
+	today := decisionTestToday
 
 	room := testpkg.CreateTestRoom(t, db, "Werkraum")
 	activityGroup := testpkg.CreateTestActivityGroup(t, db, "Töpfern")
@@ -230,7 +230,7 @@ func TestCareExit_FullSchoolWithPlanOfferingsAndParents(t *testing.T) {
 	futureInstance := testpkg.CreateTestActivityInstance(t, db, today.AddDays(7), room.ID,
 		testpkg.ActivityInstanceOpts{ActivityGroupID: &activityGroup.ID})
 	testpkg.CreateTestInstanceStudent(t, db, pastInstance.ID, studentID, studentpresence.SessionAttendancePresent)
-	checkedInAt := time.Now().Add(-time.Hour)
+	checkedInAt := today.BerlinMidnight().Add(9 * time.Hour)
 	testpkg.CreateTestInstanceStudent(t, db, openInstance.ID, studentID,
 		studentpresence.SessionAttendancePresent, testpkg.InstanceStudentOpts{CheckedInAt: &checkedInAt})
 	testpkg.CreateTestInstanceStudent(t, db, futureInstance.ID, studentID, studentpresence.SessionAttendanceExpected)

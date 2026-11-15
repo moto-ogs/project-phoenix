@@ -1,6 +1,4 @@
 import {
-  expect,
-  test,
   type Frame,
   type Locator,
   type Page,
@@ -25,6 +23,7 @@ import {
   type StaffOnboardingStepKey,
 } from "../src/lib/staff-onboarding-api";
 import { loadSeedAccess } from "../scripts/seed-state";
+import { expect, test } from "./a11y/scan";
 import { Deadline } from "./deadline";
 import { frontendPort } from "./frontend-port";
 import {
@@ -48,7 +47,8 @@ import {
 // - Einrichtung: der schuleigene Admin von `manuell` (nicht `demo1`, dessen
 //   MFA-Codes schon die übrigen Specs anfordern). Die Schule ist nicht
 //   fertig eingerichtet. Offen
-//   sind „Team“ und „Eltern“; Räume und Gruppen gelten dort nicht (binäre
+//   sind „Team“, „Eltern“ und „Arbeitszeitmodelle“ (niemand dort hat ein
+//   Soll); Räume und Gruppen gelten dort nicht (binäre
 //   Anwesenheit, offene Betreuung), Kinder sind erledigt. Erledigte Schritte
 //   bieten keine Tour an. Jede geseedete Schule hat Räume, Gruppen und
 //   Kinder; die Touren „rooms“, „groups“ und „students“ (samt Import) prüft
@@ -617,6 +617,32 @@ for (const device of VIEWPORTS) {
       );
       expect(tabNavigations).toEqual([]);
       await closeTour(page);
+    });
+
+    test("Arbeitszeitmodelle: zu den Personen ohne Soll in den Zeitkonten", async ({
+      page,
+    }) => {
+      const tour = SETUP_TOURS.worktime!;
+      await startTour(page, SCHOOL_SETUP_STEP_CONTENT.worktime.title);
+      const { visited, stoppedAt } = await walkTour(page, tour);
+      // Die Tour öffnet die Zeitkonten selbst, mit dem Filter „ohne Soll“ und
+      // im Monat, den die Checkliste gezählt hat (#6919). Der Reiter ist dann
+      // schon gewählt; seine Station entfällt.
+      expect(stoppedAt, visited.join(" → ")).toBeNull();
+      expect(visited).toEqual(["Personen ohne Soll"]);
+      const opened = new URL(page.url());
+      expect(opened.pathname).toBe("/staff");
+      expect(opened.searchParams.get("view")).toBe("accounts");
+      expect(opened.searchParams.get("filter")).toBe("ohne-soll");
+      expect(opened.searchParams.get("month")).toMatch(/^\d{4}-\d{2}$/);
+      // Der Schritt bleibt offen, bis die Personen ein Soll haben.
+      await expect(
+        page
+          .getByRole("region", { name: "Erste Schritte mit moto" })
+          .getByRole("button", {
+            name: `${SCHOOL_SETUP_STEP_CONTENT.worktime.title} Offen`,
+          }),
+      ).toBeVisible();
     });
   });
 

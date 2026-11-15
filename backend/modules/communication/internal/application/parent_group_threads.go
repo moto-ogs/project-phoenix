@@ -17,6 +17,7 @@ type (
 	ParentGroupThreadInput      = communication.ParentGroupThreadInput
 	ParentGroupAudienceChild    = communication.ParentGroupAudienceChild
 	ParentGroupAudienceReads    = communication.ParentGroupAudienceReads
+	ParentMessageMails          = communication.ParentMessageMails
 )
 
 const (

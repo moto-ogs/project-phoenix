@@ -122,6 +122,17 @@ type StaffAbsence struct {
 	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
+// HalfBoundaryDays reports whether the first and the last day of the absence
+// are half days. A legacy entry that sets only half_day is half on both ends,
+// so a single half day covers no full day; the Stundenkonto credits the same
+// halves.
+func (a StaffAbsence) HalfBoundaryDays() (start, end bool) {
+	if a.HalfDay && !a.StartHalfDay && !a.EndHalfDay {
+		return true, true
+	}
+	return a.StartHalfDay, a.EndHalfDay
+}
+
 // StaffAbsenceOrderField names a column a listing may be ordered by.
 type StaffAbsenceOrderField string
 
@@ -186,8 +197,17 @@ type StaffAbsenceType struct {
 	// CarryoverUntil is "MM-DD" in the following year until which a yearly
 	// rest stays usable; "" lets it expire on 31.12.
 	CarryoverUntil string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	// Requestable lets staff request the type; the Leitung decides.
+	Requestable bool
+	// TraegerAbsenceTypeID names the Träger's type this row carries at the
+	// school (#4710); its name, allowance, rest rule and Requestable are the
+	// Träger's. Offered and SchoolLimitDays are the school's deviation for
+	// its own Einsätze.
+	TraegerAbsenceTypeID *int64
+	Offered              bool
+	SchoolLimitDays      *float64
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 // StaffAbsenceTypeFields is the writable part of an absence type.
@@ -197,6 +217,7 @@ type StaffAbsenceTypeFields struct {
 	IsActive         bool
 	AllowanceEnabled bool
 	CarryoverUntil   string
+	Requestable      bool
 }
 
 // StaffAbsenceAudit is one status transition of an absence.
@@ -306,6 +327,9 @@ type AbsenceTypeAllowanceSummary struct {
 	BookingDays float64
 	// CarriedIn is the previous year's rest still usable in this year.
 	CarriedIn *AbsenceTypeAllowanceCarry
+	// KeptByTraeger is true when the Träger keeps this account: a type of
+	// the Träger for a person with a Personalakte, over all schools (#4710).
+	KeptByTraeger bool
 }
 
 // AbsenceTypeAllowanceAccount is one active school-defined type with an
@@ -335,6 +359,7 @@ type CreateAbsenceType struct {
 	Name             string
 	AllowanceEnabled bool
 	CarryoverUntil   string
+	Requestable      bool
 }
 
 // UpdateAbsenceType patches an absence type; nil fields stay as they are, so a
@@ -346,6 +371,17 @@ type UpdateAbsenceType struct {
 	AllowanceEnabled *bool
 	// CarryoverUntil: nil keeps the rule, "" lets the rest expire on 31.12.
 	CarryoverUntil *string
+	Requestable    *bool
+	// Offered and SchoolLimit are the school's deviation from a type of its
+	// Träger (#4710); a nil SchoolLimit keeps it, a SchoolLimit without days
+	// removes it.
+	Offered     *bool
+	SchoolLimit *SchoolLimitPatch
+}
+
+// SchoolLimitPatch sets (Days) or removes (nil Days) the school's limit.
+type SchoolLimitPatch struct {
+	Days *float64
 }
 
 type SetAbsenceTypeAllowance struct {

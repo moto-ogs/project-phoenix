@@ -11,6 +11,7 @@
 import type { Session } from "next-auth";
 import { hasPermission } from "~/lib/auth-utils";
 import type { MotoConcept } from "~/lib/moto-concepts";
+import { arrivalPickupConcept } from "~/lib/concepts/arrivalPickup";
 import { backConcept } from "~/lib/concepts/back";
 import { billingConcept } from "~/lib/concepts/billing";
 import { careContractsConcept } from "~/lib/concepts/careContracts";
@@ -28,6 +29,9 @@ import { peopleConcept } from "~/lib/concepts/people";
 import { reportsConcept } from "~/lib/concepts/reports";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { settingsConcept } from "~/lib/concepts/settings";
+import { staffConcept } from "~/lib/concepts/staff";
+import { staffPlanConcept } from "~/lib/concepts/staffPlan";
+import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 
 /** Das Recht, das „Mitglieder und Rollen" öffnet (ADR 0084, #4650). */
@@ -36,10 +40,12 @@ const ACCOUNTS_RIGHT = "traeger_accounts:manage";
 const ENROLLMENT_RIGHT = "traeger_enrollment:manage";
 /** Das Recht, das die Betreuungsverträge öffnet (#4678). */
 const CONTRACTS_RIGHT = "traeger_contracts:manage";
-/** Das Recht, das „Länger als gebucht“ ohne Namen öffnet (#4683). */
+/** Das Recht, das „Länger als gebucht“ ohne Namen (#4683), die Auslastung (#4713) und „Ankunft und Abholung“ (#4714) öffnet. */
 const REPORTS_RIGHT = "traeger_reports:read";
 /** Das Recht, das die Abrechnungsläufe öffnet (#4668). */
 const BILLING_RIGHT = "traeger_billing:manage";
+/** Das Recht, das die Personalakten öffnet (Rolle Personal, #4705). */
+const STAFF_RIGHT = "traeger_staff:manage";
 /** Das Recht, das das Zugriffsprotokoll öffnet (#4655). */
 const ACCESS_LOG_RIGHT = "traeger_access_log:read";
 /**
@@ -107,6 +113,23 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         concept: utilizationConcept,
         right: OVERVIEW_RIGHT,
       },
+      {
+        // Belegung, Anwesenheit und Räume über Wochen und Monate (#4713).
+        key: "auslastung",
+        href: "/traeger/auslastung",
+        label: "Auslastung",
+        concept: utilizationConcept,
+        right: REPORTS_RIGHT,
+      },
+      {
+        // Wann Kinder ankommen und gehen, je Wochentag und halbe Stunde (#4714).
+        key: "ankunft-abholung",
+        href: "/traeger/ankunft-abholung",
+        label: "Ankunft und Abholung",
+        shortLabel: "Ankunft",
+        concept: arrivalPickupConcept,
+        right: REPORTS_RIGHT,
+      },
     ],
   },
   {
@@ -163,6 +186,51 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         label: "Dokumente",
         concept: documentsConcept,
         right: OVERVIEW_RIGHT,
+      },
+    ],
+  },
+  {
+    // Personal über alle Schulen (ADR 0089): die Personalakten (#4705) und
+    // ihre Nachweise (#4707); Verträge und Planung kommen hier hinzu.
+    key: "personal",
+    label: "Personal",
+    items: [
+      {
+        key: "personalakten",
+        href: "/traeger/personal",
+        label: "Personalakten",
+        shortLabel: "Personal",
+        concept: staffConcept,
+        right: STAFF_RIGHT,
+      },
+      {
+        // Die Woche aller Personen über alle Einsatzorte, mit Prüfung der
+        // Arbeitszeitregeln (#4708).
+        key: "einsatzplanung",
+        href: "/traeger/personal/einsatzplanung",
+        label: "Einsatzplanung",
+        shortLabel: "Planung",
+        concept: staffPlanConcept,
+        right: STAFF_RIGHT,
+      },
+      {
+        // Führungszeugnis, Masernschutz und die Arten des Trägers mit
+        // Ablaufwarnung (#4707).
+        key: "personalnachweise",
+        href: "/traeger/nachweise",
+        label: "Personalnachweise",
+        shortLabel: "Nachweise",
+        concept: documentsConcept,
+        right: STAFF_RIGHT,
+      },
+      {
+        // Arten und Kontingente über alle Schulen (#4710).
+        key: "abwesenheitsarten",
+        href: "/traeger/personal/abwesenheitsarten",
+        label: "Abwesenheitsarten",
+        shortLabel: "Abwesenheit",
+        concept: timeTrackingConcept,
+        right: STAFF_RIGHT,
       },
     ],
   },

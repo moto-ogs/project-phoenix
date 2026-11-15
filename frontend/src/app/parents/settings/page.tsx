@@ -16,6 +16,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { usePageTitleSection } from "~/components/ui/page-title-section";
 import { useTranslations } from "next-intl";
 
 import { NotificationPreferencesSection } from "~/components/settings/notification-preferences-section";
@@ -25,6 +26,7 @@ import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { LanguageSwitcher } from "~/components/parent/language-switcher";
 import { activeParentSettingsSection } from "~/components/parent/shell/parent-nav-items";
 import { ParentSection } from "~/components/parent/shell/parent-section";
+import { ParentSignInSection } from "~/components/parent/parent-sign-in-section";
 import { SamsungChromeInstructions } from "~/components/tenant/pwa-install-hint";
 import { ButtonLink } from "~/components/ui/button";
 import { buildHelpHref, HELP_TOPICS } from "~/lib/help-topics";
@@ -36,6 +38,7 @@ function ParentSettingsContent() {
   const t = useTranslations("parentSettings");
   const tNav = useTranslations("parentNav");
   const section = activeParentSettingsSection(useSearchParams().get("tab"));
+  usePageTitleSection(tNav(section.tKey));
   const pathname = usePathname();
   const [pageUrl, setPageUrl] = useState<URL | null>(null);
   const installHelpHref = buildHelpHref(
@@ -82,7 +85,12 @@ function ParentSettingsContent() {
               {pageUrl ? (
                 <SamsungChromeInstructions pageUrl={pageUrl} />
               ) : (
-                <ButtonLink href={installHelpHref} variant="surface" size="md">
+                <ButtonLink
+                  href={installHelpHref}
+                  variant="surface"
+                  size="md"
+                  tooltip={t("appInstallGuideTooltip")}
+                >
                   {t("appInstallGuide")}
                 </ButtonLink>
               )}
@@ -94,6 +102,8 @@ function ParentSettingsContent() {
           <PushNotificationSection portal="parent" />
         </>
       ) : null}
+
+      {section.key === "signIn" ? <ParentSignInSection /> : null}
 
       {section.key === "privacy" ? <ParentAnalyticsConsentSection /> : null}
     </ParentPage>

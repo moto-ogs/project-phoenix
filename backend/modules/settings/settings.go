@@ -50,6 +50,7 @@ const (
 	KeyEnrollmentRejectedRetentionDays       = configModel.KeyEnrollmentRejectedRetentionDays
 	KeyEnrollmentWaitlistEnabled             = configModel.KeyEnrollmentWaitlistEnabled
 	KeyChildSearchOnlyNavigation             = configModel.KeyChildSearchOnlyNavigation
+	KeySimpleStaffNavigation                 = configModel.KeySimpleStaffNavigation
 	KeyFeedbackEnabled                       = configModel.KeyFeedbackEnabled
 	KeyGroupMode                             = configModel.KeyGroupMode
 	KeyOGSDevicePIN                          = configModel.KeyOGSDevicePIN
@@ -73,6 +74,7 @@ const (
 	KeyParentExcusedRequiresApproval         = configModel.KeyParentExcusedRequiresApproval
 	KeyParentNewsEnabled                     = configModel.KeyParentNewsEnabled
 	KeyParentNotesEnabled                    = configModel.KeyParentNotesEnabled
+	KeyParentMessageCardBadgeEnabled         = configModel.KeyParentMessageCardBadgeEnabled
 	KeyParentPickupChangeCutoffTime          = configModel.KeyParentPickupChangeCutoffTime
 	KeyParentPickupChangeEnabled             = configModel.KeyParentPickupChangeEnabled
 	KeyParentRequestGroupLeaderReviewEnabled = configModel.KeyParentRequestGroupLeaderReviewEnabled
@@ -89,6 +91,7 @@ const (
 	KeyStaffMessagingEnabled                 = configModel.KeyStaffMessagingEnabled
 	KeyStudentAbsenceEditScope               = configModel.KeyStudentAbsenceEditScope
 	KeyStudentPhotosEnabled                  = configModel.KeyStudentPhotosEnabled
+	KeyStudentCardActivitiesEnabled          = configModel.KeyStudentCardActivitiesEnabled
 	KeyTimetableChildrenPerStaffRatio        = configModel.KeyTimetableChildrenPerStaffRatio
 	KeyTimetableDayEndTime                   = configModel.KeyTimetableDayEndTime
 	KeyTimetableDayStartTime                 = configModel.KeyTimetableDayStartTime

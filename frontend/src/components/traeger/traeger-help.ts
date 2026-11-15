@@ -31,8 +31,20 @@ export function getTraegerHelpTopicForPath(pathname: string): HelpTopicId {
     return HELP_TOPICS.traegerKeyDateCounts;
   }
   if (onPage(page, "/belegung")) return HELP_TOPICS.traegerOccupancy;
+  if (onPage(page, "/auslastung")) return HELP_TOPICS.traegerUtilization;
+  if (onPage(page, "/ankunft-abholung")) {
+    return HELP_TOPICS.traegerArrivalPickupTimes;
+  }
   if (onPage(page, "/schulen")) return HELP_TOPICS.traegerSchoolView;
   if (onPage(page, "/dokumente")) return HELP_TOPICS.traegerSharedDocuments;
+  if (onPage(page, "/personal/abwesenheitsarten")) {
+    return HELP_TOPICS.traegerAbsenceTypes;
+  }
+  if (onPage(page, "/personal/einsatzplanung")) {
+    return HELP_TOPICS.traegerStaffPlanning;
+  }
+  if (onPage(page, "/personal")) return HELP_TOPICS.traegerStaffRecords;
+  if (onPage(page, "/nachweise")) return HELP_TOPICS.traegerStaffProofs;
   if (onPage(page, "/konto")) return HELP_TOPICS.traegerProfile;
   if (onPage(page, "/einstellungen/mitglieder")) {
     return HELP_TOPICS.traegerAccounts;

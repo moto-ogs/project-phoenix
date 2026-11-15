@@ -2,7 +2,7 @@
 
 /**
  * ChoiceModal — generic N-option scope dialog built on the shared Modal
- * (inherits portal, `Z_LAYER.modal`, FocusScope and useModal registration).
+ * (inherits portal, `Z_LAYER.modal`, FocusScope and its place in the overlay stack).
  *
  * Use it when an action needs the user to pick exactly one of a small set
  * of scopes/strategies before proceeding, e.g. "Nur diesen Termin" vs.
@@ -12,9 +12,10 @@
  */
 
 import type { FormErrorInput } from "./form-error";
-import { FormErrorAlert } from "./form-error-alert";
+import { DialogErrorSlot } from "./dialog-parts";
 import { Button } from "./button";
 import { Modal } from "./modal";
+import { ModalCancelButton } from "./modal-frame";
 
 interface ChoiceModalOption {
   value: string;
@@ -24,6 +25,9 @@ interface ChoiceModalOption {
    *  load. Keeping the option visible explains what exists; hiding it would
    *  make the dialog silently different from one attempt to the next. */
   disabled?: boolean;
+  /** Why a disabled option cannot be chosen; shown on hover, focus and tap
+   *  like every blocked kit button. */
+  disabledReason?: string;
   /** Highlights the option the user most likely wants, e.g. the choice a
    *  series already has, so an edit does not flip it by accident. */
   primary?: boolean;
@@ -38,6 +42,11 @@ interface ChoiceModalProps {
   readonly onSelect: (value: string) => void;
   /** Disables all options (and Abbrechen) while the caller is working. */
   readonly isBusy?: boolean;
+  /**
+   * Locks every way to close the dialog without a running operation; the
+   * one name for this lock in every kit dialog (#6575). `isBusy` locks it too.
+   */
+  readonly isDismissDisabled?: boolean;
   /** Why the last choice failed, from `useApiFormError` (#2516): shown at the
    *  top of the dialog with retry and request ID, like `FormModal`. */
   readonly error?: FormErrorInput;
@@ -51,31 +60,32 @@ export function ChoiceModal({
   options,
   onSelect,
   isBusy = false,
+  isDismissDisabled = false,
   error,
 }: ChoiceModalProps) {
   // While the caller is working, every dismiss path (backdrop, Escape,
   // close button, Abbrechen) must be inert — closing mid-save would let
-  // the user re-trigger an already-running mutation.
-  const handleClose = () => {
-    if (isBusy) return;
-    onClose();
-  };
-
+  // the user re-trigger an already-running mutation. The lock goes to Modal:
+  // a check in onClose alone ran Modal's exit animation and left the dialog
+  // open but invisible (#6567).
   const footer = (
-    <Button
-      type="button"
-      variant="outline"
-      size="md"
-      onClick={handleClose}
-      disabled={isBusy}
+    <ModalCancelButton
+      onClick={onClose}
+      noTooltip="Abbrechen schließt die Auswahl, ohne etwas zu ändern."
     >
       Abbrechen
-    </Button>
+    </ModalCancelButton>
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={title} footer={footer}>
-      <FormErrorAlert message={error} className="mb-4" />
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      footer={footer}
+      isDismissDisabled={isDismissDisabled || isBusy}
+    >
+      <DialogErrorSlot error={error} />
       {description && (
         <p className="mb-4 text-sm wrap-anywhere text-gray-600">
           {description}
@@ -89,7 +99,9 @@ export function ChoiceModal({
             variant={option.primary ? "primary" : "outline"}
             size="md"
             disabled={isBusy || option.disabled}
+            disabledReason={option.disabled ? option.disabledReason : undefined}
             onClick={() => onSelect(option.value)}
+            noTooltip="Jede Wahl nennt ihre Folge selbst, in Beschriftung und Beschreibung."
             className="w-full"
           >
             <span className="flex w-full min-w-0 flex-col items-start text-left wrap-anywhere">

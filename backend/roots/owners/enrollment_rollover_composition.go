@@ -8,6 +8,7 @@ import (
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // NewEnrollmentRollovers composes Enrollment's rollover over the sources.
@@ -29,17 +30,18 @@ func NewEnrollmentRollovers(src EnrollmentRolloverSources) enrollmentOwner.Rollo
 // NewEnrollmentOfferingCapacity composes the owner's capacity gate the
 // submissions share with the restore, over Care Plan's offerings and the
 // Enrollment owner's occupancy peaks. Without settings a waitlist-mode
-// overflow check fails instead of guessing the tenant's choice.
+// overflow check fails instead of guessing the tenant's choice. today starts
+// the remaining capacity window (the root's day clock; nil reads the real day).
 func NewEnrollmentOfferingCapacity(offerings enrollmentCompose.CapacityOfferings, peaks enrollmentCompose.CapacityPeaks, settings interface {
 	ResolveBool(ctx context.Context, key string) (bool, error)
-}) enrollmentOwner.OfferingCapacity {
+}, today func() calendar.Date) enrollmentOwner.OfferingCapacity {
 	var waitlistEnabled func(context.Context) (bool, error)
 	if settings != nil {
 		waitlistEnabled = func(ctx context.Context) (bool, error) {
 			return settings.ResolveBool(ctx, configModels.KeyEnrollmentWaitlistEnabled)
 		}
 	}
-	return enrollmentCompose.NewOfferingCapacity(offerings, peaks, waitlistEnabled)
+	return enrollmentCompose.NewOfferingCapacity(offerings, peaks, waitlistEnabled, today)
 }
 
 // EnrollmentRolloverSettings resolves the settings the rollover reads, the

@@ -76,7 +76,7 @@ func NewRemindersTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 	if err != nil {
 		return RemindersTestModule{}, owners.SettingsTestModule{}, err
 	}
-	pickup, err := careplanCompose.NewPickupSchedules(db.Pool(), carePlan, baseline, autoExcusal, pickupStudents, slog.Default())
+	pickup, err := careplanCompose.NewPickupSchedules(db.Pool(), carePlan, baseline, autoExcusal, pickupStudents, slog.Default(), nil)
 	if err != nil {
 		return RemindersTestModule{}, owners.SettingsTestModule{}, err
 	}

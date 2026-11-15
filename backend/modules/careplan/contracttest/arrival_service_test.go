@@ -24,8 +24,9 @@ import (
 )
 
 // setupArrivalScheduleService creates an ArrivalScheduleService with real database connection
-func setupArrivalScheduleService(t *testing.T, db *bun.DB) careplan.ArrivalScheduleService {
-	serviceFactorySchedules, err := api.NewTestCarePlanSchedules(testpkg.NewDatabase(t, db), slog.Default())
+// clocks pin the service's school day for tests that read "today" (#7104).
+func setupArrivalScheduleService(t *testing.T, db *bun.DB, clocks ...func() time.Time) careplan.ArrivalScheduleService {
+	serviceFactorySchedules, err := api.NewTestCarePlanSchedules(testpkg.NewDatabase(t, db), slog.Default(), clocks...)
 	require.NoError(t, err, "Failed to create service factory")
 	return serviceFactorySchedules.Arrivals
 }
@@ -485,13 +486,13 @@ func TestArrivalScheduleService_GetStudentArrivalExceptions(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	service := setupArrivalScheduleService(t, db)
+	service := setupArrivalScheduleService(t, db, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("returns all exceptions for student", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, db, "Test", "ArrStudent", "1a")
 
-		baseDate := calendar.TodayDate()
+		baseDate := decisionTestToday
 		for i := -2; i <= 2; i++ {
 			exception := &careplan.ArrivalException{
 				StudentID:     student.ID,
@@ -515,13 +516,13 @@ func TestArrivalScheduleService_GetUpcomingStudentArrivalExceptions(t *testing.T
 
 	db := testpkg.SetupTestDB(t)
 
-	service := setupArrivalScheduleService(t, db)
+	service := setupArrivalScheduleService(t, db, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("returns only upcoming exceptions", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, db, "Test", "ArrStudent", "1a")
 
-		baseDate := calendar.TodayDate()
+		baseDate := decisionTestToday
 
 		for i := -5; i < 0; i++ {
 			exception := &careplan.ArrivalException{
@@ -789,13 +790,13 @@ func TestArrivalScheduleService_GetStudentArrivalNotes(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	service := setupArrivalScheduleService(t, db)
+	service := setupArrivalScheduleService(t, db, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("returns all notes for student", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, db, "Test", "ArrStudent", "1a")
 
-		baseDate := calendar.TodayDate()
+		baseDate := decisionTestToday
 		for i := 0; i < 3; i++ {
 			note := &careplan.ArrivalNote{
 				StudentID: student.ID,
@@ -945,13 +946,13 @@ func TestArrivalScheduleService_DeleteAllStudentArrivalNotes(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	service := setupArrivalScheduleService(t, db)
+	service := setupArrivalScheduleService(t, db, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("deletes all notes for student", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, db, "Test", "ArrStudent", "1a")
 
-		baseDate := calendar.TodayDate()
+		baseDate := decisionTestToday
 		for i := 1; i <= 5; i++ {
 			note := &careplan.ArrivalNote{
 				StudentID: student.ID,
@@ -982,7 +983,7 @@ func TestArrivalScheduleService_GetStudentArrivalData(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	service := setupArrivalScheduleService(t, db)
+	service := setupArrivalScheduleService(t, db, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("returns combined schedule, exception, and note data", func(t *testing.T) {
@@ -999,7 +1000,7 @@ func TestArrivalScheduleService_GetStudentArrivalData(t *testing.T) {
 
 		exception := &careplan.ArrivalException{
 			StudentID:     student.ID,
-			ExceptionDate: careplan.Date(calendar.TodayDate().AddDays(5)),
+			ExceptionDate: careplan.Date(decisionTestToday.AddDays(5)),
 			Reason:        testpkg.StrPtr("Future exception"),
 			CreatedBy:     createArrivalServiceTestStaffID(t, db),
 		}
@@ -1008,7 +1009,7 @@ func TestArrivalScheduleService_GetStudentArrivalData(t *testing.T) {
 
 		note := &careplan.ArrivalNote{
 			StudentID: student.ID,
-			NoteDate:  careplan.Date(calendar.TodayDate()),
+			NoteDate:  careplan.Date(decisionTestToday),
 			Content:   "Test note",
 			CreatedBy: createArrivalServiceTestStaffID(t, db),
 		}

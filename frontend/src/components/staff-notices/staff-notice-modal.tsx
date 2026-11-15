@@ -175,7 +175,7 @@ export function StaffNoticeModal({
         if (!op.isCurrent()) return;
         // Protokolliert hat die Seite schon. Der Fehler bleibt im Dialog.
         await formErrors.show(err, {
-          object: "das Speichern der Tagesinformation",
+          object: "das Speichern des Hinweises",
           retry: () => latestSubmitRef.current(),
         });
       }
@@ -191,11 +191,17 @@ export function StaffNoticeModal({
       isOpen={isOpen}
       onClose={onClose}
       pending={save}
-      title={notice ? "Tagesinformation bearbeiten" : "Neue Tagesinformation"}
+      title={notice ? "Hinweis bearbeiten" : "Neuer Hinweis"}
       error={formErrors.error}
       footer={
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" size="md" onClick={onClose}>
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            noTooltip="Abbrechen schließt den Dialog und speichert nichts."
+            onClick={onClose}
+          >
             Abbrechen
           </Button>
           <Button
@@ -203,6 +209,9 @@ export function StaffNoticeModal({
             variant="primary"
             size="md"
             disabled={saving}
+            // Tagesinformationen schicken keine Benachrichtigung; sie stehen
+            // im gewählten Zeitraum bei der Zielgruppe (timetable staff_notices).
+            tooltip="Speichert den Hinweis für die Zielgruppe, ohne Benachrichtigung."
             onClick={() => void handleSubmit()}
           >
             {saving ? "Wird gespeichert …" : "Speichern"}

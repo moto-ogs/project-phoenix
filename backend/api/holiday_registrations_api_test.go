@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -116,7 +117,12 @@ type traegerPeriodLink struct {
 // plausible test day; its weeks lie in January 2027.
 func openHolidays(t *testing.T, f holidayRegistrationFixture, office traegerOffice) traegerPeriodLink {
 	t.Helper()
-	body := januaryHolidays(office)
+	return openHolidaysOf(t, f, office, januaryHolidays(office))
+}
+
+// openHolidaysOf publishes body with the registration window of openHolidays.
+func openHolidaysOf(t *testing.T, f holidayRegistrationFixture, office traegerOffice, body holidayPeriodBody) traegerPeriodLink {
+	t.Helper()
 	body.RegistrationOpensOn, body.RegistrationClosesOn = "2020-01-01", "2099-12-31"
 	created := createHolidayPeriod(t, f.traeger, office, body)
 	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)
@@ -249,8 +255,10 @@ func TestHolidayRegistrationStoresSiblingsAndAHolidayGuestWithItsReceipt(t *test
 	assert.ElementsMatch(t, []string{"id", "submitted_at", "placements", "status_token"}, keysOf(receipt.Data), "the answer repeats no personal data")
 	statusToken, _ := receipt.Data["status_token"].(string)
 	require.Len(t, statusToken, 43, "32 random bytes, URL-safe")
-	assert.NotContains(t, rec.Body.String(), "Lia", "the placements name no child")
-	assert.NotContains(t, rec.Body.String(), "Muster", "the placements name no family")
+	// The random status token can spell a name by chance (#6974).
+	withoutToken := strings.ReplaceAll(rec.Body.String(), statusToken, "")
+	assert.NotContains(t, withoutToken, "Lia", "the placements name no child")
+	assert.NotContains(t, withoutToken, "Muster", "the placements name no family")
 
 	ctx := context.Background()
 	var children []struct {
@@ -325,7 +333,9 @@ func assertHolidayRegistrationStatus(t *testing.T, f holidayRegistrationFixture,
 	t.Helper()
 	rec := publicJSON(t, f.public, http.MethodGet, holidayStatusPath(token), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	for _, hidden := range []string{"Muster", "Erdnüsse", "2018-03-01", "0151", "Melle", "Oma", "example.org"} {
+	// The guardian's full phone number: its prefix alone also occurs in the
+	// microseconds of submitted_at (#6974).
+	for _, hidden := range []string{"Muster", "Erdnüsse", "2018-03-01", "0151 2345678", "Melle", "Oma", "example.org"} {
 		assert.NotContains(t, rec.Body.String(), hidden, "the status page shows no personal data beyond first names")
 	}
 	type week struct {
@@ -393,8 +403,14 @@ func TestHolidayRegistrationNameAndBirthDateUnlockNoChild(t *testing.T) {
 	registration["guardian"] = map[string]any{"first_name": "Fremde", "last_name": "Person", "email": "fremd@example.org", "phone": "0170 1"}
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), registration)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	assert.NotContains(t, rec.Body.String(), "2a", "no class of the student")
-	assert.NotContains(t, rec.Body.String(), "Lia", "no name comes back")
+	// Random status tokens can contain class or name fragments by chance.
+	receipt := decodeSchoolPortalData[struct {
+		StatusToken string `json:"status_token"`
+	}](t, rec.Body.Bytes())
+	require.Len(t, receipt.StatusToken, 43, "32 random bytes, URL-safe")
+	withoutToken := strings.ReplaceAll(rec.Body.String(), receipt.StatusToken, "")
+	assert.NotContains(t, withoutToken, "2a", "no class of the student")
+	assert.NotContains(t, withoutToken, "Lia", "no name comes back")
 	assert.Equal(t, before, countSchoolRows(), "the registration writes no enrollment request and no guardian at the school")
 
 	offerAgain := publicJSON(t, f.public, http.MethodGet, registrationPath(period.PublicToken), nil)

@@ -1,15 +1,10 @@
 package application
 
 import (
-	"encoding/csv"
 	"errors"
-	"fmt"
-	"io"
-	"strconv"
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/sepa"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
@@ -41,48 +36,20 @@ func readImportTable(content []byte, delimiter string) (importTable, error) {
 	if len(content) > parentbilling.MaxImportFileBytes {
 		return importTable{}, parentbilling.ErrImportFileTooLarge
 	}
-	text, encoding, err := textnorm.DecodeCSVText(content)
+	// A NUL may stand where a CSV has a quote (#7009); the reader takes it
+	// off each cell and refuses the file for a NUL anywhere else.
+	read, err := textnorm.ReadCSVTable(content, delimiter, parentbilling.MaxImportRows)
+	if errors.Is(err, textnorm.ErrCSVTooManyRows) {
+		return importTable{}, parentbilling.ErrImportFileTooLarge
+	}
 	if err != nil {
 		return importTable{}, parentbilling.ErrImportFileInvalid
 	}
-	comma, err := textnorm.CSVDelimiter(text, delimiter)
-	if err != nil {
-		return importTable{}, parentbilling.ErrImportFileInvalid
-	}
-	reader := csv.NewReader(strings.NewReader(text))
-	reader.Comma, reader.FieldsPerRecord, reader.LazyQuotes, reader.ReuseRecord = comma, -1, true, false
-	table := importTable{encoding: encoding, delimiter: string(comma)}
-	if err := table.read(reader); err != nil {
-		return importTable{}, err
-	}
-	if len(table.headers) < 2 || len(table.rows) == 0 || headersHoldAnIBAN(table.headers) || headersRepeat(table.headers) {
+	table := importTable{encoding: read.Encoding, delimiter: read.Delimiter, headers: read.Headers, rows: read.Rows, lines: read.Lines}
+	if len(table.headers) < 2 || len(table.rows) == 0 || headersHoldAnIBAN(table.headers) || textnorm.RepeatedCSVHeader(table.headers) {
 		return importTable{}, parentbilling.ErrImportFileInvalid
 	}
 	return table, nil
-}
-
-// read takes the first record as the headers and every further record
-// that is not blank as a row with the line it starts on.
-func (table *importTable) read(reader *csv.Reader) error {
-	for {
-		record, err := reader.Read()
-		if errors.Is(err, io.EOF) {
-			return nil
-		}
-		if err != nil {
-			return parentbilling.ErrImportFileInvalid
-		}
-		line, _ := reader.FieldPos(0)
-		switch {
-		case table.headers == nil:
-			table.headers = trimCells(record)
-		case blankRecord(record):
-		case len(table.rows) == parentbilling.MaxImportRows:
-			return parentbilling.ErrImportFileTooLarge
-		default:
-			table.rows, table.lines = append(table.rows, trimCells(record)), append(table.lines, line)
-		}
-	}
 }
 
 // headersHoldAnIBAN tells whether the first row is a mandate rather than
@@ -93,22 +60,6 @@ func headersHoldAnIBAN(headers []string) bool {
 		if containsIBAN(header) {
 			return true
 		}
-	}
-	return false
-}
-
-// headersRepeat tells whether two columns have the same header: a mapping
-// names a column by its header, so it could not tell them apart.
-func headersRepeat(headers []string) bool {
-	seen := map[string]bool{}
-	for _, header := range headers {
-		if header == "" {
-			continue
-		}
-		if seen[header] {
-			return true
-		}
-		seen[header] = true
 	}
 	return false
 }
@@ -141,23 +92,6 @@ func isUpperLetter(b byte) bool { return b >= 'A' && b <= 'Z' }
 
 func isDigit(b byte) bool { return b >= '0' && b <= '9' }
 
-func trimCells(record []string) []string {
-	cells := make([]string, len(record))
-	for i, cell := range record {
-		cells[i] = strings.TrimSpace(cell)
-	}
-	return cells
-}
-
-func blankRecord(record []string) bool {
-	for _, cell := range record {
-		if strings.TrimSpace(cell) != "" {
-			return false
-		}
-	}
-	return true
-}
-
 // importHeaderNames are the header names moto maps without help, after
 // importHeaderKey folded them.
 var importHeaderNames = map[string][]string{
@@ -176,19 +110,7 @@ var importHeaderNames = map[string][]string{
 	parentbilling.ImportFieldLastCollected: {"letztereinzug", "letztelastschrift", "zuletzteingezogen", "letzteeinziehung",
 		"datumletztereinzug", "lastcollection", "lastcollectedon"},
 	parentbilling.ImportFieldDebtorNumber: {"debitorennummer", "kinderdebitorennummer", "debitornummer", "debitor",
-		"debitorennr", "kundennummer", "personenkonto", "debtornumber"},
-}
-
-// importHeaderKey folds a header for the comparison: lower case, umlauts
-// spelled out, letters and digits only.
-func importHeaderKey(header string) string {
-	folded := strings.NewReplacer("ä", "ae", "ö", "oe", "ü", "ue", "ß", "ss").Replace(strings.ToLower(header))
-	return strings.Map(func(r rune) rune {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-			return r
-		}
-		return -1
-	}, folded)
+		"debitorennr", "debitornr", "kundennummer", "personenkonto", "debtornumber"},
 }
 
 // suggestImportMapping maps each field to the first header with one of its
@@ -196,7 +118,7 @@ func importHeaderKey(header string) string {
 func suggestImportMapping(headers []string) parentbilling.SEPAMandateImportMapping {
 	found := map[string]string{}
 	for _, header := range headers {
-		key := importHeaderKey(header)
+		key := textnorm.HeaderKey(header)
 		for field, names := range importHeaderNames {
 			if _, done := found[field]; !done && containsString(names, key) {
 				found[field] = header
@@ -210,8 +132,13 @@ func suggestImportMapping(headers []string) parentbilling.SEPAMandateImportMappi
 		CreditorID: found[parentbilling.ImportFieldCreditorID], Sequence: found[parentbilling.ImportFieldSequence],
 		LastCollected: found[parentbilling.ImportFieldLastCollected], DebtorNumber: found[parentbilling.ImportFieldDebtorNumber],
 	}, PayerKey: parentbilling.PayerByEmail}
-	if payer := importHeaderKey(mapping.Columns.Payer); payer != "" && !strings.Contains(payer, "mail") {
+	if payer := textnorm.HeaderKey(mapping.Columns.Payer); payer != "" && !strings.Contains(payer, "mail") {
 		mapping.PayerKey = parentbilling.PayerByContract
+	}
+	// A file without contract numbers and addresses names its payers by the
+	// debtor number (#7009), as the master data of OGS Connect does.
+	if mapping.Columns.Payer == "" && mapping.Columns.DebtorNumber != "" {
+		mapping.Columns.Payer, mapping.PayerKey = mapping.Columns.DebtorNumber, parentbilling.PayerByDebtorNumber
 	}
 	return mapping
 }
@@ -225,34 +152,28 @@ func containsString(values []string, value string) bool {
 	return false
 }
 
-// parseImportDate reads a German (31.12.2024, 1.2.2024, 31/12/2024) or an
-// ISO date (2024-12-31). A two-digit year is ambiguous and refused.
-func parseImportDate(value string) (calendar.Date, bool) {
-	if date, err := calendar.ParseDate(value); err == nil {
-		return date, true
+// withoutScheme drops the SEPA scheme from a value that names it beside
+// the sequence, as "CORE/RCUR" or "CORE RCUR" (#7009): the scheme of a
+// mandate the import takes over is always CORE.
+func withoutScheme(value string) string {
+	words := strings.FieldsFunc(value, func(r rune) bool { return r == '/' || r == ' ' || r == ',' || r == '-' || r == '|' })
+	if len(words) < 2 {
+		return value
 	}
-	parts := strings.FieldsFunc(value, func(r rune) bool { return r == '.' || r == '/' })
-	if len(parts) != 3 || len(parts[2]) != 4 {
-		return "", false
+	kept := words[:0]
+	for _, word := range words {
+		if !strings.EqualFold(word, "CORE") {
+			kept = append(kept, word)
+		}
 	}
-	day, errDay := strconv.Atoi(parts[0])
-	month, errMonth := strconv.Atoi(parts[1])
-	year, errYear := strconv.Atoi(parts[2])
-	if errDay != nil || errMonth != nil || errYear != nil {
-		return "", false
-	}
-	date, err := calendar.ParseDate(fmt.Sprintf("%04d-%02d-%02d", year, month, day))
-	if err != nil {
-		return "", false
-	}
-	return date, true
+	return strings.Join(kept, " ")
 }
 
 // importSequence reads the sequence a file names: the SEPA sequence type
 // or its German name. ok is false for a value the import does not know;
 // oneOff marks a one-off mandate the import does not take over.
 func importSequence(value string) (sequence string, oneOff, ok bool) {
-	switch importHeaderKey(value) {
+	switch textnorm.HeaderKey(withoutScheme(value)) {
 	case "frst", "first", "erst", "erstlastschrift", "ersteinzug", "neu", "e":
 		return parentbilling.SequenceFirst, false, true
 	case "rcur", "recurring", "folge", "folgelastschrift", "wiederkehrend", "laufend", "f":

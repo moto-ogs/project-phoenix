@@ -12,6 +12,11 @@ import Link from "next/link";
 import { TenantPage, TenantPageStats } from "./tenant-page";
 import { Button, ButtonLink } from "./button";
 import { ModuleNotBookedSlots } from "~/components/tenant/module-not-booked-state";
+import {
+  DESKTOP_WIDTH,
+  PHONE_WIDTH,
+  setViewportWidth,
+} from "~/test/helpers/viewport";
 
 // Der Zustand für nicht gebuchte Module liest die Sitzung (#4894).
 vi.mock("next-auth/react", () => ({
@@ -94,6 +99,56 @@ describe("TenantPage", () => {
       screen.getByRole("button", { name: "Kind anlegen" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Inhalt")).toBeInTheDocument();
+  });
+
+  // #6722: Eine Seite, die nur `overflowMenu` übergibt (Gruppennachricht),
+  // hatte auf dem Telefon kein Menü: die mobile Suchzeile entstand nur mit
+  // Suche oder Filtern. Das Kebab steht dann neben dem Titel, auf jeder
+  // Breite, statt allein in einer eigenen Zeile.
+  it("stellt ein Kebab ohne Suche und Filter neben den Titel, auf jeder Breite", () => {
+    render(
+      <TenantPage
+        title="Ausflug Freitag"
+        stats="Klasse 3a · 4 von 12 Familien haben gelesen"
+        overflowMenu={[
+          { label: "Schließen", noDescription: "Test", onClick: vi.fn() },
+        ]}
+      />,
+    );
+
+    const kebabs = screen.getAllByRole("button", { name: "Weitere Aktionen" });
+    expect(kebabs).toHaveLength(1);
+    const kebab = kebabs[0]!;
+    const heading = screen.getByRole("heading", { level: 1 });
+    const titleRow = heading.closest("header")!.firstElementChild!;
+    expect(titleRow.contains(heading)).toBe(true);
+    expect(titleRow.contains(kebab)).toBe(true);
+    // Anker: das Kebab steht in der Titelzeile; keine Hülle blendet es aus.
+    for (let el: Element | null = kebab; el; el = el.parentElement) {
+      expect(el.className).not.toMatch(
+        /(^|\s)(hidden|lg:hidden|xl:hidden)(\s|$)/,
+      );
+    }
+  });
+
+  it("stellt mit Suchfeld das Kebab weiter in die Suchzeile", () => {
+    render(
+      <TenantPage
+        title="Kinder"
+        search={{ value: "", onChange: vi.fn() }}
+        overflowMenu={[
+          { label: "Exportieren", noDescription: "Test", onClick: vi.fn() },
+        ]}
+      />,
+    );
+
+    const heading = screen.getByRole("heading", { level: 1 });
+    const titleRow = heading.closest("header")!.firstElementChild!;
+    const kebabs = screen.getAllByRole("button", { name: "Weitere Aktionen" });
+    // Telefon- und Desktop-Fassung der Suchzeile, keine im Titel.
+    expect(kebabs).toHaveLength(2);
+    // Anker: beide Kebabs sind gerendert, keines steht in der Titelzeile.
+    for (const kebab of kebabs) expect(titleRow.contains(kebab)).toBe(false);
   });
 
   // #5531: Die Kopfkarte setzt ihre Bedienhöhe über Nachfahren-Selektoren.
@@ -499,6 +554,49 @@ describe("TenantPage", () => {
     } finally {
       clientWidth.mockRestore();
       offsetWidth.mockRestore();
+    }
+  });
+
+  it("führt die Pfeiltasten auf dem Telefon über jeden Reiter, nicht über „Mehr“ (#6579)", () => {
+    const onChange = vi.fn();
+    const clientWidth = vi
+      .spyOn(HTMLElement.prototype, "clientWidth", "get")
+      .mockReturnValue(120);
+    const offsetWidth = vi
+      .spyOn(HTMLElement.prototype, "offsetWidth", "get")
+      .mockReturnValue(100);
+    setViewportWidth(PHONE_WIDTH);
+
+    try {
+      render(
+        <TenantPage
+          title="Datenverwaltung"
+          tabs={{
+            value: "kinder",
+            onChange,
+            items: [
+              { value: "kinder", label: "Kinder" },
+              { value: "personal", label: "Personal" },
+            ],
+          }}
+        />,
+      );
+
+      const kinder = screen.getByRole("tab", { name: "Kinder" });
+      kinder.focus();
+      fireEvent.keyDown(kinder, { key: "ArrowRight" });
+      expect(screen.getByRole("tab", { name: "Personal" })).toHaveFocus();
+      expect(onChange).toHaveBeenLastCalledWith("personal");
+
+      fireEvent.keyDown(screen.getByRole("tab", { name: "Personal" }), {
+        key: "ArrowRight",
+      });
+      expect(kinder).toHaveFocus();
+      expect(onChange).toHaveBeenLastCalledWith("kinder");
+    } finally {
+      clientWidth.mockRestore();
+      offsetWidth.mockRestore();
+      setViewportWidth(DESKTOP_WIDTH);
     }
   });
 

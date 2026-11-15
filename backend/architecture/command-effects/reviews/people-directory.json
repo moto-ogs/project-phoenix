@@ -889,18 +889,6 @@
     {
       "adr": "0083",
       "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.birthdayView.Overview",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Birthdays.Overview",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/peopledirectory/internal/application.BirthdayService.now. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.BirthdayService.now",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.AddGuardianPhone",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -2306,7 +2294,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeletePerson",
-      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/peopledirectory/compose.Directory.DeletePerson. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/peopledirectory/compose.Directory.DeletePerson. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #6840: the person deletion now also asks for a live child or staff profile under the person's row lock before the soft delete; the transaction protocol is unchanged.",
       "source_owner": "people-directory",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -2329,7 +2317,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeletePerson",
-      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/peopledirectory.Owner.DeletePerson. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/peopledirectory.Owner.DeletePerson. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #6840: the person deletion now also asks for a live child or staff profile under the person's row lock before the soft delete; the transaction protocol is unchanged.",
       "source_owner": "people-directory",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -8775,7 +8763,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeletePerson",
-      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/peopledirectory/internal/application.Service.DeletePerson. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/peopledirectory/internal/application.Service.DeletePerson. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #6840: the person deletion now also asks for a live child or staff profile under the person's row lock before the soft delete; the transaction protocol is unchanged.",
       "source_owner": "people-directory",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -14399,6 +14387,17 @@
     },
     {
       "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.SearchStudentNotes",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentNoteSearch.SearchStudentNotes",
+      "reason": "Platform protocol participation (scope): people-directory reaches tenant.RequireTransaction (tenant-runtime) through *modules/peopledirectory/internal/application.Service.SearchStudentNotes. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). New read of the note search, in the caller's school unit like ListSchoolSharedNotes (ADR 0234).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RequireTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentNoteTeamService.InformStudentNoteTeam",
       "classification": "platform",
       "effect": "scope",
@@ -15674,7 +15673,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/students.PersonRecords.Delete",
-      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/peopledirectory/internal/application.StudentRoutePersons.Delete. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/peopledirectory/internal/application.StudentRoutePersons.Delete. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #6840: the person deletion now also asks for a live child or staff profile under the person's row lock before the soft delete; the transaction protocol is unchanged.",
       "source_owner": "people-directory",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -17333,7 +17332,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.studentRoutePersonRows.Delete",
-      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/peopledirectory/ports.PersonDirectory.Delete. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/peopledirectory/ports.PersonDirectory.Delete. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #6840: the person deletion now also asks for a live child or staff profile under the person's row lock before the soft delete; the transaction protocol is unchanged.",
       "source_owner": "people-directory",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -18590,6 +18589,26 @@
       "target_owner": "identity-access"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaffIDByPerson",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.LiveStaffProfiles.FindStaffIDByPerson",
+      "reason": "Reviewed read: School Membership's live staff lookup by person, asked by the person deletion under the person's row lock (#6840); no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindStaffIDByPerson. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaffIDByPerson",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaffIDByPerson",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.LiveStaffProfiles.FindStaffIDByPerson",
+      "reason": "Reviewed read: School Membership's live staff lookup by person, asked by the person deletion under the person's row lock (#6840); no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindStaffIDByPerson. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaffIDByPerson",
+      "target_owner": "school-membership"
+    },
+    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.RetainedPersonDirectory.Create",
       "classification": "platform",
@@ -18640,7 +18659,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.Delete",
-      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/peopledirectory/internal/application.RetainedPersonDirectory.Delete. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/peopledirectory/internal/application.RetainedPersonDirectory.Delete. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #6840: the person deletion now also asks for a live child or staff profile under the person's row lock before the soft delete; the transaction protocol is unchanged.",
       "source_owner": "people-directory",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -18853,7 +18872,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonWriter.DeletePerson",
-      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/peopledirectory/internal/application.PersonRows.DeletePerson. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Platform protocol participation (scope): people-directory reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/peopledirectory/internal/application.PersonRows.DeletePerson. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #6840: the person deletion now also asks for a live child or staff profile under the person's row lock before the soft delete; the transaction protocol is unchanged.",
       "source_owner": "people-directory",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"

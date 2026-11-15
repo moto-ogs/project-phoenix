@@ -28,7 +28,10 @@ func arrivalServiceWithClassExceptions(t *testing.T, repos *api.RepositoryTestFa
 	db := testpkg.SetupTestDB(t)
 	classes, err := arrivalTimetable.NewClassArrivals(db, func(arrivalTimetable.Observation) {})
 	require.NoError(t, err)
-	classExceptions, err := owners.NewClassArrivalExceptions(classes, owners.MustNewPeopleDirectory(testpkg.MustDatabase(db)))
+	// The past-date guard decides on decisionTestToday, so the refusal
+	// tests below name a fixed day before it.
+	classExceptions, err := owners.NewClassArrivalExceptions(classes, owners.MustNewPeopleDirectory(testpkg.MustDatabase(db)),
+		func() calendar.Date { return decisionTestToday })
 	require.NoError(t, err)
 	return nativeArrivalSchedules(t, repos.CarePlan(), classArrivalBaseline(t, repos), owners.ClassArrivalPlans(classes), classExceptions)
 }
@@ -318,7 +321,7 @@ func TestUpsertClassArrivalExceptionRefusesPastDatesAndEmptyClasses(t *testing.T
 
 	_, err := svc.UpsertClassArrivalException(ctx, careplan.ClassArrivalExceptionInput{
 		SchoolClass: "1a",
-		Date:        calendar.TodayDate().AddDays(-1),
+		Date:        decisionTestToday.AddDays(-1),
 		ArrivalTime: noon,
 	}, staff.ID)
 	assert.True(t, errors.Is(err, careplan.ErrClassArrivalExceptionPastDate), "got %v", err)
@@ -338,6 +341,6 @@ func TestUpsertClassArrivalExceptionRefusesPastDatesAndEmptyClasses(t *testing.T
 	}, staff.ID)
 	assert.True(t, errors.Is(err, careplan.ErrClassArrivalExceptionWeekend), "got %v", err)
 
-	err = svc.DeleteClassArrivalException(ctx, "1a", calendar.TodayDate().AddDays(-1))
+	err = svc.DeleteClassArrivalException(ctx, "1a", decisionTestToday.AddDays(-1))
 	assert.True(t, errors.Is(err, careplan.ErrClassArrivalExceptionPastDate), "got %v", err)
 }

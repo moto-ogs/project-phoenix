@@ -45,6 +45,17 @@ type SeedOptions struct {
 	// A repeated seed of the same slug needs a fresh one: accounts are unique
 	// across the database and the abandoned school keeps its own.
 	AccountScope string
+	// TraegerSlug puts the school under a Träger of its own instead of the
+	// profile's demo-traeger-nord; the Träger keeps the profile's name. The
+	// standing demo school sets it (#6962): the Träger steps act on every
+	// school of the Träger, so a school seeded beside the four profiles must
+	// not share theirs.
+	TraegerSlug string
+	// TraegerLock serializes the Träger steps with seeds in other processes,
+	// e.g. two demo schools seeded side by side into one database (#6962). It
+	// returns once the lock is held; release frees it. Nil serializes them
+	// only within this process.
+	TraegerLock func(context.Context) (release func(), err error)
 	// ReplaceAbandoned moves a school a broken seed left under the slug out
 	// of the way (renamed and soft-deleted) instead of failing with 409.
 	ReplaceAbandoned bool
@@ -251,8 +262,12 @@ func (s *Seeder) profileIdentity() seedProfileIdentity {
 	if s.options.SchoolName != "" {
 		name = s.options.SchoolName
 	}
+	organizationSlug := s.definition.OrganizationSlug
+	if s.options.TraegerSlug != "" {
+		organizationSlug = s.options.TraegerSlug
+	}
 	return seedProfileIdentity{
-		organizationName: s.definition.OrganizationName, organizationSlug: s.definition.OrganizationSlug,
+		organizationName: s.definition.OrganizationName, organizationSlug: organizationSlug,
 		schoolName: name, schoolSlug: slug,
 	}
 }

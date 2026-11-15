@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -81,8 +82,11 @@ type CareLifecycleTestConfig struct {
 	BookingsAuthoritative func(context.Context) (bool, error)
 	// LockCareBookingWrites is the booking-write gate. nil takes none.
 	LockCareBookingWrites func(context.Context) error
-	// Today defaults to the Berlin calendar day.
+	// Today defaults to the Berlin calendar day of Now.
 	Today func() owner0.Date
+	// Now stamps the lifecycle's withdrawals and closed presence; nil is
+	// the real clock.
+	Now func() time.Time
 	// PlanningStaffing hears about committed care ends (#5554); nil
 	// announces nothing.
 	PlanningStaffing timetable.StudentTemplateDays
@@ -99,7 +103,7 @@ func (r CareLifecycleTestRepositories) NewCareLifecycle(config CareLifecycleTest
 	deps.Owners.ChangeTrail = owners.NewCareEndRecorder(config.Audit)
 	deps.LockCareBookingWrites = lock
 	deps.BookingsAuthoritative = config.BookingsAuthoritative
-	deps.Today = config.Today
+	deps.Today, deps.Now = config.Today, config.Now
 	if config.PlanningStaffing != nil {
 		deps.Owners.PlanningStaffing = config.PlanningStaffing
 	}

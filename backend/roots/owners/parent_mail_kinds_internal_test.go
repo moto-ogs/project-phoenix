@@ -19,7 +19,7 @@ func TestParentMailKindsMatchTheOwners(t *testing.T) {
 	for _, kind := range []string{
 		identityaccess.MailKindGuardianInvitation, identityaccess.MailKindGuardianWelcome,
 		communication.MailKindParentAnnouncement, communication.MailKindParentMessage,
-		enrollment.MailKindSubmitted, enrollment.MailKindApproved, enrollment.MailKindWaitlisted, enrollment.MailKindRejected,
+		enrollment.MailKindSubmitted, enrollment.MailKindApproved, enrollment.MailKindWaitlisted, enrollment.MailKindRejected, enrollment.MailKindDecisionDigest,
 		enrollment.MailKindRolloverOptIn, enrollment.MailKindRolloverOptOut,
 		enrollment.MailKindChangeRequestQuestion, enrollment.MailKindChangeRequestApproved, enrollment.MailKindChangeRequestRejected,
 		enrollment.MailKindHolidayRegistrationReceived,
@@ -27,7 +27,7 @@ func TestParentMailKindsMatchTheOwners(t *testing.T) {
 	} {
 		assert.True(t, deliveryContract.IsParentMail(kind), kind)
 	}
-	for _, kind := range []string{parentbilling.MailKindBillingLetter, TransactionalMailKind, enrollment.MailKindAdminNotification, enrollment.MailKindDecisionDigest, identityaccess.MailKindStaffWelcome} {
+	for _, kind := range []string{parentbilling.MailKindBillingLetter, TransactionalMailKind, enrollment.MailKindAdminNotification, enrollment.MailKindChangeRequestSubmitted, enrollment.MailKindChangeRequestParentReply, identityaccess.MailKindStaffWelcome} {
 		assert.False(t, deliveryContract.IsParentMail(kind), kind)
 	}
 }

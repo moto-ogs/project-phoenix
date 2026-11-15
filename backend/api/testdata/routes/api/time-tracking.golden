@@ -1,6 +1,7 @@
 DELETE /api/time-tracking/absences/{id}
 GET /api/time-tracking/absence-allowances
 GET /api/time-tracking/absences
+GET /api/time-tracking/absences/mails
 GET /api/time-tracking/assignments
 GET /api/time-tracking/breaks/{sessionId}
 GET /api/time-tracking/closing-days

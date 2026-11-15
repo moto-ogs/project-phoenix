@@ -53,6 +53,7 @@ import { messagesConcept } from "~/lib/concepts/messages";
 import { parentMessagesConcept } from "~/lib/concepts/parentMessages";
 import { parentConversationsConcept } from "~/lib/concepts/parentConversations";
 import { newsConcept } from "~/lib/concepts/news";
+import { mailsConcept } from "~/lib/concepts/mails";
 import { announcementsConcept } from "~/lib/concepts/announcements";
 import { pollsConcept } from "~/lib/concepts/polls";
 import { confirmationsConcept } from "~/lib/concepts/confirmations";
@@ -72,10 +73,12 @@ import { accountsConcept } from "~/lib/concepts/accounts";
 import { rolesConcept } from "~/lib/concepts/roles";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 import { privacyConcept } from "~/lib/concepts/privacy";
+import { signInConcept } from "~/lib/concepts/signIn";
 import { passkeysConcept } from "~/lib/concepts/passkeys";
 import { exportsConcept } from "~/lib/concepts/exports";
 import { gradeTransitionsConcept } from "~/lib/concepts/gradeTransitions";
 import { pickupConcept } from "~/lib/concepts/pickup";
+import { arrivalPickupConcept } from "~/lib/concepts/arrivalPickup";
 import { transportConcept } from "~/lib/concepts/transport";
 import { birthdaysConcept } from "~/lib/concepts/birthdays";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
@@ -142,6 +145,7 @@ const registry = {
   parentMessages: parentMessagesConcept,
   parentConversations: parentConversationsConcept,
   news: newsConcept,
+  mails: mailsConcept,
   announcements: announcementsConcept,
   polls: pollsConcept,
   confirmations: confirmationsConcept,
@@ -161,10 +165,12 @@ const registry = {
   roles: rolesConcept,
   permissions: permissionsConcept,
   privacy: privacyConcept,
+  signIn: signInConcept,
   passkeys: passkeysConcept,
   exports: exportsConcept,
   gradeTransitions: gradeTransitionsConcept,
   pickup: pickupConcept,
+  arrivalPickup: arrivalPickupConcept,
   transport: transportConcept,
   birthdays: birthdaysConcept,
   changeHistory: changeHistoryConcept,

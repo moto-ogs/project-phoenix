@@ -144,6 +144,8 @@ func (rs *Resource) Router() chi.Router {
 // strings, the date is "YYYY-MM-DD". StaffID is ignored on update (the shift
 // stays with its staff member).
 type ShiftRequest struct {
+	// WorkingTimeRequest confirms the working-time warnings (#4708).
+	WorkingTimeRequest
 	StaffID      int64      `json:"staff_id"`
 	Date         string     `json:"date"`
 	StartTime    string     `json:"start_time"`
@@ -291,25 +293,29 @@ type ShiftResponse struct {
 	// apply a rule edit from a moved occurrence's source date, not its current
 	// display date.
 	SeriesOccurrenceDate *string `json:"series_occurrence_date,omitempty"`
+	// PlannedByTraeger marks a shift the Personalverwaltung of the Träger
+	// planned (#4708).
+	PlannedByTraeger bool `json:"planned_by_traeger,omitempty"`
 }
 
 // ToShiftResponse maps a shift onto the wire format. Exported for the
 // time-tracking self endpoint, which serves the same shape.
 func ToShiftResponse(s workforce.PlannedShift) ShiftResponse {
 	resp := ShiftResponse{
-		ID:            s.ID,
-		StaffID:       s.StaffID,
-		Date:          s.Date,
-		StartTime:     FormatWallClock(s.StartTime),
-		EndTime:       FormatWallClock(s.EndTime),
-		BreakMinutes:  s.BreakMinutes,
-		ShiftTypeID:   s.ShiftTypeID,
-		Notes:         s.Notes,
-		SeriesID:      s.SeriesID,
-		Detached:      s.Detached,
-		Cancelled:     s.Cancelled,
-		ChangeReason:  s.ChangeReason,
-		OriginShiftID: s.OriginShiftID,
+		ID:               s.ID,
+		StaffID:          s.StaffID,
+		Date:             s.Date,
+		StartTime:        FormatWallClock(s.StartTime),
+		EndTime:          FormatWallClock(s.EndTime),
+		BreakMinutes:     s.BreakMinutes,
+		ShiftTypeID:      s.ShiftTypeID,
+		Notes:            s.Notes,
+		SeriesID:         s.SeriesID,
+		Detached:         s.Detached,
+		Cancelled:        s.Cancelled,
+		ChangeReason:     s.ChangeReason,
+		OriginShiftID:    s.OriginShiftID,
+		PlannedByTraeger: s.PlannedByTraeger,
 	}
 	if s.SeriesOccurrenceDate != "" {
 		occurrenceDate := s.SeriesOccurrenceDate
@@ -403,6 +409,9 @@ type failureRule struct {
 
 var failureRules = []failureRule{
 	{Target: workforce.ErrStaffShiftOverlap, Kind: FailureConflict},
+	{Target: workforce.ErrShiftOverlapsOtherSite, Kind: FailureConflict},
+	{Target: workforce.ErrShiftWorkingTimeWarning, Kind: FailureConflict},
+	{Target: workforce.ErrShiftPlanningOff, Kind: FailureConflict},
 	{Target: workforce.ErrStaffShiftConflict, Kind: FailureConflict},
 	{Target: workforce.ErrStaffShiftDuplicate, Kind: FailureConflict},
 	{Target: workforce.ErrStaffShiftNotFound, Kind: FailureNotFound},
@@ -410,6 +419,7 @@ var failureRules = []failureRule{
 	{Target: workforce.ErrInvalidStaffShift, Kind: FailureInvalid},
 	{Target: workforce.ErrShiftTypeNotFound, Kind: FailureInvalid},
 	{Target: workforce.ErrShiftTypeInactive, Kind: FailureInvalid},
+	{Target: workforce.ErrShiftTypeArchived, Kind: FailureConflict},
 	{Target: workforce.ErrShiftSeriesNotFound, Kind: FailureNotFound},
 	{Target: workforce.ErrInvalidShiftSeries, Kind: FailureInvalid},
 	{Target: workforce.ErrPlanExportInvalid, Kind: FailureInvalid},
@@ -506,6 +516,7 @@ func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.WorkingTime = req.Confirmation()
 
 	saved, err := rs.planning.CreateShift(r.Context(), workforce.CreateStaffShift{StaffShiftInput: input})
 	if err != nil {
@@ -536,6 +547,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.WorkingTime = req.Confirmation()
 
 	saved, err := rs.planning.UpdateShift(r.Context(), workforce.UpdateStaffShift{
 		ID:                           id,
@@ -554,6 +566,8 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 // MoveShiftRequest is the complete desired slot for PUT /{id}/move. The
 // source owner makes cross-person retries distinguishable from stale moves.
 type MoveShiftRequest struct {
+	// WorkingTimeRequest confirms the working-time warnings (#4708).
+	WorkingTimeRequest
 	SourceStaffID int64      `json:"source_staff_id"`
 	TargetStaffID int64      `json:"target_staff_id"`
 	Date          string     `json:"date"`
@@ -584,6 +598,7 @@ func (rs *Resource) move(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.WorkingTime = req.Confirmation()
 	input.ActorAccountID = actor.AccountID
 
 	saved, err := rs.planning.MoveShift(r.Context(), input)
@@ -627,6 +642,8 @@ func buildMove(id int64, req MoveShiftRequest) (workforce.MoveStaffShift, error)
 // and type, record a reason, and (when cancelling) declare the full set of
 // replacement covers. The backend applies all of it in one transaction (#1841).
 type CancellationRequest struct {
+	// WorkingTimeRequest confirms the working-time warnings (#4708).
+	WorkingTimeRequest
 	// Cancelled is presence-tracked: this endpoint is destructive (a
 	// reactivation deletes every replacement), so an omitted key is rejected
 	// rather than defaulting to false and silently reactivating a shift a stale
@@ -695,6 +712,7 @@ func (rs *Resource) cancellation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.WorkingTime = req.Confirmation()
 
 	result, err := rs.planning.ApplyCancellation(r.Context(), input)
 	if err != nil {

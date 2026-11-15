@@ -210,7 +210,7 @@ type careWithdrawalResponse struct {
 	ResolvedAt          string `json:"resolved_at,omitempty"`
 }
 
-func toCareWithdrawalResponse(row careplan.WithdrawalCompletion) careWithdrawalResponse {
+func toCareWithdrawalResponse(row careplan.WithdrawalCompletion, today calendar.Date) careWithdrawalResponse {
 	studentID := ""
 	if row.StudentID != nil {
 		studentID = strconv.FormatInt(*row.StudentID, 10)
@@ -218,7 +218,7 @@ func toCareWithdrawalResponse(row careplan.WithdrawalCompletion) careWithdrawalR
 	response := careWithdrawalResponse{
 		ID: strconv.FormatInt(row.ID, 10), StudentID: studentID,
 		FirstName: row.FirstName, LastName: row.LastName, SchoolClass: row.SchoolClass,
-		FirstBookinglessDay: row.FirstBookinglessDay.String(), Urgency: row.UrgencyOn(calendar.TodayDate()), State: row.State,
+		FirstBookinglessDay: row.FirstBookinglessDay.String(), Urgency: row.UrgencyOn(today), State: row.State,
 	}
 	if row.Outcome != nil {
 		response.Outcome = *row.Outcome
@@ -260,15 +260,15 @@ func (rs *Resource) listCareWithdrawals(w http.ResponseWriter, r *http.Request) 
 		renderError(w, r, careExitErrorRenderer(err))
 		return
 	}
-	respondCareWithdrawalPage(w, r, rows, total, filter, "Offene Abmeldungen geladen")
+	rs.respondCareWithdrawalPage(w, r, rows, total, filter, "Offene Abmeldungen geladen")
 }
 
 // respondCareWithdrawalPage writes one page of withdrawal tasks in the
 // response type that never carries the exit reason.
-func respondCareWithdrawalPage(w http.ResponseWriter, r *http.Request, rows []careplan.WithdrawalCompletion, total int, filter careplan.CareWithdrawalFilter, message string) {
+func (rs *Resource) respondCareWithdrawalPage(w http.ResponseWriter, r *http.Request, rows []careplan.WithdrawalCompletion, total int, filter careplan.CareWithdrawalFilter, message string) {
 	out := make([]careWithdrawalResponse, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, toCareWithdrawalResponse(row))
+		out = append(out, toCareWithdrawalResponse(row, rs.today()))
 	}
 	common.Respond(w, r, http.StatusOK, map[string]any{
 		"items": out, "total": total, "page": filter.Page, "page_size": filter.PageSize,
@@ -305,7 +305,7 @@ func (rs *Resource) listStudentResolvedCareWithdrawals(w http.ResponseWriter, r 
 		renderError(w, r, careExitErrorRenderer(err))
 		return
 	}
-	respondCareWithdrawalPage(w, r, rows, total, filter, "Abgeschlossene Abmeldungen geladen")
+	rs.respondCareWithdrawalPage(w, r, rows, total, filter, "Abgeschlossene Abmeldungen geladen")
 }
 
 func optionalPositiveQueryID(r *http.Request, key string) (int64, error) {

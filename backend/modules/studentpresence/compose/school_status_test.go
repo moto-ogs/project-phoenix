@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -58,8 +59,11 @@ func TestSchoolStatusesUseLatestStayAndKeepYardAndCheckoutSemantics(t *testing.T
 	student := testpkg.CreateTestStudent(t, db, "School", "Status", "3a")
 	absent := testpkg.CreateTestStudent(t, db, "Absent", "Status", "3a")
 	device := testpkg.CreateTestDevice(t, db, "school-status")
-	at := time.Now().Add(-time.Hour)
-	day := testpkg.TodayDate().String()
+	// A fixed Wednesday: the facade reads the given day, not the clock, and
+	// the expected status date stays that day across midnight (Rule 14).
+	fixed := calendar.NewDate(2026, time.March, 18)
+	at := fixed.BerlinMidnight().Add(9 * time.Hour)
+	day := fixed.String()
 	row, err := module.RecordAttendance(ctx, studentpresence.Attendance{StudentID: student.ID, Date: day, CheckInTime: at, DeviceID: device.ID})
 	require.NoError(t, err)
 	assertStatus := func(want string) {

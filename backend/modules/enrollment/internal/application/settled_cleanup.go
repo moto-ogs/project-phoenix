@@ -36,7 +36,7 @@ func (s *RejectedCleanup) CleanupSettledEnrollments(ctx context.Context) (enroll
 	deleted := enrollmentNative.RejectedEnrollmentCleanupResult{}
 	var invites int64
 	err = s.runInTx(ctx, func(txCtx context.Context) error {
-		requestIDs, listErr := d.Requests.SettledRequestsBefore(txCtx, cutoffs.withdrawn, cutoffs.rejected)
+		requestIDs, listErr := d.Requests.SettledRequestsBefore(txCtx, cutoffs.withdrawn, cutoffs.rejected, d.Today())
 		if listErr != nil {
 			return listErr
 		}

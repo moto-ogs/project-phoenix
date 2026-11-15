@@ -89,6 +89,12 @@ export interface TenantInfo {
    */
   messagingEnabled: boolean;
   /**
+   * Whether child cards show new parent messages and open parent requests as
+   * a count (operations.parent_message_card_badge_enabled, #6486). The backend
+   * reports it only while parent messaging is on. Missing means off.
+   */
+  parentMessageCardBadgeEnabled?: boolean;
+  /**
    * Whether the OGS-internal Team-Chat is switched on for this school
    * (operations.staff_messaging_enabled, #2598). The registry default is ON
    * (opt-out since #3254), but a missing flag still maps to FALSE: an internal
@@ -181,6 +187,12 @@ export interface TenantInfo {
    */
   childSearchOnlyNavigation?: boolean;
   /**
+   * Staff who do not lead the school see the simple navigation
+   * (operations.simple_staff_navigation, #6956): only the pages of the daily
+   * care work. Missing metadata is off, which keeps every page.
+   */
+  simpleStaffNavigation?: boolean;
+  /**
    * The school's term for its care in the fixed texts of the enrollment flow
    * (enrollment.care_facility_term, #6042), „OGS“ by default. Read it through
    * `useCareFacilityTerm`, which also covers missing metadata.
@@ -215,6 +227,7 @@ interface TenantResolveResponse {
   student_photos_enabled?: boolean;
   booked_modules?: string[];
   parent_messaging_enabled?: boolean;
+  parent_message_card_badge_enabled?: boolean;
   staff_messaging_enabled?: boolean;
   display_enabled?: boolean;
   caldav_enabled?: boolean;
@@ -238,6 +251,7 @@ interface TenantResolveResponse {
   early_checkout_note_tolerance_minutes?: number;
   weekend_follows_friday?: boolean;
   child_search_only_navigation?: boolean;
+  simple_staff_navigation?: boolean;
   care_facility_term?: string;
 }
 
@@ -364,6 +378,8 @@ export async function resolveTenant(slug: string): Promise<TenantInfo | null> {
       studentPhotosEnabled: data.student_photos_enabled === true,
       ...bookedModuleFields(data.booked_modules),
       messagingEnabled: data.parent_messaging_enabled === true,
+      parentMessageCardBadgeEnabled:
+        data.parent_message_card_badge_enabled === true,
       staffMessagingEnabled: data.staff_messaging_enabled === true,
       displayEnabled: data.display_enabled === true,
       caldavEnabled: data.caldav_enabled === true,
@@ -398,6 +414,7 @@ export async function resolveTenant(slug: string): Promise<TenantInfo | null> {
       ),
       weekendFollowsFriday: data.weekend_follows_friday === true,
       childSearchOnlyNavigation: data.child_search_only_navigation === true,
+      simpleStaffNavigation: data.simple_staff_navigation === true,
       careFacilityTerm: normalizeCareFacilityTerm(data.care_facility_term),
     };
   } catch {

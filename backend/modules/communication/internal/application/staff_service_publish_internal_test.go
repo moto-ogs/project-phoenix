@@ -25,6 +25,9 @@ type fakeAnnouncementRepo struct {
 	updateCalls  int
 	publishCalls int
 	deleteCalls  int
+	// recorded holds tenant and announcement of the last recording (#6988);
+	// nil until a publication recorded its children.
+	recorded []int64
 	// editOnPublish, when set, replaces the stored row the instant PublishIfDraft
 	// runs — simulating a concurrent edit that committed while PublishIfDraft was
 	// blocked on the row lock. The pre-publish load still sees the original.
@@ -69,6 +72,14 @@ func (f *fakeAnnouncementRepo) Update(_ context.Context, _ *StaffParentAnnouncem
 
 func (f *fakeAnnouncementRepo) SetPublished(_ context.Context, _ int64, publishedAt *time.Time) error {
 	f.announcement.PublishedAt = publishedAt
+	if publishedAt == nil {
+		f.recorded = nil
+	}
+	return nil
+}
+
+func (f *fakeAnnouncementRepo) RecordRecipients(_ context.Context, tenantID, id int64) error {
+	f.recorded = []int64{tenantID, id}
 	return nil
 }
 
@@ -200,6 +211,7 @@ func (f *fakePushOutbox) CancelPendingByRelatedEntity(_ context.Context, related
 
 func newTestService(repo *fakeAnnouncementRepo, outbox *fakeOutbox) StaffService {
 	svc := NewService(ServiceConfig{
+		Now:        staffTestClock,
 		Repo:       repo,
 		Settings:   &fakeSettings{enabled: true},
 		Notifier:   &fakeNotifier{},
@@ -240,7 +252,7 @@ func TestUpdate_PublishedIsImmutable(t *testing.T) {
 	t.Parallel()
 
 	published := draftAnnouncement(false)
-	now := time.Now()
+	now := staffTestNow
 	published.PublishedAt = &now
 	repo := &fakeAnnouncementRepo{announcement: published}
 	svc := newTestService(repo, &fakeOutbox{})
@@ -275,7 +287,7 @@ func TestCreate_RejectsPastExpiry(t *testing.T) {
 	svc := newTestService(repo, &fakeOutbox{})
 
 	in := validInput()
-	past := time.Now().Add(-24 * time.Hour)
+	past := staffTestNow.Add(-24 * time.Hour)
 	in.ExpiresAt = &past
 
 	_, err := svc.Create(context.Background(), 42, in)
@@ -288,7 +300,7 @@ func TestUnpublish_CancelsPendingEmails(t *testing.T) {
 	t.Parallel()
 
 	published := draftAnnouncement(true)
-	now := time.Now()
+	now := staffTestNow
 	published.PublishedAt = &now
 	repo := &fakeAnnouncementRepo{announcement: published}
 	outbox := &fakeOutbox{}
@@ -306,11 +318,12 @@ func TestUnpublish_CancelsPendingReminderPushes(t *testing.T) {
 	t.Parallel()
 
 	published := draftAnnouncement(true)
-	now := time.Now()
+	now := staffTestNow
 	published.PublishedAt = &now
 	repo := &fakeAnnouncementRepo{announcement: published}
 	pushOutbox := &fakePushOutbox{}
 	svc := NewService(ServiceConfig{
+		Now:  staffTestClock,
 		Repo: repo, Settings: &fakeSettings{enabled: true}, Outbox: &fakeOutbox{},
 		PushOutbox: pushOutbox, Notifier: &fakeNotifier{}, Logger: slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
@@ -327,12 +340,13 @@ func TestDelete_CancelsPendingDeliveries(t *testing.T) {
 	t.Parallel()
 
 	published := draftAnnouncement(true)
-	now := time.Now()
+	now := staffTestNow
 	published.PublishedAt = &now
 	repo := &fakeAnnouncementRepo{announcement: published}
 	outbox := &fakeOutbox{}
 	pushOutbox := &fakePushOutbox{}
 	svc := NewService(ServiceConfig{
+		Now:  staffTestClock,
 		Repo: repo, Settings: &fakeSettings{enabled: true}, Outbox: outbox,
 		PushOutbox: pushOutbox, Notifier: &fakeNotifier{}, Logger: slog.Default(), Attachments: &stubPurger{},
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
@@ -356,7 +370,7 @@ func TestRemindUnanswered_KeepsNoEmailGuardianForPush(t *testing.T) {
 
 	poll := draftAnnouncement(false)
 	poll.ResponseType = StaffParentAnnouncementResponseSingleChoice
-	now := time.Now()
+	now := staffTestNow
 	poll.PublishedAt = &now
 	repo := &fakeAnnouncementRepo{
 		announcement: poll,
@@ -366,6 +380,7 @@ func TestRemindUnanswered_KeepsNoEmailGuardianForPush(t *testing.T) {
 	}
 	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
+		Now:        staffTestClock,
 		Repo:       repo,
 		Settings:   &fakeSettings{enabled: true},
 		Notifier:   notifier,
@@ -394,7 +409,7 @@ func TestRemindUnanswered_DoesNotPushWhenEmailQueueingFails(t *testing.T) {
 
 	poll := draftAnnouncement(false)
 	poll.ResponseType = StaffParentAnnouncementResponseSingleChoice
-	now := time.Now()
+	now := staffTestNow
 	poll.PublishedAt = &now
 	repo := &fakeAnnouncementRepo{
 		announcement: poll,
@@ -404,6 +419,7 @@ func TestRemindUnanswered_DoesNotPushWhenEmailQueueingFails(t *testing.T) {
 	}
 	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
+		Now:        staffTestClock,
 		Repo:       repo,
 		Settings:   &fakeSettings{enabled: true},
 		Notifier:   notifier,
@@ -471,6 +487,7 @@ func TestPublish_NotifiesTargetedGuardiansWithoutAnnouncementContent(t *testing.
 	}
 	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
+		Now:        staffTestClock,
 		Repo:       repo,
 		Settings:   &fakeSettings{enabled: true},
 		Notifier:   notifier,
@@ -500,6 +517,34 @@ func TestPublish_NotifiesTargetedGuardiansWithoutAnnouncementContent(t *testing.
 	}
 }
 
+// A publication records the children it reaches (#6988) in its own
+// transaction, and a retraction drops the record again.
+func TestPublish_RecordsTheReachedChildren(t *testing.T) {
+	t.Parallel()
+
+	repo := &fakeAnnouncementRepo{announcement: draftAnnouncement(false)}
+	svc := NewService(ServiceConfig{
+		Now:      staffTestClock,
+		Repo:     repo,
+		Settings: &fakeSettings{enabled: true},
+		Logger:   slog.Default(),
+	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
+
+	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err != nil {
+		t.Fatalf("publish failed: %v", err)
+	}
+	want := []int64{repo.announcement.GetTenantID(), repo.announcement.ID}
+	if !slices.Equal(repo.recorded, want) {
+		t.Fatalf("recorded %v, want %v", repo.recorded, want)
+	}
+	if _, err := svc.Unpublish(context.Background(), repo.announcement.ID); err != nil {
+		t.Fatalf("unpublish failed: %v", err)
+	}
+	if repo.recorded != nil {
+		t.Fatalf("retraction kept the recorded children %v", repo.recorded)
+	}
+}
+
 func TestPublish_GroupsGuardianPushesByPortalLocale(t *testing.T) {
 	t.Parallel()
 
@@ -512,6 +557,7 @@ func TestPublish_GroupsGuardianPushesByPortalLocale(t *testing.T) {
 	}
 	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
+		Now:  staffTestClock,
 		Repo: repo, Settings: &fakeSettings{enabled: true}, Notifier: notifier,
 		ParentsURL: "https://parents.example.test", Logger: slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
@@ -555,6 +601,7 @@ func TestPublish_PollNotifiesAllTargetedGuardians(t *testing.T) {
 	notifier := &fakeNotifier{}
 	outbox := &fakeOutbox{}
 	svc := NewService(ServiceConfig{
+		Now:        staffTestClock,
 		Repo:       repo,
 		Settings:   &fakeSettings{enabled: true},
 		Notifier:   notifier,
@@ -588,6 +635,7 @@ func TestPublish_EnqueuesBrandingLogos(t *testing.T) {
 	}
 	outbox := &fakeOutbox{}
 	svc := NewService(ServiceConfig{
+		Now:        staffTestClock,
 		Repo:       repo,
 		Settings:   &fakeSettings{enabled: true, logoURL: "/uploads/login-images/2_abc.jpg"},
 		Notifier:   &fakeNotifier{},
@@ -718,7 +766,7 @@ func TestPublish_ConcurrentEditWins_UsesFreshRow(t *testing.T) {
 func TestPublish_ConcurrentEditExpires_RollsBack(t *testing.T) {
 	t.Parallel()
 
-	past := time.Now().Add(-time.Hour)
+	past := staffTestNow.Add(-time.Hour)
 	edited := draftAnnouncement(true)
 	edited.ExpiresAt = &past // concurrent edit expired it
 	repo := &fakeAnnouncementRepo{
@@ -746,8 +794,8 @@ func TestPublish_ConcurrentEditExpires_RollsBack(t *testing.T) {
 func TestPublish_ConcurrentEditInvalidatesReminder_RollsBack(t *testing.T) {
 	t.Parallel()
 
-	future := time.Now().Add(time.Hour)
-	past := time.Now().Add(-time.Hour)
+	future := staffTestNow.Add(time.Hour)
+	past := staffTestNow.Add(-time.Hour)
 	initial := draftAnnouncement(true)
 	initial.ReminderAt = &future
 	edited := draftAnnouncement(true)
@@ -795,6 +843,7 @@ func TestPublish_EmailEnqueueFailureIsFatal(t *testing.T) {
 		},
 	}
 	svc := NewService(ServiceConfig{
+		Now:        staffTestClock,
 		Repo:       repo,
 		Settings:   &fakeSettings{enabled: true},
 		Notifier:   &fakeNotifier{},

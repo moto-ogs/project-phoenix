@@ -296,7 +296,23 @@ var moduleLegacyFileBudgets = map[string]int{
 // recipient rekey (+33) and the handovers of modules/parentbilling/compose (+5).
 // ADR 0220: the pickup change team constructor of modules/careplan/compose
 // adds exactly 13 LOC.
-const moduleComposeBudgetTotal = 13429
+// ADR 0224: the cohort rosters constructor (+5) and the grade transition's
+// class follow-up port (+2).
+// ADR 0225: the Stammdaten decision's class follow-up port of
+// modules/careplan/compose (+3).
+// ADR 0231: the registration answers constructor of modules/enrollment/compose
+// (+5) and the new school search projection modules/schoolsearchview/compose
+// (+38).
+// ADR 0232: the import of existing contracts of modules/carecontract/compose
+// (+6) and its debtor numbers of modules/parentbilling/compose (+5).
+// ADR 0234: the note search of modules/peopledirectory/compose (+2).
+// ADR 0241: the utilization reads of modules/careplan/compose (+7),
+// modules/facilities/compose (+13) and modules/studentpresence/compose (+7)
+// add exactly 27 LOC.
+// ADR 0240: the clock fields of modules/careplan/compose (+8).
+// ADR 0242: the working-time check and the Einsatzplanung sites of
+// modules/workforce/compose (+11).
+const moduleComposeBudgetTotal = 13530
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -311,6 +327,9 @@ const moduleComposeBudgetTotal = 13429
 // ADR 0187 raised modules/identityaccess/compose,
 // modules/organizationtenancy/compose and modules/parentbilling/compose for
 // the audit and the PAIN.008 files of the Träger package.
+// ADR 0231 raised modules/enrollment/compose for the registration answers and
+// added modules/schoolsearchview/compose for the school search.
+// ADR 0240 raised modules/careplan/compose for the clock fields (+8).
 var moduleComposeBudgets = map[string]int{
 	"modules/appointments/compose": 45,
 	// ADR 0103: the signature ledger constructor, construction only.
@@ -322,7 +341,11 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0154: the booked care offering constructor (+13).
 	// #4704 (ADR 0215): the Träger offering constructors fit in shortened
 	// comments (±0).
-	"modules/careplan/compose":             1688, // ADR 0220: +13, the pickup change team constructor
+	// ADR 0225: the Stammdaten decision's class follow-up port (+3).
+	// Lowered by #7104: the injected clocks fit in shortened comments (-3).
+	// ADR 0241: the booking intervals of the utilization (+7).
+	// ADR 0240: +8, the clock fields of its dependencies.
+	"modules/careplan/compose":             1703, // ADR 0220: +13, the pickup change team constructor
 	"modules/careplan/requestfeed/compose": 53,
 	// Raised by ADR 0102: the class-trip status-day seam (#4799).
 	"modules/classday/compose": 210,
@@ -357,10 +380,12 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0216: account proofs and the account's holiday registrations (+10).
 	// ADR 0215: NewTraegerPhases (+4) and NewOfferingSelectionReferences (+4),
 	// less shortened comments and a merged file (-6).
-	"modules/enrollment/compose": 635,
+	// ADR 0231: the registration answers constructor (+5).
+	"modules/enrollment/compose": 639,
 	// ADR 0218: the Träger scope and the recipient rekey (+33).
-	"modules/exporttransfer/compose":               182,
-	"modules/facilities/compose":                   184,
+	"modules/exporttransfer/compose": 182,
+	// ADR 0241: the rooms of the utilization (+13).
+	"modules/facilities/compose":                   197,
 	"modules/facilities/compose/repositoryadapter": 11,
 	"modules/feedback/compose":                     61,
 	"modules/filestorage/compose":                  211,
@@ -394,7 +419,8 @@ var moduleComposeBudgets = map[string]int{
 	// the test hook of the signing link (+17); ADR 0159: withdrawal and
 	// termination (+35); ADR 0163: the office's decision of the parents' changes (+5);
 	// ADR 0184: the contract retention of the Belege (+4).
-	"modules/carecontract/compose": 175,
+	// ADR 0232: the import of existing contracts and its ports (+6).
+	"modules/carecontract/compose": 181,
 	// Raised by ADR 0158: the monthly contribution constructor (+5);
 	// ADR 0165: the constructor of the monthly letters (+7);
 	// ADR 0167: the constructor of the payment terms (+5);
@@ -410,13 +436,15 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0191: the constructor of the stored originals of the
 	// Jahresbescheide (+5).
 	// ADR 0218: the handovers of the finance exports (+5).
-	"modules/parentbilling/compose":               129,
+	// ADR 0232: the debtor numbers of an import of care contracts (+5).
+	"modules/parentbilling/compose":               134,
 	"modules/parentrequestfeedprojection/compose": 11,
 	// Raised by ADR 0076: the restricted administrative repair constructor.
 	// ADR 0188: the guardian bank backfill/rekey constructor (+6).
 	// ADR 0197: the export opener of the sealed guardian bank data (+5).
 	// ADR 0214: the namesakes of the known child hint (+13).
-	"modules/peopledirectory/compose":    997,
+	// ADR 0234: the note search beside the facade (+2).
+	"modules/peopledirectory/compose":    999,
 	"modules/presenceprojection/compose": 7,
 	"modules/requestreview/compose":      12,
 	"modules/schedulerruntime/compose":   45,
@@ -428,6 +456,8 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0151: the school figure constructor (+6).
 	// ADR 0202: the pending-window constructor (+5).
 	"modules/schoolmembership/compose": 200,
+	// ADR 0231: the school search projection binds the school transaction.
+	"modules/schoolsearchview/compose": 38,
 	"modules/schoolsetup/compose":      56,
 	// #4722: the field cipher of the health information, construction only;
 	// the 7 LOC come out of modules/enrollment/compose, the total stays.
@@ -442,12 +472,14 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0125: the dev-tools presence history constructor (+7).
 	// ADR 0151: the school figure constructor (+13).
 	// ADR 0156: the contract Soll port (+4).
-	"modules/studentpresence/compose":                 266,
+	// ADR 0241: the presence series of the utilization (+7).
+	"modules/studentpresence/compose":                 273,
 	"modules/studentpresence/compose/presenceservice": 110,
 	"modules/supervisiondashboard/compose":            11,
-	// Raised by ADR 0128: the student template days constructor (+5) and by
-	// ADR 0144: the vacation hint constructor (+6).
-	"modules/timetable/compose":                     1151,
+	// Raised by ADR 0128: the student template days constructor (+5), by
+	// ADR 0144: the vacation hint constructor (+6) and by ADR 0224: the cohort
+	// rosters constructor (+5).
+	"modules/timetable/compose":                     1150,
 	"modules/timetableblockdisplay/compose":         9,
 	"modules/timetableenrollmentprovenance/compose": 10,
 	"modules/timetableprojection/compose":           7,
@@ -458,9 +490,11 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0151: the school figure constructor (+13).
 	// ADR 0188: the bank cipher dependency and backfill/rekey constructor (+7).
 	// ADR 0197: the export opener of the sealed staff bank and tax data (+5).
-	"modules/workforce/compose":         918,
-	"workflows/catererportal/compose":   37, // added by ADR 0077
-	"workflows/gradetransition/compose": 49,
+	// ADR 0242: the working-time check and the Einsatzplanung sites (+11).
+	"modules/workforce/compose":       928,
+	"workflows/catererportal/compose": 37, // added by ADR 0077
+	// Raised by ADR 0224: the class follow-up port (+2).
+	"workflows/gradetransition/compose": 51,
 	// Added by ADR 0209: the holiday allocation workflow and its joining
 	// Träger transaction (ADR 0206).
 	"workflows/holidayallocation/compose": 13,

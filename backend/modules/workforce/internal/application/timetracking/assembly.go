@@ -50,6 +50,9 @@ type Rows struct {
 	Adjustments      BalanceAdjustmentRecords
 	VacationQuotas   VacationQuotaRecords
 	VacationOpenings VacationOpeningRecords
+	// TraegerMonths names the staff a contract of the Träger covers in a
+	// month (#4711): the Träger closes and pays them, not the school.
+	TraegerMonths TraegerMonthStaff
 }
 
 // Ports are the consumer-owned readers and writers the composition root
@@ -90,6 +93,9 @@ type Ports struct {
 	// PayrollRules is the school's wage types and surcharge rules in force
 	// (#4807): the export books with them, the month close freezes them.
 	PayrollRules workforce.PayrollRuleSetReader
+	// MailOutcomes reads what became of the absence request mails (#7058);
+	// nil composes no mail status.
+	MailOutcomes workforce.MailOutcomes
 
 	Settings Settings
 	Payroll  PayrollConfigurationReader
@@ -147,7 +153,7 @@ func NewClock(deps Dependencies) (*Clock, error) {
 	ledger := deps.ledger(months, snapshots, logger)
 	// Monatsabschluss (#1417): freezes a month's closing balance so a
 	// retroactive correction can no longer rewrite every later Übertrag.
-	closing := NewStaffMonthCloseService(snapshots, months, deps.MonthCloseStaff, deps.Settings, logger, WithMonthCloseEvents(deps.Events), WithMonthCloseUnitOfWork(runTimeTrackingUnit), WithMonthClosePayrollRules(deps.PayrollRules))
+	closing := NewStaffMonthCloseService(snapshots, months, deps.MonthCloseStaff, deps.Settings, logger, WithMonthCloseEvents(deps.Events), WithMonthCloseUnitOfWork(runTimeTrackingUnit), WithMonthClosePayrollRules(deps.PayrollRules), WithMonthCloseTraeger(deps.TraegerMonths))
 	overview := deps.overview(snapshots, logger)
 	// Cross-staff payroll/evidence export (#1417 2b): rows via the overview's
 	// prefetch (month) and the single-staff export cells (day); every download
@@ -243,6 +249,8 @@ func (deps Dependencies) overview(snapshots MonthSnapshots, logger *slog.Logger)
 		// Vacation takeover (#2132): the Resturlaub column subtracts
 		// pre-introduction days exactly like the /staff/{id} detail view.
 		WithOverviewVacationOpenings(deps.VacationOpenings),
+		// The Träger pays the staff its contracts cover (#4711).
+		WithOverviewTraeger(deps.TraegerMonths),
 	)
 }
 
@@ -274,8 +282,8 @@ func (deps Dependencies) absenceOptions(types AbsenceTypeReader, snapshots Month
 
 func (deps Dependencies) validate() error {
 	switch {
-	case deps.TargetOverrides == nil || deps.MonthSnapshots == nil || deps.AbsenceTypes == nil:
-		return errors.New("time tracking: the target overrides, month snapshots and absence types are required")
+	case deps.TargetOverrides == nil || deps.MonthSnapshots == nil || deps.AbsenceTypes == nil || deps.TraegerMonths == nil:
+		return errors.New("time tracking: the target overrides, month snapshots, absence types and Träger months are required")
 	case deps.Sessions == nil || deps.Breaks == nil || deps.Adjustments == nil || deps.VacationQuotas == nil ||
 		deps.VacationOpenings == nil || deps.Absences == nil || deps.AbsenceAudits == nil:
 		return errors.New("time tracking: the work session, break, ledger, vacation and absence rows are required")

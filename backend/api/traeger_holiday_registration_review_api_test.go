@@ -82,9 +82,15 @@ type reviewFixture struct {
 
 func newReviewFixture(t *testing.T, name string) reviewFixture {
 	t.Helper()
+	return newReviewFixtureOf(t, name, januaryHolidays)
+}
+
+// newReviewFixtureOf is newReviewFixture with the weeks of holidays.
+func newReviewFixtureOf(t *testing.T, name string, holidays func(traegerOffice) holidayPeriodBody) reviewFixture {
+	t.Helper()
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, name, identityaccess.TraegerRoleAdministration)
-	period := openHolidays(t, f, office)
+	period := openHolidaysOf(t, f, office, holidays(office))
 	offer := holidayOffer(t, f, period.PublicToken)
 	submit := func(body map[string]any) int64 {
 		rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)

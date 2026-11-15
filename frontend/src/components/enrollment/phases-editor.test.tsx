@@ -472,14 +472,19 @@ describe("PhasesEditor", () => {
         const confirm = await screen.findByRole("button", {
           name: "Betreuung beenden",
         });
-        await waitFor(() => expect(confirm).toBeEnabled());
+        await waitFor(() => {
+          expect(confirm).toBeEnabled();
+          expect(confirm).not.toHaveAttribute("aria-disabled");
+        });
         fireEvent.click(confirm);
       }
       expect(
         await screen.findByText("Die Betreuung wurde nicht beendet"),
       ).toBeVisible();
       const confirm = screen.getByRole("button", { name: "Betreuung beenden" });
-      await waitFor(() => expect(confirm).toBeDisabled());
+      await waitFor(() =>
+        expect(confirm).toHaveAttribute("aria-disabled", "true"),
+      );
       const exclude = screen.getByRole("button", {
         name: "Aus Auswahl nehmen",
       });
@@ -503,7 +508,10 @@ describe("PhasesEditor", () => {
         const retryConfirm = await screen.findByRole("button", {
           name: "Betreuung beenden",
         });
-        await waitFor(() => expect(retryConfirm).toBeEnabled());
+        await waitFor(() => {
+          expect(retryConfirm).toBeEnabled();
+          expect(retryConfirm).not.toHaveAttribute("aria-disabled");
+        });
         fireEvent.click(retryConfirm);
         await waitFor(() =>
           expect(careExit.confirm).toHaveBeenLastCalledWith(
@@ -616,7 +624,10 @@ describe("PhasesEditor", () => {
       const confirm = await screen.findByRole("button", {
         name: "Betreuung beenden",
       });
-      await waitFor(() => expect(confirm).toBeEnabled());
+      await waitFor(() => {
+        expect(confirm).toBeEnabled();
+        expect(confirm).not.toHaveAttribute("aria-disabled");
+      });
       expect(careExit.preview).toHaveBeenNthCalledWith(
         index + 1,
         expect.objectContaining({
@@ -744,6 +755,103 @@ describe("PhasesEditor", () => {
       "Schließung des Anmeldefensters muss nach der Öffnung liegen.",
     );
     expect(mocks.createPhase).not.toHaveBeenCalled();
+  });
+
+  // #6831: Ein späteres Ende verlängert nicht die Betreuung aktiver Kinder.
+  // Der Hinweis am Feld führt zur Anschlussphase.
+  it("points a later end of a running phase to the follow-up phase", async () => {
+    mocks.listPhases.mockResolvedValue([phase()]);
+    mocks.listSchemas.mockResolvedValue([schema()]);
+    render(<PhasesEditor />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Schuljahr 2026/27",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    const endInput = await waitForInputByName("service_end_date");
+    // Anker: das unveränderte Ende zeigt den Hinweis nicht.
+    expect(endInput).toHaveValue("2027-07-31");
+    expect(
+      screen.queryByText(/bleibt das Betreuungsende, wie es ist/),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(endInput, { target: { value: "2027-08-31" } });
+
+    expect(
+      await screen.findByText(/bleibt das Betreuungsende, wie es ist/),
+    ).toBeVisible();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Anschlussphase erstellen" }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Anmeldephase übertragen" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Rollover abbrechen" }),
+    ).toBeVisible();
+    expect(inputByName("service_end_date")).toBeNull();
+    expect(mocks.updatePhase).not.toHaveBeenCalled();
+  });
+
+  it("names an existing follow-up phase instead of offering a second one", async () => {
+    mocks.listPhases.mockResolvedValue([
+      phase(),
+      phase({
+        id: "11",
+        name: "Schuljahr 2027/28",
+        service_start_date: "2027-08-01",
+        service_end_date: "2028-07-31",
+        rollover_source_phase_id: "10",
+      }),
+    ]);
+    mocks.listSchemas.mockResolvedValue([schema()]);
+    render(<PhasesEditor />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Schuljahr 2026/27",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    const endInput = await waitForInputByName("service_end_date");
+    fireEvent.change(endInput, { target: { value: "2027-08-31" } });
+
+    expect(
+      await screen.findByText(/gibt es schon eine Anschlussphase/),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Anschlussphase erstellen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the follow-up hint off a phase that has not started", async () => {
+    mocks.listPhases.mockResolvedValue([
+      phase({
+        service_start_date: "2026-10-01",
+        service_end_date: "2027-07-31",
+      }),
+    ]);
+    mocks.listSchemas.mockResolvedValue([schema()]);
+    render(<PhasesEditor />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Schuljahr 2026/27",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    const endInput = await waitForInputByName("service_end_date");
+    fireEvent.change(endInput, { target: { value: "2027-08-31" } });
+    // Anker: das Feld hat den neuen Wert übernommen.
+    await waitFor(() => expect(endInput).toHaveValue("2027-08-31"));
+    expect(
+      screen.queryByText(/bleibt das Betreuungsende, wie es ist/),
+    ).not.toBeInTheDocument();
   });
 
   it("does not save a phase without both service dates", async () => {
@@ -1013,7 +1121,7 @@ describe("PhasesEditor", () => {
     mocks.listPhases.mockResolvedValue([phase()]);
     mocks.listSchemas.mockResolvedValue([schema()]);
     mocks.getPhaseDeleteImpact.mockResolvedValue({
-      requests: 1,
+      requests: 0,
       care_offerings: 1,
       students_kept: 0,
     });
@@ -1049,10 +1157,11 @@ describe("PhasesEditor", () => {
   it("explains in the dialog why a phase with booked children stays (#6505)", async () => {
     mocks.listPhases.mockResolvedValue([phase()]);
     mocks.listSchemas.mockResolvedValue([schema()]);
+    // The preview showed no request; one arrived before the delete ran.
     mocks.getPhaseDeleteImpact.mockResolvedValue({
-      requests: 1,
+      requests: 0,
       care_offerings: 1,
-      students_kept: 1,
+      students_kept: 0,
     });
     mocks.deletePhase.mockRejectedValue(
       new ApiError("phase still has effective care offering bookings", 409, {
@@ -1082,6 +1191,36 @@ describe("PhasesEditor", () => {
         "Für diese Anmeldephase sind noch Kinder gebucht. Deshalb kann sie nicht gelöscht werden. Wählen Sie stattdessen „Deaktivieren“ oder beenden Sie zuerst die Buchungen.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("blocks deleting a phase with requests and names „Deaktivieren“ instead (#6836)", async () => {
+    mocks.listPhases.mockResolvedValue([phase()]);
+    mocks.listSchemas.mockResolvedValue([schema()]);
+    mocks.getPhaseDeleteImpact.mockResolvedValue({
+      requests: 2,
+      care_offerings: 1,
+      students_kept: 1,
+    });
+
+    render(<PhasesEditor />);
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Schuljahr 2026/27",
+      }),
+    );
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Löschen" }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(
+      await within(dialog).findByText(
+        "Zu ihr gibt es 2 Anmeldungen. Wählen Sie stattdessen „Deaktivieren“.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "Löschen" }),
+    ).toBeDisabled();
+    expect(mocks.deletePhase).not.toHaveBeenCalled();
   });
 
   it("uses tenant-aware phase detail links in the action menu", async () => {

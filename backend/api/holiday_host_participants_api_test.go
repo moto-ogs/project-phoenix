@@ -86,11 +86,8 @@ func newHolidayHostFixture(t *testing.T, name string) holidayHostFixture {
 	t.Helper()
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, name, identityaccess.TraegerRoleAdministration)
-	body := januaryHolidays(office)
-	body.Name = "Sommerferien 2099"
+	body := julyHolidays2099(office)
 	body.RegistrationOpensOn, body.RegistrationClosesOn = "2020-01-01", "2099-06-30"
-	body.Weeks[0].StartsOn, body.Weeks[0].EndsOn = "2099-07-06", "2099-07-10"
-	body.Weeks[1].StartsOn, body.Weeks[1].EndsOn = "2099-07-13", "2099-07-17"
 	created := createHolidayPeriod(t, f.traeger, office, body)
 	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -123,12 +120,12 @@ func newHolidayHostFixture(t *testing.T, name string) holidayHostFixture {
 
 // newHolidayHostRouter mounts the routes of the hosting school at
 // /api/holiday-weeks with the service clock today.
-func newHolidayHostRouter(t *testing.T, f holidayRegistrationFixture, today *atomic.Value) http.Handler {
+func newHolidayHostRouter(t *testing.T, f holidayRegistrationFixture, today *atomic.Value, noCare ...owners.HolidayTestSchoolCalendar) http.Handler {
 	t.Helper()
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, f.db))
 	require.NoError(t, err)
 	resource := NewHolidayHostHTTP(organizations, owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, f.db)),
-		owners.NewTestAuditPersistence(testpkg.NewDatabase(t, f.db), nil).DataAccessLog, testHealthCipher(),
+		owners.NewTestAuditPersistence(testpkg.NewDatabase(t, f.db), nil).DataAccessLog, testHealthCipher(), holidayTestNoCare(noCare),
 		func() calendar.Date { return today.Load().(calendar.Date) })
 	unit := testpkg.TenantRuntime(t, f.db)
 	router := chi.NewRouter()
@@ -259,7 +256,8 @@ func TestHolidayHostSeesOnlyConfirmedChildrenOfItsWeek(t *testing.T) {
 	assert.Equal(t, "Feriengäste", list.HomeSchools[1].Name)
 	rec := f.get(t, host, fmt.Sprintf("/%d/participants", week))
 	// Inspect every JSON string, including unknown fields and escaped values.
-	// Numeric IDs can contain the phone prefix without exposing a phone number.
+	// Numeric IDs and timestamps can contain the phone prefix without exposing
+	// a phone number, so the check looks for the full number (#6974).
 	decoder := json.NewDecoder(strings.NewReader(rec.Body.String()))
 	for {
 		value, err := decoder.Token()
@@ -268,7 +266,7 @@ func TestHolidayHostSeesOnlyConfirmedChildrenOfItsWeek(t *testing.T) {
 		}
 		require.NoError(t, err)
 		if text, ok := value.(string); ok {
-			for _, private := range []string{"Erdnüsse", "eva.muster@example.org", "Oma Muster", "0151"} {
+			for _, private := range []string{"Erdnüsse", "eva.muster@example.org", "Oma Muster", "0151 2345678"} {
 				assert.NotContains(t, text, private, "only the minimum fields leave the Träger")
 			}
 		}
@@ -388,4 +386,13 @@ func TestHolidayHostParticipantListQueryBudgetIsFlat(t *testing.T) {
 	assert.Len(t, read(participants).Statements, len(oneList.Statements), "the list reads the same statements for any number of children")
 	querybudgets.AssertQueryBudget(t, "api.holiday_weeks.list", oneWeek)
 	querybudgets.AssertQueryBudget(t, "api.holiday_weeks.participants", oneList)
+}
+
+// holidayTestNoCare is the calendar of the hosting school in a test: the
+// days of the first calendar named, none without one.
+func holidayTestNoCare(calendars []owners.HolidayTestSchoolCalendar) owners.HolidayTestSchoolCalendar {
+	if len(calendars) == 0 {
+		return nil
+	}
+	return calendars[0]
 }

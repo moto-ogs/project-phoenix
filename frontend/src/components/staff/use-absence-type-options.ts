@@ -29,6 +29,11 @@ export interface AbsenceTypeOption {
    */
   readonly inactive?: boolean;
   readonly allowanceEnabled?: boolean;
+  /**
+   * Mitarbeitende beantragen die Art; der Eintrag wartet auf die Leitung
+   * (#4710).
+   */
+  readonly requestable?: boolean;
 }
 
 /**
@@ -83,13 +88,17 @@ export function useAbsenceTypeOptions(
           (type) =>
             canManage ||
             !type.allowanceEnabled ||
+            type.requestable ||
             customOptionValue(type.id) === currentValue,
         )
         .map((type) => ({
           value: customOptionValue(type.id),
           label: type.name,
-          inactive: !type.isActive,
+          // Eine Art des Trägers, die die Schule nicht anbietet (#4710),
+          // steht wie eine ausgeschaltete nur als aktueller Wert da.
+          inactive: !type.isActive || !type.offered,
           allowanceEnabled: type.allowanceEnabled,
+          requestable: type.requestable,
         })),
     ],
     [standardOptions, custom, canManage, currentValue],

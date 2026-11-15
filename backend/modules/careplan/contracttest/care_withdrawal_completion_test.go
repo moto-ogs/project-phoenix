@@ -60,7 +60,7 @@ func TestCareWithdrawalCompletionRepository_RebookingOnlyObsoletesWithoutGap(t *
 	student := testpkg.CreateTestStudent(t, db, "Sam", "Kurz", "3a")
 	actor := testpkg.CreateTestAccount(t, db, "rebooking-actor")
 	studentID := student.ID
-	firstGap := calendar.TodayDate().AddDays(2)
+	firstGap := decisionTestToday.AddDays(2)
 
 	create := func() {
 		t.Helper()
@@ -286,7 +286,7 @@ func TestCareWithdrawalCompletionRepository_CancelCreatesNewPendingEvent(t *test
 	actor := testpkg.CreateTestAccount(t, db, "withdrawal-cancel-actor")
 	studentID := student.ID
 	original := &careplan.WithdrawalCompletion{
-		StudentID: &studentID, FirstBookinglessDay: calendar.TodayDate().AddDays(4),
+		StudentID: &studentID, FirstBookinglessDay: decisionTestToday.AddDays(4),
 		Trigger:               careplan.WithdrawalTriggerDirectSchool,
 		WithdrawalConfirmedBy: &actor.ID, WithdrawalConfirmedRole: "admin", WithdrawalConfirmedAt: time.Now(),
 	}

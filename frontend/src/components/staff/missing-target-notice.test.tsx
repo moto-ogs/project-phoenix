@@ -46,6 +46,10 @@ describe("MissingTargetDialogNotice", () => {
       "Die Krankmeldung zählt in diesem Monat deshalb 0 Stunden. Gilt später ein Soll für diese Tage, rechnet moto die Stunden nach. Das Soll legen Sie in der Personalakte unter „Arbeitszeitmodell“ fest.",
     );
     expect(mocks.args).toEqual(["7", "2026-09-09", true]);
+    // A new tab keeps the dialog and its entries (#7054).
+    expect(
+      screen.getByRole("link", { name: "Zum Arbeitszeitmodell, neuer Tab" }),
+    ).toHaveAttribute("href", "/test-tenant/staff/7?tab=arbeitszeitmodell");
   });
 
   it("nennt ohne Recht, wer das Soll einträgt", () => {

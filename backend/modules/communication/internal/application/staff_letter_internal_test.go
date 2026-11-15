@@ -43,6 +43,10 @@ func (r *letterRepo) PublishIfDraft(_ context.Context, _ int64, publishedAt time
 	return true, nil
 }
 
+func (r *letterRepo) RecordRecipients(context.Context, int64, int64) error {
+	return nil
+}
+
 func (r *letterRepo) SetPublished(_ context.Context, _ int64, publishedAt *time.Time) error {
 	r.announcement.PublishedAt = publishedAt
 	return nil
@@ -153,6 +157,7 @@ func letterDraft(mode, audience string) *StaffParentAnnouncement {
 
 func newLetterService(repo *letterRepo, outbox *letterOutbox, deliveries *letterDeliveries) StaffService {
 	return NewService(ServiceConfig{
+		Now:        staffTestClock,
 		Repo:       repo,
 		Settings:   &fakeSettings{enabled: true},
 		Notifier:   &fakeNotifier{},
@@ -549,7 +554,7 @@ func (r *letterRepo) UnacknowledgedReminderRecipients(_ context.Context, _, _ in
 func TestRemindOutstandingLetterMailsUnconfirmedFamilies(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	repo := &letterRepo{
@@ -587,7 +592,7 @@ func TestRemindOutstandingLetterMailsUnconfirmedFamilies(t *testing.T) {
 func TestRemindOutstandingLetterDoesNotUsePollPush(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	repo := &letterRepo{
@@ -598,6 +603,7 @@ func TestRemindOutstandingLetterDoesNotUsePollPush(t *testing.T) {
 	}
 	notifier := &fakeNotifier{}
 	svc := NewService(ServiceConfig{
+		Now:        staffTestClock,
 		Repo:       repo,
 		Settings:   &fakeSettings{enabled: true},
 		Notifier:   notifier,
@@ -618,7 +624,7 @@ func TestRemindOutstandingLetterDoesNotUsePollPush(t *testing.T) {
 func TestRemindOutstandingRefusesAcknowledgementStandardAnnouncement(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryStandard, StaffEmailAudiencePortalOnly)
 	a.RequiresAcknowledgement = true
 	a.PublishedAt = &published
@@ -633,7 +639,7 @@ func TestRemindOutstandingRefusesAcknowledgementStandardAnnouncement(t *testing.
 func TestRemindOutstandingRefusesAnnouncementWithoutAcknowledgement(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryStandard, StaffEmailAudiencePortalOnly)
 	a.RequiresAcknowledgement = false
 	a.PublishedAt = &published
@@ -660,7 +666,7 @@ func TestRemindOutstandingRefusesUnpublished(t *testing.T) {
 func TestResendFailedEmailsOnlyRetriesFailures(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	bad := "kaputt@example.test"
@@ -704,7 +710,7 @@ func TestResendFailedEmailsOnlyRetriesFailures(t *testing.T) {
 func TestResendFailedEmailsSkipsAMarkedAddress(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	marked := "gesperrt@example.test"
@@ -778,10 +784,67 @@ func TestLetterSummaryOnlyOffersWhatAResendCanReach(t *testing.T) {
 	}
 }
 
+type currentLetterStatuses struct {
+	ParentAnnouncementDeliveryRecorder
+	rows []communication.ParentAnnouncementEmailDeliveryStatus
+}
+
+func (s currentLetterStatuses) ListForEntity(context.Context, int64, string, int64) ([]communication.ParentAnnouncementEmailDeliveryStatus, error) {
+	return s.rows, nil
+}
+
+func TestLetterRetriesWaitForTheFamilysReturn(t *testing.T) {
+	t.Parallel()
+
+	published := staffTestNow.Add(-time.Hour)
+	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
+	a.PublishedAt = &published
+	address := "ausgetreten@example.test"
+	current := currentLetterStatuses{rows: []communication.ParentAnnouncementEmailDeliveryStatus{
+		{DeliveryID: 1, RecipientEmail: &address, EmailStatus: "failed", MailOutcome: "held_by_departure", Departed: true},
+	}}
+	deliveries := &letterDeliveries{}
+	outbox := &letterOutbox{}
+	svc := newLetterService(&letterRepo{announcement: a}, outbox, deliveries)
+
+	for _, phase := range []struct {
+		departed bool
+		want     int
+	}{{departed: true}, {departed: false, want: 1}} {
+		current.rows[0].Departed = phase.departed
+		rows, err := (parentAnnouncementDeliveryAdapter{current}).ListForEntity(context.Background(), a.GetTenantID(), "parent_announcement", a.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		deliveries.list = rows
+		status, err := svc.LetterStatus(context.Background(), a.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if status.Summary.EmailsResendable != phase.want || status.Summary.EmailsStopped != 0 {
+			t.Errorf("departed=%t: summary = %+v", phase.departed, status.Summary)
+		}
+		public, err := (&parentAnnouncements{service: svc}).ParentAnnouncementLetterStatus(context.Background(), a.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(public.Recipients) != 1 || public.Recipients[0].Departed != phase.departed {
+			t.Fatalf("public departure state lost: %+v", public.Recipients)
+		}
+		count, err := svc.ResendFailedEmails(context.Background(), a.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if count != phase.want || len(outbox.requests) != phase.want {
+			t.Errorf("departed=%t: resent %d, queued %d, want %d", phase.departed, count, len(outbox.requests), phase.want)
+		}
+	}
+}
+
 func TestResendFailedEmailsLeavesAStoppedOrMarkedAddressAlone(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	stopped, marked, free, provider := "gestoppt@example.test", "gesperrt@example.test", "frei@example.test", "anbieter@example.test"
@@ -808,7 +871,7 @@ func TestResendFailedEmailsLeavesAStoppedOrMarkedAddressAlone(t *testing.T) {
 func TestResendFailedEmailsSendsARefusedLetterOnlyToTheCorrectedAddress(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	old, corrected, refused := "alt@example.test", "neu@example.test", "abgemeldet@example.test"
@@ -835,7 +898,7 @@ func TestResendFailedEmailsSendsARefusedLetterOnlyToTheCorrectedAddress(t *testi
 func TestResendFailedEmailsDeduplicatesSharedAddress(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	address := "familie@example.test"
@@ -861,8 +924,8 @@ func TestResendFailedEmailsDeduplicatesSharedAddress(t *testing.T) {
 func TestResendFailedEmailsRefusesExpiredLetter(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-2 * time.Hour)
-	expired := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-2 * time.Hour)
+	expired := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	a.ExpiresAt = &expired
@@ -876,7 +939,7 @@ func TestResendFailedEmailsRefusesExpiredLetter(t *testing.T) {
 func TestResendFailedEmailsSkipsDeliveryClaimedByConcurrentRequest(t *testing.T) {
 	t.Parallel()
 
-	published := time.Now().Add(-time.Hour)
+	published := staffTestNow.Add(-time.Hour)
 	a := letterDraft(StaffParentAnnouncementDeliveryLetter, StaffEmailAudiencePortalOnly)
 	a.PublishedAt = &published
 	address := "familie@example.test"
@@ -977,7 +1040,7 @@ func TestLetterStatusKeepsAcknowledgedChildrenFulfilledAfterAccessRevocation(t *
 func TestLetterChildOutstanding(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := staffTestNow
 	cases := []struct {
 		name     string
 		child    StaffAnnouncementLetterChildStatus

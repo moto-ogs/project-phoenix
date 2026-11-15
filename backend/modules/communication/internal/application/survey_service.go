@@ -87,7 +87,7 @@ func WithSurveys(announcements communication.ParentAnnouncementCapability, sourc
 func newSurveyService(announcements *service, store SurveyStore, staff SurveyStaff) *surveyService {
 	return &surveyService{
 		surveyReads: store, announcements: announcements, store: store, staff: staff,
-		logger: announcements.logger.With("service", "survey"), now: time.Now, shuffle: shuffleTexts,
+		logger: announcements.logger.With("service", "survey"), now: announcements.now, shuffle: shuffleTexts,
 	}
 }
 

@@ -7,7 +7,7 @@
 // The BFF installs the session.
 
 import { useEffect, useLayoutEffect, useRef, useState, Suspense } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { AuthShell, MotoBrand } from "~/components/auth/auth-shell";
 import {
@@ -30,7 +30,11 @@ import { hasSessionAccess } from "~/lib/session-access";
 import { requestCatererPasswordReset } from "~/lib/auth-api";
 import { loginCaterer } from "~/lib/caterer-api";
 import { catererPath } from "~/lib/caterer-url";
-import { DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
+import {
+  signOutStaleSession,
+  useSessionExpiredNotice,
+} from "~/lib/login-session-notice";
+import type { MFAStep } from "~/lib/sign-in-answer";
 import { errorStatus } from "~/lib/expected-failure";
 import { createLogger } from "~/lib/logger";
 import {
@@ -49,31 +53,9 @@ const SHELL_COPY = {
   subtitle: "Melden Sie sich mit Ihrem Caterer-Konto an.",
 } as const;
 
-function sessionErrorInUrl(): boolean {
-  const url = new URL(window.location.href);
-  const error = url.searchParams.get("error");
-  if (error !== "SessionRequired" && error !== "SessionExpired") return false;
-  url.searchParams.delete("error");
-  url.searchParams.delete("callbackUrl");
-  window.history.replaceState(
-    {},
-    "",
-    `${url.pathname}${url.search}${url.hash}`,
-  );
-  return true;
-}
-
-interface MFAStep {
-  readonly challengeToken: string;
-  readonly maskedEmail: string;
-  readonly trustedDeviceEnabled: boolean;
-  readonly trustedDeviceDays?: number;
-}
-
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [sessionExpired, setSessionExpired] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [awaitingRedirect, setAwaitingRedirect] = useState(false);
@@ -87,26 +69,21 @@ function LoginForm() {
   const latestSubmitRef = useRef<() => void>(() => undefined);
   const latestPasskeyRef = useRef<() => void>(() => undefined);
   const searchParams = useSearchParams();
+  const [sessionExpired, setSessionExpired] =
+    useSessionExpiredNotice(searchParams);
   const { data: session, status } = useSession();
   const cleaningRef = useRef(false);
 
   useEffect(() => {
     const check = async () => {
-      // A refresh the backend refused leaves a stale cookie behind.
-      if (
-        status === "authenticated" &&
-        session?.error &&
-        !cleaningRef.current
-      ) {
-        cleaningRef.current = true;
-        try {
-          await signOut({ redirect: false });
-        } catch (cause) {
-          cleaningRef.current = false;
-          logger.warn("signout_during_cleanup_failed", {
-            error: cause instanceof Error ? cause.message : String(cause),
-          });
-        }
+      const cleanup = signOutStaleSession({
+        status,
+        session,
+        started: cleaningRef,
+        logger,
+      });
+      if (cleanup) {
+        await cleanup;
         setCheckingAuth(false);
         return;
       }
@@ -125,20 +102,6 @@ function LoginForm() {
     setPasskeySupported(isPasskeySupported());
   }, []);
 
-  useEffect(() => {
-    const error = searchParams.get("error");
-    if (error !== "SessionRequired" && error !== "SessionExpired") return;
-    let deliberate = false;
-    try {
-      deliberate = sessionStorage.getItem(DELIBERATE_LOGOUT_KEY) === "1";
-      sessionStorage.removeItem(DELIBERATE_LOGOUT_KEY);
-    } catch {
-      // sessionStorage unavailable: show the notice.
-    }
-    setSessionExpired(!deliberate);
-    sessionErrorInUrl();
-  }, [searchParams]);
-
   const isCheckingAuth = checkingAuth || status === "loading";
   const isSubmitting = isLoading || awaitingRedirect;
 
@@ -156,12 +119,7 @@ function LoginForm() {
     try {
       const result = await loginCaterer(email, password);
       if (result.status === "mfa_required") {
-        setMfaStep({
-          challengeToken: result.challengeToken,
-          maskedEmail: result.maskedEmail,
-          trustedDeviceEnabled: result.trustedDeviceEnabled,
-          trustedDeviceDays: result.trustedDeviceDays,
-        });
+        setMfaStep(result);
         return;
       }
       completeLogin();

@@ -33,6 +33,7 @@ export function settingsGuideTopic(): HelpTopic {
           "`Benachrichtigungen senden`: Hinweise in moto und auf dem Handy. Was ankommt, wählt jede Person selbst.",
           "`Team-Chat für Mitarbeitende`: Das Team schreibt sich Nachrichten. Eltern sehen davon nichts.",
           "`Kinderfotos`: Fotos bei den Kindern. Nur mit Einwilligung der Eltern. Beim Ausschalten löscht moto alle Fotos sofort. Sie können sie nicht wiederherstellen.",
+          "`Angebote auf der Kinderkarte`: Die Kinderkarten unter `Gruppen` zeigen die Angebote des Tages mit Uhrzeit.",
           "`Automatisch ausstempeln`: moto wartet nach Dienstende die eingestellte Zeit. Dann stempelt es aus. Das gilt nur bei einem geplanten Dienst.",
           "`Wegpackzeit beim Ausstempeln (Minuten)`: Diese Minuten zählt moto bei jedem Ausstempeln dazu, etwa für das Aufräumen. Nicht beim Pausenbeginn und nicht beim automatischen Ausstempeln.",
           "`Arbeitszeit runden` und `Wie gerundet wird`: moto rundet die Dauer jedes Arbeitsblocks. Die Reihenfolge: gestempelte Dauer, plus Wegpackzeit, dann runden, dann Pause abziehen. Die gestempelten Uhrzeiten bleiben sichtbar.",
@@ -52,7 +53,7 @@ export function settingsGuideTopic(): HelpTopic {
       },
       {
         title: "Erinnerungen",
-        description: "Hinweise rund um Abholung, Aktivitäten und Termine.",
+        description: "Erinnerungen rund um Abholung, Aktivitäten und Termine.",
         ordered: false,
         steps: [
           "`Anstehende Abholung`: Erinnert, wenn die Abholzeit eines Kindes näher rückt.",
@@ -103,6 +104,7 @@ export function settingsGuideTopic(): HelpTopic {
           "Vor dem Einschalten prüft die Schule die Rechtsgrundlage. Sie ist für die Nutzung verantwortlich.",
           "`Nutzungsanalyse`: moto erhält Nutzungsstatistiken Ihrer Schule, aber keine eingegebenen Inhalte.",
           "Löschfristen wie `Anwesenheit aufbewahren (Tage)`: Wie lange moto Daten behält. Sie können sie nur lesen.",
+          "`Erziehungsberechtigte ohne Kind aufbewahren (Tage)`: Diese Frist stellen Sie selbst ein. Sie beginnt erst, wenn das letzte Kind der Person gelöscht ist.",
         ],
       },
       {

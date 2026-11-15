@@ -24,7 +24,12 @@ export type AnalyticsEvent =
   | "pwa_install_prompt_shown"
   | "pwa_install_prompt_accepted"
   | "pwa_install_prompt_dismissed"
-  | "pwa_installed";
+  | "pwa_installed"
+  // Glocke im Staff-Portal (#7148): ohne Inhalte und ohne IDs, beim Klick
+  // nur der Typ des Eintrags (notification_type, allowlisted).
+  | "notification_bell_opened"
+  | "notification_feed_entry_clicked"
+  | "notification_feed_all_read";
 
 function captureEvent(event: AnalyticsEvent, props?: Properties): void {
   capturePostHog(event, props);

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/adapters/postgres"
@@ -59,7 +60,8 @@ type CareLifecycleDependencies struct {
 	// Fingerprint returns the lowercase hexadecimal SHA-256 of the content.
 	Fingerprint func([]byte) string
 	Logger      *slog.Logger
-	// Today defaults to the Berlin calendar day.
+	// Now and Today default to the real clock and its Berlin day.
+	Now              func() time.Time
 	Today            func() calendar.Date
 	StudentDirectory StudentDirectory
 }
@@ -71,10 +73,6 @@ func NewCareLifecycle(deps CareLifecycleDependencies) (careplan.CareLifecycle, e
 	if deps.DB == nil || deps.StudentDirectory == nil {
 		return nil, errors.New("care lifecycle compose: database and student directory are required")
 	}
-	today := deps.Today
-	if today == nil {
-		today = calendar.TodayDate
-	}
 	return application.NewCareLifecycle(application.CareLifecycleDependencies{
 		Owners: deps.Owners, Records: deps.Records, SourceBookings: NewOfferingBookings(),
 		Directory:             postgres.NewDirectoryStore(postgres.New(postgres.CarePlanDatabase(deps.DB)), deps.StudentDirectory),
@@ -83,7 +81,8 @@ func NewCareLifecycle(deps CareLifecycleDependencies) (careplan.CareLifecycle, e
 		BookingsAuthoritative: deps.BookingsAuthoritative,
 		Fingerprint:           deps.Fingerprint,
 		Logger:                deps.Logger,
-		Today:                 today,
+		Today:                 deps.Today,
+		Now:                   deps.Now,
 	})
 }
 

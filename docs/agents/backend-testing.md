@@ -15,6 +15,14 @@ and [fixture helpers](../../backend/test/fixtures.go).
 Copy their tenant/parallel setup, not literal IDs or legacy factory composition.
 
 - **One pool per package (#2419)**: `SetupTestDB` returns the same `*bun.DB` for every test in the binary. Never `db.Close()` it (gate: `no_shared_pool_close`). Tests that close their DB on purpose to force error paths use `testpkg.SetupClosableTestDB(t)`. Tests that run DB I/O inside a `testing/synctest` bubble use it too, so `database/sql` wait channels never cross the bubble; warm the pool with fixtures before `synctest.Test`.
+- **Fault matrices share one fault pool**: a matrix whose cells each need a
+  fault-injecting connector opens one `testpkg.CellPool` (or
+  `testpkg.NewStatementFaultCells`) per matrix and gives each cell its own
+  handle (`Cell`, `testpkg.NewStatementFaultCell`), not a pool per cell: every
+  fresh pool pays new PostgreSQL sessions. The connector reads the cell's plan
+  from the statement's context (`testpkg.CellPlan`); a statement without one
+  fails. A cell whose fault breaks its connection (`driver.ErrBadConn`) keeps
+  a pool of its own.
 - **No hand-written cleanup deletes**: the AST-based gate
   `no_ignored_cleanup_deletes` rejects DB deletes with a discarded error in
   `t.Cleanup`, deferred calls, cleanup closures, `wipe*`/`cleanup*`/`teardown*`
@@ -33,7 +41,11 @@ Copy their tenant/parallel setup, not literal IDs or legacy factory composition.
 - **Every top-level test is parallel (#2851)**: start it with `t.Parallel()`.
   The `tests_run_in_parallel` gate has an empty baseline and rejects every
   exception. Inject process configuration and output; use per-test database
-  clones for schema changes, sweeps, query measurements, and lock tests.
+  clones for schema changes, sweeps, query measurements, and lock tests. When
+  every such test first builds the same expensive schema or fixture, declare it
+  once with `testpkg.NewIsolatedTemplate` and open
+  `testpkg.SetupIsolatedTestDBFrom`: the build runs once per binary, each test
+  still gets its own clone of the result (#6962).
 - **Runtime measurements are opt-in (#4426)**: a test that repeats a flow
   for latency, plans or lock samples calls `testpkg.RequireRuntimeEvidence(t)`
   right after `t.Parallel()` and runs only with `PHX_TEST_RUNTIME_EVIDENCE=1`.
@@ -74,9 +86,13 @@ Copy their tenant/parallel setup, not literal IDs or legacy factory composition.
   wrapper and CI test invocation remain unchanged; CI runs the cache adapter's
   real-toolchain invalidation and diagnostic tests.
 - **Leftovers are a gate, not a report (#2419)**: every test binary compares its
-  clone against the start state it recorded for itself and fails the PACKAGE
-  when rows are left in SHARED state — rows outside the tenants its own tests
-  created. Rows in a test's own tenant are not leftovers. The gate runs from
+  clone against the start state the template recorded after its bootstrap
+  (taken again in the clone when the gate's rules changed, #6962) and fails the
+  PACKAGE when rows are left in SHARED state — rows outside the tenants its own
+  tests created. Rows in a test's own tenant are not leftovers, nor are rows
+  without `tenant_id` whose `organization_id` lies in the test band: a test's
+  Träger dies with the clone, so `CreateTestOrganization` registers no cleanup.
+  The gate runs from
   `TestMain` via `testpkg.Run(m)` (gate: `db_packages_run_the_leftover_gate`),
   so `../scripts/run-go-toolchain.sh go test -tags=testhooks ./...` is gated exactly like a
   full wrapper run; it costs the package one query at exit (~30-70ms measured).
@@ -100,6 +116,29 @@ fails on every `t.Skip`, `t.Skipf` or `t.SkipNow` outside `testSkipReasons`.
 That register holds environment opt-ins (`environment: …`, such as `-short` or
 a missing `TEST_DB_DSN`) and quarantined flakes with their tracking issue
 (`quarantine #1234: …`). It is shrink-only like the other ratchet registers.
+
+## Clock-dependent tests
+
+`clock-early-warning.yml` runs the full suite every Sunday at the coming
+boundary days of `scripts/clock-boundaries.mjs` (weekend, ISO week, clock
+change, new year, NRW holidays, today plus 30, 90 and 365 days) and opens or
+comments on one issue per red run. To reproduce a finding or test a day
+yourself, move Go and a private PostgreSQL there:
+
+```bash
+name=phx-clock-$(basename "$PWD")   # one server per worktree on the shared machine
+scripts/fake-clock-postgres.sh start "$name" <free port> "/tmp/$name"
+TEST_DB_DSN=$(cat "/tmp/$name/dsn") PHX_FAKE_CLOCK_POSTGRES_DIR="/tmp/$name" \
+  scripts/run-go-toolchain.sh scripts/fake-clock.sh 2027-04-20T00:30 \
+  scripts/test-backend.sh -count=1 ./modules/timetable/http -run '^TestName$'
+scripts/fake-clock-postgres.sh stop "$name" && rm -r "/tmp/$name"
+```
+
+The first run compiles the backend once with the patched `time.Now`. Without
+the private server only Go moves, and tests that compare with `now()` or
+`CURRENT_DATE` fail for that reason alone. File modification times always
+stay real. A test red at a moved day gets the cause fixed (an injected clock,
+fixed dates), never a skip.
 
 ## Credential fixtures
 

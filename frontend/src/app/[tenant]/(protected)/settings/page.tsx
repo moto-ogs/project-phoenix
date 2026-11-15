@@ -3,6 +3,7 @@
 import { Suspense, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { redirect, useSearchParams } from "next/navigation";
+import { usePageTitleSection } from "~/components/ui/page-title-section";
 import { Alert } from "~/components/ui/alert";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useSettingsSchema } from "~/lib/hooks/use-settings-schema";
@@ -38,6 +39,10 @@ function SettingsContent() {
   const activeTab = settingsTabs
     ? activeSettingsSectionId(settingsTabs, searchParams.get("tab"))
     : "";
+  const activeSectionLabel =
+    sections.find((section) => section.id === activeTab)?.label ?? null;
+  // Der Bereich steht in der Adresse, also auch im Seitentitel (#7109).
+  usePageTitleSection(activeSectionLabel);
 
   // Statuszeile: wie viele Einstellungen dieses Bereichs von der Vorgabe
   // abweichen. Die handgeschriebenen Bereiche stehen nicht im Schema und haben
@@ -94,10 +99,7 @@ function SettingsContent() {
 
   return (
     <TenantPage
-      title={
-        sections.find((section) => section.id === activeTab)?.label ??
-        "Einstellungen"
-      }
+      title={activeSectionLabel ?? "Einstellungen"}
       stats={
         overrides === null
           ? undefined

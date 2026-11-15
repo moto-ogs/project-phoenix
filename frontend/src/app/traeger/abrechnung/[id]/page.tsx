@@ -83,6 +83,7 @@ import {
   releaseBillingRun,
   startBillingRun,
 } from "~/lib/traeger-billing-api";
+import { TRAEGER_HOLIDAY_TAB } from "~/lib/traeger-payment-text";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
@@ -107,6 +108,22 @@ function runDescription(run: BillingRunDetail): string {
   return "Vorschau aller bestätigten Anmeldungen ohne gültige Rechnung. Neue Bestätigungen kommen bis zur Freigabe dazu.";
 }
 
+/** Why „Lauf freigeben“ is blocked, in the order the warnings show. */
+function releaseBlockReason(run: BillingRunDetail): string | undefined {
+  if (run.previewCount === 0) {
+    return run.unbilled > 0
+      ? "Noch keine Rechnung: Den Anmeldungen fehlt ein festgehaltener Beitrag."
+      : "Der Lauf hat keine Rechnung zum Freigeben.";
+  }
+  if (run.legalRemedyMissing) {
+    return "Tragen Sie zuerst die Rechtsbehelfsbelehrung in der Vorlage „Bescheid“ ein.";
+  }
+  if (!run.numberRangeSet) {
+    return "Legen Sie zuerst das Muster der Rechnungsnummern fest.";
+  }
+  return undefined;
+}
+
 /** „3 Rechnungen mit Betrag haben keine Debitorennummer.“ */
 function invoicesWithoutDebtorNumber(count: number): string {
   return count === 1
@@ -128,6 +145,46 @@ function paymentTextWarning(run: BillingRunDetail): string {
       ? "Tragen Sie die Nummern vor dem Freigeben bei den Anmeldungen ein."
       : "Tragen Sie die Nummern vor dem Freigeben bei den Anmeldungen ein. Das Feld dafür erscheint, wenn in den Einstellungen unter „Allgemein“ im Bereich „Ferienbetreuung“ „Debitorennummer beim Bestätigen abfragen“ an ist.";
   return `${invoicesWithoutDebtorNumber(run.paymentTextMissingDebtorNumbers)} Ihr Zahlungstext nennt aber die Debitorennummer. Nach dem Freigeben können Sie sie nicht mehr eintragen. Schreiben gehen dann nur ohne den Platzhalter im Zahlungstext. ${where}`;
+}
+
+/**
+ * The places the payment text warning names (#7054): the registrations,
+ * where the numbers go, only with the right to open them; and the holiday
+ * settings while the field there is still off.
+ */
+function PaymentTextWarningLinks({
+  run,
+  canOpenPeriod,
+}: Readonly<{ run: BillingRunDetail; canOpenPeriod: boolean }>) {
+  const fieldOff = run.missingDebtorNumbers === 0;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {canOpenPeriod ? (
+        <ButtonLink
+          href={traegerPath(
+            `/traeger/ferien/${encodeURIComponent(run.holidayPeriodId)}/anmeldungen`,
+          )}
+          variant="surface"
+          size="compact"
+          tooltip="Öffnet die Anmeldungen dieses Ferienzeitraums."
+        >
+          Zu den Anmeldungen
+        </ButtonLink>
+      ) : null}
+      {fieldOff ? (
+        <ButtonLink
+          href={traegerPath(
+            `/traeger/einstellungen?bereich=${TRAEGER_HOLIDAY_TAB}`,
+          )}
+          variant="surface"
+          size="compact"
+          tooltip="Öffnet die Ferienbetreuung in den Einstellungen."
+        >
+          Zur Einstellung
+        </ButtonLink>
+      ) : null}
+    </div>
+  );
 }
 
 export default function TraegerBillingRunPage() {
@@ -292,6 +349,7 @@ export default function TraegerBillingRunPage() {
           href={traegerPath(`/traeger/abrechnung/${run.id}/faelligkeiten`)}
           variant="ghost_tone"
           size="compact"
+          tooltip="Öffnet die Fälligkeiten der Rechnungen dieses Laufs zum Ändern."
         >
           Fälligkeiten ändern
         </ButtonLink>
@@ -355,6 +413,7 @@ export default function TraegerBillingRunPage() {
                 )}
                 variant="outline"
                 size="md"
+                tooltip="Öffnet den Ferienzeitraum, zu dem dieser Lauf gehört."
               >
                 <MotoConceptIcon
                   concept={holidayWeeksConcept}
@@ -369,6 +428,7 @@ export default function TraegerBillingRunPage() {
                 type="button"
                 variant="outline_danger"
                 size="md"
+                tooltip="moto fragt vorher nach, dann ist der Ferienzeitraum frei für einen neuen Lauf."
                 onClick={() => setConfirmingDiscard(true)}
               >
                 Leeren Lauf verwerfen
@@ -378,6 +438,7 @@ export default function TraegerBillingRunPage() {
                 type="button"
                 variant="primary"
                 size="md"
+                tooltip="Öffnet den offenen Lauf dieses Ferienzeitraums oder startet einen neuen."
                 onClick={() => void reissue()}
               >
                 Neuen Lauf starten
@@ -388,6 +449,8 @@ export default function TraegerBillingRunPage() {
                 variant="primary"
                 size="md"
                 disabled={!canRelease}
+                disabledReason={releaseBlockReason(run)}
+                tooltip="moto fragt vorher nach, dann sind alle Rechnungen mit Nummer festgeschrieben."
                 onClick={() => setConfirmingRelease(true)}
               >
                 Lauf freigeben
@@ -528,6 +591,7 @@ export default function TraegerBillingRunPage() {
                   )}
                   variant="outline"
                   size="md"
+                  tooltip="Öffnet die Fälligkeiten der Rechnungen dieses Laufs zum Ändern."
                 >
                   Fälligkeiten ändern
                 </ButtonLink>
@@ -612,6 +676,7 @@ export default function TraegerBillingRunPage() {
                   )}
                   variant="surface"
                   size="compact"
+                  tooltip="Öffnet die Vorlage „Bescheid“ in den Einstellungen."
                 >
                   Vorlage öffnen
                 </ButtonLink>
@@ -627,6 +692,7 @@ export default function TraegerBillingRunPage() {
                   href={traegerPath("/traeger/einstellungen/abrechnung")}
                   variant="surface"
                   size="compact"
+                  tooltip="Öffnet die Einstellungen für das Muster der Rechnungsnummern."
                 >
                   Abrechnungsvorgaben öffnen
                 </ButtonLink>
@@ -638,6 +704,15 @@ export default function TraegerBillingRunPage() {
               type="warning"
               title="Schreiben brauchen die Debitorennummer"
               message={paymentTextWarning(run)}
+              actionLayout="stacked"
+              action={
+                canOpenPeriod || run.missingDebtorNumbers === 0 ? (
+                  <PaymentTextWarningLinks
+                    run={run}
+                    canOpenPeriod={canOpenPeriod}
+                  />
+                ) : undefined
+              }
             />
           ) : null}
           {preview && run.missingDebtorNumbers > 0 && paymentTextGaps === 0 ? (

@@ -184,6 +184,7 @@ mechanical: **no row means off**.
 |---|---|---|
 | SSE / in-app | active | `realtime.Broadcaster` → SSE event `notification` → toast |
 | Web Push | active (#2003/#2657) | leased `platform.push_outbox` → `webpush-go` (VAPID) → browser push service → service worker notification |
+| Feed | active (#7148, staff portal) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
 | E-Mail | future | wrap `email.Mailer` + audience→address resolution as a `Channel` |
 
 E-mail is still not a `Channel`: features that mail enqueue through the same
@@ -194,6 +195,41 @@ because the scheduler may record its claim only after the push service answers.
 The existing SSE cache-invalidation events are untouched: the `notification`
 event type is additive. SSE remains the open-app channel; Web Push covers
 closed/locked devices.
+
+### Notification feed (#7148)
+
+An event with `Feed` set (`contract.NotificationFeedDelivery`) is also
+written into the feed of every staff account of its audience, in the
+caller's transaction. Rules, all applied by the router:
+
+- The type's school gate (`TenantGate`) off, or `notifications.dispatch_enabled`
+  off: neither feed entry nor push.
+- Bundling: an unread entry of the same account, type and object
+  (`RelatedType`/`RelatedID`) updated within `domain.FeedBundleWindow`
+  (10 min) is updated and moves to the top; no second push. A read entry
+  gets a new one.
+- Push only for a new entry and only to `PushAccountIDs`, which the producer
+  narrows by its relevance window and `FilterNotOptedOut`. The delivery window
+  bounds the push, never the feed entry. An open session does not suppress it.
+- The text is finished and display-safe when written; the entry stays
+  readable when its object changes or goes.
+- Reading: `GET /api/notifications/feed/` (pages, `next_cursor`,
+  `unread_count`), `GET /feed/unread-count`, `POST /feed/{id}/read`,
+  `POST /feed/read-all`, all in the request's tenant transaction. The reader
+  must still be an active staff member of the school
+  (`platform.delivery_realtime_recipients`).
+- `notification_feed_changed` reaches every staff session of the account for
+  a new or updated entry (after the commit) and for a read-state change. The
+  latter is sent once the change is written, possibly just before the commit;
+  clients reload with a delay and reconcile by polling.
+- Retention: 30 days after the last update (nightly `delivery_retention`); the
+  feed goes with its account, its school and a closed demo visit.
+
+The first producer is Timetable's cancellation of a single block
+(`instance_cancelled`): the block's staff rows without absent people and
+without the person who cancelled; feed and push from today up to 14 days
+ahead, feed only later, nothing for the past. A bulk cancellation of a
+period writes no entries per block.
 
 ### Web Push (#2003)
 

@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/application"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	carePlanPorts "github.com/moto-ogs/project-phoenix/modules/careplan/ports"
+	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
@@ -28,6 +29,7 @@ type PickupExcusalDependencies struct {
 	Blocks     PartialAbsenceBlocks
 	Preview    PartialAbsencePreview
 	Extensions PickupExtensions
+	Today      func() calendar.Date
 }
 
 func NewPickupAutoExcusal(deps PickupExcusalDependencies) (careplan.PickupAutoExcusal, error) {
@@ -35,11 +37,10 @@ func NewPickupAutoExcusal(deps PickupExcusalDependencies) (careplan.PickupAutoEx
 		return nil, errors.New("pickup excusal: database, records, baselines, and block commands are required")
 	}
 	return application.NewPickupAutoExcusal(application.NewPickupExcusalRows(deps.Records), deps.Baselines,
-		deps.Blocks, deps.Preview, deps.Extensions, excusalTransaction{db: deps.DB}), nil
+		deps.Blocks, deps.Preview, deps.Extensions, excusalTransaction{db: deps.DB}, deps.Today), nil
 }
 
-// LockWeeklyPickupStudents binds Care Plan's lock order of a weekly pickup
-// approval to the student locks of the People Directory.
+// LockWeeklyPickupStudents binds a weekly pickup approval's lock order to People Directory's student locks.
 func LockWeeklyPickupStudents(students PickupStudentLocks) func(context.Context, []int64) error {
 	return func(ctx context.Context, studentIDs []int64) error {
 		return application.LockWeeklyPickupStudents(ctx, students, studentIDs)

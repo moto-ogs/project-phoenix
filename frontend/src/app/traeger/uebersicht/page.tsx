@@ -23,7 +23,10 @@ import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { Alert } from "~/components/ui/alert";
-import { ResponsiveActionList } from "~/components/ui/responsive-action-list";
+import {
+  ResponsiveActionList,
+  ResponsiveActionRow,
+} from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -36,6 +39,7 @@ import {
   SCHOOL_SWITCH_MISSING_HINT,
   useOpenTraegerSchool,
 } from "~/components/traeger/use-open-traeger-school";
+import { TraegerCodeStepModal } from "~/components/traeger/traeger-code-step-modal";
 import { useTraegerSchoolsAlerts } from "~/components/traeger/use-traeger-schools-alerts";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { between, useMediaQuery } from "~/lib/hooks/use-media-query";
@@ -61,7 +65,10 @@ import type {
   TraegerSchoolToday,
   TraegerSchoolsToday,
 } from "~/lib/traeger-api";
-import { TRAEGER_HANDOFF_OPEN } from "~/lib/traeger-handoff";
+import {
+  TRAEGER_HANDOFF_OPEN,
+  TRAEGER_HANDOFF_OPEN_HINT,
+} from "~/lib/traeger-handoff";
 import { traegerPath } from "~/lib/traeger-url";
 import { foldForSearch } from "~/lib/search-fold";
 
@@ -383,7 +390,7 @@ export default function TraegerDashboardPage() {
   const { alerts, error, refreshFailed, reload } = useTraegerSchoolsAlerts();
   const { data: session } = useSession();
   const router = useRouter();
-  const { canOpen, opening, open } = useOpenTraegerSchool();
+  const { canOpen, opening, open, codeStepModal } = useOpenTraegerSchool();
   const [search, setSearch] = useState("");
   const [alertSchoolId, setAlertSchoolId] = useState(ALL_SCHOOLS);
   const [alertsExpanded, setAlertsExpanded] = useState(false);
@@ -490,11 +497,7 @@ export default function TraegerDashboardPage() {
                 // One line: the action keeps its word whole in the table.
                 className="whitespace-nowrap"
                 aria-label={`${TRAEGER_HANDOFF_OPEN}: ${school.name}, neuer Tab`}
-                title={
-                  iconAction
-                    ? `${TRAEGER_HANDOFF_OPEN} (neuer Tab)`
-                    : "Öffnet in einem neuen Tab"
-                }
+                tooltip={TRAEGER_HANDOFF_OPEN_HINT}
                 disabled={opening !== null}
                 onClick={(event) => {
                   // Die Aktion öffnet die Schul-App, nicht die Schulansicht.
@@ -573,6 +576,7 @@ export default function TraegerDashboardPage() {
               size="compact"
               // Under the message on a phone: the label starts with the text.
               className="max-sm:-ml-2.5"
+              tooltip="Holt die Zahlen aller Schulen noch einmal."
               onClick={reload}
             >
               Erneut laden
@@ -622,7 +626,7 @@ export default function TraegerDashboardPage() {
                   setAlertsExpanded(false);
                 }}
                 ariaLabel="Auffälligkeiten nach Schule filtern"
-                controlSize="compact"
+                controlSize="dense"
                 searchable={alerts.schools.length > 8}
                 searchPlaceholder="Schule suchen"
                 className="w-full sm:w-64"
@@ -642,6 +646,7 @@ export default function TraegerDashboardPage() {
                 variant="surface"
                 size="compact"
                 className="w-full shrink-0 min-[480px]:w-auto min-[480px]:self-start sm:self-auto"
+                tooltip="Öffnet Ihre Grenzen für Auffälligkeiten in den Einstellungen."
               >
                 {canChangeThresholds ? "Grenzen ändern" : "Grenzen ansehen"}
               </ButtonLink>
@@ -660,10 +665,7 @@ export default function TraegerDashboardPage() {
           {visible.length > 0 ? (
             <ResponsiveActionList id={listId}>
               {visible.map((school) => (
-                <li
-                  key={school.id}
-                  className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:col-span-2 sm:grid sm:grid-cols-subgrid sm:items-center"
-                >
+                <ResponsiveActionRow key={school.id}>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-900">
                       {school.name}
@@ -707,7 +709,7 @@ export default function TraegerDashboardPage() {
                         size="compact"
                         className="whitespace-nowrap"
                         aria-label={`${TRAEGER_HANDOFF_OPEN}: ${school.name}, neuer Tab`}
-                        title="Öffnet in einem neuen Tab"
+                        tooltip={TRAEGER_HANDOFF_OPEN_HINT}
                         disabled={opening !== null}
                         onClick={() => void open(school)}
                       >
@@ -729,11 +731,12 @@ export default function TraegerDashboardPage() {
                       variant="surface"
                       size="compact"
                       aria-label={`Zur Schule: ${school.name}`}
+                      tooltip="Öffnet die Zahlen und Angaben dieser Schule."
                     >
                       Zur Schule
                     </ButtonLink>
                   </div>
-                </li>
+                </ResponsiveActionRow>
               ))}
             </ResponsiveActionList>
           ) : null}
@@ -745,6 +748,7 @@ export default function TraegerDashboardPage() {
               className="mt-2 w-full"
               aria-expanded={alertsExpanded}
               aria-controls={listId}
+              noTooltip="Das Wort sagt alles: Die Liste klappt nur auf oder zu."
               onClick={() => setAlertsExpanded((current) => !current)}
             >
               {alertsExpanded ? (
@@ -804,6 +808,7 @@ export default function TraegerDashboardPage() {
                   type="button"
                   variant="outline"
                   size="md"
+                  tooltip="Leert die Suche und zeigt wieder alle Schulen."
                   onClick={() => setSearch("")}
                 >
                   Suche zurücksetzen
@@ -813,6 +818,7 @@ export default function TraegerDashboardPage() {
           )
         }
       />
+      <TraegerCodeStepModal {...codeStepModal} />
     </TenantPage>
   );
 }

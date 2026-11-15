@@ -114,6 +114,14 @@ vi.mock("~/lib/hooks/use-messages-unread", () => ({
   })),
 }));
 
+vi.mock("~/lib/hooks/use-staff-messages-unread", () => ({
+  useStaffMessagesUnread: vi.fn(() => ({
+    unreadCount: 0,
+    isLoading: false,
+    refresh: vi.fn(),
+  })),
+}));
+
 vi.mock("~/lib/hooks/use-enrollment-requests-pending", () => ({
   useEnrollmentRequestsPending: vi.fn(() => ({
     unreadCount: 0,
@@ -158,6 +166,7 @@ import { useChangeRequestAccess } from "~/lib/hooks/use-change-request-access";
 import { useCareWithdrawalsPending } from "~/lib/hooks/use-care-withdrawals-pending";
 import { useEnrollmentsUnread } from "~/lib/hooks/use-enrollments-unread";
 import { useMessagesUnread } from "~/lib/hooks/use-messages-unread";
+import { useStaffMessagesUnread } from "~/lib/hooks/use-staff-messages-unread";
 import { MODULE_KEYS } from "~/lib/modules";
 import {
   bindPersonalStorage,
@@ -173,6 +182,7 @@ import {
   useNFCEnabled,
   useOpenCareGroupMode,
   usePresenceMode,
+  useSimpleStaffNavigationSetting,
   useStaffMessagingEnabled,
   useMealPlanEnabled,
   useTenantRoutingModeSafe,
@@ -227,6 +237,9 @@ const mockUseChildSearchOnlyNavigation = vi.mocked(
   useChildSearchOnlyNavigation,
 );
 const mockUseStaffMessagingEnabled = vi.mocked(useStaffMessagingEnabled);
+const mockUseSimpleStaffNavigationSetting = vi.mocked(
+  useSimpleStaffNavigationSetting,
+);
 const mockUseTenantRoutingModeSafe = vi.mocked(useTenantRoutingModeSafe);
 const mockUseSWRDefault = vi.mocked(useSWR);
 
@@ -318,6 +331,11 @@ describe("Sidebar", () => {
     );
     restoreDefaultHasPermission();
     vi.mocked(useMessagesUnread).mockReturnValue({
+      unreadCount: 0,
+      isLoading: false,
+      refresh: vi.fn(),
+    });
+    vi.mocked(useStaffMessagesUnread).mockReturnValue({
       unreadCount: 0,
       isLoading: false,
       refresh: vi.fn(),
@@ -646,6 +664,32 @@ describe("Sidebar", () => {
       );
     });
 
+    // Team-Chat und Eltern-Chat heißen beide „Nachrichten“; die Ansage nennt
+    // den Team-Chat wie seine Zeile (#6566).
+    it("nennt den Team-Chat-Zähler nach seiner Zeile", () => {
+      mockUseStaffMessagingEnabled.mockReturnValue(true);
+      vi.mocked(useStaffMessagesUnread).mockReturnValue({
+        unreadCount: 3,
+        isLoading: false,
+        refresh: vi.fn(),
+      });
+
+      render(<Sidebar />);
+
+      const row = screen.getByText("Team-Chat").closest("a")!;
+      expect(within(row).getByText("3")).toHaveAccessibleName(
+        "3 ungelesene Nachrichten im Team-Chat",
+      );
+      // Team steht beim ersten Besuch offen (#6670); zugeklappt trägt die
+      // Gruppe den Zähler ihrer Zeile.
+      const group = screen.getByRole("button", { name: /^Team/ });
+      fireEvent.click(group);
+      expect(group).toHaveAttribute("aria-expanded", "false");
+      expect(within(group).getByText("3")).toHaveAccessibleName(
+        "3 ungelesene Nachrichten im Team-Chat",
+      );
+    });
+
     it("keeps the Team group without its internal pages when none is accessible", () => {
       // Nur die eigene Zeiterfassung, kein users:read (#4573: Mitarbeiter
       // und Tagesinformationen hängen daran).
@@ -658,7 +702,9 @@ describe("Sidebar", () => {
       // Team-Chat ist aus, Tagesinformationen brauchen users:read — die
       // Gruppe bleibt wegen der Zeiterfassung trotzdem da.
       expect(screen.queryByText("Team-Chat")).not.toBeInTheDocument();
-      expect(screen.queryByText("Tagesinformationen")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Hinweise der Leitung"),
+      ).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Team" })).toBeInTheDocument();
       expect(screen.getByText("Zeiterfassung")).toBeInTheDocument();
     });
@@ -2804,6 +2850,32 @@ describe("Sidebar", () => {
       expect(link).toHaveAttribute("href", "/time-tracking");
     });
 
+    it("zählt gesperrte Elternnachrichten nicht an der Gruppe", () => {
+      mockIsAdmin.mockReturnValue(true);
+      mockUseSession.mockReturnValue(createMockSession(true));
+      mockUseBookedModules.mockReturnValue(bookedWithout("eltern_app"));
+      vi.mocked(useMessagesUnread).mockReturnValue({
+        unreadCount: 2,
+        isLoading: false,
+        refresh: vi.fn(),
+      });
+
+      render(<Sidebar />);
+
+      // Anker: die gesperrte Nachrichten-Zeile der Eltern-App ist sichtbar.
+      const messages = screen.getByRole("link", {
+        name: "Nachrichten , nicht gebucht",
+      });
+      expect(
+        within(messages).queryByLabelText("2 ungelesene Nachrichten"),
+      ).not.toBeInTheDocument();
+
+      const parents = screen.getByRole("button", { name: /^Eltern/ });
+      expect(
+        within(parents).queryByLabelText("2 ungelesene Nachrichten"),
+      ).not.toBeInTheDocument();
+    });
+
     it("zeigt der Leitung gesperrte Datenverwaltung ohne Routenrecht", () => {
       mockIsAdmin.mockReturnValue(false);
       mockHasEffectiveAdminScope.mockReturnValue(false);
@@ -3282,11 +3354,14 @@ describe("Sidebar", () => {
       mockUsePathname.mockReturnValue("/home");
 
       render(<Sidebar />);
+      // Für die Leitung steht Planung beim ersten Besuch offen (#6670).
       const header = screen.getByRole("button", { name: "Planung" });
+      expect(header).toHaveAttribute("aria-expanded", "true");
+
+      fireEvent.click(header);
       expect(header).toHaveAttribute("aria-expanded", "false");
 
       fireEvent.click(header);
-
       expect(header).toHaveAttribute("aria-expanded", "true");
       expect(mockRouterPush).not.toHaveBeenCalled();
     });
@@ -3308,11 +3383,10 @@ describe("Sidebar", () => {
     });
   });
 
-  // Abrechnung (#1417) war ein flacher Top-Level-Eintrag mit
-  // config:manage-Gate und ist jetzt Unterpunkt des Planung-Akkordeons. Damit
-  // gilt dort dasselbe Gate wie für den ganzen Bereich: nur Admins, und nur
-  // solange timetable.enabled nicht ausgeschaltet ist.
-  describe("Abrechnung im Planung-Akkordeon", () => {
+  // Abrechnung (#1417) hängt an config:manage. Seit #6670 steht sie in der
+  // Verwaltung, nicht mehr in der Planung: eine Büro-Rolle ohne Planungsrecht
+  // sah dort eine Gruppe „Planung“ mit nur diesem Eintrag.
+  describe("Abrechnung in der Verwaltung (#6670)", () => {
     beforeEach(() => {
       mockIsAdmin.mockReturnValue(true);
       mockUseSession.mockReturnValue(createMockSession(true));
@@ -3322,18 +3396,23 @@ describe("Sidebar", () => {
       restoreDefaultHasPermission();
     });
 
-    it("renders Abrechnung as a row of the Planung group, not as a top-level entry", () => {
+    it("renders Abrechnung as a row of the Verwaltung group, not of Planung", () => {
       render(<Sidebar />);
+      fireEvent.click(screen.getByRole("button", { name: "Verwaltung" }));
 
       const abrechnungLink = screen.getByText("Abrechnung").closest("a");
       expect(abrechnungLink).toHaveAttribute("href", "/test-tenant/payroll");
 
-      // Der Eintrag steckt in der Gruppe Planung (gemeinsamer Container mit
-      // der Gruppenzeile), nicht als eigener Eintrag daneben (#2826).
+      // Der Eintrag steckt in der Gruppe Verwaltung (gemeinsamer Container
+      // mit der Gruppenzeile), nicht in der Planung (#6670).
+      const adminGroup = screen
+        .getByRole("button", { name: "Verwaltung" })
+        .closest("div");
+      expect(adminGroup).toContainElement(abrechnungLink);
       const planningGroup = screen
         .getByRole("button", { name: "Planung" })
         .closest("div");
-      expect(planningGroup).toContainElement(abrechnungLink);
+      expect(planningGroup).not.toContainElement(abrechnungLink);
 
       // Zeilen einer Gruppe tragen ein Icon und stehen im Zeilenraster;
       // nur die Unterpunkte der Akkordeons sind eingerückt.
@@ -3362,12 +3441,14 @@ describe("Sidebar", () => {
       );
 
       render(<Sidebar />);
+      fireEvent.click(screen.getByRole("button", { name: "Verwaltung" }));
 
-      expect(screen.getByText("Planung")).toBeInTheDocument();
       expect(screen.getByText("Abrechnung").closest("a")).toHaveAttribute(
         "href",
         "/test-tenant/payroll",
       );
+      // Ohne Planungsrecht keine Gruppe „Planung“, nur wegen der Abrechnung.
+      expect(screen.queryByText("Planung")).not.toBeInTheDocument();
       expect(screen.queryByText("Betreuungsplan")).not.toBeInTheDocument();
     });
 
@@ -3547,6 +3628,84 @@ describe("Sidebar", () => {
     );
   });
 
+  describe("einfache Seitenleiste (#6956)", () => {
+    afterEach(() => {
+      mockUseSimpleStaffNavigationSetting.mockReturnValue(false);
+    });
+
+    it("shows a caregiver only the pages of the daily care work, without groups", () => {
+      mockUseSimpleStaffNavigationSetting.mockReturnValue(true);
+
+      render(<Sidebar />);
+
+      expect(screen.getByText("Startseite")).toBeInTheDocument();
+      expect(screen.getByText("Alle Kinder")).toBeInTheDocument();
+      expect(screen.getByText("Räume")).toBeInTheDocument();
+      expect(screen.getByText("Zeiterfassung")).toBeInTheDocument();
+      expect(screen.getByText("Hinweise der Leitung")).toBeInTheDocument();
+      expect(screen.getByText("Hilfe")).toBeInTheDocument();
+      expect(screen.queryByText("Aktivitäten")).not.toBeInTheDocument();
+      expect(screen.queryByText("Mitarbeiter")).not.toBeInTheDocument();
+      expect(screen.queryByText("Team-Chat")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /Tagesbetrieb/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Alle Seiten anzeigen" }),
+      ).toBeInTheDocument();
+    });
+
+    it("lets the person show every page and switch back", () => {
+      mockUseSimpleStaffNavigationSetting.mockReturnValue(true);
+
+      render(<Sidebar />);
+      fireEvent.click(
+        screen.getByRole("button", { name: "Alle Seiten anzeigen" }),
+      );
+
+      expect(screen.getByText("Aktivitäten")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Tagesbetrieb/ }),
+      ).toBeInTheDocument();
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Weniger Seiten anzeigen" }),
+      );
+
+      expect(screen.queryByText("Aktivitäten")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Alle Seiten anzeigen" }),
+      ).toBeInTheDocument();
+    });
+
+    it("keeps the full sidebar for the school lead", () => {
+      mockUseSimpleStaffNavigationSetting.mockReturnValue(true);
+      mockIsAdmin.mockReturnValue(true);
+      mockUseSession.mockReturnValue(createMockSession(true));
+
+      render(<Sidebar />);
+
+      expect(
+        screen.getByRole("button", { name: /Tagesbetrieb/ }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Alle Seiten anzeigen" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("offers no switch while the school keeps the full sidebar", () => {
+      render(<Sidebar />);
+
+      expect(screen.getByText("Aktivitäten")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Alle Seiten anzeigen" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Weniger Seiten anzeigen" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe("collapsible sidebar (#2825)", () => {
     // Umgeschaltet wird über den Toggle-Button in der Kopfzeile
     // (header.test.tsx); die Seitenleiste selbst folgt nur dem geteilten
@@ -3618,7 +3777,10 @@ describe("Sidebar", () => {
       localStorage.setItem("sidebar-collapsed", "true");
       const { container } = render(<Sidebar />);
 
+      // Team steht ohne Leitungsrolle beim ersten Besuch offen (#6670).
       const team = screen.getByRole("button", { name: "Team" });
+      expect(team).toHaveAttribute("aria-expanded", "true");
+      fireEvent.click(team);
       expect(team).toHaveAttribute("aria-expanded", "false");
       fireEvent.click(team);
 
@@ -3956,6 +4118,40 @@ describe("Sidebar", () => {
       ).not.toBeInTheDocument();
     });
 
+    it("nennt am Unterpunkt eine Anmeldung in der Einzahl", () => {
+      mockUsePathname.mockReturnValue("/admin/enrollments");
+      mockUseEnrollmentsUnread.mockReturnValue({
+        unreadCount: 1,
+        isLoading: false,
+        refresh: vi.fn(),
+      });
+
+      render(<Sidebar />);
+
+      const overview = screen.getByRole("link", { name: /^Überblick/ });
+      expect(within(overview).getByText("1")).toHaveAccessibleName(
+        "1 ungelesene Anmeldung",
+      );
+    });
+
+    it("nennt am zugeklappten Bereich eine Anmeldung in der Einzahl", () => {
+      mockUseEnrollmentsUnread.mockReturnValue({
+        unreadCount: 1,
+        isLoading: false,
+        refresh: vi.fn(),
+      });
+
+      render(<Sidebar />);
+      fireEvent.click(screen.getByRole("button", { name: /^Eltern/ }));
+
+      expect(
+        screen.getAllByLabelText("1 ungelesene Anmeldung").length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.queryByLabelText("1 ungelesene Anmeldungen"),
+      ).not.toBeInTheDocument();
+    });
+
     it("zeigt den Zähler am zugeklappten Bereich", () => {
       render(<Sidebar />);
 
@@ -3965,6 +4161,59 @@ describe("Sidebar", () => {
       expect(
         screen.getAllByLabelText("3 ungelesene Anmeldungen").length,
       ).toBeGreaterThan(0);
+    });
+
+    // Die Gruppe zählt Nachrichten und Anmeldungen zusammen; vorgelesen
+    // wurde bisher die Summe als „ungelesene Nachrichten“ (#6566).
+    it("liest an der zugeklappten Gruppe jeden gezählten Teil vor", () => {
+      // Elternnachrichten verlangen users:read.
+      mockHasPermission.mockImplementation(
+        (_session: unknown, permission: string) =>
+          permission === "config:manage" ||
+          permission === "config:read" ||
+          permission === "users:update" ||
+          permission === "users:read",
+      );
+      vi.mocked(useMessagesUnread).mockReturnValue({
+        unreadCount: 2,
+        isLoading: false,
+        refresh: vi.fn(),
+      });
+
+      render(<Sidebar />);
+
+      const header = screen.getByRole("button", { name: /^Eltern/ });
+      expect(header).toHaveAttribute("aria-expanded", "false");
+      expect(within(header).getByText("5")).toHaveAccessibleName(
+        "2 ungelesene Nachrichten und 3 ungelesene Anmeldungen",
+      );
+    });
+
+    it("nennt an der Gruppe einen einzelnen Teil in der Einzahl", () => {
+      mockHasPermission.mockImplementation(
+        (_session: unknown, permission: string) =>
+          permission === "config:manage" ||
+          permission === "config:read" ||
+          permission === "users:update" ||
+          permission === "users:read",
+      );
+      vi.mocked(useMessagesUnread).mockReturnValue({
+        unreadCount: 1,
+        isLoading: false,
+        refresh: vi.fn(),
+      });
+      mockUseEnrollmentsUnread.mockReturnValue({
+        unreadCount: 1,
+        isLoading: false,
+        refresh: vi.fn(),
+      });
+
+      render(<Sidebar />);
+
+      const header = screen.getByRole("button", { name: /^Eltern/ });
+      expect(within(header).getByText("2")).toHaveAccessibleName(
+        "1 ungelesene Nachricht und 1 ungelesene Anmeldung",
+      );
     });
 
     it("zeigt ohne config:manage keinen Zähler", () => {

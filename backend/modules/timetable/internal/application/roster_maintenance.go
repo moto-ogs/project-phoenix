@@ -45,6 +45,10 @@ type RosterReconciler struct {
 	directories         ports.RepositoryDirectories
 	logger              *slog.Logger
 	now                 func() time.Time
+	// today is the school day the occurrence reconciliation starts from;
+	// dates before it are history and stay untouched. It follows now unless
+	// the composing service decides on its own calendar day.
+	today func() calendar.Date
 }
 
 var _ timetable.RosterMaintenance = (*RosterReconciler)(nil)
@@ -63,13 +67,31 @@ func NewRosterReconciler(
 	if len(now) > 0 && now[0] != nil {
 		clock = now[0]
 	}
+	return newRosterReconcilerOn(instanceRepo, instanceStudentRepo, enrollmentRepo, directories, logger, clock, nil)
+}
+
+// newRosterReconcilerOn constructs a RosterReconciler deciding on the given
+// school day; a nil day follows now.
+func newRosterReconcilerOn(
+	instanceRepo ports.InstanceRows,
+	instanceStudentRepo ports.ParticipantRows,
+	enrollmentRepo timetable.StudentEnrollmentQuery,
+	directories ports.RepositoryDirectories,
+	logger *slog.Logger,
+	now func() time.Time,
+	today func() calendar.Date,
+) *RosterReconciler {
+	if today == nil {
+		today = calendar.CalendarDateClock(now)
+	}
 	return &RosterReconciler{
 		instanceRepo:        instanceRepo,
 		instanceStudentRepo: instanceStudentRepo,
 		enrollmentRepo:      enrollmentRepo,
 		directories:         directories,
 		logger:              logger,
-		now:                 clock,
+		now:                 now,
+		today:               today,
 	}
 }
 
@@ -482,7 +504,7 @@ func (s *RosterReconciler) reconcileSourcedTemplateRosters(
 	if templateID <= 0 || len(studentIDs) == 0 {
 		return 0, 0, nil
 	}
-	if today := calendar.TodayDate(); from.Before(today) {
+	if today := s.today(); from.Before(today) {
 		from = today
 	}
 	instances, instanceIDs, err := loadPlannedTemplateInstances(ctx, s.instanceRepo.Reads, templateID, from, "reconcile sourced roster")
@@ -500,10 +522,13 @@ func (s *RosterReconciler) reconcileSourcedTemplateRosters(
 	}
 
 	// Mirror the materializer's post-copy pass for the rows just inserted: a
-	// child with an active broad day status on that date must read absent with
-	// the matching substatus, not expected.
-	if _, err := s.applyActiveStatusDays(ctx, pass.touched, "reconcile sourced roster"); err != nil {
-		return pass.created, pass.removed, err
+	// child with an active broad day status or a partial-day excusal on that
+	// date must read absent with the matching substatus, not expected. The
+	// batch pass takes all student rows, then all care-day locks in (student,
+	// date) order, one statement each, instead of one pair per occurrence and
+	// child (#6981).
+	if err := s.applySourcedRosterStatusDays(ctx, pass.touched); err != nil {
+		return pass.created, pass.removed, &ports.ScheduleError{Op: "reconcile sourced roster: apply student status days", Err: WrapDatabaseError("apply sourced roster attendance", err)}
 	}
 
 	if pass.created > 0 || pass.removed > 0 {

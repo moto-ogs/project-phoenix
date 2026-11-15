@@ -1,0 +1,6 @@
+{
+  "scenario": "workforce.payroll_dispatch.overview",
+  "max": 6,
+  "exact": true,
+  "description": "Payroll dispatch overview use case (#7058) in its tenant transaction: the newest dispatch plus ONE outcome read per mail type (link mail, notices) of that dispatch. Not an HTTP measurement; GET /api/staff/time-tracking/payroll-dispatch adds only the route frame."
+}

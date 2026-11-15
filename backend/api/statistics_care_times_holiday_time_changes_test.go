@@ -37,7 +37,7 @@ func editHolidayTimesOn(t *testing.T, db *bun.DB, org, account int64, booking ow
 			TimeModels: []holidayTimeModelBody{{ID: model, Name: "Ganztag", StartsAt: start, EndsAt: end, PriceCents: 4500}}}}}
 	principal, err := permissions.NewPrincipal(permissions.PrincipalInput{AccountID: account, OrganizationID: org, Scope: tenant.ScopeOrg, Permissions: []string{identityaccess.TraegerRightEnrollmentManage}})
 	require.NoError(t, err)
-	review, places, allocation, records := enrollmentCompose.NewHolidayRegistrationReview(testHealthCipher(), nil, nil, owners.HolidayTestSchoolCalendar{})
+	review, places, allocation, records := enrollmentCompose.NewHolidayRegistrationReview(testHealthCipher(), nil, nil, owners.HolidayTestSchoolCalendar{}, nil)
 	_, wishes := enrollmentCompose.NewHolidayWishes(testHealthCipher())
 	resource := enrollmentHTTP.NewHolidayPeriodResource(enrollmentCompose.NewHolidayPeriods(func() calendar.Date { return on }, owners.HolidayTestSchoolCalendar{}),
 		review, records, wishes, places, allocation, allocation, holidaySchoolNames{},
@@ -56,7 +56,7 @@ func editHolidayTimesOn(t *testing.T, db *bun.DB, org, account int64, booking ow
 
 func TestStudentCareTimes_TimeEditsKeepPastHolidaySoll(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	school := testpkg.Tenant(t)
 	_, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, school, "Zeitänderung", "Leitung")
 	own := testpkg.CreateTestStudent(t, tc.db, "Tina", "Eigen", "2a")

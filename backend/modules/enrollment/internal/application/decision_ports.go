@@ -30,6 +30,11 @@ type (
 		ActiveDuplicateChildren(context.Context, int64, string, []enrollmentNative.DuplicateChildKey, int64) ([]enrollmentNative.DuplicateChildKey, error)
 		HasActiveRequestForMatchedStudent(context.Context, int64, int64, int64) (bool, error)
 	}
+	// DecisionPhaseHolders names, per enrolled-child candidate, the other
+	// active request of the phase that created or renews it (#6247).
+	DecisionPhaseHolders interface {
+		PhaseRequestsHoldingStudents(ctx context.Context, phaseID int64, studentIDs, excludedChildIDs []int64) (map[int64]enrollmentNative.CandidatePhaseRequest, error)
+	}
 	// DecisionChildren reads the request children with their offering
 	// selections and writes the decision state.
 	DecisionChildren interface {
@@ -213,6 +218,9 @@ type WeeklyPickupHooks struct {
 // needs it.
 type DecisionDependencies struct {
 	Requests DecisionRequests
+	// PhaseHolders marks the candidates another request of the phase holds.
+	// The owner's composition binds its own store.
+	PhaseHolders DecisionPhaseHolders
 	// Reads is the per-account read state of the admin queue (#3778).
 	Reads          enrollmentNative.RequestReads
 	Children       DecisionChildren
@@ -245,6 +253,10 @@ type DecisionDependencies struct {
 	// approval rewrites an existing student's class, the same gate Care
 	// Plan's booking materialization serializes its roster writes with.
 	LockTemplateRecurrence func(context.Context) error
+	// FollowClassChanges lets Regeltermine with a Klasse or Jahrgang target
+	// follow the children whose class a decision rewrote, keyed by student
+	// with the class before the write (#6841). Nil skips it (focused tests).
+	FollowClassChanges func(ctx context.Context, previousClasses map[int64]string, from calendar.Date) error
 	// GuardianAuthorizer re-checks a parent's pin for the office's detail
 	// read (#6053). GuardianHold re-checks it behind the parent guard before
 	// an approval or a later edit acts on it (#6638). Without them such a pin

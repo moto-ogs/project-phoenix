@@ -41,6 +41,9 @@ type TimeTracking struct {
 	TimeExport         workforce.StaffTimeExport
 	VacationTakeovers  workforce.VacationTakeovers
 	OpeningBalances    workforce.OpeningBalanceBookings
+	// TraegerMonths serves the school's months to the Stundenkonto of the
+	// Träger (#4711).
+	TraegerMonths workforce.TraegerStaffMonths
 	// AutoCheckIn serves Student Presence's NFC auto-check-in.
 	AutoCheckIn AutoCheckInBinding
 	// Jobs are the scheduler's open-session, break and auto-checkout sweeps.
@@ -48,6 +51,9 @@ type TimeTracking struct {
 	// StaffDay is today's supervision, work and absence status the staff
 	// list shows.
 	StaffDay StaffDayStatus
+	// AbsenceMails says what became of the absence request mails (#7058);
+	// nil without the mail outcomes.
+	AbsenceMails workforce.AbsenceMailStatus
 }
 
 // StaffDayStatus reads today's status of the staff members.
@@ -85,9 +91,11 @@ func (s *WorkSessionSide) TimeTracking() (*TimeTracking, error) {
 		TimeExport:         StaffTimeExportCapability(services.Export),
 		VacationTakeovers:  VacationTakeoverCapability(services.Absences),
 		OpeningBalances:    OpeningBalanceBookingCapability(services.Ledger),
+		TraegerMonths:      TraegerMonthCapability(services.Closing, WorkTimeMonthCapability(services.Months)),
 		AutoCheckIn:        s.AutoCheckIn,
 		Jobs:               services.Sessions,
 		StaffDay:           StaffDay{WorkSessionService: services.Sessions, StaffAbsenceService: services.Absences},
+		AbsenceMails:       workforce.NewAbsenceMailStatus(s.Clock.deps.MailOutcomes),
 	}, nil
 }
 
@@ -98,8 +106,11 @@ type StaffDay struct {
 	StaffAbsenceService
 }
 
-func TimeTrackingRows(capability workforce.Capability) Rows {
+// TimeTrackingRows binds the rows of the Workforce capability; traeger names
+// the staff the Träger closes (#4711).
+func TimeTrackingRows(capability workforce.Capability, traeger TraegerMonthStaff) Rows {
 	return Rows{
+		TraegerMonths:    traeger,
 		TargetOverrides:  capability,
 		MonthSnapshots:   MonthSnapshotCapability(capability),
 		AbsenceTypes:     AbsenceTypes(capability),

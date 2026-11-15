@@ -75,6 +75,11 @@ func idleFixtureCommand(dir string) func(context.Context, ...string) ([]byte, er
 
 func runFixtureWatcher(t *testing.T, dir string) <-chan error {
 	t.Helper()
+	return runFixtureWatcherOnClock(t, dir, nil)
+}
+
+func runFixtureWatcherOnClock(t *testing.T, dir string, now func() time.Time) <-chan error {
+	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	singleton, err := tryLockFile(filepath.Join(dir, "watcher.lock"), syscall.LOCK_EX)
 	require.NoError(t, err)
@@ -84,6 +89,7 @@ func runFixtureWatcher(t *testing.T, dir string) <-chan error {
 	var server idleServer
 	require.NoError(t, json.Unmarshal(data, &server))
 	server.run = idleFixtureCommand(dir)
+	server.now = now
 	done := make(chan error, 1)
 	finished := make(chan struct{})
 	go func() {
@@ -119,6 +125,28 @@ func TestIdleWatcherProtectsParallelUsersAndStopsAfterLastExit(t *testing.T) {
 	stopped, err := os.ReadFile(filepath.Join(dir, "stopped"))
 	require.NoError(t, err)
 	require.Equal(t, "stop --timeout -1 fixture\n", string(stopped))
+}
+
+// Under scripts/fake-clock.sh with a time in the past, the lease stamps of
+// the real clock run an hour ahead of Go's (#7100). Measured on Go's clock,
+// the last user's stamp kept the server up forever.
+func TestIdleWatcherMeasuresIdleTimeOnTheLeaseClock(t *testing.T) {
+	t.Parallel()
+	leaseClock := func() time.Time { return time.Now().Add(time.Hour) }
+	dir, _ := idleFixture(t)
+	user, err := lockFile(t.Context(), filepath.Join(dir, "users.lock"), syscall.LOCK_SH)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = user.Close() })
+	stamp := leaseClock()
+	require.NoError(t, os.Chtimes(user.Name(), stamp, stamp))
+	done := runFixtureWatcherOnClock(t, dir, leaseClock)
+	require.NoError(t, user.Close())
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("the last user's lease stamp kept the server up")
+	}
 }
 
 func TestIdleLeaseProcess(t *testing.T) {

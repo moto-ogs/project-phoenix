@@ -21,7 +21,7 @@ func (s *Service) FindArrivalSchedule(ctx context.Context, id int64) (careplan.A
 		err = careplan.ErrStudentScheduleNotFound
 	}
 
-	s.observeRequest("find_arrival_schedule", started, stats, err)
+	s.observeRequest("find_arrival_schedule", time.Since(started), stats, err)
 	return value, err
 }
 
@@ -32,7 +32,7 @@ func (s *Service) ListArrivalSchedules(ctx context.Context, filter careplan.Stud
 		return s.statusQueries.ListArrivalSchedules(txCtx, filter)
 	})
 
-	s.observeRequest("list_arrival_schedules", started, stats, err)
+	s.observeRequest("list_arrival_schedules", time.Since(started), stats, err)
 	return value, err
 }
 
@@ -49,7 +49,7 @@ func (s *Service) FindArrivalException(ctx context.Context, id int64, lock bool)
 		err = careplan.ErrStudentScheduleNotFound
 	}
 
-	s.observeRequest("find_arrival_exception", started, stats, err)
+	s.observeRequest("find_arrival_exception", time.Since(started), stats, err)
 	return value, err
 }
 
@@ -60,7 +60,7 @@ func (s *Service) ListArrivalExceptions(ctx context.Context, filter careplan.Stu
 		return s.statusQueries.ListArrivalExceptions(txCtx, filter)
 	})
 
-	s.observeRequest("list_arrival_exceptions", started, stats, err)
+	s.observeRequest("list_arrival_exceptions", time.Since(started), stats, err)
 	return value, err
 }
 
@@ -77,7 +77,7 @@ func (s *Service) FindArrivalNote(ctx context.Context, id int64) (careplan.Arriv
 		err = careplan.ErrStudentScheduleNotFound
 	}
 
-	s.observeRequest("find_arrival_note", started, stats, err)
+	s.observeRequest("find_arrival_note", time.Since(started), stats, err)
 	return value, err
 }
 
@@ -88,7 +88,7 @@ func (s *Service) ListArrivalNotes(ctx context.Context, filter careplan.StudentS
 		return s.statusQueries.ListArrivalNotes(txCtx, filter)
 	})
 
-	s.observeRequest("list_arrival_notes", started, stats, err)
+	s.observeRequest("list_arrival_notes", time.Since(started), stats, err)
 	return value, err
 }
 
@@ -105,7 +105,7 @@ func (s *Service) FindPickupSchedule(ctx context.Context, id int64) (careplan.Pi
 		err = careplan.ErrStudentScheduleNotFound
 	}
 
-	s.observeRequest("find_pickup_schedule", started, stats, err)
+	s.observeRequest("find_pickup_schedule", time.Since(started), stats, err)
 	return value, err
 }
 
@@ -116,7 +116,7 @@ func (s *Service) ListPickupSchedules(ctx context.Context, filter careplan.Stude
 		return s.statusQueries.ListPickupSchedules(txCtx, filter)
 	})
 
-	s.observeRequest("list_pickup_schedules", started, stats, err)
+	s.observeRequest("list_pickup_schedules", time.Since(started), stats, err)
 	return value, err
 }
 
@@ -133,7 +133,7 @@ func (s *Service) FindPickupException(ctx context.Context, id int64, lock bool) 
 		err = careplan.ErrStudentScheduleNotFound
 	}
 
-	s.observeRequest("find_pickup_exception", started, stats, err)
+	s.observeRequest("find_pickup_exception", time.Since(started), stats, err)
 	return value, err
 }
 
@@ -144,7 +144,7 @@ func (s *Service) ListPickupExceptions(ctx context.Context, filter careplan.Stud
 		return s.statusQueries.ListPickupExceptions(txCtx, filter)
 	})
 
-	s.observeRequest("list_pickup_exceptions", started, stats, err)
+	s.observeRequest("list_pickup_exceptions", time.Since(started), stats, err)
 	return value, err
 }
 
@@ -161,7 +161,7 @@ func (s *Service) FindPickupNote(ctx context.Context, id int64) (careplan.Pickup
 		err = careplan.ErrStudentScheduleNotFound
 	}
 
-	s.observeRequest("find_pickup_note", started, stats, err)
+	s.observeRequest("find_pickup_note", time.Since(started), stats, err)
 	return value, err
 }
 
@@ -172,7 +172,7 @@ func (s *Service) ListPickupNotes(ctx context.Context, filter careplan.StudentSc
 		return s.statusQueries.ListPickupNotes(txCtx, filter)
 	})
 
-	s.observeRequest("list_pickup_notes", started, stats, err)
+	s.observeRequest("list_pickup_notes", time.Since(started), stats, err)
 	return value, err
 }
 
@@ -186,7 +186,7 @@ func (s *Service) CountStudentScheduleRows(ctx context.Context, studentID int64)
 		return s.statusQueries.CountStudentScheduleRows(txCtx, studentID)
 	})
 
-	s.observeRequest("count_student_schedule_rows", started, stats, err)
+	s.observeRequest("count_student_schedule_rows", time.Since(started), stats, err)
 	return value, err
 }
 

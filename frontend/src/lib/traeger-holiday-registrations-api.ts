@@ -18,6 +18,7 @@ import {
   debtorNumberFormatOf,
 } from "~/lib/debtor-number-format";
 import { apiErrorFromBody, transportFetch } from "./api-error";
+import type { MailOutcome } from "./email-delivery-status";
 import { filenameFromDisposition } from "./file-download";
 import {
   type BackendConsentTexts,
@@ -109,6 +110,13 @@ interface HolidayRegistrationBooking {
   readonly promotedAt: string | null;
   /** The booked days of a week by days (#4701); empty for a whole week. */
   readonly days?: readonly string[];
+  /**
+   * The child eats lunch on the care days of the booking (#5631), with the
+   * number of lunches and their price now in cent.
+   */
+  readonly lunch?: boolean;
+  readonly lunchDays?: number;
+  readonly lunchPriceCents?: number;
 }
 
 export interface HolidayRegistrationChild {
@@ -127,6 +135,42 @@ export interface HolidayRegistrationChild {
   readonly holidayWishSource: HolidayWishSource;
   /** The office still has to check the wish of this child. */
   readonly holidayWishCheck: boolean;
+}
+
+/** Which mail of a registration to the parents (#6737, #6976). */
+export type HolidayRegistrationMailKind =
+  | "holiday_registration_received"
+  | "holiday_registration_accepted"
+  | "holiday_place_granted"
+  | "holiday_closure_notice"
+  | "holiday_parent_account_offer";
+
+/**
+ * One mail of a registration with what became of it, in Delivery's words
+ * (#6976). A Träger keeps no address list, so no mail carries a mark.
+ */
+interface HolidayRegistrationMail {
+  readonly kind: HolidayRegistrationMailKind;
+  readonly outcome: MailOutcome;
+  /** When the mail came about; two mails of one kind stay apart. */
+  readonly createdAt: string | null;
+}
+
+/**
+ * What became of a mail that did not reach the parents (#6737): moto gave it
+ * up or it came back, the address is blocked, or the outcome is unknown.
+ */
+type HolidayRegistrationMailState =
+  | "failed"
+  | "blocked"
+  | "unknown"
+  // The mail arrived; the parents reported it or unsubscribed (#6976).
+  | "complained"
+  | "unsubscribed";
+
+export interface HolidayRegistrationMailProblem {
+  readonly kind: HolidayRegistrationMailKind;
+  readonly state: HolidayRegistrationMailState;
 }
 
 export interface HolidayRegistrationSummary {
@@ -151,6 +195,8 @@ export interface HolidayRegistrationSummary {
    */
   readonly deletesOn: string | null;
   readonly healthDeletesOn: string | null;
+  /** Mails that did not reach the parents (#6737, #6976). */
+  readonly mailProblems: readonly HolidayRegistrationMailProblem[];
   readonly children: readonly HolidayRegistrationChild[];
 }
 
@@ -209,6 +255,8 @@ export interface HolidayBookingChange {
   readonly timeModelId: string;
   /** The days of a week by days (#4701). */
   readonly days?: readonly string[];
+  /** The lunch of the booking (#5631). */
+  readonly lunch?: boolean;
 }
 
 export interface HolidayRegistrationEvent {
@@ -327,6 +375,8 @@ export interface HolidayRegistrationDetail extends HolidayRegistrationSummary {
   >;
   /** Only in a period by criteria (#4700); empty otherwise. */
   readonly criteria?: readonly HolidayRegistrationCriterion[];
+  /** Every mail to the parents, oldest first (#6976). */
+  readonly mails?: readonly HolidayRegistrationMail[];
 }
 
 interface BackendCheck {
@@ -346,6 +396,9 @@ interface BackendBooking {
   waitlist_position?: number | null;
   promoted_at?: string | null;
   days?: string[] | null;
+  lunch?: boolean;
+  lunch_days?: number;
+  lunch_price_cents?: number;
 }
 
 interface BackendChild {
@@ -375,6 +428,7 @@ interface BackendSummary {
   debtor_number?: string;
   deletes_on?: string | null;
   health_deletes_on?: string | null;
+  mail_problems?: HolidayRegistrationMailProblem[] | null;
   children?: BackendChild[] | null;
 }
 
@@ -388,6 +442,7 @@ interface BackendBookingChange {
   week_id: number;
   time_model_id: number;
   days?: string[] | null;
+  lunch?: boolean;
 }
 
 interface BackendDetail extends BackendSummary {
@@ -461,6 +516,13 @@ interface BackendDetail extends BackendSummary {
         checked_at: string | null;
       }[]
     | null;
+  mails?:
+    | {
+        kind: HolidayRegistrationMailKind;
+        outcome: MailOutcome;
+        created_at?: string | null;
+      }[]
+    | null;
 }
 
 function checksFromBackend(
@@ -489,6 +551,10 @@ function summaryFromBackend(
     debtorNumber: registration.debtor_number ?? "",
     deletesOn: registration.deletes_on ?? null,
     healthDeletesOn: registration.health_deletes_on ?? null,
+    mailProblems: (registration.mail_problems ?? []).map((problem) => ({
+      kind: problem.kind,
+      state: problem.state,
+    })),
     children: (registration.children ?? []).map((child) => ({
       id: String(child.id),
       firstName: child.first_name,
@@ -508,6 +574,9 @@ function summaryFromBackend(
         waitlistPosition: booking.waitlist_position ?? null,
         promotedAt: booking.promoted_at ?? null,
         ...(booking.days?.length ? { days: booking.days } : {}),
+        lunch: booking.lunch ?? false,
+        lunchDays: booking.lunch_days ?? 0,
+        lunchPriceCents: booking.lunch_price_cents ?? 0,
       })),
       duplicateRegistrationIds: (child.duplicate_registration_ids ?? []).map(
         String,
@@ -526,6 +595,7 @@ function changesFromBackend(
     weekId: String(change.week_id),
     timeModelId: String(change.time_model_id),
     ...(change.days?.length ? { days: change.days } : {}),
+    ...(change.lunch ? { lunch: true } : {}),
   }));
 }
 
@@ -614,6 +684,11 @@ function detailFromBackend(
       stated: criterion.stated,
       checked: criterion.checked,
       checkedAt: criterion.checked_at,
+    })),
+    mails: (registration.mails ?? []).map((mail) => ({
+      kind: mail.kind,
+      outcome: mail.outcome,
+      createdAt: mail.created_at ?? null,
     })),
   };
 }
@@ -732,6 +807,35 @@ export async function fetchHolidayKnownChildren(
     (known?.children ?? []).map((child) => [
       String(child.child_id),
       String(child.school_id),
+    ]),
+  );
+}
+
+/**
+ * The registrations of a period whose receipt or acceptance mail did not reach
+ * the parents (#6737): registration ID to its mail problems. A registration
+ * without a problem has no key.
+ */
+export async function fetchHolidayRegistrationMailProblems(
+  periodId: string,
+): Promise<ReadonlyMap<string, readonly HolidayRegistrationMailProblem[]>> {
+  const answer = await traegerRequest<{
+    registrations?:
+      | {
+          registration_id: number;
+          mail_problems?: HolidayRegistrationMailProblem[] | null;
+        }[]
+      | null;
+  } | null>(
+    `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/registrations/mail-problems`,
+  );
+  return new Map(
+    (answer?.registrations ?? []).map((registration) => [
+      String(registration.registration_id),
+      (registration.mail_problems ?? []).map((problem) => ({
+        kind: problem.kind,
+        state: problem.state,
+      })),
     ]),
   );
 }
@@ -862,6 +966,7 @@ export async function rebookHolidayChild(
             ...(booking.days && booking.days.length > 0
               ? { days: booking.days }
               : {}),
+            ...(booking.lunch ? { lunch: true } : {}),
           })),
         },
       },

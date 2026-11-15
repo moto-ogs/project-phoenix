@@ -72,6 +72,7 @@ import { InviteTraegerAccountModal } from "~/components/traeger/traeger-account-
 import { TraegerBelegRetentionSection } from "./traeger-beleg-retention-section";
 import { TraegerErasureOrderSection } from "./traeger-erasure-order-section";
 import { TestTraegerSection } from "./test-traeger-section";
+import { TraegerStaffReleaseSection } from "./traeger-staff-release-section";
 import { TraegerSettingsSection } from "./traeger-settings-section";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TraegerBueroTable } from "./traeger-buero-table";
@@ -963,6 +964,7 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
       tabs={{
         value: activeTab,
         onChange: handleTabValueChange,
+        inUrl: true,
         items: TAB_ITEMS.map((tab) => ({
           value: tab.id,
           label: tab.label,
@@ -1017,8 +1019,7 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
             <MFAAdminOverrideModal
               isOpen={true}
               onClose={() => setMfaResetMember(null)}
-              scope="traeger"
-              organizationId={organization.id}
+              target={{ kind: "traeger", organizationId: organization.id }}
               accountId={mfaResetMember.accountId}
               accountLabel={mfaResetMember.email}
             />
@@ -1118,6 +1119,7 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
       {activeTab === "uebersicht" ? (
         <>
           <EntityStats stats={headerStats} createdAt={organization.createdAt} />
+          <TraegerStaffReleaseSection organizationId={organization.id} />
           {organization.testSystem ? (
             <TestTraegerSection
               organizationId={organization.id}

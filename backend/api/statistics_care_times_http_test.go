@@ -84,7 +84,7 @@ const careTimeWindow = "from=2026-06-08&to=2026-06-16"
 
 func TestStudentCareTimes_ComparesTheCarePlanWithTheAttendance(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	staff, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, testpkg.Tenant(t), "Soll", "Leser")
 	childID := careTimeChild(t, tc, staff.ID)
 
@@ -119,7 +119,7 @@ func TestStudentCareTimes_ComparesTheCarePlanWithTheAttendance(t *testing.T) {
 
 func TestCareTimeOverruns_ListsAndExportsChildrenWithOverruns(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	staff, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, testpkg.Tenant(t), "Soll", "Leitung")
 	childID := careTimeChild(t, tc, staff.ID)
 	claims := claimsFor(t, account.ID)
@@ -149,7 +149,7 @@ func TestCareTimeOverruns_ListsAndExportsChildrenWithOverruns(t *testing.T) {
 // not add one for each child.
 func TestCareTimesQueryBudgets(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	staff, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, testpkg.Tenant(t), "Budget", "Leitung")
 	claims := claimsFor(t, account.ID)
 	childID := careTimeChild(t, tc, staff.ID)

@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -30,13 +31,18 @@ type monthSnapshotRow struct {
 	CreditedMinutes       int        `bun:"credited_minutes,notnull"`
 	AdjustmentMinutes     int        `bun:"adjustment_minutes,notnull"`
 	ClosedAt              time.Time  `bun:"closed_at,notnull,default:current_timestamp"`
-	ClosedBy              int64      `bun:"closed_by,notnull"`
+	ClosedBy              int64      `bun:"closed_by,nullzero"`
+	ClosedByAccountID     int64      `bun:"closed_by_account_id,nullzero"`
 	CloseReason           string     `bun:"close_reason,notnull,default:''"`
 	Source                string     `bun:"source,notnull,default:'admin'"`
 	ReopenedAt            *time.Time `bun:"reopened_at"`
 	ReopenedBy            *int64     `bun:"reopened_by"`
+	ReopenedByAccountID   *int64     `bun:"reopened_by_account_id"`
 	ReopenReason          string     `bun:"reopen_reason,notnull,default:''"`
-	PayrollRules          []byte     `bun:"payroll_rules,type:jsonb,nullzero"`
+	// PayrollRules is raw JSON: a []byte would reach the jsonb column as a
+	// base64 string, which chk_staff_month_balance_snapshots_payroll_rules
+	// refuses.
+	PayrollRules json.RawMessage `bun:"payroll_rules,type:jsonb,nullzero"`
 }
 
 func monthSnapshotToDomain(v monthSnapshotRow) domain.StaffMonthBalanceSnapshot {
@@ -44,9 +50,9 @@ func monthSnapshotToDomain(v monthSnapshotRow) domain.StaffMonthBalanceSnapshot 
 		ID: v.ID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, TenantID: v.TenantID, StaffID: v.StaffID,
 		Year: v.Year, Month: v.Month, ClosingBalanceMinutes: v.ClosingBalanceMinutes, CarryInMinutes: v.CarryInMinutes,
 		TargetMinutes: v.TargetMinutes, ActualMinutes: v.ActualMinutes, CreditedMinutes: v.CreditedMinutes,
-		AdjustmentMinutes: v.AdjustmentMinutes, ClosedAt: v.ClosedAt, ClosedBy: v.ClosedBy, CloseReason: v.CloseReason,
-		Source: v.Source, ReopenedAt: v.ReopenedAt, ReopenedBy: v.ReopenedBy, ReopenReason: v.ReopenReason,
-		PayrollRules: v.PayrollRules,
+		AdjustmentMinutes: v.AdjustmentMinutes, ClosedAt: v.ClosedAt, ClosedBy: v.ClosedBy, ClosedByAccountID: v.ClosedByAccountID, CloseReason: v.CloseReason,
+		Source: v.Source, ReopenedAt: v.ReopenedAt, ReopenedBy: v.ReopenedBy, ReopenedByAccountID: v.ReopenedByAccountID, ReopenReason: v.ReopenReason,
+		PayrollRules: []byte(v.PayrollRules),
 	}
 }
 
@@ -55,8 +61,8 @@ func monthSnapshotFromDomain(v domain.StaffMonthBalanceSnapshot) monthSnapshotRo
 		ID: v.ID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, TenantID: v.TenantID, StaffID: v.StaffID,
 		Year: v.Year, Month: v.Month, ClosingBalanceMinutes: v.ClosingBalanceMinutes, CarryInMinutes: v.CarryInMinutes,
 		TargetMinutes: v.TargetMinutes, ActualMinutes: v.ActualMinutes, CreditedMinutes: v.CreditedMinutes,
-		AdjustmentMinutes: v.AdjustmentMinutes, ClosedAt: v.ClosedAt, ClosedBy: v.ClosedBy, CloseReason: v.CloseReason,
-		Source: v.Source, ReopenedAt: v.ReopenedAt, ReopenedBy: v.ReopenedBy, ReopenReason: v.ReopenReason,
+		AdjustmentMinutes: v.AdjustmentMinutes, ClosedAt: v.ClosedAt, ClosedBy: v.ClosedBy, ClosedByAccountID: v.ClosedByAccountID, CloseReason: v.CloseReason,
+		Source: v.Source, ReopenedAt: v.ReopenedAt, ReopenedBy: v.ReopenedBy, ReopenedByAccountID: v.ReopenedByAccountID, ReopenReason: v.ReopenReason,
 		PayrollRules: v.PayrollRules,
 	}
 }
@@ -157,7 +163,11 @@ func (s *Store) ReopenMonthSnapshot(ctx context.Context, id, actorID int64, at t
 	}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
-	result, err := db.NewUpdate().Table(tableMonthSnapshots).Set("reopened_at = ?", at).Set("reopened_by = ?", actorID).Set("reopen_reason = ?", reason).
+	result, err := db.NewUpdate().Table(tableMonthSnapshots).Set("reopened_at = ?", at).
+		// A close of the Träger is reopened by its Personalverwaltung (#4711):
+		// actorID then names the Träger account, never a staff member.
+		Set("reopened_by = CASE WHEN source = 'traeger' THEN NULL ELSE ?::bigint END", actorID).
+		Set("reopened_by_account_id = CASE WHEN source = 'traeger' THEN ?::bigint END", actorID).Set("reopen_reason = ?", reason).
 		Where("id = ?", id).Where("tenant_id = ?", tenantID).Exec(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {

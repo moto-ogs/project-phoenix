@@ -94,7 +94,20 @@ type setupFixture struct {
 	store    *fakeSchoolSetupStore
 	progress *fakeSetupProgress
 	settings *fakeSetupSettings
-	now      time.Time
+	// targets is what the working-time step reads; targetReads counts how
+	// often.
+	targets     schoolsetup.WorkTimeTargets
+	targetReads int
+	now         time.Time
+}
+
+func (f *setupFixture) workTime(context.Context) (schoolsetup.WorkTimeTargets, error) {
+	f.targetReads++
+	return f.targets, nil
+}
+
+func noWorkTime(context.Context) (schoolsetup.WorkTimeTargets, error) {
+	return schoolsetup.WorkTimeTargets{}, nil
 }
 
 func newSetupFixture(t *testing.T) *setupFixture {
@@ -106,9 +119,10 @@ func newSetupFixture(t *testing.T) *setupFixture {
 			presenceMode: schoolsetup.PresenceModeDetailed,
 			groupMode:    schoolsetup.GroupModeFixedGroups,
 		},
-		now: time.Date(2026, time.September, 22, 9, 30, 0, 0, time.UTC),
+		targets: schoolsetup.WorkTimeTargets{Booked: true, StaffTotal: 3, StaffWithoutTarget: 2},
+		now:     time.Date(2026, time.September, 22, 9, 30, 0, 0, time.UTC),
 	}
-	service, err := New(f.store, f.progress, f.settings, func() time.Time { return f.now })
+	service, err := New(f.store, f.progress, f.settings, f.workTime, func() time.Time { return f.now })
 	require.NoError(t, err)
 	f.service = service
 	return f
@@ -134,8 +148,10 @@ func stepByKey(t *testing.T, status schoolsetup.Status, step schoolsetup.StepKey
 
 func TestNewRequiresEveryDependency(t *testing.T) {
 	t.Parallel()
-	_, err := New(nil, &fakeSetupProgress{}, &fakeSetupSettings{}, time.Now)
+	_, err := New(nil, &fakeSetupProgress{}, &fakeSetupSettings{}, noWorkTime, time.Now)
 	require.Error(t, err)
+	_, err = New(newFakeSchoolSetupStore(), &fakeSetupProgress{}, &fakeSetupSettings{}, nil, time.Now)
+	require.Error(t, err, "the working-time step needs its count")
 }
 
 func TestStatusOfANewSchool(t *testing.T) {
@@ -153,7 +169,7 @@ func TestStatusOfANewSchool(t *testing.T) {
 		assert.False(t, step.Done, step.Key)
 		assert.False(t, step.Skipped, step.Key)
 	}
-	assert.Equal(t, []string{"team", "rooms", "groups", "students", "guardians"}, keys)
+	assert.Equal(t, []string{"team", "rooms", "groups", "students", "guardians", "worktime"}, keys)
 }
 
 func TestSchoolSetupStepsFollowTheSchoolsSettings(t *testing.T) {
@@ -174,12 +190,55 @@ func TestSchoolSetupStepsAreDoneFromTheProjection(t *testing.T) {
 	t.Parallel()
 	f := newSetupFixture(t)
 	f.progress.facts = schoolsetup.Facts{StaffInvited: true, RoomCreated: true, GroupCreated: true, StudentEnrolled: true, GuardianInvited: true}
+	f.targets = schoolsetup.WorkTimeTargets{Booked: true, StaffTotal: 3}
 
 	status := f.status(t)
 
 	for _, step := range schoolsetup.StepKeys {
 		assert.True(t, stepByKey(t, status, step).Done, step)
 	}
+}
+
+// TestSchoolSetupWorkTimeStepFollowsTheTimeAccounts pins #6919: the step
+// exists only with Zeiterfassung, and it is done once nobody with a time
+// account lacks a Soll.
+func TestSchoolSetupWorkTimeStepFollowsTheTimeAccounts(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name          string
+		targets       schoolsetup.WorkTimeTargets
+		applies, done bool
+	}{
+		{"not booked", schoolsetup.WorkTimeTargets{}, false, false},
+		{"nobody has a time account yet", schoolsetup.WorkTimeTargets{Booked: true}, true, false},
+		{"one of three without a Soll", schoolsetup.WorkTimeTargets{Booked: true, StaffTotal: 3, StaffWithoutTarget: 1}, true, false},
+		{"everybody has a Soll", schoolsetup.WorkTimeTargets{Booked: true, StaffTotal: 3}, true, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			f := newSetupFixture(t)
+			f.targets = tc.targets
+
+			step := stepByKey(t, f.status(t), schoolsetup.StepWorkTime)
+
+			assert.Equal(t, tc.applies, step.Applies)
+			assert.Equal(t, tc.done, step.Done)
+		})
+	}
+}
+
+func TestSchoolSetupPropagatesWorkTimeErrors(t *testing.T) {
+	t.Parallel()
+	failure := errors.New("time accounts unavailable")
+	service, err := New(newFakeSchoolSetupStore(), &fakeSetupProgress{}, &fakeSetupSettings{}, func(context.Context) (schoolsetup.WorkTimeTargets, error) {
+		return schoolsetup.WorkTimeTargets{}, failure
+	}, time.Now)
+	require.NoError(t, err)
+
+	_, err = service.Status(context.Background(), setupTenant, setupAdmin)
+
+	require.ErrorIs(t, err, failure)
 }
 
 func TestSchoolSetupSkippingAStep(t *testing.T) {
@@ -207,6 +266,8 @@ func TestSchoolSetupCompletesOnlyWithoutOpenSteps(t *testing.T) {
 
 	f.progress.facts = schoolsetup.Facts{StaffInvited: true, RoomCreated: true, StudentEnrolled: true}
 	require.NoError(t, f.service.SetStepSkipped(ctx, setupTenant, setupAdmin, string(schoolsetup.StepGroups), true))
+	require.ErrorIs(t, f.service.Complete(ctx, setupTenant, setupAdmin), schoolsetup.ErrIncomplete, "two staff members still have no Soll")
+	f.targets.StaffWithoutTarget = 0
 	require.NoError(t, f.service.SetStepSkipped(ctx, setupTenant, setupAdmin, string(schoolsetup.StepGuardians), true))
 	require.NoError(t, f.service.Complete(ctx, setupTenant, setupAdmin))
 
@@ -230,6 +291,7 @@ func TestSchoolSetupIsClosedAfterCompletion(t *testing.T) {
 	require.ErrorIs(t, f.service.Complete(ctx, setupTenant, setupAdmin), schoolsetup.ErrCompleted)
 	assert.Zero(t, f.store.upserts)
 	assert.Zero(t, f.progress.reads, "a finished school reads no progress")
+	assert.Zero(t, f.targetReads, "a finished school counts no Soll")
 }
 
 func TestSchoolSetupViaTraegerFollowsADismissalInTheTraeger(t *testing.T) {
@@ -282,7 +344,7 @@ func TestSchoolSetupRestoresDismissalAcrossTheTraeger(t *testing.T) {
 func TestSchoolSetupPropagatesProgressErrors(t *testing.T) {
 	t.Parallel()
 	failure := errors.New("projection unavailable")
-	service, err := New(newFakeSchoolSetupStore(), failingSetupProgress{err: failure}, &fakeSetupSettings{}, time.Now)
+	service, err := New(newFakeSchoolSetupStore(), failingSetupProgress{err: failure}, &fakeSetupSettings{}, noWorkTime, time.Now)
 	require.NoError(t, err)
 
 	_, err = service.Status(context.Background(), setupTenant, setupAdmin)

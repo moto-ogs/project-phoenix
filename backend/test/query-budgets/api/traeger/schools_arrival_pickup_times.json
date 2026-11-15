@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.schools_arrival_pickup_times",
+  "max": 5,
+  "exact": true,
+  "description": "modules/traegerview — GET /traeger/schools/arrival-pickup-times (#4714):\nthe Träger row, the school IDs of the Träger, the school rows, the arrivals\nand pickups per weekday and half hour and the days of each weekday for the\nwhole school set in one administrative transaction. Flat in the number of\nschools.",
+  "route": "GET /traeger/schools/arrival-pickup-times"
+}

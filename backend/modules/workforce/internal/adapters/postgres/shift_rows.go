@@ -28,10 +28,12 @@ type staffShiftRow struct {
 	ChangeReason         *string       `bun:"change_reason"`
 	OriginShiftID        *int64        `bun:"origin_shift_id"`
 	SickAbsenceID        *int64        `bun:"sick_absence_id"`
-	CreatedBy            int64         `bun:"created_by,notnull"`
-	UpdatedBy            *int64        `bun:"updated_by"`
-	CreatedAt            time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt            time.Time     `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	// CreatedBy is NULL for a shift the Träger-Portal planned (#4708).
+	CreatedBy        int64     `bun:"created_by,nullzero"`
+	UpdatedBy        *int64    `bun:"updated_by"`
+	PlannedByTraeger bool      `bun:"planned_by_traeger,notnull,default:false"`
+	CreatedAt        time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	UpdatedAt        time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
 }
 
 type staffShiftSeriesRow struct {
@@ -78,9 +80,10 @@ type shiftTypeRow struct {
 	Description   string `bun:"description"`
 	// IsActive carries no default tag on purpose: bun would write DEFAULT for
 	// a false value and the column default is TRUE.
-	IsActive  bool      `bun:"is_active,notnull"`
-	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	IsActive   bool       `bun:"is_active,notnull"`
+	ArchivedAt *time.Time `bun:"archived_at"`
+	CreatedAt  time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	UpdatedAt  time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
 }
 
 // requiredClock binds a wall clock to a TIME column. The clock is anchored at
@@ -115,7 +118,8 @@ func staffShiftFromDomain(value domain.StaffShift) (*staffShiftRow, error) {
 		Notes: value.Notes, SeriesID: value.SeriesID, Detached: value.Detached, SeriesOverride: value.SeriesOverride,
 		SeriesOccurrenceDate: optionalCalendarDate(value.SeriesOccurrenceDate), Cancelled: value.Cancelled,
 		ChangeReason: value.ChangeReason, OriginShiftID: value.OriginShiftID, SickAbsenceID: value.SickAbsenceID,
-		CreatedBy: value.CreatedBy, UpdatedBy: value.UpdatedBy, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		CreatedBy: value.CreatedBy, UpdatedBy: value.UpdatedBy, PlannedByTraeger: value.PlannedByTraeger,
+		CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}, nil
 }
 
@@ -126,7 +130,8 @@ func staffShiftToDomain(row staffShiftRow) domain.StaffShift {
 		ShiftTypeID: row.ShiftTypeID, Notes: row.Notes, SeriesID: row.SeriesID, Detached: row.Detached, SeriesOverride: row.SeriesOverride,
 		SeriesOccurrenceDate: calendarDateString(row.SeriesOccurrenceDate), Cancelled: row.Cancelled,
 		ChangeReason: row.ChangeReason, OriginShiftID: row.OriginShiftID, SickAbsenceID: row.SickAbsenceID,
-		CreatedBy: row.CreatedBy, UpdatedBy: row.UpdatedBy, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		CreatedBy: row.CreatedBy, UpdatedBy: row.UpdatedBy, PlannedByTraeger: row.PlannedByTraeger,
+		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 	}
 }
 
@@ -141,13 +146,13 @@ func staffShiftsToDomain(rows []staffShiftRow) []domain.StaffShift {
 func shiftTypeFromDomain(value domain.ShiftType) *shiftTypeRow {
 	return &shiftTypeRow{
 		ID: value.ID, TenantID: value.TenantID, Name: value.Name, Color: value.Color,
-		Description: value.Description, IsActive: value.IsActive, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		Description: value.Description, IsActive: value.IsActive, ArchivedAt: value.ArchivedAt, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
 }
 
 func shiftTypeToDomain(row shiftTypeRow) domain.ShiftType {
 	return domain.ShiftType{
 		ID: row.ID, TenantID: row.TenantID, Name: row.Name, Color: row.Color,
-		Description: row.Description, IsActive: row.IsActive, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		Description: row.Description, IsActive: row.IsActive, ArchivedAt: row.ArchivedAt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 	}
 }

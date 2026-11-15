@@ -21,6 +21,8 @@ export interface BackendStaffShift {
   detached?: boolean;
   cancelled?: boolean;
   change_reason?: string | null;
+  /** The Personalverwaltung of the Träger planned the shift (#4708). */
+  planned_by_traeger?: boolean;
   origin_shift_id?: string | null;
 }
 
@@ -58,6 +60,8 @@ export interface StaffShift {
   changeReason: string | null;
   /** When set, this shift covers another (cancelled) shift as a replacement;
    *  several replacements sharing one origin split a gap across people (#1841). */
+  /** The Personalverwaltung of the Träger planned the shift (#4708). */
+  plannedByTraeger?: boolean;
   originShiftId: string | null;
 }
 
@@ -211,6 +215,7 @@ export function mapStaffShift(data: BackendStaffShift): StaffShift {
     changeReason: data.change_reason ?? null,
     originShiftId:
       data.origin_shift_id != null ? data.origin_shift_id.toString() : null,
+    ...(data.planned_by_traeger ? { plannedByTraeger: true } : {}),
   };
 }
 

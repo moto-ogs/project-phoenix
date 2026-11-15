@@ -41,7 +41,7 @@
   "guardian_role_managed": "Ta osoba jest opiekunem prawnym. Jej dane może zmienić tylko ona sama lub szkoła.",
   "guardian_shared_across_families": "Ten kontakt jest przypisany do kilku rodzin. Może go zmienić tylko szkoła. Skontaktuj się ze szkołą.",
   "guardian_social_worker_managed": "Tymi danymi kontaktowymi zarządza szkoła. W sprawie zmian skontaktuj się ze szkołą.",
-  "invalid_credentials": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
+  "invalid_credentials": "Adres e-mail lub hasło są nieprawidłowe. Sprawdź wpisane dane.",
   "invalid_poll_response": "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
   "invalid_recipients": "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
   "invalid_request_payload": "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",

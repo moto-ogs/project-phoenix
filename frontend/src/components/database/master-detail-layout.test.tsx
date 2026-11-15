@@ -165,7 +165,12 @@ describe("MasterDetailLayout", () => {
         />,
       );
       const root = container.firstElementChild;
-      expect(root).toHaveStyle({ "--master-detail-list-width": "500px" });
+      expect(root).toBeInstanceOf(HTMLElement);
+      expect(
+        (root as HTMLElement).style.getPropertyValue(
+          "--master-detail-list-width",
+        ),
+      ).toBe("500px");
 
       const listPane = screen.getByText("List").closest("section");
       expect(listPane).toHaveClass(

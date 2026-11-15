@@ -74,6 +74,10 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { RolloverForm } from "./rollover-form";
+import {
+  extendsRunningPhase,
+  PhaseExtensionHint,
+} from "./phase-extension-hint";
 import { useTenant } from "~/lib/tenant-context";
 import { supportedGradeLevelMax } from "~/lib/grade-level";
 import {
@@ -637,7 +641,7 @@ export function PhasesEditor() {
     if (!deleteTarget) return;
     // Hard guard mirroring the modal's confirmDisabled gate: never delete
     // until the blast-radius preview has loaded successfully.
-    if (impactLoading || !deleteImpact || impactLoad.error) return;
+    if (!canDeletePhase(impactLoading, deleteImpact, impactLoad.error)) return;
     const phase = deleteTarget;
     setDeletingId(phase.id);
     clearDeleteErrors();
@@ -985,6 +989,7 @@ export function PhasesEditor() {
           size="md"
           onClick={startCreate}
           className="inline-flex shrink-0 items-center justify-center gap-2"
+          tooltip="Öffnet ein leeres Formular für eine neue Anmeldephase."
         >
           <MotoConceptIcon
             concept={calendarPeriodsConcept}
@@ -1053,6 +1058,11 @@ export function PhasesEditor() {
                     schemaSource={schemaSource}
                     setSchemaSource={setSchemaSource}
                     editing={editingId !== "new"}
+                    savedPhase={phases.find((p) => p.id === editingId)}
+                    hasSuccessor={phases.some(
+                      (p) => p.rollover_source_phase_id === editingId,
+                    )}
+                    onCreateSuccessor={startRollover}
                     saving={saving}
                     highlightFormSection={highlightFormSection}
                     gradeLevelMax={gradeLevelMax}
@@ -1090,6 +1100,7 @@ export function PhasesEditor() {
                     variant="primary"
                     size="md"
                     onClick={() => setCareBeyondEnd(null)}
+                    noTooltip="Schließen schließt nur das Fenster, ohne etwas zu ändern."
                   >
                     Schließen
                   </Button>
@@ -1143,33 +1154,19 @@ export function PhasesEditor() {
                 <p>
                   Möchten Sie die Anmeldephase{" "}
                   <span className="font-medium">„{deleteTarget.name}“</span>{" "}
-                  wirklich endgültig löschen? Sind noch Kinder gebucht, geht das
-                  erst, wenn ihre Buchungen beendet sind.
+                  wirklich endgültig löschen?
                 </p>
               }
               warningSlot={
-                <div className="space-y-2">
-                  <PhaseDeleteImpactAlert
-                    loading={impactLoading}
-                    failed={Boolean(impactLoad.error)}
-                    impact={deleteImpact}
-                  />
-                  {!impactLoading && deleteImpact && (
-                    <Alert
-                      type="success"
-                      announce="off"
-                      message={
-                        deleteImpact.students_kept === 1
-                          ? "1 bereits angelegtes Kind bleibt erhalten."
-                          : `${deleteImpact.students_kept} bereits angelegte Kinder bleiben erhalten.`
-                      }
-                    />
-                  )}
-                </div>
+                <PhaseDeleteImpactAlert
+                  loading={impactLoading}
+                  failed={Boolean(impactLoad.error)}
+                  impact={deleteImpact}
+                />
               }
               gate={{ mode: "twoStep", firstStepLabel: "Löschen" }}
               confirmDisabled={
-                impactLoading || !deleteImpact || Boolean(impactLoad.error)
+                !canDeletePhase(impactLoading, deleteImpact, impactLoad.error)
               }
               onConfirm={confirmDelete}
               onClose={closeDelete}
@@ -1236,6 +1233,11 @@ interface PhaseFormProps {
   readonly schemaSource: SchemaSource;
   readonly setSchemaSource: React.Dispatch<React.SetStateAction<SchemaSource>>;
   readonly editing: boolean;
+  /** The stored phase while editing; its dates decide the extension hint. */
+  readonly savedPhase?: Phase;
+  readonly onCreateSuccessor: (phase: Phase) => void;
+  /** A follow-up phase exists; the backend refuses a second one. */
+  readonly hasSuccessor: boolean;
   readonly saving: boolean;
   readonly highlightFormSection: boolean;
   /** Tenant grade cap; null when unresolved — the grade picker then hides. */
@@ -1246,9 +1248,20 @@ interface PhaseFormProps {
   readonly fieldError: (name: string) => string | undefined;
 }
 
+// Löschen geht erst mit geladener Vorschau und nur ohne Anmeldungen (#6836).
+function canDeletePhase(
+  loading: boolean,
+  impact: PhaseDeleteImpact | null,
+  loadError: unknown,
+): boolean {
+  return !loading && !loadError && impact !== null && impact.requests === 0;
+}
+
 // Warnung im Löschdialog: was beim Löschen der Phase endgültig wegfällt.
 // Orange über Alert wie jede Warnung (#5591). Lädt die Vorschau noch oder
-// fehlt sie, steht statt der Liste der passende Satz.
+// fehlt sie, steht statt der Liste der passende Satz. Hat die Phase
+// Anmeldungen, sperrt das Backend das Löschen (#6836): Sie bleiben als
+// Nachweis, der Dialog nennt stattdessen „Deaktivieren“.
 function PhaseDeleteImpactAlert({
   loading,
   failed,
@@ -1258,6 +1271,20 @@ function PhaseDeleteImpactAlert({
   failed: boolean;
   impact: PhaseDeleteImpact | null;
 }>) {
+  if (!loading && !failed && impact && impact.requests > 0) {
+    return (
+      <Alert
+        type="warning"
+        announce="off"
+        title="Diese Anmeldephase kann nicht gelöscht werden."
+        message={`${
+          impact.requests === 1
+            ? "Zu ihr gibt es 1 Anmeldung"
+            : `Zu ihr gibt es ${impact.requests} Anmeldungen`
+        }. Wählen Sie stattdessen „Deaktivieren“.`}
+      />
+    );
+  }
   const title = "Diese Aktion kann nicht rückgängig gemacht werden:";
   let details: ReactNode = null;
   if (loading) {
@@ -1272,11 +1299,6 @@ function PhaseDeleteImpactAlert({
   } else if (impact) {
     details = (
       <ul className="list-inside list-disc space-y-0.5">
-        <li>
-          {impact.requests === 1
-            ? "1 Anmeldung wird endgültig gelöscht"
-            : `${impact.requests} Anmeldungen werden endgültig gelöscht`}
-        </li>
         <li>
           {impact.care_offerings === 1
             ? "1 Betreuungsangebot wird endgültig gelöscht"
@@ -1395,6 +1417,7 @@ function PhaseActions({
     {
       label: "Bearbeiten",
       icon: <Pencil className="h-4 w-4" aria-hidden />,
+      description: "Öffnet die Anmeldephase zum Ändern",
       disabled: saving,
       onClick: onEdit,
     },
@@ -1407,6 +1430,7 @@ function PhaseActions({
         `/anmeldung/preview?phaseId=${encodeURIComponent(phase.id)}`,
       ),
       external: true,
+      description: "Zeigt das Formular in einem neuen Tab, auch vor dem Start",
       onClick: () => undefined,
     },
     ...(hasNoPublicForm
@@ -1417,6 +1441,8 @@ function PhaseActions({
             icon: <ExternalLink className="h-4 w-4" aria-hidden />,
             href: tenantPath(`/anmeldung/${encodeURIComponent(phase.id)}`),
             external: true,
+            description:
+              "Öffnet das Anmeldeformular dieser Phase in einem neuen Tab",
             onClick: () => undefined,
           },
           // Menüeintrag statt Icon neben dem Kebab (BAUARTEN-SPEC Bauart 1
@@ -1427,11 +1453,14 @@ function PhaseActions({
                 {
                   label: "Elternlink kopieren",
                   icon: <Copy className="h-4 w-4" aria-hidden />,
+                  description:
+                    "Kopiert den Link, damit Sie ihn an Eltern weitergeben können",
                   onClick: () => void copyPhaseUrl(phaseUrl),
                 },
                 {
                   label: "QR-Code anzeigen",
                   icon: <QrCode className="h-4 w-4" aria-hidden />,
+                  description: "Zeigt den Link zum Anmeldeformular als QR-Code",
                   onClick: () => setQrCodeOpen(true),
                 },
               ]
@@ -1440,12 +1469,14 @@ function PhaseActions({
     {
       label: "Nachzügler-Link erstellen",
       icon: <Link2 className="h-4 w-4" aria-hidden />,
+      description: "Öffnet ein Fenster für einen Link an eine einzelne Familie",
       disabled: saving,
       onClick: () => setLateInviteOpen(true),
     },
     {
       label: "Manuelle Anmeldung",
       icon: <MotoConceptIcon concept={enrollmentsConcept} size={18} />,
+      description: "Öffnet ein Fenster, um ein Kind selbst anzumelden",
       disabled: saving,
       onClick: () => setManualOpen(true),
     },
@@ -1453,11 +1484,13 @@ function PhaseActions({
       label: "Anmeldungen ansehen",
       icon: <MotoConceptIcon concept={enrollmentsConcept} size={16} />,
       href: enrollmentsHref,
+      description: "Öffnet die eingegangenen Anmeldungen dieser Phase",
       onClick: () => undefined,
     },
     {
       label: "Formular zuweisen",
       icon: <MotoConceptIcon concept={enrollmentsConcept} size={16} />,
+      description: "Öffnet die Phase bei der Auswahl des Anmeldeformulars",
       disabled: saving,
       onClick: onAssignForm,
     },
@@ -1470,6 +1503,8 @@ function PhaseActions({
           size={16}
         />
       ),
+      description:
+        "Für das nächste Halbjahr oder Schuljahr. Übernimmt die Anmeldungen, Eltern können dabei umbuchen. Noch ohne E-Mail an Eltern.",
       disabled: saving || rolloverActive,
       onClick: onRollover,
     },
@@ -1479,6 +1514,8 @@ function PhaseActions({
             label: "Prüfliste öffnen",
             icon: <Check className="h-4 w-4" aria-hidden />,
             href: `/enrollment-phases/${encodeURIComponent(phase.id)}/review`,
+            description:
+              "Öffnet die Kinder, über die Sie noch entscheiden müssen",
             onClick: () => undefined,
           },
         ]
@@ -1486,6 +1523,14 @@ function PhaseActions({
     {
       label: phase.is_active ? "Deaktivieren" : "Aktivieren",
       icon: <Power className="h-4 w-4" aria-hidden />,
+      // Ohne öffentliches Formular melden Eltern über das Elternportal an.
+      description: phase.is_active
+        ? hasNoPublicForm
+          ? "Schließt die Anmeldung im Elternportal sofort"
+          : "Schließt das Anmeldeformular sofort für Eltern"
+        : hasNoPublicForm
+          ? "Gibt die Anmeldung im Elternportal sofort frei, im Anmeldezeitraum"
+          : "Öffnet das Anmeldeformular sofort für Eltern, im Anmeldezeitraum",
       disabled: saving,
       onClick: onToggleActive,
     },
@@ -1494,6 +1539,7 @@ function PhaseActions({
       label: deleting ? "Löscht…" : "Löschen",
       icon: <Trash2 className="h-4 w-4" aria-hidden />,
       destructive: true,
+      description: "moto fragt vorher nach und löscht dann die Anmeldephase",
       disabled: deleting || saving,
       onClick: onDelete,
     },
@@ -1544,6 +1590,9 @@ function PhaseForm(props: PhaseFormProps) {
     schemaSource,
     setSchemaSource,
     editing,
+    savedPhase,
+    onCreateSuccessor,
+    hasSuccessor,
     saving,
     highlightFormSection,
     gradeLevelMax,
@@ -1669,6 +1718,7 @@ function PhaseForm(props: PhaseFormProps) {
                       service_end_date: linkedPeriodDrift.endDate,
                     })
                   }
+                  tooltip="Setzt Beginn und Ende auf die Daten des Kalenderzeitraums."
                 >
                   Daten übernehmen
                 </Button>
@@ -1680,7 +1730,7 @@ function PhaseForm(props: PhaseFormProps) {
           <div>
             <ISODatePicker
               id="service_start_date"
-              controlSize="md"
+              controlSize="compact"
               label="Beginn"
               ariaLabel="Beginn"
               value={draft.service_start_date}
@@ -1709,7 +1759,7 @@ function PhaseForm(props: PhaseFormProps) {
           <div>
             <ISODatePicker
               id="service_end_date"
-              controlSize="md"
+              controlSize="compact"
               label="Ende"
               ariaLabel="Ende"
               min={draft.service_start_date || undefined}
@@ -1722,6 +1772,19 @@ function PhaseForm(props: PhaseFormProps) {
             />
           </div>
         </div>
+        {savedPhase &&
+        extendsRunningPhase(
+          savedPhase,
+          draft.service_end_date,
+          berlinTodayISO(),
+        ) ? (
+          <PhaseExtensionHint
+            saving={saving}
+            onCreateSuccessor={
+              hasSuccessor ? undefined : () => onCreateSuccessor(savedPhase)
+            }
+          />
+        ) : null}
       </FormFieldset>
 
       <FormFieldset legend="Anmeldefenster (optional)">
@@ -2065,10 +2128,23 @@ function PhaseForm(props: PhaseFormProps) {
           size="md"
           onClick={onCancel}
           disabled={saving}
+          noTooltip="Abbrechen verwirft nur die Eingaben in diesem Formular."
         >
           Abbrechen
         </Button>
-        <Button type="submit" variant="primary" size="md" disabled={saving}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          disabled={saving}
+          tooltip={
+            editing
+              ? "Speichert die Änderungen an der Anmeldephase."
+              : draft.is_active
+                ? "Legt die Phase an, im Anmeldezeitraum können sich Eltern anmelden."
+                : "Legt die Phase an, Eltern sehen sie erst nach dem Aktivieren."
+          }
+        >
           {saving ? "Speichert…" : editing ? "Speichern" : "Erstellen"}
         </Button>
       </div>
@@ -2166,6 +2242,7 @@ function SchoolClassListEditor({
           size="md"
           onClick={add}
           className="inline-flex shrink-0 items-center"
+          tooltip="Nimmt die Klasse in die Auswahl für Eltern auf, wirksam nach dem Speichern."
         >
           Hinzufügen
         </Button>

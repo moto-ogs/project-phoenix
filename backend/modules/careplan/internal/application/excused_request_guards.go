@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -260,18 +259,15 @@ func (w *ExcusedRequests) applyAbsenceRequest(ctx context.Context, req *careplan
 	if len(req.Dates) == 0 {
 		return careplan.ErrExcusedRequestNoDates
 	}
-	now := time.Now()
+	now := w.now()
 	note := req.Note
-	for _, other := range careplan.StudentStatusDayStatusesExcept(req.AbsenceStatus) {
-		if err := w.carePlan.ClearStudentStatusDays(ctx, req.StudentID, other, req.Dates, now, careplan.StudentStatusSourceParent); err != nil {
-			return err
-		}
-	}
+	guardianAccountID := req.SubmittedBy
+	// Each write replaces the status standing for its day (#6958).
 	for _, d := range req.Dates {
-		guardianAccountID := req.SubmittedBy
 		if _, err := w.carePlan.UpsertStudentStatusDay(ctx, careplan.StudentStatusDay{
 			StudentID: req.StudentID, Date: d, Status: req.AbsenceStatus, ReportedAt: now,
 			Source: careplan.StudentStatusSourceParent, GuardianAccountID: &guardianAccountID, Note: &note,
+			ReportedByAccountID: &guardianAccountID,
 		}); err != nil {
 			return err
 		}
@@ -287,7 +283,7 @@ func (w *ExcusedRequests) applyAbsenceRequest(ctx context.Context, req *careplan
 // revertApprovedAbsence clears exactly the days this request wrote, and only
 // while they are provably still its own. A day that was re-reported after
 // the approval belongs to whoever wrote it last.
-func (w *ExcusedRequests) revertApprovedAbsence(ctx context.Context, req *careplan.ExcusedAbsenceRequest) error {
+func (w *ExcusedRequests) revertApprovedAbsence(ctx context.Context, req *careplan.ExcusedAbsenceRequest, reviewer int64) error {
 	if req.Status != careplan.ExcusedRequestStatusApproved || len(req.Dates) == 0 {
 		return nil
 	}
@@ -309,7 +305,7 @@ func (w *ExcusedRequests) revertApprovedAbsence(ctx context.Context, req *carepl
 				careplan.ErrParentRequestCorrectionUnsupported, germanDate(row.Date))
 		}
 	}
-	return w.carePlan.ClearStudentStatusDays(ctx, req.StudentID, req.AbsenceStatus, req.Dates, time.Now(), careplan.StudentStatusSourceParent)
+	return w.carePlan.ClearStudentStatusDays(ctx, req.StudentID, req.AbsenceStatus, req.Dates, w.now(), careplan.StudentStatusSourceManual, &reviewer)
 }
 
 // absenceRowWrittenByRequest reports whether this status day is still the one

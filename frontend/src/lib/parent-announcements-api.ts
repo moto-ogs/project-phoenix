@@ -165,6 +165,12 @@ export interface AnnouncementStats {
   target_count: number;
   read_count: number;
   acknowledged_count: number;
+  /**
+   * The counts refer to the parents the publication reached (#6988). False
+   * for a draft and for announcements published before recording, which
+   * count whoever the targets reach today.
+   */
+  recorded?: boolean;
 }
 
 type AnnouncementRecipientStatus = "pending" | "read" | "acknowledged";
@@ -243,6 +249,8 @@ export interface LetterRecipient {
   stopped?: boolean;
   /** Another holder of the address carries no stop: mail to it still goes out. */
   stop_shared?: boolean;
+  /** No holder of this address has a child in care at the school now. */
+  departed?: boolean;
   /** Where this mail went: its outcome belongs there. `email` is the current address. */
   mailed_to?: string;
   provider_block?: MailProviderBlock;

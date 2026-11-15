@@ -53,7 +53,7 @@ func (s *InstanceLifecycleService) moveStaffBetweenBlocks(ctx context.Context, t
 	if err != nil {
 		return nil, err
 	}
-	if target.Date.Before(calendar.TodayDate()) {
+	if target.Date.Before(calendar.DateFromTime(s.now())) {
 		return nil, timetable.DeviationBadRequest("block date is in the past").WithCode(timetable.CodeInstanceInPast)
 	}
 	targetDate := calendar.Date(target.Date)

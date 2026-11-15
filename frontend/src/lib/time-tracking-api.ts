@@ -1,6 +1,7 @@
 // Time tracking API service for check-in/out and history management
 
 import type { ErrorCode } from "~/lib/error-codes.generated";
+import type { MailOutcomeCounts } from "~/lib/email-delivery-status";
 import { unavailableApiError } from "./api-error";
 import { buildApiError } from "./auth-api";
 import {
@@ -11,7 +12,6 @@ import {
 import type {
   BackendClosingDayRange,
   BackendDailyProjection,
-  BackendDailyTarget,
   BackendHoliday,
   BackendMonthSummary,
   DayProjection,
@@ -25,7 +25,6 @@ import type {
 import {
   mapClosingDaysResponse,
   mapDailyProjectionResponse,
-  mapDailyTargetsResponse,
   mapHistoryResponse,
   mapHolidaysResponse,
   mapMonthSummaryResponse,
@@ -227,23 +226,6 @@ class TimeTrackingService {
     return mapMonthSummaryResponse(result.data);
   }
 
-  // Date-valid Soll per day (#1842). The daily table must not derive Soll from
-  // the CURRENT schedule: after a contract change that would show historical
-  // rows with today's hours while the Monatskarte above them reports the
-  // hours that actually applied.
-  async getScheduleTargets(
-    from: string,
-    to: string,
-  ): Promise<ReadonlyMap<string, number>> {
-    const params = new URLSearchParams({ from, to });
-    const result = await this.request<BackendDailyTarget[] | null>(
-      `/schedule-targets?${params}`,
-      "GET",
-      "Failed to get schedule targets",
-    );
-    return mapDailyTargetsResponse(result.data);
-  }
-
   // Vollständige Tagesprojektion desselben Endpunkts (#2443): Soll, Gutschrift,
   // Ist und Saldo je Tag, gerechnet wie die Monatskarte. Die Tagestabelle liest
   // diese Werte, statt den Saldo selbst abzuleiten.
@@ -367,6 +349,18 @@ class TimeTrackingService {
       "Failed to get questioned absences",
     );
     return (result.data ?? []).map((a) => mapStaffAbsenceResponse(a as never));
+  }
+
+  /**
+   * Ob die Leitung die eigenen offenen Anträge per Mail bekam (#7058): je
+   * Antrag die Mails der letzten Meldung, nach Ergebnis gezählt. Ein Antrag
+   * ohne Mail fehlt.
+   */
+  async getAbsenceRequestMails(): Promise<Record<string, MailOutcomeCounts>> {
+    const result = await this.request<{
+      absences?: Record<string, MailOutcomeCounts> | null;
+    }>("/absences/mails", "GET", "Failed to get absence request mails");
+    return result.data?.absences ?? {};
   }
 
   async createAbsence(req: CreateAbsenceRequest): Promise<StaffAbsence> {

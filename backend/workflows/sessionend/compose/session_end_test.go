@@ -112,17 +112,21 @@ func newStack(t *testing.T) *stack {
 		}
 		activityID := activity.ID
 		groupID := group.ID
-		instance := testpkg.CreateTestActivityInstance(t, db, testpkg.TodayDate(), room.ID, testpkg.ActivityInstanceOpts{
+		// The mirrored block runs on the live day of the session; the
+		// announcement must carry that stored day, read once here.
+		day := testpkg.TodayDate()
+		instance := testpkg.CreateTestActivityInstance(t, db, day, room.ID, testpkg.ActivityInstanceOpts{
 			Status: "active", ActivityGroupID: &activityID, ActiveGroupID: &groupID, IsSpontaneous: true, Title: "Mirrored " + label,
 		})
 		return session{
-			group:      testpkg.EndedActiveGroup{GroupID: group.ID, SupervisorID: supervisor.ID},
-			roomID:     room.ID,
-			roomName:   room.Name,
-			activityID: activity.ID,
-			instanceID: instance.ID,
-			students:   []int64{first.ID, second.ID},
-			visitIDs:   visits,
+			group:        testpkg.EndedActiveGroup{GroupID: group.ID, SupervisorID: supervisor.ID},
+			roomID:       room.ID,
+			roomName:     room.Name,
+			activityID:   activity.ID,
+			instanceID:   instance.ID,
+			instanceDate: day.String(),
+			students:     []int64{first.ID, second.ID},
+			visitIDs:     visits,
 		}
 	}
 	s.ended = func(group testpkg.EndedActiveGroup) (bool, bool) {
@@ -153,13 +157,14 @@ func newStack(t *testing.T) *stack {
 }
 
 type session struct {
-	group      testpkg.EndedActiveGroup
-	roomID     int64
-	roomName   string
-	activityID int64
-	instanceID int64
-	students   []int64
-	visitIDs   []int64
+	group        testpkg.EndedActiveGroup
+	roomID       int64
+	roomName     string
+	activityID   int64
+	instanceID   int64
+	instanceDate string
+	students     []int64
+	visitIDs     []int64
 }
 
 func (s *stack) openVisits(t *testing.T, ctx context.Context, ids []int64) int {
@@ -233,7 +238,7 @@ func TestEndSessionJoinsTheCallerTransactionAndAnnouncesAfterCommit(t *testing.T
 	assert.Equal(t, realtime.EventInstanceCompleted, tenantWide[2].Event.Type)
 	require.NotNil(t, tenantWide[2].Event.Data.InstanceID)
 	assert.Equal(t, itoa(open.instanceID), *tenantWide[2].Event.Data.InstanceID)
-	assert.Equal(t, testpkg.TodayDate().String(), *tenantWide[2].Event.Data.InstanceDate)
+	assert.Equal(t, open.instanceDate, *tenantWide[2].Event.Data.InstanceDate)
 	assert.Equal(t, "14:00:00", *tenantWide[2].Event.Data.InstanceStartTime)
 	for _, call := range tenantWide {
 		assert.Equal(t, tenantID, call.TenantID)

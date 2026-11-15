@@ -176,6 +176,9 @@ type statsResponse struct {
 	TargetCount       int `json:"target_count"`
 	ReadCount         int `json:"read_count"`
 	AcknowledgedCount int `json:"acknowledged_count"`
+	// Recorded tells the counts refer to the recipients of the publication
+	// (#6988); false for a draft and an announcement published before.
+	Recorded bool `json:"recorded"`
 }
 
 func announcementStatus(a *announcementService.ParentAnnouncement) string {
@@ -458,6 +461,7 @@ func (rs *Resource) stats(w http.ResponseWriter, r *http.Request) {
 		TargetCount:       s.TargetCount,
 		ReadCount:         s.ReadCount,
 		AcknowledgedCount: s.AcknowledgedCount,
+		Recorded:          s.Recorded,
 	}, "Stats retrieved")
 }
 
@@ -548,6 +552,7 @@ type letterRecipientResponse struct {
 	AddressMark   string     `json:"address_mark,omitempty"`
 	Stopped       bool       `json:"stopped,omitempty"`
 	StopShared    bool       `json:"stop_shared,omitempty"`
+	Departed      bool       `json:"departed,omitempty"`
 	MailedTo      *string    `json:"mailed_to,omitempty"`
 	ProviderBlock string     `json:"provider_block,omitempty"`
 	Reachability  string     `json:"reachability"`
@@ -598,6 +603,7 @@ func (rs *Resource) letterStatus(w http.ResponseWriter, r *http.Request) {
 			AddressMark:   rcpt.AddressMark,
 			Stopped:       rcpt.Stopped,
 			StopShared:    rcpt.StopShared,
+			Departed:      rcpt.Departed,
 			MailedTo:      rcpt.MailedTo,
 			ProviderBlock: rcpt.ProviderBlock,
 			Reachability:  rcpt.Reachability,

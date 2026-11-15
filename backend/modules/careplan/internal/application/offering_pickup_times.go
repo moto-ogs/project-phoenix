@@ -53,7 +53,7 @@ func (m *BookingMaterialization) ReconcileOfferingPickupForOffering(ctx context.
 // offeringStudentIDs lists the students booked into the offering today or
 // later.
 func (m *BookingMaterialization) offeringStudentIDs(ctx context.Context, offeringID int64) ([]int64, error) {
-	children, err := m.deps.Enrollment.ApprovedChildren(ctx, []int64{offeringID}, calendar.TodayDate())
+	children, err := m.deps.Enrollment.ApprovedChildren(ctx, []int64{offeringID}, m.todayDate())
 	if err != nil {
 		return nil, fmt.Errorf("list approved offering children: %w", err)
 	}

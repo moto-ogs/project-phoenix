@@ -27,6 +27,8 @@ type timeTrackingTestGraph struct {
 	Events            workforceCompose.EventPublisher
 	Logger            *slog.Logger
 	Today             func() timezone.Date
+	// MailOutcomes reads what became of the absence request mails (#7058).
+	MailOutcomes workforceModule.MailOutcomes
 }
 
 func newTimeTrackingTestModule(db transactionruntime.Database, repos WorkSessionTestRepositories, staffRows peoplePorts.StaffRepository, presence TimetablePresenceRows, settings settingsCompose.SettingsService, graph timeTrackingTestGraph, mail ...*workforceCompose.AbsenceEmailDeps) (*workforceCompose.TimeTracking, error) {
@@ -57,6 +59,7 @@ func newTimeTrackingTestModule(db transactionruntime.Database, repos WorkSession
 		Staff:        owners.WorkSessionStaff(staffRows, employment, membership),
 		Supervisions: presence.GroupSupervisor, SessionRecords: presence.ActiveGroup, Holidays: graph.Holidays, StatutoryHolidays: graph.StatutoryHolidays,
 		Events: graph.Events, Logger: graph.Logger, Today: graph.Today, AbsenceEmail: absenceEmail,
+		MailOutcomes: graph.MailOutcomes,
 	}, graph.Audits, staffRows, graph.People, employment, owners.NewStaffWorkScheduleRepository(repos.Workforce), owners.NewWorkTimeModelRepository(repos.Workforce),
 		settings, payroll, db,
 	)

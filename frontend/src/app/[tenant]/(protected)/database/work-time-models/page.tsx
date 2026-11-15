@@ -3,7 +3,8 @@
 // Arbeitszeitmodell-Vorlagen der Schule (#6891). Vorher ließ sich eine
 // Vorlage nur aus der Personalakte heraus anlegen; hier sieht die Schule alle
 // Vorlagen, legt sie an, ändert und archiviert sie. Das Muster bearbeitet
-// derselbe Editor wie im Reiter „Arbeitszeitmodell“.
+// derselbe Editor wie im Reiter „Arbeitszeitmodell“. Im Reiter „Personen“
+// ordnet sie eine Vorlage mehreren Personen auf einmal zu (#6921).
 
 import { Suspense, useCallback, useLayoutEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
@@ -13,6 +14,7 @@ import {
   CATALOG_SELECTION_PARAM,
   type CatalogConfig,
 } from "~/components/database/catalog/catalog-page";
+import { WorkTimeModelPeopleTab } from "~/components/staff/work-time-model-people-tab";
 import {
   validatePatternField,
   WorkTimeModelPatternField,
@@ -43,6 +45,7 @@ import {
 const CACHE_KEY = workTimeModelKeys.catalog();
 // Der Reiter „Arbeitszeitmodell“ liest die Vorlagen unter diesem Schlüssel.
 const STAFF_PICKER_KEY = workTimeModelKeys.picker();
+
 // Ohne gesetzten Beginn liefert das Backend dieses Datum.
 const UNSET_ANCHOR = "0000-00-00";
 
@@ -138,10 +141,10 @@ const config: CatalogConfig<WorkTimeModel> = {
   title: "Arbeitszeitmodelle",
   singular: "Vorlage",
   purpose:
-    "Vorlagen legen die Soll-Stunden für viele Personen auf einmal fest. Zuordnen können Sie eine Vorlage in der Personalakte.",
+    "Vorlagen legen die Soll-Stunden für viele Personen auf einmal fest. Zuordnen können Sie eine Vorlage im Reiter „Personen“.",
   searchPlaceholder: "Vorlage suchen…",
   emptyDescription:
-    "Legen Sie eine Vorlage an, zum Beispiel für Vollzeit oder Teilzeit. Danach ordnen Sie sie in der Personalakte zu.",
+    "Legen Sie eine Vorlage an, zum Beispiel für Vollzeit oder Teilzeit. Danach ordnen Sie ihr im Reiter „Personen“ alle zu, für die sie gilt.",
   stats: (models) => {
     const archived = models.filter((model) => model.archivedAt).length;
     const offered = models.length - archived;
@@ -179,6 +182,13 @@ const config: CatalogConfig<WorkTimeModel> = {
     run: (model) => workTimeModelService.restore(model.id),
     toast: (model) => `Die Vorlage „${model.name}“ wird wieder angeboten.`,
   },
+  detailTabs: (model) => [
+    {
+      id: "personen",
+      label: "Personen",
+      content: <WorkTimeModelPeopleTab model={model} />,
+    },
+  ],
   remove: {
     menuLabel: "Löschen",
     confirmTitle: "Vorlage löschen",

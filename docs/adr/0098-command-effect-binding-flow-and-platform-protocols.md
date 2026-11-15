@@ -215,3 +215,10 @@ roster resync through one more interface each.
 
 Policy, legacy baseline, composition inventory and runtime code remain
 unchanged.
+
+## Addendum 2026-11-15: injected clocks are no command effect (#4027)
+
+A callable without parameters whose single result is `time.Time` or
+`calendar.Date` is a clock; the scan neither resolves nor diagnoses it
+(`effectFreeClock`). Rationale and the re-approved bindings:
+[ADR 0239](0239-owner-beziehen-ihre-uhr-aus-der-komposition.md).

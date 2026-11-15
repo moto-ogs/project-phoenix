@@ -142,7 +142,7 @@ func (s *InstanceLifecycleService) AcknowledgeUnderstaffed(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	if instance.Date.Before(calendar.TodayDate()) {
+	if instance.Date.Before(calendar.DateFromTime(s.now())) {
 		return nil, timetable.DeviationBadRequest(msgInstanceInPast).WithCode(timetable.CodeInstanceInPast)
 	}
 	if err := s.acquireSubstituteDayLock(ctx, calendar.Date(instance.Date)); err != nil {

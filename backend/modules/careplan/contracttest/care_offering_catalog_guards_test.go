@@ -60,7 +60,7 @@ func newCalendarPeriodValidationFixture(t *testing.T) *calendarPeriodValidationF
 		tenantID: tenantID,
 		ctx:      ctx,
 		phase:    phase,
-		catalog:  testCareOfferingCatalog(t, db),
+		catalog:  testCareOfferingCatalog(t, db, api.WithCareOfferingToday(func() calendar.Date { return decisionTestToday })),
 	}
 }
 

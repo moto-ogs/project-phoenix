@@ -58,14 +58,14 @@ func (f *AccountMFAFlows) startChallenge(ctx context.Context, accountID, tenantI
 	// the enrollment-confirm and passkey-registration paths look a code up
 	// by account, and only these columns keep that lookup inside its portal.
 	createdAt := f.now()
-	enabled, days := f.challengeDeviceHint(ctx, tenantID, scope)
+	enabled, days := f.trustedDeviceHint(ctx, tenantID)
 	challenge, send, err := f.enqueueChallenge(ctx, domain.AccountMFAChallenge{
 		AccountID: accountID, Scope: scope, TenantID: tenantID, CodeHash: codeHash,
 		ExpiresAt: createdAt.Add(domain.MFAChallengeTTL), ConsumedAt: &createdAt, IPAddress: ip,
 		CreatedAt: createdAt, UpdatedAt: createdAt,
 	}, domain.MFACodeMailFor(
 		account.Email, "", account.ID, false, plainCode, domain.MFAChallengeTTL, ip, enabled, days,
-	), credentialGeneration)
+	).ForPortal(scope, account.PortalLocale), credentialGeneration)
 	if err != nil {
 		return "", fmt.Errorf("prepare email challenge: %w", err)
 	}

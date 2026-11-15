@@ -58,6 +58,16 @@ interface BackendQualificationOverviewRow extends BackendQualificationEntry {
   last_name: string;
 }
 
+/**
+ * Was die Schule von einem Nachweis sieht, den der Träger für die Person
+ * führt (#4707, ADR 0089 Abschnitt 7): Art, Stand und Ablaufdatum.
+ */
+export interface TraegerProofStatus {
+  readonly typeName: string;
+  readonly status: QualificationStatus;
+  readonly expiresOn: string;
+}
+
 export interface QualificationEntry {
   readonly staffId: string;
   /** Fehlt bei einem fehlenden Pflichtnachweis. */
@@ -177,6 +187,26 @@ class StaffQualificationService {
       "Nachweise konnten nicht geladen werden",
     );
     return (data ?? []).map(mapEntry);
+  }
+
+  /** Der Stand der Nachweise, die der Träger für die Person führt (#4707). */
+  async traegerProofs(staffId: string): Promise<TraegerProofStatus[]> {
+    const data = await readData<
+      | {
+          type_name: string;
+          status: QualificationStatus;
+          expires_on: string | null;
+        }[]
+      | null
+    >(
+      await sessionFetch(`/api/staff/${staffId}/traeger-proofs`),
+      "Nachweise des Trägers konnten nicht geladen werden",
+    );
+    return (data ?? []).map((proof) => ({
+      typeName: proof.type_name,
+      status: proof.status,
+      expiresOn: proof.expires_on ?? "",
+    }));
   }
 
   async ownEntries(): Promise<QualificationEntry[]> {

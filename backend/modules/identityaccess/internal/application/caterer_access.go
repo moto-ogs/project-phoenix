@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"slices"
 	"strings"
 	"time"
 
@@ -39,6 +38,7 @@ type CatererAccess struct {
 	// runs on (#4497); a composition without them refuses its flows.
 	mfa      *AccountMFAFlows
 	passkeys *AccountPasskeyFlows
+	factor   voluntaryFactor
 	attach   func(context.Context) context.Context
 	now      func() time.Time
 	logger   *slog.Logger
@@ -74,11 +74,16 @@ func NewCatererAccess(auth *AccountAuthentication, deps CatererAccessDependencie
 	if attach == nil {
 		attach = func(ctx context.Context) context.Context { return ctx }
 	}
-	return &CatererAccess{
+	caterers := &CatererAccess{
 		auth: auth, store: deps.Store, delivery: deps.Delivery, passwords: deps.Passwords, verifier: deps.Verifier,
 		schools: deps.Schools, runtime: deps.Runtime, mfa: deps.MFA, passkeys: deps.Passkeys,
 		attach: attach, now: time.Now, logger: logger,
-	}, nil
+	}
+	caterers.factor = voluntaryFactor{
+		portal: domain.PortalCaterer, auth: auth, mfa: deps.MFA, verifier: deps.Verifier, runtime: deps.Runtime, logger: logger,
+		member: caterers.signedInCaterer, mint: caterers.mintProven, notEnabled: identityaccess.ErrCatererMFANotEnabled,
+	}
+	return caterers, nil
 }
 
 // inSchool reports whether the caller opened a school's transaction.
@@ -165,6 +170,24 @@ func (c *CatererAccess) ListCatererInvitations(ctx context.Context) ([]identitya
 		result = append(result, publicCatererInvitation(invitation))
 	}
 	return result, nil
+}
+
+// CatererInvitationMailStates reads what became of the mails of the school's
+// invitations in one read, in the school's transaction (#5960). Delivery owns
+// the answer; the root binds it.
+func (c *CatererAccess) CatererInvitationMailStates(ctx context.Context, invitationIDs []int64) (map[int64]identityaccess.InvitationMailState, error) {
+	ctx = c.attach(ctx)
+	if !c.inSchool(ctx) {
+		return nil, catererError(failed("read caterer invitation mail states", errSchoolTransactionRequired))
+	}
+	if len(invitationIDs) == 0 {
+		return map[int64]identityaccess.InvitationMailState{}, nil
+	}
+	states, err := c.delivery.CatererInvitationMailStates(ctx, c.runtime.TenantID(ctx), invitationIDs)
+	if err != nil {
+		return nil, catererError(failed("read caterer invitation mail states", err))
+	}
+	return states, nil
 }
 
 // RevokeCatererInvitation takes back an open invitation of the school.
@@ -382,40 +405,14 @@ func (c *CatererAccess) catererSchools(ctx context.Context, accountID int64) (do
 		schools []int64
 	)
 	err := globalIdentityRead(ctx, c.runtime, func(readCtx context.Context) error {
-		found, _, err := c.findCaterer(readCtx, accountID, &caterer)
-		switch {
-		case err != nil:
-			return err
-		case !found:
-			return domain.ErrAccountNotCaterer
-		}
-		schools, _, err = c.store.ListCatererSchools(readCtx, caterer.ID)
-		if err != nil {
-			return err
-		}
-		// School liveness belongs to Organisation & Tenancy. Resolve the
-		// linked schools in bulk before the portal opens any tenant.
-		active, err := c.schools.ListActiveSchoolsByID(readCtx, schools)
-		if err != nil {
-			return err
-		}
-		live := make(map[int64]bool, len(active))
-		for _, school := range active {
-			live[school.ID] = true
-		}
-		schools = slices.DeleteFunc(schools, func(id int64) bool { return !live[id] })
-		return nil
+		var err error
+		caterer, schools, err = c.auth.suppliedSchools(readCtx, accountID)
+		return err
 	})
 	if err != nil {
 		return domain.Caterer{}, nil, failed("find caterer schools", err)
 	}
 	return caterer, schools, nil
-}
-
-func (c *CatererAccess) findCaterer(ctx context.Context, accountID int64, into *domain.Caterer) (bool, domain.OperationStats, error) {
-	caterer, found, stats, err := c.store.FindCatererOfAccount(ctx, accountID)
-	*into = caterer
-	return found, stats, err
 }
 
 // buildCatererMetadata is the claims material of a caterer token: the

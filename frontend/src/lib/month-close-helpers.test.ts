@@ -69,6 +69,7 @@ describe("month-close response mapping", () => {
       closedAt: "2026-07-01T08:00:00Z",
       closedBy: "4",
       closeReason: "Lohnlauf",
+      closedByTraeger: false,
       frozenClosingBalanceMinutes: 90,
       driftMinutes: -30,
       carryInFrozen: true,
@@ -100,6 +101,7 @@ describe("month-close response mapping", () => {
       closedAt: "2026-07-01T08:00:00Z",
       closedBy: "4",
       closeReason: "Lohnlauf",
+      source: "manual",
     });
     expect(
       mapMonthCloseSnapshotResponse({

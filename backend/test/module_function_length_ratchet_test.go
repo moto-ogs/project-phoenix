@@ -74,15 +74,17 @@ const moduleFuncLenThreshold = 60
 // additions or raises require a new-numbered ADR cited by the entry (ADR 0070).
 // ADR 0082: newly covered sources, measured at 722c5aa147; no headroom.
 var moduleFuncLenAllowlist = map[string]int{
-	"api/active_test_helpers.go:buildActiveTestModule":                   185,
-	"api/auth_test_helpers.go:NewAuthTestModule":                         164,
-	"api/calendar_test_helpers.go:NewCalendarTestModule":                 63,
-	"api/guardian_invitation_test_helpers.go:lifecycleTestModule":        61,
-	"api/guardians_composition.go:NewGuardiansResource":                  106,
-	"api/import_test_helpers.go:NewImportTestModuleWithOwners":           80,
-	"api/iot/compose/compose.go:(*Resource).Router":                      105,
-	"api/reminders_test_helpers.go:NewRemindersTestModule":               64,
-	"api/root_serve.go:composeServeRoot":                                 511,
+	"api/active_test_helpers.go:buildActiveTestModule":            185,
+	"api/auth_test_helpers.go:NewAuthTestModule":                  164,
+	"api/calendar_test_helpers.go:NewCalendarTestModule":          63,
+	"api/guardian_invitation_test_helpers.go:lifecycleTestModule": 61,
+	"api/guardians_composition.go:NewGuardiansResource":           106,
+	"api/import_test_helpers.go:NewImportTestModuleWithOwners":    80,
+	"api/iot/compose/compose.go:(*Resource).Router":               105,
+	"api/reminders_test_helpers.go:NewRemindersTestModule":        64,
+	// ADR 0234: the school search mount takes the note search and the
+	// activity read; gofmt splits its root step (+2).
+	"api/root_serve.go:composeServeRoot":                                 513,
 	"api/root_test_root.go:composeTestRootWith":                          282,
 	"api/serve_mounts_students.go:mountStudentRoutes":                    117,
 	"api/serve_mounts_students.go:requestReviewDependencies":             100,
@@ -467,7 +469,7 @@ var moduleFuncLenAllowlist = map[string]int{
 	// ADR 0087.
 	"database/migrations/001015443_student_departure_exceptions.go:studentDepartureExceptionsUp": 74,
 	// ADR 0087.
-	"database/migrations/00_migrations.go:DetectVersionCollisions": 76,
+	"database/migrations/00_migrations.go:DetectVersionCollisions": 75,
 	// ADR 0087.
 	// ADR 0087.
 	"database/migrations/guardian_owner_backfill.go:(*guardianOwnerTenantRun).copyBatch": 68,
@@ -495,7 +497,6 @@ var moduleFuncLenAllowlist = map[string]int{
 	// ADR 0087.
 	"database/migrations/request_child_storage_contract.go:requestChildStorageContractDataPreflight": 66,
 	// ADR 0087.
-	"database/migrations/reset.go:resetDatabase": 71,
 	// ADR 0087.
 	"database/migrations/staff_owner_backfill.go:(*staffOwnerTenantRun).copyBatch": 68,
 	// ADR 0087.

@@ -4,48 +4,11 @@
  * session. Backend int64 IDs arrive as numbers and leave here as strings.
  */
 
-import { apiErrorFromBody, transportFetch } from "./api-error";
+import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 import type { SettingsSchema } from "./settings-api";
 import { filenameFromDisposition } from "./file-download";
+import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 import { type TraegerRole, traegerRoles } from "./traeger-roles";
-
-/** A Träger the person can open, offered when they belong to several. */
-export interface TraegerChoice {
-  readonly id: string;
-  readonly name: string;
-}
-
-export type TraegerLoginResult =
-  | {
-      readonly status: "authenticated";
-    }
-  | {
-      readonly status: "organization_selection_required";
-      readonly organizations: readonly TraegerChoice[];
-    }
-  | {
-      /** The account has a second factor: a code was mailed (#4651). */
-      readonly status: "mfa_required";
-      readonly challengeToken: string;
-      readonly maskedEmail: string;
-      readonly organizationId: string;
-    }
-  | {
-      /** The account sets up its second factor first. */
-      readonly status: "mfa_enrollment_required";
-      readonly enrollmentToken: string;
-      readonly maskedEmail: string;
-      readonly organizationId: string;
-    };
-
-interface BackendLoginResponse {
-  status?: string;
-  access_token?: string;
-  challenge_token?: string;
-  masked_email?: string;
-  organization_id?: number;
-  organizations?: { id: number; name: string }[];
-}
 
 export interface TraegerSchool {
   readonly id: string;
@@ -239,11 +202,14 @@ export async function traegerLogin(input: {
   readonly email: string;
   readonly password: string;
   readonly organizationId?: string;
-}): Promise<TraegerLoginResult> {
+  /** Asks for the code even on a remembered device (#6955). */
+  readonly ignoreTrustedDevice?: boolean;
+}): Promise<SignInAnswer> {
   const body: Record<string, unknown> = {
     email: input.email,
     password: input.password,
   };
+  if (input.ignoreTrustedDevice) body.ignore_trusted_device = true;
   if (input.organizationId !== undefined) {
     body.organization_id = Number(input.organizationId);
   }
@@ -262,35 +228,7 @@ export async function traegerLogin(input: {
     );
   }
 
-  const result = (data ?? {}) as BackendLoginResponse;
-  if (result.status === "organization_selection_required") {
-    return {
-      status: "organization_selection_required",
-      organizations: (result.organizations ?? []).map((organization) => ({
-        id: String(organization.id),
-        name: organization.name,
-      })),
-    };
-  }
-  if (result.status === "mfa_required" && result.challenge_token) {
-    return {
-      status: "mfa_required",
-      challengeToken: result.challenge_token,
-      maskedEmail: result.masked_email ?? "",
-      organizationId: String(result.organization_id ?? ""),
-    };
-  }
-  if (result.status === "mfa_enrollment_required" && result.access_token) {
-    return {
-      status: "mfa_enrollment_required",
-      enrollmentToken: result.access_token,
-      maskedEmail: result.masked_email ?? "",
-      organizationId: String(result.organization_id ?? ""),
-    };
-  }
-  if (result.status !== "authenticated")
-    throw apiErrorFromBody("Invalid login response", 502, data);
-  return { status: "authenticated" };
+  return signInAnswer("traeger", data);
 }
 
 /** The schools of the signed-in person's Träger. */
@@ -463,6 +401,46 @@ export async function startTraegerSchoolSession(
   return token;
 }
 
+/** The mailed code of a step in the running Träger session (#7068). */
+export interface TraegerCodeStep {
+  challengeToken: string;
+  maskedEmail: string;
+}
+
+/**
+ * Mails a code for the person of the Träger session (#7068). A school that
+ * accepts no remembered device opens once the code is redeemed.
+ */
+export async function startTraegerCodeStep(): Promise<TraegerCodeStep> {
+  const data = await traegerRequest<{
+    challenge_token?: string;
+    masked_email?: string;
+  } | null>("/api/traeger/auth/mfa/step-up", { method: "POST", body: {} });
+  if (!data?.challenge_token) {
+    throw new ApiError("Code step without challenge", 502);
+  }
+  return {
+    challengeToken: data.challenge_token,
+    maskedEmail: data.masked_email ?? "",
+  };
+}
+
+/**
+ * Redeems the code in the running Träger session (#7068). The BFF installs
+ * the renewed session; false means the code was right but the new session
+ * could not be installed, so the person signs in again.
+ */
+export async function verifyTraegerCodeStep(
+  challengeToken: string,
+  code: string,
+): Promise<boolean> {
+  const data = await traegerRequest<{ session_renewed?: boolean } | null>(
+    "/api/traeger/auth/mfa/step-up/verify",
+    { method: "POST", body: { challenge_token: challengeToken, code } },
+  );
+  return data?.session_renewed === true;
+}
+
 // --- Ferienzeiträume (#4659) ---
 
 /** A bookable care time of a holiday week; the price is in whole cent. */
@@ -509,6 +487,13 @@ export interface HolidayWeek {
   readonly bookingUnit?: HolidayBookingUnit;
   /** Days without care of the stored week; such a week takes no new booking. Read only. */
   readonly noCareDays?: readonly HolidayNoCareDay[];
+  /**
+   * Price of one lunch in cent; null or absent offers no lunch (#5631). A
+   * booking with lunch takes one lunch on each of its care days.
+   */
+  readonly lunchPriceCents?: number | null;
+  /** A booking of the week has lunch, so the offer stays. Read only. */
+  readonly lunchBooked?: boolean;
 }
 
 /** How a holiday week is booked (#4701). */
@@ -577,6 +562,8 @@ interface BackendWeek {
   time_models?: BackendTimeModel[] | null;
   booking_unit?: HolidayBookingUnit;
   no_care_days?: HolidayNoCareDay[] | null;
+  lunch_price_cents?: number | null;
+  lunch_booked?: boolean;
 }
 
 interface BackendHolidayPeriod {
@@ -622,6 +609,13 @@ function holidayPeriodFromBackend(period: BackendHolidayPeriod): HolidayPeriod {
       hostSchoolId: String(week.host_school_id),
       bookingUnit: week.booking_unit ?? "week",
       noCareDays: week.no_care_days ?? [],
+      // Only a week with lunch carries the fields (#5631).
+      ...(week.lunch_price_cents == null
+        ? {}
+        : {
+            lunchPriceCents: week.lunch_price_cents,
+            lunchBooked: week.lunch_booked ?? false,
+          }),
       timeModels: (week.time_models ?? []).map((model) => ({
         id: String(model.id),
         name: model.name,
@@ -652,6 +646,10 @@ function holidayPeriodToBackend(input: HolidayPeriodInput) {
       ends_on: week.endsOn,
       host_school_id: Number(week.hostSchoolId),
       booking_unit: week.bookingUnit ?? "week",
+      // Left out, the week offers no lunch (#5631).
+      ...(week.lunchPriceCents == null
+        ? {}
+        : { lunch_price_cents: week.lunchPriceCents }),
       time_models: week.timeModels.map((model) => ({
         ...(model.id ? { id: Number(model.id) } : {}),
         name: model.name,

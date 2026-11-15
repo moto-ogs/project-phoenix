@@ -136,6 +136,9 @@ type staffShiftService struct {
 	// its day (#6302). A nil reader plans everybody healthy.
 	sickReports SickReportReader
 	today       func() calendar.Date
+	// guard is the working-time check over all Einsatzorte of a
+	// Personalakte (#4708). Nil checks nothing.
+	guard *planGuard
 }
 
 // NewStaffShiftService creates a new staff shift service. lockStaffShifts is
@@ -198,10 +201,23 @@ func (s *staffShiftService) ensureShiftTypeAssignable(ctx context.Context, id *i
 	if err != nil {
 		return err
 	}
-	if !shiftType.IsActive && !allowedInactive[*id] {
-		return ErrShiftTypeInactive
+	if allowedInactive[*id] {
+		return nil
 	}
-	return nil
+	return shiftTypeOfferable(shiftType)
+}
+
+// shiftTypeOfferable refuses a type the school no longer offers: an
+// archived one (#6845) or a deactivated one.
+func shiftTypeOfferable(shiftType *workforce.ShiftTypeRecord) error {
+	switch {
+	case shiftType.ArchivedAt != nil:
+		return ErrShiftTypeArchived
+	case !shiftType.IsActive:
+		return ErrShiftTypeInactive
+	default:
+		return nil
+	}
 }
 
 // sameShiftTypeID reports whether two nullable shift-type ids refer to the same
@@ -421,9 +437,13 @@ func (s *staffShiftService) validateOriginLink(ctx context.Context, shift *workf
 }
 
 func (s *staffShiftService) CreateShift(ctx context.Context, shift *workforce.ShiftRecord) (*workforce.ShiftRecord, error) {
+	// A Träger that plans outside moto allows no new shift (ADR 0089 §8).
+	if err := s.refuseWhenPlanningOff(ctx); err != nil {
+		return nil, err
+	}
 	// A create always assigns the type fresh, so no deactivated type is
 	// grandfathered in (nil allowlist).
-	created, err := s.createShift(ctx, shift, nil)
+	created, err := s.createShift(ctx, shift, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -450,7 +470,9 @@ func validateShiftStaff(staff *workforce.PlanStaff, err error) error {
 // of deactivated shift-type ids (a rebuilt cover set re-sends each cover's own,
 // possibly since-deactivated, type — see ApplyCancellation); pass nil for an
 // ordinary create, where every assigned type must still be active (#1841).
-func (s *staffShiftService) createShift(ctx context.Context, shift *workforce.ShiftRecord, allowedInactiveTypes map[int64]bool) (*workforce.ShiftRecord, error) {
+// replaces is the cover a rebuilt replacement stands in for, so the
+// working-time check reports only what the write changes (#4708).
+func (s *staffShiftService) createShift(ctx context.Context, shift *workforce.ShiftRecord, allowedInactiveTypes map[int64]bool, replaces *workforce.ShiftRecord) (*workforce.ShiftRecord, error) {
 	if err := shift.Validate(); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrShiftInvalid, err.Error())
 	}
@@ -492,17 +514,17 @@ func (s *staffShiftService) createShift(ctx context.Context, shift *workforce.Sh
 	if err := s.applySickStateOfDay(ctx, shift); err != nil {
 		return nil, err
 	}
-	if err := s.checkOverlap(ctx, shift); err != nil {
-		return nil, err
-	}
-	record := ShiftCapability(shift)
-	written, err := s.repo.CreateStaffShift(ctx, &record)
+	err = s.writeCheckedShift(ctx, shift, replaces, shift.CreatedBy, func() (workforce.StaffShift, error) {
+		record := ShiftCapability(shift)
+		written, err := s.repo.CreateStaffShift(ctx, &record)
+		if err != nil {
+			return workforce.StaffShift{}, shiftWriteError("create", err)
+		}
+		return written, nil
+	})
 	if err != nil {
-		err = shiftWriteError("create", err)
-
 		return nil, err
 	}
-	applyShiftToRow(shift, written)
 	s.getLogger().Info("staff shift created",
 		"shift_id", shift.ID,
 		"staff_id", shift.StaffID,
@@ -563,14 +585,13 @@ func (s *staffShiftService) updateShiftWithOptions(ctx context.Context, shift *w
 	if err := s.applyEditedSickState(ctx, shift, existing, opts.PreserveExistingCancelled); err != nil {
 		return nil, err
 	}
-	if err := s.checkOverlap(ctx, shift); err != nil {
+	err = s.writeCheckedShift(ctx, shift, existing, valueOrZero(shift.UpdatedBy), func() (workforce.StaffShift, error) {
+		written, err := s.repo.UpdateStaffShift(ctx, ShiftCapability(shift))
+		return written, staffShiftUpdateError(err)
+	})
+	if err != nil {
 		return nil, err
 	}
-	written, err := s.repo.UpdateStaffShift(ctx, ShiftCapability(shift))
-	if err = staffShiftUpdateError(err); err != nil {
-		return nil, err
-	}
-	applyShiftToRow(shift, written)
 	s.getLogger().Info("staff shift updated",
 		"shift_id", shift.ID,
 		"staff_id", shift.StaffID,
@@ -602,6 +623,8 @@ func mergeStoredShiftState(shift, existing *workforce.ShiftRecord, opts StaffShi
 	// Staff assignment is immutable; the shift stays with its staff member.
 	shift.StaffID = existing.StaffID
 	shift.CreatedBy = existing.CreatedBy
+	// A shift the Träger-Portal planned stays marked as such (#4708).
+	shift.PlannedByTraeger = shift.PlannedByTraeger || existing.PlannedByTraeger
 	shift.TenantID = existing.TenantID
 	// A replacement stays a replacement of the same origin — the cover link is
 	// set at creation and never re-pointed by a plain edit (#1841).

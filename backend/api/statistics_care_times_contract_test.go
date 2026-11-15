@@ -43,7 +43,7 @@ func contractCareTimes(t *testing.T, tc *statisticsHTTPTestContext, accountID, c
 
 func TestStudentCareTimes_TakesTheSollFromTheSentContract(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	school := testpkg.Tenant(t)
 	staff, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, school, "Vertrag", "Leitung")
 	// The care plan books Monday 08:00 to 14:00 (careTimeChild); the contract
@@ -80,7 +80,7 @@ func TestStudentCareTimes_TakesTheSollFromTheSentContract(t *testing.T) {
 
 func TestStudentCareTimes_IgnoresADraftContract(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	school := testpkg.Tenant(t)
 	staff, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, school, "Entwurf", "Leitung")
 	childID := careTimeChild(t, tc, staff.ID)
@@ -102,7 +102,7 @@ func TestStudentCareTimes_IgnoresADraftContract(t *testing.T) {
 // plan's Soll stays.
 func TestStudentCareTimes_KeepsTheCarePlanBeforeTheContractStarts(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	school := testpkg.Tenant(t)
 	staff, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, school, "Beginn", "Leitung")
 	childID := careTimeChild(t, tc, staff.ID)
@@ -125,7 +125,7 @@ func TestStudentCareTimes_KeepsTheCarePlanBeforeTheContractStarts(t *testing.T) 
 // is "end_unknown", never the green "within_plan" (#4683).
 func TestStudentCareTimes_ContractWithoutEndTimeIsNotWithinTheBooking(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	school := testpkg.Tenant(t)
 	staff, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, school, "Ohne", "Endzeit")
 	childID := careTimeChild(t, tc, staff.ID)
@@ -149,7 +149,7 @@ func TestStudentCareTimes_ContractWithoutEndTimeIsNotWithinTheBooking(t *testing
 // school's data-access log (ADR 0088 section 7, #4683).
 func TestStudentCareTimes_RecordsTheReadOfTheChild(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	school := testpkg.Tenant(t)
 	staff, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, school, "Protokoll", "Leitung")
 	childID := careTimeChild(t, tc, staff.ID)

@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "8b7c9101bf77f25b114fb42065590cbbe2c4991a623f9f14c168b912aedf9dff",
+  "catalogSHA256": "cb4d27a315b7c4f585493dac330bc523455d540d46b77370977aa50844955392",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -2050,6 +2050,30 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "traeger_absence_type_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "requestable",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "offered",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "school_limit_days",
+          "type": "numeric",
+          "udt": "numeric",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -2439,7 +2463,7 @@
           "name": "closed_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "close_reason",
@@ -2487,6 +2511,18 @@
           "name": "payroll_rules",
           "type": "jsonb",
           "udt": "jsonb",
+          "nullable": true
+        },
+        {
+          "name": "closed_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "reopened_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
           "nullable": true
         }
       ],
@@ -2887,11 +2923,39 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "reported_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "cleared_source",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
+        },
+        {
+          "name": "cleared_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
         }
       ],
       "relationships": [
         {
+          "column": "cleared_by_account_id",
+          "targetTable": "auth.accounts",
+          "targetColumn": "id"
+        },
+        {
           "column": "guardian_account_id",
+          "targetTable": "auth.accounts",
+          "targetColumn": "id"
+        },
+        {
+          "column": "reported_by_account_id",
           "targetTable": "auth.accounts",
           "targetColumn": "id"
         },
@@ -7480,6 +7544,18 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "parent_portal",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -7489,13 +7565,19 @@
           "targetColumn": "id"
         },
         {
+          "column": "organization_id",
+          "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        },
+        {
           "column": "tenant_id",
           "targetTable": "platform.schools",
           "targetColumn": "id"
         }
       ],
       "packages": [
-        "school"
+        "school",
+        "organization"
       ],
       "excludedColumns": {
         "token_hash": "Authentication or operational secret/credential material; not customer export content."
@@ -7988,6 +8070,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": true
+        },
+        {
+          "name": "mfa_by_device",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -8376,6 +8464,12 @@
           "name": "updated_at",
           "type": "timestamp with time zone",
           "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "occurrence_responses",
+          "type": "jsonb",
+          "udt": "jsonb",
           "nullable": false
         }
       ],
@@ -10200,6 +10294,12 @@
           "name": "weekday_minutes",
           "type": "ARRAY",
           "udt": "_int4",
+          "nullable": true
+        },
+        {
+          "name": "traeger_contract_id",
+          "type": "bigint",
+          "udt": "int8",
           "nullable": true
         }
       ],
@@ -13117,6 +13217,12 @@
           "nullable": true
         },
         {
+          "name": "lunch",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
           "name": "health",
           "type": "text",
           "udt": "text",
@@ -13436,6 +13542,12 @@
           "type": "text",
           "udt": "text",
           "nullable": false
+        },
+        {
+          "name": "lunch_price_cents",
+          "type": "integer",
+          "udt": "int4",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -14943,6 +15055,12 @@
           "type": "ARRAY",
           "udt": "_date",
           "nullable": true
+        },
+        {
+          "name": "lunch",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -15790,7 +15908,7 @@
           "name": "request_child_id",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "student_id",
@@ -15857,6 +15975,12 @@
           "type": "boolean",
           "udt": "bool",
           "nullable": false
+        },
+        {
+          "name": "import_origin",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -18040,6 +18164,150 @@
       ]
     },
     {
+      "name": "parent_billing.child_debtor_numbers",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "family_email",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "child_key",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "child_first_name",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "child_last_name",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "child_birth_date",
+          "type": "date",
+          "udt": "date",
+          "nullable": true
+        },
+        {
+          "name": "debtor_number",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "last_used_on",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "updated_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        },
+        {
+          "column": "updated_by_account_id",
+          "targetTable": "auth.accounts",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "parent_billing.child_debtor_number_events",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "child_debtor_number_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "action",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "actor_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "actor_account_id",
+          "targetTable": "auth.accounts",
+          "targetColumn": "id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
       "name": "parent_billing.family_billing",
       "columns": [
         {
@@ -19438,6 +19706,12 @@
           "type": "character varying",
           "udt": "varchar",
           "nullable": true
+        },
+        {
+          "name": "holiday_registration_child_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -19849,6 +20123,12 @@
           "name": "cost_center_fallback",
           "type": "character varying",
           "udt": "varchar",
+          "nullable": true
+        },
+        {
+          "name": "booked_days",
+          "type": "smallint",
+          "udt": "int2",
           "nullable": true
         }
       ],
@@ -23742,6 +24022,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "offering_terms",
+          "type": "jsonb",
+          "udt": "jsonb",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -24812,6 +25098,12 @@
           "type": "boolean",
           "udt": "bool",
           "nullable": false
+        },
+        {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -26519,6 +26811,98 @@
         }
       ],
       "relationships": [
+        {
+          "column": "tenant_id",
+          "targetTable": "platform.schools",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school"
+      ]
+    },
+    {
+      "name": "platform.notification_feed_entries",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "tenant_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "deep_link",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "related_type",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "related_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "read_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
+        }
+      ],
+      "relationships": [
+        {
+          "column": "account_id",
+          "targetTable": "auth.accounts",
+          "targetColumn": "id"
+        },
         {
           "column": "tenant_id",
           "targetTable": "platform.schools",
@@ -29697,9 +30081,26 @@
           "type": "text",
           "udt": "text",
           "nullable": false
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
+        },
+        {
+          "name": "account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
         }
       ],
       "relationships": [
+        {
+          "column": "account_id",
+          "targetTable": "auth.accounts",
+          "targetColumn": "id"
+        },
         {
           "column": "student_id",
           "targetTable": "users.student_profiles",
@@ -30009,6 +30410,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -30359,7 +30766,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "updated_by",
@@ -30429,6 +30836,12 @@
         },
         {
           "name": "series_override",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "planned_by_traeger",
           "type": "boolean",
           "udt": "bool",
           "nullable": false
@@ -31754,6 +32167,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": false
+        },
+        {
+          "name": "search_digits",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -32809,6 +33228,12 @@
           "name": "sender_school_class",
           "type": "text",
           "udt": "text",
+          "nullable": true
+        },
+        {
+          "name": "recipient_student_ids",
+          "type": "ARRAY",
+          "udt": "_int8",
           "nullable": true
         }
       ],
@@ -37274,6 +37699,1004 @@
       ],
       "packages": [
         "school"
+      ]
+    },
+    {
+      "name": "workforce.absence_allowance_changes",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "staff_record_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "absence_type_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "udt": "int4",
+          "nullable": false
+        },
+        {
+          "name": "old_entitled_days",
+          "type": "numeric",
+          "udt": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "new_entitled_days",
+          "type": "numeric",
+          "udt": "numeric",
+          "nullable": false
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "changed_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "absence_type_id",
+          "targetTable": "workforce.absence_types",
+          "targetColumn": "id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.absence_types",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "staff_record_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.absence_allowances",
+      "columns": [
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "staff_record_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "absence_type_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "year",
+          "type": "integer",
+          "udt": "int4",
+          "nullable": false
+        },
+        {
+          "name": "entitled_days",
+          "type": "numeric",
+          "udt": "numeric",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "absence_type_id",
+          "targetTable": "workforce.absence_types",
+          "targetColumn": "id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.absence_types",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "staff_record_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.absence_types",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "allowance_enabled",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "standard_days",
+          "type": "numeric",
+          "udt": "numeric",
+          "nullable": false
+        },
+        {
+          "name": "carryover_until",
+          "type": "character",
+          "udt": "bpchar",
+          "nullable": true
+        },
+        {
+          "name": "requestable",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.staff_contract_holiday_weeks",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "contract_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "school_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "membership_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "week_start",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "weekday_minutes",
+          "type": "ARRAY",
+          "udt": "_int4",
+          "nullable": false
+        },
+        {
+          "name": "created_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "contract_id",
+          "targetTable": "workforce.staff_contracts",
+          "targetColumn": "id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_contracts",
+          "targetColumn": "organization_id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.staff_contract_targets",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "contract_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "school_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "membership_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "valid_from",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "weekday_minutes",
+          "type": "ARRAY",
+          "udt": "_int4",
+          "nullable": false
+        },
+        {
+          "name": "created_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "contract_id",
+          "targetTable": "workforce.staff_contracts",
+          "targetColumn": "id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_contracts",
+          "targetColumn": "organization_id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.staff_contracts",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "staff_record_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "kind",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "starts_on",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "ends_on",
+          "type": "date",
+          "udt": "date",
+          "nullable": true
+        },
+        {
+          "name": "created_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "staff_record_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.staff_proof_type_mappings",
+      "columns": [
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "school_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "school_type_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "proof_type_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "mapped_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "mapped_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_proof_types",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "proof_type_id",
+          "targetTable": "workforce.staff_proof_types",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.staff_proof_types",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "standard_key",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": true
+        },
+        {
+          "name": "name",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "validity_months",
+          "type": "integer",
+          "udt": "int4",
+          "nullable": true
+        },
+        {
+          "name": "reminder_lead_weeks",
+          "type": "integer",
+          "udt": "int4",
+          "nullable": false
+        },
+        {
+          "name": "mandatory",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "sort_order",
+          "type": "integer",
+          "udt": "int4",
+          "nullable": false
+        },
+        {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.staff_proofs",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "staff_record_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "type_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "presented_on",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "issued_on",
+          "type": "date",
+          "udt": "date",
+          "nullable": true
+        },
+        {
+          "name": "no_relevant_entry",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "expires_on",
+          "type": "date",
+          "udt": "date",
+          "nullable": true
+        },
+        {
+          "name": "lead_reminded_for",
+          "type": "date",
+          "udt": "date",
+          "nullable": true
+        },
+        {
+          "name": "expiry_reminded_for",
+          "type": "date",
+          "udt": "date",
+          "nullable": true
+        },
+        {
+          "name": "recorded_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_proof_types",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "staff_record_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "id"
+        },
+        {
+          "column": "type_id",
+          "targetTable": "workforce.staff_proof_types",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.staff_record_changes",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "staff_record_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "kind",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "field",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "value_text",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
+        },
+        {
+          "name": "value_masked",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": true
+        },
+        {
+          "name": "school_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "value_opened",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "staff_record_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ],
+      "excludedColumns": {
+        "value_sealed": "Bank or tax value sealed with the bank ring of the deployment (#4705); its ciphertext is no customer export content, the export opens it into value_opened."
+      }
+    },
+    {
+      "name": "workforce.staff_record_links",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "staff_record_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "school_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "membership_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "linked_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "linked_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "staff_record_id",
+          "targetTable": "workforce.staff_records",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "workforce.staff_records",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "first_name",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "last_name",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "birthday",
+          "type": "date",
+          "udt": "date",
+          "nullable": true
+        },
+        {
+          "name": "personnel_number",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": true
+        },
+        {
+          "name": "iban_masked",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "iban_opened",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
+        },
+        {
+          "name": "social_security_number_opened",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
+        },
+        {
+          "name": "tax_id_opened",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "workforce.staff_releases",
+          "targetColumn": "organization_id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ],
+      "excludedColumns": {
+        "iban_sealed": "IBAN sealed with the bank ring of the deployment (#4705); its ciphertext is no customer export content, the export opens it into iban_opened.",
+        "social_security_number_sealed": "Social security number sealed with the bank ring of the deployment (#4705); its ciphertext is no customer export content, the export opens it into social_security_number_opened.",
+        "tax_id_sealed": "Tax ID sealed with the bank ring of the deployment (#4705); its ciphertext is no customer export content, the export opens it into tax_id_opened."
+      }
+    },
+    {
+      "name": "workforce.staff_releases",
+      "columns": [
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "representation",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "released_by_operator_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "released_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
       ]
     }
   ],

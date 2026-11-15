@@ -17,6 +17,12 @@ function sameContact(a: TraegerContact, b: TraegerContact): boolean {
   return a.name === b.name && a.phone === b.phone && a.email === b.email;
 }
 
+/** The contact's phone and e-mail fields; the withdrawal card jumps to them (#7054). */
+export const TRAEGER_CONTACT_FIELD_IDS = {
+  phone: "traeger-contact-phone",
+  email: "traeger-contact-email",
+} as const;
+
 /**
  * The contact person of the Träger (#4653): who parents and schools reach
  * about a letter. Empty fields are left off the letter.
@@ -113,7 +119,7 @@ export function TraegerContactCard({
           />
           <Input
             controlSize="touch"
-            id="traeger-contact-phone"
+            id={TRAEGER_CONTACT_FIELD_IDS.phone}
             label="Telefon"
             name="phone"
             type="tel"
@@ -125,7 +131,7 @@ export function TraegerContactCard({
           />
           <Input
             controlSize="touch"
-            id="traeger-contact-email"
+            id={TRAEGER_CONTACT_FIELD_IDS.email}
             label="E-Mail-Adresse"
             name="email"
             type="email"

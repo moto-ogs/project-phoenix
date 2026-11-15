@@ -104,7 +104,7 @@ describe("LetterStatusPanel mail state (#5934)", () => {
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Fehlgeschlagene erneut senden" }),
-      ).toBeDisabled(),
+      ).toHaveAttribute("aria-disabled", "true"),
     );
   });
 
@@ -169,7 +169,7 @@ describe("LetterStatusPanel mail state (#5934)", () => {
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Fehlgeschlagene erneut senden" }),
-      ).toBeDisabled(),
+      ).toHaveAttribute("aria-disabled", "true"),
     );
   });
 
@@ -207,6 +207,10 @@ describe("LetterStatusPanel mail state (#5934)", () => {
     renderPanel();
     expect(await screen.findByText(/moto-Support/)).toBeInTheDocument();
     expect(screen.queryByText(/neue Adresse ist möglich/)).toBeNull();
+
+    // The notice names the recipient; its button lands there (#7054).
+    fireEvent.click(screen.getByRole("button", { name: "Zu den Empfängern" }));
+    expect(screen.getByRole("heading", { name: "Empfänger" })).toHaveFocus();
   });
 
   it("names the support for a block at the provider and offers no resend", async () => {
@@ -227,7 +231,7 @@ describe("LetterStatusPanel mail state (#5934)", () => {
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Fehlgeschlagene erneut senden" }),
-      ).toBeDisabled(),
+      ).toHaveAttribute("aria-disabled", "true"),
     );
   });
 
@@ -274,6 +278,35 @@ describe("LetterStatusPanel mail state (#5934)", () => {
       screen.getByRole("button", { name: "Fehlgeschlagene erneut senden" }),
     ).toBeEnabled();
   });
+
+  it.each(["send_failed", "delivered"] as const)(
+    "keeps %s as history and explains the current departure hold",
+    async (outcome) => {
+      fetchLetterStatus.mockResolvedValue(
+        status({ emails_resendable: 0 }, [
+          recipient({
+            mail_outcome: outcome,
+            email_status: outcome === "send_failed" ? "failed" : "sent",
+            departed: true,
+          }),
+        ]),
+      );
+      renderPanel();
+      expect(await screen.findByText("Kein Kind in Betreuung")).toBeVisible();
+      expect(screen.getByText(/Kein Kind dieser Person/)).toBeVisible();
+      expect(
+        screen.getByText(
+          outcome === "send_failed" ? "Fehlgeschlagen" : "Zugestellt",
+        ),
+      ).toBeVisible();
+      expect(
+        screen.queryByText(/Bitte senden Sie neu/),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Fehlgeschlagene erneut senden" }),
+      ).toHaveAttribute("aria-disabled", "true");
+    },
+  );
 });
 
 // #6652: a write holds once it is through; a failed reload keeps the shown

@@ -85,6 +85,7 @@ type StaffShift struct {
 	SickAbsenceID        *int64
 	CreatedBy            int64
 	UpdatedBy            *int64
+	PlannedByTraeger     bool
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }
@@ -190,8 +191,26 @@ type ShiftType struct {
 	Color       string
 	Description string
 	IsActive    bool
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	// ArchivedAt is set while the type only labels already planned rows.
+	ArchivedAt *time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+// ShiftTypeReferences counts the planned shifts and series carrying a type.
+type ShiftTypeReferences struct {
+	Shifts int
+	Series int
+}
+
+// Referenced reports whether any planned shift or series carries the type.
+func (r ShiftTypeReferences) Referenced() bool { return r.Shifts > 0 || r.Series > 0 }
+
+// ShiftPlanReferences counts the plan's references per shift type and the
+// series per calendar period.
+type ShiftPlanReferences struct {
+	ByShiftType            map[int64]ShiftTypeReferences
+	SeriesByCalendarPeriod map[int64]int
 }
 
 // ValidateStaffShift enforces the row rules shared with the legacy model:
@@ -213,7 +232,7 @@ func ValidateStaffShift(shift StaffShift) error {
 	if err := validateShiftWindow(shift.StartTime, shift.EndTime, shift.BreakMinutes, invalidShift); err != nil {
 		return err
 	}
-	if shift.CreatedBy <= 0 {
+	if shift.CreatedBy <= 0 && !shift.PlannedByTraeger {
 		return invalidShift("created by is required")
 	}
 	return nil

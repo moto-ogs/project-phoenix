@@ -9,6 +9,7 @@
 import { SectionLabel } from "~/components/ui/section-label";
 import { FileText, FolderOpen, Lock, Users } from "lucide-react";
 import Link from "~/components/ui/navigation-link";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useSession } from "next-auth/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
@@ -32,13 +33,12 @@ import { hasPermission } from "~/lib/auth-utils";
 import {
   filesService,
   FOLDER_VISIBILITY_LABELS,
-  formatBytes,
-  isViewableInBrowser,
   type FileFolder,
   type FolderFiles,
   type FolderOverview,
   type StoredFile,
 } from "~/lib/files-api";
+import { formatBytes, isViewableInBrowser } from "~/lib/file-format";
 import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
@@ -146,6 +146,7 @@ export function FilesPage() {
   );
   const showsTraegerCard = traegerDocuments.shown;
   const canUpload = overview?.canUpload ?? false;
+  const tenantPath = useTenantAwarePath();
   const canChangeUploadPermission =
     hasPermission(session, "config:read") &&
     hasPermission(session, "config:update");
@@ -228,6 +229,7 @@ export function FilesPage() {
             variant="primary"
             size="md"
             onClick={() => setFolderModal({ open: true, folder: null })}
+            tooltip="Öffnet ein Formular für einen neuen Ordner."
           >
             Neuer Ordner
           </Button>
@@ -281,7 +283,7 @@ export function FilesPage() {
                   label: `${folder.name} (${folder.fileCount})`,
                 }))}
                 onChange={(value) => setSelectedId(value)}
-                controlSize="compact"
+                controlSize="dense"
               />
             </SectionCard>
             <SectionCard
@@ -310,7 +312,9 @@ export function FilesPage() {
                       {canChangeUploadPermission && (
                         <span className="mt-1 block">
                           <Link
-                            href="/settings?tab=operations&highlight=files.staff_upload_enabled"
+                            href={tenantPath(
+                              "/settings?tab=operations&highlight=files.staff_upload_enabled",
+                            )}
                             className="inline-flex min-h-6 items-center text-xs font-medium text-gray-500 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-gray-800 hover:decoration-gray-500 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-1 focus-visible:outline-none"
                           >
                             Berechtigung ändern
@@ -512,6 +516,7 @@ function FolderFilesPanel({
         if (isViewableInBrowser(file.contentType)) {
           items.push({
             label: "Öffnen",
+            description: "Zeigt die Datei in einem neuen Tab",
             href: filesService.viewUrl(folder.id, file.id),
             external: true,
             onClick: () => undefined,
@@ -519,6 +524,7 @@ function FolderFilesPanel({
         }
         items.push({
           label: "Herunterladen",
+          description: "Speichert die Datei auf Ihrem Gerät",
           href: filesService.downloadUrl(folder.id, file.id),
           external: true,
           onClick: () => undefined,
@@ -528,6 +534,7 @@ function FolderFilesPanel({
             { kind: "separator" },
             {
               label: "Löschen",
+              description: "Löscht die Datei endgültig. moto fragt vorher nach",
               destructive: true,
               onClick: () => {
                 deleteErrors.clear();
@@ -547,9 +554,19 @@ function FolderFilesPanel({
   ];
 
   const folderMenu: OverflowMenuEntry[] = [
-    { label: "Ordner bearbeiten", onClick: onEdit },
+    {
+      label: "Ordner bearbeiten",
+      description: "Ändert Name und wer den Ordner sieht",
+      onClick: onEdit,
+    },
     { kind: "separator" },
-    { label: "Ordner löschen", destructive: true, onClick: onDelete },
+    {
+      label: "Ordner löschen",
+      description:
+        "Löscht den Ordner mit allen Dateien. moto fragt vorher nach",
+      destructive: true,
+      onClick: onDelete,
+    },
   ];
 
   return (

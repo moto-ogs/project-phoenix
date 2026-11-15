@@ -7,6 +7,7 @@ import { useDemoEveningActive } from "~/components/demo/demo-evening-notice";
 import { StaffPreviewBanner } from "~/components/staff-preview/staff-preview-banner";
 import { useShellAuthSafe } from "~/lib/shell-auth-context";
 import { Header } from "./header";
+import { RemindersBell } from "./header/reminders-bell";
 import { Sidebar } from "./sidebar";
 import { StaffSettingsReturnPathMemory } from "./staff-settings-nav";
 import { MobileBottomNav } from "./mobile-bottom-nav";
@@ -38,7 +39,7 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const previewActive = useShellAuthSafe()?.isPreview === true;
   // Öffentliche Demo (#3467): derselbe feste Streifen oben, mit Rollenmenü
-  // und „Kostenlos starten". Während einer Vorschau hat deren Streifen Vorrang.
+  // und „Termin buchen". Während einer Vorschau hat deren Streifen Vorrang.
   const demoBannerShown = useDemoBannerShown();
   const stripActive = previewActive || demoBannerShown;
   // Abends liegt unter dem Demo-Streifen eine Hinweiszeile (h-8, #3921).
@@ -48,7 +49,7 @@ export function AppShell({ children }: AppShellProps) {
     <div className={eveningRow ? "pt-20" : stripActive ? "pt-12" : undefined}>
       <MobilePageHelpPortal>
         <PortalShell
-          header={<Header />}
+          header={<Header notificationBell={<RemindersBell />} />}
           headerClassName={
             eveningRow
               ? "sticky top-20 z-40 hidden lg:block"

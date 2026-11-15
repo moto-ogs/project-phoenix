@@ -34,6 +34,7 @@ type service struct {
 	// two services point at each other).
 	attachments AttachmentPurger
 	logger      *slog.Logger
+	now         func() time.Time
 }
 
 // newsEnabled reports whether the parent-news feature is on for the current
@@ -114,7 +115,7 @@ func (s *service) Create(ctx context.Context, createdBy int64, in Input) (*Staff
 	if !enabled {
 		return nil, ErrNewsDisabled
 	}
-	targets, options, err := prepareCreate(ctx, &in)
+	targets, options, err := prepareCreate(ctx, &in, s.now())
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +295,7 @@ func (s *service) Publish(ctx context.Context, id int64) (*StaffParentAnnounceme
 		return nil, ErrNewsDisabled
 	}
 	if !a.IsPublished() {
-		now := time.Now()
+		now := s.now()
 		if err := validateAnnouncementPublication(a, now); err != nil {
 			return nil, err
 		}
@@ -678,7 +679,7 @@ func (s *service) Recipients(ctx context.Context, id int64) ([]*StaffAnnouncemen
 // only teach clients to send redundant flags. Silently WIDENING an audience or
 // turning a poll into a letter, by contrast, would change what the author
 // intended and is refused.
-func normalizeDelivery(in *Input) error {
+func normalizeDelivery(in *Input, now time.Time) error {
 	if in.DeliveryMode == "" {
 		in.DeliveryMode = StaffParentAnnouncementDeliveryStandard
 	}
@@ -704,11 +705,11 @@ func normalizeDelivery(in *Input) error {
 	if in.EmailAudience == StaffEmailAudienceAllContacts && !in.SendEmail {
 		return fmt.Errorf("%w: email_audience %q requires send_email", ErrValidation, in.EmailAudience)
 	}
-	return normalizeDeclaration(in)
+	return normalizeDeclaration(in, now)
 }
 
 // normalizeInput validates and trims the payload and returns the deduplicated target rows.
-func normalizeInput(in *Input) ([]*StaffParentAnnouncementTarget, error) {
+func normalizeInput(in *Input, now time.Time) ([]*StaffParentAnnouncementTarget, error) {
 	in.Title = strings.TrimSpace(in.Title)
 	in.Body = strings.TrimSpace(in.Body)
 	if in.Title == "" || len([]rune(in.Title)) > maxTitleLen {
@@ -734,13 +735,13 @@ func normalizeInput(in *Input) ([]*StaffParentAnnouncementTarget, error) {
 	// refused anyway (invisible to parents, immutable). Reject it at input time
 	// so an operator who picks yesterday in the date picker gets a clean
 	// validation error instead of a server error.
-	if in.ExpiresAt != nil && !in.ExpiresAt.After(time.Now()) {
+	if in.ExpiresAt != nil && !in.ExpiresAt.After(now) {
 		return nil, fmt.Errorf("%w: expires_at must be in the future", ErrValidation)
 	}
 	if len(in.Targets) == 0 {
 		return nil, fmt.Errorf("%w: at least one target required", ErrValidation)
 	}
-	if err := normalizeDelivery(in); err != nil {
+	if err := normalizeDelivery(in, now); err != nil {
 		return nil, err
 	}
 

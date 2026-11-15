@@ -18,6 +18,7 @@ type GuardianNotificationAudience = application.GuardianNotificationAudience
 type GuardianNotificationProfile = application.GuardianNotificationProfile
 type Application interface {
 	portal.FullService
+	portal.StaffAppointmentMails
 	ReminderEffects() ReminderEffects
 	GuardianNotificationAudiences(context.Context, []int64) (map[int64]GuardianNotificationAudience, error)
 }

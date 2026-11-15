@@ -15,7 +15,7 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { Input } from "~/components/ui/input";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { formatBytes } from "~/lib/files-api";
+import { formatBytes } from "~/lib/file-format";
 import { createLogger } from "~/lib/logger";
 import {
   TRAEGER_DOCUMENT_ACCEPT,
@@ -167,6 +167,7 @@ export function TraegerDocumentUploadModal({
               type="button"
               variant="ghost"
               size="compact"
+              tooltip="Verwirft die gewählte Datei, damit Sie eine andere wählen."
               onClick={() => setFile(null)}
             >
               Andere Datei

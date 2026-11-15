@@ -801,6 +801,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
       tabs={{
         value: activeTab,
         onChange: handleTabValueChange,
+        inUrl: true,
         items: TAB_ITEMS.map((tab) => ({
           value: tab.id,
           label: tab.label,
@@ -816,8 +817,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
                 setMfaAccount(null);
                 setMfaSchoolContext(null);
               }}
-              scope="operator"
-              schoolId={mfaSchoolContext.id}
+              target={{ kind: "operator", schoolId: mfaSchoolContext.id }}
               accountId={mfaAccount.accountId}
               accountLabel={`${mfaAccount.firstName} ${mfaAccount.lastName}`.trim()}
             />

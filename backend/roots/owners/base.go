@@ -26,6 +26,7 @@ import (
 	workforceModule "github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	"github.com/moto-ogs/project-phoenix/observability"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 func NewCleanupTimetable(db transactionruntime.Database) (timetableModule.Capability, error) {
@@ -40,13 +41,15 @@ func NewCleanupTimetable(db transactionruntime.Database) (timetableModule.Capabi
 	return NewUnobservedTimetable(db, students, rooms)
 }
 
-func newTimetable(db transactionruntime.Database, students peopleModule.StudentQuery, rooms facilitiesModule.Query, membership schoolMembershipModule.Capability, observe func(timetableCompose.Observation)) (timetableModule.Owner, error) {
+// newTimetable composes the Timetable owner; a nil today decides on the
+// Berlin calendar day.
+func newTimetable(db transactionruntime.Database, students peopleModule.StudentQuery, rooms facilitiesModule.Query, membership schoolMembershipModule.Capability, observe func(timetableCompose.Observation), today func() calendar.Date) (timetableModule.Owner, error) {
 	return timetableCompose.New(timetableCompose.Dependencies{
 		LockStaffAssignments: func(ctx context.Context, staffIDs []int64) error {
 			return schoolMembershipModule.LockStaffAssignments(ctx, membership, staffIDs)
 		},
 		DB: db.Pool(), Students: timetableStudents(students), Rooms: timetableRooms(rooms), Sessions: NewPresenceFacts(db),
-		Observe: observe, Provenance: enrollmentProvenanceView.NewReader(),
+		Observe: observe, Provenance: enrollmentProvenanceView.NewReader(), Today: today,
 	})
 }
 
@@ -125,7 +128,9 @@ func composeFeedback(db transactionruntime.Database, settings *feedbackCompose.S
 	})
 }
 
-func ComposeCarePlan(db transactionruntime.Database, persons peopleModule.Capability, slots carePlanCompose.StatusSlotDirectory) (carePlanModule.Owner, error) {
+// ComposeCarePlan composes the Care Plan owner; now stamps its writes and
+// dates its retention, nil is the real clock.
+func ComposeCarePlan(db transactionruntime.Database, persons peopleModule.Capability, slots carePlanCompose.StatusSlotDirectory, now func() time.Time) (carePlanModule.Owner, error) {
 	profiles, err := carePlanCompose.NewStudentProfiles(db.Pool(), StudentDirectoryReader(), func(carePlanCompose.Observation) {})
 	if err != nil {
 		return nil, err
@@ -135,8 +140,8 @@ func ComposeCarePlan(db transactionruntime.Database, persons peopleModule.Capabi
 		return nil, err
 	}
 	return carePlanCompose.New(carePlanCompose.Dependencies{
-		StudentDirectory: StudentDirectoryReader(),
-		DB:               db.Pool(), AmbientDB: carePlanCompose.TenantAmbientDatabase(db.Pool()),
+		StudentDirectory: StudentDirectoryReader(), Now: now,
+		DB: db.Pool(), AmbientDB: carePlanCompose.TenantAmbientDatabase(db.Pool()),
 		StatusStudents: statusStudents, StatusSlots: slots,
 		People: carePlanStudentNames(func(ctx context.Context, ids []int64) ([]carePlanPorts.StudentName, error) {
 			values, err := persons.ListStudentNamesByID(ctx, ids)

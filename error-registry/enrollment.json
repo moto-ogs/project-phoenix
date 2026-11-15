@@ -25,6 +25,18 @@
       "legacy": "enrollment.approval_data_invalid"
     },
     {
+      "code": "enrollment.approval_offering_terms_changed",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "enrollment.approval_offering_terms_changed"
+    },
+    {
+      "code": "enrollment.approval_staff_profile_required",
+      "class": "permission",
+      "parameters": [],
+      "legacy": "enrollment.approval_staff_profile_required"
+    },
+    {
       "code": "enrollment.captcha_failed",
       "class": "input",
       "parameters": [],
@@ -654,6 +666,12 @@
       "legacy": "enrollment.holiday_booking_unit_booked"
     },
     {
+      "code": "enrollment.holiday_lunch_booked",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "enrollment.holiday_lunch_booked"
+    },
+    {
       "code": "enrollment.holiday_child_day_limit",
       "class": "input",
       "parameters": [
@@ -770,6 +788,12 @@
       "class": "business_rejection",
       "parameters": [],
       "legacy": "enrollment.phase_has_effective_bookings"
+    },
+    {
+      "code": "enrollment.phase_has_requests",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "enrollment.phase_has_requests"
     },
     {
       "code": "enrollment.phase_eligibility_setting_required",

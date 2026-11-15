@@ -10,7 +10,7 @@ import (
 func targetOverrideToPublic(row domain.StaffTargetOverride) workforce.StaffTargetOverride {
 	result := workforce.StaffTargetOverride{
 		ID: row.ID, StaffID: row.StaffID, StartDate: row.StartDate, EndDate: row.EndDate,
-		WeekdayMinutes: row.WeekdayMinutes, CreatedBy: row.CreatedBy,
+		WeekdayMinutes: row.WeekdayMinutes, CreatedBy: row.CreatedBy, KeptByTraeger: row.TraegerContractID != nil,
 	}
 	if row.WeekdayMinutes == nil {
 		dailyMinutes := row.DailyMinutes

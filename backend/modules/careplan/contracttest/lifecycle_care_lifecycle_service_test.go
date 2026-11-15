@@ -180,13 +180,13 @@ func TestCareLifecycle_RefusesRetroactiveExit(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	svc := newCareLifecycleService(t, db)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
 
 	student := testpkg.CreateTestStudent(t, db, "Jonas", "Bergmann", "2a")
 
 	_, err := testpkg.TenantQuery1(t, ctx, db, svc.Preview, careplan.CareExitInput{
 		StudentIDs:  []int64{student.ID},
-		LastCareDay: calendar.TodayDate().AddDays(-1),
+		LastCareDay: decisionTestToday.AddDays(-1),
 		Reason:      careplan.CareExitReasonNoCareNeed,
 	})
 	require.ErrorIs(t, err, careplan.ErrCareExitDayInPast)
@@ -341,13 +341,13 @@ func TestCareLifecycle_EndsBookingsAtTheLastCareDay(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	svc := newCareLifecycleService(t, db)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
 	actorID := careActor(t, db)
 	timetableRepos := testTimetableRepositories(db)
 
 	student := testpkg.CreateTestStudent(t, db, "Ella", "Vogt", "2b")
 	group := testpkg.CreateTestActivityGroup(t, db, "Fußball")
-	today := calendar.TodayDate()
+	today := decisionTestToday
 
 	booking := &timetable.StudentEnrollment{
 		StudentID:       student.ID,
@@ -391,11 +391,11 @@ func TestCareLifecycle_CancelOnlyBeforeItTakesEffect(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	svc := newCareLifecycleService(t, db)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
 	actorID := careActor(t, db)
 
 	student := testpkg.CreateTestStudent(t, db, "Ruben", "Hesse", "3c")
-	future := calendar.TodayDate().AddDays(14)
+	future := decisionTestToday.AddDays(14)
 
 	endCare(t, ctx, svc, actorID, careplan.CareExitInput{
 		StudentIDs:  []int64{student.ID},
@@ -587,13 +587,13 @@ func TestCareLifecycle_ResumeForAFutureStartWaitsForTheScheduler(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	resume := newCareResumptionAt(t, db, nil)
+	resume := newCareResumptionAt(t, db, func() calendar.Date { return decisionTestToday })
 	actorID := careActor(t, db)
 
 	student := testpkg.CreateTestStudent(t, db, "Emil", "Roth", "2c")
 	_, err := db.NewUpdate().
 		TableExpr("users.student_school_memberships").
-		Set("enrolled_until = ?", calendar.TodayDate().AddDays(-3)).
+		Set("enrolled_until = ?", decisionTestToday.AddDays(-3)).
 		Set("status = ?", string(peopledirectory.StudentStatusInactive)).
 		Where("student_profile_id = ? AND deleted_at IS NULL", student.ID).
 		Exec(context.Background())
@@ -604,7 +604,7 @@ func TestCareLifecycle_ResumeForAFutureStartWaitsForTheScheduler(t *testing.T) {
 		RecordedBy: &actorID,
 	}))
 
-	start := calendar.TodayDate().AddDays(10)
+	start := decisionTestToday.AddDays(10)
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, resume, careplan.CareResumeInput{
 		StudentID:      student.ID,
 		NewStart:       start,
@@ -805,14 +805,14 @@ func TestCareLifecycle_ChangingTheDayReplansFromTheBaseline(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	svc := newCareLifecycleService(t, db)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
 	actorID := careActor(t, db)
 	timetableRepos := testTimetableRepositories(db)
 
 	student := testpkg.CreateTestStudent(t, db, "Tomke", "Ahrend", "1b")
 	room := testpkg.CreateTestRoom(t, db, "Musikraum")
 	group := testpkg.CreateTestActivityGroup(t, db, "Chor")
-	today := calendar.TodayDate()
+	today := decisionTestToday
 
 	early := testpkg.CreateTestActivityInstance(t, db, today.AddDays(10), room.ID,
 		testpkg.ActivityInstanceOpts{ActivityGroupID: &group.ID})
@@ -882,15 +882,15 @@ func TestCareLifecycle_ResumeDoesNotBringThePlanBack(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	svc := newCareLifecycleService(t, db)
-	resume := newCareResumptionAt(t, db, nil)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
+	resume := newCareResumptionAt(t, db, func() calendar.Date { return decisionTestToday })
 	actorID := careActor(t, db)
 	timetableRepos := testTimetableRepositories(db)
 
 	student := testpkg.CreateTestStudent(t, db, "Malte", "Ruhnau", "2c")
 	room := testpkg.CreateTestRoom(t, db, "Turnhalle")
 	group := testpkg.CreateTestActivityGroup(t, db, "Turnen")
-	today := calendar.TodayDate()
+	today := decisionTestToday
 
 	instance := testpkg.CreateTestActivityInstance(t, db, today.AddDays(30), room.ID,
 		testpkg.ActivityInstanceOpts{ActivityGroupID: &group.ID})

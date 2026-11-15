@@ -1,6 +1,7 @@
 DELETE /api/calendar/appointments/{appointmentId} -> basis
 GET /api/calendar/appointments/{appointmentId} -> basis
 GET /api/calendar/appointments/{appointmentId}/ics -> basis
+GET /api/calendar/appointments/{appointmentId}/mails -> basis
 GET /api/calendar/appointments/{appointmentId}/overview -> basis
 GET /api/calendar/feed -> basis
 GET /api/calendar/my -> basis

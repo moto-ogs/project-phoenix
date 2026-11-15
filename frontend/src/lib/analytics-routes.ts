@@ -13,6 +13,12 @@
  * serve `/parents/*` and `/school/*` without that prefix.
  */
 
+import {
+  createRouteTemplateMatcher,
+  pathBelow,
+  type RouteTemplateMatcher,
+} from "./route-templates";
+
 /** Authenticated OGS pages under `app/[tenant]/(protected)`. */
 export const TRACKED_TENANT_ROUTE_TEMPLATES = [
   "/absences",
@@ -79,6 +85,7 @@ export const TRACKED_TENANT_ROUTE_TEMPLATES = [
   "/messages/groups/:groupThreadId",
   "/ogs-groups",
   "/ogs-groups/overview",
+  "/parent-attention/:studentId",
   "/parent-announcements",
   // Objektansicht einer Elternmitteilung (#3115): nur die Route, nie der
   // Titel — die Kennung bleibt als :id stehen.
@@ -238,12 +245,14 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/abrechnung/jahresbescheide/:id/versand",
   "/abrechnung/nachweise",
   "/abrechnung/preise",
+  "/ankunft-abholung",
   "/anmeldephasen",
   "/anmeldephasen/:id",
   "/anmeldephasen/:id/angebote/:offeringId",
   "/anmeldephasen/:id/angebote/neu",
   "/anmeldephasen/:id/vorschau",
   "/anmeldephasen/neu",
+  "/auslastung",
   "/belegung",
   "/dokumente",
   "/dokumente/:id",
@@ -267,6 +276,12 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/invite",
   "/konto",
   "/login",
+  "/nachweise",
+  "/personal",
+  "/personal/:id",
+  "/personal/abwesenheitsarten",
+  "/personal/einsatzplanung",
+  "/personal/import",
   "/reset-password",
   "/schliesstage",
   "/schulen/:id",
@@ -275,6 +290,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/vertraege",
   "/vertraege/:id",
   "/vertraege/bedingungen",
+  "/vertraege/import",
   "/zeitvergleich",
 ] as const;
 
@@ -300,59 +316,25 @@ export type AnalyticsRouteSurface =
 /** Path of every page without a template; never the raw browser path. */
 export const UNKNOWN_ANALYTICS_PATH = "/unknown";
 
-interface RouteMatcher {
-  readonly template: string;
-  readonly pattern: RegExp;
-}
-
-function segmentPattern(segment: string): string {
-  if (segment.startsWith(":")) {
-    return segment.endsWith("*") ? "[^/]+(?:/[^/]+)*" : "[^/]+";
-  }
-  return segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-// Static templates win over dynamic ones: /rooms/unterwegs before /rooms/:id.
-function buildMatchers(templates: readonly string[]): RouteMatcher[] {
-  return [...templates]
-    .sort((left, right) => left.split(":").length - right.split(":").length)
-    .map((template) => ({
-      template,
-      pattern: new RegExp(
-        `^${template.split("/").map(segmentPattern).join("/")}$`,
-      ),
-    }));
-}
-
 const matchersBySurface: Readonly<
-  Record<AnalyticsRouteSurface, readonly RouteMatcher[]>
+  Record<AnalyticsRouteSurface, RouteTemplateMatcher>
 > = {
-  ogs: buildMatchers([
+  ogs: createRouteTemplateMatcher([
     ...TRACKED_TENANT_ROUTE_TEMPLATES,
     ...TRACKED_TENANT_PUBLIC_ROUTE_TEMPLATES,
   ]),
-  parents: buildMatchers(TRACKED_PARENT_ROUTE_TEMPLATES),
-  school: buildMatchers(TRACKED_SCHOOL_ROUTE_TEMPLATES),
-  caterer: buildMatchers(TRACKED_CATERER_ROUTE_TEMPLATES),
-  traeger: buildMatchers(TRACKED_TRAEGER_ROUTE_TEMPLATES),
-  public: buildMatchers(TRACKED_PUBLIC_ROUTE_TEMPLATES),
+  parents: createRouteTemplateMatcher(TRACKED_PARENT_ROUTE_TEMPLATES),
+  school: createRouteTemplateMatcher(TRACKED_SCHOOL_ROUTE_TEMPLATES),
+  caterer: createRouteTemplateMatcher(TRACKED_CATERER_ROUTE_TEMPLATES),
+  traeger: createRouteTemplateMatcher(TRACKED_TRAEGER_ROUTE_TEMPLATES),
+  public: createRouteTemplateMatcher(TRACKED_PUBLIC_ROUTE_TEMPLATES),
 };
 
 function matchTemplate(
   surface: AnalyticsRouteSurface,
   pathname: string,
 ): string | null {
-  return (
-    matchersBySurface[surface].find(({ pattern }) => pattern.test(pathname))
-      ?.template ?? null
-  );
-}
-
-function withoutPrefix(pathname: string, prefix: string): string | null {
-  if (pathname === prefix) return "/";
-  return pathname.startsWith(`${prefix}/`)
-    ? pathname.slice(prefix.length)
-    : null;
+  return matchersBySurface[surface](pathname);
 }
 
 function resolveOnSurface(
@@ -363,22 +345,22 @@ function resolveOnSurface(
     case "parents":
       return matchTemplate(
         "parents",
-        withoutPrefix(pathname, "/parents") ?? pathname,
+        pathBelow(pathname, "/parents") ?? pathname,
       );
     case "school":
       return matchTemplate(
         "school",
-        withoutPrefix(pathname, "/school") ?? pathname,
+        pathBelow(pathname, "/school") ?? pathname,
       );
     case "caterer":
       return matchTemplate(
         "caterer",
-        withoutPrefix(pathname, "/caterer") ?? pathname,
+        pathBelow(pathname, "/caterer") ?? pathname,
       );
     case "traeger":
       return matchTemplate(
         "traeger",
-        withoutPrefix(pathname, "/traeger") ?? pathname,
+        pathBelow(pathname, "/traeger") ?? pathname,
       );
     case "ogs": {
       // Path routing (`/<slug>/dashboard`) puts the tenant slug first. A
@@ -393,14 +375,14 @@ function resolveOnSurface(
       );
     }
     case "public": {
-      if (withoutPrefix(pathname, "/operator")) return null;
-      const parentsPath = withoutPrefix(pathname, "/parents");
+      if (pathBelow(pathname, "/operator")) return null;
+      const parentsPath = pathBelow(pathname, "/parents");
       if (parentsPath) return matchTemplate("parents", parentsPath);
-      const schoolPath = withoutPrefix(pathname, "/school");
+      const schoolPath = pathBelow(pathname, "/school");
       if (schoolPath) return matchTemplate("school", schoolPath);
-      const catererPath = withoutPrefix(pathname, "/caterer");
+      const catererPath = pathBelow(pathname, "/caterer");
       if (catererPath) return matchTemplate("caterer", catererPath);
-      const traegerPath = withoutPrefix(pathname, "/traeger");
+      const traegerPath = pathBelow(pathname, "/traeger");
       if (traegerPath) return matchTemplate("traeger", traegerPath);
       return (
         matchTemplate("public", pathname) ?? resolveOnSurface("ogs", pathname)

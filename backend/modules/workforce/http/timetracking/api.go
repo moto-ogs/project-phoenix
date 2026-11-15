@@ -67,6 +67,7 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Post("/absences", rs.createAbsence)
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Put("/absences/{id}", rs.updateAbsence)
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Delete("/absences/{id}", rs.deleteAbsence)
+		rs.mountOwnAbsenceMailRoutes(r, withTx)
 
 		// Vacation workflow (Tranche 4), MA-side
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Post("/vacation/request", rs.requestVacation)
@@ -535,7 +536,7 @@ func (rs *Resource) cancelAbsence(w http.ResponseWriter, r *http.Request) {
 	}
 	tenantID := tenant.FromContext(r.Context())
 	if err := rs.withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		return rs.StaffAbsenceService.CancelAbsence(ctx, staffID, userClaims.AccountID, absenceID)
+		return rs.AbsenceWrites.CancelAbsence(ctx, staffID, userClaims.AccountID, absenceID)
 	}); err != nil {
 		common.RenderError(w, r, classifyAbsenceError(err))
 		return

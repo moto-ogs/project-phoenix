@@ -403,6 +403,7 @@ describe("Button", () => {
       disclosure: true,
       day_chip: true,
       day_chip_stacked: true,
+      count_badge: true,
     };
     for (const variant of Object.keys(allVariants) as ButtonVariant[]) {
       const greyRest = buttonClassName({ variant, size: "md", className: "" })
@@ -435,6 +436,7 @@ describe("Button", () => {
       "disclosure",
       "day_chip",
       "day_chip_stacked",
+      "count_badge",
     ] as const;
     for (const variant of variants) {
       expect(
@@ -612,6 +614,20 @@ describe("Button", () => {
     expect(link).toHaveAttribute("href", "/parents/children");
     expect(link.className).toContain("px-4");
     expect(link.className).toContain("ring-gray-300");
+  });
+
+  it("opens a new tab and says so to screen readers", () => {
+    render(
+      <ButtonLink href="/anfragen" newTab noTooltip="Nur im Test.">
+        Zu den Anfragen
+      </ButtonLink>,
+    );
+
+    const link = screen.getByRole("link", {
+      name: "Zu den Anfragen, neuer Tab",
+    });
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 });
 

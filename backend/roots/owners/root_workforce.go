@@ -50,7 +50,9 @@ func BuildWorkSessionSide(
 		StatutoryHolidays: schoolCalendarCompose.NewTenantHolidays(calendar),
 		Events:            TimeTrackingEvents(hub),
 		AbsenceEmail:      absenceEmailDependencies(settings, mailFrom, mailIdentity, env.Links.FrontendURL, logger, people, organizations, durable),
-		Logger:            logger,
+		// What became of the absence request mails (#7058).
+		MailOutcomes: workforceMailOutcomes(durable),
+		Logger:       logger,
 	}, TimeTrackingAudits{
 		WorkSessionEdit: audits.WorkSessionEdit, TimeTrackingDeletion: audits.TimeTrackingDeletion,
 		DataAccessLog: audits.DataAccessLog, TimeTrackingAuditLog: audits.TimeTrackingAuditLog,
@@ -108,19 +110,26 @@ type WorkforcePlanning struct {
 	// QualificationReminders sends the Nachweis reminders (#4808); the
 	// Worker roots compose it once the notifications exist.
 	QualificationReminders workforceModule.QualificationReminders
-	SickReports            WorkforceAbsenceWrites
-	TimeTrackingCleanup    workforceCompose.TimeTrackingCleanupService
+	// TraegerProofReminders warns before a proof of a Träger's Personalstamm
+	// expires (#4707); composed with the Nachweis reminders.
+	TraegerProofReminders workforceModule.TraegerProofReminders
+	SickReports           WorkforceAbsenceWrites
+	TimeTrackingCleanup   workforceCompose.TimeTrackingCleanupService
 }
 
-// WorkforceAbsenceWrites are the absence writes that may cascade a sick
-// report, as the Workforce routes consume them; the root binds the
-// shift-plan-sync entry (#4825).
+// WorkforceAbsenceWrites are the absence writes that may cascade an absence
+// into the plans, as the Workforce routes consume them; the root binds the
+// shift-plan-sync entry (#4825, #6847).
 type WorkforceAbsenceWrites interface {
+	ApproveAbsence(ctx context.Context, absenceID, actorAccountID, decidedByStaffID int64, note string) (*workforceModule.StaffAbsenceResponse, error)
+	CancelAbsence(ctx context.Context, staffID, actorAccountID, absenceID int64) error
 	CreateOwnAbsence(ctx context.Context, staffID int64, actorAccountID *int64, request workforceModule.CreateAbsenceRequest) (*workforceModule.StaffAbsenceResponse, error)
 	CreateAbsenceFor(ctx context.Context, subjectStaffID, createdByStaffID int64, actorAccountID *int64, request workforceModule.CreateAbsenceRequest) (*workforceModule.StaffAbsenceResponse, error)
 	UpdateAbsence(ctx context.Context, staffID int64, actorAccountID *int64, absenceID int64, request workforceModule.UpdateAbsenceRequest) (*workforceModule.StaffAbsenceResponse, error)
 	DeleteOwnAbsence(ctx context.Context, staffID int64, actorAccountID *int64, absenceID int64) error
 	DeleteAbsenceFor(ctx context.Context, subjectStaffID, actorStaffID int64, actorAccountID *int64, absenceID int64) error
+	AbsencePlanGaps(ctx context.Context) ([]workforceModule.AbsencePlanGap, error)
+	SyncAbsencePlan(ctx context.Context, absenceID, actorStaffID int64, actorAccountID *int64) (bool, error)
 }
 
 // BuildWorkforcePlanning completes the time tracking and binds its

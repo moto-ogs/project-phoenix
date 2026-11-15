@@ -203,6 +203,7 @@ const PARENT_DRAFT_TOPICS: readonly HelpTopic[] = [
   // --- Einstieg und Konto ---
   articles.parentAccountTopic(),
   articles.parentLoginTopic(),
+  articles.parentSignInCodeTopic(),
   articles.parentFirstStepsTopic(),
   articles.parentInstallAppTopic(),
   articles.parentNotificationsTopic(),
@@ -244,6 +245,7 @@ const TRAEGER_TOPICS: readonly HelpTopic[] = [
   articles.traegerDashboardTopic(),
   articles.traegerKeyDateCountsTopic(),
   articles.traegerOccupancyTopic(),
+  articles.traegerUtilizationTopic(),
   articles.traegerSchoolViewTopic(),
   articles.traegerSchoolSwitchTopic(),
   articles.traegerTestSystemTopic(),
@@ -271,8 +273,15 @@ const TRAEGER_TOPICS: readonly HelpTopic[] = [
   articles.traegerFinanceExportsTopic(),
   articles.traegerExportHandoverTopic(),
   articles.traegerDatevExportTopic(),
+  articles.traegerStaffRecordsTopic(),
+  articles.traegerStaffProofsTopic(),
+  articles.traegerAbsenceTypesTopic(),
+  articles.traegerStaffContractsTopic(),
+  articles.traegerStaffPlanningTopic(),
+  articles.traegerStaffTimeAccountTopic(),
   articles.traegerSharedDocumentsTopic(),
   articles.traegerCareTimeOverrunsTopic(),
+  articles.traegerArrivalPickupTimesTopic(),
   articles.traegerAccessLogTopic(),
   articles.traegerBriefkopfTopic(),
   articles.traegerDocumentTemplatesTopic(),
@@ -331,6 +340,7 @@ export function getHelpTopics(
     articles.loginTopic(presenceMode, groupMode),
     articles.installAppTopic(),
     articles.appOverviewTopic(),
+    articles.schoolSearchTopic(),
     articles.caregiverFirstStepsTopic(),
     ...caregiverTopics(presenceMode, groupMode, nfcEnabled),
     ...leadTopics(presenceMode, groupMode, nfcEnabled),
@@ -339,6 +349,7 @@ export function getHelpTopics(
     ...TRAEGER_TOPICS,
     articles.errorMessagesTopic(),
     articles.analyticsConsentTopic(),
+    articles.staffNotificationsTopic(),
   ];
 
   const hidden = hiddenHelpTopicIds(presenceMode, groupMode, nfcEnabled);

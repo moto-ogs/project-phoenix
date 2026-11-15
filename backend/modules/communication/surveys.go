@@ -289,7 +289,7 @@ type SurveyDraftRecords interface {
 type SurveyAnswerRecords interface {
 	OpenStaffSurveys(ctx context.Context, accountID int64, now time.Time) ([]SurveyToAnswer, error)
 	PortalSurveySummaries(ctx context.Context, accountID int64, announcementIDs []int64) (map[int64]PortalSurveySummary, error)
-	RecordSubmission(ctx context.Context, tenantID, surveyID, accountID int64, named bool, answers []SurveyAnswerInput) (bool, error)
+	RecordSubmission(ctx context.Context, tenantID, surveyID, accountID int64, named bool, answers []SurveyAnswerInput, now func() time.Time) (bool, error)
 	HasParticipated(ctx context.Context, tenantID, surveyID, accountID int64) (bool, error)
 	ParticipantAccounts(ctx context.Context, surveyID int64) ([]int64, error)
 	Tally(ctx context.Context, surveyID int64, includeTexts bool) (*SurveyTally, error)

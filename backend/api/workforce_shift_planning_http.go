@@ -86,9 +86,13 @@ var staffShiftErrorCodes = []struct {
 	{workforce.ErrShiftSeriesOutsidePeriod, common.CodeWorkforceShiftSeriesOutsidePeriod},
 	{workforce.ErrShiftSeriesWeekCycleMissing, common.CodeWorkforceShiftSeriesWeekCycleMissing},
 	{workforce.ErrStaffShiftOverlap, common.CodeWorkforceShiftOverlap},
+	{workforce.ErrShiftOverlapsOtherSite, common.CodeWorkforceShiftOverlapsOtherSite},
+	{workforce.ErrShiftWorkingTimeWarning, common.CodeWorkforceShiftWorkingTimeWarning},
+	{workforce.ErrShiftPlanningOff, common.CodeWorkforceShiftPlanningOff},
 	{workforce.ErrStaffShiftConflict, common.CodeWorkforceShiftChanged},
 	{workforce.ErrStaffShiftDuplicate, common.CodeWorkforceShiftDuplicate},
 	{workforce.ErrShiftTypeInactive, common.CodeWorkforceShiftTypeInactive},
+	{workforce.ErrShiftTypeArchived, common.CodeWorkforceShiftTypeArchived},
 }
 
 func staffShiftErrorCode(err error) string {
@@ -116,37 +120,57 @@ func renderStaffShiftsFailure(w http.ResponseWriter, r *http.Request, kind staff
 	case staffshiftsHTTP.FailureNotFound:
 		common.RenderError(w, r, common.ErrorNotFound(err))
 	case staffshiftsHTTP.FailureConflict:
-		// A duplicate is a unique violation that already aborted the
-		// transaction; it was a 500 before and must still roll back.
-		if errors.Is(err, workforce.ErrStaffShiftDuplicate) {
-			tenant.MarkRollback(r.Context())
-		}
-		if code != "" {
-			common.RenderError(w, r, common.ErrorConflictWithCode(err, code))
-			return
-		}
-		common.RenderError(w, r, common.ErrorConflict(err))
+		renderStaffShiftsConflict(w, r, code, err)
 	case staffshiftsHTTP.FailureUnauthorized:
 		common.RenderError(w, r, common.ErrorUnauthorized(err))
 	case staffshiftsHTTP.FailureForbidden:
 		common.RenderError(w, r, common.ErrorForbidden(err))
 	default:
-		var clientMessage *staffshiftsHTTP.ClientMessageError
-		if errors.As(err, &clientMessage) {
-			common.RenderError(w, r, common.ErrorInternalServerWrap(clientMessage.Message, clientMessage.Cause))
-			return
-		}
-		common.RenderError(w, r, common.ErrorInternalServer(err))
+		renderStaffShiftsInternal(w, r, err)
 	}
+}
+
+// renderStaffShiftsConflict renders a 409. A refusal of the working-time
+// check (#4708) can come after a cancellation already removed its covers,
+// so it rolls back and carries its warnings in details.
+func renderStaffShiftsConflict(w http.ResponseWriter, r *http.Request, code string, err error) {
+	if details, ok := planCheckDetails(err); ok {
+		tenant.MarkRollback(r.Context())
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, code, details))
+		return
+	}
+	// A duplicate is a unique violation that already aborted the
+	// transaction; it was a 500 before and must still roll back.
+	// An archived type can be refused while a cover set is rebuilt,
+	// after its old covers were deleted; nothing of it may commit.
+	if errors.Is(err, workforce.ErrStaffShiftDuplicate) || errors.Is(err, workforce.ErrShiftTypeArchived) || errors.Is(err, workforce.ErrShiftPlanningOff) {
+		tenant.MarkRollback(r.Context())
+	}
+	if code != "" {
+		common.RenderError(w, r, common.ErrorConflictWithCode(err, code))
+		return
+	}
+	common.RenderError(w, r, common.ErrorConflict(err))
+}
+
+// renderStaffShiftsInternal keeps the cause of a client message in the log
+// only.
+func renderStaffShiftsInternal(w http.ResponseWriter, r *http.Request, err error) {
+	var clientMessage *staffshiftsHTTP.ClientMessageError
+	if errors.As(err, &clientMessage) {
+		common.RenderError(w, r, common.ErrorInternalServerWrap(clientMessage.Message, clientMessage.Cause))
+		return
+	}
+	common.RenderError(w, r, common.ErrorInternalServer(err))
 }
 
 // newShiftTypesResource wires /api/shift-types over the shift-type
 // administration capability.
-func newShiftTypesResource(types workforce.ShiftTypeAdministration) *shifttypesHTTP.Resource {
-	if types == nil {
+func newShiftTypesResource(types workforce.ShiftTypeAdministration, references workforce.ShiftPlanReferenceQuery) *shifttypesHTTP.Resource {
+	if types == nil || references == nil {
 		panic("shift-types HTTP composition: all dependencies are required")
 	}
-	return shifttypesHTTP.NewResource(types, shiftTypesRuntime())
+	return shifttypesHTTP.NewResource(types, references, shiftTypesRuntime())
 }
 
 func shiftTypesRuntime() shifttypesHTTP.Runtime {
@@ -174,4 +198,21 @@ func renderShiftTypesFailure(w http.ResponseWriter, r *http.Request, kind shiftt
 	default:
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 	}
+}
+
+// planCheckDetails returns the details{} of a refusal of the working-time
+// check: the warnings and whether a reason is missing, or the shift at the
+// other Einsatzort. ok is false for every other error.
+func planCheckDetails(err error) (map[string]any, bool) {
+	if warning, ok := errors.AsType[*workforce.ShiftWorkingTimeError](err); ok {
+		return map[string]any{"warnings": warning.Warnings, "count": len(warning.Warnings), "reason_required": warning.ReasonRequired}, true
+	}
+	if other, ok := errors.AsType[*workforce.ShiftOtherSiteError](err); ok {
+		details := map[string]any{"date": other.Date.String(), "day": other.Date.Format("02.01.2006"), "start": other.StartTime, "end": other.EndTime}
+		if other.SchoolName != "" {
+			details["school"] = other.SchoolName
+		}
+		return details, true
+	}
+	return nil, false
 }

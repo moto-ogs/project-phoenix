@@ -154,10 +154,10 @@ func (s *service) resendFailedLetterRecipient(ctx context.Context, a *StaffParen
 	if row.RecipientEmail == nil || *row.RecipientEmail == "" {
 		return false, nil
 	}
-	// A marked address and a stopped person stay out: the mail would stay back
-	// again and the school would read the resend as done. RecipientEmail is the
+	// A marked address and a stopped or departed person stay out: the mail would
+	// stay back again and the school would read the resend as done. RecipientEmail is the
 	// person's current address, so a correction goes to the new one.
-	if row.EmailStatus != "failed" || row.AddressMark != "" || row.Stopped ||
+	if row.EmailStatus != "failed" || row.AddressMark != "" || row.Stopped || row.Departed ||
 		row.ProviderBlock == letterProviderBlockActive || row.ProviderBlock == letterProviderBlockUnreadable {
 		return false, nil
 	}
@@ -205,7 +205,7 @@ func (s *service) resendableAnnouncement(ctx context.Context, id int64) (*StaffP
 	if !a.IsPublished() || !a.Active {
 		return nil, ErrNotPublished
 	}
-	if a.ExpiresAt != nil && !a.ExpiresAt.After(time.Now()) {
+	if a.ExpiresAt != nil && !a.ExpiresAt.After(s.now()) {
 		return nil, ErrNotPublished
 	}
 	return a, nil

@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // Store is the persistence port over config.work_time_models,
@@ -54,6 +55,31 @@ type Store interface {
 	WorkSessionStore
 	StaffRecordStore
 	TargetOverrideStore
+	WorkTimeModelAssignmentStore
+}
+
+// WorkTimeModelAssignmentStore serves the assignment of one template to
+// several staff members (#6921) over users.staff_employment_profiles,
+// config.staff_work_schedules, active.staff_month_balance_snapshots and the
+// Träger's contract targets. Every read and write is set-based.
+type WorkTimeModelAssignmentStore interface {
+	// ShareLockWorkTimeModel holds the template row FOR SHARE until commit,
+	// so an edit of the template waits for the assignment and then refreshes
+	// the members it bound; found=false for an unknown template.
+	ShareLockWorkTimeModel(ctx context.Context, id int64) (bool, domain.OperationStats, error)
+	// StaffWorkTimeFacts reads, in one statement, every staff member of the
+	// school with a template binding, a schedule, a Soll of the Träger or a
+	// closed month.
+	StaffWorkTimeFacts(ctx context.Context, today string) ([]domain.StaffWorkTimeFact, domain.OperationStats, error)
+	// StaffWorkTimeModelBindings returns the template each given member is
+	// bound to; members without one are absent.
+	StaffWorkTimeModelBindings(ctx context.Context, staffIDs []int64) (map[int64]int64, domain.OperationStats, error)
+	// StaffSollKeptByTraeger returns which of the given members a contract
+	// of the Träger governs on day.
+	StaffSollKeptByTraeger(ctx context.Context, staffIDs []int64, day string) ([]int64, domain.OperationStats, error)
+	// BindStaffWorkTimeModel binds the template and its anchor to every
+	// given member in one statement, creating missing profiles.
+	BindStaffWorkTimeModel(ctx context.Context, staffIDs []int64, workTimeModelID int64, anchorDate string) (domain.OperationStats, error)
 }
 
 // WorkSessionStore is the persistence port over active.work_sessions,
@@ -230,6 +256,25 @@ type ShiftStore interface {
 	CreateShiftTypeIfAbsent(context.Context, domain.ShiftType) (domain.ShiftType, bool, domain.OperationStats, error)
 	UpdateShiftType(context.Context, domain.ShiftType) (domain.ShiftType, bool, domain.OperationStats, error)
 	DeleteShiftType(context.Context, int64) (domain.OperationStats, error)
+	ShiftTypeRetirementStore
+}
+
+// ShiftTypeRetirementStore archives shift types that planned rows still
+// carry and counts those rows (#6845).
+type ShiftTypeRetirementStore interface {
+	// LockShiftType holds the type row until the transaction ends; a
+	// concurrent shift or series write naming the type waits on its FK
+	// check. A missing type reports found=false.
+	LockShiftType(context.Context, int64) (bool, domain.OperationStats, error)
+	// ArchiveShiftType stamps archived_at once; a missing type reports
+	// found=false.
+	ArchiveShiftType(context.Context, int64) (domain.ShiftType, bool, domain.OperationStats, error)
+	// CountShiftTypeReferences counts the shifts and series carrying one
+	// type in one statement.
+	CountShiftTypeReferences(ctx context.Context, shiftTypeID int64) (domain.ShiftTypeReferences, domain.OperationStats, error)
+	// CountShiftPlanReferences counts the shifts and series per type and the
+	// series per calendar period in one statement.
+	CountShiftPlanReferences(context.Context) (domain.ShiftPlanReferences, domain.OperationStats, error)
 }
 
 // AbsenceStore is the persistence port over active.staff_absences,
@@ -240,6 +285,15 @@ type AbsenceStore interface {
 	// StaffEntitlementsByAbsenceType returns every yearly claim of one person,
 	// keyed by type and year.
 	StaffEntitlementsByAbsenceType(ctx context.Context, staffID int64) (map[int64]map[int]float64, domain.OperationStats, error)
+	// AbsencePoolRecord returns the Personalakte that keeps the school's
+	// employment, 0 without one (#4710).
+	AbsencePoolRecord(ctx context.Context, staffID int64) (int64, domain.OperationStats, error)
+	// AbsencePoolClaims holds the Kontingente of the Träger's types of a
+	// record until the transaction ends and reads their claims.
+	AbsencePoolClaims(ctx context.Context, recordID int64, traegerTypeIDs []int64) (map[int64]domain.AbsencePoolType, domain.OperationStats, error)
+	// AbsencePoolUses reads the bookings of those types at every Einsatzort
+	// of the record that overlap [from, to].
+	AbsencePoolUses(ctx context.Context, recordID int64, traegerTypeIDs []int64, from, to string) ([]domain.AbsencePoolUse, domain.OperationStats, error)
 	UpsertStaffAbsenceTypeAllowance(context.Context, domain.SetAbsenceTypeAllowance) (domain.OperationStats, error)
 	RecordStaffAbsenceTypeAllowanceChange(context.Context, domain.SetAbsenceTypeAllowance, *float64) (domain.OperationStats, error)
 	FindStaffAbsence(context.Context, int64) (domain.StaffAbsence, bool, domain.OperationStats, error)
@@ -287,6 +341,9 @@ type StaffAssignments interface {
 	// RebaseAnchor stamps the template's rotation anchor onto the given
 	// assignees, which the caller has already resolved.
 	RebaseAnchor(ctx context.Context, staffIDs []int64, anchorDate string) error
+	// LiveStaffIDs returns the given memberships School Membership still
+	// holds as live, ascending.
+	LiveStaffIDs(ctx context.Context, staffIDs []int64) ([]int64, error)
 }
 
 // Transaction runs a unit of work on the caller's ambient transaction or, when
@@ -352,4 +409,112 @@ type StaffAdminAudit interface {
 	RecordMasterDataChange(context.Context, domain.MasterDataChange) error
 	RecordPersonnelNumberChange(context.Context, domain.PersonnelNumberChange) error
 	RecordDataAccess(context.Context, domain.DataAccess) error
+}
+
+// TraegerStaffStore is the persistence of the Personalstamm (#4705). The
+// Träger methods join the Träger transaction of the record's Träger, the
+// school methods the tenant transaction of one school, the release methods
+// the administrative transaction of the moto team.
+type TraegerStaffStore interface {
+	TraegerStaffRelease(ctx context.Context, organizationID int64) (*domain.TraegerStaffRelease, error)
+	ListStaffRecords(ctx context.Context, organizationID int64) ([]domain.TraegerStaffRecord, error)
+	FindStaffRecord(ctx context.Context, organizationID, recordID int64, forUpdate bool) (domain.TraegerStaffRecord, error)
+	LinkedEmployments(ctx context.Context, organizationID int64, schoolIDs, staffIDs []int64) ([]domain.TraegerStaffLink, error)
+	SaveStaffRecord(ctx context.Context, record domain.TraegerStaffRecord) (int64, error)
+	SealStaffRecord(ctx context.Context, record domain.TraegerStaffRecord) error
+	InsertStaffLinks(ctx context.Context, organizationID, recordID, accountID int64, links []domain.TraegerStaffLink) error
+	AppendStaffChanges(ctx context.Context, organizationID int64, changes []domain.TraegerStaffChange) error
+	ListStaffChanges(ctx context.Context, organizationID, recordID int64, limit int) ([]domain.TraegerStaffChange, error)
+	DeleteStaffRecord(ctx context.Context, organizationID, recordID int64) error
+
+	// The Abwesenheitsarten and Kontingente of the Träger (#4710).
+	ListTraegerAbsenceTypes(ctx context.Context, organizationID int64) ([]domain.TraegerAbsenceType, error)
+	FindTraegerAbsenceType(ctx context.Context, organizationID, id int64, forUpdate bool) (domain.TraegerAbsenceType, error)
+	SaveTraegerAbsenceType(ctx context.Context, value domain.TraegerAbsenceType) (domain.TraegerAbsenceType, error)
+	TraegerAbsencePool(ctx context.Context, organizationID, recordID int64, typeIDs []int64, from, to string, lock bool) (map[int64]domain.AbsencePoolType, []domain.AbsencePoolUse, error)
+	SaveTraegerAbsenceAllowance(ctx context.Context, organizationID, accountID int64, input workforce.SetTraegerAbsenceAllowance, previous *float64) error
+	SchoolAbsenceTypes(ctx context.Context) ([]domain.StaffAbsenceType, error)
+	SchoolAbsenceTypeInUse(ctx context.Context, schoolTypeID int64) (bool, error)
+	CarryTraegerAbsenceType(ctx context.Context, schoolTypeID int64, value domain.TraegerAbsenceType) error
+	TraegerStaffContractStore
+
+	TraegerStaffKeep
+	SchoolFinancialRows(ctx context.Context, staffIDs []int64) ([]domain.StaffFinancialData, error)
+	DeleteSchoolFinancialRow(ctx context.Context, staffID int64) error
+	InsertSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error
+
+	ReleaseOfTraeger(ctx context.Context, organizationID int64) (*domain.TraegerStaffRelease, error)
+	CountStaffRecords(ctx context.Context, organizationID int64) (int, error)
+	InsertRelease(ctx context.Context, release domain.TraegerStaffRelease) (domain.TraegerStaffRelease, error)
+	DeleteRelease(ctx context.Context, organizationID int64) (bool, error)
+
+	TraegerProofStore
+	TraegerStaffImportStore
+}
+
+// TraegerStaffImportStore writes the records of a Personal-Import (#4724)
+// in bulk in the Träger transaction and reads its trail entries.
+type TraegerStaffImportStore interface {
+	// LockStaffRecords locks every record of the Träger until the Träger
+	// transaction ends, in one statement: an edit of a record waits for the
+	// import, and the import checks its rows against what it then writes.
+	LockStaffRecords(ctx context.Context, organizationID int64) error
+	// ReserveStaffRecordIDs draws count record IDs in one statement, so the
+	// bank values can be sealed to their record before the insert.
+	ReserveStaffRecordIDs(ctx context.Context, organizationID int64, count int) ([]int64, error)
+	// InsertStaffRecords inserts records with their reserved IDs in one
+	// statement. A number another record holds fails with
+	// domain.ErrStaffPersonnelNumberTaken.
+	InsertStaffRecords(ctx context.Context, organizationID int64, records []domain.TraegerStaffRecord) error
+	// FillStaffRecordFinancial sets the sealed bank and tax values of each
+	// record where it has none yet, in one statement; a value the record
+	// got meanwhile stays.
+	FillStaffRecordFinancial(ctx context.Context, organizationID int64, records []domain.TraegerStaffRecord) error
+	// StaffImportEvents reads the imports of the Träger from the trail,
+	// newest first, at most limit.
+	StaffImportEvents(ctx context.Context, organizationID int64, limit int) ([]domain.StaffImportEvent, error)
+}
+
+// TraegerProofStore is the persistence of the Nachweise (#4707): kinds,
+// proofs, mappings and reminder claims in the Träger transaction, the
+// school's kinds and the status it sees in its tenant transaction.
+type TraegerProofStore interface {
+	EnsureStandardProofTypes(ctx context.Context, organizationID int64, kinds []domain.TraegerProofType) error
+	ListProofTypes(ctx context.Context, organizationID int64) ([]domain.TraegerProofType, error)
+	SaveProofType(ctx context.Context, kind domain.TraegerProofType) (domain.TraegerProofType, error)
+	ListProofs(ctx context.Context, organizationID int64, recordIDs []int64) ([]domain.TraegerProof, error)
+	SaveProof(ctx context.Context, proof domain.TraegerProof) error
+	DeleteProof(ctx context.Context, organizationID, recordID, typeID int64) error
+	ClaimProofReminder(ctx context.Context, organizationID, proofID int64, stage, expiresOn string) (bool, error)
+	ListProofTypeMappings(ctx context.Context, organizationID int64) ([]domain.TraegerProofTypeMapping, error)
+	SaveProofTypeMapping(ctx context.Context, organizationID, accountID int64, mapping domain.TraegerProofTypeMapping) error
+	SchoolProofKinds(ctx context.Context) ([]domain.QualificationType, error)
+	SchoolTraegerProofStatus(ctx context.Context) ([]domain.SchoolTraegerProofStatus, error)
+}
+
+// TraegerStaffContractStore persists the Arbeitsverträge of a record (#4706)
+// in the Träger transaction and mirrors their Soll into one school's time
+// tracking in that school's tenant transaction.
+type TraegerStaffContractStore interface {
+	ListStaffContracts(ctx context.Context, organizationID, recordID int64) ([]domain.TraegerStaffContract, error)
+	InsertStaffContract(ctx context.Context, contract domain.TraegerStaffContract, accountID int64) (int64, error)
+	UpdateStaffContractTerms(ctx context.Context, contract domain.TraegerStaffContract) error
+	ReplaceContractTargetsFrom(ctx context.Context, organizationID, contractID, accountID int64, validFrom calendar.Date, targets []domain.ContractTarget) error
+	InsertContractHolidayWeeks(ctx context.Context, organizationID, contractID, accountID int64, weeks []domain.ContractHolidayWeek) error
+	DeleteContractHolidayWeek(ctx context.Context, organizationID, contractID, schoolID int64, weekStart calendar.Date) (bool, error)
+	DeleteStaffContract(ctx context.Context, organizationID, contractID int64) error
+
+	SchoolClosedMonths(ctx context.Context, staffIDs []int64) (map[int64][]*domain.StaffMonthBalanceSnapshot, error)
+	SchoolOwnTargetOverrides(ctx context.Context, staffID int64, from calendar.Date) ([]domain.StaffTargetOverride, error)
+	SollKeptStaffIDs(ctx context.Context, staffIDs []int64, day calendar.Date) ([]int64, error)
+	KeepTemplateHistory(ctx context.Context, staffID int64, until calendar.Date) error
+	ReleaseMirror(ctx context.Context, staffID int64, from calendar.Date) error
+	MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule) error
+	MirrorStaffHolidayWeeks(ctx context.Context, staffID int64, from calendar.Date, overrides []domain.StaffTargetOverride) error
+}
+
+// TraegerStaffKeep tells the school which of its employments a record of
+// its Träger holds, in the school's tenant transaction.
+type TraegerStaffKeep interface {
+	KeptStaffIDs(ctx context.Context, staffIDs []int64) ([]int64, error)
 }

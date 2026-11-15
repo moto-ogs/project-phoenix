@@ -61,6 +61,9 @@ export interface RequestDiffEntry {
   // and for legacy payloads → fall back to `old`/`new`.
   readonly old_modes?: string[];
   readonly new_mode?: string;
+  // Staff side only: what the family saw when it filed a weekly request,
+  // present only when the plan changed since (#6990).
+  readonly submitted_old?: string;
 }
 
 /**
@@ -82,6 +85,7 @@ export interface ChatMessage {
   // older payload still renders as a bubble.
   readonly kind?: MessageKind;
   readonly event_type?: string;
+  readonly event_actor_kind?: MessageSenderKind;
   readonly request_type?: WireRequestType;
   readonly request_status?: RequestStatus;
   // Deep-link reference to the underlying request row (e.g.

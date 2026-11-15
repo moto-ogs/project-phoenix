@@ -2076,6 +2076,7 @@ function TimetablesContent() {
           {
             label: `Ausgeblendete Konflikte anzeigen`,
             badge: hiddenConflicts.length,
+            description: "Zeigt die Konflikte, die Sie ausgeblendet haben",
             onClick: () => setHiddenConflictsPanelOpen(true),
           },
         ]
@@ -2094,6 +2095,8 @@ function TimetablesContent() {
           {
             label: "Drucken oder exportieren",
             icon: <Printer className="h-4 w-4" aria-hidden />,
+            description:
+              "Öffnet ein Fenster, um den Plan zu drucken oder zu speichern",
             onClick: () => setExportOpen(true),
           },
         ]
@@ -2103,6 +2106,8 @@ function TimetablesContent() {
           {
             label: "Termine im Zeitraum absagen",
             icon: <CalendarX className="h-4 w-4" aria-hidden />,
+            description:
+              "Öffnet ein Fenster zum Absagen, Eltern bekommen keine Nachricht",
             onClick: () => setBulkCancelOpen(true),
           },
         ]
@@ -2297,6 +2302,7 @@ function TimetablesContent() {
         canManagePlanningTracks={canManageSchedules}
         canCreateExternalCaregiver={canCreateExternalCaregiver}
         canGrantExternalView={canGrantExternalView}
+        canManageOfferings={hasPermission(session, "config:manage")}
         isOpen={eventModalOpen}
         onClose={() => {
           setEventModalOpen(false);
@@ -2384,6 +2390,7 @@ function TimetablesContent() {
       )}
 
       <CalendarPeriodModal
+        linkClosingDays
         isOpen={periodModalOpen}
         onClose={() => setPeriodModalOpen(false)}
         initial={null}
@@ -2556,6 +2563,7 @@ function TimetablesContent() {
                   variant="primary"
                   size="md"
                   onClick={openPeriodCreate}
+                  tooltip="Öffnet ein Formular für den ersten Planungszeitraum."
                 >
                   Planungszeitraum anlegen
                 </Button>

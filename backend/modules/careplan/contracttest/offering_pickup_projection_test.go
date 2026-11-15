@@ -55,7 +55,7 @@ func createPickupTimeOffering(
 }
 
 func projectedPickupReader(env *decisionTestEnv) careplan.PickupScheduleService {
-	result, err := careplanCompose.NewPickupSchedules(env.db, env.repos.CarePlan(), newPickupBaselineService(env.repos.CarePlan(), approvedOfferingTestProjection(env.reposEnrollment, env.reposPeople)), nil, nil, slog.Default())
+	result, err := careplanCompose.NewPickupSchedules(env.db, env.repos.CarePlan(), newPickupBaselineService(env.repos.CarePlan(), approvedOfferingTestProjection(env.reposEnrollment, env.reposPeople)), nil, nil, slog.Default(), nil)
 	if err != nil {
 		panic(err)
 	}

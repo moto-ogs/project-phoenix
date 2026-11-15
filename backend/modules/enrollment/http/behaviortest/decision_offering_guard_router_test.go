@@ -277,12 +277,12 @@ func datePointers(from, until calendar.Date) (*enrollmentNative.Date, *enrollmen
 }
 
 func newOfferingGuardDecisionService(repos api.EnrollmentTestRepositories, reposCare owners.TimetableCarePlanRows, reposTimetable owners.TimetableTestRepositories, offeringsEnabled bool, children TestDecisionChildren, guardianAccess TestDecisionGuardianAccess, studentEnrollment owners.EnrollmentDecisionPeople, bookings TestDecisionBookings) enrollmentAPI.DecisionService {
-	return enrollmentAPI.NewDecisionService(enrollmentCompose.PublicDecisions(newOfferingGuardDecisions(repos, reposCare, reposTimetable, offeringsEnabled, children, guardianAccess, studentEnrollment, bookings)))
+	return enrollmentAPI.NewDecisionService(enrollmentCompose.PublicDecisions(newOfferingGuardDecisions(repos, reposCare, reposTimetable, offeringsEnabled, children, guardianAccess, studentEnrollment, bookings, nil)))
 }
 
 // newOfferingGuardDecisions composes the decision flow the guard suites
 // drive, the way the root binds it.
-func newOfferingGuardDecisions(repos api.EnrollmentTestRepositories, reposCare owners.TimetableCarePlanRows, reposTimetable owners.TimetableTestRepositories, offeringsEnabled bool, children TestDecisionChildren, guardianAccess TestDecisionGuardianAccess, studentEnrollment owners.EnrollmentDecisionPeople, bookings TestDecisionBookings) *TestDecisions {
+func newOfferingGuardDecisions(repos api.EnrollmentTestRepositories, reposCare owners.TimetableCarePlanRows, reposTimetable owners.TimetableTestRepositories, offeringsEnabled bool, children TestDecisionChildren, guardianAccess TestDecisionGuardianAccess, studentEnrollment owners.EnrollmentDecisionPeople, bookings TestDecisionBookings, today func() calendar.Date) *TestDecisions {
 	return owners.NewEnrollmentDecisions(enrollmentCompose.DecisionDependencies{
 		Requests:       repos.Enrollment(),
 		Children:       children,
@@ -303,6 +303,7 @@ func newOfferingGuardDecisions(repos api.EnrollmentTestRepositories, reposCare o
 		ParentsURL:        owners.EnrollmentDecisionParentsURL("http://parents.localhost:3000", ""),
 		Settings:          owners.EnrollmentDecisionSettingValues(offeringGuardSettings(offeringsEnabled)),
 		Logger:            slog.Default(),
+		Today:             today,
 	})
 }
 

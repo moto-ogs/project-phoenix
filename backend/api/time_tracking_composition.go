@@ -98,6 +98,7 @@ func newTimeTrackingResource(
 		Allowances:         allowances,
 		AllowanceResponses: timeTrackingAllowanceResponses,
 		AccountStartDate:   timeTrackingAccountStartDate(settings),
+		AbsenceMails:       timeTracking.AbsenceMails,
 		Identity:           timeTrackingIdentity,
 		WithinTenant: func(ctx context.Context, tenantID int64, run func(context.Context) error) error {
 			id, err := tenant.NewTenantID(tenantID)
@@ -113,7 +114,7 @@ func newTimeTrackingResource(
 // adapted capabilities; schedules is the Workforce query the schedule views
 // read from and the Sonderarbeitszeiten are written through; notifyChanged
 // invalidates the time-account views after such a write.
-func newStaffAdminResource(capabilities owners.WorkforceAdminCapabilities, absenceWrites timeTrackingHTTP.AdminAbsenceWrites, schedules workforceModule.Capability, notifyChanged func(context.Context), exportTransfer exportTransferModule.Capability, payroll workforceModule.PayrollDispatch, payrollRules workforceModule.PayrollRules, qualificationStaffRows owners.QualificationStaffRows, db transactionruntime.Database, logger *slog.Logger) *timeTrackingHTTP.StaffAdminResource {
+func newStaffAdminResource(capabilities owners.WorkforceAdminCapabilities, absenceWrites timeTrackingHTTP.AdminAbsenceWrites, schedules workforceModule.Capability, notifyChanged func(context.Context), exportTransfer exportTransferModule.Capability, payroll workforceModule.PayrollDispatch, absenceMails workforceModule.AbsenceMailStatus, payrollRules workforceModule.PayrollRules, qualificationStaffRows owners.QualificationStaffRows, db transactionruntime.Database, logger *slog.Logger) *timeTrackingHTTP.StaffAdminResource {
 	cleanup, err := workforceCompose.NewDocumentCleanup(db.Pool(), nil)
 	if err != nil {
 		panic(err)
@@ -131,6 +132,7 @@ func newStaffAdminResource(capabilities owners.WorkforceAdminCapabilities, absen
 		OffboardingCleanup: cleanup,
 		DocumentFiles:      documentFiles,
 		Staff:              capabilities.Staff,
+		TraegerKeep:        capabilities.TraegerKeep,
 		Documents:          capabilities.Documents,
 		WorkSessions:       capabilities.WorkSessions,
 		StaffAbsences:      capabilities.StaffAbsences,
@@ -150,6 +152,7 @@ func newStaffAdminResource(capabilities owners.WorkforceAdminCapabilities, absen
 		Identity:           timeTrackingIdentity,
 		QualificationTypes: qualifications,
 		Qualifications:     qualifications,
+		AbsenceMails:       absenceMails,
 		Logger:             logger,
 	})
 }

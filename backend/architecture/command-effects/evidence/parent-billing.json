@@ -249,6 +249,14 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingSettings.DebtorNumberScope",
+      "binding_digest": "de9d0cce95cd2e388c4662f00db1ffc2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareBillingSettings.DebtorNumberScope",
+      "source_owner": "parent-billing",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareContracts.Recipients",
       "binding_digest": "07058974f2251c1c4ab9ac133ce07606",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
@@ -457,6 +465,46 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingSettings.DebtorNumberScope",
+      "binding_digest": "de9d0cce95cd2e388c4662f00db1ffc2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.DebtorNumberFormats.DebtorNumberScope",
+      "source_owner": "parent-billing",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayBillingSettings.DebtorNumberScope",
+      "binding_digest": "de9d0cce95cd2e388c4662f00db1ffc2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.DebtorNumberFormats.DebtorNumberScope",
+      "source_owner": "parent-billing",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareBillingSettings.DebtorNumberScope",
+      "binding_digest": "de9d0cce95cd2e388c4662f00db1ffc2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.DebtorNumberScopes.DebtorNumberScope",
+      "source_owner": "parent-billing",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.DebtorNumberFormats.DebtorNumberScope",
+      "binding_digest": "de9d0cce95cd2e388c4662f00db1ffc2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.DebtorNumberScopes.DebtorNumberScope",
+      "source_owner": "parent-billing",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayBillingSettings.DebtorNumberScope",
+      "binding_digest": "de9d0cce95cd2e388c4662f00db1ffc2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.DebtorNumberScopes.DebtorNumberScope",
+      "source_owner": "parent-billing",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingActorNames.TraegerActorNames",
       "binding_digest": "1c973725851a50914a982402e367e78d",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.ExportActorNames.TraegerActorNames",
@@ -482,7 +530,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingBillingRegistrations.ConfirmedHolidayRegistrations",
-      "binding_digest": "624b4ac730271b80a870323fea92a33d",
+      "binding_digest": "8dee8ac53ee0f8fd6c667eb0ff1605f5",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayBillingRegistrations.ConfirmedHolidayRegistrations",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients",
@@ -561,6 +609,14 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingSettings.DebtorNumberScope",
+      "binding_digest": "de9d0cce95cd2e388c4662f00db1ffc2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayBillingSettings.DebtorNumberScope",
+      "source_owner": "parent-billing",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingSettings.HolidayChain",
       "binding_digest": "fdc2375bffe241eadcbcf3ef3e156784",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayBillingSettings.HolidayChain",
@@ -610,7 +666,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingHolidayRegistrations.HolidayWeeks",
-      "binding_digest": "ade733df45a93253585e7281223ddae5",
+      "binding_digest": "335ff4f4df193f046cdd84130bd028e9",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayRegistrations.HolidayWeeks",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrations.HolidayRegistrationOffer",
@@ -698,7 +754,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingPlaceChanges.RebookHolidayChild",
-      "binding_digest": "63861c5a1ee6b84feba3a9387b4d80db",
+      "binding_digest": "9263355ee0714bdaac28b90a58bc104d",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http.HolidayPlaceChanges.RebookHolidayChild",
       "source_owner": "parent-billing",
       "target": "*github.com/moto-ogs/project-phoenix/workflows/holidayallocation.Workflow.RebookHolidayChild",

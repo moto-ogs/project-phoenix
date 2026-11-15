@@ -62,7 +62,7 @@ func (s *staffAbsenceService) RequestVacation(ctx context.Context, staffID int64
 	if err != nil {
 		return nil, err
 	}
-	if isBeforeLocalToday(dateStart, time.Now()) {
+	if dateStart.Before(s.today()) {
 		return nil, workforce.ErrVacationRequestInPast
 	}
 	if err := s.lockVacationRequestRange(ctx, staffID, dateStart, dateEnd); err != nil {
@@ -139,12 +139,8 @@ func (s *staffAbsenceService) ApproveAbsence(ctx context.Context, absenceID int6
 	if err := s.rejectVacationBeforeOpening(ctx, absence); err != nil {
 		return nil, err
 	}
-	// Other open requests are judged at their own approval; only what is
-	// already spent must leave room for this one.
-	if absence.AbsenceType == AbsenceTypeVacation {
-		if err := s.ensureVacationFits(ctx, absence, absence.ID, false); err != nil {
-			return nil, err
-		}
+	if err := s.ensureApprovalFits(ctx, absence); err != nil {
+		return nil, err
 	}
 	fromStatus := absence.Status
 	now := time.Now()
@@ -165,11 +161,44 @@ func (s *staffAbsenceService) ApproveAbsence(ctx context.Context, absenceID int6
 	if err := s.createAudit(ctx, absence.ID, actorAccountID, fromStatus, absence.Status, note); err != nil {
 		return nil, fmt.Errorf("failed to audit absence approval: %w", err)
 	}
+	// The approved request is in force: its full days leave the plans
+	// (#6847).
+	if err := s.cascadeAbsence(ctx, absence, decidedByStaffID, &actorAccountID); err != nil {
+		return nil, err
+	}
 	if err := s.notifyAbsenceDecision(ctx, absence); err != nil {
 		return nil, fmt.Errorf("enqueue absence mail: %w", err)
 	}
 	s.broadcastTimeTrackingChanged(ctx)
 	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
+}
+
+// ensureApprovalFits checks the request against what is spent now: other
+// open requests are judged at their own approval, so only what is already
+// spent must leave room for this one.
+func (s *staffAbsenceService) ensureApprovalFits(ctx context.Context, absence *StaffAbsence) error {
+	if absence.AbsenceType == AbsenceTypeVacation {
+		if err := s.ensureVacationFits(ctx, absence, absence.ID, false); err != nil {
+			return err
+		}
+	}
+	return s.recheckRequestedType(ctx, absence)
+}
+
+// recheckRequestedType applies what changed at the school since the request
+// of a requestable type (#4710): a type no longer offered or switched off,
+// and the school's limit and the Kontingent, the request's own days counted
+// once.
+func (s *staffAbsenceService) recheckRequestedType(ctx context.Context, absence *StaffAbsence) error {
+	if absence.AbsenceTypeID == nil || s.absenceTypes == nil {
+		return nil
+	}
+	selected, err := s.absenceTypes.ResolveForAbsence(ctx, *absence.AbsenceTypeID)
+	if err != nil || !selected.AllowanceEnabled {
+		return err
+	}
+	_, err = s.absenceTypes.PreviewAllowanceRebooking(ctx, absence.StaffID, *absence.AbsenceTypeID, []int64{absence.ID})
+	return err
 }
 
 func (s *staffAbsenceService) DenyAbsence(ctx context.Context, absenceID int64, actorAccountID int64, decidedByStaffID int64, reason string) (*StaffAbsenceResponse, error) {
@@ -338,7 +367,7 @@ func (s *staffAbsenceService) CancelAbsence(ctx context.Context, staffID int64, 
 		return workforce.ErrAbsenceNotCancelable
 	}
 	if absence.Status == AbsenceStatusApproved &&
-		isBeforeLocalToday(absence.DateStart, time.Now()) {
+		absence.DateStart.Before(s.today()) {
 		return workforce.ErrPastAbsenceCancel
 	}
 	fromStatus := absence.Status
@@ -354,6 +383,13 @@ func (s *staffAbsenceService) CancelAbsence(ctx context.Context, staffID int64, 
 	}
 	if err := s.createAudit(ctx, absence.ID, actorAccountID, fromStatus, absence.Status, ""); err != nil {
 		return fmt.Errorf("failed to audit absence cancellation: %w", err)
+	}
+	// Withdrawing an approved request gives its days back to the plans
+	// (#6847). A pending request never stamped anything.
+	if fromStatus == AbsenceStatusApproved {
+		if err := s.shiftPlanSyncer.ClearSickForRange(ctx, sickCascadeInput(absence, staffID, &actorAccountID)); err != nil {
+			return fmt.Errorf("absence not canceled — plan cascade reversal failed: %w", err)
+		}
 	}
 	s.broadcastTimeTrackingChanged(ctx)
 	return nil
@@ -379,10 +415,6 @@ func (s *staffAbsenceService) createAudit(ctx context.Context, absenceID int64, 
 	}
 	applyAbsenceAudit(audit, value)
 	return nil
-}
-
-func isBeforeLocalToday(date calendar.Date, now time.Time) bool {
-	return date.Before(calendar.DateFromTime(now))
 }
 
 func (s *staffAbsenceService) lockVacationRequestRange(ctx context.Context, staffID int64, dateStart, dateEnd calendar.Date) error {

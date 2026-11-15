@@ -68,7 +68,8 @@ func mountPayrollDownload(root chi.Router, payroll workforceModule.PayrollDispat
 // substitutions and time tracking.
 func mountStaffRoutes(
 	root, tenant chi.Router, db transactionruntime.Database, logger *slog.Logger, membership schoolMembershipModule.Capability,
-	workTime workforceModule.Capability, workTimeCatalog workforceModule.WorkTimeModelCatalog, users peoplePorts.PersonDirectory, staffAdmin *workforceModule.StaffAdmin,
+	workTime workforceModule.Capability, workTimeCatalog workforceModule.WorkTimeModelCatalog, shiftPlanReferences workforceModule.ShiftPlanReferenceQuery,
+	users peoplePorts.PersonDirectory, staffAdmin *workforceModule.StaffAdmin,
 	workforce owners.WorkforcePlanning, shifts *workforceCompose.ShiftPlanning, education schoolstructure.GroupManagement,
 	substitution SubstitutionOperations, persons peopledirectory.Capability, settings settingsCompose.SettingsService,
 	hub *realtime.Hub, identity identityaccess.Owner, caller *owners.CallerRows, calendar schoolcalendar.Calendar,
@@ -87,7 +88,7 @@ func mountStaffRoutes(
 	mountPayrollDownload(root, workforce.PayrollDispatch, logger)
 	tenant.Mount("/work-time-models", newWorkTimeModelsResource(workTime, workTimeCatalog, staffTimeTrackingNotifier(hub)).Router())
 	tenant.Mount("/staff-shifts", staffShifts.Router())
-	tenant.Mount("/shift-types", newShiftTypesResource(shifts.ShiftTypes).Router())
+	tenant.Mount("/shift-types", newShiftTypesResource(shifts.ShiftTypes, shiftPlanReferences).Router())
 	tenant.Mount("/absence-types", absenceTypes)
 	tenant.Mount("/substitutions", newSubstitutionsResource(SubstitutionCapability(substitution)).Router())
 	tenant.Mount("/time-tracking", newTimeTrackingResource(users, staffAdmin, workforce.TimeTracking, workforce.SickReports, workforce.StaffShifts, shifts.Assignments, workTime, calendar, settings).Router(ProtectedTenantRoutes))
@@ -122,7 +123,7 @@ func mountSchoolPortalRoutes(
 	caller *owners.CallerRows, settings settingsCompose.SettingsService, careOfferings carePlanModule.CareOfferingCapability,
 	planExport planexport.Service, chat owners.CommunicationMessaging, persons peopledirectory.Capability, notifications owners.DeliveryNotifications,
 	devices owners.DeliveryDevices, classDay ClassDayViews, identity identityaccess.Owner, calendarApp calendarCompose.Application,
-	announcements communicationModule.ParentAnnouncementCapability,
+	announcements communicationModule.ParentAnnouncementCapability, shiftSeries workforceModule.ShiftPlanReferenceQuery,
 ) error {
 	pickupExtensions, err := careexit.NewPickupExtensions(timetableOwner, presence)
 	if err != nil {
@@ -145,7 +146,7 @@ func mountSchoolPortalRoutes(
 		return err
 	}
 	timetableResource := newTimetableResource(calendar, vacations, vacationHints, timetableOwner, materialization, lifecycle, planning, planningTracks, users, schedules,
-		caller, settings, careOfferings, classDay, planExport, pickupExtensions, persons, classArrivals, logger)
+		caller, settings, careOfferings, classDay, planExport, pickupExtensions, persons, classArrivals, shiftSeries, logger)
 	// OGS-internal colleague chat (#2598) — staff-to-staff, deliberately a
 	// separate surface from /messages (which is parent-facing).
 	staffMessaging := staffMessagingAPI.NewResource(chat.StaffMessaging)
@@ -160,14 +161,14 @@ func mountSchoolPortalRoutes(
 		Logger: logger.With("service", "staffnotice"),
 	}), func(ctx context.Context) int64 { return timeTrackingIdentity(ctx).AccountID })
 	// Notification abstraction (#1624).
-	notificationRoutes := NewNotificationHTTP(notifications.Notifier, devices.PushSubscriptions, notifications.Preferences)
+	notificationRoutes := NewNotificationHTTP(notifications.Notifier, devices.PushSubscriptions, notifications.Preferences, notifications.Feed)
 	// The class-day surface reads the class-day projection (#2701): the day
 	// report over Enrollment's day roster and the arrival-exception write
 	// seam (#2970) behind its one public capability.
 	classDayResource := classdayHTTP.NewResource(classDay.ClassDay, logger.With("handler", "class-day"))
 	// The calendar of moto schule (#4798): the same calendar service as
 	// /api/calendar, behind calendar:school and the school-portal mantle.
-	schoolCalendar := calendarAPI.NewResource(calendarApp, logger.With("handler", "school-calendar"))
+	schoolCalendar := calendarAPI.NewResource(calendarApp, nil, logger.With("handler", "school-calendar"))
 	school := NewSchoolPortalHTTP(SchoolPortalAuth(identity), SchoolPortalMFA(identity), portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeSchool), classDayResource, timetableResource, staffMessaging, staffNotices, notificationRoutes, schoolCalendar)
 	// Parent letters of a Lehrkraft to her classes (#4800): the OGS's
 	// announcement resource, narrowed by the caller's class reach.
@@ -193,7 +194,7 @@ func newTimetableResource(
 	users peoplePorts.PersonDirectory, schedules owners.CarePlanSchedules, caller *owners.CallerRows, settings settingsCompose.SettingsService,
 	careOfferings carePlanModule.CareOfferingCapability, classDay ClassDayViews, planExport planexport.Service,
 	pickupExtensions timetableAPI.PickupExtensionDecisions, hints peopledirectory.SchoolDayHintQuery,
-	classArrivals timetableModule.ClassArrivalQuery, logger *slog.Logger,
+	classArrivals timetableModule.ClassArrivalQuery, shiftSeries workforceModule.ShiftPlanReferenceQuery, logger *slog.Logger,
 ) *timetableAPI.Resource {
 	return timetableAPI.NewResource(timetableAPI.Dependencies{
 		CalendarPeriods:         calendar,
@@ -202,7 +203,7 @@ func newTimetableResource(
 		SchoolVacations:         vacations,
 		IsLocalSeed:             func(r *http.Request) bool { return apiCommon.IsLocalSeedRequest(r, viper.GetString("app_env")) },
 		SchoolVacationHints:     vacationHints,
-		CalendarPeriodUsage:     calendarPeriodUsage{usage: newCalendarPeriodUsage(timetableOwner)},
+		CalendarPeriodUsage:     calendarPeriodUsage{usage: newCalendarPeriodUsage(timetableOwner), shiftSeries: shiftSeries},
 		MaterializationService:  materialization,
 		InstanceService:         lifecycle.Instances,
 		InstanceSeriesConverter: planning.SeriesConverter,
@@ -235,6 +236,10 @@ func newTimetableResource(
 	})
 }
 
+// enrollmentMount is the school's online enrollment below /api. Its
+// parent-facing routes have the limit of a public link (#6739).
+const enrollmentMount = "/enrollment"
+
 // mountSchoolRoutes serves the school's rooms, groups, activities, schedules,
 // enrollment, settings, info-point displays and data administration under
 // /api.
@@ -246,7 +251,7 @@ func mountSchoolRoutes(
 	holidaySchools HolidayHostSchools, holidayStudents owners.HolidayOwnChildStudents, holidayCare owners.HolidayGuestCarePlan, holidayAccessLog owners.DataAccessAppender,
 	membership schoolMembershipModule.Capability, classListEntries schoolMembershipModule.ClassListEntries, databaseStats DatabaseStatsReader,
 	dataImports imports, persons peopledirectory.Capability, gradeTransition *gradetransition.Workflow, enrollment *enrollmentAPI.Resource,
-	appEnv string, weekProtocolSeed schedulerPorts.WeekProtocolEvenings, healthData enrollmentOwner.HolidayHealthCipher,
+	appEnv string, weekProtocolSeed schedulerPorts.WeekProtocolEvenings, healthData enrollmentOwner.HolidayHealthCipher, holidayNoCare enrollmentOwner.HolidayHostCalendar,
 ) {
 	mountWeekProtocolRoutes(tenant, timetableOwner, logger, caller, holidayAccessLog, persons, appEnv, weekProtocolSeed)
 	tenant.Mount("/rooms", roomsHTTPAdapter.NewResource(facilities, roomsHTTPAdapter.Dependencies{
@@ -259,10 +264,10 @@ func mountSchoolRoutes(
 	tenant.Mount("/groups", groupsHTTP.NewResource(education, active, peopleCompose.NewGroupRoutePeople(users), caller, newGroupStudentsInClassDay(settings), transactionFailures.IsConstraintViolation).Router(ProtectedTenantRoutes))
 	tenant.Mount("/activities", timetableHTTPAdapter.NewResource(activities, timetableOwner, NewTimetableSupervisorDirectory(users), caller, TimetableHTTPTransactions).Router(ProtectedTenantRoutes))
 	// Parent enrollment (PR 5+).
-	tenant.Mount("/enrollment", enrollment.Router(TenantSessionChain))
+	tenant.Mount(enrollmentMount, enrollment.Router(TenantSessionChain))
 	// The hosting school's holiday participant lists (#4665) and holiday
 	// guests (#4666).
-	mountHolidayHostRoutes(tenant, holidaySchools, persons, holidayStudents, holidayCare, holidayAccessLog, healthData)
+	mountHolidayHostRoutes(tenant, holidaySchools, persons, holidayStudents, holidayCare, holidayAccessLog, healthData, holidayNoCare)
 	// Info-point displays (#1325). One Device Fleet owner serves every entry
 	// point: the root composes it and the IoT service hands it back here
 	// (#2676).
@@ -286,7 +291,7 @@ func mountSchoolRoutes(
 // mountCalendarRoutes serves the personal calendars under /api, the
 // read-only staff CalDAV and the public subscription feeds.
 func mountCalendarRoutes(root, tenant chi.Router, logger *slog.Logger, calendarApp calendarCompose.Application) {
-	calendar := calendarAPI.NewResource(calendarApp, logger.With("handler", "calendar"))
+	calendar := calendarAPI.NewResource(calendarApp, calendarApp, logger.With("handler", "calendar"))
 	tenant.Mount("/calendar", calendar.Router(TenantSessionChain))
 
 	// Public parent calendar subscription feed (no auth — the token in the URL

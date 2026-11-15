@@ -27,25 +27,9 @@ import {
   formatDuration,
 } from "~/lib/time-tracking-helpers";
 import type { MonthSummary } from "~/lib/time-tracking-helpers";
+import { monthLabel } from "~/lib/duration-format";
 
-const MONTH_NAMES = [
-  "Januar",
-  "Februar",
-  "März",
-  "April",
-  "Mai",
-  "Juni",
-  "Juli",
-  "August",
-  "September",
-  "Oktober",
-  "November",
-  "Dezember",
-] as const;
-
-export function monthLabel(year: number, month: number): string {
-  return `${MONTH_NAMES[month - 1] ?? ""} ${year}`;
-}
+export { monthLabel };
 
 function formatDays(days: number): string {
   const value = days.toLocaleString("de-DE", { maximumFractionDigits: 1 });
@@ -279,7 +263,7 @@ export function Monatskarte({
               <Lock className="h-3 w-3 text-gray-500" aria-hidden />
               <StatusBadge
                 tone="gray"
-                label={`Abgeschlossen${
+                label={`${summary.closedByTraeger ? "Vom Träger abgeschlossen" : "Abgeschlossen"}${
                   summary.closedAt
                     ? ` am ${formatLocalizedDate(summary.closedAt, "de")}`
                     : ""
@@ -288,7 +272,15 @@ export function Monatskarte({
             </span>
           )}
           {summary.isClosed && onReopen && (
-            <Button type="button" size="md" variant="ghost" onClick={onReopen}>
+            <Button
+              type="button"
+              size="md"
+              variant="ghost"
+              onClick={onReopen}
+              disabled={summary.closedByTraeger}
+              disabledReason="Diesen Monat hat die Personalverwaltung des Trägers abgeschlossen. Nur sie kann ihn wieder öffnen."
+              tooltip="Hebt den Abschluss nur für diese Person auf. moto fragt vorher nach."
+            >
               Monat wieder öffnen…
             </Button>
           )}

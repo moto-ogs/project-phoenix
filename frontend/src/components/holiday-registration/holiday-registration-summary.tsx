@@ -179,6 +179,11 @@ export function HolidayRegistrationSummary({
                         })}
                       </span>
                     ) : null}
+                    {booking.lunch ? (
+                      <span className="block text-sm text-gray-600">
+                        {t("summaryLunch")}
+                      </span>
+                    ) : null}
                   </DataField>
                 );
               })}
@@ -318,6 +323,7 @@ export function HolidayRegistrationSummary({
             size="md"
             disabled={submitting}
             onClick={onBack}
+            noTooltip="Zurück öffnet wieder das Formular, ohne etwas zu senden."
           >
             {t("back")}
           </Button>
@@ -326,7 +332,15 @@ export function HolidayRegistrationSummary({
             variant="primary"
             size="md"
             disabled={submitting || !canSubmit || pendingUploads > 0}
+            disabledReason={
+              submitting
+                ? undefined
+                : pendingUploads > 0
+                  ? t("submitUploadsPending")
+                  : t("submitCaptchaPending")
+            }
             onClick={onSubmit}
+            tooltip={offer.binding ? t("submitBindingHint") : t("submitHint")}
           >
             {submitting
               ? t("submitting")

@@ -17,14 +17,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.AttachmentDigests",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.AttachmentPurger.AttachmentDigests",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CountAttachments",
       "binding_digest": "35f6440ee54ec4bd85fc5bb2873ff541",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.AttachmentPurger.CountAttachments",
@@ -39,14 +31,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CountAttachments",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.AttachmentPurger.CountAttachments",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.QueueAttachmentCleanupForAnnouncement",
@@ -57,14 +41,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.QueueAttachmentCleanupForAnnouncement",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.AttachmentPurger.QueueAttachmentCleanupForAnnouncement",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.AttachmentDigests",
       "binding_digest": "35f6440ee54ec4bd85fc5bb2873ff541",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.AttachmentDigests",
@@ -79,14 +55,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.AttachmentDigests",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.AttachmentDigests",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CleanupOrphanedFiles",
@@ -105,14 +73,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CleanupOrphanedFiles",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.CleanupOrphanedFiles",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CountAttachments",
       "binding_digest": "35f6440ee54ec4bd85fc5bb2873ff541",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.CountAttachments",
@@ -127,14 +87,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CountAttachments",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.CountAttachments",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CreateFolder",
@@ -161,14 +113,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.CreateFolder",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.CreateFolder",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.DeleteAttachment",
       "binding_digest": "35f6440ee54ec4bd85fc5bb2873ff541",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.DeleteAttachment",
@@ -191,14 +135,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.DeleteAttachment",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.DeleteAttachment",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.DeleteFile",
@@ -239,14 +175,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.DeleteFile",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.DeleteFile",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.DeleteFolder",
@@ -265,14 +193,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.DeleteFolder",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.DeleteFolder",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListAttachments",
       "binding_digest": "35f6440ee54ec4bd85fc5bb2873ff541",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.ListAttachments",
@@ -289,14 +209,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListAttachments",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.ListAttachments",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListAudienceOptions",
       "binding_digest": "c995a891311de2cc4743cbf5e168e3b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.ListAudienceOptions",
@@ -311,14 +223,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListAudienceOptions",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.ListAudienceOptions",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListFiles",
@@ -361,14 +265,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListFiles",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.ListFiles",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListFolders",
       "binding_digest": "0b1c6ac80f0efa67171b146850fcff11",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.ListFolders",
@@ -401,14 +297,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.ListFolders",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.ListFolders",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.OpenAttachment",
       "binding_digest": "35f6440ee54ec4bd85fc5bb2873ff541",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.OpenAttachment",
@@ -423,14 +311,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.OpenAttachment",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.OpenAttachment",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.OpenFile",
@@ -463,14 +343,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.OpenFile",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.OpenFile",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.QueueAttachmentCleanupForAnnouncement",
@@ -481,14 +353,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.QueueAttachmentCleanupForAnnouncement",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.QueueAttachmentCleanupForAnnouncement",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.UpdateFolder",
       "binding_digest": "c995a891311de2cc4743cbf5e168e3b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.UpdateFolder",
@@ -513,14 +377,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.UpdateFolder",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.UpdateFolder",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.UploadAttachment",
       "binding_digest": "8b7a431c184692375916548cafb76863",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.UploadAttachment",
@@ -535,14 +391,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.UploadAttachment",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.UploadAttachment",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.UploadFile",
@@ -583,14 +431,6 @@
       "source_owner": "file-storage",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Service.UploadFile",
-      "binding_digest": "8e1d89e4a4bf408bac463077dc3469a3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage.Capability.UploadFile",
-      "source_owner": "file-storage",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.Dependencies.Now",
-      "target_owner": ""
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/application.storedObject.Close",

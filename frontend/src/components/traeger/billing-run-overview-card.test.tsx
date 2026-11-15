@@ -67,6 +67,7 @@ function invoice(
     number,
     issuedOn: "2026-09-09",
     registrationId: `r-${id}`,
+    registrationChildId: "",
     recipientFirstName: firstName,
     recipientLastName: lastName,
     recipientEmail: "",
@@ -464,6 +465,47 @@ describe("BillingRunOverviewCard letter preview (#5692)", () => {
     expect(screen.getByText("Lia Muster")).toBeInTheDocument();
     // One child: its sum is the invoice amount, no second total line.
     expect(screen.getByText("Summe")).toBeInTheDocument();
+  });
+
+  it("names an invoice per child and its child in each row menu (#7007)", () => {
+    const sibling = (id: string, childId: string, firstName: string) => ({
+      ...invoice(id, "", "Eva", "Muster", 4500),
+      id: "",
+      registrationId: "r-7",
+      registrationChildId: childId,
+      children: [
+        {
+          childId,
+          firstName,
+          lastName: "Muster",
+          totalCents: 4500,
+          corrections: [],
+          carriedCorrections: [],
+          positions: [],
+        },
+      ],
+    });
+    renderCard({
+      ...RUN,
+      status: "calculated",
+      releasedAt: null,
+      letters: null,
+      documents: [sibling("", "71", "Mia"), sibling("", "72", "Noah")],
+    });
+
+    expect(
+      screen.getByText("Je Kind eine Rechnung, auch für Geschwister."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Aktionen für die Rechnung an Eva Muster für Mia",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Aktionen für die Rechnung an Eva Muster für Noah",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("offers no preview before the letters of the run exist", () => {

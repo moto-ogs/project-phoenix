@@ -76,7 +76,7 @@ func setupUnreadTest(t *testing.T) *unreadEnv {
 		Children:         repos.Enrollment(),
 		Guardians:        repos.Enrollment(),
 		CareOfferingRepo: offerings,
-		Capacity:         owners.NewEnrollmentOfferingCapacity(offerings, repos.Enrollment(), settings),
+		Capacity:         owners.NewEnrollmentOfferingCapacity(offerings, repos.Enrollment(), settings, nil),
 		Catalog:          repos.Enrollment(),
 		SchoolRepo:       capabilitySchools{schools: reposSchools.School},
 		Notifications:    NewTestNotifications(repos.Enrollment(), notifyModeSettings{settings: settings}, discardingOutbox{}, capabilitySchools{schools: reposSchools.School}),

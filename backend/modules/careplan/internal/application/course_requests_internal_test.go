@@ -84,6 +84,13 @@ func offeringChangesForTest(deps OfferingChangeDependencies) *OfferingChanges {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
+	// The review reads its fixed test day, never the real clock.
+	if deps.Now == nil {
+		deps.Now = func() time.Time { return calendar.NewDate(2026, time.August, 24).BerlinMidnight() }
+	}
+	if deps.Today == nil {
+		deps.Today = calendar.CalendarDateClock(deps.Now)
+	}
 	return &OfferingChanges{deps: deps}
 }
 

@@ -340,7 +340,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return nil
 		},
 		func() (err error) {
-			carePlan, err = ComposeCarePlan(db, persons, CarePlanStatusSlots(timetableRepos.InstanceStudent))
+			carePlan, err = ComposeCarePlan(db, persons, CarePlanStatusSlots(timetableRepos.InstanceStudent), env.Now)
 			return
 		},
 		func() (err error) { appointments, err = BuildServeAppointments(db); return },
@@ -362,13 +362,13 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return nil
 		},
 		func() (err error) {
-			timetableRows, err = BuildTimetableOwner(db, env.Logger, env.Now, timetableOwner, timetableRepos, calendar, bookings, structure.Groups, hub)
+			timetableRows, err = BuildTimetableOwner(db, env.Logger, env.Now, timetableOwner, timetableRepos, calendar, bookings, structure.Groups, hub, persons, people.Students)
 			return
 		},
 		func() (err error) { classArrivals, err = BuildClassArrivals(db, env.Logger); return },
 		func() (err error) {
 			studentAudit = peopleCompose.NewStudentAuditService(tokens.AuditActor, NewStudentAuditFor(persons))
-			carePlanRows, err = BuildCarePlanRows(db, env.Logger, studentAudit, carePlan, persons, membership, timetableOwner, calendar, classArrivals, people)
+			carePlanRows, err = BuildCarePlanRows(db, env.Logger, studentAudit, carePlan, persons, membership, timetableOwner, calendar, classArrivals, people, env.Now)
 			return
 		},
 		func() (err error) {
@@ -443,7 +443,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			shifts, err = BuildShiftPlanning(db, env, hub, workTime, people, calendar, audit, timetableRows, rooms, activities)
+			shifts, err = BuildShiftPlanning(db, env, hub, workTime, people, calendar, audit, timetableRows, rooms, activities, settings.Service)
 			return
 		},
 		func() (err error) {
@@ -456,7 +456,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() (err error) {
 			lifecycle, err = BuildTimetableLifecycle(db, env, hub, timetableRows, days, people, careRows, presence, supervisions,
-				WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, NewTimetableSickReports(workTime))
+				WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, NewTimetableSickReports(workTime), NewTimetableStaffCancellationNotices(notifications))
 			return
 		},
 		func() (err error) {
@@ -492,12 +492,12 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() (err error) {
 			requests, err = BuildCarePlanRequests(db, env, hub, carePlan, persons, people, schedules, offerings, enrollment,
-				timetableOwner, settings.Service, audit, services, emitter, caller, reviewPolicy, tokens.Permissions, notifications.AbsenceNotifier, NewPickupChangeTeamReach(notifications), documentPermissions)
+				timetableOwner, settings.Service, audit, services, emitter, caller, reviewPolicy, tokens.Permissions, notifications.AbsenceNotifier, NewPickupChangeTeamReach(notifications), documentPermissions, timetableRows.CohortRosters)
 			return
 		},
 		func() error {
 			chat = BuildCommunicationMessaging(db, env, hub, settings.Service, messaging, services.Users, StaffStudentReads{Caller: caller.Caller()},
-				notifications, delivery.Outbox, people, SchoolNameDirectory{Schools: organizations}, communicationSession, identity)
+				notifications, delivery.Outbox, delivery.Runtime.EmailOutcomes, people, SchoolNameDirectory{Schools: organizations}, communicationSession, identity)
 			calendarApp = BuildCalendarApp(db, env, people, structure, portalReads, timetableRows, rooms, workTime, organizations,
 				identity, caller.Caller(), appointments, calendar, delivery, notifications, settings.Service, persons)
 			return nil
@@ -536,7 +536,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			facilities, err = BuildFacilitiesModule(db, ObserveFacilities, timetableRows.RecurrenceLock, presence.Presence, requests.CareOfferings)
+			facilities, err = BuildFacilitiesModule(db, ObserveFacilities, timetableRows.RecurrenceLock, presence.Presence, requests.CareOfferings, groups, devices)
 			return
 		},
 		func() (err error) {

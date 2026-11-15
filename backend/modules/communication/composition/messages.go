@@ -21,8 +21,7 @@ type ParentMessagingConfig struct {
 	MessageRepo deliveryPorts.ParentMessageRepositorySource
 	ReadRepo    deliveryPorts.ParentMessageReadRepositorySource
 	Persons     parentMessages.PersonLookup
-	// UserContext is the caller: the student read rules gate the read scope,
-	// and its groups serve the "own groups" count scope (#3673).
+	// UserContext is the caller: student read rules and own-groups count scope (#3673).
 	UserContext      parentMessages.Caller
 	Session          deliveryPorts.RequestSession
 	Settings         parentMessages.Settings
@@ -38,11 +37,12 @@ type ParentMessagingConfig struct {
 	ParentsURL       string
 	Observe          func(Observation)
 	GroupAudience    communication.ParentGroupAudienceReads
+	Mails            communication.ParentMessageMails // what became of the e-mails of OGS messages (#7058)
 }
 
-// NewParentMessaging also returns the OGS side of the group threads (#4784)
-// and the photos and files of both (#6685).
-func NewParentMessaging(cfg ParentMessagingConfig, runtime parentMessages.Runtime, policy deliveryPorts.ParentDeliveryPolicy) (communication.ParentMessagingCapability, communication.ParentGroupThreadCapability, communication.MessageAttachmentCapability) {
+// NewParentMessaging also returns the OGS side of the group threads (#4784), the
+// files of both (#6685), the team confirmation (#6486) and the mail status (#7058).
+func NewParentMessaging(cfg ParentMessagingConfig, runtime parentMessages.Runtime, policy deliveryPorts.ParentDeliveryPolicy) (communication.ParentMessagingCapability, communication.ParentGroupThreadCapability, communication.MessageAttachmentCapability, communication.ParentMessageTeamHandling, communication.ParentMessageMailStatus) {
 	service := parentMessages.NewService(parentMessages.Config{
 		Attachments: messageAttachmentStore(cfg.DB),
 		ThreadRepo:  parentMessages.NewThreadRepository(cfg.ThreadRepo), MessageRepo: parentMessages.NewMessageRepository(cfg.MessageRepo), ReadRepo: parentMessages.NewReadRepository(cfg.ReadRepo),
@@ -50,9 +50,9 @@ func NewParentMessaging(cfg ParentMessagingConfig, runtime parentMessages.Runtim
 		Broadcaster: cfg.Broadcaster, Logger: cfg.Logger, Notifier: deliveryPorts.NewNotificationSender(cfg.Notifier), Preferences: cfg.Preferences, Outbox: cfg.Outbox,
 		GuardianProfiles: cfg.GuardianProfiles, Schools: cfg.Schools, LoginImages: cfg.LoginImages, ParentsURL: cfg.ParentsURL,
 		CountPreferences: newCountPreferences(cfg.DB), Groups: cfg.UserContext,
-		GroupThreads: parentpostgres.NewGroupThreadStore(parentDatabase(cfg.DB)), GroupAudience: cfg.GroupAudience, Leaders: cfg.Persons,
+		GroupThreads: parentpostgres.NewGroupThreadStore(parentDatabase(cfg.DB)), GroupAudience: cfg.GroupAudience, Leaders: cfg.Persons, Mails: cfg.Mails,
 	}, runtime, policy)
-	return deliveryPorts.NewParentMessagingFacade(service, parentMessages.NativeFacadeRows(), parentMessages.NativeFacadeErrors(), communicationPostgres.NewMessageObservation(cfg.Observe)), service, service
+	return deliveryPorts.NewParentMessagingFacade(service, parentMessages.NativeFacadeRows(), parentMessages.NativeFacadeErrors(), communicationPostgres.NewMessageObservation(cfg.Observe)), service, service, service, service
 }
 
 // messageAttachmentStore is the attachment store over the ambient tenant

@@ -34,7 +34,7 @@ func TestSEPAMandateImportPayersStayWithTheirTraegerBelowRLS(t *testing.T) {
 	cipher, err := securityRuntimeCompose.NewBankDataCipher(testpkg.NewTestHealthDataKeys(), "")
 	require.NoError(t, err)
 	mandates := parentBillingCompose.NewSEPAMandates(
-		parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}, cipher, noDebtorNumberFormat{})
+		parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}, cipher, noDebtorNumberFormat{}, sepaImportDay)
 	csv := fmt.Sprintf("Mandatsreferenz;Mandatsdatum;IBAN;Kontoinhaber;Zahler\n"+
 		"OGS-R-1;01.09.2026;%[1]s;Eva Beispiel;%[2]d\nOGS-R-2;01.09.2026;%[1]s;Eva Beispiel;%[3]d\n", sepaIBAN, own, other)
 	mapping := &parentbilling.SEPAMandateImportMapping{Columns: parentbilling.SEPAMandateImportColumns{
@@ -68,4 +68,9 @@ type noDebtorNumberFormat struct{}
 
 func (noDebtorNumberFormat) DebtorNumberFormat(context.Context, int64) (parentbilling.DebtorNumberFormat, error) {
 	return parentbilling.DebtorNumberFormat{}, nil
+}
+
+// DebtorNumberScope keeps the number per payer, the default (#7007).
+func (noDebtorNumberFormat) DebtorNumberScope(context.Context, int64) (string, error) {
+	return parentbilling.DebtorNumberScopePayer, nil
 }

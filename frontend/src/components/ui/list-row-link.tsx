@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
 import NavigationLink from "~/components/ui/navigation-link";
 import { cn } from "~/lib/utils";
+import { CARD_FRAME } from "./card-surface";
 import { listRowLinkStateClasses } from "./list-row-styles";
 
 type ListRowLinkTarget =
@@ -55,6 +56,12 @@ type ListRowLinkProps = ListRowLinkTarget & {
    * bleibt Legenden und Plänen vorbehalten (ADR 0149).
    */
   readonly unread?: boolean;
+  /**
+   * Dreizeilig: der Untertitel bricht um statt abgeschnitten zu werden. Für
+   * einen Text, der ganz gelesen werden muss, etwa einen Hinweis der Glocke
+   * (#7148); eine Vorschau wie in den Nachrichten bleibt einzeilig.
+   */
+  readonly wrapSubtitle?: boolean;
   /** Layout-Klassen für den Textteil, etwa bei einer schmalen Planungsspalte. */
   readonly contentClassName?: string;
   /** Als einzelne Karte statt als Zeile einer `FramedList`. */
@@ -98,6 +105,7 @@ export function ListRowLink({
   accent,
   accentTint = false,
   unread = false,
+  wrapSubtitle = false,
   contentClassName,
   framed = false,
   chevron = true,
@@ -155,7 +163,8 @@ export function ListRowLink({
       {subtitle ? (
         <span
           className={cn(
-            "block min-w-0 truncate text-sm",
+            "block min-w-0 text-sm",
+            wrapSubtitle ? "break-words whitespace-normal" : "truncate",
             unread ? "text-gray-700" : "text-gray-500",
           )}
         >
@@ -242,9 +251,8 @@ export function ListRowLink({
     </button>
   );
   if (!framed) return row;
-  return (
-    <div className={cn("moto-content-surface rounded-2xl border", className)}>
-      {row}
-    </div>
-  );
+  // Gerahmt teilt die Zeile nur den Rahmen der Karte. Polster und Fokusring
+  // bleiben die der Zeile, beim Überfahren wird nur der Pfeil dunkler; ob sie
+  // wie `TileCard` reagieren soll, klärt #6731.
+  return <div className={cn(CARD_FRAME, className)}>{row}</div>;
 }

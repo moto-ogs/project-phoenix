@@ -183,6 +183,13 @@
   "dayLimitOver": "Wybrano: {count, plural, one {# dzień} other {# dni}}. To za dużo. Wybierz mniej dni.",
   "summaryDays": "Dni: {days}",
   "contributionDays": "{count, plural, one {# dzień} other {# dni}}",
+  "weeksLunchText": "Do każdego tygodnia można dokupić obiad. Jest dodatkowo płatny.",
+  "lunchLabel": "Z obiadem",
+  "lunchHint": "{count, plural, one {# obiad za {price}} few {# obiady po {price}, razem {total}} many {# obiadów po {price}, razem {total}} other {# obiadu po {price}, razem {total}}}",
+  "lunchHintDays": "{price} za obiad. Dziecko je obiad w każdym wybranym dniu.",
+  "summaryLunch": "Z obiadem",
+  "contributionLunch": "Obiad",
+  "contributionLunchCount": "Obiad · {count, plural, one {# obiad za {price}} few {# obiady po {price}} many {# obiadów po {price}} other {# obiadu po {price}}}",
   "dayWithoutCare": "{date} nie ma opieki ({name}).",
   "noCareDayAria": "{day}, brak opieki",
   "account": {
@@ -203,5 +210,18 @@
     "parent": "Rodzic",
     "guardian": "Opiekun prawny",
     "relative": "Krewny"
-  }
+  },
+  "accountHintLoginTooltip": "Otwiera logowanie, potem wrócą Państwo tutaj.",
+  "addChildHint": "Dodaje kolejne dziecko do tego zgłoszenia.",
+  "removeChildHint": "Usuwa to dziecko ze zgłoszenia, jego dane zostaną utracone.",
+  "addPickupHint": "Dodaje kolejną osobę do kontaktu w nagłych wypadkach lub odbioru.",
+  "removeContactHint": "Usuwa tę osobę ze zgłoszenia.",
+  "toSummaryHint": "Pokazuje wszystkie dane do sprawdzenia, jeszcze bez wysyłania.",
+  "contributionRetryHint": "Ponownie oblicza opłatę.",
+  "submitHint": "Wysyła zgłoszenie do organizatora, który decyduje o miejscu.",
+  "submitBindingHint": "Wiążąco zgłasza dziecko u organizatora, miejsce nie jest jeszcze pewne.",
+  "submitCaptchaPending": "Najpierw proszę zakończyć weryfikację bezpieczeństwa.",
+  "submitUploadsPending": "Proszę poczekać, aż wszystkie pliki zostaną przesłane.",
+  "doneToRegistrationsHint": "Otwiera listę Państwa zgłoszeń na ferie.",
+  "doneToStatusHint": "Pokazuje, na jakim etapie organizator jest z Państwa zgłoszeniem."
 }

@@ -5,6 +5,8 @@ const CodeEnrollmentApprovalCareOfferingDayConflict = "enrollment.approval_care_
 const CodeEnrollmentApprovalCareOfferingExactlyOne = "enrollment.approval_care_offering_exactly_one"
 const CodeEnrollmentApprovalCareOfferingMissing = "enrollment.approval_care_offering_missing"
 const CodeEnrollmentApprovalDataInvalid = "enrollment.approval_data_invalid"
+const CodeEnrollmentApprovalOfferingTermsChanged = "enrollment.approval_offering_terms_changed"
+const CodeEnrollmentApprovalStaffProfileRequired = "enrollment.approval_staff_profile_required"
 const CodeEnrollmentCaptchaFailed = "enrollment.captcha_failed"
 const CodeEnrollmentCaptchaRequired = "enrollment.captcha_required"
 const CodeEnrollmentCareOfferingAutoAddInvalid = "enrollment.care_offering_auto_add_invalid"
@@ -97,6 +99,7 @@ const CodeEnrollmentHolidayFormFieldNotAllowed = "enrollment.holiday_form_field_
 const CodeEnrollmentHolidayGuestGroupInvalid = "enrollment.holiday_guest_group_invalid"
 const CodeEnrollmentHolidayGuestNotFound = "enrollment.holiday_guest_not_found"
 const CodeEnrollmentHolidayHostSchoolOutsideTraeger = "enrollment.holiday_host_school_outside_traeger"
+const CodeEnrollmentHolidayLunchBooked = "enrollment.holiday_lunch_booked"
 const CodeEnrollmentHolidayPeriodIncomplete = "enrollment.holiday_period_incomplete"
 const CodeEnrollmentHolidayPeriodInvalid = "enrollment.holiday_period_invalid"
 const CodeEnrollmentHolidayPeriodNotFound = "enrollment.holiday_period_not_found"
@@ -130,6 +133,7 @@ const CodeEnrollmentPhaseBookingBoundsConflict = "enrollment.phase_booking_bound
 const CodeEnrollmentPhaseCareOfferingConflict = "enrollment.phase_care_offering_conflict"
 const CodeEnrollmentPhaseEligibilitySettingRequired = "enrollment.phase_eligibility_setting_required"
 const CodeEnrollmentPhaseHasEffectiveBookings = "enrollment.phase_has_effective_bookings"
+const CodeEnrollmentPhaseHasRequests = "enrollment.phase_has_requests"
 const CodeEnrollmentPhaseNameExists = "enrollment.phase_name_exists"
 const CodeEnrollmentPhaseNameRequired = "enrollment.phase_name_required"
 const CodeEnrollmentPhaseNotEligible = "enrollment.phase_not_eligible"
@@ -183,6 +187,8 @@ var errorCodeClassesEnrollment = []errorCodeClass{
 	{CodeEnrollmentApprovalCareOfferingExactlyOne, "business_rejection"},
 	{CodeEnrollmentApprovalCareOfferingMissing, "business_rejection"},
 	{CodeEnrollmentApprovalDataInvalid, "input"},
+	{CodeEnrollmentApprovalOfferingTermsChanged, "business_rejection"},
+	{CodeEnrollmentApprovalStaffProfileRequired, "permission"},
 	{CodeEnrollmentCaptchaFailed, "input"},
 	{CodeEnrollmentCaptchaRequired, "input"},
 	{CodeEnrollmentCareOfferingAutoAddInvalid, "input"},
@@ -275,6 +281,7 @@ var errorCodeClassesEnrollment = []errorCodeClass{
 	{CodeEnrollmentHolidayGuestGroupInvalid, "input"},
 	{CodeEnrollmentHolidayGuestNotFound, "business_rejection"},
 	{CodeEnrollmentHolidayHostSchoolOutsideTraeger, "input"},
+	{CodeEnrollmentHolidayLunchBooked, "business_rejection"},
 	{CodeEnrollmentHolidayPeriodIncomplete, "business_rejection"},
 	{CodeEnrollmentHolidayPeriodInvalid, "input"},
 	{CodeEnrollmentHolidayPeriodNotFound, "business_rejection"},
@@ -308,6 +315,7 @@ var errorCodeClassesEnrollment = []errorCodeClass{
 	{CodeEnrollmentPhaseCareOfferingConflict, "business_rejection"},
 	{CodeEnrollmentPhaseEligibilitySettingRequired, "input"},
 	{CodeEnrollmentPhaseHasEffectiveBookings, "business_rejection"},
+	{CodeEnrollmentPhaseHasRequests, "business_rejection"},
 	{CodeEnrollmentPhaseNameExists, "business_rejection"},
 	{CodeEnrollmentPhaseNameRequired, "input"},
 	{CodeEnrollmentPhaseNotEligible, "permission"},

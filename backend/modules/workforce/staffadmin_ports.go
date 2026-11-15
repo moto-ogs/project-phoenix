@@ -99,17 +99,41 @@ type staffAdminEngine interface {
 	StaffDocuments
 }
 
+// staffAdminTraeger is the Träger side of the personnel record (#4705).
+type staffAdminTraeger interface {
+	StaffTraegerKeep
+	TraegerStaffRecords(collaborators TraegerStaffPorts) TraegerStaffRecords
+	TraegerAbsenceTypes(collaborators TraegerStaffPorts) TraegerAbsenceTypes
+	TraegerStaffContracts(collaborators TraegerStaffPorts) TraegerStaffContracts
+	TraegerStaffPlanning(collaborators TraegerStaffPorts, sites TraegerShiftSites) TraegerStaffPlanning
+}
+
+// StaffTraegerKeep tells the school whether its Träger keeps an employment
+// in its staff record (#4705, ADR 0089 section 6): the personnel number and
+// the bank and tax values are then the Träger's, read-only for the school.
+type StaffTraegerKeep interface {
+	StaffKeptByTraeger(ctx context.Context, staffID int64) (bool, error)
+	// StaffSollKeptByTraeger is true while a contract of the Träger governs
+	// the Soll of the employment (#4706): the school then reads its schedule
+	// and Ferien-Soll but does not change them.
+	StaffSollKeptByTraeger(ctx context.Context, staffID int64) (bool, error)
+}
+
 // StaffAdmin is the public facade of the personnel-record administration: the
 // Stammdaten sections, the payroll number, the audited financial reads and
-// the Dokumente tab. It serves StaffRecordAdmin and StaffDocuments.
-type StaffAdmin struct{ engine staffAdminEngine }
+// the Dokumente tab. It serves StaffRecordAdmin, StaffDocuments and
+// StaffTraegerKeep.
+type StaffAdmin struct {
+	engine  staffAdminEngine
+	traeger staffAdminTraeger
+}
 
-// NewStaffAdmin wraps the composed engine.
-func NewStaffAdmin(engine staffAdminEngine) *StaffAdmin {
-	if engine == nil {
-		panic("workforce: staff admin engine is required")
+// NewStaffAdmin wraps the composed engine and its Träger side.
+func NewStaffAdmin(engine staffAdminEngine, traeger staffAdminTraeger) *StaffAdmin {
+	if engine == nil || traeger == nil {
+		panic("workforce: staff admin engine and its Träger side are required")
 	}
-	return &StaffAdmin{engine: engine}
+	return &StaffAdmin{engine: engine, traeger: traeger}
 }
 
 func (a *StaffAdmin) UpdatePersonnelNumber(ctx context.Context, staffID int64, value *string, changedByStaffID int64, note string) (*StaffProfile, error) {
@@ -210,4 +234,40 @@ func (a *StaffAdmin) MarkQueuedStaffDocumentFileCleanupCompleteByFilename(ctx co
 
 func (a *StaffAdmin) ActivateQueuedStaffDocumentFileCleanup(ctx context.Context, storedName string) error {
 	return a.engine.ActivateQueuedStaffDocumentFileCleanup(ctx, storedName)
+}
+
+func (a *StaffAdmin) StaffKeptByTraeger(ctx context.Context, staffID int64) (bool, error) {
+	return a.traeger.StaffKeptByTraeger(ctx, staffID)
+}
+
+func (a *StaffAdmin) StaffSollKeptByTraeger(ctx context.Context, staffID int64) (bool, error) {
+	return a.traeger.StaffSollKeptByTraeger(ctx, staffID)
+}
+
+// TraegerStaffContracts are the Arbeitsverträge of the Personalstamm (#4706,
+// ADR 0089 section 1); the root binds the same collaborators as for the
+// records.
+func (a *StaffAdmin) TraegerStaffContracts(collaborators TraegerStaffPorts) TraegerStaffContracts {
+	return a.traeger.TraegerStaffContracts(collaborators)
+}
+
+// TraegerStaffRecords is the Personalstamm of the Träger-Portal (#4705, ADR
+// 0089) over this personnel record; the root binds the collaborators.
+func (a *StaffAdmin) TraegerStaffRecords(collaborators TraegerStaffPorts) TraegerStaffRecords {
+	return a.traeger.TraegerStaffRecords(collaborators)
+}
+
+// TraegerStaffPlanning is the Einsatzplanung of the Träger (#4708, ADR 0089
+// section 8) over the same collaborators and the Dienstplan of each school.
+func (a *StaffAdmin) TraegerStaffPlanning(collaborators TraegerStaffPorts, sites TraegerShiftSites) TraegerStaffPlanning {
+	if sites == nil {
+		panic("workforce traeger planning: the Dienstplan of the schools is required")
+	}
+	return a.traeger.TraegerStaffPlanning(collaborators, sites)
+}
+
+// TraegerAbsenceTypes is the Träger's Abwesenheitsarten and Kontingente
+// (#4710, ADR 0089 section 10) over the same collaborators.
+func (a *StaffAdmin) TraegerAbsenceTypes(collaborators TraegerStaffPorts) TraegerAbsenceTypes {
+	return a.traeger.TraegerAbsenceTypes(collaborators)
 }

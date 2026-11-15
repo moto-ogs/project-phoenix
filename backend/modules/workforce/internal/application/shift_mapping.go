@@ -14,7 +14,7 @@ func shiftToDomain(value workforce.StaffShift) domain.StaffShift {
 		ShiftTypeID: value.ShiftTypeID, Notes: value.Notes, SeriesID: value.SeriesID, Detached: value.Detached, SeriesOverride: value.SeriesOverride,
 		SeriesOccurrenceDate: value.SeriesOccurrenceDate, Cancelled: value.Cancelled, ChangeReason: value.ChangeReason,
 		OriginShiftID: value.OriginShiftID, SickAbsenceID: value.SickAbsenceID, CreatedBy: value.CreatedBy,
-		UpdatedBy: value.UpdatedBy, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		UpdatedBy: value.UpdatedBy, PlannedByTraeger: value.PlannedByTraeger, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
 }
 
@@ -25,7 +25,7 @@ func shiftToPublic(value domain.StaffShift) workforce.StaffShift {
 		ShiftTypeID: value.ShiftTypeID, Notes: value.Notes, SeriesID: value.SeriesID, Detached: value.Detached, SeriesOverride: value.SeriesOverride,
 		SeriesOccurrenceDate: value.SeriesOccurrenceDate, Cancelled: value.Cancelled, ChangeReason: value.ChangeReason,
 		OriginShiftID: value.OriginShiftID, SickAbsenceID: value.SickAbsenceID, CreatedBy: value.CreatedBy,
-		UpdatedBy: value.UpdatedBy, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		UpdatedBy: value.UpdatedBy, PlannedByTraeger: value.PlannedByTraeger, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
 }
 
@@ -78,14 +78,14 @@ func seriesToPublic(value domain.StaffShiftSeries) workforce.StaffShiftSeries {
 func shiftTypeToDomain(value workforce.ShiftType) domain.ShiftType {
 	return domain.ShiftType{
 		ID: value.ID, TenantID: value.TenantID, Name: value.Name, Color: value.Color,
-		Description: value.Description, IsActive: value.IsActive, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		Description: value.Description, IsActive: value.IsActive, ArchivedAt: value.ArchivedAt, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
 }
 
 func shiftTypeToPublic(value domain.ShiftType) workforce.ShiftType {
 	return workforce.ShiftType{
 		ID: value.ID, TenantID: value.TenantID, Name: value.Name, Color: value.Color,
-		Description: value.Description, IsActive: value.IsActive, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		Description: value.Description, IsActive: value.IsActive, ArchivedAt: value.ArchivedAt, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
 }
 

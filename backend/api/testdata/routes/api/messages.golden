@@ -4,10 +4,12 @@ GET /api/messages/count-scope
 GET /api/messages/group-threads
 GET /api/messages/group-threads/audience
 GET /api/messages/group-threads/{groupThreadId}
+GET /api/messages/group-threads/{groupThreadId}/mails
 GET /api/messages/reachable-students
 GET /api/messages/students/{studentId}/guardians
 GET /api/messages/students/{studentId}/threads
 GET /api/messages/threads/{threadId}
+GET /api/messages/threads/{threadId}/mails
 GET /api/messages/unread-count
 POST /api/messages/attachments
 POST /api/messages/group-threads
@@ -17,5 +19,6 @@ POST /api/messages/mark-all-read
 POST /api/messages/threads
 POST /api/messages/threads/open
 POST /api/messages/threads/{threadId}
+POST /api/messages/threads/{threadId}/handled
 POST /api/messages/threads/{threadId}/unread
 PUT /api/messages/count-scope

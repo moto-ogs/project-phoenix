@@ -25,7 +25,7 @@ func NewCompanionEdges(store ports.Store, observe func(ports.Observation)) Compa
 func (r CompanionEdges) ListCompanionEdges(ctx context.Context, studentID int64) ([]careplan.CompanionEdge, error) {
 	started := time.Now()
 	values, stats, err := r.store.ListCompanionEdges(ctx, studentID)
-	r.observeCompanions("list_companion_edges", started, stats, err)
+	r.observeCompanions("list_companion_edges", time.Since(started), stats, err)
 	if err != nil {
 		return nil, err
 	}
@@ -43,19 +43,19 @@ func (r CompanionEdges) CompanionDaysCoveredExcluding(
 ) (map[int64]map[string]bool, error) {
 	started := time.Now()
 	covered, stats, err := r.store.CompanionDaysCoveredExcluding(ctx, studentIDs, excludeID)
-	r.observeCompanions("companion_days_covered_excluding", started, stats, err)
+	r.observeCompanions("companion_days_covered_excluding", time.Since(started), stats, err)
 	return covered, err
 }
 
 func (r CompanionEdges) DeleteCompanionEdges(ctx context.Context, edgeIDs []int64) error {
 	started := time.Now()
 	stats, err := r.store.DeleteCompanionEdges(ctx, edgeIDs)
-	r.observeCompanions("delete_companion_edges", started, stats, err)
+	r.observeCompanions("delete_companion_edges", time.Since(started), stats, err)
 	return err
 }
 
-func (r CompanionEdges) observeCompanions(operation string, started time.Time, stats any, err error) {
-	observation := ports.Observation{Operation: operation, Duration: time.Since(started), Err: err}
+func (r CompanionEdges) observeCompanions(operation string, elapsed time.Duration, stats any, err error) {
+	observation := ports.Observation{Operation: operation, Duration: elapsed, Err: err}
 	if typed, ok := stats.(domain.OperationStats); ok {
 		observation.Stats = typed
 	}

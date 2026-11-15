@@ -4,15 +4,14 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	deliveryPorts "github.com/moto-ogs/project-phoenix/modules/communication/internal/application"
 	records "github.com/moto-ogs/project-phoenix/modules/communication/internal/staffannouncements"
 )
 
-// ParentAnnouncementConfig is the compatibility composition seam for the
-// users.parent_* persistence that moves in #2675. Callers receive only the
-// Communication public capability.
+// ParentAnnouncementOutbox is the mail outbox of the announcements.
 type ParentAnnouncementOutbox interface{ deliveryPorts.MailOutbox }
 
 type ParentAnnouncementPushOutbox interface {
@@ -33,6 +32,7 @@ type ParentAnnouncementConfig struct {
 	ParentsURL   string
 	Logger       *slog.Logger
 	SurveyStaff  deliveryPorts.SurveyStaff // with it, the surveys (#4781)
+	Now          func() time.Time
 }
 
 type ParentAnnouncementEmailConfig communication.MailRendererConfig
@@ -53,7 +53,7 @@ func NewParentAnnouncementsWithAttachments(cfg ParentAnnouncementConfig, attachm
 	return deliveryPorts.WithSurveys(deliveryPorts.NewParentAnnouncementFacade(deliveryPorts.NewService(deliveryPorts.ServiceConfig{
 		Repo: records.NewRepository(cfg.Repo), Settings: cfg.Settings, Outbox: cfg.Outbox, PushOutbox: cfg.PushOutbox, Notifier: deliveryPorts.NewNotificationSender(cfg.Notifier),
 		Series: cfg.Series, Preferences: cfg.Preferences, Deliveries: deliveries,
-		ParentsURL: cfg.ParentsURL, Logger: cfg.Logger, Fingerprints: cfg.Fingerprints, Signatures: cfg.Signatures, Attachments: attachments,
+		ParentsURL: cfg.ParentsURL, Logger: cfg.Logger, Fingerprints: cfg.Fingerprints, Signatures: cfg.Signatures, Attachments: attachments, Now: cfg.Now,
 	}, runtime, policy)), cfg.Repo, cfg.SurveyStaff)
 }
 

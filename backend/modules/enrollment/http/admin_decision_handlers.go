@@ -172,39 +172,19 @@ type AdminExistingChildCandidate struct {
 	LastName    string  `json:"last_name"`
 	DateOfBirth *string `json:"date_of_birth,omitempty"`
 	SchoolClass string  `json:"school_class,omitempty"`
+	// PhaseRequest is the other active request of the same phase that
+	// already created or renews this child (#6247). The office cannot renew
+	// it again in the phase; the enrollment duplicates that request.
+	PhaseRequest *AdminCandidatePhaseRequest `json:"phase_request,omitempty"`
 }
 
-// AdminRequestChildOffering is one care-offering pick for a child.
-// SelectedDays is non-empty only for offerings whose
-// days_of_week_mode is "parent_choice"; otherwise it's omitted and
-// the offering's AvailableDays describes the (admin-fixed) schedule.
-//
-// The attribute and validity fields carry the same facts the parent
-// portal renders for this booking (#2185), in the same wire shape:
-// ValidUntil is the INCLUSIVE last covered day, matching
-// workflows/parentportal/http/care_offerings_handlers.go. The stored column is
-// exclusive; one JSON name must not mean two different days depending
-// on which endpoint answered.
-//
-// StartsLater marks a row that is not in effect yet — display only.
-// Which SET a row sits in (offerings vs upcoming_offerings) is what
-// says whether a correction replaces it; before the phase starts a
-// booking is not yet in effect AND on file, so the two questions have
-// different answers and must not share one flag.
-type AdminRequestChildOffering struct {
-	OfferingID            string   `json:"offering_id"`
-	OfferingName          string   `json:"offering_name"`
-	DaysOfWeekMode        string   `json:"days_of_week_mode"`
-	SelectedDays          []string `json:"selected_days,omitempty"`
-	ManualSelectedDays    []string `json:"manual_selected_days,omitempty"`
-	AutomaticSelectedDays []string `json:"automatic_selected_days,omitempty"`
-	AvailableDays         []string `json:"available_days,omitempty"`
-	IncludesLunch         bool     `json:"includes_lunch"`
-	IncludesHolidayCare   bool     `json:"includes_holiday_care"`
-	PriceCents            *int     `json:"price_cents,omitempty"`
-	ValidFrom             string   `json:"valid_from,omitempty"`
-	ValidUntil            string   `json:"valid_until,omitempty"`
-	StartsLater           bool     `json:"starts_later,omitempty"`
+// AdminCandidatePhaseRequest names the request of the phase that holds a
+// candidate.
+type AdminCandidatePhaseRequest struct {
+	RequestID         string `json:"request_id"`
+	ChildStatus       string `json:"child_status"`
+	GuardianFirstName string `json:"guardian_first_name"`
+	GuardianLastName  string `json:"guardian_last_name"`
 }
 
 type AdminOfferingAdjustment struct {
@@ -480,6 +460,12 @@ func newAdminExistingChildCandidate(candidate capability.ExistingChildCandidate)
 		dob := string(*candidate.DateOfBirth)
 		out.DateOfBirth = &dob
 	}
+	if held := candidate.PhaseRequest; held != nil {
+		out.PhaseRequest = &AdminCandidatePhaseRequest{
+			RequestID: strconv.FormatInt(held.RequestID, 10), ChildStatus: held.ChildStatus,
+			GuardianFirstName: held.GuardianFirstName, GuardianLastName: held.GuardianLastName,
+		}
+	}
 	return out
 }
 
@@ -548,11 +534,17 @@ func toAdminSchemaMetadata(fs *capability.FormSchema) ([]AdminRequestSchemaField
 // AdminDecideRequest is the body of POST .../children/{childId}/decide.
 // ExistingStudentID and CreateNewStudent answer an approval whose child may
 // already be enrolled (#6053): renew that child, or create a new one.
+// ShownExistingStudentIDs lists the candidates the office saw when it chose a
+// new child; a candidate outside it refuses the approval again (#6247).
 type AdminDecideRequest struct {
-	Status            string `json:"status"` // approved | waitlisted | rejected | under_review
-	Reason            string `json:"reason,omitempty"`
-	ExistingStudentID string `json:"existing_student_id,omitempty"`
-	CreateNewStudent  bool   `json:"create_new_student,omitempty"`
+	Status                  string   `json:"status"` // approved | waitlisted | rejected | under_review
+	Reason                  string   `json:"reason,omitempty"`
+	ExistingStudentID       string   `json:"existing_student_id,omitempty"`
+	CreateNewStudent        bool     `json:"create_new_student,omitempty"`
+	ShownExistingStudentIDs []string `json:"shown_existing_student_ids,omitempty"`
+	// AcceptOfferingChanges confirms booking the offerings' current terms
+	// although they changed since the submission (#6837).
+	AcceptOfferingChanges bool `json:"accept_offering_changes,omitempty"`
 }
 
 func (req *AdminDecideRequest) Bind(_ *http.Request) error { return nil }
@@ -560,6 +552,20 @@ func (req *AdminDecideRequest) Bind(_ *http.Request) error { return nil }
 // existingStudentID parses the chosen enrolled child, nil when none is chosen.
 func (req *AdminDecideRequest) existingStudentID() (*int64, error) {
 	return parseExistingStudentID(req.ExistingStudentID)
+}
+
+// parseShownStudentIDs reads the candidates the office saw before it chose a
+// new child.
+func parseShownStudentIDs(values []string) ([]int64, error) {
+	ids := make([]int64, 0, len(values))
+	for _, value := range values {
+		id, err := parseExistingStudentID(value)
+		if err != nil || id == nil {
+			return nil, errors.New("invalid shown_existing_student_ids")
+		}
+		ids = append(ids, *id)
+	}
+	return ids, nil
 }
 
 // parseExistingStudentID reads the office's chosen enrolled child of a
@@ -600,18 +606,25 @@ func (rs *Resource) decideAdminChild(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	shownStudentIDs, err := parseShownStudentIDs(body.ShownExistingStudentIDs)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
 
 	claims := sessiontoken.ClaimsFromCtx(r.Context())
 	// The command opens the tenant unit and owns its retry and the guardian
 	// invitation an approval owes (#6093).
 	outcome, err := rs.DecisionService.DecideAndInvite(r.Context(), DecideInput{
-		RequestID:         requestID,
-		ChildID:           childID,
-		Status:            DecisionStatus(body.Status),
-		Reason:            body.Reason,
-		ReviewedBy:        int64(claims.ID),
-		ExistingStudentID: existingStudentID,
-		CreateNewStudent:  body.CreateNewStudent,
+		RequestID:             requestID,
+		ChildID:               childID,
+		Status:                DecisionStatus(body.Status),
+		Reason:                body.Reason,
+		ReviewedBy:            int64(claims.ID),
+		ExistingStudentID:     existingStudentID,
+		CreateNewStudent:      body.CreateNewStudent,
+		ShownCandidateIDs:     shownStudentIDs,
+		AcceptOfferingChanges: body.AcceptOfferingChanges,
 	})
 	if err != nil {
 		rs.renderDecideError(w, r, err)
@@ -705,6 +718,9 @@ func (rs *Resource) decideErrorRules(r *http.Request) []common.ErrorRule {
 		{Target: capability.ErrDecisionInvalidData, Render: func(err error) render.Renderer {
 			return common.ErrorInvalidRequestWithCode(err, common.CodeEnrollmentApprovalDataInvalid)
 		}},
+		{Target: capability.ErrDecisionReviewerStaffRequired, Render: func(err error) render.Renderer {
+			return common.ErrorForbiddenWithCode(err, common.CodeEnrollmentApprovalStaffProfileRequired)
+		}},
 		{Target: capability.ErrWaitlistDisabled, Render: func(err error) render.Renderer {
 			return common.ErrorConflictWithCode(err, common.CodeEnrollmentWaitlistDisabled)
 		}},
@@ -721,10 +737,15 @@ func (rs *Resource) decideErrorRules(r *http.Request) []common.ErrorRule {
 			return common.ErrorConflictWithCode(err, common.CodeEnrollmentGuardianAccountMismatch)
 		}},
 		{Target: capability.ErrChildPossiblyEnrolled, Render: func(err error) render.Renderer {
-			return common.ErrorConflictWithCode(err, common.CodeEnrollmentChildPossiblyEnrolled)
+			// The refusal names the current candidates, so the detail page
+			// asks the office again with them instead of a stale list (#6247).
+			return common.ErrorConflictWithDetails(err, common.CodeEnrollmentChildPossiblyEnrolled, possiblyEnrolledDetails(err))
 		}},
 		{Target: capability.ErrExistingChildChoiceInvalid, Render: func(err error) render.Renderer {
 			return common.ErrorConflictWithCode(err, common.CodeEnrollmentExistingChildChoiceInvalid)
+		}},
+		{Target: capability.ErrOfferingTermsChanged, Render: func(err error) render.Renderer {
+			return common.ErrorConflictWithCode(err, common.CodeEnrollmentApprovalOfferingTermsChanged)
 		}},
 		{Target: capability.ErrExistingStudentAlreadyRequested, Render: func(err error) render.Renderer {
 			return common.ErrorConflictWithCode(err, common.CodeEnrollmentChildAlreadyRequested)

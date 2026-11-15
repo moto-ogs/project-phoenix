@@ -94,6 +94,7 @@ export default function TraegerLastschriftPage() {
             href={traegerPath("/traeger/abrechnung/lastschrift/import")}
             variant="outline"
             size="md"
+            tooltip="Öffnet den Import bestehender Mandate aus einer CSV-Datei."
           >
             Mandate importieren
           </ButtonLink>
@@ -141,9 +142,6 @@ export default function TraegerLastschriftPage() {
             ]
       }
       onClearAllFilters={() => setShow("all")}
-      // The selected segment already shows the filter on a wide screen; a
-      // chip row would show it twice. A phone shows the count on its button.
-      activeFilterDisplay="count"
     >
       {mandates ? (
         <SepaMandatesCard

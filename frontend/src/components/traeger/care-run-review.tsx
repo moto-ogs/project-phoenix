@@ -17,7 +17,10 @@ import {
   exportFormatOptions,
 } from "~/components/ui/export-menu";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import { ResponsiveActionList } from "~/components/ui/responsive-action-list";
+import {
+  ResponsiveActionList,
+  ResponsiveActionRow,
+} from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
@@ -169,10 +172,7 @@ export function CareExcludedCard({
     >
       <ResponsiveActionList>
         {invoices.map((invoice) => (
-          <li
-            key={invoiceKey(invoice)}
-            className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:col-span-2 sm:grid sm:grid-cols-subgrid sm:items-center"
-          >
+          <ResponsiveActionRow key={invoiceKey(invoice)}>
             <div className="min-w-0">
               <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
                 <span className="font-semibold text-gray-900">
@@ -204,12 +204,13 @@ export function CareExcludedCard({
                 loadingText="Wird aufgenommen …"
                 disabled={returning !== null}
                 aria-label={`Wieder aufnehmen: ${invoiceKindLabel(invoice)} von ${childName(invoice)}`}
+                tooltip="Nimmt die Rechnung sofort wieder in diesen Lauf auf."
                 onClick={() => onInclude(invoice)}
               >
                 Wieder aufnehmen
               </Button>
             </div>
-          </li>
+          </ResponsiveActionRow>
         ))}
       </ResponsiveActionList>
     </SectionCard>
@@ -344,6 +345,7 @@ function DebitHintsCard({
             href={traegerPath("/traeger/einstellungen/abrechnung")}
             variant="outline"
             size="md"
+            tooltip="Öffnet die Einstellungen zur Abrechnung des Trägers."
           >
             Gläubiger-ID eintragen
           </ButtonLink>
@@ -352,6 +354,7 @@ function DebitHintsCard({
             href={traegerPath(dueDatesHref)}
             variant="outline"
             size="md"
+            tooltip="Öffnet die Seite, auf der Sie die Abbuchungstage ändern."
           >
             Fälligkeiten ändern
           </ButtonLink>
@@ -362,10 +365,7 @@ function DebitHintsCard({
         // Open rows first; a family that pays by transfer pays all the
         // same, so it stands apart as information.
         const renderRow = ({ item, text, dueTooSoon }: DebitHint) => (
-          <li
-            key={item.key}
-            className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:col-span-2 sm:grid sm:grid-cols-subgrid sm:items-center"
-          >
+          <ResponsiveActionRow key={item.key}>
             <div className="min-w-0">
               <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
                 <span className="font-semibold text-gray-900">{item.name}</span>
@@ -391,11 +391,16 @@ function DebitHintsCard({
                 variant="surface"
                 size="compact"
                 aria-label={`${mandateAction(item)}: ${item.family}`}
+                tooltip={
+                  item.payment?.debitGap === "mandate_missing"
+                    ? "Öffnet die Familie, dort erfassen Sie das Lastschrift-Mandat."
+                    : "Öffnet das Lastschrift-Mandat dieser Familie."
+                }
               >
                 {mandateAction(item)}
               </ButtonLink>
             </div>
-          </li>
+          </ResponsiveActionRow>
         );
         const openRows = shown.filter((hint) => !isTransfer(hint));
         const infoRows = shown.filter(isTransfer);
@@ -428,6 +433,11 @@ function DebitHintsCard({
           size="compact"
           className="mt-3"
           aria-expanded={expanded}
+          tooltip={
+            expanded
+              ? "Zeigt wieder nur die ersten Einträge der Liste an."
+              : "Zeigt weitere Einträge unten in der Liste an."
+          }
           onClick={() => setExpanded((value) => !value)}
         >
           {expanded

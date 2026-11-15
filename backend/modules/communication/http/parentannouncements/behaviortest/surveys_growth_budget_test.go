@@ -20,6 +20,7 @@ import (
 	settingsValues "github.com/moto-ogs/project-phoenix/modules/settings"
 	deliveryPolicy "github.com/moto-ogs/project-phoenix/roots/communicationtest"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -38,7 +39,7 @@ func TestSurveyPositiveGrowthQueryBudget(t *testing.T) {
 	require.NoError(t, err)
 	files, _, err := api.NewFileStoreTestModule(database, testpkg.TenantRuntime(t, db), objectBackend)
 	require.NoError(t, err)
-	withSurveys, err := compose.NewParentAnnouncementsWithAttachments(compose.ParentAnnouncementConfig{Repo: repos.ParentAnnouncement, Settings: settingsValues.NewParentAnnouncementValues(settings.Settings), Logger: slog.Default(), SurveyStaff: repos.StaffMessageRead}, files, owners.CommunicationRequestRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
+	withSurveys, err := compose.NewParentAnnouncementsWithAttachments(compose.ParentAnnouncementConfig{Repo: repos.ParentAnnouncement, Settings: settingsValues.NewParentAnnouncementValues(settings.Settings), Logger: slog.Default(), SurveyStaff: repos.StaffMessageRead, Now: func() time.Time { return surveyGrowthNow }}, files, owners.CommunicationRequestRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 	require.NoError(t, err)
 	surveys, err := communication.SurveysOf(withSurveys)
 	require.NoError(t, err)
@@ -50,7 +51,7 @@ func TestSurveyPositiveGrowthQueryBudget(t *testing.T) {
 	counter.Stop()
 	var lastSurvey *communication.Survey
 	for _, n := range []int{3, 8} {
-		input := communication.SurveyInput{Title: fmt.Sprintf("Growth-%d", n), Audience: communication.SurveyAudienceStaff, Anonymous: false, ClosesAt: time.Now().Add(72 * time.Hour)}
+		input := communication.SurveyInput{Title: fmt.Sprintf("Growth-%d", n), Audience: communication.SurveyAudienceStaff, Anonymous: false, ClosesAt: surveyGrowthNow.Add(72 * time.Hour)}
 		for i := 0; i < n; i++ {
 			input.Questions = append(input.Questions, communication.SurveyQuestionInput{Kind: communication.SurveyQuestionSingle, Prompt: fmt.Sprintf("Question-%02d", i), Required: true, Options: []string{"Yes", "No"}})
 		}
@@ -160,3 +161,7 @@ func TestSurveyPositiveGrowthQueryBudget(t *testing.T) {
 		require.Equal(t, 404, rec.Code, rec.Body.String())
 	}
 }
+
+// surveyGrowthNow is the fixed clock of the survey service and its close
+// time, a Wednesday 10:00 in Berlin (#7104).
+var surveyGrowthNow = calendar.NewDate(2026, time.November, 18).BerlinMidnight().Add(10 * time.Hour)

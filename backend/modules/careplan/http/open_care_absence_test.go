@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
@@ -116,12 +117,15 @@ func TestAbsenceWriter_DetailFlags(t *testing.T) {
 func TestAbsenceWriter_ParentExcusedRequestDecidable(t *testing.T) {
 	t.Parallel()
 
-	tc := setupStudentsRoute(t)
+	// A fixed Monday; the request names the Thursday of that week, so the
+	// day stays an upcoming school day whatever the real clock says.
+	today := calendar.NewDate(2026, time.August, 24)
+	tc := setupStudentsRoute(t, func() time.Time { return today.BerlinMidnight().Add(10 * time.Hour) })
 
 	chain := testpkg.CreateTestParentGuardianChain(t, tc.db)
 	_, account := testpkg.CreateTestStaffWithAccount(t, tc.db, "Queue", "Staff")
 
-	day := calendar.TodayDate().AddDays(3)
+	day := today.AddDays(3)
 	var pending *excusedrequests.Request
 	require.NoError(t, testpkg.WithTenantTx(t, adminTenantCtx(chain.TenantID), tc.db, chain.TenantID,
 		func(txCtx context.Context, _ bun.Tx) error {

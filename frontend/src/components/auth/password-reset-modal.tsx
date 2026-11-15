@@ -12,7 +12,7 @@ import { Modal } from "~/components/ui/modal";
 import { Button } from "~/components/ui/button";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { SpinnerIcon } from "~/components/ui/icons";
-import { Input } from "~/components/ui/input";
+import { Input, type InputControlSize } from "~/components/ui/input";
 import type { DatabaseFormErrorPath } from "~/components/database/database-form";
 import { wireErrorCode } from "~/lib/api-error";
 import { requestPasswordReset, type ApiError } from "~/lib/auth-api";
@@ -27,7 +27,7 @@ interface PasswordResetModalProps {
   readonly onRequestReset?: (email: string) => Promise<{ message: string }>;
   readonly rateLimitStorageKey?: string;
   /** Matches the reset field to the owning login form. */
-  readonly inputControlSize?: "default" | "compact";
+  readonly inputControlSize?: InputControlSize;
   readonly copy?: PasswordResetModalCopy;
   /**
    * The owner's shared API error path (`useApiFormError`), handed in by the
@@ -38,6 +38,11 @@ interface PasswordResetModalProps {
   readonly errorPath: DatabaseFormErrorPath;
   /** The element `errorPath` searches for a refused field to focus. */
   readonly formRef?: RefObject<HTMLFormElement | null>;
+  /**
+   * The address the login form already holds. Each opening starts with it,
+   * so nobody types it twice after a refused password (#7106).
+   */
+  readonly initialEmail?: string;
 }
 
 interface PasswordResetModalCopy {
@@ -129,12 +134,20 @@ export function PasswordResetModal({
   onClose,
   onRequestReset = requestPasswordReset,
   rateLimitStorageKey = "passwordResetRateLimitUntil",
-  inputControlSize = "default",
+  inputControlSize = "large",
   copy = DEFAULT_PASSWORD_RESET_MODAL_COPY,
   errorPath,
   formRef,
+  initialEmail = "",
 }: PasswordResetModalProps) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(isOpen ? initialEmail.trim() : "");
+  // The dialog stays mounted while closed: each opening takes the login
+  // form's address anew.
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    if (isOpen) setEmail(initialEmail.trim());
+  }
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [rateLimitUntil, setRateLimitUntil] = useState<number | null>(null);

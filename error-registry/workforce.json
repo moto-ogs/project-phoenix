@@ -55,6 +55,24 @@
       "legacy": "absence_type_inactive"
     },
     {
+      "code": "workforce.absence_type_kept_by_traeger",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.absence_type_kept_by_traeger"
+    },
+    {
+      "code": "workforce.absence_type_not_offered",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.absence_type_not_offered"
+    },
+    {
+      "code": "workforce.absence_type_school_limit_exceeded",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.absence_type_school_limit_exceeded"
+    },
+    {
       "code": "workforce.adjustment_in_closed_month",
       "class": "input",
       "parameters": [],
@@ -121,6 +139,12 @@
         "month"
       ],
       "legacy": "workforce.month_closed"
+    },
+    {
+      "code": "workforce.month_closed_by_traeger",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.month_closed_by_traeger"
     },
     {
       "code": "workforce.month_not_closable",
@@ -379,6 +403,22 @@
       "legacy": "workforce.shift_overlap"
     },
     {
+      "code": "workforce.shift_overlaps_other_site",
+      "class": "business_rejection",
+      "parameters": [
+        "start",
+        "end",
+        "day"
+      ],
+      "legacy": "workforce.shift_overlaps_other_site"
+    },
+    {
+      "code": "workforce.shift_planning_off",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.shift_planning_off"
+    },
+    {
       "code": "workforce.shift_series_no_occurrences",
       "class": "input",
       "parameters": [],
@@ -397,16 +437,40 @@
       "legacy": "workforce.shift_series_week_cycle_missing"
     },
     {
+      "code": "workforce.shift_type_archived",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.shift_type_archived"
+    },
+    {
       "code": "workforce.shift_type_inactive",
       "class": "business_rejection",
       "parameters": [],
       "legacy": "workforce.shift_type_inactive"
     },
     {
+      "code": "workforce.shift_working_time_warning",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.shift_working_time_warning"
+    },
+    {
+      "code": "workforce.staff_kept_by_traeger",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.staff_kept_by_traeger"
+    },
+    {
       "code": "workforce.staff_profile_missing",
       "class": "business_rejection",
       "parameters": [],
       "legacy": "workforce.staff_profile_missing"
+    },
+    {
+      "code": "workforce.staff_soll_kept_by_traeger",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.staff_soll_kept_by_traeger"
     },
     {
       "code": "workforce.stammdaten_invalid",
@@ -444,6 +508,211 @@
         "max_days"
       ],
       "legacy": "workforce.target_override_too_long"
+    },
+    {
+      "code": "workforce.traeger_absence_allowance_below_booked",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_absence_allowance_below_booked"
+    },
+    {
+      "code": "workforce.traeger_absence_type_in_use",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_absence_type_in_use"
+    },
+    {
+      "code": "workforce.traeger_absence_type_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_absence_type_invalid"
+    },
+    {
+      "code": "workforce.traeger_absence_type_name_taken",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_absence_type_name_taken"
+    },
+    {
+      "code": "workforce.traeger_absence_type_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_absence_type_not_found"
+    },
+    {
+      "code": "workforce.traeger_contract_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_contract_invalid"
+    },
+    {
+      "code": "workforce.traeger_contract_month_closed",
+      "class": "business_rejection",
+      "parameters": [
+        "school",
+        "day"
+      ],
+      "legacy": "workforce.traeger_contract_month_closed"
+    },
+    {
+      "code": "workforce.traeger_contract_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_contract_not_found"
+    },
+    {
+      "code": "workforce.traeger_contract_overlap",
+      "class": "business_rejection",
+      "parameters": [
+        "school"
+      ],
+      "legacy": "workforce.traeger_contract_overlap"
+    },
+    {
+      "code": "workforce.traeger_holiday_week_school_override",
+      "class": "business_rejection",
+      "parameters": [
+        "school",
+        "day"
+      ],
+      "legacy": "workforce.traeger_holiday_week_school_override"
+    },
+    {
+      "code": "workforce.traeger_month_closed_by_school",
+      "class": "business_rejection",
+      "parameters": [
+        "school"
+      ],
+      "legacy": "workforce.traeger_month_closed_by_school"
+    },
+    {
+      "code": "workforce.traeger_month_later_closed",
+      "class": "business_rejection",
+      "parameters": [
+        "school",
+        "month"
+      ],
+      "legacy": "workforce.traeger_month_later_closed"
+    },
+    {
+      "code": "workforce.traeger_month_not_kept",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_month_not_kept"
+    },
+    {
+      "code": "workforce.traeger_planning_shift_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_planning_shift_not_found"
+    },
+    {
+      "code": "workforce.traeger_planning_site_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_planning_site_invalid"
+    },
+    {
+      "code": "workforce.traeger_proof_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_proof_invalid"
+    },
+    {
+      "code": "workforce.traeger_proof_mapping_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_proof_mapping_invalid"
+    },
+    {
+      "code": "workforce.traeger_proof_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_proof_not_found"
+    },
+    {
+      "code": "workforce.traeger_proof_type_name_taken",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_proof_type_name_taken"
+    },
+    {
+      "code": "workforce.traeger_proof_type_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_proof_type_not_found"
+    },
+    {
+      "code": "workforce.traeger_staff_already_linked",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_already_linked"
+    },
+    {
+      "code": "workforce.traeger_staff_import_changed",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_import_changed"
+    },
+    {
+      "code": "workforce.traeger_staff_import_file_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_import_file_invalid"
+    },
+    {
+      "code": "workforce.traeger_staff_import_file_too_large",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_import_file_too_large"
+    },
+    {
+      "code": "workforce.traeger_staff_import_mapping_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_import_mapping_invalid"
+    },
+    {
+      "code": "workforce.traeger_staff_link_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_link_invalid"
+    },
+    {
+      "code": "workforce.traeger_staff_not_released",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_not_released"
+    },
+    {
+      "code": "workforce.traeger_staff_record_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_record_not_found"
+    },
+    {
+      "code": "workforce.traeger_staff_release_exists",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_release_exists"
+    },
+    {
+      "code": "workforce.traeger_staff_release_in_use",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_release_in_use"
+    },
+    {
+      "code": "workforce.traeger_staff_release_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_release_invalid"
+    },
+    {
+      "code": "workforce.traeger_staff_release_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_release_not_found"
     },
     {
       "code": "workforce.vacation_opening_absences_before_cutoff",

@@ -15,6 +15,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -142,7 +143,14 @@ type careBillingFixture struct {
 
 func newCareBillingFixture(t *testing.T, name string) careBillingFixture {
 	t.Helper()
-	_, portal, _, _ := newTraegerPortal(t)
+	return newCareBillingFixtureOn(t, name, calendar.TodayDate)
+}
+
+// newCareBillingFixtureOn is newCareBillingFixture whose day-bound services
+// read today.
+func newCareBillingFixtureOn(t *testing.T, name string, today func() calendar.Date) careBillingFixture {
+	t.Helper()
+	_, portal, _, _ := newTraegerPortalOn(t, today)
 	db := testpkg.SetupTestDB(t)
 	office := newTraegerOffice(t, db, portal, name, identityaccess.TraegerRoleBilling)
 	testpkg.OwnTraegerCareContracts(t, db, office.organization)

@@ -59,6 +59,7 @@ func (f *fakePreferences) FilterNotOptedOut(_ context.Context, notificationType 
 
 func consentTestService(repo *fakeAnnouncementRepo, notifier *fakeNotifier, prefs *fakePreferences) StaffService {
 	return NewService(ServiceConfig{
+		Now:         staffTestClock,
 		Repo:        repo,
 		Settings:    &fakeSettings{enabled: true},
 		Notifier:    notifier,
@@ -143,6 +144,7 @@ func TestPublishEmailsEveryGuardianWhoDidNotOptOut(t *testing.T) {
 	// 101 said no; 202 never touched the switch and is not opted in for push.
 	prefs := &fakePreferences{optedOut: []int64{101}}
 	svc := NewService(ServiceConfig{
+		Now:         staffTestClock,
 		Repo:        repo,
 		Settings:    &fakeSettings{enabled: true},
 		Notifier:    notifier,
@@ -187,6 +189,7 @@ func TestPublishEmailsFamiliesWithoutAnyPreferenceRow(t *testing.T) {
 	// Nobody opted in (no push) and nobody opted out (no stored decision).
 	prefs := &fakePreferences{}
 	svc := NewService(ServiceConfig{
+		Now:         staffTestClock,
 		Repo:        repo,
 		Settings:    &fakeSettings{enabled: true},
 		Notifier:    notifier,
@@ -221,6 +224,7 @@ func TestPublishFailsOnEmailOptOutLookupError(t *testing.T) {
 	outbox := &fakeOutbox{}
 	prefs := &fakePreferences{optedIn: []int64{202}, optOutErr: errors.New("boom")}
 	svc := NewService(ServiceConfig{
+		Now:         staffTestClock,
 		Repo:        repo,
 		Settings:    &fakeSettings{enabled: true},
 		Notifier:    &fakeNotifier{},
@@ -251,6 +255,7 @@ func TestPublishDeduplicatesOptedInGuardiansByNormalizedEmail(t *testing.T) {
 	outbox := &fakeOutbox{}
 	prefs := &fakePreferences{optedIn: []int64{101, 202}}
 	svc := NewService(ServiceConfig{
+		Now:         staffTestClock,
 		Repo:        repo,
 		Settings:    &fakeSettings{enabled: true},
 		Notifier:    notifier,
@@ -301,6 +306,7 @@ func TestPublishStillEmailsWhenPushIsGated(t *testing.T) {
 			prefs := &fakePreferences{optedIn: []int64{202}}
 			outbox := &fakeOutbox{}
 			svc := NewService(ServiceConfig{
+				Now:         staffTestClock,
 				Repo:        repo,
 				Settings:    &fakeSettings{enabled: true},
 				Notifier:    notifier,

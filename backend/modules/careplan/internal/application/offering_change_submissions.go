@@ -149,7 +149,7 @@ func (s *OfferingChanges) createOfferingChangeRow(
 	input careplan.CreateOfferingChangeInput,
 	proposal *offeringChangeProposal,
 ) (*careplan.OfferingChangeRequest, error) {
-	row, err := newOfferingChangeRow(input, proposal)
+	row, err := newOfferingChangeRow(input, proposal, s.deps.Now())
 	if err != nil {
 		return nil, fmt.Errorf("offering change: create: %w", err)
 	}
@@ -176,7 +176,7 @@ func (s *OfferingChanges) createOfferingChangeRow(
 	return &created, nil
 }
 
-func newOfferingChangeRow(input careplan.CreateOfferingChangeInput, proposal *offeringChangeProposal) (careplan.OfferingChangeRequest, error) {
+func newOfferingChangeRow(input careplan.CreateOfferingChangeInput, proposal *offeringChangeProposal, now time.Time) (careplan.OfferingChangeRequest, error) {
 	payload, err := payloadFromSelections(proposal.selections)
 	if err != nil {
 		return careplan.OfferingChangeRequest{}, err
@@ -187,7 +187,6 @@ func newOfferingChangeRow(input careplan.CreateOfferingChangeInput, proposal *of
 		CompleteWithdrawalConfirmed: proposal.completeWithdrawal, DecisionSnapshot: json.RawMessage("null"),
 	}
 	if proposal.completeWithdrawal {
-		now := time.Now()
 		row.WithdrawalConfirmedBy = &input.AccountID
 		row.WithdrawalConfirmedAt = &now
 	}

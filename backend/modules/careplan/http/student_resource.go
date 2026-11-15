@@ -27,6 +27,7 @@ type ResourceConfig struct {
 	CareLifecycleService         careplan.CareLifecycle
 	CareRequestReviews           careplan.CareScheduleReviewQuery
 	CareRequestService           carerequests.Decisions
+	FollowCohortChanges          FollowCohortChanges
 	CompanionService             careplan.StudentCompanions
 	DocumentStorage              StudentDocumentStorage
 	ExcusedRequestService        excusedrequests.Service
@@ -46,29 +47,29 @@ type ResourceConfig struct {
 	PickupAdjustmentService      careplan.PickupAdjustments
 	// PickupChangeNotices serves the reader's unread markers of changed
 	// pickup times (#6855).
-	PickupChangeNotices         careplan.PickupChangeTeamNotices
-	PickupScheduleService       careplan.PickupScheduleService
-	PickupSignatureProofs       PickupSignatureProofs
-	Reports                     ReportRenderer
-	Schools                     SchoolIdentity
-	SettingsService             TenantSettings
-	StudentAuditService         StudentChangeHistory
-	StudentAccidentReports      careplan.StudentAccidentReports
-	StudentConsents             StudentConsentCapability
-	StudentDocumentService      careplan.StudentDocuments
-	StudentPhotos               StudentPhotoLifecycle
-	UserContextService          CallerContext
-	WeekdayPickupNotes          WeekdayPickupNoteReplacer
-	RespondCreatedStudent       func(http.ResponseWriter, *http.Request, *peopleModule.StudentState, *peopleModule.Person)
-	RespondUpdatedStudent       func(http.ResponseWriter, *http.Request, int64, *peopleModule.Person, bool, bool, time.Time)
-	PersistStudentStatusHistory func(context.Context, *peopleModule.StudentState, *bool, *bool, bool, bool, time.Time, *string) error
-	NotifyAbsenceReported       func(context.Context, int64, []int64, string, []calendar.Date, bool, int64) error
-	IsPartialAbsenceConflict    func(error) bool
-	WriteCareDecision           func(http.ResponseWriter, *http.Request, *careplan.CareScheduleReviewItem)
-	WriteCareDetail             func(http.ResponseWriter, *http.Request, *carerequests.HistoryItem)
-	WriteMasterDataDecision     func(http.ResponseWriter, *http.Request, *masterdatarequests.ReviewItem)
-	WriteExcusedDecision        func(http.ResponseWriter, *http.Request, *excusedrequests.ReviewItem)
-	OfferingDiffLabel           func(string, []string) string
+	PickupChangeNotices      careplan.PickupChangeTeamNotices
+	PickupScheduleService    careplan.PickupScheduleService
+	PickupSignatureProofs    PickupSignatureProofs
+	Reports                  ReportRenderer
+	Schools                  SchoolIdentity
+	SettingsService          TenantSettings
+	StudentAuditService      StudentChangeHistory
+	StudentAccidentReports   careplan.StudentAccidentReports
+	StudentConsents          StudentConsentCapability
+	StudentDocumentService   careplan.StudentDocuments
+	StudentPhotos            StudentPhotoLifecycle
+	UserContextService       CallerContext
+	WeekdayPickupNotes       WeekdayPickupNoteReplacer
+	RespondCreatedStudent    func(http.ResponseWriter, *http.Request, *peopleModule.StudentState, *peopleModule.Person)
+	RespondUpdatedStudent    func(http.ResponseWriter, *http.Request, int64, *peopleModule.Person, bool, bool, time.Time)
+	ApplyProfileStatusChange func(context.Context, *peopleModule.StudentState, *bool, *bool, time.Time, *string) error
+	NotifyAbsenceReported    func(context.Context, int64, []int64, string, []calendar.Date, bool, int64) error
+	IsPartialAbsenceConflict func(error) bool
+	WriteCareDecision        func(http.ResponseWriter, *http.Request, *careplan.CareScheduleReviewItem)
+	WriteCareDetail          func(http.ResponseWriter, *http.Request, *carerequests.HistoryItem)
+	WriteMasterDataDecision  func(http.ResponseWriter, *http.Request, *masterdatarequests.ReviewItem)
+	WriteExcusedDecision     func(http.ResponseWriter, *http.Request, *excusedrequests.ReviewItem)
+	OfferingDiffLabel        func(string, []string) string
 }
 
 type Resource struct{ ResourceConfig }
@@ -79,6 +80,9 @@ func NewResource(cfg ResourceConfig) *Resource {
 	}
 	return &Resource{ResourceConfig: cfg}
 }
+
+// today is the Berlin school day of the resource's clock.
+func (rs *Resource) today() calendar.Date { return calendar.DateFromTime(rs.Now()) }
 func (rs *Resource) Register(r chi.Router, withTx common.Middleware) {
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Post("/master-data-change-requests/{requestId}/decide", rs.decideMasterDataChangeRequest)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Post("/care-schedule-change-requests/{requestId}/decide", rs.decideCareScheduleChangeRequest)

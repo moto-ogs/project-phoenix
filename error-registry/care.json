@@ -290,7 +290,7 @@
     },
     {
       "code": "care.invalid_credentials",
-      "class": "permission",
+      "class": "input",
       "parameters": [],
       "legacy": "invalid_credentials"
     },

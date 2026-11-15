@@ -24,13 +24,13 @@ func TestCareExitArchive_RecordedAtUsesTheBerlinDay(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
-	svc := newCareLifecycleService(t, db)
+	svc := newCareLifecycleServiceAt(t, db, decisionTestToday)
 	ctx := testpkg.Ctx(t)
 
 	class := fmt.Sprintf("ce-%s", uuid.Must(uuid.NewV4()).String()[:8])
 	student := testpkg.CreateTestStudent(t, db, "CareExitRecorded", "Kid", class)
 
-	yesterday := calendar.TodayDate().AddDays(-1)
+	yesterday := decisionTestToday.AddDays(-1)
 	testpkg.SetStudentLifecycle(t, db, student.ID, testpkg.StudentStatusActive, nil, &yesterday)
 
 	require.NoError(t, carePlanRecords(db).UpsertCareExit(ctx, careplan.CareExit{

@@ -344,7 +344,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	}
 	excusedRequestService, err := owners.NewExcusedAbsenceRequestService(
 		students.CarePlan, repos.Student, repos.Person, owners.ParentRequestReviewScope(requestReviewPolicy, requestTokenReads.Permissions),
-		pillEmitter, realtimeHub, parentRequestEvents, nil, nil, nil, logger.With("service", "excused-requests"), nil, partialAbsenceService,
+		pillEmitter, realtimeHub, parentRequestEvents, nil, nil, nil, logger.With("service", "excused-requests"), timezone.CalendarDateClock(clocks...), OptionalClock(clocks), partialAbsenceService,
 	)
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
@@ -352,7 +352,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	masterDataDecisions, err := owners.NewMasterDataDecisions(
 		students.CarePlan, persons, repos.Student, repos.Person, studentAuditService,
 		owners.ParentRequestWriteScope(requestReviewPolicy, requestTokenReads.Permissions),
-		pillEmitter, realtimeHub, parentRequestEvents, nil, logger.With("service", "master-data-review"), nil,
+		pillEmitter, realtimeHub, parentRequestEvents, nil, logger.With("service", "master-data-review"), timezone.CalendarDateClock(clocks...), careplanCompose.MasterDataClassChanges{},
 	)
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
@@ -411,7 +411,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 		Settings:          settingsService,
 		Pickups:           pickupScheduleService,
 		Arrivals:          arrivalScheduleService,
-		PlannedStudentIDs: instanceService.GetPlannedStudentIDsByDate,
+		PlannedStudentIDs: instanceService.GetPlannedStudentIDsByDate, Timetable: reposTimetable.Timetable, BlockTypes: NewTimetableBlockDisplayForTests(db),
 		CareDays:          careDayService,
 		CareParticipation: careLifecycleService,
 		ExcusedRequests:   excusedRequestService,

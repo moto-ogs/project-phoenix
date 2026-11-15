@@ -55,6 +55,9 @@
   "api/staff/[id]/time-tracking/sessions/[sessionId]/edits": [
     "GET tenant /api/staff/id%2F1/time-tracking/sessions/sessionId%2F1/edits"
   ],
+  "api/staff/[id]/traeger-proofs": [
+    "GET tenant /api/staff/id%2F1/traeger-proofs"
+  ],
   "api/staff/absence-types": [
     "GET tenant /api/absence-types",
     "POST tenant /api/absence-types"
@@ -64,6 +67,9 @@
   ],
   "api/staff/absence-types/[absenceTypeId]/allowances/[staffId]/preview": [
     "GET tenant /api/absence-types/absenceTypeId%2F1/allowances/staffId%2F1/preview"
+  ],
+  "api/staff/absences/mails": [
+    "GET tenant /api/staff/absences/mails"
   ],
   "api/staff/dashboard-summary": [
     "GET tenant /api/staff/dashboard-summary"
@@ -88,12 +94,8 @@
     "GET tenant /api/staff/qualifications"
   ],
   "api/staff/shift-types": [
-    "GET tenant /api/shift-types",
+    "GET tenant /api/shift-types query=include_archived,with_usage",
     "POST tenant /api/shift-types"
-  ],
-  "api/staff/shift-types/[shiftTypeId]": [
-    "DELETE tenant /api/shift-types/shiftTypeId%2F1",
-    "PUT tenant /api/shift-types/shiftTypeId%2F1"
   ],
   "api/staff/shift-types/defaults": [
     "POST tenant /api/shift-types/defaults"
@@ -132,6 +134,9 @@
   ],
   "api/staff/time-tracking/export/sftp-status": [
     "GET tenant /api/staff/time-tracking/export/sftp-status"
+  ],
+  "api/staff/time-tracking/month-close/traeger-staff": [
+    "GET tenant /api/staff/time-tracking/month-close/traeger-staff"
   ],
   "api/staff/time-tracking/overview": [
     "GET tenant /api/staff/time-tracking/overview"

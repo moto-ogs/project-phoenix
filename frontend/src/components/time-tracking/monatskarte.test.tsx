@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -34,6 +34,7 @@ function makeSummary(overrides: Partial<MonthSummary> = {}): MonthSummary {
     isClosed: false,
     closedAt: null,
     closedBy: null,
+    closedByTraeger: false,
     closeReason: null,
     frozenClosingBalanceMinutes: null,
     driftMinutes: 0,
@@ -406,6 +407,37 @@ describe("monthLabel", () => {
         />,
       );
       expect(screen.getByText("Monat wieder öffnen…")).toBeInTheDocument();
+    });
+
+    // #4711: only the Personalverwaltung reopens a close of the Träger.
+    it("names the Träger's close and locks the school's reopen", () => {
+      const onReopen = vi.fn();
+      render(
+        <Monatskarte
+          summary={makeSummary({
+            ...closed,
+            closedBy: null,
+            closedByTraeger: true,
+            driftMinutes: 0,
+          })}
+          isLoading={false}
+          onReopen={onReopen}
+        />,
+      );
+      expect(
+        screen.getByText("Vom Träger abgeschlossen am 05.09.2026"),
+      ).toBeInTheDocument();
+      const reopen = screen.getByRole("button", {
+        name: /Monat wieder öffnen/,
+      });
+      expect(reopen).toHaveAttribute("aria-disabled", "true");
+      fireEvent.click(reopen);
+      expect(onReopen).not.toHaveBeenCalled();
+      expect(
+        screen.getByText(
+          "Diesen Monat hat die Personalverwaltung des Trägers abgeschlossen. Nur sie kann ihn wieder öffnen.",
+        ),
+      ).toBeInTheDocument();
     });
   });
 });

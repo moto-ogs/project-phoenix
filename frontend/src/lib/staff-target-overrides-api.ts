@@ -13,6 +13,9 @@ export interface StaffTargetOverride {
   endDate: string;
   dailyMinutes: number | null;
   weekdayMinutes: readonly number[] | null;
+  // The Ferien-Soll of a contract of the Träger (#4706); the school only
+  // reads it.
+  keptByTraeger?: boolean;
 }
 
 type StaffTargetOverrideInput = {
@@ -30,6 +33,7 @@ interface BackendStaffTargetOverride {
   end_date: string;
   daily_minutes: number | null;
   weekday_minutes?: number[] | null;
+  kept_by_traeger?: boolean;
 }
 
 function mapStaffTargetOverride(
@@ -42,6 +46,7 @@ function mapStaffTargetOverride(
     endDate: row.end_date.slice(0, 10),
     dailyMinutes: row.daily_minutes,
     weekdayMinutes: row.weekday_minutes ?? null,
+    keptByTraeger: row.kept_by_traeger === true,
   };
 }
 

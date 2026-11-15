@@ -2,7 +2,9 @@
 
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { FramedList } from "~/components/ui/framed-list";
+import { COUNTER_TONE } from "~/lib/counter-tones";
 import { staff as staffKeys } from "~/lib/swr/staff";
+import { traegerMonthStaffKeys } from "~/lib/swr/staff-keys";
 import { Suspense, useState, useMemo, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { redirect, useSearchParams } from "next/navigation";
@@ -419,6 +421,24 @@ function StaffPageContent() {
     () => staffMonthCloseService.getStatus(monthAnchor.year, monthAnchor.month),
     { keepPreviousData: false, revalidateOnFocus: false },
   );
+  // Personen mit Vertrag beim Träger (#4711): ihren Monat schließt die
+  // Personalverwaltung ab, der Abschluss der Schule lässt sie aus. Ohne
+  // Antwort zeigt die Tabelle nur keinen Hinweis.
+  const { data: traegerStaffIds } = useSWRAuth(
+    monthCloseKey
+      ? traegerMonthStaffKeys.month(monthAnchor.year, monthAnchor.month)
+      : null,
+    () =>
+      staffMonthCloseService.getTraegerStaff(
+        monthAnchor.year,
+        monthAnchor.month,
+      ),
+    { keepPreviousData: false, revalidateOnFocus: false },
+  );
+  const traegerStaff = useMemo(
+    () => new Set(traegerStaffIds ?? []),
+    [traegerStaffIds],
+  );
   const accountsLoadError = useSwrLoadError(
     accountsError,
     "die Liste der Zeitkonten",
@@ -429,12 +449,17 @@ function StaffPageContent() {
     "die Anzeige des Monatsabschlusses",
     mutateMonthClose,
   );
+  // Abschlüsse des Trägers (#4711) gehören nicht zum Abschluss der Schule:
+  // Sie betreffen nur Personen mit Vertrag beim Träger.
+  const schoolSnapshots = monthCloseSnapshots?.filter(
+    (snapshot) => snapshot.source !== "traeger",
+  );
   const monthClose =
-    !monthCloseStatusError && monthCloseSnapshots
+    !monthCloseStatusError && schoolSnapshots
       ? {
-          closed: monthCloseSnapshots.length > 0,
-          closedAt: monthCloseSnapshots[0]?.closedAt ?? "",
-          closedCount: monthCloseSnapshots.length,
+          closed: schoolSnapshots.length > 0,
+          closedAt: schoolSnapshots[0]?.closedAt ?? "",
+          closedCount: schoolSnapshots.length,
         }
       : null;
 
@@ -555,7 +580,7 @@ function StaffPageContent() {
     return matchesLocationFilter(location, locationFilter);
   });
 
-  // Prepare filter configurations for PageHeaderWithSearch. Der Status-Filter
+  // Prepare filter configurations for the TenantPage search row. Der Status-Filter
   // gehört zur Karten-Ansicht, der Beschäftigungstyp zur Zeitkonten-Tabelle —
   // beide gleichzeitig anzuzeigen würde Filter anbieten, die auf die sichtbare
   // Ansicht nicht wirken.
@@ -799,6 +824,7 @@ function StaffPageContent() {
               variant="outline"
               size="md"
               onClick={() => setSearchTerm("")}
+              tooltip="Leert die Suche und zeigt wieder alle Ehemaligen."
             >
               Suche zurücksetzen
             </Button>
@@ -827,6 +853,7 @@ function StaffPageContent() {
                 setSearchTerm("");
                 setLocationFilter("all");
               }}
+              tooltip="Leert Suche und Ortsfilter und zeigt wieder alle Personen."
             >
               Suche zurücksetzen
             </Button>
@@ -836,6 +863,7 @@ function StaffPageContent() {
               variant="primary"
               size="md"
               onClick={() => router.push("/database/personal")}
+              tooltip="Öffnet das Personal in der Datenverwaltung, dort legen Sie Personen an."
             >
               Zur Datenverwaltung
             </Button>
@@ -924,9 +952,20 @@ function StaffPageContent() {
                     Bereits abgeschlossene Konten bleiben unverändert; nur
                     offene Konten werden eingefroren.
                   </p>
+                  {traegerStaff.size > 0 ? (
+                    <p>
+                      {traegerStaff.size === 1
+                        ? "1 Person hat"
+                        : `${traegerStaff.size} Personen haben`}{" "}
+                      einen Arbeitsvertrag beim Träger. Ihren Monat schließt die
+                      Personalverwaltung des Trägers ab. Dieser Abschluss lässt
+                      sie aus.
+                    </p>
+                  ) : null}
                 </>
               }
               submitLabel="Monat abschließen"
+              submitTooltip="Schreibt das Stundenkonto aller Mitarbeitenden zum Monatsende fest."
               successMessage="Der Monat ist abgeschlossen."
               onSubmit={handleCloseMonth}
               onClose={() => setShowCloseModal(false)}
@@ -940,6 +979,7 @@ function StaffPageContent() {
             onClose={() => setShowExportModal(false)}
             year={accounts?.year ?? monthAnchor.year}
             month={accounts?.month ?? monthAnchor.month}
+            canOpenSettings={hasPermission(session, "config:manage")}
           />
         </>
       }
@@ -962,7 +1002,7 @@ function StaffPageContent() {
           <div className="flex shrink-0 items-center gap-2">
             <NotificationBadge
               count={pendingAbsences.length}
-              tone="staff"
+              tone={COUNTER_TONE.staff}
               ariaLabel={`${pendingAbsences.length} ${pendingAbsences.length === 1 ? "offener Antrag" : "offene Anträge"}`}
             />
             <CaretRightIcon
@@ -1007,6 +1047,7 @@ function StaffPageContent() {
               onNextMonth={() => shiftMonth(1)}
               canGoNextMonth={!isCurrentOrFutureMonth}
               monthClose={monthClose}
+              traegerStaff={traegerStaff}
               monthCloseError={monthCloseLoadError}
               onRetryMonthClose={() => void mutateMonthClose()}
               monthIsOver={!isCurrentOrFutureMonth}

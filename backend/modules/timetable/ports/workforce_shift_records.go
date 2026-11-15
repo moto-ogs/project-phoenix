@@ -26,6 +26,7 @@ type WorkforceShift struct {
 	SickAbsenceID        *int64
 	CreatedBy            int64
 	UpdatedBy            *int64
+	PlannedByTraeger     bool
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }
@@ -38,6 +39,7 @@ type WorkforceShiftType struct {
 	Color       string
 	Description string
 	IsActive    bool
+	ArchivedAt  *time.Time
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

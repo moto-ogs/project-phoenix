@@ -84,6 +84,12 @@ type PayrollDispatchView struct {
 	FinishedAt        *time.Time `json:"finished_at,omitempty"`
 	DownloadExpiresAt *time.Time `json:"download_expires_at,omitempty"`
 	DownloadedAt      *time.Time `json:"downloaded_at,omitempty"`
+	// LinkMail is what became of the link mail to the Lohnbüro (#7058), in
+	// Delivery's words; empty while there is none (SFTP, blocked before).
+	LinkMail string `json:"link_mail,omitempty"`
+	// NoticeMails counts the notices to the time-tracking managers by
+	// outcome (#7058); absent while none went out.
+	NoticeMails map[string]int `json:"notice_mails,omitempty"`
 }
 
 // PayrollDispatchOverview is the dispatch block of /payroll: the newest

@@ -26,6 +26,7 @@ import { staffQualificationService } from "~/lib/staff-qualification-api";
 import {
   mergeQualificationEntries,
   QualificationEntryList,
+  TraegerProofStatusList,
 } from "~/components/staff/qualification-entry-list";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import {
@@ -89,6 +90,26 @@ function Value({
   return <span className="font-normal text-gray-400">{emptyText}</span>;
 }
 
+/**
+ * Der Hinweis, dass der Träger einen Wert in seiner Personalakte führt
+ * (#4705, ADR 0089 Abschnitt 6): Die Schule sieht, wer ändert und wohin sie
+ * sich wendet.
+ */
+function TraegerKeepsNotice({ what }: { readonly what: string }) {
+  return (
+    <InsetPanel className="flex items-start gap-2">
+      <Lock
+        className="mt-0.5 h-4 w-4 shrink-0 text-gray-400"
+        aria-hidden="true"
+      />
+      <p className="text-sm text-gray-600">
+        {what} führt der Träger in seiner Personalakte. Ändern kann sie die
+        Personalverwaltung des Trägers.
+      </p>
+    </InsetPanel>
+  );
+}
+
 export function StammdatenTab({
   staffId,
   canManagePayroll,
@@ -110,7 +131,7 @@ export function StammdatenTab({
   const berlinToday = useBerlinToday();
 
   const {
-    data: personnelNumber,
+    data: payroll,
     error: payrollError,
     isLoading: payrollLoading,
     mutate: mutatePayroll,
@@ -136,6 +157,16 @@ export function StammdatenTab({
   } = useSWRAuth(
     canViewSections ? staffQualificationKeys.entries(staffId) : null,
     () => staffQualificationService.staffEntries(staffId),
+  );
+  // Was der Träger für die Person an Nachweisen führt (#4707); leer für
+  // jede Person ohne Personalakte des Trägers.
+  const {
+    data: traegerProofs,
+    error: traegerProofsError,
+    mutate: mutateTraegerProofs,
+  } = useSWRAuth(
+    canViewSections ? staffQualificationKeys.traeger(staffId) : null,
+    () => staffQualificationService.traegerProofs(staffId),
   );
   const {
     data: qualificationTypes,
@@ -193,6 +224,11 @@ export function StammdatenTab({
     "die Nachweise",
     mutateQualificationEntries,
   );
+  const traegerProofsLoadError = useSwrLoadError(
+    canViewSections ? traegerProofsError : undefined,
+    "die Nachweise beim Träger",
+    mutateTraegerProofs,
+  );
   const qualificationTypesLoadError = useSwrLoadError(
     canEditSections ? qualificationTypesError : undefined,
     "die Nachweisarten",
@@ -221,8 +257,14 @@ export function StammdatenTab({
     qualificationEntries,
     berlinToday,
   );
-  const payrollEditable = canManagePayroll && !payrollLoading;
-  const financialEditable = canViewFinancial && !financialError;
+  // Führt der Träger die Person in seiner Personalakte, sind Personalnummer
+  // und Bankdaten seine (#4705); die Schule sieht sie nur.
+  const personnelNumber = payroll?.personnelNumber ?? null;
+  const payrollKept = payroll?.keptByTraeger === true;
+  const financialKept = financial?.keptByTraeger === true;
+  const payrollEditable = canManagePayroll && !payrollLoading && !payrollKept;
+  const financialEditable =
+    canViewFinancial && !financialError && !financialKept;
   const canStartEditing =
     !readOnly && (sectionsEditable || payrollEditable || financialEditable);
 
@@ -520,6 +562,7 @@ export function StammdatenTab({
             variant="surface"
             size="md"
             onClick={startEditing}
+            tooltip="Öffnet die Stammdaten dieser Person zum Ändern."
           >
             Bearbeiten
           </Button>
@@ -713,12 +756,23 @@ export function StammdatenTab({
                 <DataFieldSkeleton />
                 <DataFieldSkeleton />
               </DataGrid>
-            ) : qualificationList.length === 0 ? (
-              <p className="text-sm text-gray-400">
-                Keine Qualifikationen hinterlegt.
-              </p>
             ) : (
-              <QualificationEntryList entries={qualificationList} />
+              <div className="space-y-4">
+                {traegerProofsError ? (
+                  <LoadErrorAlert error={traegerProofsLoadError} />
+                ) : traegerProofs && traegerProofs.length > 0 ? (
+                  <TraegerProofStatusList proofs={traegerProofs} />
+                ) : null}
+                {qualificationList.length === 0 ? (
+                  <p className="text-sm text-gray-400">
+                    {traegerProofs && traegerProofs.length > 0
+                      ? "Die Schule hat keine eigenen Qualifikationen hinterlegt."
+                      : "Keine Qualifikationen hinterlegt."}
+                  </p>
+                ) : (
+                  <QualificationEntryList entries={qualificationList} />
+                )}
+              </div>
             )}
           </SectionCard>
         </>
@@ -736,6 +790,7 @@ export function StammdatenTab({
                 href={tenantPath("/payroll")}
                 variant="ghost"
                 size="md"
+                tooltip="Öffnet die Abrechnung mit Lohnarten und DATEV-Angaben."
               >
                 Abrechnung
               </ButtonLink>
@@ -745,18 +800,20 @@ export function StammdatenTab({
           {editing && draft && payrollEditable ? (
             <PersonnelNumberFields draft={draft} onChange={patchDraft} />
           ) : (
-            <DataGrid>
-              {payrollLoading ? (
-                <DataFieldSkeleton />
-              ) : (
-                <DataField label="Personalnummer" mono>
-                  <Value
-                    value={personnelNumber ?? null}
-                    emptyText="Nicht gesetzt"
-                  />
-                </DataField>
-              )}
-            </DataGrid>
+            <div className="space-y-3">
+              <DataGrid>
+                {payrollLoading ? (
+                  <DataFieldSkeleton />
+                ) : (
+                  <DataField label="Personalnummer" mono>
+                    <Value value={personnelNumber} emptyText="Nicht gesetzt" />
+                  </DataField>
+                )}
+              </DataGrid>
+              {payrollKept ? (
+                <TraegerKeepsNotice what="Diese Personalnummer" />
+              ) : null}
+            </div>
           )}
         </SectionCard>
       ) : null}
@@ -766,15 +823,24 @@ export function StammdatenTab({
         <SectionCard
           collapsible
           title="Bank & Steuer"
-          description="Jeder Abruf der gespeicherten Werte wird im Audit-Log protokolliert."
+          description={
+            financialKept
+              ? undefined
+              : "Jeder Abruf der gespeicherten Werte wird im Audit-Log protokolliert."
+          }
           action={
-            !editing && !financialError ? (
+            !editing && !financialError && !financialKept ? (
               <Button
                 type="button"
                 variant="surface"
                 size="md"
                 onClick={() => void toggleReveal()}
                 disabled={revealing}
+                tooltip={
+                  revealed
+                    ? "Verdeckt Bank- und Steuerdaten wieder."
+                    : "Zeigt Bank- und Steuerdaten vollständig, der Abruf wird protokolliert."
+                }
               >
                 {revealed ? (
                   <>
@@ -793,6 +859,8 @@ export function StammdatenTab({
         >
           {financialError ? (
             <LoadErrorAlert error={financialLoadError} />
+          ) : financialKept ? (
+            <TraegerKeepsNotice what="Die Bank- und Steuerdaten" />
           ) : editing && draft ? (
             draft.financial ? (
               <FinancialFields
@@ -812,6 +880,7 @@ export function StammdatenTab({
                   isLoading={financialLoading}
                   loadingText="Wird geladen…"
                   onClick={() => void loadFinancialForEditing()}
+                  tooltip="Lädt die Werte ins Formular, der Abruf wird protokolliert."
                 >
                   Werte zum Ändern laden
                 </Button>

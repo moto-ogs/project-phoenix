@@ -3,7 +3,7 @@
 "use client";
 
 import { AT_LEAST_LG } from "~/lib/hooks/use-media-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -36,7 +36,7 @@ import { isDemoBuild } from "~/lib/demo-access";
 // Import extracted components
 import { BrandLink, BreadcrumbDivider } from "./header/brand-link";
 import { RefreshButton } from "./header/refresh-button";
-import { RemindersBell } from "./header/reminders-bell";
+import { SchoolSearchSlot } from "~/components/search/school-search-slot";
 import { StaffNewsButton } from "./header/staff-news-button";
 import { SessionWarning } from "./header/session-warning";
 import {
@@ -118,7 +118,7 @@ function schoolTitleForPath(pathname: string): string | null {
     pathname === "/tagesinformationen" ||
     pathname === "/school/tagesinformationen"
   ) {
-    return "Tagesinformationen";
+    return "Hinweise der Leitung";
   }
   // Kalender in moto schule (#4798).
   if (pathname === "/kalender" || pathname === "/school/kalender") {
@@ -155,11 +155,17 @@ const TRAEGER_PAGE_TITLES: ReadonlyArray<
   ["/uebersicht", "Dashboard"],
   ["/stichtagszahlen", "Stichtagszahlen"],
   ["/belegung", "Belegung"],
+  ["/auslastung", "Auslastung"],
+  ["/ankunft-abholung", "Ankunft und Abholung"],
   ["/ferien", "Ferienbetreuung"],
   ["/anmeldephasen", "Anmeldephasen"],
   ["/schliesstage", "Schließtage"],
   ["/zeitvergleich", "Länger als gebucht"],
   ["/dokumente", "Dokumente"],
+  ["/personal/abwesenheitsarten", "Abwesenheitsarten"],
+  ["/personal/einsatzplanung", "Einsatzplanung"],
+  ["/personal", "Personalakten"],
+  ["/nachweise", "Personalnachweise"],
   // Die drei Bereiche der Abrechnung (#5145): die genaueren Adressen zuerst,
   // denn der erste Treffer gewinnt.
   ["/abrechnung/familien", "Familien und Zahlung"],
@@ -199,7 +205,16 @@ function schoolRoleLabel(roles: readonly string[]): string {
     : "Lehrkraft";
 }
 
-export function Header() {
+export interface HeaderProps {
+  /**
+   * Die Glocke der Benachrichtigungen (#7148). Nur die Staff-Shell gibt sie
+   * mit: Der Kopf aller Portale importiert sie so nicht, und ihr Vollbild-
+   * Blatt landet nicht in den Bündeln von moto schule, Caterer und Träger.
+   */
+  readonly notificationBell?: ReactNode;
+}
+
+export function Header({ notificationBell }: HeaderProps = {}) {
   const { breadcrumb } = useBreadcrumb();
   const {
     studentName,
@@ -434,8 +449,12 @@ export function Header() {
                 variant="ghost"
                 size="icon"
                 onClick={toggleSidebar}
-                title={sidebarToggleLabel}
                 aria-label={sidebarToggleLabel}
+                tooltip={
+                  sidebarCollapsed
+                    ? "Zeigt die Seitenleiste wieder breit, mit allen Namen."
+                    : "Klappt die Seitenleiste zu schmalen Symbolen ein."
+                }
                 aria-expanded={!sidebarCollapsed}
                 aria-keyshortcuts="Control+B Meta+B"
                 // -ml-4 zieht den Button aus dem Header-Padding (lg:px-8)
@@ -508,6 +527,10 @@ export function Header() {
 
           {/* Right section: Actions + Profile */}
           <div className="ml-auto flex flex-shrink-0 items-center space-x-2">
+            {/* Die Suche über die Schule (#6954): Feld ab xl, sonst Lupe. */}
+            {mode === "teacher" ? (
+              <SchoolSearchSlot placement="header" />
+            ) : null}
             {/* Das Fragezeichen steht bei den Aktionen (#4345): direkt hinter
                 der Brotkrume las es sich als Teil des Seitennamens oder als
                 Darstellungsfehler. */}
@@ -540,7 +563,7 @@ export function Header() {
             </div>
 
             {mode === "teacher" ? <StaffNewsButton /> : null}
-            {mode === "teacher" ? <RemindersBell /> : null}
+            {mode === "teacher" ? notificationBell : null}
             {/* User menu */}
             <AnchoredPopover
               open={isProfileMenuOpen}

@@ -34,7 +34,7 @@ export function staffRecordTopic(): HelpTopic {
         steps: [
           "Wählen Sie oben `Arbeitszeitmodell`.",
           "Wählen Sie rechts `Bearbeiten`.",
-          "Wählen Sie `Vorlage zuweisen` für ein Modell, das mehrere Personen teilen. Vorlagen legen Sie unter `Datenverwaltung` › `Arbeitszeitmodelle` an.",
+          "Wählen Sie `Vorlage zuweisen` für ein Modell, das mehrere Personen teilen. Vorlagen legen Sie unter `Datenverwaltung` › `Arbeitszeitmodelle` an. Dort ordnen Sie eine Vorlage auch mehreren Personen auf einmal zu.",
           "Oder wählen Sie `Eigenes Modell` nur für diese Person.",
           "Wählen Sie bei `Rotation` zum Beispiel `Standard (1 Woche)` oder `A/B-Wochen (2 Wochen)`.",
           "Tragen Sie je Wochentag die Stunden ein, zum Beispiel `4,45`.",
@@ -66,6 +66,7 @@ export function staffRecordTopic(): HelpTopic {
       "Ändern Sie eine Vorlage, wirkt das künftig auf alle Personen mit dieser Zuordnung.",
       "Den Bereich `Klassen` gibt es nur bei Lehrkräften.",
       "Bankverbindung und Steuernummer sind verborgen. Jeder Abruf wird festgehalten.",
+      "Bei `Personalnummer` oder `Bank & Steuer` steht: „führt der Träger in seiner Personalakte“. Dann pflegt die Personalverwaltung des Trägers diese Werte. Sie sehen die Personalnummer und ändern sie nicht.",
     ],
     troubleshootingDetails: [
       "Ein Krankheitstag zählt 0 Stunden? Dann fehlt das Soll. Tragen Sie es unter `Arbeitszeitmodell` ein.",

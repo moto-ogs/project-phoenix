@@ -230,13 +230,13 @@ func TestStudentList_CareStatusDecidesWhichSideIsShown(t *testing.T) {
 func TestStudentList_MarksRecordedExitsOnly(t *testing.T) {
 	t.Parallel()
 
-	tc := setupStudentsRouteWithCareLifecycle(t, false)
+	tc := setupStudentsRouteWithCareLifecycle(t, false, fixedCalendarClock)
 
 	recorded := testpkg.CreateTestStudent(t, tc.db, "Flagged", "Recorded", "4a")
 	phaseEnd := testpkg.CreateTestStudent(t, tc.db, "Flagged", "PhaseEnd", "4a")
 	actor := testpkg.CreateTestAccount(t, tc.db, "care-flag@example.com")
 	claims := testutil.AdminTestClaims(int(actor.ID))
-	today := calendar.NewDate(2026, 8, 24)
+	today := studentsTestToday // the day the handler sees
 
 	// Both carry the same end date, far ahead. Only one of them was entered
 	// through "Betreuung beenden".

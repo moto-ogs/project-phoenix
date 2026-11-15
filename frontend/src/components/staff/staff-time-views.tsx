@@ -16,14 +16,11 @@ import {
   type SegmentedControlItem,
 } from "~/components/ui/segmented-control";
 import { StatCard } from "~/components/ui/stat-card";
-import { formatDuration } from "~/lib/time-tracking-helpers";
+import { formatDuration, formatSignedDuration } from "~/lib/duration-format";
 import type { PeriodMetrics } from "~/lib/hooks/use-period-metrics";
 import { getDeltaStatus } from "~/lib/staff-metrics-helpers";
 
-export function formatSignedDuration(minutes: number): string {
-  const sign = minutes > 0 ? "+" : minutes < 0 ? "−" : "";
-  return `${sign}${formatDuration(Math.abs(minutes))}`;
-}
+export { formatSignedDuration };
 
 // ─── KPI Cards ───────────────────────────────────────────────────────────────
 
@@ -120,9 +117,9 @@ export function KpiCards({
   /** Wechselt zum Reiter „Arbeitszeitmodell“, wenn das Soll fehlt (#6887). */
   readonly onSetTarget?: () => void;
   // Every figure is date-valid, straight from the backend month model
-  // (usePeriodMetrics, #1842). Never computeStaffMetrics: that one prices
-  // historical days at the CURRENT schedule and contradicts the Monatskarte
-  // and the daily rows below it after a contract change. null = loading.
+  // (usePeriodMetrics, #1842, #6847). Never price days in the browser: a
+  // browser-side calculation contradicted the Monatskarte and the daily rows
+  // after a contract change. null = loading.
   readonly metrics: PeriodMetrics;
 }) {
   const { week, month, accountBalanceMinutes } = metrics;

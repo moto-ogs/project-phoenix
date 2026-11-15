@@ -220,7 +220,7 @@ export function CarePriceModuleEditor({
                 ariaLabel={`Werte für ${moduleName} von einem anderen Modul übernehmen`}
                 options={copySources}
                 onChange={onCopyFrom}
-                controlSize="compact"
+                controlSize="dense"
                 className="w-56"
               />
             ) : null}
@@ -250,6 +250,7 @@ export function CarePriceModuleEditor({
             variant="link"
             size="compact"
             onClick={fillAllDays}
+            tooltip="Trägt die Preise des ersten Tags bei allen Tagen dieses Moduls ein."
             aria-label={`${firstColumn?.long}-Preise von ${moduleName} für alle Tage übernehmen`}
           >
             {firstColumn?.short}-Preise für alle Tage übernehmen

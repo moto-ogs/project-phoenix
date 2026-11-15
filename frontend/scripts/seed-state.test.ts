@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { readSeedAccess, SEED_STATE_VERSION } from "./seed-state";
+import {
+  readSeedAccess,
+  readSeedParents,
+  SEED_STATE_VERSION,
+} from "./seed-state";
 
 function writeState(path: string, value: unknown): void {
   writeFileSync(path, JSON.stringify(value), { mode: 0o600 });
@@ -104,5 +108,52 @@ describe("seed-state profile reader", () => {
     expect(() => readSeedAccess({ statePath: path, profile: "fehlt" })).toThrow(
       "available profiles: vollbetrieb",
     );
+  });
+});
+
+describe("readSeedParents", () => {
+  afterEach(() => {
+    for (const dir of tempDirs.splice(0)) {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
+  it("lists complete parent logins of the default profile with their child count", () => {
+    const path = statePath();
+    writeState(path, {
+      version: SEED_STATE_VERSION,
+      default_profile: "vollbetrieb",
+      profiles: {
+        vollbetrieb: {
+          credentials: {
+            parents: [
+              {
+                email: "a@example.test",
+                password: "Test1234%",
+                student_ids: [1, 2],
+              },
+              { email: "ohne-passwort@example.test" },
+              {
+                email: "b@example.test",
+                password: "Test1234%",
+                student_ids: [3],
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(readSeedParents({ statePath: path })).toEqual([
+      { email: "a@example.test", password: "Test1234%", children: 2 },
+      { email: "b@example.test", password: "Test1234%", children: 1 },
+    ]);
+  });
+
+  it("returns an empty list without a seed file and rejects another version", () => {
+    expect(readSeedParents({ statePath: statePath() })).toEqual([]);
+    const path = statePath();
+    writeState(path, { version: "0", default_profile: "x", profiles: {} });
+    expect(() => readSeedParents({ statePath: path })).toThrow(/version/);
   });
 });

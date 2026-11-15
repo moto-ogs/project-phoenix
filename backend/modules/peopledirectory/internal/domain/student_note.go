@@ -421,3 +421,23 @@ type SchoolDayHintFilter struct {
 	Date       calendar.Date
 	StudentIDs []int64
 }
+
+// StudentNoteSearch is a text search over the note cards of every child of
+// the school (#7012): the card's audience filter for a reader in every
+// child's care team. A care_team note somebody else wrote comes back marked;
+// whether the reader has that child is the caller's question.
+type StudentNoteSearch struct {
+	Text                 string
+	Visibilities         []string
+	LedActivityGroupIDs  []int64
+	LedEducationGroupIDs []int64
+	ReaderAccountID      int64
+}
+
+// StudentNoteSearchHit is the newest matching note of one child.
+type StudentNoteSearchHit struct {
+	StudentID    int64
+	NoteID       int64
+	Body         string
+	CareTeamOnly bool
+}

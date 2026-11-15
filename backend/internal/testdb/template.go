@@ -94,9 +94,10 @@ var migrationFilePattern = regexp.MustCompile(`^(\d{6,})_.+\.go$`)
 type TemplateOption func(*templateOptions)
 
 type templateOptions struct {
-	hash   string
-	build  func(ctx context.Context, templateDSN string) error
-	verify func(ctx context.Context, templateDSN string) (bool, error)
+	hash    string
+	build   func(ctx context.Context, templateDSN string) error
+	verify  func(ctx context.Context, templateDSN string) (bool, error)
+	prepare func(ctx context.Context, templateDSN string) error
 }
 
 // WithMigrationsHash overrides the migrations-source hash (tests only).
@@ -105,9 +106,11 @@ func WithMigrationsHash(hash string) TemplateOption {
 }
 
 // WithBuild overrides how a freshly created template database is populated
-// (tests only; default runs all migrations via `go run . migrate`).
+// (tests only; default runs all migrations via `go run . migrate`). It also
+// drops the preparation that follows the migrations (prepareTemplate): a
+// test-built template has no application schema to bootstrap.
 func WithBuild(build func(ctx context.Context, templateDSN string) error) TemplateOption {
-	return func(o *templateOptions) { o.build = build }
+	return func(o *templateOptions) { o.build, o.prepare = build, nil }
 }
 
 // WithVerify overrides the completeness check used to adopt an unstamped
@@ -209,14 +212,14 @@ func EnsureTemplate(ctx context.Context, cfg *Config, opts ...TemplateOption) (*
 }
 
 func resolveTemplateOptions(opts []TemplateOption) (templateOptions, error) {
-	o := templateOptions{build: buildTemplate, verify: migrationsComplete}
+	o := templateOptions{build: buildTemplate, verify: migrationsComplete, prepare: prepareTemplate}
 	for _, opt := range opts {
 		opt(&o)
 	}
 	if o.hash != "" {
 		return o, nil
 	}
-	hash, err := MigrationsHash()
+	hash, err := TemplateHash()
 	if err != nil {
 		return templateOptions{}, err
 	}
@@ -238,7 +241,7 @@ func ensureTemplateLocked(ctx context.Context, conn sqlExecutor, cfg, tcfg *Conf
 	} else if adopted, err := adoptBaseTemplate(ctx, conn, cfg, tcfg, o.hash, o.verify); err != nil {
 		return err
 	} else if adopted {
-		return stampTemplate(ctx, conn, name, o.hash)
+		return prepareAndStampTemplate(ctx, conn, tcfg, o)
 	}
 
 	if _, err := conn.ExecContext(ctx, `CREATE DATABASE `+quoteIdentifier(name)); err != nil {
@@ -246,6 +249,19 @@ func ensureTemplateLocked(ctx context.Context, conn sqlExecutor, cfg, tcfg *Conf
 	}
 	if err := o.build(ctx, tcfg.TemplateDSN()); err != nil {
 		return fmt.Errorf("build template database %q: %w", name, err)
+	}
+	return prepareAndStampTemplate(ctx, conn, tcfg, o)
+}
+
+// prepareAndStampTemplate runs the preparation on a migrated template and
+// only then stamps it: an unstamped template is adopted again later, which
+// repeats the idempotent preparation instead of trusting a half-prepared one.
+func prepareAndStampTemplate(ctx context.Context, conn sqlExecutor, tcfg *Config, o templateOptions) error {
+	name := tcfg.TemplateName()
+	if o.prepare != nil {
+		if err := o.prepare(ctx, tcfg.TemplateDSN()); err != nil {
+			return fmt.Errorf("prepare template database %q: %w", name, err)
+		}
 	}
 	return stampTemplate(ctx, conn, name, o.hash)
 }
@@ -262,7 +278,7 @@ func prepareExistingTemplate(ctx context.Context, conn sqlExecutor, tcfg *Config
 		return false, fmt.Errorf("verify unstamped template %q: %w", name, err)
 	}
 	if complete {
-		return true, stampTemplate(ctx, conn, name, o.hash)
+		return true, prepareAndStampTemplate(ctx, conn, tcfg, o)
 	}
 	if err := dropDatabase(ctx, conn, name); err != nil {
 		return false, fmt.Errorf("drop incomplete template %q: %w", name, err)
@@ -287,7 +303,7 @@ func templateIsFresh(ctx context.Context, maint sqlExecutor, name, hash string) 
 		return false, nil
 	}
 	touched, ok := touchedAt(comment)
-	return ok && time.Since(touched) < templateStampInterval, nil
+	return ok && realNow().Sub(touched) < templateStampInterval, nil
 }
 
 // adoptBaseTemplate copies the legacy base database (the name in
@@ -379,7 +395,7 @@ func templateState(ctx context.Context, maint sqlExecutor, name string) (exists 
 // stampTemplate marks the template as fully built and records the current
 // time as its last use; the sweep's template GC reads that timestamp.
 func stampTemplate(ctx context.Context, maint sqlExecutor, name, hash string) error {
-	comment := hashCommentPrefix + hash + touchedCommentKey + strconv.FormatInt(time.Now().Unix(), 10)
+	comment := hashCommentPrefix + hash + touchedCommentKey + strconv.FormatInt(realNow().Unix(), 10)
 	stmt := fmt.Sprintf(`COMMENT ON DATABASE %s IS %s`, quoteIdentifier(name), quoteLiteral(comment))
 	if _, err := maint.ExecContext(ctx, stmt); err != nil {
 		return fmt.Errorf("stamp template %q: %w", name, err)

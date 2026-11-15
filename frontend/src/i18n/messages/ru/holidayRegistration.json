@@ -183,6 +183,13 @@
   "dayLimitOver": "Выбрано дней: {count}. Это слишком много. Выберите меньше дней.",
   "summaryDays": "Дни: {days}",
   "contributionDays": "дней: {count}",
+  "weeksLunchText": "К каждой неделе можно добавить обед. Он оплачивается отдельно.",
+  "lunchLabel": "С обедом",
+  "lunchHint": "{count, plural, one {# обед за {price}} few {# обеда по {price}, всего {total}} many {# обедов по {price}, всего {total}} other {# обеда по {price}, всего {total}}}",
+  "lunchHintDays": "{price} за обед. Ребёнок обедает в каждый выбранный день.",
+  "summaryLunch": "С обедом",
+  "contributionLunch": "Обед",
+  "contributionLunchCount": "Обед · {count, plural, one {# обед за {price}} few {# обеда по {price}} many {# обедов по {price}} other {# обеда по {price}}}",
   "dayWithoutCare": "{date} присмотра нет ({name}).",
   "noCareDayAria": "{day}, присмотра нет",
   "account": {
@@ -203,5 +210,18 @@
     "parent": "Родитель",
     "guardian": "Опекун",
     "relative": "Родственник"
-  }
+  },
+  "accountHintLoginTooltip": "Открывает вход, после этого вы вернётесь сюда.",
+  "addChildHint": "Добавляет ещё одного ребёнка в эту заявку.",
+  "removeChildHint": "Удаляет этого ребёнка из заявки, его данные будут потеряны.",
+  "addPickupHint": "Добавляет ещё одного человека для экстренной связи или забора ребёнка.",
+  "removeContactHint": "Удаляет этого человека из заявки.",
+  "toSummaryHint": "Показывает все данные для проверки, пока без отправки.",
+  "contributionRetryHint": "Заново рассчитывает взнос.",
+  "submitHint": "Отправляет заявку организатору, который решает о месте.",
+  "submitBindingHint": "Обязательно записывает ребёнка у организатора, место ещё не подтверждено.",
+  "submitCaptchaPending": "Сначала пройдите проверку безопасности.",
+  "submitUploadsPending": "Подождите, пока загрузятся все файлы.",
+  "doneToRegistrationsHint": "Открывает список ваших заявок на каникулы.",
+  "doneToStatusHint": "Показывает, на каком этапе организатор рассматривает вашу заявку."
 }

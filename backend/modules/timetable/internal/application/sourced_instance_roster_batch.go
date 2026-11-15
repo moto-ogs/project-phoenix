@@ -56,7 +56,7 @@ func (s *RosterReconciler) loadSourcedInstanceBatch(ctx context.Context, inputs 
 			from = in.From
 		}
 	}
-	if today := calendar.TodayDate(); from.Before(today) {
+	if today := s.today(); from.Before(today) {
 		from = today
 	}
 	fromText := from.String()
@@ -137,12 +137,17 @@ func (s *RosterReconciler) applySourcedRosterStatusDays(ctx context.Context, tou
 }
 
 func (s *RosterReconciler) saveSourcedInstanceBatch(ctx context.Context, batch *sourcedInstanceBatch) error {
-	if len(batch.creates)+len(batch.deletes) == 0 {
+	return s.saveParticipantDiff(ctx, batch.creates, batch.deletes)
+}
+
+// saveParticipantDiff writes a planned-roster diff in one batch.
+func (s *RosterReconciler) saveParticipantDiff(ctx context.Context, creates []timetable.InstanceStudentInput, deletes []int64) error {
+	if len(creates)+len(deletes) == 0 {
 		return nil
 	}
 	commands, ok := s.instanceStudentRepo.Plans.(timetable.SourcedInstanceStudents)
 	if !ok {
-		return errors.New("sourced roster batch: participant diff commands are required")
+		return errors.New("roster diff: participant diff commands are required")
 	}
-	return commands.SaveSourcedInstanceStudents(ctx, batch.creates, batch.deletes)
+	return commands.SaveSourcedInstanceStudents(ctx, creates, deletes)
 }

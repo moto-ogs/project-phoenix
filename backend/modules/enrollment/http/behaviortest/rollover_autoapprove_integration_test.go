@@ -37,6 +37,11 @@ import (
 // student; the test then asserts the rollover updates THAT student
 // rather than inserting a second one.
 
+// autoApproveNow is the instant the auto-approve suites tick the deadline
+// worker at: noon of decisionTestToday, the day their decisions and the
+// Kinderkontingent count judge on. The new phase starts 2027-09-01.
+var autoApproveNow = decisionTestToday.BerlinMidnight().Add(12 * time.Hour)
+
 func setupAutoApproveIntegrationEnv(t *testing.T) *rolloverTestEnv {
 	return setupAutoApproveIntegrationEnvWithSettings(t, nil)
 }
@@ -66,7 +71,8 @@ func setupAutoApproveIntegrationEnvWithDecision(
 
 	repoFactory, repoFactoryCare, _, _, _, _ := testRepositories(t, env.db)
 
-	studentEnrollment := testStudentEnrollment(env.db)
+	studentEnrollment, err := owners.NewPeopleDirectory(testpkg.MustDatabase(env.db), func() time.Time { return autoApproveNow })
+	require.NoError(t, err)
 	decision := newTestDecisions(enrollmentCompose.DecisionDependencies{
 		Requests:       repoFactory.Enrollment(),
 		Children:       repoFactory.Enrollment(),
@@ -83,6 +89,9 @@ func setupAutoApproveIntegrationEnvWithDecision(
 		ParentsURL:             owners.EnrollmentDecisionParentsURL("http://parents.localhost:3000", "http://localhost:3000"),
 		LockTemplateRecurrence: lockRecurrence,
 		Logger:                 slog.Default(),
+		// The worker ticks at autoApproveNow; the decisions judge the new
+		// phase's start from the same day.
+		Today: func() calendar.Date { return decisionTestToday },
 	}, settings, env.outbox)
 
 	// Rebuild the rollover service so DecisionService is injected.
@@ -218,7 +227,7 @@ func TestRolloverService_AutoApprove_EndToEndUpdatesExistingStudent(t *testing.T
 	// Run the rollover with auto_approve = true and a past deadline.
 	req := validRolloverRequest(env, enrollmentNative.PhaseRolloverModeOptOut, true)
 	req.RolloverAutoApprove = true
-	req.RolloverDeadline = time.Now().Add(-1 * time.Hour)
+	req.RolloverDeadline = autoApproveNow.Add(-time.Hour)
 	req.Name = "auto-approve-integration-target"
 	result, err := env.rolloverSvc.CreatePhaseFromSource(ctx, req)
 	require.NoError(t, err)
@@ -235,7 +244,7 @@ func TestRolloverService_AutoApprove_EndToEndUpdatesExistingStudent(t *testing.T
 	// Tick the deadline worker — auto_approve flag should route the
 	// row through DecisionService.Decide(approved) which in turn
 	// runs applyApprovalRollover (no new Person/Student rows).
-	summary, err := testpkg.TenantQuery1(t, ctx, env.db, env.rolloverSvc.RunDeadlineWorker, time.Now())
+	summary, err := testpkg.TenantQuery1(t, ctx, env.db, env.rolloverSvc.RunDeadlineWorker, autoApproveNow)
 	require.NoError(t, err)
 	assert.Equal(t, 1, summary.AutoRenewedToApproved, "auto_approve must promote to approved")
 	assert.Equal(t, 0, summary.AutoRenewedToSubmitted, "no bulk-submitted fallback")
@@ -312,11 +321,11 @@ func TestRolloverService_AutoApprove_ClassSwitchSkipsClassChangedSinceApproval(t
 	)
 	req := validRolloverRequest(env, enrollmentNative.PhaseRolloverModeOptOut, true)
 	req.RolloverAutoApprove = true
-	req.RolloverDeadline = time.Now().Add(-1 * time.Hour)
+	req.RolloverDeadline = autoApproveNow.Add(-time.Hour)
 	req.Name = "class-switch-skip-target"
 	result, err := env.rolloverSvc.CreatePhaseFromSource(ctx, req)
 	require.NoError(t, err)
-	summary, err := testpkg.TenantQuery1(t, ctx, env.db, env.rolloverSvc.RunDeadlineWorker, time.Now())
+	summary, err := testpkg.TenantQuery1(t, ctx, env.db, env.rolloverSvc.RunDeadlineWorker, autoApproveNow)
 	require.NoError(t, err)
 	require.Equal(t, 1, summary.AutoRenewedToApproved)
 
@@ -353,12 +362,12 @@ func TestRolloverService_AutoApprove_InactiveExistingStudentImmediateBecomesActi
 
 	req := validRolloverRequest(env, enrollmentNative.PhaseRolloverModeOptOut, true)
 	req.RolloverAutoApprove = true
-	req.RolloverDeadline = time.Now().Add(-1 * time.Hour)
+	req.RolloverDeadline = autoApproveNow.Add(-time.Hour)
 	req.Name = "inactive-immediate-target"
 	result, err := env.rolloverSvc.CreatePhaseFromSource(ctx, req)
 	require.NoError(t, err)
 
-	summary, err := testpkg.TenantQuery1(t, ctx, env.db, env.rolloverSvc.RunDeadlineWorker, time.Now())
+	summary, err := testpkg.TenantQuery1(t, ctx, env.db, env.rolloverSvc.RunDeadlineWorker, autoApproveNow)
 	require.NoError(t, err)
 	assert.Equal(t, 1, summary.AutoRenewedToApproved)
 	assert.Equal(t, 0, summary.AutoApproveErrors)
@@ -393,12 +402,12 @@ func TestRolloverService_AutoApprove_StatusChangeWritesSystemAudit(t *testing.T)
 
 	req := validRolloverRequest(env, enrollmentNative.PhaseRolloverModeOptOut, true)
 	req.RolloverAutoApprove = true
-	req.RolloverDeadline = time.Now().Add(-time.Hour)
+	req.RolloverDeadline = autoApproveNow.Add(-time.Hour)
 	req.Name = "inactive-audit-target"
 	_, err := env.rolloverSvc.CreatePhaseFromSource(ctx, req)
 	require.NoError(t, err)
 
-	summary, err := testpkg.TenantQuery1(t, ctx, env.db, env.rolloverSvc.RunDeadlineWorker, time.Now())
+	summary, err := testpkg.TenantQuery1(t, ctx, env.db, env.rolloverSvc.RunDeadlineWorker, autoApproveNow)
 	require.NoError(t, err)
 	assert.Equal(t, 1, summary.AutoRenewedToApproved)
 	assert.Equal(t, 0, summary.AutoApproveErrors)
@@ -428,12 +437,12 @@ func TestRolloverService_AutoApprove_InactiveExistingStudentFutureScheduledBecom
 
 	req := validRolloverRequest(env, enrollmentNative.PhaseRolloverModeOptOut, true)
 	req.RolloverAutoApprove = true
-	req.RolloverDeadline = time.Now().Add(-1 * time.Hour)
+	req.RolloverDeadline = autoApproveNow.Add(-time.Hour)
 	req.Name = "inactive-scheduled-target"
 	result, err := env.rolloverSvc.CreatePhaseFromSource(ctx, req)
 	require.NoError(t, err)
 
-	summary, err := testpkg.TenantQuery1(t, ctx, env.db, env.rolloverSvc.RunDeadlineWorker, time.Now())
+	summary, err := testpkg.TenantQuery1(t, ctx, env.db, env.rolloverSvc.RunDeadlineWorker, autoApproveNow)
 	require.NoError(t, err)
 	assert.Equal(t, 1, summary.AutoRenewedToApproved)
 	assert.Equal(t, 0, summary.AutoApproveErrors)
@@ -469,15 +478,14 @@ func TestRolloverService_AutoApprove_InactiveExistingStudentPastScheduledBecomes
 
 	req := validRolloverRequest(env, enrollmentNative.PhaseRolloverModeOptOut, true)
 	req.RolloverAutoApprove = true
-	now := decisionTestToday.BerlinMidnight().Add(12 * time.Hour)
-	req.RolloverDeadline = now.Add(-1 * time.Hour)
+	req.RolloverDeadline = autoApproveNow.Add(-time.Hour)
 	req.ServiceStartDate = decisionTestToday.AddDays(-1)
 	req.ServiceEndDate = calendar.NewDate(req.ServiceStartDate.Year(), req.ServiceStartDate.Month()+10, req.ServiceStartDate.Day())
 	req.Name = "inactive-scheduled-past-target"
 	result, err := env.rolloverSvc.CreatePhaseFromSource(ctx, req)
 	require.NoError(t, err)
 
-	summary, err := testpkg.TenantQuery1(t, ctx, env.db, env.rolloverSvc.RunDeadlineWorker, now)
+	summary, err := testpkg.TenantQuery1(t, ctx, env.db, env.rolloverSvc.RunDeadlineWorker, autoApproveNow)
 	require.NoError(t, err)
 	assert.Equal(t, 1, summary.AutoRenewedToApproved)
 	assert.Equal(t, 0, summary.AutoApproveErrors)
@@ -512,12 +520,12 @@ func TestRolloverService_AutoApprove_DoesNotDuplicateStudents(t *testing.T) {
 
 	req := validRolloverRequest(env, enrollmentNative.PhaseRolloverModeOptOut, true)
 	req.RolloverAutoApprove = true
-	req.RolloverDeadline = time.Now().Add(-1 * time.Hour)
+	req.RolloverDeadline = autoApproveNow.Add(-time.Hour)
 	req.Name = "no-dup-target"
 	_, createErr := env.rolloverSvc.CreatePhaseFromSource(ctx, req)
 	require.NoError(t, createErr)
 
-	_, workerErr := testpkg.TenantQuery1(t, ctx, env.db, env.rolloverSvc.RunDeadlineWorker, time.Now())
+	_, workerErr := testpkg.TenantQuery1(t, ctx, env.db, env.rolloverSvc.RunDeadlineWorker, autoApproveNow)
 	require.NoError(t, workerErr)
 
 	afterCount := countStudentsForPerson(t, env, existing.PersonID)
@@ -578,7 +586,7 @@ func TestRolloverService_AutoApprove_ValidationFailureRollsBackStudentUpdate(t *
 
 	req := validRolloverRequest(env, enrollmentNative.PhaseRolloverModeOptOut, true)
 	req.RolloverAutoApprove = true
-	req.RolloverDeadline = time.Now().Add(-time.Hour)
+	req.RolloverDeadline = autoApproveNow.Add(-time.Hour)
 	req.Name = "auto-approve-savepoint-rollback-target"
 	result, err := env.rolloverSvc.CreatePhaseFromSource(ctx, req)
 	require.NoError(t, err)
@@ -601,7 +609,7 @@ func TestRolloverService_AutoApprove_ValidationFailureRollsBackStudentUpdate(t *
 	var summary *enrollmentAPI.DeadlineWorkerSummary
 	err = testpkg.WithTenantTx(t, context.Background(), env.db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
 		var workerErr error
-		summary, workerErr = env.rolloverSvc.RunDeadlineWorker(txCtx, time.Now())
+		summary, workerErr = env.rolloverSvc.RunDeadlineWorker(txCtx, autoApproveNow)
 		return workerErr
 	})
 	require.NoError(t, err, "ordinary Decide failures must be isolated to their row savepoint")

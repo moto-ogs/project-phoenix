@@ -15,7 +15,13 @@ import {
 } from "~/components/database/catalog/catalog-page";
 import { ModuleRouteGuard } from "~/components/tenant/module-route-guard";
 import { absenceTypeService, type AbsenceType } from "~/lib/absence-type-api";
-import { CARRYOVER_OPTIONS, carryoverRuleLabel } from "~/lib/absence-helpers";
+import {
+  CARRYOVER_OPTIONS,
+  carryoverRuleLabel,
+  formatDayCount,
+} from "~/lib/absence-helpers";
+import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
+import { InsetPanel } from "~/components/ui/inset-panel";
 import type { SectionConfig } from "~/lib/database/types";
 import { formatCount } from "~/lib/format-utils";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -43,7 +49,82 @@ function carryoverOptions(type: AbsenceType | null) {
   ];
 }
 
+// Was der Träger an seiner Art festlegt (#4710), als Anzeige im Formular.
+// `componentProps` bringt die Art; das Formular kennt nur Feldwerte.
+function TraegerKeptSummary({
+  absenceType: type,
+}: {
+  readonly absenceType?: AbsenceType;
+  readonly value: unknown;
+}) {
+  if (!type) return null;
+  return (
+    <InsetPanel tone="muted" padding="md" className="space-y-2">
+      <DataGrid columns={2}>
+        <DataField label="Kontingent">
+          {type.allowanceEnabled
+            ? "Je Person über alle Schulen"
+            : "Ohne Kontingent"}
+        </DataField>
+        <DataField label="Verfall">
+          {type.allowanceEnabled
+            ? carryoverRuleLabel(type.carryoverUntil)
+            : "–"}
+        </DataField>
+        <DataField label="Beantragen">
+          {type.requestable
+            ? "Mitarbeitende beantragen"
+            : "Nur die Leitung trägt ein"}
+        </DataField>
+      </DataGrid>
+      <p className="text-xs text-gray-600">
+        Name, Kontingent und Verfall legt Ihr Träger fest. Die Tage je Person
+        stehen in der Personalakte beim Träger.
+      </p>
+    </InsetPanel>
+  );
+}
+
+function traegerSections(type: AbsenceType): SectionConfig[] {
+  return [
+    {
+      title: "Vom Träger",
+      fields: [
+        {
+          name: "kept",
+          label: "Vom Träger",
+          type: "custom",
+          colSpan: 2,
+          component: TraegerKeptSummary,
+          componentProps: { absenceType: type },
+        },
+      ],
+    },
+    ...(type.allowanceEnabled
+      ? [
+          {
+            title: "An dieser Schule",
+            fields: [
+              {
+                name: "schoolLimitDays",
+                label: "Höchstens Tage je Person und Jahr an dieser Schule",
+                type: "number" as const,
+                colSpan: 2 as const,
+                min: 0,
+                max: 366,
+                placeholder: "Kein eigener Wert",
+                helperText:
+                  "Gilt nur für Einsätze an dieser Schule. Leer: Es gilt nur das Kontingent des Trägers. Mehr als dort erlaubt keine Schule.",
+              },
+            ],
+          },
+        ]
+      : []),
+  ];
+}
+
 function sections(type: AbsenceType | null): SectionConfig[] {
+  if (type?.keptByTraeger) return traegerSections(type);
   return [
     {
       title: "Abwesenheitsart",
@@ -73,9 +154,38 @@ function sections(type: AbsenceType | null): SectionConfig[] {
           helperText:
             "Gilt nur mit Kontingent. Bis zu diesem Tag gehen Tage im neuen Jahr zuerst vom Rest des Vorjahres ab. Danach ist der Rest verfallen.",
         },
+        {
+          name: "requestable",
+          label: "Mitarbeitende dürfen beantragen",
+          type: "checkbox",
+          colSpan: 2,
+          helperText:
+            "Der Antrag geht an die Leitung. Sie gibt frei oder lehnt ab.",
+        },
       ],
     },
   ];
+}
+
+function schoolLimitOf(raw: unknown): number | null {
+  const text = String(raw ?? "")
+    .trim()
+    .replace(",", ".");
+  return text === "" ? null : Number(text);
+}
+
+function rowSubtitle(type: AbsenceType): string {
+  if (type.keptByTraeger) {
+    if (!type.isActive) return "Vom Träger · beim Träger ausgeschaltet";
+    if (!type.offered) return "Vom Träger · an dieser Schule nicht angeboten";
+    return type.schoolLimitDays !== null
+      ? `Vom Träger · hier höchstens ${formatDayCount(type.schoolLimitDays)}`
+      : "Vom Träger · Kontingent über alle Schulen";
+  }
+  const base = type.allowanceEnabled
+    ? `Mit Kontingent · ${carryoverRuleLabel(type.carryoverUntil)}`
+    : "Ohne Kontingent";
+  return type.requestable ? `${base} · beantragbar` : base;
 }
 
 const config: CatalogConfig<AbsenceType> = {
@@ -83,34 +193,47 @@ const config: CatalogConfig<AbsenceType> = {
   title: "Abwesenheitsarten",
   singular: "Abwesenheitsart",
   purpose:
-    "Eigene Arten wie Regenerationstag, zusätzlich zu Urlaub, Krank, Fortbildung, Sonstige und Freizeitausgleich.",
+    "Eigene Arten wie Regenerationstag, zusätzlich zu Urlaub, Krank, Fortbildung, Sonstige und Freizeitausgleich. Arten mit „Vom Träger“ legt Ihr Träger fest; Ihre Schule darf nur für ihre Einsätze abweichen.",
   searchPlaceholder: "Abwesenheitsart suchen…",
   emptyDescription:
     "Legen Sie eine eigene Art an, zum Beispiel Regenerationstag oder Krank-Urlaubstag. Urlaub, Krank, Fortbildung, Sonstige und Freizeitausgleich gibt es immer.",
   stats: (types) => {
-    const inactive = types.filter((type) => !type.isActive).length;
+    const inactive = types.filter(
+      (type) => !type.isActive || !type.offered,
+    ).length;
     const active = types.length - inactive;
-    return inactive > 0
-      ? `${formatCount(active)} in der Auswahl · ${formatCount(inactive)} ausgeschaltet`
-      : `${formatCount(active)} eigene ${active === 1 ? "Art" : "Arten"}`;
+    const fromTraeger = types.filter((type) => type.keptByTraeger).length;
+    const parts =
+      inactive > 0
+        ? [
+            `${formatCount(active)} in der Auswahl`,
+            `${formatCount(inactive)} ausgeschaltet`,
+          ]
+        : [`${formatCount(active)} ${active === 1 ? "Art" : "Arten"}`];
+    // Arten des Trägers (#4710) zählen mit, aber erkennbar.
+    if (fromTraeger > 0) parts.push(`${formatCount(fromTraeger)} vom Träger`);
+    return parts.join(" · ");
   },
   toRow: (type) => ({
     name: type.name,
-    subtitle: type.allowanceEnabled
-      ? `Mit Kontingent · ${carryoverRuleLabel(type.carryoverUntil)}`
-      : "Ohne Kontingent",
-    retired: !type.isActive,
+    subtitle: rowSubtitle(type),
+    retired: !type.isActive || !type.offered,
   }),
   sections,
-  toFormValues: (type) => ({
-    name: type.name,
-    allowanceEnabled: type.allowanceEnabled,
-    carryoverUntil: type.carryoverUntil ?? "",
-  }),
+  toFormValues: (type) =>
+    type.keptByTraeger
+      ? { schoolLimitDays: type.schoolLimitDays ?? "" }
+      : {
+          name: type.name,
+          allowanceEnabled: type.allowanceEnabled,
+          carryoverUntil: type.carryoverUntil ?? "",
+          requestable: type.requestable,
+        },
   createDefaults: {
     name: "",
     allowanceEnabled: false,
     carryoverUntil: "",
+    requestable: false,
   },
   // Der POST nimmt die vollständige Konfiguration an und speichert sie in
   // einem Vorgang. Ein fehlgeschlagener Nachtrag kann so keinen Eintrag mit
@@ -121,31 +244,46 @@ const config: CatalogConfig<AbsenceType> = {
       {
         allowanceEnabled: Boolean(values.allowanceEnabled),
         carryoverUntil: String(values.carryoverUntil ?? "") || null,
+        requestable: Boolean(values.requestable),
       },
     );
   },
+  // Eine Art des Trägers ändert die Schule nur in ihrer Abweichung (#4710).
   update: (type, values) =>
-    absenceTypeService.updateAbsenceType(type.id, {
-      name: String(values.name ?? type.name).trim(),
-      allowanceEnabled: Boolean(values.allowanceEnabled),
-      carryoverUntil: String(values.carryoverUntil ?? "") || null,
-    }),
+    type.keptByTraeger
+      ? absenceTypeService.updateAbsenceType(type.id, {
+          schoolLimitDays: schoolLimitOf(values.schoolLimitDays),
+        })
+      : absenceTypeService.updateAbsenceType(type.id, {
+          name: String(values.name ?? type.name).trim(),
+          allowanceEnabled: Boolean(values.allowanceEnabled),
+          carryoverUntil: String(values.carryoverUntil ?? "") || null,
+          requestable: Boolean(values.requestable),
+        }),
   retire: {
     menuLabel: "Nicht mehr anbieten",
     confirmTitle: "Abwesenheitsart nicht mehr anbieten?",
     confirmLabel: "Nicht mehr anbieten",
     loadingLabel: "Wird aus der Auswahl genommen …",
     describe: (type) =>
-      `„${type.name}“ steht bei neuen Abwesenheiten nicht mehr zur Auswahl. Bereits eingetragene Abwesenheiten behalten den Namen.`,
+      type.keptByTraeger
+        ? `„${type.name}“ ist eine Art Ihres Trägers. Ihre Schule bietet sie dann nicht mehr an, andere Schulen schon. Eingetragene Abwesenheiten behalten den Namen.`
+        : `„${type.name}“ steht bei neuen Abwesenheiten nicht mehr zur Auswahl. Bereits eingetragene Abwesenheiten behalten den Namen.`,
     run: (type) =>
-      absenceTypeService.updateAbsenceType(type.id, { isActive: false }),
+      absenceTypeService.updateAbsenceType(
+        type.id,
+        type.keptByTraeger ? { offered: false } : { isActive: false },
+      ),
     toast: (type) =>
       `Die Abwesenheitsart „${type.name}“ wird nicht mehr angeboten.`,
   },
   restore: {
     menuLabel: "Wieder anbieten",
     run: (type) =>
-      absenceTypeService.updateAbsenceType(type.id, { isActive: true }),
+      absenceTypeService.updateAbsenceType(
+        type.id,
+        type.keptByTraeger ? { offered: true } : { isActive: true },
+      ),
     toast: (type) =>
       `Die Abwesenheitsart „${type.name}“ wird wieder angeboten.`,
   },

@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	eventContract "github.com/moto-ogs/project-phoenix/modules/communication/eventcontract"
 
@@ -27,12 +28,13 @@ type excusedRequestReviewPolicy interface {
 type CarePlanObserver func(carePlanCompose.Observation)
 
 // NewExcusedAbsenceRequestService composes the Care Plan excused-absence
-// workflow over the legacy root's dependencies. Nil effects are skipped.
+// workflow over the legacy root's dependencies. Nil effects are skipped; nil
+// clocks use the real one.
 func NewExcusedAbsenceRequestService(
 	carePlan careplan.Capability, students ExcusedRequestStudentRows, persons ExcusedRequestPersonRows,
 	scope carePlanCompose.ReviewScopeResolver, emitter eventContract.Emitter,
 	broadcaster realtime.Broadcaster, events peopledirectory.ParentRequestEvents, notifier deliveryCompose.AbsenceNotifier,
-	shares carePlanCompose.ShareVisibility, observe CarePlanObserver, logger *slog.Logger, today func() timezone.Date,
+	shares carePlanCompose.ShareVisibility, observe CarePlanObserver, logger *slog.Logger, today func() timezone.Date, now func() time.Time,
 	partialAbsences careplan.PartialAbsenceService,
 ) (*carePlanCompose.ExcusedAbsenceRequests, error) {
 	var messenger carePlanCompose.RequestMessenger
@@ -57,7 +59,7 @@ func NewExcusedAbsenceRequestService(
 	}
 	return NewExcusedAbsenceRequests(ExcusedRequestWiring{
 		CarePlan: carePlan, Students: students, Persons: persons,
-		Scope: scope, Today: day, Logger: logger, Observe: observe,
+		Scope: scope, Today: day, Now: now, Logger: logger, Observe: observe,
 		Messenger: messenger, Broadcaster: staff, Ledger: ledger,
 		Notifier: absences, Shares: shares, PartialAbsences: partialAbsences,
 	})

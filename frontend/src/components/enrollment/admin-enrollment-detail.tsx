@@ -4,6 +4,11 @@ import {
   APPROVAL_WITHOUT_OFFERING_COPY,
   approvalNeedsOfferingConfirm,
 } from "~/components/enrollment/approval-without-offering";
+import {
+  APPROVAL_WITH_CHANGED_TERMS_COPY,
+  changedOfferings,
+  submittedTermsMessage,
+} from "~/components/enrollment/offering-term-changes";
 import { isTerminalChildStatus } from "~/lib/enrollment-status";
 import type { ChildStatus } from "~/lib/enrollment-status";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -65,11 +70,17 @@ import {
   useRequestMails,
 } from "~/components/enrollment/request-mail-status";
 import {
+  DUPLICATE_ENROLLMENT_REASON,
   existingChildChoiceDescription,
+  existingChildChoiceOf,
   existingChildChoiceOptions,
-  existingChildHintMessage,
   needsExistingChildChoice,
+  possiblyEnrolledCandidates,
+  REJECT_DUPLICATE_CHOICE,
 } from "~/components/enrollment/existing-child-choice";
+import { ExistingChildNotice } from "~/components/enrollment/existing-child-notice";
+import { ActionHint } from "~/components/ui/action-hint";
+import { DECISION_HINTS } from "~/components/enrollment/decision-hints";
 import { Button, buttonClassName } from "~/components/ui/button";
 import NavigationLink from "~/components/ui/navigation-link";
 import { Alert } from "~/components/ui/alert";
@@ -111,10 +122,26 @@ interface ActionDef {
 }
 
 const ACTIONS: ActionDef[] = [
-  { status: "approved", label: "Bestätigen", tone: "success" },
-  { status: "waitlisted", label: "Warteliste", tone: "outline" },
-  { status: "rejected", label: "Ablehnen", tone: "danger" },
-  { status: "under_review", label: "Zur Prüfung", tone: "primary" },
+  {
+    status: "approved",
+    label: "Bestätigen",
+    tone: "success",
+  },
+  {
+    status: "waitlisted",
+    label: "Warteliste",
+    tone: "outline",
+  },
+  {
+    status: "rejected",
+    label: "Ablehnen",
+    tone: "danger",
+  },
+  {
+    status: "under_review",
+    label: "Zur Prüfung",
+    tone: "primary",
+  },
 ];
 
 interface Props {
@@ -154,6 +181,8 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
       childId: string,
       status: DecisionStatus,
       existingChildChoice?: ExistingChildChoice,
+      acceptOfferingChanges?: boolean,
+      reasonOverride?: string,
     ) => Promise<void>
   >(async () => undefined);
   const latestRestoreRef = useRef<() => Promise<void>>(async () => undefined);
@@ -165,9 +194,17 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [approvalWithoutOfferingChildId, setApprovalWithoutOfferingChildId] =
-    useState<{ id: string; existingChildChoice?: ExistingChildChoice } | null>(
-      null,
-    );
+    useState<{
+      id: string;
+      existingChildChoice?: ExistingChildChoice;
+      acceptOfferingChanges?: boolean;
+    } | null>(null);
+  // Ein Angebot hat sich seit der Anmeldung geändert: das Büro bestätigt die
+  // neuen Angaben vor dem Bestätigen des Kindes (#6837).
+  const [changedTermsApproval, setChangedTermsApproval] = useState<{
+    child: AdminRequestChild;
+    existingChildChoice?: ExistingChildChoice;
+  } | null>(null);
   // Ein Kind, das vielleicht schon angemeldet ist: das Büro wählt vor dem
   // Bestätigen das bestehende Kind oder ein neues (#6053).
   const [existingChildChoiceChild, setExistingChildChoiceChild] =
@@ -253,26 +290,64 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
     childId: string,
     status: DecisionStatus,
     existingChildChoice?: ExistingChildChoice,
+    acceptOfferingChanges?: boolean,
+    reasonOverride?: string,
   ) => {
     if (!data) return;
-    const reason = (reasons[childId] ?? "").trim();
+    const reason = reasonOverride ?? (reasons[childId] ?? "").trim();
     setBusyChildId(childId);
     decisionErrors.clear();
     setDecisionErrorChildId(childId);
     let saved = false;
     try {
-      // The office's choice travels only when there was one to make.
-      await (existingChildChoice
-        ? decideAdminChild(
-            requestId,
-            childId,
-            status,
-            reason || undefined,
-            existingChildChoice,
-          )
-        : decideAdminChild(requestId, childId, status, reason || undefined));
+      // The office's choice and confirmation travel only when there was
+      // one to make.
+      if (acceptOfferingChanges === true) {
+        await decideAdminChild(
+          requestId,
+          childId,
+          status,
+          reason || undefined,
+          existingChildChoice,
+          true,
+        );
+      } else if (existingChildChoice) {
+        await decideAdminChild(
+          requestId,
+          childId,
+          status,
+          reason || undefined,
+          existingChildChoice,
+        );
+      } else {
+        await decideAdminChild(requestId, childId, status, reason || undefined);
+      }
       saved = true;
     } catch (err) {
+      // Another approval enrolled the child meanwhile, or the office never
+      // saw a candidate (#6247): ask again with the current candidates
+      // instead of failing on a stale list.
+      const candidates =
+        status === "approved" ? possiblyEnrolledCandidates(err) : null;
+      const refused = data.children.find((child) => child.id === childId);
+      if (candidates && refused) {
+        const refreshed: AdminRequestChild = {
+          ...refused,
+          possible_existing_children: candidates,
+        };
+        setData((current) =>
+          current
+            ? {
+                ...current,
+                children: current.children.map((child) =>
+                  child.id === childId ? refreshed : child,
+                ),
+              }
+            : current,
+        );
+        setExistingChildChoiceChild(refreshed);
+        return;
+      }
       logger.error("admin_enrollment_decide_failed", {
         error: err instanceof Error ? err.message : "unknown",
         request_id: requestId,
@@ -282,7 +357,13 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
       await decisionErrors.show(err, {
         object: "die Entscheidung",
         retry: () =>
-          void latestDecideRef.current(childId, status, existingChildChoice),
+          void latestDecideRef.current(
+            childId,
+            status,
+            existingChildChoice,
+            acceptOfferingChanges,
+            reasonOverride,
+          ),
       });
     } finally {
       setBusyChildId(null);
@@ -354,6 +435,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
     child: AdminRequestChild,
     status: DecisionStatus,
     existingChildChoice?: ExistingChildChoice,
+    acceptOfferingChanges?: boolean,
   ) => {
     if (
       status === "approved" &&
@@ -361,6 +443,14 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
       needsExistingChildChoice(child)
     ) {
       setExistingChildChoiceChild(child);
+      return;
+    }
+    if (
+      status === "approved" &&
+      acceptOfferingChanges !== true &&
+      changedOfferings(child).length > 0
+    ) {
+      setChangedTermsApproval({ child, existingChildChoice });
       return;
     }
     if (
@@ -373,11 +463,34 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
           : (child.offerings?.length ?? 0),
       })
     ) {
-      setApprovalWithoutOfferingChildId({ id: child.id, existingChildChoice });
+      setApprovalWithoutOfferingChildId({
+        id: child.id,
+        existingChildChoice,
+        acceptOfferingChanges,
+      });
       return;
     }
-    void handleDecide(child.id, status, existingChildChoice);
+    void handleDecide(
+      child.id,
+      status,
+      existingChildChoice,
+      acceptOfferingChanges,
+    );
   };
+
+  // A duplicate of another enrollment of the phase is refused with a reason
+  // that names no other family, unless the office wrote its own (#6247).
+  const canRejectDuplicate = availableActions.some(
+    (action) => action.status === "rejected",
+  );
+  const rejectDuplicate = (child: AdminRequestChild) =>
+    void handleDecide(
+      child.id,
+      "rejected",
+      undefined,
+      undefined,
+      (reasons[child.id] ?? "").trim() || DUPLICATE_ENROLLMENT_REASON,
+    );
 
   const submittedAt = formatDateTime(data.submitted_at, {
     day: "2-digit",
@@ -430,6 +543,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
                   pending.id,
                   "approved",
                   pending.existingChildChoice,
+                  pending.acceptOfferingChanges,
                 );
               }
             }}
@@ -441,24 +555,67 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
               message={APPROVAL_WITHOUT_OFFERING_COPY.message}
             />
           </ConfirmationModal>
+          <ConfirmationModal
+            isOpen={changedTermsApproval !== null}
+            onClose={() => setChangedTermsApproval(null)}
+            onConfirm={() => {
+              const pending = changedTermsApproval;
+              setChangedTermsApproval(null);
+              if (pending !== null) {
+                requestDecision(
+                  pending.child,
+                  "approved",
+                  pending.existingChildChoice,
+                  true,
+                );
+              }
+            }}
+            title={APPROVAL_WITH_CHANGED_TERMS_COPY.title}
+            confirmText={APPROVAL_WITH_CHANGED_TERMS_COPY.confirmText}
+          >
+            <Alert
+              type="warning"
+              message={APPROVAL_WITH_CHANGED_TERMS_COPY.message}
+            />
+            <ul className="mt-3 space-y-2 text-sm">
+              {(changedTermsApproval
+                ? changedOfferings(changedTermsApproval.child)
+                : []
+              ).map((offering) => (
+                <li key={offering.offering_id}>
+                  <span className="font-medium text-gray-900">
+                    {offering.offering_name}
+                  </span>
+                  <span className="block text-gray-600">
+                    {submittedTermsMessage(offering)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </ConfirmationModal>
           {existingChildChoiceChild ? (
             <ChoiceModal
               isOpen
               title="Ist das Kind schon angemeldet?"
               description={existingChildChoiceDescription(
                 existingChildChoiceChild,
+                { canRejectDuplicate },
               )}
-              options={existingChildChoiceOptions(existingChildChoiceChild)}
+              options={existingChildChoiceOptions(existingChildChoiceChild, {
+                canRejectDuplicate,
+              })}
               onClose={() => setExistingChildChoiceChild(null)}
               onSelect={(value) => {
                 const child = existingChildChoiceChild;
                 setExistingChildChoiceChild(null);
+                if (value === REJECT_DUPLICATE_CHOICE) {
+                  rejectDuplicate(child);
+                  return;
+                }
                 requestDecision(
                   child,
                   "approved",
-                  value === "new"
-                    ? { createNewStudent: true }
-                    : { existingStudentId: value },
+                  existingChildChoiceOf(value, child),
                 );
               }}
             />
@@ -567,6 +724,12 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
                     setReasons((prev) => ({ ...prev, [child.id]: value }))
                   }
                   onDecide={(status) => requestDecision(child, status)}
+                  requestGuardian={`${data.guardian_first_name} ${data.guardian_last_name}`}
+                  onRejectDuplicate={
+                    canRejectDuplicate
+                      ? () => rejectDuplicate(child)
+                      : undefined
+                  }
                   onOfferingsChanged={() => void load({ quiet: true })}
                   onDataCorrected={handleDataCorrected}
                   onDelete={() =>
@@ -674,10 +837,12 @@ function ChildInformationCard({
   onDataCorrected,
   onOfferingsChanged,
   onReasonChange,
+  onRejectDuplicate,
   onDelete,
   phaseId,
   phaseName,
   reason,
+  requestGuardian,
   requestId,
   schemaFields,
   weeklyPlanToday,
@@ -694,13 +859,14 @@ function ChildInformationCard({
   onDataCorrected: (correctedChild: AdminRequestChild) => void;
   onOfferingsChanged: () => void;
   onReasonChange: (value: string) => void;
+  onRejectDuplicate?: () => void;
+  requestGuardian: string;
   onDelete: () => void;
   reason: string;
   schemaFields?: AdminRequestSchemaField[];
   weeklyPlanToday: string | null;
 }>) {
   const terminal = isTerminalChildStatus(child.status);
-  const existingChildHint = terminal ? null : existingChildHintMessage(child);
   const canDeleteFromEnrollment =
     terminal && child.created_student_id === undefined;
   const tenantPath = useTenantAwarePath();
@@ -741,17 +907,19 @@ function ChildInformationCard({
         <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">
           {child.status === "approved" && child.created_student_id ? (
             <>
-              <NavigationLink
-                href={studentHref}
-                className={buttonClassName({
-                  variant: "outline",
-                  size: "md",
-                  className: "gap-2",
-                })}
-              >
-                Kind &amp; Einladung verwalten
-                <ExternalLink className="h-4 w-4" aria-hidden="true" />
-              </NavigationLink>
+              <ActionHint text="Öffnet die Akte des Kindes mit der Einladung für die Eltern.">
+                <NavigationLink
+                  href={studentHref}
+                  className={buttonClassName({
+                    variant: "outline",
+                    size: "md",
+                    className: "gap-2",
+                  })}
+                >
+                  Kind &amp; Einladung verwalten
+                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                </NavigationLink>
+              </ActionHint>
               <AdminChildDataCorrection
                 requestId={requestId}
                 child={child}
@@ -771,9 +939,14 @@ function ChildInformationCard({
             message="Beim Schuljahreswechsel war das Kinderkontingent voll. Darum wurde dieses Kind nicht automatisch verlängert. Bitte entscheiden Sie selbst."
           />
         ) : null}
-        {existingChildHint ? (
-          <Alert type="warning" announce="off" message={existingChildHint} />
-        ) : null}
+        {terminal ? null : (
+          <ExistingChildNotice
+            child={child}
+            requestGuardian={requestGuardian}
+            onRejectDuplicate={onRejectDuplicate}
+            busy={busy}
+          />
+        )}
         {child.status_reason ? (
           <InsetPanel
             framed
@@ -831,6 +1004,7 @@ function ChildInformationCard({
                 type="button"
                 variant="outline_danger"
                 size="md"
+                tooltip="moto fragt vorher nach und löscht dann das Kind aus der Anmeldung."
                 onClick={onDelete}
               >
                 <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -899,25 +1073,28 @@ function ReviewSidebar({
             <DataField label="Eingegangen">{submittedAt}</DataField>
           </DataGrid>
         </div>
-        <a
-          href={statusHref}
-          target="_blank"
-          rel="noreferrer"
-          className={buttonClassName({
-            variant: "outline",
-            size: "md",
-            className: "mt-4 w-full gap-2",
-          })}
-        >
-          Statusseite öffnen
-          <ExternalLink className="h-4 w-4" aria-hidden="true" />
-        </a>
+        <ActionHint text="Öffnet in einem neuen Tab die Statusseite, die die Eltern sehen.">
+          <a
+            href={statusHref}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonClassName({
+              variant: "outline",
+              size: "md",
+              className: "mt-4 w-full gap-2",
+            })}
+          >
+            Statusseite öffnen
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+          </a>
+        </ActionHint>
         {onRestoreRequest ? (
           <Button
             type="button"
             variant="outline"
             size="md"
             className="mt-3 w-full"
+            tooltip="moto fragt vorher nach und öffnet dann zurückgezogene Kinder wieder."
             onClick={onRestoreRequest}
           >
             <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -929,6 +1106,7 @@ function ReviewSidebar({
           variant="outline_danger"
           size="md"
           className="mt-3 w-full"
+          tooltip="moto fragt vorher nach und löscht dann die ganze Anmeldung."
           onClick={onDeleteRequest}
         >
           <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -1032,6 +1210,10 @@ function DecisionPanel({
               size="md"
               variant={getDecisionButtonVariant(action.tone)}
               disabled={busy || isCurrent}
+              disabledReason={
+                isCurrent ? "Das Kind hat diesen Stand schon." : undefined
+              }
+              tooltip={DECISION_HINTS[action.status]}
               onClick={() => onDecide(action.status)}
               className="inline-flex items-center justify-center gap-2"
             >

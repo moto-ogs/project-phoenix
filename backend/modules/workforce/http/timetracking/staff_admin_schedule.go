@@ -33,6 +33,9 @@ func (rs *StaffAdminResource) getSchedule(w http.ResponseWriter, r *http.Request
 	}
 
 	resp, err := rs.buildScheduleResponse(r.Context(), scheduleSubject{ID: staff.ID, WorkTimeModelID: staff.WorkTimeModelID, RotationAnchorDate: staff.RotationAnchorDate})
+	if err == nil {
+		err = rs.withSollKeep(r, staff.ID, resp)
+	}
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
@@ -73,6 +76,10 @@ func (rs *StaffAdminResource) updateSchedule(w http.ResponseWriter, r *http.Requ
 	staff, err := rs.PersonService.StaffByID(r.Context(), staffID)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorNotFound(errors.New("staff not found")))
+		return
+	}
+
+	if !rs.refuseSollKeptByTraeger(w, r, staff.ID) {
 		return
 	}
 
@@ -191,6 +198,7 @@ func (rs *StaffAdminResource) buildCustomScheduleResponse(ctx context.Context, s
 		Entries:            entries,
 		WeeklyTotals:       totals,
 		ValidFrom:          earliest,
+		KeptByTraeger:      len(rows) > 0 && rows[0].KeptByTraeger,
 	}, nil
 }
 

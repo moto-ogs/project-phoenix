@@ -23,8 +23,12 @@ import {
   serviceDays,
 } from "~/components/traeger/care-contract-format";
 import { CareContractChangeCard } from "~/components/traeger/care-contract-change-card";
-import { CareContractNoticeCard } from "~/components/traeger/care-contract-notice-card";
 import {
+  CareContractNoticeCard,
+  NoticeCardJump,
+} from "~/components/traeger/care-contract-notice-card";
+import {
+  CONTRACT_VERSIONS_SECTION_ID,
   CareContractVersions,
   plannedVersion,
 } from "~/components/traeger/care-contract-versions";
@@ -32,6 +36,7 @@ import { CareContractSignatureCard } from "~/components/traeger/care-contract-si
 import { EmailText } from "~/components/traeger/email-text";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
+import { JumpButton } from "~/components/ui/jump-button";
 import {
   OverflowMenu,
   type OverflowMenuItem,
@@ -273,6 +278,9 @@ export default function TraegerVertragPage() {
   const canSend =
     isDraft || contract?.status === "versendet" || contract?.status === "aktiv";
   const lastMail = contract?.mailings[0];
+  const sendBlockedReason = lastMail
+    ? contractSendBlockedReason(lastMail, isDraft)
+    : undefined;
   const party = contract?.parties[0];
   const planned = contract
     ? plannedVersion(contract.versions, today)
@@ -305,6 +313,7 @@ export default function TraegerVertragPage() {
   if (refreshInCard) {
     headMenu.push({
       label: "Versand aktualisieren",
+      description: "Holt den neuesten Stand der Mails an die Eltern.",
       icon: <RotateCw className="h-4 w-4" aria-hidden="true" />,
       onClick: () => {
         if (!refreshing) void refreshDelivery();
@@ -314,6 +323,8 @@ export default function TraegerVertragPage() {
   if (contract && resendInCard && !sendBlocked) {
     headMenu.push({
       label: "Erneut senden",
+      description:
+        "moto fragt vorher nach, dann geht der Vertrag noch einmal an die Eltern.",
       icon: <Send className="h-4 w-4" aria-hidden="true" />,
       onClick: () => setConfirmingSend(true),
     });
@@ -321,6 +332,7 @@ export default function TraegerVertragPage() {
   if (contract && sendInHead) {
     headMenu.push({
       label: "PDF herunterladen",
+      description: "Speichert den Vertrag als PDF auf Ihrem Gerät.",
       icon: <Download className="h-4 w-4" aria-hidden="true" />,
       onClick: () => void download(),
     });
@@ -328,6 +340,7 @@ export default function TraegerVertragPage() {
   if (isDraft) {
     headMenu.push({
       label: "Entwurf verwerfen",
+      description: "moto fragt vorher nach, dann wird der Entwurf gelöscht.",
       icon: <Trash2 className="h-4 w-4" aria-hidden="true" />,
       destructive: true,
       onClick: () => setConfirmDiscard(true),
@@ -369,6 +382,12 @@ export default function TraegerVertragPage() {
                 variant={isDraft ? "success" : "outline"}
                 size="md"
                 disabled={sendBlocked}
+                tooltip={
+                  isDraft
+                    ? "moto fragt vorher nach, dann geht der Vertrag per E-Mail und in die Eltern-App."
+                    : "moto fragt vorher nach, dann geht der Vertrag noch einmal an die Eltern."
+                }
+                disabledReason={sendBlockedReason}
                 onClick={() => setConfirmingSend(true)}
               >
                 <Send className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -383,6 +402,7 @@ export default function TraegerVertragPage() {
                 type="button"
                 variant="outline"
                 size="md"
+                tooltip="Speichert den Vertrag als PDF auf Ihrem Gerät."
                 onClick={() => void download()}
               >
                 <Download className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -466,6 +486,14 @@ export default function TraegerVertragPage() {
             <Alert
               type="info"
               message={`Ab ${formatDate(planned.effectiveFrom)} gilt Version ${planned.number}. Eine Änderung der Betreuung ist freigegeben. Was sich ändert, steht unten unter „Versionen“.`}
+              action={
+                <JumpButton
+                  targetId={CONTRACT_VERSIONS_SECTION_ID}
+                  tooltip="Springt zu den Versionen und zeigt, was sich ändert."
+                >
+                  Zu den Versionen
+                </JumpButton>
+              }
             />
           ) : null}
           <CareContractSignatureCard contract={contract} onChanged={load} />
@@ -597,6 +625,7 @@ export default function TraegerVertragPage() {
                 <SepaMandateStatusCard contractId={contract.id} />
               ) : null}
               <SectionCard
+                id={DELIVERY_SECTION_ID}
                 title="Versand"
                 actions={
                   resendInCard || refreshInCard ? (
@@ -607,6 +636,7 @@ export default function TraegerVertragPage() {
                           variant="surface"
                           size="compact"
                           disabled={refreshing}
+                          tooltip="Holt den neuesten Stand der Mails an die Eltern."
                           onClick={() => void refreshDelivery()}
                         >
                           <RotateCw
@@ -624,6 +654,8 @@ export default function TraegerVertragPage() {
                           variant="surface"
                           size="compact"
                           disabled={sendBlocked}
+                          tooltip="moto fragt vorher nach, dann geht der Vertrag noch einmal an die Eltern."
+                          disabledReason={sendBlockedReason}
                           onClick={() => setConfirmingSend(true)}
                         >
                           <Send className="mr-1.5 h-4 w-4" aria-hidden="true" />
@@ -701,6 +733,7 @@ export default function TraegerVertragPage() {
                       type="submit"
                       variant="primary"
                       disabled={sending || refreshing}
+                      tooltip="Schickt den Vertrag sofort an die neue Adresse."
                     >
                       {sending ? "Wird gesendet …" : "An diese Adresse senden"}
                     </Button>
@@ -777,10 +810,37 @@ function contractMailBadge(mailing: ContractMailing): {
   );
 }
 
+// Why „Vertrag senden“ / „Erneut senden“ is blocked, short enough for the
+// bubble; the hold notice on the page gives the details (#6747).
+function contractSendBlockedReason(
+  mailing: ContractMailing,
+  isDraft: boolean,
+): string | undefined {
+  if (mailing.state === "queued")
+    return "Die letzte Mail wartet noch auf den Versand.";
+  if (isDraft) return undefined;
+  switch (mailing.sendBlock) {
+    case "stopped":
+      return "Die Schule hat Mails an diese Person gestoppt, klären Sie das mit ihr.";
+    case "address":
+    case "provider":
+      return "Die Adresse ist gesperrt, senden Sie unter „Versand“ an eine andere.";
+    case "provider_unknown":
+      return "Die Sperre der Adresse lässt sich gerade nicht prüfen, bitte später versuchen.";
+    case "delayed":
+      return "Die letzte Mail kommt verspätet noch an, neu gesendet käme sie doppelt.";
+    default:
+      return undefined;
+  }
+}
+
 // The reason and the next step as they are now. "Prüfen Sie die Adresse" only
 // fits a mail that came back; a stop or a block has another way out.
+const OTHER_ADDRESS_HINT =
+  "Unter „Versand“ können Sie eine andere Adresse verwenden.";
+
 function contractHoldNotice(mailing: ContractMailing): string | null {
-  const other = "Unter „Versand“ können Sie eine andere Adresse verwenden.";
+  const other = OTHER_ADDRESS_HINT;
   switch (mailing.sendBlock) {
     case "stopped":
       return "Die Schule hat die Mails an diese Person gestoppt. Klären Sie das mit der Schule, oder geben Sie den Vertrag anders weiter.";
@@ -809,6 +869,20 @@ function contractHoldNotice(mailing: ContractMailing): string | null {
   }
 }
 
+/** The card „Versand“, where notices about the mail lead (#7054). */
+const DELIVERY_SECTION_ID = "vertrag-versand";
+
+function DeliveryJump() {
+  return (
+    <JumpButton
+      targetId={DELIVERY_SECTION_ID}
+      tooltip="Springt zu den Mails an die Eltern."
+    >
+      Zum Versand
+    </JumpButton>
+  );
+}
+
 function StatusNotice({
   contract,
 }: Readonly<{ contract: CareContractDetail }>) {
@@ -826,13 +900,23 @@ function StatusNotice({
   if (contract.signature && last?.state !== "failed") return null;
   const held = last ? contractHoldNotice(last) : null;
   if (held) {
-    return <Alert type="warning" message={held} />;
+    return (
+      <Alert
+        type="warning"
+        message={held}
+        // The blocked or refused address can be swapped under „Versand“.
+        action={
+          held.includes(OTHER_ADDRESS_HINT) ? <DeliveryJump /> : undefined
+        }
+      />
+    );
   }
   if (last?.state === "failed") {
     return (
       <Alert
         type="warning"
         message={`Die Mail an ${last.recipient} kam nicht an. Prüfen Sie die Adresse. Unter „Versand“ können Sie eine andere Adresse verwenden.`}
+        action={<DeliveryJump />}
       />
     );
   }
@@ -841,6 +925,7 @@ function StatusNotice({
       <Alert
         type="info"
         message={`Gekündigt. Der Vertrag endet am ${formatDate(contract.endsOn)}. Bis dahin gilt die gebuchte Betreuung. Die Bestätigung steht unter „Vertrag beenden“.`}
+        action={contract.concluded ? <NoticeCardJump /> : undefined}
       />
     );
   }
@@ -849,6 +934,7 @@ function StatusNotice({
       <Alert
         type="warning"
         message="Außerordentlich gekündigt. Prüfen Sie den Grund der Eltern und legen Sie unter „Vertrag beenden“ fest, wann der Vertrag endet. Bis dahin gilt die gebuchte Betreuung."
+        action={contract.concluded ? <NoticeCardJump /> : undefined}
       />
     );
   }
@@ -883,6 +969,7 @@ function StatusNotice({
       <Alert
         type="info"
         message="Die Mail wartet auf den Versand. Mit „Versand aktualisieren“ unter „Versand“ prüfen Sie den Stand."
+        action={<DeliveryJump />}
       />
     );
   }
@@ -891,6 +978,7 @@ function StatusNotice({
       <Alert
         type="warning"
         message="Das Ergebnis des Mail-Versands ist unbekannt. Mit „Versand aktualisieren“ unter „Versand“ prüfen Sie den Stand."
+        action={<DeliveryJump />}
       />
     );
   }

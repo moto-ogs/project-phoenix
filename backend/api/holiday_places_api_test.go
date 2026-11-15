@@ -151,10 +151,11 @@ func (f reviewFixture) hostParticipants(t *testing.T, hostSchoolID, weekID int64
 // placement at sending (waitlisted bookings), the order of the waiting list,
 // the contribution without waiting bookings (chain filter), the host
 // school's list without them (the placement condition of migration
-// 1.15.878) and the move up with its mail and new contribution.
+// 1.15.878) and the move up with its mail and new contribution. Its weeks
+// lie in 2099: the host school's list closes after a week's last day.
 func TestHolidayPlacesGoInOrderOfArrivalAndMoveUpOnCancellation(t *testing.T) {
 	t.Parallel()
-	f := newReviewFixture(t, "Träger Plätze Reihenfolge")
+	f := newReviewFixtureOf(t, "Träger Plätze Reihenfolge", julyHolidays2099)
 	first, second := f.offer.Weeks[0], f.offer.Weeks[1]
 	// Lia and Ben of the fixture hold both places of the first week.
 	change := f.setCapacity(t, first.ID, 2)

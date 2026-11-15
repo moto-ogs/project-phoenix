@@ -47,7 +47,7 @@ func (s *staffDeviations) ApplyDeviations(ctx context.Context, instanceID int64,
 
 	// Past blocks are historical record; no deviation — including a cancellation
 	// — may rewrite them. Guard before the exclusive cancel branch (#1840).
-	if instance.Date.Before(calendar.TodayDate()) {
+	if instance.Date.Before(calendar.DateFromTime(s.now())) {
 		return nil, timetable.DeviationBadRequest(msgInstanceInPast).WithCode(timetable.CodeInstanceInPast)
 	}
 
@@ -133,7 +133,7 @@ func (s *staffDeviations) cancelDeviation(ctx context.Context, instanceID int64,
 	}
 	// A move to a past day would rewrite history; the initial guard ran against a
 	// possibly-stale read, so re-check under the lock.
-	if locked.Date.Before(calendar.TodayDate()) {
+	if locked.Date.Before(calendar.DateFromTime(s.now())) {
 		return nil, timetable.DeviationBadRequest(msgInstanceInPast).WithCode(timetable.CodeInstanceInPast)
 	}
 	cancelled, err := s.deps.Lifecycle.CancelBlock(ctx, ports.DeviationCancellation{

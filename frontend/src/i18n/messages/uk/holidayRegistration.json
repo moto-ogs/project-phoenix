@@ -183,6 +183,13 @@
   "dayLimitOver": "Обрано днів: {count}. Це забагато. Оберіть менше днів.",
   "summaryDays": "Дні: {days}",
   "contributionDays": "днів: {count}",
+  "weeksLunchText": "До кожного тижня можна додати обід. Він оплачується окремо.",
+  "lunchLabel": "З обідом",
+  "lunchHint": "{count, plural, one {# обід за {price}} few {# обіди по {price}, разом {total}} many {# обідів по {price}, разом {total}} other {# обіду по {price}, разом {total}}}",
+  "lunchHintDays": "{price} за обід. Дитина обідає кожного вибраного дня.",
+  "summaryLunch": "З обідом",
+  "contributionLunch": "Обід",
+  "contributionLunchCount": "Обід · {count, plural, one {# обід за {price}} few {# обіди по {price}} many {# обідів по {price}} other {# обіду по {price}}}",
   "dayWithoutCare": "{date} догляду немає ({name}).",
   "noCareDayAria": "{day}, догляду немає",
   "account": {
@@ -203,5 +210,18 @@
     "parent": "Батько або мати",
     "guardian": "Опікун",
     "relative": "Родич"
-  }
+  },
+  "accountHintLoginTooltip": "Відкриває вхід, після цього ви повернетеся сюди.",
+  "addChildHint": "Додає ще одну дитину до цієї заявки.",
+  "removeChildHint": "Вилучає цю дитину із заявки, її дані буде втрачено.",
+  "addPickupHint": "Додає ще одну особу для екстреного зв'язку або забирання дитини.",
+  "removeContactHint": "Вилучає цю особу із заявки.",
+  "toSummaryHint": "Показує всі дані для перевірки, поки без надсилання.",
+  "contributionRetryHint": "Знову розраховує внесок.",
+  "submitHint": "Надсилає заявку організатору, який вирішує щодо місця.",
+  "submitBindingHint": "Обов'язково записує дитину в організатора, місце ще не підтверджене.",
+  "submitCaptchaPending": "Спочатку пройдіть перевірку безпеки.",
+  "submitUploadsPending": "Зачекайте, доки завантажаться всі файли.",
+  "doneToRegistrationsHint": "Відкриває список ваших заявок на канікули.",
+  "doneToStatusHint": "Показує, на якому етапі організатор розглядає вашу заявку."
 }

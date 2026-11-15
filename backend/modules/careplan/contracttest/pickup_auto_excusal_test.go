@@ -91,7 +91,7 @@ func setupAutoExcusalHarnessWithExtensions(t *testing.T, withBaseline, withExten
 	syncer := newPickupExcusal(t, db, repos.CarePlan(), newPickupBaselineService(repos.CarePlan(), approvedOfferingProjection(t)), tt, withExtensions)
 	pickupStudents, err := owners.PickupPlanStudents(owners.MustNewPeopleDirectory(testpkg.MustDatabase(db)))
 	require.NoError(t, err)
-	svc, err := compose.NewPickupSchedules(db, repos.CarePlan(), newPickupBaselineService(repos.CarePlan(), approvedOfferingProjection(t)), syncer, pickupStudents, nil)
+	svc, err := compose.NewPickupSchedules(db, repos.CarePlan(), newPickupBaselineService(repos.CarePlan(), approvedOfferingProjection(t)), syncer, pickupStudents, nil, nil)
 	require.NoError(t, err)
 	partial, err := compose.NewPartialAbsences(db, repos.CarePlan(), api.NewStudentPresenceForTests(testpkg.NewDatabase(t, db)), syncer)
 	require.NoError(t, err)
@@ -564,7 +564,7 @@ func TestAutoExcusal_FullDayStatusCoexistsAndReleaseReplays(t *testing.T) {
 	// Clearing the sick day (production path: MarkClearedByID sets cleared_at,
 	// then releases the slots) restores its rows — and must replay the still
 	// active pickup cutoff instead of leaving the late blocks expected.
-	err = repos.StudentStatusDay.MarkClearedByID(h.ctx, statusDay.ID, time.Now(), absencerecords.StudentStatusSourceManual)
+	err = repos.StudentStatusDay.MarkClearedByID(h.ctx, statusDay.ID, time.Now(), absencerecords.StudentStatusSourceManual, nil)
 	require.NoError(t, err)
 
 	assert.Equal(t, studentpresence.SessionAttendanceExpected, h.attendance(t, h.beforeRow).Status)

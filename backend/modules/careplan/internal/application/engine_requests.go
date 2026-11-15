@@ -41,12 +41,12 @@ type RequestStore interface {
 	CloseOpenCareRequests(context.Context, []int64, string, *int64, time.Time) (int64, domain.OperationStats, error)
 }
 
-func (s *Service) observeRequest(operation string, started time.Time, stats domain.OperationStats, err error) {
-	s.observe(ports.Observation{Operation: operation, Duration: time.Since(started), Stats: stats, Err: err})
+func (s *Service) observeRequest(operation string, elapsed time.Duration, stats domain.OperationStats, err error) {
+	s.observe(ports.Observation{Operation: operation, Duration: elapsed, Stats: stats, Err: err})
 }
 
 func requestValue[T any](ctx context.Context, e interface {
-	observeRequest(string, time.Time, domain.OperationStats, error)
+	observeRequest(string, time.Duration, domain.OperationStats, error)
 }, operation string, call func(ctx context.Context) (T, domain.OperationStats, error)) (result T, err error) {
 	started := time.Now()
 	var stats domain.OperationStats
@@ -54,7 +54,7 @@ func requestValue[T any](ctx context.Context, e interface {
 		result, stats, err = call(txCtx)
 		return err
 	})
-	e.observeRequest(operation, started, stats, err)
+	e.observeRequest(operation, time.Since(started), stats, err)
 	return result, err
 }
 
@@ -66,7 +66,7 @@ func requestCommand(e *Service, ctx context.Context, operation string, call func
 		stats, commandErr = call(txCtx)
 		return commandErr
 	})
-	e.observeRequest(operation, started, stats, err)
+	e.observeRequest(operation, time.Since(started), stats, err)
 	return err
 }
 
@@ -77,6 +77,6 @@ func requestCommandValue[T any](e *Service, ctx context.Context, operation strin
 		result, stats, err = call(txCtx)
 		return err
 	})
-	e.observeRequest(operation, started, stats, err)
+	e.observeRequest(operation, time.Since(started), stats, err)
 	return result, err
 }

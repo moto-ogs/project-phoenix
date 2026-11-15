@@ -20,6 +20,10 @@ var (
 	// student/person validators. Mapped to 400, not 500 — submit/edit now
 	// validate up front, so this is defense-in-depth for legacy rows.
 	ErrDecisionInvalidData = errors.New("enrollment request data is invalid")
+	// ErrDecisionReviewerStaffRequired marks an approval whose weekly pickup
+	// or arrival rows need a staff author, while the reviewing account has no
+	// staff profile. Another staff member has to approve (#6839).
+	ErrDecisionReviewerStaffRequired = errors.New("approving weekly schedules requires a staff profile")
 	// ErrGuardianAccountMismatch marks an approval whose authenticated
 	// submitter account (request.guardian_account_id) conflicts with the
 	// guardian profile the request's email resolves to: the email already
@@ -68,11 +72,22 @@ type DecideInput struct {
 	SuppressParentEmail        bool
 	SuppressGuardianInvitation bool
 	// ExistingStudentID and CreateNewStudent are the office's answer when the
-	// child of an open or linked_parents phase may already be enrolled
-	// (#6053): renew that student, or create a new child. At most one is set,
-	// and only for an approval.
+	// child of an open, linked_parents or new_students phase may already be
+	// enrolled (#6053, #6247): renew that student, or create a new child. At
+	// most one is set, and only for an approval.
 	ExistingStudentID *int64
 	CreateNewStudent  bool
+	// ShownCandidateIDs are the enrolled children the office saw when it
+	// chose CreateNewStudent. The approval reads the candidates again under
+	// the child's identity lock and refuses with ErrChildPossiblyEnrolled when
+	// one is missing from this list, e.g. a child another approval created
+	// meanwhile (#6247).
+	ShownCandidateIDs []int64
+	// AcceptOfferingChanges is the office's confirmation that the approval
+	// books the offerings' current catalog terms although price, days or
+	// activity changed since the parents submitted (#6837). Without it such
+	// an approval is refused with ErrOfferingTermsChanged.
+	AcceptOfferingChanges bool
 }
 
 // DecideOutcome is what Decide returns: the refreshed child plus the
@@ -124,6 +139,20 @@ type ExistingChildCandidate struct {
 	LastName    string
 	DateOfBirth *Date
 	SchoolClass string
+	// PhaseRequest is the other active request of the same phase that
+	// already created or renews the candidate, nil when none does. The
+	// office cannot renew such a candidate a second time in the phase; the
+	// enrollment is a duplicate of that request (#6247).
+	PhaseRequest *CandidatePhaseRequest
+}
+
+// CandidatePhaseRequest names the active request of a phase that holds an
+// enrolled child: which request, whose, and how far it got.
+type CandidatePhaseRequest struct {
+	RequestID         int64
+	ChildStatus       string
+	GuardianFirstName string
+	GuardianLastName  string
 }
 
 // ChildOfferingRow is one care-offering selection for a child, as
@@ -155,6 +184,12 @@ type ChildOfferingRow struct {
 	// approved change scheduled for a future date. Those rows are
 	// informational: they describe what will be booked, not what is.
 	StartsLater bool
+	// SubmittedTerms are the catalog terms the parents submitted this
+	// offering under, nil without a snapshot (#6837). ChangedTerms names the
+	// booking-relevant terms the catalog changed since (OfferingTerm*); an
+	// approval books the current terms only after the office confirms them.
+	SubmittedTerms *OfferingTerms
+	ChangedTerms   []OfferingTermChange
 }
 
 // ChildOfferingSet separates the two questions a reader asks about a

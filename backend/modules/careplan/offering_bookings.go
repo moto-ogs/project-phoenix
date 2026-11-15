@@ -76,14 +76,14 @@ type CareOfferingBookingRestore struct {
 // lock remains held while it snapshots and ends care across owners.
 func (m *OfferingBookings) LockCareOfferingBookings(ctx context.Context, childIDs []int64) (err error) {
 	started := time.Now()
-	defer func() { m.observe("lock", "command", started, int64(len(childIDs)), -1, err) }()
+	defer func() { m.observe("lock", "command", time.Since(started), int64(len(childIDs)), -1, err) }()
 
 	return m.engine.LockCareOfferingBookings(ctx, childIDs)
 }
 
 func (m *OfferingBookings) EndCareOfferingBookings(ctx context.Context, childIDs []int64, until Date) (changed int64, err error) {
 	started := time.Now()
-	defer func() { m.observe("end", "command", started, int64(len(childIDs)), changed, err) }()
+	defer func() { m.observe("end", "command", time.Since(started), int64(len(childIDs)), changed, err) }()
 
 	if _, err := time.Parse(time.DateOnly, string(until)); err != nil {
 		return 0, fmt.Errorf("invalid care end: %w", err)
@@ -97,7 +97,7 @@ func (m *OfferingBookings) EndCareOfferingBookings(ctx context.Context, childIDs
 
 func (m *OfferingBookings) RestoreCareOfferingBookings(ctx context.Context, restores []CareOfferingBookingRestore) (restored int64, err error) {
 	started := time.Now()
-	defer func() { m.observe("restore", "command", started, int64(len(restores)), restored, err) }()
+	defer func() { m.observe("restore", "command", time.Since(started), int64(len(restores)), restored, err) }()
 
 	for _, restore := range restores {
 		if restore.Booking.ID <= 0 {
@@ -149,7 +149,7 @@ func NewOfferingBookings(engine offeringBookingEngine, transactions interface {
 
 func (m *OfferingBookings) RecordCareOfferingBookings(ctx context.Context, childID int64, bookings []CareOfferingBooking) (err error) {
 	started := time.Now()
-	defer func() { m.observe("record", "command", started, int64(len(bookings)), -1, err) }()
+	defer func() { m.observe("record", "command", time.Since(started), int64(len(bookings)), -1, err) }()
 
 	if err := validateCareOfferingBookings(childID, bookings); err != nil {
 		return err
@@ -163,7 +163,7 @@ func (m *OfferingBookings) RecordCareOfferingBookings(ctx context.Context, child
 // It does not change Enrollment's submitted choices.
 func (m *OfferingBookings) ReplaceCareOfferingBookings(ctx context.Context, childID int64, bookings []CareOfferingBooking) (err error) {
 	started := time.Now()
-	defer func() { m.observe("replace", "command", started, int64(len(bookings)), -1, err) }()
+	defer func() { m.observe("replace", "command", time.Since(started), int64(len(bookings)), -1, err) }()
 
 	if err := validateCareOfferingBookings(childID, bookings); err != nil {
 		return err
@@ -219,7 +219,7 @@ func validateCareOfferingBookings(childID int64, bookings []CareOfferingBooking)
 // Earlier intervals are retained, with exclusive ends at the switch date.
 func (m *OfferingBookings) ScheduleCareOfferingBookings(ctx context.Context, childID int64, effectiveFrom Date, bookings []CareOfferingBooking) (err error) {
 	started := time.Now()
-	defer func() { m.observe("schedule", "command", started, int64(len(bookings)), -1, err) }()
+	defer func() { m.observe("schedule", "command", time.Since(started), int64(len(bookings)), -1, err) }()
 
 	if _, err := time.Parse(time.DateOnly, string(effectiveFrom)); err != nil {
 		return fmt.Errorf("invalid booking switch date: %w", err)
@@ -243,7 +243,7 @@ func (m *OfferingBookings) ScheduleCareOfferingBookings(ctx context.Context, chi
 
 func (m *OfferingBookings) CareOfferingBookingsForPhase(ctx context.Context, phaseID int64) (rows []CareOfferingBooking, err error) {
 	started := time.Now()
-	defer func() { m.observe("for_phase", "query", started, 0, int64(len(rows)), err) }()
+	defer func() { m.observe("for_phase", "query", time.Since(started), 0, int64(len(rows)), err) }()
 
 	if phaseID <= 0 {
 		return nil, fmt.Errorf("phase_id is required")
@@ -256,7 +256,9 @@ func (m *OfferingBookings) CareOfferingBookingsForPhase(ctx context.Context, pha
 
 func (m *OfferingBookings) CareOfferingBookingsForOfferings(ctx context.Context, offeringIDs []int64) (rows []CareOfferingBooking, err error) {
 	started := time.Now()
-	defer func() { m.observe("for_offerings", "query", started, int64(len(offeringIDs)), int64(len(rows)), err) }()
+	defer func() {
+		m.observe("for_offerings", "query", time.Since(started), int64(len(offeringIDs)), int64(len(rows)), err)
+	}()
 
 	if len(offeringIDs) == 0 {
 		return []CareOfferingBooking{}, nil
@@ -269,7 +271,7 @@ func (m *OfferingBookings) CareOfferingBookingsForOfferings(ctx context.Context,
 
 func (m *OfferingBookings) CountCareOfferingBookings(ctx context.Context, childIDs []int64) (count int, err error) {
 	started := time.Now()
-	defer func() { m.observe("count", "query", started, int64(len(childIDs)), int64(count), err) }()
+	defer func() { m.observe("count", "query", time.Since(started), int64(len(childIDs)), int64(count), err) }()
 
 	if len(childIDs) == 0 {
 		return 0, nil
@@ -282,7 +284,9 @@ func (m *OfferingBookings) CountCareOfferingBookings(ctx context.Context, childI
 
 func (m *OfferingBookings) CareOfferingBookingHistory(ctx context.Context, childIDs []int64) (rows []CareOfferingBooking, err error) {
 	started := time.Now()
-	defer func() { m.observe("history", "query", started, int64(len(childIDs)), int64(len(rows)), err) }()
+	defer func() {
+		m.observe("history", "query", time.Since(started), int64(len(childIDs)), int64(len(rows)), err)
+	}()
 
 	if len(childIDs) == 0 {
 		return []CareOfferingBooking{}, nil
@@ -295,7 +299,7 @@ func (m *OfferingBookings) CareOfferingBookingHistory(ctx context.Context, child
 
 func (m *OfferingBookings) CareOfferingBookingsAtDates(ctx context.Context, dates map[int64]Date) (rows []CareOfferingBooking, err error) {
 	started := time.Now()
-	defer func() { m.observe("at_dates", "query", started, int64(len(dates)), int64(len(rows)), err) }()
+	defer func() { m.observe("at_dates", "query", time.Since(started), int64(len(dates)), int64(len(rows)), err) }()
 
 	if len(dates) == 0 {
 		return []CareOfferingBooking{}, nil

@@ -1,4 +1,6 @@
 "use client";
+
+import { Lock } from "lucide-react";
 import { parseISODate, berlinTodayISO } from "~/lib/date-helpers";
 
 import {
@@ -154,6 +156,10 @@ export function ArbeitszeitmodellTab({
   }
 
   const today = parseISODate(berlinTodayISO());
+  // Führt ein Arbeitsvertrag des Trägers das Soll (#4706), liest die Schule
+  // es nur; Ändern kann es die Personalverwaltung des Trägers.
+  const keptByTraeger = schedule.keptByTraeger === true;
+  const editable = canEdit && !keptByTraeger;
   const weeklyTotal = schedule.weeklyTotals.reduce((s, m) => s + m, 0);
   const weeksLabel =
     schedule.rotationLength > 1
@@ -189,7 +195,7 @@ export function ArbeitszeitmodellTab({
   // Nur der aufgelöste Sollstatus begründet die Warnung (#6887).
   const scheduleEmpty = !schedule.model && schedule.entries.length === 0;
   const missingTargetText = `Ohne Soll zählen Krankheit, Urlaub und Fortbildung 0 Stunden. Gearbeitete Zeit zählt ganz als Plus. ${
-    canEdit
+    editable
       ? "Tragen Sie mit „Bearbeiten“ die Wochenstunden aus dem Arbeitsvertrag ein."
       : MISSING_TARGET_OWNER
   }`;
@@ -203,13 +209,27 @@ export function ArbeitszeitmodellTab({
           message={`In diesem Monat gilt kein Soll. ${missingTargetText}`}
         />
       ) : null}
+      {keptByTraeger ? (
+        <InsetPanel className="flex items-start gap-2">
+          <Lock
+            className="mt-0.5 h-4 w-4 shrink-0 text-gray-400"
+            aria-hidden="true"
+          />
+          <p className="text-sm text-gray-600">
+            Das Soll führt der Träger im Arbeitsvertrag, auch das Soll in
+            Ferienwochen. Ändern kann es die Personalverwaltung des Trägers.
+          </p>
+        </InsetPanel>
+      ) : null}
       <SectionCard
         title={
           scheduleEmpty
             ? "Arbeitszeitmodell"
             : schedule.mode === "template" && schedule.model
               ? schedule.model.name
-              : "Eigenes Modell"
+              : keptByTraeger
+                ? "Soll aus dem Arbeitsvertrag"
+                : "Eigenes Modell"
         }
         headingLevel={3}
         description={
@@ -220,12 +240,13 @@ export function ArbeitszeitmodellTab({
               )} / Woche`
         }
         action={
-          canEdit ? (
+          editable ? (
             <Button
               type="button"
               variant="outline"
               size="md"
               onClick={() => setEditing(true)}
+              tooltip="Öffnet das Arbeitszeitmodell dieser Person zum Ändern."
             >
               Bearbeiten
             </Button>
@@ -243,7 +264,7 @@ export function ArbeitszeitmodellTab({
             description={
               hasTarget === false
                 ? missingTargetText
-                : canEdit
+                : editable
                   ? "Tragen Sie mit „Bearbeiten“ die Wochenstunden aus dem Arbeitsvertrag ein."
                   : "Das Arbeitszeitmodell trägt die Leitung ein."
             }
@@ -296,7 +317,7 @@ export function ArbeitszeitmodellTab({
         )}
       </SectionCard>
 
-      <SonderarbeitszeitenSection staffId={staffId} canEdit={canEdit} />
+      <SonderarbeitszeitenSection staffId={staffId} canEdit={editable} />
 
       <FourWeekPreview staffId={staffId} schedule={schedule} today={today} />
     </div>
@@ -650,10 +671,14 @@ function ModeChoice({
   );
 }
 
-const MANAGE_TEMPLATES_LINK = {
-  href: "/database/work-time-models",
-  label: "Arbeitszeitmodelle verwalten",
-} as const;
+function ManageTemplatesLink() {
+  return (
+    <CatalogManageLink
+      href="/database/work-time-models"
+      label="Arbeitszeitmodelle verwalten"
+    />
+  );
+}
 
 function TemplateSelector({
   templates: allTemplates,
@@ -679,7 +704,7 @@ function TemplateSelector({
           Es gibt noch keine Vorlagen. Legen Sie eine unter „Arbeitszeitmodelle“
           an. Oder speichern Sie ein eigenes Modell als Vorlage.
         </InsetPanel>
-        <CatalogManageLink {...MANAGE_TEMPLATES_LINK} />
+        <ManageTemplatesLink />
       </div>
     );
   }
@@ -705,7 +730,7 @@ function TemplateSelector({
         placeholder="Bitte wählen…"
       />
       {selected && <TemplatePreviewBlock model={selected} />}
-      <CatalogManageLink {...MANAGE_TEMPLATES_LINK} />
+      <ManageTemplatesLink />
     </div>
   );
 }

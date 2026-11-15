@@ -51,6 +51,9 @@ type StaffTargetOverride struct {
 	DailyMinutes   *int   `json:"daily_minutes"`
 	WeekdayMinutes []int  `json:"weekday_minutes"`
 	CreatedBy      *int64 `json:"created_by,omitempty"`
+	// KeptByTraeger is true for the Ferien-Soll of a contract the Träger
+	// keeps (#4706): the school sees the range but does not change it.
+	KeptByTraeger bool `json:"kept_by_traeger"`
 }
 
 // StaffTargetOverrideFields is the writable part of a Sonderarbeitszeit.

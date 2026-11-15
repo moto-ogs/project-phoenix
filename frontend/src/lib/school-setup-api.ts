@@ -6,7 +6,7 @@ const logger = createLogger({ component: "SchoolSetupApi" });
 
 /** Einrichtungs-Assistent für neue Schulen (#2832). */
 export type SchoolSetupStepKey =
-  "team" | "rooms" | "groups" | "students" | "guardians";
+  "team" | "rooms" | "groups" | "students" | "guardians" | "worktime";
 
 export interface SchoolSetupStep {
   key: SchoolSetupStepKey;
@@ -37,6 +37,7 @@ const STEP_KEYS: readonly SchoolSetupStepKey[] = [
   "groups",
   "students",
   "guardians",
+  "worktime",
 ];
 
 interface BackendStep {

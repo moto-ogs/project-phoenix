@@ -10,7 +10,7 @@ import {
 } from "react";
 // eslint-disable-next-line no-restricted-imports -- parent routes are not tenant-scoped
 import { redirect, useSearchParams } from "next/navigation";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Alert } from "~/components/ui/alert";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
@@ -26,9 +26,16 @@ import { PasswordResetModal } from "~/components/auth/password-reset-modal";
 import { LanguageSwitcher } from "~/components/parent/language-switcher";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError, unavailableApiError } from "~/lib/api-error";
-import { LOGIN_REFUSALS } from "~/components/auth/credential-error";
-import { LOGIN_RATE_LIMITED } from "~/lib/login-refusal";
+import { credentialError } from "~/components/auth/credential-error";
+import {
+  MFAChallengeForm,
+  type MFAChallengeCopy,
+} from "~/components/auth/mfa-challenge-form";
+import { signOutStaleSession } from "~/lib/login-session-notice";
+import { portalPasswordLogin } from "~/lib/portal-password-login";
+import type { MFAStep } from "~/lib/sign-in-answer";
 import { createLogger } from "~/lib/logger";
+import type { ErrorCode } from "~/lib/error-codes.generated";
 import { requestParentPasswordReset } from "~/lib/auth-api";
 import { parentPath } from "~/lib/parent-url";
 import { holidayRegistrationReturnPath } from "~/lib/parent-holiday-registration";
@@ -36,17 +43,8 @@ import { portalNotBookedExplanation } from "~/lib/portal-not-booked";
 import { normalizeLocale } from "~/i18n/locales";
 import { clientEnv } from "~/env.client";
 import { Button } from "~/components/ui/button";
-import { PORTAL_ROUTES } from "~/lib/portal-paths";
 
 const logger = createLogger({ component: "ParentLoginPage" });
-
-/**
- * Wie lange nach einem erfolgreichen signIn auf die publizierte Session
- * gewartet wird, bevor das Formular wieder freigegeben wird. Der Abruf geht an
- * die eigene Route (/api/parent/auth/session), zehn Sekunden sind also
- * reichlich und trotzdem kurz genug, dass niemand vor einem toten Screen sitzt.
- */
-const SESSION_HANDOFF_TIMEOUT_MS = 10_000;
 
 /**
  * Absolute URL der Schul-Anmeldung. Anders als das Elternportal liegt das
@@ -63,19 +61,55 @@ function staffLoginUrl(): string {
 }
 
 /**
- * The form error of a refused login. The provider names the backend's code
- * (server/auth/portals.ts); Auth.js's own "credentials" code, for a login that
- * named none, reads as wrong credentials. Any other Auth.js error is a fault
- * on our side.
+ * The 401 refusals of the parents' password and code steps: a wrong password
+ * names the care code the page has always shown (portalauth ParentLoginRules).
  */
-function loginRefusal(error: string, code: string | undefined): ApiError {
-  if (error !== "CredentialsSignin") {
-    return new ApiError("parent login failed", 500, { code: "general.server" });
-  }
-  const refusal =
-    LOGIN_REFUSALS.find((known) => known === code) ??
-    "identity.invalid_credentials";
-  return new ApiError("parent login refused", undefined, { code: refusal });
+const PARENT_LOGIN_REFUSALS = [
+  "care.invalid_credentials",
+  "identity.invalid_credentials",
+  "identity.session_account_inactive",
+] as const;
+
+/**
+ * The refusals that mean "this address and password do not match". Only
+ * these lead from the error to the password reset: an inactive account gets
+ * no new password that way (#3376).
+ */
+const WRONG_PASSWORD_REFUSALS: readonly ErrorCode[] = [
+  "care.invalid_credentials",
+  "identity.invalid_credentials",
+];
+
+type ParentSignInTranslate = ReturnType<typeof useTranslations<"parentSignIn">>;
+
+/** The code step in the parent's language (#7051). */
+function challengeCopy(t: ParentSignInTranslate): MFAChallengeCopy {
+  return {
+    back: t("challenge.back"),
+    backLabel: t("challenge.backLabel"),
+    title: t("challenge.title"),
+    sentTo: (email) =>
+      t.rich("challenge.sentTo", {
+        email: "",
+        b: () => <span className="font-medium text-gray-800">{email}</span>,
+      }),
+    codeLabel: t("challenge.codeLabel"),
+    digitLabel: (position) => t("challenge.digitLabel", { position }),
+    checking: t("challenge.checking"),
+    autoCheck: t("challenge.autoCheck"),
+    question: t("challenge.question"),
+    remember: t("challenge.remember"),
+    rememberHint: (days) => t("challenge.rememberHint", { days }),
+    once: t("challenge.once"),
+    onceHint: t("challenge.onceHint"),
+    enterCodeFirst: t("challenge.enterCodeFirst"),
+    removeDevicesHint: t("challenge.removeDevicesHint"),
+    resend: t("challenge.resend"),
+    resendIn: (seconds) => t("challenge.resendIn", { seconds }),
+    resending: t("challenge.resending"),
+    verifyObject: t("challenge.verifyObject"),
+    resendObject: t("challenge.resendObject"),
+  };
 }
 
 export default function ParentLoginPage() {
@@ -92,6 +126,11 @@ function ParentLoginForm() {
   const tErrorCatalog = useTranslations("errorCatalog");
   const tAuthShell = useTranslations("parentAuthShell");
   const tReset = useTranslations("parentPasswordResetModal");
+  const tSignIn = useTranslations("parentSignIn");
+  const mfaCopy = useMemo(() => challengeCopy(tSignIn), [tSignIn]);
+  // Where the account has the code by e-mail switched on (#7051), the
+  // password leads to this second step.
+  const [mfaStep, setMfaStep] = useState<MFAStep | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   // Fehler laufen über den gemeinsamen Weg (#2518): Katalogtext je Code im
@@ -107,6 +146,9 @@ function ParentLoginForm() {
   // Keine Schule des Kontos nutzt das Elternportal (#4895): kein Fehler der
   // Eingabe, die Schule entscheidet.
   const [portalNotBooked, setPortalNotBooked] = useState(false);
+  // Address and password did not match: the error offers the reset with
+  // the address already typed (#7106).
+  const [passwordRefused, setPasswordRefused] = useState(false);
   const locale = normalizeLocale(useLocale());
   const [isLoading, setIsLoading] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -121,12 +163,10 @@ function ParentLoginForm() {
   // Seite serverseitig vorgerendert wird.
   const [staffUrl, setStaffUrl] = useState<string | null>(null);
   useEffect(() => setStaffUrl(staffLoginUrl()), []);
-  // True zwischen erfolgreichem signIn und der publizierten Session. Steuert
-  // den Watchdog weiter unten.
-  const [awaitingSession, setAwaitingSession] = useState(false);
+  // Gesetzt, sobald die BFF die Sitzung installiert hat: Die Seite wechselt
+  // in die App und bleibt bis dahin gesperrt.
+  const [awaitingRedirect, setAwaitingRedirect] = useState(false);
   const { data: session, status } = useSession();
-  // Ref prevents re-triggering signOut (not in effect deps → no loop).
-  // Separate state controls the loading spinner for the UI.
   const cleanupStartedRef = useRef(false);
   const [cleanupAttempt, setCleanupAttempt] = useState(0);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
@@ -150,70 +190,39 @@ function ParentLoginForm() {
     isRedirectingToParent ||
     (status === "authenticated" && session?.error !== undefined);
 
-  // Redirect if already authenticated as parent, or clear stale sessions.
   useEffect(() => {
-    const check = async () => {
-      if (
-        status === "authenticated" &&
-        session?.error &&
-        !cleanupStartedRef.current
-      ) {
-        cleanupStartedRef.current = true;
-        setIsCleaningUp(true);
-        try {
-          await signOut({ redirect: false });
-        } catch (err) {
-          cleanupStartedRef.current = false;
-          logger.warn("parent_login_stale_session_cleanup_failed", {
-            error: err instanceof Error ? err.message : String(err),
-          });
-          // The stale session keeps the form locked: say so, and let
-          // Wiederholen run the cleanup again.
-          void showFormError(unavailableApiError(err), {
-            object: t("errorObject"),
-            retry: () => setCleanupAttempt((current) => current + 1),
-          });
-        }
-        setIsCleaningUp(false);
-        return;
-      }
-    };
-    void check();
+    const cleanup = signOutStaleSession({
+      status,
+      session,
+      started: cleanupStartedRef,
+      logger,
+      // The stale session keeps the form locked: say so, and let
+      // Wiederholen run the cleanup again.
+      onFailure: (cause) => {
+        setPasswordRefused(false);
+        void showFormError(unavailableApiError(cause), {
+          object: t("errorObject"),
+          retry: () => setCleanupAttempt((current) => current + 1),
+        });
+      },
+    });
+    if (!cleanup) return;
+    setIsCleaningUp(true);
+    void cleanup.then(() => setIsCleaningUp(false));
   }, [status, session, cleanupAttempt, showFormError, t]);
 
-  // Watchdog für die Übergabe von signIn an die Session. signIn kann ok
-  // melden, ohne dass danach je eine Session ankommt: NextAuth holt sie per
-  // fetchData(), und das schluckt JEDEN Fetch-Fehler und liefert null
-  // (next-auth/lib/client.js). Ein einzelner wackliger GET auf
-  // /api/parent/auth/session lässt status damit auf "unauthenticated" stehen,
-  // der redirect() unten feuert nie. Ohne diesen Watchdog bliebe das Formular
-  // mit "Anmeldung läuft..." dauerhaft gesperrt und ohne Fehlermeldung
-  // zurück, und nur ein manueller Reload käme da wieder raus.
-  useEffect(() => {
-    if (!awaitingSession) return;
-    const timer = setTimeout(() => {
-      setAwaitingSession(false);
-      setIsLoading(false);
-      // Die Session kam nicht an: die Verbindung hakt, ein neuer Versuch hilft.
-      void showFormError(unavailableApiError(), {
-        object: t("errorObject"),
-        retry: () => latestSubmitRef.current(),
-      });
-    }, SESSION_HANDOFF_TIMEOUT_MS);
-    return () => clearTimeout(timer);
-  }, [awaitingSession, showFormError, t]);
-
-  // Einzige Weiterleitung nach erfolgreichem Login. Sie greift, sobald NextAuth
-  // die neue Session veröffentlicht — auch für den Fall "bereits angemeldet,
-  // ruft /login direkt auf". handleSubmit darf daher NICHT zusätzlich
-  // router.push() feuern: zwei gleichzeitige Navigationen auf dasselbe Ziel
-  // lassen den App-Router-State als pending Thenable stehen, und das
-  // bedingte `use(state)` in Next' useActionQueue rendert dann eine
-  // unterschiedliche Anzahl Hooks ("Rendered more hooks than during the
-  // previous render", Seite bricht ab, erst ein Reload heilt es).
-  if (isRedirectingToParent) {
+  // Ein Elternteil, das bereits angemeldet ist und /login direkt aufruft,
+  // geht in die App. Nach einer Anmeldung hier lädt completeLogin die App
+  // neu; die Weiterleitung greift dann nicht zusätzlich (#7051).
+  if (isRedirectingToParent && !awaitingRedirect) {
     redirect(returnPath ?? parentPath("/parents"));
   }
+
+  // Die BFF hat die Sitzung installiert: nach dem Passwort oder dem Code.
+  const completeLogin = () => {
+    setAwaitingRedirect(true);
+    window.location.href = returnPath ?? parentPath("/parents");
+  };
 
   const submit = async () => {
     if (isSessionSettling) return;
@@ -221,53 +230,57 @@ function ParentLoginForm() {
     formErrors.clear();
     setIsStaffAccount(false);
     setPortalNotBooked(false);
+    setPasswordRefused(false);
 
     try {
-      const result = await signIn(PORTAL_ROUTES.parent.providerId, {
-        redirect: false,
-        email,
-        password,
-      });
-
-      if (result?.error) {
+      const result = await portalPasswordLogin("parent", email, password);
+      if (result.status === "mfa_required") {
+        setMfaStep(result);
         setIsLoading(false);
-        // The 403 follows a correct password check, so naming a staff
-        // account tells a stranger nothing.
-        if (result.code === "care.not_a_guardian") {
-          setIsStaffAccount(true);
-          return;
-        }
-        if (result.code === "module.not_booked") {
-          setPortalNotBooked(true);
-          return;
-        }
-        if (result.code === LOGIN_RATE_LIMITED) {
-          formErrors.invalid(t("errors.rateLimited"));
-          return;
-        }
-        void formErrors.show(loginRefusal(result.error, result.code), {
-          object: t("errorObject"),
-          retry: () => latestSubmitRef.current(),
-        });
         return;
       }
-
-      // Kein router.push hier — die Weiterleitung oben übernimmt. isLoading
-      // bleibt absichtlich stehen, damit das Formular bis zur Navigation
-      // gesperrt bleibt und niemand ein zweites Mal absendet; der Watchdog
-      // gibt es wieder frei, falls die Session ausbleibt.
-      setAwaitingSession(true);
+      // isLoading bleibt stehen: Das Formular bleibt bis zur Navigation
+      // gesperrt, damit niemand ein zweites Mal absendet.
+      completeLogin();
     } catch (err) {
-      // signIn wirft nur, wenn die Anfrage nicht ankam.
+      setIsLoading(false);
+      // The 403 follows a correct password check, so naming a staff
+      // account tells a stranger nothing.
+      if (err instanceof ApiError && err.code === "care.not_a_guardian") {
+        setIsStaffAccount(true);
+        return;
+      }
+      if (err instanceof ApiError && err.code === "module.not_booked") {
+        setPortalNotBooked(true);
+        return;
+      }
+      if (err instanceof ApiError && err.status === 429) {
+        formErrors.invalid(t("errors.rateLimited"));
+        return;
+      }
+      setPasswordRefused(
+        err instanceof ApiError &&
+          err.status === 401 &&
+          err.code !== undefined &&
+          WRONG_PASSWORD_REFUSALS.includes(err.code),
+      );
       void formErrors.show(
-        err instanceof ApiError ? err : unavailableApiError(err),
+        err instanceof ApiError
+          ? credentialError(err, PARENT_LOGIN_REFUSALS)
+          : unavailableApiError(err),
         {
           object: t("errorObject"),
           retry: () => latestSubmitRef.current(),
         },
       );
-      setIsLoading(false);
     }
+  };
+
+  const backToCredentials = () => {
+    setMfaStep(null);
+    setPassword("");
+    setPasswordRefused(false);
+    formErrors.clear();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -291,111 +304,140 @@ function ParentLoginForm() {
         footer={<LanguageSwitcher />}
         testimonialPanelCopy={testimonialPanelCopy}
       >
-        <form
-          ref={formRef}
-          onSubmit={handleSubmit}
-          noValidate
-          className="space-y-6"
-          aria-busy={isSessionSettling || undefined}
-        >
-          {cameFromStaffLogin && !hasError && (
-            <Alert type="info" message={t("fromStaffBanner")} />
-          )}
-          {sessionExpired && !hasError && (
-            <Alert type="info" message={tErrorCatalog("loginNotice")} />
-          )}
-
-          {portalNotBooked ? (
-            <Alert
-              type="info"
-              message={portalNotBookedExplanation("parent", locale)}
-            />
-          ) : isStaffAccount ? (
-            <Alert
-              type="info"
-              message={t("errors.notAGuardian")}
-              action={
-                staffUrl ? (
-                  <a
-                    href={staffUrl}
-                    className="font-medium whitespace-nowrap underline underline-offset-2"
-                  >
-                    {t("staffLoginLink")}
-                  </a>
-                ) : undefined
-              }
-            />
-          ) : (
-            <FormErrorAlert message={formErrors.error} />
-          )}
-
-          <div className="space-y-4">
-            <div className="text-left">
-              <Input
-                id="parent-email"
-                name="email"
-                type="email"
-                label={t("emailLabel")}
-                controlSize="compact"
-                autoComplete="username"
-                required
-                disabled={isSessionSettling}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-
-            <div className="text-left">
-              <FieldLabel htmlFor="parent-password" required>
-                {t("passwordLabel")}
-              </FieldLabel>
-              <Input
-                id="parent-password"
-                name="password"
-                type="password"
-                controlSize="compact"
-                autoComplete="current-password"
-                required
-                disabled={isSessionSettling}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                revealable
-                showPasswordLabel={t("showPassword")}
-                hidePasswordLabel={t("hidePassword")}
-              />
-            </div>
-
-            <div className="text-center">
-              <Button
-                type="button"
-                variant="link"
-                size="md"
-                disabled={isLoading || isSessionSettling}
-                onClick={() => setIsResetModalOpen(true)}
-              >
-                {t("forgotPassword")}
-              </Button>
-            </div>
-          </div>
-
-          <Button
-            type="submit"
-            disabled={isLoading || isSessionSettling}
-            variant="primary"
-            size="field"
-            className="w-full"
+        {mfaStep ? (
+          <MFAChallengeForm
+            scope="parent"
+            copy={mfaCopy}
+            challengeToken={mfaStep.challengeToken}
+            maskedEmail={mfaStep.maskedEmail}
+            trustedDeviceEnabled={mfaStep.trustedDeviceEnabled}
+            trustedDeviceDays={mfaStep.trustedDeviceDays}
+            onSuccess={completeLogin}
+            onCancel={backToCredentials}
+          />
+        ) : (
+          <form
+            ref={formRef}
+            onSubmit={handleSubmit}
+            noValidate
+            className="space-y-6"
+            aria-busy={isSessionSettling || undefined}
           >
-            <span className="relative z-10">
-              {isLoading ? t("submitting") : t("submit")}
-            </span>
-          </Button>
-        </form>
+            {cameFromStaffLogin && !hasError && (
+              <Alert type="info" message={t("fromStaffBanner")} />
+            )}
+            {sessionExpired && !hasError && (
+              <Alert type="info" message={tErrorCatalog("loginNotice")} />
+            )}
+
+            {portalNotBooked ? (
+              <Alert
+                type="info"
+                message={portalNotBookedExplanation("parent", locale)}
+              />
+            ) : isStaffAccount ? (
+              <Alert
+                type="info"
+                message={t("errors.notAGuardian")}
+                action={
+                  staffUrl ? (
+                    <a
+                      href={staffUrl}
+                      className="font-medium whitespace-nowrap underline underline-offset-2"
+                    >
+                      {t("staffLoginLink")}
+                    </a>
+                  ) : undefined
+                }
+              />
+            ) : (
+              <FormErrorAlert
+                message={formErrors.error}
+                action={
+                  passwordRefused ? (
+                    <Button
+                      type="button"
+                      variant="link_tone"
+                      size="compact"
+                      onClick={() => setIsResetModalOpen(true)}
+                      className="-ml-2.5 self-start"
+                    >
+                      {tReset("title")}
+                    </Button>
+                  ) : undefined
+                }
+              />
+            )}
+
+            <div className="space-y-4">
+              <div className="text-left">
+                <Input
+                  id="parent-email"
+                  name="email"
+                  type="email"
+                  label={t("emailLabel")}
+                  controlSize="compact"
+                  autoComplete="username"
+                  required
+                  disabled={isSessionSettling}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="text-left">
+                <FieldLabel htmlFor="parent-password" required>
+                  {t("passwordLabel")}
+                </FieldLabel>
+                <Input
+                  id="parent-password"
+                  name="password"
+                  type="password"
+                  controlSize="compact"
+                  autoComplete="current-password"
+                  required
+                  disabled={isSessionSettling}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  revealable
+                  showPasswordLabel={t("showPassword")}
+                  hidePasswordLabel={t("hidePassword")}
+                />
+              </div>
+
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="link"
+                  size="md"
+                  disabled={isLoading || isSessionSettling}
+                  onClick={() => setIsResetModalOpen(true)}
+                >
+                  {t("forgotPassword")}
+                </Button>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isLoading || isSessionSettling}
+              variant="primary"
+              size="field"
+              className="w-full"
+            >
+              <span className="relative z-10">
+                {isLoading ? t("submitting") : t("submit")}
+              </span>
+            </Button>
+          </form>
+        )}
       </AuthShell>
 
       <PasswordResetModal
         isOpen={isResetModalOpen}
         onClose={() => setIsResetModalOpen(false)}
         onRequestReset={requestParentPasswordReset}
+        initialEmail={email}
         rateLimitStorageKey="parentPasswordResetRateLimitUntil"
         errorPath={resetErrors}
         formRef={resetFormRef}

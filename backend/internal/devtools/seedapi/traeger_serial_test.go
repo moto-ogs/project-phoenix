@@ -85,6 +85,38 @@ func TestTraegerStepWaitEndsWithTheContext(t *testing.T) {
 	assert.NoError(t, <-held)
 }
 
+// countingStep counts its runs.
+type countingStep struct{ runs *int }
+
+func (countingStep) Name() string { return "counting" }
+
+func (s countingStep) Run(context.Context, *Runtime) error {
+	*s.runs++
+	return nil
+}
+
+// A seed beside other seed processes also holds their shared lock for the
+// step, and a lock it cannot get fails the step without running it (#6962).
+func TestTraegerStepHoldsTheLockSharedWithOtherProcesses(t *testing.T) {
+	t.Parallel()
+
+	runs, held, released := 0, 0, 0
+	rt := &Runtime{
+		Bootstrap: &bootstrapSeedState{OrganizationID: 9401},
+		TraegerLock: func(context.Context) (func(), error) {
+			held++
+			return func() { released++ }, nil
+		},
+	}
+	step := traegerSerialStep{Step: countingStep{runs: &runs}}
+	require.NoError(t, step.Run(context.Background(), rt))
+	assert.Equal(t, []int{1, 1, 1}, []int{runs, held, released}, "runs, acquisitions, releases")
+
+	rt.TraegerLock = func(context.Context) (func(), error) { return nil, context.DeadlineExceeded }
+	assert.ErrorIs(t, step.Run(context.Background(), rt), context.DeadlineExceeded)
+	assert.Equal(t, 1, runs, "the step must not run without the lock")
+}
+
 func TestEveryTraegerStepOfTheDemoWorkflowRunsSerially(t *testing.T) {
 	t.Parallel()
 

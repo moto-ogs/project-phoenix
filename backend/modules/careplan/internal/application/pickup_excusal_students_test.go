@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // recordingExcusalLocker records the tenant unit of work and the student
@@ -38,14 +39,14 @@ func (l *recordingExcusalLocker) LockStudent(_ context.Context, id int64) error 
 // noUpcomingExceptions answers every student without a future exception.
 type noUpcomingExceptions struct{ ports.PickupExcusalStore }
 
-func (noUpcomingExceptions) FindUpcomingByStudentID(context.Context, int64) ([]*careplan.PickupException, error) {
+func (noUpcomingExceptions) FindUpcomingByStudentID(context.Context, int64, calendar.Date) ([]*careplan.PickupException, error) {
 	return nil, nil
 }
 
 func TestResyncFutureExceptionsRunsEveryStudentInOneUnitOfWork(t *testing.T) {
 	t.Parallel()
 	locker := &recordingExcusalLocker{}
-	syncer := NewPickupAutoExcusal(noUpcomingExceptions{}, nil, nil, nil, nil, locker)
+	syncer := NewPickupAutoExcusal(noUpcomingExceptions{}, nil, nil, nil, nil, locker, nil)
 
 	require.NoError(t, syncer.ResyncFutureExceptions(context.Background(), []int64{7, 3}))
 

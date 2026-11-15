@@ -33,8 +33,7 @@ import { DatabaseFormModal } from "~/components/database/database-form-modal";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import type { OverflowMenuEntry } from "~/components/ui/page-header/OverflowMenu";
-import { PageHeaderWithSearch } from "~/components/ui/page-header/PageHeaderWithSearch";
+import type { OverflowMenuEntry } from "~/components/ui/page-header/types";
 import { Skeleton } from "~/components/ui/skeleton";
 import type { FormErrorInput } from "~/components/ui/form-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -91,10 +90,20 @@ interface CatalogRestore<T> {
 /** Endgültiges Löschen. Nur für Kataloge, deren Backend das kennt. */
 interface CatalogRemove<T> {
   readonly menuLabel: string;
-  readonly confirmTitle: string;
+  /** Zeile unter dem Menüeintrag (#6643), etwa wenn Löschen archivieren
+   *  kann; sonst der Standardsatz. */
+  readonly menuDescription?: string;
+  /** Titel der Rückfrage; je Eintrag, wenn das Entfernen archivieren kann. */
+  readonly confirmTitle: string | ((item: T) => string);
+  /** Beschriftung der beiden Bestätigungsstufen, wenn sie vom Eintrag
+   *  abhängt (archivieren statt löschen, #6845). */
+  readonly confirmLabels?: (
+    item: T,
+  ) => { readonly first: string; readonly confirm: string } | undefined;
   readonly describe: (item: T) => React.ReactNode;
   readonly run: (item: T) => Promise<unknown>;
-  readonly toast: (item: T) => string;
+  /** `result` ist die Antwort von `run`, etwa ob gelöscht oder archiviert. */
+  readonly toast: (item: T, result: unknown) => string;
 }
 
 export interface CatalogConfig<T extends CatalogItem> {
@@ -134,7 +143,21 @@ export interface CatalogConfig<T extends CatalogItem> {
   readonly preserveDraftOnSectionsChange?: boolean;
   /** Anlegen erst freigeben, wenn die für neue Einträge nötigen Daten vorliegen. */
   readonly createDisabled?: boolean;
+  /**
+   * Weitere Reiter der Objektansicht nach „Stammdaten“, etwa wer einen
+   * Eintrag nutzt. Ein anderer Eintrag öffnet wieder „Stammdaten“.
+   */
+  readonly detailTabs?: (item: T) => readonly CatalogDetailTab[];
 }
+
+/** Ein zusätzlicher Reiter der Objektansicht eines Katalogeintrags. */
+interface CatalogDetailTab {
+  readonly id: string;
+  readonly label: string;
+  readonly content: React.ReactNode;
+}
+
+const STAMMDATEN_TAB = "stammdaten";
 
 interface CatalogPageProps<T extends CatalogItem> {
   readonly config: CatalogConfig<T>;
@@ -197,6 +220,10 @@ export function CatalogPage<T extends CatalogItem>({
   const [createOpen, setCreateOpen] = useState(false);
   const [retireTarget, setRetireTarget] = useState<T | null>(null);
   const [removeTarget, setRemoveTarget] = useState<T | null>(null);
+  const removeLabels =
+    removeTarget && config.remove?.confirmLabels
+      ? config.remove.confirmLabels(removeTarget)
+      : undefined;
   const [busy, setBusy] = useState(false);
   // Zählt jedes gespeicherte Formular hoch, damit `DatabaseForm` seine Felder
   // aus dem frisch geladenen Eintrag neu aufbaut (wie in den Räumen).
@@ -223,6 +250,15 @@ export function CatalogPage<T extends CatalogItem>({
     () => all.find((item) => item.id === selectedId) ?? null,
     [all, selectedId],
   );
+
+  // Ein anderer Eintrag beginnt wieder bei „Stammdaten“.
+  const [detailTab, setDetailTab] = useState({
+    itemId: selectedId,
+    tab: STAMMDATEN_TAB,
+  });
+  if (detailTab.itemId !== selectedId) {
+    setDetailTab({ itemId: selectedId, tab: STAMMDATEN_TAB });
+  }
 
   // Ein anderer Eintrag oder ein neu geöffnetes Anlegen beginnt ohne den
   // Fehler des vorigen Versuchs.
@@ -360,16 +396,21 @@ export function CatalogPage<T extends CatalogItem>({
     const target = removeTarget;
     const remove = config.remove;
     if (!target || !remove) return;
+    let removal: unknown;
     const result = await runWrite(
       "catalog_remove_failed",
-      () => remove.run(target),
+      async () => {
+        removal = await remove.run(target);
+      },
       () => {
         setRemoveTarget(null);
         select(null);
       },
     );
     if (!result.saved) setRemoveTarget(null);
-    if (result.saved && result.refreshed) toast.success(remove.toast(target));
+    if (result.saved && result.refreshed) {
+      toast.success(remove.toast(target, removal));
+    }
   }, [config, removeTarget, runWrite, select, toast]);
 
   const handleMove = useCallback(
@@ -439,6 +480,12 @@ export function CatalogPage<T extends CatalogItem>({
               size="icon"
               aria-label={`${row.name} nach oben`}
               disabled={busy || index === 0}
+              tooltip="Schiebt den Eintrag in der Auswahl eine Stelle nach oben."
+              disabledReason={
+                !busy && index === 0
+                  ? "Der Eintrag steht schon ganz oben."
+                  : undefined
+              }
               onClick={() => void handleMove(item, -1)}
             >
               <ChevronUp className="size-4" aria-hidden="true" />
@@ -449,6 +496,12 @@ export function CatalogPage<T extends CatalogItem>({
               size="icon"
               aria-label={`${row.name} nach unten`}
               disabled={busy || index === visibleActive.length - 1}
+              tooltip="Schiebt den Eintrag in der Auswahl eine Stelle nach unten."
+              disabledReason={
+                !busy && index === visibleActive.length - 1
+                  ? "Der Eintrag steht schon ganz unten."
+                  : undefined
+              }
               onClick={() => void handleMove(item, 1)}
             >
               <ChevronDown className="size-4" aria-hidden="true" />
@@ -491,6 +544,8 @@ export function CatalogPage<T extends CatalogItem>({
             ? [
                 {
                   label: config.restore.menuLabel,
+                  description:
+                    "Bietet den Eintrag sofort wieder zur Auswahl an.",
                   disabled: busy,
                   onClick: () => void handleRestore(selected),
                 },
@@ -500,6 +555,8 @@ export function CatalogPage<T extends CatalogItem>({
             ? [
                 {
                   label: config.retire.menuLabel,
+                  description:
+                    "Nimmt den Eintrag nur für Neues aus der Auswahl, moto fragt vorher nach.",
                   disabled: busy,
                   onClick: () => setRetireTarget(selected),
                 },
@@ -510,6 +567,9 @@ export function CatalogPage<T extends CatalogItem>({
                 { kind: "separator" as const },
                 {
                   label: config.remove.menuLabel,
+                  description:
+                    config.remove.menuDescription ??
+                    "Löscht den Eintrag, moto fragt vorher nach.",
                   destructive: true,
                   disabled: busy,
                   onClick: () => setRemoveTarget(selected),
@@ -563,7 +623,7 @@ export function CatalogPage<T extends CatalogItem>({
       }
       tabs={[
         {
-          id: "stammdaten",
+          id: STAMMDATEN_TAB,
           label: "Stammdaten",
           content:
             canManage && !selectedReadOnly ? (
@@ -592,9 +652,10 @@ export function CatalogPage<T extends CatalogItem>({
               </p>
             ),
         },
+        ...(config.detailTabs?.(selected) ?? []),
       ]}
-      activeTab="stammdaten"
-      onTabChange={() => undefined}
+      activeTab={detailTab.tab}
+      onTabChange={(tab) => setDetailTab({ itemId: selectedId, tab })}
     />
   ) : (
     <EmptyState
@@ -656,28 +717,24 @@ export function CatalogPage<T extends CatalogItem>({
             </div>
           ) : undefined,
       }}
-      search={
-        <PageHeaderWithSearch
-          embedded
-          title=""
-          badge={{
-            icon: (
-              <MotoDuotoneIcon
-                icon={concept.icon}
-                tone={concept.tone}
-                size={20}
-              />
-            ),
-            count: visible.length,
-            label: config.title,
-          }}
-          search={{
-            value: searchTerm,
-            onChange: setSearchTerm,
-            placeholder: config.searchPlaceholder,
-          }}
-        />
-      }
+      searchRow={{
+        badge: {
+          icon: (
+            <MotoDuotoneIcon
+              icon={concept.icon}
+              tone={concept.tone}
+              size={20}
+            />
+          ),
+          count: visible.length,
+          label: config.title,
+        },
+        search: {
+          value: searchTerm,
+          onChange: setSearchTerm,
+          placeholder: config.searchPlaceholder,
+        },
+      }}
       overlays={
         <>
           {createOpen && items !== undefined && (
@@ -727,11 +784,21 @@ export function CatalogPage<T extends CatalogItem>({
           {config.remove && items !== undefined && (
             <ConfirmDeleteModal
               isOpen={removeTarget !== null && items !== undefined}
-              title={config.remove.confirmTitle}
+              title={
+                typeof config.remove.confirmTitle === "function"
+                  ? removeTarget
+                    ? config.remove.confirmTitle(removeTarget)
+                    : ""
+                  : config.remove.confirmTitle
+              }
               description={
                 removeTarget ? config.remove.describe(removeTarget) : ""
               }
-              gate={{ mode: "twoStep" }}
+              gate={{
+                mode: "twoStep",
+                firstStepLabel: removeLabels?.first,
+              }}
+              confirmLabel={removeLabels?.confirm}
               loading={busy}
               error=""
               onConfirm={() => void handleRemove()}

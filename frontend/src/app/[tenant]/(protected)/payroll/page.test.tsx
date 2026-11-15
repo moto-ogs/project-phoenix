@@ -341,7 +341,10 @@ describe("PayrollPage Versand an das Lohnbüro (#4805)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Zu den Einstellungen" }),
-    ).toHaveAttribute("href", "/settings?tab=system&highlight=sftp.enabled");
+    ).toHaveAttribute(
+      "href",
+      "/test-tenant/settings?tab=system&highlight=sftp.enabled",
+    );
   });
 
   it("drops the SFTP hint without an error when the status is forbidden", () => {
@@ -373,6 +376,44 @@ describe("PayrollPage Versand an das Lohnbüro (#4805)", () => {
         "Für DATEV fehlen noch Angaben. Was fehlt, steht oben unter Vollständigkeit. Fehlt beim Monatsabschluss etwas, sendet moto keine Datei.",
       ),
     ).toBeInTheDocument();
+
+    // The notice leads to the card it names (#7054).
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zur Vollständigkeit" }),
+    );
+    expect(
+      screen.getByRole("heading", { name: "Vollständigkeit" }),
+    ).toHaveFocus();
+  });
+
+  it("leads a failed SFTP dispatch to the setting its reason names", () => {
+    swrData["payroll-dispatch"] = {
+      data: {
+        year: 2026,
+        month: 8,
+        correction: false,
+        channel: "sftp",
+        format: "datev_lodas",
+        recipient: null,
+        state: "failed",
+        reason: "authentication_rejected",
+        attempts: 4,
+        filename: null,
+        createdAt: "2026-09-01T08:00:00Z",
+        finishedAt: "2026-09-01T08:00:05Z",
+        downloadExpiresAt: null,
+        downloadedAt: null,
+      },
+    };
+
+    render(<PayrollPage />);
+
+    expect(
+      screen.getByRole("link", { name: "Zu den Einstellungen" }),
+    ).toHaveAttribute(
+      "href",
+      "/test-tenant/settings?tab=system&highlight=sftp.username",
+    );
   });
 
   it("shows a blocked latest dispatch with its reason", () => {
@@ -426,15 +467,111 @@ describe("PayrollPage Versand an das Lohnbüro (#4805)", () => {
         finishedAt: "2026-09-01T08:01:00Z",
         downloadExpiresAt: "2026-09-15T08:00:00Z",
         downloadedAt: "2026-09-02T07:30:00Z",
+        linkMail: "delivered",
+        noticeMails: null,
       },
     };
 
     render(<PayrollPage />);
 
     expect(screen.getByText("E-Mail an lohn@example.de")).toBeInTheDocument();
-    expect(screen.getByText("E-Mail zugestellt")).toBeInTheDocument();
+    // Zugestellt heißt: das Postfach des Lohnbüros hat es gemeldet (#7058).
+    expect(screen.getByText("Zugestellt")).toBeInTheDocument();
     expect(screen.getByText("15.09.2026, 10:00")).toBeInTheDocument();
     expect(screen.getByText("02.09.2026, 09:30")).toBeInTheDocument();
+  });
+
+  // #7058: ein verschickter Link liest sich nicht wie ein zugestellter.
+  it("says only versendet while the Lohnbüro's mailbox reported nothing", () => {
+    swrData["payroll-dispatch"] = {
+      data: {
+        year: 2026,
+        month: 8,
+        correction: false,
+        channel: "email",
+        format: "xlsx",
+        recipient: "lohn@example.de",
+        state: "sent",
+        reason: null,
+        attempts: 1,
+        filename: "zeitkonten_2026-08.xlsx",
+        createdAt: "2026-09-01T08:00:00Z",
+        finishedAt: "2026-09-01T08:01:00Z",
+        downloadExpiresAt: "2026-09-15T08:00:00Z",
+        downloadedAt: null,
+        linkMail: "accepted",
+        noticeMails: null,
+      },
+    };
+
+    render(<PayrollPage />);
+
+    expect(screen.getByText("Versendet")).toBeInTheDocument();
+    expect(screen.queryByText("Zugestellt")).not.toBeInTheDocument();
+    expect(screen.getByText("Noch nicht")).toBeInTheDocument();
+  });
+
+  it("names the next step when the link did not reach the Lohnbüro", () => {
+    swrData["payroll-dispatch"] = {
+      data: {
+        year: 2026,
+        month: 8,
+        correction: false,
+        channel: "email",
+        format: "xlsx",
+        recipient: "lohn@example.de",
+        state: "sent",
+        reason: null,
+        attempts: 1,
+        filename: "zeitkonten_2026-08.xlsx",
+        createdAt: "2026-09-01T08:00:00Z",
+        finishedAt: "2026-09-01T08:01:00Z",
+        downloadExpiresAt: "2026-09-15T08:00:00Z",
+        downloadedAt: null,
+        linkMail: "undeliverable",
+        noticeMails: null,
+      },
+    };
+
+    render(<PayrollPage />);
+
+    expect(screen.getByText("Nicht zustellbar")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Die Mail kam nicht an. Prüfen Sie oben die E-Mail-Adresse des Lohnbüros. Die Monatsdatei finden Sie unter Mitarbeiter im Reiter Zeitkonten bei „Exportieren“.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("shows what became of the notices to the Leitung", () => {
+    swrData["payroll-dispatch"] = {
+      data: {
+        year: 2026,
+        month: 8,
+        correction: false,
+        channel: "email",
+        format: "csv",
+        recipient: null,
+        state: "blocked",
+        reason: "email_missing",
+        attempts: 0,
+        filename: null,
+        createdAt: "2026-09-01T08:00:00Z",
+        finishedAt: "2026-09-01T08:00:05Z",
+        downloadExpiresAt: null,
+        downloadedAt: null,
+        linkMail: null,
+        noticeMails: { delivered: 2, undeliverable: 1 },
+      },
+    };
+
+    render(<PayrollPage />);
+
+    expect(screen.getByText("Hinweis an die Leitung")).toBeInTheDocument();
+    expect(screen.getByText("1 nicht zustellbar")).toBeInTheDocument();
+    expect(screen.getByText("2 zugestellt")).toBeInTheDocument();
+    // The blocked dispatch names its own reason; no second notice about mail.
+    expect(screen.queryByText(/Die Mail kam nicht an/)).not.toBeInTheDocument();
   });
 
   it("says that nothing was sent yet", () => {
@@ -893,7 +1030,7 @@ describe("PayrollPage eigene Lohnarten und Zuschläge (#4807)", () => {
 
     expect(
       screen.getByRole("button", { name: "Zuschlagsregel anlegen" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
     expect(
       screen.getByText(/Legen Sie zuerst oben eine Lohnart an/),
     ).toBeInTheDocument();

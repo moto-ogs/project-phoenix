@@ -8,7 +8,9 @@ DELETE /api/staff/{id}/target-overrides/{overrideId}
 DELETE /api/staff/{id}/time-tracking/adjustments/{adjustmentId}
 DELETE /api/staff/{id}/vacation/opening
 GET /api/staff/
+GET /api/staff/absences/mails
 GET /api/staff/absences/pending
+GET /api/staff/absences/plan-gaps
 GET /api/staff/absences/requests
 GET /api/staff/available
 GET /api/staff/by-role
@@ -24,6 +26,7 @@ GET /api/staff/time-tracking/export
 GET /api/staff/time-tracking/export/datev-report
 GET /api/staff/time-tracking/export/sftp-status
 GET /api/staff/time-tracking/month-close
+GET /api/staff/time-tracking/month-close/traeger-staff
 GET /api/staff/time-tracking/overview
 GET /api/staff/time-tracking/payroll-dispatch
 GET /api/staff/time-tracking/payroll-rules
@@ -48,10 +51,12 @@ GET /api/staff/{id}/time-tracking/history
 GET /api/staff/{id}/time-tracking/month-summary
 GET /api/staff/{id}/time-tracking/schedule-targets
 GET /api/staff/{id}/time-tracking/sessions/{sessionId}/edits
+GET /api/staff/{id}/traeger-proofs
 GET /api/staff/{id}/vacation/quota
 POST /api/staff/
 POST /api/staff/absences/{absenceId}/approve
 POST /api/staff/absences/{absenceId}/deny
+POST /api/staff/absences/{absenceId}/plan-sync
 POST /api/staff/absences/{absenceId}/question
 POST /api/staff/externals
 POST /api/staff/externals/{id}/invitation

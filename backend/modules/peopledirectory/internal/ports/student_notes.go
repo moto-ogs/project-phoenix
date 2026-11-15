@@ -14,6 +14,9 @@ type StudentNoteStore interface {
 	// carries an optional NoteID, so a caller that names one note does not
 	// need a second store method with its own audience rules.
 	List(context.Context, domain.StudentNoteFilter) ([]domain.StudentNote, domain.OperationStats, error)
+	// Search finds the newest matching note of every child the search
+	// audience reaches, marking the hits that need the child's care team.
+	Search(context.Context, domain.StudentNoteSearch) ([]domain.StudentNoteSearchHit, domain.OperationStats, error)
 	// FindByID reads one note regardless of audience — the writers use it to
 	// re-check authorship and ownership under the lock they write with.
 	FindByID(ctx context.Context, id int64, lock string) (domain.StudentNote, bool, domain.OperationStats, error)

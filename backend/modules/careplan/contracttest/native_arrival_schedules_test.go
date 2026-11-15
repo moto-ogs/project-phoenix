@@ -69,9 +69,11 @@ func TestNativeArrivalExceptionAndNoteUseOwnerRecords(t *testing.T) {
 	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
 	student := testpkg.CreateTestStudent(t, db, "Arrival", "Exception", "1a")
 	staff := testpkg.CreateTestStaff(t, db, "Arrival", "Author")
-	service, err := compose.NewArrivalSchedules(db, owner, nil, nil, compose.ArrivalScheduleDependencies{})
+	service, err := compose.NewArrivalSchedules(db, owner, nil, nil, compose.ArrivalScheduleDependencies{
+		Today: func() calendar.Date { return decisionTestToday },
+	})
 	require.NoError(t, err)
-	date := calendar.TodayDate().AddDays(7)
+	date := decisionTestToday.AddDays(7)
 	clock := time.Date(1, 1, 1, 12, 45, 0, 0, time.UTC)
 	row, err := service.CreateOrReclaimException(ctx, student.ID, date, &clock, nil, staff.ID, nil)
 	require.NoError(t, err)

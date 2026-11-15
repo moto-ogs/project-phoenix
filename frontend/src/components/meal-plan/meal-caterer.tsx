@@ -15,6 +15,7 @@ import { ConfirmationModal } from "~/components/ui/modal";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
 import { Skeleton } from "~/components/ui/skeleton";
+import { StatusBadge } from "~/components/ui/status-badge";
 import {
   useApiErrorDisplay,
   useApiFormError,
@@ -22,6 +23,10 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { formatBerlinDate } from "~/lib/date-helpers";
+import {
+  invitationMailNote,
+  mailStatusCopy,
+} from "~/lib/email-delivery-status";
 import { createLogger } from "~/lib/logger";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import {
@@ -36,6 +41,14 @@ import {
 const logger = createLogger({ component: "MealCaterer" });
 
 const EMPTY_FORM = { email: "", catererName: "", deliveryAddress: "" };
+
+/** What the school learns about an invitation's mail and does next (#5960). */
+function catererMailNote(invitation: MealCatererInvitation): string | null {
+  return invitationMailNote(
+    invitation,
+    "Stimmt die Adresse nicht, widerrufen Sie die Einladung und laden Sie neu ein.",
+  );
+}
 
 /**
  * Der Caterer der Schule (ADR 0077): wer liefert, eine Einladung per E-Mail
@@ -216,13 +229,43 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
     {
       key: "email",
       header: "E-Mail-Adresse",
-      stacked: "meta",
-      render: (invitation) => invitation.email,
+      // A long address with its status does not fit beside the name on a
+      // phone; as a labelled line it keeps both readable.
+      stacked: "field",
+      render: (invitation) => {
+        const mailCopy = mailStatusCopy(
+          invitation.mailOutcome,
+          invitation.addressMark,
+          false,
+          invitation.providerBlock,
+        );
+        const mailNote = catererMailNote(invitation);
+        return (
+          <>
+            <span className="block wrap-anywhere">{invitation.email}</span>
+            {mailCopy && (
+              <span className="mt-1 block">
+                <StatusBadge
+                  label={mailCopy.label}
+                  tone={mailCopy.tone}
+                  compact
+                />
+              </span>
+            )}
+            {/* The phone rows have no sub-row, so the note stands here. */}
+            {mailNote && (
+              <span className="mt-1 block text-xs text-gray-600 md:hidden">
+                {mailNote}
+              </span>
+            )}
+          </>
+        );
+      },
     },
     {
       key: "expires",
       header: "Gültig bis",
-      stacked: "meta",
+      stacked: "field",
       render: (invitation) => formatBerlinDate(invitation.expiresAt),
     },
     {
@@ -235,6 +278,8 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
           items={[
             {
               label: "Widerrufen",
+              description:
+                "Macht den Link in der E-Mail ungültig. moto fragt vorher nach",
               destructive: true,
               onClick: () => setRevokeTarget(invitation),
             },
@@ -254,6 +299,8 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
         items={[
           {
             label: "Belieferung beenden",
+            description:
+              "Beendet die Belieferung, der Caterer sieht nichts mehr. moto fragt vorher nach",
             destructive: true,
             onClick: () => setEndOpen(true),
           },
@@ -266,6 +313,7 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
         size="md"
         className="gap-2"
         onClick={openInvite}
+        tooltip="Öffnet ein Formular, um Ihren Caterer per E-Mail einzuladen."
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
         Caterer einladen
@@ -316,6 +364,12 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
               getRowKey={(invitation) => invitation.id}
               rowHasInteractiveControls
               stackedOnMobile
+              renderSubRows={(invitation) => {
+                const mailNote = catererMailNote(invitation);
+                return mailNote
+                  ? [{ key: `${invitation.id}-mail-note`, content: mailNote }]
+                  : [];
+              }}
             />
           ) : null}
         </div>
@@ -337,6 +391,7 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
               size="md"
               onClick={() => setInviteOpen(false)}
               disabled={sending}
+              noTooltip="Schließt das Fenster, ohne eine Einladung zu senden."
             >
               Abbrechen
             </Button>
@@ -352,6 +407,8 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
                 form.email.trim() === "" ||
                 form.catererName.trim() === ""
               }
+              tooltip="Schickt dem Caterer sofort eine E-Mail mit dem Link zu seinem Zugang."
+              disabledReason="Geben Sie zuerst Name und E-Mail-Adresse des Caterers ein."
             >
               Einladung senden
             </Button>
@@ -414,6 +471,7 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
         onConfirm={() => void confirmRevoke()}
         title="Einladung widerrufen?"
         confirmText="Widerrufen"
+        confirmTooltip="Macht den Link in der Einladung sofort ungültig."
         cancelText="Abbrechen"
         confirmVariant="danger"
         isConfirmLoading={working}
@@ -430,6 +488,7 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
         onConfirm={() => void confirmEnd()}
         title="Belieferung beenden"
         confirmText="Beenden"
+        confirmTooltip="Beendet die Belieferung sofort, der Caterer sieht nichts mehr."
         cancelText="Abbrechen"
         confirmVariant="danger"
         isConfirmLoading={working}

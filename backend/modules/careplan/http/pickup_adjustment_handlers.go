@@ -143,7 +143,7 @@ func (rs *Resource) previewStudentPickupAdjustment(w http.ResponseWriter, r *htt
 		renderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodePickupInvalid))
 		return
 	}
-	input, err := pickupAdjustmentPreviewInput(student.ID, body)
+	input, err := pickupAdjustmentPreviewInput(student.ID, body, rs.today())
 	if err != nil {
 		renderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodePickupInvalid))
 		return
@@ -170,7 +170,7 @@ func (rs *Resource) applyStudentPickupAdjustment(w http.ResponseWriter, r *http.
 		renderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodePickupInvalid))
 		return
 	}
-	input, err := pickupAdjustmentPreviewInput(student.ID, body)
+	input, err := pickupAdjustmentPreviewInput(student.ID, body, rs.today())
 	if err != nil {
 		renderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodePickupInvalid))
 		return
@@ -232,8 +232,9 @@ func (rs *Resource) pickupAdjustmentApplyInput(
 func pickupAdjustmentPreviewInput(
 	studentID int64,
 	body pickupAdjustmentRequest,
+	today calendar.Date,
 ) (careplan.PickupAdjustmentPreviewInput, error) {
-	effectiveFrom := calendar.TodayDate()
+	effectiveFrom := today
 	if body.EffectiveFrom != nil {
 		effectiveFrom = *body.EffectiveFrom
 	}

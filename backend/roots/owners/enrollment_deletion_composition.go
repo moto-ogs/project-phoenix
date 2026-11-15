@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	timetableProjection "github.com/moto-ogs/project-phoenix/modules/timetableprojection/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // enrollmentGuardianDirectory serves the deletion preview's guardians from
@@ -60,7 +61,7 @@ func NewEnrollmentDeletionModule(src EnrollmentDeletionSources) enrollmentCompos
 		Owner: src.Owner, Guardians: src.Guardians,
 		CountAuditAdjustments: src.CountAuditAdjustments, CountBookings: src.CountBookings,
 		SourceEnrollments: timetableProjection.New().CountSourceEnrollments,
-		Delivery:          src.Delivery, Logger: src.Logger,
+		Delivery:          src.Delivery, Logger: src.Logger, Today: src.Today,
 	}
 	if src.Audit != nil {
 		deps.Audit = enrollmentDeletionAudit{repo: src.Audit}
@@ -141,4 +142,6 @@ type EnrollmentDeletionSources struct {
 		ResolveInt(ctx context.Context, key string) (int, error)
 	}
 	Logger *slog.Logger
+	// Today is the retention cleanup's school day.
+	Today func() calendar.Date
 }

@@ -13,7 +13,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Alert } from "~/components/ui/alert";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -39,8 +39,10 @@ import {
   PERIOD_TYPE_LABELS,
   type PeriodType,
   formatPeriodUsage,
+  formatShiftSeriesCount,
 } from "~/lib/calendar-period-helpers";
 import { createLogger } from "~/lib/logger";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 import { FormFieldset } from "~/components/ui/form-fieldset";
 import {
   useFormModalPending,
@@ -62,12 +64,19 @@ interface CalendarPeriodModalProps {
   onDeleted?: (period: CalendarPeriod) => void;
   /** Pass an existing period to enter edit mode. Omit/null for create. */
   initial?: CalendarPeriod | null;
+  /**
+   * Opened outside „Schuljahr und Kalender“: the closing-day hint links
+   * there in a new tab, which keeps this dialog (#7054). Whoever may write
+   * a period may open that page (schedules:manage).
+   */
+  linkClosingDays?: boolean;
   /** Optional defaults used when creating from a visible planner week. */
   createDefaults?: Partial<FormState>;
   /**
-   * Advisory reference counts for the edited period. When provided, the
-   * delete confirmation names the concrete usage instead of a generic
-   * warning. Deleting never blocks — all FKs are ON DELETE SET NULL.
+   * Reference counts for the edited period. When provided, the delete
+   * confirmation names the concrete usage instead of a generic warning.
+   * Most links are unlinked on delete; Dienstplan series are not: while one
+   * exists the period cannot be deleted (#6845).
    */
   usage?: {
     enrollmentPhaseCount: number;
@@ -76,6 +85,7 @@ interface CalendarPeriodModalProps {
     studentEnrollmentCount: number;
     supervisorCount: number;
     activityInstanceCount: number;
+    staffShiftSeriesCount?: number;
   };
   /**
    * Enables the "Verknüpfte Anmeldephasen" section (edit mode only) so the
@@ -141,6 +151,7 @@ function formFromPeriod(p: CalendarPeriod): FormState {
 export function CalendarPeriodModal({
   isOpen,
   onClose,
+  linkClosingDays = false,
   onSaved,
   onDeleted,
   initial,
@@ -149,6 +160,7 @@ export function CalendarPeriodModal({
   phaseLink,
 }: CalendarPeriodModalProps) {
   const { success: toastSuccess } = useToast();
+  const tenantPath = useTenantAwarePath();
   const [form, setForm] = useState<FormState>(emptyForm);
   // Speichern und Löschen sperren das Panel, bis der Server antwortet
   // (#6593); `pendingAction` sagt, welche der beiden Aktionen läuft.
@@ -204,6 +216,10 @@ export function CalendarPeriodModal({
   const deleteWarning = usageText
     ? `Dieser Zeitraum wird von ${usageText} verwendet. Beim Löschen werden diese Verknüpfungen entfernt.${groupDeleteImpact} Die Anmeldephasen, Vorlagen und Termine selbst bleiben erhalten.`
     : "Beim Löschen werden bestehende Verknüpfungen zu Anmeldephasen, Aktivitätsvorlagen und Regelterminen entfernt.";
+  // Schichtserien halten ihren Zeitraum fest, auch beendete (#6845). Der
+  // Zeitraum bleibt dann stehen; ausschalten geht weiterhin.
+  const shiftSeriesCount = usage?.staffShiftSeriesCount ?? 0;
+  const deleteBlocked = shiftSeriesCount > 0;
   const deleteConflictHint =
     "Der Server verweigert das Löschen, wenn dadurch eine Betreuungsangebot-Verknüpfung ungültig würde. Auch doppelte aktive Kinder- oder Personalzuordnungen ohne Zeitraum können das Löschen verhindern.";
 
@@ -475,7 +491,23 @@ export function CalendarPeriodModal({
               {/* #3594: „Ferien“ als Zeitraum sagt keine Termine ab und setzt
                 kein Soll auf null; das tut nur ein Schließtag. */}
               {form.periodType === "holiday" && (
-                <Alert type="info" message={HOLIDAY_CLOSING_DAY_HINT} />
+                <Alert
+                  type="info"
+                  message={HOLIDAY_CLOSING_DAY_HINT}
+                  action={
+                    linkClosingDays ? (
+                      <ButtonLink
+                        href={tenantPath("/calendar-periods")}
+                        newTab
+                        variant="surface"
+                        size="compact"
+                        tooltip="Öffnet „Schuljahr und Kalender“ mit den Schließtagen in einem neuen Tab."
+                      >
+                        Zu den Schließtagen
+                      </ButtonLink>
+                    ) : undefined
+                  }
+                />
               )}
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -484,7 +516,7 @@ export function CalendarPeriodModal({
                     id="start_date"
                     name="start_date"
                     error={formErrors.fieldError("start_date")}
-                    controlSize="md"
+                    controlSize="compact"
                     value={form.startDate}
                     onChange={(next) => update("startDate", next)}
                     calendarLayout="popover"
@@ -495,7 +527,7 @@ export function CalendarPeriodModal({
                     id="end_date"
                     name="end_date"
                     error={formErrors.fieldError("end_date")}
-                    controlSize="md"
+                    controlSize="compact"
                     value={form.endDate}
                     onChange={(next) => update("endDate", next)}
                     calendarLayout="popover"
@@ -529,7 +561,7 @@ export function CalendarPeriodModal({
                     id="cycle_anchor"
                     name="week_cycle_anchor"
                     error={formErrors.fieldError("week_cycle_anchor")}
-                    controlSize="md"
+                    controlSize="compact"
                     value={form.weekCycleAnchor}
                     onChange={(next) => update("weekCycleAnchor", next)}
                     disabled={cycleLength <= 1}
@@ -624,6 +656,7 @@ export function CalendarPeriodModal({
                 variant="outline_danger"
                 size="md"
                 onClick={() => setDeleteConfirmOpen(true)}
+                tooltip="Löscht den Kalenderzeitraum, moto fragt vorher nach."
                 isLoading={deleting}
                 loadingText="Lösche …"
                 className="w-full sm:w-auto"
@@ -640,6 +673,7 @@ export function CalendarPeriodModal({
                 size="md"
                 className="flex-1 sm:flex-none"
                 onClick={onClose}
+                noTooltip="Abbrechen schließt nur das Fenster, ohne etwas zu ändern."
               >
                 Abbrechen
               </Button>
@@ -651,6 +685,7 @@ export function CalendarPeriodModal({
                 size="md"
                 className="flex-1 sm:flex-none"
                 onClick={onClose}
+                noTooltip="Der Zeitraum ist schon gespeichert, Schließen schließt nur das Fenster."
               >
                 Schließen
               </Button>
@@ -664,6 +699,14 @@ export function CalendarPeriodModal({
                 isLoading={submitting}
                 loadingText="Speichere …"
                 disabled={!canSubmit}
+                disabledReason={
+                  save.pending ? undefined : missingFieldReason(form)
+                }
+                tooltip={
+                  persisted
+                    ? "Speichert die Änderungen für alle Pläne dieses Zeitraums."
+                    : "Legt den Kalenderzeitraum an, die Pläne können ihn dann nutzen."
+                }
               >
                 {persisted ? "Speichern" : "Anlegen"}
               </Button>
@@ -676,17 +719,35 @@ export function CalendarPeriodModal({
           isOpen={deleteConfirmOpen}
           title="Kalenderzeitraum löschen"
           description={
-            <p>
-              Der Kalenderzeitraum{" "}
-              <span className="font-medium text-gray-900">
-                „{initial.name}“
-              </span>{" "}
-              wird gelöscht. {deleteWarning}
-            </p>
+            deleteBlocked ? (
+              <p>
+                Der Kalenderzeitraum{" "}
+                <span className="font-medium text-gray-900">
+                  „{initial.name}“
+                </span>{" "}
+                lässt sich nicht löschen. Im Dienstplan nutzen ihn{" "}
+                {formatShiftSeriesCount(shiftSeriesCount)}.
+              </p>
+            ) : (
+              <p>
+                Der Kalenderzeitraum{" "}
+                <span className="font-medium text-gray-900">
+                  „{initial.name}“
+                </span>{" "}
+                wird gelöscht. {deleteWarning}
+              </p>
+            )
           }
           warningSlot={
-            <Alert type="warning" announce="off" message={deleteConflictHint} />
+            <Alert
+              type="warning"
+              announce="off"
+              message={
+                deleteBlocked ? SHIFT_SERIES_BLOCK_HINT : deleteConflictHint
+              }
+            />
           }
+          confirmDisabled={deleteBlocked}
           gate={{ mode: "twoStep", firstStepLabel: "Löschen" }}
           onConfirm={handleDelete}
           onClose={() => {
@@ -708,6 +769,11 @@ interface FieldProps {
   children: React.ReactNode;
 }
 
+// #6845: Schichtserien bleiben mit ihrem Zeitraum verbunden, auch wenn sie
+// beendet sind. Ausschalten ist der Weg, der dann bleibt.
+const SHIFT_SERIES_BLOCK_HINT =
+  "Schichtserien bleiben mit ihrem Zeitraum verbunden, auch beendete. Gilt der Zeitraum nicht mehr? Dann nehmen Sie den Haken bei „Zeitraum im Plan verwenden“ heraus und speichern.";
+
 // #3594: Hinweis bei der Art „Ferien“. Der Zeitraum sagt keine Termine ab
 // und setzt kein Soll auf null; das tut nur ein Schließtag.
 const HOLIDAY_CLOSING_DAY_HINT =
@@ -726,4 +792,14 @@ function Field({ label, htmlFor, required = false, children }: FieldProps) {
       {children}
     </div>
   );
+}
+
+// Grund für den gesperrten Speichern-Knopf; während des Speicherns bleibt er
+// ohne Grund nativ gesperrt (#6643).
+function missingFieldReason(form: FormState): string | undefined {
+  if (form.name.trim().length === 0)
+    return "Geben Sie zuerst eine Bezeichnung ein.";
+  if (form.startDate === "" || form.endDate === "")
+    return "Wählen Sie zuerst Startdatum und Enddatum aus.";
+  return undefined;
 }

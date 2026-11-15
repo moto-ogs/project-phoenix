@@ -12,6 +12,7 @@ export type MailOutcome =
   | "blocked"
   | "provider_blocked"
   | "held_by_stop"
+  | "held_by_departure"
   | "unsubscribed"
   | "overdue"
   | "complained"
@@ -59,6 +60,14 @@ export const GUARDIAN_STOPPED_COPY: MailStatusCopy = {
   tone: "gray",
   explanation:
     "Ihre Schule hat die Mails an diese Person gestoppt. Anmeldecodes, Mails zum Passwort und Abrechnungsbriefe des Trägers kommen weiter an.",
+};
+
+/** The current departure hold, separate from the outcome of an earlier mail. */
+export const GUARDIAN_DEPARTED_COPY: MailStatusCopy = {
+  label: "Kein Kind in Betreuung",
+  tone: "gray",
+  explanation:
+    "Kein Kind dieser Person wird noch an Ihrer Schule betreut. Elternbriefe, Nachrichten, Termine und Einladungen gehen deshalb nicht mehr an sie.",
 };
 
 /** Mails still go out to an address someone else holds without a stop. */
@@ -124,6 +133,12 @@ const OUTCOME_COPY: Record<MailOutcome, MailStatusCopy> = {
     explanation:
       "Die Mail ging nicht raus, weil die Mails an diese Person gestoppt waren. Sie können sie neu senden.",
   },
+  held_by_departure: {
+    label: "Nicht gesendet",
+    tone: "gray",
+    explanation:
+      "Kein Kind dieser Person wurde beim Versand noch betreut. Die Mail ging deshalb nicht raus.",
+  },
   unsubscribed: {
     label: "Abgemeldet",
     tone: "gray",
@@ -136,8 +151,10 @@ const OUTCOME_COPY: Record<MailOutcome, MailStatusCopy> = {
     explanation:
       "Die Mail ist seit Tagen verzögert. Sie können sie noch einmal senden.",
   },
+  // The mail arrived; the person reported it afterwards (#6999). It never
+  // reads like a mail that did not arrive.
   complained: {
-    label: "Nicht zustellbar",
+    label: "Als unerwünscht gemeldet",
     tone: "red",
     explanation: "Diese Person hat die Mail als unerwünscht gemeldet.",
   },
@@ -225,3 +242,192 @@ export const CHECK_ADDRESS_AT_GUARDIAN =
 /** Whoever sees a letter without the OGS's access to the guardian's card. */
 export const TELL_THE_OGS_ABOUT_THE_ADDRESS =
   "Sagen Sie der OGS Bescheid. Dort lässt sich die Adresse korrigieren.";
+
+/** What Delivery knows about the mail of an invitation (#5934, #5960). */
+export interface InvitationMail {
+  readonly mailOutcome?: MailOutcome;
+  readonly addressMark?: EmailAddressMark;
+  readonly providerBlock?: MailProviderBlock;
+}
+
+/**
+ * The line under an invitation of a staff member or a caterer. Their mail still
+ * goes out to a marked address (#5935), so the note only says what is known about
+ * the address and never speaks of a block. The address of an invitation is fixed:
+ * nextStep names the new invitation.
+ */
+export function invitationMailNote(
+  mail: InvitationMail,
+  nextStep: string,
+): string | null {
+  if (mail.mailOutcome === "undeliverable") {
+    return `Die Mail kam nicht an. ${nextStep}`;
+  }
+  if (mail.addressMark === "complained") {
+    return `Von dieser Adresse kam eine Beschwerde über eine Mail. ${nextStep}`;
+  }
+  if (mail.addressMark === "failed") {
+    return `Eine frühere Mail an diese Adresse kam nicht an. ${nextStep}`;
+  }
+  if (mail.mailOutcome === "accepted") return null;
+  return (
+    mailStatusCopy(mail.mailOutcome, "", false, mail.providerBlock)
+      ?.explanation ?? null
+  );
+}
+
+/** The mails of one message to several families, counted by outcome (#7058). */
+export type MailOutcomeCounts = Readonly<Partial<Record<MailOutcome, number>>>;
+
+/** One group of mails with the same result, as a message's summary shows it. */
+export interface MailOutcomeGroup {
+  readonly count: number;
+  /** „12 zugestellt“, „1 nicht zustellbar“. */
+  readonly label: string;
+  readonly tone: MailStatusCopy["tone"];
+}
+
+// The word after a count. Results a school treats alike share a word, so a
+// summary never lists two kinds of „nicht gesendet“ side by side.
+const COUNT_WORDS: Record<MailOutcome, readonly [one: string, many: string]> = {
+  queued: ["wird gesendet", "werden gesendet"],
+  accepted: ["versendet", "versendet"],
+  delivered: ["zugestellt", "zugestellt"],
+  delayed: ["verzögert", "verzögert"],
+  overdue: ["überfällig", "überfällig"],
+  undeliverable: ["nicht zustellbar", "nicht zustellbar"],
+  blocked: ["nicht gesendet", "nicht gesendet"],
+  provider_blocked: ["nicht gesendet", "nicht gesendet"],
+  held_by_stop: ["nicht gesendet", "nicht gesendet"],
+  held_by_departure: ["nicht gesendet", "nicht gesendet"],
+  unsubscribed: ["abgemeldet", "abgemeldet"],
+  complained: ["als unerwünscht gemeldet", "als unerwünscht gemeldet"],
+  send_failed: ["fehlgeschlagen", "fehlgeschlagen"],
+  unknown: ["Ergebnis unbekannt", "Ergebnis unbekannt"],
+  cancelled: ["abgebrochen", "abgebrochen"],
+};
+
+const TONE_RANK: Record<MailStatusCopy["tone"], number> = {
+  red: 0,
+  warning: 1,
+  gray: 2,
+  blue: 3,
+  green: 4,
+};
+
+/**
+ * The mails of a message grouped by result, the one that needs attention
+ * first: „1 nicht zustellbar · 11 zugestellt“. Unknown outcomes are left out;
+ * an empty list means no mail went out.
+ */
+export function mailOutcomeGroups(
+  counts: MailOutcomeCounts | undefined,
+): MailOutcomeGroup[] {
+  const groups = new Map<
+    string,
+    {
+      count: number;
+      tone: MailStatusCopy["tone"];
+      words: readonly [string, string];
+    }
+  >();
+  for (const [outcome, count] of Object.entries(counts ?? {})) {
+    const words = COUNT_WORDS[outcome as MailOutcome];
+    const copy = OUTCOME_COPY[outcome as MailOutcome];
+    if (!words || !copy || !count) continue;
+    const group = groups.get(words[1]);
+    if (group) {
+      group.count += count;
+      if (TONE_RANK[copy.tone] < TONE_RANK[group.tone]) group.tone = copy.tone;
+    } else {
+      groups.set(words[1], { count, tone: copy.tone, words });
+    }
+  }
+  return [...groups.values()]
+    .map(({ count, tone, words }) => ({
+      count,
+      tone,
+      label: `${count} ${count === 1 ? words[0] : words[1]}`,
+    }))
+    .sort((a, b) => TONE_RANK[a.tone] - TONE_RANK[b.tone] || b.count - a.count);
+}
+
+// Results of a mail that never reached the family and will not by itself:
+// refused, given up on, held for a blocked address or days late. The backend
+// names the guardians of these results (#7058).
+const NOT_ARRIVED_OUTCOMES: readonly MailOutcome[] = [
+  "undeliverable",
+  "send_failed",
+  "blocked",
+  "provider_blocked",
+  "overdue",
+];
+
+/** How many of the counted mails did not reach their family. */
+function mailsNotArrived(counts: MailOutcomeCounts | undefined): number {
+  return NOT_ARRIVED_OUTCOMES.reduce(
+    (sum, outcome) => sum + (counts?.[outcome] ?? 0),
+    0,
+  );
+}
+
+/** The counts of several mailings added up, outcome by outcome. */
+export function sumMailOutcomeCounts(
+  all: readonly MailOutcomeCounts[],
+): MailOutcomeCounts {
+  const total: Partial<Record<MailOutcome, number>> = {};
+  for (const counts of all) {
+    for (const [outcome, count] of Object.entries(counts)) {
+      const key = outcome as MailOutcome;
+      total[key] = (total[key] ?? 0) + (count ?? 0);
+    }
+  }
+  return total;
+}
+
+/**
+ * The line under a mail nobody can send again from the screen (#7058): what
+ * happened and who acts next, never „senden Sie neu“. Null while the mail
+ * needs nothing, so a delivered or accepted mail stays quiet.
+ */
+export function undeliveredMailNote(
+  outcome: MailOutcome | null | undefined,
+  nextStep: string,
+): string | null {
+  switch (outcome) {
+    case "undeliverable":
+    case "send_failed":
+      return `Die Mail kam nicht an. ${nextStep}`;
+    case "complained":
+      return `Die Mail wurde als unerwünscht gemeldet. ${nextStep}`;
+    case "overdue":
+      return `Die Mail ist seit Tagen verzögert. ${nextStep}`;
+    case "delayed":
+      return "Die Mail kommt später an. moto versucht es weiter.";
+    default:
+      return null;
+  }
+}
+
+/**
+ * The same line for the mails of one occasion, counted by outcome. A complaint
+ * is no mail that did not arrive (#6999): it gets its own words.
+ */
+export function undeliveredMailsNote(
+  counts: MailOutcomeCounts | null | undefined,
+  nextStep: string,
+): string | null {
+  const missing = mailsNotArrived(counts ?? undefined);
+  if (missing > 0) {
+    return `${missing === 1 ? "Eine Mail kam" : `${missing} Mails kamen`} nicht an. ${nextStep}`;
+  }
+  const complained = counts?.complained ?? 0;
+  if (complained > 0) {
+    return `${complained === 1 ? "Eine Mail wurde" : `${complained} Mails wurden`} als unerwünscht gemeldet. Sprechen Sie die Person direkt an.`;
+  }
+  const late = counts?.delayed ?? 0;
+  if (late > 0) {
+    return `${late === 1 ? "Eine Mail kommt" : `${late} Mails kommen`} später an. moto versucht es weiter.`;
+  }
+  return null;
+}

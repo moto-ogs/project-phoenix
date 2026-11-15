@@ -11,9 +11,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 )
 
-// Consumer-owned ports of the Stammdaten decision and the cross-kind parent
-// request commands (#3354), re-exported so the composition root can
-// implement them without reaching into the module.
+// Consumer-owned ports of the Stammdaten decision and the cross-kind parent request commands (#3354),
+// re-exported so the composition root can implement them without reaching into the module.
 type (
 	MasterDataRecords        = ports.MasterDataRecords
 	MasterDataFieldReviews   = careplan.MasterDataFieldReviews
@@ -24,6 +23,7 @@ type (
 	MasterDataPersonChange   = ports.MasterDataPersonChange
 	MasterDataWriteError     = ports.MasterDataWriteError
 	MasterDataBroadcaster    = ports.MasterDataBroadcaster
+	MasterDataClassChanges   = ports.MasterDataClassChanges
 	DepartureModes           = domain.DepartureModes
 	ParentRequestRights      = ports.ParentRequestRights
 	ParentRequestRightsCheck = ports.ParentRequestRightsResolver
@@ -58,10 +58,11 @@ type MasterDataDecisionDependencies struct {
 	Broadcaster MasterDataBroadcaster
 	Ledger      RequestLedger
 	Shares      ShareVisibility
+	// ClassChanges follows an approved Klasse into the Regeltermine (#6951).
+	ClassChanges MasterDataClassChanges
 }
 
-// NewMasterDataDecisions composes the decision over Care Plan's own request
-// rows and the tenant runtime's transaction hooks.
+// NewMasterDataDecisions composes the decision over Care Plan's own request rows and the tenant runtime's transaction hooks.
 func NewMasterDataDecisions(deps MasterDataDecisionDependencies) (*MasterDataDecisions, error) {
 	if deps.CarePlan == nil {
 		return nil, errors.New("care plan master data decisions: care plan capability is required")
@@ -69,7 +70,7 @@ func NewMasterDataDecisions(deps MasterDataDecisionDependencies) (*MasterDataDec
 	return application.NewMasterDataDecisions(application.MasterDataDecisionDependencies{
 		Requests: deps.CarePlan, People: deps.People, Records: deps.Records, Scope: deps.Scope,
 		Hooks: TenantHooks{}, Today: deps.Today, Logger: deps.Logger, Messenger: deps.Messenger,
-		Broadcaster: deps.Broadcaster, Ledger: deps.Ledger, Shares: deps.Shares,
+		Broadcaster: deps.Broadcaster, Ledger: deps.Ledger, Shares: deps.Shares, ClassChanges: deps.ClassChanges,
 	})
 }
 

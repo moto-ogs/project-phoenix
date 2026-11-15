@@ -1,7 +1,6 @@
-import { readdirSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { appRoot, collectPageRoutes } from "~/test/page-routes";
 import {
   resolveAnalyticsRoute,
   TRACKED_PARENT_ROUTE_TEMPLATES,
@@ -13,47 +12,6 @@ import {
   TRACKED_TRAEGER_ROUTE_TEMPLATES,
   type AnalyticsRouteSurface,
 } from "./analytics-routes";
-
-const appRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../app",
-);
-
-/** Route of every page.tsx below `directory`, as the browser shows it. */
-function collectPageRoutes(
-  directory: string,
-  skip: ReadonlySet<string> = new Set(),
-  prefix: readonly string[] = [],
-): string[] {
-  const routes: string[] = [];
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      if (skip.has(entry.name)) continue;
-      // Route groups such as (public) do not appear in the URL.
-      const segment = /^\(.+\)$/.test(entry.name)
-        ? []
-        : [
-            entry.name
-              .replace(/^\[\[\.\.\.(.+)]]$/, ":$1*")
-              .replace(/^\[\.\.\.(.+)]$/, ":$1*")
-              .replace(/^\[(.+)]$/, ":$1"),
-          ];
-      const nested = collectPageRoutes(
-        path.join(directory, entry.name),
-        new Set(),
-        [...prefix, ...segment],
-      );
-      routes.push(...nested);
-      // An optional catch-all ([[...topic]]) also serves its parent path.
-      if (/^\[\[\.\.\..+]]$/.test(entry.name) && nested.length > 0) {
-        routes.push(`/${prefix.join("/")}`);
-      }
-    } else if (entry.name === "page.tsx") {
-      routes.push(`/${prefix.join("/")}`);
-    }
-  }
-  return routes;
-}
 
 // Each portal's page tree and its allowlist. A new page.tsx without a
 // template fails here: add the template (see .claude/rules/usage-analytics.md).

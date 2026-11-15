@@ -71,6 +71,26 @@ describe("school setup steps", () => {
     ]);
   });
 
+  it("keeps the working-time step for schools with Zeiterfassung only", () => {
+    const withWorkTime = (applies: boolean) =>
+      state({
+        steps: [
+          ...state().steps,
+          { key: "worktime", applies, done: false, skipped: false },
+        ],
+      });
+    expect(
+      applicableSteps(withWorkTime(false)).map((step) => step.key),
+    ).not.toContain("worktime");
+    expect(setupProgress(withWorkTime(true))).toEqual({
+      finished: 2,
+      total: 5,
+    });
+    expect(
+      fillTopics(withWorkTime(true).steps).map((topic) => topic.title),
+    ).toContain("Arbeitszeitmodelle aktuell halten");
+  });
+
   it("points to help categories the lead sees, named as in the help", () => {
     const leadTopics = getHelpTopics("detailed", "fixed_groups", true).filter(
       (topic) => helpTopicMatchesRole(topic, "lead"),

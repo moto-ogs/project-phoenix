@@ -29,6 +29,7 @@ var (
 	ErrInvalidShiftSeries       = errors.New("invalid staff shift series input")
 	ErrShiftTypeNotFound        = errors.New("shift type not found")
 	ErrShiftTypeInactive        = errors.New("shift type is inactive")
+	ErrShiftTypeArchived        = errors.New("shift type is archived")
 	ErrInvalidShiftType         = errors.New("invalid shift type input")
 	ErrShiftTypeNameTaken       = errors.New("shift type name is already taken")
 	ErrShiftTypeCategoryUnknown = errors.New("shift type category ids are unknown")
@@ -104,8 +105,11 @@ type StaffShift struct {
 	SickAbsenceID *int64
 	CreatedBy     int64
 	UpdatedBy     *int64
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	// PlannedByTraeger marks a shift the Personalverwaltung planned or last
+	// changed in the Träger-Portal (#4708); CreatedBy is 0 when it created it.
+	PlannedByTraeger bool
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // StaffShiftOrderField names a column a shift listing may be ordered by.
@@ -192,8 +196,12 @@ type ShiftType struct {
 	Color       string
 	Description string
 	IsActive    bool
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	// ArchivedAt is set once the school removed the type while planned
+	// shifts or series still carried it (#6845). The type keeps labelling
+	// them but is no longer offered.
+	ArchivedAt *time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 // ShiftQuery reads planned shifts, their series, the removed occurrences and

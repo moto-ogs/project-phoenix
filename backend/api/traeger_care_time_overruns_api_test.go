@@ -118,7 +118,7 @@ func newOverrunFixtureOn(t *testing.T, db *bun.DB) overrunFixture {
 	billing, _ := signIn(identityaccess.TraegerRoleBilling)
 	foreign := newTraegerOffice(t, db, traeger, "Träger Zeitvergleich Fremd", identityaccess.TraegerRoleAdministration)
 
-	statistics, err := NewStatisticsTestModule(testpkg.NewDatabase(t, db), unit)
+	statistics, err := NewStatisticsTestModule(testpkg.NewDatabase(t, db), unit, statisticsJuly2026)
 	require.NoError(t, err)
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)

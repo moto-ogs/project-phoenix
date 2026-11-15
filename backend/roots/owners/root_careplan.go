@@ -1,9 +1,13 @@
 package owners
 
 import (
+	"time"
+
 	"context"
 	"fmt"
 	"log/slog"
+
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	carePlanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
@@ -35,6 +39,9 @@ type CarePlanRows struct {
 	LifecycleOwners        carePlanCompose.CareLifecycleOwners
 	Companions             careplan.StudentCompanions
 	ExcusedRequestRows     ExcusedRequestReads
+	// Now is the root clock the schedules and the lifecycle decide on; nil
+	// is the real one (ADR 0239).
+	Now func() time.Time
 }
 
 // BuildCarePlanRows binds Care Plan to the owners the root composed. The
@@ -46,8 +53,10 @@ func BuildCarePlanRows(
 	db transactionruntime.Database, logger *slog.Logger, studentAudit peoplePorts.StudentAuditService,
 	carePlan careplan.Capability, persons peopledirectory.Capability, membership schoolmembership.Capability,
 	timetableOwner timetable.Capability, calendar schoolcalendar.Query, classArrivals timetable.ClassArrivals, people PeopleRows,
+	now func() time.Time,
 ) (CarePlanRows, error) {
-	classExceptions, err := NewClassArrivalExceptions(classArrivals, persons)
+	today := timezone.CalendarDateClock(now)
+	classExceptions, err := NewClassArrivalExceptions(classArrivals, persons, today)
 	if err != nil {
 		return CarePlanRows{}, err
 	}
@@ -55,6 +64,7 @@ func BuildCarePlanRows(
 	if err != nil {
 		return CarePlanRows{}, err
 	}
+	arrivalDependencies.Today = today
 	pickupStudents, err := PickupPlanStudents(persons)
 	if err != nil {
 		return CarePlanRows{}, err
@@ -80,6 +90,7 @@ func BuildCarePlanRows(
 		LifecycleOwners:        lifecycleOwners,
 		Companions:             companions,
 		ExcusedRequestRows:     NewExcusedAbsenceRequestRepository(carePlan),
+		Now:                    now,
 	}, nil
 }
 
@@ -138,7 +149,7 @@ func BuildCarePlanSchedules(
 		StudentDirectory: StudentDirectoryReader(),
 		DB:               db.Pool(), Records: carePlan, Owners: lifecycleOwners, LockCareBookingWrites: lockRecurrence,
 		BookingsAuthoritative: authoritative, Fingerprint: securityruntime.Fingerprint,
-		Logger: logger.With("service", "care_lifecycle"),
+		Logger: logger.With("service", "care_lifecycle"), Now: rows.Now,
 	})
 	if err != nil {
 		return CarePlanSchedules{}, fmt.Errorf("compose care lifecycle: %w", err)
@@ -178,12 +189,13 @@ func buildCarePlanPlans(db transactionruntime.Database, logger *slog.Logger, car
 	excusal, err := carePlanCompose.NewPickupAutoExcusal(carePlanCompose.PickupExcusalDependencies{
 		DB: db.Pool(), Records: carePlan, Baselines: schedules.PickupBaselines, Blocks: presence,
 		Preview: rows.PickupExcusalTimetable, Extensions: rows.PickupExcusalTimetable,
+		Today: timezone.CalendarDateClock(rows.Now),
 	})
 	if err != nil {
 		return CarePlanSchedules{}, err
 	}
 	pickups, err := carePlanCompose.NewPickupSchedules(db.Pool(), carePlan, schedules.PickupBaselines, excusal,
-		rows.PickupStudents, logger.With("service", "pickup-schedule"))
+		rows.PickupStudents, logger.With("service", "pickup-schedule"), timezone.CalendarDateClock(rows.Now))
 	if err != nil {
 		return CarePlanSchedules{}, err
 	}

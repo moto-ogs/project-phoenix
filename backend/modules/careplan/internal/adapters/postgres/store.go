@@ -19,13 +19,34 @@ const pendingOfferingChangeConstraint = "uq_offering_change_requests_pending"
 
 type Database func(context.Context) (bun.IDB, int64, error)
 
-type Store struct{ database Database }
+type Store struct {
+	database Database
+	// now stamps the rows the store writes (updated_at, decided_at,
+	// cleanup times); nil is the real clock.
+	now func() time.Time
+}
 
 func New(database Database) *Store {
 	if database == nil {
 		panic("care plan postgres: database runtime is required")
 	}
 	return &Store{database: database}
+}
+
+// WithClock returns the store stamping its writes with now (ADR 0239).
+func (s *Store) WithClock(now func() time.Time) *Store {
+	clocked := *s
+	clocked.now = now
+	return &clocked
+}
+
+// currentTime is the instant the store stamps a write with.
+func (s *Store) currentTime() time.Time {
+	now := s.now
+	if now == nil {
+		now = time.Now
+	}
+	return now()
 }
 
 // LockExceptionDay takes the transaction-scoped advisory lock shared by all
@@ -534,7 +555,7 @@ func (s *Store) DecideOfferingChange(ctx context.Context, input careplan.DecideO
 	if err != nil {
 		return domain.OperationStats{}, err
 	}
-	now := time.Now()
+	now := s.currentTime()
 	query := db.NewUpdate().Model((*offeringChangeRow)(nil)).
 		ModelTableExpr(`enrollment.offering_change_requests AS "offering_change_request"`).
 		Set("status = ?", input.Status).

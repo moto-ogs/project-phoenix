@@ -654,33 +654,7 @@ export function mapWorkSessionEditResponse(
   };
 }
 
-/**
- * Formats duration in minutes to human-readable string
- * @param minutes - Duration in minutes
- * @returns Formatted string like "6h 30min" or "0min" or "--"
- */
-export function formatDuration(minutes: number | null | undefined): string {
-  if (minutes === null || minutes === undefined || Number.isNaN(minutes)) {
-    return "--";
-  }
-
-  if (minutes === 0) {
-    return "0min";
-  }
-
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-
-  if (hours === 0) {
-    return `${mins}min`;
-  }
-
-  if (mins === 0) {
-    return `${hours}h`;
-  }
-
-  return `${hours}h ${mins}min`;
-}
+export { formatDuration } from "~/lib/duration-format";
 
 /** A time field the person emptied (#6293). */
 export const TIME_REQUIRED_HINT = "Bitte eine Uhrzeit eintragen.";
@@ -798,28 +772,9 @@ export const OPEN_MONTH_REFRESH_MS = 60_000;
  */
 export const MAX_TARGET_RANGE_DAYS = 366;
 
-export interface BackendDailyTarget {
+interface BackendDailyTarget {
   date: string;
   target_minutes: number;
-}
-
-/**
- * Soll-Minuten je Kalendertag, aufgelöst gegen die Plan-Version, die AN
- * diesem Tag galt (#1842). Key ist der ISO-Tag (YYYY-MM-DD).
- *
- * Die Tagestabelle darf das Soll nicht aus dem AKTUELLEN Dienstplan ableiten:
- * Nach einer Vertragsänderung (z. B. 8h -> 4h) stünden sonst in jeder
- * vergangenen Zeile 4h, während die Monatskarte darüber die tatsächlich
- * gültigen 8h summiert — Karte und Tabelle widersprächen sich.
- */
-export function mapDailyTargetsResponse(
-  data: BackendDailyTarget[] | null | undefined,
-): ReadonlyMap<string, number> {
-  const targets = new Map<string, number>();
-  for (const entry of data ?? []) {
-    targets.set(entry.date.slice(0, 10), entry.target_minutes);
-  }
-  return targets;
 }
 
 export interface BackendDailyProjection extends BackendDailyTarget {
@@ -866,20 +821,6 @@ export function mapDailyProjectionResponse(
     });
   }
   return projection;
-}
-
-/**
- * Nur die Soll-Minuten aus einer Tagesprojektion — für Verbraucher, die
- * ausschließlich das Soll brauchen (Wochen-/Monats-KPIs). Sie lesen denselben
- * SWR-Key wie die Tagestabelle: ein Key trägt EINE Nutzlast, also holen beide
- * die Projektion und schneiden sich hier heraus, was sie brauchen.
- */
-export function targetsFromProjection(
-  projection: ReadonlyMap<string, DayProjection>,
-): ReadonlyMap<string, number> {
-  return new Map(
-    [...projection].map(([date, day]) => [date, day.targetMinutes]),
-  );
 }
 
 export interface BackendHoliday {
@@ -961,6 +902,7 @@ export interface BackendMonthSummary {
   is_closed?: boolean;
   closed_at?: string | null;
   closed_by?: number | null;
+  closed_by_traeger?: boolean;
   close_reason?: string | null;
   frozen_closing_balance_minutes?: number | null;
   drift_minutes?: number | null;
@@ -1071,6 +1013,9 @@ export interface MonthSummary {
   isClosed: boolean;
   closedAt: string | null;
   closedBy: string | null;
+  /** The Personalverwaltung of the Träger closed the month (#4711); only it
+   *  reopens it. */
+  closedByTraeger: boolean;
   closeReason: string | null;
   frozenClosingBalanceMinutes: number | null;
   driftMinutes: number;
@@ -1111,6 +1056,8 @@ export interface MonthCloseSnapshot {
   closedAt: string;
   closedBy: string;
   closeReason: string;
+  /** "traeger" when the Personalverwaltung of the Träger closed it (#4711). */
+  source: string;
 }
 
 export function mapMonthCloseSnapshotResponse(
@@ -1124,6 +1071,7 @@ export function mapMonthCloseSnapshotResponse(
     closedAt: data.closed_at,
     closedBy: data.closed_by.toString(),
     closeReason: data.close_reason ?? "",
+    source: data.source,
   };
 }
 
@@ -1184,6 +1132,7 @@ export function mapMonthSummaryResponse(
     isClosed: data.is_closed ?? false,
     closedAt: data.closed_at ?? null,
     closedBy: data.closed_by != null ? data.closed_by.toString() : null,
+    closedByTraeger: data.closed_by_traeger ?? false,
     closeReason: data.close_reason ?? null,
     frozenClosingBalanceMinutes: data.frozen_closing_balance_minutes ?? null,
     driftMinutes: data.drift_minutes ?? 0,

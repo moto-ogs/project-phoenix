@@ -7,7 +7,10 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import { ResponsiveActionList } from "~/components/ui/responsive-action-list";
+import {
+  ResponsiveActionList,
+  ResponsiveActionRow,
+} from "~/components/ui/responsive-action-list";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type {
@@ -137,7 +140,13 @@ export function CareRulesCard({
         ) : null
       }
       action={
-        <Button type="button" variant="outline" size="md" onClick={onCreate}>
+        <Button
+          type="button"
+          variant="outline"
+          size="md"
+          tooltip="Öffnet ein Fenster für eine neue Regel mit Monaten und Schulen."
+          onClick={onCreate}
+        >
           {CREATE_LABELS[kind]}
         </Button>
       }
@@ -151,10 +160,7 @@ export function CareRulesCard({
           {rules.map((rule) => {
             const state = stateOf(rule, currentMonth);
             return (
-              <li
-                key={rule.id}
-                className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:col-span-2 sm:grid sm:grid-cols-subgrid sm:items-center"
-              >
+              <ResponsiveActionRow key={rule.id}>
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900">
                     <span>{rule.name}</span>
@@ -172,18 +178,21 @@ export function CareRulesCard({
                       {
                         icon: <Pencil className="size-4" aria-hidden />,
                         label: "Ändern",
+                        description: "Monate, Schulen und Wirkung der Regel",
                         onClick: () => onEdit(rule),
                       },
                       {
                         label: "Löschen",
                         icon: <Trash2 className="size-4" aria-hidden />,
+                        description:
+                          "Gilt ab dem nächsten Lauf nicht mehr, moto fragt vorher nach",
                         destructive: true,
                         onClick: () => onDelete(rule),
                       },
                     ]}
                   />
                 </div>
-              </li>
+              </ResponsiveActionRow>
             );
           })}
         </ResponsiveActionList>

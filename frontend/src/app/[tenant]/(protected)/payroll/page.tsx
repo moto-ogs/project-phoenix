@@ -21,6 +21,7 @@ import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
 import { FieldLabel } from "~/components/ui/field-label";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
+import { JumpButton } from "~/components/ui/jump-button";
 import NavigationLink from "~/components/ui/navigation-link";
 import { SectionCard } from "~/components/ui/section-card";
 import { SegmentedControl } from "~/components/ui/segmented-control";
@@ -30,8 +31,14 @@ import {
   type StatusBadgeTone,
 } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { formatChatDateTime } from "~/lib/date-helpers";
+import {
+  mailStatusCopy,
+  undeliveredMailNote,
+} from "~/lib/email-delivery-status";
+import { MailOutcomeBadges } from "~/components/messaging/message-mail-status";
 import { errorStatus } from "~/lib/expected-failure";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -61,8 +68,16 @@ import { hasPermission } from "~/lib/auth-utils";
 import { notBookedModuleOf } from "~/lib/module-not-booked";
 import { MISSING_TARGET_OWNER } from "~/components/staff/missing-target-notice";
 import { ProgressBar } from "~/components/ui/progress-bar";
-import { ResponsiveActionList } from "~/components/ui/responsive-action-list";
-import { fetchSFTPStatus, type SFTPStatus } from "~/lib/sftp-export-api";
+import {
+  ResponsiveActionList,
+  ResponsiveActionRow,
+} from "~/components/ui/responsive-action-list";
+import {
+  fetchSFTPStatus,
+  sftpSettingsHref,
+  transferFailureSettingsHref,
+  type SFTPStatus,
+} from "~/lib/sftp-export-api";
 import {
   archiveSurchargeRule,
   archiveWageType,
@@ -84,6 +99,7 @@ import {
   type PayrollWageType,
   type WageTypeUnit,
 } from "~/lib/payroll-rules-api";
+import { staffWithoutTargetHref } from "~/lib/time-account-links";
 import {
   CreateSurchargeRuleModal,
   CreateWageTypeModal,
@@ -418,11 +434,6 @@ export default function PayrollPage() {
   );
 }
 
-/** Zeitkonten des Monats mit dem Filter „ohne Soll“ (#6890). */
-function staffWithoutTargetHref(year: number, month: number): string {
-  return `/staff?view=accounts&filter=ohne-soll&month=${year}-${String(month).padStart(2, "0")}`;
-}
-
 type ReadinessState = "done" | "open" | "checking";
 
 /** Symbol, Farbe und vorgelesener Zustand je Zeile. */
@@ -527,6 +538,7 @@ function ReadinessCard({
 
   return (
     <SectionCard
+      id={PAYROLL_READINESS_SECTION_ID}
       title="Vollständigkeit"
       titleBadge={
         open > 0 ? (
@@ -613,7 +625,7 @@ function targetItem({
 function ReadinessRow({ item }: { readonly item: ReadinessItem }) {
   const { icon: Icon, className, sr } = READINESS_STATE[item.state];
   return (
-    <li className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:col-span-2 sm:grid sm:grid-cols-subgrid sm:items-center">
+    <ResponsiveActionRow>
       <div className="flex min-w-0 items-start gap-3">
         <Icon
           className={`mt-0.5 size-5 shrink-0 ${className}`}
@@ -634,7 +646,7 @@ function ReadinessRow({ item }: { readonly item: ReadinessItem }) {
           {item.action}
         </div>
       ) : null}
-    </li>
+    </ResponsiveActionRow>
   );
 }
 
@@ -701,7 +713,7 @@ function lohnartColumns(
                 void onSave(cat.unitSettingKey, next);
               }
             }}
-            controlSize="compact"
+            controlSize="dense"
             className="md:w-auto md:min-w-[10rem]"
           />
         ) : (
@@ -831,8 +843,12 @@ const DISPATCH_FORMAT_OPTIONS = (
   Object.keys(PAYROLL_DISPATCH_FORMAT_LABELS) as PayrollDispatchFormat[]
 ).map((value) => ({ value, label: PAYROLL_DISPATCH_FORMAT_LABELS[value] }));
 
-/** Die Gegenstelle liegt in den Einstellungen bei „Zeitkonten übertragen“. */
-const SFTP_SETTINGS_HREF = "/settings?tab=system&highlight=sftp.enabled";
+/** Die Karte, auf die der DATEV-Hinweis beim Versand zeigt (#7054). */
+const PAYROLL_READINESS_SECTION_ID = "payroll-readiness";
+
+/** Was ein Klick zu den SFTP-Einstellungen tut. */
+const SFTP_SETTINGS_TOOLTIP =
+  "Öffnet die Übertragung der Zeitkonten in den Einstellungen.";
 
 /**
  * Fehlt etwas, das die DATEV-Prüfung beim Versand verlangt? Dieselben Zahlen
@@ -892,6 +908,7 @@ function LohnbueroCard({
     });
   };
 
+  const tenantPath = useTenantAwarePath();
   const [email, setEmail] = useState(status.dispatch.email);
   useEffect(() => setEmail(status.dispatch.email), [status.dispatch.email]);
   const trimmedEmail = email.trim();
@@ -995,18 +1012,28 @@ function LohnbueroCard({
             type="warning"
             message={sftpHint}
             action={
-              <NavigationLink
-                href={SFTP_SETTINGS_HREF}
-                className="text-sm font-medium underline underline-offset-2"
+              <ButtonLink
+                href={tenantPath(sftpSettingsHref())}
+                variant="surface"
+                size="compact"
+                tooltip={SFTP_SETTINGS_TOOLTIP}
               >
                 Zu den Einstellungen
-              </NavigationLink>
+              </ButtonLink>
             }
           />
         )}
         {datevIncomplete(status, rules, current.format) && (
           <Alert
             type="warning"
+            action={
+              <JumpButton
+                targetId={PAYROLL_READINESS_SECTION_ID}
+                tooltip="Springt zur Liste, was für den Versand noch fehlt."
+              >
+                Zur Vollständigkeit
+              </JumpButton>
+            }
             message="Für DATEV fehlen noch Angaben. Was fehlt, steht oben unter Vollständigkeit. Fehlt beim Monatsabschluss etwas, sendet moto keine Datei."
           />
         )}
@@ -1034,6 +1061,11 @@ function LohnbueroCard({
   );
 }
 
+// Neu senden lässt sich der Link nicht: die Adresse steht oben in dieser
+// Karte, die Datei gibt es im Export der Zeitkonten.
+const LINK_MAIL_NEXT_STEP =
+  "Prüfen Sie oben die E-Mail-Adresse des Lohnbüros. Die Monatsdatei finden Sie unter Mitarbeiter im Reiter Zeitkonten bei „Exportieren“.";
+
 function dispatchStateBadge(dispatch: PayrollDispatchView): {
   label: string;
   tone: StatusBadgeTone;
@@ -1046,10 +1078,15 @@ function dispatchStateBadge(dispatch: PayrollDispatchView): {
       dispatch.attempts > 0
         ? { label: "Wird erneut versucht", tone: "blue" }
         : { label: "Wird vorbereitet", tone: "blue" },
-    mailing: { label: "E-Mail wird zugestellt", tone: "blue" },
+    mailing: { label: "E-Mail wird gesendet", tone: "blue" },
+    // Ein verschickter Link ist erst zugestellt, wenn das Postfach des
+    // Lohnbüros es meldet (#7058): der Stand ist dann der der Mail.
     sent:
       dispatch.channel === "email"
-        ? { label: "E-Mail zugestellt", tone: "green" }
+        ? (mailStatusCopy(dispatch.linkMail ?? "accepted") ?? {
+            label: "Versendet",
+            tone: "gray",
+          })
         : { label: "Übertragen", tone: "green" },
     blocked: { label: "Nicht gesendet", tone: "warning" },
     failed: { label: "Fehlgeschlagen", tone: "red" },
@@ -1062,9 +1099,21 @@ function LatestDispatch({
 }: {
   readonly dispatch: PayrollDispatchView;
 }) {
+  const tenantPath = useTenantAwarePath();
   const badge = dispatchStateBadge(dispatch);
   const reason = payrollDispatchReasonText(dispatch);
   const isEmail = dispatch.channel === "email";
+  // Names the text a setting of the transfer, the notice leads there (#7054).
+  const settingsHref =
+    dispatch.state === "failed" && dispatch.channel === "sftp"
+      ? transferFailureSettingsHref(dispatch.reason ?? undefined)
+      : null;
+  // Kam der Link nicht an, steht der nächste Schritt unter dem Stand. Ein
+  // gescheiterter Versand nennt seinen Grund schon selbst.
+  const linkMailNote =
+    isEmail && dispatch.state === "sent"
+      ? undeliveredMailNote(dispatch.linkMail, LINK_MAIL_NEXT_STEP)
+      : null;
 
   return (
     <div className="space-y-3">
@@ -1086,6 +1135,15 @@ function LatestDispatch({
         <DataField label="Stand">
           <StatusBadge label={badge.label} tone={badge.tone} />
         </DataField>
+        {dispatch.noticeMails && (
+          <DataField label="Hinweis an die Leitung">
+            <MailOutcomeBadges
+              envelope
+              counts={dispatch.noticeMails}
+              accessibleLabel="E-Mails an die Leitung: "
+            />
+          </DataField>
+        )}
         {dispatch.filename && (
           <DataField label="Datei" mono>
             {dispatch.filename}
@@ -1112,7 +1170,40 @@ function LatestDispatch({
       {reason && (
         // Ein Hinweis zum Stand, kein Fehlschlag dieser Seite: darum
         // „warning“; die rote Plakette trägt das Scheitern.
-        <Alert type="warning" announce="polite" message={reason} />
+        <Alert
+          type="warning"
+          announce="polite"
+          message={reason}
+          action={
+            settingsHref ? (
+              <ButtonLink
+                href={tenantPath(settingsHref)}
+                variant="surface"
+                size="compact"
+                tooltip={SFTP_SETTINGS_TOOLTIP}
+              >
+                Zu den Einstellungen
+              </ButtonLink>
+            ) : undefined
+          }
+        />
+      )}
+      {linkMailNote && (
+        <Alert
+          type="warning"
+          announce="polite"
+          message={linkMailNote}
+          action={
+            isEmail ? (
+              <JumpButton
+                targetId="payroll-dispatch-email"
+                tooltip="Springt zur E-Mail-Adresse des Lohnbüros."
+              >
+                Zur Adresse
+              </JumpButton>
+            ) : undefined
+          }
+        />
       )}
     </div>
   );
@@ -1318,7 +1409,7 @@ function WageTypesCard({
               saveWageType(wageType, { unit: next as WageTypeUnit });
             }
           }}
-          controlSize="compact"
+          controlSize="dense"
           className="md:w-auto md:min-w-[10rem]"
         />
       ),
@@ -1331,7 +1422,14 @@ function WageTypesCard({
       render: (wageType) => (
         <OverflowMenu
           ariaLabel={`Aktionen für ${wageType.name}`}
-          items={[{ label: "Archivieren", onClick: () => onArchive(wageType) }]}
+          items={[
+            {
+              label: "Archivieren",
+              description:
+                "Nimmt die Lohnart aus dem Export. moto fragt vorher nach.",
+              onClick: () => onArchive(wageType),
+            },
+          ]}
         />
       ),
     },
@@ -1347,6 +1445,7 @@ function WageTypesCard({
           variant="outline"
           size="compact"
           onClick={onCreate}
+          tooltip="Öffnet ein Fenster für eine neue Lohnart Ihres Lohnbüros."
         >
           Lohnart anlegen
         </Button>
@@ -1522,7 +1621,7 @@ function SurchargeRulesCard({
                 saveSurchargeRule(rule, { wageTypeId: next });
               }
             }}
-            controlSize="compact"
+            controlSize="dense"
             className="md:w-auto md:min-w-[10rem]"
           />
         );
@@ -1536,7 +1635,14 @@ function SurchargeRulesCard({
       render: (rule) => (
         <OverflowMenu
           ariaLabel={`Aktionen für ${SURCHARGE_KIND_LABELS[rule.kind]}`}
-          items={[{ label: "Archivieren", onClick: () => onArchive(rule) }]}
+          items={[
+            {
+              label: "Archivieren",
+              description:
+                "Beendet die Regel ab jetzt. moto fragt vorher nach.",
+              onClick: () => onArchive(rule),
+            },
+          ]}
         />
       ),
     },
@@ -1554,6 +1660,8 @@ function SurchargeRulesCard({
           size="compact"
           onClick={onCreate}
           disabled={noWageType}
+          disabledReason="Legen Sie zuerst oben eine eigene Lohnart an."
+          tooltip="Öffnet ein Fenster für eine neue Zuschlagsregel."
         >
           Zuschlagsregel anlegen
         </Button>
@@ -1745,7 +1853,7 @@ function AbsenceTypeWageTypesCard({
               );
             }
           }}
-          controlSize="compact"
+          controlSize="dense"
           className="md:w-auto md:min-w-[12rem]"
         />
       ),

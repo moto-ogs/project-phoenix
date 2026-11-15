@@ -34,12 +34,20 @@ import {
   formatDayCount,
 } from "~/lib/absence-helpers";
 import { createLogger } from "~/lib/logger";
-import type { StaffAbsence } from "~/lib/time-tracking-helpers";
+import {
+  absenceDisplayLabel,
+  type StaffAbsence,
+} from "~/lib/time-tracking-helpers";
 import {
   timeTrackingService,
   type VacationQuotaSummary,
 } from "~/lib/time-tracking-api";
 import { VacationRequestModal } from "./vacation-request-modal";
+import {
+  AbsenceRequestMails,
+  useOwnAbsenceRequestMails,
+} from "~/components/staff/absence-mail-status";
+import type { MailOutcomeCounts } from "~/lib/email-delivery-status";
 import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
 
 const logger = createLogger({ component: "LeaveRequestsCard" });
@@ -74,6 +82,14 @@ function decisionNoteLabel(status: string): string {
   return "Anmerkung der Leitung:";
 }
 
+/** Urlaub und jeder Antrag einer beantragbaren eigenen Art (#4710). */
+function isRequestFlowAbsence(absence: StaffAbsence): boolean {
+  return (
+    absence.absenceType === "vacation" ||
+    (Boolean(absence.absenceTypeId) && absence.status !== "reported")
+  );
+}
+
 export function LeaveRequestsCard() {
   const currentTimestamp = useCurrentTimestamp();
   const [modalOpen, setModalOpen] = useState(false);
@@ -106,10 +122,12 @@ export function LeaveRequestsCard() {
         timeTrackingService.getQuestionedAbsences(),
       ]);
       setQuota(q);
-      setVacations(abs.filter((a) => a.absenceType === "vacation"));
+      // Neben Urlaub laufen Anträge beantragbarer Arten hier mit (#4710):
+      // alles, was nicht direkt eingetragen ist.
+      setVacations(abs.filter(isRequestFlowAbsence));
       setQuestionedVacations(
         questions.filter(
-          (a) => a.absenceType === "vacation" && a.status === "question",
+          (a) => isRequestFlowAbsence(a) && a.status === "question",
         ),
       );
       clearLoadError();
@@ -159,6 +177,17 @@ export function LeaveRequestsCard() {
         .slice(0, 8),
     [vacations],
   );
+
+  // Ob die Leitung die wartenden Anträge per Mail bekam (#7058).
+  const waitingIds = useMemo(
+    () =>
+      vacations
+        .filter((vacation) => vacation.status === "requested")
+        .map((vacation) => vacation.id)
+        .sort(),
+    [vacations],
+  );
+  const requestMails = useOwnAbsenceRequestMails(waitingIds);
 
   const sortedQuestionedVacations = useMemo(
     () =>
@@ -243,6 +272,7 @@ export function LeaveRequestsCard() {
               size="md"
               onClick={() => setModalOpen(true)}
               disabled={loading || load.error !== null}
+              tooltip="Öffnet ein Formular für einen neuen Urlaubsantrag."
             >
               Urlaub beantragen
             </Button>
@@ -316,6 +346,11 @@ export function LeaveRequestsCard() {
             {recentVacations.length > 0 && (
               <div className="mt-5 border-t border-gray-100 pt-5">
                 <SectionLabel className="mb-3">Meine Anträge</SectionLabel>
+                <LoadErrorAlert
+                  error={requestMails.loadError}
+                  actionLayout="responsive"
+                  className="mb-3"
+                />
                 <ul className="space-y-2">
                   {recentVacations.map((vacation) => (
                     <AbsenceRequestItem
@@ -323,6 +358,11 @@ export function LeaveRequestsCard() {
                       absence={vacation}
                       currentTimestamp={currentTimestamp}
                       onCancel={handleCancel}
+                      mailCounts={
+                        vacation.status === "requested"
+                          ? requestMails.mails[vacation.id]
+                          : undefined
+                      }
                     />
                   ))}
                 </ul>
@@ -376,12 +416,15 @@ function AbsenceRequestItem({
   onCancel,
   onResubmitted,
   showResubmit = false,
+  mailCounts,
 }: {
   readonly absence: StaffAbsence;
   readonly currentTimestamp: number;
   readonly onCancel: (absence: StaffAbsence) => void;
   readonly onResubmitted?: () => void;
   readonly showResubmit?: boolean;
+  /** The notice of a waiting request to the Leitung (#7058). */
+  readonly mailCounts?: MailOutcomeCounts;
 }) {
   const meta = statusMeta(absence.status);
   const cancelable =
@@ -395,6 +438,9 @@ function AbsenceRequestItem({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium text-gray-800">
+            {absence.absenceType !== "vacation" && (
+              <span className="mr-2">{absenceDisplayLabel(absence)} ·</span>
+            )}
             {formatRange(absence.dateStart, absence.dateEnd)}
             <span className="ml-2 text-xs text-gray-500">
               · {formatDayCount(dayCountFor(absence))}
@@ -413,6 +459,7 @@ function AbsenceRequestItem({
               {absence.decisionNote}
             </p>
           )}
+          <AbsenceRequestMails counts={mailCounts} />
         </div>
         <div className="flex items-center gap-3">
           <StatusColorBadge label={meta.label} color={meta.color} />
@@ -422,6 +469,7 @@ function AbsenceRequestItem({
               variant="ghost_danger"
               size="compact"
               onClick={() => onCancel(absence)}
+              tooltip="Zieht den Antrag zurück, auch genehmigten Urlaub. moto fragt vorher nach."
             >
               Stornieren
             </Button>
@@ -505,6 +553,7 @@ function ResubmitAbsenceForm({
           size="compact"
           onClick={handleSubmit}
           disabled={submitting}
+          tooltip="Sendet Ihre Antwort sofort an die Leitung zur Entscheidung."
         >
           {submitting ? "…" : "Antwort senden & erneut einreichen"}
         </Button>

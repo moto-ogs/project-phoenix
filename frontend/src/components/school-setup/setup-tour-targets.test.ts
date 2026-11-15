@@ -12,16 +12,14 @@ import { staffOnboardingTours } from "../staff-onboarding/staff-onboarding-steps
 
 // Jede Stelle, auf die eine Tour per `data-setup-tour` zeigt, muss eine Seite
 // auch rendern (#5142: Der Unit-Test der Tour zeigte auf eine nachgebaute
-// Stelle und blieb grün, während die App „nicht zu sehen“ meldete). Und jede
-// Datei, die eine solche Stelle rendert, steht in den Pfaden, bei denen
-// .github/workflows/e2e.yml die Tour-Spec e2e/onboarding-tours.spec.ts auf dem
-// PR startet.
+// Stelle und blieb grün, während die App „nicht zu sehen“ meldete). Die
+// Tour-Spec e2e/onboarding-tours.spec.ts läuft nur noch nachts, darum fängt
+// dieser Test fehlende Stellen schon auf dem PR.
 
 const FRONTEND = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../..",
 );
-const REPO = path.resolve(FRONTEND, "..");
 const SRC = path.join(FRONTEND, "src");
 
 /** Die Touren selbst nennen die Stellen nur, sie rendern sie nicht. */
@@ -169,54 +167,6 @@ function isRendered(value: string, targets: readonly RenderedTarget[]) {
   });
 }
 
-/** `paths` unter `pull_request` in .github/workflows/e2e.yml. */
-function e2ePullRequestPaths(): string[] {
-  const workflow = readFileSync(
-    path.join(REPO, ".github/workflows/e2e.yml"),
-    "utf8",
-  );
-  const block =
-    /\n {2}pull_request:\n[\s\S]*?\n {4}paths:\n((?: {6}(?:- |#).*\n)+)/.exec(
-      workflow,
-    );
-  if (!block) throw new Error("e2e.yml hat keine pull_request.paths.");
-  return block[1]!
-    .split("\n")
-    .map((line) => /^ {6}- "?([^"]+)"?$/.exec(line)?.[1])
-    .filter((entry): entry is string => entry !== undefined);
-}
-
-/** GitHub-Pfadfilter: `**` über Ordner, `*` innerhalb eines Ordners. */
-function globToRegExp(glob: string): RegExp {
-  let pattern = "";
-  for (let index = 0; index < glob.length; index++) {
-    const char = glob[index]!;
-    if (glob.startsWith("**/", index)) {
-      pattern += "(?:.*/)?";
-      index += 2;
-    } else if (glob.startsWith("**", index)) {
-      pattern += ".*";
-      index += 1;
-    } else if (char === "*") {
-      pattern += "[^/]*";
-    } else {
-      pattern += char.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
-    }
-  }
-  return new RegExp(`^${pattern}$`);
-}
-
-function triggersE2E(file: string, paths: readonly string[]): boolean {
-  let included = false;
-  for (const entry of paths) {
-    const negated = entry.startsWith("!");
-    if (globToRegExp(negated ? entry.slice(1) : entry).test(file)) {
-      included = !negated;
-    }
-  }
-  return included;
-}
-
 describe("Stellen der geführten Touren", () => {
   const { targets, files } = renderedTargets();
 
@@ -233,36 +183,5 @@ describe("Stellen der geführten Touren", () => {
       .filter(([value]) => !isRendered(value, targets))
       .map(([value, where]) => `data-setup-tour="${value}" (${where})`);
     expect(missing).toEqual([]);
-  });
-
-  it("jede Datei mit einer Tour-Stelle startet die Tour-Spec in e2e.yml", () => {
-    const paths = e2ePullRequestPaths();
-    const repoFiles = [
-      ...files,
-      ...TOUR_DEFINITIONS,
-      "src/components/school-setup/use-setup-tour.ts",
-      "src/components/ui/coach-mark.tsx",
-      "e2e/onboarding-tours.spec.ts",
-    ].map((file) => `frontend/${file}`);
-    expect(repoFiles.filter((file) => !triggersE2E(file, paths))).toEqual([]);
-  });
-
-  it("prüft die Pfadmuster wie GitHub", () => {
-    expect(
-      triggersE2E("frontend/src/app/[tenant]/(protected)/rooms/page.tsx", [
-        "frontend/src/app/**/rooms/page.tsx",
-      ]),
-    ).toBe(true);
-    expect(
-      triggersE2E("frontend/e2e/layout/a.spec.ts", [
-        "frontend/e2e/**",
-        "!frontend/e2e/layout/**",
-      ]),
-    ).toBe(false);
-    expect(
-      triggersE2E("frontend/src/components/a/b.tsx", [
-        "frontend/src/components/*.tsx",
-      ]),
-    ).toBe(false);
   });
 });

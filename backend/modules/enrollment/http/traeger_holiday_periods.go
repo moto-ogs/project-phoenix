@@ -32,6 +32,7 @@ type HolidayPeriodResource struct {
 	schoolNames   capability.HolidaySchoolNames
 	known         capability.HolidayKnownChildren
 	knownTrail    capability.HolidayKnownChildTrail
+	mails         capability.HolidayRegistrationMailReview
 	requireManage common.Middleware
 	requireHealth common.Middleware
 }
@@ -52,7 +53,12 @@ func NewHolidayPeriodResource(periods capability.HolidayPeriods, review capabili
 	if periods == nil || review == nil || records == nil || wishes == nil || places == nil || allocation == nil || decide == nil || schoolNames == nil || known == nil || knownTrail == nil || requireManage == nil || requireHealth == nil {
 		panic("enrollment http: the holiday periods, the registration review, the registration records, the wish review, the places, the allocation, the decision, the school names, the known children with their trail and the right checks are required")
 	}
-	return &HolidayPeriodResource{periods: periods, review: review, records: records, wishes: wishes, places: places, allocation: allocation, decide: decide, schoolNames: schoolNames, known: known, knownTrail: knownTrail, requireManage: requireManage, requireHealth: requireHealth}
+	// The review also names the undelivered mails of the list (#6737).
+	mails, ok := review.(capability.HolidayRegistrationMailReview)
+	if !ok {
+		panic("enrollment http: the registration review does not name the undelivered mails")
+	}
+	return &HolidayPeriodResource{periods: periods, review: review, records: records, wishes: wishes, places: places, allocation: allocation, decide: decide, schoolNames: schoolNames, known: known, knownTrail: knownTrail, mails: mails, requireManage: requireManage, requireHealth: requireHealth}
 }
 
 // HolidayAllocationReads names the Träger's criteria, shows the proposal of
@@ -120,6 +126,9 @@ type holidayWeekRequest struct {
 	TimeModels   []holidayTimeModelRequest `json:"time_models"`
 	// BookingUnit is "week" or "day"; empty is a week (#4701).
 	BookingUnit string `json:"booking_unit"`
+	// LunchPriceCents is the price of one lunch; null offers no lunch
+	// (#5631).
+	LunchPriceCents *int64 `json:"lunch_price_cents"`
 }
 
 // HolidayPeriodRequest is the body of POST /traeger/holiday-periods and PUT
@@ -154,7 +163,7 @@ func (req *HolidayPeriodRequest) input() capability.HolidayPeriodInput {
 		}
 		weeks[i] = capability.HolidayWeekInput{
 			ID: week.ID, StartsOn: week.StartsOn, EndsOn: week.EndsOn, HostSchoolID: week.HostSchoolID, TimeModels: models,
-			BookingUnit: week.BookingUnit,
+			BookingUnit: week.BookingUnit, LunchPriceCents: week.LunchPriceCents,
 		}
 	}
 	return capability.HolidayPeriodInput{
@@ -294,6 +303,8 @@ func renderHolidayPeriodError(w http.ResponseWriter, r *http.Request, err error)
 			field = fmt.Sprintf("weeks.%d.starts_on", refusedDays.Week)
 		}
 		common.RenderError(w, r, common.ErrorConflictOnField(err, common.CodeEnrollmentHolidayWeekDayLimit, field))
+	case errors.Is(err, capability.ErrHolidayLunchBooked):
+		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeEnrollmentHolidayLunchBooked))
 	case errors.Is(err, capability.ErrHolidayBookingUnitBooked):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeEnrollmentHolidayBookingUnitBooked))
 	case errors.Is(err, capability.ErrHolidayWeekBooked):

@@ -145,7 +145,8 @@ type PayrollManagers interface {
 }
 
 // PayrollDispatchPorts are the collaborators of the payroll dispatch.
-// Every port is required; Now is optional and pins the clock in tests.
+// Every port but MailOutcomes is required; Now is optional and pins the
+// clock in tests.
 type PayrollDispatchPorts struct {
 	Settings PayrollDispatchSettings
 	Export   PayrollExport
@@ -154,6 +155,9 @@ type PayrollDispatchPorts struct {
 	Schools  PayrollSchools
 	Managers PayrollManagers
 	Tokens   PayrollTokens
+	// MailOutcomes reads what became of the link mail and the notices for
+	// the overview (#7058); nil shows no mail status.
+	MailOutcomes MailOutcomes
 	// FrontendURL is the base of the download link and the notice's link.
 	FrontendURL string
 	Logger      *slog.Logger

@@ -31,6 +31,8 @@ type MoveShiftInput struct {
 	// ActorAccountID stamps the shift_moved Änderungsprotokoll entry (#1884);
 	// nil records an actor-less event.
 	ActorAccountID *int64
+	// WorkingTime confirms the working-time warnings of the move (#4708).
+	WorkingTime workforce.WorkingTimeConfirmation
 }
 
 // MoveShift applies a move as one row update inside the caller's tenant
@@ -69,7 +71,8 @@ func (s *staffShiftService) MoveShift(ctx context.Context, input MoveShiftInput)
 	if err := s.applyMovedSickState(ctx, existing, &moved); err != nil {
 		return nil, err
 	}
-	if err := s.validateMove(ctx, existing, &moved); err != nil {
+	override, err := s.validateMove(ctx, existing, &moved)
+	if err != nil {
 		return nil, err
 	}
 	if err := s.applyMoveSeriesRules(ctx, existing, &moved); err != nil {
@@ -81,7 +84,7 @@ func (s *staffShiftService) MoveShift(ctx context.Context, input MoveShiftInput)
 		return nil, err
 	}
 	applyShiftToRow(&moved, written)
-	if err := s.logShiftMovedEvent(ctx, existing, &moved, input.ActorAccountID); err != nil {
+	if err := s.logShiftMovedEvent(ctx, existing, &moved, input, override); err != nil {
 		return nil, err
 	}
 	s.getLogger().Info("staff shift moved",
@@ -157,6 +160,7 @@ func movedShift(existing *workforce.ShiftRecord, input MoveShiftInput) workforce
 	moved.EndTime = input.EndTime
 	moved.BreakMinutes = input.BreakMinutes
 	moved.ShiftTypeID = input.ShiftTypeID
+	moved.WorkingTime = input.WorkingTime
 	if input.ActorStaffID > 0 {
 		moved.UpdatedBy = &input.ActorStaffID
 	}
@@ -173,23 +177,31 @@ func (s *staffShiftService) applyMovedSickState(ctx context.Context, existing, m
 	return s.applySickStateOfDay(ctx, moved)
 }
 
-// validateMove checks the moved row's shape, type, origin link and overlap.
-func (s *staffShiftService) validateMove(ctx context.Context, existing, moved *workforce.ShiftRecord) error {
+// validateMove checks the moved row's shape, type, origin link, overlap
+// and working time (#4708); it returns the override the move must record.
+func (s *staffShiftService) validateMove(ctx context.Context, existing, moved *workforce.ShiftRecord) (*planOverride, error) {
 	if err := moved.Validate(); err != nil {
-		return fmt.Errorf("%w: %s", ErrShiftInvalid, err.Error())
+		return nil, fmt.Errorf("%w: %s", ErrShiftInvalid, err.Error())
 	}
 	// A type assigned to another person is a fresh assignment, so an inactive
 	// type cannot hitchhike across staff. Same-person moves may retain their
 	// already-attached inactive type, matching ordinary edits.
 	if moved.StaffID != existing.StaffID || !sameShiftTypeID(moved.ShiftTypeID, existing.ShiftTypeID) {
 		if err := s.ensureShiftTypeActive(ctx, moved.ShiftTypeID); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if err := s.validateMovedOrigin(ctx, existing, moved); err != nil {
-		return err
+		return nil, err
 	}
-	return s.checkOverlap(ctx, moved)
+	if err := s.checkOverlap(ctx, moved); err != nil {
+		return nil, err
+	}
+	var before []*workforce.ShiftRecord
+	if moved.StaffID == existing.StaffID {
+		before = []*workforce.ShiftRecord{existing}
+	}
+	return s.guard.check(ctx, moved.StaffID, before, []*workforce.ShiftRecord{moved}, moved.WorkingTime)
 }
 
 // applyMoveSeriesRules consumes a vacated series occurrence and sets the moved
@@ -227,7 +239,11 @@ func (s *staffShiftService) applyMoveSeriesRules(ctx context.Context, existing, 
 // audit is wired: an audit failure aborts the move. The audit is optional
 // only for unit tests constructed without audit wiring — production always
 // sets it.
-func (s *staffShiftService) logShiftMovedEvent(ctx context.Context, existing, moved *workforce.ShiftRecord, actorAccountID *int64) error {
+func (s *staffShiftService) logShiftMovedEvent(ctx context.Context, existing, moved *workforce.ShiftRecord, input MoveShiftInput, override *planOverride) error {
+	actorAccountID := input.ActorAccountID
+	if err := s.guard.record(ctx, override, moved, actorAccountID, input.ActorStaffID); err != nil {
+		return err
+	}
 	if s.shiftMoveAudit == nil {
 		return nil
 	}

@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { loadSeedAccess, type SeedAccess } from "../scripts/seed-state";
 import { frontendPort } from "./frontend-port";
@@ -48,6 +48,7 @@ export async function loginToTenant(
   // `domcontentloaded` statt `load`: der Next-Dev-Server hält über SSE
   // Verbindungen offen, das `load`-Event kann dadurch hängen.
   await loginToLocalTenant(page, base, access);
+  await waitForSignedInRedirect(page);
 
   const res = await page.request.get(`${base}/api/auth/session`);
   expect(res.ok(), `Session laden fehlgeschlagen (${res.status()})`).toBe(true);
@@ -59,6 +60,36 @@ export async function loginToTenant(
     localStorage.setItem(storageKey, JSON.stringify({ done: true }));
   }, key);
   await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForSignedInRedirect(page);
+}
+
+/** Längste Zeit für die Weiterleitung von `/`, samt kalter Übersetzung. */
+const SIGNED_IN_REDIRECT_TIMEOUT = 60_000;
+
+/**
+ * Wartet, bis die Tenant-Wurzel `/` ein angemeldetes Konto weitergeleitet hat.
+ * Die Wurzel ist die Login-Maske; mit Sitzung zeigt sie „Sie sind bereits
+ * angemeldet“ und leitet erst im Browser weiter (SmartRedirect, nach /home oder
+ * zur Schul-Übergabe, für jedes Konto weg von `/`). Ohne dieses Warten zerstörte
+ * die Weiterleitung den Kontext von page.evaluate, oder die Spec prüfte noch die
+ * Login-Maske.
+ *
+ * Auf einem kalten Next-Dev-Server übersetzt die erste Weiterleitung die
+ * Zielseite; das kostet im CI-Job bis zu 30 s. Seit #6937 laufen die Shards in
+ * eigenen Jobs mit kaltem Server, und die erste Spec eines Shards verbrauchte
+ * damit ihr ganzes Zeitbudget im Login. Diese Zeit zählt deshalb nicht gegen
+ * den Test: Er bekommt das Warten als Zeit dazu. Hängt die Weiterleitung,
+ * meldet waitForURL das selbst, bevor das Budget endet. `commit`, nicht `load`:
+ * der Dev-Server hält SSE-Verbindungen offen, `load` kann hängen.
+ */
+async function waitForSignedInRedirect(page: Page): Promise<void> {
+  // Nur verlängern, nie kürzen: Ein Aufrufer (etwa ein beforeAll mit eigenem
+  // Budget) behält seine Zeit.
+  test.info().setTimeout(test.info().timeout + SIGNED_IN_REDIRECT_TIMEOUT);
+  await page.waitForURL((url) => url.pathname !== "/", {
+    timeout: SIGNED_IN_REDIRECT_TIMEOUT,
+    waitUntil: "commit",
+  });
 }
 
 /**

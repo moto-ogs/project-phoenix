@@ -83,25 +83,28 @@ type LifecycleStudents interface {
 // notice), and so is SickReports; Settings is required with
 // EnforceTimePolicy; Logger and Now default. Every other field is required.
 type InstanceLifecycleDependencies struct {
-	InstanceRepo        InstanceRows
-	IdempotencyRepo     timetable.ActivityInstanceCommand
-	InstanceStaffRepo   timetable.InstanceStaffCapability
-	InstanceStudents    ParticipantRows
-	ExceptionRepo       timetable.ActivityExceptionCapability
-	CalendarPeriodRepo  CalendarPeriodRecords
-	RecoveryRepo        ActivityRecoveryRecords
-	ActivityGroupRepo   timetable.ActivityGroupQuery
-	StaffRepo           LifecycleStaff
-	StudentRepo         LifecycleStudents
-	ActiveGroupRepo     studentpresence.SessionRecords
-	SupervisorRepo      studentpresence.SupervisionRecords
-	Presence            LifecyclePresence
-	ActiveService       SessionEnder
-	Rooms               LifecycleRooms
-	CareDays            CareDays
-	CareDayLocks        CareDayLocks
-	Protocol            DeviationProtocol
-	GuardianNotices     GuardianNotices
+	InstanceRepo       InstanceRows
+	IdempotencyRepo    timetable.ActivityInstanceCommand
+	InstanceStaffRepo  timetable.InstanceStaffCapability
+	InstanceStudents   ParticipantRows
+	ExceptionRepo      timetable.ActivityExceptionCapability
+	CalendarPeriodRepo CalendarPeriodRecords
+	RecoveryRepo       ActivityRecoveryRecords
+	ActivityGroupRepo  timetable.ActivityGroupQuery
+	StaffRepo          LifecycleStaff
+	StudentRepo        LifecycleStudents
+	ActiveGroupRepo    studentpresence.SessionRecords
+	SupervisorRepo     studentpresence.SupervisionRecords
+	Presence           LifecyclePresence
+	ActiveService      SessionEnder
+	Rooms              LifecycleRooms
+	CareDays           CareDays
+	CareDayLocks       CareDayLocks
+	Protocol           DeviationProtocol
+	GuardianNotices    GuardianNotices
+	// StaffNotices tells the planned staff about a cancellation (#7148);
+	// nil tells nobody.
+	StaffNotices        StaffCancellationNotices
 	Broadcaster         LifecycleBroadcaster
 	Settings            LifecycleSettings
 	Materialization     timetable.MaterializationCapability

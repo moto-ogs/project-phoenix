@@ -77,7 +77,7 @@ func TestArrivalBaselineTakesTimeFromTheClass(t *testing.T) {
 	staff := testpkg.CreateTestStaff(t, db, "Betreuung", "Person")
 	setClassArrivalTimes(t, "3b", map[string]string{"mon": "11:45", "wed": "12:45"})
 
-	monday := mondayOnOrAfter(calendar.TodayDate())
+	monday := mondayOnOrAfter(decisionTestToday)
 	tuesday := monday.AddDays(1)
 	wednesday := monday.AddDays(2)
 
@@ -158,7 +158,7 @@ func TestArrivalBaselineClassTimeAloneIsNoCareDay(t *testing.T) {
 	})
 	testpkg.CreateTestArrivalSchedule(t, db, student.ID, timetable.WeekdayMonday, staff.ID, "")
 
-	monday := mondayOnOrAfter(calendar.TodayDate())
+	monday := mondayOnOrAfter(decisionTestToday)
 	projection, err := baseline.Project(ctx, []int64{student.ID}, monday, monday.AddDays(4))
 	require.NoError(t, err)
 
@@ -206,7 +206,7 @@ func TestArrivalBaselineManualRowOverridesClassTime(t *testing.T) {
 	testpkg.CreateTestArrivalSchedule(t, db, student.ID, timetable.WeekdayMonday, staff.ID, "12:15")
 	testpkg.CreateTestArrivalSchedule(t, db, student.ID, timetable.WeekdayTuesday, staff.ID, "")
 
-	monday := mondayOnOrAfter(calendar.TodayDate())
+	monday := mondayOnOrAfter(decisionTestToday)
 	projection, err := baseline.Project(ctx, []int64{student.ID}, monday, monday.AddDays(1))
 	require.NoError(t, err)
 

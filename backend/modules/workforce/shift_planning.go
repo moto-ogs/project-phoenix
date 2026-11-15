@@ -39,6 +39,11 @@ type StaffShiftInput struct {
 	ChangeReason  *string
 	OriginShiftID *int64
 	ActorStaffID  int64
+	// TraegerAccountID is the account of the Personalverwaltung when the
+	// Träger-Portal plans the shift (#4708); ActorStaffID is then 0.
+	TraegerAccountID int64
+	// WorkingTime confirms the working-time warnings of the write (#4708).
+	WorkingTime WorkingTimeConfirmation
 }
 
 type CreateStaffShift struct {
@@ -68,6 +73,8 @@ type MoveStaffShift struct {
 	ShiftTypeID    *int64
 	ActorStaffID   int64
 	ActorAccountID *int64
+	// WorkingTime confirms the working-time warnings of the move (#4708).
+	WorkingTime WorkingTimeConfirmation
 }
 
 // ShiftReplacement is one person covering part of a cancelled shift's gap.
@@ -97,6 +104,8 @@ type CancelStaffShift struct {
 	ShiftTypeID      *int64
 	Replacements     []ShiftReplacement
 	ActorStaffID     int64
+	// WorkingTime confirms the working-time warnings of the covers (#4708).
+	WorkingTime WorkingTimeConfirmation
 }
 
 type StaffShiftCancellation struct {
@@ -123,6 +132,9 @@ type StaffShiftSeriesInput struct {
 	// days (#3820).
 	IncludeSchoolBreaks bool
 	ActorStaffID        int64
+	// WorkingTime confirms the working-time warnings of the occurrences
+	// (#4708).
+	WorkingTime WorkingTimeConfirmation
 }
 
 type CreateStaffShiftSeries struct {
@@ -149,6 +161,9 @@ type SplitStaffShiftSeries struct {
 	// IncludeSchoolBreaks nil keeps the predecessor's opt-in (#3820).
 	IncludeSchoolBreaks *bool
 	ActorStaffID        int64
+	// WorkingTime confirms the working-time warnings of the occurrences
+	// (#4708).
+	WorkingTime WorkingTimeConfirmation
 }
 
 // StaffShiftSeriesResult reports what a series write materialized; the
@@ -286,11 +301,16 @@ type ShiftTypeInput struct {
 // mapping in the same unit of work; unknown category ids yield
 // ErrShiftTypeCategoryUnknown and the caller must roll the request back.
 type ShiftTypeAdministration interface {
+	// ListShiftTypes returns every type of the school, archived ones
+	// included; each carries ArchivedAt so callers can tell them apart.
 	ListShiftTypes(context.Context) ([]ShiftType, error)
 	CreateShiftType(context.Context, ShiftTypeInput) (ShiftType, error)
 	// CreateDefaultShiftTypes seeds the example types a school starts with,
 	// skipping names that already exist, and returns the full list.
 	CreateDefaultShiftTypes(context.Context) ([]ShiftType, error)
 	UpdateShiftType(context.Context, ShiftTypeInput) (ShiftType, error)
-	DeleteShiftType(context.Context, int64) error
+	// DeleteShiftType removes a type. A type that planned shifts or series
+	// still carry is archived instead, so they keep their classification
+	// (#6845); the result names what happened.
+	DeleteShiftType(context.Context, int64) (ShiftTypeRemoval, error)
 }

@@ -5,7 +5,14 @@ import { BackgroundWrapper } from "~/components/background-wrapper";
 import localFont from "next/font/local";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { getLocale } from "next-intl/server";
+import { getLocale, getMessages } from "next-intl/server";
+import { RouteTitle } from "~/components/page-title/route-title";
+import {
+  pageTitleSurfaceOf,
+  type LocalizedPageTitleMessages,
+} from "~/lib/page-titles";
+import { configuredPortalOfHost } from "~/lib/portal-paths";
+import { tenantSlugFromHost } from "~/lib/tenant-host";
 import {
   faviconMetadata,
   isParentsHost,
@@ -34,8 +41,9 @@ const motoFont = localFont({
   fallback: ["Arial", "sans-serif"],
 });
 
+// No title here: every page gets its own through RouteTitle (#7109). A
+// shared default would hide a page without one from page-titles.test.ts.
 const baseMetadata = {
-  title: "moto – Digitale Ganztagsbetreuung",
   description:
     "Das innovative An- und Abmeldesystem mit NFC-Armbändern für die offene Ganztagsschule. DSGVO-konform, entwickelt an der Universität Münster.",
 } satisfies Metadata;
@@ -46,25 +54,25 @@ function requiredEnv(name: string): string {
   return value;
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-  const requestHeaders = await headers();
-  const host =
-    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "";
-  const config = {
+function hostConfig() {
+  return {
     operatorHostname: requiredEnv("NEXT_PUBLIC_OPERATOR_HOSTNAME"),
     parentsHostname: requiredEnv("NEXT_PUBLIC_PARENTS_HOSTNAME"),
     schoolHostname: requiredEnv("NEXT_PUBLIC_SCHOOL_HOSTNAME"),
     tenantDomain: requiredEnv("TENANT_DOMAIN"),
   };
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const host = requestHost(await headers());
+  const config = hostConfig();
   const variant = resolveFaviconVariant(host, config);
   const parentCopy = isParentsHost(host, config)
     ? getParentAppMetadata((await getLocale()) as AppLocale)
     : null;
 
   return {
-    ...(parentCopy
-      ? { title: parentCopy.name, description: parentCopy.description }
-      : baseMetadata),
+    ...(parentCopy ? { description: parentCopy.description } : baseMetadata),
     ...faviconMetadata(variant),
   };
 }
@@ -79,6 +87,39 @@ export const viewport = {
   initialScale: 1,
 };
 
+function requestHost(requestHeaders: Headers): string {
+  const raw =
+    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "";
+  return (raw.split(",")[0] ?? "").trim();
+}
+
+/** Host name without port; an unparsable Host header names no portal. */
+function hostnameOf(host: string): string {
+  if (host === "" || !URL.canParse(`http://${host}`)) return "";
+  return new URL(`http://${host}`).hostname;
+}
+
+async function pageTitleProps() {
+  const host = requestHost(await headers());
+  const config = hostConfig();
+  const hostname = hostnameOf(host);
+  // isParentsHost also knows the legacy parents host.
+  const portal = isParentsHost(host, config)
+    ? "parent"
+    : hostname === ""
+      ? "tenant"
+      : configuredPortalOfHost(host);
+  const hostSurface = pageTitleSurfaceOf(portal, hostname, config.tenantDomain);
+  const messages = (await getMessages()) as {
+    pageTitles?: LocalizedPageTitleMessages;
+  };
+  return {
+    hostSurface,
+    tenantSlug: hostSurface === "ogs" ? tenantSlugFromHost(host) : null,
+    messages: messages.pageTitles ?? { pages: {} },
+  };
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -92,13 +133,16 @@ export default async function RootLayout({
   // public enrollment layout), not app-wide, so the German-only portals don't
   // ship the parent catalog.
   const locale = await getLocale();
+  const titleProps = await pageTitleProps();
   return (
     <html lang={locale}>
       <body
         className={`${inter.className} ${inter.variable} ${motoFont.variable}`}
       >
         <Providers>
-          <BackgroundWrapper>{children}</BackgroundWrapper>
+          <RouteTitle {...titleProps}>
+            <BackgroundWrapper>{children}</BackgroundWrapper>
+          </RouteTitle>
         </Providers>
       </body>
     </html>

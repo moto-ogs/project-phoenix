@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -28,11 +29,65 @@ func (s *staffAbsenceService) CreateOwnAbsence(ctx context.Context, staffID int6
 		if err != nil {
 			return nil, err
 		}
+		// A type the school or its Träger marked as requestable goes to the
+		// Leitung as a request (#4710); other types with a Kontingent stay
+		// with the Leitung.
+		if absenceType.Requestable {
+			return s.requestAbsence(ctx, staffID, req)
+		}
 		if absenceType.AllowanceEnabled {
 			return nil, ErrManagerControlledAbsence
 		}
 	}
 	return s.CreateAbsenceFor(ctx, staffID, staffID, actorAccountID, req)
+}
+
+// requestAbsence files a request for a requestable type. It holds its days
+// in the Kontingent until the Leitung decides, so the check counts the
+// other open requests too; the plans change only once it is approved.
+func (s *staffAbsenceService) requestAbsence(ctx context.Context, staffID int64, req CreateAbsenceRequest) (*StaffAbsenceResponse, error) {
+	dateStart, dateEnd, err := parseDateRange(req.DateStart, req.DateEnd)
+	if err != nil {
+		return nil, err
+	}
+	if dateStart.Before(s.today()) {
+		return nil, workforce.ErrVacationRequestInPast
+	}
+	// Gates first, then the type's row, as every booking takes them (#6702).
+	if err := s.lockVacationRequestRange(ctx, staffID, dateStart, dateEnd); err != nil {
+		return nil, err
+	}
+	_, typeID, baseType, err := s.resolveAbsenceTypeSelection(ctx, req.AbsenceTypeID, req.AbsenceType)
+	if err != nil {
+		return nil, err
+	}
+	req.AbsenceTypeID, req.AbsenceType = typeID, baseType
+	if _, _, err := s.admitAbsenceRange(ctx, staffID, req); err != nil {
+		return nil, err
+	}
+	workingDays := countWorkingDays(dateStart, dateEnd, req.HalfDay, req.HalfDay)
+	if workingDays <= 0 {
+		return nil, workforce.ErrAbsenceNoWorkingDays
+	}
+	now := time.Now()
+	absence := &StaffAbsence{
+		StaffID: staffID, AbsenceType: baseType, AbsenceTypeID: typeID, DateStart: dateStart, DateEnd: dateEnd,
+		HalfDay: req.HalfDay, StartHalfDay: req.HalfDay, EndHalfDay: req.HalfDay, Note: req.Note,
+		Status: AbsenceStatusRequested, CreatedBy: staffID, WorkingDays: &workingDays, RequestedAt: now,
+	}
+	absence.CreatedAt, absence.UpdatedAt = now, now
+	absence.SetTenantID(tenant.FromContext(ctx))
+	command := StaffAbsenceToCapability(absence)
+	created, err := s.absenceRepo.CreateStaffAbsence(ctx, &command)
+	if err = absenceWriteError("create", err); err != nil {
+		return nil, fmt.Errorf("failed to create absence request: %w", err)
+	}
+	applyAbsenceToRecord(absence, created)
+	if err := s.notifyAbsenceRequested(ctx, absence); err != nil {
+		return nil, fmt.Errorf("enqueue absence mail: %w", err)
+	}
+	s.broadcastTimeTrackingChanged(ctx)
+	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
 }
 
 func (s *staffAbsenceService) CreateAbsenceFor(ctx context.Context, subjectStaffID, createdByStaffID int64, actorAccountID *int64, req CreateAbsenceRequest) (*StaffAbsenceResponse, error) {
@@ -54,8 +109,16 @@ func (s *staffAbsenceService) CreateAbsenceFor(ctx context.Context, subjectStaff
 
 	// The Leitung books vacation directly, without a request (#3256). Staff
 	// never reach this branch: CreateOwnAbsence sends them to RequestVacation.
+	// The booked vacation takes plan effect at once (#6847).
 	if req.AbsenceType == AbsenceTypeVacation {
-		return s.createDirectVacation(ctx, subjectStaffID, createdByStaffID, req)
+		resp, err := s.createDirectVacation(ctx, subjectStaffID, createdByStaffID, req)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.cascadeAbsence(ctx, resp.StaffAbsence, createdByStaffID, actorAccountID); err != nil {
+			return nil, err
+		}
+		return resp, nil
 	}
 
 	dateStart, dateEnd, err := s.admitAbsenceRange(ctx, subjectStaffID, req)
@@ -67,7 +130,7 @@ func (s *staffAbsenceService) CreateAbsenceFor(ctx context.Context, subjectStaff
 		return nil, err
 	}
 
-	if err := s.cascadeSickReport(ctx, resp.StaffAbsence, createdByStaffID, actorAccountID); err != nil {
+	if err := s.cascadeAbsence(ctx, resp.StaffAbsence, createdByStaffID, actorAccountID); err != nil {
 		return nil, err
 	}
 	s.broadcastTimeTrackingChanged(ctx)
@@ -124,17 +187,31 @@ func (s *staffAbsenceService) storeAbsence(ctx context.Context, subjectStaffID, 
 	return s.createNewAbsence(ctx, subjectStaffID, createdByStaffID, dateStart, dateEnd, req)
 }
 
-// cascadeSickReport fans a full-day sick report out into the plans (#1843).
-// Fail-closed: an error aborts the surrounding create so a sick report whose
-// plan effects half-applied never commits.
-func (s *staffAbsenceService) cascadeSickReport(ctx context.Context, absence *StaffAbsence, actorStaffID int64, actorAccountID *int64) error {
-	if absence.AbsenceType != AbsenceTypeSick || absence.HalfDay {
+// cascadeAbsence fans an absence with plan effect out into the plans: its
+// full days cancel the person's shifts and mark their care blocks absent
+// (#1843). Since #6847 that holds for every type once the absence is in
+// force, a reported entry or an approved request; a half day still never
+// cascades, the person works the other half. Fail-closed: an error aborts
+// the surrounding write so an absence whose plan effects half-applied never
+// commits.
+func (s *staffAbsenceService) cascadeAbsence(ctx context.Context, absence *StaffAbsence, actorStaffID int64, actorAccountID *int64) error {
+	if !takesPlanEffect(absence) {
 		return nil
 	}
 	if err := s.shiftPlanSyncer.MarkSickForRange(ctx, sickCascadeInput(absence, actorStaffID, actorAccountID)); err != nil {
-		return fmt.Errorf("sick report saved nothing — plan cascade failed: %w", err)
+		return fmt.Errorf("absence saved nothing — plan cascade failed: %w", err)
 	}
 	return nil
+}
+
+// takesPlanEffect reports whether the absence is in force and covers at
+// least one full day. A single half day covers none.
+func takesPlanEffect(absence *StaffAbsence) bool {
+	if !slices.Contains(workforce.PlanEffectiveAbsenceStatuses(), absence.Status) {
+		return false
+	}
+	startHalf, endHalf := effectiveBoundaryHalfDays(absence)
+	return absence.DateStart != absence.DateEnd || (!startHalf && !endHalf)
 }
 
 // parseDateRange parses start and end date strings in ISO format.
@@ -218,10 +295,10 @@ func (s *staffAbsenceService) mergeOverlappingAbsences(
 	return s.withLabel(ctx, toAbsenceResponse(primary)), nil
 }
 
+// reassignMergedSickStamps moves the plan stamps of every merged secondary
+// to the primary. Every type stamps plans since #6847; a secondary that never
+// cascaded owns no stamp, which makes its step a no-op.
 func (s *staffAbsenceService) reassignMergedSickStamps(ctx context.Context, primary *StaffAbsence, secondaries []*StaffAbsence) error {
-	if primary.AbsenceType != AbsenceTypeSick {
-		return nil
-	}
 	for _, secondary := range secondaries {
 		if err := s.shiftPlanSyncer.ReassignSickStamps(ctx, secondary.ID, primary.ID); err != nil {
 			return fmt.Errorf("failed to merge absence — plan stamp reassignment failed: %w", err)

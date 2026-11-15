@@ -4,6 +4,7 @@ package api
 
 import (
 	"fmt"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -42,8 +43,8 @@ func NewEnrollmentTestRepositoriesWithMembers(db transactionruntime.Database, me
 
 // NewEnrollmentTimetableRows are the Timetable rows of the enrollment
 // suites, with the deviation protocol bound to the Audit Platform.
-func NewEnrollmentTimetableRows(db transactionruntime.Database) owners.TimetableTestRepositories {
-	tt, err := owners.NewTimetableTestRepositoriesWithMembers(db, owners.MustNewMembershipTestRepositories(db))
+func NewEnrollmentTimetableRows(db transactionruntime.Database, clocks ...func() time.Time) owners.TimetableTestRepositories {
+	tt, err := owners.NewTimetableTestRepositoriesWithMembers(db, owners.MustNewMembershipTestRepositories(db), clocks...)
 	if err != nil {
 		panic(fmt.Sprintf("enrollment test rows: compose timetable: %v", err))
 	}

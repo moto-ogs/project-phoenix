@@ -3,7 +3,7 @@
 
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { useState, useEffect, useLayoutEffect, useRef, Suspense } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
@@ -32,7 +32,12 @@ import { parentsPortalLoginUrl } from "~/lib/parent-url";
 import { schoolPortalLoginUrl } from "~/lib/school-url";
 import { isSchoolPortalHandoffPath } from "~/lib/redirect-utils";
 import { hasSessionAccess } from "~/lib/session-access";
-import { DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
+import {
+  clearSessionErrorFromUrl,
+  signOutStaleSession,
+  useSessionExpiredNotice,
+} from "~/lib/login-session-notice";
+import type { MFAStep } from "~/lib/sign-in-answer";
 import { login as loginApi } from "~/lib/mfa-api";
 import {
   isPasskeySupported,
@@ -95,28 +100,6 @@ const WRONG_PORTAL_COPY = {
   },
 } as const;
 
-function clearSessionErrorFromUrl() {
-  const url = new URL(window.location.href);
-  const hadSessionError =
-    url.searchParams.get("error") === "SessionRequired" ||
-    url.searchParams.get("error") === "SessionExpired";
-
-  if (!hadSessionError) return;
-
-  url.searchParams.delete("error");
-  url.searchParams.delete("callbackUrl");
-
-  const nextUrl = `${url.pathname}${url.search}${url.hash}`;
-  window.history.replaceState({}, "", nextUrl);
-}
-
-interface MFAStep {
-  challengeToken: string;
-  maskedEmail: string;
-  trustedDeviceEnabled: boolean;
-  trustedDeviceDays: number;
-}
-
 interface MFAEnrollmentStep {
   // enrollmentToken is the narrow-scope JWT issued by login when MFA is
   // required and the user has no credential yet. It only authorizes
@@ -129,8 +112,6 @@ interface MFAEnrollmentStep {
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  // Ein Hinweis, kein Fehler: die Sitzung ist abgelaufen (aus der URL).
-  const [sessionExpired, setSessionExpired] = useState(false);
   // Fehler laufen über den gemeinsamen Weg (#2517): Katalogtext je Code im
   // Fehlerkasten des Formulars, Feldfehler am Feld.
   const formRef = useRef<HTMLFormElement>(null);
@@ -151,6 +132,8 @@ function LoginForm() {
   const router = useTenantRouter();
   const { tenantSlug, tenant } = useTenant();
   const searchParams = useSearchParams();
+  const [sessionExpired, setSessionExpired] =
+    useSessionExpiredNotice(searchParams);
   const { data: session, status, update } = useSession();
   const loginTitle = tenant?.name?.trim() ? tenant.name : "Willkommen bei moto";
   const tenantLoginImageUrl = tenant?.settings?.loginImageUrl;
@@ -165,7 +148,6 @@ function LoginForm() {
     trackTenantEvent(event, analyticsSchoolId, props);
   };
 
-  // Guard against calling signOut multiple times during stale session cleanup
   const isCleaningSessionRef = useRef(false);
 
   // Check for valid session
@@ -175,25 +157,14 @@ function LoginForm() {
 
   useEffect(() => {
     const checkAndRedirect = async () => {
-      // If the session has an irrecoverable error (refresh token was rejected
-      // by the backend), clear the stale session cookie so the user can log in
-      // fresh. Without this, the JWT callback keeps retrying the failed refresh
-      // in the background, and the stale session competes with new login attempts.
-      if (
-        status === "authenticated" &&
-        session?.error &&
-        !isCleaningSessionRef.current
-      ) {
-        isCleaningSessionRef.current = true;
-        logger.debug("clearing_stale_session", { error: session.error });
-        try {
-          await signOut({ redirect: false });
-        } catch (err) {
-          isCleaningSessionRef.current = false;
-          logger.warn("signout_during_cleanup_failed", {
-            error: err instanceof Error ? err.message : String(err),
-          });
-        }
+      const cleanup = signOutStaleSession({
+        status,
+        session,
+        started: isCleaningSessionRef,
+        logger,
+      });
+      if (cleanup) {
+        await cleanup;
         setCheckingAuth(false);
         return;
       }
@@ -219,29 +190,6 @@ function LoginForm() {
 
     void checkAndRedirect();
   }, [status, session, enrollmentStep]);
-
-  // Check for session errors in URL, but suppress after a deliberate logout.
-  // NextAuth's useSession({ required: true }) races the logout navigation and
-  // can redirect here with ?error=SessionRequired before the page unloads.
-  useEffect(() => {
-    const urlError = searchParams.get("error");
-    if (urlError === "SessionRequired" || urlError === "SessionExpired") {
-      let deliberate = false;
-      try {
-        deliberate = sessionStorage.getItem(DELIBERATE_LOGOUT_KEY) === "1";
-        sessionStorage.removeItem(DELIBERATE_LOGOUT_KEY);
-      } catch {
-        // sessionStorage unavailable
-      }
-      if (deliberate) {
-        // Clean up NextAuth's error/callbackUrl params from the URL
-        clearSessionErrorFromUrl();
-      } else {
-        setSessionExpired(true);
-        clearSessionErrorFromUrl();
-      }
-    }
-  }, [searchParams]);
 
   const isCheckingAuth = checkingAuth || status === "loading";
   const isSmartRedirecting =
@@ -323,21 +271,13 @@ function LoginForm() {
       });
 
       if (response.status === "mfa_required") {
-        setMfaStep({
-          challengeToken: response.challenge_token,
-          maskedEmail: response.masked_email,
-          trustedDeviceEnabled: response.trusted_device_enabled ?? true,
-          trustedDeviceDays: response.trusted_device_days ?? 90,
-        });
+        setMfaStep(response);
         return;
       }
 
       if (response.status === "mfa_enrollment_required") {
-        // Post-#1430: the response carries an enrollment-scoped JWT in
-        // access_token (no refresh_token). It only authorizes
-        // /auth/mfa/enroll/* — the real session is minted by confirm.
         setEnrollmentStep({
-          enrollmentToken: response.access_token,
+          enrollmentToken: response.enrollmentToken,
           email,
         });
         return;

@@ -1,0 +1,301 @@
+package application
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/stretchr/testify/require"
+)
+
+type studentAnswerRecords struct {
+	rows    []enrollment.LinkedChildAnswers
+	schemas map[int64]*enrollment.FormSchema
+	err     error
+}
+
+func (r studentAnswerRecords) LinkedChildAnswers(context.Context) ([]enrollment.LinkedChildAnswers, error) {
+	return r.rows, nil
+}
+
+func (r studentAnswerRecords) StudentExtraFieldSchemas(_ context.Context, ids []int64) ([]enrollment.SchemaVersionResult, error) {
+	out := make([]enrollment.SchemaVersionResult, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, enrollment.SchemaVersionResult{ID: id, Schema: r.schemas[id], Err: r.err})
+	}
+	return out, nil
+}
+
+func answers(values map[string]any) enrollment.FormValues {
+	var out enrollment.FormValues
+	for key, value := range values {
+		out.Set(key, value)
+	}
+	return out
+}
+
+// answerFixture: two form versions; the newer one renames the swimming
+// question and offers a third club option. Student 11 registered twice, the
+// newer answer counts. Student 13 answered no.
+func answerFixture() studentAnswerRecords {
+	older := &enrollment.FormSchema{ID: 4, Fields: []enrollment.FormField{
+		{Key: "seepferdchen", Label: "Seepferdchen?", Type: enrollment.FormFieldBoolean, AppliesToCh: true},
+		{Key: "club", Label: "AG", Type: enrollment.FormFieldSelect, AppliesToCh: true, Options: []enrollment.FormFieldOption{{Value: "chor", Label: "Chor"}}},
+	}}
+	newer := &enrollment.FormSchema{ID: 7, Fields: []enrollment.FormField{
+		{Key: "seepferdchen", Label: "Seepferdchen vorhanden", Type: enrollment.FormFieldBoolean, AppliesToCh: true},
+		{Key: "club", Label: "Wunsch-AG", Type: enrollment.FormFieldSelect, AppliesToCh: true, Options: []enrollment.FormFieldOption{{Value: "chor", Label: "Chor"}, {Value: "fussball", Label: "Fußball"}}},
+		{Key: "allergies", Label: "Allergien", Type: enrollment.FormFieldTextarea, AppliesToCh: true},
+		{Key: "health", Label: "Gesundheit", Type: enrollment.FormFieldTextarea, AppliesToCh: true, Target: enrollment.TargetStudentHealthInfo},
+		{Key: "parent_job", Label: "Beruf", Type: enrollment.FormFieldText},
+		{Key: "since", Label: "Schwimmt seit", Type: enrollment.FormFieldDate, AppliesToCh: true},
+	}}
+	day := time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
+	return studentAnswerRecords{
+		schemas: map[int64]*enrollment.FormSchema{4: older, 7: newer},
+		rows: []enrollment.LinkedChildAnswers{
+			{StudentID: 11, SchemaID: 7, SubmittedAt: day.AddDate(1, 0, 0), CustomData: answers(map[string]any{
+				"seepferdchen": true, "club": "fussball", "allergies": "Nüsse", "health": "Asthma", "parent_job": "Ärztin", "since": "2025-06-01",
+			})},
+			{StudentID: 12, SchemaID: 7, SubmittedAt: day, CustomData: answers(map[string]any{"seepferdchen": true, "club": "chor"})},
+			{StudentID: 13, SchemaID: 7, SubmittedAt: day, CustomData: answers(map[string]any{"seepferdchen": false})},
+			{StudentID: 11, SchemaID: 4, SubmittedAt: day.AddDate(-1, 0, 0), CustomData: answers(map[string]any{"seepferdchen": false, "club": "chor"})},
+		},
+	}
+}
+
+func TestStudentAnswerFiltersNameTheChildrenOfTheNewestAnswer(t *testing.T) {
+	t.Parallel()
+	filters, err := NewStudentAnswers(answerFixture()).StudentAnswerFilters(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, []enrollment.StudentAnswerFilter{
+		{Key: "allergies", Label: "Allergien", Type: enrollment.FormFieldTextarea, Options: []enrollment.StudentAnswerOption{
+			{Value: enrollment.AnswerGivenValue, Label: "Angabe vorhanden", StudentIDs: []int64{11}},
+		}},
+		{Key: "since", Label: "Schwimmt seit", Type: enrollment.FormFieldDate, Options: []enrollment.StudentAnswerOption{
+			{Value: enrollment.AnswerGivenValue, Label: "Angabe vorhanden", StudentIDs: []int64{11}},
+		}},
+		{Key: "seepferdchen", Label: "Seepferdchen vorhanden", Type: enrollment.FormFieldBoolean, Options: []enrollment.StudentAnswerOption{
+			{Value: "true", Label: "Ja", StudentIDs: []int64{11, 12}}, {Value: "false", Label: "Nein", StudentIDs: []int64{13}},
+		}},
+		{Key: "club", Label: "Wunsch-AG", Type: enrollment.FormFieldSelect, Options: []enrollment.StudentAnswerOption{
+			{Value: "chor", Label: "Chor", StudentIDs: []int64{12}}, {Value: "fussball", Label: "Fußball", StudentIDs: []int64{11}},
+		}},
+	}, filters, "newest labels; a text, number or date question filters by a given answer (#7012); targeted and guardian questions are no filters")
+}
+
+func TestStudentsWithAnswerUsesEachChildsNewestAnswer(t *testing.T) {
+	t.Parallel()
+	reads := NewStudentAnswers(answerFixture())
+	yes, err := reads.StudentsWithAnswer(context.Background(), "seepferdchen", "true")
+	require.NoError(t, err)
+	require.Equal(t, []int64{11, 12}, yes, "the older no of child 11 no longer counts")
+	no, err := reads.StudentsWithAnswer(context.Background(), "seepferdchen", "false")
+	require.NoError(t, err)
+	require.Equal(t, []int64{13}, no)
+	none, err := reads.StudentsWithAnswer(context.Background(), "health", "Asthma")
+	require.NoError(t, err)
+	require.Empty(t, none, "a targeted question is read on the child record, not here")
+	_, err = reads.StudentsWithAnswer(context.Background(), "seepferdchen", "")
+	require.Error(t, err)
+}
+
+// TestStudentsWithAnswerGivenFindsEveryFilledFreeAnswer reads the "answer
+// given" value of a text, number or date question (#7012): every child whose
+// newest answer says something. It means nothing for a yes/no or choice
+// question, whose answers are their own values.
+func TestStudentsWithAnswerGivenFindsEveryFilledFreeAnswer(t *testing.T) {
+	t.Parallel()
+	records := answerFixture()
+	day := time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
+	records.rows = append(records.rows,
+		enrollment.LinkedChildAnswers{StudentID: 14, SchemaID: 7, SubmittedAt: day, CustomData: answers(map[string]any{"allergies": "  "})},
+		enrollment.LinkedChildAnswers{StudentID: 15, SchemaID: 7, SubmittedAt: day, CustomData: answers(map[string]any{"allergies": "Laktose"})},
+	)
+	reads := NewStudentAnswers(records)
+	given, err := reads.StudentsWithAnswer(context.Background(), "allergies", enrollment.AnswerGivenValue)
+	require.NoError(t, err)
+	require.Equal(t, []int64{11, 15}, given, "a blank answer is no answer")
+	choice, err := reads.StudentsWithAnswer(context.Background(), "club", enrollment.AnswerGivenValue)
+	require.NoError(t, err)
+	require.Empty(t, choice, "a choice filters by its options only")
+}
+
+// TestFreeAnswerFiltersListFewDistinctAnswers lists the answers of a text,
+// number or date question as options when the school's children gave only a
+// few different ones (#7012): "keine" and "Nüsse" become choices, written
+// any way. The option value is a key of the answer, never its text: the
+// filter travels in the list's address.
+func TestFreeAnswerFiltersListFewDistinctAnswers(t *testing.T) {
+	t.Parallel()
+	schema := &enrollment.FormSchema{ID: 7, Fields: []enrollment.FormField{
+		{Key: "allergies", Label: "Allergien", Type: enrollment.FormFieldTextarea, AppliesToCh: true},
+	}}
+	given := map[int64]string{11: "keine", 12: " Keine ", 13: "Nüsse", 14: "keine"}
+	records := studentAnswerRecords{schemas: map[int64]*enrollment.FormSchema{7: schema}}
+	for id := int64(11); id <= 14; id++ {
+		records.rows = append(records.rows, enrollment.LinkedChildAnswers{StudentID: id, SchemaID: 7, CustomData: answers(map[string]any{"allergies": given[id]})})
+	}
+	reads := NewStudentAnswers(records)
+	filters, err := reads.StudentAnswerFilters(context.Background())
+	require.NoError(t, err)
+	require.Len(t, filters, 1)
+	options := filters[0].Options
+	require.Len(t, options, 3)
+	require.Equal(t, enrollment.StudentAnswerOption{Value: enrollment.AnswerGivenValue, Label: "Angabe vorhanden", StudentIDs: []int64{11, 12, 13, 14}}, options[0])
+	require.Equal(t, "keine", options[1].Label, "the most frequent spelling names the answer")
+	require.Equal(t, []int64{11, 12, 14}, options[1].StudentIDs, "case and spaces do not split an answer")
+	require.Equal(t, "Nüsse", options[2].Label)
+	require.Equal(t, "Laktoseintoleranz. Bitte keine Milchprodukte beim …",
+		(&freeAnswer{first: []string{"Laktoseintoleranz. Bitte keine Milchprodukte beim Mittagessen."}, spellings: map[string]int{}}).label(),
+		"a long answer is cut at a word")
+	require.Equal(t, []int64{13}, options[2].StudentIDs)
+	for _, option := range options[1:] {
+		require.NotContains(t, option.Value, option.Label, "the value carries no answer text")
+		ids, err := reads.StudentsWithAnswer(context.Background(), "allergies", option.Value)
+		require.NoError(t, err)
+		require.Equal(t, option.StudentIDs, ids)
+	}
+
+	for id := int64(20); id < 20+maxListedFreeAnswers; id++ {
+		records.rows = append(records.rows, enrollment.LinkedChildAnswers{StudentID: id, SchemaID: 7, CustomData: answers(map[string]any{"allergies": fmt.Sprintf("Allergie %d", id)})})
+	}
+	many, err := NewStudentAnswers(records).StudentAnswerFilters(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, []string{enrollment.AnswerGivenValue}, optionValues(many[0].Options), "many different answers leave only \"Angabe vorhanden\"")
+}
+
+func optionValues(options []enrollment.StudentAnswerOption) []string {
+	out := make([]string, 0, len(options))
+	for _, option := range options {
+		out = append(out, option.Value)
+	}
+	return out
+}
+
+func TestSearchStudentAnswersMatchesStatedAnswersOnly(t *testing.T) {
+	t.Parallel()
+	reads := NewStudentAnswers(answerFixture())
+	matches, err := reads.SearchStudentAnswers(context.Background(), "seepferd", 10)
+	require.NoError(t, err)
+	require.Equal(t, []enrollment.StudentAnswerMatch{
+		{StudentID: 11, Label: "Seepferdchen vorhanden", Answer: "Ja"},
+		{StudentID: 12, Label: "Seepferdchen vorhanden", Answer: "Ja"},
+	}, matches, "a no names the question but says nothing")
+
+	byAnswer, err := reads.SearchStudentAnswers(context.Background(), "nusse", 10)
+	require.NoError(t, err)
+	require.Equal(t, []enrollment.StudentAnswerMatch{{StudentID: 11, Label: "Allergien", Answer: "Nüsse"}}, byAnswer, "folded like a name search")
+
+	byOption, err := reads.SearchStudentAnswers(context.Background(), "Fußball", 10)
+	require.NoError(t, err)
+	require.Equal(t, []enrollment.StudentAnswerMatch{{StudentID: 11, Label: "Wunsch-AG", Answer: "Fußball"}}, byOption)
+
+	byDate, err := reads.SearchStudentAnswers(context.Background(), "01.06.2025", 10)
+	require.NoError(t, err)
+	require.Equal(t, []enrollment.StudentAnswerMatch{{StudentID: 11, Label: "Schwimmt seit", Answer: "01.06.2025"}}, byDate)
+
+	for _, hidden := range []string{"Asthma", "Ärztin"} {
+		found, err := reads.SearchStudentAnswers(context.Background(), hidden, 10)
+		require.NoError(t, err)
+		require.Empty(t, found, hidden)
+	}
+	limited, err := reads.SearchStudentAnswers(context.Background(), "seepferd", 1)
+	require.NoError(t, err)
+	require.Len(t, limited, 1)
+	every, err := reads.SearchStudentAnswers(context.Background(), "seepferd", 0)
+	require.NoError(t, err)
+	require.Equal(t, []int64{11, 12}, studentIDsOf(every), "no limit returns every child, newest registrations first")
+}
+
+func studentIDsOf(matches []enrollment.StudentAnswerMatch) []int64 {
+	ids := make([]int64, 0, len(matches))
+	for _, match := range matches {
+		ids = append(ids, match.StudentID)
+	}
+	return ids
+}
+
+func TestSearchStudentAnswersIncludesNumbersStoredAsStrings(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name string
+		raw  any
+		text string
+	}{
+		{name: "integer string", raw: "12", text: "12"},
+		{name: "decimal string", raw: " 12.5 ", text: "12,5"},
+		{name: "zero string", raw: "0", text: "0"},
+		{name: "JSON number", raw: float64(12.5), text: "12,5"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			reads := NewStudentAnswers(studentAnswerRecords{
+				schemas: map[int64]*enrollment.FormSchema{7: {ID: 7, Fields: []enrollment.FormField{
+					{Key: "distance", Label: "Schulweg", Type: enrollment.FormFieldNumber, AppliesToCh: true},
+				}}},
+				rows: []enrollment.LinkedChildAnswers{
+					{StudentID: 11, SchemaID: 7, CustomData: answers(map[string]any{"distance": tc.raw})},
+				},
+			})
+			for _, query := range []string{"Schulweg", tc.text} {
+				matches, err := reads.SearchStudentAnswers(context.Background(), query, 10)
+				require.NoError(t, err)
+				require.Equal(t, []enrollment.StudentAnswerMatch{{StudentID: 11, Label: "Schulweg", Answer: tc.text}}, matches, query)
+			}
+		})
+	}
+}
+
+func TestStudentAnswersClearedValuesDoNotReviveOlderAnswers(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name      string
+		fieldType enrollment.FormFieldType
+		cleared   any
+		older     any
+		value     string
+	}{
+		{name: "boolean null", fieldType: enrollment.FormFieldBoolean, older: true, value: "true"},
+		{name: "select empty", fieldType: enrollment.FormFieldSelect, cleared: "", older: "chor", value: "chor"},
+		{name: "select null", fieldType: enrollment.FormFieldSelect, older: "chor", value: "chor"},
+		{name: "text empty", fieldType: enrollment.FormFieldText, cleared: "", older: "Chor", value: enrollment.AnswerGivenValue},
+		{name: "textarea whitespace", fieldType: enrollment.FormFieldTextarea, cleared: " \t", older: "Chor", value: enrollment.AnswerGivenValue},
+		{name: "number empty", fieldType: enrollment.FormFieldNumber, cleared: "", older: float64(12), value: enrollment.AnswerGivenValue},
+		{name: "date empty", fieldType: enrollment.FormFieldDate, cleared: "", older: "2026-09-01", value: enrollment.AnswerGivenValue},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			reads := NewStudentAnswers(studentAnswerRecords{
+				schemas: map[int64]*enrollment.FormSchema{7: {ID: 7, Fields: []enrollment.FormField{
+					{Key: "question", Label: "Frage", Type: tc.fieldType, AppliesToCh: true},
+				}}},
+				rows: []enrollment.LinkedChildAnswers{
+					{StudentID: 11, SchemaID: 7, CustomData: answers(map[string]any{"question": tc.cleared})},
+					{StudentID: 12, SchemaID: 7, CustomData: answers(map[string]any{"other": "answer"})},
+					{StudentID: 11, SchemaID: 7, CustomData: answers(map[string]any{"question": tc.older})},
+					{StudentID: 12, SchemaID: 7, CustomData: answers(map[string]any{"question": tc.older})},
+				},
+			})
+			matches, err := reads.SearchStudentAnswers(context.Background(), "Frage", 10)
+			require.NoError(t, err)
+			require.Equal(t, []int64{12}, studentIDsOf(matches), "cleared suppresses the old answer; absent still inherits it")
+			filters, err := reads.StudentAnswerFilters(context.Background())
+			require.NoError(t, err)
+			require.Len(t, filters, 1)
+			require.Equal(t, []int64{12}, filters[0].Options[0].StudentIDs)
+			ids, err := reads.StudentsWithAnswer(context.Background(), "question", tc.value)
+			require.NoError(t, err)
+			require.Equal(t, []int64{12}, ids)
+		})
+	}
+}
+
+func TestStudentAnswersFailOnAnUnreadableFormVersion(t *testing.T) {
+	t.Parallel()
+	records := answerFixture()
+	records.err = errors.New("broken version")
+	_, err := NewStudentAnswers(records).SearchStudentAnswers(context.Background(), "seepferd", 10)
+	require.ErrorContains(t, err, "broken version")
+}

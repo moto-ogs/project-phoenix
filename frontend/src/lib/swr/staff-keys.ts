@@ -26,6 +26,27 @@ export const staffKeys = {
     resourceKey("staff-directory-teachers-", { page: 1, pageSize: 1000 }),
 } as const;
 
+/**
+ * Der Stand der Mails zu Abwesenheitsanträgen (#7058), je Satz der gezeigten
+ * Anträge; Konto und Schule ergänzen die Hooks. Die Leitung liest die Mails
+ * zu ihren Entscheidungen, die Person die Meldung ihrer wartenden Anträge.
+ */
+export const absenceMailKeys = {
+  decisions: (absenceIds: readonly string[]) =>
+    `staff-absence-mails-${absenceIds.join(",")}`,
+  ownRequests: (waitingIds: readonly string[]) =>
+    `own-absence-request-mails-${waitingIds.join(",")}`,
+} as const;
+
+/**
+ * Die Personen, deren Monat der Träger abschließt (#4711), je Monat. Der
+ * Abschluss der Schule ändert sie nicht; ein neuer Monat lädt neu.
+ */
+export const traegerMonthStaffKeys = {
+  month: (year: number, month: number) =>
+    `staff-month-close-traeger-staff-${year}-${month}`,
+} as const;
+
 /** Nachweise der Mitarbeitenden (#4808). */
 export const staffQualificationKeys = {
   types: () => "database-qualification-types",
@@ -33,6 +54,8 @@ export const staffQualificationKeys = {
   entries: (staffId: string) =>
     `staff-qualification-entries-${encodeURIComponent(staffId)}`,
   own: () => "own-staff-qualifications",
+  traeger: (staffId: string) =>
+    `staff-traeger-proofs-${encodeURIComponent(staffId)}`,
 } as const;
 
 /**
@@ -42,6 +65,8 @@ export const staffQualificationKeys = {
 export const workTimeModelKeys = {
   catalog: () => "database-work-time-models",
   picker: () => "work-time-models",
+  /** Vorlage, Soll und Sperren je Person für den Zuordnungsdialog (#6921). */
+  staffFacts: () => "work-time-model-staff-facts",
 } as const;
 
 /** Monatskarte einer Person (#1842). Derselbe Schlüssel, den

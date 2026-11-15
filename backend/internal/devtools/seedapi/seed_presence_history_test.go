@@ -448,3 +448,35 @@ func TestPresenceHistoryStatusDaysRecoverIDsFromAMalformedResponse(t *testing.T)
 	assert.False(t, writeCalled)
 	assert.Equal(t, []string{"/api/students/7/status-days/101", "/api/students/7/status-days/102"}, deleted)
 }
+
+// The seeded day has a shape (#4714): early care in the morning, arrivals
+// when class ends, later on Tuesday than on Friday, and pickups an hour
+// earlier on Friday; every visit still fits its session.
+func TestPresenceTimesGiveTheSchoolDayAShape(t *testing.T) {
+	t.Parallel()
+	monday := calendar.NewDate(2026, time.November, 2)
+	tuesday, friday := monday.AddDays(1), monday.AddDays(4)
+	early := 0
+	for index := range 60 {
+		for offset := range 5 {
+			arrival, pickup := presenceTimes(index, monday.AddDays(offset))
+			assert.GreaterOrEqual(t, arrival, 7*60)
+			assert.Less(t, arrival, 13*60, "arrival before the sessions fill up")
+			assert.GreaterOrEqual(t, pickup, 13*60+30)
+			assert.Less(t, pickup, 16*60+45, "the visit ends inside its session")
+			if arrival < 8*60 {
+				early++
+			}
+		}
+		if index%5 == 0 {
+			continue
+		}
+		tuesdayArrival, _ := presenceTimes(index, tuesday)
+		fridayArrival, fridayPickup := presenceTimes(index, friday)
+		_, mondayPickup := presenceTimes(index, monday)
+		assert.GreaterOrEqual(t, tuesdayArrival, 12*60+10, "class ends later on Tuesday")
+		assert.Less(t, fridayArrival, 12*60, "and earlier on Friday")
+		assert.Less(t, fridayPickup, mondayPickup+15, "Friday pickups come about an hour earlier")
+	}
+	assert.Equal(t, 12*5, early, "every fifth child comes to the early care")
+}

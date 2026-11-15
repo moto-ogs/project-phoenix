@@ -85,7 +85,7 @@ func (rs *Resource) getStudentPartialAbsences(w http.ResponseWriter, r *http.Req
 		renderError(w, r, common.ErrorInternalServer(errors.New("partial absence service not configured")))
 		return
 	}
-	from, to, err := parseStatusDayRange(r)
+	from, to, err := parseStatusDayRangeAt(r, rs.today())
 	if err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return

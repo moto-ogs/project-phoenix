@@ -431,6 +431,21 @@ describe("CalendarPeriodModal", () => {
     ).toBeInTheDocument();
   });
 
+  it("links the closing-day hint from another page in a new tab (#7054)", () => {
+    render(
+      <CalendarPeriodModal
+        isOpen
+        linkClosingDays
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        createDefaults={{ name: "Herbstferien", periodType: "holiday" }}
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "Zu den Schließtagen, neuer Tab" }),
+    ).toHaveAttribute("target", "_blank");
+  });
+
   it("hides the phase link section in create mode", () => {
     render(
       <CalendarPeriodModal
@@ -489,6 +504,42 @@ describe("CalendarPeriodModal", () => {
     expect(
       screen.getByText(/Personalzuordnungen.*Löschen verhindern/),
     ).toBeInTheDocument();
+  });
+
+  it("blocks the delete while Dienstplan series use the period", () => {
+    render(
+      <CalendarPeriodModal
+        isOpen
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        onDeleted={vi.fn()}
+        initial={period}
+        usage={{
+          enrollmentPhaseCount: 0,
+          activityGroupCount: 0,
+          scheduleCount: 0,
+          studentEnrollmentCount: 0,
+          supervisorCount: 0,
+          activityInstanceCount: 0,
+          staffShiftSeriesCount: 2,
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Löschen" }));
+    const dialog = screen.getByRole("dialog", {
+      name: "Kalenderzeitraum löschen",
+    });
+    expect(
+      within(dialog).getByText(/lässt sich nicht löschen/),
+    ).toHaveTextContent("Im Dienstplan nutzen ihn 2 Schichtserien.");
+    expect(
+      within(dialog).getByText(/Zeitraum im Plan verwenden/),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "Löschen" }),
+    ).toBeDisabled();
+    expect(mockDelete).not.toHaveBeenCalled();
   });
 
   it("keeps the modal open and lists warnings when the save overlaps active periods", async () => {

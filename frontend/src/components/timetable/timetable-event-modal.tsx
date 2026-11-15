@@ -160,6 +160,8 @@ interface TimetableEventModalProps {
   canCreateExternalCaregiver?: boolean;
   /** Offer „Nur ansehen“ for an external person (users:manage, ADR 0091). */
   canGrantExternalView?: boolean;
+  /** config:manage: the step „Personal und Kinder“ links to „Angebote“. */
+  canManageOfferings?: boolean;
   /**
    * OGS-Schließtage des Tenants (#2032). Fällt das gewählte Datum auf einen
    * davon, fragt das Speichern einmal nach — angelegt wird trotzdem, sobald
@@ -196,6 +198,7 @@ export function TimetableEventModal({
   canManagePlanningTracks = false,
   canCreateExternalCaregiver = false,
   canGrantExternalView = false,
+  canManageOfferings = false,
   closingDayRanges,
   closingDaysLoading = false,
 }: TimetableEventModalProps) {
@@ -438,6 +441,26 @@ export function TimetableEventModal({
           calendarPeriodId: form.calendarPeriodId,
           weekPattern: form.weekPattern,
         });
+  // Was „Speichern“ tut und warum es gesperrt ist (#6773).
+  const statusLocked =
+    isEditingInstance && initialInstance?.status !== "planned";
+  // Dieselbe Bedingung wie die Rückfrage im onSubmit unten.
+  const closingDayAsks =
+    closingDayConfirmationKey !== null && !isScopedSeriesEdit;
+  // Reihenfolge wie in handleSubmit: Ein Termin einer Serie mit „Nur diese
+  // Woche“ ändert nur sich selbst, auch wenn „Wiederholt sich“ an ist.
+  const saveTarget = isEditingSeries
+    ? "Speichert die Änderung für die kommenden Termine der Serie."
+    : isEditingInstance && initialInstance?.activityGroupId
+      ? "Speichert die Änderung nur für diesen Termin."
+      : isSeriesFlow
+        ? "Legt den Regeltermin an und trägt seine Termine ein."
+        : isEditingInstance
+          ? "Speichert die Änderung nur für diesen Termin."
+          : "Legt den Termin im Betreuungsplan an.";
+  const saveTooltip = closingDayAsks
+    ? `${saveTarget} moto fragt wegen des Schließtags vorher nach.`
+    : saveTarget;
   const [closingDayPrompt, setClosingDayPrompt] = useState<{
     conflict: ClosingDayConflict;
     count: number;
@@ -494,6 +517,10 @@ export function TimetableEventModal({
     // `step` is read, not tracked: only a fresh validation result may move it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fieldErrors]);
+
+  // Ein Dienst (#3822) hat nur Personal.
+  const personalStepLabel =
+    form.type === "duty" ? "Personal" : "Personal und Kinder";
 
   if (scopeSelectionRequired && initialInstance) {
     return (
@@ -623,10 +650,7 @@ export function TimetableEventModal({
               // Mirror handleSubmit's early-return guards: on those paths no
               // validation runs, so the flag would stay set and a later,
               // unrelated fieldErrors change could trigger a spurious step jump.
-              if (
-                !submitting &&
-                !(isEditingInstance && initialInstance?.status !== "planned")
-              ) {
+              if (!submitting && !statusLocked) {
                 submitAttempted.current = true;
               }
               void handleSubmit(event);
@@ -710,6 +734,7 @@ export function TimetableEventModal({
                 addStaffOption={addStaffOption}
                 canCreateExternalCaregiver={canCreateExternalCaregiver}
                 canGrantExternalView={canGrantExternalView}
+                canManageOfferings={canManageOfferings}
                 loadingRefs={loadingRefs}
                 loadingStudents={loadingStudents}
                 studentLoadFailed={studentLoadFailed}
@@ -806,8 +831,21 @@ export function TimetableEventModal({
                   {coverageWarningCount > 0 && (
                     <Alert
                       type="warning"
-                      message={`${coverageWarningCount} Dienstplan-${coverageWarningCount === 1 ? "Lücke" : "Lücken"} gefunden. Details im Schritt „${form.type === "duty" ? "Personal" : "Personal und Kinder"}“. Speichern ist weiterhin möglich.`}
+                      message={`${coverageWarningCount} Dienstplan-${coverageWarningCount === 1 ? "Lücke" : "Lücken"} gefunden. Details im Schritt „${personalStepLabel}“. Speichern ist weiterhin möglich.`}
                       announce="off"
+                      action={
+                        // The details sit in another step of this form
+                        // (#7054): the button opens that step.
+                        <Button
+                          type="button"
+                          variant="surface"
+                          size="compact"
+                          tooltip={`Springt zum Schritt „${personalStepLabel}“ mit den Lücken.`}
+                          onClick={() => setStep(LAST_STEP)}
+                        >
+                          Zu den Lücken
+                        </Button>
+                      }
                     />
                   )}
                   {coverageCheckFailed && (
@@ -843,6 +881,7 @@ export function TimetableEventModal({
                 type="button"
                 variant="outline_danger"
                 size="md"
+                tooltip="Löscht den Regeltermin ab einem Tag, den Sie wählen. moto fragt vorher nach."
                 onClick={openSeriesDeleteConfirm}
                 className="w-full sm:w-auto"
               >
@@ -861,6 +900,7 @@ export function TimetableEventModal({
               variant="outline"
               size="md"
               className="flex-1 sm:flex-none"
+              noTooltip="Schließt das Formular ohne Speichern, das Wort sagt alles."
               onClick={onClose}
             >
               Abbrechen
@@ -871,6 +911,7 @@ export function TimetableEventModal({
                 variant="outline"
                 size="md"
                 className="flex-1 sm:flex-none"
+                noTooltip="Geht einen Schritt zurück, Eingaben bleiben erhalten."
                 onClick={() => setStep((current) => Math.max(current - 1, 0))}
               >
                 Zurück
@@ -890,6 +931,7 @@ export function TimetableEventModal({
                 variant="primary"
                 size="md"
                 className="flex-1 sm:flex-none"
+                tooltip="Prüft die Angaben und zeigt den nächsten Schritt."
               >
                 Weiter
               </Button>
@@ -902,9 +944,12 @@ export function TimetableEventModal({
                 className="flex-1 sm:flex-none"
                 isLoading={submitting}
                 loadingText="Speichere …"
-                disabled={
-                  closingDaysLoading ||
-                  (isEditingInstance && initialInstance?.status !== "planned")
+                tooltip={saveTooltip}
+                disabled={closingDaysLoading || statusLocked}
+                disabledReason={
+                  statusLocked
+                    ? "Nur geplante Termine können bearbeitet werden."
+                    : undefined
                 }
               >
                 Speichern
@@ -934,7 +979,7 @@ export function TimetableEventModal({
               >
                 <ISODatePicker
                   id="series_delete_effective_date"
-                  controlSize="md"
+                  controlSize="compact"
                   value={deleteEffectiveDate}
                   min={berlinTodayISO()}
                   invalid={Boolean(deleteDateError)}

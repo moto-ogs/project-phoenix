@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -41,7 +42,12 @@ func CreateTestOperatorWithEmail(tb testing.TB, db *bun.DB, email, displayName s
 	return op
 }
 
-// CreateTestOrganization inserts an organization fixture and registers exact-ID cleanup.
+// CreateTestOrganization inserts an organization fixture. Leave the ID to the
+// sequence: the template lifts it above the test-tenant band, so the
+// organization, its schools and every row of the Träger belong to the test and
+// die with the clone. The leftover gate tells them from shared state by the
+// ID alone (testdb.sharedRowPredicate); a cleanup sweep per organization cost
+// about 330,000 DELETE statements per suite (#6962).
 func CreateTestOrganization(tb testing.TB, db *bun.DB, organization *Organization) *Organization {
 	tb.Helper()
 	require.NotNil(tb, organization)
@@ -51,34 +57,6 @@ func CreateTestOrganization(tb testing.TB, db *bun.DB, organization *Organizatio
 		Returning("*").
 		Exec(context.Background())
 	require.NoError(tb, err, "Failed to create test organization")
-	tb.Cleanup(func() {
-		ctx := context.Background()
-		var tenantIDs []int64
-		cleanupErr := db.NewSelect().
-			TableExpr("platform.schools").
-			Column("id").
-			Where("organization_id = ?", organization.ID).
-			Scan(ctx, &tenantIDs)
-		require.NoError(tb, cleanupErr, "Failed to find test organization schools")
-		// The Träger's own rows (ADR 0086) carry no school; the tenant
-		// cleanup below deletes the organization with foreign-key triggers
-		// suspended, so they go first and by their Träger.
-		// The pushes of the Träger (ADR 0126) are among them.
-		// The recipients, their formats and the handover journal of Export
-		// Transfer's Träger scope (ADR 0218, ADR 0222) are among them too.
-		for _, table := range []string{"config.traeger_setting_audit", "config.traeger_setting_values", "platform.push_outbox",
-			"config.traeger_export_recipient_formats", "audit.traeger_export_transfers", "config.traeger_export_recipients"} {
-			_, cleanupErr = db.NewDelete().TableExpr(table).Where("organization_id = ?", organization.ID).Exec(ctx)
-			require.NoError(tb, cleanupErr, "Failed to clean up the Träger rows of %s", table)
-		}
-		cleanupTenantTestData(tb, db, tenantIDs...)
-		_, cleanupErr = db.NewDelete().
-			Model((*Organization)(nil)).
-			ModelTableExpr("platform.organizations").
-			Where("id = ?", organization.ID).
-			Exec(ctx)
-		require.NoError(tb, cleanupErr, "Failed to clean up test organization")
-	})
 	return organization
 }
 
@@ -109,6 +87,23 @@ func OwnTestAccountPasskeySession(tb testing.TB, db *bun.DB, sessionID string) {
 		_, err := db.ExecContext(context.Background(), `DELETE FROM auth.passkey_sessions WHERE id = ?`, sessionID)
 		require.NoError(tb, err)
 	})
+}
+
+// CreateTestAccountPasskey inserts an active school-portal passkey of an
+// account and returns its ID and registration time. The row cascades with
+// the account fixture. Its credential state is a placeholder: a test that
+// signs in with a passkey registers one through the ceremonies.
+func CreateTestAccountPasskey(tb testing.TB, db *bun.DB, accountID int64, name string) (int64, time.Time) {
+	tb.Helper()
+	var row struct {
+		ID        int64
+		CreatedAt time.Time
+	}
+	err := db.NewRaw(`INSERT INTO auth.passkey_credentials (account_id, user_handle, credential_id, credential_json, name)
+ VALUES (?, ?, ?, '{"id":"fixture"}', ?) RETURNING id, created_at`,
+		accountID, []byte(fmt.Sprintf("fixture-handle-%d", accountID)), []byte(fmt.Sprintf("fixture-credential-%d-%s", accountID, name)), name).Scan(context.Background(), &row)
+	require.NoError(tb, err, "Failed to create test account passkey")
+	return row.ID, row.CreatedAt
 }
 
 // cleanupOperator removes an operator and its audit-log rows. All other
@@ -160,8 +155,7 @@ func CreateTestOperatorWithPassword(tb testing.TB, db *bun.DB, email, password s
 }
 
 // CreateTestSchoolInOrganization inserts a live school of the organization
-// and returns its ID (= tenant ID). The organization fixture's cleanup removes
-// it with the organization's other schools.
+// and returns its ID (= tenant ID), a test-band ID that dies with the clone.
 func CreateTestSchoolInOrganization(tb testing.TB, db *bun.DB, organizationID int64, name string) int64 {
 	tb.Helper()
 	schoolID := uniqueJWTSafeTenantID()
@@ -230,7 +224,9 @@ func OwnTraegerHolidayPeriods(tb testing.TB, db *bun.DB, organizationID int64) {
 		require.NoError(tb, err, "Failed to clean up test Träger mails")
 		// A confirmation remembers the family and its number at the Träger
 		// (#6692); a family without a contract does not go with one.
-		for _, table := range []string{"parent_billing.family_billing_events", "parent_billing.family_billing"} {
+		// So does the number of a child (#7007).
+		for _, table := range []string{"parent_billing.family_billing_events", "parent_billing.family_billing",
+			"parent_billing.child_debtor_number_events", "parent_billing.child_debtor_numbers"} {
 			_, err = db.ExecContext(context.Background(), `DELETE FROM `+table+` WHERE organization_id = ?`, organizationID)
 			require.NoError(tb, err, "Failed to clean up the test families of the holiday care")
 		}

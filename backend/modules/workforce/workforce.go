@@ -76,7 +76,7 @@ func ErrorCode(err error) string {
 		return "not_found"
 	case errors.Is(err, ErrAbsenceTypeNameTaken), errors.Is(err, ErrAbsenceTypeNameReserved), errors.Is(err, ErrAbsenceTypeInUse),
 		errors.Is(err, ErrAbsenceTypeInactive), errors.Is(err, ErrAbsenceTypeAllowanceExceeded), errors.Is(err, ErrAllowanceBookingOverlap), errors.Is(err, ErrGroupSubstitutionExists),
-		errors.Is(err, ErrStaffShiftDuplicate), errors.Is(err, ErrShiftTypeNameTaken), errors.Is(err, ErrWorkSessionAlreadyOpen),
+		errors.Is(err, ErrStaffShiftDuplicate), errors.Is(err, ErrShiftTypeNameTaken), errors.Is(err, ErrShiftTypeArchived), errors.Is(err, ErrWorkSessionAlreadyOpen),
 		errors.Is(err, ErrPersonnelNumberTaken), errors.Is(err, ErrStaffTargetOverrideRejected):
 		return "conflict"
 	default:
@@ -142,6 +142,9 @@ type StaffWorkSchedule struct {
 	RotationAnchorDate string `json:"rotation_anchor_date,omitempty"`
 	ValidFrom          string `json:"valid_from"`
 	ValidUntil         string `json:"valid_until,omitempty"`
+	// KeptByTraeger is set on the current schedule: a contract of the
+	// Träger governs the Soll (#4706, ADR 0237).
+	KeptByTraeger bool `json:"-"`
 }
 
 // StaffWorkScheduleEntry is one weekday of a schedule version being written.

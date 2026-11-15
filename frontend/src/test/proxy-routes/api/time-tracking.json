@@ -10,6 +10,9 @@
     "DELETE tenant /api/time-tracking/absences/id%2F1",
     "PUT tenant /api/time-tracking/absences/id%2F1"
   ],
+  "api/time-tracking/absences/mails": [
+    "GET tenant /api/time-tracking/absences/mails"
+  ],
   "api/time-tracking/assignments": [
     "GET tenant /api/time-tracking/assignments"
   ],

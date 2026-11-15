@@ -181,7 +181,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return nil
 		},
 		func() (err error) {
-			carePlan, err = owners.ComposeCarePlan(db, persons, owners.CarePlanStatusSlots(timetableRepos.InstanceStudent))
+			carePlan, err = owners.ComposeCarePlan(db, persons, owners.CarePlanStatusSlots(timetableRepos.InstanceStudent), env.Now)
 			return
 		},
 		func() error { operatorAuditLog = owners.NewOperatorAuditLog(db); return nil },
@@ -200,13 +200,13 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return nil
 		},
 		func() (err error) {
-			timetableRows, err = owners.BuildTimetableOwner(db, env.Logger, env.Now, timetableOwner, timetableRepos, calendar, bookings, structure.Groups, hub)
+			timetableRows, err = owners.BuildTimetableOwner(db, env.Logger, env.Now, timetableOwner, timetableRepos, calendar, bookings, structure.Groups, hub, persons, people.Students)
 			return
 		},
 		func() (err error) { classArrivals, err = owners.BuildClassArrivals(db, env.Logger); return },
 		func() (err error) {
 			studentAudit = peopleCompose.NewStudentAuditService(tokens.AuditActor, owners.NewStudentAuditFor(persons))
-			carePlanRows, err = owners.BuildCarePlanRows(db, env.Logger, studentAudit, carePlan, persons, membership, timetableOwner, calendar, classArrivals, people)
+			carePlanRows, err = owners.BuildCarePlanRows(db, env.Logger, studentAudit, carePlan, persons, membership, timetableOwner, calendar, classArrivals, people, env.Now)
 			return
 		},
 		func() (err error) {
@@ -291,7 +291,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		},
 		func() (err error) {
 			lifecycle, err = owners.BuildTimetableLifecycle(db, env, hub, timetableRows, days, people, careRows, presence, supervisions,
-				owners.WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, owners.NewTimetableSickReports(workTime))
+				owners.WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, owners.NewTimetableSickReports(workTime), owners.NewTimetableStaffCancellationNotices(notifications))
 			return
 		},
 		func() (err error) {
@@ -329,7 +329,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		},
 		func() (err error) {
 			requests, err = owners.BuildCarePlanRequests(db, env, hub, carePlan, persons, people, schedules, offerings, enrollment,
-				timetableOwner, settings.Service, audit, services, emitter, caller, reviewPolicy, tokens.Permissions, notifications.AbsenceNotifier, owners.NewPickupChangeTeamReach(notifications), documentPermissions)
+				timetableOwner, settings.Service, audit, services, emitter, caller, reviewPolicy, tokens.Permissions, notifications.AbsenceNotifier, owners.NewPickupChangeTeamReach(notifications), documentPermissions, timetableRows.CohortRosters)
 			return
 		},
 		func() (err error) {

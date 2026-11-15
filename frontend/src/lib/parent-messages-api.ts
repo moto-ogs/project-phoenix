@@ -8,6 +8,7 @@
  * Go backend with the staff JWT. Backend int64 ids arrive already stringified.
  */
 
+import type { MailOutcome } from "./email-delivery-status";
 import {
   ApiError,
   apiErrorFromResponse,
@@ -248,6 +249,22 @@ export async function fetchThread(threadId: string): Promise<ThreadDetail> {
 }
 
 /**
+ * What became of the e-mail of each OGS message in a conversation (#7058),
+ * keyed by message id. A message without a mail has no key.
+ */
+export async function fetchThreadMails(
+  threadId: string,
+): Promise<Readonly<Record<string, MailOutcome>>> {
+  const result = await getEnvelope<{
+    messages?: Record<string, MailOutcome>;
+  }>(
+    `/api/messages/threads/${encodeURIComponent(threadId)}/mails`,
+    "Der Stand der E-Mails konnte nicht geladen werden",
+  );
+  return result.data?.messages ?? {};
+}
+
+/**
  * Send a staff reply to a thread. Returns the full updated message list.
  */
 export async function postMessage(
@@ -282,6 +299,23 @@ export async function markThreadUnread(threadId: string): Promise<void> {
     `/api/messages/threads/${encodeURIComponent(threadId)}/unread`,
     {},
     "Die Unterhaltung wurde nicht als ungelesen markiert.",
+  );
+}
+
+/**
+ * Confirm the guardian activity up to the given message for the whole team,
+ * without a reply (#6486). Colleagues no longer see it as new; parents see no
+ * change. The message id is the last one the dialog showed, so a message that
+ * arrived meanwhile stays new.
+ */
+export async function confirmThreadForTeam(
+  threadId: string,
+  handledUpToMessageId: string,
+): Promise<void> {
+  await postEnvelope<null>(
+    `/api/messages/threads/${encodeURIComponent(threadId)}/handled`,
+    { handled_up_to_message_id: handledUpToMessageId },
+    "Die Nachricht wurde nicht als gelesen bestätigt.",
   );
 }
 

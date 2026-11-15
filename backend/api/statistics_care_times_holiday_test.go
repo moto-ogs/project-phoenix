@@ -38,7 +38,7 @@ func insertHolidayGuest(t *testing.T, db *bun.DB, school, studentID int64, start
 // booking until 16:00 and a check-out at 15:45 are no overrun.
 func TestStudentCareTimes_HolidayBookingReplacesTheContract(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	school := testpkg.Tenant(t)
 	_, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, school, "Ferien", "Leitung")
 	child := testpkg.CreateTestStudent(t, tc.db, "Fina", "Ferien", "2a").ID
@@ -73,7 +73,7 @@ func TestStudentCareTimes_HolidayBookingReplacesTheContract(t *testing.T) {
 // ended before its week is compared like any child.
 func TestStudentCareTimes_CancelledHolidayBookingLeavesTheSoll(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	school := testpkg.Tenant(t)
 	staff, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, school, "Storno", "Leitung")
 	child := careTimeChild(t, tc, staff.ID)
@@ -192,7 +192,7 @@ func joinTraeger(t *testing.T, db *bun.DB, organization, school int64) {
 // A received registration books nothing; the contract stays.
 func TestStudentCareTimes_OwnChildsHolidayBookingReplacesTheContract(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	school := testpkg.Tenant(t)
 	_, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, school, "Eigen", "Leitung")
 	child := testpkg.CreateTestStudent(t, tc.db, "Mila", "Eigenkind", "2a")
@@ -235,7 +235,7 @@ func TestStudentCareTimes_OwnChildsHolidayBookingReplacesTheContract(t *testing.
 // booking the child had then, also once its time model is archived.
 func TestStudentCareTimes_RebookingKeepsTheSollOfPastHolidayDays(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	school := testpkg.Tenant(t)
 	_, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, school, "Umbuchung", "Leitung")
 	child := testpkg.CreateTestStudent(t, tc.db, "Rudi", "Umgebucht", "2a")
@@ -279,7 +279,7 @@ func TestStudentCareTimes_RebookingKeepsTheSollOfPastHolidayDays(t *testing.T) {
 // no further statement.
 func TestCareTimeOverrunsQueryBudgetWithOwnHolidayBookings(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	school := testpkg.Tenant(t)
 	_, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, school, "Budget", "Ferien")
 	claims := claimsFor(t, account.ID)
@@ -338,7 +338,7 @@ func ownChildForHoliday(t *testing.T, tc *statisticsHTTPTestContext, organizatio
 // booking for those days.
 func TestStudentCareTimes_ChildThatLeftAfterTheHolidaysKeepsItsHolidaySoll(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	school := testpkg.Tenant(t)
 	_, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, school, "Austritt", "Leitung")
 	organization := testpkg.CreateTestOrganization(t, tc.db, &testpkg.Organization{
@@ -370,7 +370,7 @@ func TestStudentCareTimes_ChildThatLeftAfterTheHolidaysKeepsItsHolidaySoll(t *te
 // an all-clear against the contract.
 func TestStudentCareTimes_HolidayBookingOfTwoNFCEqualChildrenIsNotCompared(t *testing.T) {
 	t.Parallel()
-	tc := setupStatisticsRoute(t)
+	tc := setupStatisticsRoute(t, statisticsJuly2026)
 	school := testpkg.Tenant(t)
 	_, account := testpkg.CreateTestStaffWithAccountForTenant(t, tc.db, school, "Jose", "Leitung")
 	organization := testpkg.CreateTestOrganization(t, tc.db, &testpkg.Organization{

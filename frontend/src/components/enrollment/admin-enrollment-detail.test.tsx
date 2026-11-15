@@ -217,7 +217,7 @@ describe("AdminEnrollmentDetail child that may already be enrolled", () => {
         "child-1",
         "approved",
         undefined,
-        { createNewStudent: true },
+        { createNewStudent: true, shownStudentIds: [] },
       );
     });
   });
@@ -285,10 +285,16 @@ describe("AdminEnrollmentDetail child that may already be enrolled", () => {
 
     render(<AdminEnrollmentDetail requestId="request-1" />);
     expect(
-      await screen.findByText(
-        "Ein Kind mit diesem Namen und Geburtsdatum ist schon angemeldet. Beim Bestätigen wählen Sie, ob es dasselbe Kind ist.",
+      await screen.findByText("Paul Offen ist vielleicht schon angemeldet"),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "In moto gibt es schon ein Kind mit diesem Namen und Geburtsdatum. Beim Bestätigen wählen Sie, ob es dasselbe Kind ist.",
       ),
     ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Akte von Paul Offen öffnen" }),
+    ).toHaveAttribute("href", expect.stringContaining("/students/student-7"));
     fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
 
     const dialog = await screen.findByRole("dialog", {
@@ -362,7 +368,136 @@ describe("AdminEnrollmentDetail child that may already be enrolled", () => {
         "child-1",
         "approved",
         undefined,
-        { createNewStudent: true },
+        { createNewStudent: true, shownStudentIds: ["student-7"] },
+      );
+    });
+  });
+
+  // Another approval enrolled the child after this page loaded (#6247): the
+  // refusal reopens the choice with the current candidates, no error.
+  it("asks again with the candidates of a refused approval", async () => {
+    const request = requestWithCandidate();
+    mocks.getAdminRequest.mockResolvedValue({
+      ...request,
+      children: request.children.map((child) => ({
+        ...child,
+        possible_existing_children: undefined,
+      })),
+    });
+    mocks.decideAdminChild
+      .mockRejectedValueOnce(
+        new ApiError("child may already be enrolled", 409, {
+          code: "enrollment.child_possibly_enrolled",
+          details: {
+            candidates: request.children[0]?.possible_existing_children,
+          },
+        }),
+      )
+      .mockResolvedValueOnce({ id: "child-1" });
+
+    render(<AdminEnrollmentDetail requestId="request-1" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Bestätigen" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Ist das Kind schon angemeldet?",
+    });
+    expect(
+      within(dialog).getByText(
+        "Paul Offen · Klasse 1a · geboren am 15.04.2018",
+      ),
+    ).toBeVisible();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /Als neues Kind anlegen/ }),
+    );
+    await waitFor(() => {
+      expect(mocks.decideAdminChild).toHaveBeenLastCalledWith(
+        "request-1",
+        "child-1",
+        "approved",
+        undefined,
+        { createNewStudent: true, shownStudentIds: ["student-7"] },
+      );
+    });
+  });
+
+  // Both parents enrolled the same new child; the other enrollment of the
+  // phase already holds it (#6247).
+  function duplicateRequest() {
+    const request = requestWithCandidate();
+    return {
+      ...request,
+      guardian_first_name: "Emre",
+      guardian_last_name: "Offen",
+      children: request.children.map((child) => ({
+        ...child,
+        possible_existing_children: child.possible_existing_children.map(
+          (candidate) => ({
+            ...candidate,
+            phase_request: {
+              request_id: "request-0",
+              child_status: "approved",
+              guardian_first_name: "Derya",
+              guardian_last_name: "Offen",
+            },
+          }),
+        ),
+      })),
+    };
+  }
+
+  it("shows a duplicate with the other enrollment and refuses it", async () => {
+    mocks.getAdminRequest.mockResolvedValue(duplicateRequest());
+    mocks.decideAdminChild.mockResolvedValue({ id: "child-1" });
+
+    render(<AdminEnrollmentDetail requestId="request-1" />);
+    expect(
+      await screen.findByText(
+        "Paul Offen ist in dieser Phase schon angemeldet",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Anmeldung von Derya Offen öffnen" }),
+    ).toHaveAttribute(
+      "href",
+      expect.stringContaining("/admin/enrollments/request-0"),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Als doppelt ablehnen" }),
+    );
+
+    await waitFor(() => {
+      expect(mocks.decideAdminChild).toHaveBeenCalledWith(
+        "request-1",
+        "child-1",
+        "rejected",
+        "Ihr Kind ist schon über eine andere Anmeldung angemeldet.",
+      );
+    });
+  });
+
+  it("refuses the duplicate from the choice dialog too", async () => {
+    mocks.getAdminRequest.mockResolvedValue(duplicateRequest());
+    mocks.decideAdminChild.mockResolvedValue({ id: "child-1" });
+
+    render(<AdminEnrollmentDetail requestId="request-1" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Bestätigen" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Ist das Kind schon angemeldet?",
+    });
+    // Blocked with its reason, which stays reachable on focus and tap.
+    expect(
+      within(dialog).getByRole("button", {
+        name: /Bestehendes Kind verwenden/,
+      }),
+    ).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /Als doppelt ablehnen/ }),
+    );
+    await waitFor(() => {
+      expect(mocks.decideAdminChild).toHaveBeenCalledWith(
+        "request-1",
+        "child-1",
+        "rejected",
+        "Ihr Kind ist schon über eine andere Anmeldung angemeldet.",
       );
     });
   });
@@ -464,6 +599,72 @@ describe("AdminEnrollmentDetail approval without an offering", () => {
     expect(
       screen.queryByRole("button", { name: "Trotzdem bestätigen" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("names offering changes since submission and approves only after confirmation (#6837)", async () => {
+    mocks.getAdminRequest.mockResolvedValue({
+      id: "request-1",
+      phase_id: "phase-1",
+      phase_name: "2026/27",
+      care_offering_selection_mode: "optional",
+      guardian_first_name: "Mara",
+      guardian_last_name: "Beispiel",
+      guardian_email: "mara@example.test",
+      submitted_at: "2026-08-05T10:00:00Z",
+      status_token: "status-token",
+      children: [
+        adjustmentChild({
+          status: "submitted",
+          offerings: [
+            {
+              offering_id: "7",
+              offering_name: "Ganztag",
+              days_of_week_mode: "fixed",
+              available_days: ["mon", "tue", "wed", "thu"],
+              price_cents: 9500,
+              submitted_terms: {
+                name: "Ganztag",
+                price_cents: 8000,
+                days_of_week_mode: "fixed",
+                available_days: ["mon", "tue", "wed", "thu", "fri"],
+              },
+              changed_terms: ["price", "days"],
+            },
+          ],
+        }),
+      ],
+    });
+    mocks.decideAdminChild.mockResolvedValue({
+      id: "child-1",
+      status: "approved",
+    });
+
+    render(<AdminEnrollmentDetail requestId="request-1" />);
+    const submittedTerms =
+      "Seit der Anmeldung geändert. Die Eltern haben gewählt: 80,00 € pro Monat, Tage: Mo, Di, Mi, Do, Fr.";
+    expect(await screen.findByText(submittedTerms)).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+    expect(mocks.decideAdminChild).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(
+        "Ein Angebot hat sich nach der Anmeldung geändert. Beim Bestätigen gelten die neuen Angaben. Bitte informieren Sie die Familie.",
+      ),
+    ).toBeVisible();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Neue Angaben bestätigen" }),
+    );
+    await waitFor(() => {
+      expect(mocks.decideAdminChild).toHaveBeenCalledWith(
+        "request-1",
+        "child-1",
+        "approved",
+        undefined,
+        undefined,
+        true,
+      );
+    });
   });
 
   it.each([

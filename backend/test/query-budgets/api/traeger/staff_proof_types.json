@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.staff_proof_types",
+  "max": 3,
+  "exact": true,
+  "description": "modules/workforce — GET /traeger/staff-proofs/types (#4707): the binding of\nthe Träger transaction, its release and the kinds in one statement each\n(the standard kinds are added by an INSERT, no SELECT). Flat in the number\nof kinds.",
+  "route": "GET /traeger/staff-proofs/types"
+}

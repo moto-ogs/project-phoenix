@@ -50,6 +50,10 @@ const (
 	// operator read or changed (#4720, ADR 0184); the resource ID is the
 	// Träger.
 	AuditResourceBelegRetention = "beleg_retention"
+	// AuditResourceTraegerStaffRelease is the release „Personal beim Träger“
+	// the operator read, granted or withdrew (#4705, ADR 0089 section 2); the
+	// resource ID is the Träger.
+	AuditResourceTraegerStaffRelease = "traeger_staff_release"
 )
 
 // Device vocabulary shared with Device Fleet.
@@ -229,13 +233,16 @@ type DeviceSession struct {
 }
 
 // Person is the part of a person the soft delete reads. FormerStaff is true
-// when the person holds retired staff memberships and no live one.
+// when the person holds retired staff memberships and no live one; LiveStaff
+// when it holds a live one; Student when a child record names the person.
 type Person struct {
 	ID          int64
 	TenantID    int64
 	AccountID   *int64
 	HasRFIDCard bool
 	FormerStaff bool
+	LiveStaff   bool
+	Student     bool
 }
 
 // PersonListing is one person of the operator person listings.

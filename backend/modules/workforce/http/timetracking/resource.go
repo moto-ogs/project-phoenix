@@ -6,11 +6,13 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 )
 
-// OwnAbsenceWrites are the staff member's absence writes that may cascade a
-// sick report into Dienstplan and Betreuungsplan (#1843). The root binds the
-// shift-plan-sync workflow's entry, which runs Workforce's write and the
-// cascade in one tenant transaction (#4825).
+// OwnAbsenceWrites are the staff member's absence writes that may cascade an
+// absence into Dienstplan and Betreuungsplan (#1843, #6847), the withdrawal
+// of an approved request among them. The root binds the shift-plan-sync
+// workflow's entry, which runs Workforce's write and the cascade in one
+// tenant transaction (#4825).
 type OwnAbsenceWrites interface {
+	CancelAbsence(ctx context.Context, staffID, actorAccountID, absenceID int64) error
 	CreateOwnAbsence(ctx context.Context, staffID int64, actorAccountID *int64, request workforce.CreateAbsenceRequest) (*workforce.StaffAbsenceResponse, error)
 	UpdateAbsence(ctx context.Context, staffID int64, actorAccountID *int64, absenceID int64, request workforce.UpdateAbsenceRequest) (*workforce.StaffAbsenceResponse, error)
 	DeleteOwnAbsence(ctx context.Context, staffID int64, actorAccountID *int64, absenceID int64) error
@@ -42,6 +44,9 @@ type Resource struct {
 	identity         IdentityFunc
 	withinTenant     TenantTransaction
 	shiftResponses   ShiftResponses
+	// absenceMails says whether the approvers got the notice of a waiting
+	// request by mail (#7058); nil leaves the route away.
+	absenceMails workforce.AbsenceMailStatus
 }
 
 // Dependencies are the collaborators of the time-tracking resource.
@@ -63,6 +68,9 @@ type Dependencies struct {
 	Identity         IdentityFunc
 	WithinTenant     TenantTransaction
 	ShiftResponses   ShiftResponses
+	// AbsenceMails serves the mail status of the own requests (#7058);
+	// optional.
+	AbsenceMails workforce.AbsenceMailStatus
 }
 
 // NewResource creates a new time-tracking resource.
@@ -88,5 +96,6 @@ func NewResource(deps Dependencies) *Resource {
 		identity:               deps.Identity,
 		withinTenant:           deps.WithinTenant,
 		shiftResponses:         deps.ShiftResponses,
+		absenceMails:           deps.AbsenceMails,
 	}
 }

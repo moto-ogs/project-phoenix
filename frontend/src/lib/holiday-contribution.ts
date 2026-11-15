@@ -6,7 +6,7 @@
  */
 
 type ContributionLineKind =
-  "base" | "sibling" | "benefits_exemption" | "cost_takeover";
+  "base" | "sibling" | "benefits_exemption" | "cost_takeover" | "meal";
 
 export interface ContributionLine {
   readonly kind: ContributionLineKind;
@@ -21,8 +21,24 @@ export interface ContributionLine {
   readonly note: string;
   /** Cost takeover (#5627): the copied name of the cost bearer. */
   readonly costBearerName?: string;
-  /** Days a base line of a week by days prices (#4701); null for a week. */
+  /**
+   * Days a base line of a week by days prices (#4701), null for a week; on
+   * a meal line the number of lunches it prices (#5631).
+   */
   readonly bookedDays?: number | null;
+}
+
+/**
+ * The price of one lunch of a meal line in cent (#5631): its amount is the
+ * price of one lunch times its lunches. Null without the number of lunches.
+ */
+export function lunchPriceOf(line: {
+  readonly amountCents: number;
+  readonly bookedDays?: number | null;
+}): number | null {
+  if (!line.bookedDays || line.bookedDays <= 0) return null;
+  // Whole cent, like the invoice text (integer division in mealLabel).
+  return Math.trunc(Math.abs(line.amountCents) / line.bookedDays);
 }
 
 interface ChildContribution {
@@ -127,19 +143,23 @@ export function contributionFromBackend(
       childId: child.child_id ? String(child.child_id) : "",
       position: child.position,
       totalCents: child.total_cents,
-      lines: (child.lines ?? []).map((line) => ({
-        kind: line.kind,
-        amountCents: line.amount_cents,
-        weekStartsOn: line.week_starts_on,
-        weekEndsOn: line.week_ends_on,
-        timeModelName: line.time_model_name,
-        childRank: line.child_rank,
-        discountBasisPoints: line.discount_basis_points,
-        discountCents: line.discount_cents,
-        note: line.note,
-        costBearerName: line.cost_bearer_name ?? "",
-        bookedDays: line.booked_days ?? null,
-      })),
+      // A meal line without lunches only records the selection of a week
+      // whose care days are all closed (#5631); it shows nothing.
+      lines: (child.lines ?? [])
+        .filter((line) => line.kind !== "meal" || (line.booked_days ?? 0) > 0)
+        .map((line) => ({
+          kind: line.kind,
+          amountCents: line.amount_cents,
+          weekStartsOn: line.week_starts_on,
+          weekEndsOn: line.week_ends_on,
+          timeModelName: line.time_model_name,
+          childRank: line.child_rank,
+          discountBasisPoints: line.discount_basis_points,
+          discountCents: line.discount_cents,
+          note: line.note,
+          costBearerName: line.cost_bearer_name ?? "",
+          bookedDays: line.booked_days ?? null,
+        })),
     })),
     totalCents: contribution.total_cents,
     exemptionAvailable: contribution.exemption_available,

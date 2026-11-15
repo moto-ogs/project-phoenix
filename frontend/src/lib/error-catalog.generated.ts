@@ -34,6 +34,8 @@ export const ERROR_CATALOG = {
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "billing.invalid_key_day":
         "Der Stichtag muss zwischen dem 1. und dem 28. des Monats liegen. Bitte wählen Sie einen dieser Tage.",
+      "calendar.occurrence_unavailable":
+        "Diesen Termin gibt es nicht mehr, er wurde vielleicht abgesagt. Bitte laden Sie den Kalender neu.",
       "care_contract.application_not_found":
         "Diese Anmeldung gibt es nicht mehr oder sie ist nicht angenommen. Bitte laden Sie die Seite neu.",
       "care_contract.change_contract_not_active":
@@ -56,6 +58,12 @@ export const ERROR_CATALOG = {
         "Dieser Vertrag ist schon unterschrieben oder wartet nicht auf eine Unterschrift. Bitte laden Sie die Seite neu.",
       "care_contract.field_invalid":
         "Einige Angaben stimmen nicht. Bitte prüfen Sie Ihre Eingaben.",
+      "care_contract.import_changed":
+        "Seit der Vorschau hat sich etwas geändert. Bitte prüfen Sie die Vorschau noch einmal und übernehmen Sie dann.",
+      "care_contract.import_file_invalid":
+        "Die Datei lässt sich nicht lesen. Bitte wählen Sie eine CSV-Datei mit Überschriften in der ersten Zeile.",
+      "care_contract.import_file_too_large":
+        "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
       "care_contract.letterhead_too_long":
         "Absender oder Fußzeile sind zu lang für den Vertrag. Bitte kürzen Sie sie unter „Briefkopf und Vorlagen“.",
       "care_contract.notice_end_not_open":
@@ -143,6 +151,8 @@ export const ERROR_CATALOG = {
         "Dieser Kontakt ist mehreren Familien zugeordnet und kann nur von der Schule geändert werden. Bitte wenden Sie sich an die Schule.",
       "care.guardian_social_worker_managed":
         "Diese Kontaktdaten werden von der Schule verwaltet. Für Änderungen wenden Sie sich bitte an die Schule.",
+      "care.invalid_credentials":
+        "Die E-Mail-Adresse oder das Passwort stimmt nicht. Bitte prüfen Sie Ihre Eingabe.",
       "care.invalid_poll_response":
         "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.invalid_recipients":
@@ -296,7 +306,7 @@ export const ERROR_CATALOG = {
       "communication.staff_messaging_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "communication.staff_notice_outdated":
-        "Diese Tagesinformation hat sich inzwischen geändert. Bitte laden Sie die Seite neu.",
+        "Dieser Hinweis hat sich inzwischen geändert. Bitte laden Sie die Seite neu.",
       "communication.survey_already_answered":
         "Sie haben an dieser Umfrage schon teilgenommen. Die Antwort lässt sich nicht mehr ändern.",
       "communication.survey_anonymous":
@@ -321,6 +331,10 @@ export const ERROR_CATALOG = {
         "Für dieses Kind ist kein Betreuungsangebot gebucht. Die Familie muss zuerst ein Angebot ergänzen.",
       "enrollment.approval_data_invalid":
         "Die Angaben dieser Anmeldung sind unvollständig. Bitte korrigieren Sie die Daten des Kindes.",
+      "enrollment.approval_offering_terms_changed":
+        "Ein Angebot hat sich seit der Anmeldung geändert. Öffnen Sie die Anmeldung und bestätigen Sie die neuen Angaben.",
+      "enrollment.approval_staff_profile_required":
+        "Diese Anmeldung enthält Abhol- oder Bringzeiten. Freigeben kann sie nur jemand mit Personalprofil.",
       "enrollment.captcha_failed":
         "Die Sicherheitsabfrage hat nicht geklappt. Bitte versuchen Sie es noch einmal.",
       "enrollment.captcha_required":
@@ -497,6 +511,8 @@ export const ERROR_CATALOG = {
         "Die Angaben zu diesem Feriengast sind nicht mehr da. Sie bleiben nur bis 7 Tage nach der Ferienwoche.",
       "enrollment.holiday_host_school_outside_traeger":
         "Diese Schule gehört nicht zu Ihrem Träger. Bitte wählen Sie eine Schule aus der Liste.",
+      "enrollment.holiday_lunch_booked":
+        "Für diese Woche ist schon Mittagessen gebucht. Darum bleibt das Angebot bestehen. Den Preis können Sie ändern.",
       "enrollment.holiday_period_incomplete":
         "Der Ferienzeitraum braucht mindestens eine Woche. Jede Woche braucht mindestens ein Zeitmodell.",
       "enrollment.holiday_period_invalid":
@@ -562,6 +578,8 @@ export const ERROR_CATALOG = {
         "Für eine Einschränkung nach Klasse oder Klassenstufe muss die passende Abfrage eingeschaltet sein. Bitte schalten Sie sie in den Einstellungen ein.",
       "enrollment.phase_has_effective_bookings":
         "Für diese Anmeldephase sind noch Kinder gebucht. Deshalb kann sie nicht gelöscht werden. Wählen Sie stattdessen „Deaktivieren“ oder beenden Sie zuerst die Buchungen.",
+      "enrollment.phase_has_requests":
+        "Zu dieser Anmeldephase gibt es Anmeldungen. Deshalb kann sie nicht gelöscht werden. Wählen Sie stattdessen „Deaktivieren“.",
       "enrollment.phase_name_exists":
         "Es gibt schon eine Anmeldephase mit diesem Namen. Bitte wählen Sie einen anderen Namen.",
       "enrollment.phase_name_required":
@@ -981,6 +999,8 @@ export const ERROR_CATALOG = {
         "Ein Vertrag hat an einem Tag zwei gültige Fassungen. Bitte melden Sie das dem Support. Der Lauf rechnet diesen Monat nicht ab.",
       "parent_billing.carried_correction_not_found":
         "Diese Korrektur wird in diesem Lauf nicht mehr vorgeschlagen. Bitte laden Sie die Seite neu.",
+      "parent_billing.child_not_found":
+        "Dieses Kind gehört nicht zu dieser Familie. Bitte laden Sie die Liste „Familien“ neu.",
       "parent_billing.contribution_rule_invalid":
         "Bitte prüfen Sie die markierten Felder.",
       "parent_billing.contribution_rule_not_found":
@@ -1189,6 +1209,8 @@ export const ERROR_CATALOG = {
         "Diesen Träger gibt es nicht mehr. Bitte laden Sie die Seite neu.",
       "provisioning.organization_slug_taken":
         "Diesen Slug hat schon ein anderer Träger. Bitte wählen Sie einen anderen.",
+      "provisioning.person_has_active_profile":
+        "Diese Person ist noch als Kind oder Mitarbeitende an der Schule angelegt. Das Kind löscht die Schule beim Kind. Mitarbeitende lassen sich erst nach ihrem Austritt löschen.",
       "provisioning.person_has_supervisions":
         "Diese Person führt gerade eine Aufsicht. Bitte beenden Sie die Aufsicht zuerst.",
       "provisioning.person_not_found":
@@ -1229,12 +1251,20 @@ export const ERROR_CATALOG = {
         "Aus dieser Phase gibt es schon eine Anschlussphase. Bitte löschen Sie zuerst die bestehende Anschlussphase.",
       "rollover.source_not_found":
         "Die Ausgangsphase gibt es nicht mehr. Bitte laden Sie die Seite neu.",
+      "rooms.archived":
+        "Dieser Raum ist archiviert. Sie können ihn nicht mehr ändern.",
       "rooms.color_already_in_use":
         "Diese Farbe hat schon ein anderer Raum. Bitte wählen Sie eine andere Farbe.",
       "rooms.not_found":
         "Diesen Raum gibt es nicht mehr. Bitte wählen Sie ihn in der Liste neu aus.",
       "rooms.not_released":
         "Dieser Raum ist nicht mehr freigegeben. Bitte wählen Sie einen anderen Raum.",
+      "rooms.required_by_care_offering":
+        "Ein Betreuungsangebot braucht diesen Raum noch. Wählen Sie dort zuerst einen anderen Raum.",
+      "rooms.session_running":
+        "In diesem Raum läuft gerade eine Aktivität. Beenden Sie sie zuerst.",
+      "rooms.still_planned":
+        "Dieser Raum wird noch genutzt. Verlegen Sie zuerst Aktivitäten, Termine, Gruppen und Geräte in einen anderen Raum.",
       "school.parent_conference_change_closed":
         "Bis 24 Stunden vor dem Termin können Sie buchen, umbuchen oder absagen. Danach wenden Sie sich bitte direkt an die Lehrkraft.",
       "school.parent_conference_slot_taken":
@@ -1323,6 +1353,8 @@ export const ERROR_CATALOG = {
         "Bitte wählen Sie höchstens 500 Kinder auf einmal aus.",
       "students.care_offerings_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
+      "students.care_request_plan_changed":
+        "Der Betreuungsplan wurde gerade geändert. Bitte laden Sie die Seite neu. Prüfen Sie die Anfrage dann noch einmal.",
       "students.care_resume_alumnus":
         "Dieses Kind wurde beim Schuljahreswechsel abgemeldet. Sie finden es unter Schuljahreswechsel, Bereich Abgänge.",
       "students.care_resume_missing":
@@ -1409,6 +1441,8 @@ export const ERROR_CATALOG = {
         "Für das Kind gibt es keine gültige Anmeldung mehr. Bitte lehnen Sie {object} ab.",
       "students.partial_absence_conflict":
         "Das Kind ist an einem gewählten Tag schon ab einer Uhrzeit entschuldigt. Entfernen Sie zuerst die Teilentschuldigung unter „Entschuldigen“ und „Ab Uhrzeit“.",
+      "students.person_has_active_profile":
+        "Diese Person ist noch als Kind oder Mitarbeitende angelegt. Löschen Sie das Kind direkt beim Kind. Mitarbeitende lassen sich erst nach ihrem Austritt löschen.",
       "students.photo_consent_required":
         "Für ein Foto fehlt die Einwilligung der Eltern. Bitte bestätigen Sie zuerst die Einwilligung.",
       "students.photo_consent_withdrawn":
@@ -1447,6 +1481,8 @@ export const ERROR_CATALOG = {
         "Ein eigener Wert ist hier nicht möglich. Bitte wählen Sie einen Wunsch oder „Keine Änderung“.",
       "students.status_day_conflict":
         "An einigen Tagen gibt es schon einen Eintrag. Diese Tage wurden nicht geändert.",
+      "students.status_day_occupied":
+        "Für heute ist eine Klassenfahrt eingetragen. Heben Sie zuerst die Klassenfahrt auf.",
       "substitutions.invalid_period":
         "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "substitutions.invalid_target":
@@ -1481,6 +1517,8 @@ export const ERROR_CATALOG = {
         "{object} überschneidet sich mit anderen Zeiträumen. Bitte prüfen Sie die Termine.",
       "timetable.calendar_period_roster_conflict":
         "Der Zeitraum lässt sich nicht löschen. Sonst wären Kinder oder Personal doppelt eingeteilt. Bitte passen Sie zuerst die Regeltermine an.",
+      "timetable.calendar_period_shift_series_conflict":
+        "Der Zeitraum lässt sich nicht löschen. Schichtserien im Dienstplan nutzen ihn noch. Bitte beenden Sie diese Serien zuerst.",
       "timetable.calendar_period_week_cycle_anchor_missing":
         "Bitte wählen Sie das Startdatum der Wiederholung.",
       "timetable.closing_day_end_before_start":
@@ -1795,6 +1833,8 @@ export const ERROR_CATALOG = {
         "Ihr Konto hat keinen Zugang zum Träger-Portal. Bitte wenden Sie sich an das moto-Team.",
       "traeger.school_not_found":
         "Diese Schule gehört nicht zu Ihrem Träger. Bitte laden Sie die Seite neu.",
+      "traeger.school_requires_code":
+        "Diese Schule verlangt zum Öffnen einen Code aus Ihrer E-Mail.",
       "traeger.second_factor_required":
         "Zum Öffnen einer Schule brauchen Sie einen zweiten Anmeldenachweis. Bitte melden Sie sich im Träger-Portal neu an.",
       "traeger.shared_document_not_found":
@@ -1814,6 +1854,12 @@ export const ERROR_CATALOG = {
         "An diesen Tagen ist schon eine Abwesenheit eingetragen. Bitte wählen Sie andere Tage.",
       "workforce.absence_type_inactive":
         "Diese Abwesenheitsart ist ausgeschaltet. Bitte wählen Sie eine andere.",
+      "workforce.absence_type_kept_by_traeger":
+        "Diese Abwesenheitsart legt Ihr Träger fest. Ihre Schule ändert nur, ob sie die Art anbietet und wie viele Tage hier höchstens gehen.",
+      "workforce.absence_type_not_offered":
+        "Ihre Schule bietet diese Abwesenheitsart nicht an. Bitte wählen Sie eine andere Art.",
+      "workforce.absence_type_school_limit_exceeded":
+        "An dieser Schule sind für diese Art nicht mehr Tage erlaubt. Die Grenze legt die Schule fest.",
       "workforce.adjustment_in_closed_month":
         "Dieser Monat ist schon abgeschlossen. Bitte wählen Sie ein Datum im offenen Monat. Oder öffnen Sie den Monat wieder.",
       "workforce.already_checked_in":
@@ -1835,6 +1881,8 @@ export const ERROR_CATALOG = {
         "Diese Abwesenheit trägt nur die Leitung ein. Bitte fragen Sie die Leitung.",
       "workforce.month_closed":
         "Der {month} ist abgeschlossen. Öffnen Sie den Monat zuerst wieder. Das geht im Reiter Zeiterfassung.",
+      "workforce.month_closed_by_traeger":
+        "Diesen Monat hat die Personalverwaltung des Trägers abgeschlossen. Nur sie kann ihn wieder öffnen.",
       "workforce.month_not_closable":
         "Dieser Monat ist noch nicht vorbei. Sie können ihn erst danach abschließen.",
       "workforce.month_not_closed":
@@ -1913,16 +1961,28 @@ export const ERROR_CATALOG = {
         "Für diese Schicht gibt es Vertretungen. Bitte passen Sie zuerst die Vertretungen an.",
       "workforce.shift_overlap":
         "Die Schicht überschneidet sich mit einer anderen Schicht dieser Person. Bitte prüfen Sie die Zeiten.",
+      "workforce.shift_overlaps_other_site":
+        "Die Person arbeitet am {day} von {start} bis {end} Uhr schon an einem anderen Einsatzort. Bitte wählen Sie eine andere Zeit.",
+      "workforce.shift_planning_off":
+        "Ihr Träger plant Einsätze nicht in moto. Neue Schichten sind deshalb ausgeschaltet.",
       "workforce.shift_series_no_occurrences":
         "Für {object} gibt es keine Termine mehr. Bitte prüfen Sie Wochentage und „Gültig bis“.",
       "workforce.shift_series_outside_period":
         "Die Serie liegt außerhalb des Kalenderzeitraums. Bitte prüfen Sie „Gültig ab“ und „Gültig bis“.",
       "workforce.shift_series_week_cycle_missing":
         "Dieser Kalenderzeitraum hat keine Woche A und B. Bitte wählen Sie „Jede Woche“.",
+      "workforce.shift_type_archived":
+        "Diese Dienstart wurde entfernt. Bitte wählen Sie eine andere.",
       "workforce.shift_type_inactive":
         "Diese Dienstart ist ausgeschaltet. Bitte wählen Sie eine andere.",
+      "workforce.shift_working_time_warning":
+        "Die Schicht verstößt gegen eine Arbeitszeitregel. Bitte prüfen Sie die Zeiten und bestätigen Sie die Planung.",
+      "workforce.staff_kept_by_traeger":
+        "Diesen Wert führt der Träger in seiner Personalakte. Bitte wenden Sie sich an die Personalverwaltung des Trägers.",
       "workforce.staff_profile_missing":
         "Für Ihr Konto gibt es keinen Personaldatensatz. Diese Einstellung gilt nur für Personal.",
+      "workforce.staff_soll_kept_by_traeger":
+        "Das Soll dieser Person führt der Träger im Arbeitsvertrag. Bitte wenden Sie sich an die Personalverwaltung des Trägers.",
       "workforce.stammdaten_invalid":
         "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "workforce.target_override_hours_invalid":
@@ -1933,6 +1993,70 @@ export const ERROR_CATALOG = {
         "Das Ende liegt vor dem Anfang. Bitte prüfen Sie den Zeitraum.",
       "workforce.target_override_too_long":
         "Der Zeitraum ist zu lang. Erlaubt sind höchstens {max_days} Tage.",
+      "workforce.traeger_absence_allowance_below_booked":
+        "Der Anspruch ist zu klein. An den Schulen sind schon mehr Tage eingetragen oder beantragt.",
+      "workforce.traeger_absence_type_in_use":
+        "Eine Schule hat diese Art schon gebucht. Der Name bleibt deshalb, wie er ist.",
+      "workforce.traeger_absence_type_invalid":
+        "Die Abwesenheitsart konnte nicht gespeichert werden. Bitte prüfen Sie Name und Tage.",
+      "workforce.traeger_absence_type_name_taken":
+        "Eine Abwesenheitsart mit diesem Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
+      "workforce.traeger_absence_type_not_found":
+        "Diese Abwesenheitsart gibt es nicht mehr. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_contract_invalid":
+        "Bitte prüfen Sie die Angaben zum Arbeitsvertrag.",
+      "workforce.traeger_contract_month_closed":
+        "Die Schule {school} hat die Zeit davor schon abgerechnet. Eine Änderung geht dort erst ab dem {day}.",
+      "workforce.traeger_contract_not_found":
+        "Diesen Arbeitsvertrag gibt es nicht mehr. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_contract_overlap":
+        "An der Schule {school} gilt an diesen Tagen schon ein anderer Arbeitsvertrag. Beenden Sie den anderen Vertrag zuerst oder wählen Sie andere Tage.",
+      "workforce.traeger_holiday_week_school_override":
+        "Die Schule {school} hat für die Woche ab dem {day} schon eine eigene Sonderarbeitszeit. Bitte bitten Sie die Schule, diese zu löschen, oder wählen Sie eine andere Woche.",
+      "workforce.traeger_month_closed_by_school":
+        "Die Schule {school} hat diesen Monat selbst abgeschlossen. Nur die Schule kann ihn wieder öffnen.",
+      "workforce.traeger_month_later_closed":
+        "An der Schule {school} ist {month} schon abgeschlossen. Bitte öffnen Sie zuerst diesen späteren Monat.",
+      "workforce.traeger_month_not_kept":
+        "In diesem Monat gilt kein Arbeitsvertrag des Trägers. Die Schulen schließen den Monat selbst ab.",
+      "workforce.traeger_planning_shift_not_found":
+        "Die Schicht gibt es nicht mehr. Bitte laden Sie die Woche neu.",
+      "workforce.traeger_planning_site_invalid":
+        "Die Person arbeitet an dieser Schule nicht mehr. Bitte wählen Sie einen anderen Einsatzort.",
+      "workforce.traeger_proof_invalid":
+        "Der Nachweis lässt sich so nicht speichern. Bitte prüfen Sie das markierte Feld.",
+      "workforce.traeger_proof_mapping_invalid":
+        "Diese Nachweisart gibt es an der Schule nicht mehr. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_proof_not_found":
+        "Diesen Nachweis gibt es nicht mehr. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_proof_type_name_taken":
+        "Eine Nachweisart mit diesem Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
+      "workforce.traeger_proof_type_not_found":
+        "Diese Nachweisart gibt es nicht mehr oder sie ist archiviert. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_staff_already_linked":
+        "Eine dieser Personen hat schon eine Personalakte. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_staff_import_changed":
+        "Seit der Vorschau hat sich etwas an den Personalakten geändert. Bitte prüfen Sie die Vorschau noch einmal und übernehmen Sie dann.",
+      "workforce.traeger_staff_import_file_invalid":
+        "moto kann die Datei nicht lesen. Bitte wählen Sie eine CSV-Datei mit Überschriften in der ersten Zeile und mindestens einer Person.",
+      "workforce.traeger_staff_import_file_too_large":
+        "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
+      "workforce.traeger_staff_import_mapping_invalid":
+        "Die Zuordnung der Spalten passt nicht zur Datei. Bitte wählen Sie für jedes Pflichtfeld eine Spalte.",
+      "workforce.traeger_staff_link_invalid":
+        "Die Personen lassen sich so nicht verknüpfen. Bitte prüfen Sie Ihre Auswahl.",
+      "workforce.traeger_staff_not_released":
+        "Personal beim Träger ist für Ihren Träger noch nicht freigeschaltet. Das moto-Team schaltet es frei.",
+      "workforce.traeger_staff_record_not_found":
+        "Diese Personalakte gibt es nicht mehr. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_staff_release_exists":
+        "Personal beim Träger ist für diesen Träger schon freigeschaltet.",
+      "workforce.traeger_staff_release_in_use":
+        "Der Träger führt noch Personalakten. Er muss sie zuerst auflösen.",
+      "workforce.traeger_staff_release_invalid":
+        "Bitte wählen Sie eine der beiden Erklärungen des Trägers.",
+      "workforce.traeger_staff_release_not_found":
+        "Personal beim Träger ist für diesen Träger nicht freigeschaltet.",
       "workforce.vacation_opening_absences_before_cutoff":
         "Vor dem Stichtag ist schon Urlaub eingetragen. Diese Tage würden doppelt zählen. Bitte wählen Sie einen früheren Stichtag.",
       "workforce.vacation_opening_already_exists":
@@ -1974,6 +2098,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Please check this field.",
     },
     codes: {
+      "calendar.occurrence_unavailable":
+        "This date no longer exists. It may have been cancelled. Please reload the calendar.",
       "care_contract.application_not_found":
         "This application no longer exists or is not accepted. Please reload the page.",
       "care_contract.change_contract_not_active":
@@ -2081,6 +2207,8 @@ export const ERROR_CATALOG = {
         "This contact is shared with several families and can only be changed by the school. Please contact the school.",
       "care.guardian_social_worker_managed":
         "These contact details are managed by the school. To make changes, please contact the school.",
+      "care.invalid_credentials":
+        "The email address or the password is not correct. Please check your entry.",
       "care.invalid_poll_response":
         "{object} contains invalid details. Please check your entries.",
       "care.invalid_recipients":
@@ -2200,6 +2328,8 @@ export const ERROR_CATALOG = {
       "communication.survey_not_open": "This survey no longer accepts answers.",
       "display.manage_forbidden":
         "You can view info displays, but cannot change them. Please contact your school management.",
+      "enrollment.approval_staff_profile_required":
+        "This registration contains pickup or arrival times. Only someone with a staff profile can approve it.",
       "enrollment.captcha_failed":
         "The security check did not work. Please try again.",
       "enrollment.captcha_required": "Please complete the security check.",
@@ -2301,6 +2431,8 @@ export const ERROR_CATALOG = {
         "The details of this holiday guest are no longer available. They are kept only until 7 days after the holiday week.",
       "enrollment.holiday_host_school_outside_traeger":
         "This school does not belong to your Träger. Please choose a school from the list.",
+      "enrollment.holiday_lunch_booked":
+        "Lunch is already booked for this week. That is why the offer stays. You can change the price.",
       "enrollment.holiday_period_incomplete":
         "The holiday period needs at least one week. Every week needs at least one time model.",
       "enrollment.holiday_period_invalid": "Please check the marked fields.",
@@ -2544,6 +2676,8 @@ export const ERROR_CATALOG = {
         "The mandate text has changed. Please read and confirm it again.",
       "parent_billing.sollstellung_revenue_account_missing":
         "{count} invoices have no revenue account. Enter a standard revenue account in the DATEV settings.",
+      "provisioning.person_has_active_profile":
+        "This person is still registered as a child or staff member at the school. The school must delete the child or record the staff member's exit first.",
       "school.parent_conference_change_closed":
         "You can book, change or cancel up to 24 hours before the meeting. After that, please contact the teacher directly.",
       "school.parent_conference_slot_taken":
@@ -2568,6 +2702,8 @@ export const ERROR_CATALOG = {
         "{object} has been changed in the meantime. Please check your details again.",
       "students.care_offerings_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
+      "students.care_request_plan_changed":
+        "The care plan has just changed. Please reload the page. Then check the request again.",
       "students.change_request_stale":
         "{object} has been changed in the meantime. Please reload the page.",
       "students.export_selection_too_large":
@@ -2584,6 +2720,8 @@ export const ERROR_CATALOG = {
         "The child no longer has a valid enrollment. Please decline {object}.",
       "students.partial_absence_conflict":
         "The child is already excused from a certain time on a chosen day. First remove that partial excusal under “Entschuldigen” and “Ab Uhrzeit”.",
+      "students.person_has_active_profile":
+        "This person is still registered as a child or staff member. Please delete the child or record the staff member's exit first.",
       "students.pickup_permission_contact_gone":
         "{object} could not be changed. Please check the current state.",
       "students.pickup_proof_not_found":
@@ -2594,6 +2732,8 @@ export const ERROR_CATALOG = {
         "The parents set this time. Only someone with a staff profile can change it.",
       "students.status_day_conflict":
         "Some days already have an entry. These days were not changed.",
+      "students.status_day_occupied":
+        "A class trip is entered for today. Remove the class trip first.",
       "substitutions.last_supervisor":
         "You are the only supervisor. Hand the supervision over to someone or end the activity.",
       "timetable.closing_day_notice_changed":
@@ -2659,6 +2799,8 @@ export const ERROR_CATALOG = {
         "Your account has no access to the Träger portal. Please contact the moto team.",
       "traeger.school_not_found":
         "This school does not belong to your Träger. Please reload the page.",
+      "traeger.school_requires_code":
+        "This school asks for a code from your e-mail before it opens.",
       "traeger.second_factor_required":
         "To open a school you need a second sign-in factor. Please sign in to the Träger portal again.",
       "traeger.shared_document_not_found":
@@ -2690,6 +2832,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Проверьте это поле.",
     },
     codes: {
+      "calendar.occurrence_unavailable":
+        "Этой даты больше нет. Возможно, её отменили. Пожалуйста, обновите календарь.",
       "care_contract.application_not_found":
         "This application no longer exists or is not accepted. Please reload the page.",
       "care_contract.change_contract_not_active":
@@ -2797,6 +2941,8 @@ export const ERROR_CATALOG = {
         "Этот контакт используется несколькими семьями и может быть изменён только школой. Обратитесь в школу.",
       "care.guardian_social_worker_managed":
         "Эти контактные данные управляются школой. Для изменений обратитесь в школу.",
+      "care.invalid_credentials":
+        "Неверный адрес электронной почты или пароль. Проверьте введённые данные.",
       "care.invalid_poll_response":
         "Указаны неверные данные: {object}. Проверьте введённые данные.",
       "care.invalid_recipients":
@@ -2897,6 +3043,8 @@ export const ERROR_CATALOG = {
       "communication.survey_not_open": "Этот опрос больше не принимает ответы.",
       "display.manage_forbidden":
         "Вы можете просматривать информационные экраны, но не изменять их. Обратитесь к руководству школы.",
+      "enrollment.approval_staff_profile_required":
+        "В этой заявке указано время прихода или ухода. Одобрить её может только сотрудник с профилем персонала.",
       "enrollment.captcha_failed":
         "Проверка безопасности не пройдена. Попробуйте ещё раз.",
       "enrollment.captcha_required": "Пройдите проверку безопасности.",
@@ -2988,6 +3136,8 @@ export const ERROR_CATALOG = {
         "В эти каникулы ребёнок может прийти не больше {limit} дней. Всего будет дней: {days}. Из них в других заявках: {elsewhere}. Выберите меньше дней.",
       "enrollment.holiday_child_day_limit_public":
         "В эти каникулы ребёнка можно записать не более чем на {limit} дней. Лимит действует для всех заявок ребёнка вместе. Выберите меньше дней или обратитесь в офис организатора.",
+      "enrollment.holiday_lunch_booked":
+        "На эту неделю уже заказан обед. Поэтому предложение остаётся. Цену можно изменить.",
       "enrollment.holiday_registration_closed":
         "Запись на эти каникулы не открыта. Пожалуйста, проверьте начало и конец записи.",
       "enrollment.holiday_registration_form_changed":
@@ -3215,6 +3365,8 @@ export const ERROR_CATALOG = {
         "Данные изменились: {object}. Проверьте свои данные ещё раз.",
       "students.care_offerings_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
+      "students.care_request_plan_changed":
+        "План присмотра только что изменился. Обновите страницу. Затем проверьте запрос ещё раз.",
       "students.change_request_stale":
         "Данные изменились: {object}. Обновите страницу.",
       "students.export_selection_too_large":
@@ -3240,6 +3392,8 @@ export const ERROR_CATALOG = {
         "Это время установили родители. Изменить его может только сотрудник с профилем персонала.",
       "students.status_day_conflict":
         "На некоторые дни уже есть запись. Эти дни не изменены.",
+      "students.status_day_occupied":
+        "На сегодня внесена классная поездка. Сначала отмените классную поездку.",
       "substitutions.last_supervisor":
         "Вы единственный, кто ведёт присмотр. Передайте присмотр другому человеку или завершите занятие.",
       "timetable.closing_day_notice_not_found":
@@ -3283,6 +3437,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Kontrolloni këtë fushë.",
     },
     codes: {
+      "calendar.occurrence_unavailable":
+        "Kjo datë nuk ekziston më. Mund të jetë anuluar. Ju lutemi rifreskoni kalendarin.",
       "care_contract.application_not_found":
         "This application no longer exists or is not accepted. Please reload the page.",
       "care_contract.change_contract_not_active":
@@ -3391,6 +3547,8 @@ export const ERROR_CATALOG = {
         "Ky kontakt përdoret nga disa familje dhe mund të ndryshohet vetëm nga shkolla. Kontaktoni shkollën.",
       "care.guardian_social_worker_managed":
         "Këto të dhëna kontakti menaxhohen nga shkolla. Për ndryshime kontaktoni shkollën.",
+      "care.invalid_credentials":
+        "Adresa e email-it ose fjalëkalimi nuk është i saktë. Kontrolloni të dhënat.",
       "care.invalid_poll_response":
         "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
       "care.invalid_recipients":
@@ -3492,6 +3650,8 @@ export const ERROR_CATALOG = {
       "communication.survey_not_open": "Ky sondazh nuk pranon më përgjigje.",
       "display.manage_forbidden":
         "Mund t’i shikoni ekranet informuese, por nuk mund t’i ndryshoni. Ju lutemi kontaktoni drejtuesit e shkollës.",
+      "enrollment.approval_staff_profile_required":
+        "Ky regjistrim përmban orare marrjeje ose sjelljeje. Vetëm dikush me profil stafi mund ta miratojë.",
       "enrollment.captcha_failed":
         "Kontrolli i sigurisë nuk funksionoi. Ju lutemi provoni përsëri.",
       "enrollment.captcha_required":
@@ -3592,6 +3752,8 @@ export const ERROR_CATALOG = {
         "Në këto pushime një fëmijë mund të vijë më së shumti {limit} ditë. Gjithsej do të ishin {days} ditë. Ditë në regjistrime të tjera: {elsewhere}. Ju lutemi zgjidhni më pak ditë.",
       "enrollment.holiday_child_day_limit_public":
         "Një fëmijë mund të regjistrohet për më së shumti {limit} ditë gjatë këtyre pushimeve. Kufiri vlen për të gjitha regjistrimet e fëmijës së bashku. Ju lutemi zgjidhni më pak ditë ose kontaktoni zyrën e ofruesit.",
+      "enrollment.holiday_lunch_booked":
+        "Për këtë javë është rezervuar tashmë dreka. Prandaj oferta mbetet. Çmimin mund ta ndryshoni.",
       "enrollment.holiday_registration_closed":
         "Regjistrimi për këto pushime nuk është i hapur. Ju lutemi kontrolloni fillimin dhe mbarimin e regjistrimit.",
       "enrollment.holiday_registration_form_changed":
@@ -3822,6 +3984,8 @@ export const ERROR_CATALOG = {
         "Ndërkohë është ndryshuar: {object}. Kontrolloni përsëri të dhënat tuaja.",
       "students.care_offerings_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
+      "students.care_request_plan_changed":
+        "Plani i kujdesit sapo ndryshoi. Ju lutemi rifreskoni faqen. Pastaj kontrolloni sërish kërkesën.",
       "students.change_request_stale":
         "Ndërkohë është ndryshuar: {object}. Ju lutemi ringarkoni faqen.",
       "students.export_selection_too_large":
@@ -3848,6 +4012,8 @@ export const ERROR_CATALOG = {
         "Këtë orë e kanë vendosur prindërit. Vetëm dikush me profil stafi mund ta ndryshojë.",
       "students.status_day_conflict":
         "Disa ditë kanë tashmë një regjistrim. Këto ditë nuk u ndryshuan.",
+      "students.status_day_occupied":
+        "Për sot është regjistruar një ekskursion klase. Hiqni fillimisht ekskursionin e klasës.",
       "substitutions.last_supervisor":
         "Jeni i vetmi mbikëqyrës. Ia dorëzoni mbikëqyrjen dikujt tjetër ose përfundoni aktivitetin.",
       "timetable.closing_day_notice_not_found":
@@ -3891,6 +4057,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Sprawdź to pole.",
     },
     codes: {
+      "calendar.occurrence_unavailable":
+        "Tego terminu już nie ma. Mógł zostać odwołany. Proszę odświeżyć kalendarz.",
       "care_contract.application_not_found":
         "This application no longer exists or is not accepted. Please reload the page.",
       "care_contract.change_contract_not_active":
@@ -3999,6 +4167,8 @@ export const ERROR_CATALOG = {
         "Ten kontakt jest przypisany do kilku rodzin. Może go zmienić tylko szkoła. Skontaktuj się ze szkołą.",
       "care.guardian_social_worker_managed":
         "Tymi danymi kontaktowymi zarządza szkoła. W sprawie zmian skontaktuj się ze szkołą.",
+      "care.invalid_credentials":
+        "Adres e-mail lub hasło są nieprawidłowe. Sprawdź wpisane dane.",
       "care.invalid_poll_response":
         "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
       "care.invalid_recipients":
@@ -4100,6 +4270,8 @@ export const ERROR_CATALOG = {
         "Ta ankieta nie przyjmuje już odpowiedzi.",
       "display.manage_forbidden":
         "Możesz przeglądać ekrany informacyjne, ale nie możesz ich zmieniać. Skontaktuj się z dyrekcją szkoły.",
+      "enrollment.approval_staff_profile_required":
+        "To zgłoszenie zawiera godziny odbioru lub przyprowadzenia. Zatwierdzić je może tylko osoba z profilem pracownika.",
       "enrollment.captcha_failed":
         "Weryfikacja bezpieczeństwa nie powiodła się. Spróbuj ponownie.",
       "enrollment.captcha_required": "Potwierdź weryfikację bezpieczeństwa.",
@@ -4190,6 +4362,8 @@ export const ERROR_CATALOG = {
         "W te ferie dziecko może przyjść najwyżej {limit} dni. Łącznie byłoby to {days} dni. Dni w innych zgłoszeniach: {elsewhere}. Wybierz mniej dni.",
       "enrollment.holiday_child_day_limit_public":
         "Dziecko może być zapisane na najwyżej {limit} dni w te ferie. Limit dotyczy łącznie wszystkich zgłoszeń dziecka. Proszę wybrać mniej dni lub skontaktować się z biurem organizatora.",
+      "enrollment.holiday_lunch_booked":
+        "Na ten tydzień zarezerwowano już obiad. Dlatego oferta pozostaje. Cenę można zmienić.",
       "enrollment.holiday_registration_closed":
         "Zgłoszenia na te ferie nie są otwarte. Sprawdź początek i koniec zgłoszeń.",
       "enrollment.holiday_registration_form_changed":
@@ -4417,6 +4591,8 @@ export const ERROR_CATALOG = {
         "W międzyczasie zmieniono: {object}. Sprawdź ponownie swoje dane.",
       "students.care_offerings_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
+      "students.care_request_plan_changed":
+        "Plan opieki właśnie się zmienił. Odśwież stronę. Następnie sprawdź wniosek jeszcze raz.",
       "students.change_request_stale":
         "W międzyczasie zmieniono: {object}. Odśwież stronę.",
       "students.export_selection_too_large":
@@ -4442,6 +4618,8 @@ export const ERROR_CATALOG = {
         "Ten czas ustawili rodzice. Zmienić go może tylko osoba z profilem pracownika.",
       "students.status_day_conflict":
         "Niektóre dni mają już wpis. Tych dni nie zmieniono.",
+      "students.status_day_occupied":
+        "Na dziś wpisana jest wycieczka klasowa. Najpierw usuń wycieczkę klasową.",
       "substitutions.last_supervisor":
         "Jesteś jedyną osobą sprawującą opiekę. Przekaż opiekę innej osobie lub zakończ zajęcia.",
       "timetable.closing_day_notice_not_found":
@@ -4485,6 +4663,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Bu alanı kontrol edin.",
     },
     codes: {
+      "calendar.occurrence_unavailable":
+        "Bu tarih artık yok. İptal edilmiş olabilir. Lütfen takvimi yeniden yükleyin.",
       "care_contract.application_not_found":
         "This application no longer exists or is not accepted. Please reload the page.",
       "care_contract.change_contract_not_active":
@@ -4593,6 +4773,8 @@ export const ERROR_CATALOG = {
         "Bu kişi birden fazla aileye bağlı. Bilgilerini yalnızca okul değiştirebilir. Lütfen okulla iletişime geçin.",
       "care.guardian_social_worker_managed":
         "Bu iletişim bilgilerini okul yönetiyor. Değişiklik için lütfen okulla iletişime geçin.",
+      "care.invalid_credentials":
+        "E-posta adresi veya şifre doğru değil. Lütfen girdiğiniz bilgileri kontrol edin.",
       "care.invalid_poll_response":
         "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",
       "care.invalid_recipients":
@@ -4694,6 +4876,8 @@ export const ERROR_CATALOG = {
       "communication.survey_not_open": "Bu anket artık yanıt kabul etmiyor.",
       "display.manage_forbidden":
         "Bilgi ekranlarını görüntüleyebilirsiniz, ancak değiştiremezsiniz. Lütfen okul yönetimine başvurun.",
+      "enrollment.approval_staff_profile_required":
+        "Bu kayıtta alma veya getirme saatleri var. Yalnızca personel profili olan biri onaylayabilir.",
       "enrollment.captcha_failed":
         "Güvenlik doğrulaması başarısız oldu. Lütfen tekrar deneyin.",
       "enrollment.captcha_required":
@@ -4790,6 +4974,8 @@ export const ERROR_CATALOG = {
         "Bu tatilde bir çocuk en fazla {limit} gün gelebilir. Toplam {days} gün olurdu. Diğer kayıtlardaki gün sayısı: {elsewhere}. Lütfen daha az gün seçin.",
       "enrollment.holiday_child_day_limit_public":
         "Bir çocuk bu tatilde en fazla {limit} gün için kaydedilebilir. Bu sınır çocuğun tüm kayıtları için birlikte geçerlidir. Lütfen daha az gün seçin veya hizmet sağlayıcının ofisine başvurun.",
+      "enrollment.holiday_lunch_booked":
+        "Bu hafta için öğle yemeği zaten rezerve edildi. Bu nedenle teklif kalır. Fiyatı değiştirebilirsiniz.",
       "enrollment.holiday_registration_closed":
         "Bu tatil için kayıt açık değil. Lütfen kaydın başlangıç ve bitiş tarihlerini kontrol edin.",
       "enrollment.holiday_registration_form_changed":
@@ -5017,6 +5203,8 @@ export const ERROR_CATALOG = {
         "{object} bu arada değiştirildi. Lütfen bilgilerinizi yeniden kontrol edin.",
       "students.care_offerings_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
+      "students.care_request_plan_changed":
+        "Bakım planı az önce değişti. Lütfen sayfayı yenileyin. Ardından talebi tekrar kontrol edin.",
       "students.change_request_stale":
         "{object} bu arada değiştirildi. Lütfen sayfayı yenileyin.",
       "students.export_selection_too_large":
@@ -5043,6 +5231,8 @@ export const ERROR_CATALOG = {
         "Bu saati veliler belirledi. Yalnızca personel profili olan biri değiştirebilir.",
       "students.status_day_conflict":
         "Bazı günlerde zaten bir kayıt var. Bu günler değiştirilmedi.",
+      "students.status_day_occupied":
+        "Bugün için bir sınıf gezisi girilmiş. Önce sınıf gezisini kaldırın.",
       "substitutions.last_supervisor":
         "Gözetimi yapan tek kişi sizsiniz. Gözetimi başka birine devredin veya etkinliği bitirin.",
       "timetable.closing_day_notice_not_found":
@@ -5086,6 +5276,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Перевірте це поле.",
     },
     codes: {
+      "calendar.occurrence_unavailable":
+        "Цієї дати більше немає. Можливо, її скасували. Будь ласка, оновіть календар.",
       "care_contract.application_not_found":
         "This application no longer exists or is not accepted. Please reload the page.",
       "care_contract.change_contract_not_active":
@@ -5192,6 +5384,8 @@ export const ERROR_CATALOG = {
         "Цей контакт належить до кількох сімей. Змінити його може лише школа. Зверніться до школи.",
       "care.guardian_social_worker_managed":
         "Цими контактними даними керує школа. Щодо змін зверніться до школи.",
+      "care.invalid_credentials":
+        "Неправильна адреса електронної пошти або пароль. Перевірте введені дані.",
       "care.invalid_poll_response":
         "Указано неправильні дані: {object}. Перевірте введені дані.",
       "care.invalid_recipients":
@@ -5293,6 +5487,8 @@ export const ERROR_CATALOG = {
         "Це опитування більше не приймає відповіді.",
       "display.manage_forbidden":
         "Ви можете переглядати інформаційні екрани, але не змінювати їх. Зверніться до керівництва школи.",
+      "enrollment.approval_staff_profile_required":
+        "У цій заявці вказано час приходу або забирання. Схвалити її може лише працівник із профілем персоналу.",
       "enrollment.captcha_failed":
         "Перевірка безпеки не вдалася. Спробуйте ще раз.",
       "enrollment.captcha_required": "Пройдіть перевірку безпеки.",
@@ -5383,6 +5579,8 @@ export const ERROR_CATALOG = {
         "У ці канікули дитина може прийти не більше {limit} днів. Загалом буде днів: {days}. З них в інших заявках: {elsewhere}. Оберіть менше днів.",
       "enrollment.holiday_child_day_limit_public":
         "На ці канікули дитину можна записати щонайбільше на {limit} днів. Обмеження діє для всіх заявок дитини разом. Виберіть менше днів або зверніться до офісу організатора.",
+      "enrollment.holiday_lunch_booked":
+        "На цей тиждень уже замовлено обід. Тому пропозиція залишається. Ціну можна змінити.",
       "enrollment.holiday_registration_closed":
         "Запис на ці канікули не відкритий. Будь ласка, перевірте початок і кінець запису.",
       "enrollment.holiday_registration_form_changed":
@@ -5610,6 +5808,8 @@ export const ERROR_CATALOG = {
         "Дані змінилися: {object}. Перевірте свої дані ще раз.",
       "students.care_offerings_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
+      "students.care_request_plan_changed":
+        "План догляду щойно змінився. Оновіть сторінку. Потім ще раз перевірте запит.",
       "students.change_request_stale":
         "Дані змінилися: {object}. Оновіть сторінку.",
       "students.export_selection_too_large":
@@ -5635,6 +5835,8 @@ export const ERROR_CATALOG = {
         "Цей час встановили батьки. Змінити його може лише працівник із профілем персоналу.",
       "students.status_day_conflict":
         "На деякі дні вже є запис. Ці дні не змінено.",
+      "students.status_day_occupied":
+        "На сьогодні внесено класну поїздку. Спочатку скасуйте класну поїздку.",
       "substitutions.last_supervisor":
         "Ви єдина особа, що здійснює нагляд. Передайте нагляд іншій особі або завершіть заняття.",
       "timetable.closing_day_notice_not_found":

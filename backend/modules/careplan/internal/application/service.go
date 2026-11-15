@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -40,6 +41,8 @@ type Dependencies struct {
 	Observe          func(ports.Observation)
 	People           careplanPorts.StudentNameFinder
 	Runtime          Runtime
+	// Today dates the status-day retention; nil is the real Berlin day.
+	Today func() calendar.Date
 }
 
 // Service serves the Care Plan capability (#4453): it validates the public
@@ -56,6 +59,7 @@ type Service struct {
 	withdrawals   ports.WithdrawalList
 	people        careplanPorts.StudentNameFinder
 	runtime       Runtime
+	today         func() calendar.Date
 }
 
 // NewService serves the complete Care Plan capability over dependencies.
@@ -64,6 +68,9 @@ func NewService(dependencies Dependencies) *Service {
 	service.OfferingBookings, service.DayLocks = dependencies.OfferingBookings, dependencies.Runtime
 	service.requests, service.statusDays, service.withdrawals = dependencies.Requests, dependencies.StatusDays, dependencies.Withdrawals
 	service.people, service.runtime = dependencies.People, dependencies.Runtime
+	if dependencies.Today != nil {
+		service.today = dependencies.Today
+	}
 	return service
 }
 
@@ -72,7 +79,7 @@ func New(store ports.Store, observe ports.Observer) *Service {
 	if store == nil || observe == nil {
 		panic("care plan application: store and observer are required")
 	}
-	return &Service{store: store, observe: observe}
+	return &Service{store: store, observe: observe, today: calendar.TodayDate}
 }
 
 // NewExceptionQueryService serves the schedule, exception, note and status

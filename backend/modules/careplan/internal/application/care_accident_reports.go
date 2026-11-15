@@ -33,7 +33,7 @@ func (s *StudentDocuments) CreateStudentAccidentReport(ctx context.Context, stud
 	if err := s.requireAccidentManage(actor); err != nil {
 		return careplan.CareDocument{}, err
 	}
-	report, err := careplan.NormalizeAccidentReport(report)
+	report, err := careplan.NormalizeAccidentReport(report, s.now())
 	if err != nil {
 		return careplan.CareDocument{}, err
 	}
@@ -70,7 +70,7 @@ func (s *StudentDocuments) UpdateStudentAccidentReport(ctx context.Context, stud
 	if err := s.requireAccidentManage(actor); err != nil {
 		return careplan.CareDocument{}, err
 	}
-	report, err := careplan.NormalizeAccidentReport(report)
+	report, err := careplan.NormalizeAccidentReport(report, s.now())
 	if err != nil {
 		return careplan.CareDocument{}, err
 	}
@@ -137,7 +137,7 @@ func (s *StudentDocuments) CorrectStudentAccidentReport(ctx context.Context, stu
 	if err := s.requireAccidentManage(actor); err != nil {
 		return careplan.CareDocument{}, err
 	}
-	report, err := careplan.NormalizeAccidentReport(report)
+	report, err := careplan.NormalizeAccidentReport(report, s.now())
 	if err != nil {
 		return careplan.CareDocument{}, err
 	}

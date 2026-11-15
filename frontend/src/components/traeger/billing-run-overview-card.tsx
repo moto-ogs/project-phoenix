@@ -84,12 +84,21 @@ const FORMATS: readonly ExportMenuOption[] = exportFormatOptions([
 ]);
 
 function rowMenuLabel(document: BillingDocument): string {
-  return `Aktionen für die Rechnung an ${recipientName(document)}`;
+  // Siblings with an invoice each share the recipient (#7007).
+  const child = document.registrationChildId ? document.children[0] : undefined;
+  const forChild = child ? ` für ${child.firstName}` : "";
+  return `Aktionen für die Rechnung an ${recipientName(document)}${forChild}`;
 }
 
-/** A draft has no ID yet; its registration names it. */
+/**
+ * A draft has no ID yet; its registration names it, and its child when the
+ * registration has an invoice per child (#7007).
+ */
 function rowKey(document: BillingDocument): string {
-  return document.id || `draft-${document.registrationId}`;
+  return (
+    document.id ||
+    `draft-${document.registrationId}-${document.registrationChildId || "all"}`
+  );
 }
 
 /**
@@ -112,13 +121,30 @@ function leftForChild(
   return left;
 }
 
-function invoicesDescription(released: boolean, canPreview: boolean) {
+/**
+ * Whom a draft invoice bills: the family, or each child when the Träger
+ * keeps the debtor number per child (#7007). A registration billed as a
+ * whole before the switch keeps its one invoice.
+ */
+function draftShapeText(documents: readonly BillingDocument[]): string {
+  const perChild = documents.filter((document) => document.registrationChildId);
+  if (perChild.length === 0) return "Je Familie eine Rechnung.";
+  return perChild.length === documents.length
+    ? "Je Kind eine Rechnung, auch für Geschwister."
+    : "Je Kind eine Rechnung, auch für Geschwister. Eine Anmeldung mit einer Rechnung von vor der Umstellung behält ihre eine Rechnung.";
+}
+
+function invoicesDescription(
+  released: boolean,
+  canPreview: boolean,
+  documents: readonly BillingDocument[],
+) {
   if (!released) {
     // From md on the card's „Aufschlüsselung zeigen“ opens it for every row;
     // a phone row keeps it in its menu, so the phone names that place.
     return (
       <>
-        Je Familie eine Rechnung.
+        {draftShapeText(documents)}
         <span className="md:hidden">
           {" "}
           Die Aufschlüsselung je Kind steht im Menü der Zeile.
@@ -337,6 +363,8 @@ export function BillingRunOverviewCard({
     if (onCancel && !isCredited(document)) {
       items.push({
         label: "Rechnung stornieren",
+        description:
+          "Öffnet ein Fenster, um die ganze Rechnung mit Begründung zurückzunehmen.",
         icon: <Undo2 className="size-4" aria-hidden />,
         onClick: () => onCancel(document),
       });
@@ -347,6 +375,8 @@ export function BillingRunOverviewCard({
         if (left <= 0) continue;
         items.push({
           label: `Gutschrift für ${child.firstName}`,
+          description:
+            "Öffnet ein Fenster, um für dieses Kind einen Betrag gutzuschreiben.",
           icon: <ReceiptText className="size-4" aria-hidden />,
           onClick: () => onCredit(document, child, left),
         });
@@ -473,6 +503,8 @@ export function BillingRunOverviewCard({
             items={[
               {
                 label: "Aufschlüsselung zeigen",
+                description:
+                  "Zeigt, wie sich der Betrag für jedes Kind zusammensetzt.",
                 icon: <Eye className="size-4" aria-hidden />,
                 onClick: () => setShownKey(rowKey(document)),
               },
@@ -480,6 +512,8 @@ export function BillingRunOverviewCard({
                 ? [
                     {
                       label: "Schreiben ansehen",
+                      description:
+                        "Zeigt das Schreiben dieser Rechnung als PDF.",
                       icon: <Eye className="size-4" aria-hidden />,
                       onClick: () => openPreview(document),
                     },
@@ -489,6 +523,8 @@ export function BillingRunOverviewCard({
                 ? [
                     {
                       label: "Versand und Exporte ansehen",
+                      description:
+                        "Zeigt, wann die Rechnung ausgestellt, verschickt und exportiert wurde.",
                       onClick: () => setHistoryId(document.id),
                     },
                   ]
@@ -496,6 +532,8 @@ export function BillingRunOverviewCard({
               ...(onCorrect
                 ? document.children.map((child) => ({
                     label: `Betrag für ${child.firstName} korrigieren`,
+                    description:
+                      "Öffnet ein Fenster, um den Betrag mit Begründung zu ändern.",
                     icon: <Pencil className="size-4" aria-hidden />,
                     onClick: () => onCorrect(document, child),
                   }))
@@ -505,6 +543,8 @@ export function BillingRunOverviewCard({
                 ? [
                     {
                       label: "Schreiben herunterladen",
+                      description:
+                        "Lädt das Schreiben dieser Rechnung als PDF herunter.",
                       icon: <Download className="size-4" aria-hidden />,
                       onClick: () => onDownloadLetter(document),
                     },
@@ -555,7 +595,7 @@ export function BillingRunOverviewCard({
     <SectionCard
       title="Rechnungen"
       overflow="visible"
-      description={invoicesDescription(released, canPreview)}
+      description={invoicesDescription(released, canPreview, run.documents)}
       actions={
         released && run.documents.length > 0 ? (
           <OverflowMenu
@@ -584,6 +624,11 @@ export function BillingRunOverviewCard({
             variant="outline"
             size="md"
             className="max-md:hidden"
+            tooltip={
+              breakdownShown
+                ? "Blendet die Beträge je Kind in der Liste wieder aus."
+                : "Zeigt in jeder Zeile die Beträge für jedes Kind."
+            }
             onClick={() => setBreakdownShown((shown) => !shown)}
           >
             {breakdownShown

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
@@ -95,7 +94,7 @@ func (s *CareLifecycle) applyDueEffects(ctx context.Context, ids []int64, asOf c
 	if len(current) == 0 {
 		return effects, nil
 	}
-	now := time.Now()
+	now := s.now()
 	if effects.closedPresence, err = s.closeOpenPresence(ctx, current, now); err != nil {
 		return effects, err
 	}

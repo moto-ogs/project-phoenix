@@ -39,8 +39,7 @@ func (r *TenantRuntime) WithinAdmin(ctx context.Context, command func(context.Co
 	return runtimeBinding.PortalAdminWrite(ctx, r.db, command, tenant.WithAdminTx)
 }
 
-// WithoutTransactionAndHooks detaches ctx from the transaction and its
-// commit hooks.
+// WithoutTransactionAndHooks detaches ctx from the transaction and its commit hooks.
 func (r *TenantRuntime) WithoutTransactionAndHooks(ctx context.Context) context.Context {
 	return runtimeBinding.PortalDetachedContext(ctx)
 }

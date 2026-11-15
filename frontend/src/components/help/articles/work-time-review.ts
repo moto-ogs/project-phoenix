@@ -58,7 +58,9 @@ export function workTimeReviewTopic(): HelpTopic {
       "Wochensaldo und Stundenkonto rechnen gegen das hinterlegte Arbeitszeitmodell. Ohne Soll zählen Krankheit, Urlaub und Fortbildung 0 Stunden.",
       "`Team` → `Zeiterfassung` zeigt nur Ihre eigene Stempeluhr, nicht die des Teams.",
       "Mit `Monat abschließen` frieren Sie den Stand ein. Das geht ab dem 1. des Folgemonats.",
+      "Steht bei einer Person `Schließt der Träger ab`, hat sie einen Arbeitsvertrag beim Träger. Ihren Monat schließt der Träger ab, Ihr Abschluss lässt sie aus. Nur der Träger öffnet ihn wieder.",
       "Ist unter `Abrechnung` der `Versand an das Lohnbüro` eingeschaltet, geht die Monatsdatei danach von selbst an das Lohnbüro.",
+      "Unter einer Rückfrage und in der Historie steht, ob die Mail dazu bei der Person ankam. Kam sie nicht an, sagen Sie der Person direkt Bescheid.",
     ],
     differences: [
       "Fehlt der Reiter `Mitarbeitende`? Dann dürfen Sie keine Anträge entscheiden.",

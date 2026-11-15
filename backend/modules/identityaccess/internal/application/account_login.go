@@ -49,7 +49,7 @@ func (s *AccountAuthentication) loginWithMFAGate(ctx context.Context, email, pas
 	minted, err := s.mintAccountSession(ctx, mintRequest{
 		portal: domain.PortalTenant, account: account, email: email, tenantID: metadata.TenantID, proof: proof,
 		op:    "login",
-		audit: &mintAudit{event: domain.AuthEventLogin, ipAddress: ipAddress, userAgent: userAgent},
+		audit: &mintAudit{event: domain.AuthEventLogin, ipAddress: ipAddress, userAgent: userAgent, schoolID: metadata.TenantID},
 	})
 	if err != nil {
 		return nil, err
@@ -105,9 +105,6 @@ func (s *AccountAuthentication) mfaChallengeResult(ctx context.Context, account 
 	if err != nil {
 		return nil, failed("start mfa challenge", err)
 	}
-	if !portal.TrustedDevice {
-		return &domain.LoginResult{Status: domain.LoginStatusMFARequired, ChallengeToken: challenge, MaskedEmail: domain.MaskEmail(account.Email)}, nil
-	}
 	return &domain.LoginResult{
 		Status:               domain.LoginStatusMFARequired,
 		ChallengeToken:       challenge,
@@ -155,7 +152,7 @@ func (s *AccountAuthentication) issueTenantTokens(ctx context.Context, accountID
 	minted, err := s.mintAccountSession(ctx, mintRequest{
 		portal: domain.PortalTenant, account: account, tenantID: metadata.TenantID, proof: proof,
 		op:    "issue tokens",
-		audit: &mintAudit{event: domain.AuthEventLogin, ipAddress: ipAddress, userAgent: userAgent},
+		audit: &mintAudit{event: domain.AuthEventLogin, ipAddress: ipAddress, userAgent: userAgent, schoolID: metadata.TenantID},
 	})
 	return minted.accessToken, minted.refreshToken, err
 }

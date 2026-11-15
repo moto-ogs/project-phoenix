@@ -1208,6 +1208,37 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": data})
 			return
 		}
+		// The Personal-Import (#4724) previews a multipart file, then takes it
+		// over with the fingerprint of the preview.
+		if strings.HasPrefix(r.URL.Path, "/traeger/staff-record-imports/") {
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{
+				"fingerprint": "seed-preview", "counts": map[string]any{"imported": 3},
+			}})
+			return
+		}
+		// The Träger's Abwesenheitsarten (#4710): both types exist after the
+		// seed; the school carries none in this fake.
+		if r.URL.Path == "/traeger/absence-types/" {
+			data := any(map[string]any{"id": 1})
+			if r.Method == seedHTTPMethodGet {
+				data = map[string]any{"types": []any{
+					map[string]any{"id": 1, "name": seedTraegerRegeneration},
+					map[string]any{"id": 2, "name": seedTraegerConversion},
+				}}
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": data})
+			return
+		}
+		// The Einsatzplanung of the Träger (#4708): the week of this fake
+		// Träger plans nobody.
+		if r.Method == seedHTTPMethodGet && r.URL.Path == "/traeger/staff-planning/" {
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"people": []any{}}})
+			return
+		}
+		if r.Method == seedHTTPMethodGet && r.URL.Path == "/api/absence-types" {
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []any{}})
+			return
+		}
 		// The shared document step (#4692) reads the schools with their
 		// groups and the documents, then uploads one document at a time.
 		if data, ok := fakeTraegerDocumentData(r.Method, r.URL.Path); ok {
@@ -1791,6 +1822,11 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			})
 			return
 		}
+		if r.URL.Path == "/parent/me/calendar" {
+			// The parent's Elterncafé invitation it answers date by date (#6987).
+			_, _ = fmt.Fprintf(w, `{"status":"success","data":{"events":[{"title":%q,"recipient_id":"81"}]}}`, seedParentCafeTitle)
+			return
+		}
 		if r.URL.Path == "/traeger/holiday-periods/criteria" {
 			// The criteria of the allocation as stored (#4700).
 			_, _ = fmt.Fprint(w, `{"status":"success","data":{"criteria":[{"id":71},{"id":72},{"id":73},{"id":74}],"periods":[]}}`)
@@ -2103,6 +2139,10 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 		case "/traeger/auth/login":
 			// The Träger-Portal sign-in of the holiday period step (#4659).
 			_, _ = fmt.Fprint(w, `{"status":"authenticated","access_token":"traeger-token","refresh_token":"traeger-refresh"}`)
+
+		case "/traeger/billing-families/children":
+			// The children's debtor numbers (#7007): no family to prepare.
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []any{}})
 
 		case "/traeger/schools/":
 			// The Träger's two schools the operator created above.

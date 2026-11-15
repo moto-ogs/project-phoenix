@@ -120,3 +120,34 @@ func (s *Service) ListSchoolSharedNotes(ctx context.Context, studentID int64) ([
 	}
 	return result, nil
 }
+
+// SearchStudentNotes finds children by the text of their notes (#7012), one
+// hit per child, newest first. Like ListSchoolSharedNotes it runs in the
+// caller's school unit and opens none of its own. It resolves no names: a
+// hit leads to the child's card, which reads the note with its author again.
+func (s *Service) SearchStudentNotes(ctx context.Context, request peopledirectory.StudentNoteSearchRequest) ([]peopledirectory.StudentNoteSearchHit, error) {
+	search := domain.StudentNoteSearch{
+		Text: strings.TrimSpace(request.Text), Visibilities: request.Audience.Visibilities,
+		LedActivityGroupIDs:  request.Audience.LedActivityGroupIDs,
+		LedEducationGroupIDs: request.Audience.LedEducationGroupIDs,
+		ReaderAccountID:      request.Audience.ReaderAccountID,
+	}
+	if search.Text == "" || search.ReaderAccountID <= 0 {
+		return nil, peopledirectory.ErrStudentNoteInvalid
+	}
+	notes := s.studentNotes
+	if err := notes.tx.RequireTransaction(ctx); err != nil {
+		return nil, MapError(err)
+	}
+	hits, _, err := notes.store.Search(ctx, search)
+	if err != nil {
+		return nil, MapError(err)
+	}
+	result := make([]peopledirectory.StudentNoteSearchHit, 0, len(hits))
+	for _, hit := range hits {
+		result = append(result, peopledirectory.StudentNoteSearchHit{
+			StudentID: hit.StudentID, NoteID: hit.NoteID, Body: hit.Body, CareTeamOnly: hit.CareTeamOnly,
+		})
+	}
+	return result, nil
+}

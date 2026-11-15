@@ -124,11 +124,19 @@ export const messageKeys = {
     `messages-inbox-${encodeURIComponent(String(onlyUnread))}`,
   /** Every filter of the parent-message inbox. */
   messagesInboxFamily: () => "messages-inbox-",
+  /** Neue Nachrichten und offene Anfragen je Kind für die Kinderkachel (#6486). */
+  parentAttention: (withMessages: boolean, withRequests: boolean) =>
+    `parent-attention-${withMessages ? "m" : ""}${withRequests ? "r" : ""}`,
   groupMessages: () => "group-messages",
   messageThread: (id: string | undefined) =>
     `message-thread-${encodeURIComponent(id ?? "")}`,
   groupMessage: (id: string | undefined) =>
     `group-message-${encodeURIComponent(id ?? "")}`,
+  /** What became of the e-mails of a conversation's OGS messages (#7058). */
+  messageThreadMails: (id: string | undefined) =>
+    `message-thread-mails-${encodeURIComponent(id ?? "")}`,
+  groupMessageMails: (id: string | undefined) =>
+    `group-message-mails-${encodeURIComponent(id ?? "")}`,
 } as const;
 
 /**
@@ -225,6 +233,10 @@ export const studentKeys = {
 } as const;
 
 export const timetableKeys = {
+  // Abwesenheiten, die noch nicht im Plan stehen (#7021). Ein Präfix der
+  // Planänderungen (PLAN_CACHE_KEY_PREFIXES), damit jede Schicht- oder
+  // Abwesenheitsänderung im Dienstplan die Liste neu lädt.
+  absencePlanGaps: "absence-plan-gaps",
   offeringGaps: (periodId: string) =>
     `offering-gaps-${encodeURIComponent(periodId)}`,
   // Schulferien (#5345): der Hinweis und die Liste eines Fensters.
@@ -313,6 +325,16 @@ export const parentAnnouncementKeys = {
 } as const;
 
 export const displayKeys = { list: () => "info-displays" } as const;
+
+/**
+ * Benachrichtigungs-Feed der Glocke (#7148): die erste Seite der Hinweise und
+ * der Zähler der ungelesenen. Getrennt, weil die Glocke den Zähler immer
+ * lädt, die Liste erst beim Öffnen.
+ */
+export const notificationFeedKeys = {
+  firstPage: () => "notification-feed-first-page",
+  unreadCount: () => "notification-feed-unread",
+} as const;
 /** Dokumente, die der Träger für die Schule freigegeben hat (#4692). */
 export const schoolTraegerDocumentKeys = {
   list: () => "traeger-documents-school",
@@ -336,6 +358,9 @@ export const traegerKeys = {
   schoolsAlerts: () => "traeger-schools-alerts",
   keyDateCounts: () => "traeger-key-date-counts",
   occupancy: () => "traeger-occupancy",
+  // Ankunft und Abholung eines Zeitraums (#4714): Durchschnitte, keine Kinder.
+  arrivalPickupTimes: (from: string, to: string) =>
+    `traeger-arrival-pickup-times-${from}-${to}`,
   periodsFamily: "traeger-holiday-period-",
   periods: () => "traeger-holiday-period-list",
   period: (id: string) =>
@@ -381,8 +406,10 @@ function searchKey(params: {
   companions: boolean;
   years: readonly string[];
   pickupStatus: string;
+  /** The registration answer filter (#6954); only an active one adds a segment. */
+  enrollmentAnswer?: string;
 }): string {
-  return `${SEARCH_STUDENTS_KEY_PREFIX}${searchStudentsGroupScope(params.groupIds)}-${params.search}-${encodeMultiValueParam([...params.schoolClasses])}-${params.roomId}-${params.dayStatus}-${params.date}-${params.isToday ? "today" : "planning"}-${params.photoState}-${params.bus}-${params.photoConsent}-${params.companions}-${encodeMultiValueParam([...params.years])}-${params.pickupStatus}`;
+  return `${SEARCH_STUDENTS_KEY_PREFIX}${searchStudentsGroupScope(params.groupIds)}-${params.search}-${encodeMultiValueParam([...params.schoolClasses])}-${params.roomId}-${params.dayStatus}-${params.date}-${params.isToday ? "today" : "planning"}-${params.photoState}-${params.bus}-${params.photoConsent}-${params.companions}-${encodeMultiValueParam([...params.years])}-${params.pickupStatus}${params.enrollmentAnswer ? `-a${params.enrollmentAnswer}` : ""}`;
 }
 
 const catererOrdersFamily = "caterer-orders-";

@@ -132,7 +132,7 @@ describe("RolloverForm", () => {
 
     // mode defaults to opt_out (safer default — parent doesn't need to act)
     expect(screen.getByRole("combobox", { name: "Modus" })).toHaveTextContent(
-      "Opt-Out: Eltern müssen abmelden",
+      "Anmeldungen laufen weiter (Opt-Out)",
     );
 
     // bumps_grade defaults to true (yearly cadence)
@@ -193,19 +193,15 @@ describe("RolloverForm", () => {
 
     // opt_out is the default — full sentence appears below the select.
     expect(
-      screen.getByText(
-        /Anmeldungen werden automatisch übernommen\. Ohne aktive Abmeldung/,
-      ),
+      screen.getByText(/Eltern müssen nichts tun\. Bis zur Frist können sie/),
     ).toBeInTheDocument();
 
-    await chooseOption("Modus", "Opt-In: Eltern müssen aktiv bestätigen");
+    await chooseOption("Modus", "Eltern bestätigen neu (Opt-In)");
 
-    // The opt_in description ends with "wird die Anmeldung zurückgezogen" —
+    // The opt_in description ends with "Ohne Bestätigung wird die Anmeldung zurückgezogen" —
     // matching the unique tail keeps us off the dropdown <option> text.
     expect(
-      screen.getByText(
-        /Ohne Bestätigung bis zur Frist wird die Anmeldung zurückgezogen/,
-      ),
+      screen.getByText(/Ohne Bestätigung wird die Anmeldung zurückgezogen/),
     ).toBeInTheDocument();
   });
 

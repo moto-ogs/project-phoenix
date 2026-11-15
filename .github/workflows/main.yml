@@ -73,10 +73,12 @@ jobs:
       base-ref: ${{ github.base_ref }}
       # The script suites, the env sync and the error-code registry check only
       # files their own filter lists. Docs-only pull requests skip all three.
-      run-ci-scripts: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.tooling == 'true' || steps.filter.outputs.quality-scripts == 'true' || steps.filter.outputs.hooks == 'true' || steps.filter.outputs.toolchain == 'true' || steps.filter.outputs.script-tests == 'true' || steps.filter.outputs.backend-local-test-scripts == 'true' || steps.backend-size.outputs.full == 'true' || steps.filter.outputs.backend-test-infra == 'true' }}
+      run-ci-scripts: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.tooling == 'true' || steps.filter.outputs.restore-suite == 'true' || steps.filter.outputs.quality-scripts == 'true' || steps.filter.outputs.hooks == 'true' || steps.filter.outputs.toolchain == 'true' || steps.filter.outputs.script-tests == 'true' || steps.filter.outputs.backend-local-test-scripts == 'true' || steps.backend-size.outputs.full == 'true' || steps.filter.outputs.backend-test-infra == 'true' }}
       run-env-check: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.env == 'true' }}
       run-error-codes: ${{ github.event_name == 'push' || steps.scope.outputs.release == 'true' || steps.filter.outputs.error-codes == 'true' }}
-      tooling-changed: ${{ steps.filter.outputs.tooling == 'true' }}
+      # The restore suite takes about five minutes (#6962). Pull requests run
+      # it for its own inputs; pushes and release pull requests always do.
+      restore-changed: ${{ steps.filter.outputs.restore-suite == 'true' || github.event_name == 'push' || steps.scope.outputs.release == 'true' }}
       # The ratchets suite also runs the self-tests of the backend test
       # scripts: for a change to the local wrappers, and whenever the backend
       # suite is full. They ran inside "Backend tests" on full runs and took
@@ -194,6 +196,7 @@ jobs:
             seed-smoke-infra:
               - '.github/workflows/main.yml'
               - '.github/workflows/test.yml'
+              - 'scripts/seed-smoke-clock.mjs'
             frontend:
               - 'frontend/**'
               - '!frontend/**/*.md'
@@ -233,6 +236,8 @@ jobs:
               - 'scripts/go-test-link-cache_test.sh'
               - 'scripts/go-cache-sweep.sh'
               - 'scripts/go-cache-sweep_test.sh'
+              - 'scripts/fake-clock*'
+              - 'scripts/test-backend-clocks.sh'
               - 'scripts/test-changed.sh'
               - 'scripts/test-changed_test.sh'
               - 'scripts/go-package-workers.sh'
@@ -277,21 +282,9 @@ jobs:
               - '.wtconfig'
             # Release, deploy and demo tooling and the workflow files the
             # script suites read. None of it feeds the test or lint suites.
+            # The unit suite also starts for restore-suite below.
             tooling:
-              - 'docs/operations/daily-restore.compose.yml'
-              - 'scripts/daily-backup*'
-              - 'scripts/*erasure-ledger*'
-              - 'monitoring/grafana/provisioning/alerting/daily-backup.yml'
-              - 'monitoring/grafana/provisioning/alerting/nightly-cleanup.yml'
-              - 'scripts/nightly-cleanup-alerts*'
-              - 'monitoring/grafana/provisioning/alerting/infrastructure.yml'
-              - 'scripts/db-pool-alerts*'
-              - 'scripts/daily_backup.py'
-              - 'scripts/restore-daily-backup.sh'
-              - 'scripts/systemd/moto-*backup*'
-              - 'scripts/systemd/moto-release-retention*'
               - 'scripts/check-release-architecture*'
-              - 'scripts/release-backup*'
               - 'scripts/demo-environment.test.mjs'
               - 'scripts/report-sentry-deploy*'
               - 'scripts/deploy-grafana-provisioning*'
@@ -300,12 +293,36 @@ jobs:
               - 'scripts/create-demo-env.py'
               - 'scripts/test-support/release-docker.mjs'
               - 'scripts/deploy-remote.sh'
-              - 'scripts/rollback-remote.sh'
-              - 'scripts/restore-db.sh'
               - '.github/**'
               - 'environments/**'
               - '.env.example'
               - 'package.json'
+            # Every file the restore suite's steps run or read: the tests, the
+            # scripts they call (and those scripts' callees), Compose files,
+            # alert rules and systemd units; images are pinned in these files.
+            # main.yml defines the steps and the apt tools. Families are listed
+            # by glob so a new sibling fails open. Nothing else is read: Node
+            # loads only node: built-ins, Python only its standard library
+            # (#6962). backend-affected-packages_test.sh checks the inventory.
+            restore-suite:
+              - '.github/workflows/main.yml'
+              - 'scripts/release-backup*'
+              - 'scripts/rollback-remote.sh'
+              - 'scripts/restore-db.sh'
+              - 'scripts/daily-backup*'
+              - 'scripts/daily_backup.py'
+              - 'scripts/restore-daily-backup.sh'
+              - 'docs/operations/daily-restore.compose.yml'
+              - 'scripts/*erasure-ledger*'
+              - 'scripts/*-alerts*'
+              - 'monitoring/grafana/provisioning/alerting/daily-backup.yml'
+              - 'monitoring/grafana/provisioning/alerting/nightly-cleanup.yml'
+              - 'monitoring/grafana/provisioning/alerting/infrastructure.yml'
+              - 'monitoring/grafana/provisioning/alerting/holiday-closure-notifications.yml'
+              - 'monitoring/grafana/provisioning/alerting/email-delivery.yml'
+              - 'monitoring/prometheus-compose.yml'
+              - 'scripts/systemd/moto-*backup*'
+              - 'scripts/systemd/moto-release-retention*'
             # Script suites without another trigger (#4436). Each runs when its
             # script or suite changes; the runner guard reruns when a test
             # file or a Playwright config appears or moves.
@@ -320,6 +337,7 @@ jobs:
               - 'scripts/runtime-checkpoint-*.py'
               - 'scripts/runtime_checkpoint_*_test.py'
               - 'scripts/check-agent-context*'
+              - 'scripts/ci-runtime-watch*'
               - '{AGENTS,CLAUDE}.md'
               - '{backend,frontend}/{AGENTS,CLAUDE}.md'
               - '.agents/**'
@@ -333,6 +351,9 @@ jobs:
               - 'scripts/check-test-runners*'
               - 'scripts/check-pr-body*'
               - 'scripts/check-caddyfile*'
+              - 'scripts/seed-smoke-clock*'
+              - 'scripts/clock-boundaries*'
+              - 'scripts/clock-early-warning*'
               - 'deploy/caddy/**'
               - '**/*.test.{js,cjs,mjs,ts,cts,mts}'
               - '**/*_test.py'
@@ -454,11 +475,13 @@ jobs:
       matrix:
         # These suites have separate fixtures and no ordering dependency.
         # Keep the existing path selection without buying unused runners.
+        # "selection" starts wherever "ratchets" does: its script self-tests
+        # ran after the source ratchets in one job of 233-271 s (#6962).
         suite: >-
           ${{ fromJSON(
-            needs.detect-changes.outputs.tooling-changed == 'true' && needs.detect-changes.outputs.toolchain-changed == 'true' && '["unit","restore","ratchets"]'
-            || needs.detect-changes.outputs.tooling-changed == 'true' && '["unit","restore"]'
-            || needs.detect-changes.outputs.toolchain-changed == 'true' && '["unit","ratchets"]'
+            needs.detect-changes.outputs.restore-changed == 'true' && needs.detect-changes.outputs.toolchain-changed == 'true' && '["unit","restore","release-restore","ratchets","selection"]'
+            || needs.detect-changes.outputs.restore-changed == 'true' && '["unit","restore","release-restore"]'
+            || needs.detect-changes.outputs.toolchain-changed == 'true' && '["unit","ratchets","selection"]'
             || '["unit"]'
           ) }}
     permissions:
@@ -469,10 +492,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The register ratchets compare against the merge base with development,
       # which a depth-1 checkout cannot resolve. Unrelated refs and tags are
-      # not inputs.
+      # not inputs. Commits and trees are enough for the merge base; git
+      # loads a base file on demand. With every blob the fetch took 40-48 s
+      # here and 58 s locally, without them 13 s locally (#6962).
       - name: Fetch source ratchet comparison history
         if: matrix.suite == 'ratchets'
-        run: git fetch --no-tags --unshallow origin "$(git rev-parse HEAD)" +refs/heads/development:refs/remotes/origin/development
+        run: git fetch --no-tags --unshallow --filter=blob:none origin "$(git rev-parse HEAD)" +refs/heads/development:refs/remotes/origin/development
 
       - name: Verify pre-push failure and selection behavior
         if: matrix.suite == 'unit'
@@ -482,7 +507,7 @@ jobs:
         if: matrix.suite == 'unit'
         run: |
           node scripts/check-agent-context.mjs
-          node --test scripts/check-migration-versions.test.mjs scripts/student-contract-monitor.test.mjs scripts/check-agent-context.test.mjs scripts/check-test-runners.test.mjs scripts/check-pr-body.test.mjs scripts/db-snapshot-roles.test.mjs scripts/check-caddyfile.test.mjs scripts/check-exit-status.test.mjs scripts/dev-bench.test.mjs scripts/test-perf.test.mjs scripts/ci-failures.test.mjs scripts/check-changed.test.mjs scripts/backend-package-budgets.test.mjs scripts/query-budget-scoreboard.test.mjs scripts/capture-query-budget-routes.test.mjs .github/actions/ci-cost/ci-cost.test.mjs .agents/skills/security-audit/validate-coverage-ledger.test.cjs .agents/skills/security-audit/validate-findings.test.cjs
+          node --test scripts/check-migration-versions.test.mjs scripts/student-contract-monitor.test.mjs scripts/check-agent-context.test.mjs scripts/check-test-runners.test.mjs scripts/check-pr-body.test.mjs scripts/db-snapshot-roles.test.mjs scripts/check-caddyfile.test.mjs scripts/seed-smoke-clock.test.mjs scripts/clock-boundaries.test.mjs scripts/clock-early-warning.test.mjs scripts/check-exit-status.test.mjs scripts/dev-bench.test.mjs scripts/test-perf.test.mjs scripts/ci-failures.test.mjs scripts/ci-runtime-watch.test.mjs scripts/check-changed.test.mjs scripts/backend-package-budgets.test.mjs scripts/architecture-build-cache.test.mjs scripts/query-budget-scoreboard.test.mjs scripts/capture-query-budget-routes.test.mjs .github/actions/ci-cost/ci-cost.test.mjs .agents/skills/security-audit/validate-coverage-ledger.test.cjs .agents/skills/security-audit/validate-findings.test.cjs
           node scripts/check-caddyfile.mjs deploy/caddy/Caddyfile
           python3 -m unittest scripts/runtime_checkpoint_compare_test.py scripts/runtime_checkpoint_report_test.py scripts/check_runtime_env_test.py scripts/normalize_ci_needs_test.py
 
@@ -491,8 +516,10 @@ jobs:
         if: matrix.suite == 'unit'
         run: node scripts/check-test-runners.mjs
 
+      # A suite of its own: it took 41-43 s in front of the daily backup
+      # test, whose job ran 230-281 s (three runs, 14.11.2026, #6962).
       - name: Verify complete release restore with PostgreSQL
-        if: matrix.suite == 'restore'
+        if: matrix.suite == 'release-restore'
         run: node --test scripts/release-backup.integration.test.mjs
 
       - name: Install daily backup test tools
@@ -502,7 +529,7 @@ jobs:
       - name: Verify encrypted daily backup and isolated restore
         if: matrix.suite == 'restore'
         run: |
-          node --test scripts/daily-backup.integration.test.mjs scripts/daily-backup-alerts.integration.test.mjs scripts/nightly-cleanup-alerts.integration.test.mjs scripts/db-pool-alerts.integration.test.mjs scripts/holiday-closure-alerts.integration.test.mjs
+          node --test scripts/daily-backup.integration.test.mjs scripts/daily-backup-roles-diagnostics.integration.test.mjs scripts/daily-backup-roles-school-erasure.integration.test.mjs scripts/daily-backup-roles-billing-retention.integration.test.mjs scripts/daily-backup-roles-data-return.integration.test.mjs scripts/daily-backup-alerts.integration.test.mjs scripts/nightly-cleanup-alerts.integration.test.mjs scripts/db-pool-alerts.integration.test.mjs scripts/holiday-closure-alerts.integration.test.mjs scripts/email-delivery-alerts.integration.test.mjs
           sudo install -d /usr/local/lib/moto-backup
           sudo install scripts/daily-backup.sh /usr/local/lib/moto-backup/
           systemd-analyze verify scripts/systemd/moto-daily-backup.service scripts/systemd/moto-daily-backup.timer scripts/systemd/moto-backup-failure@.service
@@ -515,7 +542,7 @@ jobs:
           node --test scripts/erasure-ledger.integration.test.mjs
 
       - name: Setup Node.js for error-code generator fixtures
-        if: matrix.suite == 'ratchets'
+        if: matrix.suite == 'ratchets' || matrix.suite == 'selection'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
@@ -524,7 +551,7 @@ jobs:
       # Changed-test selection adds ./test only for backend changes, so such a
       # change runs the ratchets here instead of the full backend suite.
       - name: Setup Go with cache
-        if: matrix.suite == 'ratchets'
+        if: matrix.suite == 'ratchets' || matrix.suite == 'selection'
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod
@@ -538,19 +565,20 @@ jobs:
 
       # The selector suite also pins contracts in main.yml and lint.yml.
       - name: Verify workflow selection contracts
-        if: matrix.suite == 'ratchets'
+        if: matrix.suite == 'selection'
         run: scripts/backend-affected-packages_test.sh
 
       # Not in "Backend tests": that job sets the wall-clock time. This suite
       # starts whenever the backend suite is full or one of these scripts
       # changed (toolchain-changed in detect-changes).
       - name: Verify backend test scripts
-        if: matrix.suite == 'ratchets'
+        if: matrix.suite == 'selection'
         run: |
           scripts/backend-test-matrix_test.sh
           scripts/test-changed_test.sh
           scripts/go-test-link-cache_test.sh
           scripts/go-cache-sweep_test.sh
+          scripts/fake-clock_test.sh
 
   lint:
     name: Lint
@@ -591,11 +619,32 @@ jobs:
         with:
           # Ratchets need historical source blobs, not unrelated refs/tags.
           fetch-depth: 1
-      - name: Fetch architecture comparison history
+      # A pull request is checked against its event's base commit
+      # (pull_request.base.sha), not against a merge-base: the check reads
+      # only that commit's tree (rev-parse, ls-tree, cat-file, show, grep,
+      # archive, diff against the working tree). That one commit replaces the
+      # full history, which took 30 to 45 s (#6962). Pushes compute the
+      # merge-base with development and the release check proves ancestry, so
+      # both keep the history. A failed fetch fails here, and a base without
+      # its tree fails the check step; neither passes without the comparison.
+      - name: Fetch architecture comparison base
         env:
+          EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPOSITORY: ${{ github.repository }}
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: |
+          if [[ "$EVENT_NAME" == "pull_request" ]] \
+            && ! [[ "$BASE_REF" == "main" && "$HEAD_REF" == "development" && "$HEAD_REPO" == "$REPOSITORY" ]]; then
+            if [[ ! "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "Pull request base '$BASE_SHA' is not a full commit SHA."
+              exit 1
+            fi
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+            exit 0
+          fi
           refs=("$(git rev-parse HEAD)" "+refs/heads/development:refs/remotes/origin/development")
           if [ -n "$BASE_REF" ] && [ "$BASE_REF" != development ]; then
             refs+=("+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF")
@@ -604,18 +653,24 @@ jobs:
             refs+=("$BASE_SHA")
           fi
           git fetch --no-tags --unshallow origin "${refs[@]}"
-      - name: Setup Go with cache
+      # The modules come from the architecture cache below. setup-go's own
+      # cache loaded a second build cache of 1.2 GB beside it (#6962).
+      - name: Setup Go
         id: go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod
-          cache: true
-          # The development cache build.yml saves under this key. The
-          # architecture module pins the same golang.org/x versions.
-          cache-dependency-path: backend/go.sum
-      # setup-go's go.sum-only key is immutable. The ratchet loads packages
-      # through go list -export, so keep a source-keyed build layer with the
-      # last source build as a warm fallback, as test.yml does.
+          cache: false
+      # The ratchet loads packages through go list -export, so it restores a
+      # source-keyed build layer with the module cache. go.sum of both modules
+      # is part of the prefix, so a restored module cache never carries old
+      # versions forward.
+      # "Warm architecture build cache" (backend-build-cache.yml) is its only
+      # writer: it checks each development commit, the base of the next pull
+      # requests, and the ratchet's -trimpath lets the extracted base reuse
+      # those compile actions. The key, path, GOFLAGS and runner image must
+      # match that job (scripts/architecture-build-cache.test.mjs). A miss only
+      # makes the check compile cold.
       - name: Compute architecture build cache key
         id: build-cache-key
         env:
@@ -625,36 +680,22 @@ jobs:
           echo "prefix=$ARCH_CACHE_PREFIX" >> "$GITHUB_OUTPUT"
           echo "key=$ARCH_CACHE_PREFIX$ARCH_SOURCE_HASH" >> "$GITHUB_OUTPUT"
       - name: Restore architecture build cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/.cache/go-build
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
           key: ${{ steps.build-cache-key.outputs.key }}
           restore-keys: ${{ steps.build-cache-key.outputs.prefix }}
-      - name: Check deterministic architecture ratchet
-        env:
-          BASE_REF: ${{ github.base_ref }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          EVENT_NAME: ${{ github.event_name }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          GH_TOKEN: ${{ github.token }}
-          HEAD_REF: ${{ github.head_ref }}
-          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-          REPOSITORY: ${{ github.repository }}
+      # The projections load the head graph a second time (22 s on four
+      # cores). They run beside the check instead of after it; the step
+      # "Generate and validate current architecture projections" waits for
+      # them, prints their output and fails with their exit status.
+      - name: Start architecture projections in the background
         run: |
-          if [[ "$EVENT_NAME" == "pull_request" ]]; then
-            if [[ "$BASE_REF" == "main" && "$HEAD_REF" == "development" && "$HEAD_REPO" == "$REPOSITORY" ]]; then
-              node scripts/check-release-architecture.mjs
-            elif git cat-file -e "$BASE_SHA:backend/architecture/legacy.jsonl" 2>/dev/null; then
-              scripts/backend-architecture.sh check --base-ref "$BASE_SHA"
-            else
-              echo "Base commit $BASE_SHA has no architecture baseline; rebase onto the cutover."
-              exit 1
-            fi
-          else
-            scripts/backend-architecture.sh check
-          fi
-      - name: Generate and validate current architecture projections
-        run: |
+          cat > "$RUNNER_TEMP/architecture-projections" <<'SCRIPT'
+          #!/usr/bin/env bash
+          set -eo pipefail
           output_directory=$(mktemp -d)
           cleanup() {
             rm -rf -- "$output_directory"
@@ -683,6 +724,51 @@ jobs:
                       f"{filename}: root element is {root.tag}, expected {svg_tag}"
                   )
           PY
+          SCRIPT
+          chmod +x "$RUNNER_TEMP/architecture-projections"
+          rm -f "$RUNNER_TEMP/architecture-projections.status"
+          (
+            set +e
+            "$RUNNER_TEMP/architecture-projections" > "$RUNNER_TEMP/architecture-projections.log" 2>&1
+            echo $? > "$RUNNER_TEMP/architecture-projections.status.new"
+            mv "$RUNNER_TEMP/architecture-projections.status.new" "$RUNNER_TEMP/architecture-projections.status"
+          ) > /dev/null 2>&1 < /dev/null &
+      - name: Check deterministic architecture ratchet
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            if [[ "$BASE_REF" == "main" && "$HEAD_REF" == "development" && "$HEAD_REPO" == "$REPOSITORY" ]]; then
+              node scripts/check-release-architecture.mjs
+            elif git cat-file -e "$BASE_SHA:backend/architecture/legacy.jsonl" 2>/dev/null; then
+              scripts/backend-architecture.sh check --base-ref "$BASE_SHA"
+            else
+              echo "Base commit $BASE_SHA has no architecture baseline; rebase onto the cutover."
+              exit 1
+            fi
+          else
+            scripts/backend-architecture.sh check
+          fi
+      - name: Generate and validate current architecture projections
+        run: |
+          status_file="$RUNNER_TEMP/architecture-projections.status"
+          for _ in $(seq 1 3000); do
+            test -s "$status_file" && break
+            sleep 0.2
+          done
+          cat "$RUNNER_TEMP/architecture-projections.log" 2>/dev/null || true
+          if [[ ! -s "$status_file" ]]; then
+            echo "Architecture projections did not finish within 600 s."
+            exit 1
+          fi
+          exit "$(cat "$status_file")"
       - name: Audit open migration issues
         env:
           GITHUB_TOKEN: ${{ github.token }}

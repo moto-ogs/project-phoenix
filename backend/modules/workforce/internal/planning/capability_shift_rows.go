@@ -23,7 +23,7 @@ func ShiftCapability(shift *workforce.ShiftRecord) workforce.StaffShift {
 		ShiftTypeID: shift.ShiftTypeID, Notes: shift.Notes, SeriesID: shift.SeriesID, Detached: shift.Detached, SeriesOverride: shift.SeriesOverride,
 		Cancelled: shift.Cancelled, ChangeReason: shift.ChangeReason, OriginShiftID: shift.OriginShiftID,
 		SickAbsenceID: shift.SickAbsenceID, CreatedBy: shift.CreatedBy, UpdatedBy: shift.UpdatedBy,
-		CreatedAt: shift.CreatedAt, UpdatedAt: shift.UpdatedAt,
+		PlannedByTraeger: shift.PlannedByTraeger, CreatedAt: shift.CreatedAt, UpdatedAt: shift.UpdatedAt,
 	}
 	if shift.SeriesOccurrenceDate != nil {
 		value.SeriesOccurrenceDate = shift.SeriesOccurrenceDate.String()
@@ -64,6 +64,7 @@ func applyShiftToRow(shift *workforce.ShiftRecord, value workforce.StaffShift) {
 	shift.SickAbsenceID = value.SickAbsenceID
 	shift.CreatedBy = value.CreatedBy
 	shift.UpdatedBy = value.UpdatedBy
+	shift.PlannedByTraeger = value.PlannedByTraeger
 }
 
 func seriesRowToCapability(series *StaffShiftSeries) workforce.StaffShiftSeries {
@@ -125,7 +126,7 @@ func applySeriesToRow(series *StaffShiftSeries, value workforce.StaffShiftSeries
 func shiftTypeRowToCapability(shiftType *workforce.ShiftTypeRecord) workforce.ShiftType {
 	return workforce.ShiftType{
 		ID: shiftType.ID, TenantID: shiftType.TenantID, Name: shiftType.Name, Color: shiftType.Color,
-		Description: shiftType.Description, IsActive: shiftType.IsActive, CreatedAt: shiftType.CreatedAt, UpdatedAt: shiftType.UpdatedAt,
+		Description: shiftType.Description, IsActive: shiftType.IsActive, ArchivedAt: shiftType.ArchivedAt, CreatedAt: shiftType.CreatedAt, UpdatedAt: shiftType.UpdatedAt,
 	}
 }
 
@@ -144,6 +145,7 @@ func applyShiftTypeToRow(shiftType *workforce.ShiftTypeRecord, value workforce.S
 	shiftType.Color = value.Color
 	shiftType.Description = value.Description
 	shiftType.IsActive = value.IsActive
+	shiftType.ArchivedAt = value.ArchivedAt
 }
 
 // shiftWallClock reads only the time-of-day components; the year anchor and

@@ -14,14 +14,14 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/careplantest"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // The excused-absence request workflow (#3093) over the real Care Plan
 // tables. The calendar is pinned so no assertion depends on the wall clock;
-// only reported_at instants, which the workflow compares with created_at,
-// use time.Now.
+// only a reported_at instant newer than created_at uses time.Now.
 var (
 	excusedToday    = careplan.Date("2026-08-24")
 	excusedTomorrow = careplan.Date("2026-08-25")
@@ -219,7 +219,9 @@ func TestExcusedRequestQueueBadgeAndParentList(t *testing.T) {
 	}))
 
 	require.NoError(t, f.inTenant(t, func(ctx context.Context) error {
-		rows, err := f.requests.ListForStudent(ctx, f.chain.StudentID, time.Now().Add(-24*time.Hour))
+		// Every decision of this test lies after the pinned day, so the
+		// recent window holds them all; a withdrawn row stays out by status.
+		rows, err := f.requests.ListForStudent(ctx, f.chain.StudentID, calendar.Date(excusedPast).BerlinMidnight())
 		require.NoError(t, err)
 		statuses := map[int64]string{}
 		for _, row := range rows {
@@ -349,7 +351,8 @@ func TestExcusedRequestApproveRefusedWhenNewerStatusExists(t *testing.T) {
 func TestExcusedRequestApproveOverwritesOlderStatus(t *testing.T) {
 	t.Parallel()
 	f := newExcusedFixture(t)
-	f.upsertStatusDay(t, excusedIn3Days, careplan.StudentStatusDaySick, time.Now().Add(-24*time.Hour))
+	// Reported on a pinned past day, before the request is created.
+	f.upsertStatusDay(t, excusedIn3Days, careplan.StudentStatusDaySick, calendar.Date(excusedPast).BerlinMidnight())
 	pending := f.createPending(t, []careplan.Date{excusedIn3Days}, "Arzttermin")
 	f.approve(t, pending.ID)
 	days := f.activeStatusDays(t)
@@ -609,8 +612,8 @@ func (f *failingCarePlan) UpdatePendingExcusedAbsenceRequest(ctx context.Context
 	return f.after(f.Capability.UpdatePendingExcusedAbsenceRequest(ctx, id, dates, note, status), f.failAfterUpdate)
 }
 
-func (f *failingCarePlan) ClearStudentStatusDays(ctx context.Context, studentID int64, status string, dates []careplan.Date, at time.Time, source string) error {
-	return f.after(f.Capability.ClearStudentStatusDays(ctx, studentID, status, dates, at, source), f.failAfterClear)
+func (f *failingCarePlan) ClearStudentStatusDays(ctx context.Context, studentID int64, status string, dates []careplan.Date, at time.Time, source string, accountID *int64) error {
+	return f.after(f.Capability.ClearStudentStatusDays(ctx, studentID, status, dates, at, source, accountID), f.failAfterClear)
 }
 
 func (f *failingCarePlan) UpsertStudentStatusDay(ctx context.Context, value careplan.StudentStatusDay) (careplan.StudentStatusDay, error) {

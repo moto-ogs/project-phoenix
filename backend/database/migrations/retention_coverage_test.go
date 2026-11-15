@@ -216,9 +216,9 @@ var tableRetentions = map[string]tableRetention{
 	"config.home_layouts":                                   parent("auth.accounts"),
 	"config.school_setup_dismissals":                        parent("auth.accounts"),
 	"config.school_setups":                                  notPersonal("school setup wizard state"),
-	"config.setting_audit":                                  own("nightly retention step setting_audit_retention, AuditRetention.DeleteExpiredSettingChanges -> SettingAuditRetention.DeleteChangedBefore (3 years); changed_by SET NULL on account delete"),
+	"config.setting_audit":                                  own("nightly retention step setting_audit_retention, AuditRetention.DeleteExpiredSettingChanges -> SettingAuditRetention.deleteExpired -> config.delete_expired_setting_audit (3 years); changed_by SET NULL on account delete"),
 	"config.setting_values":                                 notPersonal("tenant setting values (only updated-by account reference, FK NO ACTION)"),
-	"config.traeger_setting_audit":                          own("each Träger setting change prunes the Träger's changes older than settings.SettingAuditRetentionYears (3 years) in the same Träger transaction, TraegerSettingRepository.RecordChange (ADR 0107); rows go with platform.organizations; changed_by SET NULL on account delete"),
+	"config.traeger_setting_audit":                          own("each Träger setting change prunes the Träger's changes older than 3 years in the same Träger transaction, TraegerSettingRepository.RecordChange -> config.delete_expired_traeger_setting_audit (ADR 0107); rows go with platform.organizations; changed_by SET NULL on account delete"),
 	"config.traeger_setting_values":                         notPersonal("Träger setting values (only updated-by account reference, FK NO ACTION); rows go with platform.organizations"),
 	"config.staff_onboardings":                              parent("auth.accounts"),
 	"config.staff_target_overrides":                         staffRetention("Workforce SQL users.erase_retired_staff_records"),
@@ -354,6 +354,8 @@ var tableRetentions = map[string]tableRetention{
 	"parent_billing.revenue_accounts":                       notPersonal("revenue account of a Leistung or Angebot of a Träger (#4821), no person"),
 	"parent_billing.cost_centers":                           notPersonal("cost center of a school, the holiday care or an Angebot of a Träger (#4821), no person"),
 	"parent_billing.family_billing":                         own("a deviation goes with care_contract.contracts; a row a holiday registration used (last_used_on) loses only its contract and deviation (trg_family_billing_detach); a family without a contract (#6692) goes with the hourly Beleg retention, BelegRetention.ApplyBelegRetention -> Store.DeleteExpiredFamilies, on 1 January of the fourth year after last_used_on under the Träger's holiday_document instruction and without its deletion stop, unless a document of the family is kept, logged in parent_billing.beleg_deletions, and with platform.organizations; updated_by_account_id SET NULL on account delete"),
+	"parent_billing.child_debtor_numbers":                   own("a number of a child (#7007) goes with the hourly Beleg retention, BelegRetention.ApplyBelegRetention -> Store.DeleteExpiredFamilies -> deleteExpiredChildNumbers, on 1 January of the fourth year after last_used_on under the Träger's holiday_document instruction and without its deletion stop, unless a document of the family is kept, logged in parent_billing.beleg_deletions, and with platform.organizations; updated_by_account_id SET NULL on account delete"),
+	"parent_billing.child_debtor_number_events":             own("goes with the hourly Beleg retention, Store.DeleteExpiredFamilies -> deleteExpiredChildNumbers, once its number is gone and it is three years old, and with platform.organizations; actor_account_id SET NULL on account delete"),
 	"parent_billing.family_billing_events":                  own("goes with care_contract.contracts; an entry without a contract (#6692) goes with the hourly Beleg retention, Store.DeleteExpiredFamilies, once its row is gone and it is three years old, and with platform.organizations; actor_account_id SET NULL on account delete"),
 	"parent_billing.holiday_contribution_lines":             parent("parent_billing.holiday_contributions"),
 	"parent_billing.holiday_contributions":                  parent("enrollment.holiday_registration_children"),
@@ -387,6 +389,7 @@ var tableRetentions = map[string]tableRetention{
 	"platform.email_delivery_events":                        own("nightly retention step delivery_retention, DeleteExpiredDeliveries (with the mail, 30 days after it ended; system and Träger mail through RunOnce's DeleteExpiredSystemEmails by cascade)"),
 	"platform.email_suppressions":                           own("nightly retention step delivery_retention, DeleteUnheldEmailSuppressions (no fixed period: the first run after no guardian, account or open application of the school holds the address)"),
 	"platform.email_outbox":                                 own("nightly retention step delivery_retention, DeleteExpiredDeliveries (30 days after sent, dead letter or cancelled; guardian welcome keeps only its key)"),
+	"platform.notification_feed_entries":                    own("nightly retention step delivery_retention, DeleteExpiredDeliveries (30 days after the last update, #7148); goes with auth.accounts and platform.schools"),
 	"platform.operator_audit_log":                           own("hourly token-cleanup, operator audit log retention, DeleteExpiredOperatorAuditLog (before 1 January of last year)"),
 	"platform.operator_email_change_tokens":                 own("hourly token-cleanup, CleanupOperatorEmailChanges -> DeleteStaleOperatorEmailChanges"),
 	"platform.operator_invitation_tokens":                   own("hourly token-cleanup, DeleteExpiredOperatorInvitations"),
@@ -518,6 +521,19 @@ var tableRetentions = map[string]tableRetention{
 	"users.survey_responses":                                parent("users.surveys"),
 	"users.surveys":                                         own("nightly retention steps parent_survey_retention and staff_survey_retention, SurveyRetention.DeleteExpiredParentSurveys / DeleteExpiredStaffSurveys (school window gdpr.parent_message_retention_days or gdpr.staff_message_retention_days after the survey closed, a draft after its last change, #4781)"),
 	"users.teachers":                                        staffRetention("School Membership EraseNextRetiredStaff"),
+	"workforce.staff_proof_type_mappings":                   notPersonal("which kind of a school maps onto which kind of its Träger, by plain id; goes with its Träger kind and with platform.organizations (#4707)"),
+	"workforce.staff_proof_types":                           notPersonal("the kinds of proof a Träger asks for; archived, never deleted; they go with platform.organizations (#4707)"),
+	"workforce.staff_proofs":                                parent("workforce.staff_records"),
+	"workforce.absence_allowance_changes":                   parent("workforce.staff_records"),
+	"workforce.absence_allowances":                          parent("workforce.staff_records"),
+	"workforce.absence_types":                               own("the Personalverwaltung retires an Abwesenheitsart of the Träger instead of deleting it, because the schools' bookings keep its name (#4710); rows go with platform.organizations when the Träger is erased (#4657)"),
+	"workforce.staff_contract_holiday_weeks":                parent("workforce.staff_contracts"),
+	"workforce.staff_contract_targets":                      parent("workforce.staff_contracts"),
+	"workforce.staff_contracts":                             parent("workforce.staff_records"),
+	"workforce.staff_record_changes":                        parent("workforce.staff_records"),
+	"workforce.staff_record_links":                          parent("workforce.staff_records"),
+	"workforce.staff_records":                               own("the Personalverwaltung dissolves a staff record in the Träger-Portal (DELETE /traeger/staff-records/{id}, #4705), which gives each live Einsatzort its bank and tax values back; the deletion after the end of the last Arbeitsvertrag comes with the contracts (ADR 0089 section 12, #4706); rows go with platform.organizations when the Träger is erased (#4657)"),
+	"workforce.staff_releases":                              notPersonal("the release of a Träger names the statement it confirmed and the operator's id; it goes with platform.organizations (#4705)"),
 }
 
 func TestEveryTableHasARetentionPath(t *testing.T) {
@@ -526,13 +542,16 @@ func TestEveryTableHasARetentionPath(t *testing.T) {
 	ctx := context.Background()
 
 	var tables []string
+	// phx_test holds the test harness's leftover-gate start state
+	// (internal/testdb), which every clone inherits from the template; no
+	// migration creates it.
 	require.NoError(t, db.NewRaw(`
 		SELECT n.nspname || '.' || c.relname
 		FROM pg_class AS c
 		JOIN pg_namespace AS n ON n.oid = c.relnamespace
 		WHERE c.relkind IN ('r', 'p')
 		  AND NOT c.relispartition
-		  AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+		  AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast', 'phx_test')
 		ORDER BY 1`).Scan(ctx, &tables))
 
 	var problems []string

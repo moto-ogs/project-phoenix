@@ -41,7 +41,7 @@
   "guardian_role_managed": "This person is a legal guardian. Only they or the school can change their details.",
   "guardian_shared_across_families": "This contact is shared with several families and can only be changed by the school. Please contact the school.",
   "guardian_social_worker_managed": "These contact details are managed by the school. To make changes, please contact the school.",
-  "invalid_credentials": "You cannot access {object}. Please contact the school.",
+  "invalid_credentials": "The email address or the password is not correct. Please check your entry.",
   "invalid_poll_response": "{object} contains invalid details. Please check your entries.",
   "invalid_recipients": "{object} contains invalid details. Please check your entries.",
   "invalid_request_payload": "{object} contains invalid details. Please check your entries.",
