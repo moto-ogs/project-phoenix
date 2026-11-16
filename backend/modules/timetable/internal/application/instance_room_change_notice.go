@@ -18,14 +18,21 @@ const roomChangeSoonDays = 1
 // transaction. Only a change from one room to another counts: a block that
 // gets its first room or loses its room did not move. Recipients are the
 // block's staff and children after the edit; the person who made the change
-// is left out. Nothing is written for a block in the past.
-func (s *InstanceLifecycleService) noticeRoomChange(ctx context.Context, instance *scheduleModel.ActivityInstance, previousRoomID int64, actorAccountID *int64) error {
+// is left out. Nothing is written for a block in the past. When the same edit
+// moves the block to another day, the earlier of both days that has not
+// passed decides how urgent the notice is: people expecting the block
+// tomorrow hear about it like a change for tomorrow.
+func (s *InstanceLifecycleService) noticeRoomChange(ctx context.Context, instance *scheduleModel.ActivityInstance, previousRoomID int64, previousDate calendar.Date, actorAccountID *int64) error {
 	if s.deps.RoomNotices == nil || instance == nil || previousRoomID <= 0 || instance.RoomID <= 0 || previousRoomID == instance.RoomID {
 		return nil
 	}
-	ahead := calendar.DateFromTime(s.now()).DaysUntil(instance.Date)
+	today := calendar.DateFromTime(s.now())
+	ahead := today.DaysUntil(instance.Date)
 	if ahead < 0 {
 		return nil
+	}
+	if before := today.DaysUntil(previousDate); before >= 0 && before < ahead {
+		ahead = before
 	}
 	const op = "update instance: room notice"
 	staff, err := s.staffNotice(ctx, instance, actorAccountID, op)
@@ -47,7 +54,7 @@ func (s *InstanceLifecycleService) noticeRoomChange(ctx context.Context, instanc
 		InstanceID: instance.ID, Title: instance.Title, Date: instance.Date, StartTime: instance.StartTime,
 		RoomName: names[instance.RoomID], PreviousRoom: names[previousRoomID],
 		StaffAccountIDs: staff.AccountIDs, StudentIDs: studentIDs,
-		Soon: ahead <= roomChangeSoonDays, Push: roomChangePush(ahead),
+		Push: roomChangePush(ahead),
 	}
 	if actorAccountID != nil {
 		notice.ActorAccountID = *actorAccountID

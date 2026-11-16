@@ -11,8 +11,8 @@ import (
 // seedRoomChangeNoticeStep moves a coming block of the first parent
 // account's children to another room (#7141): the planned staff and the
 // families find the room change in their bell. The block lies on the next
-// school day, so the notice is one for today or tomorrow, which pushes by
-// default.
+// school day: a notice for tomorrow from Sunday to Thursday, one for a later
+// day after a Friday or Saturday seed.
 type seedRoomChangeNoticeStep struct{}
 
 func (seedRoomChangeNoticeStep) Name() string {

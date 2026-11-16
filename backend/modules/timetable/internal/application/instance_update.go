@@ -69,7 +69,7 @@ func (s *InstanceLifecycleService) UpdatePlanned(ctx context.Context, instanceID
 	if err := s.clearStaleAckIfStaffed(ctx, instance, actorAccountID); err != nil {
 		return nil, err
 	}
-	if err := s.noticeRoomChange(ctx, instance, previousRoomID, actorAccountID); err != nil {
+	if err := s.noticeRoomChange(ctx, instance, previousRoomID, origSlot.Date, actorAccountID); err != nil {
 		return nil, err
 	}
 	s.broadcastPlannedInstanceChanged(ctx, "instance_update")

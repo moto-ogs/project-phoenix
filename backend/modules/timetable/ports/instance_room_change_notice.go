@@ -25,8 +25,8 @@ const (
 // InstanceRoomChangeNotice tells the staff of a block and the families of
 // its children that it takes place in another room (#7141). StaffAccountIDs
 // are the block's staff after the change, absent people and the person who
-// made the change left out; StudentIDs the booked children. Soon is true for
-// a move for today or tomorrow.
+// made the change left out; StudentIDs the booked children. Push says how far
+// the move may ring a phone, and with it which type of notice it is.
 type InstanceRoomChangeNotice struct {
 	InstanceID int64
 	Title      string
@@ -38,7 +38,6 @@ type InstanceRoomChangeNotice struct {
 	ActorAccountID  int64
 	StaffAccountIDs []int64
 	StudentIDs      []int64
-	Soon            bool
 	Push            RoomChangePush
 }
 

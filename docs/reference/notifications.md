@@ -130,7 +130,12 @@ For example, an aggregate derived from an admin-wide view must use
 ## Consent (per account, per type)
 
 Nothing is delivered to a person who did not ask for it. The rule is
-mechanical: **no row means off**.
+mechanical: **no row means off**, except for a type registered `DefaultOn`:
+a notice that is the person's own task or about their own planned blocks
+(staff types with a `Permission`, #4791, #7148) or about the family's own
+children when that is what the type exists for (`parent_room_changed`,
+#7141). Such a type reads as on until the person stores an "off", and
+"switch everything off" stores that "off" in every portal.
 
 - **Catalogue** — `modules/delivery/internal/notifications/types.go`. One `TypeDefinition` per
   notification a person can agree to: key, German label and description (the

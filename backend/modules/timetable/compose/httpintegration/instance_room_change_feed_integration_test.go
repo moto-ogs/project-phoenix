@@ -93,12 +93,21 @@ func (f *roomFeedFixture) roomBlock(t *testing.T, date calendar.Date, staff []fe
 // children stay as they are.
 func (f *roomFeedFixture) edit(t *testing.T, instanceID int64, actor feedPerson, roomID int64, title string) {
 	t.Helper()
+	f.editOn(t, instanceID, actor, roomID, title, "")
+}
+
+// editOn is edit that also moves the block to date (empty keeps its day).
+func (f *roomFeedFixture) editOn(t *testing.T, instanceID int64, actor feedPerson, roomID int64, title string, date calendar.Date) {
+	t.Helper()
 	var row struct {
 		Date      calendar.Date `bun:"date"`
 		StartTime time.Time     `bun:"start_time"`
 		EndTime   time.Time     `bun:"end_time"`
 	}
 	require.NoError(t, f.s.db.NewRaw(`SELECT date, start_time, end_time FROM schedule.activity_instances WHERE id = ?`, instanceID).Scan(context.Background(), &row))
+	if date != "" {
+		row.Date = date
+	}
 	var staffIDs, studentIDs []int64
 	require.NoError(t, f.s.db.NewRaw(`SELECT staff_id FROM schedule.instance_staff WHERE instance_id = ?`, instanceID).Scan(context.Background(), &staffIDs))
 	require.NoError(t, f.s.db.NewRaw(`SELECT student_id FROM schedule.instance_students WHERE instance_id = ?`, instanceID).Scan(context.Background(), &studentIDs))
@@ -181,6 +190,23 @@ func TestRoomChangeReachesTheStaffingAndTheFamilies(t *testing.T) {
 	assert.Empty(t, f.parentPushes(t, withoutAccess.AccountID, "parent_room_changed"))
 	assert.Empty(t, f.parentFeed(t, notBooked.AccountID).Data.Entries, "a family whose child is not booked gets nothing")
 
+	// Losing the right after the entry was written hides it.
+	_, err = f.s.db.ExecContext(context.Background(), `UPDATE auth.guardian_student_access SET permissions = '{}'::jsonb
+		WHERE relationship_id IN (SELECT id FROM users.student_guardian_relationships WHERE guardian_profile_id = ?)`, parent.GuardianProfileID)
+	require.NoError(t, err)
+	assert.Empty(t, f.parentFeed(t, parent.AccountID).Data.Entries, "the right is checked again on every read")
+	_, err = f.s.db.ExecContext(context.Background(), `UPDATE auth.guardian_student_access SET permissions = '{"parent_portal.access": true}'::jsonb
+		WHERE relationship_id IN (SELECT id FROM users.student_guardian_relationships WHERE guardian_profile_id = ?)`, parent.GuardianProfileID)
+	require.NoError(t, err)
+
+	// A later move reaches the family's feed; the push only who switched it on.
+	later := f.roomBlock(t, calendar.NewDate(2030, 6, 14), []feedPerson{actor, planned}, parent.StudentID)
+	f.edit(t, later, actor, f.moveTo, "Fußball-AG")
+	laterFeed := f.parentFeed(t, parent.AccountID)
+	require.Len(t, laterFeed.Data.Entries, 2)
+	assert.Equal(t, "parent_room_changed_later", laterFeed.Data.Entries[0].Type)
+	assert.Empty(t, f.parentPushes(t, parent.AccountID, "parent_room_changed_later"), "a later move is off by default for families too")
+
 	// Another school of the same person sees nothing of this school.
 	foreign := testpkg.NewTenantScope(t, f.s.db)
 	testpkg.MapAccountToTenant(t, f.s.db, planned.accountID, foreign.TenantID)
@@ -230,15 +256,25 @@ func TestRoomChangeFollowsTheDayTheSwitchesAndBundles(t *testing.T) {
 	assert.Len(t, f.feed(t, eager, "").Data.Entries, 3)
 	assert.Equal(t, 1, f.pushesOf(t, eager, "instance_room_changed_later"))
 
+	// A block moved from tomorrow to a day weeks ahead in the same edit is
+	// urgent for whoever expected it tomorrow.
+	moved := f.roomBlock(t, calendar.NewDate(2030, 6, 11), staff)
+	f.editOn(t, moved, actor, f.moveTo, "Schach-AG", calendar.NewDate(2030, 7, 2))
+	movedFeed := f.feed(t, planned, "")
+	require.Len(t, movedFeed.Data.Entries, 4)
+	assert.Equal(t, "instance_room_changed", movedFeed.Data.Entries[0].Type)
+	assert.Contains(t, movedFeed.Data.Entries[0].Body, "am Di. 02.07.", "the text names the new day")
+	assert.Equal(t, 2, f.pushesOf(t, planned, "instance_room_changed"))
+
 	// A past block tells nobody.
 	past := f.roomBlock(t, calendar.NewDate(2030, 6, 9), staff)
 	f.edit(t, past, actor, f.moveTo, "Schach-AG")
-	assert.Len(t, f.feed(t, planned, "").Data.Entries, 3)
+	assert.Len(t, f.feed(t, planned, "").Data.Entries, 4)
 
 	// A school that switched the type off gets neither entry nor push.
 	testpkg.SetTestTenantSetting(t, f.s.db, testpkg.Tenant(t), "notifications.instance_room_changed_enabled", "false")
 	off := f.roomBlock(t, calendar.NewDate(2030, 6, 11), staff)
 	f.edit(t, off, actor, f.moveTo, "Schach-AG")
-	assert.Len(t, f.feed(t, planned, "").Data.Entries, 3)
-	assert.Equal(t, 1, f.pushesOf(t, planned, "instance_room_changed"))
+	assert.Len(t, f.feed(t, planned, "").Data.Entries, 4)
+	assert.Equal(t, 2, f.pushesOf(t, planned, "instance_room_changed"))
 }

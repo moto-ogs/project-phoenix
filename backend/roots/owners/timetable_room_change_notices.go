@@ -2,7 +2,6 @@ package owners
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -12,7 +11,6 @@ import (
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
-	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -58,7 +56,7 @@ func (n timetableRoomChangeNotices) NotifyInstanceRoomChanged(ctx context.Contex
 // roomChangeTypes are the staff and the parent type of a move on the
 // notice's day.
 func roomChangeTypes(notice timetablePorts.InstanceRoomChangeNotice) (string, string) {
-	if notice.Soon {
+	if notice.Push == timetablePorts.RoomChangePushSoon {
 		return deliveryContract.NotificationInstanceRoomChanged, deliveryContract.NotificationParentRoomChanged
 	}
 	return deliveryContract.NotificationInstanceRoomChangedLater, deliveryContract.NotificationParentRoomChangedLater
@@ -171,7 +169,7 @@ func (n timetableRoomChangeNotices) portalGuardians(ctx context.Context, student
 		if contact.StudentID == nil || contact.AccountID <= 0 || contact.AccountID == actorAccountID {
 			continue
 		}
-		granted, err := roomChangePortalAccess(contact.PortalPermission)
+		granted, err := guardianPortalAccessGranted(contact.PortalPermission)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -192,18 +190,6 @@ func (n timetableRoomChangeNotices) portalGuardians(ctx context.Context, student
 	return accountIDs, localeOf, nil
 }
 
-// roomChangePortalAccess reads a stored parent_portal.access value with the
-// shared helper, which also knows its historical shapes.
-func roomChangePortalAccess(raw json.RawMessage) (bool, error) {
-	var value any
-	if len(raw) > 0 {
-		if err := json.Unmarshal(raw, &value); err != nil {
-			return false, fmt.Errorf("room change notice: guardian portal permission: %w", err)
-		}
-	}
-	return securityruntime.GuardianPermissionGranted(value), nil
-}
-
 // roomChangeNotifyError keeps a school's switched-off notifications a
 // silent outcome.
 func roomChangeNotifyError(err error) error {
@@ -216,15 +202,7 @@ func roomChangeNotifyError(err error) error {
 // roomChangeCopy is the display-safe text of the notice: the block's name,
 // when it takes place and in which room, never a child.
 func roomChangeCopy(notice timetablePorts.InstanceRoomChangeNotice) (string, string) {
-	name := strings.TrimSpace(notice.Title)
-	subject := "„" + name + "“"
-	if name == "" {
-		subject = "Ein Termin"
-	}
-	when := staffCancellationWeekdays[notice.Date.Weekday()] + " " + notice.Date.Format("02.01.")
-	if !notice.StartTime.IsZero() {
-		when += " um " + notice.StartTime.Format("15:04") + " Uhr"
-	}
+	subject, when := blockNoticeSubject(notice.Title), blockNoticeWhen(notice.Date, notice.StartTime)
 	room := strings.TrimSpace(notice.RoomName)
 	if room == "" {
 		return "Raum geändert", fmt.Sprintf("%s am %s findet in einem anderen Raum statt.", subject, when)
