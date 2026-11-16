@@ -108,7 +108,7 @@
 			.status svg { flex: none; width: 1.5rem; height: 1.5rem; animation: turn 1s linear infinite; }
 			@keyframes turn { to { transform: rotate(360deg); } }
 			@media (min-width: 40rem) {
-			  main { padding: 2.5rem 2rem; }
+			  main { padding: 2rem; }
 			  h1 { font-size: 2.25rem; }
 			  .lead { font-size: 1rem; }
 			}
