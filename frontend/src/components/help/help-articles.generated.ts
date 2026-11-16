@@ -1127,7 +1127,8 @@ export const bankDetailsTopic = function bankDetailsTopic(): HelpTopic {
       "`Ohne IBAN` zeigt, bei welchen Kindern noch etwas fehlt.",
     ],
     differences: [
-      "Fehlt bei einem Kind die IBAN, steht dort `Nicht zugeordnet`.",
+      "Fehlt bei einem Kind die IBAN, steht dort `Fehlt`.",
+      "Steht beim Kontoinhaber `Nicht zugeordnet`, ist beim Kind noch niemand als Kontoinhaber eingetragen.",
     ],
     troubleshootingDetails: [
       "Fehlt `Bankverbindungen` in der Seitenleiste? Dafür braucht es ein eigenes Recht. Fragen Sie Ihre Leitung.",
@@ -4288,7 +4289,7 @@ export const leadRosterDeviationTopic =
   } satisfies typeof authored_leadRosterDeviationTopic;
 
 /**
- * `/dienstplan/springer` (#4709, ADR 0250): die Springer aus dem
+ * `/dienstplan/springer` (#4709, ADR 0252): die Springer aus dem
  * Vertretungspool des Trägers sehen, blocken und eine eigene Blockung
  * aufheben.
  */
@@ -7378,6 +7379,10 @@ export const parentNewsTopic = function parentNewsTopic(): HelpTopic {
  * entscheiden: oben die Themen je Bereich, darunter der Knopf `Aktivieren`
  * unter `Benachrichtigungen auf diesem Gerät`. Die vier Schritte folgen der
  * Eltern-Anleitung `moto-eltern-push-benachrichtigungen.pdf`.
+ *
+ * Die `Hinweise` (#7140) stehen ohne Einstellung in moto: am Computer hinter
+ * der Glocke oben rechts, auf dem Telefon unter `Mehr`. Erster Hinweis ist
+ * die Absage einer Betreuung des Kindes.
  */
 export const parentNotificationsTopic =
   function parentNotificationsTopic(): HelpTopic {
@@ -7403,6 +7408,9 @@ export const parentNotificationsTopic =
       result:
         "moto meldet sich ab jetzt bei den gewählten Themen. Auch wenn die App geschlossen ist.",
       notes: [
+        "Jeder Hinweis steht auch in moto unter `Hinweise`, zum Beispiel wenn eine Betreuung Ihres Kindes ausfällt. Dafür müssen Sie nichts einschalten.",
+        "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder `Alle als gelesen markieren` wählen.",
+        "Auf dem Sperrbildschirm steht nie der Name Ihres Kindes. Was genau los ist, lesen Sie nach der Anmeldung in moto.",
         "Die Themen stehen unter `Kinder`, `Mitteilungen` und `Termine`.",
         "Sie können Themen später jederzeit ein- oder ausschalten.",
         "Sie brauchen beide Stellen: die Themen und den Knopf `Aktivieren`.",
@@ -7410,6 +7418,8 @@ export const parentNotificationsTopic =
       ],
       differences: [
         "Am Computer steht `Einstellungen` in der Navigation statt hinter `Mehr`.",
+        "Die `Hinweise` finden Sie am Computer hinter der Glocke oben rechts. Auf dem Telefon tippen Sie unten auf `Mehr` und dann auf `Hinweise`. Die Zahl daran zählt neue Hinweise.",
+        "Sie sehen nur Hinweise zu Kindern, für die Sie moto nutzen dürfen. Nimmt die Schule Ihnen dieses Recht, verschwinden auch ältere Hinweise zu diesem Kind.",
         "Ein Thema trägt `Von Ihrer Schule derzeit deaktiviert`? Dann nutzt Ihre OGS es nicht.",
         "Hat Ihre Schule alle Benachrichtigungen abgeschaltet, bleibt Ihre Auswahl gespeichert und gilt später wieder.",
         "Auf Android sind die Schritte gleich. Die Frage Ihres Geräts kann anders aussehen.",
@@ -10987,6 +10997,16 @@ export const traegerAccountsTopic = function traegerAccountsTopic(): HelpTopic {
         ],
       },
       {
+        title: "Liste herunterladen",
+        description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+        steps: [
+          "Wählen Sie unten in der Navigation `Einstellungen`.",
+          "Wählen Sie `Mitglieder und Rollen`.",
+          "Wählen Sie oben `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Personen und offenen Einladungen.",
+          "Den Verlauf laden Sie mit `Herunterladen` beim `Verlauf` herunter.",
+        ],
+      },
+      {
         title: "Person entfernen",
         steps: [
           "Wählen Sie unten in der Navigation `Einstellungen`.",
@@ -11281,6 +11301,16 @@ export const traegerBillingRunTopic =
             "Führt Ihr Träger die Debitorennummer je Kind, heißt die Spalte `Nummern der Kinder`. Dort steht jedes Kind mit seiner Nummer. Familien mit Betreuungsvertrag stehen dann schon vor der ersten Rechnung in der Liste. Im Drei-Punkte-Menü wählen Sie `Nummern der Kinder eintragen` oder `Nummern der Kinder ändern`. Jedes Kind hat ein eigenes Feld. Wählen Sie `Speichern`. Die nächste Monatsrechnung eines Kindes nimmt seine Nummer.",
             "Wählen Sie die Familie. Sie sehen ihre Summen, wer zahlt, den Zahlungsweg und jedes Dokument mit Ferienzeitraum, Kindern, Betrag und Stand. Eine Familie ohne Rechnung öffnet sich nicht.",
             "Wählen Sie ein Dokument, um seinen Abrechnungslauf zu öffnen. Dort stornieren Sie oder schreiben gut.",
+          ],
+        },
+        {
+          title: "Listen herunterladen",
+          description:
+            "Die Liste der Läufe, die Familien und die Dokumente einer Familie laden Sie als Datei herunter.",
+          steps: [
+            "Für die Läufe wählen Sie `Abrechnungsläufe` und dann den Reiter `Ferien`. Für die Familien wählen Sie `Familien und Zahlung`. Für die Dokumente einer Familie öffnen Sie die Familie.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Bei den Abrechnungsläufen gilt der gewählte Ferienzeitraum. Bei den Familien enthält die Datei alle Familien, ohne Suche und Filter.",
+            "Die Liste der Familien und die Dokumente einer Familie enthalten personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },
       ],
@@ -11775,6 +11805,14 @@ export const traegerCareCostSharesTopic =
             "Schicken Sie die Liste an den Kostenträger.",
           ],
         },
+        {
+          title: "Alle Anteile herunterladen",
+          steps: [
+            "Wählen Sie `Familien und Zahlung` und dann den Reiter `Kostenübernahmen`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Kinder, ohne Suche und Filter.",
+            "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
+          ],
+        },
       ],
       result:
         "Der Monatslauf rechnet erst alle Ermäßigungen aus. Danach zieht er den Anteil des Kostenträgers ab. Die Rechnung zeigt den Monatsbeitrag, den Anteil und den Rest. Ein Anteil für die Mensa zieht vom Mensa-Betrag ab. Übernimmt der Kostenträger alles, steht auf der Rechnung `Beitragsfrei` und 0 €.",
@@ -11922,7 +11960,8 @@ export const traegerCareMonthsTopic =
           description:
             "Sie können eine Rechnung aus diesem Lauf nehmen. Sie kommt im nächsten Lauf dieses Monats wieder. Hat ein Kind eine Rechnung für die Betreuung und eine eigene `Mensa-Rechnung`, schließen Sie jede für sich aus.",
           steps: [
-            "Wählen Sie bei `Monatslauf` den Knopf `Prüfliste` und dann `Excel` oder `CSV`. Die Liste hat je Position eine Zeile. Rechnungsnummern stehen noch nicht darin.",
+            "Wählen Sie bei `Monatslauf` den Knopf `Prüfliste` und dann `PDF`, `Excel` oder `CSV`. Die Liste hat je Position eine Zeile. Rechnungsnummern stehen noch nicht darin.",
+            "Nach der Freigabe heißt der Knopf bei `Monatslauf` `Herunterladen`. Die Datei enthält alle Rechnungen des Laufs mit ihren Nummern.",
             "Stimmt eine Rechnung noch nicht, wählen Sie in ihrer Zeile das Menü mit den drei Punkten und dann `Ausschließen`.",
             "Prüfen Sie im Fenster, welche Rechnung Sie ausschließen. Dort steht zum Beispiel `Mensa-Rechnung` und darunter, ob die Betreuungsrechnung des Kindes im Lauf bleibt. Steht die Mensa auf der Rechnung der Betreuung, wird sie mit ausgeschlossen.",
             "Schreiben Sie bei `Grund`, warum, zum Beispiel „Kündigung wird noch geprüft“. Wählen Sie `Ausschließen`.",
@@ -12009,6 +12048,13 @@ export const traegerCareMonthsTopic =
             "Wurde die Rechnung weder gesendet noch zum Drucken heruntergeladen, bekommt die Familie kein Storno. Sie sieht nichts davon.",
             "Wählen Sie in der Meldung über den Rechnungen `Neu ausstellen`. Ein passender Prüflauf öffnet sich, sonst ein neuer Lauf. Ein neuer Lauf enthält nur Schulen mit noch offenen Stornos. Geben Sie ihn frei und senden Sie das neue Schreiben. Verteilen sich die Stornos auf mehrere Prüfläufe, wiederholen Sie `Neu ausstellen`. Sind alle Rechnungen neu ausgestellt, verschwindet die Meldung im alten Lauf.",
             "Die neue Rechnung übernimmt die Änderungen der stornierten Rechnung, zum Beispiel einen geänderten Betrag oder Empfänger. Im Verlauf steht dann `Übernommen aus` mit der alten Nummer. Passt eine Änderung nicht mehr, nehmen Sie sie dort zurück.",
+          ],
+        },
+        {
+          title: "Liste der Monatsläufe herunterladen",
+          steps: [
+            "Wählen Sie `Abrechnungsläufe` und dann den Reiter `Monatsbeiträge`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monatsläufe.",
           ],
         },
       ],
@@ -12111,6 +12157,16 @@ export const traegerCareNoticesTopic =
             "Die Vorschau zeigt nur Kinder, bei denen sich etwas geändert hat. Sie stehen als `Änderungsbescheid`.",
             "Der Änderungsbescheid nennt den alten Bescheid. Je Zeile steht `bisher`, `neu` und `Zu-/Abgang`.",
             "Stellen Sie die Bescheide aus. Von da an gilt für diese Monate der Änderungsbescheid.",
+          ],
+        },
+        {
+          title: "Listen herunterladen",
+          description:
+            "Die Jahresläufe, die Bescheide eines Laufs und den Versand laden Sie als Datei herunter.",
+          steps: [
+            "Wählen Sie `Abrechnungsläufe` und dann den Reiter `Jahresbescheide`. Für die Bescheide öffnen Sie einen Jahreslauf, für den Versand dort `An Familien senden`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Bescheide und der Versand enthalten personenbezogene Daten. Jeder Download wird protokolliert.",
           ],
         },
       ],
@@ -12228,6 +12284,14 @@ export const traegerCareReductionsTopic =
             "Wählen Sie `Nachweis speichern`.",
           ],
         },
+        {
+          title: "Kinderzahl und Nachweise herunterladen",
+          steps: [
+            "Wählen Sie `Familien und Zahlung` und dann den Reiter `Kinderzahl` oder `Nachweise`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält die ganze Liste, ohne Suche.",
+            "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
+          ],
+        },
       ],
       result:
         "Der nächste Monatslauf rechnet die Ermäßigungen aus. Jede Rechnung zeigt jede Ermäßigung mit Namen und Betrag. Bei Geschwistern steht dabei, das wievielte Kind es ist, zum Beispiel `2. Kind von 3`.",
@@ -12338,6 +12402,15 @@ export const traegerCatalogPhasesTopic =
           ],
         },
         {
+          title: "Liste herunterladen",
+          description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+          steps: [
+            "Wählen Sie in der Navigation `Anmeldephasen`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält alle Anmeldephasen mit Leistungszeitraum, Schulen und Stand.",
+          ],
+        },
+        {
           title: "Vorschau ansehen und übertragen",
           steps: [
             "Öffnen Sie die Anmeldephase.",
@@ -12423,6 +12496,16 @@ export const traegerClosingDaysTopic =
             "Wählen Sie in der Zeile `Eltern informieren`. Ein Klick genügt.",
             "Mehrere Schließtage auf einmal: Wählen Sie oben `Alle Eltern informieren`.",
             "Die Zeile zeigt `Wird gesendet` und dann `Gesendet`.",
+          ],
+        },
+        {
+          title: "Schließtage herunterladen",
+          description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+          steps: [
+            "Wählen Sie in der Navigation `Schließtage`.",
+            "Wählen Sie oben das Jahr.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält die Schließtage dieses Jahres mit Grund und Schulen.",
           ],
         },
         {
@@ -12533,6 +12616,7 @@ export const traegerDashboardTopic =
         "Wählen Sie dort `Zur Schule`, um die Schule anzusehen.",
         "Lesen Sie unter `Zahlen je Schule` die Zahlen jeder Schule.",
         "Wählen Sie eine Schule, um ihre Zahlen und Stammdaten zu sehen.",
+        "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Haben Sie bei `Auffälligkeiten` eine Schule gewählt, enthält die Datei nur diese Schule.",
       ],
       result:
         "Sie sehen für jede Schule, wie viele Kinder gerade da sind, wie viele heute krank sind, wie viele Betreuungskräfte angemeldet sind und wie viele Anmeldungen offen sind.",
@@ -12760,6 +12844,16 @@ export const traegerDocumentTemplatesTopic =
           ],
         },
         {
+          title: "Liste herunterladen",
+          description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+          steps: [
+            "Wählen Sie unten in der Navigation `Einstellungen`.",
+            "Wählen Sie `Briefkopf und Vorlagen` und dann `Vorlagen`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei zeigt für jedes Dokument, ob es die Standardvorlage oder eine eigene Vorlage nutzt.",
+          ],
+        },
+        {
           title: "Frühere Fassung zurückholen",
           steps: [
             "Suchen Sie unten bei `Versionen` die Fassung.",
@@ -12923,6 +13017,13 @@ export const traegerFinanceExportsTopic =
             "Geben Sie die Datei an Ihre Kämmerei. Oder lassen Sie moto sie übergeben, siehe „Exporte an Empfänger übergeben“.",
           ],
         },
+        {
+          title: "Läufe und Exportprotokoll herunterladen",
+          steps: [
+            "Wählen Sie `Familien und Zahlung` und dann den Reiter `Exporte`.",
+            "Wählen Sie bei `Dateien je Lauf` oder `Exportprotokoll` den Knopf `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          ],
+        },
       ],
       result:
         "Die Datei steht im `Exportprotokoll` mit Nummer, Datum und wer sie geholt hat. Beim Lauf steht die letzte Sollstellung. In jeder Monatsrechnung zeigt `Verlauf`, in welchen Dateien sie war.",
@@ -13002,6 +13103,15 @@ export const traegerHolidayAllocationTopic =
             "Wählen Sie bei einem Kind `Platz geben` oder `Auf die Warteliste`. Weicht das vom Vorschlag ab, schreiben Sie eine `Begründung`.",
             "Oder wählen Sie bei der Woche `Vorschlag übernehmen`. Mit mehreren Wochen gibt es oben `Vorschlag für alle Wochen übernehmen`.",
             "Bestätigen Sie im Fenster.",
+          ],
+        },
+        {
+          title: "Vergabe herunterladen",
+          description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+          steps: [
+            "Öffnen Sie den Ferienzeitraum und wählen Sie den Reiter `Vergabe`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält die offenen Anmeldungen im Vorschlag und alle Entscheidungen Ihres Büros.",
           ],
         },
         {
@@ -13326,6 +13436,15 @@ export const traegerHolidayPeriodTopic =
           ],
         },
         {
+          title: "Liste herunterladen",
+          description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+          steps: [
+            "Wählen Sie in der Navigation `Ferienbetreuung`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält alle Ferienzeiträume mit Anmeldung, Wochen, Schulen und Status.",
+          ],
+        },
+        {
           title: "Veröffentlichen",
           steps: [
             "Öffnen Sie den Ferienzeitraum in der Liste `Ferienbetreuung`.",
@@ -13410,6 +13529,15 @@ export const traegerHolidayPlacesTopic =
             "Die Zahl vorne ist der Rang. Das Kind mit der 1 bekommt den nächsten freien Platz.",
             "Berücksichtigt der Ferienzeitraum den Ferienwunsch, stehen Kinder mit `Ohne Ferienwunsch` hinter den anderen.",
             "Wählen Sie ein Kind, um seine Anmeldung zu öffnen.",
+          ],
+        },
+        {
+          title: "Plätze herunterladen",
+          description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+          steps: [
+            "Öffnen Sie den Ferienzeitraum und wählen Sie den Reiter `Plätze`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält je Woche die Plätze und die Kinder auf der Warteliste.",
           ],
         },
         {
@@ -13906,6 +14034,7 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
     result: "moto öffnet die Seite `Schulen` mit allen Schulen Ihres Trägers.",
     notes: [
       "Legen Sie sich die Adresse als Lesezeichen an.",
+      "Die Liste der Schulen laden Sie mit `Herunterladen` als `PDF`, `Excel` oder `CSV` herunter.",
       "Ein neues Passwort gilt auch für Ihr Konto in der OGS.",
     ],
     differences: [
@@ -13973,7 +14102,7 @@ export const traegerOccupancyTopic =
   } satisfies typeof authored_traegerOccupancyTopic;
 
 /**
- * `/traeger/personal/lohnexport` (#4712, ADR 0249): die DATEV-Lohndatei über
+ * `/traeger/personal/lohnexport` (#4712, ADR 0250): die DATEV-Lohndatei über
  * alle Schulen mit eigenen Lohnarten je Art des Vertrags, der Zeitexport als
  * CSV mit seinen festen Spalten und die Lohnarten im Reiter `Lohnarten`.
  */
@@ -14429,6 +14558,14 @@ export const traegerSepaMandatesTopic =
             "Wählen Sie `Widerrufen`.",
           ],
         },
+        {
+          title: "Mandate herunterladen",
+          steps: [
+            "Wählen Sie `Familien und Zahlung` und dann den Reiter `Lastschrift`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Mandate, auch die widerrufenen.",
+            "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
+          ],
+        },
       ],
       result:
         "Im nächsten Monatslauf steht auf jeder Rechnung mit Lastschrift die Vorabankündigung: Betrag, Tag der Abbuchung, Konto (verdeckt), Gläubiger-ID und Mandatsreferenz. Der Betrag ist das, was die Familie zahlt, also ohne den Anteil eines Kostenträgers.",
@@ -14554,6 +14691,15 @@ export const traegerSharedDocumentsTopic =
             "Wählen Sie bei `An welchen Schulen?`: `Alle Schulen`, `Eine Schule` oder bei Eltern auch `Eine Gruppe`.",
             "Wählen Sie dann die `Schule` und gegebenenfalls die `Gruppe`.",
             "Prüfen Sie den Kasten `Sichtbar für`. Wählen Sie `Freigeben`.",
+          ],
+        },
+        {
+          title: "Liste herunterladen",
+          description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+          steps: [
+            "Wählen Sie in der Navigation `Dokumente`.",
+            "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält alle Dokumente und für wen sie freigegeben sind.",
           ],
         },
         {
@@ -14736,6 +14882,14 @@ export const traegerStaffPlanningTopic =
           ],
         },
         {
+          title: "Die Woche herunterladen",
+          steps: [
+            "Wählen Sie die Woche mit den Pfeilen.",
+            "Wählen Sie oben `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei hat eine Zeile je Person und eine Spalte je Tag.",
+          ],
+        },
+        {
           title: "Die Regeln ändern",
           steps: [
             "Wählen Sie `Einstellungen` und dort `Einsatzplanung`.",
@@ -14750,7 +14904,7 @@ export const traegerStaffPlanningTopic =
         "moto zählt alle Schulen der Person zusammen: die Stunden am Tag, die Ruhezeit, die Pausen und das Soll der Woche.",
         "Dieselbe Prüfung läuft, wenn eine Schule selbst eine Schicht plant.",
         "Das Soll kommt aus dem Arbeitsvertrag. Feiertage und Schließtage zählen nicht.",
-        "Jedes Anzeigen der Woche steht im Zugriffsprotokoll jeder Schule.",
+        "Jedes Anzeigen und jeder Download der Woche steht im Zugriffsprotokoll jeder Schule.",
         "moto prüft die Regeln als Hilfe. Ob eine Planung erlaubt ist, entscheiden Sie.",
       ],
       differences: [
@@ -14770,7 +14924,7 @@ export const traegerStaffPlanningTopic =
   } satisfies typeof authored_traegerStaffPlanningTopic;
 
 /**
- * `/traeger/personal/vertretungspool` (#4709, ADR 0250): wer Springer ist,
+ * `/traeger/personal/vertretungspool` (#4709, ADR 0252): wer Springer ist,
  * jede Blockung der Woche, ihr Download (#4718) und das Aufheben einer
  * Blockung.
  */
@@ -14980,6 +15134,14 @@ export const traegerStaffRecordsTopic =
           ],
         },
         {
+          title: "Die Liste der Akten herunterladen",
+          steps: [
+            "Wählen Sie in der Navigation `Personalakten`.",
+            "Wählen Sie oben rechts `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+            "Die Datei enthält alle Akten mit Personalnummer und Einsatzorten. Bank- und Steuerdaten stehen nicht darin.",
+          ],
+        },
+        {
           title: "Personalnummer eintragen",
           steps: [
             "Öffnen Sie die Akte im Reiter `Akten`.",
@@ -15016,6 +15178,7 @@ export const traegerStaffRecordsTopic =
         "Ein Wert, den Sie beim Verknüpfen nicht wählen, bleibt mit seiner Schule im `Verlauf` der Akte.",
         "Jede Schule sieht weiter nur ihr eigenes Personal. Sie sieht keine Akte und keine anderen Schulen.",
         "Jedes Anzeigen der Bank- und Steuerdaten steht im Zugriffsprotokoll jeder Schule der Person.",
+        "Jeder Download der Liste steht im Zugriffsprotokoll jeder Schule.",
         "Lehrkräfte des Landes und Kräfte anderer Träger bekommen keine Akte. Verknüpfen Sie nur Personen, die Ihr Träger beschäftigt.",
         "Die Verarbeitung stützt sich auf Art. 6 Abs. 1 lit. b und c DSGVO: Ihr Träger ist der Arbeitgeber.",
       ],

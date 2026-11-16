@@ -1353,6 +1353,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (f parentNotificationFeed) Page(ctx context.Context, accountID int64, cursor string, limit int) (parentAPI.FeedPage, error) {\n\tpage, err := f.GuardianNotificationFeed.Page(ctx, accountID, cursor, limit)\n\tif err != nil {\n\t\treturn parentAPI.FeedPage{}, err\n\t}\n\tout := parentAPI.FeedPage{NextCursor: page.NextCursor, UnreadCount: page.UnreadCount, Entries: make([]parentAPI.FeedEntry, len(page.Entries))}\n\tfor i, entry := range page.Entries {\n\t\tout.Entries[i] = parentAPI.FeedEntry(entry)\n\t}\n\treturn out, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/parentNotificationFeed.Page",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (s parentPreferences) DisableAllForParent(ctx context.Context, accountID int64) error {\n\treturn s.source.DisableAllForParent(ctx, accountID)\n}",
       "form": "forward-debt",
       "id": "api/parentPreferences.DisableAllForParent",
@@ -7541,7 +7548,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (c schedulerPresenceCleanup) CleanupExpiredVisits(ctx context.Context) (*schedulerPorts.ExpiredVisitCleanup, error) {\n\tresult, err := c.presence.CleanupExpiredVisits(ctx)\n\tif result == nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026schedulerPorts.ExpiredVisitCleanup{StudentsProcessed: result.StudentsProcessed, RecordsDeleted: result.RecordsDeleted, Success: result.Success}, err\n}",
+      "evidence": "func (c schedulerPresenceCleanup) CleanupExpiredVisits(ctx context.Context) (*schedulerPorts.ExpiredVisitCleanup, error) {\n\tresult, err := c.presence.CleanupExpiredVisits(ctx)\n\tif result == nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026schedulerPorts.ExpiredVisitCleanup{StudentsProcessed: result.StudentsProcessed, RecordsDeleted: result.RecordsDeleted, StudentsFailed: len(result.Errors), Success: result.Success}, err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/schedulerPresenceCleanup.CleanupExpiredVisits",
       "owner": "roots"
@@ -7555,7 +7562,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (c schedulerPresenceCleanup) CleanupStaleSupervisors(ctx context.Context) (*schedulerPorts.StaleSupervisorCleanup, error) {\n\tresult, err := c.presence.CleanupStaleSupervisors(ctx)\n\tif result == nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026schedulerPorts.StaleSupervisorCleanup{RecordsClosed: result.RecordsClosed, Success: result.Success}, err\n}",
+      "evidence": "func (c schedulerPresenceCleanup) CleanupStaleSupervisors(ctx context.Context) (*schedulerPorts.StaleSupervisorCleanup, error) {\n\tresult, err := c.presence.CleanupStaleSupervisors(ctx)\n\tif result == nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026schedulerPorts.StaleSupervisorCleanup{RecordsClosed: result.RecordsClosed, RecordsFailed: len(result.Errors), Success: result.Success}, err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/schedulerPresenceCleanup.CleanupStaleSupervisors",
       "owner": "roots"

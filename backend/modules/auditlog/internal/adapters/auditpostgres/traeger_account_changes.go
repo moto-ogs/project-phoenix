@@ -22,11 +22,12 @@ func NewTraegerAccountChanges(runtime Runtime) *TraegerAccountChanges {
 }
 
 // traegerAccountChangesQuery lists the changes of a Träger older than ?1
-// (0 starts at the newest). The reads of the member list (?3) are no change.
+// (0 starts at the newest). The reads of the member list (?3) and the
+// downloads of the history (?4) are no change.
 const traegerAccountChangesQuery = `SELECT change.id, change.created_at, change.actor_account_id, change.action,
 		change.target_account_id, change.target_email, change.target_name, change.roles_before, change.roles_after
 	FROM audit.traeger_account_changes AS change
-	WHERE change.organization_id = ?0 AND change.action <> ?3 AND (?1 = 0 OR change.id < ?1)
+	WHERE change.organization_id = ?0 AND change.action NOT IN (?3, ?4) AND (?1 = 0 OR change.id < ?1)
 	ORDER BY change.id DESC
 	LIMIT ?2`
 
@@ -54,7 +55,8 @@ func (r *TraegerAccountChanges) ListTraegerAccountChanges(ctx context.Context, o
 		RolesBefore     []string  `bun:"roles_before,array"`
 		RolesAfter      []string  `bun:"roles_after,array"`
 	}
-	if err := db.NewRaw(traegerAccountChangesQuery, organizationID, max(beforeID, 0), limit, auditModel.TraegerAccountMembersListed).Scan(ctx, &rows); err != nil {
+	if err := db.NewRaw(traegerAccountChangesQuery, organizationID, max(beforeID, 0), limit, auditModel.TraegerAccountMembersListed,
+		auditModel.TraegerAccountHistoryExported).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("audit Träger account changes: list: %w", err)
 	}
 	for _, row := range rows {

@@ -1,4 +1,5 @@
 DELETE /traeger/closing-days/{id} -> basis
 GET /traeger/closing-days/ -> basis
+GET /traeger/closing-days/export -> basis
 POST /traeger/closing-days/ -> basis
 PUT /traeger/closing-days/{id} -> basis

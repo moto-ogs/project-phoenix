@@ -575,6 +575,7 @@ function TenantPageView({
   badge,
   filterPanel,
   primaryAction,
+  primaryActionDesktopOnly,
   searchSlot,
   searchSlotHeight = "controls",
   tabs,
@@ -737,6 +738,7 @@ function TenantPageView({
                 badge={badge}
                 filterPanel={filterPanel}
                 primaryAction={primaryAction}
+                primaryActionDesktopOnly={primaryActionDesktopOnly}
               />
             )}
           </div>

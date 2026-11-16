@@ -19,7 +19,12 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import type { HolidayPeriod } from "~/lib/traeger-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { useTraegerHolidayPeriods } from "~/components/traeger/use-traeger-resources";
 import { traegerPath } from "~/lib/traeger-url";
 
@@ -98,6 +103,16 @@ export default function TraegerHolidayPeriodsPage() {
       error={loadError}
       actions={
         <>
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList("/api/traeger/holiday-periods/export", format)
+            }
+            scope={traegerExportScope()}
+            ariaLabel="Ferienzeiträume herunterladen"
+            fallbackName="ferienzeitraeume"
+            errorObject="die Ferienzeiträume"
+            unavailable={periods.length === 0}
+          />
           <ButtonLink
             href={traegerPath("/traeger/ferien/kriterien")}
             variant="outline"

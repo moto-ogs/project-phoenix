@@ -41,7 +41,9 @@ type ImportTestModule struct {
 // contrived data shape.
 type ImportTestOptions struct {
 	WrapGuardians importPorts.GuardianPortDecorator
-	Clock         func() time.Time
+	// Clock is the clock of the import and of the Workforce it books into;
+	// nil is the real one.
+	Clock func() time.Time
 	// BatchStatementLimit scales the bound of a batch attempt down (E13).
 	BatchStatementLimit time.Duration
 	// RowPathOnly composes without the statement bound: every chunk takes
@@ -79,7 +81,7 @@ func NewImportTestRuntime(db transactionruntime.Database, options ImportTestOpti
 func importTestRuntime(command auditModels.Command, observations *[]importModels.ImportObservation, options ImportTestOptions) importPorts.ImportRuntime {
 	runtime := newImportRuntime(command, func(observation importModels.ImportObservation) {
 		*observations = append(*observations, observation)
-	})
+	}, options.Clock)
 	runtime.BatchStatementLimit = options.BatchStatementLimit
 	switch {
 	case options.RowPathOnly:

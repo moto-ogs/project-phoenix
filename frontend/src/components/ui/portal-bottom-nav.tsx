@@ -428,6 +428,7 @@ export function PortalNavSheetLink({
 export function PortalNavSheetButton({
   label,
   concept,
+  badge,
   ...buttonProps
 }: Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
@@ -435,6 +436,8 @@ export function PortalNavSheetButton({
 > & {
   readonly label: string;
   readonly concept: MotoConcept;
+  /** Zähler hinter dem Namen, wie bei `PortalNavSheetLink`. */
+  readonly badge?: ReactNode;
 }) {
   return (
     <button
@@ -447,7 +450,14 @@ export function PortalNavSheetButton({
         active={false}
         className="h-5 w-5 text-gray-600"
       />
-      {label}
+      {badge ? (
+        <>
+          <span className="flex-1">{label}</span>
+          {badge}
+        </>
+      ) : (
+        label
+      )}
     </button>
   );
 }

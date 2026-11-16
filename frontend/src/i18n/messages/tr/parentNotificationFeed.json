@@ -1,0 +1,21 @@
+{
+  "bell": "Uyarılar",
+  "bellCount": "Uyarılar ({count})",
+  "badge": "{count} yeni uyarı",
+  "bellTooltip": "Okulun çocuklarınızla ilgili uyarılarını gösterir.",
+  "description": "Okulun çocuklarınızla ilgili uyarıları, örneğin bakım iptal edildiğinde.",
+  "close": "Kapat",
+  "closeTooltip": "Uyarıları kapatır.",
+  "section": "Çocuklarınız için",
+  "markAllRead": "Tümünü okundu olarak işaretle",
+  "markAllReadTooltip": "Tüm uyarıları hemen okundu olarak işaretler.",
+  "markAllReadErrorObject": "okundu olarak işaretleme",
+  "loadErrorObject": "uyarılar",
+  "loading": "Uyarılar yükleniyor.",
+  "emptyTitle": "Uyarı yok.",
+  "emptyDescription": "Burada örneğin çocuğunuzun bakımı iptal edildiğinde bir uyarı görürsünüz.",
+  "unread": "Yeni",
+  "loadMore": "Daha fazla yükle",
+  "loadingMore": "Diğer uyarılar yükleniyor.",
+  "loadMoreTooltip": "Daha eski uyarıları gösterir."
+}

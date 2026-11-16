@@ -35,18 +35,21 @@ const maxDocumentBody = organizationtenancy.TraegerDocumentMaxBytes + 64<<10
 // schools.
 type DocumentsResource struct {
 	documents     organizationtenancy.TraegerDocuments
+	schools       organizationtenancy.TraegerDocumentSchools
+	lists         common.ListRenderer
 	requireRead   common.Middleware
 	requireManage common.Middleware
 }
 
 // NewDocumentsResource builds the resource. The root binds requireRead and
 // requireManage to the rights Identity & Access bundles into the Träger
-// roles (ADR 0084 section 4).
-func NewDocumentsResource(documents organizationtenancy.TraegerDocuments, requireRead, requireManage common.Middleware) *DocumentsResource {
-	if documents == nil || requireRead == nil || requireManage == nil {
-		panic("organization tenancy traeger: the documents and the right checks are required")
+// roles (ADR 0084 section 4). schools names the schools of a release and
+// lists renders the list as PDF, Excel or CSV (#4718).
+func NewDocumentsResource(documents organizationtenancy.TraegerDocuments, schools organizationtenancy.TraegerDocumentSchools, lists common.ListRenderer, requireRead, requireManage common.Middleware) *DocumentsResource {
+	if documents == nil || schools == nil || lists == nil || requireRead == nil || requireManage == nil {
+		panic("organization tenancy traeger: the documents, the schools, the list renderer and the right checks are required")
 	}
-	return &DocumentsResource{documents: documents, requireRead: requireRead, requireManage: requireManage}
+	return &DocumentsResource{documents: documents, schools: schools, lists: lists, requireRead: requireRead, requireManage: requireManage}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/documents.
@@ -56,6 +59,7 @@ func (rs *DocumentsResource) TraegerRouter(protectedTraegerRoutes func(chi.Route
 	protectedTraegerRoutes(r, func(r chi.Router, _ common.Middleware) {
 		read := r.With(rs.requireRead)
 		read.Get("/", rs.list)
+		read.Get("/export", rs.export)
 		read.Get("/{id}/file", rs.file)
 		manage := r.With(rs.requireManage)
 		manage.Post("/", rs.upload)

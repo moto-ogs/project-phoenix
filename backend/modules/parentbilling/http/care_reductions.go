@@ -22,15 +22,16 @@ import (
 type CareReductionResource struct {
 	reductions     capability.CareReductions
 	requireBilling common.Middleware
+	lists          common.ListRenderer
 }
 
 // NewCareReductionResource builds the resource. requireBilling admits only
 // a session with the Träger right "Abrechnung".
-func NewCareReductionResource(reductions capability.CareReductions, requireBilling common.Middleware) *CareReductionResource {
-	if reductions == nil || requireBilling == nil {
-		panic("parent billing http: the care reductions and the right check are required")
+func NewCareReductionResource(reductions capability.CareReductions, requireBilling common.Middleware, lists common.ListRenderer) *CareReductionResource {
+	if reductions == nil || requireBilling == nil || lists == nil {
+		panic("parent billing http: the care reductions, the right check and the list export are required")
 	}
-	return &CareReductionResource{reductions: reductions, requireBilling: requireBilling}
+	return &CareReductionResource{reductions: reductions, requireBilling: requireBilling, lists: lists}
 }
 
 // RuleRouter returns the routes mounted at /traeger/care-rules.
@@ -54,6 +55,7 @@ func (rs *CareReductionResource) EvidenceRouter(protectedTraegerRoutes func(chi.
 	protectedTraegerRoutes(r, func(r chi.Router, withTx common.Middleware) {
 		billing := r.With(rs.requireBilling, withTx)
 		billing.Get("/", rs.evidences)
+		billing.Get("/export", rs.exportEvidences)
 		billing.Post("/", rs.createEvidence)
 		billing.Put("/{id}", rs.updateEvidence)
 		billing.Delete("/{id}", rs.deleteEvidence)

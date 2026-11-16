@@ -26,7 +26,7 @@ func TestImportBatches_OpeningBalanceOwnersRollbackAndReplay(t *testing.T) {
 			actor := newImporter(t, db)
 			staff := testpkg.CreateTestStaff(t, db, "Opening", "Batch")
 			ctx := tenant.WithUnitOfWork(testpkg.Ctx(t), testpkg.TenantRuntime(t, db))
-			svc := module.OpeningBalanceImport(testpkg.Date(2026, time.September, 1), "Übernahme", actor.staffID)
+			svc := module.OpeningBalanceImport.Build(testpkg.Date(2026, time.September, 1), "Übernahme", actor.staffID)
 			request := importModels.ImportRequest[importModels.OpeningBalanceImportRow]{
 				Rows: []importModels.OpeningBalanceImportRow{{FirstName: "Opening", LastName: "Batch", HoursBalance: "-3,25", VacationEntitled: "30", VacationCarryover: "4", VacationRemaining: "12,5"}},
 				Mode: importModels.ImportModeCreate, UserID: actor.accountID, SkipInvalidRows: true,

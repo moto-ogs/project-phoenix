@@ -16,6 +16,10 @@ import {
 } from "~/components/traeger/traeger-document-format";
 import { TraegerDocumentUploadModal } from "~/components/traeger/traeger-document-upload-modal";
 import { useTraegerDocuments } from "~/components/traeger/use-traeger-documents";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -27,6 +31,7 @@ import { useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import type { TraegerDocument } from "~/lib/traeger-documents-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 /** Das Recht, das Hochladen und Freigeben öffnet (Rolle Dokumente, #5992). */
@@ -142,19 +147,31 @@ export default function TraegerDocumentsPage() {
       statsLoading={isLoading}
       error={loadError ?? schoolsError}
       actions={
-        canManage ? (
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            className="gap-2"
-            tooltip="Fügt ein Dokument hinzu, noch ohne Freigabe für Eltern und Schulen."
-            onClick={() => setUploading(true)}
-          >
-            <UploadSimpleIcon className="h-4 w-4" aria-hidden="true" />
-            Dokument hochladen
-          </Button>
-        ) : undefined
+        <>
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList("/api/traeger/documents/export", format)
+            }
+            scope={traegerExportScope()}
+            ariaLabel="Dokumente herunterladen"
+            fallbackName="dokumente"
+            errorObject="die Liste der Dokumente"
+            unavailable={documents.length === 0}
+          />
+          {canManage ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              className="gap-2"
+              tooltip="Fügt ein Dokument hinzu, noch ohne Freigabe für Eltern und Schulen."
+              onClick={() => setUploading(true)}
+            >
+              <UploadSimpleIcon className="h-4 w-4" aria-hidden="true" />
+              Dokument hochladen
+            </Button>
+          ) : null}
+        </>
       }
       overlays={
         <TraegerDocumentUploadModal

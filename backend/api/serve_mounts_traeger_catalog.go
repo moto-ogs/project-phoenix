@@ -54,7 +54,7 @@ func mountTraegerCatalogRoutes(root chi.Router, schoolPhaseAdministration *enrol
 	if err != nil {
 		return err
 	}
-	resource := traegerCatalogHTTP.NewResource(phases, offerings, catalog, common.RequiresPermission(identityaccess.TraegerRightEnrollmentManage))
+	resource := traegerCatalogHTTP.NewResource(phases, offerings, catalog, traegerListRenderer(NewSimpleListRenderer()), common.RequiresPermission(identityaccess.TraegerRightEnrollmentManage))
 	root.Mount("/traeger/catalog", resource.Router(ProtectedTraegerRoutes))
 	return nil
 }
