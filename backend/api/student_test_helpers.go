@@ -367,7 +367,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	scheduleSubstitution, err := shiftplansyncCompose.NewSubstitution(shiftplansyncCompose.SubstitutionDependencies{
 		Deviations: liveTimetable.Deviations, Staff: owners.NewPlanStaffDirectory(repos.Staff), Broadcaster: realtimeHub, Logger: logger.With("service", "schedule-substitution"),
 		Runtime: schoolStructure.NewLegacyRepositoryRuntime(db.Pool()), ActivityInstances: timetableCompose.NewTimetableInstanceReads(reposTimetable.ActivityInstance.Reads),
-		InstanceStaff: timetableCompose.NewTimetableInstanceStaffReads(reposTimetable.InstanceStaff),
+		InstanceStaff: timetableCompose.NewTimetableInstanceStaffReads(reposTimetable.InstanceStaff), Today: today,
 	})
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err

@@ -333,7 +333,9 @@ var moduleLegacyFileBudgets = map[string]int{
 // modules/peopledirectory/compose (+6), modules/schoolmembership/compose (+5),
 // modules/schoolstructure/compose (+8) and modules/settings/compose (+3)
 // add exactly 38 LOC.
-const moduleComposeBudgetTotal = 13643
+// ADR 0273: the day clock of the Terminvertretung in
+// workflows/shiftplansync/compose (+1).
+const moduleComposeBudgetTotal = 13644
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -554,7 +556,8 @@ var moduleComposeBudgets = map[string]int{
 	"workflows/parentportal/compose":     336,
 	"workflows/reminderdelivery/compose": 30,
 	"workflows/sessionend/compose":       59,
-	"workflows/shiftplansync/compose":    124,
+	// ADR 0273: the day clock of the Terminvertretung (+1).
+	"workflows/shiftplansync/compose":    125,
 	"workflows/staffclock/compose":       36,
 	"workflows/staffoffboarding/compose": 74,
 	// Added by ADR 0104: construction of the Träger projection, no retained logic.

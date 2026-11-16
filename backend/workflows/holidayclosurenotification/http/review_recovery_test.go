@@ -492,11 +492,25 @@ func TestPreparationFailureKeepsTheLastToldSourceRange(t *testing.T) {
 			return err
 		}))
 	}
+	var failedID int64
 	require.NoError(t, testpkg.WithinTraeger(w.ctx, w.organization, func(ctx context.Context) error {
 		event, leased, err := events.LeaseHolidayClosureEvent(ctx, w.organization, time.Minute)
 		require.NoError(t, err)
 		require.True(t, leased)
-		return events.FinishHolidayClosureEvent(ctx, w.organization, event.ID, event.LeaseToken, schoolcalendar.HolidayClosureOutcome{State: schoolcalendar.HolidayClosureEventPending, ErrorCode: "processing_failed", RetryAt: time.Now().Add(time.Hour)})
+		failedID = event.ID
+		return events.FinishHolidayClosureEvent(ctx, w.organization, event.ID, event.LeaseToken, schoolcalendar.HolidayClosureOutcome{State: schoolcalendar.HolidayClosureEventPending, ErrorCode: "processing_failed", RetryAfter: time.Hour})
+	}))
+	// The wait runs on the database's clock, the one the lease reads: the
+	// failed command is not due again before the hour is over (#7104).
+	var waitsAnHour bool
+	require.NoError(t, w.db.NewRaw(`SELECT next_attempt_at BETWEEN CURRENT_TIMESTAMP + interval '59 minutes' AND CURRENT_TIMESTAMP + interval '61 minutes'
+		FROM calendar.holiday_closure_events WHERE id = ?`, failedID).Scan(w.ctx, &waitsAnHour))
+	assert.True(t, waitsAnHour, "the retry wait is counted from the database's clock")
+	require.NoError(t, testpkg.WithinTraeger(w.ctx, w.organization, func(ctx context.Context) error {
+		_, leased, err := events.LeaseHolidayClosureEvent(ctx, w.organization, time.Minute)
+		require.NoError(t, err)
+		assert.False(t, leased, "a failed command waits before its next lease")
+		return nil
 	}))
 	move("2030-07-11")
 	var latest notification.Notice

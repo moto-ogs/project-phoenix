@@ -95,11 +95,8 @@ var moduleLiveClockBudget = map[string]int{
 	// timers, and the standby time is measured since the last term.
 	// Scheduler.waitUntilNextMinute: the timer that aligns the minute tick
 	// with the wall clock. A pinned clock would stop both.
-	"modules/schedulerruntime":             11,
-	"workflows/catererportal":              2,
-	"workflows/holidayclosurenotification": 1,
-	"workflows/parentportal":               19,
-	"workflows/shiftplansync":              2,
+	"modules/schedulerruntime": 11,
+	"workflows/parentportal":   19,
 }
 
 // moduleLiveClockValueBudget caps, per owner directory, the references to the
@@ -146,9 +143,7 @@ var moduleLiveClockValueBudget = map[string]int{
 	"modules/supervisiondashboard": 1,
 	"modules/timetable":            14,
 	"modules/workforce":            8,
-	"workflows/careexit":           2,
 	"workflows/parentportal":       3,
-	"workflows/reminderdelivery":   1,
 }
 
 const calendarImportPath = "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"

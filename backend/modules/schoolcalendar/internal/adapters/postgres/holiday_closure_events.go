@@ -114,7 +114,7 @@ const (
 			processed_at = CURRENT_TIMESTAMP,
    prepared_at = CASE WHEN ? IN ('prepared', 'no_mail') THEN COALESCE(prepared_at, CURRENT_TIMESTAMP) ELSE prepared_at END,
 			completed_at = CASE WHEN ? IN ('completed', 'no_mail') THEN CURRENT_TIMESTAMP ELSE NULL END,
-			next_attempt_at = COALESCE(?, next_attempt_at)
+			next_attempt_at = COALESCE(CURRENT_TIMESTAMP + ?::interval, next_attempt_at)
 		WHERE organization_id = ? AND id = ? AND state = 'leased' AND lease_token = ?::uuid`
 	holidayClosureCalendarSQL = `SELECT kind, school_id, source_id, start_date, end_date, reason, school_name, federal_state, revision
 		FROM calendar.traeger_holiday_closure_calendar(?::bigint[], ?, ?)`
@@ -622,11 +622,11 @@ func (s *HolidayClosureEventStore) FinishHolidayClosureEvent(ctx context.Context
 	if err != nil {
 		return err
 	}
-	var retryAt *time.Time
-	if !outcome.RetryAt.IsZero() {
-		retryAt = &outcome.RetryAt
+	var retryAfter *string
+	if outcome.RetryAfter > 0 {
+		retryAfter = new(fmt.Sprintf("%d seconds", int(outcome.RetryAfter.Seconds())))
 	}
-	result, err := db.NewRaw(finishHolidayClosureEventSQL, outcome.State, outcome.ErrorCode, outcome.State, outcome.State, retryAt,
+	result, err := db.NewRaw(finishHolidayClosureEventSQL, outcome.State, outcome.ErrorCode, outcome.State, outcome.State, retryAfter,
 		organizationID, eventID, leaseToken).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("school calendar postgres: finish the holiday closure event: %w", err)

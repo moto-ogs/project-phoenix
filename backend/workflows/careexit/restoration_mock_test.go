@@ -121,7 +121,10 @@ func TestPlanRestorationFailsWithTheResyncAndSkipsItAfterARefusal(t *testing.T) 
 func TestNewPlanRestorationRequiresItsCollaborators(t *testing.T) {
 	t.Parallel()
 	unit := func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }
-	assert.Panics(t, func() { careexit.NewPlanRestoration(nil, &restorationResync{}, unit, nil) })
-	assert.Panics(t, func() { careexit.NewPlanRestoration(&restorationLifecycle{}, nil, unit, nil) })
-	assert.Panics(t, func() { careexit.NewPlanRestoration(&restorationLifecycle{}, &restorationResync{}, nil, nil) })
+	today := func() calendar.Date { return calendar.NewDate(2026, 10, 23) }
+	assert.Panics(t, func() { careexit.NewPlanRestoration(nil, &restorationResync{}, unit, today) })
+	assert.Panics(t, func() { careexit.NewPlanRestoration(&restorationLifecycle{}, nil, unit, today) })
+	assert.Panics(t, func() { careexit.NewPlanRestoration(&restorationLifecycle{}, &restorationResync{}, nil, today) })
+	assert.Panics(t, func() { careexit.NewPlanRestoration(&restorationLifecycle{}, &restorationResync{}, unit, nil) })
+	assert.NotPanics(t, func() { careexit.NewPlanRestoration(&restorationLifecycle{}, &restorationResync{}, unit, today) })
 }

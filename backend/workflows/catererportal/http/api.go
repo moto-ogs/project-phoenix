@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -23,14 +24,16 @@ type ExportFile struct {
 }
 
 // Runtime is what the root binds: the caller's account, the list renderer
-// (PDF and Excel), the password reset, and the caterer's sign-in and
-// second factor (#4497), which Identity & Access serves (#6172). A zero
-// reset runtime answers its routes as unavailable.
+// (PDF and Excel), the password reset, the caterer's sign-in and
+// second factor (#4497), which Identity & Access serves (#6172), and the
+// clock an invitation's expiry is read against. A zero reset runtime answers
+// its routes as unavailable.
 type Runtime struct {
 	CurrentAccountID func(context.Context) int64
 	RenderList       func(mealplan.ListExport, string) (ExportFile, error)
 	Resets           common.PasswordResetRoutes
 	Auth             AuthRoutes
+	Now              func() time.Time
 }
 
 // AuthRoutes are the caterer's sign-in and the management of its second
@@ -48,11 +51,11 @@ type Resource struct {
 	runtime Runtime
 }
 
-// NewResource builds the resource; the portal, the account and the
-// renderer are required.
+// NewResource builds the resource; the portal, the account, the renderer,
+// the auth routes and the clock are required.
 func NewResource(portal catererportal.Portal, runtime Runtime) *Resource {
-	if portal == nil || runtime.CurrentAccountID == nil || runtime.RenderList == nil || runtime.Auth == nil {
-		panic("caterer portal HTTP: portal, account, renderer and auth routes are required")
+	if portal == nil || runtime.CurrentAccountID == nil || runtime.RenderList == nil || runtime.Auth == nil || runtime.Now == nil {
+		panic("caterer portal HTTP: portal, account, renderer, auth routes and clock are required")
 	}
 	return &Resource{portal: portal, runtime: runtime}
 }

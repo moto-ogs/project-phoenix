@@ -61,10 +61,6 @@ var calendarFixtureShiftedLiveDateDebt = map[string]int{
 	"workflows/parentportal/parent_request_reason_enforcement_test.go":                           3,
 	"workflows/parentportal/parent_request_share_at_creation_test.go":                            3,
 	"workflows/parentportal/parent_write_service_test.go":                                        4,
-	"workflows/shiftplansync/compose/behaviortest/sick_cascade_test.go":                          18,
-	"workflows/shiftplansync/compose/behaviortest/substitution_test.go":                          20,
-	"workflows/studentdeletion/behaviortest/student_deletion_workflow_test.go":                   1,
-	"workflows/studentdeletion/http/graduate_purge_audit_test.go":                                1,
 }
 
 // applyCalendarShiftDebt removes the shifted-live-date findings that a

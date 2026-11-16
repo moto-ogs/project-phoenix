@@ -534,7 +534,7 @@ func composeServeRoot(
 			return mountStudentRoutes(tenant, db, logger, deviceAuth, studentPresence, persons, services, membership, caller, reviewPolicy,
 				settings.Service, hub, carePlan, carePlanRows.Companions, schedules, requests, planning, emitter, activities,
 				lifecycle, reports, structureViews, organizations, presence.StatusDays, notifications.AbsenceNotifier, studentDeletion,
-				groupLive, enrollmentCompose.PublicDecisions(decisions), active, owners.NewCareResumption(carePlanRows.LifecycleOwners.Students, carePlan, carePlanRows.LifecycleOwners.ChangeTrail, nil, logger.With("service", "care_lifecycle")).Resume, persons.StudentNoteTeam, newStudentNoteTeamReach(people.Staff, notifications), timetableRows.CohortRosters, studentAnswers, env.Now)
+				groupLive, enrollmentCompose.PublicDecisions(decisions), active, owners.NewCareResumption(carePlanRows.LifecycleOwners.Students, carePlan, carePlanRows.LifecycleOwners.ChangeTrail, env.Today, logger.With("service", "care_lifecycle")).Resume, persons.StudentNoteTeam, newStudentNoteTeamReach(people.Staff, notifications), timetableRows.CohortRosters, studentAnswers, env.Now)
 		},
 		func() error {
 			return mountPresenceRoutes(tenant, db, logger, config.SentryPyrePortalDSN, deviceAuth, studentPresence, active, facilities,
@@ -562,9 +562,8 @@ func composeServeRoot(
 				birthdays, emergency, settings.Service, GuardianEmailDelivery{Outcomes: delivery.Runtime.EmailOutcomes, Suppressions: delivery.Runtime.EmailReconciliation}, audit.Persistence.DataAccessLog, env.Now)
 			mountCalendarRoutes(router, tenant, logger, calendarApp)
 			return errors.Join(mountMealBillingMonths(tenant, mealPlan, calendar, presence.Presence, settings.Service), mountCommunicationRoutes(tenant, logger, chat, announcements, reminders, deliveryDevices, communication),
-				mountDeliveryRoutes(router, tenant, logger, fileStore, parent, hub, caller, identity))
+				mountDeliveryRoutes(router, tenant, logger, fileStore, parent, hub, caller, identity), mountCatererPortal(router, tenant, limiters, identity, mealPlan, organizations, env.Now))
 		},
-		func() error { return mountCatererPortal(router, tenant, limiters, identity, mealPlan, organizations) },
 		func() error {
 			operator, err := newOperatorRouter(db, logger, sessionAuth, limiters, iot, organizations, settings.Service, hub,
 				active, settingsWrites, identity, provisioning, services.CaregiverCapability, schedules.Lifecycle, communication, dataImports.Student, settings.Traeger, env.Now)

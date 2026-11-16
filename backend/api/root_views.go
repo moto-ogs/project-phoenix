@@ -75,6 +75,7 @@ func buildSubstitutions(
 		Logger:            env.Logger.With("service", "schedule-substitution"),
 		ActivityInstances: arrivalTimetable.NewTimetableInstanceReads(repos.ActivityInstance.Reads),
 		InstanceStaff:     arrivalTimetable.NewTimetableInstanceStaffReads(repos.InstanceStaff),
+		Today:             env.Today,
 	})
 	if err != nil {
 		return nil, err
