@@ -8206,9 +8206,10 @@ export const schoolSearchTopic = function schoolSearchTopic(): HelpTopic {
   return {
     id: HELP_TOPICS.schoolSearch,
     title: "Mit der Suche finden",
-    question: "Wie finde ich schnell ein Kind, eine Familie oder eine Seite?",
+    question:
+      "Wie finde ich schnell ein Kind, eine Familie, eine Seite oder eine Einstellung?",
     summary:
-      "Eine Suche findet Kinder, Familien, Team, Räume, Gruppen und Seiten.",
+      "Eine Suche findet Kinder, Familien, Team, Räume, Gruppen, Seiten, Einstellungen und Hilfe.",
     group: "einstieg",
     audience: ["caregiver", "lead"],
     icon: "ListSearch",
@@ -8228,8 +8229,16 @@ export const schoolSearchTopic = function schoolSearchTopic(): HelpTopic {
         steps: [
           "Geben Sie mindestens zwei Zeichen ein.",
           "Sie können einen Namen, eine Klasse, eine Gruppe, eine Telefonnummer oder eine E-Mail-Adresse eingeben.",
-          "Die Treffer stehen nach Art sortiert: `Kinder`, `Sorgeberechtigte und Kontakte`, `Mitarbeitende`, `Räume`, `Gruppen` und `Seiten`.",
+          "Die Treffer stehen nach Art sortiert: `Kinder`, `Sorgeberechtigte und Kontakte`, `Mitarbeitende`, `Räume`, `Gruppen`, `Seiten`, `Einstellungen` und `Hilfe`.",
           "Wählen Sie einen Treffer. Oder wählen Sie ihn mit den Pfeiltasten und drücken Sie Enter.",
+        ],
+      },
+      {
+        title: "Seiten, Einstellungen und Hilfe finden",
+        steps: [
+          "Geben Sie den Namen einer Seite ein, zum Beispiel `Dienstplan`. Die Suche findet auch Seiten in den Bereichen der Seitenleiste, etwa in `Datenverwaltung` oder `Planung`. Unter dem Treffer steht der Bereich.",
+          "Geben Sie den Namen einer Einstellung ein, zum Beispiel `Passwort`. Wählen Sie den Treffer. moto öffnet die Seite mit dieser Einstellung.",
+          "Unter `Hilfe` stehen passende Anleitungen. Sie öffnen sich in einem neuen Tab.",
         ],
       },
       {
@@ -8262,15 +8271,16 @@ export const schoolSearchTopic = function schoolSearchTopic(): HelpTopic {
       },
     ],
     result:
-      "Sie landen direkt beim Kind, bei der Person, im Raum oder auf der Seite.",
+      "Sie landen direkt beim Kind, bei der Person, im Raum, auf der Seite oder bei der Einstellung.",
     differences: [
       "Sie finden nur, was Sie auch ohne Suche sehen dürfen. Telefonnummern, E-Mail-Adressen, Elternnotizen, Einträge aus dem Reiter `Notizen` und Angaben aus der Anmeldung finden nur Konten, die Kontaktdaten sehen dürfen.",
       "Eine Notiz finden Sie nur, wenn Sie sie auch im Reiter `Notizen` sehen. Eine Notiz für das Betreuungsteam findet nur, wer das Kind betreut. Eine Notiz für die Leitung findet nur die Leitung der genannten Gruppe.",
+      "Die Einstellungen der Schule findet nur, wer sie öffnen darf. Die Einstellungen im eigenen Profil findet jede Person.",
       "Ein Gruppen-Treffer öffnet `Alle Kinder` mit den Kindern dieser Gruppe.",
       "Gesundheitsangaben durchsucht die Suche nicht. Öffnen Sie dafür das Kind.",
     ],
     notes: [
-      "Ohne Eingabe zeigt die Suche die Seiten, die Sie öffnen dürfen.",
+      "Ohne Eingabe zeigt die Suche die Hauptseiten, die Sie öffnen dürfen.",
       "Brauchen Sie alle Kinder mit einem Namen? Öffnen Sie `Alle Kinder` und suchen Sie dort.",
     ],
     related: [HELP_TOPICS.studentSearch, HELP_TOPICS.appOverview],
