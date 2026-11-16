@@ -388,7 +388,7 @@ question) lives in the dashboard descriptions.
 | OGS-App | `moto-app.de` | Most used pages per day with navigation name and time on page, actions per role, where users go from the start page, feature reach, rarely used pages, dead and rage clicks | created by the sync |
 | Eltern-App | `moto-app.de` | The same for parents; parents have no school | created by the sync |
 | Schul-App | `moto-app.de` | The same for teachers in the school portal | created by the sync |
-| Caterer-Portal | `moto-app.de` | What caterers save (invitation accepted, order confirmed) by action, with school days and schools, days with a confirmed order per school, invitations, acceptances and ends per week (counted per school and day); no page views (capture rule in the section on the school switch above) | created by the sync |
+| Caterer-Portal | `moto-app.de` | What caterers save (invitation accepted, order confirmed) by action, with school days and schools, days with a confirmed order per school, invitations, acceptances and ends per week (counted per school and day, every day including weekends: caterers plan then too); no page views (capture rule in the section on the school switch above) | created by the sync |
 | Schule im Verlauf | `moto-app.de` | One school over time (`school_id` filter, do not save it) | <https://eu.posthog.com/project/140838/dashboard/1046854> |
 | Demo | `demo` | Conversion to „Termin buchen“, time in the demo, what visitors look at and try, where they stop, dead and rage clicks | created by the sync |
 

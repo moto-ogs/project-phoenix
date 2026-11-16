@@ -58,15 +58,19 @@ test('every insight filters on production or the demo, never staging', () => {
   }
 });
 
-test('school insights count Monday to Friday without the public holidays of NRW, the demo every day', () => {
+test('school insights count Monday to Friday without the public holidays of NRW, the demo and the caterer every day', () => {
   for (const insight of insights) {
     const source = insight.query.source;
     const filters = source.kind === 'HogQLQuery'
       ? source.query.split(ON_WORKDAY).length - 1
       : source.properties.values.filter((group) => group.values.some((value) => value.key === ON_WORKDAY)).length;
     const scans = source.kind === 'HogQLQuery' ? source.query.match(/\bfrom (events|heatmaps)\b/g).length : 1;
-    assert.equal(filters, insight.deployment === 'production' ? scans : 0, insight.name);
+    assert.equal(filters, insight.deployment === 'production' && !insight.everyDay ? scans : 0, insight.name);
   }
+  // Only the caterer, an outside party that also plans on weekends, counts every day.
+  const everyDay = definitions.filter((d) => d.insights.some((insight) => insight.everyDay));
+  assert.deepEqual(everyDay.map((d) => d.name), ['Nutzungsanalyse: Caterer-Portal']);
+  assert.ok(everyDay[0].insights.every((insight) => insight.everyDay), 'every caterer tile counts every day');
   const holidays = publicHolidays([2026, 2027]);
   assert.equal(holidays.length, 22);
   for (const day of ['2026-04-03', '2026-04-06', '2026-05-14', '2026-05-25', '2026-06-04', '2026-10-03', '2026-11-01', '2026-12-25', '2027-03-29']) {
@@ -244,6 +248,7 @@ test('the caterer never makes its school look active, and its idempotent writes 
   assert.match(perSchool, /toDate\(timestamp\) as Tag/);
   assert.doesNotMatch(perSchool, /count\(\)/, 'repeated confirmations count once per day');
   assert.match(perSchool, /\ngroup by Schule\n/, 'two schools of the same name stay apart');
+  assert.match(perSchool, /properties\.surface = 'caterer'/);
   for (const insight of tiles.filter((tile) => tile.query.kind === 'InsightVizNode')) {
     for (const step of insight.query.source.series) {
       assert.equal(step.math_hogql, 'uniq(concat(toString(properties.school_id), toString(toDate(timestamp))))', `${insight.name} ${step.event}`);

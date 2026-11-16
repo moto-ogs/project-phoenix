@@ -152,14 +152,18 @@ export function publicHolidays([from, to] = HOLIDAY_YEARS) {
  */
 export const ON_WORKDAY = `toDayOfWeek(toDate(timestamp)) <= 5 and toString(toDate(timestamp)) not in ${sqlList(publicHolidays())}`;
 
-/**
- * HogQL condition on the deployment; every HogQL insight uses it. Production
- * counts school days only (ON_WORKDAY); the demo is open every day.
- */
 /** Note on every dashboard with school data. */
 const WORKDAYS_NOTE = 'Gezählt werden nur Werktage: Montag bis Freitag ohne gesetzliche Feiertage in NRW.';
 
-const onDeployment = (deployment) => deployment === 'production'
+/**
+ * Production counts school days only (ON_WORKDAY): the OGS is closed on the
+ * other days. `everyDay` lifts that for an outside party that also works on
+ * weekends (the caterer); the demo is open every day.
+ */
+const workdaysOnly = (deployment, everyDay) => deployment === 'production' && !everyDay;
+
+/** HogQL condition on the deployment; every HogQL insight uses it. */
+const onDeployment = (deployment, everyDay = false) => workdaysOnly(deployment, everyDay)
   ? `properties.deployment = ${sqlString(DEPLOYMENTS[deployment])} and ${ON_WORKDAY}`
   : `properties.deployment = ${sqlString(DEPLOYMENTS[deployment])}`;
 
@@ -172,10 +176,11 @@ function deploymentOf(deployment) {
  * A HogQL table (or number). `sql` receives the deployment condition and
  * must use it in every `from events`.
  */
-function hogql(deployment, sql, display = 'ActionsTable', chartSettings) {
-  const query = sql(onDeployment(deploymentOf(deployment))).trim();
+function hogql(deployment, sql, display = 'ActionsTable', chartSettings, { everyDay = false } = {}) {
+  const query = sql(onDeployment(deploymentOf(deployment), everyDay)).trim();
   return {
     deployment,
+    ...(everyDay ? { everyDay } : {}),
     query: {
       kind: 'DataVisualizationNode',
       source: { kind: 'HogQLQuery', query },
@@ -185,13 +190,13 @@ function hogql(deployment, sql, display = 'ActionsTable', chartSettings) {
   };
 }
 
-function deploymentFilter(deployment) {
+function deploymentFilter(deployment, everyDay = false) {
   return {
     type: 'AND',
     values: [{
       type: 'AND',
       values: [{ key: 'deployment', type: 'event', operator: 'exact', value: [DEPLOYMENTS[deploymentOf(deployment)]] }],
-    }, ...(deployment === 'production' ? [{ type: 'AND', values: [{ key: ON_WORKDAY, type: 'hogql' }] }] : [])],
+    }, ...(workdaysOnly(deployment, everyDay) ? [{ type: 'AND', values: [{ key: ON_WORKDAY, type: 'hogql' }] }] : [])],
   };
 }
 
@@ -214,9 +219,10 @@ export function schoolLabel(deployment) {
 /** Breakdown by school name (`schoolLabel`) for charts of real schools. */
 export const SCHOOL_BREAKDOWN = schoolLabel('production');
 
-function trends(deployment, { series: steps, interval = 'week', dateFrom = '-90d', breakdown, breakdownType = 'event', display = 'ActionsLineGraph', compare = false }) {
+function trends(deployment, { series: steps, interval = 'week', dateFrom = '-90d', breakdown, breakdownType = 'event', display = 'ActionsLineGraph', compare = false, everyDay = false }) {
   return {
     deployment,
+    ...(everyDay ? { everyDay } : {}),
     query: {
       kind: 'InsightVizNode',
       source: {
@@ -224,7 +230,7 @@ function trends(deployment, { series: steps, interval = 'week', dateFrom = '-90d
         series: steps,
         interval,
         dateRange: { date_from: dateFrom },
-        properties: deploymentFilter(deployment),
+        properties: deploymentFilter(deployment, everyDay),
         filterTestAccounts: false,
         ...(breakdown ? { breakdownFilter: { breakdown, breakdown_type: breakdownType } } : {}),
         ...(compare ? { compareFilter: { compare: true } } : {}),
@@ -940,11 +946,11 @@ order by Woche desc`),
     },
     {
       name: 'Nutzungsanalyse: Caterer-Portal',
-      description: `Was Caterer im Caterer-Portal tun (surface = caterer) und wie Schulen ihren Caterer anbinden, in echten Schulen (deployment = moto-app.de). Das Caterer-Portal sendet keine Seitenaufrufe: Caterer-Konten werden nicht nach einer Einwilligung gefragt, ihr Browser erfasst deshalb nichts. Gezählt werden nur die Speichervorgänge aus dem Backend, je Schule der Bestellung oder Einladung; ein Login des Caterers nennt keine Schule und fehlt. ${WORKDAYS_NOTE}`,
+      description: `Was Caterer im Caterer-Portal tun (surface = caterer) und wie Schulen ihren Caterer anbinden, in echten Schulen (deployment = moto-app.de). Das Caterer-Portal sendet keine Seitenaufrufe: Caterer-Konten werden nicht nach einer Einwilligung gefragt, ihr Browser erfasst deshalb nichts. Gezählt werden nur die Speichervorgänge aus dem Backend, je Schule der Bestellung oder Einladung; ein Login des Caterers nennt keine Schule und fehlt. Gezählt werden alle Tage, auch Wochenenden und Feiertage: Caterer planen auch dann.`,
       insights: [
         {
           name: 'Caterer-Portal: Was tun Caterer?',
-          description: 'Letzte 30 Tage. Erfolgreiche Speichervorgänge im Caterer-Portal, etwa Bestellung bestätigt, gezählt als Schultage: mehrere Speichervorgänge für eine Schule am selben Tag zählen einmal. Samstage, Sonntage und Feiertage fehlen.',
+          description: 'Letzte 30 Tage. Erfolgreiche Speichervorgänge im Caterer-Portal je Aktion, etwa Bestellung bestätigt, gezählt als Schultage: dieselbe Aktion für eine Schule am selben Tag zählt einmal.',
           ...hogql('production', (where) => `
 select
   event as Aktion,
@@ -956,11 +962,11 @@ where ${where}
   and ${coreAction}
   and timestamp > now() - interval 30 day
 group by Aktion
-order by Schultage desc`),
+order by Schultage desc`, 'ActionsTable', undefined, { everyDay: true }),
         },
         {
           name: 'Caterer-Portal: Tage mit bestätigter Bestellung je Schule (30 Tage)',
-          description: 'Je Schule: an wie vielen Werktagen ihr Caterer mindestens eine Bestellung bestätigt hat, und wann zuletzt. Mehrere Bestätigungen am selben Tag zählen einmal. Bestätigungen an Samstagen, Sonntagen und Feiertagen fehlen; eine Schule ohne Bestätigung an einem Werktag fehlt ganz.',
+          description: 'Je Schule: an wie vielen Tagen ihr Caterer mindestens eine Bestellung bestätigt hat, und wann zuletzt. Mehrere Bestätigungen am selben Tag zählen einmal. Eine Schule ohne Bestätigung fehlt.',
           ...hogql('production', (where) => `
 select
   any(Standort) as Standort,
@@ -977,26 +983,28 @@ from (
     and timestamp > now() - interval 30 day
 )
 group by Schule
-order by ${quoted('Tage mit Bestätigung')} desc, Standort`),
+order by ${quoted('Tage mit Bestätigung')} desc, Schule`, 'ActionsTable', undefined, { everyDay: true }),
         },
         {
           name: 'Caterer-Portal: Tage mit bestätigter Bestellung pro Woche',
-          description: 'Je Schule die Werktage einer Woche, an denen ihr Caterer mindestens eine Bestellung bestätigt hat. Samstage, Sonntage und Feiertage fehlen.',
+          description: 'Je Schule die Tage einer Woche, an denen ihr Caterer mindestens eine Bestellung bestätigt hat.',
           ...trends('production', {
             series: [series('meal_order_confirmed', 'Tage mit Bestätigung', { math: 'hogql', math_hogql: SCHOOL_DAYS })],
             dateFrom: '-180d',
             breakdown: SCHOOL_BREAKDOWN,
             breakdownType: 'hogql',
             display: 'ActionsBar',
+            everyDay: true,
           }),
         },
         {
           name: 'Caterer-Anbindung: Einladungen, Annahmen und Enden pro Woche',
-          description: 'Schulen laden ihren Caterer in der OGS-App ein und beenden die Belieferung dort; der Caterer nimmt die Einladung im Caterer-Portal an. Gezählt werden Tage je Schule: mehrere gleiche Vorgänge einer Schule am selben Tag zählen einmal. Samstage, Sonntage und Feiertage fehlen.',
+          description: 'Schulen laden ihren Caterer in der OGS-App ein und beenden die Belieferung dort; der Caterer nimmt die Einladung im Caterer-Portal an. Gezählt werden Tage je Schule: mehrere gleiche Vorgänge einer Schule am selben Tag zählen einmal.',
           ...trends('production', {
             series: CATERER_LINK_EVENTS.map(([event, name]) => series(event, name, { math: 'hogql', math_hogql: SCHOOL_DAYS })),
             dateFrom: '-180d',
             display: 'ActionsBar',
+            everyDay: true,
           }),
         },
       ],

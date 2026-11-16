@@ -283,6 +283,10 @@ func TestRouteSchoolRoutesNameTheirSchool(t *testing.T) {
 	t.Parallel()
 	count := 0
 	for key, action := range CoreActions() {
+		if strings.HasPrefix(key.Pattern, "/caterer/") && action.Event != "" && !action.Session {
+			// A caterer session names no school; any other caterer write would never count.
+			assert.True(t, action.SchoolFromRoute, "%v counts through catererEvent", key)
+		}
 		if !action.SchoolFromRoute {
 			continue
 		}

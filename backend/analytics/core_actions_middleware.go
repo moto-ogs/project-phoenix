@@ -100,10 +100,7 @@ func CoreActionMiddleware(cfg CoreActionConfig) func(http.Handler) http.Handler 
 			if !ok || action.Event == "" {
 				return
 			}
-			if action.CreatedOnly && !responseFlag(body.Bytes(), "created") {
-				return
-			}
-			if action.EndedOnly && !responseFlag(body.Bytes(), "ended") {
+			if !action.countsResponse(body.Bytes()) {
 				return
 			}
 			captureCoreAction(cfg, r, action, body)
