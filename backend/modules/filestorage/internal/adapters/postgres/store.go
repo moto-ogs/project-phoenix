@@ -33,8 +33,8 @@ func requireTenant(db Database, ctx context.Context) (bun.IDB, int64, error) {
 	return idb, tenantID, nil
 }
 
-func measure(started time.Time, rows int64) domain.OperationStats {
-	return domain.OperationStats{Queries: 1, Rows: rows, StatementDuration: time.Since(started)}
+func measure(elapsed time.Duration, rows int64) domain.OperationStats {
+	return domain.OperationStats{Queries: 1, Rows: rows, StatementDuration: elapsed}
 }
 
 // folderNameUniqueConstraint is the unique index behind the one-name-per-school rule.

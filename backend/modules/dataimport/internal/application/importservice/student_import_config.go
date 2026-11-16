@@ -136,13 +136,13 @@ func (c *StudentImportConfig) Validate(ctx context.Context, row *importModels.St
 
 	errors = append(errors, validateStudentDepartureNote(row)...)
 
-	errors = append(errors, normalizeStudentBirthday(row)...)
+	errors = append(errors, normalizeStudentBirthday(row, c.now())...)
 
 	// 6b. Enrollment date range validation (if provided)
 	errors = append(errors, validateEnrollmentDates(row)...)
 
 	// 6c. Consent date validation (if provided)
-	errors = append(errors, validateConsentDates(row)...)
+	errors = append(errors, validateConsentDates(row, c.now())...)
 
 	errors = append(errors, validateStudentRetention(row)...)
 
@@ -232,7 +232,7 @@ func validateEnrollmentDates(row *importModels.StudentImportRow) []importModels.
 // validateConsentDates validates the optional consent date columns (AGB, data
 // processing, email contact, photo) and normalizes them to ISO format. A
 // consent cannot have been given in the future, so future dates are rejected.
-func validateConsentDates(row *importModels.StudentImportRow) []importModels.ValidationError {
+func validateConsentDates(row *importModels.StudentImportRow, now time.Time) []importModels.ValidationError {
 	var errors []importModels.ValidationError
 
 	validate := func(value *string, field, label string) {
@@ -251,7 +251,7 @@ func validateConsentDates(row *importModels.StudentImportRow) []importModels.Val
 			})
 			return
 		}
-		if validateBirthdayDate(parsed) != nil {
+		if validateBirthdayDate(parsed, now) != nil {
 			errors = append(errors, importModels.ValidationError{
 				Field:    field,
 				Message:  fmt.Sprintf("Einwilligungsdatum für '%s' darf nicht in der Zukunft liegen.", label),
@@ -494,11 +494,11 @@ func validateStudentDepartureNote(row *importModels.StudentImportRow) []importMo
 	return errors
 }
 
-func normalizeStudentBirthday(row *importModels.StudentImportRow) []importModels.ValidationError {
+func normalizeStudentBirthday(row *importModels.StudentImportRow, now time.Time) []importModels.ValidationError {
 	errors := []importModels.ValidationError{}
 	// 6. Birthday validation (if provided)
 	if trimmedBirthday := strings.TrimSpace(row.Birthday); trimmedBirthday != "" {
-		parsedBirthday, err := parseSupportedDate(trimmedBirthday)
+		parsedBirthday, err := parseSupportedDate(trimmedBirthday, now)
 		if err != nil {
 			message := "Ungültiges Datumsformat. Bitte verwenden Sie eines dieser Formate: JJJJ-MM-TT (z.B. 2015-08-15), TT.MM.JJJJ (z.B. 15.08.2015) oder TT.MM.JJ (z.B. 15.08.15)"
 			code := "invalid_date_format"
