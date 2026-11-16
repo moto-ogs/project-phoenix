@@ -24,7 +24,7 @@ func TestCountActiveVisitsByActiveGroupID_Success(t *testing.T) {
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
 	count, err := svc.CountActiveVisitsByActiveGroupID(context.Background(), 10)
 
 	require.NoError(t, err)
@@ -40,7 +40,7 @@ func TestCountActiveVisitsByActiveGroupID_Error(t *testing.T) {
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
 	count, err := svc.CountActiveVisitsByActiveGroupID(context.Background(), 10)
 
 	require.Error(t, err)
@@ -57,7 +57,7 @@ func TestCountActiveVisitsByActiveGroupID_ZeroCount(t *testing.T) {
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
 	count, err := svc.CountActiveVisitsByActiveGroupID(context.Background(), 10)
 
 	require.NoError(t, err)
@@ -81,7 +81,7 @@ func TestGetStudentCurrentVisit_Success(t *testing.T) {
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
 	visit, err := svc.GetStudentCurrentVisit(context.Background(), testStudentID)
 
 	require.NoError(t, err)
@@ -99,7 +99,7 @@ func TestGetStudentCurrentVisit_NotFound(t *testing.T) {
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
 	visit, err := svc.GetStudentCurrentVisit(context.Background(), 1)
 
 	require.Error(t, err)
@@ -116,7 +116,7 @@ func TestGetStudentCurrentVisit_DatabaseError(t *testing.T) {
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
 	visit, err := svc.GetStudentCurrentVisit(context.Background(), 1)
 
 	require.Error(t, err)
@@ -133,7 +133,7 @@ func TestGetStudentCurrentVisit_NilVisit(t *testing.T) {
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
 	visit, err := svc.GetStudentCurrentVisit(context.Background(), 1)
 
 	require.Error(t, err)
@@ -153,7 +153,7 @@ func TestGetStudentCurrentVisitWithRoom_Success(t *testing.T) {
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo, RoomRepo: &roomRepoForActiveWrapperTest{rooms: []*SessionRoom{{ID: 10, Name: "Test Room"}}}}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo, RoomRepo: &roomRepoForActiveWrapperTest{rooms: []*SessionRoom{{ID: 10, Name: "Test Room"}}}}}
 	visit, err := svc.GetStudentCurrentVisitWithRoom(context.Background(), 1)
 
 	require.NoError(t, err)
@@ -173,7 +173,7 @@ func TestGetStudentCurrentVisitWithRoom_RoomDirectoryResults(t *testing.T) {
 					return &studentpresence.VisitLocation{Visit: studentpresence.Visit{ID: 200}, Group: &studentpresence.VisitGroup{RoomID: 10}}, nil
 				},
 			}
-			svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal,
+			svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 				SchoolPresence: presence, RoomRepo: &roomRepoForActiveWrapperTest{err: lookupErr},
 			}}
 			visit, err := svc.GetStudentCurrentVisitWithRoom(context.Background(), 1)
@@ -199,7 +199,7 @@ func TestGetStudentCurrentVisitWithRoom_NotFound(t *testing.T) {
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo, RoomRepo: &roomRepoForActiveWrapperTest{rooms: []*SessionRoom{{ID: 10, Name: "Test Room"}}}}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo, RoomRepo: &roomRepoForActiveWrapperTest{rooms: []*SessionRoom{{ID: 10, Name: "Test Room"}}}}}
 	visit, err := svc.GetStudentCurrentVisitWithRoom(context.Background(), 1)
 
 	require.Error(t, err)
@@ -216,7 +216,7 @@ func TestGetStudentCurrentVisitWithRoom_DatabaseError(t *testing.T) {
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo, RoomRepo: &roomRepoForActiveWrapperTest{rooms: []*SessionRoom{{ID: 10, Name: "Test Room"}}}}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo, RoomRepo: &roomRepoForActiveWrapperTest{rooms: []*SessionRoom{{ID: 10, Name: "Test Room"}}}}}
 	visit, err := svc.GetStudentCurrentVisitWithRoom(context.Background(), 1)
 
 	require.Error(t, err)
@@ -233,7 +233,7 @@ func TestGetStudentCurrentVisitWithRoom_NilVisit(t *testing.T) {
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo, RoomRepo: &roomRepoForActiveWrapperTest{rooms: []*SessionRoom{{ID: 10, Name: "Test Room"}}}}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo, RoomRepo: &roomRepoForActiveWrapperTest{rooms: []*SessionRoom{{ID: 10, Name: "Test Room"}}}}}
 	visit, err := svc.GetStudentCurrentVisitWithRoom(context.Background(), 1)
 
 	require.Error(t, err)
@@ -250,7 +250,7 @@ func TestGetStudentCurrentVisitWithRoom_NilVisit(t *testing.T) {
 
 func TestListStudentsPresentInRoom_InvalidRoomDoesNotQueryWholeSchool(t *testing.T) {
 	t.Parallel()
-	svc := &service{}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow}}
 	for _, roomID := range []int64{0, -1} {
 		ids, err := svc.ListStudentsPresentInRoom(context.Background(), roomID)
 		require.NoError(t, err)
@@ -270,7 +270,7 @@ func TestListStudentsPresentInRoom_ReturnsIDsFromRepo(t *testing.T) {
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
 	ids, err := svc.ListStudentsPresentInRoom(context.Background(), 42)
 
 	require.NoError(t, err)
@@ -287,7 +287,7 @@ func TestListStudentsPresentInRoom_EmptyResult(t *testing.T) {
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
 	ids, err := svc.ListStudentsPresentInRoom(context.Background(), 1)
 
 	require.NoError(t, err)
@@ -304,7 +304,7 @@ func TestListStudentsPresentInRoom_WrapsRepoError(t *testing.T) {
 		},
 	}
 
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, SchoolPresence: visitRepo}}
 	ids, err := svc.ListStudentsPresentInRoom(context.Background(), 1)
 
 	require.Error(t, err)

@@ -2,6 +2,7 @@ package compose
 
 import (
 	"testing"
+	"time"
 
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -18,7 +19,7 @@ func TestStaffNoticeRepository_ListValidOn(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewStaffNoticeRepository(db, nil)
+	repo := NewStaffNoticeRepository(db, time.Now)
 	ctx := testpkg.Ctx(t)
 
 	account := testpkg.CreateTestAccount(t, db, "notice-author@test.local")
@@ -80,7 +81,7 @@ func TestStaffNoticeRepository_Acknowledge(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewStaffNoticeRepository(db, nil)
+	repo := NewStaffNoticeRepository(db, time.Now)
 	ctx := testpkg.Ctx(t)
 
 	account := testpkg.CreateTestAccount(t, db, "notice-reader@test.local")
@@ -128,7 +129,7 @@ func TestStaffNoticeRepository_AcknowledgedCountsExcludesTheAuthor(t *testing.T)
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewStaffNoticeRepository(db, nil)
+	repo := NewStaffNoticeRepository(db, time.Now)
 	ctx := testpkg.Ctx(t)
 
 	author := testpkg.CreateTestAccount(t, db, "count-author@test.local")
@@ -166,7 +167,7 @@ func TestStaffNoticeRepository_ListValidOnFiltersAudience(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewStaffNoticeRepository(db, nil)
+	repo := NewStaffNoticeRepository(db, time.Now)
 	ctx := testpkg.Ctx(t)
 
 	account := testpkg.CreateTestAccount(t, db, "notice-audience@test.local")
@@ -214,7 +215,7 @@ func TestStaffNoticeRepository_Acknowledgements(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewStaffNoticeRepository(db, nil)
+	repo := NewStaffNoticeRepository(db, time.Now)
 	ctx := testpkg.Ctx(t)
 
 	author := testpkg.CreateTestAccount(t, db, "notice-ack-author@test.local")

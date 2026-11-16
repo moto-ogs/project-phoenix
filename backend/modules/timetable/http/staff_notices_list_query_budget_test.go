@@ -183,7 +183,7 @@ func TestStaffNoticeListRouteQueryBudgets(t *testing.T) {
 						i := len(notices)
 						notice := f.create(t, f.ctx, i, noticeBudgetInput(i))
 						if i%2 == 0 {
-							repo := compose.NewStaffNoticeRepository(f.db, nil)
+							repo := compose.NewStaffNoticeRepository(f.db, time.Now)
 							for _, accountID := range []int64{f.reader, f.other} {
 								require.NoError(t, repo.Acknowledge(f.ctx, notice.ID, accountID))
 							}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
@@ -57,10 +58,10 @@ type PayrollDispatchStaff interface {
 func BuildPayrollDispatch(
 	db transactionruntime.Database, settings settingsCompose.SettingsService, export workforce.PayrollExport,
 	transfer exporttransfer.Capability, outbox OutboxEnqueuer, mailFrom email.Email, mailIdentity email.ReplyToResolver,
-	schools organizationtenancy.Query, staff PayrollDispatchStaff, frontendURL string, logger *slog.Logger,
+	schools organizationtenancy.Query, staff PayrollDispatchStaff, frontendURL string, logger *slog.Logger, now func() time.Time,
 ) (workforce.PayrollDispatch, error) {
-	if settings == nil || transfer == nil || outbox.Runtime == nil || schools == nil || staff == nil {
-		return nil, errors.New("payroll dispatch: settings, transfer, delivery, schools and staff are required")
+	if settings == nil || transfer == nil || outbox.Runtime == nil || schools == nil || staff == nil || now == nil {
+		return nil, errors.New("payroll dispatch: settings, transfer, delivery, schools, staff and the clock are required")
 	}
 	logger = logger.With("service", "payroll_dispatch")
 	return workforceCompose.NewPayrollDispatch(db.Pool(), workforce.PayrollDispatchPorts{
@@ -69,7 +70,7 @@ func BuildPayrollDispatch(
 		Mail:     payrollMailOutbox{outbox: outbox, from: mailFrom, identity: mailIdentity, logger: logger},
 		Schools:  payrollSchools{schools: schools}, Managers: payrollManagers{staff: staff},
 		Tokens: payrollTokens{}, MailOutcomes: WorkforceMails{Outcomes: outbox.Runtime.EmailOutcomes},
-		FrontendURL: frontendURL, Logger: logger,
+		FrontendURL: frontendURL, Logger: logger, Now: now,
 	})
 }
 

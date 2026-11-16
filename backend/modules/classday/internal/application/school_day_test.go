@@ -40,8 +40,9 @@ func TestSchoolDayCountsEveryClassFromOneRoster(t *testing.T) {
 	early := time.Date(2000, 1, 1, 14, 0, 0, 0, time.UTC)
 	log := &fakeClassDayAccessLog{}
 	svc := NewClassDay(ClassDayDependencies{
-		Caller:  fakeClassDayCaller{classes: []string{"1a", "2b", "4d"}},
-		Rosters: fakeDayRosters{roster: schoolDayTestRoster()},
+		MorningAttendanceDependencies: MorningAttendanceDependencies{Now: classDayTestNow},
+		Caller:                        fakeClassDayCaller{classes: []string{"1a", "2b", "4d"}},
+		Rosters:                       fakeDayRosters{roster: schoolDayTestRoster()},
 		StatusDays: fakeClassDayStatusDays{entries: []StatusDayEntry{
 			{StudentID: 2, Status: statusDaySick},
 			{StudentID: 4, Status: statusDayClassTrip},
@@ -92,11 +93,12 @@ func TestSchoolDayWithoutSchoolCountsOnlyChildren(t *testing.T) {
 	t.Parallel()
 
 	svc := NewClassDay(ClassDayDependencies{
-		Caller:     fakeClassDayCaller{classes: []string{"1a", "2b"}},
-		Rosters:    fakeDayRosters{roster: schoolDayTestRoster()},
-		StatusDays: fakeClassDayStatusDays{entries: []StatusDayEntry{{StudentID: 2, Status: statusDaySick}}},
-		Times:      fakeDayTimes{},
-		CareDays:   fakeCareDays{},
+		MorningAttendanceDependencies: MorningAttendanceDependencies{Now: classDayTestNow},
+		Caller:                        fakeClassDayCaller{classes: []string{"1a", "2b"}},
+		Rosters:                       fakeDayRosters{roster: schoolDayTestRoster()},
+		StatusDays:                    fakeClassDayStatusDays{entries: []StatusDayEntry{{StudentID: 2, Status: statusDaySick}}},
+		Times:                         fakeDayTimes{},
+		CareDays:                      fakeCareDays{},
 	}).(classday.SchoolDay)
 	ctx := calendar.WithWeekendPlan(context.Background(), func(context.Context) (bool, error) { return false, nil })
 
@@ -116,11 +118,12 @@ func TestSchoolDayWithoutPhaseSplitsNobody(t *testing.T) {
 	roster := schoolDayTestRoster()
 	roster.PhaseNames = nil
 	svc := NewClassDay(ClassDayDependencies{
-		Caller:     fakeClassDayCaller{classes: []string{"1a", "2b"}},
-		Rosters:    fakeDayRosters{roster: roster},
-		StatusDays: fakeClassDayStatusDays{},
-		Times:      fakeDayTimes{},
-		CareDays:   fakeCareDays{},
+		MorningAttendanceDependencies: MorningAttendanceDependencies{Now: classDayTestNow},
+		Caller:                        fakeClassDayCaller{classes: []string{"1a", "2b"}},
+		Rosters:                       fakeDayRosters{roster: roster},
+		StatusDays:                    fakeClassDayStatusDays{},
+		Times:                         fakeDayTimes{},
+		CareDays:                      fakeCareDays{},
 	}).(classday.SchoolDay)
 
 	report, err := svc.SchoolDayReport(context.Background(), "2026-08-05", classday.Actor{AccountID: 42, Roles: "schulverwaltung"})

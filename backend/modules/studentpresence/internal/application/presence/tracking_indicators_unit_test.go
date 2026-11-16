@@ -56,7 +56,7 @@ func (r trackingGroups) FindByIDs(context.Context, []int64) ([]*ports.SessionAct
 
 func trackingService(names func(context.Context, []int64) ([]visitGroupNames, error)) *service {
 	presence := &trackingPresenceSource{names: names}
-	return &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal,
+	return &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 		SchoolPresence: presence, RoomRepo: trackingRooms{source: presence}, ActivityGroupRepo: trackingGroups{source: presence},
 	}}
 }
@@ -64,7 +64,7 @@ func trackingService(names func(context.Context, []int64) ([]visitGroupNames, er
 func TestGetTrackingIndicators_EmptyStudentIDs(t *testing.T) {
 	t.Parallel()
 
-	svc := &service{}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow}}
 
 	result, err := svc.GetTrackingIndicators(context.Background(), []int64{}, []string{"Mensa"})
 
@@ -75,7 +75,7 @@ func TestGetTrackingIndicators_EmptyStudentIDs(t *testing.T) {
 func TestGetTrackingIndicators_EmptyLabels(t *testing.T) {
 	t.Parallel()
 
-	svc := &service{}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow}}
 
 	result, err := svc.GetTrackingIndicators(context.Background(), []int64{100}, []string{})
 

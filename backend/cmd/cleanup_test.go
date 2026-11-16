@@ -97,6 +97,7 @@ func setupTestSessionCleanup(t *testing.T) (transactionruntime.Database, organiz
 		TimetableBridgeCompleter: api.NewUnobservedTimetableRepositories(testpkg.NewDatabase(t, db)).NativeInstances(),
 		DB:                       db,
 		Logger:                   slog.Default(),
+		Now:                      time.Now,
 	}, presenceservice.WithPresenceSettings(detailedPresenceSettings{}))
 	schools, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)

@@ -66,7 +66,7 @@ func (f *snapshotFixture) newAdminSessionService() timetracking.WorkSessionServi
 		f.workforce, f.workforce, owners.NewWorkSessionAudit(owners.NewTestAuditPersistence(testpkg.MustDatabase(f.db), nil).WorkSessionEdit), f.reposAbsences.StaffAbsence,
 		f.reposPresence.GroupSupervisor, f.reposPresence.ActiveGroup, owners.WorkSessionStaff(f.repos.Staff, api.MustNewStaffEmployment(testpkg.MustDatabase(f.db)), f.reposMembership.Membership), owners.NewWorkSessionSchedules(owners.NewStaffWorkScheduleRepository(f.workforce)), owners.NewWorkSessionTimeModels(owners.NewWorkTimeModelRepository(f.workforce)),
 		snapshotSessionSettings{}, nil, f.db, owners.RenderTimeTrackingPDF,
-		owners.RenderTimeTrackingWorkbook,
+		owners.RenderTimeTrackingWorkbook, timetracking.WithSessionClock(testNow),
 	)
 }
 
@@ -115,16 +115,16 @@ func newSnapshotFixture(t *testing.T) *snapshotFixture {
 		owners.NewWorkScheduleTargets(owners.NewStaffWorkScheduleRepository(workTime)), owners.NewWorkTimeTargetModels(owners.NewWorkTimeModelRepository(workTime)), workforceCompose.NewTimeTrackingShifts(workTime),
 		settings, nil,
 		timetracking.WithMonthSnapshots(timetracking.MonthSnapshotCapability(workTime)),
-		timetracking.WithMonthAdjustments(workTime),
+		timetracking.WithMonthAdjustments(workTime), timetracking.WithMonthTestClock(testNow),
 	)
 
 	closeSvc := timetracking.NewStaffMonthCloseService(
-		timetracking.MonthSnapshotCapability(workTime), monthSvc, owners.MonthCloseStaff(reposPeople.Staff), settings, nil, timetracking.WithMonthCloseUnitOfWork(testpkg.RunInTenantTransaction),
+		timetracking.MonthSnapshotCapability(workTime), monthSvc, owners.MonthCloseStaff(reposPeople.Staff), settings, nil, timetracking.WithMonthCloseUnitOfWork(testpkg.RunInTenantTransaction), timetracking.WithMonthCloseClock(testNow),
 	)
 	adjustSvc := timetracking.NewStaffBalanceAdjustmentService(
 		workTime, monthSvc, settings, nil, timetracking.WithAdjustmentUnitOfWork(testpkg.RunInTenantTransaction),
 
-		timetracking.WithAdjustmentSnapshots(timetracking.MonthSnapshotCapability(workTime)),
+		timetracking.WithAdjustmentSnapshots(timetracking.MonthSnapshotCapability(workTime)), timetracking.WithAdjustmentClock(testNow),
 	)
 
 	return &snapshotFixture{

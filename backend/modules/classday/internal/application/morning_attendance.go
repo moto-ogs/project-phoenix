@@ -29,7 +29,7 @@ type (
 // write verdict stays false and the write answers
 // classday.ErrMorningAttendanceNotConfigured. Now is the clock of the whole
 // class day (ADR 0239): "today", the access-log stamps and the export dates
-// read it; nil uses the wall clock.
+// read it; NewClassDay requires it.
 type MorningAttendanceDependencies struct {
 	Store MorningAttendance
 	Scope MorningAttendanceScope
@@ -65,13 +65,9 @@ type morningAttendance struct {
 	after func(ctx context.Context, in classday.MorningAttendanceWrite, date calendar.Date, newlyAbsent []int64) error
 }
 
-// clock is the composition's Now; a seam a test builds without one reads the
-// wall clock.
+// clock is the composition's Now, which NewClassDay requires.
 func (d MorningAttendanceDependencies) clock() func() time.Time {
-	if d.Now != nil {
-		return d.Now
-	}
-	return time.Now
+	return d.Now
 }
 
 func newMorningAttendance(deps ClassDayDependencies) morningAttendance {

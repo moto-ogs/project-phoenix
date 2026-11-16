@@ -233,11 +233,11 @@ func (s *staffOverviewService) getLogger() *slog.Logger {
 }
 
 func (s *staffOverviewService) today() calendar.Date {
-	return dayOrWall(s.todayFunc, s.nowFunc)()
+	return dayOf(s.todayFunc, s.nowFunc)()
 }
 
 func (s *staffOverviewService) now() time.Time {
-	return clockOrWall(s.nowFunc)()
+	return requireClock(s.nowFunc)()
 }
 
 // --- overview list ---------------------------------------------------------

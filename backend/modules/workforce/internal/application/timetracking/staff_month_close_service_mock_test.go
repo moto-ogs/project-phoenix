@@ -89,7 +89,7 @@ func TestStaffMonthCloseService_RechecksIdempotencyAfterLock(t *testing.T) {
 		&recordingMonthCloseMonthService{events: &events},
 		&recordingMonthCloseStaffLister{events: &events},
 		&wtmMockSettings{accountStart: "2025-01-01"},
-		slog.New(slog.DiscardHandler),
+		slog.New(slog.DiscardHandler), WithMonthCloseClock(testNow),
 	)
 
 	result, err := service.CloseMonth(context.Background(), 42, 2025, 8, "Monatsabschluss")
@@ -148,7 +148,7 @@ func newBroadcastMonthCloseService(
 		&recordingMonthCloseStaffLister{events: &events},
 		&wtmMockSettings{accountStart: "2025-01-01"},
 		slog.New(slog.DiscardHandler),
-		WithMonthCloseEvents(broadcaster),
+		WithMonthCloseEvents(broadcaster), WithMonthCloseClock(testNow),
 	)
 	return service
 }
@@ -252,7 +252,7 @@ func TestStaffMonthCloseService_LocksAllStaffBeforeOneSnapshotRead(t *testing.T)
 		&orderedMonthCloseMonthService{events: &events},
 		timestampMonthCloseStaffLister{},
 		&wtmMockSettings{accountStart: "2025-01-01"},
-		slog.New(slog.DiscardHandler),
+		slog.New(slog.DiscardHandler), WithMonthCloseClock(testNow),
 	)
 
 	_, err := service.CloseMonth(context.Background(), 77, 2025, 8, "Monatsabschluss")
@@ -278,7 +278,7 @@ func TestStaffMonthCloseService_SkipsOnlyStaffWithThisMonthClosed(t *testing.T) 
 		&orderedMonthCloseMonthService{events: &events},
 		timestampMonthCloseStaffLister{},
 		&wtmMockSettings{accountStart: "2025-01-01"},
-		slog.New(slog.DiscardHandler),
+		slog.New(slog.DiscardHandler), WithMonthCloseClock(testNow),
 	)
 
 	result, err := service.CloseMonth(context.Background(), 77, 2025, 8, "Monatsabschluss")

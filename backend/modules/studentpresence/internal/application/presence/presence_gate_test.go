@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"testing"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 
@@ -92,7 +91,7 @@ func TestResolvePresenceModeRejectsFailuresAndInvalidValues(t *testing.T) {
 		{name: "binary", resolver: &stubSettingsResolver{stringValues: map[string]string{presenceModeQuestion: PresenceModeBinary}}, want: PresenceModeBinary},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			svc := &service{settings: tc.resolver}
+			svc := &service{Now: presenceTestNow, settings: tc.resolver}
 			mode, err := svc.GetPresenceMode(context.Background())
 			if tc.wantErr {
 				require.Error(t, err)
@@ -115,14 +114,14 @@ func TestService_CreateVisit_BinaryMode_IsNoOp(t *testing.T) {
 	// proves the short-circuit — if the gate leaks, this would panic. Visit
 	// must pass Validate() (StudentID/ActiveGroupID/EntryTime), since the
 	// gate is placed after validation to preserve caller-contract errors.
-	s := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, Logger: slog.Default()}, settings: &stubSettingsResolver{
+	s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, Logger: slog.Default()}, settings: &stubSettingsResolver{
 		stringValues: map[string]string{presenceModeQuestion: "binary"},
 	},
 	}
 	visit := &studentpresence.Visit{
 		StudentID:     1,
 		ActiveGroupID: 2,
-		EntryTime:     time.Now(),
+		EntryTime:     presenceTestNow(),
 	}
 
 	err := s.CreateVisit(context.Background(), visit)
@@ -134,7 +133,7 @@ func TestService_EndVisit_BinaryMode_IsNoOp(t *testing.T) {
 
 	// Same contract for EndVisit — stale visit IDs from before a mode
 	// switch hit the no-op path instead of a missing-row error.
-	s := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, Logger: slog.Default()}, settings: &stubSettingsResolver{
+	s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, Logger: slog.Default()}, settings: &stubSettingsResolver{
 		stringValues: map[string]string{presenceModeQuestion: "binary"},
 	},
 	}
@@ -146,7 +145,7 @@ func TestService_EndVisit_BinaryMode_IsNoOp(t *testing.T) {
 func TestService_EndDailySessions_BinaryMode_ReturnsEmptySuccess(t *testing.T) {
 	t.Parallel()
 
-	s := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, Logger: slog.Default()}, settings: &stubSettingsResolver{
+	s := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, Logger: slog.Default()}, settings: &stubSettingsResolver{
 		stringValues: map[string]string{presenceModeQuestion: "binary"},
 	},
 	}

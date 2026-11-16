@@ -67,7 +67,7 @@ type WeekProtocolResourceConfig struct {
 	// optional and supplied only by the development root.
 	Seed        func(context.Context) error
 	IsLocalSeed func(*http.Request) bool
-	// Now dates the access log entries; nil is the real clock.
+	// Now dates the access log entries; required.
 	Now func() time.Time
 }
 
@@ -86,7 +86,7 @@ func NewWeekProtocolResource(cfg WeekProtocolResourceConfig) *WeekProtocolResour
 		cfg.Logger = slog.Default()
 	}
 	if cfg.Now == nil {
-		cfg.Now = time.Now
+		panic("week protocol resource: the clock is required")
 	}
 	return &WeekProtocolResource{cfg: cfg}
 }

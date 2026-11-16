@@ -48,7 +48,7 @@ func TestStaffSupervisionAccessGatesGroupLookup(t *testing.T) {
 			request := httptest.NewRequest("GET", "/groups/7", nil).WithContext(ctx)
 			response := httptest.NewRecorder()
 			lookedUp := false
-			rs := &Resource{Presence: supervisionQueryStub{
+			rs := &Resource{runtime: RequestRuntime{Now: time.Now}, Presence: supervisionQueryStub{
 				query: func(ctx context.Context, filter studentpresence.GroupSupervisionFilter) ([]studentpresence.GroupSupervision, error) {
 					assert.Same(t, request.Context(), ctx)
 					require.NotNil(t, filter.StaffID)
@@ -81,7 +81,7 @@ func TestVisitAccessSupervisionsDiscardPartialFailures(t *testing.T) {
 	for _, fail := range []bool{false, true} {
 		ctx, cancel := context.WithCancel(context.Background())
 		queried := false
-		rs := &Resource{Presence: supervisionQueryStub{query: func(got context.Context, filter studentpresence.GroupSupervisionFilter) ([]studentpresence.GroupSupervision, error) {
+		rs := &Resource{runtime: RequestRuntime{Now: time.Now}, Presence: supervisionQueryStub{query: func(got context.Context, filter studentpresence.GroupSupervisionFilter) ([]studentpresence.GroupSupervision, error) {
 			queried = true
 			assert.Same(t, ctx, got)
 			require.NotNil(t, filter.StaffID)
@@ -124,7 +124,7 @@ func TestSessionSupervisorsPreserveExistenceGate(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			queried := false
-			rs := &Resource{Presence: supervisionQueryStub{
+			rs := &Resource{runtime: RequestRuntime{Now: time.Now}, Presence: supervisionQueryStub{
 				groups: func(got context.Context, ids []int64) ([]studentpresence.LiveGroup, error) {
 					assert.Same(t, ctx, got)
 					assert.Equal(t, []int64{7}, ids)
@@ -215,11 +215,11 @@ func TestSupervisionReadsPreserveErrorEnvelopes(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			filter := studentpresence.GroupSupervisionFilter{IDs: []int64{7}}
-			rs := &Resource{Presence: supervisionQueryStub{query: func(got context.Context, gotFilter studentpresence.GroupSupervisionFilter) ([]studentpresence.GroupSupervision, error) {
+			rs := resourceForTest(Resource{Presence: supervisionQueryStub{query: func(got context.Context, gotFilter studentpresence.GroupSupervisionFilter) ([]studentpresence.GroupSupervision, error) {
 				assert.Same(t, ctx, got)
 				assert.Equal(t, filter, gotFilter)
 				return tc.rows, tc.err
-			}}}
+			}}})
 			row, err := rs.presenceSupervisor(ctx, 7)
 			require.ErrorIs(t, err, studentpresence.ErrGroupSupervisorNotFound)
 			assert.Equal(t, SupervisorResponse{}, row)

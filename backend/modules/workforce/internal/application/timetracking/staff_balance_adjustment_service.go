@@ -150,11 +150,11 @@ func NewStaffBalanceAdjustmentService(
 }
 
 func (s *staffBalanceAdjustmentService) today() calendar.Date {
-	return dayOrWall(s.todayFunc, s.nowFunc)()
+	return dayOf(s.todayFunc, s.nowFunc)()
 }
 
 func (s *staffBalanceAdjustmentService) now() time.Time {
-	return clockOrWall(s.nowFunc)()
+	return requireClock(s.nowFunc)()
 }
 
 // rejectPreAccountDate fails a booking dated before the account start: such

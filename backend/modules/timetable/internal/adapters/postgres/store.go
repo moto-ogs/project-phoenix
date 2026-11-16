@@ -34,18 +34,22 @@ func New(database Database) *Store {
 
 // WithClock returns the store stamping its writes with now (ADR 0239).
 func (s *Store) WithClock(now func() time.Time) *Store {
+	if now == nil {
+		panic("timetable postgres: the clock is required")
+	}
 	clocked := *s
 	clocked.now = now
 	return &clocked
 }
 
-// currentTime is the instant the store stamps a write with.
+// currentTime is the instant the store stamps a write with. A store that
+// stamps writes is composed WithClock; the composition owns the clock
+// (ADR 0272).
 func (s *Store) currentTime() time.Time {
-	now := s.now
-	if now == nil {
-		now = time.Now
+	if s.now == nil {
+		panic("timetable postgres: a stamping write needs the store composed WithClock")
 	}
-	return now()
+	return s.now()
 }
 
 // CompletionTimestamp returns PostgreSQL's stable timestamp for the current

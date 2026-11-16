@@ -27,7 +27,7 @@ func NativeInstanceRecords(rows ports.InstanceRows) ports.NativeInstanceRecords 
 }
 
 func (f nativeFixtureInstances) Create(ctx context.Context, value *scheduleModels.ActivityInstance) error {
-	return createLegacyInstance(ctx, f.rows, value, NewClock(f.rows.Now))
+	return createLegacyInstance(ctx, f.rows, value, f.rows.Now)
 }
 
 func (f nativeFixtureInstances) FindByID(ctx context.Context, id int64) (*scheduleModels.ActivityInstance, error) {

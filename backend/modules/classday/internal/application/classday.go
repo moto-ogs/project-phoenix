@@ -71,10 +71,11 @@ type classDayService struct {
 }
 
 // NewClassDay creates the school-portal capability. Caller and Rosters are
-// required: without them no class can be resolved and no sheet served.
+// required: without them no class can be resolved and no sheet served. Now is
+// required too: the composition's clock names "today" (ADR 0239).
 func NewClassDay(deps ClassDayDependencies) classday.ClassDay {
-	if deps.Caller == nil || deps.Rosters == nil {
-		panic("classday application.NewClassDay: Caller and Rosters dependencies are required")
+	if deps.Caller == nil || deps.Rosters == nil || deps.Now == nil {
+		panic("classday application.NewClassDay: Caller, Rosters and the clock are required")
 	}
 	if deps.Today == nil {
 		deps.Today = calendar.CalendarDateClock(deps.clock())

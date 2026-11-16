@@ -71,6 +71,9 @@ func TestClassTripReturnTimeLocksInOrderAndMapsMembershipRejection(t *testing.T)
 			service := compose.NewClassDay(compose.ClassDayDependencies{
 				Caller: struct{ compose.CallerReader }{}, Rosters: tripRosters{}, WriteScope: tripScope{},
 				ClassArrivalExceptions: arrivals, TripStatusDays: struct{ compose.ClassTripStatusDays }{}, Announcer: announcer,
+				MorningAttendanceDependencies: compose.MorningAttendanceDependencies{
+					Now: func() time.Time { return time.Date(2099, time.March, 2, 9, 0, 0, 0, calendar.Berlin) },
+				},
 			})
 			returnTime := time.Date(0, 1, 1, 13, 30, 0, 0, time.UTC)
 			_, err := service.ReportClassTrip(context.Background(), classday.ClassTripWrite{

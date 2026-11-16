@@ -50,7 +50,7 @@ func TestOverviewVacationSharesTheMonthPrefetch(t *testing.T) {
 		owners.OverviewStaff(f.repos.Staff), f.workforce, f.workforce, f.reposAbsences.StaffAbsence,
 		f.workforce, quota, timetracking.MonthSnapshotCapability(f.workforce),
 		owners.NewWorkScheduleTargets(owners.NewStaffWorkScheduleRepository(f.workforce)), owners.NewWorkTimeTargetModels(owners.NewWorkTimeModelRepository(f.workforce)), workforceCompose.NewTimeTrackingShifts(f.workforce),
-		wtmIntSettings{accountStart: "2025-01-01"}, nil,
+		wtmIntSettings{accountStart: "2025-01-01"}, nil, timetracking.WithOverviewClock(testNow),
 	)
 	view, err := testpkg.TenantQuery1(t, f.ctx, f.db, svc.GetTimeTrackingOverview, timetracking.OverviewFilters{Year: 2025, Month: 1})
 	require.NoError(t, err)

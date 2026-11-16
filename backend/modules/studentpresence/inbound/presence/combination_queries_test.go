@@ -37,7 +37,7 @@ func TestCombinationLookupPreservesNotFoundEnvelope(t *testing.T) {
 	t.Parallel()
 	for _, lookupErr := range []error{studentpresence.ErrCombinedGroupNotFound, errors.New("database unavailable")} {
 		ctx, cancel := context.WithCancel(context.Background())
-		rs := &Resource{Presence: combinationQueryStub{find: func(got context.Context, id int64) (studentpresence.CombinedGroup, error) {
+		rs := &Resource{runtime: RequestRuntime{Now: time.Now}, Presence: combinationQueryStub{find: func(got context.Context, id int64) (studentpresence.CombinedGroup, error) {
 			assert.Same(t, ctx, got)
 			assert.EqualValues(t, 42, id)
 			return studentpresence.CombinedGroup{ID: 42}, lookupErr
@@ -65,7 +65,7 @@ func TestCombinationQueryPreservesFiltersAndDiscardsPartialFailures(t *testing.T
 			filter := studentpresence.CombinedGroupFilter{Active: &active, OpenOnly: operation == "FindActiveCombinedGroups"}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			rs := &Resource{Presence: combinationQueryStub{query: func(got context.Context, gotFilter studentpresence.CombinedGroupFilter) ([]studentpresence.CombinedGroup, error) {
+			rs := &Resource{runtime: RequestRuntime{Now: time.Now}, Presence: combinationQueryStub{query: func(got context.Context, gotFilter studentpresence.CombinedGroupFilter) ([]studentpresence.CombinedGroup, error) {
 				assert.Same(t, ctx, got)
 				assert.Equal(t, filter, gotFilter)
 				return []studentpresence.CombinedGroup{{ID: 42}}, errors.New("query failed")

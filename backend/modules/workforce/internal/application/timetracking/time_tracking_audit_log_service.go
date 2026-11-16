@@ -89,10 +89,10 @@ type timeTrackingAuditLogService struct {
 }
 
 func NewTimeTrackingAuditLogService(repo TimeTrackingAuditReader, staffNames StaffDisplayNameQuery, settings settingsResolver, today func() calendar.Date) TimeTrackingAuditLogService {
-	if settings == nil {
-		panic("time tracking audit log: settings are required")
+	if settings == nil || today == nil {
+		panic("time tracking audit log: settings and the school day clock are required")
 	}
-	return &timeTrackingAuditLogService{repo: repo, staffNames: staffNames, settings: settings, today: dayOrWall(today, nil)}
+	return &timeTrackingAuditLogService{repo: repo, staffNames: staffNames, settings: settings, today: today}
 }
 
 type auditLogCursorPayload struct {

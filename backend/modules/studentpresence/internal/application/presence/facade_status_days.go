@@ -10,10 +10,11 @@ import (
 
 // NewStatusDays builds the status-day reads and writes over Care Plan's
 // status-day adapter; a full-day status never silently overwrites a
-// time-specific excusal on the same date.
-func NewStatusDays(repo StudentStatusDayRepository, pickupExceptions ManualPartialAbsenceReader, db studentpresence.DatabaseHandle, lockExceptionDay LockExceptionDay, clocks ...func() time.Time) studentpresence.StatusDays {
+// time-specific excusal on the same date. now is the composition's clock and
+// is required.
+func NewStatusDays(repo StudentStatusDayRepository, pickupExceptions ManualPartialAbsenceReader, db studentpresence.DatabaseHandle, lockExceptionDay LockExceptionDay, now func() time.Time) studentpresence.StatusDays {
 	return statusDays{
-		StudentStatusDayService: NewStudentStatusDayServiceWithPartialAbsences(repo, pickupExceptions, db, lockExceptionDay, clocks...),
+		StudentStatusDayService: NewStudentStatusDayServiceWithPartialAbsences(repo, pickupExceptions, db, lockExceptionDay, now),
 		statusDayRecords:        repo,
 	}
 }

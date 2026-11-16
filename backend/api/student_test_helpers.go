@@ -174,7 +174,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
-	now := OptionalClock(clocks)
+	now := clockOrNow(clocks)
 	today := timezone.CalendarDateClock(now)
 	settingsService := liveSettings.Settings
 	// Care Plan is composed after the live graph's person directory; the

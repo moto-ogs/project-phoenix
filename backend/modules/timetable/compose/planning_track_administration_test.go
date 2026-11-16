@@ -140,7 +140,7 @@ func archivedPlanningTrack(id int64, name string) timetable.PlanningTrack {
 func TestPlanningTrackAdministrationValidatesDrafts(t *testing.T) {
 	t.Parallel()
 	owner := newPlanningTrackOwnerStub()
-	admin := NewPlanningTrackAdministration(owner, nil, nil)
+	admin := NewPlanningTrackAdministration(owner, nil, time.Now)
 	ctx := context.Background()
 
 	created, err := admin.AddPlanningTrack(ctx, timetable.PlanningTrackDraft{Name: "  Mittag  ", Color: "#F78C10", SortOrder: 2})
@@ -178,7 +178,7 @@ func TestPlanningTrackAdministrationValidatesDrafts(t *testing.T) {
 
 func TestPlanningTrackAdministrationMissingTracks(t *testing.T) {
 	t.Parallel()
-	admin := NewPlanningTrackAdministration(newPlanningTrackOwnerStub(), nil, nil)
+	admin := NewPlanningTrackAdministration(newPlanningTrackOwnerStub(), nil, time.Now)
 	ctx := context.Background()
 	invalid := timetable.PlanningTrackDraft{Name: "", Color: "blue", SortOrder: -1}
 
@@ -196,7 +196,7 @@ func TestPlanningTrackAdministrationListAndGet(t *testing.T) {
 	t.Parallel()
 	track := timetable.PlanningTrack{ID: time.Now().UnixNano(), Name: "Früh", Color: "#5080D8"}
 	owner := newPlanningTrackOwnerStub(track)
-	admin := NewPlanningTrackAdministration(owner, nil, nil)
+	admin := NewPlanningTrackAdministration(owner, nil, time.Now)
 	ctx := context.Background()
 
 	tracks, err := admin.ListAllPlanningTracks(ctx)
@@ -220,7 +220,7 @@ func TestPlanningTrackAdministrationWriteFailures(t *testing.T) {
 	t.Parallel()
 	wantErr := errors.New("database unavailable")
 	owner := newPlanningTrackOwnerStub()
-	admin := NewPlanningTrackAdministration(owner, nil, nil)
+	admin := NewPlanningTrackAdministration(owner, nil, time.Now)
 	ctx := context.Background()
 	draft := timetable.PlanningTrackDraft{Name: "Nord", Color: "#5080D8", SortOrder: 1}
 
@@ -252,7 +252,7 @@ func TestPlanningTrackAdministrationWriteFailures(t *testing.T) {
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackArchived)
 
 	archived := archivedPlanningTrack(created.ID+1, "Alt")
-	archivedAdmin := NewPlanningTrackAdministration(newPlanningTrackOwnerStub(archived), nil, nil)
+	archivedAdmin := NewPlanningTrackAdministration(newPlanningTrackOwnerStub(archived), nil, time.Now)
 	_, err = archivedAdmin.EditPlanningTrack(ctx, archived.ID, draft)
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackArchived)
 }
@@ -263,7 +263,7 @@ func TestPlanningTrackAdministrationArchiveAndRestore(t *testing.T) {
 	remaining := timetable.PlanningTrack{ID: base, Name: "Mittag", Color: "#F78C10", SortOrder: 0}
 	track := timetable.PlanningTrack{ID: base + 1, Name: "Früh", Color: "#83CD2D", SortOrder: 0}
 	owner := newPlanningTrackOwnerStub(remaining, track)
-	admin := NewPlanningTrackAdministration(owner, nil, nil)
+	admin := NewPlanningTrackAdministration(owner, nil, time.Now)
 	ctx := context.Background()
 
 	archived, err := admin.ArchivePlanningTrack(ctx, track.ID)
@@ -282,7 +282,7 @@ func TestPlanningTrackAdministrationArchiveRestoreEdges(t *testing.T) {
 	active := timetable.PlanningTrack{ID: base, Name: "Früh", Color: "#5080D8"}
 	archived := archivedPlanningTrack(base+1, "Alt")
 	owner := newPlanningTrackOwnerStub(active, archived)
-	admin := NewPlanningTrackAdministration(owner, nil, nil)
+	admin := NewPlanningTrackAdministration(owner, nil, time.Now)
 	ctx := context.Background()
 
 	unchanged, err := admin.ArchivePlanningTrack(ctx, archived.ID)
@@ -310,7 +310,7 @@ func TestPlanningTrackAdministrationValidatesAssignments(t *testing.T) {
 	active := timetable.PlanningTrack{ID: base, Name: "Früh", Color: "#5080D8"}
 	archived := archivedPlanningTrack(base+1, "Alt")
 	owner := newPlanningTrackOwnerStub(active, archived)
-	admin := NewPlanningTrackAdministration(owner, nil, nil)
+	admin := NewPlanningTrackAdministration(owner, nil, time.Now)
 	ctx := context.Background()
 
 	require.NoError(t, admin.ValidatePlanningTrackAssignment(ctx, nil, nil))
@@ -334,14 +334,14 @@ func TestPlanningTrackAdministrationReorder(t *testing.T) {
 	owner := newPlanningTrackOwnerStub()
 	one := time.Now().UnixNano()
 
-	unwired := NewPlanningTrackAdministration(owner, nil, nil)
+	unwired := NewPlanningTrackAdministration(owner, nil, time.Now)
 	require.ErrorIs(t, unwired.OrderPlanningTracks(context.Background(), []int64{0}), timetable.ErrInvalidPlanningTrack)
 	require.ErrorIs(t, unwired.OrderPlanningTracks(context.Background(), []int64{one, one}), timetable.ErrInvalidPlanningTrack)
 	require.EqualError(t, unwired.OrderPlanningTracks(context.Background(), []int64{one}), "planning track service is not configured")
 
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	admin := NewPlanningTrackAdministration(owner, db, nil)
+	admin := NewPlanningTrackAdministration(owner, db, time.Now)
 	require.NoError(t, admin.OrderPlanningTracks(ctx, []int64{one, one + 1}))
 	assert.Equal(t, []int64{one, one + 1}, owner.reorderedIDs)
 
@@ -357,7 +357,7 @@ func TestPlanningTrackAdministrationReorder(t *testing.T) {
 func TestPlanningTrackAdministrationNameConflictAndArchiveLifecycle(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	admin := NewPlanningTrackAdministration(buildModule(t, db), db, nil)
+	admin := NewPlanningTrackAdministration(buildModule(t, db), db, time.Now)
 	ctx := testpkg.Ctx(t)
 	draft := timetable.PlanningTrackDraft{Name: "Nord", Color: "#5080D8", SortOrder: 0}
 
@@ -384,7 +384,7 @@ func TestPlanningTrackAdministrationNameConflictAndArchiveLifecycle(t *testing.T
 func TestPlanningTrackAdministrationAgainstOwner(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	admin := NewPlanningTrackAdministration(buildModule(t, db), db, nil)
+	admin := NewPlanningTrackAdministration(buildModule(t, db), db, time.Now)
 	ctx := testpkg.Ctx(t)
 
 	early, err := admin.AddPlanningTrack(ctx, timetable.PlanningTrackDraft{Name: "Früh", Color: "#5080D8", SortOrder: 0})

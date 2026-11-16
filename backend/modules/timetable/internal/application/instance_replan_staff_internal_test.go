@@ -48,7 +48,7 @@ func TestReplanLocksTheLivePeopleOfTheDeletedOccurrences(t *testing.T) {
 		{InstanceID: future.ID, StaffID: 43},
 	}
 	directory := &liveStaffDirectory{live: map[int64]bool{41: true}}
-	s := &InstanceLifecycleService{deps: ports.InstanceLifecycleDependencies{StaffRepo: directory}}
+	s := &InstanceLifecycleService{deps: ports.InstanceLifecycleDependencies{StaffRepo: directory, Now: internalTestNow}}
 
 	staff, err := s.liveStaffOf(context.Background(), rows, []*scheduleModel.ActivityInstance{past, future})
 	require.NoError(t, err)

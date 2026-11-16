@@ -152,8 +152,8 @@ type ShiftPlanningDependencies struct {
 	// Broadcaster and Logger are optional.
 	Broadcaster realtime.Broadcaster
 	Logger      *slog.Logger
-	// Today overrides the calendar-day clock the materializer and the sick
-	// state of shift writes compare against; nil keeps timezone.TodayDate.
+	// Today is the calendar-day clock the materializer and the sick state of
+	// shift writes compare against; required.
 	Today func() calendar.Date
 	// PlanRules (nil: ArbZG defaults) and WorkingTimeAudit feed the working-time check (ADR 0242).
 	PlanRules        planning.PlanRuleSettings
@@ -176,8 +176,8 @@ type ShiftPlanning struct {
 // week-grid services over the Workforce capability rows.
 func NewShiftPlanning(deps ShiftPlanningDependencies) (*ShiftPlanning, error) {
 	switch {
-	case deps.Workforce == nil:
-		return nil, errors.New("shift planning: the Workforce capability is required")
+	case deps.Workforce == nil || deps.Today == nil:
+		return nil, errors.New("shift planning: the Workforce capability and the school day clock are required")
 	case deps.Staff == nil:
 		return nil, errors.New("shift planning: the staff directory is required")
 	case deps.CalendarPeriods == nil:

@@ -103,13 +103,17 @@ func (r *weekProtocolPDFs) RenderReport(doc timetable.WeekProtocolReportDocument
 	}, nil
 }
 
+// weekProtocolNow is the clock of the staff notices: Friday evening, when
+// the week's protocol closes.
+func weekProtocolNow() time.Time { return weekProtocolFriday.BerlinMidnight().Add(21 * time.Hour) }
+
 func (s *weekProtocolSources) of(db *bun.DB) timetable.WeekProtocolSources {
 	if s.pdfs == nil {
 		s.pdfs = &weekProtocolPDFs{}
 	}
 	return timetable.WeekProtocolSources{
 		Renderer:   s.pdfs,
-		Notices:    NewStaffNotices(StaffNoticeDependencies{DB: db}),
+		Notices:    NewStaffNotices(StaffNoticeDependencies{DB: db, Now: weekProtocolNow}),
 		Calendar:   s,
 		Attendance: s,
 		Groups: func(context.Context) ([]timetable.WeekProtocolGroup, error) {
@@ -246,7 +250,7 @@ func TestWeekProtocolRecordsWeekendNotice(t *testing.T) {
 	module, ctx := buildModule(t, db), testpkg.Ctx(t)
 	saturday := weekProtocolFriday.AddDays(1)
 	author := testpkg.CreateTestAccount(t, db, "week-protocol-notice-author@test.local")
-	notices := NewStaffNotices(StaffNoticeDependencies{DB: db})
+	notices := NewStaffNotices(StaffNoticeDependencies{DB: db, Now: weekProtocolNow})
 	_, err := notices.CreateStaffNotice(ctx, author.ID, timetable.StaffNoticeInput{
 		Title: "Sommerfest", Body: "Treffpunkt ist die Turnhalle.", ValidFrom: saturday.String(), ValidUntil: saturday.String(),
 		Active: true,

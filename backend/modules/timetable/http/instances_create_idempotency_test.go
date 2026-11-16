@@ -49,6 +49,8 @@ func setupIdempotentCreateRoute(t *testing.T) *idempotentCreateSetup {
 		Templates:       serviceFactory.TimetableData.Templates,
 		TimetableData:   serviceFactory.TimetableData.Data,
 		InstanceService: serviceFactory.Instance,
+		// The period and the next workday come from the wall clock.
+		Now: time.Now,
 	})
 	router := chi.NewRouter()
 	router.Mount("/timetable", resource.Router(rootAPI.ProtectedTenantRoutes))

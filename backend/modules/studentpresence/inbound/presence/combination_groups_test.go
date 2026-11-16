@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/stretchr/testify/assert"
@@ -36,7 +37,7 @@ func TestCombinationGroupsPreserveMappingOrderAndSkipMissingSessions(t *testing.
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	rs := &Resource{Presence: combinationGroupsStub{
+	rs := &Resource{runtime: RequestRuntime{Now: time.Now}, Presence: combinationGroupsStub{
 		find: func(got context.Context, id int64) (studentpresence.CombinedGroup, error) {
 			assert.Same(t, ctx, got)
 			assert.EqualValues(t, 9, id)
@@ -78,7 +79,7 @@ func TestCombinationGroupsClassifyEveryFailureAsNotFound(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			rs := &Resource{Presence: combinationGroupsStub{
+			rs := &Resource{runtime: RequestRuntime{Now: time.Now}, Presence: combinationGroupsStub{
 				find: func(context.Context, int64) (studentpresence.CombinedGroup, error) {
 					return studentpresence.CombinedGroup{ID: 9}, tc.findErr
 				},
