@@ -1,4 +1,9 @@
-import { berlinClockFromISO } from "~/lib/date-helpers";
+import {
+  berlinClockFromISO,
+  berlinDateTimeISO,
+  endOfBerlinDayISO,
+  parseISODate,
+} from "~/lib/date-helpers";
 
 function parseInstant(value: string | undefined): number | null {
   if (!value) return null;
@@ -56,4 +61,28 @@ export function completeAvailableClock(
   return (
     (completeAvailableAt && berlinClockFromISO(completeAvailableAt)) || endTime
   );
+}
+
+/**
+ * Ob sich die Absage eines Termins noch zurücknehmen lässt (#7151): der
+ * Termin ist abgesagt und noch nicht vorbei. Ohne Ende nach dem Beginn gilt
+ * das Ende des Tages, wie im Backend.
+ */
+export function canReinstateInstance(
+  instance: {
+    status: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+  },
+  now: Date,
+): boolean {
+  if (instance.status !== "cancelled") return false;
+  const day = parseISODate(instance.date);
+  const end =
+    instance.endTime > instance.startTime
+      ? berlinDateTimeISO(day, instance.endTime)
+      : endOfBerlinDayISO(day);
+  const endMs = parseInstant(end);
+  return endMs != null && now.getTime() < endMs;
 }

@@ -76,7 +76,7 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 	write, err := r.store.PublishFeedEntries(ctx, event.Audience.TenantID, domain.FeedEntryContent{
 		Type: event.Type, Title: event.Title, Body: event.Body, DeepLink: feedDeepLink(*event),
 		RelatedType: event.RelatedType, RelatedID: event.RelatedID,
-	}, event.Audience.StaffAccountIDs, now, now.Add(-domain.FeedBundleWindow))
+	}, feedBundleTypes(def), event.Audience.StaffAccountIDs, now, now.Add(-domain.FeedBundleWindow))
 	if err != nil {
 		return false, fmt.Errorf("write notification feed: %w", err)
 	}
@@ -88,6 +88,27 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 	event.Audience.StaffAccountIDs = push
 	event.feedOnly = len(push) == 0
 	return len(event.feedChanged) > 0, nil
+}
+
+// feedBundleTypes are the types whose unread entry about the same object a
+// publication of def updates within the bundle window: def itself, the type
+// it takes back, and the types that take it back (#7151). A reinstatement
+// shortly after a cancellation, while the cancellation is unread, updates
+// that entry instead of adding a second one; so does a renewed cancellation.
+func feedBundleTypes(def TypeDefinition) []string {
+	types := []string{def.Key}
+	if def.Reverses != "" {
+		types = append(types, def.Reverses)
+	}
+	typeMu.RLock()
+	defer typeMu.RUnlock()
+	for key, other := range typeRegistry {
+		if other.Reverses == def.Key {
+			types = append(types, key)
+		}
+	}
+	slices.Sort(types)
+	return slices.Compact(types)
 }
 
 // feedType checks the shape a feed event needs: a staff audience, a known

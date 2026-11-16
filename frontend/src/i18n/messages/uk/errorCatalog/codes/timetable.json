@@ -81,6 +81,7 @@
   "planning_track_name_taken": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "planning_track_not_found": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "presence_would_overstaff": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "reinstate_ended": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "reopen_attendance_changed": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "reopen_staff_busy": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "reopen_student_active": "Не вдалося змінити: {object}. Перевірте поточний стан.",

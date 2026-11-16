@@ -14,6 +14,7 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /api/timetable/templates/booking-leftovers
 	GET /api/timetable/templates/roster-deviations
 	GET /api/timetable/templates/{id}/offering-preview
+	POST /api/timetable/instances/{id}/reinstate
 	POST /api/timetable/school-vacation-hints/acknowledgements
 	POST /api/timetable/templates/{id}/offering-connection
 	POST /api/timetable/templates/{id}/students/{studentId}/remove-days

@@ -31386,7 +31386,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffCancellationNotices.NotifyInstanceCancelled",
-      "binding_digest": "aa45e0781d7292bb7f2cf378bc5a0b1e",
+      "binding_digest": "842023e9c40785e63ae4ded833f65e58",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffCancellationNotices.NotifyInstanceCancelled",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
@@ -31394,8 +31394,24 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffCancellationNotices.NotifyInstanceCancelled",
-      "binding_digest": "a4baf076be273afb795d7fe754328bdc",
+      "binding_digest": "3aba79bd62320cf459b817fe1505aa56",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffCancellationNotices.NotifyInstanceCancelled",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffCancellationNotices.NotifyInstanceReinstated",
+      "binding_digest": "18fac691c636ee5ad9281f98f48dfdba",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffCancellationNotices.NotifyInstanceReinstated",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffCancellationNotices.NotifyInstanceReinstated",
+      "binding_digest": "30fbf0887b70ba20362eab8b03cc521c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffCancellationNotices.NotifyInstanceReinstated",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
       "target_owner": "delivery-platform"

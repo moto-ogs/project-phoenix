@@ -55,6 +55,9 @@
   "api/timetable/instances/[id]/participants": [
     "GET tenant /api/timetable/instances/id%2F1/participants"
   ],
+  "api/timetable/instances/[id]/reinstate": [
+    "POST tenant /api/timetable/instances/id%2F1/reinstate"
+  ],
   "api/timetable/instances/[id]/reopen": [
     "POST tenant /api/timetable/instances/id%2F1/reopen"
   ],

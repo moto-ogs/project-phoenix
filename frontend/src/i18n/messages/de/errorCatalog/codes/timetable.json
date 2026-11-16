@@ -81,6 +81,7 @@
   "planning_track_name_taken": "Diesen Namen gibt es schon. Bitte wählen Sie einen anderen Namen.",
   "planning_track_not_found": "Die Planungsspur gibt es nicht mehr. Bitte laden Sie die Seite neu.",
   "presence_would_overstaff": "Der Termin ist schon voll besetzt. Bitte entfernen Sie zuerst die nicht mehr nötige Vertretung.",
+  "reinstate_ended": "Der Termin ist schon vorbei. Eine Absage lässt sich nur bis zum Ende des Termins zurücknehmen.",
   "reopen_attendance_changed": "Die Anwesenheit wurde nach dem Abschluss geändert. Der Termin lässt sich nicht wieder öffnen.",
   "reopen_staff_busy": "Eine Betreuungsperson betreut inzwischen eine andere Gruppe. Der Termin lässt sich nicht wieder öffnen.",
   "reopen_student_active": "Ein Kind ist inzwischen woanders eingecheckt. Der Termin lässt sich nicht wieder öffnen.",
