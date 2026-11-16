@@ -50,7 +50,7 @@ import (
 // Re-measured 2026-11-15 for #7104: not counting stopwatch starts and the
 // owner slices lowered the sum from 1,646 to 665 calls; Care Plan (139 to 1)
 // and Parent Billing (7 to 0) take their clocks from their compositions.
-// Identity & Access (83 to 13, ADR 0261) keeps thirteen.
+// Identity & Access (83 to 14, ADR 0261) keeps fourteen.
 // portalauth.PasswordResetRetryAfter is the RetryAfter func(error) of
 // api/common's PasswordResetRoutes, which five portal routers build without
 // a clock; sessiontoken's decode serves the package-level middleware
@@ -60,10 +60,11 @@ import (
 // validates on the real clock: verifyRegistration and consumeLoginSession of
 // AccountPasskeyFlows, verifyRegistration and verifyLogin of
 // OperatorPasskeyFlows, and SignInDataRetention's
-// inUnitDeleteExpiredPasskeySessions. Six stamp or compare the iat and exp of
+// inUnitDeleteExpiredPasskeySessions. Seven stamp or compare the iat and exp of
 // tokens the jwtauth verifier checks on the jwx clock: SessionCodec's
 // AccountOfAccessToken, IssueTokenPair, IssueAccessToken,
-// IssueMFAEnrollmentToken and ParseAccessToken, and TokenAuth.ParseAccessJWT.
+// IssueMFAEnrollmentToken and ParseAccessToken, TokenAuth.ParseAccessJWT and
+// the access-token expiry in AccountAuthentication.ValidateSessionTokens.
 var moduleLiveClockBudget = map[string]int{
 	"modules/appointments": 5,
 	"modules/auditlog":     15,
@@ -83,7 +84,7 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/enrollment":                   63,
 	"modules/facilities":                   2,
 	"modules/feedback":                     1,
-	"modules/identityaccess":               13,
+	"modules/identityaccess":               14,
 	"modules/mealplan":                     1,
 	"modules/operatordashboard":            2,
 	"modules/organizationtenancy":          7,

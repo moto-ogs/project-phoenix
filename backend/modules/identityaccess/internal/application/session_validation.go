@@ -26,7 +26,8 @@ func (s *AccountAuthentication) ValidateSessionTokens(ctx context.Context, acces
 	ctx = bindRuntime(s.attach, ctx)
 	claims, err := s.codec.ParseAccessToken(access)
 	now := s.sessions.now().Unix()
-	if err != nil || claims.AccountID <= 0 || claims.ExpiresAt <= now || !domain.SessionScopeMatches(claims.Scope, portal) {
+	// The access token's expiry is stamped and verified on the real clock (jwx).
+	if err != nil || claims.AccountID <= 0 || claims.ExpiresAt <= time.Now().Unix() || !domain.SessionScopeMatches(claims.Scope, portal) {
 		return identityaccess.SessionClaims{}, identityaccess.ErrInvalidToken
 	}
 	named, _ := domain.PortalNamed(portal)

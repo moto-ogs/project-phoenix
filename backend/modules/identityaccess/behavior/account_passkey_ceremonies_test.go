@@ -20,7 +20,9 @@ import (
 // software authenticator answers the options, the composed owner verifies
 // them and Postgres keeps the rows.
 type accountPasskeyScene struct {
-	passkeys  identityaccess.AccountPasskeyFlows
+	passkeys identityaccess.AccountPasskeyFlows
+	// sessions validates the session a completed login minted.
+	sessions  identityaccess.Owner
 	db        *bun.DB
 	tenantID  int64
 	subdomain string
@@ -42,7 +44,7 @@ func newAccountPasskeySceneAt(t *testing.T, db *bun.DB, now func() time.Time) ac
 	module := newMFATestModule(t, db, withDeliveringMailer([]api.AuthTestOption{api.WithAuthTestClock(now)})...)
 	require.NotNil(t, module.Passkeys)
 	tenantID, subdomain := testpkg.CreateTestTenant(t, db)
-	return accountPasskeyScene{passkeys: module.Passkeys, db: db, tenantID: tenantID, subdomain: subdomain, origin: "http://" + subdomain + ".localhost", now: now}
+	return accountPasskeyScene{passkeys: module.Passkeys, sessions: module.Auth, db: db, tenantID: tenantID, subdomain: subdomain, origin: "http://" + subdomain + ".localhost", now: now}
 }
 
 // member creates an account that belongs to the scene's school.

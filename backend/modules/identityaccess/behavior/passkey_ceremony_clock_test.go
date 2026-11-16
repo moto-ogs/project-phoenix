@@ -31,6 +31,12 @@ func TestAccountPasskeyCeremoniesCompleteWhileTheOwnerClockIsFarFromTheRealDay(t
 	require.NoError(t, err)
 	assert.NotEmpty(t, result.AccessToken)
 	assert.NotEmpty(t, result.RefreshToken)
+
+	// The access token expires on the real clock that minted it, so the
+	// session it belongs to validates although the owner's clock is in 2030.
+	claims, err := scene.sessions.ValidateSessionTokens(context.Background(), result.AccessToken, result.RefreshToken, "tenant")
+	require.NoError(t, err)
+	assert.Equal(t, account, claims.AccountID)
 }
 
 func TestOperatorPasskeyCeremoniesCompleteWhileTheOwnerClockIsFarFromTheRealDay(t *testing.T) {

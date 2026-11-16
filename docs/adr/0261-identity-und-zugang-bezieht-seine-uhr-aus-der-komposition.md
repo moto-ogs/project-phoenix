@@ -74,13 +74,14 @@ Gültigkeit mit `time.Until`.
    Zeremonie (`verifyRegistration` und `consumeLoginSession` der Konten,
    `verifyRegistration` und `verifyLogin` der Betreiber) und das Löschen
    abgelaufener Zeremonien (`inUnitDeleteExpiredPasskeySessions`) vergleichen
-   diesen Ablauf deshalb mit der echten Uhr, wie auf der Basis. Sechs Aufrufe
+   diesen Ablauf deshalb mit der echten Uhr, wie auf der Basis. Sieben Aufrufe
    betreffen Access-, Refresh- und Enrollment-Tokens: Der jwtauth-Verifier
    prüft ihr `iat` und `exp` mit der jwx-Uhr. `SessionCodec` stempelt sie
    deshalb mit der echten Uhr (`IssueTokenPair`, `IssueAccessToken`,
    `IssueMFAEnrollmentToken`) und vergleicht ihr `exp` ebenso
    (`ParseAccessToken`, `AccountOfAccessToken`,
-   `sessiontoken.TokenAuth.ParseAccessJWT`). `TokenAuth` nimmt keine Uhr.
+   `sessiontoken.TokenAuth.ParseAccessJWT` und die Ablaufprüfung des
+   Access-Tokens in `ValidateSessionTokens`). `TokenAuth` nimmt keine Uhr.
    Die Uhr des Codecs stempelt und prüft nur MFA-Challenge- und
    Eltern-Setup-Tokens, die allein der Codec prüft.
 4. **Tests.** Tests, die Identity & Access direkt komponieren, laufen auf
@@ -103,8 +104,8 @@ Gültigkeit mit `time.Until`.
 
 ## Folgen
 
-- Das Uhr-Budget fällt um 70 Aufrufe (auf der Basis dieses Schnitts von 576
-  auf 506), Identity & Access von 83 auf 13.
+- Das Uhr-Budget fällt um 69 Aufrufe (auf der Basis dieses Schnitts von 576
+  auf 507), Identity & Access von 83 auf 14.
 - `calendarFixtureShiftedLiveDateDebt` verliert 9 Dateien mit 33 Funden.
   Alle Einträge unter `modules/identityaccess/` und
   `api/operator_mfa_verify_success_internal_test.go` entfallen.
