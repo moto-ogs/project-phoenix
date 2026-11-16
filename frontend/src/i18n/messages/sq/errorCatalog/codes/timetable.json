@@ -81,6 +81,7 @@
   "planning_track_name_taken": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "planning_track_not_found": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "presence_would_overstaff": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "reinstate_ended": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "reopen_attendance_changed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "reopen_staff_busy": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "reopen_student_active": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",

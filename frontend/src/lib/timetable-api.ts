@@ -6,7 +6,7 @@ import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
  * inject the JWT server-side. The client mirrors the surface of the backend:
  * - getWeek(from, to)            → GET    /instances?from=&to=
  * - start(id), complete(id),     → POST   /instances/{id}/{action}
- *   cancel(id)
+ *   cancel(id), reinstate(id)
  * - materialize(from?, to?)      → POST   /materialize
  */
 
@@ -939,6 +939,19 @@ class TimetableService {
   }
 
   /**
+   * POST /api/timetable/instances/{id}/reinstate (#7151).
+   * Takes back a cancellation while the block has not ended; the block is
+   * planned again and its staff hear "findet doch statt".
+   */
+  async reinstate(instanceId: string): Promise<InstanceStatusResult> {
+    return this.lifecycle<BackendInstanceStatusResult, InstanceStatusResult>(
+      instanceId,
+      "reinstate",
+      mapInstanceStatusResult,
+    );
+  }
+
+  /**
    * Preview for "Eltern informieren" in the cancel dialog (#2601): whether the
    * school allows the notice, whether the checkbox starts ticked, and how many
    * children / families the block reaches.
@@ -960,7 +973,7 @@ class TimetableService {
 
   private async lifecycle<TBackend, TFront>(
     instanceId: string,
-    action: "start" | "complete" | "cancel" | "reopen",
+    action: "start" | "complete" | "cancel" | "reopen" | "reinstate",
     mapper: (raw: TBackend) => TFront,
     body: Record<string, unknown> = {},
   ): Promise<TFront> {

@@ -12,6 +12,13 @@ import (
 // Timetable produces it; Delivery registers the type.
 const NotificationInstanceCancelled = "instance_cancelled"
 
+// NotificationInstanceReinstated is the notification type of a cancellation
+// taken back (#7151): the block takes place after all. It reaches the same
+// people as the cancellation, follows the cancellation's school switch,
+// personal switch and 14-day push window, so it pushes whenever the
+// cancellation pushed.
+const NotificationInstanceReinstated = "instance_reinstated"
+
 // NotificationFeedDelivery asks the notification router to write an event
 // into the notification feed of every staff account of its audience (#7148).
 // PushAccountIDs are the recipients the producer lets a push reach; a push

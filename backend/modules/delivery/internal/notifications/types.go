@@ -152,6 +152,9 @@ const (
 	// staffing that it was cancelled (#7148). It writes the notification feed
 	// and pushes while the cancellation takes effect within 14 days.
 	TypeInstanceCancelled = contract.NotificationInstanceCancelled
+	// TypeInstanceReinstated tells the same staff that a cancellation was
+	// taken back (#7151). It takes back TypeInstanceCancelled.
+	TypeInstanceReinstated = contract.NotificationInstanceReinstated
 
 	// TypeEnrollmentSubmitted is the e-mail "Neue Anmeldung" (#3780) to the
 	// enrollment managers who switched it on in the Anmeldungen overview.
@@ -186,6 +189,12 @@ type TypeDefinition struct {
 	// declines (FilterNotOptedOut). It needs a Permission, so it is on only
 	// for the people whose task the notice is (#4791).
 	DefaultOn bool
+	// Reverses names the type whose change this one takes back (#7151), as
+	// "findet doch statt" takes back a cancellation. Such a type is no choice
+	// of its own: no portal offers it, it follows the reversed type's school
+	// switch, and in the notification feed it updates an unread entry of the
+	// reversed type about the same object within the bundle window.
+	Reverses string
 }
 
 var (
@@ -242,7 +251,7 @@ func RegisterType(def TypeDefinition) {
 // and decide this type. The school portal borrows from the staff catalogue
 // and adds its own school-only types.
 func OfferedInPortal(def TypeDefinition, portal string) bool {
-	if def.Channel == ChannelEmail {
+	if def.Channel == ChannelEmail || def.Reverses != "" {
 		return false
 	}
 	if portal == PortalSchool {
@@ -319,6 +328,18 @@ func registerStaffAppointmentTypes() {
 		SortOrder:   1,
 		Permission:  permissionActivitiesRead,
 		DefaultOn:   true,
+	})
+	RegisterType(TypeDefinition{
+		Key:         TypeInstanceReinstated,
+		Label:       "Absage zurückgenommen",
+		Description: "Wenn eine Absage zurückgenommen wird und der Termin doch stattfindet. Folgt dem Schalter für Absagen.",
+		Group:       GroupAppointments,
+		Portal:      PortalStaff,
+		TenantGate:  settingInstanceCancelledEnabled,
+		SortOrder:   2,
+		Permission:  permissionActivitiesRead,
+		DefaultOn:   true,
+		Reverses:    TypeInstanceCancelled,
 	})
 }
 

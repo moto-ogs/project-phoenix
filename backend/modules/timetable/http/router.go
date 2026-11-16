@@ -129,6 +129,9 @@ func (rs *Resource) mountInstancePlanningRoutes(r chi.Router, withTx common.Midd
 		Post("/{id}/reopen", rs.reopenInstance)
 	r.With(common.RequiresPermission(permissions.SchedulesManage), withTx, rs.requireWebAttendanceForActiveInstance).
 		Post("/{id}/cancel", rs.cancelInstance)
+	// #7151: take back a cancellation while the block has not ended.
+	r.With(common.RequiresPermission(permissions.SchedulesManage), withTx).
+		Post("/{id}/reinstate", rs.reinstateInstance)
 	// #2601: preview for "Eltern informieren" in the cancel dialog.
 	r.With(common.RequiresPermission(permissions.SchedulesManage), withTx).
 		Get("/{id}/guardian-notice", rs.guardianNoticeReach)

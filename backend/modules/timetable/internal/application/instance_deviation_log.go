@@ -12,6 +12,7 @@ import (
 // they match the Audit Platform's deviation event vocabulary.
 const (
 	DeviationEventCancellation      = "cancellation"
+	DeviationEventReinstatement     = "reinstatement"
 	DeviationEventUnderstaffedAck   = "understaffed_ack"
 	DeviationEventUnderstaffedUnack = "understaffed_unack"
 
