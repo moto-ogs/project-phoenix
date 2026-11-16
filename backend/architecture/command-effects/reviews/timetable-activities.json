@@ -12164,6 +12164,28 @@
     },
     {
       "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Owner.BlockEducationGroups",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.BlockGroupQuery.BlockEducationGroups",
+      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/timetable.Owner.BlockEducationGroups (#7136). The staffing notice reads the blocks' groups inside the deviation write's unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Owner.BlockEducationGroups",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.BlockGroupQuery.BlockEducationGroups",
+      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through modules/timetable.Owner.BlockEducationGroups (#7136). The staffing notice reads the blocks' groups inside the deviation write's unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Owner.AcknowledgeConflict",
       "classification": "platform",
       "effect": "scope",
@@ -38872,6 +38894,66 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Capability.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListGroupAssignments",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Capability.ListTeachers (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListTeachers",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Owner.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListGroupAssignments",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Owner.ListTeachers (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListTeachers",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Query.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListGroupAssignments",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Query.ListTeachers (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListTeachers",
+      "target_owner": "school-membership"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGuardianNotices.NoticeReach",
       "classification": "query",
       "effect": "query",
@@ -42226,6 +42308,49 @@
       "reason": "Platform protocol participation (notice): timetable-activities reaches realtime.Broadcaster.BroadcastToTenant (delivery-platform) through roots/owners.staffingAnnouncer.AnnounceStaffingChanged. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/realtime.Broadcaster.BroadcastToTenant",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.BlockGroupQuery.BlockEducationGroups",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingBlockGroups.BlockEducationGroups",
+      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/timetable.BlockGroupQuery.BlockEducationGroups (#7136). The staffing notice reads the blocks' groups inside the deviation write's unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.BlockGroupQuery.BlockEducationGroups",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingBlockGroups.BlockEducationGroups",
+      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.WithinTenantRetry (tenant-runtime) through modules/timetable.BlockGroupQuery.BlockEducationGroups (#7136). The staffing notice reads the blocks' groups inside the deviation write's unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenantRetry",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffingNotices.NotifyStaffingChanged",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingNotices.NotifyStaffingChanged",
+      "reason": "Platform protocol participation (durable): timetable-activities reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.timetableStaffingNotices.NotifyStaffingChanged (#7136). The notification feed entries and the push outbox entries of a staffing change join the deviation write's unit; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableStaffingNotices.NotifyStaffingChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingNotices.NotifyStaffingChanged",
+      "reason": "Read-only target: timetable-activities reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.timetableStaffingNotices.NotifyStaffingChanged (#7136). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
       "target_owner": "delivery-platform"
     },
     {

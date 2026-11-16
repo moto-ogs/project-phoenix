@@ -21,6 +21,7 @@ func TestRestatedSettingKeysMatchTheRegistry(t *testing.T) {
 		"notifications.active_window_end",
 		"notifications.absence_reported_enabled",
 		"notifications.instance_cancelled_enabled",
+		"notifications.staffing_changed_enabled",
 		"notifications.staff_notice_published_enabled",
 		"notifications.on_duty_only",
 		"reminders.pickup_upcoming_enabled",

@@ -118,6 +118,18 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 		SortOrder:       6,
 	},
 	{
+		Key:             config.KeyNotificationsStaffingChangedEnabled,
+		Label:           "Hinweis bei Vertretung und Dienstplanänderung",
+		Description:     "Vertritt jemand oder ist jemand nicht da, bekommen die vertretende und die vertretene Person einen Hinweis in moto, dazu die Lehrkräfte der Gruppe. Ob dazu eine Mitteilung aufs Handy kommt, entscheidet jede Person selbst.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "benachrichtigungen",
+		SortOrder:       7,
+	},
+	{
 		Key:             config.KeyNotificationsStaffNoticePublishedEnabled,
 		Label:           "Benachrichtigung bei neuem Hinweis der Leitung",
 		Description:     "Legt die Leitung einen Hinweis für die Betreuung an, steht er bei den Benachrichtigungen. Eine Mitteilung aufs Handy bekommt nur, wer sie selbst einschaltet.",
@@ -127,6 +139,6 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 		WritePermission: "config:update",
 		Tab:             "operations",
 		Category:        "benachrichtigungen",
-		SortOrder:       7,
+		SortOrder:       8,
 	},
 }

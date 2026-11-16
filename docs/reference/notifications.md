@@ -231,6 +231,25 @@ without the person who cancelled; feed and push from today up to 14 days
 ahead, feed only later, nothing for the past. A bulk cancellation of a
 period writes no entries per block.
 
+Staffing changes (#7136) come from every write of the Timetable staffing:
+the single Vertretungsplan save, the Sammel-Vertretung, and the plan cascade
+of an absence (sick report, its reconciliation and the Dienstplan-Abgleich
+`SyncAbsencePlan`). Each story is one notice per person and kind
+(substituted, absent, present again, substitute removed), whatever the number
+of days. `staffing_changed` reaches the substitute and the absent person and
+links to their own Dienstplan; `group_staffing_changed` reaches the teachers
+assigned to the OGS groups of the affected blocks (`education.group_teacher`,
+groups as the Betreuungsplan's group filter names them) and links to
+`/vertretung?d=…&block=…`. The person who made the change gets nothing; the
+text names no reason. Both types sit under the heading
+„Dienstplan und Vertretung“ (`dienstplan`), push by default and share the
+school switch `notifications.staffing_changed_enabled`. Bundling object: the
+story itself (`staffing_story`, a random id per story), so an independently
+visible change never overwrites another unread entry in the same operation; the
+staffing rows do not record which substitution a later removal undoes, so a
+removal is an entry of its own. Withdrawing or shortening an absence tells the
+same people that the person is there again.
+
 A new Hinweis der Leitung (`staff_notice_published`, #7143) reaches the
 readers of the Tagesinformationen in the OGS portal: the school's staff whose
 account holds `users:read`, without the person who saved it. It is written
