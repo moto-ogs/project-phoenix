@@ -234,7 +234,7 @@ period writes no entries per block.
 Staffing changes (#7136) come from every write of the Timetable staffing:
 the single Vertretungsplan save, the Sammel-Vertretung, and the plan cascade
 of an absence (sick report, its reconciliation and the Dienstplan-Abgleich
-`SyncAbsencePlan`). Each operation is one notice per person and kind
+`SyncAbsencePlan`). Each story is one notice per person and kind
 (substituted, absent, present again, substitute removed), whatever the number
 of days. `staffing_changed` reaches the substitute and the absent person and
 links to their own Dienstplan; `group_staffing_changed` reaches the teachers
@@ -244,11 +244,23 @@ groups as the Betreuungsplan's group filter names them) and links to
 text names no reason. Both types sit under the heading
 „Dienstplan und Vertretung“ (`dienstplan`), push by default and share the
 school switch `notifications.staffing_changed_enabled`. Bundling object: the
-operation itself (`staffing_operation`, a random id per write), so an
-unrelated change never overwrites an unread entry about other days; the
+story itself (`staffing_story`, a random id per story), so an independently
+visible change never overwrites another unread entry in the same operation; the
 staffing rows do not record which substitution a later removal undoes, so a
 removal is an entry of its own. Withdrawing or shortening an absence tells the
 same people that the person is there again.
+
+A new Hinweis der Leitung (`staff_notice_published`, #7143) reaches the
+readers of the Tagesinformationen in the OGS portal: the school's staff whose
+account holds `users:read`, without the person who saved it. It is written
+when a saved notice newly reaches them: created active, switched on again or
+its audience widened to include them; never for another edit. A notice only for the Lehrkräfte of moto schule writes no
+entries until the school portal has its feed (#7139). Feed and push while the
+notice starts within 14 days, feed only later, nothing once it has ended. The
+push is off by default (`FilterOptedIn`); the school switch is
+`notifications.staff_notice_published_enabled`. The link
+`/tagesinformationen?hinweis=<id>` opens the notice through
+`GET /api/staff-notices/{id}`, also before it applies.
 
 ### Web Push (#2003)
 

@@ -114,3 +114,16 @@ func TestStaffingNoticesFollowTheRight(t *testing.T) {
 		assert.Equal(t, "notifications.staffing_changed_enabled", def.TenantGate, key)
 	}
 }
+
+// TestStaffNoticePublishedFollowsTheRight pins the right the notice about a
+// Hinweis der Leitung (#7143) restates: the readers of the Tagesinformationen
+// in the OGS portal hold users:read, and the push is off by default.
+func TestStaffNoticePublishedFollowsTheRight(t *testing.T) {
+	t.Parallel()
+	def, ok := notifications.GetType(notifications.TypeStaffNoticePublished)
+	require.True(t, ok)
+	assert.Equal(t, permissions.UsersRead, def.Permission)
+	assert.False(t, def.DefaultOn, "the push of a Hinweis der Leitung is off by default")
+	assert.Equal(t, notifications.PortalStaff, def.Portal)
+	assert.False(t, def.SchoolPortal, "the feed of moto schule follows with #7139")
+}

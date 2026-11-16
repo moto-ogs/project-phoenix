@@ -129,4 +129,16 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 		Category:        "benachrichtigungen",
 		SortOrder:       7,
 	},
+	{
+		Key:             config.KeyNotificationsStaffNoticePublishedEnabled,
+		Label:           "Benachrichtigung bei neuem Hinweis der Leitung",
+		Description:     "Legt die Leitung einen Hinweis für die Betreuung an, steht er bei den Benachrichtigungen. Eine Mitteilung aufs Handy bekommt nur, wer sie selbst einschaltet.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "benachrichtigungen",
+		SortOrder:       8,
+	},
 }

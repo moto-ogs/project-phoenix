@@ -75,6 +75,7 @@ export const NOTIFICATION_FEED_ANALYTICS_TYPES = [
   "staffing_changed",
   "group_staffing_changed",
   "instance_reinstated",
+  "staff_notice_published",
   "student_pickup_changed",
   "student_absence_reported",
   "staff_student_note_shared",

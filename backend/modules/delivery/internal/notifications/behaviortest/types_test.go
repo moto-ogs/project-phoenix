@@ -31,7 +31,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 
 	t.Run("staff catalogue is grouped and ordered", func(t *testing.T) {
 		defs := notifications.TypesForPortal(notifications.PortalStaff)
-		require.Len(t, defs, 18)
+		require.Len(t, defs, 19)
 
 		keys := make([]string, len(defs))
 		for i, def := range defs {
@@ -53,6 +53,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 			notifications.TypeStaffPlannedExit,
 			notifications.TypeStaffQualificationExpiry,
 			notifications.TypeStaffQualificationOwnExpiry,
+			notifications.TypeStaffNoticePublished,
 			notifications.TypeInstanceCancelled,
 			notifications.TypeStaffingChanged,
 			notifications.TypeGroupStaffingChanged,

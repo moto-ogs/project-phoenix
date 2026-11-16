@@ -77,3 +77,13 @@ export const staffMonthSummaryKeys = {
   month: (staffId: string, year: number, month: number) =>
     `staff-month-summary-${staffId}-${year}-${month}`,
 } as const;
+
+/**
+ * Der einzelne Hinweis der Leitung, auf den ein Eintrag in der Glocke zeigt
+ * (#7143), je Konto; die Schule ergänzt `useSWRAuth`. Die eigene
+ * Kenntnisnahme gehört zur Antwort, deshalb trägt der Schlüssel das Konto.
+ */
+export const staffNoticeKeys = {
+  linked: (accountId: string, noticeId: string) =>
+    `staff-notice:${accountId}:${encodeURIComponent(noticeId)}`,
+} as const;

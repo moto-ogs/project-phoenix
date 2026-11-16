@@ -693,4 +693,8 @@ afterAll(async () => {
   // context.
   await settleImports(baseline.untrackedImmediate);
   resetWorker(baseline);
+  // Vitest forwards console calls to its RPC endpoint asynchronously. Give
+  // logs from the settled chains one turn to reach the runner before this
+  // worker starts another file or is torn down.
+  await new Promise<void>((resolve) => baseline.untrackedImmediate(resolve));
 });
