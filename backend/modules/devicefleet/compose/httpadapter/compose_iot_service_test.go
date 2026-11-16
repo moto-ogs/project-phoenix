@@ -23,7 +23,7 @@ import (
 func setupIoTService(t *testing.T, db *bun.DB) iot.Service {
 	fleet, err := api.NewDeviceFleet(testpkg.NewDatabase(t, db))
 	require.NoError(t, err, "Failed to compose the device fleet")
-	return iot.NewService(fleet)
+	return iot.NewService(fleet, time.Now)
 }
 
 // =============================================================================

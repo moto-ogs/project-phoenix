@@ -39,7 +39,7 @@ func (s *Service) FindOpenTraegerErasureOrder(ctx context.Context, organizationI
 // withdrawn.
 func (s *Service) CreateTraegerErasureOrder(ctx context.Context, input organizationtenancy.NewTraegerErasureOrder) (order organizationtenancy.TraegerErasureOrder, err error) {
 	input.OrderReference = strings.TrimSpace(input.OrderReference)
-	if err := validateTraegerErasureOrder(input, calendar.TodayDate()); err != nil {
+	if err := validateTraegerErasureOrder(input, s.today()); err != nil {
 		return organizationtenancy.TraegerErasureOrder{}, err
 	}
 	err = s.run(ctx, "create_traeger_erasure_order", func(txCtx context.Context, stats *domain.OperationStats) error {
@@ -99,7 +99,7 @@ var _ organizationtenancy.TraegerErasureOrderRecords = (*Service)(nil)
 // hint existed (#4720). A started order cannot be withdrawn, so this is its
 // only way forward; a recorded choice never changes.
 func (s *Service) RecordTraegerErasureOrderRecords(ctx context.Context, organizationID int64, records organizationtenancy.RecordsHandover) (order organizationtenancy.TraegerErasureOrder, err error) {
-	if err := validateRecordsHandover(records, calendar.TodayDate()); err != nil {
+	if err := validateRecordsHandover(records, s.today()); err != nil {
 		return organizationtenancy.TraegerErasureOrder{}, err
 	}
 	err = s.run(ctx, "record_traeger_erasure_order_records", func(txCtx context.Context, stats *domain.OperationStats) error {

@@ -214,7 +214,7 @@ func TestUnregisteredTagScan_DeleteExpiredKeepsRecentScans(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	fleet := newScanFleet(t, db)
 	ctx := testpkg.Ctx(t)
-	now := time.Now()
+	now := scanRetentionDay
 	oldScan := recordScan(t, fleet, ctx, "TAG-EXPIRED", nil, now.Add(-120*24*time.Hour))
 	newScan := recordScan(t, fleet, ctx, "TAG-KEPT", nil, now)
 
@@ -244,7 +244,7 @@ func TestUnregisteredTagScan_DeleteExpiredRollsBackAndRetriesIdempotently(t *tes
 	db := testpkg.SetupTestDB(t)
 	fleet := newScanFleet(t, db)
 	ctx := testpkg.Ctx(t)
-	now := time.Now()
+	now := scanRetentionDay
 	expired := recordScan(t, fleet, ctx, "TAG-RETENTION-ROLLBACK", nil, now.Add(-120*24*time.Hour))
 	cutoff := now.Add(-devicefleet.UnregisteredTagScanRetentionDays * 24 * time.Hour)
 	wantErr := errors.New("abort after retention")
@@ -350,7 +350,7 @@ func TestUnregisteredTagScan_TwoTenantIsolation(t *testing.T) {
 		for _, scan := range scans {
 			assert.Equal(t, tenantB, scan.TenantID, "cross-tenant leak: tenant A scan visible to tenant B")
 		}
-		deleted, err := fleet.DeleteExpiredUnregisteredTagScans(ctxB, time.Now().Add(-devicefleet.UnregisteredTagScanRetentionDays*24*time.Hour))
+		deleted, err := fleet.DeleteExpiredUnregisteredTagScans(ctxB, scanRetentionDay.Add(-devicefleet.UnregisteredTagScanRetentionDays*24*time.Hour))
 		require.NoError(t, err)
 		assert.Zero(t, deleted, "retention is scoped to the caller tenant")
 		return nil
@@ -449,3 +449,8 @@ func TestUnregisteredTagScan_KeepsPersistenceFailuresVisible(t *testing.T) {
 	// The runtime belongs to this closable pool; both reads and writes now
 	// fail at the same transaction boundary. Rollback behavior is covered above.
 }
+
+// scanRetentionDay is the fixed instant the retention tests measure their
+// window from. The database refuses only a cutoff newer than its own window,
+// so a fixed past day keeps the expired scans expired on every day (#7104).
+var scanRetentionDay = time.Date(2026, time.November, 2, 12, 0, 0, 0, time.UTC)

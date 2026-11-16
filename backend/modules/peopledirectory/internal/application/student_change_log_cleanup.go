@@ -21,7 +21,11 @@ func NewStudentChangeLogCleanupService(
 	deletions ports.StudentChangeLogDeletionLog,
 	retention ports.StudentChangeLogRetention,
 	logger *slog.Logger,
+	now func() time.Time,
 ) ports.StudentChangeLogCleanupService {
+	if now == nil {
+		panic("student change-log cleanup: the clock is required")
+	}
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -31,6 +35,7 @@ func NewStudentChangeLogCleanupService(
 		deletions: deletions,
 		retention: retention,
 		logger:    logger,
+		now:       now,
 	}
 }
 
@@ -40,6 +45,8 @@ type studentChangeLogCleanupService struct {
 	deletions ports.StudentChangeLogDeletionLog
 	retention ports.StudentChangeLogRetention
 	logger    *slog.Logger
+	// now is the composition's clock the retention window ends on.
+	now func() time.Time
 }
 
 // CleanupExpiredChangeLog deletes change-history rows older than the resolved
@@ -59,7 +66,7 @@ func (s *studentChangeLogCleanupService) CleanupExpiredChangeLog(ctx context.Con
 	}
 	// created_at is TIMESTAMPTZ, so compare against an instant. BerlinMidnight
 	// of (today - retentionDays) is the cutoff; anything older is deleted.
-	cutoff := calendar.TodayDate().AddDays(-retentionDays).BerlinMidnight()
+	cutoff := calendar.DateFromTime(s.now()).AddDays(-retentionDays).BerlinMidnight()
 
 	// 1. Per-student impact, needed before the delete so audit rows can be
 	//    written first.

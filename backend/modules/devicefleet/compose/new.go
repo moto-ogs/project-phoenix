@@ -104,8 +104,8 @@ func New(dependencies Dependencies) (devicefleet.Capability, error) {
 	runtime := postgres.DatabaseRuntime(dependencies.DB)
 	observe := dependencies.Observe
 	service := application.New(application.Dependencies{
-		Devices:   postgres.NewDeviceStore(runtime),
-		Displays:  postgres.NewDisplayStore(runtime),
+		Devices:   postgres.NewDeviceStore(runtime, now),
+		Displays:  postgres.NewDisplayStore(runtime, now),
 		Scans:     postgres.NewUnregisteredTagScanStore(runtime),
 		Rooms:     application.RoomDirectory{Rooms: dependencies.Rooms},
 		Presence:  presence,

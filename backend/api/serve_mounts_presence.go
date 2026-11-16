@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 
@@ -42,13 +43,14 @@ import (
 	"github.com/moto-ogs/project-phoenix/workflows/sessionend"
 )
 
-func newDeviceAuthentication(iot devicefleetCompose.IoTService, organizations organizationtenancy.Query, settings settingsCompose.SettingsService, logger *slog.Logger) *deviceauth.Authenticators {
+func newDeviceAuthentication(iot devicefleetCompose.IoTService, organizations organizationtenancy.Query, settings settingsCompose.SettingsService, logger *slog.Logger, now func() time.Time) *deviceauth.Authenticators {
 	return deviceauth.New(deviceauth.Dependencies{
 		Logger:       logger,
 		Devices:      iot.Fleet(),
 		Schools:      deviceSchoolDirectory{schools: organizations},
 		SchoolErrors: devicefleetCompose.NewSchoolReadErrors(),
 		Settings:     settings,
+		Now:          now,
 	})
 }
 
@@ -63,7 +65,7 @@ func mountPresenceRoutes(
 	groupLive grouplive.Query, dashboard supervisiondashboard.Query, yard FacilitiesYard, iot devicefleetCompose.IoTService,
 	activities activityContract.ActivityService, education schoolstructure.GroupManagement, pickups carePlanModule.PickupScheduleService,
 	timeTracking *workforceCompose.TimeTracking, rooms FacilitiesRooms, feedback feedbackModule.Capability,
-	organizations organizationtenancy.Query, invitations identityaccess.SchoolInvitations,
+	organizations organizationtenancy.Query, invitations identityaccess.SchoolInvitations, now func() time.Time,
 ) error {
 	openRoomMove, err := newOpenRoomMove(facilities, timetableOwner, active, logger)
 	if err != nil {
@@ -79,7 +81,7 @@ func mountPresenceRoutes(
 		return err
 	}
 	iotResource, err := newIoTResource(db, logger, errorReportDSN, deviceAuth, presence, openRoomMove, sessionEnd, iot, facilities, active, users,
-		activities, timetableOwner, timetableRepos, education, pickups, settings, timeTracking, rooms, feedback, organizations, hub, invitations)
+		activities, timetableOwner, timetableRepos, education, pickups, settings, timeTracking, rooms, feedback, organizations, hub, invitations, now)
 	if err != nil {
 		return err
 	}
@@ -128,7 +130,7 @@ func newIoTResource(
 	timetableRepos timetableCompose.Repositories, education schoolstructure.GroupManagement, pickups carePlanModule.PickupScheduleService,
 	settings settingsCompose.SettingsService, timeTracking *workforceCompose.TimeTracking, rooms FacilitiesRooms,
 	feedback feedbackModule.Capability, organizations organizationtenancy.Query, hub *realtime.Hub,
-	invitations identityaccess.SchoolInvitations,
+	invitations identityaccess.SchoolInvitations, now func() time.Time,
 ) (*iotAPI.Resource, error) {
 	errorReports, err := NewIoTErrorReportRelay(errorReportDSN)
 	if err != nil {
@@ -151,8 +153,8 @@ func newIoTResource(
 		Logger:    logger.With("service", "device-scan"),
 	})
 	return iotAPI.NewResource(iotAPI.ServiceDependencies{
-		Administration:   NewIoTAdministration(devicefleetCompose.NewAdministration(iot.Fleet())),
-		Runtime:          NewIoTHTTPRuntime(),
+		Administration:   NewIoTAdministration(devicefleetCompose.NewAdministration(iot.Fleet(), now), now),
+		Runtime:          NewIoTHTTPRuntime(now),
 		DeviceScan:       deviceScan,
 		OpenRooms:        deviceScan,
 		StaffClock:       newStaffClockService(users, owners.NewPeopleIdentityAccess(db, observability.ObserveIdentityAccessOperation), timeTracking.TimeClock),

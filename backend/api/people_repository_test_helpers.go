@@ -65,15 +65,17 @@ type PeopleRepositorySuiteFactory struct {
 }
 
 // NewPeopleRepositorySuiteFactory composes the People Directory suite
-// repositories over the unobserved timetable dependencies.
-func NewPeopleRepositorySuiteFactory(db transactionruntime.Database) *PeopleRepositorySuiteFactory {
+// repositories over the unobserved timetable dependencies; the student rosters
+// list the children of the Berlin day of the optional clock.
+func NewPeopleRepositorySuiteFactory(db transactionruntime.Database, clocks ...func() time.Time) *PeopleRepositorySuiteFactory {
 	return newPeopleRepositorySuiteFactory(db, owners.MustNewUnobservedTimetable(db), owners.MustNewPeopleDirectory(db), MustNewSchoolStructure(db),
-		owners.MustNewUnobservedRooms(db), MustNewSchoolCalendar(db), owners.MustNewSchoolMembership(db), owners.MustNewWorkforce(db))
+		owners.MustNewUnobservedRooms(db), MustNewSchoolCalendar(db), owners.MustNewSchoolMembership(db), owners.MustNewWorkforce(db), clocks...)
 }
 
 func newPeopleRepositorySuiteFactory(
 	db transactionruntime.Database, capability timetable.Capability, students peopledirectory.Capability, groups schoolstructure.Query,
 	rooms facilities.Capability, calendarOwner schoolcalendar.Capability, membership schoolmembership.Capability, workTime workforce.Capability,
+	clocks ...func() time.Time,
 ) *PeopleRepositorySuiteFactory {
 	if capability == nil || students == nil || groups == nil || rooms == nil || calendarOwner == nil || membership == nil || workTime == nil {
 		panic("repository test factory: timetable and projection dependencies are required")
@@ -81,7 +83,7 @@ func newPeopleRepositorySuiteFactory(
 	identity, persons := owners.NewPeopleIdentityAccess(db, nil), owners.NewPersonRepository(db)
 	members := owners.NewMembershipRepositories(db, persons, identity, membership, rooms, workTime)
 	members.People = students
-	members.Student = owners.NewStudentRepository(db, membership, groups)
+	members.Student = owners.NewStudentRepository(db, membership, groups, clocks...)
 	members.GuardianProfile = owners.NewGuardianProfileRepository(db)
 	members.StudentGuardian = owners.NewStudentGuardianRepository(db)
 	// The withdrawal and change-request rows delegate to an unobserved Care

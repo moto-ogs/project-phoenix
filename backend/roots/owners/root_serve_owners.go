@@ -38,9 +38,10 @@ import (
 	"github.com/moto-ogs/project-phoenix/observability"
 )
 
-// BuildServeOrganizations composes Organisation & Tenancy.
-func BuildServeOrganizations(db transactionruntime.Database) (organizationtenancy.Capability, error) {
-	return organizationCompose.New(organizationCompose.Dependencies{DB: db.Pool(), Observe: observeOrganizationTenancy})
+// BuildServeOrganizations composes Organisation & Tenancy on the root's
+// clock.
+func BuildServeOrganizations(db transactionruntime.Database, now func() time.Time) (organizationtenancy.Capability, error) {
+	return organizationCompose.New(organizationCompose.Dependencies{DB: db.Pool(), Observe: observeOrganizationTenancy, Now: now})
 }
 
 // NewTraegerMemberNames composes the names of the Träger memberships
@@ -54,10 +55,10 @@ func observeOrganizationTenancy(observation organizationCompose.Observation) {
 	observability.ObserveOrganizationTenancyOperation(observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows, observation.Stats.StatementDuration, organizationtenancy.ErrorCode(observation.Err), observation.Err)
 }
 
-// BuildServeSchoolStructure composes School Structure.
-func BuildServeSchoolStructure(db transactionruntime.Database) (schoolstructure.Owner, error) {
+// BuildServeSchoolStructure composes School Structure on the root's clock.
+func BuildServeSchoolStructure(db transactionruntime.Database, now func() time.Time) (schoolstructure.Owner, error) {
 	return schoolStructureCompose.New(schoolStructureCompose.Dependencies{
-		DB: db.Pool(),
+		DB: db.Pool(), Now: now,
 		Observe: func(observation schoolStructureCompose.Observation) {
 			observability.ObserveSchoolStructureOperation(observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows, observation.Stats.StatementDuration, schoolstructure.ErrorCode(observation.Err), observation.Err)
 		},
@@ -165,12 +166,12 @@ func BuildServeParentConferences(db transactionruntime.Database) schoolcalendar.
 // companion slice and student profiles are constructible from the database
 // alone, so the directory's write path gets them here rather than waiting
 // for the full Care Plan, which needs this directory.
-func BuildPeopleDirectory(db transactionruntime.Database, observe func(peopleCompose.Observation), photos peopleCompose.StudentPhotoRuntime, guardians *peopleCompose.GuardianDirectoryProvider) (*peopleCompose.Directory, error) {
+func BuildPeopleDirectory(db transactionruntime.Database, observe func(peopleCompose.Observation), photos peopleCompose.StudentPhotoRuntime, guardians *peopleCompose.GuardianDirectoryProvider, now func() time.Time) (*peopleCompose.Directory, error) {
 	companions, err := careplanCompose.NewCompanionRecords(db.Pool(), func(careplanCompose.Observation) {})
 	if err != nil {
 		return nil, err
 	}
-	membership, err := NewSchoolMembership(db)
+	membership, err := NewSchoolMembership(db, now)
 	if err != nil {
 		return nil, err
 	}
@@ -184,6 +185,7 @@ func BuildPeopleDirectory(db transactionruntime.Database, observe func(peopleCom
 		Observe:                    observe,
 		StudentPhotos:              photos,
 		GuardianProvider:           guardians,
+		Now:                        now,
 	}, membership, careProfiles, companions, peopleDirectoryAudit(db), newGuardianLinkOwners(db),
 		NewPeopleIdentityAccess(db, nil).FindActiveGuardianMemberships)
 }

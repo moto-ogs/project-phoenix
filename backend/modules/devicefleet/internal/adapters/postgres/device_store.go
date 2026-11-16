@@ -40,14 +40,21 @@ type deviceRow struct {
 }
 
 // DeviceStore reads and writes iot.devices for the Device Fleet owner.
-type DeviceStore struct{ database Database }
+type DeviceStore struct {
+	database Database
+	// now is the owner's clock an update stamps updated_at with.
+	now func() time.Time
+}
 
 // NewDeviceStore builds the device adapter over the supplied runtime.
-func NewDeviceStore(database Database) *DeviceStore {
+func NewDeviceStore(database Database, now func() time.Time) *DeviceStore {
 	if database == nil {
 		panic("devicefleet postgres: database runtime is required")
 	}
-	return &DeviceStore{database: database}
+	if now == nil {
+		panic("devicefleet postgres: the clock is required")
+	}
+	return &DeviceStore{database: database, now: now}
 }
 
 func (s *DeviceStore) selectDevices(db bun.IDB, scope TenantScope, model any) *bun.SelectQuery {
@@ -96,7 +103,7 @@ func (s *DeviceStore) Update(ctx context.Context, input domain.UpdateDevice) (de
 	}
 	row := deviceRowFromUpdate(input)
 	if row.UpdatedAt.IsZero() {
-		row.UpdatedAt = time.Now()
+		row.UpdatedAt = s.now()
 	}
 	query := db.NewUpdate().Model(&row).
 		ModelTableExpr(deviceTableExpr).

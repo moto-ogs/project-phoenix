@@ -22,7 +22,7 @@ import (
 // the People Directory birthday capability (birthdays_behavior_test.go).
 
 // The repositories refuse an empty day set instead of building a WHERE clause
-// with no values. A student and a staff member with a birthday today exist, so
+// with no values. A student and a staff member with a birthday on the day exist, so
 // an empty result proves the refusal and not an empty school.
 func TestBirthdayRepositoriesRejectAnEmptyDaySet(t *testing.T) {
 	t.Parallel()
@@ -32,7 +32,7 @@ func TestBirthdayRepositoriesRejectAnEmptyDaySet(t *testing.T) {
 	repos := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	ctx := testpkg.Ctx(t)
 
-	today := calendar.TodayDate()
+	today := calendar.NewDate(2026, 11, 2)
 	student := testpkg.CreateTestStudent(t, db, "Geburtstag", "Kind", "1a")
 	member := testpkg.CreateTestStaff(t, db, "Geburtstag", "Personal")
 	for _, personID := range []int64{student.PersonID, member.PersonID} {
@@ -40,14 +40,14 @@ func TestBirthdayRepositoriesRejectAnEmptyDaySet(t *testing.T) {
 	}
 	todaySet := []peopleBirthday.BirthdayMonthDay{{Month: today.Month(), Day: today.Day()}}
 
-	students, err := testpkg.TenantQuery1(t, ctx, db, repos.Student.FindBirthdaysOn, todaySet)
+	students, err := testpkg.TenantQuery2(t, ctx, db, repos.Student.FindBirthdaysOn, todaySet, today)
 	require.NoError(t, err)
 	require.Len(t, students, 1, "the seeded student has a birthday today")
 	staff, err := testpkg.TenantQuery1(t, ctx, db, repos.Staff.FindBirthdaysOn, todaySet)
 	require.NoError(t, err)
 	require.Len(t, staff, 1, "the seeded staff member has a birthday today")
 
-	students, err = testpkg.TenantQuery1(t, ctx, db, repos.Student.FindBirthdaysOn, nil)
+	students, err = testpkg.TenantQuery2(t, ctx, db, repos.Student.FindBirthdaysOn, nil, today)
 	require.NoError(t, err)
 	assert.Empty(t, students)
 

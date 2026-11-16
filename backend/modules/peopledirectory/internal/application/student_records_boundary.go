@@ -243,7 +243,7 @@ func (r *StudentRecords) FindAllWithGroups(
 	ctx context.Context,
 ) ([]*peopleModule.StudentRosterEntry, error) {
 	return r.roster(ctx, "find all with groups", func() ([]domain.StudentRosterEntry, error) {
-		return r.directory.ListRoster(ctx, owner0.TodayDate().String())
+		return r.directory.ListRoster(ctx, r.directory.today().String())
 	})
 }
 

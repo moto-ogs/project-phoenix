@@ -5,6 +5,8 @@ package api
 import (
 	"log/slog"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
@@ -48,7 +50,7 @@ func newCallerRowsForTests(db transactionruntime.Database, settings owners.Calle
 	}
 	activities := timetableCompose.NewCallerActivityGroups(tt.Timetable)
 	caller, err := owners.NewCallerContext(requestTokenReads, r.Profile, owners.CallerPersons{Rows: members.Person, People: people}, membership, staffGroups,
-		members.Student, activities, owners.NewLoggedStudentPresence(db, slog.Default()), settings, slog.Default())
+		members.Student, activities, owners.NewLoggedStudentPresence(db, slog.Default()), settings, slog.Default(), calendar.TodayDate)
 	if err != nil {
 		return nil, err
 	}

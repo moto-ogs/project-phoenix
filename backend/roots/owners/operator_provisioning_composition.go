@@ -26,7 +26,7 @@ import (
 // settings.
 func newOperatorProvisioning(
 	organizations organizationtenancy.Capability, identity identityaccess.Owner, accounts OperatorAccountDirectory,
-	adapters OperatorProvisioningAdapters, settings settingsCompose.SettingsService, logger *slog.Logger,
+	adapters OperatorProvisioningAdapters, settings settingsCompose.SettingsService, logger *slog.Logger, now func() time.Time,
 ) (organizationtenancy.OperatorProvisioning, error) {
 	return organizationCompose.NewProvisioning(organizationCompose.ProvisioningDependencies{
 		PWAUsageWindowDays: deliveryCompose.PWAUsageWindowDays,
@@ -46,6 +46,7 @@ func newOperatorProvisioning(
 		Audit:      adapters.Audit,
 		Secrets:    provisioningSecrets{},
 		Logger:     logger,
+		Now:        now,
 	}, newOperatorDashboard(adapters.ActiveAccountCounts))
 }
 

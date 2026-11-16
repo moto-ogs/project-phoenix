@@ -50,6 +50,9 @@ import (
 // Re-measured 2026-11-15 for #7104: not counting stopwatch starts and the
 // owner slices lowered the sum from 1,646 to 665 calls; Care Plan (139 to 1)
 // and Parent Billing (7 to 0) take their clocks from their compositions.
+// People Directory, Device Fleet, Device Scan, Organisation & Tenancy, School
+// Structure, School Membership, Facilities and Settings followed (47 to 0,
+// ADR 0268).
 var moduleLiveClockBudget = map[string]int{
 	"modules/appointments": 5,
 	"modules/auditlog":     15,
@@ -61,26 +64,18 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/communication":                15,
 	"modules/dataimport":                   55,
 	"modules/delivery":                     44,
-	"modules/devicefleet":                  12,
-	"modules/devicescan":                   6,
 	"modules/documentrendering":            1,
 	"modules/enrollment":                   63,
-	"modules/facilities":                   2,
 	"modules/feedback":                     1,
 	"modules/filestorage":                  32,
 	"modules/identityaccess":               83,
 	"modules/mealplan":                     1,
 	"modules/operatordashboard":            2,
-	"modules/organizationtenancy":          7,
-	"modules/peopledirectory":              12,
 	"modules/planexport":                   2,
 	"modules/presenceprojection":           15,
 	"modules/requestreview":                1,
 	"modules/schedulerruntime":             36,
 	"modules/schoolcalendar":               5,
-	"modules/schoolmembership":             2,
-	"modules/schoolstructure":              3,
-	"modules/settings":                     3,
 	"modules/statistics":                   6,
 	"modules/studentpresence":              86,
 	"modules/timetable":                    45,

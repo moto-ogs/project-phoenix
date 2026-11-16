@@ -306,10 +306,10 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			mailSender, mailDispatcher, mailFrom, pushVAPID, err = BuildMailTransport(env)
 			return
 		},
-		func() (err error) { organizations, err = BuildServeOrganizations(db); return },
-		func() (err error) { groups, err = BuildServeSchoolStructure(db); return },
+		func() (err error) { organizations, err = BuildServeOrganizations(db, env.Now); return },
+		func() (err error) { groups, err = BuildServeSchoolStructure(db, env.Now); return },
 		func() (err error) { rooms, err = BuildServeRooms(db); return },
-		func() (err error) { membership, err = ComposeSchoolMembership(db); return },
+		func() (err error) { membership, err = ComposeSchoolMembership(db, env.Now); return },
 		func() error { bookings = NewEnrollmentBookings(); return nil },
 		func() (err error) {
 			settings, tracker, err = buildWorkerAnalyticsSettings(db, unit, env, organizations, hub, bookings, tracker, buildAnalytics)
@@ -321,7 +321,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() (err error) { workTime, err = BuildServeWorkforce(db, membership, calendar); return },
 		func() error {
-			people, peopleIdentity = BuildPeopleRows(db, env.Observe.IdentityAccess, groups, rooms, membership, workTime)
+			people, peopleIdentity = BuildPeopleRows(db, env.Observe.IdentityAccess, groups, rooms, membership, workTime, env.Now)
 			return nil
 		},
 		func() (err error) { guardian, err = BuildGuardianService(db, people, audit, env); return },
@@ -331,7 +331,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return nil
 		},
 		func() (err error) {
-			persons, err = BuildPeopleDirectory(db, ObservePeopleDirectory, photoRuntime, GuardianDirectoryProvider(db, guardian))
+			persons, err = BuildPeopleDirectory(db, ObservePeopleDirectory, photoRuntime, GuardianDirectoryProvider(db, guardian), env.Now)
 			return
 		},
 		func() (err error) { timetableOwner, err = BuildServeTimetable(db, persons, rooms, membership); return },

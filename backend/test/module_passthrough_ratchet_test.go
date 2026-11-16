@@ -280,7 +280,9 @@ const modulePassthroughApplicationSegment = "/internal/application/"
 // Raised by ADR 0243: the month close of the Träger in modules/workforce,
 // whose capability maps the close, the reopen and the staff read onto the
 // public failures (+3).
-const modulePassthroughOwnerBudgetTotal = 1400
+// Lowered by #7104: People Directory's student rosters and guardian retention
+// read the day of the owner's clock instead of forwarding (-2).
+const modulePassthroughOwnerBudgetTotal = 1398
 
 // modulePassthroughOwnerBudgets is the register: module directory →
 // pass-throughs measured in its application layer and its compositions
@@ -333,7 +335,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0209: the billing lock B of the holiday allocation
 	// workflow, which validates the Träger and maps the lock error (+1).
 	"modules/parentbilling":    12,
-	"modules/peopledirectory":  204, // #6840: DeletePerson checks live profiles (-1)
+	"modules/peopledirectory":  202, // #6840: DeletePerson checks live profiles (-1); #7104: the rosters and the retention read the owner's clock (-2)
 	"modules/requestreview":    15,
 	"modules/schedulerruntime": 4,
 	// Raised by ADR 0073: the feed cleanup keeps only the staff feed tombstones.

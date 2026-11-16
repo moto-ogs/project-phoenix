@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
@@ -98,7 +99,7 @@ func newTraegerExporter(t *testing.T, db *bun.DB, files *sepaFilesFake, audit *e
 	t.Helper()
 	exporter, err := compose.NewTraegerTenantExporter(db, organizationtenancy.TenantExportDependencies{
 		Fingerprints: organizationtenancy.ExportFingerprints{Bytes: testpkg.ContentFingerprint, Reader: testpkg.ReaderContentFingerprint},
-		Sealed:       openedSealedFields{}, Projected: projectedFields{}, SEPADebitFiles: files, Audit: audit})
+		Sealed:       openedSealedFields{}, Projected: projectedFields{}, SEPADebitFiles: files, Audit: audit, Now: time.Now})
 	require.NoError(t, err)
 	return exporter
 }

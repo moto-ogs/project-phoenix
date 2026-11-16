@@ -144,7 +144,7 @@ func NewDeviceTestModule(db transactionruntime.Database, unit tenant.UnitOfWork)
 	if err != nil {
 		return DeviceTestModule{}, err
 	}
-	return DeviceTestModule{IoT: devicefleetCompose.NewIoTService(fleet)}, nil
+	return DeviceTestModule{IoT: devicefleetCompose.NewIoTService(fleet, time.Now)}, nil
 }
 
 func newBirthdayWritesForTests(db transactionruntime.Database) staffoffboarding.StaffBirthdayWrites {

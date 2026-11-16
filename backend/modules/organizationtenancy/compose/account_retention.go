@@ -4,14 +4,15 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/application"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // NewAccountRetention composes the narrow offboarding read on the caller's transaction runtime, without an unscoped pool.
 func NewAccountRetention(observe func(Observation)) organizationtenancy.AccountRetention {
-	return application.New(postgres.New(postgres.NewDatabase()), postgres.Transaction{}, observe)
+	return application.New(postgres.New(postgres.NewDatabase()), postgres.Transaction{}, observe, calendar.TodayDate) // decides on no day
 }
 
 // NewTraegerMemberNames composes the names of the Träger memberships (#4693) on the caller's transaction runtime.
 func NewTraegerMemberNames(observe func(Observation)) organizationtenancy.TraegerMemberNames {
-	return application.New(postgres.New(postgres.NewDatabase()), postgres.Transaction{}, observe)
+	return application.New(postgres.New(postgres.NewDatabase()), postgres.Transaction{}, observe, calendar.TodayDate) // decides on no day
 }

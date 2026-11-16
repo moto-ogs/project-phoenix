@@ -56,7 +56,7 @@ func NewWeekProtocolEvenings(
 	if err != nil {
 		panic(fmt.Errorf("compose week protocol calendar: %w", err))
 	}
-	groups, err := BuildServeSchoolStructure(db)
+	groups, err := BuildServeSchoolStructure(db, time.Now)
 	if err != nil {
 		panic(fmt.Errorf("compose week protocol groups: %w", err))
 	}

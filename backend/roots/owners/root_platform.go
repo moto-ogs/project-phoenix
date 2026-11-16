@@ -149,6 +149,7 @@ func BuildSettingsOwner(db transactionruntime.Database, unit rootUnitOfWork, env
 		ClassRestrictionGuard: phases.HasActiveClassRestrictedPhase,
 		GradeRestrictionGuard: phases.HasActiveGradeRestrictedPhase,
 		GradeCapGuard:         phases.MaxActivePhaseGrade,
+		Now:                   env.Now,
 	})
 	if err != nil {
 		return SettingsOwner{}, err

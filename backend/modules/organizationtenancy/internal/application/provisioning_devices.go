@@ -442,7 +442,7 @@ func (p *Provisioning) deviceOnlineWindow(ctx context.Context, tenantID int64) t
 func (p *Provisioning) archiveAndTransfer(ctx context.Context, source domain.Device, targetSchoolID int64) (domain.Device, error) {
 	originalStatus := source.Status
 	transferredHash, transferredMask := source.APIKeyHash, source.MaskedAPIKey
-	now := time.Now()
+	now := p.now()
 	source.ArchivedAt = &now
 	source.APIKey = nil
 	source.APIKeyHash = nil

@@ -44,6 +44,7 @@ func NewSettingsTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 		Logger: slog.Default(), HomeLayouts: homeLayouts, ObserveLookup: func(string, string, string, time.Duration) {},
 		ClassRestrictionGuard: repos.ClassRestriction, GradeRestrictionGuard: repos.GradeRestriction, GradeCapGuard: repos.GradeCap,
 		TraegerValues: settingsCompose.NewTraegerSettingRepository(runtime), SchoolTraeger: schoolTraeger(organizations),
+		Now: time.Now,
 	})
 	if err != nil {
 		return SettingsTestModule{}, err

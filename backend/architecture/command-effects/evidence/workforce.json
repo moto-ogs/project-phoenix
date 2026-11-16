@@ -4242,7 +4242,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollRuleAudit.RecordPayrollRuleChange",
-      "binding_digest": "7ce5dddf5ab5728ac1ba3fd2ded43a18",
+      "binding_digest": "2a478b5f5653499612725e7fe85ca3db",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollRuleAudit.RecordPayrollRuleChange",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingAuditRepository.Create",
@@ -4250,7 +4250,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollRuleAudit.RecordPayrollRuleChange",
-      "binding_digest": "5d540340973b683de5d3d0a51272ca89",
+      "binding_digest": "5000eb47c38a8039e6e7c0de08c1af96",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollRuleAudit.RecordPayrollRuleChange",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
@@ -4258,7 +4258,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.payrollRuleAudit.RecordPayrollRuleChange",
-      "binding_digest": "5761eead23d7039c6e9eab3a0205f6c7",
+      "binding_digest": "c40f8a128e58ab0cfabdaacd133f44d2",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollRuleAudit.RecordPayrollRuleChange",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",

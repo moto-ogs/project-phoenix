@@ -315,7 +315,12 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0248: Communication's parent-letter child reader constructor (+6).
 // ADR 0246: the report templates of modules/organizationtenancy/compose (+5)
 // and the export adapter of modules/traegerview/compose (+1).
-const moduleComposeBudgetTotal = 13540
+// ADR 0268: the clock fields, their imports and nil defaults of
+// modules/devicefleet/compose (+5), modules/organizationtenancy/compose (+9),
+// modules/peopledirectory/compose (+6), modules/schoolmembership/compose (+5),
+// modules/schoolstructure/compose (+6) and modules/settings/compose (+2)
+// add exactly 33 LOC.
+const moduleComposeBudgetTotal = 13573
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -333,6 +338,7 @@ const moduleComposeBudgetTotal = 13540
 // ADR 0231 raised modules/enrollment/compose for the registration answers and
 // added modules/schoolsearchview/compose for the school search.
 // ADR 0240 raised modules/careplan/compose for the clock fields (+8).
+// ADR 0268 raised six compositions for their clock fields (+33).
 var moduleComposeBudgets = map[string]int{
 	"modules/appointments/compose": 45,
 	// ADR 0103: the signature ledger constructor, construction only.
@@ -359,8 +365,9 @@ var moduleComposeBudgets = map[string]int{
 	"modules/dataimport/compose":         85,
 	"modules/dataimport/compose/imports": 29,
 	// ADR 0145: +40 LOC for transport lifecycle, -8 LOC for the retired local wrapper.
-	"modules/delivery/compose":                      393,
-	"modules/devicefleet/compose":                   203,
+	"modules/delivery/compose": 393,
+	// ADR 0268: the clock of the administration and the IoT service (+5).
+	"modules/devicefleet/compose":                   208,
 	"modules/devicefleet/compose/repositoryadapter": 10,
 	// ADR 0124: bind the optional heartbeat to the tenant runtime savepoint (+9).
 	"modules/devicescan/compose":        532,
@@ -411,7 +418,8 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0198: the narrow account-retention constructor (+13).
 	// Raised by ADR 0203: the data return retrieval and release constructors (+18).
 	// ADR 0246: the report templates and their projection read (+5).
-	"modules/organizationtenancy/compose": 379,
+	// ADR 0268: the clock fields and their imports (+9).
+	"modules/organizationtenancy/compose": 388,
 	// Added by ADR 0115: the Elternabrechnung's construction only.
 	// Raised by ADR 0119: the billing run constructor (+7).
 	// Raised by ADR 0121: the confirmation letter constructor (+8).
@@ -449,7 +457,8 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0197: the export opener of the sealed guardian bank data (+5).
 	// ADR 0214: the namesakes of the known child hint (+13).
 	// ADR 0234: the note search beside the facade (+2).
-	"modules/peopledirectory/compose":    999,
+	// ADR 0268: the clock of the rosters, the guardians and the retention (+6).
+	"modules/peopledirectory/compose":    1005,
 	"modules/presenceprojection/compose": 7,
 	"modules/requestreview/compose":      12,
 	"modules/schedulerruntime/compose":   45,
@@ -460,7 +469,8 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0076: the restricted administrative repair constructor.
 	// ADR 0151: the school figure constructor (+6).
 	// ADR 0202: the pending-window constructor (+5).
-	"modules/schoolmembership/compose": 200,
+	// ADR 0268: the day clock of the store and the Kontingentzahl (+5).
+	"modules/schoolmembership/compose": 205,
 	// ADR 0231: the school search projection binds the school transaction.
 	"modules/schoolsearchview/compose": 38,
 	"modules/schoolsetup/compose":      56,
@@ -469,10 +479,12 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0183: bank cipher constructor (+6).
 	"modules/securityruntime/compose": 13,
 	// ADR 0154: the group names constructor (+13).
-	"modules/schoolstructure/compose": 606,
+	// ADR 0268: the clock fields of the group service and the retention (+6).
+	"modules/schoolstructure/compose": 612,
 	// Raised by ADR 0107 and ADR 0175: the Träger settings and school-read context guard.
 	// ADR 0193: the export projection of setting values (+3).
-	"modules/settings/compose":             323,
+	// ADR 0268: the clock of the operator presence-mode guard (+2).
+	"modules/settings/compose":             325,
 	"modules/studentdirectoryview/compose": 9,
 	// Raised by ADR 0125: the dev-tools presence history constructor (+7).
 	// ADR 0151: the school figure constructor (+13).
