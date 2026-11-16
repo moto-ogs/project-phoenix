@@ -168,6 +168,8 @@ func TestBuildRejects(t *testing.T) {
 	}
 	noPortal := get("/api/rows/", inner{})
 	noPortal.Portals = nil
+	bothAnswers := get("/api/rows/", inner{})
+	bothAnswers.NoData = true
 	strayEnum := get("/api/rows/", inner{})
 	strayEnum.Enums = []EnumSpec{{Name: "Gone", Fields: []string{"inner.gone"}, Values: []string{"x"}}}
 
@@ -182,6 +184,7 @@ func TestBuildRejects(t *testing.T) {
 			S stamp `json:"s"`
 		}{})}, Options{Identifiers: identifiers}, "anonymous struct"},
 		"an unknown marshaler in a named type":      {[]Registration{get("/api/rows/", []stamp{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
+		"a response on a route without data":        {[]Registration{bothAnswers}, Options{Identifiers: identifiers}, "registers a response and no data"},
 		"a route without a portal":                  {[]Registration{noPortal}, Options{Identifiers: identifiers}, "names no portal"},
 		"a route registered twice":                  {[]Registration{get("/api/rows/", inner{}), get("/api/rows/", inner{})}, Options{Identifiers: identifiers}, "registered twice"},
 		"a numeric id entry nothing uses":           {[]Registration{get("/api/rows/", inner{})}, Options{NumericIDs: []string{"gone.Type.ID"}, Identifiers: identifiers}, "numeric id gone.Type.ID"},
@@ -314,6 +317,23 @@ func TestTypeScriptListsTheRoutesOfEachPortal(t *testing.T) {
 		_, err = TypeScript(doc)
 		assert.ErrorContains(t, err, "taken by a generated table")
 	}
+}
+
+// A route that answers 204 or the bare envelope names no response type; its
+// decoder takes exactly those two answers.
+func TestTypeScriptWritesARouteWithoutData(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{{Method: "DELETE", Pattern: "/api/rows/{id}", Portals: []string{"tenant"}, NoData: true}}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	assert.True(t, doc.Routes[0].NoData)
+	assert.Nil(t, doc.Routes[0].Response)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+
+	source := files["rows.generated.ts"]
+	assert.Contains(t, source, "import {\n  noData,\n} from \"./runtime\";")
+	assert.Contains(t, source, "    response: noData,\n")
+	assert.NotContains(t, source, "success")
 }
 
 // Two portals mount the same handlers, so two resources answer with one Go

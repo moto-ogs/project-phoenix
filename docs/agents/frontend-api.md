@@ -385,6 +385,11 @@ The key is the scope claim of the portal's session token
 - A Go type two resources answer with (the staff portal and moto schule
   mount the same notification feed) is written once, in
   `lib/contract/shared.generated.ts`, and imported by both resource files.
+- A route that answers 204 or the envelope without data registers
+  `NoData: true` in place of a response type. Its decoder (`noData`) takes
+  exactly those two answers, and the BFF answers `data: null` (a DELETE: 204).
+- An identifier in `NumericIDs` leaves the proxy as a string, whatever Go
+  sends. A client type for such a route reads `string`, never `number`.
 
 The registered routes are the entries of `portals.generated.ts`.
 
