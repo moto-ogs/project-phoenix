@@ -3104,6 +3104,28 @@
     },
     {
       "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.AcceptCatererInvitation",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererAccessEngine.AcceptCatererInvitation",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithTenantTx (tenant-runtime) through *modules/identityaccess/internal/application.CatererAccess.AcceptCatererInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). A refused acceptance password (#4496) files its authentication event through AccountAuthentication.logAuthEvent, which joins the school's transaction the caterer portal opened; the runtime's own unit is reached only without an ambient transaction, as at the caterer password change.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithTenantTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.AcceptCatererInvitation",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererAccessEngine.AcceptCatererInvitation",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through *modules/identityaccess/internal/application.CatererAccess.AcceptCatererInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). A refused acceptance password (#4496) files its authentication event through AccountAuthentication.logAuthEvent, which joins the school's transaction the caterer portal opened; the runtime's own unit is reached only without an ambient transaction, as at the caterer password change.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.CatererSchools",
       "classification": "platform",
       "effect": "scope",
@@ -22650,6 +22672,17 @@
       "target_owner": "school-membership"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CatererInvitationDelivery.CancelCatererInvitation",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CatererInvitationDelivery.CancelCatererInvitation",
+      "reason": "Platform protocol participation (mutation): identity-access reaches modules/delivery/compose.EmailOutbox.CancelPendingByRelatedEntity (delivery-platform) through modules/identityaccess/ports.CatererInvitationDelivery.CancelCatererInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). A revoked caterer invitation stops its unsent mail in the school's transaction of the revocation (#4496).",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.CancelPendingByRelatedEntity",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CatererInvitationDelivery.CatererInvitationMailStates",
       "classification": "query",
       "effect": "query",
@@ -26650,6 +26683,17 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListSupervisedLiveGroups",
       "target_owner": "student-presence"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.catererInvitationDelivery.CancelCatererInvitation",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CatererInvitationDelivery.CancelCatererInvitation",
+      "reason": "Platform protocol participation (mutation): identity-access reaches modules/delivery/compose.EmailOutbox.CancelPendingByRelatedEntity (delivery-platform) through roots/owners.catererInvitationDelivery.CancelCatererInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). A revoked caterer invitation stops its unsent mail in the school's transaction of the revocation (#4496).",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.CancelPendingByRelatedEntity",
+      "target_owner": "delivery-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.catererInvitationDelivery.CatererInvitationMailStates",

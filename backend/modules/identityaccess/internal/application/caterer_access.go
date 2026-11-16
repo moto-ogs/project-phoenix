@@ -147,12 +147,26 @@ func (c *CatererAccess) revokeOpen(ctx context.Context) error {
 	}
 	for _, invitation := range invitations {
 		if invitation.Open(c.now()) {
-			if _, _, err := c.store.RevokeCatererInvitation(ctx, invitation.ID, c.now()); err != nil {
+			if _, err := c.revoke(ctx, invitation.ID); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+// revoke takes back the school's open invitation and stops its mail if the
+// outbox has not sent it yet (#4496): a link that no longer works is not
+// mailed. Both commit in the school's transaction.
+func (c *CatererAccess) revoke(ctx context.Context, invitationID int64) (bool, error) {
+	revoked, _, err := c.store.RevokeCatererInvitation(ctx, invitationID, c.now())
+	if err != nil || !revoked {
+		return revoked, err
+	}
+	if err := c.delivery.CancelCatererInvitation(ctx, invitationID); err != nil {
+		return false, fmt.Errorf("stop caterer invitation mail: %w", err)
+	}
+	return true, nil
 }
 
 // ListCatererInvitations lists the school's invitations, newest first.
@@ -196,7 +210,7 @@ func (c *CatererAccess) RevokeCatererInvitation(ctx context.Context, invitationI
 	if !c.inSchool(ctx) {
 		return catererError(failed("revoke caterer invitation", errSchoolTransactionRequired))
 	}
-	revoked, _, err := c.store.RevokeCatererInvitation(ctx, invitationID, c.now())
+	revoked, err := c.revoke(ctx, invitationID)
 	if err == nil && !revoked {
 		err = domain.ErrInvitationNotFound
 	}
@@ -282,7 +296,10 @@ func (c *CatererAccess) preview(ctx context.Context, token string) (domain.Cater
 // the caller opened. A new address gets an account and a caterer of the
 // invited name; the account of an existing caterer confirms with its
 // password and adds the school. An address of another kind of account is
-// refused. The school's supply by the caterer starts with it, so the
+// refused. A wrong password answers ErrInvalidCredentials after it was
+// counted towards the account's lock in the caller's transaction, which has
+// written nothing else: the caller commits it before it answers, as the
+// login does. The school's supply by the caterer starts with it, so the
 // caterer never exists without its school.
 func (c *CatererAccess) AcceptCatererInvitation(ctx context.Context, token string, registration identityaccess.CatererRegistration) (identityaccess.CatererAcceptance, error) {
 	ctx = c.attach(ctx)
@@ -340,17 +357,7 @@ func (c *CatererAccess) catererAccount(ctx context.Context, invitation domain.Ca
 		return 0, 0, err
 	}
 	if found {
-		caterer, isCaterer, _, err := c.store.FindCatererOfAccount(ctx, account.ID)
-		switch {
-		case err != nil:
-			return 0, 0, err
-		case !isCaterer:
-			return 0, 0, domain.ErrCatererAddressTaken
-		}
-		if valid, verifyErr := c.verifier.VerifyPassword(registration.Password, account.PasswordHash); verifyErr != nil || !valid {
-			return 0, 0, identityaccess.ErrInvalidCredentials
-		}
-		return account.ID, caterer.ID, nil
+		return c.existingCaterer(ctx, account, registration)
 	}
 	if registration.Password != registration.ConfirmPassword {
 		return 0, 0, domain.ErrPasswordMismatch
@@ -371,6 +378,53 @@ func (c *CatererAccess) catererAccount(ctx context.Context, invitation domain.Ca
 		return 0, 0, err
 	}
 	return created.ID, catererID, nil
+}
+
+// existingCaterer proves the existing account of the invited address with
+// its password, checked like a login (#4496; see AcceptCatererInvitation),
+// and names its caterer. An address of another kind of account is refused.
+func (c *CatererAccess) existingCaterer(ctx context.Context, account domain.LoginAccount, registration domain.CatererRegistration) (int64, int64, error) {
+	caterer, isCaterer, _, err := c.store.FindCatererOfAccount(ctx, account.ID)
+	switch {
+	case err != nil:
+		return 0, 0, err
+	case !isCaterer:
+		return 0, 0, domain.ErrCatererAddressTaken
+	}
+	accepted, err := c.checkPassword(ctx, account, registration.Password)
+	if err != nil {
+		return 0, 0, err
+	}
+	if !accepted {
+		if err := c.auditRefusedAcceptance(ctx, account.ID, registration); err != nil {
+			return 0, 0, err
+		}
+		return 0, 0, identityaccess.ErrInvalidCredentials
+	}
+	if !account.Active {
+		return 0, 0, identityaccess.ErrAccountInactive
+	}
+	return account.ID, caterer.ID, nil
+}
+
+// auditRefusedAcceptance files a refused acceptance password like a refused
+// login, in a savepoint of the school's transaction: a failed audit write
+// is logged and cannot abort the transaction that keeps the count. Only a
+// savepoint that could not be controlled is returned.
+func (c *CatererAccess) auditRefusedAcceptance(ctx context.Context, accountID int64, registration domain.CatererRegistration) error {
+	if registration.IPAddress == "" {
+		return nil
+	}
+	err := runInSavepoint(ctx, func(savepointCtx context.Context) error {
+		return c.auth.logAuthEvent(savepointCtx, accountID, domain.AuthEventLogin, false, registration.IPAddress, registration.UserAgent, "Caterer invitation acceptance refused")
+	})
+	if errors.Is(err, domain.ErrTransactionUnusable) {
+		return err
+	}
+	if err != nil {
+		c.logger.Error("failed to audit refused caterer acceptance", slog.Any("error", err))
+	}
+	return nil
 }
 
 // redeemable resolves the school's invitation by its token and says why it
