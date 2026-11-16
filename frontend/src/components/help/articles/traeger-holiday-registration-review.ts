@@ -128,7 +128,8 @@ export function traegerHolidayRegistrationReviewTopic(): HelpTopic {
         title: "Exportieren",
         steps: [
           "Stellen Sie die Filter ein, zum Beispiel eine Schule.",
-          "Wählen Sie `Herunterladen` und dann `Excel` oder `CSV`.",
+          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Die PDF ist zum Ausdrucken. Sie enthält Kind, Woche, Zeitmodell, Mittagessen und Telefon. Adresse, E-Mail und die Antworten im Formular stehen nur in Excel und CSV.",
         ],
       },
       {

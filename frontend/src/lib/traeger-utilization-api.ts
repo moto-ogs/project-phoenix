@@ -6,8 +6,11 @@
  * the school's access log. Backend int64 IDs leave as strings.
  */
 
-import { apiErrorFromBody, transportFetch } from "./api-error";
-import { filenameFromDisposition } from "./file-download";
+import {
+  downloadTraegerList,
+  type TraegerListFile,
+  type TraegerListFormat,
+} from "./traeger-list-export";
 import type { TraegerSchool } from "./traeger-api";
 import { traegerRequest } from "./traeger-api";
 
@@ -236,34 +239,15 @@ export async function fetchUtilizationChildren(
   };
 }
 
-async function readJson(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return null;
-  }
-}
-
 /** The CSV export of the window, of one school or all. */
-export async function downloadTraegerUtilization(
+export function downloadTraegerUtilization(
   window: UtilizationWindow,
-  schoolId?: string,
-): Promise<{ readonly blob: Blob; readonly filename: string | null }> {
-  const response = await transportFetch(
-    `${UTILIZATION_PATH}/export?${windowQuery(window, schoolId)}`,
-    { credentials: "include", cache: "no-store" },
-  );
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      await readJson(response),
-    );
-  }
-  return {
-    blob: await response.blob(),
-    filename: filenameFromDisposition(response),
-  };
+  schoolId: string | undefined,
+  format: TraegerListFormat,
+): Promise<TraegerListFile> {
+  return downloadTraegerList(`${UTILIZATION_PATH}/export`, format, {
+    from: window.from,
+    to: window.to,
+    school: schoolId,
+  });
 }

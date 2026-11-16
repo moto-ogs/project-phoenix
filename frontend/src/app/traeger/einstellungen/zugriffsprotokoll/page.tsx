@@ -10,17 +10,16 @@ import type { DateRange } from "react-day-picker";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DateRangePicker } from "~/components/ui/date-range-picker";
 import { EmptyState } from "~/components/ui/empty-state";
-import {
-  ExportMenu,
-  type ExportMenuOption,
-  exportFormatOptions,
-} from "~/components/ui/export-menu";
 import type {
   ActiveFilter,
   FilterConfig,
 } from "~/components/ui/page-header/types";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
 import {
   formatBerlinDate,
@@ -28,7 +27,6 @@ import {
   berlinTodayISO,
   toISODate,
 } from "~/lib/date-helpers";
-import { downloadBlob } from "~/lib/file-download";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { createLogger } from "~/lib/logger";
 import {
@@ -44,10 +42,6 @@ import {
 const logger = createLogger({ component: "TraegerAccessLogPage" });
 
 type KindChoice = TraegerAccessKind | "all";
-
-const EXPORT_FORMATS: readonly ExportMenuOption[] = exportFormatOptions([
-  "csv",
-]);
 
 const KIND_ITEMS: readonly { value: KindChoice; label: string }[] = [
   { value: "all", label: "Alles" },
@@ -185,7 +179,6 @@ export default function TraegerAccessLogPage() {
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const logLoad = useApiLoadError();
   const { show: showLoadError, clear: clearLoadError } = logLoad;
   const { show: showActionError } = useApiErrorDisplay();
@@ -285,25 +278,6 @@ export default function TraegerAccessLogPage() {
     }
   };
 
-  const exportCsv = async () => {
-    if (!filter) return;
-    setExporting(true);
-    try {
-      const file = await downloadTraegerAccessLog(filter);
-      downloadBlob(
-        file.blob,
-        file.filename ?? `zugriffsprotokoll-${from}-bis-${to}.csv`,
-      );
-    } catch (err) {
-      logger.error("traeger_access_log_export_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showActionError(err, { object: "die Exportdatei" });
-    } finally {
-      setExporting(false);
-    }
-  };
-
   const schoolOptions = [
     { value: "", label: "Alle Schulen" },
     ...schools.map((school) => ({ value: school.id, label: school.name })),
@@ -391,12 +365,21 @@ export default function TraegerAccessLogPage() {
             className="w-full sm:w-auto"
             triggerClassName="w-full sm:w-auto"
           />
-          <ExportMenu
+          <TraegerListExportMenu
+            download={(format) => {
+              if (!filter) return Promise.reject(new Error("no filter"));
+              return downloadTraegerAccessLog(filter, format);
+            }}
+            scope={traegerExportScope(
+              schoolId
+                ? schoolOptions.find((option) => option.value === schoolId)
+                    ?.label
+                : null,
+            )}
             ariaLabel="Zugriffsprotokoll herunterladen"
-            options={EXPORT_FORMATS}
-            busyKey={exporting ? "csv" : null}
+            fallbackName={`zugriffsprotokoll-${from}-bis-${to}`}
+            errorObject="das Zugriffsprotokoll"
             unavailable={!filter || loading}
-            onSelect={() => void exportCsv()}
           />
         </>
       }

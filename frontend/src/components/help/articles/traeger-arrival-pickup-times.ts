@@ -28,7 +28,7 @@ export function traegerArrivalPickupTimesTopic(): HelpTopic {
       "Lesen Sie die Felder unter `Ankunft` und `Abholung`. Je dunkler ein Feld, desto mehr Kinder. Die Zahl im Feld ist der Durchschnitt eines Tages.",
       "Zeigen Sie auf ein Feld oder tippen Sie darauf. Darunter steht dann die genaue Zahl.",
       "Wählen Sie unter `Je Schule` eine Schule oder oben den Filter `Schule`. Dann sehen Sie nur diese Schule.",
-      "Wählen Sie `Herunterladen` und dann `CSV`, um alle Zahlen als Tabelle zu speichern.",
+      "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
     ],
     result:
       "Sie sehen, wann an jeder Schule viele Kinder kommen und gehen. Planen Sie für diese Zeiten mehr Personal ein.",

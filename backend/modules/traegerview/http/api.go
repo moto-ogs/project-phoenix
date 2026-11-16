@@ -20,16 +20,18 @@ import (
 type Resource struct {
 	overview traegerview.Overview
 	reports  traegerview.Reports
+	lists    ListRenderer
 }
 
 // NewResource builds the resource. reports answers the heatmap of arrival
 // and pickup times (#4714), the comparison of schools (#4715) and the daily
-// attendance report of Mecklenburg-Vorpommern (#4717).
-func NewResource(overview traegerview.Overview, reports traegerview.Reports) *Resource {
-	if overview == nil || reports == nil {
-		panic("traeger view http: the overview and the reports are required")
+// attendance report of Mecklenburg-Vorpommern (#4717); lists renders the
+// exports as PDF, Excel or CSV (#4718).
+func NewResource(overview traegerview.Overview, reports traegerview.Reports, lists ListRenderer) *Resource {
+	if overview == nil || reports == nil || lists == nil {
+		panic("traeger view http: the overview, the reports and the list renderer are required")
 	}
-	return &Resource{overview: overview, reports: reports}
+	return &Resource{overview: overview, reports: reports, lists: lists}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/schools inside the
@@ -42,6 +44,7 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 	protectedTraegerRoutes(r, func(r chi.Router, _ common.Middleware) {
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/", rs.listSchools)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/key-date-counts", rs.keyDateCounts)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/key-date-counts/export", rs.keyDateCountsExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/alerts", rs.schoolsAlerts)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/occupancy", rs.occupancy)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/occupancy/export", rs.occupancyExport)

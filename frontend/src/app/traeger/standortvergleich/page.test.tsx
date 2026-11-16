@@ -209,6 +209,7 @@ describe("TraegerComparisonPage", () => {
     expect(mockDownload).toHaveBeenCalledWith(
       { from: "2026-08-13", to: "2026-09-09", schoolIds: [] },
       ["places_rate", "free_places", "booked", "present", "active_students"],
+      "csv",
     );
   });
 });

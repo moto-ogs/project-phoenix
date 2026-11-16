@@ -194,6 +194,7 @@ func TestTraegerUtilizationCountsOfferingsAttendanceAndRoomsPerDay(t *testing.T)
 	assert.Equal(t, http.StatusNotFound, stranger.Code, "a school of another Träger: %s", stranger.Body.String())
 	assert.Contains(t, stranger.Body.String(), "traeger.school_not_found")
 	assert.NotContains(t, stranger.Body.String(), "Fremd")
+	assertTraegerListFormats(t, router, answer.AccessToken, "/traeger/schools/utilization/export?"+window, fmt.Sprintf("auslastung-%s-bis-%s", day, utilizationFriday))
 
 	// Leitung holds no "Berichte lesen": neither the figures nor the export.
 	leader := traegerAccount(t, db, password)

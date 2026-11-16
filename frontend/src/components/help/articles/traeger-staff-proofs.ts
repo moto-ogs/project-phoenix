@@ -50,7 +50,7 @@ export function traegerStaffProofsTopic(): HelpTopic {
         steps: [
           "Wählen Sie in der Navigation `Personalnachweise`.",
           "Im Reiter `Ablaufliste` sehen Sie alle offenen Nachweise. Das Dringendste steht oben.",
-          "Wählen Sie oben rechts das Symbol zum Herunterladen. Wählen Sie `CSV`.",
+          "Wählen Sie oben rechts `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Nachweise.",
         ],
       },
       {

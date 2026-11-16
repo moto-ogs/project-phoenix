@@ -130,6 +130,9 @@ func TestTraegerComparisonComparesTheChosenSchools(t *testing.T) {
 		assert.Contains(t, csv, line+"\n")
 	}
 	assert.NotContains(t, csv, "Fremd")
+	// #4718: the same comparison as PDF and Excel.
+	assertTraegerListFormats(t, router, answer.AccessToken, "/traeger/schools/comparison/export?"+window,
+		fmt.Sprintf("standortvergleich-%s-bis-%s", day, utilizationFriday))
 
 	for path, status := range map[string]int{
 		fmt.Sprintf("/traeger/schools/comparison?%s&schools=%d", window, foreign):        http.StatusNotFound,

@@ -3,6 +3,8 @@ package listexport
 import (
 	"bytes"
 	"fmt"
+	"strconv"
+	"strings"
 
 	listrecords "github.com/moto-ogs/project-phoenix/modules/documentrendering/records"
 
@@ -167,7 +169,15 @@ func writeXLSXBodyRow(f *excelize.File, sheet string, excelRow int, row listreco
 	for index, column := range columns {
 		cell, _ := excelize.CoordinatesToCellName(index+1, excelRow)
 		// XLSX has no per-line emphasis; preserve the wrapped line structure.
-		value := listrecords.StripStyleMarkers(row.Values[column.ID])
+		text := listrecords.StripStyleMarkers(row.Values[column.ID])
+		var value any = text
+		if column.Numeric && text != "" {
+			number, err := strconv.ParseFloat(strings.ReplaceAll(text, ",", "."), 64)
+			if err != nil {
+				return fmt.Errorf("numeric list column %s: %w", column.ID, err)
+			}
+			value = number
+		}
 		if err := f.SetCellValue(sheet, cell, value); err != nil {
 			return err
 		}

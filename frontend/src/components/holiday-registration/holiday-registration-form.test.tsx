@@ -687,15 +687,17 @@ describe("HolidayRegistrationForm", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
     );
-    expect(
-      await screen.findByRole("heading", {
-        name: "Bitte prüfen Sie Ihre Angaben",
-      }),
-    ).toHaveFocus();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", {
+          name: "Bitte prüfen Sie Ihre Angaben",
+        }),
+      ).toHaveFocus(),
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Zurück und ändern" }));
     const formHeading = (await screen.findAllByRole("heading"))[0];
-    expect(formHeading).toHaveFocus();
+    await waitFor(() => expect(formHeading).toHaveFocus());
 
     fireEvent.click(
       screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
@@ -706,11 +708,13 @@ describe("HolidayRegistrationForm", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Verbindlich anmelden" }),
     );
-    expect(
-      await screen.findByRole("heading", {
-        name: "Ihre Anmeldung ist eingegangen",
-      }),
-    ).toHaveFocus();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", {
+          name: "Ihre Anmeldung ist eingegangen",
+        }),
+      ).toHaveFocus(),
+    );
   });
 
   it("registers a holiday guest after the summary", async () => {

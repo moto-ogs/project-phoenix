@@ -194,6 +194,41 @@ func TestTraegerOccupancyCountsTheRosterByGroupAndCareForm(t *testing.T) {
 	}
 	assert.NotContains(t, csv, "Fremd")
 	assert.Contains(t, csv, day+";OGS Am Bach;;Gruppe;"+foxes.Name+";0;\n", "an empty group is exported too")
+
+	// #4718: the same list for one school, and as PDF and Excel.
+	single := traegerOccupancyRequest(t, router, fmt.Sprintf("/traeger/schools/occupancy/export?school=%d", empty), answer.AccessToken, nil)
+	require.Equal(t, http.StatusOK, single.Code, single.Body.String())
+	assert.Contains(t, single.Body.String(), day+";OGS Lindenweg;;Alle Kinder;;0;\n")
+	assert.NotContains(t, single.Body.String(), "OGS Am Bach", "the export of one school holds that school only")
+	assertTraegerListFormats(t, router, answer.AccessToken, "/traeger/schools/occupancy/export", fmt.Sprintf("belegung-%s", got.Day))
+	stranger := traegerOccupancyRequest(t, router, fmt.Sprintf("/traeger/schools/occupancy/export?school=%d", foreign), answer.AccessToken, nil)
+	assert.Equal(t, http.StatusNotFound, stranger.Code, "a school of another Träger answers like an unknown one")
+	assert.Contains(t, stranger.Body.String(), "traeger.school_not_found")
+	assert.NotContains(t, stranger.Body.String(), "OGS Fremd Belegung")
+}
+
+// assertTraegerListFormats checks that an export of the Träger-Portal answers
+// PDF and Excel with the file name of the list, and refuses a format it does
+// not know (#4718).
+func assertTraegerListFormats(t *testing.T, router http.Handler, token, path, filename string) {
+	t.Helper()
+	separator := "?"
+	if strings.Contains(path, "?") {
+		separator = "&"
+	}
+	for format, contentType := range map[string]string{
+		"pdf":  "application/pdf",
+		"xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	} {
+		rec := traegerOccupancyRequest(t, router, path+separator+"format="+format, token, nil)
+		require.Equal(t, http.StatusOK, rec.Code, format+": "+rec.Body.String())
+		assert.Equal(t, contentType, rec.Header().Get("Content-Type"), format)
+		assert.Contains(t, rec.Header().Get("Content-Disposition"), filename+"."+format, format)
+		assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"), format)
+		assert.NotEmpty(t, rec.Body.Bytes(), format)
+	}
+	unknown := traegerOccupancyRequest(t, router, path+separator+"format=docx", token, nil)
+	assert.Equal(t, http.StatusBadRequest, unknown.Code, "an unknown format: "+unknown.Body.String())
 }
 
 // #5977: an offering of a running phase shows up without a booking, with 0
@@ -269,7 +304,7 @@ func TestTraegerOccupancyNeedsTheOverviewRight(t *testing.T) {
 	code, answer := traegerSignIn(t, router, withoutRole.Email, password, 0)
 	require.Equal(t, http.StatusOK, code)
 
-	for _, path := range []string{"/traeger/schools/occupancy", "/traeger/schools/occupancy/export"} {
+	for _, path := range []string{"/traeger/schools/occupancy", "/traeger/schools/occupancy/export", "/traeger/schools/key-date-counts/export"} {
 		rec := traegerOccupancyRequest(t, router, path, answer.AccessToken, nil)
 		assert.Equal(t, http.StatusForbidden, rec.Code, path+": "+rec.Body.String())
 		assert.NotContains(t, rec.Body.String(), "OGS Belegung Ohne Recht")

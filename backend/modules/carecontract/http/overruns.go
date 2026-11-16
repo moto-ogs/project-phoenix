@@ -21,13 +21,16 @@ type OverrunResource struct {
 	evaluations   carecontract.OverrunEvaluations
 	requireReport common.Middleware
 	requireNames  common.Middleware
+	lists         ListRenderer
 }
 
-func NewOverrunResource(evaluations carecontract.OverrunEvaluations, requireReport, requireNames common.Middleware) *OverrunResource {
-	if evaluations == nil || requireReport == nil || requireNames == nil {
-		panic("care contract http: the evaluation and both right checks are required")
+// NewOverrunResource builds the resource; lists renders both exports
+// (#4718).
+func NewOverrunResource(evaluations carecontract.OverrunEvaluations, requireReport, requireNames common.Middleware, lists ListRenderer) *OverrunResource {
+	if evaluations == nil || requireReport == nil || requireNames == nil || lists == nil {
+		panic("care contract http: the evaluation, both right checks and the list renderer are required")
 	}
-	return &OverrunResource{evaluations: evaluations, requireReport: requireReport, requireNames: requireNames}
+	return &OverrunResource{evaluations: evaluations, requireReport: requireReport, requireNames: requireNames, lists: lists}
 }
 
 // Router returns the routes mounted at /traeger/care-time-overruns.
@@ -36,7 +39,9 @@ func (rs *OverrunResource) Router(protectedTraegerRoutes func(chi.Router, func(c
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 	protectedTraegerRoutes(r, func(r chi.Router, _ common.Middleware) {
 		r.With(rs.requireReport).Get("/", rs.summary)
+		r.With(rs.requireReport).Get("/export", rs.exportSummary)
 		r.With(rs.requireNames).Get("/children", rs.children)
+		r.With(rs.requireNames).Get("/children/export", rs.exportChildren)
 	})
 	return r
 }
@@ -52,25 +57,60 @@ func (rs *OverrunResource) children(w http.ResponseWriter, r *http.Request) {
 type evaluation func(context.Context, carecontract.Reviewer, carecontract.OverrunFilter) (carecontract.OverrunEvaluation, error)
 
 func (rs *OverrunResource) respond(w http.ResponseWriter, r *http.Request, read evaluation) {
-	reviewer, ok := reviewerOf(w, r)
+	result, _, ok := rs.evaluate(w, r, read)
 	if !ok {
 		return
+	}
+	common.Respond(w, r, http.StatusOK, result, "Care time overruns retrieved successfully")
+}
+
+// exportSummary answers GET /traeger/care-time-overruns/export: the figures
+// per school as PDF, Excel or CSV (format=, CSV without one), for the
+// filter's window and school (#4718).
+func (rs *OverrunResource) exportSummary(w http.ResponseWriter, r *http.Request) {
+	rs.export(w, r, rs.evaluations.OverrunSummary, overrunSchoolsTable)
+}
+
+// exportChildren answers GET /traeger/care-time-overruns/children/export:
+// every child with an overrun by name, like the list, behind the same right.
+// The evaluation writes the children shown to the access log of each school.
+func (rs *OverrunResource) exportChildren(w http.ResponseWriter, r *http.Request) {
+	rs.export(w, r, rs.evaluations.OverrunChildren, overrunChildrenTable)
+}
+
+func (rs *OverrunResource) export(w http.ResponseWriter, r *http.Request, read evaluation, table func(carecontract.OverrunEvaluation, carecontract.OverrunFilter) ListTable) {
+	format, err := listFormat(r)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
+	result, filter, ok := rs.evaluate(w, r, read)
+	if !ok {
+		return
+	}
+	writeList(w, r, rs.lists, format, table(result, filter))
+}
+
+func (rs *OverrunResource) evaluate(w http.ResponseWriter, r *http.Request, read evaluation) (carecontract.OverrunEvaluation, carecontract.OverrunFilter, bool) {
+	reviewer, ok := reviewerOf(w, r)
+	if !ok {
+		return carecontract.OverrunEvaluation{}, carecontract.OverrunFilter{}, false
 	}
 	filter, err := overrunFilter(r)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
+		return carecontract.OverrunEvaluation{}, carecontract.OverrunFilter{}, false
 	}
 	result, err := read(r.Context(), reviewer, filter)
 	if errors.Is(err, carecontract.ErrOverrunWindowInvalid) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
+		return carecontract.OverrunEvaluation{}, carecontract.OverrunFilter{}, false
 	}
 	if err != nil {
 		renderError(w, r, err)
-		return
+		return carecontract.OverrunEvaluation{}, carecontract.OverrunFilter{}, false
 	}
-	common.Respond(w, r, http.StatusOK, result, "Care time overruns retrieved successfully")
+	return result, filter, true
 }
 
 // overrunFilter reads from, to (YYYY-MM-DD) and the optional school_id.
