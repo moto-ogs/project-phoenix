@@ -1,3 +1,4 @@
+import { ApiError } from "~/lib/api-error";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -146,6 +147,38 @@ describe("useStudentEnrollmentExtraFields", () => {
     await waitFor(() => expect(result.current.groups).toEqual(groups));
     expect(result.current.error).toBeNull();
     expect(fetchStudentEnrollmentExtraFieldsMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("withdraws cached answers on refusal but preserves them on a transient failure", async () => {
+    fetchStudentEnrollmentExtraFieldsMock.mockResolvedValue(groups);
+    const { result } = renderHook(
+      () => useStudentEnrollmentExtraFields("123", true),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.groups).toEqual(groups));
+    fetchStudentEnrollmentExtraFieldsMock.mockRejectedValueOnce(
+      new Error("offline"),
+    );
+    act(() => result.current.reload());
+    await waitFor(() => expect(loggerWarnMock).toHaveBeenCalled());
+    expect(result.current.groups).toEqual(groups);
+    const refusal = new ApiError("forbidden", 403);
+    fetchStudentEnrollmentExtraFieldsMock.mockRejectedValueOnce(refusal);
+    act(() => result.current.reload());
+    await waitFor(() => expect(result.current.error).toBe(refusal));
+    expect(result.current.groups).toEqual([]);
+    fetchStudentEnrollmentExtraFieldsMock.mockRejectedValueOnce(
+      new Error("offline again"),
+    );
+    act(() => result.current.reload());
+    await waitFor(() =>
+      expect(fetchStudentEnrollmentExtraFieldsMock).toHaveBeenCalledTimes(4),
+    );
+    expect(result.current.groups).toEqual([]);
+    fetchStudentEnrollmentExtraFieldsMock.mockResolvedValue(groups);
+    act(() => result.current.reload());
+    await waitFor(() => expect(result.current.groups).toEqual(groups));
+    expect(result.current.hasError).toBe(false);
   });
 
   it("clears previous groups before loading another student", async () => {

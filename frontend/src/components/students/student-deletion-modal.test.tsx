@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render as rtlRender,
   screen,
@@ -134,6 +135,55 @@ describe("StudentDeletionModal", () => {
     vi.clearAllMocks();
     mockFetchImpact.mockResolvedValue(impact);
     mockDeleteStudent.mockResolvedValue(undefined);
+  });
+
+  it("waits for a fresh impact on every opening before fixing the confirmation", async () => {
+    const props = {
+      studentId: "42",
+      displayName: "Mia Muster",
+      onClose: vi.fn(),
+      onDeleted: vi.fn(),
+    };
+    const view = (isOpen: boolean) => (
+      <ModalProvider>
+        <StudentDeletionModal {...props} isOpen={isOpen} />
+      </ModalProvider>
+    );
+    const { rerender } = render(view(true));
+    expect(
+      await screen.findByText("Was wird gelöscht oder gelöst? (5)"),
+    ).toBeVisible();
+    rerender(view(false));
+    const fresh = {
+      ...impact,
+      fingerprint: "fresh",
+      total: 8,
+      counts: { ...impact.counts, timetable_assignments: 5 },
+    };
+    let resolve!: (value: StudentDeletionImpact) => void;
+    mockFetchImpact.mockReturnValueOnce(
+      new Promise<StudentDeletionImpact>((done) => {
+        resolve = done;
+      }),
+    );
+    rerender(view(true));
+    await waitFor(() => expect(mockFetchImpact).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("Auswirkungen werden geladen…")).toBeVisible();
+    expect(
+      screen.queryByText("Was wird gelöscht oder gelöst? (5)"),
+    ).not.toBeInTheDocument();
+    await act(async () => resolve(fresh));
+    expect(
+      await screen.findByText("Was wird gelöscht oder gelöst? (8)"),
+    ).toBeVisible();
+    fireEvent.click(await advanceToFinalConfirmation());
+    await waitFor(() =>
+      expect(mockDeleteStudent).toHaveBeenCalledWith(
+        "42",
+        expect.objectContaining({ expected_fingerprint: "fresh" }),
+        undefined,
+      ),
+    );
   });
 
   it("shows the impact and requires a reason and acknowledgement", async () => {

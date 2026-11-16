@@ -268,26 +268,7 @@ export default function TraegerHolidayRegistrationPage() {
     fetchError: schoolsFailure,
   } = useTraegerSchools();
   const previewLoad = useApiLoadError();
-  const { show: showLoadError } = previewLoad;
-
-  const { reload: reloadRegistration } = registrationReader;
-  const { reload: reloadContribution } = contributionReader;
-  const { reload: reloadHealth } = healthReader;
-  const { reload: reloadConfirmation } = confirmationReader;
-  const { reload: reloadFamily } = familyReader;
-  const reloadAll = useCallback(() => {
-    reloadRegistration();
-    reloadContribution();
-    reloadHealth();
-    reloadConfirmation();
-    reloadFamily();
-  }, [
-    reloadRegistration,
-    reloadContribution,
-    reloadHealth,
-    reloadConfirmation,
-    reloadFamily,
-  ]);
+  const { show: showLoadError, clear: clearPreviewError } = previewLoad;
 
   // Reads the registration with all its parts and rejects on failure: after
   // a write the page shows that as a load error above the registration. The
@@ -343,6 +324,7 @@ export default function TraegerHolidayRegistrationPage() {
     async (withExemption: boolean, withCostBearer: string | null) => {
       const request = ++latestContribution.current;
       setPreviewPending(true);
+      clearPreviewError();
       try {
         const next = await fetchHolidayContribution(
           periodId,
@@ -362,11 +344,11 @@ export default function TraegerHolidayRegistrationPage() {
         });
         await showLoadError(err, {
           object: "der Ferienbeitrag",
-          retry: reloadAll,
+          retry: () => void refreshContribution(withExemption, withCostBearer),
         });
       }
     },
-    [reloadAll, periodId, registrationId, showLoadError],
+    [clearPreviewError, periodId, registrationId, showLoadError],
   );
 
   const changed = useCallback(

@@ -96,7 +96,7 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useSWRAuth, useInvalidateFamily } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useTenantRouter } from "~/lib/tenant-router";
@@ -166,18 +166,23 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
   const [weeklyPlanCheckedOn, setWeeklyPlanCheckedOn] = useState<string | null>(
     null,
   );
+  const invalidateFamily = useInvalidateFamily();
   const fetchDetail = useCallback(async () => {
     const fresh = await getAdminRequest(requestId);
     // Das Öffnen hat die Anmeldung für diese Person gelesen (#3778).
     announceAdminRequestOpened();
+    void invalidateFamily(enrollmentKeys.adminRequestsFamily);
     return fresh;
-  }, [requestId]);
+  }, [invalidateFamily, requestId]);
   const {
     data,
     error: detailError,
     mutate: mutateDetail,
   } = useSWRAuth(enrollmentKeys.adminRequest(requestId), fetchDetail, {
     keepPreviousData: false,
+    // This GET marks the request read, including a warm reopening after „Ungelesen“.
+    revalidateOnMount: true,
+    dedupingInterval: 0,
     onSuccess: () => setWeeklyPlanCheckedOn(berlinTodayISO()),
   });
   const detailLoad = useSwrResourceLoadError(
@@ -201,13 +206,21 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
       try {
         await mutateDetail(fetchDetail(), { revalidate: false });
       } catch (err) {
+        // The write holds even if the detail could not be read again.
+        void invalidateFamily(enrollmentKeys.adminRequestsFamily);
         await showReloadError(err, {
           object: "die Anmeldung",
           retry: () => void reload(),
         });
       }
     },
-    [mutateDetail, fetchDetail, clearReloadError, showReloadError],
+    [
+      mutateDetail,
+      fetchDetail,
+      clearReloadError,
+      showReloadError,
+      invalidateFamily,
+    ],
   );
   const toast = useToast();
   // Eine Entscheidung scheitert an genau einem Kind: der Kasten steht dort.

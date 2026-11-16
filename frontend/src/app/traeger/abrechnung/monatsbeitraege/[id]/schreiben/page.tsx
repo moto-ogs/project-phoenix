@@ -27,6 +27,7 @@ import { careLetterKey } from "~/components/traeger/care-run-invoices";
 import { CareRunLetterInvoices } from "~/components/traeger/care-run-letter-invoices";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
+import { useRefusalGuard } from "~/components/traeger/use-traeger-confirmed-resource";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -39,6 +40,7 @@ import { downloadBlob } from "~/lib/file-download";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateFamily } from "~/lib/swr";
+import { useSWRRequestGuard } from "~/lib/swr/hooks";
 import {
   REFRESH_WHILE_QUEUED_MS,
   traegerBillingRunKeys,
@@ -132,8 +134,23 @@ export default function TraegerCareRunLettersPage() {
   const openLetter = letters ? shownLetter : null;
   const openCancel = letters ? cancelling : null;
   // A fresh list that rejects on failure, for the steps that need it.
+  const lettersGuard = useRefusalGuard(
+    released ? traegerBillingRunKeys.careLetters(runId) : null,
+  );
+  const beginLettersRead = useSWRRequestGuard();
   const fetchLetters = () =>
-    mutateLetters(fetchCareLetters(runId), { revalidate: false });
+    mutateLetters(
+      async () => {
+        const complete = beginLettersRead(lettersGuard.key);
+        try {
+          return await fetchCareLetters(runId);
+        } catch (error) {
+          complete(() => lettersGuard.callbacks.onError(error));
+          throw error;
+        }
+      },
+      { revalidate: false },
+    );
   // Nach dem Drucken laden die Schreiben nach; ein Fehler dabei ist ein
   // Ladefehler, kein Fehler des Druckens (#6652).
   const printAfterWrite = useRefreshAfterWrite(

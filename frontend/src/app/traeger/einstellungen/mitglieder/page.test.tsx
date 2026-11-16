@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   act,
   fireEvent,
@@ -105,6 +108,19 @@ const HISTORY = {
   hasMore: true,
 };
 
+function BackgroundRefusal() {
+  const reader = useTraegerResource(
+    traegerKeys.buero(),
+    api.fetchTraegerBuero,
+    "die Liste der Personen",
+  );
+  const { reload, refused } = reader;
+  useEffect(() => {
+    reload();
+  }, [reload]);
+  return refused ? <span>Zugriff verweigert</span> : null;
+}
+
 function renderPage() {
   return render(
     <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
@@ -127,6 +143,42 @@ describe("TraegerAccountsPage", () => {
     for (const fn of Object.values(api)) fn.mockReset();
     api.fetchTraegerBuero.mockResolvedValue(BUERO);
     api.fetchTraegerAccountHistory.mockResolvedValue(HISTORY);
+  });
+
+  it.each([
+    "Rollen ändern",
+    "Namen eintragen",
+    "Einladung zurücknehmen",
+    "Person einladen",
+  ])("closes %s after a refused background read", async (action) => {
+    const { rerender } = renderPage();
+    await screen.findByText("Lea Leitung");
+    if (action === "Person einladen")
+      fireEvent.click(screen.getByRole("button", { name: action }));
+    else if (action === "Einladung zurücknehmen") {
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "Aktionen für die Einladung an neu@traeger.example",
+        }),
+      );
+      fireEvent.click(await screen.findByRole("menuitem", { name: action }));
+    } else {
+      await openMenu("kasse@traeger.example");
+      fireEvent.click(await screen.findByRole("menuitem", { name: action }));
+    }
+    expect(await screen.findByRole("dialog")).toBeVisible();
+    api.fetchTraegerBuero.mockRejectedValue(new ApiError("forbidden", 403));
+    rerender(
+      <SWRConfig value={{ errorRetryCount: 0 }}>
+        <ToastProvider>
+          <TraegerAccountsPage />
+          <BackgroundRefusal />
+        </ToastProvider>
+      </SWRConfig>,
+    );
+    // Anker: der zweite Leser hat denselben Schlüssel erneut gelesen und verweigert.
+    expect(await screen.findByText("Zugriff verweigert")).toBeVisible();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("lists the people with their roles and the open invitations", async () => {

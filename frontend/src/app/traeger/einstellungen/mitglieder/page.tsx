@@ -5,7 +5,7 @@
 // (#5474).
 // Nur mit dem Recht „Konten verwalten“ (Rolle Leitung, #5471).
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { Pencil, Trash2, Undo2, UserPen, UserPlus, Users } from "lucide-react";
 import {
@@ -82,6 +82,14 @@ export default function TraegerAccountsPage() {
   const invalidateFamily = useInvalidateFamily();
   const confirmErrors = useApiFormError();
   const { success } = useToast();
+
+  useEffect(() => {
+    if (!refused) return;
+    setInviting(false);
+    setEditing(null);
+    setNaming(null);
+    setPending(null);
+  }, [refused]);
 
   const onExportError = (error: unknown) => {
     if (!isRefusal(error)) return;
@@ -362,24 +370,24 @@ export default function TraegerAccountsPage() {
       overlays={
         <>
           <InviteTraegerAccountModal
-            isOpen={inviting}
+            isOpen={!refused && inviting}
             onClose={() => setInviting(false)}
             onInvited={afterWrite.refresh}
           />
           <ChangeTraegerRolesModal
-            member={editing}
+            member={refused ? null : editing}
             members={buero.members}
             onClose={() => setEditing(null)}
             onChanged={afterWrite.refresh}
           />
           <ChangeTraegerMemberNameModal
-            member={naming}
+            member={refused ? null : naming}
             onClose={() => setNaming(null)}
             onSaved={showSavedMember}
             onChanged={afterWrite.refresh}
           />
           <ConfirmDeleteModal
-            isOpen={pending !== null}
+            isOpen={!refused && pending !== null}
             onClose={closeConfirm}
             onConfirm={() => void confirm()}
             title={

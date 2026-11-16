@@ -132,7 +132,9 @@ function useSharingState(
     () => mutate(),
   );
   // The selection is a draft of the dialog, reset by every new answer.
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(() =>
+    selectedRecipients(data),
+  );
   const [draftSource, setDraftSource] = useState(data);
   if (draftSource !== data) {
     setDraftSource(data);
@@ -314,6 +316,7 @@ function useRequestSharingControl(props: RequestSharingControlProps) {
     );
   const show = () => {
     clearSaveError();
+    sharing.setSelected(selectedRecipients(sharing.state ?? undefined));
     // Familienschutz may have changed since the list loaded.
     void mutate();
     setOpen(true);

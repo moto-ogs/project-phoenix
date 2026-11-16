@@ -88,10 +88,10 @@ vi.mock("~/lib/traeger-contributions-api", () => ({
   confirmHolidayRegistration: (...args: unknown[]) => mockConfirm(...args),
   // A test sets the contribution through the override (#5629) or the
   // mock (#5628).
-  fetchHolidayContribution: () =>
+  fetchHolidayContribution: (...args: unknown[]) =>
     contributionOverride.current
       ? Promise.resolve(contributionOverride.current)
-      : mockContribution(),
+      : mockContribution(...args),
 }));
 
 const { mockSplit } = vi.hoisted(() => ({ mockSplit: vi.fn() }));
@@ -129,6 +129,44 @@ describe("TraegerHolidayRegistrationPage", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.mocked(useTenantSlugSafe).mockReturnValue("test-tenant");
+  });
+
+  it("retries the selected exemption preview and clears its load error", async () => {
+    mockContribution
+      .mockReset()
+      .mockResolvedValue({ ...HOLIDAY_CONTRIBUTION, exemptionAvailable: true });
+    render(
+      <ToastProvider>
+        <TraegerHolidayRegistrationPage />
+      </ToastProvider>,
+    );
+    const checkbox = await screen.findByRole("radio", {
+      name: /Von der Zahlung befreien/,
+    });
+    mockContribution.mockRejectedValueOnce(new ApiError("down", 503));
+    fireEvent.click(checkbox);
+    const failure = await screen.findByText(
+      catalogText("general.unavailable", "der Ferienbeitrag"),
+    );
+    expect(failure).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    await waitFor(() =>
+      expect(mockContribution).toHaveBeenLastCalledWith(
+        "5",
+        "7",
+        true,
+        undefined,
+      ),
+    );
+    // Anker: die gewählte Befreiung bleibt nach dem erfolgreichen Abruf bestehen.
+    expect(checkbox).toBeChecked();
+    await waitFor(() =>
+      expect(
+        screen.queryByText(
+          catalogText("general.unavailable", "der Ferienbeitrag"),
+        ),
+      ).not.toBeInTheDocument(),
+    );
   });
 
   describe("siblings from another registration (#5628)", () => {

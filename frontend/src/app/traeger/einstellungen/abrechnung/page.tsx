@@ -7,7 +7,7 @@
 // Zahlung und Rechnungen je Leistung (#4689) und die Lastschrift mit
 // Gläubiger-ID (#4695) gehören zum Recht „Abrechnung“.
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { BillingTermsCard } from "~/components/traeger/billing-terms-card";
 import { ContributionRulesCard } from "~/components/traeger/contribution-rules-card";
@@ -109,9 +109,11 @@ function useBillingDefaults(enabled: boolean) {
   const mutateCareNumberRange = careNumberRange.mutate;
   const mutateTerms = terms.mutate;
   const mutateCreditor = creditor.mutate;
+  const latestRead = useRef(0);
   /** Reads every default again after a write; rejects with a failure. */
   const read = useCallback(async () => {
     if (!enabled) return;
+    const request = ++latestRead.current;
     // The defaults show together: none changes unless every read succeeded.
     const [rules, bearers, numberRange, careNumberRange, terms, creditor] =
       await Promise.all([
@@ -122,6 +124,7 @@ function useBillingDefaults(enabled: boolean) {
         fetchBillingTerms(),
         fetchSepaCreditor(),
       ]);
+    if (request !== latestRead.current) return;
     const fresh = { revalidate: false } as const;
     await Promise.all([
       mutateRules(rules, fresh),

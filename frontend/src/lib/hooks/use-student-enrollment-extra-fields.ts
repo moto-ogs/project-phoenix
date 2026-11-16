@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 
 import { useSWRAuth } from "~/lib/swr";
+import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import {
   fetchStudentEnrollmentExtraFields,
@@ -15,16 +16,26 @@ export function useStudentEnrollmentExtraFields(
   studentId: string,
   hasFullAccess: boolean,
 ) {
+  const discard = useDiscardRefusedEntity();
+  const key = tenantDailyKeys.studentEnrollmentExtraFields(studentId);
   const { data, error, isLoading, mutate } = useSWRAuth(
-    hasFullAccess
-      ? tenantDailyKeys.studentEnrollmentExtraFields(studentId)
-      : null,
+    hasFullAccess ? key : null,
     () => fetchStudentEnrollmentExtraFields(studentId),
-    { keepPreviousData: false },
+    {
+      keepPreviousData: false,
+      onError: (failure) => {
+        discard(failure, {
+          codes: ["general.permission"],
+          refusedKey: key,
+          matches: (candidate) => candidate === key,
+        });
+      },
+    },
   );
   // The raw failure for the shared load error path (#2517): the card shows
   // the catalog text with "Wiederholen" instead of silently dropping the
-  // Anmeldung answers. A failed background refresh keeps the shown answers.
+  // Anmeldung answers. A transient failure keeps the shown answers;
+  // a refusal drops them from the shared cache.
   // Logged while mounted only: a late failure after leaving the page is
   // nobody's concern.
   useEffect(() => {

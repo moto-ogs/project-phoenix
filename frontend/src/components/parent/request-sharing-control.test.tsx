@@ -91,6 +91,53 @@ describe("RequestSharingControl", () => {
     expect(await screen.findByText("Anfrage teilen")).toBeInTheDocument();
   });
 
+  it("initializes a warm remount and discards cancelled recipient changes on reopening", async () => {
+    getSharing.mockResolvedValue({
+      family_protected: false,
+      recipients: [
+        {
+          guardian_profile_id: "7",
+          first_name: "Mara",
+          last_name: "Muster",
+          selected: true,
+        },
+      ],
+    });
+    const control = (show: boolean) => (
+      <ModalProvider>
+        {show ? (
+          <RequestSharingControl
+            studentId="42"
+            requestType="excused"
+            requestId="9"
+            isSelf
+          />
+        ) : null}
+      </ModalProvider>
+    );
+    const { rerender } = renderParent(control(true));
+    await screen.findByText("Anfrage teilen");
+    rerender(control(false));
+    rerender(control(true));
+    fireEvent.click(await screen.findByText("Anfrage teilen"));
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "Mara Muster",
+    });
+    await waitFor(() => expect(getSharing).toHaveBeenCalledTimes(2));
+    expect(checkbox).toBeChecked();
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+    fireEvent.click(await screen.findByText("Anfrage teilen"));
+    await waitFor(() => expect(getSharing).toHaveBeenCalledTimes(3));
+    expect(
+      await screen.findByRole("checkbox", { name: "Mara Muster" }),
+    ).toBeChecked();
+    fireEvent.click(screen.getByText("Auswahl speichern"));
+    await waitFor(() =>
+      expect(setSharing).toHaveBeenCalledWith("42", "excused", "9", ["7"]),
+    );
+  });
+
   it("saves only the explicitly selected guardian", async () => {
     renderControl();
     fireEvent.click(await screen.findByText("Anfrage teilen"));

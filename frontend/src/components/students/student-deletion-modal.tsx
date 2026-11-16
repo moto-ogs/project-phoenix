@@ -25,7 +25,7 @@ import {
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 
@@ -105,7 +105,7 @@ export function StudentDeletionModal({
   // The impact the person confirms stays fixed for this opening: no focus or
   // reconnect refresh replaces it under the acknowledgement. A changed impact
   // comes back as a 409 and is then shown fresh (below).
-  const previewRead = useSWRAuth(
+  const previewRead = useFreshSWR(
     isOpen ? tenantStudentKeys.deletionImpact(studentId, completionId) : null,
     () => fetchStudentDeletionImpact(studentId, completionId),
     {

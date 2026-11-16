@@ -1,3 +1,5 @@
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import {
   act,
   fireEvent,
@@ -109,6 +111,78 @@ beforeEach(() => {
   mocks.listCareOfferings.mockReset().mockResolvedValue([]);
   mocks.fetchCareOfferingBookingStats.mockReset().mockResolvedValue({});
   vi.mocked(useCareOfferingsEnabled).mockReturnValue(true);
+});
+
+function EnrollmentLists({ read }: { read: () => Promise<string> }) {
+  const overview = useSWRAuth(enrollmentKeys.adminRequests(), read);
+  const phase = useSWRAuth(enrollmentKeys.adminRequests("phase-1"), read);
+  return (
+    <>
+      <span>overview: {overview.data}</span>
+      <span>phase: {phase.data}</span>
+    </>
+  );
+}
+
+describe("AdminEnrollmentDetail cache updates", () => {
+  const detail = {
+    id: "request-1",
+    phase_id: "phase-1",
+    phase_name: "2026/27",
+    guardian_first_name: "Mara",
+    guardian_last_name: "Beispiel",
+    guardian_email: "mara@example.test",
+    submitted_at: "2026-08-05T10:00:00Z",
+    status_token: "status-token",
+    children: [adjustmentChild({ status: "submitted" })],
+  };
+
+  it("marks each opening read and refreshes both cached enrollment lists", async () => {
+    let state = "unread";
+    const read = vi.fn(async () => state);
+    mocks.getAdminRequest.mockImplementation(async () => {
+      state = "read";
+      return detail;
+    });
+    const view = (open: boolean) => (
+      <>
+        <EnrollmentLists read={read} />
+        {open ? <AdminEnrollmentDetail requestId="request-1" /> : null}
+      </>
+    );
+    const { rerender } = render(view(false));
+    expect(await screen.findByText("overview: unread")).toBeVisible();
+    expect(await screen.findByText("phase: unread")).toBeVisible();
+    rerender(view(true));
+    await screen.findByRole("button", { name: "Warteliste" });
+    expect(await screen.findByText("overview: read")).toBeVisible();
+    expect(await screen.findByText("phase: read")).toBeVisible();
+    rerender(view(false));
+    state = "unread";
+    rerender(view(true));
+    await waitFor(() => expect(mocks.getAdminRequest).toHaveBeenCalledTimes(2));
+    expect(state).toBe("read");
+  });
+
+  it("refreshes list statuses even if the detail reload after a decision fails", async () => {
+    let state = "submitted";
+    const read = vi.fn(async () => state);
+    mocks.getAdminRequest.mockResolvedValue(detail);
+    mocks.decideAdminChild.mockImplementation(async () => {
+      state = "waitlisted";
+      mocks.getAdminRequest.mockRejectedValue(new ApiError("down", 503));
+      return {};
+    });
+    render(
+      <>
+        <EnrollmentLists read={read} />
+        <AdminEnrollmentDetail requestId="request-1" />
+      </>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Warteliste" }));
+    expect(await screen.findByText("overview: waitlisted")).toBeVisible();
+    expect(await screen.findByText("phase: waitlisted")).toBeVisible();
+  });
 });
 
 describe("AdminEnrollmentDetail mail updates", () => {

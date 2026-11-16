@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ApiError } from "~/lib/api-error";
@@ -16,6 +22,7 @@ vi.unmock("swr");
 const { api, push } = vi.hoisted(() => ({
   api: {
     fetchCareRun: vi.fn(),
+    downloadCareLetter: vi.fn(),
     printCareLetters: vi.fn(),
     fetchCareLetters: vi.fn(),
     fetchCareRuns: vi.fn(),
@@ -203,6 +210,50 @@ describe("monthly invoice reissue", () => {
       expect(api.printCareLetters).toHaveBeenCalledTimes(1);
     },
   );
+
+  it("withdraws letters and open panels when reissue's fresh read is refused", async () => {
+    api.fetchCareLetters.mockResolvedValue({
+      ...letters([{ ...CANCELLATION, hasLetter: true }]),
+      letters: {
+        paymentDueOn: "2026-09-23",
+        notes: "Privater Hinweis",
+        createdAt: "2026-09-09T08:00:00Z",
+      },
+    });
+    renderPage();
+    expect(await screen.findByText("Privater Hinweis")).toBeVisible();
+    let reject!: (error: unknown) => void;
+    api.fetchCareLetters.mockReturnValueOnce(
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      }),
+    );
+    api.downloadCareLetter.mockRejectedValue(new ApiError("down", 503));
+    fireEvent.click(screen.getByRole("button", { name: "Neu ausstellen" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Aktionen für den Storno von Mia Beispiel",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Schreiben ansehen" }),
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "Storno MB-0002" }),
+    ).toBeVisible();
+    await act(async () => reject(new ApiError("forbidden", 403)));
+    // Anker: der verweigerte Abruf wird auf der geladenen Seite angezeigt.
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Schreiben"),
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("Privater Hinweis")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Storno MB-0002" }),
+    ).not.toBeInTheDocument();
+    expect(api.startCareRun).not.toHaveBeenCalled();
+  });
 
   it("hides reissue when every cancellation has a released replacement", async () => {
     api.fetchCareLetters.mockResolvedValue(
