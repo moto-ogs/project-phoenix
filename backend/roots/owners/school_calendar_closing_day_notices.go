@@ -81,38 +81,15 @@ func (n schoolCalendarClosingDayNotices) NotifyClosingDayChanged(ctx context.Con
 	})
 	slices.Sort(school)
 	school = slices.Compact(school)
-	guardians := withoutAccount(audience.GuardianAccountIDs, actor)
 	title, body := closingDayNoticeCopy(notice)
 	key := fmt.Sprintf("school_closing_day:%d:%d", notice.ClosingDayID, n.now().UnixNano())
 	event := deliveryCompose.NotificationEvent{
 		RelatedType: "closing_day", RelatedID: notice.ClosingDayID, Title: title, Body: body,
 	}
-	if len(staff) > 0 {
-		staffEvent := event
-		staffEvent.Type, staffEvent.IdempotencyKey = deliveryContract.NotificationSchoolClosingDayChanged, key+":staff"
-		staffEvent.DeepLink, staffEvent.SchoolDeepLink = closingDayStaffLink, closingDaySchoolLink
-		staffEvent.Audience = deliveryCompose.NotificationAudience{
-			TenantID: tenantID, Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: staff,
-		}
-		if err := n.send(ctx, staffEvent, staff, notice.Push); err != nil {
-			return err
-		}
+	if err := n.notifyStaff(ctx, tenantID, key, event, staff, school, notice.Push); err != nil {
+		return err
 	}
-	if len(school) > 0 {
-		schoolEvent := event
-		schoolEvent.Type, schoolEvent.IdempotencyKey = deliveryContract.NotificationSchoolClosingDayChanged, key+":school"
-		schoolEvent.Portal = deliveryCompose.NotificationPortalSchool
-		// An empty OGS link keeps this entry out of the OGS feed. Delivery
-		// sends the event only to moto-schule devices and exposes its school
-		// link in that portal.
-		schoolEvent.SchoolDeepLink = closingDaySchoolLink
-		schoolEvent.Audience = deliveryCompose.NotificationAudience{
-			TenantID: tenantID, Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: school,
-		}
-		if err := n.send(ctx, schoolEvent, school, notice.Push); err != nil {
-			return err
-		}
-	}
+	guardians := withoutAccount(audience.GuardianAccountIDs, actor)
 	if len(guardians) == 0 || len(audience.StudentIDs) == 0 {
 		return nil
 	}
@@ -127,6 +104,36 @@ func (n schoolCalendarClosingDayNotices) NotifyClosingDayChanged(ctx context.Con
 		GuardianAccountIDs: guardians, StudentIDs: audience.StudentIDs,
 	}
 	return n.send(ctx, guardianEvent, guardians, notice.Push)
+}
+
+func (n schoolCalendarClosingDayNotices) notifyStaff(ctx context.Context, tenantID int64, key string, event deliveryCompose.NotificationEvent, staff, school []int64, push bool) error {
+	if len(staff) > 0 {
+		staffEvent := event
+		staffEvent.Type, staffEvent.IdempotencyKey = deliveryContract.NotificationSchoolClosingDayChanged, key+":staff"
+		staffEvent.DeepLink, staffEvent.SchoolDeepLink = closingDayStaffLink, closingDaySchoolLink
+		staffEvent.Audience = deliveryCompose.NotificationAudience{
+			TenantID: tenantID, Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: staff,
+		}
+		if err := n.send(ctx, staffEvent, staff, push); err != nil {
+			return err
+		}
+	}
+	if len(school) > 0 {
+		schoolEvent := event
+		schoolEvent.Type, schoolEvent.IdempotencyKey = deliveryContract.NotificationSchoolClosingDayChanged, key+":school"
+		schoolEvent.Portal = deliveryCompose.NotificationPortalSchool
+		// An empty OGS link keeps this entry out of the OGS feed. Delivery
+		// sends the event only to moto-schule devices and exposes its school
+		// link in that portal.
+		schoolEvent.SchoolDeepLink = closingDaySchoolLink
+		schoolEvent.Audience = deliveryCompose.NotificationAudience{
+			TenantID: tenantID, Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: school,
+		}
+		if err := n.send(ctx, schoolEvent, school, push); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // send writes the event's feed entries and lets a push reach the recipients
