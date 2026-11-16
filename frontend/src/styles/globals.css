@@ -543,8 +543,8 @@
    own disclosure toggle (`SectionCollapseToggle`) opens no layer: it must not
    lift the card above a sticky save bar. */
 .moto-content-surface:has(
-    [aria-expanded="true"]:not([data-section-collapse-toggle])
-  ) {
+  [aria-expanded="true"]:not([data-section-collapse-toggle])
+) {
   position: relative;
   z-index: 60;
 }
@@ -885,12 +885,12 @@ html[data-chat-page-lock] body {
    größere Schrift bleibt. */
 @media (pointer: coarse) {
   :is(input, textarea, select):not(
-      [class*="text-lg"],
-      [class*="text-xl"],
-      [class*="text-2xl"],
-      [class*="text-3xl"],
-      [class*="text-4xl"]
-    ) {
+    [class*="text-lg"],
+    [class*="text-xl"],
+    [class*="text-2xl"],
+    [class*="text-3xl"],
+    [class*="text-4xl"]
+  ) {
     font-size: 16px;
   }
 }
