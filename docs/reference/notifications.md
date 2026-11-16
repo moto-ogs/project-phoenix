@@ -130,7 +130,12 @@ For example, an aggregate derived from an admin-wide view must use
 ## Consent (per account, per type)
 
 Nothing is delivered to a person who did not ask for it. The rule is
-mechanical: **no row means off**.
+mechanical: **no row means off**, except for a type registered `DefaultOn`:
+a notice that is the person's own task or about their own planned blocks
+(staff types with a `Permission`, #4791, #7148) or about the family's own
+children when that is what the type exists for (`parent_room_changed`,
+#7141). Such a type reads as on until the person stores an "off", and
+"switch everything off" stores that "off" in every portal.
 
 - **Catalogue** — `modules/delivery/internal/notifications/types.go`. One `TypeDefinition` per
   notification a person can agree to: key, German label and description (the
@@ -184,7 +189,7 @@ mechanical: **no row means off**.
 |---|---|---|
 | SSE / in-app | active | `realtime.Broadcaster` → SSE event `notification` → toast |
 | Web Push | active (#2003/#2657) | leased `platform.push_outbox` → `webpush-go` (VAPID) → browser push service → service worker notification |
-| Feed | active (#7148 staff portal, #7139 moto schule, #7140 parents portal; class timetable #7142) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
+| Feed | active (#7148 staff portal, #7139 moto schule, #7140 parents portal; room changes #7141, class timetable #7142) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
 | E-Mail | future | wrap `email.Mailer` + audience→address resolution as a `Channel` |
 
 E-mail is still not a `Channel`: features that mail enqueue through the same
@@ -295,6 +300,28 @@ push is off by default (`FilterOptedIn`); the school switch is
 `notifications.staff_notice_published_enabled`. The link
 `/tagesinformationen?hinweis=<id>` opens the notice through
 `GET /api/staff-notices/{id}`, also before it applies.
+
+A block that moves to another room (#7141) comes from Timetable's edit of a
+planned block (`UpdatePlanned`, also its series conversion): only a change
+from one room to another counts, not a first room or a removed one. The
+staff of the block after the edit, without absent people and without the
+person who made the change, get a feed entry, in moto schule too
+(`/school/aufsichten`); their link is the own Dienstplan on that day. The
+guardians who hold `parent_portal.access` for one of the booked children
+(People Directory's `GuardianPortalContacts`) get the same entry in the
+parents portal, linked to `/children`. Its text names the block, its day and
+both rooms, never a child; the families' push keeps a lock-screen copy in
+their portal language without block, room or child. The day decides the
+type: a move for today or tomorrow is `instance_room_changed` /
+`parent_room_changed`, on by default (`FilterNotOptedOut`); a later move is
+`instance_room_changed_later` / `parent_room_changed_later`, pushed within
+14 days only for who switched it on (`FilterOptedIn`), feed only beyond;
+nothing for the past. All four share the school switch
+`notifications.instance_room_changed_enabled`. Bundling object: the block
+(`activity_instance`), so a second move within ten minutes updates the
+unread entry. A room changed on the series replans its future blocks and
+tells nobody; a parent type that is on by default reads as on in the
+parents portal until the family switches it off.
 
 A changed Stundenplan of a class (#7142) comes from Care Plan's writes of the
 class's Unterrichtsschluss: a weekly save that changes at least one

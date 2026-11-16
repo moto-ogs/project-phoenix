@@ -164,7 +164,9 @@ func TestParentNotificationPreferencesHTTPQueryBudget(t *testing.T) {
 			require.NoError(t, testpkg.TenantCommand3(t, ctx, db, consent.RecordConsent, chain.AccountID, row.key, row.enabled))
 		}
 		for _, row := range expected {
-			row["enabled"] = (n >= 3 && row["key"] == "parent_announcement") || (n == 8 && row["key"] == "parent_appointment")
+			// The room change for today or tomorrow is on without a stored
+			// decision (#7141).
+			row["enabled"] = row["key"] == "parent_room_changed" || (n >= 3 && row["key"] == "parent_announcement") || (n == 8 && row["key"] == "parent_appointment")
 		}
 		count, countErr := db.NewSelect().TableExpr("users.notification_preferences").Where("account_id = ?", chain.AccountID).Where("tenant_id IN (?, ?)", chain.TenantID, second.TenantID).Count(context.Background())
 		require.NoError(t, countErr)
@@ -193,7 +195,7 @@ func TestParentNotificationPreferencesHTTPQueryBudget(t *testing.T) {
 	empty := testpkg.CreateTestAccount(t, db, "no-guardian-school")
 	emptyExpected := notificationBudgetCatalogue(t, "parent")
 	for _, row := range emptyExpected {
-		row["available"] = false
+		row["available"], row["enabled"] = false, false
 	}
 	counter.Reset()
 	counter.Start()
@@ -431,6 +433,22 @@ var notificationBudgetCatalogues = map[string]string{
     "group": "termine",
     "enabled": false,
     "available": true
+  },
+  {
+    "key": "instance_room_changed",
+    "label": "Raumänderung heute oder morgen",
+    "description": "Wenn ein Termin, für den Sie eingeplant sind, heute oder morgen in einem anderen Raum stattfindet. Der Hinweis in moto kommt immer.",
+    "group": "termine",
+    "enabled": true,
+    "available": true
+  },
+  {
+    "key": "instance_room_changed_later",
+    "label": "Raumänderung an späteren Tagen",
+    "description": "Wenn ein Termin, für den Sie eingeplant sind, ab übermorgen in einem anderen Raum stattfindet. Der Hinweis in moto kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten, und nur für die nächsten 14 Tage.",
+    "group": "termine",
+    "enabled": false,
+    "available": true
   }
 ]`,
 	"parent": `[
@@ -494,6 +512,22 @@ var notificationBudgetCatalogues = map[string]string{
     "key": "parent_care_cancelled",
     "label": "Betreuung fällt aus",
     "description": "Wenn die OGS einen Betreuungstermin Ihres Kindes absagt.",
+    "group": "termine",
+    "enabled": false,
+    "available": true
+  },
+  {
+    "key": "parent_room_changed",
+    "label": "Raumänderung heute oder morgen",
+    "description": "Wenn ein Termin Ihres Kindes heute oder morgen in einem anderen Raum stattfindet.",
+    "group": "termine",
+    "enabled": true,
+    "available": true
+  },
+  {
+    "key": "parent_room_changed_later",
+    "label": "Raumänderung an späteren Tagen",
+    "description": "Wenn ein Termin Ihres Kindes ab übermorgen in einem anderen Raum stattfindet. Die Mitteilung kommt nur, wenn Sie sie einschalten, und nur für die nächsten 14 Tage.",
     "group": "termine",
     "enabled": false,
     "available": true

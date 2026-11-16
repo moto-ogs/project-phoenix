@@ -28,7 +28,7 @@ func TestSchoolPortalCatalogue(t *testing.T) {
 	for _, def := range TypesForPortal(PortalSchool) {
 		keys = append(keys, def.Key)
 	}
-	assert.Equal(t, []string{TypeSchoolClassAbsenceReported, TypeSchoolUnreportedAbsence, TypeClassTimetableChanged, TypeClassTimetableChangedAhead, TypeStaffMessage, TypeInstanceCancelled, TypeSchoolParentConferenceBooking}, keys)
+	assert.Equal(t, []string{TypeSchoolClassAbsenceReported, TypeSchoolUnreportedAbsence, TypeClassTimetableChanged, TypeClassTimetableChangedAhead, TypeStaffMessage, TypeInstanceCancelled, TypeSchoolParentConferenceBooking, TypeInstanceRoomChanged, TypeInstanceRoomChangedLater}, keys)
 
 	staffMessage, _ := GetType(TypeStaffMessage)
 	pickup, _ := GetType(TypePickupUpcoming)

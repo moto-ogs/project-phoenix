@@ -12,6 +12,7 @@ const (
 	settingInstanceCancelledEnabled            = "notifications.instance_cancelled_enabled"
 	settingStaffingChangedEnabled              = "notifications.staffing_changed_enabled"
 	settingStaffNoticePublishedEnabled         = "notifications.staff_notice_published_enabled"
+	settingInstanceRoomChangedEnabled          = "notifications.instance_room_changed_enabled"
 	settingClassTimetableChangedEnabled        = "notifications.class_timetable_changed_enabled"
 	settingOnDutyOnly                          = "notifications.on_duty_only"
 	settingRemindersPickupUpcomingEnabled      = "reminders.pickup_upcoming_enabled"

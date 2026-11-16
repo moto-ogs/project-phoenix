@@ -153,14 +153,14 @@ func TestDefaultOnTypeIsOfferedToTheOfficeOnly(t *testing.T) {
 	repo.upserted = nil
 	require.NoError(t, svc.DisableAllForPortalAccount(ctx, unreportedOffice, notifications.PortalSchool))
 	// The cancellation notice is default-on in moto schule as well (#7139),
-	// and so is the class timetable notice for today and tomorrow (#7142).
-	require.Len(t, repo.upserted, 3, "switching everything off stores an explicit off for each default-on type")
+	// and so are the room change and class timetable notices for today or tomorrow (#7141, #7142).
+	require.Len(t, repo.upserted, 4, "switching everything off stores an explicit off for each default-on type")
 	declined := make([]string, 0, len(repo.upserted))
 	for _, upserted := range repo.upserted {
 		declined = append(declined, upserted.NotificationType)
 		assert.False(t, upserted.Enabled)
 	}
-	assert.ElementsMatch(t, []string{notifications.TypeSchoolUnreportedAbsence, notifications.TypeClassTimetableChanged, notifications.TypeInstanceCancelled}, declined)
+	assert.ElementsMatch(t, []string{notifications.TypeSchoolUnreportedAbsence, notifications.TypeClassTimetableChanged, notifications.TypeInstanceCancelled, notifications.TypeInstanceRoomChanged}, declined)
 }
 
 // The notice goes to whoever may enter the missing report (#4791): offered
