@@ -360,6 +360,7 @@ func registerStaffNoticeTypes() {
 		TenantGate:  settingStaffNoticePublishedEnabled,
 		Permission:  permissionUsersRead,
 		SortOrder:   7,
+		Feed:        true,
 	})
 }
 
