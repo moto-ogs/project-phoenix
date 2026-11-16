@@ -1,27 +1,31 @@
 /** Visual policy shared by every UI-kit surface that obscures page content. */
 
-/** Blur applied to the page behind an overlay. */
-export const OVERLAY_BACKDROP_CLASS = "backdrop-blur-sm";
-
 /**
  * Tint of the backdrop: one color and one opacity for Modal, FormModal,
  * Drawer and SlideOver, so stacked or adjacent overlays dim the page in the
  * same gray instead of three different ones (#2932).
+ *
+ * The blur comes from `OVERLAY_BACKDROP_BLUR_CLASS` on the same element.
  */
 export const OVERLAY_BACKDROP_TINT_CLASS = "bg-black/40";
 
-/** Fully transparent start state for the backdrop enter/exit animation. */
-export const OVERLAY_BACKDROP_TINT_HIDDEN_CLASS = "bg-black/0";
+/**
+ * Blurs the page behind an overlay, together with the tint and from its first
+ * frame, as before #7252 (`.moto-overlay-blur` in globals.css). A blur that
+ * set in only after the panel had landed read as "grey first, blur later"
+ * and was reverted.
+ */
+export const OVERLAY_BACKDROP_BLUR_CLASS = "moto-overlay-blur";
 
 /**
  * Panel look of the centered dialog (`Modal`, and through it `FormModal`,
  * `ConfirmationModal`, `ChoiceModal`, `ConfirmDeleteModal`): soft white
- * gradient, glass blur and a deep shadow with a hint of brand blue.
+ * gradient and a deep shadow with a hint of brand blue. Opaque instead of
+ * glass: a `backdrop-filter` blur under the panel was redrawn in every frame
+ * of its scale animation, and without it the page would show through.
  */
 export const OVERLAY_PANEL_STYLE = {
-  background:
-    "linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%)",
-  backdropFilter: "blur(20px)",
+  background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
   boxShadow:
     "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 8px 16px -8px rgba(80, 128, 216, 0.15)",
   animationFillMode: "both",

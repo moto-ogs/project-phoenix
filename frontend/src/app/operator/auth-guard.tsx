@@ -15,6 +15,7 @@ import {
   PortalAuthGuard,
 } from "~/components/auth/portal-auth-guard";
 
+const OPERATOR_LOADING = "Operator Dashboard wird geöffnet …";
 const OPERATOR_PUBLIC_PAGES = ["/login", "/email-confirm", "/invite"];
 
 // The login page clears failed sessions and explains how to sign in again.
@@ -35,6 +36,7 @@ export function OperatorAuthGuard({
       publicPages={OPERATOR_PUBLIC_PAGES}
       wrongScope="root"
       endedSessionRedirect={endedSessionRedirect}
+      loadingMessage={OPERATOR_LOADING}
       renderShell={(page, session) => (
         <OperatorPortal session={session}>{page}</OperatorPortal>
       )}
@@ -54,7 +56,7 @@ function OperatorPortal({
   const contentScope = useSWRCacheKey()(
     operatorProvisioningKeys.organizations(),
   );
-  if (!contentScope) return <FullPageLoading />;
+  if (!contentScope) return <FullPageLoading message={OPERATOR_LOADING} />;
 
   return (
     <OperatorShellProvider>

@@ -161,7 +161,8 @@ func feedType(event Event) (TypeDefinition, error) {
 	if err := validateFeedAudience(event, def, known); err != nil {
 		return TypeDefinition{}, err
 	}
-	if event.DeepLink == "" && event.Feed.DeepLink == "" {
+	if event.DeepLink == "" && event.Feed.DeepLink == "" &&
+		(!deliversToSchoolPortal(event) || event.SchoolDeepLink == "") {
 		return TypeDefinition{}, errors.New("notification feed requires a deep link")
 	}
 	if !appRelative(event.Feed.DeepLink) {

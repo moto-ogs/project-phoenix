@@ -32,7 +32,7 @@ func (rs *Resource) getSchoolDay(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServer(errSchoolDayNotConfigured))
 		return
 	}
-	date, ok := dateQueryOrToday(w, r)
+	date, ok := rs.dateQueryOrToday(w, r)
 	if !ok {
 		return
 	}

@@ -58,6 +58,27 @@ vi.mock("~/lib/traeger-export-handovers-api", async (importOriginal) => ({
   fetchExportRecipients: () => new Promise(() => undefined),
 }));
 
+// The SEPA direct debits of the run (#4697) are tested on their own: no
+// family pays by direct debit here.
+vi.mock("~/lib/traeger-sepa-debits-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/traeger-sepa-debits-api")>()),
+  fetchSepaDebitRun: () =>
+    Promise.resolve({
+      creditorId: "DE98ZZZ09999999999",
+      creditorName: "Träger",
+      creditorIbanMasked: "•••• 3000",
+      accountMissing: false,
+      messageId: "",
+      count: 0,
+      totalCents: 0,
+      groups: [],
+      pastDue: 0,
+      debits: [],
+      submitted: [],
+      left: [],
+      submittedAt: null,
+    }),
+}));
 vi.mock("~/lib/traeger-billing-api", () => api);
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",

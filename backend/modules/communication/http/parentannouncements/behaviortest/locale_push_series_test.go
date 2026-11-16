@@ -127,7 +127,7 @@ func newLocalePushFixtureFor(t *testing.T, locales []string, perLocale int, sche
 	}))
 	f.router = chi.NewRouter()
 	f.router.Use(testpkg.TenantRuntimeMiddleware(t, db))
-	f.router.Mount("/api/parent-announcements", announcement.NewResource(service, nil).Router(api.ProtectedTenantRoutes))
+	f.router.Mount("/api/parent-announcements", announcement.NewResource(service, nil, time.Now).Router(api.ProtectedTenantRoutes))
 	f.counter = testpkg.CaptureQueriesForContext(t, db)
 	f.counter.Stop()
 	return f

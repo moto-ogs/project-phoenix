@@ -20,6 +20,9 @@ type Runtime struct {
 	// field the conflict is about (#2517).
 	ConflictOnField     func(w http.ResponseWriter, r *http.Request, err error, code, field string)
 	ConstraintViolation func(error) bool
+	// Now is the root's clock the statistics and scan answers are stamped
+	// with.
+	Now func() time.Time
 }
 
 // codeDeviceIDTaken is the registered code of a device ID that another

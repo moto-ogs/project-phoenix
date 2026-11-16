@@ -129,7 +129,7 @@ func (rs *Resource) createStudentNote(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	subject, err := parseNoteSubject(body)
+	subject, err := parseNoteSubject(body, rs.today())
 	if err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -167,7 +167,7 @@ func (rs *Resource) updateStudentNote(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	subject, err := parseNoteSubject(studentNoteRequestBody{SubjectDate: body.SubjectDate})
+	subject, err := parseNoteSubject(studentNoteRequestBody{SubjectDate: body.SubjectDate}, rs.today())
 	if err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -380,7 +380,7 @@ func (rs *Resource) noteActivities(ctx context.Context, studentID int64) ([]peop
 		return nil, nil
 	}
 	groupsByStudent, err := rs.ActiveEnrollments.ActiveEnrollmentGroups(
-		ctx, []int64{studentID}, calendar.TodayDate())
+		ctx, []int64{studentID}, rs.today())
 	if err != nil {
 		return nil, err
 	}
@@ -408,14 +408,16 @@ func decodeStudentNoteBody(w http.ResponseWriter, r *http.Request) (studentNoteR
 	return body, true
 }
 
-func parseNoteSubject(body studentNoteRequestBody) (peopleModule.StudentNoteSubject, error) {
+// parseNoteSubject reads the note's references; a referenced day lies on or
+// before today.
+func parseNoteSubject(body studentNoteRequestBody, today calendar.Date) (peopleModule.StudentNoteSubject, error) {
 	subject := peopleModule.StudentNoteSubject{}
 	if body.SubjectDate != nil && *body.SubjectDate != "" {
 		date, err := calendar.ParseDate(*body.SubjectDate)
 		if err != nil {
 			return subject, errors.New("subject_date must be a YYYY-MM-DD date")
 		}
-		if date.After(calendar.TodayDate()) {
+		if date.After(today) {
 			return subject, errors.New("subject_date must not be in the future")
 		}
 		subject.Date = &date

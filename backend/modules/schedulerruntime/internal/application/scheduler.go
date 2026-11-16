@@ -251,6 +251,9 @@ func newScheduler(deps ports.WorkerDependencies) *Scheduler {
 
 func schedulerCleanupJobs(deps ports.WorkerDependencies) []CleanupJob {
 	jobs := buildCleanupJobs(deps.AuthCleanup, deps.InvitationCleanup, deps.EmailChangeCleanup, deps.OperatorInvitationCleanup)
+	if deps.OperatorInvitationCleanup != nil {
+		jobs = append(jobs, signInDataCleanupJobs(deps.OperatorInvitationCleanup, deps.Now)...)
+	}
 	jobs = append(jobs, operatorRetentionJobs(deps.OperatorRetention)...)
 	jobs = append(jobs, accountRetentionJobs(deps.AccountRetention)...)
 	if !isNilDependency(deps.HolidayRegistrationRetention) {

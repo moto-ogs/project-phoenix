@@ -26,6 +26,25 @@ vi.mock("~/lib/traeger-absence-api", () => ({
   fetchTraegerAbsenceAccounts: vi.fn().mockResolvedValue([]),
   setTraegerAbsenceAllowance: vi.fn(),
 }));
+// Das Stundenkonto (#4711) hat seinen eigenen Test: ein leerer Monat.
+vi.mock("~/lib/traeger-time-account-api", async (original) => ({
+  ...(await original<typeof import("~/lib/traeger-time-account-api")>()),
+  fetchTraegerTimeAccount: (_recordId: string, year: number, month: number) =>
+    Promise.resolve({
+      year,
+      month,
+      state: "school",
+      ended: true,
+      schools: [],
+      targetMinutes: 0,
+      actualMinutes: 0,
+      creditedMinutes: 0,
+      adjustmentMinutes: 0,
+      balanceMinutes: 0,
+      carryInMinutes: 0,
+      closingBalanceMinutes: 0,
+    }),
+}));
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
 }));

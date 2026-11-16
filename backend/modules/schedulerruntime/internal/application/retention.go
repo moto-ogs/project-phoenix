@@ -58,7 +58,7 @@ func (s *Scheduler) cleanupNow() time.Time {
 	if s.cleanupClock != nil {
 		return s.cleanupClock()
 	}
-	return time.Now()
+	return s.clock()
 }
 
 // cleanupRunState is the stored state of one cleanup job of a school: its

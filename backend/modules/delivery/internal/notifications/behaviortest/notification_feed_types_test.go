@@ -48,9 +48,13 @@ func TestFeedTypesAreTheStaffNoticesBesideMessagesAndReminders(t *testing.T) {
 		notifications.TypeStaffQualificationOwnExpiry,
 		notifications.TypeStaffNoticePublished,
 		notifications.TypeInstanceCancelled,
+		notifications.TypeInstanceRoomChanged,
+		notifications.TypeInstanceRoomChangedLater,
+		notifications.TypeSchoolClosingDayChanged,
 		notifications.TypeStaffingChanged,
 		notifications.TypeGroupStaffingChanged,
 		notifications.TypeTeamMemberAbsent,
+		notifications.TypeClassTimetableChanged,
 	}, feed)
 	for _, key := range []string{notifications.TypeStaffParentMessage, notifications.TypeStaffMessage, notifications.TypeParentMessage} {
 		def, ok := notifications.GetType(key)

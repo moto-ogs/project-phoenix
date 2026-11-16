@@ -19,14 +19,14 @@ type SchoolInvitationMaintenance struct {
 	logger *slog.Logger
 }
 
-func NewSchoolInvitationMaintenance(store ports.SchoolInvitationStore, logger *slog.Logger, run func(context.Context, func(context.Context) error) error) *SchoolInvitationMaintenance {
-	if store == nil {
-		panic("identity access application: school invitation maintenance requires its store")
+func NewSchoolInvitationMaintenance(store ports.SchoolInvitationStore, logger *slog.Logger, run func(context.Context, func(context.Context) error) error, now func() time.Time) *SchoolInvitationMaintenance {
+	if store == nil || now == nil {
+		panic("identity access application: school invitation maintenance requires its store and clock")
 	}
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &SchoolInvitationMaintenance{store: store, now: time.Now, logger: logger, run: run}
+	return &SchoolInvitationMaintenance{store: store, now: now, logger: logger, run: run}
 }
 
 // RevokeTenantInvitations spends every pending invitation of the school, so

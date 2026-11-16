@@ -8,19 +8,23 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 type Service struct {
 	store   ports.Store
 	tx      ports.Transaction
 	observe ports.Observer
+	// today is the composition's day clock; the Träger erasure orders judge
+	// their dates against it.
+	today func() calendar.Date
 }
 
-func New(store ports.Store, tx ports.Transaction, observe ports.Observer) *Service {
-	if store == nil || tx == nil || observe == nil {
+func New(store ports.Store, tx ports.Transaction, observe ports.Observer, today func() calendar.Date) *Service {
+	if store == nil || tx == nil || observe == nil || today == nil {
 		panic("organization tenancy application: all dependencies are required")
 	}
-	return &Service{store: store, tx: tx, observe: observe}
+	return &Service{store: store, tx: tx, observe: observe, today: today}
 }
 
 func (s *Service) CreateOrganization(ctx context.Context, input organizationtenancy.CreateOrganization) (result organizationtenancy.Organization, err error) {

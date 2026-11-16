@@ -13,13 +13,15 @@ vi.unmock("swr");
 // figures count only what the release issues, and the release sends the
 // reviewed state back.
 
-const { api, review } = vi.hoisted(() => ({
+const { api, review, debit, handover } = vi.hoisted(() => ({
   api: {
     fetchCareRun: vi.fn(),
     fetchCareLetters: vi.fn(),
     releaseCareRun: vi.fn(),
   },
   review: { includeCareInvoice: vi.fn() },
+  debit: { fetchSepaDebitRun: vi.fn() },
+  handover: { fetchExportRecipients: vi.fn() },
 }));
 vi.mock("~/lib/traeger-care-billing-api", async (original) => ({
   ...(await original<typeof import("~/lib/traeger-care-billing-api")>()),
@@ -28,6 +30,14 @@ vi.mock("~/lib/traeger-care-billing-api", async (original) => ({
 vi.mock("~/lib/traeger-care-review-api", async (original) => ({
   ...(await original<typeof import("~/lib/traeger-care-review-api")>()),
   ...review,
+}));
+vi.mock("~/lib/traeger-sepa-debits-api", async (original) => ({
+  ...(await original<typeof import("~/lib/traeger-sepa-debits-api")>()),
+  ...debit,
+}));
+vi.mock("~/lib/traeger-export-handovers-api", async (original) => ({
+  ...(await original<typeof import("~/lib/traeger-export-handovers-api")>()),
+  ...handover,
 }));
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "7" }),
@@ -122,6 +132,26 @@ describe("monthly run review", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     api.fetchCareRun.mockResolvedValue(RUN);
+    debit.fetchSepaDebitRun.mockResolvedValue({
+      creditorId: "",
+      creditorName: "",
+      creditorIbanMasked: "",
+      accountMissing: false,
+      messageId: "",
+      count: 0,
+      totalCents: 0,
+      groups: [],
+      pastDue: 0,
+      debits: [],
+      submitted: [],
+      left: [],
+      submittedAt: null,
+    });
+    handover.fetchExportRecipients.mockResolvedValue({
+      recipients: [],
+      assignments: [],
+      handovers: [],
+    });
   });
 
   it("shows the excluded invoice apart, with its reason, and takes it back", async () => {

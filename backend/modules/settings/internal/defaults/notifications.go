@@ -39,6 +39,18 @@ var notifications_init_zeiterfassung_0Definitions = []config.Definition{
 		Category:        "zeiterfassung",
 		SortOrder:       8,
 	},
+	{
+		Key:             config.KeyNotificationsClassTimetableChangedEnabled,
+		Label:           "Hinweis bei geändertem Stundenplan einer Klasse",
+		Description:     "Ändert sich der Unterrichtsschluss einer Klasse, bekommen die Lehrkräfte der Klasse, die Betreuung ihrer Kinder und die Eltern einen Hinweis in moto. Ob dazu eine Mitteilung aufs Handy kommt, entscheidet jede Person selbst.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "benachrichtigungen",
+		SortOrder:       9,
+	},
 }
 
 var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
@@ -140,5 +152,29 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 		Tab:             "operations",
 		Category:        "benachrichtigungen",
 		SortOrder:       8,
+	},
+	{
+		Key:             config.KeyNotificationsInstanceRoomChangedEnabled,
+		Label:           "Hinweis bei Raumänderung",
+		Description:     "Findet ein Termin oder Angebot in einem anderen Raum statt, bekommen das eingeplante Personal und die Eltern der Kinder einen Hinweis in moto. Ob dazu eine Mitteilung aufs Handy kommt, entscheidet jede Person selbst.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "benachrichtigungen",
+		SortOrder:       9,
+	},
+	{
+		Key:             config.KeyNotificationsSchoolClosingDayEnabled,
+		Label:           "Benachrichtigung bei Schließtagen",
+		Description:     "Wird ein Schließtag eingetragen, geändert oder gelöscht, steht das bei den Benachrichtigungen aller Mitarbeitenden, Lehrkräfte und Eltern. Liegt der Tag in den nächsten 14 Tagen, kommt auch eine Mitteilung aufs Handy. Jede Person kann sie selbst ausschalten.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "benachrichtigungen",
+		SortOrder:       10,
 	},
 }

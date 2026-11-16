@@ -38,14 +38,13 @@ type cleanupService struct {
 	settings         VisitRetentionSettings
 	txHandler        *tenant.TransactionRunner
 	batchSize        int
-	today            func() calendar.Date
+	// now is the composition's clock (ADR 0239): the retention boundaries,
+	// the deletion stamps and the run times read it.
+	now func() time.Time
 }
 
 func (s *cleanupService) todayDate() calendar.Date {
-	if s.today != nil {
-		return s.today()
-	}
-	return calendar.TodayDate()
+	return calendar.DateFromTime(s.now())
 }
 
 // NewCleanupService creates a new cleanup service instance
@@ -54,8 +53,11 @@ func NewCleanupService(
 	supervisorRepo ports.GroupSupervisorRepository,
 	dataDeletionRepo DeletionAudit,
 	settings VisitRetentionSettings,
-	today ...func() calendar.Date,
+	now func() time.Time,
 ) CleanupService {
+	if now == nil {
+		panic("student presence cleanup: a clock is required")
+	}
 	service := &cleanupService{
 		presence:         presence,
 		supervisorRepo:   supervisorRepo,
@@ -63,9 +65,7 @@ func NewCleanupService(
 		settings:         settings,
 		txHandler:        tenant.NewTransactionRunner(),
 		batchSize:        100, // Process 100 students at a time
-	}
-	if len(today) > 0 {
-		service.today = today[0]
+		now:              now,
 	}
 	return service
 }
@@ -115,7 +115,7 @@ func (s *cleanupService) ApplyAttendanceLogSetting(ctx context.Context, enabled 
 // retention window has passed, with one audit row per student.
 func (s *cleanupService) CleanupExpiredVisits(ctx context.Context) (*CleanupResult, error) {
 	result := &CleanupResult{
-		StartedAt: time.Now(),
+		StartedAt: s.now(),
 		Errors:    make([]CleanupError, 0),
 		Success:   true,
 	}
@@ -134,7 +134,7 @@ func (s *cleanupService) CleanupExpiredVisits(ctx context.Context) (*CleanupResu
 	})
 	if err != nil {
 		result.Success = false
-		result.CompletedAt = time.Now()
+		result.CompletedAt = s.now()
 		return result, err
 	}
 
@@ -144,7 +144,7 @@ func (s *cleanupService) CleanupExpiredVisits(ctx context.Context) (*CleanupResu
 		batchResult, err := s.processBatch(ctx, batch)
 		if err != nil {
 			result.Success = false
-			result.CompletedAt = time.Now()
+			result.CompletedAt = s.now()
 			return result, err
 		}
 
@@ -158,7 +158,7 @@ func (s *cleanupService) CleanupExpiredVisits(ctx context.Context) (*CleanupResu
 		}
 	}
 
-	result.CompletedAt = time.Now()
+	result.CompletedAt = s.now()
 	return result, nil
 }
 
@@ -282,7 +282,7 @@ func (s *cleanupService) processBatch(ctx context.Context, students []studentpre
 			result.errors = append(result.errors, CleanupError{
 				StudentID: student.StudentID,
 				Error:     err.Error(),
-				Timestamp: time.Now(),
+				Timestamp: s.now(),
 			})
 		} else {
 			result.deleted += deleted[student.StudentID]
@@ -322,7 +322,7 @@ func (s *cleanupService) expireVisitsInTx(ctx context.Context, students []studen
 // caller's transaction. Each row carries the student's actually deleted
 // count and its retention window or completed-day boundary.
 func (s *cleanupService) expireVisits(ctx context.Context, students []studentpresence.VisitRetentionCount) (map[int64]int64, error) {
-	now := time.Now()
+	now := s.now()
 	deleted, err := s.presence.DeleteExpiredVisits(ctx, students, now)
 	if err != nil {
 		return nil, err
@@ -378,7 +378,7 @@ func staleAttendanceCheckOut(record studentpresence.Attendance) (calendar.Date, 
 // row. A failure is recorded in the result; the cleanup goes on with the next
 // record.
 func (s *cleanupService) closeStaleRecord(ctx context.Context, record studentpresence.Attendance, checkOutTime time.Time, result *AttendanceCleanupResult) bool {
-	closed, err := s.presence.CloseStaleAttendance(ctx, record.ID, checkOutTime, time.Now())
+	closed, err := s.presence.CloseStaleAttendance(ctx, record.ID, checkOutTime, s.now())
 	if err != nil {
 		errMsg := fmt.Sprintf("Failed to close attendance record %d: %v", record.ID, err)
 		result.Errors = append(result.Errors, errMsg)
@@ -391,7 +391,7 @@ func (s *cleanupService) closeStaleRecord(ctx context.Context, record studentpre
 // CleanupStaleAttendance closes attendance records from previous days that lack check-out times
 func (s *cleanupService) CleanupStaleAttendance(ctx context.Context) (*AttendanceCleanupResult, error) {
 	result := &AttendanceCleanupResult{
-		StartedAt: time.Now(),
+		StartedAt: s.now(),
 		Success:   true,
 		Errors:    make([]string, 0),
 	}
@@ -402,12 +402,12 @@ func (s *cleanupService) CleanupStaleAttendance(ctx context.Context) (*Attendanc
 	staleRecords, err := s.presence.ListAttendance(ctx, studentpresence.AttendanceFilter{BeforeDate: today.String(), OpenOnly: true})
 	if err != nil {
 		result.Success = false
-		result.CompletedAt = time.Now()
+		result.CompletedAt = s.now()
 		return result, fmt.Errorf("failed to find stale attendance records: %w", err)
 	}
 
 	if len(staleRecords) == 0 {
-		result.CompletedAt = time.Now()
+		result.CompletedAt = s.now()
 		return result, nil
 	}
 
@@ -420,7 +420,7 @@ func (s *cleanupService) CleanupStaleAttendance(ctx context.Context) (*Attendanc
 		date, checkOutTime, err := staleAttendanceCheckOut(record)
 		if err != nil {
 			result.Success = false
-			result.CompletedAt = time.Now()
+			result.CompletedAt = s.now()
 			return result, err
 		}
 
@@ -438,7 +438,7 @@ func (s *cleanupService) CleanupStaleAttendance(ctx context.Context) (*Attendanc
 
 	result.StudentsAffected = len(studentsAffected)
 	result.OldestRecordDate = oldestRecord
-	result.CompletedAt = time.Now()
+	result.CompletedAt = s.now()
 
 	return result, nil
 }
@@ -484,7 +484,7 @@ func (s *cleanupService) PreviewAttendanceCleanup(ctx context.Context) (*Attenda
 // CleanupStaleSupervisors closes supervisor records from previous days that lack end_date
 func (s *cleanupService) CleanupStaleSupervisors(ctx context.Context) (*SupervisorCleanupResult, error) {
 	result := &SupervisorCleanupResult{
-		StartedAt: time.Now(),
+		StartedAt: s.now(),
 		Success:   true,
 		Errors:    make([]string, 0),
 	}
@@ -496,12 +496,12 @@ func (s *cleanupService) CleanupStaleSupervisors(ctx context.Context) (*Supervis
 	staleRecords, err := s.supervisorRepo.FindStaleOpen(ctx, today)
 	if err != nil {
 		result.Success = false
-		result.CompletedAt = time.Now()
+		result.CompletedAt = s.now()
 		return result, fmt.Errorf("failed to find stale supervisor records: %w", err)
 	}
 
 	if len(staleRecords) == 0 {
-		result.CompletedAt = time.Now()
+		result.CompletedAt = s.now()
 		return result, nil
 	}
 
@@ -515,7 +515,7 @@ func (s *cleanupService) CleanupStaleSupervisors(ctx context.Context) (*Supervis
 
 		// Update the record
 		record.EndDate = &endDate
-		record.UpdatedAt = time.Now()
+		record.UpdatedAt = s.now()
 		if _, err := s.supervisorRepo.SetEndDate(ctx, record); err != nil {
 			errMsg := fmt.Sprintf("Failed to close supervisor record %d: %v", record.ID, err)
 			result.Errors = append(result.Errors, errMsg)
@@ -534,7 +534,7 @@ func (s *cleanupService) CleanupStaleSupervisors(ctx context.Context) (*Supervis
 
 	result.StaffAffected = len(staffAffected)
 	result.OldestRecordDate = oldestRecord
-	result.CompletedAt = time.Now()
+	result.CompletedAt = s.now()
 
 	return result, nil
 }

@@ -2,6 +2,7 @@ package enrollmenthttp
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -17,7 +18,7 @@ func TestHolidayParticipantExportIncludesBookedDates(t *testing.T) {
 			{FirstName: "Ben", Days: []calendar.Date{calendar.NewDate(2027, 1, 4), calendar.NewDate(2027, 1, 6)}},
 		},
 	}
-	doc := holidayParticipantDocument(list, holidaySchoolNameMap{})
+	doc := holidayParticipantDocument(list, holidaySchoolNameMap{}, time.Time{})
 	assert.Equal(t, "04.01.2027, 06.01.2027", doc.Rows[0].Values["days"])
 	found := false
 	for _, column := range doc.Columns {

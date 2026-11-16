@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
@@ -329,7 +328,7 @@ func (s *InstanceLifecycleService) superviseTarget(ctx context.Context, plan *st
 		StaffID:   plan.staffID,
 		GroupID:   activeGroupID,
 		Role:      "supervisor",
-		StartDate: calendar.DateFromTime(time.Now()).String(),
+		StartDate: calendar.DateFromTime(s.now()).String(),
 	}
 	newSup.TenantID = tenant.FromContext(ctx)
 	if err := s.deps.SupervisorRepo.CreateSupervision(ctx, newSup); err != nil {

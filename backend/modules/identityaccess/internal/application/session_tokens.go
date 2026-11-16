@@ -19,9 +19,13 @@ type JWTSigner interface {
 }
 
 // NewSessionCodec binds the session, MFA challenge and invitation owner
-// tokens to one signer.
-func NewSessionCodec(signer JWTSigner, accessExpiry, refreshExpiry time.Duration) *SessionCodec {
-	return &SessionCodec{signer: signer, accessExpiry: accessExpiry, refreshExpiry: refreshExpiry}
+// tokens to one signer. now stamps and checks the MFA challenge and parent
+// setup tokens, which only this codec verifies. Access, refresh and
+// enrollment tokens also pass the jwtauth verifier, which checks iat, exp and
+// nbf on the real clock of jwx, so they are stamped and compared on the real
+// clock (ADR 0261).
+func NewSessionCodec(signer JWTSigner, accessExpiry, refreshExpiry time.Duration, now func() time.Time) *SessionCodec {
+	return &SessionCodec{signer: signer, accessExpiry: accessExpiry, refreshExpiry: refreshExpiry, now: now}
 }
 
 // SessionCodec signs and parses the identity tokens with one signer. The
@@ -30,6 +34,7 @@ type SessionCodec struct {
 	signer        JWTSigner
 	accessExpiry  time.Duration
 	refreshExpiry time.Duration
+	now           func() time.Time
 }
 
 func (c *SessionCodec) AccessExpiry() time.Duration { return c.accessExpiry }
@@ -53,6 +58,7 @@ func (c *SessionCodec) IssueTokenPair(access identityaccess.SessionClaims, refre
 	if err != nil {
 		return "", "", err
 	}
+	// The jwtauth verifier checks this token on the jwx clock (ADR 0261).
 	now := time.Now()
 	refreshToken, err := c.sign(tokenprimitives.EncodeRefresh(tokenprimitives.RefreshClaims(refresh), now, now.Add(c.refreshExpiry)))
 	if err != nil {
@@ -62,11 +68,13 @@ func (c *SessionCodec) IssueTokenPair(access identityaccess.SessionClaims, refre
 }
 
 func (c *SessionCodec) IssueAccessToken(claims identityaccess.SessionClaims) (string, error) {
+	// The jwtauth verifier checks this token on the jwx clock (ADR 0261).
 	now := time.Now()
 	return c.sign(tokenprimitives.EncodeAccess(tokenprimitives.AccessClaims(claims), now, now.Add(c.accessExpiry)))
 }
 
 func (c *SessionCodec) IssueMFAEnrollmentToken(accountID, tenantID int64, scope string, ttl time.Duration, credentialGeneration int64) (string, error) {
+	// The jwtauth verifier checks this token on the jwx clock (ADR 0261).
 	wire, err := tokenprimitives.EncodeEnrollment(tokenprimitives.EnrollmentClaims{AccountID: accountID, Scope: scope, TenantID: tenantID, CredentialGeneration: credentialGeneration}, time.Now(), ttl)
 	if err != nil {
 		return "", err
@@ -89,7 +97,7 @@ func (c *SessionCodec) sign(wire any) (string, error) {
 }
 
 func (c *SessionCodec) IssueChallengeToken(claims identityaccess.MFAChallengeClaims, ttl time.Duration) (string, error) {
-	return c.sign(tokenprimitives.EncodeChallenge(tokenprimitives.ChallengeClaims(claims), time.Now(), ttl))
+	return c.sign(tokenprimitives.EncodeChallenge(tokenprimitives.ChallengeClaims(claims), c.now(), ttl))
 }
 
 func (c *SessionCodec) ParseChallengeToken(token string) (identityaccess.MFAChallengeClaims, error) {
@@ -97,7 +105,7 @@ func (c *SessionCodec) ParseChallengeToken(token string) (identityaccess.MFAChal
 	if err != nil {
 		return identityaccess.MFAChallengeClaims{}, err
 	}
-	claims, err := tokenprimitives.DecodeChallenge(verified, time.Now())
+	claims, err := tokenprimitives.DecodeChallenge(verified, c.now())
 	return identityaccess.MFAChallengeClaims(claims), err
 }
 
@@ -140,7 +148,7 @@ func (c *SessionCodec) ParseRefreshToken(token string) (identityaccess.RefreshCl
 // IssueHolidayParentSetupToken signs the setup link of a parent account at a
 // Träger (ADR 0216 point 5).
 func (c *SessionCodec) IssueHolidayParentSetupToken(claims identityaccess.HolidayParentSetupClaims, ttl time.Duration) (string, error) {
-	return c.sign(tokenprimitives.EncodeHolidayParentSetup(tokenprimitives.HolidayParentSetupClaims(claims), time.Now(), ttl))
+	return c.sign(tokenprimitives.EncodeHolidayParentSetup(tokenprimitives.HolidayParentSetupClaims(claims), c.now(), ttl))
 }
 
 // ParseHolidayParentSetupToken accepts only an unexpired setup token.
@@ -149,6 +157,6 @@ func (c *SessionCodec) ParseHolidayParentSetupToken(token string) (identityacces
 	if err != nil {
 		return identityaccess.HolidayParentSetupClaims{}, err
 	}
-	claims, err := tokenprimitives.DecodeHolidayParentSetup(verified, time.Now())
+	claims, err := tokenprimitives.DecodeHolidayParentSetup(verified, c.now())
 	return identityaccess.HolidayParentSetupClaims(claims), err
 }

@@ -42,6 +42,8 @@ type ClassDayTestModule struct {
 	// Unreported records the notices about children missing without a
 	// report (#4791) instead of handing them to Delivery.
 	Unreported *RecordingUnreportedNotifier
+	// Today is the module's day clock the HTTP resource reads.
+	Today func() calendar.Date
 }
 
 // RecordingUnreportedNotifier keeps every notice about children missing
@@ -130,7 +132,7 @@ func NewClassDayTestModuleWithRealtime(db transactionruntime.Database, unit tena
 		},
 	}, reports, rCare.StudentStatusDay, r.Student, r.Person, r.StudentGuardian, rAudit.DataAccessLog, activeSettings.Settings,
 		hub, slog.Default())
-	return ClassDayTestModule{ClassDay: classDay, Unreported: unreported}, nil
+	return ClassDayTestModule{ClassDay: classDay, Unreported: unreported, Today: calendar.CalendarDateClock(clocks...)}, nil
 }
 
 // classDayTestMorning is the morning attendance seam with the absence

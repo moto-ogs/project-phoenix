@@ -312,7 +312,7 @@ func (s *service) prepareVisitTransfer(
 		return false, time.Time{}, err
 	}
 
-	transferAt := time.Now()
+	transferAt := s.now()
 	if updated.ExitTime != nil {
 		// A combined transfer/checkout has no separate transfer timestamp in the
 		// request. Use checkout as the boundary so target check-in precedes close.
@@ -541,7 +541,7 @@ func (s *service) endVisitWithAttendanceSync(
 // close only touches an open visit; a close that ends nothing reads the visit
 // to tell a missing visit from an ended one.
 func (s *service) endVisitRecord(ctx context.Context, id int64) (*studentpresence.Visit, error) {
-	closed, err := s.SchoolPresence.CloseVisits(ctx, []int64{id}, time.Now())
+	closed, err := s.SchoolPresence.CloseVisits(ctx, []int64{id}, s.now())
 	if err != nil {
 		return nil, &ActiveError{Op: "EndVisit", Err: errors.Join(ErrDatabaseOperation, err)}
 	}

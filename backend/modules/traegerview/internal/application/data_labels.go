@@ -48,6 +48,8 @@ var dataLabels = map[string]string{
 	"parent_letter_preview":               "Vorschau eines Elternbriefs für ein Kind",
 	"parent_letter_print":                 "Alle Elternbriefe eines Versands (PDF)",
 	"parent_letter_publish":               "Angaben der Kinder für einen Elternbrief je Kind",
+	"student_parent_records":              "Elternbriefe und Einverständnisse eines Kindes",
+	"parent_declaration_proof":            "Nachweis eines Einverständnisses (PDF oder CSV)",
 	"care_contract_applications":          "Angenommene Anmeldungen für Betreuungsverträge",
 	"care_contracts":                      "Betreuungsverträge",
 	"care_time_overruns":                  "Kinder mit längerer Betreuung als gebucht",

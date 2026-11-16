@@ -175,7 +175,7 @@ func (rs *Resource) buildAttendanceExportDocument(
 	return lists.Document{
 		Title:       title,
 		Subtitle:    fmt.Sprintf("Kind-ID %d · %s bis %s", studentID, from.Format(attendanceExportDateLayout), to.Format(attendanceExportDateLayout)),
-		GeneratedAt: time.Now(), Columns: columns,
+		GeneratedAt: rs.Now(), Columns: columns,
 		Rows: rows, Footer: "Vertrauliche Anwesenheitsdaten",
 	}, nil
 }

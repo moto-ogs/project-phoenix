@@ -40,8 +40,9 @@ type ParentLetterLogos interface {
 	ParentLetterLogo(ctx context.Context, logoURL string) []byte
 }
 
-// ParentLetterAccess is one read of children's data through a letter: a
-// preview for one child or the print of every letter of a dispatch.
+// ParentLetterAccess is one read of children's data through a letter or a
+// declaration: a preview for one child, the print of every letter of a
+// dispatch, a child's record or a declaration's proof (#4814).
 type ParentLetterAccess struct {
 	ActorAccountID int64
 	Kind           string
@@ -52,11 +53,16 @@ type ParentLetterAccess struct {
 }
 
 // The kinds of ParentLetterAccess. Publish is the read of every reached
-// child's values when a letter that names each child goes out.
+// child's values when a letter that names each child goes out. The child
+// record kinds (#4814) are the read of one child's letters and
+// declarations, and the download of a declaration's proof, for the school
+// or for one child.
 const (
-	ParentLetterAccessPreview = "preview"
-	ParentLetterAccessPrint   = "print"
-	ParentLetterAccessPublish = "publish"
+	ParentLetterAccessPreview          = "preview"
+	ParentLetterAccessPrint            = "print"
+	ParentLetterAccessPublish          = "publish"
+	ParentLetterAccessStudentRecords   = "student_records"
+	ParentLetterAccessDeclarationProof = "declaration_proof"
 )
 
 // ParentLetterAccessLog writes each read of children's data through a

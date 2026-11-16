@@ -2,7 +2,6 @@ package sessions
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/go-chi/render"
 )
@@ -33,6 +32,10 @@ func (rs *Resource) updateSessionActivity(w http.ResponseWriter, r *http.Request
 		rs.renderError(w, r, err)
 		return
 	}
+	// A request without a timestamp happened now.
+	if req.Timestamp.IsZero() {
+		req.Timestamp = rs.runtime.Now()
+	}
 
 	sessionID, err := rs.Lifecycle.TouchSession(r.Context())
 	if err != nil {
@@ -40,11 +43,12 @@ func (rs *Resource) updateSessionActivity(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	now := rs.runtime.Now()
 	response := map[string]interface{}{
 		"session_id":    sessionID,
 		"activity_type": req.ActivityType,
-		"updated_at":    time.Now(),
-		"last_activity": time.Now(),
+		"updated_at":    now,
+		"last_activity": now,
 	}
 
 	rs.runtime.Success(w, r, http.StatusOK, response, "Session activity updated")
@@ -72,7 +76,7 @@ func (rs *Resource) validateSessionTimeout(w http.ResponseWriter, r *http.Reques
 		"valid":           true,
 		"timeout_minutes": req.TimeoutMinutes,
 		"last_activity":   req.LastActivity,
-		"validated_at":    time.Now(),
+		"validated_at":    rs.runtime.Now(),
 	}
 
 	rs.runtime.Success(w, r, http.StatusOK, response, "Timeout validation successful")

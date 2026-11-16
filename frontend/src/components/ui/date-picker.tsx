@@ -407,7 +407,7 @@ export function DatePicker({
           onPointerEnter={preloadDayPicker}
           onFocus={preloadDayPicker}
           className={cn(
-            "flex items-center rounded-lg border transition-all",
+            "flex items-center rounded-lg border transition",
             iconOnly
               ? `${CONTROL_HEIGHT_CLASS.compact} w-10 shrink-0 justify-center pointer-coarse:size-11`
               : `min-w-0 flex-1 justify-between ${

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -27,7 +28,7 @@ func TestStaffRecipientResolverReachesGroupTeamAndAdmins(t *testing.T) {
 		}},
 		&fakeAdminReader{ids: []int64{absenceAdmin}},
 		&fakeOnDutySetting{enabled: true},
-		&fakeDutyReader{onDuty: map[int64]struct{}{absenceStaffA: {}, absenceAdminStaff: {}}},
+		&fakeDutyReader{onDuty: map[int64]struct{}{absenceStaffA: {}, absenceAdminStaff: {}}}, calendar.CalendarDateClock(),
 	)
 
 	scopes, err := resolver.Resolve(context.Background(), notifications.StaffRecipientRequest{
@@ -60,7 +61,7 @@ func TestStaffRecipientResolverOnlyAccountsSkipsGroupTeamAndAdmins(t *testing.T)
 		&fakeStaffAccountReader{accounts: map[int64]int64{absenceStaffA: absenceAccountA, absenceAdminStaff: absenceAdmin}},
 		&fakeAdminReader{ids: []int64{absenceAdmin}},
 		&fakeOnDutySetting{enabled: false},
-		&fakeDutyReader{},
+		&fakeDutyReader{}, calendar.CalendarDateClock(),
 	)
 
 	scopes, err := resolver.Resolve(context.Background(), notifications.StaffRecipientRequest{

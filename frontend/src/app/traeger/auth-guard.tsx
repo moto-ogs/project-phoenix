@@ -14,7 +14,13 @@ import { hasSessionAccess } from "~/lib/session-access";
 import { TraegerShellProvider } from "~/lib/shell-auth-context";
 import { traegerPath } from "~/lib/traeger-url";
 
-const TRAEGER_PUBLIC_PAGES = ["/login", "/reset-password", "/invite"];
+const TRAEGER_PUBLIC_PAGES = [
+  "/login",
+  "/reset-password",
+  "/invite",
+  // Entry of the public demo (#6193): it signs the visitor in itself.
+  "/demo",
+];
 
 /**
  * A session whose refresh ended for good (expired or revoked refresh token,
@@ -39,7 +45,7 @@ export function TraegerAuthGuard({
       publicPages={TRAEGER_PUBLIC_PAGES}
       wrongScope="login"
       endedSessionRedirect={endedSessionRedirect}
-      loadingMessage="Wird geladen …"
+      loadingMessage="moto träger wird geöffnet …"
       renderShell={(page, session) => {
         const user = session?.user;
         return (

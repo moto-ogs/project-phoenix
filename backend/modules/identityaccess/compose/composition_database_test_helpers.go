@@ -8,5 +8,5 @@ import (
 	"github.com/uptrace/bun"
 )
 
-func newStore(db *bun.DB) *postgres.Store             { return postgres.NewStore(db) }
+func newStore(db *bun.DB) *postgres.Store             { return postgres.NewStore(db, clockOrReal(nil)) }
 func newTransactionRunner() *tenant.TransactionRunner { return tenant.NewTransactionRunner() }

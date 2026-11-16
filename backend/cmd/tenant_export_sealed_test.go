@@ -46,7 +46,11 @@ func TestTenantExportOpensHealthAndProjectsSettingsWithTheRootBindings(t *testin
 		require.NoError(t, json.Unmarshal(row["setting_key"], &key))
 		settings[key] = string(row["exported_value"])
 	}
-	require.Equal(t, map[string]string{"security.ogs_device_pin": "null", "sftp.host": `"sftp.example.invalid"`}, settings)
+	require.Equal(t, map[string]string{
+		// The federal state every school has (#7174) leaves as stored.
+		"operations.federal_state": `"` + testpkg.TestSchoolFederalState + `"`,
+		"security.ogs_device_pin":  "null", "sftp.host": `"sftp.example.invalid"`,
+	}, settings)
 
 	var opened []string
 	for _, row := range readExportRows(t, filepath.Join(out, "users.student_care_profiles.jsonl")) {

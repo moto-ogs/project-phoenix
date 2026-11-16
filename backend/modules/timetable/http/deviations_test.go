@@ -43,6 +43,7 @@ type devSetup struct {
 	staffX int64 // current substitute
 	staffY int64 // replacement
 	staffB int64 // second planned person
+	clock  func() time.Time
 }
 
 func buildDevModule(t *testing.T) *devSetup {
@@ -76,7 +77,7 @@ func buildDevModule(t *testing.T) *devSetup {
 
 	return &devSetup{
 		res: res, mock: mock, db: db, ctx: ctx, roomID: room.ID,
-		staffA: a.ID, staffX: x.ID, staffY: y.ID, staffB: b.ID,
+		staffA: a.ID, staffX: x.ID, staffY: y.ID, staffB: b.ID, clock: clock,
 	}
 }
 
@@ -378,7 +379,7 @@ func TestApplyDeviations_PastBlock_Rejected(t *testing.T) {
 
 	s := buildDevModule(t)
 	router := devRouter(s.ctx, s.res, s.db)
-	past := calendar.TodayDate().AddDays(-1)
+	_, past := futureSubDate(-1) // the day before the module's clock
 
 	inst := testpkg.CreateTestActivityInstance(t, s.db, past, s.roomID, testpkg.ActivityInstanceOpts{Title: "Past"})
 
@@ -708,7 +709,7 @@ func TestAcknowledgeUnderstaffed_PastBlock_Rejected(t *testing.T) {
 
 	s := buildDevModule(t)
 	router := ackRouter(s.ctx, s.res)
-	past := calendar.TodayDate().AddDays(-1)
+	_, past := futureSubDate(-1) // the day before the module's clock
 
 	inst := testpkg.CreateTestActivityInstance(t, s.db, past, s.roomID, testpkg.ActivityInstanceOpts{Title: "PastAck"})
 

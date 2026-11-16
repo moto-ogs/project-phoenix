@@ -406,7 +406,7 @@ export function Header({ notificationBell }: HeaderProps = {}) {
       // this sticky topbar's height and pin themselves just below it instead of
       // scrolling underneath it.
       data-app-header
-      className={`sticky top-0 z-50 w-full border-b border-gray-200/70 bg-white/95 backdrop-blur-md transition-[background-color,border-color,box-shadow] duration-300 ${
+      className={`sticky top-0 z-50 w-full border-b border-gray-200/70 bg-white transition-[background-color,border-color,box-shadow] duration-300 ${
         isScrolled ? "shadow-sm" : ""
       }`}
     >

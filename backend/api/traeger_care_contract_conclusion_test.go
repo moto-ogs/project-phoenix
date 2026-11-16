@@ -42,7 +42,7 @@ func careContractConclusionRun(t *testing.T, f careContractFixture) carecontract
 	require.NoError(t, err)
 	audit, err := auditCompose.NewTenantPersistence(f.db, time.Now)
 	require.NoError(t, err)
-	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil)
+	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil, time.Now)
 	require.NoError(t, err)
 	delivery, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{
 		DB: f.db, People: owners.EnrollmentFlowGuardianDirectory{}, Observe: func(deliveryContract.Observation) {},
@@ -50,7 +50,7 @@ func careContractConclusionRun(t *testing.T, f careContractFixture) carecontract
 	require.NoError(t, err)
 	schoolSettings, err := owners.NewSettingsTestModule(database, unit)
 	require.NoError(t, err)
-	conclusion := NewCareContractConclusion(organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog, owners.CareContractTestHolidays{}, "http://parents.localhost:3000")
+	conclusion := NewCareContractConclusion(organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog, owners.CareContractTestHolidays{}, "http://parents.localhost:3000", nil)
 	run, err := conclusion.ConcludeAccepted(tenant.WithUnitOfWork(context.Background(), unit), f.office.organization)
 	require.NoError(t, err)
 	return run

@@ -17,9 +17,11 @@ import (
 // object sweep of the files parents attach (#4783) to Enrollment's records,
 // the Audit Platform's access log and the operator-managed retention window.
 // A nil access log refuses every open; nil settings fail the retention run.
-func NewEnrollmentRequestUploads(records enrollmentOwner.RequestUploadRecords, accessLog enrollmentAccessLogAppender, settings enrollmentOwner.UploadRetentionSettings, logger *slog.Logger) *enrollmentOwner.RequestUploads {
+// now is the root clock (ADR 0265) the expiry and the sweep measure with; it
+// must be the clock records stamps an upload's creation with.
+func NewEnrollmentRequestUploads(records enrollmentOwner.RequestUploadRecords, accessLog enrollmentAccessLogAppender, settings enrollmentOwner.UploadRetentionSettings, logger *slog.Logger, now func() time.Time) *enrollmentOwner.RequestUploads {
 	deps := enrollmentOwner.RequestUploadDependencies{
-		Records: records, Settings: settings, Logger: logger,
+		Records: records, Settings: settings, Logger: logger, Now: now,
 		NotFound: func(err error) bool { return errors.Is(err, transactionruntime.ErrNoRows) },
 	}
 	if accessLog != nil {
@@ -56,8 +58,9 @@ func (l enrollmentUploadAccessLog) RecordUploadAccess(ctx context.Context, entry
 }
 
 // enrollmentUploadRetentionStep deletes the expired uploads of one school in
-// the nightly cleanup (#4783); the file store sweep removes their objects.
-func enrollmentUploadRetentionStep(settings enrollmentOwner.UploadRetentionSettings, logger *slog.Logger) schedulerPorts.RetentionStep {
-	uploads := NewEnrollmentRequestUploads(enrollmentCompose.New(), nil, settings, logger.With("service", "enrollment-upload-retention"))
+// the nightly cleanup (#4783) on the root clock now; the file store sweep
+// removes their objects.
+func enrollmentUploadRetentionStep(settings enrollmentOwner.UploadRetentionSettings, logger *slog.Logger, now func() time.Time) schedulerPorts.RetentionStep {
+	uploads := NewEnrollmentRequestUploads(enrollmentCompose.NewClocked(now), nil, settings, logger.With("service", "enrollment-upload-retention"), now)
 	return ownerRetentionStep(auditModels.DeletionTypeEnrollmentUploadRetention, uploads.DeleteExpiredUploads)
 }

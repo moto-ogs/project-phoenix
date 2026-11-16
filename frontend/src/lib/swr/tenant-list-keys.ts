@@ -17,6 +17,8 @@ export const tenantListKeys = {
     `meal-plan-week-${encodeURIComponent(monday)}`,
   /** Fragen der Anmeldung, nach deren Antworten die Kinderliste filtert (#6954). */
   enrollmentAnswerFilters: () => "enrollment-answer-filters",
+  /** Der kleine Hilfe-Index der Suche (Titel, Frage, Zusammenfassung; #6954). */
+  helpSearchIndex: () => "help-search-index",
   /** Pausen der eigenen offenen Arbeitszeit. */
   sessionBreaks: (sessionId: string) =>
     `time-tracking-session-breaks-${encodeURIComponent(sessionId)}`,

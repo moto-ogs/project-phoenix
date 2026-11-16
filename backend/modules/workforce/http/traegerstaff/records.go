@@ -25,6 +25,7 @@ type RecordsResource struct {
 	contracts    workforce.TraegerStaffContracts
 	absences     workforce.TraegerAbsenceTypes
 	timeAccounts workforce.TraegerStaffTimeAccounts
+	hires        workforce.TraegerStaffHires
 	requireStaff common.Middleware
 	lists        common.ListRenderer
 	// today is the day the Kontingente default their year to.
@@ -34,15 +35,16 @@ type RecordsResource struct {
 // NewRecordsResource builds the resource; the root binds requireStaff to
 // the Träger right traeger_staff:manage (ADR 0084 section 4). absences
 // serves the Kontingente of a record (#4710), timeAccounts its Stundenkonto
-// (#4711), lists renders the download of the list (#4718), today the
-// composition's calendar day (ADR 0239).
+// (#4711), hires „Person einstellen“ (#7206), lists renders the download of
+// the list (#4718), today the composition's calendar day (ADR 0239).
 func NewRecordsResource(records workforce.TraegerStaffRecords, contracts workforce.TraegerStaffContracts,
-	absences workforce.TraegerAbsenceTypes, timeAccounts workforce.TraegerStaffTimeAccounts, requireStaff common.Middleware, lists common.ListRenderer, today func() calendar.Date,
+	absences workforce.TraegerAbsenceTypes, timeAccounts workforce.TraegerStaffTimeAccounts, hires workforce.TraegerStaffHires,
+	requireStaff common.Middleware, lists common.ListRenderer, today func() calendar.Date,
 ) *RecordsResource {
-	if records == nil || contracts == nil || absences == nil || timeAccounts == nil || requireStaff == nil || lists == nil || today == nil {
-		panic("workforce traeger staff: the records, the contracts, the Kontingente, the Stundenkonto, the right check, the list renderer and the day clock are required")
+	if records == nil || contracts == nil || absences == nil || timeAccounts == nil || hires == nil || requireStaff == nil || lists == nil || today == nil {
+		panic("workforce traeger staff: the records, the contracts, the Kontingente, the Stundenkonto, the hires, the right check, the list renderer and the day clock are required")
 	}
-	return &RecordsResource{records: records, contracts: contracts, absences: absences, timeAccounts: timeAccounts, requireStaff: requireStaff, lists: lists, today: today}
+	return &RecordsResource{records: records, contracts: contracts, absences: absences, timeAccounts: timeAccounts, hires: hires, requireStaff: requireStaff, lists: lists, today: today}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/staff-records.
@@ -55,6 +57,7 @@ func (rs *RecordsResource) TraegerRouter(protectedTraegerRoutes func(chi.Router,
 		staff.Get("/export", rs.overviewExport)
 		staff.Post("/", rs.link)
 		staff.Post("/link-preview", rs.preview)
+		staff.Post("/hire", rs.hire)
 		staff.Get("/{id}", rs.record)
 		staff.Delete("/{id}", rs.dissolve)
 		staff.Put("/{id}/personnel-number", rs.personnelNumber)

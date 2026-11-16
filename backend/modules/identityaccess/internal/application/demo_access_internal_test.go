@@ -64,7 +64,7 @@ func TestDemoAccessRedeemLocksTheSchoolBeforeItUsesTheAccess(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 10, 16, 9, 0, 0, 0, time.UTC)
 	var calls []string
-	flow, err := NewDemoAccess(DemoAccessDependencies{
+	flow, err := NewDemoAccess(DemoAccessDependencies{Now: time.Now,
 		Sessions: demoRedemptionSessions{},
 		Store: demoRedemptionStore{
 			access: domain.DemoAccess{ID: 7, ExpiresAt: now.Add(time.Hour), SchoolSlug: "ogs-nord-k3m9xp"},
@@ -196,7 +196,7 @@ func TestDemoAccessFollowUpWithAPhoneNumberMailsTheLead(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			var leads []domain.DemoAccess
-			flow, err := NewDemoAccess(DemoAccessDependencies{
+			flow, err := NewDemoAccess(DemoAccessDependencies{Now: time.Now,
 				Sessions: demoRedemptionSessions{},
 				Store: knownDemoAccessStore{known: domain.DemoAccess{
 					ContactOptIn: true, CreatedAt: now.Add(-time.Hour), ExpiresAt: now.Add(time.Hour), SchoolSlug: "ogs-nord-k3m9xp",

@@ -680,6 +680,7 @@ func provisionTestSchool(t *testing.T, db *bun.DB, graph organizationtenancy.Pro
 	schoolInput.Slug = fmt.Sprintf("schule-%s-%d", label, suffix)
 	schoolInput.Subdomain = fmt.Sprintf("schule-%s-%d", label, suffix)
 	schoolInput.Email = fmt.Sprintf("kontakt-%s-%d@example.test", label, suffix)
+	schoolInput.FederalState = "DE-BW"
 	schoolInput.Active = true
 	school, err := service.CreateSchool(ctx, schoolInput, operatorID, provisioningTestClientIP)
 	require.NoError(t, err)
@@ -729,6 +730,25 @@ func TestOperatorProvisioningIntegration_CreateSchool_SeedsCategoriesAndWebManua
 
 	assert.Equal(t, 1, countOperatorAudit(t, db, "create", "organization", organizationID))
 	assert.Equal(t, 1, countOperatorAudit(t, db, "create", "school", schoolID))
+
+	// The federal state named on creation is the school's setting (#7174).
+	// It is a system write: the settings audit names accounts, an operator
+	// is none, and the operator audit entry above names the operator.
+	var state struct {
+		Value     string `bun:"value"`
+		UpdatedBy *int64 `bun:"updated_by"`
+	}
+	require.NoError(t, db.NewSelect().TableExpr("config.setting_values").
+		ColumnExpr("value #>> '{}' AS value, updated_by").
+		Where("tenant_id = ? AND setting_key = 'operations.federal_state'", schoolID).
+		Scan(dbCtx, &state))
+	assert.Equal(t, "DE-BW", state.Value)
+	assert.Nil(t, state.UpdatedBy)
+	var audits int
+	require.NoError(t, db.NewSelect().TableExpr("config.setting_audit").ColumnExpr("count(*)").
+		Where("tenant_id = ? AND setting_key = 'operations.federal_state' AND action = 'set' AND changed_by IS NULL", schoolID).
+		Scan(dbCtx, &audits))
+	assert.Equal(t, 1, audits)
 
 	// The web-manual device is protected from transfer.
 	service := graph
@@ -1044,6 +1064,7 @@ func TestOperatorProvisioningIntegration_TransferDevice_ArchivesSourceAndMovesKe
 	targetInput.Slug = fmt.Sprintf("ziel-%d", sourceSchoolID)
 	targetInput.Subdomain = fmt.Sprintf("ziel-%d", sourceSchoolID)
 	targetInput.Email = fmt.Sprintf("ziel-%d@example.test", sourceSchoolID)
+	targetInput.FederalState = "DE-NW"
 	targetInput.Active = true
 	targetSchool, err := service.CreateSchool(ctx, targetInput, operatorID, provisioningTestClientIP)
 	require.NoError(t, err)

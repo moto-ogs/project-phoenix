@@ -24,7 +24,7 @@ export function CatererAuthGuard({
       portal="caterer"
       publicPages={CATERER_PUBLIC_PAGES}
       wrongScope="login"
-      loadingMessage="Wird geladen …"
+      loadingMessage="Caterer-Portal wird geöffnet …"
       renderShell={(page) => (
         <CatererShellProvider>
           <BreadcrumbProvider>

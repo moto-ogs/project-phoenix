@@ -705,13 +705,18 @@ export async function fetchDeclarationStatus(
   return data;
 }
 
-/** Download address of the Einverständnis report (PDF) or history (CSV). */
+/**
+ * Download address of the Einverständnis report (PDF) or history (CSV). With
+ * a child the proof holds only that child (Kinderakte, #4814).
+ */
 function declarationExportUrl(
   id: string,
   format: "csv" | "pdf",
   base: string,
+  studentId?: string,
 ): string {
-  return `${base}/${encodeURIComponent(id)}/declaration-export?format=${format}`;
+  const child = studentId ? `&student_id=${encodeURIComponent(studentId)}` : "";
+  return `${base}/${encodeURIComponent(id)}/declaration-export?format=${format}${child}`;
 }
 
 /**
@@ -723,8 +728,11 @@ export async function downloadDeclarationExport(
   id: string,
   format: "csv" | "pdf",
   base = BASE,
+  studentId?: string,
 ): Promise<void> {
-  const response = await transportFetch(declarationExportUrl(id, format, base));
+  const response = await transportFetch(
+    declarationExportUrl(id, format, base, studentId),
+  );
   if (!response.ok) {
     await throwApiError(response, "Die Datei konnte nicht erstellt werden");
   }
@@ -733,6 +741,55 @@ export async function downloadDeclarationExport(
     blob,
     filenameFromDisposition(response) ?? `erklaerung-${id}.${format}`,
   );
+}
+
+/* --- Kinderakte (#4814) ---------------------------------------------------- */
+
+/** One Elternbrief that reached the child, with the child's confirmation. */
+export interface StudentParentLetter {
+  announcement_id: string;
+  title: string;
+  published_at: string;
+  /** False when no guardian of the child has a parent account. */
+  can_confirm: boolean;
+  acknowledged_at: string | null;
+  acknowledged_by: string;
+}
+
+/** One Einverständnis of the child with its state on the current version. */
+export interface StudentParentDeclaration {
+  announcement_id: string;
+  title: string;
+  published_at: string;
+  deadline: string | null;
+  version_no: number;
+  state: DeclarationChildState;
+  signers: DeclarationSigner[];
+}
+
+/** The letters and declarations of one child, newest first. */
+export interface StudentParentRecords {
+  letters: StudentParentLetter[];
+  declarations: StudentParentDeclaration[];
+}
+
+/**
+ * What the school sent one child's family and what the family declared, read
+ * from the Elternbriefe and Einverständnisse themselves. The backend writes
+ * every read to the access log.
+ */
+export async function fetchStudentParentRecords(
+  studentId: string,
+): Promise<StudentParentRecords> {
+  const data = await request<StudentParentRecords>(
+    `${BASE}/students/${encodeURIComponent(studentId)}`,
+    undefined,
+    "Elternbriefe und Einverständnisse konnten nicht geladen werden",
+  );
+  return {
+    letters: data?.letters ?? [],
+    declarations: data?.declarations ?? [],
+  };
 }
 
 /** Re-queue only the mails that failed. Separate from remindUnanswered. */

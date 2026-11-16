@@ -216,6 +216,26 @@ vi.mock("~/lib/student-api", async (importOriginal) => ({
   fetchEnrollmentAnswerFilters: () => mockFetchAnswerFilters(),
 }));
 
+// Side-loads the test's SWR mock runs but no case reads: the signed-in
+// staff profile and today's holiday guests (none).
+vi.mock("~/lib/usercontext-api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/usercontext-api")>();
+  return {
+    ...actual,
+    userContextService: {
+      ...actual.userContextService,
+      getCurrentStaff: vi.fn(() =>
+        Promise.resolve({ id: "1", person_id: "1" }),
+      ),
+    },
+  };
+});
+
+vi.mock("~/lib/holiday-host-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/holiday-host-api")>()),
+  fetchHolidayGuestBadges: vi.fn(() => Promise.resolve([])),
+}));
+
 vi.mock("~/lib/api", () => ({
   groupService: {
     getGroups: vi.fn(() => Promise.resolve([])),

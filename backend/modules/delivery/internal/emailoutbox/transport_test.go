@@ -172,3 +172,22 @@ func TestProviderPostponesAThrottledMailWithinTheWindow(t *testing.T) {
 		})
 	}
 }
+
+// The throttle window counts on the worker's clock, which stamped the mail:
+// with a clock far from the real day a new mail still waits.
+func TestProviderDatesTheThrottleWindowOnTheWorkerClock(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2021, time.March, 10, 9, 30, 0, 0, time.UTC)
+	renderer := &recordingMailRenderer{}
+	provider := MailPushProvider{
+		Registry: NewTemplateRegistry(map[string]Renderer{"notice": renderer}),
+		Mailer:   throttlingMailTransport{}, Tenants: contextCheckingMailTransactions{}, Logger: slog.Default(),
+		Now: func() time.Time { return now },
+	}
+	intent := deliveryContract.ClaimedIntent{TenantID: 42, Template: "notice", EmailPayload: json.RawMessage(`{}`), CreatedAt: now.Add(-time.Minute)}
+
+	_, err := provider.SendEmail(context.Background(), intent)
+
+	require.ErrorIs(t, err, deliveryContract.ErrThrottled)
+	require.ErrorIs(t, err, deliveryContract.ErrDeferred)
+}

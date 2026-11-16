@@ -64,7 +64,7 @@ import { useSheetAboveKeyboard } from "./hooks/useSheetAboveKeyboard";
 import type { FormModalPending } from "./use-form-modal-pending";
 import type { FormErrorInput } from "./form-error";
 import {
-  OVERLAY_BACKDROP_CLASS,
+  OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
   Z_LAYER,
 } from "./overlay-styles";
@@ -232,7 +232,7 @@ const SlideOverOverlay = React.forwardRef<
     className={cn(
       `fixed inset-0 ${Z_LAYER.sheetBackdrop}`,
       OVERLAY_BACKDROP_TINT_CLASS,
-      OVERLAY_BACKDROP_CLASS,
+      OVERLAY_BACKDROP_BLUR_CLASS,
       className,
     )}
     {...props}

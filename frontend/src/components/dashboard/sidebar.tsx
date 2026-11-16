@@ -23,12 +23,7 @@ import { useTraegerReturnHref } from "~/lib/hooks/use-traeger-return-href";
 import { TRAEGER_RETURN_LABEL } from "~/lib/traeger-handoff";
 import { isDemoBannerShown } from "~/components/demo/demo-banner";
 import { useDemoEveningActive } from "~/components/demo/demo-evening-notice";
-import {
-  canReadSupervisionData,
-  hasEffectiveAdminScope,
-  leadsSchool,
-} from "~/lib/auth-utils";
-import { canOpenActiveSupervision } from "~/lib/active-supervision-access";
+import { hasEffectiveAdminScope, leadsSchool } from "~/lib/auth-utils";
 import { useCareWithdrawalsPending } from "~/lib/hooks/use-care-withdrawals-pending";
 import { operatorPath } from "~/lib/operator-url";
 import { useSidebarAccordion } from "~/lib/hooks/use-sidebar-accordion";
@@ -90,17 +85,21 @@ import {
 import {
   COMMUNICATION_SUB_PAGES,
   DATABASE_SECTION,
-  DATABASE_SUB_PAGES,
   ENROLLMENT_SECTION,
   ENROLLMENT_SUB_PAGES,
   getActiveEnrollmentSubPageHref,
-  hasAnyDatabasePagePermission,
   PARENT_SUB_PAGES,
-  PLANNING_CATALOG_HREFS,
   STAFF_FLAT_PAGES,
 } from "~/lib/section-navigation";
 import {
-  moduleGate,
+  communicationNavPages,
+  databaseNavPages,
+  groupsSectionVisible,
+  parentNavPages,
+  planningNavPages,
+  supervisionsSectionVisible,
+} from "./staff-nav-pages";
+import {
   STAFF_NAV_ITEMS,
   staffNavBorrowedActiveHref,
   staffNavPathActive,
@@ -451,7 +450,6 @@ function SidebarContent({
     "groups",
   );
   const userHasEffectiveAdminScope = hasEffectiveAdminScope(session);
-  const canReadSupervisions = canReadSupervisionData(session);
   // Leitung der Einrichtung: Adminzuschnitt oder config:manage, das Recht
   // hinter Anmeldungen und Einstellungen (#3469). Entscheidet über die
   // Anmeldungen, die Rolle der Hilfe und die beim ersten Besuch offenen
@@ -465,14 +463,16 @@ function SidebarContent({
     fromParam,
     getStaffNavDefaultOpenGroups(userLeadsSchool),
   );
-  // Welche Seiten die Person sieht, offen oder mit Schloss: dieselbe Regel
-  // wie in der mobilen Leiste (staff-nav-items.ts).
+  // Welche Seiten die Person sieht, offen oder mit Schloss: die flachen
+  // Seiten nach derselben Regel wie in der mobilen Leiste
+  // (staff-nav-items.ts), die Katalogseiten nach den Regeln, die auch die
+  // Suche liest (staff-nav-pages.ts).
   const {
     pageState,
     viewer: { openCareGroupMode },
     moduleNav,
     isBinaryMode,
-    timetableEnabled,
+    catalogViewer,
   } = useStaffNavPages(session ?? null, {
     tagesplanRouteRightForAdmins: false,
     staffNoticesOpenForAdminRole: false,
@@ -480,6 +480,10 @@ function SidebarContent({
   });
   const { counts: groupAttendanceCounts } = useGroupAttendanceCounts();
   const canShowGroupAttendanceCounts = pathname.startsWith("/ogs-groups");
+  const planningSubPages = useMemo(
+    () => planningNavPages(catalogViewer),
+    [catalogViewer],
+  );
 
   // Kinder nur über „Alle Kinder“ (#1321): Gruppen und Aktuelle
   // Aufsicht verlassen die Leiste und stehen dort als Reiter.
@@ -498,24 +502,19 @@ function SidebarContent({
     return count ? `${count.present}/${count.total}` : undefined;
   };
 
+  // Die Katalogseiten nach den Regeln, die auch die Suche liest
+  // (staff-nav-pages.ts).
   const databaseSubPages = useMemo(
-    () =>
-      DATABASE_SUB_PAGES.flatMap((page) => {
-        const state = moduleGate(
-          moduleNav.page(page.href),
-          // Jede Seite trägt das Recht ihrer Route
-          // (`DATABASE_PAGE_PERMISSIONS`, derselbe Katalog wie im Guard der
-          // Route); ohne es führt der Eintrag nur auf ein 403. Der
-          // Adminzuschnitt öffnet alle.
-          userHasEffectiveAdminScope ||
-            hasAnyDatabasePagePermission(session, page.href),
-          // Planungsspuren gehören zum Betreuungsplan; ist er ausgeschaltet,
-          // gibt es nichts zu ordnen.
-          !PLANNING_CATALOG_HREFS.has(page.href) || timetableEnabled,
-        );
-        return state ? [{ ...page, locked: state === "locked" }] : [];
-      }),
-    [moduleNav, userHasEffectiveAdminScope, session, timetableEnabled],
+    () => databaseNavPages(catalogViewer),
+    [catalogViewer],
+  );
+  const parentSubPages = useMemo(
+    () => parentNavPages(catalogViewer),
+    [catalogViewer],
+  );
+  const communicationSubPages = useMemo(
+    () => communicationNavPages(catalogViewer),
+    [catalogViewer],
   );
 
   // Zähler an einzelnen Zeilen. Eine zugeklappte Gruppe summiert die Zähler
@@ -785,20 +784,19 @@ function SidebarContent({
   // Akkordeons. Symbol aus dem geteilten Baum, damit Desktop und Mobil
   // dasselbe Bild zeigen.
   const catalogNavItems: NavItem[] = [
-    ...PARENT_SUB_PAGES,
-    ...COMMUNICATION_SUB_PAGES,
-    ...PLANNING_SUB_PAGES,
+    ...parentSubPages,
+    ...communicationSubPages,
+    ...planningSubPages,
   ].flatMap((page) => {
-    const state = pageState(page.href);
     // Jede Katalogseite hat ein Bild (staff-nav-items.test.ts).
     const concept = STAFF_NAV_CONCEPTS[page.href];
-    return state && concept
+    return concept
       ? [
           {
             href: page.href,
             label: page.label,
             concept,
-            locked: state === "locked",
+            locked: "locked" in page ? page.locked : false,
           },
         ]
       : [];
@@ -1060,8 +1058,14 @@ function SidebarContent({
   // overviewEnabled keeps a released room (#3065) from opening the accordion:
   // it is reachable for everyone and grants no supervision, so it must not
   // stand for one when the school keeps everyone on their own supervisions.
-  const showStaffAccordions = canReadSupervisions || overviewEnabled;
-  const showGroupAccordion = showStaffAccordions || userHasEffectiveAdminScope;
+  const sectionViewer = {
+    session,
+    effectiveAdminScope: userHasEffectiveAdminScope,
+    openCareGroupMode,
+    isBinaryMode,
+    childSearchOnlyNavigation,
+    overviewEnabled,
+  };
 
   // Resolve operator nav hrefs once (operatorPath is deterministic for the page lifetime)
   const resolvedOperatorSections = useMemo(
@@ -1123,7 +1127,7 @@ function SidebarContent({
   // Eintrag führt auf die Auswahlseite, darunter stehen die eigenen Gruppen
   // (#4351).
   const renderGroupsSection = () =>
-    showGroupAccordion && !openCareGroupMode && !childSearchOnlyNavigation ? (
+    groupsSectionVisible(sectionViewer) ? (
       <SidebarAccordionSection
         concept={groupsConcept}
         label={OGS_GROUPS_LABEL}
@@ -1175,9 +1179,7 @@ function SidebarContent({
   // Aufsicht stehen unter „Räume“ (#4372). Mit `schedules:read` allein
   // (#4573) zeigt die Seite die eigene laufende Aufsicht.
   const renderSupervisionsSection = () =>
-    (overviewEnabled || canOpenActiveSupervision(session)) &&
-    !isBinaryMode &&
-    !childSearchOnlyNavigation ? (
+    supervisionsSectionVisible(sectionViewer) ? (
       <>
         <SidebarAccordionSection
           concept={supervisionConcept}

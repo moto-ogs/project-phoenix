@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 
+	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -22,13 +23,21 @@ type operatorPasskeyScene struct {
 	passkeys identityaccess.OperatorPasskeyFlows
 	mfa      identityaccess.OperatorMFAFlows
 	db       *bun.DB
+	// now is the owner's clock; the e-mail codes the scene seeds expire on it.
+	now func() time.Time
 }
 
 func newOperatorPasskeyScene(t *testing.T, db *bun.DB) operatorPasskeyScene {
 	t.Helper()
-	module := newOperatorMFATestModule(t, db, withDeliveringMailer(nil)...)
+	return newOperatorPasskeySceneAt(t, db, time.Now)
+}
+
+// newOperatorPasskeySceneAt composes the owner on now (ADR 0261).
+func newOperatorPasskeySceneAt(t *testing.T, db *bun.DB, now func() time.Time) operatorPasskeyScene {
+	t.Helper()
+	module := newOperatorMFATestModule(t, db, withDeliveringMailer([]api.AuthTestOption{api.WithAuthTestClock(now)})...)
 	require.NotNil(t, module.OperatorPasskeys)
-	return operatorPasskeyScene{passkeys: module.OperatorPasskeys, mfa: module.OperatorMFA, db: db}
+	return operatorPasskeyScene{passkeys: module.OperatorPasskeys, mfa: module.OperatorMFA, db: db, now: now}
 }
 
 // operator creates an operator with the second factor a registration is
@@ -49,7 +58,7 @@ func (s operatorPasskeyScene) beginRegistration(t *testing.T, operatorID int64) 
 	code := fmt.Sprintf("%06d", 100000+passkeyCodeSequence.Add(1))
 	_, err := s.db.NewRaw(`INSERT INTO platform.operator_mfa_email_challenges (operator_id, code_hash, expires_at, credential_generation)
  SELECT id, ?, ?, credential_generation FROM platform.operators WHERE id = ?`,
-		testpkg.HashTestPassword(t, code), time.Now().Add(identityaccess.MFAChallengeTTL), operatorID).Exec(ctx)
+		testpkg.HashTestPassword(t, code), s.now().Add(identityaccess.MFAChallengeTTL), operatorID).Exec(ctx)
 	require.NoError(t, err)
 	options, err := s.passkeys.BeginOperatorPasskeyRegistration(ctx, identityaccess.OperatorPasskeyRegistrationStart{
 		OperatorID: operatorID, ExpectedOrigin: operatorPasskeyOrigin, Code: code,

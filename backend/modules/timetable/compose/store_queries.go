@@ -6,6 +6,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/application"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/uptrace/bun"
 )
 
@@ -39,8 +40,8 @@ func NewCourseGroupQueries(db *bun.DB, observe func(Observation)) (timetable.Cou
 
 // NewRoomReferenceQueries counts the Timetable rows that use a room, for the
 // Facilities room removal (#6845).
-func NewRoomReferenceQueries(db *bun.DB, observe func(Observation)) (timetable.RoomReferenceQuery, error) {
+func NewRoomReferenceQueries(db *bun.DB, observe func(Observation), today func() calendar.Date) (timetable.RoomReferenceQuery, error) {
 	return storeService(db, observe, "room reference queries", func(store *postgres.Store) timetable.RoomReferenceQuery {
-		return application.NewRoomReferenceQueries(store, observe)
+		return application.NewRoomReferenceQueries(store, observe, today)
 	})
 }

@@ -19,6 +19,6 @@ func NewAuthTestParentPortal(db transactionruntime.Database) (carePlanCompose.Pa
 	if err != nil {
 		return carePlanCompose.ParentPortalRepositories{}, err
 	}
-	requests := carePlanCompose.NewParentEnrollmentRequestRepository(db.Pool(), owners.ParentPortalEnrollments{Enrollment: enrollmentCompose.New()}, owners.IdentityAccountDirectory{Accounts: owners.NewPeopleIdentityAccess(db, nil)})
+	requests := carePlanCompose.NewParentEnrollmentRequestRepository(db.Pool(), owners.ParentPortalEnrollments{Enrollment: enrollmentCompose.NewClocked(nil)}, owners.IdentityAccountDirectory{Accounts: owners.NewPeopleIdentityAccess(db, nil)})
 	return carePlanCompose.ParentPortalRepositories{ParentEnrollmentRequest: requests}.WithSchools(owners.ParentPortalSchools{Schools: organizations}), nil
 }

@@ -36,7 +36,7 @@ func TestUpdateSchoolSettingsRewritesOnlyTheSettings(t *testing.T) {
 		ID: 31, OrganizationID: 41, Name: "Grundschule", Slug: "gs", Subdomain: "gs", Active: true,
 		Settings: `{"a":1}`, City: "Köln", Email: "info@gs.test",
 	}}
-	module := New(engine, ownerTestTransaction{}, func(ports.Observation) {})
+	module := New(engine, ownerTestTransaction{}, func(ports.Observation) {}, ownerTestToday)
 
 	require.NoError(t, module.UpdateSchoolSettings(context.Background(), 31, func(current string) (string, error) {
 		assert.Equal(t, `{"a":1}`, current)

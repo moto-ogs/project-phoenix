@@ -27,10 +27,13 @@ const tenant = vi.hoisted(() => ({
 vi.mock("~/lib/tenant-context", () => tenant);
 
 // The app the banner sits in: the OGS app unless a test says otherwise.
-const shell = vi.hoisted(() => ({ mode: "teacher" }));
+const shell = vi.hoisted(() => ({ mode: "teacher", isViaTraeger: false }));
 vi.mock("~/lib/shell-auth-context", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/shell-auth-context")>()),
-  useShellAuthSafe: () => ({ mode: shell.mode }),
+  useShellAuthSafe: () => ({
+    mode: shell.mode,
+    isViaTraeger: shell.isViaTraeger,
+  }),
 }));
 
 const fetchMock = vi.fn();
@@ -64,6 +67,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   vi.stubGlobal("location", { ...globalThis.location, assign });
   shell.mode = "teacher";
+  shell.isViaTraeger = false;
   tenant.useTenantSafe.mockReturnValue({
     tenantSlug: "ogs-beispiel-a1b2c3",
     tenant: { name: "OGS Beispiel" },
@@ -179,9 +183,9 @@ describe("DemoBanner", () => {
     await user.keyboard("{Enter}");
     const items = await screen.findAllByRole("menuitemradio");
     // Each role names itself; its line underneath only describes it.
-    expect(items).toHaveLength(3);
-    ["Betreuungskraft", "OGS-Leitung", "Elternteil"].forEach((name, index) =>
-      expect(items[index]).toHaveAccessibleName(name),
+    expect(items).toHaveLength(4);
+    ["Betreuungskraft", "OGS-Leitung", "Elternteil", "Träger-Büro"].forEach(
+      (name, index) => expect(items[index]).toHaveAccessibleName(name),
     );
     // The visitor is also the parent of one child (#5033).
     expect(items[2]).toHaveAccessibleDescription(
@@ -202,6 +206,7 @@ describe("DemoBanner", () => {
       accessId: "4711",
       role: "lead",
       src: "messe",
+      traeger: false,
       pending: "demo_role_switched",
     });
   });
@@ -373,6 +378,80 @@ describe("DemoBanner", () => {
     expect(analytics.registerDemoVisit).toHaveBeenCalledWith(
       expect.objectContaining({ role: "parent" }),
     );
+  });
+
+  // The Träger-Portal (#6193) is an app on its own host like the parents
+  // app: the banner shows there and leads back to the OGS app.
+  it("shows the banner in the Träger-Portal and leads back to the OGS app", async () => {
+    shell.mode = "traeger";
+    tenant.useTenantSafe.mockReturnValue(null);
+    saveDemoVisit({
+      accessId: "4711",
+      role: "traeger",
+      traeger: true,
+      schoolName: "OGS Sonnenschein",
+    });
+    const user = userEvent.setup();
+    renderBanner();
+
+    expect(await screen.findByText("OGS Sonnenschein")).toBeInTheDocument();
+    const trigger = screen.getByRole("button", { name: /Rolle wechseln/ });
+    expect(trigger).toHaveTextContent("Träger-Büro");
+    await user.click(trigger);
+    await user.click(
+      screen.getByRole("menuitemradio", { name: "Betreuungskraft" }),
+    );
+
+    expect(assign).toHaveBeenCalledWith(
+      "/api/demo/access/handoff?role=caregiver",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("opens the Träger-Portal for the role Träger-Büro", async () => {
+    saveDemoVisit({ accessId: "4711", role: "caregiver", traeger: true });
+    const user = userEvent.setup();
+    renderBanner();
+
+    await user.click(
+      await screen.findByRole("button", { name: /Rolle wechseln/ }),
+    );
+    await user.click(
+      screen.getByRole("menuitemradio", { name: "Träger-Büro" }),
+    );
+
+    expect(assign).toHaveBeenCalledWith(
+      "/api/demo/access/handoff?role=traeger",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // A school under the shared Demo-Träger has no office of its own.
+  it("offers no Träger-Büro without a Träger of the school's own", async () => {
+    saveDemoVisit({ accessId: "4711", role: "caregiver", traeger: false });
+    const user = userEvent.setup();
+    renderBanner();
+
+    await user.click(
+      await screen.findByRole("button", { name: /Rolle wechseln/ }),
+    );
+    const items = screen.getAllByRole("menuitemradio");
+    expect(items.map((item) => item.textContent)).toEqual([
+      expect.stringContaining("Betreuungskraft"),
+      expect.stringContaining("OGS-Leitung"),
+      expect.stringContaining("Elternteil"),
+    ]);
+  });
+
+  // A school the Träger-Büro opened (Absprung) knows no demo link: the
+  // banner names the role and offers no switch that could only fail.
+  it("names the Träger-Büro without a switch in a school opened from the Träger-Portal", async () => {
+    shell.isViaTraeger = true;
+    localStorage.clear();
+    renderBanner();
+
+    expect(await screen.findByText("Träger-Büro")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Rolle/ })).toBeNull();
   });
 
   // „Demo neu anfangen" (#3470) sits apart from the roles and asks first.

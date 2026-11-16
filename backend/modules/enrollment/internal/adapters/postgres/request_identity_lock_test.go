@@ -15,7 +15,7 @@ import (
 func TestChildIdentityLockUsesTheUnicodeNameMatchKey(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	store := ownerCompose.New()
+	store := ownerCompose.NewClocked(nil)
 	birthday := calendar.NewDate(2016, time.March, 14)
 	require.NoError(t, testpkg.WithTenantTx(t, t.Context(), db, testpkg.Tenant(t), func(ctx context.Context, tx bun.Tx) error {
 		for _, name := range [][2]string{{" JÖRG ", "MÜLLER"}, {"Jörg", "Müller"}, {"Jo\u0308rg", "Mu\u0308ller"}} {

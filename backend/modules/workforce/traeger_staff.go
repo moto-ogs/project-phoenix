@@ -388,4 +388,8 @@ type TraegerStaffPorts struct {
 	// the exports.
 	Exports TraegerStaffExportSchool
 	Payroll TraegerPayrollSettingsReader
+	// HirePersons and HireEmployments create the person and the employment
+	// of a hired person at a school (#7206); nil outside the records.
+	HirePersons     TraegerHirePersons
+	HireEmployments TraegerHireEmployments
 }

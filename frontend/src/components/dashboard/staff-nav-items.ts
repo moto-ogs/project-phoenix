@@ -1,7 +1,12 @@
 import type { MotoConcept } from "~/lib/moto-concepts";
 import type { Session } from "next-auth";
-import { hasPermission, hasRole, isCaregiver } from "~/lib/auth-utils";
-import { canReviewGuardianApprovals } from "~/lib/guardian-approval-access";
+import { useMemo } from "react";
+import {
+  hasEffectiveAdminScope,
+  hasPermission,
+  hasRole,
+  isCaregiver,
+} from "~/lib/auth-utils";
 import { useChangeRequestAccess } from "~/lib/hooks/use-change-request-access";
 import {
   useModuleNavigation,
@@ -25,6 +30,13 @@ import {
   useStaffMessagingEnabled,
   useTimetableEnabled,
 } from "~/lib/tenant-context";
+import {
+  communicationPageRule,
+  moduleGate,
+  parentPageRule,
+  planningPageRule,
+  type StaffCatalogViewer,
+} from "./staff-nav-pages";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { calendarConcept } from "~/lib/concepts/calendar";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
@@ -411,86 +423,31 @@ function staffNavPageRule(
       );
     return [permitted, true];
   }
+  // Die Regeln der Katalogseiten stehen in staff-nav-pages.ts, damit
+  // Seitenleiste, mobile Leiste und Suche dieselben lesen.
+  const catalogViewer = {
+    session,
+    isAdmin: viewer.isAdmin,
+    openCareGroupMode: viewer.openCareGroupMode,
+    timetableEnabled: inputs.settings.timetable,
+    parentNewsEnabled: inputs.parentNewsEnabled,
+    mealPlanEnabled: inputs.mealPlanEnabled,
+    staffMessagingEnabled: inputs.staffMessagingEnabled,
+  };
   const parentPage = PARENT_SUB_PAGES_BY_HREF.get(href);
-  if (parentPage) {
-    switch (parentPage.feature) {
-      case "messages":
-        // Elternnachrichten verlangen users:read (#4573: nicht für die
-        // AG-Leitung).
-        return [viewer.isAdmin || hasPermission(session, "users:read"), true];
-      case "approvals":
-        // Lesen users:manage, Entscheiden users:update (#3469).
-        return [canReviewGuardianApprovals(session), true];
-      case "announcements":
-        // Elternmitteilungen (#1669) schreibt in v1 nur die Rolle Admin:
-        // jede /api/parent-announcements-Route verlangt admin:*, weil der
-        // Dienst die Empfänger nicht je Aufrufer eingrenzt. Eine künftige
-        // delegierte Rolle muss zuerst das Backend lockern.
-        return [hasPermission(session, "admin:*"), inputs.parentNewsEnabled];
-      case "bankDetails":
-        return [hasPermission(session, "guardians:financial"), true];
-      case "mealPlan":
-        return [
-          viewer.isAdmin ||
-            hasPermission(session, "meals:read") ||
-            hasPermission(session, "meals:register"),
-          inputs.mealPlanEnabled,
-        ];
-    }
-  }
+  if (parentPage) return parentPageRule(parentPage, catalogViewer);
   const communicationPage = COMMUNICATION_SUB_PAGES_BY_HREF.get(href);
   if (communicationPage) {
-    switch (communicationPage.feature) {
-      case "teamChat":
-        // Team-Chat ist Opt-out (operations.staff_messaging_enabled, Standard
-        // an seit #3254) und fällt trotzdem fail-closed weg, solange das
-        // Flag fehlt.
-        return [true, inputs.staffMessagingEnabled];
-      case "staffNotices":
-        return [
-          (rules.staffNoticesOpenForAdminRole && viewer.isAdmin) ||
-            hasPermission(session, "users:read"),
-          true,
-        ];
-      case "surveys":
-        // Jede Person im Team beantwortet hier; die Verwaltung trennt die
-        // Seite selbst nach surveys:manage (#4781).
-        return [true, true];
-    }
+    const rule = communicationPageRule(communicationPage, catalogViewer);
+    return communicationPage.feature === "staffNotices" &&
+      rules.staffNoticesOpenForAdminRole &&
+      viewer.isAdmin
+      ? [true, rule[1]]
+      : rule;
   }
   const planningPage = PLANNING_SUB_PAGES_BY_HREF.get(href);
-  if (planningPage) {
-    // Nicht-Admins sehen nur Seiten mit gehaltener nonAdminPermission
-    // (#2283), bei offener Betreuung auch mit openCarePermission (#4769).
-    // Nur die Seiten des Betreuungsplans hängen an timetable.enabled;
-    // Dienstplan und Abrechnung folgen ihren Modulen (#4894).
-    return [
-      viewer.isAdmin ||
-        (planningPage.nonAdminPermission !== undefined &&
-          hasPermission(session, planningPage.nonAdminPermission)) ||
-        (viewer.openCareGroupMode &&
-          planningPage.openCarePermission !== undefined &&
-          hasPermission(session, planningPage.openCarePermission)),
-      !planningPage.requiresTimetable || inputs.settings.timetable,
-    ];
-  }
+  if (planningPage) return planningPageRule(planningPage, catalogViewer);
   return undefined;
-}
-
-/**
- * Regel des Modul-Registers (#4894): `hidden` fällt weg, `locked` ist für
- * die Leitung sichtbar, unabhängig vom Recht der Zielseite, denn die
- * Erklärung zeigt, dass die Schule das Modul zuerst buchen muss. `open`
- * braucht Recht und Schulschalter.
- */
-export function moduleGate(
-  visibility: ModuleVisibility,
-  permitted: boolean,
-  settingOn: boolean,
-): StaffNavPageState {
-  if (visibility === "hidden") return null;
-  if (visibility === "locked") return "locked";
-  return permitted && settingOn ? "open" : null;
 }
 
 /** Wie die Seite hinter `href` erscheint; `null` auch für fremde Adressen. */
@@ -506,7 +463,10 @@ export function staffNavPageState(
     return null;
   }
   const rule = staffNavPageRule(href, inputs, rules);
-  return rule ? moduleGate(inputs.modulePage(href), ...rule) : null;
+  if (!rule) return null;
+  const gate = moduleGate(inputs.modulePage(href), ...rule);
+  if (!gate.show) return null;
+  return gate.locked ? "locked" : "open";
 }
 
 export interface StaffNavPages {
@@ -516,6 +476,11 @@ export interface StaffNavPages {
   readonly moduleNav: ModuleNavigation;
   readonly isBinaryMode: boolean;
   readonly timetableEnabled: boolean;
+  /**
+   * Dieselben Schulschalter für die Kataloglisten aus staff-nav-pages.ts,
+   * damit eine Fläche die Hooks nicht ein zweites Mal ruft.
+   */
+  readonly catalogViewer: StaffCatalogViewer;
 }
 
 /**
@@ -537,12 +502,40 @@ export function useStaffNavPages(
   );
   const mealPlanEnabled = useMealPlanEnabled();
   const { canOpenRequestsPage } = useChangeRequestAccess();
+  const isAdmin = hasRole(session, "admin");
+  const effectiveAdminScope = hasEffectiveAdminScope(session);
   const viewer: StaffNavViewer = {
     session,
-    isAdmin: hasRole(session, "admin"),
+    isAdmin,
     isCaregiver: isCaregiver(session),
     openCareGroupMode,
   };
+  // Stabil, solange sich nichts ändert: die Seitenleiste merkt sich ihre
+  // Kataloglisten an diesem Objekt.
+  const catalogViewer: StaffCatalogViewer = useMemo(
+    () => ({
+      session,
+      isAdmin,
+      effectiveAdminScope,
+      openCareGroupMode,
+      moduleNav,
+      timetableEnabled: settings.timetable,
+      parentNewsEnabled,
+      mealPlanEnabled,
+      staffMessagingEnabled,
+    }),
+    [
+      session,
+      isAdmin,
+      effectiveAdminScope,
+      openCareGroupMode,
+      moduleNav,
+      settings.timetable,
+      parentNewsEnabled,
+      mealPlanEnabled,
+      staffMessagingEnabled,
+    ],
+  );
   const inputs: StaffNavPageInputs = {
     viewer,
     modulePage: moduleNav.page,
@@ -559,6 +552,7 @@ export function useStaffNavPages(
     moduleNav,
     isBinaryMode,
     timetableEnabled: settings.timetable,
+    catalogViewer,
   };
 }
 

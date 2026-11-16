@@ -2,6 +2,7 @@ package compose
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	boundaryBinding "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/postgres"
@@ -14,6 +15,9 @@ import (
 // NewGuardianService composes the guardian service over the retained
 // repositories in deps and the tenant transactions of db.
 func NewGuardianService(deps peoplePorts.GuardianServiceDependencies, db *bun.DB) peoplePorts.GuardianService {
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
 	return application.NewRetainedGuardianService(deps, guardianTransactions{db: db})
 }
 

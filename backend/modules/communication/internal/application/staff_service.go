@@ -34,8 +34,10 @@ type service struct {
 	// two services point at each other).
 	attachments AttachmentPurger
 	letters     ParentLetters
-	logger      *slog.Logger
-	now         func() time.Time
+	// studentRecords reads a child's letters and declarations (#4814).
+	studentRecords communication.StudentParentRecordRecords
+	logger         *slog.Logger
+	now            func() time.Time
 }
 
 // newsEnabled reports whether the parent-news feature is on for the current

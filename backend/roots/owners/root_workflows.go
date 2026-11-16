@@ -22,7 +22,7 @@ func BuildStudentDeletion(
 	carePlan careplan.Capability, timetableOwner timetable.Capability, owner TimetableOwner, feedback studentdeletioncompose.Feedback,
 	verifiedStaff func(context.Context) (bool, error), photos peoplePorts.StudentPhotoService, audit AuditOwner,
 ) (*studentdeletion.Workflow, error) {
-	owners, err := NewStudentDeletionOwners(db)
+	owners, err := NewStudentDeletionOwners(db, env.Now)
 	if err != nil {
 		return nil, fmt.Errorf("compose student deletion owners: %w", err)
 	}

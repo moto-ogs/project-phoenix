@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -337,7 +336,7 @@ func (s *RetainedGuardianService) buildPaymentRowsInTx(
 		ActorAccountID: actorAccountID,
 		ActorRole:      fallbackActorRole(actorRole),
 		Access:         access,
-		AccessedAt:     time.Now(),
+		AccessedAt:     s.Now(),
 		Metadata:       metadata,
 	}); err != nil {
 		return nil, fmt.Errorf("write payment access audit: %w", err)
@@ -438,7 +437,7 @@ func (s *RetainedGuardianService) loadPaymentAuditedInTx(ctx context.Context, gu
 		ActorAccountID: actorAccountID,
 		ActorRole:      fallbackActorRole(actorRole),
 		Access:         access,
-		AccessedAt:     time.Now(),
+		AccessedAt:     s.Now(),
 		Metadata: map[string]interface{}{
 			"guardian_profile_id": guardianProfileID,
 		},

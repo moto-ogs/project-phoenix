@@ -183,22 +183,9 @@ export function GuardianInvitationAcceptForm({ token, invitation }: Props) {
         title={t("acceptedTitle")}
         description={t("acceptedText")}
         progress={
-          <>
-            <div className="h-1 w-16 overflow-hidden rounded-full bg-gray-100">
-              <div
-                className="h-full rounded-full bg-gray-900"
-                style={{
-                  animation: "guardianProgressFill 1.5s ease-in-out forwards",
-                }}
-              />
-            </div>
-            <style>{`
-              @keyframes guardianProgressFill {
-                from { width: 0%; }
-                to { width: 100%; }
-              }
-            `}</style>
-          </>
+          <div className="h-1 w-16 overflow-hidden rounded-full bg-gray-100">
+            <div className="animate-progressFill h-full w-full rounded-full bg-gray-900" />
+          </div>
         }
       />
     );

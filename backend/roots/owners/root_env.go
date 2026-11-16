@@ -17,8 +17,8 @@ import (
 type RootEnvironment struct {
 	Logger *slog.Logger
 	Config ServiceConfig
-	// Now is the clock of the services; nil uses the real one. Today is its
-	// calendar day.
+	// Now is the clock of the services, the real one unless a test root
+	// passes its own; it is never nil. Today is its calendar day.
 	Now     func() time.Time
 	Today   func() timezone.Date
 	Links   ServiceLinks
@@ -76,4 +76,12 @@ type RootObservers struct {
 	SettingsSideEffectFailure settingsCompose.SideEffectFailureObserver
 	// CarePlan records the excused-absence workflow as Care Plan operations.
 	CarePlan func(carePlanCompose.Observation)
+}
+
+// clockOrReal is now, or the real clock of the production roots, which fix none.
+func clockOrReal(now func() time.Time) func() time.Time {
+	if now == nil {
+		return time.Now
+	}
+	return now
 }

@@ -69,7 +69,7 @@ func stopHeartbeatTimers(d *LastSeenDebouncer) {
 func TestHeartbeatRetryWaitsAfterDeferredFailure(t *testing.T) {
 	t.Parallel()
 	synctest.Test(t, func(t *testing.T) {
-		debouncer := NewLastSeenDebouncer()
+		debouncer := NewLastSeenDebouncer(time.Now)
 		defer stopHeartbeatTimers(debouncer)
 		directory := newHeartbeatRetryDirectory(func(_ heartbeatWrite, call int) error {
 			if call == 2 {
@@ -122,7 +122,7 @@ func TestHeartbeatRetryWaitsAfterDeferredFailure(t *testing.T) {
 func TestHeartbeatRetryRepeatedFailuresKeepLatestObservation(t *testing.T) {
 	t.Parallel()
 	synctest.Test(t, func(t *testing.T) {
-		debouncer := NewLastSeenDebouncer()
+		debouncer := NewLastSeenDebouncer(time.Now)
 		defer stopHeartbeatTimers(debouncer)
 		start := time.Now()
 		directory := newHeartbeatRetryDirectory(func(write heartbeatWrite, call int) error {
@@ -172,7 +172,7 @@ func TestHeartbeatRetryRepeatedFailuresKeepLatestObservation(t *testing.T) {
 func TestHeartbeatRetryIsolatesDevicePrimaryKeysAndSchoolContexts(t *testing.T) {
 	t.Parallel()
 	synctest.Test(t, func(t *testing.T) {
-		debouncer := NewLastSeenDebouncer()
+		debouncer := NewLastSeenDebouncer(time.Now)
 		defer stopHeartbeatTimers(debouncer)
 		start := time.Now()
 		type schoolRuntimeKey struct{}
@@ -235,7 +235,7 @@ func TestHeartbeatRetryIsolatesDevicePrimaryKeysAndSchoolContexts(t *testing.T) 
 func TestHeartbeatRetryWaitsFromFailureCompletionAndSerializesWrites(t *testing.T) {
 	t.Parallel()
 	synctest.Test(t, func(t *testing.T) {
-		debouncer := NewLastSeenDebouncer()
+		debouncer := NewLastSeenDebouncer(time.Now)
 		defer stopHeartbeatTimers(debouncer)
 		started := make(chan struct{})
 		release := make(chan struct{})

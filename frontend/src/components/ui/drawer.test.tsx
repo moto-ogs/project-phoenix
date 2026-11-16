@@ -81,16 +81,16 @@ describe("DrawerContent", () => {
     expect(screen.getByText("Drawer content")).toBeInTheDocument();
   });
 
-  it("keeps the obscured page blurred behind the shared overlay", () => {
+  it("dims and blurs the page with the shared overlay backdrop", () => {
     render(
       <DrawerContent>
         <div>Drawer content</div>
       </DrawerContent>,
     );
 
-    expect(screen.getByTestId("drawer-overlay")).toHaveClass(
-      "backdrop-blur-sm",
-    );
+    const overlay = screen.getByTestId("drawer-overlay");
+    expect(overlay).toHaveClass("bg-black/40", "moto-overlay-blur");
+    expect(overlay.className).not.toMatch(/backdrop-blur/);
   });
 
   it("dims the page with the same tint as every other kit overlay", () => {

@@ -65,22 +65,25 @@ func (s *Store) PasswordResetWindow(ctx context.Context, email string) (domain.P
 }
 
 // CountPasswordResetRequest counts the request inside the rolling window in
-// one upsert, so concurrent requests cannot collapse into one count.
+// one upsert, so concurrent requests cannot collapse into one count. The
+// window starts and rolls on the owner's clock, the clock the limiter then
+// compares its end with.
 func (s *Store) CountPasswordResetRequest(ctx context.Context, email string) (domain.PasswordResetWindow, domain.OperationStats, error) {
 	db, err := s.database(ctx)
 	if err != nil {
 		return domain.PasswordResetWindow{}, domain.OperationStats{}, err
 	}
 	var row passwordResetWindowRow
+	now := s.now()
 	started := time.Now()
 	err = db.NewRaw(`INSERT INTO auth.password_reset_rate_limits AS rate_limit (email, attempts, window_start)
-		VALUES (?, 1, NOW())
+		VALUES (?0, 1, ?1)
 		ON CONFLICT (email) DO UPDATE SET
-			attempts = CASE WHEN rate_limit.window_start > NOW() - INTERVAL '`+passwordResetWindowLength+`'
+			attempts = CASE WHEN rate_limit.window_start > CAST(?1 AS timestamptz) - INTERVAL '`+passwordResetWindowLength+`'
 				THEN rate_limit.attempts + 1 ELSE 1 END,
-			window_start = CASE WHEN rate_limit.window_start > NOW() - INTERVAL '`+passwordResetWindowLength+`'
-				THEN rate_limit.window_start ELSE NOW() END
-		RETURNING attempts, window_start + INTERVAL '`+passwordResetWindowLength+`' AS retry_at`, email).Scan(ctx, &row)
+			window_start = CASE WHEN rate_limit.window_start > CAST(?1 AS timestamptz) - INTERVAL '`+passwordResetWindowLength+`'
+				THEN rate_limit.window_start ELSE ?1 END
+		RETURNING attempts, window_start + INTERVAL '`+passwordResetWindowLength+`' AS retry_at`, email, now).Scan(ctx, &row)
 	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {
 		return domain.PasswordResetWindow{}, stats, fmt.Errorf("identity access postgres: count password reset request: %w", err)
@@ -138,7 +141,7 @@ func (s *Store) FindRedeemablePasswordResetToken(ctx context.Context, token stri
 		Where(`"password_reset_token".used = FALSE`).
 		Limit(1).
 		Scan(ctx)
-	found, stats, err := scanOne("find redeemable password reset token", started, err)
+	found, stats, err := scanOne("find redeemable password reset token", time.Since(started), err)
 	redeemable := row.toDomain()
 	redeemable.Token = token
 	return redeemable, found, stats, err
@@ -178,20 +181,22 @@ func (s *Store) DeleteSpentPasswordResetTokens(ctx context.Context, now time.Tim
 
 // MigratePasswordResetWindow preserves active windows from before hashed keys.
 // The delete and upsert share the caller's limiter transaction. A mixed rollout
-// merges live counts conservatively rather than granting another quota.
+// merges live counts conservatively rather than granting another quota. A
+// window is live on the owner's clock, as in CountPasswordResetRequest.
 func (s *Store) MigratePasswordResetWindow(ctx context.Context, address, key string) error {
 	db, err := s.database(ctx)
 	if err != nil {
 		return err
 	}
+	now := s.now()
 	_, err = db.ExecContext(ctx, `WITH legacy AS (
- DELETE FROM auth.password_reset_rate_limits WHERE email = ? AND window_start > NOW() - INTERVAL '1 hour'
+ DELETE FROM auth.password_reset_rate_limits WHERE email = ? AND window_start > CAST(? AS timestamptz) - INTERVAL '1 hour'
  RETURNING attempts, window_start
  ) INSERT INTO auth.password_reset_rate_limits AS counter (email, attempts, window_start)
  SELECT ?, attempts, window_start FROM legacy
  ON CONFLICT (email) DO UPDATE SET
- attempts = CASE WHEN counter.window_start > NOW() - INTERVAL '1 hour'
+ attempts = CASE WHEN counter.window_start > CAST(? AS timestamptz) - INTERVAL '1 hour'
  THEN LEAST(counter.attempts + EXCLUDED.attempts, ?) ELSE EXCLUDED.attempts END,
- window_start = GREATEST(counter.window_start, EXCLUDED.window_start)`, address, key, domain.PasswordResetRateLimitThreshold)
+ window_start = GREATEST(counter.window_start, EXCLUDED.window_start)`, address, now, key, now, domain.PasswordResetRateLimitThreshold)
 	return err
 }

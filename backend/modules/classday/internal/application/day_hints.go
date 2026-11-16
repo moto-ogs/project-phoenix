@@ -16,7 +16,7 @@ import (
 // StudentNoteDependencies are the People Directory note seams of moto
 // schule. The Lehrkraft's day hint (#4795): without DayHints the day-hint
 // capabilities answer classday.ErrDayHintsNotConfigured and the day report
-// carries no hints; Today defaults to the Berlin calendar day. The notes the
+// carries no hints; Today defaults to the Berlin day of the composition's Now. The notes the
 // OGS released for the school (#4797): People Directory's SharedNotes and
 // School Structure's ClassTeachers; without both the shared-notes capability
 // answers classday.ErrSharedNotesNotConfigured and no class offers the view.
@@ -155,17 +155,10 @@ func (h dayHints) todayOnly(date classday.Date) (calendar.Date, error) {
 	if err != nil {
 		return "", err
 	}
-	if day != h.currentDay() {
+	if day != h.today() {
 		return "", classday.ErrDayHintNotToday
 	}
 	return day, nil
-}
-
-func (h dayHints) currentDay() calendar.Date {
-	if h.today != nil {
-		return h.today()
-	}
-	return calendar.TodayDate()
 }
 
 // classStudentIDs returns the children of the class with an OGS record on the
@@ -196,7 +189,7 @@ func (h dayHints) attachDayHints(ctx context.Context, report *classday.DayReport
 	}
 	// A hint is written for today only, and only when the school opened it.
 	// The HTTP adapter adds the caller's permission to this verdict.
-	if day == h.currentDay() {
+	if day == h.today() {
 		open, err := h.scopeOpen(ctx)
 		if err != nil {
 			return err

@@ -155,7 +155,7 @@ func (s *OperatorAuthentication) validateCredentials(ctx context.Context, email,
 		if !found {
 			operator = domain.Operator{}
 		}
-		accepted, err = checkPasswordLogin(txCtx, s.operators.operators, s.passwords, s.passwordPolicy, operator.ID, operator.PasswordHash, password, true)
+		accepted, err = checkPasswordLogin(txCtx, s.operators.operators, s.passwords, s.passwordPolicy, operator.ID, operator.PasswordHash, password, true, s.operators.now)
 		return err
 	})
 	if err != nil {
@@ -241,7 +241,7 @@ func (s *OperatorAuthentication) newRefreshSession(operatorID int64, familyID st
 	return domain.OperatorSession{
 		OperatorID: operatorID,
 		Token:      uuid.Must(uuid.NewV4()).String(),
-		Expiry:     time.Now().Add(s.codec.RefreshExpiry()),
+		Expiry:     s.operators.now().Add(s.codec.RefreshExpiry()),
 		FamilyID:   familyID,
 		Generation: generation,
 	}
@@ -678,7 +678,7 @@ func (s *OperatorAuthentication) rotateOperatorRefresh(txCtx context.Context, op
 	if session.OperatorID != operatorID {
 		return accessToken, refreshToken, recovered, rejectAfterCommit, identityaccess.ErrOperatorRefreshTokenInvalid
 	}
-	now := time.Now()
+	now := s.operators.now()
 	if now.After(session.Expiry) {
 		if err := s.revokeFamilyWithAudit(txCtx, session, "token_expired"); err != nil {
 			return accessToken, refreshToken, recovered, rejectAfterCommit, fmt.Errorf("failed to delete expired operator refresh-token family: %w", err)

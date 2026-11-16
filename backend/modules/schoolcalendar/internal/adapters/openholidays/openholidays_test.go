@@ -45,6 +45,31 @@ func TestSchoolVacations_ReadsEveryStateFromOneRequest(t *testing.T) {
 	}, vacations, "the German name, nationwide entries once per state, public holidays left out")
 }
 
+// Mecklenburg-Vorpommern has separate dates for vocational schools (the
+// 2026/27 answer of the API). An OGS gets the general-education dates only;
+// merging both gave MV schools Sommerferien to 29.08. instead of 22.08.
+func TestSchoolVacations_KeepsTheGeneralEducationDatesOfSplitStates(t *testing.T) {
+	t.Parallel()
+	const body = `[
+ {"startDate":"2026-07-13","endDate":"2026-08-29","type":"School","name":[{"language":"DE","text":"Sommerferien"}],"subdivisions":[{"code":"DE-MV"}],"groups":[{"code":"DE-MV-BBS"}]},
+ {"startDate":"2026-07-13","endDate":"2026-08-22","type":"School","name":[{"language":"DE","text":"Sommerferien"}],"subdivisions":[{"code":"DE-MV"}],"groups":[{"code":"DE-MV-ABS"}]},
+ {"startDate":"2027-05-07","endDate":"2027-05-07","type":"School","name":[{"language":"DE","text":"Zusätzlicher Ferientag"}],"subdivisions":[{"code":"DE-MV"}],"groups":[{"code":"DE-MV-ABS"},{"code":"DE-MV-BBS"}]},
+ {"startDate":"2026-07-30","endDate":"2026-09-12","type":"School","name":[{"language":"DE","text":"Sommerferien"}],"subdivisions":[{"code":"DE-BW"}],"groups":[]}
+]`
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(body))
+	}))
+	t.Cleanup(server.Close)
+
+	vacations, err := New(server.Client(), server.URL, nil).SchoolVacations(context.Background(), "2026-08-01", "2027-07-31")
+	require.NoError(t, err)
+	assert.Equal(t, []Vacation{
+		{Region: "DE-MV", Name: "Sommerferien", StartDate: "2026-07-13", EndDate: "2026-08-22"},
+		{Region: "DE-MV", Name: "Zusätzlicher Ferientag", StartDate: "2027-05-07", EndDate: "2027-05-07"},
+		{Region: "DE-BW", Name: "Sommerferien", StartDate: "2026-07-30", EndDate: "2026-09-12"},
+	}, vacations)
+}
+
 func TestSchoolVacations_FailsOnABadAnswer(t *testing.T) {
 	t.Parallel()
 	cases := map[string]struct {
@@ -56,6 +81,8 @@ func TestSchoolVacations_FailsOnABadAnswer(t *testing.T) {
 		"not json":       {status: http.StatusOK, body: `<html>`},
 		"broken range":   {status: http.StatusOK, body: `[{"startDate":"2027-01-06","endDate":"2026-12-23","type":"School","name":[{"language":"DE","text":"X"}],"subdivisions":[{"code":"DE-NW"}]}]`},
 		"no name":        {status: http.StatusOK, body: `[{"startDate":"2026-12-23","endDate":"2027-01-06","type":"School","name":[],"subdivisions":[{"code":"DE-NW"}]}]`},
+		// A new school-type split must be classified, not merged or dropped.
+		"unknown group": {status: http.StatusOK, body: `[{"startDate":"2026-12-23","endDate":"2027-01-06","type":"School","name":[{"language":"DE","text":"X"}],"subdivisions":[{"code":"DE-BY"}],"groups":[{"code":"DE-BY-FOS"}]}]`},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

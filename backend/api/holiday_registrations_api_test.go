@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -51,6 +53,11 @@ func newHolidayRegistrationFixtureWithDays(t *testing.T, days owners.HolidayTest
 	return newHolidayRegistrationFixtureIn(t, days, "test")
 }
 
+// holidayFixtureToday is the day the registration, the review and the
+// periods of the fixture decide on, a Tuesday before the January 2027 weeks
+// of openHolidays (#7104).
+func holidayFixtureToday() calendar.Date { return calendar.NewDate(2026, time.December, 1) }
+
 // newHolidayRegistrationFixtureIn is newHolidayRegistrationFixtureWithDays in
 // the environment appEnv, which gates what the local seeder receives (ADR
 // 0216).
@@ -58,7 +65,7 @@ func newHolidayRegistrationFixtureIn(t *testing.T, days owners.HolidayTestSchool
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	unit := testpkg.TenantRuntime(t, db)
-	traeger := traegerPortalWithDays(t, db, unit, days)
+	traeger := traegerPortalWithDaysOn(t, db, unit, days, holidayFixtureToday)
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
 	delivery, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{
@@ -70,10 +77,10 @@ func newHolidayRegistrationFixtureIn(t *testing.T, days owners.HolidayTestSchool
 		_ = json.NewEncoder(w).Encode(map[string]any{"success": r.Form.Get("response") != failingCaptcha})
 	}))
 	t.Cleanup(turnstile.Close)
-	settings, err := owners.BuildTraegerSettings(testpkg.NewDatabase(t, db), unit, slog.Default(), organizations, nil)
+	settings, err := owners.BuildTraegerSettings(testpkg.NewDatabase(t, db), unit, slog.Default(), organizations, nil, time.Now)
 	require.NoError(t, err)
 	resource := NewHolidayRegistrationHTTP(organizations, delivery.Module, TurnstileKeys{SiteKey: "site-key", SecretKey: "secret-key"},
-		turnstile.URL, testHealthCipher(), days, settings, owners.NewHolidayParentAccountLinks(holidayTestSetupLinks{}, "https://eltern.example.org/"), appEnv, slog.Default())
+		turnstile.URL, testHealthCipher(), days, settings, owners.NewHolidayParentAccountLinks(holidayTestSetupLinks{}, "https://eltern.example.org/"), appEnv, slog.Default(), holidayFixtureToday)
 	router := chi.NewRouter()
 	router.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -554,7 +561,7 @@ func TestHolidayRegistrationsGoThreeMonthsAfterTheirPeriod(t *testing.T) {
 
 	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
 	require.NoError(t, tenant.WithinAdmin(ctx, func(adminCtx context.Context) error {
-		_, err := owners.NewHolidayRegistrationRetention(nil).DeleteExpiredHolidayRegistrations(adminCtx)
+		_, err := owners.NewHolidayRegistrationRetention(holidayFixtureToday).DeleteExpiredHolidayRegistrations(adminCtx)
 		return err
 	}))
 	countRows := func(period int64) int {

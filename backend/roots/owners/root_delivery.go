@@ -30,6 +30,7 @@ import (
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -53,6 +54,9 @@ type DeliveryNotifications struct {
 	// GuardianFeed serves a guardian account its feed across the schools of
 	// the family in the parents portal (#7140).
 	GuardianFeed deliveryContract.GuardianNotificationFeed
+	// SchoolAudience names the accounts and families a notice to the whole
+	// school reaches (#7144).
+	SchoolAudience deliveryContract.SchoolAudience
 }
 
 // BuildDeliveryNotifications binds the notification router over the realtime
@@ -95,23 +99,19 @@ func BuildDeliveryNotifications(
 	}
 	recipients := deliveryCompose.NewStaffRecipientResolver(preferences, deliveryStudentGroups{students: people.Students},
 		structure.Groups, people.Staff, identity, settings,
-		deliveryOnDutyStaff{presence: workTime})
+		deliveryOnDutyStaff{presence: workTime}, timezone.CalendarDateClock(clock))
 	schoolClasses := deliveryContract.SchoolClassRecipients{
 		Reach:   deliverySchoolClassReach{students: people.Students, assignments: assignments, staff: people.Staff},
 		Consent: preferences, Subscribers: consent, Accounts: identity, Permissions: securityruntime.HasPermission,
 		Office: deliverySchoolOffice{staff: people.Staff},
 	}
-	absences, err := deliveryCompose.NewTenantAbsenceNotifier(unit, notifier, recipients, db.Pool(), logger.With("producer", "absence_notifications"), schoolClasses)
+	absences, err := deliveryCompose.NewTenantAbsenceNotifier(unit, notifier, recipients, db.Pool(), logger.With("producer", "absence_notifications"), schoolClasses, timezone.CalendarDateClock(clock))
 	if err != nil {
 		return DeliveryNotifications{}, err
 	}
-	unreported, ok := absences.(deliveryContract.UnreportedAbsenceNotifier)
-	if !ok {
-		return DeliveryNotifications{}, fmt.Errorf("absence notifier does not send the notice about children missing without a report")
-	}
-	responsible, ok := recipients.(deliveryContract.ResponsibleStaff)
-	if !ok {
-		return DeliveryNotifications{}, fmt.Errorf("staff recipients do not name the staff responsible for a child")
+	unreported, responsible, schoolAudience, err := deliveryCapabilities(absences, recipients, notifier)
+	if err != nil {
+		return DeliveryNotifications{}, err
 	}
 	return DeliveryNotifications{
 		UnreportedAbsences: unreported,
@@ -123,6 +123,7 @@ func BuildDeliveryNotifications(
 		ResponsibleStaff: responsible,
 		Feed:             feed,
 		GuardianFeed:     guardianFeed,
+		SchoolAudience:   schoolAudience,
 	}, nil
 }
 
@@ -167,7 +168,7 @@ func buildDeliveryWorker(
 		carecontract.MailKindNotice: careContractNoticeMailRenderer(careContractCompose.NewNoticeMailRenderer(), defaultFrom),
 	}
 	enrollmentKinds := []string{}
-	for kind, renderer := range enrollmentMailRenderers(enrollmentCompose.NewMailRenderers(newHolidayAcceptanceAccounts(accounts, env.Links.ParentsURL), env.Links.ParentsURL), defaultFrom) {
+	for kind, renderer := range enrollmentMailRenderers(enrollmentCompose.NewMailRenderers(newHolidayAcceptanceAccounts(accounts, env.Links.ParentsURL), env.Links.ParentsURL, env.Today), defaultFrom) {
 		renderers[kind] = renderer
 		enrollmentKinds = append(enrollmentKinds, kind)
 	}
@@ -200,11 +201,31 @@ func buildDeliveryWorker(
 		PushObjects:    pushObjects,
 		DeferredPush:   deferredPushes(reminderRecovery(db, reminders), documents),
 		Deliverable:    moduleGate.deliverable,
+		Now:            clockOrReal(env.Now), // the clock of delivery.Runtime
 	})
 	if err != nil {
 		return nil, fmt.Errorf("initialize delivery module: %w", err)
 	}
 	return worker, nil
+}
+
+// deliveryCapabilities are the further contracts of the composed Delivery:
+// the notice about children missing without a report, the staff responsible
+// for a child and the audience of the whole school (#7144).
+func deliveryCapabilities(absences, recipients any, notifier deliveryCompose.Notifier) (deliveryContract.UnreportedAbsenceNotifier, deliveryContract.ResponsibleStaff, deliveryContract.SchoolAudience, error) {
+	unreported, ok := absences.(deliveryContract.UnreportedAbsenceNotifier)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("absence notifier does not send the notice about children missing without a report")
+	}
+	responsible, ok := recipients.(deliveryContract.ResponsibleStaff)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("staff recipients do not name the staff responsible for a child")
+	}
+	audience, ok := notifier.(deliveryContract.SchoolAudience)
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("notification router does not name the audience of the whole school")
+	}
+	return unreported, responsible, audience, nil
 }
 
 // deliveryFeeds are the two read sides of the router's notification feed:

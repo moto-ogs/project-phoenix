@@ -663,7 +663,7 @@ func TestCollectCustomFields_NewestSchemaLabelWins(t *testing.T) {
 func TestBuildPhaseExportFile_RejectsUnsupportedFormat(t *testing.T) {
 	t.Parallel()
 
-	if _, err := buildPhaseExportFile(nil, sampleExport(), "csv", ""); err == nil {
+	if _, err := buildPhaseExportFile(nil, sampleExport(), "csv", "", time.Time{}); err == nil {
 		t.Error("csv must be rejected on the phase export endpoint")
 	}
 }
@@ -1007,7 +1007,7 @@ func TestBuildCareUsageExportFile_DOCX(t *testing.T) {
 		},
 	}
 
-	file, err := buildCareUsageExportFile(newTestDocumentRenderer(), report, lists.FormatDOCX)
+	file, err := buildCareUsageExportFile(newTestDocumentRenderer(), report, lists.FormatDOCX, time.Time{})
 	if err != nil {
 		t.Fatalf("buildCareUsageExportFile: %v", err)
 	}

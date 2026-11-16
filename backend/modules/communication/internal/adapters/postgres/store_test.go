@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -18,7 +19,7 @@ func TestStoreReadPathsPreserveDatabaseRuntimeFailure(t *testing.T) {
 	database := reflect.MakeFunc(databaseType, func([]reflect.Value) []reflect.Value {
 		return []reflect.Value{reflect.Zero(databaseType.Out(0)), reflect.ValueOf(databaseErr)}
 	}).Interface().(Database)
-	store := New(database)
+	store := New(database, time.Now)
 	ctx := context.Background()
 
 	tests := map[string]func() error{

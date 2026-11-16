@@ -22,9 +22,11 @@ func (s *Store) InsertDemoAccess(ctx context.Context, access domain.DemoAccess) 
 		return 0, err
 	}
 	var id int64
-	err = db.NewRaw(`INSERT INTO auth.demo_accesses (email, first_name, last_name, school_name, source, contact_opt_in, token_hash, expires_at, school_slug)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-		access.Email, access.FirstName, access.LastName, access.SchoolName, access.Source, access.ContactOptIn, access.TokenHash, access.ExpiresAt, access.SchoolSlug).Scan(ctx, &id)
+	// The owner's clock stamps the row: the cooldown of the address counts
+	// from created_at, and the expiry it is compared with comes from that clock.
+	err = db.NewRaw(`INSERT INTO auth.demo_accesses (email, first_name, last_name, school_name, source, contact_opt_in, token_hash, expires_at, school_slug, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+		access.Email, access.FirstName, access.LastName, access.SchoolName, access.Source, access.ContactOptIn, access.TokenHash, access.ExpiresAt, access.SchoolSlug, s.now()).Scan(ctx, &id)
 	if err != nil {
 		return 0, fmt.Errorf("identity access postgres: insert demo access: %w", err)
 	}

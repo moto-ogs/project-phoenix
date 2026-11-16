@@ -107,7 +107,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *preferenceService) DisableAllForParent(ctx context.Context, accountID int64) error {\n\tctx = s.withTenantRuntime(ctx)\n\tif accountID \u003c= 0 {\n\t\treturn errors.New(\"account id is required\")\n\t}\n\treturn s.forEachGuardianTenant(ctx, accountID, func(tenantCtx context.Context, tenantID int64) error {\n\t\tif err := s.consent.DisableConsent(tenantCtx, accountID, typeKeysForPortal(PortalParent)); err != nil {\n\t\t\treturn fmt.Errorf(\"disable notification preferences for tenant %d: %w\", tenantID, err)\n\t\t}\n\t\treturn nil\n\t})\n}",
+      "evidence": "func (s *preferenceService) DisableAllForParent(ctx context.Context, accountID int64) error {\n\tctx = s.withTenantRuntime(ctx)\n\tif accountID \u003c= 0 {\n\t\treturn errors.New(\"account id is required\")\n\t}\n\treturn s.forEachGuardianTenant(ctx, accountID, func(tenantCtx context.Context, tenantID int64) error {\n\t\tif err := s.consent.DisableConsent(tenantCtx, accountID, typeKeysForPortal(PortalParent)); err != nil {\n\t\t\treturn fmt.Errorf(\"disable notification preferences for tenant %d: %w\", tenantID, err)\n\t\t}\n\t\treturn s.declineDefaultOnTypes(tenantCtx, accountID, PortalParent)\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/delivery/internal/notifications/preferenceService.DisableAllForParent",
       "owner": "modules/delivery"

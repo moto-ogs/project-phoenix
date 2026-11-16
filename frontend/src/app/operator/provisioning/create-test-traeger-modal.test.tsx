@@ -52,6 +52,8 @@ function renderModal() {
   fireEvent.change(screen.getByLabelText(/^Kontaktadresse der Test-Schulen/), {
     target: { value: "buero@traeger.example" },
   });
+  fireEvent.click(screen.getByLabelText(/^Bundesland der Test-Schulen/));
+  fireEvent.click(screen.getByRole("option", { name: "Niedersachsen" }));
   return { onCreated, onClose };
 }
 
@@ -81,6 +83,7 @@ describe("CreateTestTraegerModal", () => {
       slug: "test-bissendorf",
       school_count: 3,
       contact_email: "buero@traeger.example",
+      federal_state: "DE-NI",
     });
     expect(mockCreateSampleChildren).toHaveBeenCalledWith("31");
     expect(mockToastSuccess).toHaveBeenCalledWith(

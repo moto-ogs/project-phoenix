@@ -10,10 +10,13 @@ import (
 
 type PlanningTrackViews struct {
 	tracks timetable.PlanningTrackCapability
+	now    func() time.Time
 }
 
-func NewPlanningTrackViews(tracks timetable.PlanningTrackCapability) *PlanningTrackViews {
-	return &PlanningTrackViews{tracks: tracks}
+// NewPlanningTrackViews reads and archives the planning tracks; now stamps
+// an archived track, nil is the real clock.
+func NewPlanningTrackViews(tracks timetable.PlanningTrackCapability, now func() time.Time) *PlanningTrackViews {
+	return &PlanningTrackViews{tracks: tracks, now: NewClock(now)}
 }
 func (a *PlanningTrackViews) ListAllPlanningTracks(ctx context.Context) ([]timetable.PlanningTrack, error) {
 	return a.tracks.ListPlanningTracks(ctx, timetable.PlanningTrackFilter{Ordered: true})
@@ -66,7 +69,7 @@ func (a *PlanningTrackViews) ArchivePlanningTrack(ctx context.Context, id int64)
 	if err != nil || track.IsArchived() {
 		return track, err
 	}
-	now := time.Now()
+	now := a.now()
 	if _, _, err := a.tracks.SetPlanningTrackArchivedAt(ctx, id, &now); err != nil {
 		return timetable.PlanningTrack{}, err
 	}

@@ -17,6 +17,16 @@ describe("ProgressBar", () => {
     expect(bar).toHaveAttribute("aria-valuemax", "6");
   });
 
+  it("announces an indeterminate wait without a value", () => {
+    render(<ProgressBar indeterminate label="moto öffnet die Seite" />);
+
+    const bar = screen.getByRole("progressbar", {
+      name: "moto öffnet die Seite",
+    });
+    expect(bar).not.toHaveAttribute("aria-valuenow");
+    expect(bar.firstElementChild).toHaveClass("moto-progress-indeterminate");
+  });
+
   it("keeps the announced value inside the range", () => {
     render(<ProgressBar value={120} max={100} label="Stunden" />);
 
@@ -29,8 +39,10 @@ describe("ProgressBar", () => {
   it("fills in proportion to the value", () => {
     render(<ProgressBar value={1} max={4} label="Schritte" />);
 
+    // The full-width bar shows its first quarter: three quarters sit left of
+    // the clipping track.
     expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({
-      width: "25%",
+      transform: "translateX(-75%)",
     });
   });
 

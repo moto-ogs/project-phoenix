@@ -1561,6 +1561,8 @@ func TestDeletePeriod_CareOfferingConflictMarksTenantRollback(t *testing.T) {
 			Where("tenant_id = ?", tenantID).
 			Exec(cleanupCtx)
 		require.NoError(t, cleanupErr)
+		_, cleanupErr = db.NewDelete().TableExpr("config.setting_values").Where("tenant_id = ?", tenantID).Exec(cleanupCtx)
+		require.NoError(t, cleanupErr)
 		_, cleanupErr = db.NewDelete().TableExpr("platform.schools").Where("id = ?", tenantID).Exec(cleanupCtx)
 		require.NoError(t, cleanupErr)
 		_, cleanupErr = db.NewDelete().TableExpr("platform.organizations").Where("id = ?", tenantID).Exec(cleanupCtx)

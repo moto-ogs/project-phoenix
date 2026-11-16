@@ -39,7 +39,7 @@ export function SchoolAuthGuard({
       portal="school"
       publicPages={SCHOOL_PUBLIC_PAGES}
       wrongScope="root"
-      loadingMessage="Wird geladen …"
+      loadingMessage="moto schule wird geöffnet …"
       renderShell={(page, session) => (
         <SchoolShellProvider>
           <BreadcrumbProvider>

@@ -8,8 +8,8 @@ import {
   type DemoLink,
   type DemoSetupProgress,
   demoLinkFragment,
-  isParentDemoRole,
-  parentsDemoEntryUrl,
+  demoAppOfRole,
+  otherAppDemoEntryUrl,
   takeDemoLinkFromFragment,
   waitForDemoSchool,
 } from "~/lib/demo-access";
@@ -50,9 +50,10 @@ export default function DemoWaitingRoomPage() {
           setPhase(waited.phase);
           return;
         }
-        // The role parent (#3468) goes straight to the parents app.
-        if (link.role && isParentDemoRole(link.role)) {
-          globalThis.location.assign(parentsDemoEntryUrl(link));
+        // The role parent (#3468) goes straight to the parents app, the
+        // role Träger-Büro (#6193) to the Träger-Portal.
+        if (link.role && demoAppOfRole(link.role) !== "school") {
+          globalThis.location.assign(otherAppDemoEntryUrl(link, link.role));
           return;
         }
         if (!waited.schoolUrl?.startsWith("http")) {

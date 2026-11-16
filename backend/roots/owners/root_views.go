@@ -68,7 +68,7 @@ func BuildPresenceReports(
 // BuildPresenceCleanup binds the retention command used by jobs and setting writes.
 func BuildPresenceCleanup(env RootEnvironment, presence PresenceOwner, audit AuditOwner, settings settingsCompose.SettingsService) studentpresence.PresenceCleanup {
 	_, supervisors := presenceCompose.SessionRepositories(presence.SessionRecords)
-	return presenceservice.NewPresenceCleanup(presence.Presence, supervisors, NewDeletionAudit(audit.Persistence.DataDeletion), settingsCompose.PresenceSettings(settings), env.Today)
+	return presenceservice.NewPresenceCleanup(presence.Presence, supervisors, NewDeletionAudit(audit.Persistence.DataDeletion), settingsCompose.PresenceSettings(settings), env.Now)
 }
 
 // BuildCalendarApp binds the staff and parent personal calendars over the
@@ -152,13 +152,13 @@ func BuildProvisioning(
 ) (organizationtenancy.OperatorProvisioning, error) {
 	adapters, err := NewOperatorProvisioningAdapters(
 		operatorPersonStudentMembership(db), devices, persons, membership, people.Persons, people.Staff, identity,
-		sessions, supervisions, arrivalTimetable.NewActivityCategorySeeder(owner.Repositories.ActivityCategory), operatorAuditLog,
+		sessions, supervisions, arrivalTimetable.NewActivityCategorySeeder(owner.Repositories.ActivityCategory), operatorAuditLog, env.Today,
 	)
 	if err != nil {
 		return organizationtenancy.OperatorProvisioning{}, fmt.Errorf("compose operator provisioning: %w", fmt.Errorf("compose operator provisioning adapters: %w", err))
 	}
 	provisioning, err := newOperatorProvisioning(organizations, identity, NewOperatorAccountDirectory(identity, persons, membership, organizations),
-		adapters, settings, env.Logger.With("service", "platform"))
+		adapters, settings, env.Logger.With("service", "platform"), env.Now)
 	if err != nil {
 		return organizationtenancy.OperatorProvisioning{}, fmt.Errorf("compose operator provisioning: %w", err)
 	}
@@ -181,7 +181,7 @@ func BuildDeliveryDevices(db transactionruntime.Database, unit rootUnitOfWork, e
 		return DeliveryDevices{}, err
 	}
 	usage, err := deliveryCompose.NewTenantPWAUsageService(unit, db.Pool(), observabilityCompose.NewPWAStandaloneUsageRepository(db.Pool()),
-		pwaUsageCounts{provisioning: provisioning}, identity, settings, env.Logger.With("service", "pwa_usage"))
+		pwaUsageCounts{provisioning: provisioning}, identity, settings, env.Logger.With("service", "pwa_usage"), env.Now)
 	if err != nil {
 		return DeliveryDevices{}, err
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/internal/ptrtest"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	people "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -70,7 +71,7 @@ func TestStudentResponseRedactsSensitiveFields(t *testing.T) {
 		for _, snapshot := range []bool{false, true} {
 			var response StudentResponse
 			if snapshot {
-				response = newStudentResponseFromSnapshot(ctx, student, person, nil, true, nil, true)
+				response = newStudentResponseFromSnapshot(ctx, student, person, nil, true, nil, true, calendar.NewDate(2026, 11, 2))
 			} else {
 				var err error
 				response, err = newStudentResponseWithOpts(ctx, StudentResponseOpts{

@@ -351,7 +351,8 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
     help: true,
   },
   traeger: {
-    api: ["/api/traeger/"],
+    // The demo entry (#6193) redeems its link on this host as well.
+    api: ["/api/traeger/", "/api/demo/access/"],
     localized: false,
     help: true,
     // Bookmarks, help links and e-mails name these pages, also with /traeger.

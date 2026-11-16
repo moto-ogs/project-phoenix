@@ -7,6 +7,8 @@ describe("RootLoadingPage", () => {
   it("provides neutral loading feedback for routes without local boundaries", () => {
     render(<RootLoadingPage />);
 
-    expect(screen.getByRole("status", { name: "Laden..." })).toBeVisible();
+    expect(
+      screen.getByRole("status", { name: "Seite wird geöffnet …" }),
+    ).toBeVisible();
   });
 });

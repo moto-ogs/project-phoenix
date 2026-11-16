@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
@@ -46,9 +45,9 @@ func (rs *HolidayPeriodResource) requireHealthWhenAsked(next http.Handler) http.
 	})
 }
 
-func holidayRecordNamesOf(r *http.Request) holidayRecordNames {
+func (rs *HolidayPeriodResource) recordNamesOf(r *http.Request) holidayRecordNames {
 	schools, _ := r.Context().Value(holidaySchoolNamesKey{}).(map[int64]string)
-	return holidayRecordNames{schools: schools, generatedAt: time.Now()}
+	return holidayRecordNames{schools: schools, generatedAt: readClock(rs.Now)}
 }
 
 // holidayRecordFile renders the file of one registration. Its name carries
@@ -69,7 +68,7 @@ func (rs *HolidayPeriodResource) downloadRegistrationPDF(w http.ResponseWriter, 
 		renderHolidayReviewError(w, r, err)
 		return
 	}
-	file, err := holidayRecordFile(set.Period, set.Records[0], holidayRecordNamesOf(r))
+	file, err := holidayRecordFile(set.Period, set.Records[0], rs.recordNamesOf(r))
 	if err != nil {
 		renderHolidayReviewError(w, r, err)
 		return
@@ -141,7 +140,7 @@ func (rs *HolidayPeriodResource) downloadRegistrationPDFs(withTx common.Middlewa
 		if !ok {
 			return
 		}
-		names := holidayRecordNamesOf(r)
+		names := rs.recordNamesOf(r)
 		// The first file is rendered before the response starts: a period
 		// whose files cannot be rendered answers with an error, not with a
 		// broken archive.

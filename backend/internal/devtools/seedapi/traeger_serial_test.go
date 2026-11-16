@@ -120,7 +120,7 @@ func TestTraegerStepHoldsTheLockSharedWithOtherProcesses(t *testing.T) {
 func TestEveryTraegerStepOfTheDemoWorkflowRunsSerially(t *testing.T) {
 	t.Parallel()
 
-	for _, options := range []SeedOptions{{}, {DeferHistory: true}} {
+	for _, options := range []SeedOptions{{}, {DeferHistory: true}, {DeferHistory: true, OwnTraeger: true}} {
 		seeder := &Seeder{options: options}
 		steps := append(fullDemoWorkflow(seeder).Steps, deferredDemoSteps(seeder)...)
 		traeger := 0

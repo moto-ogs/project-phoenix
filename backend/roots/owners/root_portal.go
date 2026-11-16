@@ -97,7 +97,7 @@ func BuildParentPortal(
 		ParentMessageNotifier: bindParentMessageNotifier(notifications.StaffParentMessages), ArrivalSchedules: NewParentArrivalSchedules(schedules.Arrivals),
 		PickupSchedules: NewParentPickupSchedules(schedules.Pickups), CareRequests: requests.CareRequests, ExcusedRequests: NewParentExcusedAbsenceRequests(requests.Excused),
 		Emitter: BindParentChildEvents(emitter), MessagingEnabled: BindParentMessagingGate(settings, env.Logger.With("service", "parent")), AnnouncementRepo: BindParentAnnouncementAccess(messaging.ParentAnnouncement),
-		Memberships: NewParentSchoolMembershipLock(db), InvitationAccounts: NewParentInvitationAccountLock(db), GuardianInvites: NewParentGuardianAccess(identity), GuardianInvitations: NewGuardianInvitationReads(identity), InvalidateInvites: NewGuardianInvitationInvalidation(db),
+		Memberships: NewParentSchoolMembershipLock(db), InvitationAccounts: NewParentInvitationAccountLock(db), GuardianInvites: NewParentGuardianAccess(identity), GuardianInvitations: NewGuardianInvitationReads(identity), InvalidateInvites: NewGuardianInvitationInvalidation(db, env.Now),
 		StudentGuardianRepo: NewParentStudentGuardianReads(people.StudentGuardians), GuardianPhoneRepo: NewParentGuardianPhoneReads(peopleCompose.NewGuardianPhoneNumberRepository(db.Pool())),
 		StudentConsents: NewParentStudentConsents(services.StudentConsents), StudentPhotos: photos, ChildDataAccess: NewParentChildDataAccess(audit.Persistence.DataAccessLog),
 		HolidayWishes: NewParentHolidayWishes(wishProofs), HolidayAnnouncements: NewParentHolidayAnnouncements(), HolidayRegistrations: NewParentHolidayRegistrations(organizations), HolidayAccountProofs: NewParentHolidayAccountProofs(env.HealthData),
@@ -107,7 +107,7 @@ func BuildParentPortal(
 
 		CarePlanPolicy: NewParentCarePlanPolicy(),
 
-		BillingDocuments: NewParentBillingDocuments(), ContractDocuments: NewParentContractDocuments(contractSigning, contractHolidays), ContractNotices: contractNotices, SharedDocuments: NewParentSharedDocuments(), SEPAMandates: mandates, TraegerRuntime: ParentPortalRuntime{},
+		BillingDocuments: NewParentBillingDocuments(), ContractDocuments: NewParentContractDocuments(contractSigning, contractHolidays, env.Now), ContractNotices: contractNotices, SharedDocuments: NewParentSharedDocuments(), SEPAMandates: mandates, TraegerRuntime: ParentPortalRuntime{},
 		SchoolTraeger: NewParentSchoolTraeger(organizations), ParentAccounts: NewParentAccounts(identity),
 	}), nil
 }

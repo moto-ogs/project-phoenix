@@ -119,8 +119,11 @@ type Dependencies struct {
 	// PIN resolves the tenant device PIN. Required.
 	PIN PINResolver
 	// LastSeen debounces last_seen writes. Authenticators built from one
-	// Dependencies value share it; a nil debouncer gets a fresh one.
+	// Dependencies value share it; a nil debouncer gets a fresh one on Now.
 	LastSeen *LastSeenDebouncer
+	// Now is the composition's clock a device is last seen at. Required
+	// unless LastSeen is given.
+	Now func() time.Time
 }
 
 // Authenticator builds the device middlewares over one set of ports.
@@ -139,7 +142,10 @@ func NewAuthenticator(deps Dependencies) *Authenticator {
 		deps.Logger = slog.Default()
 	}
 	if deps.LastSeen == nil {
-		deps.LastSeen = NewLastSeenDebouncer()
+		if deps.Now == nil {
+			panic("device authenticator: the clock is required")
+		}
+		deps.LastSeen = NewLastSeenDebouncer(deps.Now)
 	}
 	return &Authenticator{deps: deps}
 }
@@ -431,10 +437,16 @@ type LastSeenDebouncer struct {
 	cache           sync.Map
 	pendingContexts sync.Map
 	flushContext    func(context.Context) context.Context
+	// now is the composition's clock: the instant a device is seen at and
+	// the start of each debounce window.
+	now func() time.Time
 }
 
-func NewLastSeenDebouncer() *LastSeenDebouncer {
-	return &LastSeenDebouncer{flushContext: context.WithoutCancel}
+func NewLastSeenDebouncer(now func() time.Time) *LastSeenDebouncer {
+	if now == nil {
+		panic("last-seen debouncer: the clock is required")
+	}
+	return &LastSeenDebouncer{flushContext: context.WithoutCancel, now: now}
 }
 
 // updateDeviceLastSeen updates the device's last seen timestamp, logging any errors.
@@ -448,7 +460,7 @@ func (d *LastSeenDebouncer) updateDeviceLastSeen(ctx context.Context, devices De
 }
 
 func (d *LastSeenDebouncer) observeDevice(ctx context.Context, devices DeviceDirectory, device *AuthenticatedDevice) (time.Time, *lastSeenDebounceState, bool) {
-	now := time.Now()
+	now := d.now()
 	device.LastSeen = &now
 
 	state := d.getOrCreateLastSeenState(device.ID)
@@ -498,7 +510,7 @@ func (d *LastSeenDebouncer) completeLastSeen(devices DeviceDirectory, id int64, 
 		)
 		state.mu.Lock()
 		state.writeInFlight = false
-		now := time.Now()
+		now := d.now()
 		if !state.lastPersisted.IsZero() {
 			// A failed flush must not reuse an already elapsed debounce window.
 			// Initial request failures still allow the next request to try immediately.
@@ -516,7 +528,7 @@ func (d *LastSeenDebouncer) completeLastSeen(devices DeviceDirectory, id int64, 
 	state.lastPersisted = observedAt
 	state.retryNotBefore = time.Time{}
 	state.writeInFlight = false
-	d.scheduleDeferredFlushLocked(devices, id, state, time.Now())
+	d.scheduleDeferredFlushLocked(devices, id, state, d.now())
 	state.mu.Unlock()
 }
 

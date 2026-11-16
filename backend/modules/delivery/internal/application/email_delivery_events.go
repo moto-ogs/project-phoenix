@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
@@ -151,7 +150,7 @@ func (w *Worker) recordOwnEvent(ctx context.Context, intent domain.Intent, state
 	defer cancel()
 	_, err := RecordEmailDeliveryEvent(recordCtx, store, domain.EmailDeliveryEvent{
 		Token: intent.DeliveryToken, Provider: eventProviderMoto, ProviderEventID: eventID,
-		State: state, OccurredAt: time.Now(), Diagnostic: diagnostic,
+		State: state, OccurredAt: w.now(), Diagnostic: diagnostic,
 	})
 	w.observe(domain.Observation{Operation: "email_delivery_event", Transport: string(intent.Transport), Template: intent.Template, Count: boolCount(err == nil), Err: err})
 }
