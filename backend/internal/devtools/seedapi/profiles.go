@@ -28,6 +28,8 @@ const (
 	profileSettingGroupMode             = "operations.group_mode"
 	profileSettingWebSpontaneous        = "attendance.web_spontaneous_activities_enabled"
 	profileSettingEnrollmentEnabled     = "enrollment.enabled"
+	profileSettingEnrollmentDSGVOOn     = "enrollment.legal_dsgvo_enabled"
+	profileSettingEnrollmentDSGVOText   = "enrollment.legal_dsgvo_text"
 	profileSettingCareOfferingsEnabled  = "enrollment.care_offerings_enabled"
 	profileSettingBookingsAuthoritative = "enrollment.bookings_authoritative"
 	profileSettingDevicePIN             = "security.ogs_device_pin"
@@ -215,6 +217,13 @@ func fullOperationFeatureSettings() map[string]SeedSetting {
 		},
 		profileSettingEnrollmentEnabled: {
 			Value: json.RawMessage(`true`), ManagedBy: SettingManagedByTenant,
+		},
+		// The public form goes online only with a privacy notice (#7176).
+		profileSettingEnrollmentDSGVOOn: {
+			Value: json.RawMessage(`true`), ManagedBy: SettingManagedByTenant,
+		},
+		profileSettingEnrollmentDSGVOText: {
+			Value: seedEnrollmentPrivacyNoticeJSON, ManagedBy: SettingManagedByTenant,
 		},
 		profileSettingCareOfferingsEnabled: {
 			Value: json.RawMessage(`true`), ManagedBy: SettingManagedByTenant,

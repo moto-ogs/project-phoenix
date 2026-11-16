@@ -48,6 +48,18 @@ vi.mock("~/lib/settings-api", () => ({
   fetchSettingsSchema: mocks.fetchSettingsSchema,
 }));
 
+// The privacy-notice warning (#7176) shows only to people who may change
+// the settings.
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: {
+      user: { id: "1", permissions: ["config:update", "config:manage"] },
+      expires: "2099-01-01",
+    },
+    status: "authenticated",
+  }),
+}));
+
 vi.mock("~/lib/tenant-context", () => ({
   useTenantSlugSafe: () => "demo",
   useTenantRoutingModeSafe: () => "path",
@@ -76,7 +88,10 @@ function phase(overrides: Partial<Phase> = {}): Phase {
   };
 }
 
-function settingsSchema(enrollmentEnabled: boolean) {
+function settingsSchema(
+  enrollmentEnabled: boolean,
+  privacyNotice = { enabled: true, text: "Datenschutzinformation" },
+) {
   return {
     tabs: [
       {
@@ -90,6 +105,14 @@ function settingsSchema(enrollmentEnabled: boolean) {
               {
                 key: "enrollment.enabled",
                 value: enrollmentEnabled,
+              },
+              {
+                key: "enrollment.legal_dsgvo_enabled",
+                value: privacyNotice.enabled,
+              },
+              {
+                key: "enrollment.legal_dsgvo_text",
+                value: privacyNotice.text,
               },
             ],
           },
@@ -116,6 +139,24 @@ beforeEach(() => {
 });
 
 describe("AdminEnrollmentsList setup guide", () => {
+  it("warns while the online enrollment runs without a privacy notice", async () => {
+    mocks.fetchSettingsSchema.mockResolvedValue(
+      settingsSchema(true, { enabled: false, text: "" }),
+    );
+
+    render(<AdminEnrollmentsList />);
+
+    expect(
+      await screen.findByText("Datenschutzinformation fehlt"),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Zur Datenschutzinformation" }),
+    ).toHaveAttribute(
+      "href",
+      "/demo/settings?tab=enrollment&highlight=enrollment.legal_dsgvo_text",
+    );
+  });
+
   it("does not count the form step as complete before a phase exists", async () => {
     render(<AdminEnrollmentsList />);
 

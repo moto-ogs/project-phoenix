@@ -2907,8 +2907,13 @@ export const enrollmentSetupTopic = function enrollmentSetupTopic(): HelpTopic {
       },
       {
         title: "Die Anmeldung öffnen",
+        description:
+          "Die Online-Anmeldung lässt sich nur mit einer Datenschutzinformation einschalten. Eltern lesen sie im Formular.",
         steps: [
-          "Schalten Sie unter `Einstellungen` > `Anmeldung` die `Online-Anmeldung` ein.",
+          "Öffnen Sie `Einstellungen` > `Anmeldung` und dort den Bereich `Rechtstexte`.",
+          "Schalten Sie `Datenschutzinformation im Anmeldeformular anzeigen` ein und tragen Sie Ihren Text ein.",
+          "Schalten Sie im Bereich `Allgemein` die `Online-Anmeldung` ein.",
+          "Prüfen Sie im Fenster die `Empfänger für neue Anmeldungen`. Dort steht schon die Kontaktadresse Ihrer Schule. Sie können sie ändern oder das Feld leer lassen. Wählen Sie `Einschalten`.",
           "Öffnen Sie `Anmeldephasen`.",
           "Öffnen Sie bei der Phase das Menü mit den drei Punkten.",
           "Wählen Sie `Aktivieren`.",
@@ -2957,6 +2962,8 @@ export const enrollmentSetupTopic = function enrollmentSetupTopic(): HelpTopic {
       "Gilt die Phase nur für `Nur bereits angemeldete Kinder` oder `Nur Eltern mit Konto an der Schule`, fehlen `Formular ansehen`, `Elternansicht öffnen`, der Link zum Kopieren und der QR-Code. Diese Eltern melden sich im Elternportal an.",
     ],
     troubleshootingDetails: [
+      "Beim Einschalten steht `Zuerst die Datenschutzinformation eintragen`? Dann fehlt der Text oder sein Schalter ist aus. Wählen Sie `Zur Datenschutzinformation`. Den Text darf nur eintragen, wer alle Einstellungen der Schule ändern darf.",
+      "Oben steht `Datenschutzinformation fehlt`? Ihre Online-Anmeldung läuft schon, aber Eltern sehen keine Datenschutzinformation. Das Formular bleibt erreichbar. Tragen Sie die Datenschutzinformation ein. Dann verschwindet der Hinweis.",
       "Beim Beenden nennt moto Kinder, deren Betreuung nicht beendet werden kann? Wählen Sie unter diesen Kindern `Aus Auswahl nehmen`. Danach können Sie die Betreuung der übrigen Kinder erneut prüfen und beenden.",
       "Der Überblick sagt `Noch keine Anmeldephase`? Dann legen Sie zuerst eine Phase an.",
       "Auf `Betreuungsangebote` steht `Erst eine Anmeldephase anlegen`? Dann fehlt die Phase noch. Angebote gibt es nur innerhalb einer Phase.",
@@ -8400,7 +8407,7 @@ export const settingsGuideTopic = function settingsGuideTopic(): HelpTopic {
         description: "Wie Eltern ihr Kind bei Ihnen anmelden.",
         ordered: false,
         steps: [
-          "`Online-Anmeldung`: Eltern melden ihr Kind über ein Formular im Internet an.",
+          "`Online-Anmeldung`: Eltern melden ihr Kind über ein Formular im Internet an. Einschalten lässt sie sich erst mit einer Datenschutzinformation unter `Rechtstexte`.",
           "`Name der Betreuung in Texten für Eltern`: So heißt Ihre Betreuung in den festen Texten der Anmeldung, der Eltern-App und in den E-Mails dazu. Wählen Sie `OGS`, `GTS` oder `Eigener Name`. Ihre eigenen Texte im Formular ändern sich nicht.",
           "`Empfänger für neue Anmeldungen`: Diese Adressen bekommen bei jeder neuen Anmeldung eine E-Mail.",
           "`Rechtstexte`: Was Eltern im Formular lesen und bestätigen, zum Beispiel die Datenschutzinformation.",

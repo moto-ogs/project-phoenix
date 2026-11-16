@@ -38,9 +38,13 @@ func NewSettingsBudgetRouterForTest(ctx context.Context, db transactionruntime.D
 		return nil, "", err
 	}
 	home := settings.Service.(settingsHTTP.HomeLayoutOperations)
+	schools, err := owners.BuildServeOrganizations(db)
+	if err != nil {
+		return nil, "", err
+	}
 	r := chi.NewRouter()
 	r.Use(auth.Verifier())
-	r.Mount("/api/settings", newSettingsResource(db, writes.Tenant, home, owners.NewEnrollmentBookings().SchemaReferencesLegalDocument).SettingsRouter())
+	r.Mount("/api/settings", newSettingsResource(db, writes.Tenant, home, owners.NewEnrollmentBookings().SchemaReferencesLegalDocument, schools).SettingsRouter())
 	traeger := settingsHTTP.NewTraegerSettingsResource(settings.Traeger, identityaccess.TraegerRightOverviewRead,
 		identityaccess.TraegerRightSettingsManage, identityaccess.TraegerRightStaffManage, identityaccess.TraegerRightBillingManage)
 	r.Mount("/traeger/settings", traeger.TraegerRouter(ProtectedTraegerRoutes))

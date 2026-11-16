@@ -1,0 +1,171 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
+import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import { Input } from "~/components/ui/input";
+import { ConfirmationModal } from "~/components/ui/modal";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { hasPermission } from "~/lib/auth-utils";
+import {
+  ENROLLMENT_ENABLED_KEY,
+  ENROLLMENT_NOTIFICATION_EMAILS_KEY,
+  ENROLLMENT_PRIVACY_NOTICE_SETTINGS_PATH,
+} from "~/lib/enrollment-privacy-notice";
+import { createLogger } from "~/lib/logger";
+import { fetchSchoolContactEmail } from "~/lib/settings-api";
+import { useTenantRouter } from "~/lib/tenant-router";
+
+const logger = createLogger({ component: "EnrollmentActivationDialog" });
+
+interface EnrollmentActivationDialogProps {
+  readonly isOpen: boolean;
+  readonly onClose: () => void;
+  /** Whether parents would see a privacy notice (switch on and text). */
+  readonly noticePresent: boolean;
+  /** The recipients stored today; empty means none. */
+  readonly currentRecipients: string;
+  readonly onSave: (key: string, value: unknown) => Promise<void>;
+}
+
+/**
+ * Switching the online enrollment on (#7176). Without a privacy notice the
+ * dialog says so and leads to it: the backend refuses the switch then. With
+ * one, it asks who gets an e-mail about new enrollments, prefilled with the
+ * school's contact address. The field may stay empty.
+ */
+export function EnrollmentActivationDialog({
+  isOpen,
+  onClose,
+  noticePresent,
+  currentRecipients,
+  onSave,
+}: EnrollmentActivationDialogProps) {
+  if (!isOpen) return null;
+  return noticePresent ? (
+    <RecipientsStep
+      onClose={onClose}
+      currentRecipients={currentRecipients}
+      onSave={onSave}
+    />
+  ) : (
+    <MissingNoticeStep onClose={onClose} />
+  );
+}
+
+function MissingNoticeStep({ onClose }: Readonly<{ onClose: () => void }>) {
+  const { data: session } = useSession();
+  const router = useTenantRouter();
+  const canWriteNotice = hasPermission(session, "config:manage");
+  return (
+    <ConfirmationModal
+      isOpen
+      onClose={onClose}
+      onConfirm={() => {
+        onClose();
+        router.push(ENROLLMENT_PRIVACY_NOTICE_SETTINGS_PATH);
+      }}
+      title="Zuerst die Datenschutzinformation eintragen"
+      confirmText="Zur Datenschutzinformation"
+      confirmTooltip="Öffnet die Datenschutzinformation unter „Rechtstexte“."
+      isConfirmDisabled={!canWriteNotice}
+      confirmDisabledReason="Eintragen kann sie eine Person mit dem Recht „Alle Einstellungen der Schule ändern“."
+      cancelText="Abbrechen"
+    >
+      <p className="text-sm text-gray-600">
+        Eltern müssen bei der Anmeldung eine Datenschutzinformation lesen. Sie
+        fehlt noch. Tragen Sie sie unter „Rechtstexte“ ein und schalten Sie sie
+        an. Danach können Sie die Online-Anmeldung einschalten.
+      </p>
+    </ConfirmationModal>
+  );
+}
+
+function RecipientsStep({
+  onClose,
+  currentRecipients,
+  onSave,
+}: Readonly<{
+  onClose: () => void;
+  currentRecipients: string;
+  onSave: (key: string, value: unknown) => Promise<void>;
+}>) {
+  const [recipients, setRecipients] = useState(currentRecipients);
+  const [saving, setSaving] = useState(false);
+  const formRef = useRef<HTMLDivElement | null>(null);
+  const errors = useApiFormError(formRef);
+  const { success: toastSuccess } = useToast();
+  const touchedRef = useRef(false);
+
+  // Without stored recipients the school's contact address is the proposal.
+  useEffect(() => {
+    if (currentRecipients.trim() !== "") return;
+    let cancelled = false;
+    fetchSchoolContactEmail()
+      .then((email) => {
+        if (!cancelled && !touchedRef.current && email) setRecipients(email);
+      })
+      .catch((error: unknown) => {
+        // Only a proposal: the field stays empty and the person can still
+        // type an address or leave it empty. Logged for diagnostics.
+        logger.warn("school_contact_email_load_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentRecipients]);
+
+  const confirm = async () => {
+    errors.clear();
+    setSaving(true);
+    try {
+      const next = recipients.trim();
+      if (next !== currentRecipients.trim()) {
+        await onSave(ENROLLMENT_NOTIFICATION_EMAILS_KEY, next);
+      }
+      await onSave(ENROLLMENT_ENABLED_KEY, true);
+      toastSuccess("Die Online-Anmeldung ist eingeschaltet.");
+      onClose();
+    } catch (error) {
+      void errors.show(error, { object: "die Online-Anmeldung" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ConfirmationModal
+      isOpen
+      onClose={() => {
+        if (saving) return;
+        onClose();
+      }}
+      onConfirm={() => void confirm()}
+      title="Online-Anmeldung einschalten"
+      confirmText="Einschalten"
+      confirmTooltip="Schaltet den Anmeldelink für Eltern sofort frei."
+      cancelText="Abbrechen"
+      isConfirmLoading={saving}
+      loadingText="Wird eingeschaltet …"
+    >
+      <div ref={formRef} className="space-y-3">
+        <FormErrorAlert message={errors.error} />
+        <Input
+          label="Empfänger für neue Anmeldungen"
+          hint="Diese Adressen bekommen bei jeder neuen Anmeldung eine E-Mail. Mehrere Adressen trennen Sie mit einem Komma. Das Feld darf leer bleiben."
+          type="text"
+          inputMode="email"
+          autoComplete="email"
+          value={recipients}
+          onChange={(event) => {
+            touchedRef.current = true;
+            setRecipients(event.target.value);
+            errors.clear();
+          }}
+        />
+      </div>
+    </ConfirmationModal>
+  );
+}

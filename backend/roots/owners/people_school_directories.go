@@ -27,7 +27,17 @@ func (d EnrollmentSchoolDirectory) FindSchool(ctx context.Context, id int64) (*e
 
 // SchoolContactDirectory answers the reply address of tenant-bound mail.
 type SchoolContactDirectory struct {
-	Schools organizationtenancy.SchoolQuery
+	Schools schoolFinder
+}
+
+// ContactEmail is the school's contact address, empty for a missing school.
+// It prefills the enrollment notification recipients (#7176).
+func (d SchoolContactDirectory) ContactEmail(ctx context.Context, tenantID int64) (string, error) {
+	contact, err := d.FindSchoolContact(ctx, tenantID)
+	if err != nil || contact == nil {
+		return "", err
+	}
+	return contact.Email, nil
 }
 
 func (d SchoolContactDirectory) FindSchoolContact(ctx context.Context, tenantID int64) (*deliveryCompose.SchoolContact, error) {

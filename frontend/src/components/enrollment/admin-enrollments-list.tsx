@@ -36,6 +36,11 @@ import {
   type FormSchema,
 } from "~/lib/enrollment-form-schema-api";
 import { fetchSettingsSchema } from "~/lib/settings-api";
+import {
+  enrollmentPrivacyNotice,
+  type EnrollmentPrivacyNoticeState,
+} from "~/lib/enrollment-privacy-notice";
+import { EnrollmentPrivacyNoticeWarning } from "./enrollment-privacy-notice-warning";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import type { FormErrorInput } from "~/components/ui/form-error";
 import { useApiLoadError } from "~/contexts/ToastContext";
@@ -109,6 +114,8 @@ export function AdminEnrollmentsList({
   const [enrollmentEnabled, setEnrollmentEnabled] = useState<boolean | null>(
     null,
   );
+  const [privacyNotice, setPrivacyNotice] =
+    useState<EnrollmentPrivacyNoticeState | null>(null);
   const [allRequests, setAllRequests] = useState<AdminRequestSummary[]>([]);
   const [changeRequests, setChangeRequests] = useState<
     AdminEnrollmentChangeRequest[]
@@ -192,6 +199,7 @@ export function AdminEnrollmentsList({
           ).length,
         });
         setEnrollmentEnabled(readEnrollmentEnabled(settingsData));
+        setPrivacyNotice(enrollmentPrivacyNotice(settingsData?.tabs));
         setLoaded(true);
       } catch (err) {
         if (cancelled) return;
@@ -269,6 +277,7 @@ export function AdminEnrollmentsList({
 
   return (
     <div className="space-y-4">
+      <EnrollmentPrivacyNoticeWarning state={privacyNotice} />
       <EnrollmentSetupGuide
         enrollmentEnabled={enrollmentEnabled}
         phaseCount={phases.length}

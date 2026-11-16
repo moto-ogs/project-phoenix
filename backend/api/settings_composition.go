@@ -16,9 +16,10 @@ import (
 	enrollmentAPI "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
 	settingsHTTP "github.com/moto-ogs/project-phoenix/modules/settings/http"
+	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 )
 
-func newSettingsResource(db transactionruntime.Database, operations settingsHTTP.Operations, homeLayouts settingsHTTP.HomeLayoutOperations, references func(context.Context, string, string) (bool, error)) *settingsHTTP.SettingsResource {
+func newSettingsResource(db transactionruntime.Database, operations settingsHTTP.Operations, homeLayouts settingsHTTP.HomeLayoutOperations, references func(context.Context, string, string) (bool, error), schools owners.SchoolFinder) *settingsHTTP.SettingsResource {
 	settingsRuntime := settingsHTTP.NewRuntime(settingsHTTP.RuntimeDependencies{
 		DocumentCleanup: fileStorageCompose.NewUploadCleanup(db.Pool(), "enrollment-legal-documents").Queue,
 		Protected: func(r chi.Router, fn func(chi.Router, settingsHTTP.Middleware)) {
@@ -77,13 +78,17 @@ func newSettingsResource(db transactionruntime.Database, operations settingsHTTP
 			return referenced, nil
 		},
 	})
-	return settingsHTTP.NewSettingsResource(operations, homeLayouts, settingsRuntime)
+	return settingsHTTP.NewSettingsResource(operations, homeLayouts, settingsRuntime, owners.SchoolContactDirectory{Schools: schools}.ContactEmail)
 }
 
 // settingsInputError renders a rejected setting value. A visible attendance
 // window longer than its retention names the window that blocks it (#3957),
 // so the person reads which value is allowed.
 func settingsInputError(err error) render.Renderer {
+	if _, ok := errors.AsType[*settingsModule.EnrollmentPrivacyNoticeError](err); ok {
+		// #7176: names the missing privacy notice instead of a bare invalid value.
+		return apiCommon.ErrorInvalidRequestWithCode(err, apiCommon.CodeSettingsEnrollmentPrivacyNoticeMissing)
+	}
 	window, ok := errors.AsType[*settingsModule.AttendanceWindowError](err)
 	if !ok {
 		return apiCommon.ErrorInvalidRequest(err)
