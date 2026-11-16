@@ -7,7 +7,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-const traegerAccountHistoryExportVersion = "20261116090000"
+const traegerAccountHistoryExportVersion = "20261116150000"
 
 func init() {
 	MigrationRegistry.Register(&Migration{
