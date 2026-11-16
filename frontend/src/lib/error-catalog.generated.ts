@@ -177,6 +177,8 @@ export const ERROR_CATALOG = {
         "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
       "care.offering_changes_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
+      "care.photos_disabled":
+        "Die Schule hat Kinderfotos ausgeschaltet. Sie können die Einwilligung später wieder geben.",
       "care.pickup_change_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
       "care.pickup_permission_request_required":
@@ -2267,6 +2269,8 @@ export const ERROR_CATALOG = {
         "{object} contains invalid details. Please check your entries.",
       "care.offering_changes_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
+      "care.photos_disabled":
+        "The school has switched child photos off. You can give your consent again later.",
       "care.pickup_change_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
       "care.pickup_permission_request_required":
@@ -3015,6 +3019,8 @@ export const ERROR_CATALOG = {
         "Указаны неверные данные: {object}. Проверьте введённые данные.",
       "care.offering_changes_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
+      "care.photos_disabled":
+        "Школа отключила фотографии детей. Вы сможете снова дать согласие позже.",
       "care.pickup_change_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
       "care.pickup_permission_request_required":
@@ -3628,6 +3634,8 @@ export const ERROR_CATALOG = {
         "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
       "care.offering_changes_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
+      "care.photos_disabled":
+        "Shkolla i ka çaktivizuar fotot e fëmijëve. Pëlqimin mund ta jepni përsëri më vonë.",
       "care.pickup_change_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "care.pickup_permission_request_required":
@@ -4256,6 +4264,8 @@ export const ERROR_CATALOG = {
         "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
       "care.offering_changes_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
+      "care.photos_disabled":
+        "Szkoła wyłączyła zdjęcia dzieci. Zgodę możesz ponownie wyrazić później.",
       "care.pickup_change_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
       "care.pickup_permission_request_required":
@@ -4869,6 +4879,8 @@ export const ERROR_CATALOG = {
         "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",
       "care.offering_changes_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
+      "care.photos_disabled":
+        "Okul çocuk fotoğraflarını kapattı. Onayınızı daha sonra yeniden verebilirsiniz.",
       "care.pickup_change_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
       "care.pickup_permission_request_required":
@@ -5488,6 +5500,8 @@ export const ERROR_CATALOG = {
         "Указано неправильні дані: {object}. Перевірте введені дані.",
       "care.offering_changes_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
+      "care.photos_disabled":
+        "Школа вимкнула фото дітей. Ви зможете знову надати згоду пізніше.",
       "care.pickup_change_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
       "care.pickup_permission_request_required":

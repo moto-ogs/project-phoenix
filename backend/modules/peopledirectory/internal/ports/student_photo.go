@@ -18,6 +18,9 @@ type StudentPhotoStore interface {
 	// LockPhotoFeature takes the per-tenant advisory lock that serializes
 	// photo writes against a feature-disable purge.
 	LockPhotoFeature(ctx context.Context) (domain.OperationStats, error)
+	// TryLockPhotoFeature takes the same gate without waiting and reports
+	// whether it did; for callers that already hold a child's row lock.
+	TryLockPhotoFeature(ctx context.Context) (bool, domain.OperationStats, error)
 	// SavePhoto writes the photo slice of one child.
 	SavePhoto(ctx context.Context, photo domain.StudentPhoto) (domain.OperationStats, error)
 	// PurgePhotos clears every stored photo and photo consent of the tenant

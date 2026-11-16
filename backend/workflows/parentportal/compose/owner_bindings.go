@@ -49,7 +49,7 @@ func newStudentRecords(profiles careplan.StudentProfileCommands, people PeopleDi
 		Photo: func(record care.StudentPhotoState) peopledirectory.StudentPhotoState {
 			return peopledirectory.StudentPhotoState(record)
 		},
-	})
+	}, peopledirectory.ErrPhotoFeatureDisabled, peopledirectory.ErrPhotoFeatureDisabledMid)
 }
 func newGuardianChanges(log auditlog.GuardianChangeLog) care.GuardianChangeLog {
 	return care.NewGuardianChanges(log, func(record care.GuardianChange) auditlog.GuardianChange { return auditlog.GuardianChange(record) })

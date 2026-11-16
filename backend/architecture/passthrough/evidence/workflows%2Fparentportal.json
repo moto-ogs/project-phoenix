@@ -905,7 +905,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s studentRecords[C, P]) SetStudentPhotoConsent(ctx context.Context, photo StudentPhotoState) error {\n\treturn s.people.SetStudentPhotoConsent(ctx, portalRecord(photo, s.rows.Photo))\n}",
+      "evidence": "func (s studentRecords[C, P]) SetStudentPhotoConsent(ctx context.Context, photo StudentPhotoState) error {\n\terr := s.people.SetStudentPhotoConsent(ctx, portalRecord(photo, s.rows.Photo))\n\tfor _, refusal := range s.photosOff {\n\t\tif errors.Is(err, refusal) {\n\t\t\treturn fmt.Errorf(\"%w: %w\", ErrPhotosDisabled, err)\n\t\t}\n\t}\n\treturn err\n}",
       "form": "unclassified-evidence",
       "id": "workflows/parentportal/internal/care/studentRecords[C, P].SetStudentPhotoConsent",
       "owner": "workflows/parentportal"

@@ -169,9 +169,9 @@ const DESTRUCTIVE_SWITCH_OFF: Record<string, DestructiveSwitchOff> = {
       </>
     ),
     gateLabel:
-      "Geben Sie LÖSCHEN ein, um alle Kinderfotos und Foto-Einwilligungen zu löschen.",
+      "Geben Sie LÖSCHEN ein, um alle Kinderfotos endgültig zu löschen.",
     confirmTooltip:
-      "Schaltet Kinderfotos aus. Löscht alle Fotos und Einwilligungen sofort.",
+      "Schaltet Kinderfotos aus. Löscht alle Fotos sofort, die Einwilligungen enden.",
   },
 };
 

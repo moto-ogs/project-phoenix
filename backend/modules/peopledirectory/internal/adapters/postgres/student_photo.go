@@ -55,6 +55,33 @@ func (s *StudentStore) LockPhotoFeature(ctx context.Context) (domain.OperationSt
 	return stats, nil
 }
 
+// TryLockPhotoFeature takes the per-tenant photo gate only when it is free
+// and reports whether it did. A caller that already holds a child's row lock
+// uses it instead of waiting, which would invert the gate-before-row order
+// of the switch-off purge and could deadlock against it.
+func (s *StudentStore) TryLockPhotoFeature(ctx context.Context) (bool, domain.OperationStats, error) {
+	db, scope, err := s.database(ctx)
+	if err != nil {
+		return false, domain.OperationStats{}, err
+	}
+	if scope.TenantID <= 0 {
+		return false, domain.OperationStats{}, errors.New("people directory postgres: tenant is required to lock the photo feature")
+	}
+	if scope.TenantID > 0x7fffffff {
+		return false, domain.OperationStats{}, fmt.Errorf(
+			"people directory postgres: tenant %d exceeds the advisory-lock object id range", scope.TenantID)
+	}
+	stats := domain.OperationStats{Queries: 1}
+	started := time.Now()
+	var acquired bool
+	err = db.NewRaw("SELECT pg_try_advisory_xact_lock(?, ?)", studentPhotoFeatureLockClass, int32(scope.TenantID)).Scan(ctx, &acquired)
+	stats.StatementDuration = time.Since(started)
+	if err != nil {
+		return false, stats, fmt.Errorf("people directory postgres: try to lock photo feature: %w", err)
+	}
+	return acquired, stats, nil
+}
+
 func (s *StudentStore) SavePhoto(ctx context.Context, photo domain.StudentPhoto) (domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {

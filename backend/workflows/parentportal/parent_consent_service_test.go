@@ -14,6 +14,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/api"
+	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -57,15 +58,35 @@ func buildConsentService(t *testing.T) (*parentService.Portal, *bun.DB, *api.Peo
 	return buildConsentServiceWith(t, nil)
 }
 
+// photoSettings is the school's child-photo switch the People Directory
+// reads (#7208); a consent can be given only while it is on.
+type photoSettings struct{ off atomic.Bool }
+
+func (s *photoSettings) ResolveBool(context.Context, string) (bool, error) { return !s.off.Load(), nil }
+func (s *photoSettings) HasTenantOverride(context.Context, string) (bool, error) {
+	return true, nil
+}
+func (s *photoSettings) ResolveString(context.Context, string) (string, error) { return "", nil }
+
 // buildConsentServiceWith lets a test adjust the portal's dependencies
 // before they are composed.
 func buildConsentServiceWith(t *testing.T, adjust func(*parentportalcompose.Dependencies)) (*parentService.Portal, *bun.DB, *api.PeopleRepositorySuiteFactory, *consentRecordingUnlinker) {
+	t.Helper()
+	svc, db, repos, unlinker, _ := buildConsentServiceWithPhotos(t, adjust)
+	return svc, db, repos, unlinker
+}
+
+// buildConsentServiceWithPhotos also returns the school's child-photo switch.
+func buildConsentServiceWithPhotos(t *testing.T, adjust func(*parentportalcompose.Dependencies)) (*parentService.Portal, *bun.DB, *api.PeopleRepositorySuiteFactory, *consentRecordingUnlinker, *photoSettings) {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	repos := api.NewRepositoryTestFactory(testpkg.NewDatabase(t, db))
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	unlinker := &consentRecordingUnlinker{}
 	photos := consentPhotoUnlinker{unlinker: unlinker}
+	switches := &photoSettings{}
+	people, err := owners.NewPeopleDirectoryWithObserver(testpkg.MustDatabase(db), func(peopleCompose.Observation) {}, nil, owners.StudentPhotoRuntime{Settings: switches})
+	require.NoError(t, err)
 	deps := parentportalcompose.Dependencies{
 		Memberships:         parentMemberships(t, db),
 		GuardianProfileRepo: guardProfiles(t, db),
@@ -77,12 +98,12 @@ func buildConsentServiceWith(t *testing.T, adjust func(*parentportalcompose.Depe
 		Locales:             owners.ParentPortalLocales(),
 		Runtime:             owners.ParentPortalRuntime{},
 		CarePlan:            owners.NewParentCarePlanCommands(repos.CarePlan(), nil),
-		People:              owners.MustNewPeopleDirectory(testpkg.MustDatabase(db)),
+		People:              people,
 		CareProfiles:        careProfiles(t, db),
 		ChildRepo:           repos.ParentChildReads(),
 		StudentRepo:         owners.NewParentStudentReads(reposPeople.Student),
 		StudentGuardianRepo: owners.NewParentStudentGuardianReads(reposPeople.StudentGuardian),
-		StudentConsents:     owners.NewParentStudentConsents(api.NewStudentConsents(testpkg.NewDatabase(t, db))),
+		StudentConsents:     owners.NewParentStudentConsents(owners.NewStudentConsentsFor(people, owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).StudentConsentChange)),
 		StudentPhotos:       photos,
 		StudentUpdates:      owners.BindParentStudentUpdates(testpkg.NewRecordingBroadcaster()),
 		Logger:              slog.Default(),
@@ -94,7 +115,7 @@ func buildConsentServiceWith(t *testing.T, adjust func(*parentportalcompose.Depe
 	if adjust != nil {
 		adjust(&deps)
 	}
-	return parentportalcompose.New(deps), db, reposPeople, unlinker
+	return parentportalcompose.New(deps), db, reposPeople, unlinker, switches
 }
 
 func TestGetChildConsentsShowsRecordedStatesAndWithdrawalCapability(t *testing.T) {
@@ -165,7 +186,7 @@ func TestWithdrawPhotoConsentRemovesPhotoAndRecordsOneHistoryEntry(t *testing.T)
 func TestGrantPhotoConsentAfterWithdrawalRecordsNewStateWithoutRestoringPhoto(t *testing.T) {
 	t.Parallel()
 
-	svc, db, repos, unlinker := buildConsentService(t)
+	svc, db, repos, unlinker, photos := buildConsentServiceWithPhotos(t, nil)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	now := time.Date(2026, time.August, 31, 9, 30, 0, 0, time.UTC)
 	storedURL := "/uploads/students/portrait.jpg"
@@ -177,6 +198,24 @@ func TestGrantPhotoConsentAfterWithdrawalRecordsNewStateWithoutRestoringPhoto(t 
 
 	_, err = svc.WithdrawPhotoConsent(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID)
 	require.NoError(t, err)
+
+	// #7208: while the school has child photos off, the portal offers no new
+	// consent and refuses one; the withdrawal stays recorded.
+	photos.off.Store(true)
+	offered, err := svc.GetChildConsents(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID)
+	require.NoError(t, err)
+	for _, consent := range offered {
+		if consent.Key == "photo" {
+			assert.False(t, consent.CanGrant, "photos off: no new consent on offer")
+		}
+	}
+	_, err = svc.GrantPhotoConsent(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID)
+	require.ErrorIs(t, err, parentService.ErrPhotosDisabled)
+	refused, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), db, repos.Student.FindByID, any(chain.StudentID))
+	require.NoError(t, err)
+	assert.Nil(t, refused.PhotoConsentGivenAt)
+	photos.off.Store(false)
+
 	consents, err := svc.GrantPhotoConsent(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID)
 	require.NoError(t, err)
 	assert.Equal(t, "granted", ChildConsentState(consents, "photo"))

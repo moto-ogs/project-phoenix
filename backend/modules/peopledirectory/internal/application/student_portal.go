@@ -18,8 +18,38 @@ func (s *StudentPhotoService) SetPortalConsent(ctx context.Context, photo domain
 		if s.tx.TenantID(txCtx) <= 0 {
 			return domain.ErrTenantRequired
 		}
+		if photo.PhotoConsentGivenAt != nil {
+			if err := s.requirePortalGrantAllowed(txCtx, stats); err != nil {
+				return err
+			}
+		}
 		writeStats, err := s.store.SavePhoto(txCtx, photo)
 		stats.Add(writeStats)
 		return err
 	})
+}
+
+// requirePortalGrantAllowed admits a parent's photo consent only while the
+// school has child photos switched on (#7208): switching them off ends every
+// consent, so one recorded meanwhile would survive the next switch-on. The
+// parent flow already holds the child's row lock, so the photo gate is only
+// tried: a switch-off in progress refuses the grant, and a switch-off that
+// starts later waits for this commit and ends the new consent with the rest.
+// A withdrawal never comes here; it stays possible at any time.
+func (s *StudentPhotoService) requirePortalGrantAllowed(ctx context.Context, stats *domain.OperationStats) error {
+	if err := s.requireFeatureEnabled(ctx); err != nil {
+		return err
+	}
+	acquired, lockStats, err := s.store.TryLockPhotoFeature(ctx)
+	stats.Add(lockStats)
+	if err != nil {
+		return err
+	}
+	if !acquired {
+		return domain.ErrPhotoFeatureDisabledMid
+	}
+	if err := s.requireFeatureEnabled(ctx); err != nil {
+		return domain.ErrPhotoFeatureDisabledMid
+	}
+	return nil
 }

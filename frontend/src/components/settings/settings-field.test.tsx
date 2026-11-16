@@ -194,7 +194,7 @@ describe("SettingsField", () => {
 
     fireEvent.change(
       getByRole("textbox", {
-        name: "Geben Sie LÖSCHEN ein, um alle Kinderfotos und Foto-Einwilligungen zu löschen.",
+        name: "Geben Sie LÖSCHEN ein, um alle Kinderfotos endgültig zu löschen.",
       }),
       { target: { value: "LÖSCHEN" } },
     );

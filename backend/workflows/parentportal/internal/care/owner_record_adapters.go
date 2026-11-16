@@ -50,13 +50,17 @@ type StudentRecordRows[C, P any] struct {
 	Photo func(StudentPhotoState) P
 }
 type studentRecords[C, P any] struct {
-	care   StudentCare[C]
-	people StudentPeople[P]
-	rows   StudentRecordRows[C, P]
+	care      StudentCare[C]
+	people    StudentPeople[P]
+	rows      StudentRecordRows[C, P]
+	photosOff []error
 }
 
-func NewStudentRecords[C, P any](care StudentCare[C], people StudentPeople[P], rows StudentRecordRows[C, P]) StudentRecords {
-	return studentRecords[C, P]{care: care, people: people, rows: rows}
+// NewStudentRecords binds the owners' student writes. photosOff are the
+// owner's refusals of a photo consent while child photos are switched off;
+// the portal answers them as ErrPhotosDisabled.
+func NewStudentRecords[C, P any](care StudentCare[C], people StudentPeople[P], rows StudentRecordRows[C, P], photosOff ...error) StudentRecords {
+	return studentRecords[C, P]{care: care, people: people, rows: rows, photosOff: photosOff}
 }
 func portalLiveAbsence[C any](absence StudentLiveAbsence, convert func(int64, bool, *time.Time, bool, *time.Time) C) C {
 	return convert(absence.StudentID, absence.Sick != nil && *absence.Sick, absence.SickSince, absence.Excused != nil && *absence.Excused, absence.ExcusedSince)
@@ -153,7 +157,13 @@ func requireCareProfileWrite(studentID, rows int64, err error) error {
 }
 
 func (s studentRecords[C, P]) SetStudentPhotoConsent(ctx context.Context, photo StudentPhotoState) error {
-	return s.people.SetStudentPhotoConsent(ctx, portalRecord(photo, s.rows.Photo))
+	err := s.people.SetStudentPhotoConsent(ctx, portalRecord(photo, s.rows.Photo))
+	for _, refusal := range s.photosOff {
+		if errors.Is(err, refusal) {
+			return fmt.Errorf("%w: %w", ErrPhotosDisabled, err)
+		}
+	}
+	return err
 }
 
 func (g guardianChanges[C]) RecordGuardianChanges(ctx context.Context, changes []GuardianChange) error {

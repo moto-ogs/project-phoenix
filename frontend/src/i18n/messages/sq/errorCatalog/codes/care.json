@@ -60,6 +60,7 @@
   "offering_changes_disabled": "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
   "payer_guardian_protected": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "photo_consent_not_withdrawn": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "photos_disabled": "Shkolla i ka çaktivizuar fotot e fëmijëve. Pëlqimin mund ta jepni përsëri më vonë.",
   "pickup_change_care_day_ended": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "pickup_change_cutoff_passed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "pickup_change_disabled": "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",

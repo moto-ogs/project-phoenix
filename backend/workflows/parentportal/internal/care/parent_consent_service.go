@@ -47,6 +47,10 @@ const (
 // withdrawal event from the existing consent history.
 var ErrPhotoConsentNotWithdrawn = errors.New("parent: photo consent was not withdrawn")
 
+// ErrPhotosDisabled refuses a new photo consent while the school has child
+// photos switched off (#7208); a withdrawal stays possible.
+var ErrPhotosDisabled = errors.New("parent: child photos are switched off at this school")
+
 func (s *Service) GetChildConsents(ctx context.Context, accountID, studentID int64) ([]ChildConsent, error) {
 	var consents []ChildConsent
 	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, func(*Child) error {
