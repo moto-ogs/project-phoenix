@@ -7,7 +7,7 @@ status: accepted
 > **Teilweise abgelöst** seit November 2026: Gesundheitsangaben der
 > Kinderakte und der Ferienanmeldung sowie Bankdaten von Eltern, Personal und
 > SEPA-Zahlern liegen feldverschlüsselt in der Datenbank (AES-256-GCM mit
-> Security Runtimes Feld-Cipher, an Spalte und Schule oder Träger gebunden).
+> Security Runtimes Feld-Cipher, jeder Wert an Schule oder Träger gebunden).
 > Für diese Daten gilt der Satz „keine Feld-/Dateiverschlüsselung in der
 > Anwendung“ nicht mehr:
 >
@@ -24,8 +24,9 @@ status: accepted
 > - IBAN, Kontoinhaber, Steuer-ID und SV-Nummer von Eltern und Personal (#6332,
 >   Migrationen `1.15.836`/`1.15.837`, Klartextspalten mit `1.15.900` entfernt):
 >   [ADR 0188](0188-bankdaten-von-eltern-und-personal-liegen-versiegelt-im-bankring.md).
->   Der Personalstamm des Trägers (#4705) legt dieselben Werte von Anfang an
->   versiegelt mit dem Bankring an, ohne eigene ADR-Entscheidung dazu.
+>   Der Personalstamm des Trägers (#4705) speichert dieselben Werte von Anfang
+>   an versiegelt mit dem Bankring:
+>   [ADR 0233](0233-personalakte-des-traegers-verknuepft-beschaeftigungen-und-uebernimmt-bankdaten.md).
 >
 > ADR 0171, 0183 und 0188 tragen noch `status: proposed`; ihr Code liegt auf
 > `development`. Weiter gilt diese Entscheidung für Datei-Uploads, auch
