@@ -115,18 +115,18 @@ func (rs *Resource) exportHistory(w http.ResponseWriter, r *http.Request) {
 			berlinInstant(entry.OccurredAt), traegerAccountActionLabels[entry.Action], historyDetail(entry), entry.TargetEmail, actorEmail,
 		})
 	}
-	var filters []string
-	if history.HasMore {
-		filters = []string{common.ListCutNote(identityaccess.TraegerAccountHistoryExportLimit)}
-	}
-	common.WriteList(w, r, rs.lists, format, common.ListTable{
-		Title: "Verlauf des Träger-Büros", Filters: filters,
+	table := common.ListTable{
+		Title: "Verlauf des Träger-Büros",
 		Columns: []common.ListColumn{
 			{ID: "occurred", Label: "Zeitpunkt"}, {ID: "action", Label: "Was"}, {ID: "detail", Label: "Angaben"},
 			{ID: "target", Label: "Betrifft"}, {ID: "actor", Label: "Von"},
 		},
 		Rows: rows, Footer: common.ListPersonalDataFooter, Filename: "verlauf-traeger-buero",
-	})
+	}
+	if history.HasMore {
+		common.MarkListTruncated(&table, identityaccess.TraegerAccountHistoryExportLimit)
+	}
+	common.WriteList(w, r, rs.lists, format, table)
 }
 
 // historyDetail names the roles or the name of a change, as the page does.

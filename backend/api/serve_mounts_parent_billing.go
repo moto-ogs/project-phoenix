@@ -115,7 +115,7 @@ func newSEPADebitResource(debits parentbilling.SEPADebits) *parentBillingHTTP.SE
 func NewSEPAMandateHTTP(settings TraegerBrandingSettings, cipher parentbilling.BankDataCipher, today func() calendar.Date) *parentBillingHTTP.SEPAMandateResource {
 	contracts := parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}
 	return parentBillingHTTP.NewSEPAMandateResource(parentBillingCompose.NewSEPAMandates(contracts, cipher, parentBillingSettings{settings: settings}, today),
-		common.RequiresPermission(identityaccess.TraegerRightBillingManage), traegerListRenderer(NewSimpleListRenderer()))
+		common.RequiresPermission(identityaccess.TraegerRightBillingManage), traegerListRenderer(NewSimpleListRenderer()), today)
 }
 
 // NewBillingTermsHTTP binds the payment terms, the bundling, the family

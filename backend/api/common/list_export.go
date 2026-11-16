@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -137,6 +138,18 @@ func ListInstant(at time.Time) string {
 // entries of a longer list, so nobody takes the file for the whole list.
 func ListCutNote(limit int) string {
 	return "Gekürzt: nur die neuesten " + groupedThousands(limit) + " Einträge"
+}
+
+// MarkListTruncated labels an export that contains only the newest entries.
+// PDF uses its head; spreadsheets repeat the note in a regular data column,
+// since CSV deliberately leaves out the head and filters.
+func MarkListTruncated(table *ListTable, limit int) {
+	note := ListCutNote(limit)
+	table.Filters = append(slices.Clone(table.Filters), note)
+	table.Columns = append(table.Columns, ListColumn{ID: "truncation_note", Label: "Hinweis", SpreadsheetOnly: true})
+	for i := range table.Rows {
+		table.Rows[i] = append(table.Rows[i], note)
+	}
 }
 
 // groupedThousands writes 10000 as „10.000“.

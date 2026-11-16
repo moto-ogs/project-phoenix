@@ -1,11 +1,54 @@
 package api
 
 import (
+	"encoding/csv"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestTruncatedTraegerListCSV(t *testing.T) {
+	t.Parallel()
+	table := common.ListTable{
+		Title: "Exportprotokoll", Filename: "exportprotokoll", Filters: []string{"Alle Schulen"},
+		Columns: []common.ListColumn{{ID: "number", Label: "Nr."}},
+		Rows:    [][]string{{"3"}, {"2"}},
+	}
+	common.MarkListTruncated(&table, 2)
+	for _, format := range []string{"pdf", "xlsx"} {
+		_, err := traegerListRenderer(func(doc SimpleListDocument, _, _ string) (SimpleListFile, error) {
+			assert.Equal(t, []string{"Alle Schulen", "Gekürzt: nur die neuesten 2 Einträge"}, doc.Filters)
+			if format == "pdf" {
+				assert.Equal(t, []SimpleListColumn{{ID: "number", Label: "Nr."}}, doc.Columns)
+				assert.Equal(t, [][]string{{"3"}, {"2"}}, doc.Rows)
+			} else {
+				assert.Equal(t, []SimpleListColumn{{ID: "number", Label: "Nr."}, {ID: "truncation_note", Label: "Hinweis"}}, doc.Columns)
+				assert.Equal(t, table.Rows, doc.Rows)
+			}
+			return SimpleListFile{}, nil
+		})(table, format)
+		require.NoError(t, err)
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/export", nil)
+	format, err := common.ParseListFormat(req)
+	require.NoError(t, err)
+	common.WriteList(rec, req, traegerListRenderer(NewSimpleListRenderer()), format, table)
+	require.Equal(t, 200, rec.Code)
+	reader := csv.NewReader(strings.NewReader(strings.TrimPrefix(rec.Body.String(), "\xEF\xBB\xBF")))
+	reader.Comma = ';'
+	rows, err := reader.ReadAll()
+	require.NoError(t, err, "CSV keeps a header and equally sized data rows")
+	assert.Equal(t, [][]string{
+		{"Nr.", "Hinweis"},
+		{"3", "Gekürzt: nur die neuesten 2 Einträge"},
+		{"2", "Gekürzt: nur die neuesten 2 Einträge"},
+	}, rows)
+}
 
 // The PDF of a Träger list names the values of the whole list once in its
 // head, so it leaves out the columns that repeat them on every row; Excel

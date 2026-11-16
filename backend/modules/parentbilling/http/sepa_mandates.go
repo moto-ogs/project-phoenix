@@ -25,15 +25,16 @@ type SEPAMandateResource struct {
 	mandates       capability.SEPAMandates
 	requireBilling common.Middleware
 	lists          common.ListRenderer
+	today          func() calendar.Date
 }
 
 // NewSEPAMandateResource builds the resource. requireBilling admits only a
 // session with the Träger right "Abrechnung".
-func NewSEPAMandateResource(mandates capability.SEPAMandates, requireBilling common.Middleware, lists common.ListRenderer) *SEPAMandateResource {
-	if mandates == nil || requireBilling == nil || lists == nil {
-		panic("parent billing http: the SEPA mandates, the right check and the list export are required")
+func NewSEPAMandateResource(mandates capability.SEPAMandates, requireBilling common.Middleware, lists common.ListRenderer, today func() calendar.Date) *SEPAMandateResource {
+	if mandates == nil || requireBilling == nil || lists == nil || today == nil {
+		panic("parent billing http: the SEPA mandates, the right check, the list export and the day clock are required")
 	}
-	return &SEPAMandateResource{mandates: mandates, requireBilling: requireBilling, lists: lists}
+	return &SEPAMandateResource{mandates: mandates, requireBilling: requireBilling, lists: lists, today: today}
 }
 
 // CreditorRouter returns the routes mounted at /traeger/sepa-creditor.

@@ -232,24 +232,26 @@ func (rs *SEPAMandateResource) exportMandates(w http.ResponseWriter, r *http.Req
 		column("family", "Familie"), column("reference", "Mandatsreferenz"), column("kind", "Art"),
 		column("iban", "Konto"), column("holder", "Kontoinhaber"), column("signed", "Unterschrieben"),
 		column("last", "Zuletzt abgebucht"), column("expires", "Verfällt ohne Abbuchung am"), column("status", "Stand"))
+	today := rs.today()
 	for _, mandate := range mandates {
 		table.Rows = append(table.Rows, []string{
 			personName(mandate.PartyFirstName, mandate.PartyLastName), mandate.Reference, mandateKindLabels[mandate.Kind],
 			mandate.IBANMasked, mandate.AccountHolder, dateText(mandate.SignedOn), optionalDate(mandate.LastCollectedOn),
-			dateText(mandate.ExpiresOn), mandateStateText(mandate),
+			dateText(mandate.ExpiresOn), mandateStateText(mandate, today),
 		})
 	}
 	common.WriteList(w, r, rs.lists, format, table)
 }
 
-// mandateStateText is the state of a mandate. Whether 36 months without a
-// collection ran out the column of the expiry tells.
-func mandateStateText(mandate capability.SEPAMandate) string {
+// mandateStateText is the state of a mandate on today's Berlin calendar day.
+func mandateStateText(mandate capability.SEPAMandate, today calendar.Date) string {
 	switch {
 	case mandate.RevokedOn != nil:
 		return "Widerrufen seit " + dateText(*mandate.RevokedOn)
 	case !mandate.CreditorCurrent:
 		return "Neues Mandat nötig"
+	case !mandate.ExpiresOn.IsZero() && !mandate.ExpiresOn.After(today):
+		return "Verfallen"
 	default:
 		return "In Kraft"
 	}

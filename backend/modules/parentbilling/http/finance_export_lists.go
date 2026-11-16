@@ -2,7 +2,6 @@ package parentbillinghttp
 
 import (
 	"net/http"
-	"slices"
 	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -43,7 +42,7 @@ func (rs *FinanceExportResource) exportRuns(w http.ResponseWriter, r *http.Reque
 		})
 	}
 	if len(runs.Runs) < runs.Total {
-		table.Filters = append(slices.Clone(table.Filters), common.ListCutNote(capability.MaxExportListRows))
+		common.MarkListTruncated(&table, capability.MaxExportListRows)
 	}
 	common.WriteList(w, r, rs.lists, format, table)
 }
@@ -89,7 +88,7 @@ func (rs *FinanceExportResource) exportFiles(w http.ResponseWriter, r *http.Requ
 		})
 	}
 	if len(files.Files) < files.Total {
-		table.Filters = append(slices.Clone(table.Filters), common.ListCutNote(capability.MaxExportListRows))
+		common.MarkListTruncated(&table, capability.MaxExportListRows)
 	}
 	common.WriteList(w, r, rs.lists, format, table)
 }
