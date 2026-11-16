@@ -323,16 +323,6 @@
 
 /* Sophisticated Modal Animations - Following UI/UX Best Practices */
 
-/* Backdrop fade - simple opacity only to prevent layout shift */
-@keyframes backdropEnter {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
 /* Clean modal entrance - subtle spring feel without excessive bounce */
 @keyframes modalEnter {
   0% {
@@ -373,22 +363,6 @@
   }
 }
 
-/* Content reveal animation */
-@keyframes contentReveal {
-  0% {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  60% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0px);
-  }
-}
-
 /* Utility classes for Tailwind animations. The modal durations come from
    `MODAL_MOTION_STYLE` (components/ui/motion.ts), which Modal sets on its
    root, so its close timer and the animation share one value (#6575). */
@@ -404,10 +378,6 @@
 
 .animate-bounceIn {
   animation: bounceIn 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-.animate-contentReveal {
-  animation: contentReveal 200ms ease-out both;
 }
 
 .moto-dotted-background {
@@ -1025,7 +995,6 @@ html[data-chat-page-lock] body {
   .animate-modalEnter,
   .animate-modalExit,
   .animate-bounceIn,
-  .animate-contentReveal,
   .animate-slideInRight,
   .animate-fadeIn,
   .animate-fadeInUp {

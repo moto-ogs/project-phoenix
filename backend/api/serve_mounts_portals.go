@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/spf13/viper"
@@ -176,12 +177,13 @@ func newOperatorRouter(
 }
 
 // newParentResource composes the cross-tenant guardian portal: public
-// /parent/auth/login and the protected /parent/* routes.
+// /parent/auth/login and the protected /parent/* routes; now is the root
+// clock the parents' uploads are stamped with (ADR 0265).
 func newParentResource(
 	logger *slog.Logger, identity identityaccess.Owner, parent *parentportal.Portal, calendarApp calendarCompose.Application, flows owners.EnrollmentFlows,
 	guardianProfiles *peopleCompose.GuardianProfileLoader, organizations organizationtenancy.Query,
 	devices owners.DeliveryDevices, notifications owners.DeliveryNotifications, delivery deliveryRuntime.Capability,
-	healthData enrollmentOwner.HolidayHealthCipher, traegerSettings TraegerBrandingSettings,
+	healthData enrollmentOwner.HolidayHealthCipher, traegerSettings TraegerBrandingSettings, now func() time.Time,
 ) *parentAPI.Resource {
 	return parentAPI.NewResource(parentAPI.ResourceConfig{
 		Auth:        parentPortalLogin(identity),
@@ -191,7 +193,7 @@ func newParentResource(
 		Conferences: calendarApp,
 		Enrollment: parentEnrollmentForms(
 			enrollmentAPI.NewRequestService(flows.Intake),
-			enrollmentUploadUnits{intake: flows.Intake, records: owners.NewEnrollmentBookings(), reads: flows.Uploads},
+			enrollmentUploadUnits{intake: flows.Intake, records: owners.NewEnrollmentBookings(now), reads: flows.Uploads},
 			NewEnrollmentUploadStorage(logger.With("handler", "parent-enrollment-uploads")),
 		),
 		GuardianProfileLoader: newParentGuardianProfiles(guardianProfiles),

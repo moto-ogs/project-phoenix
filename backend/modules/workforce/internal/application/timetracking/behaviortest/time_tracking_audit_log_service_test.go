@@ -165,7 +165,7 @@ func newAuditLogFixture(t *testing.T) *auditLogFixture {
 	return &auditLogFixture{
 		tenantID: tenantID, staffA: staffA.ID, staffB: staffB.ID, admin: admin.ID,
 		repos: repos, db: db, ctx: ctx,
-		svc: timetracking.NewTimeTrackingAuditLogService(owners.NewTimeTrackingAuditReader(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).TimeTrackingAuditLog), owners.StaffDisplayNames(reposPeople.Staff), workforceRetentionFixture{}),
+		svc: timetracking.NewTimeTrackingAuditLogService(owners.NewTimeTrackingAuditReader(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).TimeTrackingAuditLog), owners.StaffDisplayNames(reposPeople.Staff), workforceRetentionFixture{}, nil),
 	}
 }
 
@@ -372,7 +372,7 @@ func TestAuditLogRejectsUnreadableRetention(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	failure := errors.New("audit retention unavailable")
-	service := timetracking.NewTimeTrackingAuditLogService(owners.NewTimeTrackingAuditReader(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).TimeTrackingAuditLog), nil, unreadableWorkforceRetention{failure: failure})
+	service := timetracking.NewTimeTrackingAuditLogService(owners.NewTimeTrackingAuditReader(owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).TimeTrackingAuditLog), nil, unreadableWorkforceRetention{failure: failure}, nil)
 	page, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), db, service.ListAuditLog, timetracking.AuditLogListRequest{})
 	require.ErrorIs(t, err, failure)
 	assert.Nil(t, page)
@@ -381,6 +381,6 @@ func TestAuditLogRejectsUnreadableRetention(t *testing.T) {
 func TestAuditLogRejectsMissingSettings(t *testing.T) {
 	t.Parallel()
 	require.PanicsWithValue(t, "time tracking audit log: settings are required", func() {
-		timetracking.NewTimeTrackingAuditLogService(nil, nil, nil)
+		timetracking.NewTimeTrackingAuditLogService(nil, nil, nil, nil)
 	})
 }

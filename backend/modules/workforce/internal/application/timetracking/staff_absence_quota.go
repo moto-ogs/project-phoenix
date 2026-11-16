@@ -138,7 +138,7 @@ func (s *staffAbsenceService) createDirectVacation(ctx context.Context, staffID,
 		return nil, workforce.ErrAbsenceNoWorkingDays
 	}
 
-	absence := directVacationRecord(ctx, staffID, createdBy, req, dateStart, dateEnd, workingDays)
+	absence := directVacationRecord(ctx, staffID, createdBy, req, dateStart, dateEnd, workingDays, s.now())
 
 	if err := s.rejectVacationBeforeOpening(ctx, absence); err != nil {
 		return nil, err
@@ -160,8 +160,7 @@ func (s *staffAbsenceService) createDirectVacation(ctx context.Context, staffID,
 	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
 }
 
-func directVacationRecord(ctx context.Context, staffID, createdBy int64, req CreateAbsenceRequest, dateStart, dateEnd calendar.Date, workingDays float64) *StaffAbsence {
-	now := time.Now()
+func directVacationRecord(ctx context.Context, staffID, createdBy int64, req CreateAbsenceRequest, dateStart, dateEnd calendar.Date, workingDays float64, now time.Time) *StaffAbsence {
 	absence := &StaffAbsence{StaffID: staffID, AbsenceType: AbsenceTypeVacation, DateStart: dateStart, DateEnd: dateEnd, HalfDay: req.HalfDay, StartHalfDay: req.HalfDay, EndHalfDay: req.HalfDay, Note: req.Note, Status: AbsenceStatusReported, CreatedBy: createdBy, WorkingDays: &workingDays, RequestedAt: now}
 	absence.CreatedAt = now
 	absence.UpdatedAt = now
@@ -309,7 +308,7 @@ func (s *staffAbsenceService) SetVacationQuota(ctx context.Context, change Vacat
 
 func (s *staffAbsenceService) upsertVacationQuota(ctx context.Context, change VacationQuotaChange) error {
 	staffID, year, entitled, carryover := change.StaffID, change.Year, change.EntitledDays, change.CarryoverDays
-	now := time.Now()
+	now := s.now()
 	quota := &StaffVacationQuota{
 		StaffID:       staffID,
 		Year:          year,

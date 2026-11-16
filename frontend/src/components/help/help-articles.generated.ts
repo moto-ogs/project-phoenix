@@ -4336,6 +4336,8 @@ export const leadStaffPoolTopic = function leadStaffPoolTopic(): HelpTopic {
       "moto speichert keinen Grund und keine Gruppe zu einer Blockung.",
       "Nach der ersten Blockung steht die Person in Ihrem Dienstplan. Planen Sie dort ihre Schicht ein.",
       "Die Person meldet sich bei Ihrer Schule nur in den geblockten Zeiten an, 30 Minuten vorher bis 30 Minuten danach. Sie sieht ihren Dienstplan und stempelt, mehr nicht.",
+      "Am Tag nach Ihrer letzten Blockung endet die Beschäftigung an Ihrer Schule. Blocken Sie die Person wieder, ist sie wieder bei Ihnen beschäftigt.",
+      "Geben Sie der Person an Ihrer Schule eine eigene Rolle, bleibt sie auch nach der letzten Blockung beschäftigt.",
     ],
     differences: [
       "Eine graue Blockung nennt eine andere Schule. Zu dieser Zeit ist die Person dort.",
@@ -8204,9 +8206,10 @@ export const schoolSearchTopic = function schoolSearchTopic(): HelpTopic {
   return {
     id: HELP_TOPICS.schoolSearch,
     title: "Mit der Suche finden",
-    question: "Wie finde ich schnell ein Kind, eine Familie oder eine Seite?",
+    question:
+      "Wie finde ich schnell ein Kind, eine Familie, eine Seite oder eine Einstellung?",
     summary:
-      "Eine Suche findet Kinder, Familien, Team, Räume, Gruppen und Seiten.",
+      "Eine Suche findet Kinder, Familien, Team, Räume, Gruppen, Seiten, Einstellungen und Hilfe.",
     group: "einstieg",
     audience: ["caregiver", "lead"],
     icon: "ListSearch",
@@ -8226,8 +8229,16 @@ export const schoolSearchTopic = function schoolSearchTopic(): HelpTopic {
         steps: [
           "Geben Sie mindestens zwei Zeichen ein.",
           "Sie können einen Namen, eine Klasse, eine Gruppe, eine Telefonnummer oder eine E-Mail-Adresse eingeben.",
-          "Die Treffer stehen nach Art sortiert: `Kinder`, `Sorgeberechtigte und Kontakte`, `Mitarbeitende`, `Räume`, `Gruppen` und `Seiten`.",
+          "Die Treffer stehen nach Art sortiert: `Kinder`, `Sorgeberechtigte und Kontakte`, `Mitarbeitende`, `Räume`, `Gruppen`, `Seiten`, `Einstellungen` und `Hilfe`.",
           "Wählen Sie einen Treffer. Oder wählen Sie ihn mit den Pfeiltasten und drücken Sie Enter.",
+        ],
+      },
+      {
+        title: "Seiten, Einstellungen und Hilfe finden",
+        steps: [
+          "Geben Sie den Namen einer Seite ein, zum Beispiel `Dienstplan`. Die Suche findet auch Seiten in den Bereichen der Seitenleiste, etwa in `Datenverwaltung` oder `Planung`. Unter dem Treffer steht der Bereich.",
+          "Geben Sie den Namen einer Einstellung ein, zum Beispiel `Passwort`. Wählen Sie den Treffer. moto öffnet die Seite mit dieser Einstellung.",
+          "Unter `Hilfe` stehen passende Anleitungen. Sie öffnen sich in einem neuen Tab.",
         ],
       },
       {
@@ -8260,15 +8271,16 @@ export const schoolSearchTopic = function schoolSearchTopic(): HelpTopic {
       },
     ],
     result:
-      "Sie landen direkt beim Kind, bei der Person, im Raum oder auf der Seite.",
+      "Sie landen direkt beim Kind, bei der Person, im Raum, auf der Seite oder bei der Einstellung.",
     differences: [
       "Sie finden nur, was Sie auch ohne Suche sehen dürfen. Telefonnummern, E-Mail-Adressen, Elternnotizen, Einträge aus dem Reiter `Notizen` und Angaben aus der Anmeldung finden nur Konten, die Kontaktdaten sehen dürfen.",
       "Eine Notiz finden Sie nur, wenn Sie sie auch im Reiter `Notizen` sehen. Eine Notiz für das Betreuungsteam findet nur, wer das Kind betreut. Eine Notiz für die Leitung findet nur die Leitung der genannten Gruppe.",
+      "Die Einstellungen der Schule findet nur, wer sie öffnen darf. Die Einstellungen im eigenen Profil findet jede Person.",
       "Ein Gruppen-Treffer öffnet `Alle Kinder` mit den Kindern dieser Gruppe.",
       "Gesundheitsangaben durchsucht die Suche nicht. Öffnen Sie dafür das Kind.",
     ],
     notes: [
-      "Ohne Eingabe zeigt die Suche die Seiten, die Sie öffnen dürfen.",
+      "Ohne Eingabe zeigt die Suche die Hauptseiten, die Sie öffnen dürfen.",
       "Brauchen Sie alle Kinder mit einem Namen? Öffnen Sie `Alle Kinder` und suchen Sie dort.",
     ],
     related: [HELP_TOPICS.studentSearch, HELP_TOPICS.appOverview],
@@ -8434,7 +8446,8 @@ export const settingsGuideTopic = function settingsGuideTopic(): HelpTopic {
         ordered: false,
         steps: [
           "`Zwei-Faktor-Anmeldung (Code per E-Mail)`: Beim Anmelden kommt zusätzlich ein Code per E-Mail.",
-          "`Fehlversuche bis zur Kontosperre`: Nach so vielen falschen Bestätigungscodes pausiert die Code-Prüfung.",
+          "`Fehlversuche bis zur Code-Sperre`: Nach so vielen falschen Bestätigungscodes pausiert die Code-Prüfung.",
+          "`Dauer der Code-Sperre (Minuten)`: So lange pausiert danach die Code-Prüfung.",
         ],
       },
       {
@@ -14978,6 +14991,8 @@ export const traegerStaffPoolTopic =
         "Jedes Anzeigen und jeder Download der Woche steht im Zugriffsprotokoll jeder betroffenen Schule.",
         "Blockt eine Schule die Person zum ersten Mal, wird die Schule ein Einsatzort in der Akte. Die Schule plant sie dann im Dienstplan ein.",
         "An dieser Schule meldet sich die Person nur in den geblockten Zeiten an. Heben Sie eine Blockung auf, endet auch dieser Zugang.",
+        "Am Tag nach der letzten Blockung einer Schule endet die Beschäftigung dort. In der Akte steht der Einsatzort dann als `Beendet`. Die nächste Blockung beschäftigt die Person dort wieder. Ihr Konto bleibt bestehen.",
+        "Hat die Schule der Person eine eigene Rolle gegeben, bleibt sie dort auch nach der letzten Blockung beschäftigt.",
         "Die Person braucht dafür ein Konto bei moto. Hat sie keins, laden Sie sie an einer Schule ein.",
       ],
       differences: [
@@ -15079,7 +15094,7 @@ export const traegerStaffProofsTopic =
  * `/traeger/personal` (#4705, ADR 0089): eine Personalakte über alle
  * Schulen. Vorschläge prüfen und verknüpfen, Personalnummer und Bank- und
  * Steuerdaten pflegen, Personal aus einer Datei importieren (#4724), eine
- * Akte auflösen. Nur mit der Rolle Personal und
+ * neue Person einstellen (#7206), eine Akte auflösen. Nur mit der Rolle Personal und
  * nach der Freigabe „Personal beim Träger“.
  */
 export const traegerStaffRecordsTopic =
@@ -15117,6 +15132,19 @@ export const traegerStaffRecordsTopic =
             "Öffnen Sie den Reiter `Ohne Akte`.",
             "Wählen Sie die Person.",
             "Prüfen Sie die Werte. Wählen Sie `Akte anlegen`.",
+          ],
+        },
+        {
+          title: "Eine neue Person einstellen",
+          description:
+            "Für eine Person, die noch an keiner Ihrer Schulen arbeitet. moto legt die Akte, den Arbeitsvertrag und an jeder Schule die Person an.",
+          steps: [
+            "Wählen Sie in der Navigation `Personalakten` und oben `Person einstellen`.",
+            "Tragen Sie bei `Person` Vorname, Nachname und Geburtsdatum ein. Personalnummer, E-Mail und Telefon können Sie dazu eintragen. Wählen Sie `Weiter`.",
+            "Wählen Sie bei `Arbeitsvertrag` die Art und den ersten Tag. Wählen Sie `Weiter`.",
+            "Wählen Sie bei `Einsatzorte` jede Schule, an der die Person arbeitet. Tragen Sie die Stunden pro Tag ein. Wählen Sie `Weiter`.",
+            "Prüfen Sie bei `Prüfen` alle Angaben. Wählen Sie `Person einstellen`.",
+            "Die Schule richtet danach Zugang, Transponder und Rolle ein.",
           ],
         },
         {
@@ -15173,6 +15201,7 @@ export const traegerStaffRecordsTopic =
         "Die Akte gilt für alle Schulen der Person. Jede Schule sieht die Personalnummer des Trägers und kann sie nicht mehr ändern. Die Bank- und Steuerdaten ziehen von den Schulen in die Akte. Die Schulen sehen nur noch: „führt der Träger“. Planung, Zeiten und Abwesenheiten bleiben an jeder Schule wie bisher. Vertrag und Soll tragen Sie danach in der Akte ein.",
       notes: [
         "Sie können dieselbe Datei noch einmal laden. Eine neue Personalnummer wird eine neue Akte. Bei einer bekannten Nummer trägt moto nur fehlende IBAN, Steuer-ID oder SV-Nummer ein. Bestehende Werte ändert der Import nie. Führende Nullen zählen nicht: 00123 und 123 sind dieselbe Nummer.",
+        "Eine eingestellte Person hat an der Schule noch keinen Zugang. Die Schule lädt sie ein und gibt ihr eine Rolle. Die E-Mail-Adresse aus dem Formular steht dafür in den Stammdaten der Schule.",
         "Der Import verknüpft keine Akte von selbst mit einer Schule. Das bestätigen Sie unter `Vorschläge`.",
         "moto bewahrt die Datei nicht auf. Im `Verlauf` jeder Akte stehen Dateiname und Zeile. `Bisherige Importe` zeigt, wer wann welche Datei übernommen hat.",
         "Ein Wert, den Sie beim Verknüpfen nicht wählen, bleibt mit seiner Schule im `Verlauf` der Akte.",
@@ -15191,6 +15220,8 @@ export const traegerStaffRecordsTopic =
         "„Die Personalnummer steht mehrmals in der Datei“: Lassen Sie jede Nummer nur einmal stehen und laden Sie die Datei noch einmal.",
         "„Seit der Vorschau hat sich etwas an den Personalakten geändert“: Jemand hat gerade eine Akte geändert. Prüfen Sie die Vorschau und übernehmen Sie noch einmal.",
         "„Diese Personalnummer ist schon vergeben“: Eine andere Akte oder eine andere Person an einer der Schulen hat die Nummer. Ändern Sie zuerst die andere Nummer.",
+        "Nach dem Einstellen steht da „ist nur zum Teil angelegt“: Stellen Sie die Person nicht noch einmal ein. Öffnen Sie `Personalakten` und den Reiter `Ohne Akte`. Legen Sie dort die Akte an und tragen Sie in der Akte den Vertrag ein.",
+        "Beim Einstellen fragt moto `Gibt es diese Person schon?`: Es gibt eine Akte oder eine Person an einer Schule mit demselben Namen und Geburtsdatum. Ist es dieselbe Person, brechen Sie ab und legen Sie die Akte unter `Ohne Akte` an. Sind es zwei Personen, wählen Sie `Trotzdem einstellen`.",
         "„Eine dieser Personen hat schon eine Personalakte“: Laden Sie die Seite neu. Vielleicht hat jemand den Vorschlag gerade verknüpft.",
       ],
       related: [

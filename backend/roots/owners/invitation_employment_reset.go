@@ -29,7 +29,7 @@ func BuildInvitationEmploymentReset(db transactionruntime.Database, env RootEnvi
 		Shifts: workforceCompose.NewTimeTrackingShifts(workTime), Holidays: schoolCalendarCompose.NewNonWorkingDays(calendar),
 		StatutoryHolidays: schoolCalendarCompose.NewTenantHolidays(calendar),
 		Settings:          settingsCompose.PresenceSettings(settings), Logger: env.Logger,
-		DeletionAudit: NewTimeTrackingDeletionAudit(audit.Persistence.TimeTrackingDeletion), Today: env.Today,
+		DeletionAudit: NewTimeTrackingDeletionAudit(audit.Persistence.TimeTrackingDeletion), Now: env.Now, Today: env.Today,
 	})
 	return &identityPorts.EmploymentResetCommands{
 		Prepare: func(ctx context.Context, in identityPorts.EmploymentReset) (*string, error) {

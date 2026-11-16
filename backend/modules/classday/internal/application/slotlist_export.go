@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/modules/classday/internal/ports"
@@ -42,7 +41,7 @@ func (s *service) RenderList(ctx context.Context, requested classday.Params, for
 	doc := classday.ExportDocument{
 		Title:       documentTitle(result),
 		Subtitle:    subtitle(result),
-		GeneratedAt: time.Now(),
+		GeneratedAt: s.now(),
 		Filters:     exportFilters(params, result),
 		Columns:     columns,
 		Rows:        docRows,

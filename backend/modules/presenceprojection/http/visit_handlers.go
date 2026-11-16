@@ -64,7 +64,7 @@ func (rs *Resource) getStudentVisitHistory(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Filter to today's visits only
-	today := calendar.Today()
+	today := calendar.DateOf(rs.Now())
 	tomorrow := today.Add(24 * time.Hour)
 
 	var todaysVisits []studentVisitResponse

@@ -66,7 +66,7 @@ func (o *Overview) AccessLog(ctx context.Context, viewer traegerview.Viewer, fil
 	}
 	result := traegerview.AccessLogPage{Entries: []traegerview.AccessLogEntry{}, AsOf: filter.AsOf}
 	if result.AsOf.IsZero() {
-		result.AsOf = time.Now()
+		result.AsOf = o.now()
 	}
 	// The pages of one list end at the same instant, so the reads this list
 	// records below never push an earlier entry onto a later page.

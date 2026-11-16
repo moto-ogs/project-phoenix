@@ -31,20 +31,24 @@ type UnregisteredTagScanService interface {
 type unregisteredTagScanService struct {
 	repo     auditModels.UnregisteredTagScanRepository
 	tenantID func(context.Context) int64
+	now      func() time.Time
 }
 
+// UnregisteredTagScanRuntime binds the scan service to the caller's school
+// and to the clock that stamps a scan and counts its retention back.
 type UnregisteredTagScanRuntime struct {
 	TenantID func(context.Context) int64
+	Now      func() time.Time
 }
 
 // NewUnregisteredTagScanService builds the retained scan service. repo is
 // the Device Fleet owner behind the retained repository port (#2678): every
 // scan write, including the append, goes through that owner.
 func NewUnregisteredTagScanService(repo auditModels.UnregisteredTagScanRepository, runtime UnregisteredTagScanRuntime) (UnregisteredTagScanService, error) {
-	if repo == nil || runtime.TenantID == nil {
+	if repo == nil || runtime.TenantID == nil || runtime.Now == nil {
 		return nil, fmt.Errorf("unregistered tag scan service dependencies are required")
 	}
-	return &unregisteredTagScanService{repo: repo, tenantID: runtime.TenantID}, nil
+	return &unregisteredTagScanService{repo: repo, tenantID: runtime.TenantID, now: runtime.Now}, nil
 }
 
 func (s *unregisteredTagScanService) Record(ctx context.Context, tagUID string, deviceID *int64) error {
@@ -59,7 +63,7 @@ func (s *unregisteredTagScanService) Record(ctx context.Context, tagUID string, 
 	scan := &auditModels.UnregisteredTagScan{
 		TagUID:    normalized,
 		DeviceID:  deviceID,
-		ScannedAt: time.Now(),
+		ScannedAt: s.now(),
 	}
 	scan.SetTenantID(tenantID)
 	return s.repo.Create(ctx, scan)
@@ -69,11 +73,11 @@ func (s *unregisteredTagScanService) DeleteOlderThan(ctx context.Context, days i
 	if days <= 0 {
 		days = UnregisteredTagScanRetentionDays
 	}
-	return s.repo.DeleteOlderThan(ctx, time.Now().In(calendar.Berlin).AddDate(0, 0, -days))
+	return s.repo.DeleteOlderThan(ctx, s.now().In(calendar.Berlin).AddDate(0, 0, -days))
 }
 
 func (s *unregisteredTagScanService) DeleteExpired(ctx context.Context) (int, int, error) {
-	cutoff := auditModels.RetentionDaysCutoff(time.Now(), UnregisteredTagScanRetentionDays)
+	cutoff := auditModels.RetentionDaysCutoff(s.now(), UnregisteredTagScanRetentionDays)
 	deleted, err := s.repo.DeleteOlderThan(ctx, cutoff)
 	return deleted, UnregisteredTagScanRetentionDays, err
 }

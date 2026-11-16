@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/internal/adapters/turnstile"
@@ -58,6 +59,7 @@ type PhaseDependencies struct {
 	CareExits      enrollment.PhaseResponseCareExits
 	PortalAccounts enrollment.PhaseResponsePortalAccounts
 	Logger         *slog.Logger
+	Now            func() time.Time // the public window's clock (ADR 0239); nil is the real one, a nil Today its Berlin day
 	Today          func() calendar.Date
 }
 
@@ -76,7 +78,7 @@ func NewResyncingPhases(deps PhaseDependencies) (*Phases, error) {
 		Settings:  deps.Settings,
 		Responses: responses,
 		Runtime:   tenantRuntime(), TraegerCopies: newStore(),
-		Logger: deps.Logger, Today: deps.Today,
+		Logger: deps.Logger, Now: deps.Now, Today: deps.Today,
 	})
 }
 
@@ -122,9 +124,9 @@ func NewNotifications(deps NotificationDependencies) enrollment.Notifications {
 	})
 }
 
-// NewMailRenderers binds account eligibility and the parents URL to Enrollment's renderers.
-func NewMailRenderers(accounts enrollment.HolidayAcceptanceAccounts, parentsURL string) enrollment.MailRenderers {
-	return application.NewMailRenderers(accounts, parentsURL)
+// NewMailRenderers binds account eligibility, the parents URL and the day of dispatch (nil: Berlin day) to Enrollment's renderers.
+func NewMailRenderers(accounts enrollment.HolidayAcceptanceAccounts, parentsURL string, today func() calendar.Date) enrollment.MailRenderers {
+	return application.NewMailRenderers(accounts, parentsURL, today)
 }
 
 // NewApprovedOfferingProjection composes the approved-offering projection.

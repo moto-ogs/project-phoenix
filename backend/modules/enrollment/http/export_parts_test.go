@@ -2,6 +2,7 @@ package enrollmenthttp
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -113,8 +114,42 @@ func TestEnrollmentExportHeadStampsEveryLayout(t *testing.T) {
 	assert.Equal(t, exportConfidentialityNote, table.Footer)
 	assert.Equal(t, head.Filters, blocks.Filters)
 	assert.Equal(t, head.Filters, table.Filters)
-	assert.False(t, blocks.GeneratedAt.IsZero())
-	assert.False(t, table.GeneratedAt.IsZero())
+}
+
+// Every layout of an export carries the generation time the render gets
+// from the resource's clock (ADR 0239).
+func TestEnrollmentExportsStampEveryLayoutWithTheResourceClock(t *testing.T) {
+	t.Parallel()
+
+	generatedAt := time.Date(2026, time.November, 18, 9, 30, 0, 0, time.UTC)
+	stamps := &generationStamps{}
+	head := enrollmentExportHead{Title: "T", Subtitle: "S"}
+
+	for _, format := range []lists.Format{lists.FormatPDF, lists.FormatDOCX, lists.FormatXLSX} {
+		_, err := renderEnrollmentExport(stamps, format, "Datei", generatedAt,
+			func() lists.RecordDocument { return head.blocks(nil, nil) },
+			func() lists.Document { return head.table(nil, nil) })
+		require.NoError(t, err, format)
+	}
+	assert.Equal(t, []time.Time{generatedAt, generatedAt, generatedAt}, stamps.seen)
+}
+
+// generationStamps records the generation time of every document it renders.
+type generationStamps struct{ seen []time.Time }
+
+func (g *generationStamps) Render(doc lists.Document, _ lists.Format, _ string) (lists.File, error) {
+	g.seen = append(g.seen, doc.GeneratedAt)
+	return lists.File{}, nil
+}
+
+func (g *generationStamps) RenderRecords(doc lists.RecordDocument, _ string) (lists.File, error) {
+	g.seen = append(g.seen, doc.GeneratedAt)
+	return lists.File{}, nil
+}
+
+func (g *generationStamps) RenderRecordsDOCX(doc lists.RecordDocument, _ string) (lists.File, error) {
+	g.seen = append(g.seen, doc.GeneratedAt)
+	return lists.File{}, nil
 }
 
 func TestEnrollmentExportsShareTheHead(t *testing.T) {
@@ -150,7 +185,7 @@ func TestRenderEnrollmentExportBuildsOnlyTheChosenLayout(t *testing.T) {
 		{lists.FormatXLSX, false},
 	} {
 		var builtBlocks, builtTable bool
-		file, err := renderEnrollmentExport(svc, tc.format, "Datei",
+		file, err := renderEnrollmentExport(svc, tc.format, "Datei", time.Time{},
 			func() lists.RecordDocument { builtBlocks = true; return lists.RecordDocument{Title: "T"} },
 			func() lists.Document {
 				builtTable = true
@@ -163,7 +198,7 @@ func TestRenderEnrollmentExportBuildsOnlyTheChosenLayout(t *testing.T) {
 		assert.Equal(t, !tc.wantBlocks, builtTable, tc.format)
 	}
 
-	_, err := renderEnrollmentExport(svc, "csv", "Datei",
+	_, err := renderEnrollmentExport(svc, "csv", "Datei", time.Time{},
 		func() lists.RecordDocument { t.Fatal("blocks built for csv"); return lists.RecordDocument{} },
 		func() lists.Document { t.Fatal("table built for csv"); return lists.Document{} },
 	)

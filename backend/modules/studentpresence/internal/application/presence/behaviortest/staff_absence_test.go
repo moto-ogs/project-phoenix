@@ -15,6 +15,10 @@ import (
 // CRUD Tests
 // ============================================================================
 
+// staffAbsenceDay is the Monday the absence repository tests store and query
+// on; the repository takes every day from its caller.
+var staffAbsenceDay = calendar.NewDate(2026, 11, 2)
+
 func TestStaffAbsenceRepository_Create(t *testing.T) {
 	t.Parallel()
 
@@ -25,7 +29,7 @@ func TestStaffAbsenceRepository_Create(t *testing.T) {
 
 	t.Run("creates staff absence with valid data", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Test", "Staff")
-		today := calendar.TodayDate()
+		today := staffAbsenceDay
 		tomorrow := today.AddDays(1)
 		absence := workforce.StaffAbsence{
 			StaffID:     staff.ID,
@@ -44,7 +48,7 @@ func TestStaffAbsenceRepository_Create(t *testing.T) {
 
 	t.Run("creates absence with vacation type", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Test", "Staff")
-		today := calendar.TodayDate()
+		today := staffAbsenceDay
 		nextWeek := today.AddDays(7)
 		absence := workforce.StaffAbsence{
 			StaffID:     staff.ID,
@@ -64,7 +68,7 @@ func TestStaffAbsenceRepository_Create(t *testing.T) {
 
 	t.Run("creates half-day absence", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Test", "Staff")
-		today := calendar.TodayDate()
+		today := staffAbsenceDay
 		absence := workforce.StaffAbsence{
 			StaffID:     staff.ID,
 			AbsenceType: workforce.AbsenceTypeTraining,
@@ -90,7 +94,7 @@ func TestStaffAbsenceRepository_Create(t *testing.T) {
 
 	t.Run("create with invalid absence type should fail", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Test", "Staff")
-		today := calendar.TodayDate()
+		today := staffAbsenceDay
 		absence := workforce.StaffAbsence{
 			StaffID:     staff.ID,
 			AbsenceType: "invalid_type",
@@ -105,7 +109,7 @@ func TestStaffAbsenceRepository_Create(t *testing.T) {
 
 	t.Run("create with invalid status should fail", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Test", "Staff")
-		today := calendar.TodayDate()
+		today := staffAbsenceDay
 		absence := workforce.StaffAbsence{
 			StaffID:     staff.ID,
 			AbsenceType: workforce.AbsenceTypeSick,
@@ -122,7 +126,7 @@ func TestStaffAbsenceRepository_Create(t *testing.T) {
 
 	t.Run("create with missing staff ID should fail", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Test", "Staff")
-		today := calendar.TodayDate()
+		today := staffAbsenceDay
 		absence := workforce.StaffAbsence{
 			StaffID:     0, // Invalid
 			AbsenceType: workforce.AbsenceTypeSick,
@@ -139,7 +143,7 @@ func TestStaffAbsenceRepository_Create(t *testing.T) {
 
 	t.Run("create with date_start after date_end should fail", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Test", "Staff")
-		today := calendar.TodayDate()
+		today := staffAbsenceDay
 		yesterday := today.AddDays(-1)
 		absence := workforce.StaffAbsence{
 			StaffID:     staff.ID,
@@ -169,7 +173,7 @@ func TestStaffAbsenceRepository_GetByStaffAndDate(t *testing.T) {
 
 	t.Run("finds absence for specific date", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Test", "Staff")
-		today := calendar.TodayDate()
+		today := staffAbsenceDay
 		tomorrow := today.AddDays(1)
 
 		absence := workforce.StaffAbsence{
@@ -195,7 +199,7 @@ func TestStaffAbsenceRepository_GetByStaffAndDate(t *testing.T) {
 
 	t.Run("returns nil when no absence for date", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Test", "Staff")
-		futureDate := calendar.TodayDate().AddDays(365)
+		futureDate := staffAbsenceDay.AddDays(365)
 		values, err := repo.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{StaffID: staff.ID, OverlapFrom: futureDate.String(), OverlapTo: futureDate.String(), Statuses: []string{workforce.AbsenceStatusReported, workforce.AbsenceStatusApproved}, Limit: 1})
 		var found *workforce.StaffAbsence
 		if len(values) > 0 {
@@ -207,7 +211,7 @@ func TestStaffAbsenceRepository_GetByStaffAndDate(t *testing.T) {
 
 	t.Run("ignores requested and canceled absences", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Test", "Staff")
-		today := calendar.TodayDate()
+		today := staffAbsenceDay
 		for _, status := range []string{
 			workforce.AbsenceStatusRequested,
 			workforce.AbsenceStatusCanceled,

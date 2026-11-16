@@ -58,10 +58,7 @@ type classHandover struct {
 }
 
 func newClassHandover(deps ClassDayDependencies) classHandover {
-	today := calendar.TodayDate
-	if now := deps.Now; now != nil {
-		today = func() calendar.Date { return calendar.DateFromTime(now()) }
-	}
+	today := calendar.CalendarDateClock(deps.clock())
 	return classHandover{
 		store: deps.Handovers, scope: deps.HandoverScope, names: deps.HandoverStaffNames,
 		announcer: deps.HandoverAnnouncer, rosters: deps.Rosters, today: today,

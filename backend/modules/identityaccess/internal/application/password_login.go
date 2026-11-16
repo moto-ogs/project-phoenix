@@ -29,20 +29,28 @@ func checkPasswordLogin(ctx context.Context, store ports.PasswordLoginStore, pas
 	if id == 0 || (state.PasswordLockedUntil != nil && state.PasswordLockedUntil.After(checkedAt)) {
 		return false, nil
 	}
-	changed := state.PasswordAttempts != 0 || state.PasswordLockedUntil != nil
-	if state.PasswordLockedUntil != nil {
-		state = domain.PasswordLoginState{}
-	}
 	if verifyErr == nil && valid && hash != "" {
-		if !changed {
+		if state == (domain.PasswordLoginState{}) {
 			return true, nil
 		}
 		return true, store.SavePasswordLoginState(ctx, id, operator, domain.PasswordLoginState{})
 	}
+	state = currentPasswordFailures(state, checkedAt, duration)
 	state.PasswordAttempts++
+	state.PasswordFailedAt = &checkedAt
 	if state.PasswordAttempts >= threshold {
 		until := checkedAt.Add(duration)
 		state.PasswordLockedUntil = &until
 	}
 	return false, store.SavePasswordLoginState(ctx, id, operator, state)
+}
+
+// currentPasswordFailures drops what no longer counts: an expired lock and
+// failures older than the lock duration start a fresh budget, so mistakes
+// spread over weeks never add up to a lock (#7214).
+func currentPasswordFailures(state domain.PasswordLoginState, now time.Time, duration time.Duration) domain.PasswordLoginState {
+	if state.PasswordLockedUntil != nil || (state.PasswordFailedAt != nil && !state.PasswordFailedAt.Add(duration).After(now)) {
+		return domain.PasswordLoginState{}
+	}
+	return state
 }

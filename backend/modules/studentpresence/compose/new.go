@@ -37,17 +37,21 @@ func New(deps Dependencies) (studentpresence.Owner, error) {
 	if deps.DB == nil || deps.Observe == nil {
 		return nil, errors.New("student presence compose: all dependencies are required")
 	}
-	store := postgres.New(databaseRuntime(deps.DB))
-	now := deps.Now
+	now := orWallClock(deps.Now)
+	return application.New(postgres.New(databaseRuntime(deps.DB), now), transaction{}, deps.Observe, sessionAttendancePorts(deps), now), nil
+}
+
+// orWallClock is the composition's clock (ADR 0239), the wall clock when none is passed.
+func orWallClock(now func() time.Time) func() time.Time {
 	if now == nil {
-		now = time.Now
+		return time.Now
 	}
-	return application.New(store, transaction{}, deps.Observe, sessionAttendancePorts(deps), now), nil
+	return now
 }
 
 // NewPresenceHistory builds the past-presence writer for the dev tools (ADR 0125) and the public demo's operator route (ADR 0127).
 func NewPresenceHistory(deps Dependencies) studentpresence.PresenceHistory {
-	return application.NewPresenceHistory(postgres.New(databaseRuntime(deps.DB)), transaction{})
+	return application.NewPresenceHistory(postgres.New(databaseRuntime(deps.DB), orWallClock(deps.Now)), transaction{}, orWallClock(deps.Now))
 }
 
 func sessionAttendancePorts(deps Dependencies) ports.AttendanceRulePorts {

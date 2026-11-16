@@ -86,6 +86,9 @@ func NewPasswordReset(auth *AccountAuthentication, deps PasswordResetDependencie
 // unknown address, or an account without a role of the scope's portal,
 // yields no link and no error, so the response never reveals whether an
 // account exists. Every normalized address shares the same rate-limit contract.
+// A failure past the lookup only happens for an existing account, so it is
+// logged and answered neutrally as well (#7213): an error answer would tell
+// the caller that the address has an account.
 func (r *PasswordReset) InitiatePasswordReset(ctx context.Context, email string, portal identityaccess.PasswordResetScope) (*identityaccess.PasswordResetLink, error) {
 	return runFlow(ctx, r.flow(), func(ctx context.Context) (*identityaccess.PasswordResetLink, error) {
 		scope := domain.PasswordResetScope(portal)
@@ -107,8 +110,16 @@ func (r *PasswordReset) InitiatePasswordReset(ctx context.Context, email string,
 			return nil, nil
 		}
 		eligible, err := r.portalEligible(ctx, account.ID, scope)
-		if err != nil || !eligible {
-			return nil, err
+		if err != nil {
+			r.logger.Error("password reset: portal eligibility check failed, answering neutrally",
+				slog.String("scope", string(scope)),
+				slog.Int64("account_id", account.ID),
+				slog.Any("error", err),
+			)
+			return nil, nil
+		}
+		if !eligible {
+			return nil, nil
 		}
 		r.logger.Info("password reset requested",
 			slog.String("scope", string(scope)))
@@ -120,7 +131,12 @@ func (r *PasswordReset) InitiatePasswordReset(ctx context.Context, email string,
 			return issueErr
 		})
 		if err != nil {
-			return nil, failed("initiate password reset transaction", err)
+			r.logger.Error("password reset: issuing the link failed, answering neutrally",
+				slog.String("scope", string(scope)),
+				slog.Int64("account_id", account.ID),
+				slog.Any("error", err),
+			)
+			return nil, nil
 		}
 		r.logger.Info("password reset token created",
 			slog.Int64("account_id", account.ID))

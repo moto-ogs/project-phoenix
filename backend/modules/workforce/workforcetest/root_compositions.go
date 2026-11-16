@@ -13,6 +13,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // AdminCapabilities are the public Workforce contracts the staff
@@ -31,6 +32,8 @@ type AdminCapabilities struct {
 	// AbsenceWrites are the sick-report writes the root routes through the
 	// shift-plan-sync workflow's entry with the real cascade (#4825).
 	AbsenceWrites AbsenceWrites
+	// Today is the calendar day of the composition's clock.
+	Today func() calendar.Date
 }
 
 // AbsenceWrites are the absence writes that may cascade an absence into the

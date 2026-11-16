@@ -225,15 +225,22 @@ func (d *DueExits) lockPlan(ctx context.Context, staffID int64) error {
 // the staff row never waits for an account that offboarding holds while it
 // waits for those gates.
 func (d *DueExits) lockAccount(ctx context.Context, staffID int64) error {
+	_, err := d.lockAccounts(ctx, staffID)
+	return err
+}
+
+// lockAccounts locks the sign-in accounts of a live member and returns
+// them; a retired or missing member has none.
+func (d *DueExits) lockAccounts(ctx context.Context, staffID int64) ([]int64, error) {
 	deps := d.planner.workflow.deps
 	// A retired or missing member is no exit any more; runPlan skips it.
 	staff, err := deps.ListStaff(ctx, schoolmembership.StaffFilter{IDs: []int64{staffID}, MembershipOnly: true})
 	if err != nil || len(staff) == 0 {
-		return err
+		return nil, err
 	}
 	people, err := deps.People.ListPersonsByID(ctx, []int64{staff[0].PersonID})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	accounts := make([]int64, 0, len(people))
 	for _, person := range people {
@@ -242,9 +249,9 @@ func (d *DueExits) lockAccount(ctx context.Context, staffID int64) error {
 		}
 	}
 	if len(accounts) == 0 {
-		return nil
+		return nil, nil
 	}
-	return deps.LockAccounts(ctx, accounts)
+	return accounts, deps.LockAccounts(ctx, accounts)
 }
 
 // runPlan does what is due for one planned exit. exitErr is a failed or

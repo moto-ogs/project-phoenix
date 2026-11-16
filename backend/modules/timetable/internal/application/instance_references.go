@@ -144,7 +144,7 @@ func (s *InstanceLifecycleService) validateStudentReferences(ctx context.Context
 	if len(found) != len(uniqueStudentIDs) {
 		return fmt.Errorf("%w: invalid student_ids", timetable.ErrInvalidInstanceReference)
 	}
-	if date.Before(calendar.TodayDate()) {
+	if date.Before(calendar.DateFromTime(s.now())) {
 		return nil
 	}
 	for _, id := range uniqueStudentIDs {

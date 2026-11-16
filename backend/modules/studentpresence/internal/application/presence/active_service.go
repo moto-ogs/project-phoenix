@@ -164,11 +164,14 @@ type service struct {
 	guardianWaker GuardianWaker
 }
 
+// now reads the composition's clock (ADR 0239). The root always passes one;
+// a service a unit test builds without it reads the wall clock.
 func (s *service) now() time.Time {
-	if s.Now != nil {
-		return s.Now()
+	clock := s.Now
+	if clock == nil {
+		clock = time.Now
 	}
-	return time.Now()
+	return clock()
 }
 
 func (s *service) todayDate() calendar.Date {

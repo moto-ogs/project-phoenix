@@ -1,6 +1,8 @@
 package owners
 
 import (
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
@@ -28,8 +30,9 @@ func NewRoomReferences(
 	devices interface {
 		ListDevices(ctx context.Context, filter devicefleet.DeviceFilter) ([]devicefleet.Device, error)
 	},
+	today func() timezone.Date,
 ) (func(context.Context, int64) (facilitiesModule.RoomReferences, error), error) {
-	planning, err := timetableCompose.NewRoomReferenceQueries(db.Pool(), observeTimetableActivities)
+	planning, err := timetableCompose.NewRoomReferenceQueries(db.Pool(), observeTimetableActivities, today)
 	if err != nil {
 		return nil, err
 	}

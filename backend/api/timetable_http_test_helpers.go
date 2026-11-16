@@ -215,7 +215,7 @@ func newTimetableHTTPTestReads(db transactionruntime.Database, r TimetableHTTPTe
 		ArrivalBaselines:  owners.ArrivalBaselineProjector{Reader: arrivals},
 		Presence:          presence,
 		Sessions:          sessions.ActiveGroup,
-		ContentHash:       securityruntime.Fingerprint,
+		ContentHash:       securityruntime.Fingerprint, Now: r.ActivityInstance.Now,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -303,8 +303,8 @@ func (timetableHTTPTestNoPreservedDeviations) Reapply(context.Context, int64, *i
 // NewTimetableHTTPTestSessionRecords are Student Presence's live sessions and
 // supervisions over the test database, for suites that arrange a running
 // block.
-func NewTimetableHTTPTestSessionRecords(db transactionruntime.Database) presenceCompose.SessionRecords {
-	return NewPresenceSessionRecords(db)
+func NewTimetableHTTPTestSessionRecords(db transactionruntime.Database, clocks ...func() time.Time) presenceCompose.SessionRecords {
+	return NewPresenceSessionRecords(db, clocks...)
 }
 
 // NewTimetableHTTPTestRecurrenceLock is the Timetable owner's tenant

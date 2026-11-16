@@ -21,7 +21,7 @@ func (rs *Resource) listSupervisors(w http.ResponseWriter, r *http.Request) {
 	// Get active status filter
 	activeStr := r.URL.Query().Get("active")
 	if activeStr != "" {
-		day := calendar.TodayDate().String()
+		day := rs.today().String()
 		if activeStr == "true" || activeStr == "1" {
 			filter.ActiveOn = &day
 		} else {
@@ -68,7 +68,7 @@ func (rs *Resource) getStaffSupervisions(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Get supervisions for staff
-	day := calendar.TodayDate().String()
+	day := rs.today().String()
 	responses, err := rs.presenceSupervisionResponses(r.Context(), studentpresence.GroupSupervisionFilter{StaffID: &staffID, ActiveOn: &day}, "FindSupervisorsByStaffID")
 	if err != nil {
 		common.RenderError(w, r, ErrorRenderer(err))
@@ -88,7 +88,7 @@ func (rs *Resource) getStaffActiveSupervisions(w http.ResponseWriter, r *http.Re
 	}
 
 	// Get active supervisions for staff
-	day := calendar.TodayDate().String()
+	day := rs.today().String()
 	responses, err := rs.presenceSupervisionResponses(r.Context(), studentpresence.GroupSupervisionFilter{StaffID: &staffID, ActiveOn: &day}, "GetStaffActiveSupervisions")
 	if err != nil {
 		common.RenderError(w, r, ErrorRenderer(err))
@@ -116,7 +116,7 @@ func (rs *Resource) getSupervisorsByGroup(w http.ResponseWriter, r *http.Request
 	}
 
 	// Get supervisors for active group
-	day := calendar.TodayDate().String()
+	day := rs.today().String()
 	responses, err := rs.presenceSupervisionResponses(r.Context(), studentpresence.GroupSupervisionFilter{GroupIDs: []int64{groupID}, ActiveOn: &day}, "FindSupervisorsByActiveGroupID")
 	if err != nil {
 		common.RenderError(w, r, ErrorRenderer(err))
@@ -156,7 +156,7 @@ func (rs *Resource) createSupervisor(w http.ResponseWriter, r *http.Request) {
 	response, err := rs.presenceSupervisor(r.Context(), created.ID)
 	if err != nil {
 		// Still return success but with the basic supervisor info
-		common.Respond(w, r, http.StatusCreated, supervisionRowResponse(created), "Supervisor created successfully")
+		common.Respond(w, r, http.StatusCreated, supervisionRowResponse(created, rs.today()), "Supervisor created successfully")
 		return
 	}
 
@@ -203,7 +203,7 @@ func (rs *Resource) updateSupervisor(w http.ResponseWriter, r *http.Request) {
 	response, err := rs.presenceSupervisor(r.Context(), id)
 	if err != nil {
 		// Still return success but with the basic supervisor info
-		common.Respond(w, r, http.StatusOK, supervisionRowResponse(existing), "Supervisor updated successfully")
+		common.Respond(w, r, http.StatusOK, supervisionRowResponse(existing, rs.today()), "Supervisor updated successfully")
 		return
 	}
 

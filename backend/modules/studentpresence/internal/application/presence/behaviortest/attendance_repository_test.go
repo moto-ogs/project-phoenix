@@ -366,8 +366,8 @@ func TestPresenceAttendance_StudentDate(t *testing.T) {
 	})
 
 	t.Run("different dates for same student", func(t *testing.T) {
-		now := time.Now()
-		date1 := calendar.TodayDate()
+		now := attendanceRepoNow()
+		date1 := attendanceRepoDay
 		date2 := date1.AddDays(1) // Next day
 
 		// Fresh student — Student1 already has open rows on `today` from
@@ -437,10 +437,10 @@ func TestPresenceAttendance_FindLatestByStudent(t *testing.T) {
 	data := createAttendanceTestData(t, db)
 
 	t.Run("latest record across multiple dates", func(t *testing.T) {
-		now := time.Now()
-		date1 := calendar.TodayDate().AddDays(-2) // 2 days ago
-		date2 := calendar.TodayDate().AddDays(-1) // Yesterday
-		date3 := calendar.TodayDate()             // Today
+		now := attendanceRepoNow()
+		date1 := attendanceRepoDay.AddDays(-2) // 2 days ago
+		date2 := attendanceRepoDay.AddDays(-1) // Yesterday
+		date3 := attendanceRepoDay             // Today
 
 		// Different dates each, so the partial unique index isn't relevant
 		// here — but use an isolated student for clean assertions.
@@ -579,8 +579,8 @@ func TestPresenceAttendance_FindLatestByStudent(t *testing.T) {
 		// Create a new student for isolated test
 		complexStudent := testpkg.CreateTestStudent(t, db, "Complex", "ScenarioStudent", "1e")
 
-		now := time.Now()
-		today := calendar.TodayDate()
+		now := attendanceRepoNow()
+		today := attendanceRepoDay
 		yesterday := today.AddDays(-1)
 
 		// Yesterday: multiple records — earlier is closed, later stays open
@@ -832,8 +832,8 @@ func TestPresenceAttendance_GetStudentCurrentStatus(t *testing.T) {
 		// Create isolated student
 		historicalStudent := testpkg.CreateTestStudent(t, db, "Historical", "StatusTest", "2e")
 
-		now := time.Now()
-		yesterday := calendar.TodayDate().AddDays(-1)
+		now := attendanceRepoNow()
+		yesterday := attendanceRepoDay.AddDays(-1)
 
 		// Create attendance for yesterday
 		attendance := &studentpresence.Attendance{
@@ -850,7 +850,7 @@ func TestPresenceAttendance_GetStudentCurrentStatus(t *testing.T) {
 
 		// Get current status - should not find yesterday's record
 		require.NotZero(t, attendance.ID)
-		status, err := repo.ListAttendance(ctx, studentpresence.AttendanceFilter{StudentIDs: []int64{historicalStudent.ID}, FromDate: calendar.TodayDate().String(), UntilDate: calendar.TodayDate().String(), NewestFirst: true, Limit: 1})
+		status, err := repo.ListAttendance(ctx, studentpresence.AttendanceFilter{StudentIDs: []int64{historicalStudent.ID}, FromDate: attendanceRepoDay.String(), UntilDate: attendanceRepoDay.String(), NewestFirst: true, Limit: 1})
 
 		require.NoError(t, err)
 		assert.Empty(t, status, "Should return no rows when only historical records exist")
@@ -1397,8 +1397,8 @@ func TestPresenceAttendance_CloseOpenForTodayUsesCallerDate(t *testing.T) {
 
 	student := testpkg.CreateTestStudent(t, db, "Close", "SnapshotDay", "2w")
 
-	now := time.Now()
-	yesterday := calendar.TodayDate().AddDays(-1)
+	now := attendanceRepoNow()
+	yesterday := attendanceRepoDay.AddDays(-1)
 	open := studentpresence.Attendance{
 		StudentID:   student.ID,
 		Date:        yesterday.String(),
@@ -1410,7 +1410,7 @@ func TestPresenceAttendance_CloseOpenForTodayUsesCallerDate(t *testing.T) {
 	require.NoError(t, err)
 
 	// A close scoped to the CURRENT day must not touch yesterday's open row.
-	closed, err := repo.CloseAttendance(ctx, studentpresence.AttendanceCheckout{StudentIDs: []int64{student.ID}, At: now, Date: calendar.TodayDate().String(), StaffID: data.Staff1ID, DeviceID: 0})
+	closed, err := repo.CloseAttendance(ctx, studentpresence.AttendanceCheckout{StudentIDs: []int64{student.ID}, At: now, Date: attendanceRepoDay.String(), StaffID: data.Staff1ID, DeviceID: 0})
 	require.NoError(t, err)
 	assert.Empty(t, closed, "a different-day close must not match the snapshot day's row")
 
@@ -1420,6 +1420,13 @@ func TestPresenceAttendance_CloseOpenForTodayUsesCallerDate(t *testing.T) {
 	require.Len(t, closed, 1, "the caller-supplied day's open row must be closed")
 	assert.Equal(t, open.ID, closed[0].ID)
 }
+
+// attendanceRepoDay is the Monday the repository tests that compare days
+// run on; attendanceRepoNow is noon of it. The repository takes every day
+// and instant from its caller.
+var attendanceRepoDay = calendar.NewDate(2026, 11, 2)
+
+func attendanceRepoNow() time.Time { return attendanceRepoDay.BerlinMidnight().Add(12 * time.Hour) }
 
 func newPresence(t *testing.T, db *testpkg.DB) studentpresence.Owner {
 	t.Helper()

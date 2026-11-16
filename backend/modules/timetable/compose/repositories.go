@@ -7,12 +7,13 @@ package compose
 // RepositoryDirectories.
 
 import (
-	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
-	"github.com/uptrace/bun"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/application"
+	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
+	"github.com/uptrace/bun"
 )
 
 // RepositoryDependencies are what the retained Timetable rows compose.
@@ -24,6 +25,7 @@ type RepositoryDependencies struct {
 	// PartialAbsences previews pickup excusals for the fixtures' participants.
 	PartialAbsences application.PartialAbsences
 	Directories     ports.RepositoryDirectories
+	Now             func() time.Time // dates the rows created running without instants; nil is the real clock
 }
 
 // Repositories are the retained repositories of the Timetable owner; the
@@ -55,7 +57,7 @@ func NewRepositories(dependencies RepositoryDependencies, reads application.Pres
 		Timetable: capability, Directories: dependencies.Directories,
 		ActivityCategory: capability, ActivitySchedule: capability, Timeframe: capability, ActivityException: capability, InstanceIdempotency: capability,
 		ActivitySupervisor: capability, StudentEnrollment: capability, InstanceStaff: capability,
-		ActivityInstance: ports.InstanceRows{Plans: capability, Sessions: dependencies.Presence, Reads: reads},
+		ActivityInstance: ports.InstanceRows{Plans: capability, Sessions: dependencies.Presence, Reads: reads, Now: dependencies.Now},
 		InstanceStudent:  ports.ParticipantRows{Plans: capability, Presence: dependencies.Presence, Reads: reads},
 		partialAbsences:  dependencies.PartialAbsences,
 	}

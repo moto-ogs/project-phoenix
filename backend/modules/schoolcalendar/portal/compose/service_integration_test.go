@@ -1156,7 +1156,8 @@ func TestCalendarServiceIntegration_CleanupExpiredFeedTombstonesDeletesStaffTomb
 	assignment := testpkg.CreateTestInstanceStaff(t, db, instance.ID, staff.ID, testpkg.InstanceStaffOpts{})
 	require.NoError(t, reposTimetable.InstanceStaff.DeleteInstanceStaff(testpkg.Ctx(t), assignment.ID))
 
-	expired := time.Now().AddDate(0, 0, -91)
+	// The cleanup counts its 90 days back from the calendar's clock.
+	expired := cfg.Now().AddDate(0, 0, -91)
 	_, err = db.NewUpdate().Table("calendar.appointments").
 		Set("deleted_at = ?", expired).
 		Where("id = ?", detail.Appointment.ID).

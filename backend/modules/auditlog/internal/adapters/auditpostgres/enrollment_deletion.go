@@ -19,5 +19,5 @@ func (r *EnrollmentDeletionRepository) Create(ctx context.Context, event *auditM
 	if event == nil {
 		return fmt.Errorf("enrollment deletion audit event is required")
 	}
-	return NewAppender(r.runtime).Append(ctx, event)
+	return NewAppender(r.runtime, nil).Append(ctx, event)
 }

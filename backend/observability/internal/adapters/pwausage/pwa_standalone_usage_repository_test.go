@@ -94,10 +94,14 @@ func TestPWAStandaloneUsageRepository(t *testing.T) {
 			account.ID)
 		require.NoError(t, err)
 
+		// The rows carry the database's clock (RecordSeen writes NOW()), so the
+		// cutoff counts back from that clock, not from the test's.
+		var databaseTime time.Time
+		require.NoError(t, db.NewRaw("SELECT CURRENT_TIMESTAMP").Scan(context.Background(), &databaseTime))
 		var deleted int
 		err = testpkg.WithTenantTx(t, context.Background(), db, tenantID, func(txCtx context.Context, _ bun.Tx) error {
 			var deleteErr error
-			deleted, deleteErr = repo.DeleteLastSeenBefore(txCtx, tenantID, time.Now().AddDate(0, 0, -30))
+			deleted, deleteErr = repo.DeleteLastSeenBefore(txCtx, tenantID, databaseTime.AddDate(0, 0, -30))
 			return deleteErr
 		})
 		require.NoError(t, err)

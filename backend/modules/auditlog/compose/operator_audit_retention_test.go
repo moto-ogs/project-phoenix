@@ -22,9 +22,9 @@ func TestOperatorAuditLogLosesEntriesAfterTheFollowingYear(t *testing.T) {
 	// retention test delete this test's expired row first.
 	db := testpkg.SetupIsolatedTestDB(t)
 	ctx := context.Background()
-	persistence, err := NewTenantPersistence(db)
+	persistence, err := NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
-	command, err := NewObservedCommand(persistence.AppendStore, slog.Default(), func(string, time.Duration, int, error) {})
+	command, err := NewObservedCommand(persistence.AppendStore, slog.Default(), func(string, time.Duration, int, error) {}, time.Now)
 	require.NoError(t, err)
 
 	operator := testpkg.CreateTestOperator(t, db)
@@ -67,9 +67,9 @@ func TestTraegerAccountLedgerLosesEntriesWithTheOperatorLedger(t *testing.T) {
 	// retention test delete this test's expired row first.
 	db := testpkg.SetupIsolatedTestDB(t)
 	ctx := context.Background()
-	persistence, err := NewTenantPersistence(db)
+	persistence, err := NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
-	command, err := NewObservedCommand(persistence.AppendStore, slog.Default(), func(string, time.Duration, int, error) {})
+	command, err := NewObservedCommand(persistence.AppendStore, slog.Default(), func(string, time.Duration, int, error) {}, time.Now)
 	require.NoError(t, err)
 
 	organizationID := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{
@@ -112,9 +112,9 @@ func TestTraegerDocumentDownloadsLoseEntriesWithTheOperatorLedger(t *testing.T) 
 	// retention tests delete this test's expired row first.
 	db := testpkg.SetupIsolatedTestDB(t)
 	ctx := context.Background()
-	persistence, err := NewTenantPersistence(db)
+	persistence, err := NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
-	command, err := NewObservedCommand(persistence.AppendStore, slog.Default(), func(string, time.Duration, int, error) {})
+	command, err := NewObservedCommand(persistence.AppendStore, slog.Default(), func(string, time.Duration, int, error) {}, time.Now)
 	require.NoError(t, err)
 
 	organizationID := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{

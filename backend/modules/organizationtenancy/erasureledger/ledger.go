@@ -91,10 +91,20 @@ func (l *Ledger) open() (*os.File, error) {
 	}
 	current, err := os.Lstat(l.path)
 	if err != nil || !os.SameFile(info, current) {
-		_ = file.Close()
+		release(file)
 		return nil, errLedger
 	}
 	return file, nil
+}
+
+// release unlocks before it closes. flock belongs to the open file
+// description, which a subprocess forked meanwhile shares until it execs;
+// closing alone would leave the ledger locked for that window, and the next
+// operator call would fail on the nonblocking lock. LOCK_UN through any
+// descriptor ends the lock for every copy.
+func release(file *os.File) {
+	_ = syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+	_ = file.Close()
 }
 
 func (l *Ledger) checksum(previous, payload string) string {
@@ -164,7 +174,7 @@ func (l *Ledger) Check(schoolIDs []int64, orderReference string) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = file.Close() }()
+	defer release(file)
 	selected := make(map[int64]bool, len(schoolIDs))
 	for _, id := range schoolIDs {
 		selected[id] = true
@@ -187,7 +197,7 @@ func (l *Ledger) Record(raw json.RawMessage) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = file.Close() }()
+	defer release(file)
 	found := false
 	previous, err := l.read(file, func(old entry) error {
 		if old.SchoolID == item.SchoolID && old.Reference != item.Reference {

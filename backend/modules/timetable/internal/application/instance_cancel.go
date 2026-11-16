@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
@@ -57,7 +56,7 @@ func (s *InstanceLifecycleService) cancel(ctx context.Context, instanceID int64,
 		}
 	}
 	previousStatus := instance.Status
-	now := time.Now()
+	now := s.now()
 	instance.Status = scheduleModel.InstanceStatusCancelled
 	instance.CompletedAt = &now
 	instance.CancelReason = reason

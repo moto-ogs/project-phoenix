@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -96,7 +97,7 @@ type Config struct {
 	FrontendURL            string
 	CalDAVURL              string
 	// Today is the Berlin calendar day the subscription feeds count their
-	// window from. Nil means the real day; tests pin it to fixed dates.
+	// window from; nil is the Berlin day of Now.
 	Today func() appointmentcap.Date
 
 	// Mails reads what became of the guardian e-mails of an appointment
@@ -140,6 +141,13 @@ type service struct {
 }
 
 func NewService(cfg Config) *service {
+	if cfg.Now == nil {
+		panic("calendar portal: the clock is required")
+	}
+	if cfg.Today == nil {
+		day := calendar.CalendarDateClock(cfg.Now)
+		cfg.Today = func() appointmentcap.Date { return appointmentcap.Date(day().String()) }
+	}
 	if cfg.ChildRepo != nil && cfg.ElternAppBookings == nil {
 		panic("calendar portal: the parent children need the Eltern-App bookings")
 	}

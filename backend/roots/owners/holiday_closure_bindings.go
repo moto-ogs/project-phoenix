@@ -14,6 +14,7 @@ import (
 	schedulerPorts "github.com/moto-ogs/project-phoenix/modules/schedulerruntime/ports"
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -69,12 +70,13 @@ func (m HolidayClosureMail) TraegerMailStates(ctx context.Context, organizationI
 
 // NewHolidayClosures binds Enrollment's closing day notices (#6434, ADR 0196)
 // to the host schools' calendar, the worker's read channel, the Träger
-// directory, the outbox and Security Runtime's key primitives.
+// directory, the outbox and Security Runtime's key primitives; today is the
+// root's day clock (ADR 0265), nil the Berlin day.
 func NewHolidayClosures(holidayCalendar enrollment.HolidaySchoolCalendar, holidays HolidayClosureHolidays, traeger enrollment.HolidayTraegerDirectory,
-	mail HolidayClosureMail,
+	mail HolidayClosureMail, today func() calendar.Date,
 ) enrollment.HolidayClosures {
 	return enrollmentCompose.NewHolidayClosures(holidayCalendar, NewHolidayClosureCalendar(holidays), traeger, mail,
-		securityruntime.FillRandom, securityruntime.KeyedFingerprint, nil)
+		securityruntime.FillRandom, securityruntime.KeyedFingerprint, today)
 }
 
 // HolidayOfficeOrganizations is what the Träger directory of a holiday mail
@@ -118,10 +120,11 @@ func (d holidayOfficeTraeger) HolidayTraeger(ctx context.Context, organizationID
 // HolidayClosureNotificationsJob binds the Worker's processing of confirmed
 // closing day notices (ADR 0196). The Worker's context carries no unit of
 // work; the job attaches unit, as the HTTP middleware does for a request.
+// today is the root's day clock.
 func HolidayClosureNotificationsJob(unit tenant.UnitOfWork, holidayCalendar enrollment.HolidaySchoolCalendar, holidays HolidayClosureHolidays,
-	organizations HolidayOfficeOrganizations, mail HolidayClosureMail, logger *slog.Logger,
+	organizations HolidayOfficeOrganizations, mail HolidayClosureMail, logger *slog.Logger, today func() calendar.Date,
 ) schedulerPorts.HolidayClosureNotifications {
-	notices := NewHolidayClosureNotifications(NewHolidayClosures(holidayCalendar, holidays, NewHolidayOfficeTraeger(organizations), mail), organizations, mail,
+	notices := NewHolidayClosureNotifications(NewHolidayClosures(holidayCalendar, holidays, NewHolidayOfficeTraeger(organizations), mail, today), organizations, mail,
 		logger.With("workflow", "holiday-closure-notification"))
 	watchdog := schoolCalendarCompose.NewHolidayClosureEvents()
 	return schedulerPorts.HolidayClosureNotifications{

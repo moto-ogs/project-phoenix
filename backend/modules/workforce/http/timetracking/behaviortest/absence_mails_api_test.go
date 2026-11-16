@@ -176,7 +176,7 @@ func newOwnAbsenceMailRouter(t *testing.T) (*bun.DB, http.Handler, workforcetest
 	db, caps := workforcetest.ComposeAdmin(t)
 	outbox := workforcetest.ComposeMailOutbox(t, db)
 	capability := newWorkforceCapability(t, db)
-	resource := timetracking.NewResource(timetracking.Dependencies{WorkSessions: caps.WorkSessions, StaffAbsences: caps.StaffAbsences, AbsenceWrites: caps.AbsenceWrites, Staff: caps.Staff, WorkTimeMonth: caps.WorkTimeMonth, Allowances: capability, AllowanceResponses: func(accounts []workforce.AbsenceTypeAllowanceAccount) any {
+	resource := timetracking.NewResource(timetracking.Dependencies{Today: caps.Today, WorkSessions: caps.WorkSessions, StaffAbsences: caps.StaffAbsences, AbsenceWrites: caps.AbsenceWrites, Staff: caps.Staff, WorkTimeMonth: caps.WorkTimeMonth, Allowances: capability, AllowanceResponses: func(accounts []workforce.AbsenceTypeAllowanceAccount) any {
 		return absencetypes.ToOwnAllowanceResponses(accounts)
 	}, Identity: testIdentity, WithinTenant: testWithinTenant(db), AbsenceMails: outbox.Status})
 	router := chi.NewRouter()

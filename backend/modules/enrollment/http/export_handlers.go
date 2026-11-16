@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -89,7 +90,7 @@ func (rs *Resource) exportPhaseRegistrations(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	file, err := buildPhaseExportFile(rs.ListExportService, data, format, childStatus)
+	file, err := buildPhaseExportFile(rs.ListExportService, data, format, childStatus, rs.now())
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
@@ -190,12 +191,12 @@ func decodeOptionalJSONBody(r *http.Request, dst any) error {
 	return nil
 }
 
-func buildPhaseExportFile(svc lists.DocumentRenderer, data *PhaseExport, format lists.Format, childStatus string) (lists.File, error) {
+func buildPhaseExportFile(svc lists.DocumentRenderer, data *PhaseExport, format lists.Format, childStatus string, generatedAt time.Time) (lists.File, error) {
 	// The document heading is the phase name on its own (no separator
 	// punctuation); "Anmeldungen" lives in the subtitle counts + the
 	// download filename. The filename base stays descriptive regardless.
 	heading := phaseExportHeading(data)
-	return renderEnrollmentExport(svc, format, phaseExportFilename(data),
+	return renderEnrollmentExport(svc, format, phaseExportFilename(data), generatedAt,
 		func() lists.RecordDocument { return buildPhaseExportRecords(data, heading, childStatus) },
 		func() lists.Document { return buildPhaseExportTable(data, heading, childStatus) },
 	)
@@ -246,7 +247,7 @@ func (rs *Resource) exportStudentEnrollmentRequests(w http.ResponseWriter, r *ht
 		return
 	}
 
-	file, err := buildStudentEnrollmentExportFile(rs.ListExportService, data, format)
+	file, err := buildStudentEnrollmentExportFile(rs.ListExportService, data, format, rs.now())
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
@@ -255,9 +256,9 @@ func (rs *Resource) exportStudentEnrollmentRequests(w http.ResponseWriter, r *ht
 	writeExportFile(w, file)
 }
 
-func buildStudentEnrollmentExportFile(svc lists.DocumentRenderer, data *StudentEnrollmentExport, format lists.Format) (lists.File, error) {
+func buildStudentEnrollmentExportFile(svc lists.DocumentRenderer, data *StudentEnrollmentExport, format lists.Format, generatedAt time.Time) (lists.File, error) {
 	heading := studentEnrollmentExportHeading(data)
-	return renderEnrollmentExport(svc, format, heading,
+	return renderEnrollmentExport(svc, format, heading, generatedAt,
 		func() lists.RecordDocument { return buildStudentEnrollmentExportRecords(data, heading) },
 		func() lists.Document { return buildStudentEnrollmentExportTable(data, heading) },
 	)
