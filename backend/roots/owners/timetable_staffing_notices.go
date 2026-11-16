@@ -30,7 +30,8 @@ type TimetableStaffNotices struct {
 // The staffing notice names the teachers of a block's OGS groups through
 // School Membership's teaching assignments, the groups through Timetable's
 // own block groups and the Gruppenübergaben through Workforce. Without
-// Delivery's notifications both stay nil.
+// Delivery's notifications both stay nil. A missing staffing dependency
+// leaves only cancellation notices enabled.
 func NewTimetableStaffNotices(notifications DeliveryNotifications, membership schoolmembership.Query, groups timetable.BlockGroupQuery, handovers groupSubstitutionLister) TimetableStaffNotices {
 	cancellations := NewTimetableStaffCancellationNotices(notifications)
 	if cancellations == nil {
@@ -38,14 +39,21 @@ func NewTimetableStaffNotices(notifications DeliveryNotifications, membership sc
 	}
 	return TimetableStaffNotices{
 		Cancellations: cancellations,
-		Staffing: timetablePorts.StaffingNoticeDependencies{
-			Notices: timetableStaffingNotices{
-				notifier: notifications.Notifier, preferences: notifications.Preferences, now: time.Now,
-			},
-			Groups:    groups,
-			Teachers:  timetableGroupTeachers{membership: membership},
-			Handovers: timetableGroupHandovers{substitutions: handovers},
+		Staffing:      newTimetableStaffingNoticeDependencies(notifications.Notifier, notifications.Preferences, membership, groups, handovers),
+	}
+}
+
+func newTimetableStaffingNoticeDependencies(notifier staffPushRouter, preferences staffPushPreferences, membership groupTeacherLister, groups timetable.BlockGroupQuery, handovers groupSubstitutionLister) timetablePorts.StaffingNoticeDependencies {
+	if notifier == nil || preferences == nil || membership == nil || groups == nil || handovers == nil {
+		return timetablePorts.StaffingNoticeDependencies{}
+	}
+	return timetablePorts.StaffingNoticeDependencies{
+		Notices: timetableStaffingNotices{
+			notifier: notifier, preferences: preferences, now: time.Now,
 		},
+		Groups:    groups,
+		Teachers:  timetableGroupTeachers{membership: membership},
+		Handovers: timetableGroupHandovers{substitutions: handovers},
 	}
 }
 
@@ -87,10 +95,12 @@ func (h timetableGroupHandovers) GroupHandovers(ctx context.Context, groupIDs []
 // timetableGroupTeachers names the teachers of OGS groups as staff ids: the
 // group assignments, then the teachers' staff records, two batched reads.
 type timetableGroupTeachers struct {
-	membership interface {
-		ListGroupAssignments(context.Context, schoolmembership.GroupAssignmentFilter) ([]schoolmembership.GroupAssignment, error)
-		ListTeachers(context.Context, schoolmembership.TeacherFilter) ([]schoolmembership.Teacher, error)
-	}
+	membership groupTeacherLister
+}
+
+type groupTeacherLister interface {
+	ListGroupAssignments(context.Context, schoolmembership.GroupAssignmentFilter) ([]schoolmembership.GroupAssignment, error)
+	ListTeachers(context.Context, schoolmembership.TeacherFilter) ([]schoolmembership.Teacher, error)
 }
 
 func (t timetableGroupTeachers) GroupTeacherStaffIDs(ctx context.Context, groupIDs []int64) (map[int64][]int64, error) {
