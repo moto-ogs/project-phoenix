@@ -291,4 +291,6 @@ func TestRouteSchoolRoutesNameTheirSchool(t *testing.T) {
 		assert.True(t, strings.HasPrefix(key.Pattern, "/caterer/"), "%v: only the caterer portal names no school", key)
 	}
 	assert.Equal(t, 2, count)
+	// Ending a supply is idempotent; only a request that ended one counts.
+	assert.True(t, CoreActions()[RouteKey{Method: http.MethodDelete, Pattern: "/api/meal-caterer/supply"}].CreatedOnly)
 }

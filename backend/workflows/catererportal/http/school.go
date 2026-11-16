@@ -136,5 +136,9 @@ func (rs *Resource) endSupply(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]bool{"created": ended}, "Supply ended")
+	message := "Supply ended"
+	if !ended {
+		message = "No running supply"
+	}
+	common.Respond(w, r, http.StatusOK, map[string]bool{"created": ended}, message)
 }

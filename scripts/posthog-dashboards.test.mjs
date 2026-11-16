@@ -239,6 +239,11 @@ test('the caterer never makes its school look active, and its idempotent writes 
   }
   assert.ok(checked >= 10, `${checked} school activity insights`);
   const tiles = definitions.find((d) => d.name === 'Nutzungsanalyse: Caterer-Portal').insights;
+  const perSchool = tiles.find((insight) => insight.name.endsWith('je Schule (30 Tage)')).query.source.query;
+  assert.match(perSchool, /uniq\(Tag\) as `Tage mit Bestätigung`/);
+  assert.match(perSchool, /toDate\(timestamp\) as Tag/);
+  assert.doesNotMatch(perSchool, /count\(\)/, 'repeated confirmations count once per day');
+  assert.match(perSchool, /\ngroup by Schule\n/, 'two schools of the same name stay apart');
   for (const insight of tiles.filter((tile) => tile.query.kind === 'InsightVizNode')) {
     for (const step of insight.query.source.series) {
       assert.equal(step.math_hogql, 'uniq(concat(toString(properties.school_id), toString(toDate(timestamp))))', `${insight.name} ${step.event}`);

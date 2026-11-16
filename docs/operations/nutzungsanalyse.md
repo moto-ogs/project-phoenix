@@ -222,7 +222,7 @@ Caterer kann mehrere beliefern. `caterer_invite_accepted` und
 `meal_order_confirmed` zählen deshalb für die Schule aus dem Routenparameter
 `schoolId` (`surface=caterer`, `role=caterer`, ohne `$session_id`), erst nach
 einer 2xx-Antwort und nur bei eingeschaltetem Schulschalter (#4496). Ein
-Caterer-Login nennt keine Schule und wird nicht erfasst.
+Caterer-Login nennt keine Schule und wird außerhalb der Demo nicht erfasst.
 
 Eltern- und Schulportal lesen die Policy beim Sichtbarwerden eines Tabs und
 alle fünf Minuten bei sichtbarem Tab neu. Vor jedem Neulesen wird die Erfassung

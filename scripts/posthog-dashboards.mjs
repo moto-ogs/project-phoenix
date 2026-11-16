@@ -963,16 +963,20 @@ order by Schultage desc`),
           description: 'Je Schule: an wie vielen Werktagen ihr Caterer mindestens eine Bestellung bestätigt hat, und wann zuletzt. Mehrere Bestätigungen am selben Tag zählen einmal. Bestätigungen an Samstagen, Sonntagen und Feiertagen fehlen; eine Schule ohne Bestätigung an einem Werktag fehlt ganz.',
           ...hogql('production', (where) => `
 select
-  ${SCHOOL_BREAKDOWN} as Standort,
-  uniq(toDate(timestamp)) as ${quoted('Tage mit Bestätigung')},
-  max(toDate(timestamp)) as ${quoted('Letzte Bestätigung')}
-from events
-where ${where}
-  and event = 'meal_order_confirmed'
-  and properties.surface = ${sqlString(CATERER)}
-  and isNotNull(properties.school_id)
-  and timestamp > now() - interval 30 day
-group by Standort
+  any(Standort) as Standort,
+  Schule as ${quoted('Schul-ID')},
+  uniq(Tag) as ${quoted('Tage mit Bestätigung')},
+  max(Tag) as ${quoted('Letzte Bestätigung')}
+from (
+  select ${SCHOOL_BREAKDOWN} as Standort, toString(properties.school_id) as Schule, toDate(timestamp) as Tag
+  from events
+  where ${where}
+    and event = 'meal_order_confirmed'
+    and properties.surface = ${sqlString(CATERER)}
+    and isNotNull(properties.school_id)
+    and timestamp > now() - interval 30 day
+)
+group by Schule
 order by ${quoted('Tage mit Bestätigung')} desc, Standort`),
         },
         {
@@ -987,7 +991,7 @@ order by ${quoted('Tage mit Bestätigung')} desc, Standort`),
           }),
         },
         {
-          name: 'Caterer-Anbindung: Einladungen und Enden pro Woche',
+          name: 'Caterer-Anbindung: Einladungen, Annahmen und Enden pro Woche',
           description: 'Schulen laden ihren Caterer in der OGS-App ein und beenden die Belieferung dort; der Caterer nimmt die Einladung im Caterer-Portal an. Gezählt werden Tage je Schule: mehrere gleiche Vorgänge einer Schule am selben Tag zählen einmal. Samstage, Sonntage und Feiertage fehlen.',
           ...trends('production', {
             series: CATERER_LINK_EVENTS.map(([event, name]) => series(event, name, { math: 'hogql', math_hogql: SCHOOL_DAYS })),
