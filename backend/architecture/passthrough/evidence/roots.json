@@ -3677,13 +3677,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (r StudentPhotoRuntime) PhotoFeatureEnabled(ctx context.Context) (bool, error) {\n\tif r.Settings == nil {\n\t\treturn false, nil\n\t}\n\treturn r.Settings.ResolveBool(ctx, configModel.KeyStudentPhotosEnabled)\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/StudentPhotoRuntime.PhotoFeatureEnabled",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (r StudentPhotoRuntime) RecordPhotoConsent(ctx context.Context, before, after peopleCompose.StudentPhotoConsentSnapshot, actorAccountID *int64, changedAt time.Time) error {\n\tif r.Consents == nil {\n\t\treturn nil\n\t}\n\tbeforeRow := \u0026peopleModule.StudentState{PhotoConsentGivenAt: before.PhotoConsentGivenAt}\n\tbeforeRow.ID = before.StudentID\n\tafterRow := \u0026peopleModule.StudentState{PhotoConsentGivenAt: after.PhotoConsentGivenAt}\n\tafterRow.ID = after.StudentID\n\treturn r.Consents.RecordTransitions(ctx, beforeRow, afterRow, auditModels.StudentConsentSourceTenantPortal, actorAccountID, changedAt)\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/StudentPhotoRuntime.RecordPhotoConsent",

@@ -1,6 +1,7 @@
 package parent
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -114,4 +115,27 @@ func TestGrantPhotoConsentMapsEndedCareError(t *testing.T) {
 
 	assert.Equal(t, http.StatusForbidden, w.Code)
 	assert.Contains(t, w.Body.String(), `"code":"care.child_care_ended"`)
+}
+
+func TestGrantPhotoConsentDistinguishesBusyDisabledAndLookupFailure(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name   string
+		err    error
+		status int
+		code   string
+	}{
+		{"busy", parentService.ErrPhotoConsentBusy, http.StatusConflict, "care.photo_consent_busy"},
+		{"disabled", parentService.ErrPhotosDisabled, http.StatusConflict, "care.photos_disabled"},
+		{"lookup failure", errors.New("settings read failed"), http.StatusInternalServerError, "general.server"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rs := &Resource{ParentService: &fakeParentService{grantConsentErr: tc.err}}
+			req := parentRequestWithStudentID(http.MethodPut, "/children/42/consents/photo", "{}", "42")
+			w := httptest.NewRecorder()
+			rs.grantPhotoConsent(w, req)
+			assert.Equal(t, tc.status, w.Code)
+			assert.Contains(t, w.Body.String(), `"code":"`+tc.code+`"`)
+		})
+	}
 }

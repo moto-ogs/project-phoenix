@@ -95,6 +95,7 @@ export const PARENT_PORTAL_ERROR_CODES = [
   "care.offering_changes_disabled",
   "care.payer_guardian_protected",
   "care.photo_consent_not_withdrawn",
+  "care.photos_disabled",
   "care.pickup_change_cutoff_passed",
   "care.pickup_change_disabled",
   "care.poll_closed",
