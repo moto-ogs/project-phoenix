@@ -326,7 +326,7 @@ cd backend && ../scripts/run-go-toolchain.sh go test -tags=testhooks ./test -run
 
 If a test's purpose genuinely requires the system clock, inject a clock where possible. Otherwise add only its exact `path/to/file_test.go:TestFunction` key to `calendarFixtureClockExceptions`, with a specific reason why the live clock is load-bearing. Every unexcepted finding fails immediately, with one exception: the shifted-live-date category has a shrink-only per-file debt register, `calendarFixtureShiftedLiveDateDebt` (`backend/test/calendar_fixture_shift_debt_ratchet_test.go`), which #7104 burns down; its header states the failure cases. The other categories have no grandfathered count or fingerprint baseline. Stale exception keys fail the ratchet and must be removed.
 
-A pinned test clock helps only when the code reads it: `modules/` and `workflows/` take their clock from the composition. `TestModuleLiveClockRatchet` caps real-clock calls and `now: time.Now` outside `compose` (ADR 0272), `TestModuleSQLClockRatchet` caps `NOW()`/`CURRENT_DATE` in queries: pass the instant as a parameter (ADR 0280). To test a coming day: [clock-dependent tests](../../docs/agents/backend-testing.md#clock-dependent-tests).
+A pinned test clock helps only when the code reads it: owners take their clock from the composition. `TestModuleLiveClockRatchet` caps real-clock calls and `now: time.Now` outside `compose` (ADR 0272), `TestModuleSQLClockRatchet` caps `NOW()`/`CURRENT_DATE` in queries: pass the instant as a parameter (ADR 0280). To test a coming day: [clock-dependent tests](../../docs/agents/backend-testing.md#clock-dependent-tests).
 
 ---
 
