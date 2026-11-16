@@ -41,12 +41,19 @@ const consentPath = "/api/students/123/privacy-consent";
 /** The backend student row of a PUT answer. */
 function updatedRow(overrides: Record<string, unknown> = {}) {
   return {
+    status: "success",
     data: {
       id: 123,
       person_id: 10,
       first_name: "Alice",
       last_name: "Smith",
       school_class: "1a",
+      current_location: "",
+      bus: false,
+      sick: false,
+      excused: false,
+      class_trip: false,
+      has_full_access: false,
       created_at: "2024-01-01T00:00:00Z",
       updated_at: "2024-01-15T10:00:00Z",
       ...overrides,
@@ -57,6 +64,7 @@ function updatedRow(overrides: Record<string, unknown> = {}) {
 /** The detail read: the full row plus the flags the backend always sends. */
 function detailRow(overrides: Record<string, unknown> = {}) {
   return {
+    status: "success",
     data: {
       ...updatedRow().data,
       has_full_access: true,
@@ -259,6 +267,7 @@ describe("PUT /api/students/[id]", () => {
     vi.clearAllMocks();
     mockAuth.mockResolvedValue(defaultSession);
     mockApiGet.mockResolvedValue({
+      status: "success",
       data: { accepted: true, data_retention_days: 25 },
     });
   });

@@ -1,0 +1,221 @@
+package contract
+
+import (
+	"encoding/json"
+	"reflect"
+	"testing"
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+type mode string
+
+// wireID and laxID stand for wireID and laxID, which the root
+// names; this package must not import them.
+type wireID int64
+
+func (wireID) MarshalJSON() ([]byte, error) { return []byte(`"0"`), nil }
+
+type laxID int64
+
+func (laxID) MarshalJSON() ([]byte, error) { return []byte(`0`), nil }
+
+var identifiers = map[reflect.Type]string{reflect.TypeFor[wireID](): KindID, reflect.TypeFor[laxID](): KindLaxID}
+
+type inner struct {
+	ID        wireID    `json:"id"`
+	Shadowed  string    `json:"shadowed"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type row struct {
+	inner
+	Shadowed bool           `json:"shadowed"`
+	Name     string         `json:"name"`
+	Nick     string         `json:"nick,omitempty"`
+	Note     *string        `json:"note"`
+	Hint     *string        `json:"hint,omitempty"`
+	Tags     []string       `json:"tags"`
+	Friends  []wireID       `json:"friend_ids,omitempty"`
+	Day      calendar.Date  `json:"day"`
+	Birthday *calendar.Date `json:"birthday,omitempty"`
+	Mode     mode           `json:"mode"`
+	Status   string         `json:"status"`
+	Count    int            `json:"count"`
+	Legacy   int64          `json:"legacy_id"`
+	Quoted   int64          `json:"quoted_id,string"`
+	Lax      laxID          `json:"lax_id"`
+	Weights  map[string]int `json:"weights,omitempty"`
+	Hidden   string         `json:"-"`
+}
+
+type body struct {
+	Name string `json:"name"`
+	ID   wireID `json:"id"`
+}
+
+type stamp struct{}
+
+func (stamp) MarshalJSON() ([]byte, error) { return []byte(`"x"`), nil }
+
+func get(pattern string, response any) Registration {
+	return Registration{Method: "GET", Pattern: pattern, Portals: []string{"tenant"}, Response: response}
+}
+
+func rowRoute() Registration {
+	route := get("/api/rows/{id}", row{})
+	route.Enums = []EnumSpec{
+		{Type: mode(""), Values: []string{"b", "a"}},
+		{Name: "Status", Fields: []string{"row.status"}, Values: []string{"on", "off"}},
+	}
+	route.DeprecatedFields = []string{"row.nick"}
+	return route
+}
+
+var rowOptions = Options{NumericIDs: []string{"contract.row.Legacy"}, Identifiers: identifiers}
+
+func fieldsOf(t *testing.T, doc Document, name string) map[string]Field {
+	t.Helper()
+	for _, object := range doc.Types {
+		if object.Name == name {
+			fields := map[string]Field{}
+			for _, field := range object.Fields {
+				fields[field.Name] = field
+			}
+			return fields
+		}
+	}
+	t.Fatalf("type %s is not in the document", name)
+	return nil
+}
+
+func TestBuildFollowsEncodingJSON(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{rowRoute()}, rowOptions)
+	require.NoError(t, err)
+	fields := fieldsOf(t, doc, "row")
+
+	// What the model says must be what encoding/json renders.
+	rendered, err := json.Marshal(row{})
+	require.NoError(t, err)
+	var keys map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(rendered, &keys))
+	for name, field := range fields {
+		raw, present := keys[name]
+		assert.Equalf(t, !field.Optional, present, "%s: optional means absent for the zero value", name)
+		if present && string(raw) == "null" {
+			assert.Truef(t, field.Schema.Nullable, "%s renders null", name)
+		}
+	}
+	assert.Len(t, fields, len(keys)+5, "the five omitempty fields are absent for the zero value")
+
+	schema := func(name string) Schema { return fields[name].Schema }
+	assert.Equal(t, KindBool, schema("shadowed").Kind, "the outer field wins over the embedded one")
+	assert.Equal(t, Schema{Kind: KindID}, schema("id"))
+	assert.Equal(t, Schema{Kind: KindInstant}, schema("created_at"))
+	assert.Equal(t, Schema{Kind: KindString, Nullable: true}, schema("note"))
+	assert.Equal(t, Schema{Kind: KindString}, schema("hint"), "a nil pointer with omitempty is absent, never null")
+	assert.True(t, schema("tags").Nullable, "a nil slice renders null")
+	assert.Equal(t, KindID, schema("friend_ids").Elem.Kind)
+	assert.Equal(t, Schema{Kind: KindDate, Nullable: true}, schema("day"), "the zero date renders null")
+	assert.Equal(t, Schema{Kind: KindDate}, schema("birthday"))
+	assert.Equal(t, Schema{Kind: KindEnum, Ref: "mode"}, schema("mode"))
+	assert.Equal(t, Schema{Kind: KindEnum, Ref: "Status"}, schema("status"))
+	assert.Equal(t, KindInt, schema("count").Kind)
+	assert.Equal(t, KindLegacyID, schema("legacy_id").Kind)
+	assert.Equal(t, KindID, schema("quoted_id").Kind)
+	assert.Equal(t, KindLaxID, schema("lax_id").Kind)
+	assert.True(t, fields["nick"].Deprecated)
+	assert.NotContains(t, fields, "Hidden")
+	assert.Equal(t, []Enum{{Name: "Status", Values: []string{"off", "on"}}, {Name: "mode", Values: []string{"a", "b"}}}, doc.Enums)
+}
+
+func TestBuildRejects(t *testing.T) {
+	t.Parallel()
+	variants := Registration{
+		Method: "GET", Pattern: "/api/rows/", Portals: []string{"tenant"},
+		Variants: &VariantSpec{QueryParam: "view", Default: "a", ByValue: map[string]any{"a": []inner{}}},
+	}
+	noPortal := get("/api/rows/", inner{})
+	noPortal.Portals = nil
+	strayEnum := get("/api/rows/", inner{})
+	strayEnum.Enums = []EnumSpec{{Name: "Gone", Fields: []string{"inner.gone"}, Values: []string{"x"}}}
+
+	cases := map[string]struct {
+		routes  []Registration
+		options Options
+		message string
+	}{
+		"an int64 that does not say what it is": {[]Registration{rowRoute()}, Options{Identifiers: identifiers}, "int64 does not say what it is"},
+		"a response shape chosen by the query":  {[]Registration{variants}, Options{Identifiers: identifiers}, "depends on ?view"},
+		"an anonymous struct": {[]Registration{get("/api/rows/", struct {
+			S stamp `json:"s"`
+		}{})}, Options{Identifiers: identifiers}, "anonymous struct"},
+		"an unknown marshaler in a named type": {[]Registration{get("/api/rows/", []stamp{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
+		"a route without a portal":             {[]Registration{noPortal}, Options{Identifiers: identifiers}, "names no portal"},
+		"a route registered twice":             {[]Registration{get("/api/rows/", inner{}), get("/api/rows/", inner{})}, Options{Identifiers: identifiers}, "registered twice"},
+		"a numeric id entry nothing uses":      {[]Registration{get("/api/rows/", inner{})}, Options{NumericIDs: []string{"gone.Type.ID"}, Identifiers: identifiers}, "numeric id gone.Type.ID"},
+		"a variant entry nothing uses":         {[]Registration{get("/api/rows/", inner{})}, Options{QueryVariants: []string{"GET /api/gone/"}, Identifiers: identifiers}, "query variant GET /api/gone/"},
+		"an enum field nothing uses":           {[]Registration{strayEnum}, Options{Identifiers: identifiers}, "enum field inner.gone"},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Build(tc.routes, tc.options)
+			assert.ErrorContains(t, err, tc.message)
+		})
+	}
+}
+
+func TestBuildAllowsALegacyQueryVariant(t *testing.T) {
+	t.Parallel()
+	route := Registration{
+		Method: "GET", Pattern: "/api/rows/", Portals: []string{"tenant"}, Paginated: true,
+		Query:    []QueryParam{{Name: "view", Kind: "string", Values: []string{"b", "a"}}},
+		Variants: &VariantSpec{QueryParam: "view", Default: "a", ByValue: map[string]any{"a": []inner{}, "b": []body{}}},
+	}
+	doc, err := Build([]Registration{route}, Options{QueryVariants: []string{"GET /api/rows/"}, Identifiers: identifiers})
+	require.NoError(t, err)
+	assert.Equal(t, Schema{Kind: KindArray, Elem: &Schema{Kind: KindRef, Ref: "body"}}, doc.Routes[0].Variants.Cases["b"])
+	assert.Equal(t, []string{"a", "b"}, doc.Routes[0].Query[0].Values)
+}
+
+func TestARequestBodyHasOnlyOptionalFields(t *testing.T) {
+	t.Parallel()
+	route := Registration{Method: "POST", Pattern: "/api/rows/", Portals: []string{"tenant"}, Request: body{}, Response: inner{}}
+	doc, err := Build([]Registration{route}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	for name, field := range fieldsOf(t, doc, "body") {
+		assert.Truef(t, field.Optional, "%s", name)
+	}
+}
+
+func TestTypeScriptWritesTypesBeforeTheirUse(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{rowRoute()}, rowOptions)
+	require.NoError(t, err)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	source := files["rows.generated.ts"]
+	require.NotEmpty(t, source)
+	for _, line := range []string{
+		`export const MODE_VALUES = ["a", "b"] as const;`,
+		"  id: string;",
+		"  note: string | null;",
+		"  hint?: string;",
+		"  tags: string[] | null;",
+		"  mode: OpenEnum<mode>;",
+		"  /** @deprecated leaves the contract with the next release */\n  nick?: string;",
+		"  legacy_id: int64StringOrNumber,",
+		"  friend_ids: z.array(int64String).optional(),",
+		"  day: calendarDate.nullable(),",
+		"  hint: z.string().optional(),",
+		`  "GET /api/rows/{id}": {`,
+		"    response: success(rowSchema),",
+	} {
+		assert.Contains(t, source, line)
+	}
+}

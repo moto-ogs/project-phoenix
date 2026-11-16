@@ -1,4 +1,6 @@
-import { apiDelete, apiGet, apiPut } from "~/lib/api-helpers.server";
+import { apiDelete, apiPut } from "~/lib/api-helpers.server";
+import { contractGet, decodeContract } from "~/lib/contract/client.server";
+import { routes } from "~/lib/contract/students.generated";
 import { problemBody } from "~/lib/api-error";
 import {
   ApiResponseError,
@@ -16,9 +18,8 @@ import {
   mapStudentDetailResponse,
   mapStudentResponse,
   prepareStudentForBackend,
+  studentWriteResponse,
   writeMayChangeCompanions,
-  type BackendStudent,
-  type BackendStudentDetail,
 } from "~/lib/student-wire";
 import {
   rejectRetiredStudentContacts,
@@ -32,6 +33,7 @@ import {
 import { PRIVACY_CONSENT_SAVED_DETAIL } from "~/lib/student-update-errors";
 
 const logger = createLogger({ component: "StudentDetailRoute" });
+const DETAIL = routes["GET /api/students/{id}"];
 
 /**
  * Re-shapes a failed student PUT into the SAME wire error plus the
@@ -88,12 +90,15 @@ export const GET = createGetHandler<Student>(async (request, token, params) => {
   try {
     // The tenant-scoped backend projection carries the consent: one read-budget
     // unit and no BFF consent waterfall.
-    const response = await apiGet<{ data: BackendStudentDetail }>(
+    const result = await contractGet(
+      `${DETAIL.method} ${DETAIL.pattern}`,
+      DETAIL.response,
       `/api/students/${id}?include_privacy_consent=true`,
       token,
       { signal: request.signal },
     );
-    return mapStudentDetailResponse(response.data);
+    if (!result.ok) throw result.error.cause;
+    return mapStudentDetailResponse(result.value.data);
   } catch (error) {
     logFailure("student fetch failed", id, error);
     throw error;
@@ -137,9 +142,9 @@ export const PUT = createPutHandler<Student, StudentUpdateBody>(
         }
       }
 
-      let response: { data: BackendStudent };
+      let answer: unknown;
       try {
-        response = await apiPut<{ data: BackendStudent }>(
+        answer = await apiPut<unknown>(
           `/api/students/${id}`,
           token,
           prepareStudentForBackend(body),
@@ -147,6 +152,13 @@ export const PUT = createPutHandler<Student, StudentUpdateBody>(
       } catch (studentError) {
         throw consent ? markPrivacyConsentSaved(studentError) : studentError;
       }
+      const updated = decodeContract(
+        "PUT /api/students/{id}",
+        studentWriteResponse,
+        answer,
+      );
+      if (!updated.ok) throw updated.error.cause;
+      const response = updated.value;
 
       // Whether the write changed the "läuft mit" links (#1694): the
       // backend's verdict, or what the payload can change when it sent none.
