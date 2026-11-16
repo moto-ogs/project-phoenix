@@ -324,7 +324,7 @@ func (s *Store) InvalidateGuardianInvitations(ctx context.Context, profileID int
 		Set("expires_at = LEAST(expires_at, ?)", now).
 		Set("email = NULL").
 		Set("approval_status = CASE WHEN approval_status = ? THEN ? ELSE approval_status END", domain.GuardianInvitationApprovalPending, domain.GuardianInvitationApprovalRejected).
-		Set("updated_at = ?", now).
+		Set("updated_at = NOW()").
 		Where("(? OR approval_status <> ?)", includePendingApprovals, domain.GuardianInvitationApprovalPending).
 		Where("guardian_profile_id = ?", profileID).Where("accepted_at IS NULL").Where("expires_at > ?", now)).Exec(ctx)
 	return err

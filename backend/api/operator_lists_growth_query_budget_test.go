@@ -32,7 +32,7 @@ func operatorListBudgetRouter(t *testing.T, db *bun.DB) (chi.Router, identityacc
 	t.Helper()
 	provisioning, identity := buildOperatorProvisioningWithIdentity(t, db)
 	operatorID := testpkg.CreateTestOperator(t, db).ID
-	auth, err := NewConfiguredSessionAuth(viper.GetString("auth_jwt_secret"), viper.GetDuration("auth_jwt_expiry"), viper.GetDuration("auth_jwt_refresh_expiry"), nil)
+	auth, err := NewConfiguredSessionAuth(viper.GetString("auth_jwt_secret"), viper.GetDuration("auth_jwt_expiry"), viper.GetDuration("auth_jwt_refresh_expiry"))
 	require.NoError(t, err)
 	token, _, err := identity.IssueTokensForAuthenticatedOperator(provisioningContext(t, db), operatorID, nil, "127.0.0.1", "operator-list-budget")
 	require.NoError(t, err)

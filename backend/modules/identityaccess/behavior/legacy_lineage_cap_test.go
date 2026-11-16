@@ -19,7 +19,7 @@ import (
 func legacyRefreshToken(t *testing.T, refresh string) string {
 	t.Helper()
 	claims := decodePreviewTokenPayload(t, refresh)
-	auth, err := sessiontoken.NewTokenAuthWithDurations(authSigningSecret, 15*time.Minute, 24*time.Hour, nil)
+	auth, err := sessiontoken.NewTokenAuthWithDurations(authSigningSecret, 15*time.Minute, 24*time.Hour)
 	require.NoError(t, err)
 	legacy := tokentest.RefreshClaims{ID: int(claims["id"].(float64)), Token: claims["token"].(string)}
 	if tenantID, ok := claims["tenant_id"].(float64); ok {

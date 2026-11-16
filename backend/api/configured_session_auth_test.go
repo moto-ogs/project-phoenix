@@ -17,7 +17,7 @@ const configuredSessionTestSecret = "configured-session-auth-test-secret-only"
 func TestConfiguredSessionAuthVerifiesTheConfiguredCodecsSessions(t *testing.T) {
 	t.Parallel()
 
-	sessionAuth, err := NewConfiguredSessionAuth(configuredSessionTestSecret, 15*time.Minute, 24*time.Hour, nil)
+	sessionAuth, err := NewConfiguredSessionAuth(configuredSessionTestSecret, 15*time.Minute, 24*time.Hour)
 	require.NoError(t, err)
 	tokens, err := NewConfiguredSessionTokens(configuredSessionTestSecret, 15*time.Minute, 24*time.Hour, nil)
 	require.NoError(t, err)
@@ -32,7 +32,7 @@ func TestConfiguredSessionAuthVerifiesTheConfiguredCodecsSessions(t *testing.T) 
 	assert.Equal(t, 15*time.Minute, sessionAuth.JwtExpiry)
 	assert.Equal(t, 24*time.Hour, sessionAuth.JwtRefreshExpiry)
 
-	other, err := NewConfiguredSessionAuth("a-different-configured-session-secret", 15*time.Minute, 24*time.Hour, nil)
+	other, err := NewConfiguredSessionAuth("a-different-configured-session-secret", 15*time.Minute, 24*time.Hour)
 	require.NoError(t, err)
 	_, err = other.ParseAccessJWT(accessToken)
 	assert.Error(t, err, "a session signed under another secret must not verify")
@@ -41,6 +41,6 @@ func TestConfiguredSessionAuthVerifiesTheConfiguredCodecsSessions(t *testing.T) 
 func TestConfiguredSessionAuthRejectsTheGeneratedSecretMode(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewConfiguredSessionAuth("random", 15*time.Minute, 24*time.Hour, nil)
+	_, err := NewConfiguredSessionAuth("random", 15*time.Minute, 24*time.Hour)
 	require.ErrorContains(t, err, "invalid auth JWT configuration")
 }

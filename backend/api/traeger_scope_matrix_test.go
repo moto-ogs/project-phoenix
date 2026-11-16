@@ -22,7 +22,7 @@ import (
 
 func checkTraegerScopeMatrix(t *testing.T, apiInstance *goldenRuntime) {
 	t.Parallel()
-	tokenAuth, err := newSessionTokenAuth(nil)
+	tokenAuth, err := newSessionTokenAuth()
 	require.NoError(t, err)
 	mint := func(claims sessiontoken.AppClaims) string {
 		token, err := tokentest.CreateJWT(tokenAuth, claims)

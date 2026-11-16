@@ -15,7 +15,7 @@ import (
 
 func TestNativeInvitationOwnershipProof(t *testing.T) {
 	t.Parallel()
-	legacy, err := sessiontoken.NewTokenAuthWithDurations("invitation-codec-test-key-not-for-deployment", time.Hour, 24*time.Hour, nil)
+	legacy, err := sessiontoken.NewTokenAuthWithDurations("invitation-codec-test-key-not-for-deployment", time.Hour, 24*time.Hour)
 	require.NoError(t, err)
 	native, err := identityCompose.NewSessionTokenCodec(legacy.JwtAuth, time.Hour, 24*time.Hour, nil)
 	require.NoError(t, err)
@@ -63,7 +63,7 @@ func TestNativeInvitationOwnershipProof(t *testing.T) {
 
 func TestNativeSessionCodecPreservesTokenWire(t *testing.T) {
 	t.Parallel()
-	legacy, err := sessiontoken.NewTokenAuthWithDurations("session-codec-test-key-not-for-deployment", time.Hour, 24*time.Hour, nil)
+	legacy, err := sessiontoken.NewTokenAuthWithDurations("session-codec-test-key-not-for-deployment", time.Hour, 24*time.Hour)
 	require.NoError(t, err)
 	native, err := identityCompose.NewSessionTokenCodec(legacy.JwtAuth, time.Hour, 24*time.Hour, nil)
 	require.NoError(t, err)
@@ -105,7 +105,7 @@ func TestNativeSessionCodecPreservesTokenWire(t *testing.T) {
 
 func TestNativeSessionCodecTokenBoundaries(t *testing.T) {
 	t.Parallel()
-	legacy, err := sessiontoken.NewTokenAuthWithDurations("session-codec-boundary-test-key-only", time.Hour, 24*time.Hour, nil)
+	legacy, err := sessiontoken.NewTokenAuthWithDurations("session-codec-boundary-test-key-only", time.Hour, 24*time.Hour)
 	require.NoError(t, err)
 	native, err := identityCompose.NewSessionTokenCodec(legacy.JwtAuth, time.Hour, 24*time.Hour, nil)
 	require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestNativeSessionCodecTokenBoundaries(t *testing.T) {
 	require.True(t, preview.ReadOnly)
 	require.EqualValues(t, 9, preview.ActingAdminID)
 	require.Equal(t, "preview", preview.PreviewID)
-	other, err := sessiontoken.NewTokenAuthWithDurations("different-session-codec-test-key-only", time.Hour, time.Hour, nil)
+	other, err := sessiontoken.NewTokenAuthWithDurations("different-session-codec-test-key-only", time.Hour, time.Hour)
 	require.NoError(t, err)
 	_, forged, err := other.JwtAuth.Encode(map[string]any{"id": 42, "sub": "codec@test.local", "roles": []string{}})
 	require.NoError(t, err)
@@ -180,7 +180,7 @@ func TestNativeSessionCodecTokenBoundaries(t *testing.T) {
 // caterer, parent or unnamed portal is refused, never minted as tenant.
 func TestNativeSessionCodecRefusesEnrollmentOfPortalsWithoutEnrollment(t *testing.T) {
 	t.Parallel()
-	legacy, err := sessiontoken.NewTokenAuthWithDurations("enrollment-scope-test-key-not-for-deployment", time.Hour, 24*time.Hour, nil)
+	legacy, err := sessiontoken.NewTokenAuthWithDurations("enrollment-scope-test-key-not-for-deployment", time.Hour, 24*time.Hour)
 	require.NoError(t, err)
 	native, err := identityCompose.NewSessionTokenCodec(legacy.JwtAuth, time.Hour, 24*time.Hour, nil)
 	require.NoError(t, err)
@@ -197,7 +197,7 @@ func TestNativeSessionCodecRefusesEnrollmentOfPortalsWithoutEnrollment(t *testin
 func TestNativeSessionCodecRejectsOtherHMACAlgorithms(t *testing.T) {
 	t.Parallel()
 	const key = "session-codec-algorithm-test-key-only"
-	legacy, err := sessiontoken.NewTokenAuthWithDurations(key, time.Hour, 24*time.Hour, nil)
+	legacy, err := sessiontoken.NewTokenAuthWithDurations(key, time.Hour, 24*time.Hour)
 	require.NoError(t, err)
 	native, err := identityCompose.NewSessionTokenCodec(legacy.JwtAuth, time.Hour, 24*time.Hour, nil)
 	require.NoError(t, err)

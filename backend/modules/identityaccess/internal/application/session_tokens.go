@@ -19,7 +19,11 @@ type JWTSigner interface {
 }
 
 // NewSessionCodec binds the session, MFA challenge and invitation owner
-// tokens to one signer; now is the clock that stamps and checks them.
+// tokens to one signer. now stamps and checks the MFA challenge and parent
+// setup tokens, which only this codec verifies. Access, refresh and
+// enrollment tokens also pass the jwtauth verifier, which checks iat, exp and
+// nbf on the real clock of jwx, so they are stamped and compared on the real
+// clock (ADR 0261).
 func NewSessionCodec(signer JWTSigner, accessExpiry, refreshExpiry time.Duration, now func() time.Time) *SessionCodec {
 	return &SessionCodec{signer: signer, accessExpiry: accessExpiry, refreshExpiry: refreshExpiry, now: now}
 }
@@ -43,7 +47,7 @@ func (c *SessionCodec) AccountOfAccessToken(token string) (int64, error) {
 		return 0, nil
 	}
 	claims, err := c.ParseAccessToken(token)
-	if err != nil || !domain.SessionProvesInvitationOwnership(domain.SessionClaims(claims), c.now()) {
+	if err != nil || !domain.SessionProvesInvitationOwnership(domain.SessionClaims(claims), time.Now()) {
 		return 0, nil
 	}
 	return claims.AccountID, nil
@@ -54,7 +58,8 @@ func (c *SessionCodec) IssueTokenPair(access identityaccess.SessionClaims, refre
 	if err != nil {
 		return "", "", err
 	}
-	now := c.now()
+	// The jwtauth verifier checks this token on the jwx clock (ADR 0261).
+	now := time.Now()
 	refreshToken, err := c.sign(tokenprimitives.EncodeRefresh(tokenprimitives.RefreshClaims(refresh), now, now.Add(c.refreshExpiry)))
 	if err != nil {
 		return "", "", err
@@ -63,12 +68,14 @@ func (c *SessionCodec) IssueTokenPair(access identityaccess.SessionClaims, refre
 }
 
 func (c *SessionCodec) IssueAccessToken(claims identityaccess.SessionClaims) (string, error) {
-	now := c.now()
+	// The jwtauth verifier checks this token on the jwx clock (ADR 0261).
+	now := time.Now()
 	return c.sign(tokenprimitives.EncodeAccess(tokenprimitives.AccessClaims(claims), now, now.Add(c.accessExpiry)))
 }
 
 func (c *SessionCodec) IssueMFAEnrollmentToken(accountID, tenantID int64, scope string, ttl time.Duration, credentialGeneration int64) (string, error) {
-	wire, err := tokenprimitives.EncodeEnrollment(tokenprimitives.EnrollmentClaims{AccountID: accountID, Scope: scope, TenantID: tenantID, CredentialGeneration: credentialGeneration}, c.now(), ttl)
+	// The jwtauth verifier checks this token on the jwx clock (ADR 0261).
+	wire, err := tokenprimitives.EncodeEnrollment(tokenprimitives.EnrollmentClaims{AccountID: accountID, Scope: scope, TenantID: tenantID, CredentialGeneration: credentialGeneration}, time.Now(), ttl)
 	if err != nil {
 		return "", err
 	}
@@ -113,7 +120,7 @@ func (c *SessionCodec) ParseAccessToken(token string) (identityaccess.SessionCla
 	if err != nil {
 		return identityaccess.SessionClaims{}, err
 	}
-	if claims.ExpiresAt > 0 && claims.ExpiresAt < c.now().Unix() {
+	if claims.ExpiresAt > 0 && claims.ExpiresAt < time.Now().Unix() {
 		return identityaccess.SessionClaims{}, errors.New("access token expired")
 	}
 	return claims, nil

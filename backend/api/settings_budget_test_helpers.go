@@ -29,7 +29,7 @@ func NewSettingsBudgetRouterForTest(ctx context.Context, db transactionruntime.D
 	if err != nil {
 		return nil, "", err
 	}
-	auth, err := NewConfiguredSessionAuth(viper.GetString("auth_jwt_secret"), viper.GetDuration("auth_jwt_expiry"), viper.GetDuration("auth_jwt_refresh_expiry"), nil)
+	auth, err := NewConfiguredSessionAuth(viper.GetString("auth_jwt_secret"), viper.GetDuration("auth_jwt_expiry"), viper.GetDuration("auth_jwt_refresh_expiry"))
 	if err != nil {
 		return nil, "", err
 	}

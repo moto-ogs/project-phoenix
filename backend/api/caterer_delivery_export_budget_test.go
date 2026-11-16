@@ -38,7 +38,7 @@ func checkCatererDeliveryExportQueryBudget(t *testing.T, api *goldenRuntime) {
 	})
 	_, err := db.ExecContext(ctx, `INSERT INTO auth.caterer_accounts (account_id, caterer_id) VALUES (?, ?)`, account.ID, catererID)
 	require.NoError(t, err)
-	tokenAuth, err := newSessionTokenAuth(nil)
+	tokenAuth, err := newSessionTokenAuth()
 	require.NoError(t, err)
 	family := testpkg.CreateTestSessionFamily(t, db, account.ID, testpkg.Tenant(t), tenant.ScopeCaterer)
 	token, err := tokentest.CreateJWT(tokenAuth, sessiontoken.AppClaims{ID: int(account.ID), Sub: account.Email, Roles: []string{"caterer"}, Scope: tenant.ScopeCaterer, FamilyID: family})

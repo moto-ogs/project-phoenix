@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/spf13/viper"
@@ -232,14 +231,12 @@ func newPlatformRuntime() platformAnnouncementsHTTP.Runtime {
 }
 
 // newSessionTokenAuth hands the signing configuration to Identity's
-// composition, which builds the HTTP session runtime (ADR 0053 point 6);
-// now is the root's clock (nil: the real one).
-func newSessionTokenAuth(now func() time.Time) (*sessiontoken.TokenAuth, error) {
+// composition, which builds the HTTP session runtime (ADR 0053 point 6).
+func newSessionTokenAuth() (*sessiontoken.TokenAuth, error) {
 	return NewConfiguredSessionAuth(
 		viper.GetString("auth_jwt_secret"),
 		viper.GetDuration("auth_jwt_expiry"),
 		viper.GetDuration("auth_jwt_refresh_expiry"),
-		now,
 	)
 }
 

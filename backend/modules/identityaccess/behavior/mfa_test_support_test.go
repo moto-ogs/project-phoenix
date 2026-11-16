@@ -59,7 +59,7 @@ func challengeTokenAuth(t *testing.T, module api.AuthTestModule) *sessiontoken.T
 	t.Helper()
 	signing := module.SessionSigning
 	require.NotEmpty(t, signing.Secret)
-	tokenAuth, err := sessiontoken.NewTokenAuthWithDurations(signing.Secret, signing.AccessExpiry, signing.RefreshExpiry, nil)
+	tokenAuth, err := sessiontoken.NewTokenAuthWithDurations(signing.Secret, signing.AccessExpiry, signing.RefreshExpiry)
 	require.NoError(t, err)
 	return tokenAuth
 }

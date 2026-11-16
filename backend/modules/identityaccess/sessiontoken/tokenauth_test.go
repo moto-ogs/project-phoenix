@@ -23,7 +23,7 @@ func newTestTokenAuth(_ *testing.T, secret string, durations ...time.Duration) (
 	if len(durations) > 1 {
 		refreshExpiry = durations[1]
 	}
-	return sessiontoken.NewTokenAuthWithDurations(secret, expiry, refreshExpiry, nil)
+	return sessiontoken.NewTokenAuthWithDurations(secret, expiry, refreshExpiry)
 }
 
 const testSecret = "test-secret-32-chars-minimum!!!"

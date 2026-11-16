@@ -2698,7 +2698,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListGuardianPortalContacts",
-      "binding_digest": "800f94f001a0894747f0d8dbc755f7d2",
+      "binding_digest": "5c0a080a95e6e9d6f656666b8cdf8603",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardianPortalContacts",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
@@ -2722,7 +2722,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListGuardianPortalContacts",
-      "binding_digest": "800f94f001a0894747f0d8dbc755f7d2",
+      "binding_digest": "5c0a080a95e6e9d6f656666b8cdf8603",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardianPortalContacts",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
@@ -4714,7 +4714,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.StudentsWithPortalGuardian",
-      "binding_digest": "800f94f001a0894747f0d8dbc755f7d2",
+      "binding_digest": "5c0a080a95e6e9d6f656666b8cdf8603",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.StudentsWithPortalGuardian",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
@@ -4738,7 +4738,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.StudentsWithPortalGuardian",
-      "binding_digest": "800f94f001a0894747f0d8dbc755f7d2",
+      "binding_digest": "5c0a080a95e6e9d6f656666b8cdf8603",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.StudentsWithPortalGuardian",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
@@ -5202,7 +5202,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListGuardianPortalContacts",
-      "binding_digest": "800f94f001a0894747f0d8dbc755f7d2",
+      "binding_digest": "5c0a080a95e6e9d6f656666b8cdf8603",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
@@ -6682,7 +6682,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListGuardianPortalContacts",
-      "binding_digest": "800f94f001a0894747f0d8dbc755f7d2",
+      "binding_digest": "5c0a080a95e6e9d6f656666b8cdf8603",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListGuardianPortalContacts",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
@@ -7706,7 +7706,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.StudentsWithPortalGuardian",
-      "binding_digest": "800f94f001a0894747f0d8dbc755f7d2",
+      "binding_digest": "5c0a080a95e6e9d6f656666b8cdf8603",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.StudentsWithPortalGuardian",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
@@ -8650,7 +8650,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListGuardianPortalContacts",
-      "binding_digest": "800f94f001a0894747f0d8dbc755f7d2",
+      "binding_digest": "5c0a080a95e6e9d6f656666b8cdf8603",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListGuardianPortalContacts",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
@@ -8674,7 +8674,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardianPortalContacts",
-      "binding_digest": "800f94f001a0894747f0d8dbc755f7d2",
+      "binding_digest": "5c0a080a95e6e9d6f656666b8cdf8603",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListGuardianPortalContacts",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
@@ -9770,7 +9770,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.StudentsWithPortalGuardian",
-      "binding_digest": "800f94f001a0894747f0d8dbc755f7d2",
+      "binding_digest": "5c0a080a95e6e9d6f656666b8cdf8603",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.StudentsWithPortalGuardian",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
@@ -9794,7 +9794,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.StudentsWithPortalGuardian",
-      "binding_digest": "800f94f001a0894747f0d8dbc755f7d2",
+      "binding_digest": "5c0a080a95e6e9d6f656666b8cdf8603",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.StudentsWithPortalGuardian",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
@@ -12370,7 +12370,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/postgres.GuardianStore.FindPortalMemberships",
-      "binding_digest": "800f94f001a0894747f0d8dbc755f7d2",
+      "binding_digest": "5c0a080a95e6e9d6f656666b8cdf8603",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.GuardianStore.FindPortalMemberships",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
@@ -12378,7 +12378,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/postgres.GuardianStore.ListAccountLinksByStudents",
-      "binding_digest": "800f94f001a0894747f0d8dbc755f7d2",
+      "binding_digest": "5c0a080a95e6e9d6f656666b8cdf8603",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.GuardianStore.ListAccountLinksByStudents",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",

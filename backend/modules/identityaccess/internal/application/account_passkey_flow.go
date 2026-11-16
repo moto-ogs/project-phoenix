@@ -202,7 +202,9 @@ func (f *AccountPasskeyFlows) FinishRegistration(ctx context.Context, request do
 // refused ceremony is a rejection: the consumption stays committed, so the
 // same challenge cannot be retried.
 func (f *AccountPasskeyFlows) verifyRegistration(ctx context.Context, request domain.AccountPasskeyRegistrationFinish) (domain.AccountPasskeyCredential, error) {
-	session, err := f.records.ConsumeSession(ctx, request.SessionID, domain.PasskeySessionPurposeRegistration, f.now())
+	// go-webauthn stamps and validates the ceremony's expiry on the real
+	// clock, so its stored expiry is compared on that clock too (ADR 0261).
+	session, err := f.records.ConsumeSession(ctx, request.SessionID, domain.PasskeySessionPurposeRegistration, time.Now())
 	if err != nil {
 		if errors.Is(err, identityaccess.ErrAccountPasskeySessionNotFound) {
 			return domain.AccountPasskeyCredential{}, rejectCeremony(identityaccess.ErrPasskeySessionInvalid)
@@ -355,7 +357,9 @@ func (f *AccountPasskeyFlows) verifyLogin(ctx context.Context, request domain.Ac
 
 // consumeLoginSession completes a login ceremony exactly once.
 func (f *AccountPasskeyFlows) consumeLoginSession(ctx context.Context, sessionID string) (domain.AccountPasskeySession, error) {
-	session, err := f.records.ConsumeSession(ctx, sessionID, domain.PasskeySessionPurposeLogin, f.now())
+	// go-webauthn stamps and validates the ceremony's expiry on the real
+	// clock, so its stored expiry is compared on that clock too (ADR 0261).
+	session, err := f.records.ConsumeSession(ctx, sessionID, domain.PasskeySessionPurposeLogin, time.Now())
 	if err != nil {
 		if errors.Is(err, identityaccess.ErrAccountPasskeySessionNotFound) {
 			return domain.AccountPasskeySession{}, rejectCeremony(identityaccess.ErrPasskeySessionInvalid)

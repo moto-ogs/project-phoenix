@@ -43,9 +43,8 @@ Gültigkeit mit `time.Until`.
    Reset, Caterer, Betreiber-Tokens, Betreiber-MFA und Passkeys lesen die
    Uhr ihres Service. Schuleinladung, Konto-MFA, Demo, Träger-Konten und
    die beiden Aufbewahrungsjobs bekommen sie über ihre Abhängigkeiten. Der
-   Session-Codec, `sessiontoken.TokenAuth`, die Demo-Routen, die
-   Einladungs-Lesezugriffe und die Invalidierung nehmen die Uhr der Wurzel
-   als Parameter.
+   Session-Codec, die Demo-Routen, die Einladungs-Lesezugriffe und die
+   Invalidierung nehmen die Uhr der Wurzel als Parameter.
 2. **Eine Uhr pro Entscheidung.** Betreiber-Einladungen, E-Mail-Wechsel,
    Betreiber-MFA-Codes und Demo-Zugänge schreiben `created_at` aus der Uhr
    des Stores. Eine Sitzung ohne Stempel bekommt ihn ebenfalls von dort.
@@ -55,39 +54,73 @@ Gültigkeit mit `time.Until`.
    Zustellung. Reine Schreibstempel wie `updated_at = NOW()` entscheiden
    nichts und bleiben bei der Datenbank. Dasselbe gilt für Entscheidungen,
    die ganz in SQL fallen: die Löschfrist deaktivierter Betreiber und die
-   Zeitfenster der Springer.
-3. **Zwei Aufrufe bleiben.** `portalauth.PasswordResetRetryAfter` ist die
+   Zeitfenster der Springer. Auf Tabellen mit dem Trigger
+   `update_modified_column()` oder einem gleichwertigen setzt die Datenbank
+   `updated_at` bei jedem UPDATE. Go stempelt `updated_at` dort nur beim
+   INSERT mit der Uhr des Stores, und keine Entscheidung vergleicht dieses
+   `updated_at` mit der Uhr des Owners.
+3. **Dreizehn Aufrufe bleiben.** Prüft eine Bibliothek einen Zeitpunkt mit
+   der echten Uhr, stempelt und vergleicht ihn auch Identity & Access mit der
+   echten Uhr. `portalauth.PasswordResetRetryAfter` ist die
    `RetryAfter func(error)` von `api/common.PasswordResetRoutes`. Fünf
    Portal-Router bauen sie ohne Uhr. `decode` in `sessiontoken` bedient die
    paketweite Middleware (`ParseVerified`, `Authenticator`,
    `AuthenticateRefreshJWT`, `RateLimitKey`). Diese Middleware nennt keine
    Uhr, und davor prüft der jwtauth-Verifier `exp` mit der jwx-Uhr. Beide
    Stellen ließen sich nur mit einer Änderung öffentlicher Verträge
-   injizieren.
+   injizieren. Fünf Aufrufe betreffen Passkey-Zeremonien: go-webauthn stempelt
+   ihren Ablauf (`SessionData.Expires`) beim Beginn mit `time.Now` und prüft
+   ihn beim Abschluss wieder mit `time.Now`. Das Verbrauchen der gespeicherten
+   Zeremonie (`verifyRegistration` und `consumeLoginSession` der Konten,
+   `verifyRegistration` und `verifyLogin` der Betreiber) und das Löschen
+   abgelaufener Zeremonien (`inUnitDeleteExpiredPasskeySessions`) vergleichen
+   diesen Ablauf deshalb mit der echten Uhr, wie auf der Basis. Sechs Aufrufe
+   betreffen Access-, Refresh- und Enrollment-Tokens: Der jwtauth-Verifier
+   prüft ihr `iat` und `exp` mit der jwx-Uhr. `SessionCodec` stempelt sie
+   deshalb mit der echten Uhr (`IssueTokenPair`, `IssueAccessToken`,
+   `IssueMFAEnrollmentToken`) und vergleicht ihr `exp` ebenso
+   (`ParseAccessToken`, `AccountOfAccessToken`,
+   `sessiontoken.TokenAuth.ParseAccessJWT`). `TokenAuth` nimmt keine Uhr.
+   Die Uhr des Codecs stempelt und prüft nur MFA-Challenge- und
+   Eltern-Setup-Tokens, die allein der Codec prüft.
 4. **Tests.** Tests, die Identity & Access direkt komponieren, laufen auf
    Montag, 16.11.2026, 09:00. Tests hinter dem jwtauth-Verifier oder
    `api/common.SetTrustedDevice` laufen nicht auf einer festen Go-Uhr, denn
    jwx und `time.Until` lesen die echte Zeit. Ihre Fixtures laufen deshalb zu
-   einem festen Zeitpunkt im Jahr 2100 ab.
+   einem festen Zeitpunkt im Jahr 2100 ab. `api.WithAuthTestClock` setzt im
+   Testmodul die Uhr von Owner und Codec, wie die Wurzel beide aus
+   `RootEnvironment.Now` speist. Damit laufen Registrierung und Anmeldung mit
+   Passkey für Konten und Betreiber mit einer Owner-Uhr am 04.03.2030 durch.
 5. **Budgets und Bindungen.** Das Compose-LOC-Budget von
    `modules/identityaccess/compose` steigt um die Zeilen der Uhr: Feld,
    nil-Default und Importe (+16, 1.372 auf 1.388). Die 225 Effekt-Bindungen,
    deren Körper oder Spur sich nur durch die Uhr geändert hat, sind mit
    dieser ADR neu bestätigt. Das sind 161 in Identity & Access, 36 in Care
-   Plan, 18 in People Directory und 10 in Communication. Die 14
+   Plan, 18 in People Directory und 10 in Communication. Die Begründungen in
+   Identity & Access nennen die echte Uhr der Ausnahmen aus Punkt 3. Die 14
    E4-Ausnahmen in Care Plan tragen diese ADR als `approval_adr`. Effekt und
    Einstufung bleiben gleich.
 
 ## Folgen
 
-- Das Uhr-Budget fällt um 81 Aufrufe (auf der Basis dieses Schnitts von 576
-  auf 495), Identity & Access von 83 auf 2.
+- Das Uhr-Budget fällt um 70 Aufrufe (auf der Basis dieses Schnitts von 576
+  auf 506), Identity & Access von 83 auf 13.
 - `calendarFixtureShiftedLiveDateDebt` verliert 9 Dateien mit 33 Funden.
   Alle Einträge unter `modules/identityaccess/` und
   `api/operator_mfa_verify_success_internal_test.go` entfallen.
 - Die Pass-through-Evidenz von Identity & Access verliert 4 Einträge. Die
   MFA-Record-Methoden lesen die Uhr des Stores und leiten nicht mehr nur
-  weiter. 4 Texte haben sich geändert.
+  weiter. 3 Texte haben sich geändert.
+- Zwei Werte prüfen weiter zwei Uhren. Das `exp` eines Refresh-Tokens ist
+  der Ablauf der gespeicherten Sitzung, den die Uhr des Owners setzt; jwx
+  prüft ihn im Verifier zusätzlich mit der echten Uhr. Das Max-Age des
+  Remember-Device-Cookies rechnet `api/common.SetTrustedDevice` mit
+  `time.Until` aus dem Ablauf des Geräts, den ebenfalls die Uhr des Owners
+  setzt. Eine einzige Uhr hieße, den Sitzungs- und Gerätelebenszyklus
+  wieder auf die echte Uhr zu legen oder Token- und Cookie-Vertrag zu
+  ändern. In Produktion sind beide Uhren dieselbe; Tests mit fester
+  Owner-Uhr schicken solche Tokens und Cookies nicht durch Verifier oder
+  Browser (Punkt 4).
 - Ratenbegrenzungen (Betreiber-Links, Betreiber-Codes, Passwort-Reset), die
   Abkühlzeit der Demo und die Einladungsliste messen gegen die Uhr des
   App-Servers statt gegen die Uhr der Datenbank. In Produktion liegen beide
