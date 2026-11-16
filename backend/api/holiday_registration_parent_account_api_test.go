@@ -169,8 +169,6 @@ func TestHolidayRegistrationWithTheAccountProofLinksTheAccount(t *testing.T) {
 // with the registration that asked for it (#7000).
 func TestHolidayRegistrationRetentionTakesTheAccountLinkAlong(t *testing.T) {
 	t.Parallel()
-	// Retention purges every organization, including other tests' older bookings.
-	testpkg.SetupIsolatedTestDB(t)
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, "Träger Konto Löschfrist", identityaccess.TraegerRoleAdministration)
 	body := januaryHolidays(office)
