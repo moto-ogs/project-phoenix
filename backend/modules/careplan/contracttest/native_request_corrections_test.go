@@ -45,15 +45,22 @@ func (b *correctionBoundary) NotifyCorrection(context.Context, *carerequests.Req
 	return b.notificationErr
 }
 
+// advancingDecisionClock starts at the fixed decision instant and runs on,
+// so a later edit is stamped after the decision it follows.
+func advancingDecisionClock() func() time.Time {
+	started := time.Now()
+	return func() time.Time { return decisionTestClock().Add(time.Since(started)) }
+}
+
 func TestNativeCorrectionReauthorizesAndRollsBackExactExceptionDeletion(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, advancingDecisionClock())
 	ctx := testpkg.Ctx(t)
 	student := testpkg.CreateTestStudent(t, db, "Correction", "Transaction", "1a")
 	parent := testpkg.CreateTestAccount(t, db, "parent")
 	staff, reviewer := testpkg.CreateTestStaffWithAccount(t, db, "Correction", "Reviewer")
-	createdAt := time.Now().Add(-time.Second)
+	createdAt := decisionTestClock().Add(-time.Second)
 	exception, err := owner.CreatePickupException(ctx, careplan.PickupException{
 		StudentID: student.ID, ExceptionDate: "2031-02-03", CreatedBy: staff.ID,
 		CreatedAt: createdAt, UpdatedAt: createdAt,

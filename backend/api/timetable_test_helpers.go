@@ -84,7 +84,7 @@ func NewTimetableTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 	}
 	pickup, err := careplanCompose.NewPickupBaselines(carePlan, approvedOfferings, func(ctx context.Context) (bool, error) {
 		return settings.Settings.ResolveBool(ctx, configModels.KeyEnrollmentBookingsAuthoritative)
-	})
+	}, timezone.CalendarDateClock(clocks...))
 	if err != nil {
 		return TimetableTestModule{}, nil, nil, err
 	}

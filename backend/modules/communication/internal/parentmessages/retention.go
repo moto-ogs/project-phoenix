@@ -43,7 +43,7 @@ type Retention struct {
 // CleanupExpiredMessages deletes the messages older than the window and the
 // conversations left without any message.
 func (r Retention) CleanupExpiredMessages(ctx context.Context) (RetentionResult, error) {
-	if r.Store == nil || r.Settings == nil {
+	if r.Store == nil || r.Settings == nil || r.Now == nil {
 		return RetentionResult{}, ErrRetentionUnresolved
 	}
 	days, err := r.Settings.ParentMessageRetentionDays(ctx)
@@ -53,11 +53,7 @@ func (r Retention) CleanupExpiredMessages(ctx context.Context) (RetentionResult,
 	if days <= 0 {
 		return RetentionResult{}, fmt.Errorf("%w: window must be positive, got %d", ErrRetentionUnresolved, days)
 	}
-	now := time.Now
-	if r.Now != nil {
-		now = r.Now
-	}
-	messages, threads, err := r.Store.DeleteMessagesBefore(ctx, now().AddDate(0, 0, -days))
+	messages, threads, err := r.Store.DeleteMessagesBefore(ctx, r.Now().AddDate(0, 0, -days))
 	if err != nil {
 		return RetentionResult{RetentionDays: days}, err
 	}

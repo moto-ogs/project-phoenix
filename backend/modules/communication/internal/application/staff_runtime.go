@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"log/slog"
-	"time"
 )
 
 // Runtime identifies the school of the ambient transaction.
@@ -19,7 +18,7 @@ func NewService(cfg ServiceConfig, runtime Runtime, policy ParentDeliveryPolicy)
 	}
 	now := cfg.Now
 	if now == nil {
-		now = time.Now
+		panic("staff announcements: the composition's clock is required")
 	}
 	return &service{
 		now:            now,

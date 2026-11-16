@@ -48,7 +48,7 @@ func setupPickupExtensionHarness(t *testing.T) *pickupExtensionHarness {
 	syncer := newPickupExcusal(t, db, repos.CarePlan(), baselines, tt, true)
 	pickupStudents, err := api.PickupPlanStudents(api.MustNewPeopleDirectory(testpkg.MustDatabase(db)))
 	require.NoError(t, err)
-	svc, err := careplanCompose.NewPickupSchedules(db, repos.CarePlan(), baselines, syncer, pickupStudents, nil, nil)
+	svc, err := careplanCompose.NewPickupSchedules(db, repos.CarePlan(), baselines, syncer, pickupStudents, nil, decisionTestDay)
 	require.NoError(t, err)
 	student := testpkg.CreateTestStudent(t, db, "Later", "Pickup", "LP1")
 	staff := testpkg.CreateTestStaff(t, db, "Later", "Staff")

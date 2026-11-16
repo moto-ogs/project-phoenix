@@ -40,7 +40,11 @@ func setupCareScheduleRouter(t *testing.T, clocks ...func() time.Time) (*bun.DB,
 	require.NoError(t, err)
 	liveSettings := NewActiveTestSettings(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db), clocks...)
 	liveCaller := NewActiveTestCaller(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db), clocks...)
-	resource, err := newCareScheduleTestRouter(testpkg.NewDatabase(t, db), module, live, liveSettings, liveCaller)
+	now := time.Now
+	if len(clocks) > 0 {
+		now = clocks[0]
+	}
+	resource, err := newCareScheduleTestRouter(testpkg.NewDatabase(t, db), module, live, liveSettings, liveCaller, now)
 	require.NoError(t, err)
 	return db, resource
 }

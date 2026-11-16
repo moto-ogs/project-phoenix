@@ -412,6 +412,12 @@ func (d groupRetentionDays) ParentMessageRetentionDays(context.Context) (int, er
 	return int(d), nil
 }
 
+// databaseRelativeClock dates the retention window of the group thread
+// suites. Their messages carry the created_at PostgreSQL stamps, and the
+// fixtures age them against the database's NOW(); the window has to be read
+// on the clock that stamped them.
+var databaseRelativeClock = time.Now
+
 // TestGroupThread_RetentionDeletesExpiredGroupMessages: the nightly parent
 // message retention removes group messages past the window, their recipient
 // rows, and the thread left empty.
@@ -427,7 +433,7 @@ func TestGroupThread_RetentionDeletesExpiredGroupMessages(t *testing.T) {
 		testpkg.Tenant(t), testpkg.Tenant(t))
 	require.NoError(t, err)
 
-	cleanup := composition.NewParentMessageRetention(db, groupRetentionDays(365))
+	cleanup := composition.NewParentMessageRetention(db, groupRetentionDays(365), databaseRelativeClock)
 	require.NoError(t, run(testpkg.Ctx(t), func(ctx context.Context) error {
 		result, err := cleanup.CleanupExpiredParentMessages(ctx)
 		require.NoError(t, err)
@@ -473,7 +479,7 @@ func TestGroupThread_RetentionRepairsLatestActivity(t *testing.T) {
 		WHERE id = ? AND tenant_id = ?`, latestID, testpkg.Tenant(t))
 	require.NoError(t, err)
 
-	cleanup := composition.NewParentMessageRetention(db, groupRetentionDays(365))
+	cleanup := composition.NewParentMessageRetention(db, groupRetentionDays(365), databaseRelativeClock)
 	require.NoError(t, run(testpkg.Ctx(t), func(ctx context.Context) error {
 		result, err := cleanup.CleanupExpiredParentMessages(ctx)
 		require.NoError(t, err)
@@ -519,7 +525,7 @@ func TestGroupThread_RetentionClearsActivityOfRecentEmptyThread(t *testing.T) {
 		WHERE thread_id = ? AND tenant_id = ?`, threadID, testpkg.Tenant(t))
 	require.NoError(t, err)
 
-	cleanup := composition.NewParentMessageRetention(db, groupRetentionDays(365))
+	cleanup := composition.NewParentMessageRetention(db, groupRetentionDays(365), databaseRelativeClock)
 	require.NoError(t, run(testpkg.Ctx(t), func(ctx context.Context) error {
 		result, err := cleanup.CleanupExpiredParentMessages(ctx)
 		require.NoError(t, err)

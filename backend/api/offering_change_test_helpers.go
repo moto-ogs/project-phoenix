@@ -71,7 +71,8 @@ func NewOfferingChangeTestModule(db transactionruntime.Database, options Offerin
 	}
 	deps.Planning = owners.ManualPlanningReader{Query: owners.PlanningQuery{DB: db}, CourseGroups: reposTimetable.Timetable}
 	deps.Bookings = options.Bookings
-	deps.Today = options.Today
+	// Now stamps the decisions; Today defaults to its Berlin day.
+	deps.Today, deps.Now = options.Today, time.Now
 	deps.Logger = slog.Default()
 	return owners.ComposeOfferingChanges(deps)
 }

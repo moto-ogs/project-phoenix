@@ -91,7 +91,7 @@ func setupAutoExcusalHarnessWithExtensions(t *testing.T, withBaseline, withExten
 	syncer := newPickupExcusal(t, db, repos.CarePlan(), newPickupBaselineService(repos.CarePlan(), approvedOfferingProjection(t)), tt, withExtensions)
 	pickupStudents, err := owners.PickupPlanStudents(owners.MustNewPeopleDirectory(testpkg.MustDatabase(db)))
 	require.NoError(t, err)
-	svc, err := compose.NewPickupSchedules(db, repos.CarePlan(), newPickupBaselineService(repos.CarePlan(), approvedOfferingProjection(t)), syncer, pickupStudents, nil, nil)
+	svc, err := compose.NewPickupSchedules(db, repos.CarePlan(), newPickupBaselineService(repos.CarePlan(), approvedOfferingProjection(t)), syncer, pickupStudents, nil, decisionTestDay)
 	require.NoError(t, err)
 	partial, err := compose.NewPartialAbsences(db, repos.CarePlan(), api.NewStudentPresenceForTests(testpkg.NewDatabase(t, db)), syncer)
 	require.NoError(t, err)
@@ -581,7 +581,7 @@ func TestAutoExcusal_FullDayStatusCoexistsAndReleaseReplays(t *testing.T) {
 func newPickupExcusal(t *testing.T, db *bun.DB, records carePlanPorts.PickupExcusalRecords, baselines careplan.PickupBaselineReader, tt timetable.Capability, extensions bool) careplan.PickupAutoExcusal {
 	t.Helper()
 	adapter := pickupExcusalTimetable{owners.NewPickupExcusalTimetable(tt, owners.NewPartialAbsencePreview(testpkg.MustDatabase(db))), tt, db}
-	deps := compose.PickupExcusalDependencies{DB: db, Records: records, Baselines: baselines, Blocks: api.NewStudentPresenceForTests(testpkg.NewDatabase(t, db)), Preview: adapter}
+	deps := compose.PickupExcusalDependencies{DB: db, Records: records, Baselines: baselines, Blocks: api.NewStudentPresenceForTests(testpkg.NewDatabase(t, db)), Preview: adapter, Today: decisionTestDay}
 	if extensions {
 		deps.Extensions = adapter
 	}

@@ -123,9 +123,9 @@ func (s arrivalBaselineSource) OfferingRows(ctx context.Context, links []*carepl
 }
 
 // NewPickupBaselines projects the pickup baselines from the stored schedules,
-// the approved bookings and the booking mode.
-func NewPickupBaselines(records carePlanPorts.PickupBaselineRecords, links careplan.ApprovedBookingReader, authoritative func(context.Context) (bool, error)) careplan.PickupBaselineReader {
-	return NewPickupBaselineQueries(pickupBaselineSource{links, records, authoritative})
+// the approved bookings and the booking mode on the composition's day.
+func NewPickupBaselines(records carePlanPorts.PickupBaselineRecords, links careplan.ApprovedBookingReader, authoritative func(context.Context) (bool, error), today func() calendar.Date) careplan.PickupBaselineReader {
+	return NewPickupBaselineQueries(pickupBaselineSource{links, records, authoritative}, today)
 }
 
 // pickupBaselineSource reads the booking rows straight from the approved

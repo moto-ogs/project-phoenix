@@ -171,17 +171,14 @@ var _ communication.MessageAttachmentCleanup = MessageAttachmentSweep{}
 // intents in the caller's tenant transaction. The intents stay locked until
 // it commits, so two passes never race on one object.
 func (s MessageAttachmentSweep) SweepMessageAttachmentObjects(ctx context.Context, remove func(context.Context, int64, string) error) (int, error) {
-	if s.Store == nil || remove == nil {
+	if s.Store == nil || remove == nil || s.Now == nil {
 		return 0, ErrMessageAttachmentsNotConfigured
 	}
 	intents, err := s.Store.PendingMessageAttachmentCleanups(ctx, messageAttachmentSweepBatchSize)
 	if err != nil {
 		return 0, err
 	}
-	now := time.Now
-	if s.Now != nil {
-		now = s.Now
-	}
+	now := s.Now
 	var removed int
 	var failures []error
 	for _, intent := range intents {

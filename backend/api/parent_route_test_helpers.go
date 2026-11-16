@@ -4,6 +4,7 @@ package api
 
 import (
 	"context"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -57,7 +58,7 @@ func NewParentRouteTestRepositories(db transactionruntime.Database, members owne
 		return ParentRouteTestRepositories{}, err
 	}
 	excusedRequests, err := owners.NewExcusedAbsenceRequests(owners.ExcusedRequestWiring{
-		CarePlan: care, Students: members.Student, Persons: members.Person, Scope: schoolWideReviewScope,
+		CarePlan: care, Students: members.Student, Persons: members.Person, Scope: schoolWideReviewScope, Now: time.Now,
 	})
 	if err != nil {
 		return ParentRouteTestRepositories{}, err

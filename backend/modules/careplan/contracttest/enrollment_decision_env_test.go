@@ -108,6 +108,9 @@ const decisionTestToday calendar.Date = "2026-08-24"
 // owners of the env that take one.
 func decisionTestClock() time.Time { return decisionTestToday.BerlinMidnight() }
 
+// decisionTestDay is the day clock of the fixed decision day.
+func decisionTestDay() calendar.Date { return decisionTestToday }
+
 func (s stubActivationSettings) ResolveString(_ context.Context, key string) (string, error) {
 	if key == enrollmentKeys.DefaultActivationMode {
 		return s.mode, nil

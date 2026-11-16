@@ -267,7 +267,7 @@ func TestLeaveFinalGroupMemberBroadcastsAfterCommit(t *testing.T) {
 			return nil
 		},
 	}
-	service := NewService(Config{
+	service := NewService(Config{Now: time.Now,
 		ThreadRepo:  repository,
 		Groups:      groups,
 		Session:     staticStaffMessagingSession{},

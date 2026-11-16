@@ -29,7 +29,7 @@ func (d *detailFailDirectory) PersonNames(context.Context, []int64) (map[int64]c
 func TestScheduleDetailAuthorizesBeforeLoadingNames(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{})
+	module := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
 	ctx := testpkg.Ctx(t)
 	student := testpkg.CreateTestStudent(t, db, "Detail", "Scope", "1a")
 	account := testpkg.CreateTestAccount(t, db, "parent")

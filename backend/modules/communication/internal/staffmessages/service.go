@@ -124,7 +124,7 @@ type Config struct {
 	// it uploads are refused; messages without files are unaffected.
 	Attachments deliveryPorts.MessageAttachmentStore
 
-	// Now dates the retention window; nil is the real clock.
+	// Now dates the retention window; the composition's clock is required.
 	Now func() time.Time
 }
 
@@ -137,7 +137,7 @@ func NewService(cfg Config, runtime Runtime, policy deliveryPorts.NotificationEr
 		cfg.Logger = slog.Default()
 	}
 	if cfg.Now == nil {
-		cfg.Now = time.Now
+		panic("staff messaging: the composition's clock is required")
 	}
 	return &Service{Config: cfg, runtime: runtime, deliveryPolicy: policy}
 }

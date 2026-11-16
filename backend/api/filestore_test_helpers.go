@@ -63,7 +63,7 @@ func NewFileStoreTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 		return nil, nil, err
 	}
 	announcements, err := communicationCompose.NewParentAnnouncementsWithAttachments(communicationCompose.ParentAnnouncementConfig{
-		Repo: parentStore.NewParentAnnouncementRepository(db.Pool(), owners.NewParentAnnouncementAudience(db, owners.ParentAnnouncementApplicants(enrollmentAudience.NewClocked(nil))), nil), Settings: settingsValues.NewParentAnnouncementValues(settings.Settings), Logger: slog.Default(),
+		Repo: parentStore.NewParentAnnouncementRepository(db.Pool(), owners.NewParentAnnouncementAudience(db, owners.ParentAnnouncementApplicants(enrollmentAudience.NewClocked(nil))), time.Now), Settings: settingsValues.NewParentAnnouncementValues(settings.Settings), Logger: slog.Default(), Now: time.Now,
 		Fingerprints: owners.SecurityFingerprints{},
 	}, purger, owners.CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	if err != nil {

@@ -15,7 +15,7 @@ func NewCleanupTestRunner(deps ports.WorkerDependencies) func() {
 	if err != nil {
 		panic(err)
 	}
-	s := &Scheduler{
+	s := &Scheduler{now: deps.Now,
 		retentionCleanupJobs: newRetentionCleanupJobs(deps),
 		logger:               deps.Logger, schoolRepo: deps.SchoolRepo, tenantRuntime: deps.TenantRuntime,
 		retention: retention,
@@ -37,13 +37,13 @@ func NewCleanupTestRunner(deps ports.WorkerDependencies) func() {
 
 // ActiveSchoolsForTest runs the unchanged settings-aware active-school loop.
 func ActiveSchoolsForTest(deps ports.WorkerDependencies) []int64 {
-	s := &Scheduler{schoolRepo: deps.SchoolRepo, tenantRuntime: deps.TenantRuntime, settings: deps.Settings, logger: deps.Logger}
+	s := &Scheduler{now: deps.Now, schoolRepo: deps.SchoolRepo, tenantRuntime: deps.TenantRuntime, settings: deps.Settings, logger: deps.Logger}
 	return s.forEachTenantSettings(context.Background(), "active-school-check", func(context.Context, int64) error { return nil })
 }
 
 // NewFileCleanupTestRunner drives the same three recovery checks as the Worker.
 func NewFileCleanupTestRunner(deps ports.WorkerDependencies) func() {
-	s := &Scheduler{
+	s := &Scheduler{now: deps.Now,
 		logger: deps.Logger, schoolRepo: deps.SchoolRepo, tenantRuntime: deps.TenantRuntime,
 		staffDocumentFileCleaner:   deps.StaffDocumentCleaner,
 		studentDocumentFileCleaner: deps.StudentDocumentCleaner, fileStoreCleaner: deps.FileStoreCleaner,

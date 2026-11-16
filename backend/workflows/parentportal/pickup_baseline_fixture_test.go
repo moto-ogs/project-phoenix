@@ -3,13 +3,15 @@ package parentportal_test
 import (
 	"context"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 )
 
 // newPickupBaselineService binds native records in the fixture's legacy booking mode.
 func newPickupBaselineService(records careplan.Capability, links careplan.ApprovedBookingReader) careplan.PickupBaselineReader {
-	baselines, err := compose.NewPickupBaselines(records, links, func(context.Context) (bool, error) { return false, nil })
+	baselines, err := compose.NewPickupBaselines(records, links, func(context.Context) (bool, error) { return false, nil }, calendar.TodayDate)
 	if err != nil {
 		panic(err)
 	}

@@ -205,7 +205,7 @@ func signInDataCleanupJobs(cleaner ports.SignInDataCleaner, now func() time.Time
 		{Description: "MFA email code cleanup", Run: cleaner.DeleteExpiredMFAEmailChallenges},
 		{Description: "Passkey session cleanup", Run: cleaner.DeleteExpiredPasskeySessions},
 		{Description: "Operator session cleanup", Run: func(ctx context.Context) (int, error) {
-			return cleaner.DeleteExpiredOperatorSessions(ctx, schedulerTime(now))
+			return cleaner.DeleteExpiredOperatorSessions(ctx, now())
 		}},
 	}
 }

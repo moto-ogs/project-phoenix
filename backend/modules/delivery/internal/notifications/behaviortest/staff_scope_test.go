@@ -75,7 +75,7 @@ func staffEvent(tenantID int64, accountIDs ...int64) notifications.Event {
 func TestStaffScopeValidation(t *testing.T) {
 	t.Parallel()
 
-	svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil,
+	svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil, time.Now,
 		notifications.NewSSEChannel(testpkg.NewRecordingBroadcaster()))
 
 	t.Run("no recipients is rejected", func(t *testing.T) {
@@ -97,7 +97,7 @@ func TestStaffScopeRoutesToNamedAccounts(t *testing.T) {
 	t.Parallel()
 
 	bc := testpkg.NewRecordingBroadcaster()
-	svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil,
+	svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil, time.Now,
 		notifications.NewSSEChannel(bc))
 
 	err := dispatch(t, func(ctx context.Context) error {
@@ -124,7 +124,7 @@ func TestStaffMessageAlsoRoutesToSchoolPortal(t *testing.T) {
 	t.Parallel()
 
 	bc := testpkg.NewRecordingBroadcaster()
-	svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil,
+	svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil, time.Now,
 		notifications.NewSSEChannel(bc))
 	event := staffEvent(testTenantID, 11)
 	event.Type = notifications.TypeStaffMessage
@@ -148,7 +148,7 @@ func TestTestNotificationStaysInTheRequestingPortal(t *testing.T) {
 		t.Parallel()
 
 		bc := testpkg.NewRecordingBroadcaster()
-		svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil,
+		svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil, time.Now,
 			notifications.NewSSEChannel(bc))
 		event := staffEvent(testTenantID, 11)
 		event.Type = notifications.TypeTest
@@ -168,7 +168,7 @@ func TestTestNotificationStaysInTheRequestingPortal(t *testing.T) {
 		t.Parallel()
 
 		bc := testpkg.NewRecordingBroadcaster()
-		svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil,
+		svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil, time.Now,
 			notifications.NewSSEChannel(bc))
 		event := staffEvent(testTenantID, 11)
 		event.Type = notifications.TypeTest
@@ -191,7 +191,7 @@ func TestStaffAccountIDsAreSnapshotted(t *testing.T) {
 	t.Parallel()
 
 	bc := testpkg.NewRecordingBroadcaster()
-	svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil,
+	svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil, time.Now,
 		notifications.NewSSEChannel(bc))
 
 	recipients := []int64{11, 22}
@@ -221,7 +221,7 @@ func TestDeliveryWindow(t *testing.T) {
 	t.Run("outside the window nothing is dispatched", func(t *testing.T) {
 		bc := testpkg.NewRecordingBroadcaster()
 		start, end := inactiveWindow()
-		svc := notifications.NewService(settingsWithWindow(start, end), nil,
+		svc := notifications.NewService(settingsWithWindow(start, end), nil, time.Now,
 			notifications.NewSSEChannel(bc))
 
 		err := dispatch(t, func(ctx context.Context) error {
@@ -233,7 +233,7 @@ func TestDeliveryWindow(t *testing.T) {
 
 	t.Run("the test notification ignores the window", func(t *testing.T) {
 		bc := testpkg.NewRecordingBroadcaster()
-		svc := notifications.NewService(settingsWithWindow("00:00", "00:01"), nil,
+		svc := notifications.NewService(settingsWithWindow("00:00", "00:01"), nil, time.Now,
 			notifications.NewSSEChannel(bc))
 
 		// An admin verifying the setup in the evening must get an answer, not
@@ -247,7 +247,7 @@ func TestDeliveryWindow(t *testing.T) {
 
 	t.Run("a malformed window fails closed", func(t *testing.T) {
 		bc := testpkg.NewRecordingBroadcaster()
-		svc := notifications.NewService(settingsWithWindow("nonsense", "18:00"), nil,
+		svc := notifications.NewService(settingsWithWindow("nonsense", "18:00"), nil, time.Now,
 			notifications.NewSSEChannel(bc))
 
 		err := dispatch(t, func(ctx context.Context) error {
@@ -259,7 +259,7 @@ func TestDeliveryWindow(t *testing.T) {
 
 	t.Run("a blank window fails closed", func(t *testing.T) {
 		bc := testpkg.NewRecordingBroadcaster()
-		svc := notifications.NewService(settingsWithWindow("", "18:00"), nil,
+		svc := notifications.NewService(settingsWithWindow("", "18:00"), nil, time.Now,
 			notifications.NewSSEChannel(bc))
 
 		err := dispatch(t, func(ctx context.Context) error {
@@ -276,7 +276,7 @@ func TestNotifyBatch(t *testing.T) {
 
 	t.Run("delivers one event per recipient", func(t *testing.T) {
 		bc := testpkg.NewRecordingBroadcaster()
-		svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil,
+		svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil, time.Now,
 			notifications.NewSSEChannel(bc))
 
 		err := dispatch(t, func(ctx context.Context) error {
@@ -295,7 +295,7 @@ func TestNotifyBatch(t *testing.T) {
 
 	t.Run("test notifications ignore the delivery window", func(t *testing.T) {
 		bc := testpkg.NewRecordingBroadcaster()
-		svc := notifications.NewService(settingsWithWindow("00:00", "00:01"), nil,
+		svc := notifications.NewService(settingsWithWindow("00:00", "00:01"), nil, time.Now,
 			notifications.NewSSEChannel(bc))
 
 		err := dispatch(t, func(ctx context.Context) error {
@@ -307,7 +307,7 @@ func TestNotifyBatch(t *testing.T) {
 
 	t.Run("a malformed window rejects the whole batch", func(t *testing.T) {
 		bc := testpkg.NewRecordingBroadcaster()
-		svc := notifications.NewService(settingsWithWindow("06:00", "invalid"), nil,
+		svc := notifications.NewService(settingsWithWindow("06:00", "invalid"), nil, time.Now,
 			notifications.NewSSEChannel(bc))
 
 		err := dispatch(t, func(ctx context.Context) error {
@@ -322,7 +322,7 @@ func TestNotifyBatch(t *testing.T) {
 
 	t.Run("a mixed-tenant batch is rejected", func(t *testing.T) {
 		bc := testpkg.NewRecordingBroadcaster()
-		svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil,
+		svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil, time.Now,
 			notifications.NewSSEChannel(bc))
 
 		err := svc.NotifyBatch(context.Background(), []notifications.Event{
@@ -336,7 +336,7 @@ func TestNotifyBatch(t *testing.T) {
 
 	t.Run("one malformed event fails the whole batch", func(t *testing.T) {
 		bc := testpkg.NewRecordingBroadcaster()
-		svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil,
+		svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil, time.Now,
 			notifications.NewSSEChannel(bc))
 
 		// Dropping the bad event silently would lose a recipient without a
@@ -351,7 +351,7 @@ func TestNotifyBatch(t *testing.T) {
 
 	t.Run("an empty batch is a no-op", func(t *testing.T) {
 		bc := testpkg.NewRecordingBroadcaster()
-		svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil,
+		svc := notifications.NewService(settingsWithWindow("00:00", "00:00"), nil, time.Now,
 			notifications.NewSSEChannel(bc))
 
 		require.NoError(t, svc.NotifyBatch(context.Background(), nil))

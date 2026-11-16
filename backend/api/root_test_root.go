@@ -228,7 +228,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return
 		},
 		func() (err error) {
-			messaging = owners.NewParentMessagingRepositories(messageDB, groups, membership, peopleIdentity, enrollmentCompose.NewClocked(env.Now), nil, organizations)
+			messaging = owners.NewParentMessagingRepositories(messageDB, groups, membership, peopleIdentity, enrollmentCompose.NewClocked(env.Now), env.Now, organizations)
 			consent, err = communicationCompose.NewNotificationConsent(communicationCompose.NotificationConsentConfig{
 				DB: messageDB.Pool(), Observe: env.Observe.Communication,
 			})
@@ -460,6 +460,14 @@ func caregiverProfilesForTests(db transactionruntime.Database) (owners.Caregiver
 		return owners.CaregiverProfiles{}, err
 	}
 	return owners.CaregiverProfiles{Persons: persons, Membership: membership}, nil
+}
+
+// realClockUnless is the clock a test graph pins, or the real one.
+func realClockUnless(clocks []func() time.Time) func() time.Time {
+	if now := OptionalClock(clocks); now != nil {
+		return now
+	}
+	return time.Now
 }
 
 // OptionalClock is the clock a test graph pins, or nil for the real one.

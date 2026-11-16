@@ -301,7 +301,7 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			messaging = owners.NewParentMessagingRepositories(db, groups, membership, peopleIdentity, enrollmentCompose.NewClocked(env.Now), nil, organizations)
+			messaging = owners.NewParentMessagingRepositories(db, groups, membership, peopleIdentity, enrollmentCompose.NewClocked(env.Now), env.Now, organizations)
 			consent, err = communicationCompose.NewNotificationConsent(communicationCompose.NotificationConsentConfig{
 				DB: db.Pool(), Observe: env.Observe.Communication,
 			})

@@ -173,7 +173,7 @@ func (r *ParentMessagingSuiteRepositories) WithSchoolProjections(schools organiz
 // Communication stores over the unobserved owners of db.
 func NewParentMessagingSuiteRepositories(db transactionruntime.Database, clocks ...func() time.Time) *ParentMessagingSuiteRepositories {
 	return &ParentMessagingSuiteRepositories{MessagingRepositories: owners.ComposeParentMessagingRepositories(
-		db, MustNewSchoolStructure(db), owners.MustNewSchoolMembership(db), owners.NewPeopleIdentityAccess(db, nil), enrollmentCompose.NewClocked(nil), OptionalClock(clocks),
+		db, MustNewSchoolStructure(db), owners.MustNewSchoolMembership(db), owners.NewPeopleIdentityAccess(db, nil), enrollmentCompose.NewClocked(nil), realClockUnless(clocks),
 	)}
 }
 
@@ -309,7 +309,7 @@ func NewPeopleRepositorySuiteParentMessaging(db transactionruntime.Database) (Pa
 // NewPeopleRepositorySuiteAnnouncements is the parent announcement store over
 // its Enrollment audience, constructed here rather than by shared fixtures.
 func NewPeopleRepositorySuiteAnnouncements(db transactionruntime.Database, clocks ...func() time.Time) recordports.ParentAnnouncementRepository {
-	return parentStore.NewParentAnnouncementRepository(db.Pool(), owners.NewParentAnnouncementAudience(db, owners.ParentAnnouncementApplicants(enrollmentCompose.NewClocked(nil)), clocks...), OptionalClock(clocks))
+	return parentStore.NewParentAnnouncementRepository(db.Pool(), owners.NewParentAnnouncementAudience(db, owners.ParentAnnouncementApplicants(enrollmentCompose.NewClocked(nil)), clocks...), realClockUnless(clocks))
 }
 
 // NewPeopleRepositorySuiteCaregiverBindingLocker is the caregiver binding

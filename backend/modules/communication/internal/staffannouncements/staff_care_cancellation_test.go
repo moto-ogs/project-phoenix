@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"testing"
+	"time"
 
 	records "github.com/moto-ogs/project-phoenix/modules/communication/internal/staffannouncements"
 
@@ -40,7 +41,7 @@ func buildNoticeService(t *testing.T, settings *settingsDouble) (announcement.St
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	reposMessages := api.NewParentMessagingSuiteRepositories(testpkg.NewDatabase(t, db))
-	svc := announcement.NewService(announcement.ServiceConfig{
+	svc := announcement.NewService(announcement.ServiceConfig{Now: time.Now,
 		Repo:       records.NewRepository(reposMessages.ParentAnnouncement),
 		Settings:   configModel.NewParentAnnouncementValues(settings),
 		Notifier:   noticeNotificationCallback(owners.BindCommunicationNotificationSender(api.NewCommunicationTestNotifier(settings, slog.Default()))),

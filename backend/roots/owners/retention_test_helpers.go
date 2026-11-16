@@ -68,7 +68,7 @@ func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWo
 	}
 	steps := dataRetentionSteps(
 		settings.Settings, fleet, statusDays,
-		communicationCompose.NewParentMessageRetention(db.Pool(), settingsModule.NewParentMessageRetentionValues(settings.Settings)),
+		communicationCompose.NewParentMessageRetention(db.Pool(), settingsModule.NewParentMessageRetentionValues(settings.Settings), time.Now),
 		enrollments, workforceCompose.NewSickNoteRetention(StaffSickNoteRetentionSettings{Settings: settings.Settings}),
 		command, deliveryCompose.NewRetention(time.Now),
 	)
@@ -102,8 +102,8 @@ func newRetentionTestAnnouncements(db transactionruntime.Database, settings sett
 		return nil, err
 	}
 	announcements, err := communicationCompose.NewParentAnnouncementsWithAttachments(communicationCompose.ParentAnnouncementConfig{
-		Repo:     parentStore.NewParentAnnouncementRepository(db.Pool(), NewParentAnnouncementAudience(db, ParentAnnouncementApplicants(enrollmentCompose.NewClocked(nil))), nil),
-		Settings: settingsModule.NewParentAnnouncementValues(settings), Logger: slog.Default(), Fingerprints: SecurityFingerprints{},
+		Repo:     parentStore.NewParentAnnouncementRepository(db.Pool(), NewParentAnnouncementAudience(db, ParentAnnouncementApplicants(enrollmentCompose.NewClocked(nil))), time.Now),
+		Settings: settingsModule.NewParentAnnouncementValues(settings), Logger: slog.Default(), Fingerprints: SecurityFingerprints{}, Now: time.Now,
 	}, purger, CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	if err != nil {
 		return nil, err

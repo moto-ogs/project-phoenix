@@ -84,7 +84,7 @@ func NewWorker(
 	if err != nil {
 		return nil, err
 	}
-	retention, err := workerRetentionOf(db, logger, settings, audit, fleet, carePlan, communicationCompose.NewParentMessageRetention(db.Pool(), settingsValues.NewParentMessageRetentionValues(settings)), notices.RejectedCleanup, studentDeletion, identity, announcements, timetableRepos.Timetable, peopleOwner, clockOrReal(now))
+	retention, err := workerRetentionOf(db, logger, settings, audit, fleet, carePlan, communicationCompose.NewParentMessageRetention(db.Pool(), settingsValues.NewParentMessageRetentionValues(settings), clockOrReal(now)), notices.RejectedCleanup, studentDeletion, identity, announcements, timetableRepos.Timetable, peopleOwner, clockOrReal(now))
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func NewWorker(
 		return nil, err
 	}
 	return schedulerRuntimeCompose.NewWorker(schedulerPorts.WorkerDependencies{
-		Logger: logger.With("service", "scheduler"), Now: now,
+		Logger: logger.With("service", "scheduler"), Now: clockOrReal(now),
 		Getenv:                       os.Getenv,
 		SchoolRepo:                   schedulerTenantDirectory{schools: organizations, billing: billing, schoolNames: schoolNames},
 		TenantRuntime:                runtime,

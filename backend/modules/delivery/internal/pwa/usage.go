@@ -109,7 +109,11 @@ func NewUsageService(
 	accountTenants GuardianSchools,
 	settings RetentionSettings,
 	logger *slog.Logger,
+	now func() time.Time,
 ) UsageService {
+	if now == nil {
+		panic("pwa usage: the composition's clock is required")
+	}
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -120,13 +124,13 @@ func NewUsageService(
 		accountTenants: accountTenants,
 		settings:       settings,
 		logger:         logger,
-		now:            time.Now,
+		now:            now,
 	}
 }
 
 // NewTenantUsageService is NewUsageService over the root's tenant unit of
 // work (ADR 0059). A missing collaborator is a construction error; the
-// logger stays optional, and a nil clock is the real one.
+// logger stays optional; the clock is required.
 func NewTenantUsageService(
 	runtime tenant.UnitOfWork,
 	db *bun.DB,
@@ -140,14 +144,11 @@ func NewTenantUsageService(
 	if runtime.IsZero() {
 		return nil, fmt.Errorf("pwa usage: %w", tenant.ErrRuntimeRequired)
 	}
-	if db == nil || repo == nil || summaries == nil || accountTenants == nil || settings == nil {
+	if db == nil || repo == nil || summaries == nil || accountTenants == nil || settings == nil || now == nil {
 		return nil, errors.New("pwa usage: all dependencies are required")
 	}
-	service := NewUsageService(db, repo, summaries, accountTenants, settings, logger).(*usageService)
+	service := NewUsageService(db, repo, summaries, accountTenants, settings, logger, now).(*usageService)
 	service.tenantRuntime = &runtime
-	if now != nil {
-		service.now = now
-	}
 	return service, nil
 }
 

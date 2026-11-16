@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api"
 	staffmessaging "github.com/moto-ogs/project-phoenix/modules/communication/internal/staffmessages"
@@ -66,7 +67,7 @@ func newServiceWithEnabled(t *testing.T, db *bun.DB, enabled bool, retentionDays
 	})
 
 	repos := newRepositories(t, db)
-	return staffmessaging.NewService(staffmessaging.Config{
+	return staffmessaging.NewService(staffmessaging.Config{Now: time.Now,
 		ThreadRepo:  staffmessaging.NewThreadRepository(repos.Thread),
 		Session:     api.CommunicationSession{},
 		MessageRepo: staffmessaging.NewMessageRepository(repos.Message),
@@ -87,7 +88,7 @@ func newServiceWithBrokenRetention(t *testing.T, db *bun.DB) *staffmessaging.Ser
 		},
 	}
 	repos := newRepositories(t, db)
-	return staffmessaging.NewService(staffmessaging.Config{
+	return staffmessaging.NewService(staffmessaging.Config{Now: time.Now,
 		ThreadRepo:  staffmessaging.NewThreadRepository(repos.Thread),
 		Session:     api.CommunicationSession{},
 		MessageRepo: staffmessaging.NewMessageRepository(repos.Message),

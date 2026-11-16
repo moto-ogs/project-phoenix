@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -127,6 +128,8 @@ func NewStaffMessagingTestModule(db transactionruntime.Database, unit tenant.Uni
 		Persons: owners.BindStaffSenderNames(people), Session: CommunicationSession{}, Settings: settingsValues.NewStaffMessagingValues(settings.Settings), Broadcaster: realtime.NewHub(slog.Default()),
 		Logger: slog.Default(), Notifier: owners.BindCommunicationNotificationSender(delivery.Notifications),
 		Preferences: delivery.NotificationPreferences, Observe: func(communicationCompose.Observation) {},
+		// The staff messaging suites date the retention window on the real clock.
+		Now: time.Now,
 	}, owners.CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	return StaffMessagingTestModule{StaffMessaging: messaging, Attachments: attachments}, settings, nil
 }

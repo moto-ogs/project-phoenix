@@ -69,8 +69,8 @@ func NewPortalMessageAttachments(db *bun.DB) communication.PortalMessageAttachme
 }
 
 // NewMessageAttachmentCleanup removes the objects of deleted attachments.
-func NewMessageAttachmentCleanup(db *bun.DB, logger *slog.Logger) communication.MessageAttachmentCleanup {
-	return deliveryPorts.MessageAttachmentSweep{Store: messageAttachmentStore(db), Logger: logger}
+func NewMessageAttachmentCleanup(db *bun.DB, logger *slog.Logger, now func() time.Time) communication.MessageAttachmentCleanup {
+	return deliveryPorts.MessageAttachmentSweep{Store: messageAttachmentStore(db), Logger: logger, Now: now}
 }
 
 // newCountPreferences builds the store behind the personal count scope
@@ -99,7 +99,7 @@ type StaffMessagingConfig struct {
 	Observe     func(Observation)
 	// DB backs the photos and files of messages (#6685); nil refuses uploads.
 	DB  *bun.DB
-	Now func() time.Time // dates the retention window; nil is the real clock
+	Now func() time.Time // dates the retention window; required
 }
 
 // NewStaffMessaging also returns the photos and files of the team chat (#6685).

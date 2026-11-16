@@ -15,6 +15,9 @@ import (
 
 var errUsageRepo = errors.New("usage repository failure")
 
+// usageTestNow is the fixed clock the usage service dates its retention on.
+func usageTestNow() time.Time { return time.Date(2031, time.June, 2, 3, 0, 0, 0, time.UTC) }
+
 type recordingUsageRepository struct {
 	recorded      []recordedUsage
 	recordErr     error
@@ -79,7 +82,7 @@ func TestUsageServiceReportStaff(t *testing.T) {
 	t.Parallel()
 
 	repo := &recordingUsageRepository{}
-	service := NewUsageService(nil, repo, nil, nil, nil, nil)
+	service := NewUsageService(nil, repo, nil, nil, nil, nil, usageTestNow)
 
 	require.NoError(t, service.ReportStaff(context.Background(), 42))
 	require.Len(t, repo.recorded, 1)
@@ -98,7 +101,7 @@ func TestUsageServiceReportParent(t *testing.T) {
 	t.Run("fans out one row per active guardian mapping", func(t *testing.T) {
 		repo := &recordingUsageRepository{}
 		mappings := accountTenantStub{mappings: []int64{11, 12}}
-		service := NewUsageService(db, repo, nil, mappings, nil, nil)
+		service := NewUsageService(db, repo, nil, mappings, nil, nil, usageTestNow)
 		service.(*usageService).tenantRuntime = new(testpkg.TenantRuntime(t, db))
 
 		require.NoError(t, service.ReportParent(context.Background(), 42))
@@ -113,21 +116,21 @@ func TestUsageServiceReportParent(t *testing.T) {
 
 	t.Run("zero mappings is a no-op, not an error", func(t *testing.T) {
 		repo := &recordingUsageRepository{}
-		service := NewUsageService(db, repo, nil, accountTenantStub{}, nil, nil)
+		service := NewUsageService(db, repo, nil, accountTenantStub{}, nil, nil, usageTestNow)
 		service.(*usageService).tenantRuntime = new(testpkg.TenantRuntime(t, db))
 		require.NoError(t, service.ReportParent(context.Background(), 42))
 		assert.Empty(t, repo.recorded)
 	})
 
 	t.Run("forwards mapping and repository errors", func(t *testing.T) {
-		service := NewUsageService(db, nil, nil, accountTenantStub{err: errUsageRepo}, nil, nil)
+		service := NewUsageService(db, nil, nil, accountTenantStub{err: errUsageRepo}, nil, nil, usageTestNow)
 		service.(*usageService).tenantRuntime = new(testpkg.TenantRuntime(t, db))
 		err := service.ReportParent(context.Background(), 42)
 		require.ErrorIs(t, err, errUsageRepo)
 		assert.ErrorContains(t, err, "resolving guardian tenant mappings")
 
 		repo := &recordingUsageRepository{recordErr: errUsageRepo}
-		service = NewUsageService(db, repo, nil, accountTenantStub{mappings: []int64{11}}, nil, nil)
+		service = NewUsageService(db, repo, nil, accountTenantStub{mappings: []int64{11}}, nil, nil, usageTestNow)
 		service.(*usageService).tenantRuntime = new(testpkg.TenantRuntime(t, db))
 		err = service.ReportParent(context.Background(), 42)
 		require.ErrorIs(t, err, errUsageRepo)
@@ -142,33 +145,33 @@ func TestUsageServiceCleanupExpiredUsage(t *testing.T) {
 
 	t.Run("deletes with the configured retention cutoff", func(t *testing.T) {
 		repo := &recordingUsageRepository{deleteCount: 3}
-		service := NewUsageService(nil, repo, nil, nil, retentionSettings(90), nil)
+		service := NewUsageService(nil, repo, nil, nil, retentionSettings(90), nil, usageTestNow)
 
 		result, err := service.CleanupExpiredUsage(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, 3, result.RowsDeleted)
 		assert.Equal(t, 90, result.RetentionDays)
 		assert.Equal(t, testpkg.Tenant(t), repo.deletedTenant)
-		assert.WithinDuration(t, time.Now().AddDate(0, 0, -90), repo.deletedCutoff, time.Minute)
+		assert.Equal(t, usageTestNow().AddDate(0, 0, -90), repo.deletedCutoff, "the cutoff is 90 days before the clock of the composition")
 	})
 
 	t.Run("fails closed without tenant, settings, or valid retention", func(t *testing.T) {
-		service := NewUsageService(nil, &recordingUsageRepository{}, nil, nil, retentionSettings(90), nil)
+		service := NewUsageService(nil, &recordingUsageRepository{}, nil, nil, retentionSettings(90), nil, usageTestNow)
 		_, err := service.CleanupExpiredUsage(context.Background())
 		require.ErrorContains(t, err, "no tenant in context")
 
-		service = NewUsageService(nil, &recordingUsageRepository{}, nil, nil, nil, nil)
+		service = NewUsageService(nil, &recordingUsageRepository{}, nil, nil, nil, nil, usageTestNow)
 		_, err = service.CleanupExpiredUsage(ctx)
 		require.ErrorContains(t, err, "settings service not configured")
 
-		service = NewUsageService(nil, &recordingUsageRepository{}, nil, nil, retentionSettings(0), nil)
+		service = NewUsageService(nil, &recordingUsageRepository{}, nil, nil, retentionSettings(0), nil, usageTestNow)
 		_, err = service.CleanupExpiredUsage(ctx)
 		require.ErrorContains(t, err, "retention must be positive")
 	})
 
 	t.Run("forwards delete errors", func(t *testing.T) {
 		repo := &recordingUsageRepository{deleteErr: errUsageRepo}
-		service := NewUsageService(nil, repo, nil, nil, retentionSettings(90), nil)
+		service := NewUsageService(nil, repo, nil, nil, retentionSettings(90), nil, usageTestNow)
 		_, err := service.CleanupExpiredUsage(ctx)
 		require.ErrorIs(t, err, errUsageRepo)
 	})
@@ -181,7 +184,7 @@ func TestUsageServiceSnapshotUsage(t *testing.T) {
 	summaries := &summariesStub{rows: rows}
 	// nil db degrades WithAdminTxOrDirect to a direct call — exactly what a
 	// unit test needs.
-	service := NewUsageService(nil, nil, summaries, nil, nil, nil)
+	service := NewUsageService(nil, nil, summaries, nil, nil, nil, usageTestNow)
 
 	got, err := service.SnapshotUsage()
 	require.NoError(t, err)
@@ -193,7 +196,7 @@ func TestUsageServiceSnapshotUsage(t *testing.T) {
 	assert.Equal(t, 1, summaries.calls)
 
 	failing := &summariesStub{err: errUsageRepo}
-	service = NewUsageService(nil, nil, failing, nil, nil, nil)
+	service = NewUsageService(nil, nil, failing, nil, nil, nil, usageTestNow)
 	_, err = service.SnapshotUsage()
 	require.ErrorIs(t, err, errUsageRepo)
 }
