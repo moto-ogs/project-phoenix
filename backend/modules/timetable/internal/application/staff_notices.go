@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	internalports "github.com/moto-ogs/project-phoenix/modules/timetable/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
@@ -38,19 +39,28 @@ type StaffNoticePeriodLookup interface {
 // optional: ohne Verzeichnis zeigt die Bestätigungsliste den Platzhalter. Names
 // gibt je Konto-Id den Anzeigenamen der aktiven Person des Mandanten zurück;
 // Konten ohne Person fehlen in der Antwort.
+//
+// Publications ist optional: ohne sie erfährt niemand über den
+// Benachrichtigungs-Feed von einem neuen Hinweis (#7143). Transaction hält
+// Speichern und Feed-Eintrag in einer Einheit; ohne sie läuft jeder Schritt
+// in der Einheit, die der Aufrufer mitbringt.
 type StaffNoticeDependencies struct {
-	Periods     StaffNoticePeriodLookup
-	Names       func(ctx context.Context, accountIDs []int64) (map[int64]string, error)
-	Logger      *slog.Logger
-	CurrentDate func() calendar.Date
+	Periods      StaffNoticePeriodLookup
+	Names        func(ctx context.Context, accountIDs []int64) (map[int64]string, error)
+	Publications ports.StaffNoticePublications
+	Transaction  internalports.Transaction
+	Logger       *slog.Logger
+	CurrentDate  func() calendar.Date
 }
 
 type staffNoticeService struct {
-	repo        ports.StaffNoticeRecords
-	periods     StaffNoticePeriodLookup
-	names       func(ctx context.Context, accountIDs []int64) (map[int64]string, error)
-	logger      *slog.Logger
-	currentDate func() calendar.Date
+	repo         ports.StaffNoticeRecords
+	periods      StaffNoticePeriodLookup
+	names        func(ctx context.Context, accountIDs []int64) (map[int64]string, error)
+	publications ports.StaffNoticePublications
+	tx           internalports.Transaction
+	logger       *slog.Logger
+	currentDate  func() calendar.Date
 }
 
 // NewStaffNotices verdrahtet den Dienst auf dem eigenen Repository des Owners.
@@ -69,7 +79,10 @@ func newStaffNotices(repo ports.StaffNoticeRecords, deps StaffNoticeDependencies
 	if currentDate == nil {
 		currentDate = calendar.TodayDate
 	}
-	return &staffNoticeService{repo: repo, periods: deps.Periods, names: deps.Names, logger: logger, currentDate: currentDate}
+	return &staffNoticeService{
+		repo: repo, periods: deps.Periods, names: deps.Names, publications: deps.Publications, tx: deps.Transaction,
+		logger: logger, currentDate: currentDate,
+	}
 }
 
 func (s *staffNoticeService) FindStaffNotice(ctx context.Context, id int64) (timetable.StaffNotice, error) {
@@ -237,18 +250,27 @@ func (s *staffNoticeService) CreateStaffNotice(ctx context.Context, createdBy in
 	if err != nil {
 		return timetable.StaffNotice{}, err
 	}
-	if err := s.repo.Create(ctx, notice); err != nil {
-		return timetable.StaffNotice{}, fmt.Errorf("staffnotice: create: %w", err)
-	}
-	// Wer den Hinweis schreibt, kennt ihn. Ohne diese Zeile fragt die eigene
-	// Tagesinformation die Leitung nach einer Kenntnisnahme und zählt so lange
-	// im Badge mit — eine Aufgabe, die niemand erledigen kann, weil sie keine
-	// ist. Die Kenntnisnahme hier zu stempeln hält jeden Leseweg (Startseite,
-	// Liste, Badge, Zähler) ohne Sonderfall richtig.
-	if notice.RequiresAcknowledgement {
-		if err := s.repo.Acknowledge(ctx, notice.ID, createdBy); err != nil {
-			return timetable.StaffNotice{}, fmt.Errorf("staffnotice: acknowledge author: %w", err)
+	err = s.write(ctx, func(ctx context.Context) error {
+		if err := s.repo.Create(ctx, notice); err != nil {
+			return fmt.Errorf("staffnotice: create: %w", err)
 		}
+		// Wer den Hinweis schreibt, kennt ihn. Ohne diese Zeile fragt die eigene
+		// Tagesinformation die Leitung nach einer Kenntnisnahme und zählt so lange
+		// im Badge mit — eine Aufgabe, die niemand erledigen kann, weil sie keine
+		// ist. Die Kenntnisnahme hier zu stempeln hält jeden Leseweg (Startseite,
+		// Liste, Badge, Zähler) ohne Sonderfall richtig.
+		if notice.RequiresAcknowledgement {
+			if err := s.repo.Acknowledge(ctx, notice.ID, createdBy); err != nil {
+				return fmt.Errorf("staffnotice: acknowledge author: %w", err)
+			}
+		}
+		if publishes(false, notice) {
+			return s.noticeAudienceOfPublication(ctx, notice, createdBy)
+		}
+		return nil
+	})
+	if err != nil {
+		return timetable.StaffNotice{}, err
 	}
 	s.logger.Info("staff_notice_created",
 		slog.Int64("notice_id", notice.ID),
@@ -259,24 +281,37 @@ func (s *staffNoticeService) CreateStaffNotice(ctx context.Context, createdBy in
 	return staffNoticeContract(notice), nil
 }
 
-func (s *staffNoticeService) UpdateStaffNotice(ctx context.Context, id int64, in timetable.StaffNoticeInput) (timetable.StaffNotice, error) {
+// UpdateStaffNotice speichert eine Änderung. Schaltet sie einen
+// ausgeschalteten Hinweis ein, erfährt die Zielgruppe davon wie bei einem
+// neuen Hinweis (#7143); updatedBy ist dann die auslösende Person.
+func (s *staffNoticeService) UpdateStaffNotice(ctx context.Context, id, updatedBy int64, in timetable.StaffNoticeInput) (timetable.StaffNotice, error) {
 	existing, err := s.find(ctx, id)
 	if err != nil {
 		return timetable.StaffNotice{}, err
 	}
+	wasActive := existing.Active
 	notice, err := s.apply(existing, in)
 	if err != nil {
 		return timetable.StaffNotice{}, err
 	}
-	if err := s.repo.Update(ctx, notice); err != nil {
-		return timetable.StaffNotice{}, fmt.Errorf("staffnotice: update: %w", err)
-	}
-	// Wird die Kenntnisnahme erst nachträglich verlangt, gilt dasselbe wie beim
-	// Anlegen: die Verfasserin muss ihren eigenen Hinweis nicht bestätigen.
-	if notice.RequiresAcknowledgement {
-		if err := s.repo.Acknowledge(ctx, notice.ID, notice.CreatedBy); err != nil {
-			return timetable.StaffNotice{}, fmt.Errorf("staffnotice: acknowledge author: %w", err)
+	err = s.write(ctx, func(ctx context.Context) error {
+		if err := s.repo.Update(ctx, notice); err != nil {
+			return fmt.Errorf("staffnotice: update: %w", err)
 		}
+		// Wird die Kenntnisnahme erst nachträglich verlangt, gilt dasselbe wie beim
+		// Anlegen: die Verfasserin muss ihren eigenen Hinweis nicht bestätigen.
+		if notice.RequiresAcknowledgement {
+			if err := s.repo.Acknowledge(ctx, notice.ID, notice.CreatedBy); err != nil {
+				return fmt.Errorf("staffnotice: acknowledge author: %w", err)
+			}
+		}
+		if publishes(wasActive, notice) {
+			return s.noticeAudienceOfPublication(ctx, notice, updatedBy)
+		}
+		return nil
+	})
+	if err != nil {
+		return timetable.StaffNotice{}, err
 	}
 	s.logger.Info("staff_notice_updated", slog.Int64("notice_id", notice.ID))
 	return staffNoticeContract(notice), nil

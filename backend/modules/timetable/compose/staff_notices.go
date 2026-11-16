@@ -16,17 +16,21 @@ import (
 // and to the readers the root provides; see application.StaffNoticeDependencies
 // for the optional ones.
 type StaffNoticeDependencies struct {
-	DB          *bun.DB
-	Periods     application.StaffNoticePeriodLookup
-	Names       func(ctx context.Context, accountIDs []int64) (map[int64]string, error)
-	Logger      *slog.Logger
-	CurrentDate func() calendar.Date
+	DB      *bun.DB
+	Periods application.StaffNoticePeriodLookup
+	Names   func(ctx context.Context, accountIDs []int64) (map[int64]string, error)
+	// Publications tells the audience of a new Hinweis about it (#7143);
+	// without it nobody hears about it through the notification feed.
+	Publications ports.StaffNoticePublications
+	Logger       *slog.Logger
+	CurrentDate  func() calendar.Date
 }
 
 // NewStaffNotices builds the staff notices over the owner's repository.
 func NewStaffNotices(deps StaffNoticeDependencies) timetable.StaffNotices {
 	return application.NewStaffNotices(NewStaffNoticeRepository(deps.DB), application.StaffNoticeDependencies{
-		Periods: deps.Periods, Names: deps.Names, Logger: deps.Logger, CurrentDate: deps.CurrentDate,
+		Periods: deps.Periods, Names: deps.Names, Publications: deps.Publications, Transaction: transaction{},
+		Logger: deps.Logger, CurrentDate: deps.CurrentDate,
 	})
 }
 

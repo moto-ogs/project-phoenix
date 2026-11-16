@@ -117,4 +117,16 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 		Category:        "benachrichtigungen",
 		SortOrder:       6,
 	},
+	{
+		Key:             config.KeyNotificationsStaffNoticePublishedEnabled,
+		Label:           "Neue Hinweise der Leitung in der Glocke",
+		Description:     "Legt die Leitung einen Hinweis für das Team an, sieht das Team ihn in der Glocke. Eine Mitteilung aufs Handy bekommt nur, wer sie selbst einschaltet.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "benachrichtigungen",
+		SortOrder:       7,
+	},
 }

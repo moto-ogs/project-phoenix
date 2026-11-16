@@ -18,12 +18,14 @@ const state = vi.hoisted(() => ({
   isAdmin: true,
   today: undefined as unknown as SwrSlot,
   all: undefined as unknown as SwrSlot,
+  linked: undefined as unknown as SwrSlot,
+  search: "",
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
   usePathname: () => "/schule/tagesinformationen",
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(state.search),
 }));
 
 vi.mock("next-auth/react", () => ({
@@ -41,7 +43,9 @@ vi.mock("~/lib/swr", () => ({
       ? { data: undefined, error: undefined, isLoading: false, mutate: vi.fn() }
       : key.startsWith("staff-notices-today")
         ? state.today
-        : state.all,
+        : key.startsWith("staff-notice:")
+          ? state.linked
+          : state.all,
 }));
 
 function slot(data: unknown, error?: unknown): SwrSlot {
@@ -67,6 +71,7 @@ function renderPage() {
 describe("Tagesinformationen: Statuszeile bei Ladefehler (#2517)", () => {
   beforeEach(() => {
     state.isAdmin = true;
+    state.search = "";
     state.today = slot([]);
     state.all = slot([]);
   });
@@ -103,5 +108,61 @@ describe("Tagesinformationen: Statuszeile bei Ladefehler (#2517)", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("0 heute")).toBeInTheDocument();
     expect(screen.queryByText(/insgesamt/)).not.toBeInTheDocument();
+  });
+});
+
+describe("Tagesinformationen: Hinweis aus der Glocke (#7143)", () => {
+  const notice = {
+    id: "42",
+    title: "Sommerfest",
+    body: "Bitte Kuchen mitbringen.",
+    priority: "info",
+    audience: "all",
+    valid_from: "2030-06-25",
+    weekdays: [],
+    week_pattern: 0,
+    requires_acknowledgement: false,
+    active: true,
+  };
+
+  beforeEach(() => {
+    state.isAdmin = false;
+    state.today = slot([]);
+    state.all = slot([]);
+    state.linked = slot(notice);
+    state.search = "hinweis=42";
+  });
+
+  it("shows the linked notice that does not apply today", () => {
+    renderPage();
+
+    expect(
+      screen.getByRole("heading", { name: "Hinweis aus der Glocke" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Sommerfest")).toBeInTheDocument();
+    expect(screen.getByText("Bitte Kuchen mitbringen.")).toBeInTheDocument();
+  });
+
+  it("does not repeat a linked notice that is listed under Heute", () => {
+    state.today = slot([notice]);
+
+    renderPage();
+
+    expect(
+      screen.queryByRole("heading", { name: "Hinweis aus der Glocke" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText("Sommerfest")).toHaveLength(1);
+  });
+
+  it("explains a deleted or switched off notice", () => {
+    state.linked = slot(undefined, new ApiError("not found", 404));
+
+    renderPage();
+
+    expect(
+      screen.getByText(
+        "Diesen Hinweis gibt es nicht mehr. Die Leitung hat ihn gelöscht oder ausgeschaltet.",
+      ),
+    ).toBeInTheDocument();
   });
 });

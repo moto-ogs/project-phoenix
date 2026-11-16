@@ -11,6 +11,7 @@ var RestatedSettingKeys = []string{
 	settingActiveWindowEnd,
 	settingAbsenceReportedEnabled,
 	settingInstanceCancelledEnabled,
+	settingStaffNoticePublishedEnabled,
 	settingOnDutyOnly,
 	settingRemindersPickupUpcomingEnabled,
 	settingRemindersPickupOverdueEnabled,
