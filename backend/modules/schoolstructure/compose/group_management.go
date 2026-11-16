@@ -1,8 +1,11 @@
 package compose
 
 import (
+	"time"
+
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // NewGroupManagement builds the native facade over the existing group application.
@@ -11,10 +14,11 @@ func NewGroupManagement(groupRepo GroupRecords, groupTeachers GroupTeacherStore,
 	if len(options) > 0 {
 		option = options[0]
 	}
-	return groups.NewManagement(groupRepo, groups.NewService(groupRepo, groupTeachers, classTeachers, rooms, teachers, staff, students, handovers, runtime, option.Broadcaster, option.Audit))
+	return groups.NewManagement(groupRepo, groups.NewService(groupRepo, groupTeachers, classTeachers, rooms, teachers, staff, students, handovers, runtime, option.Broadcaster, option.Audit, calendar.CalendarDateClock(option.Now)))
 }
 
 type GroupServiceOptions struct {
 	Broadcaster groups.GroupPublisher
 	Audit       ClassAssignmentAudit
+	Now         func() time.Time // the root's clock; nil is the real one
 }

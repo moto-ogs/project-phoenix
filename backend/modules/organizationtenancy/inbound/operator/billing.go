@@ -26,18 +26,23 @@ type BillingResource struct {
 	service            organizationtenancy.BillingReport
 	logger             *slog.Logger
 	isLocalSeedRequest func(*http.Request) bool
+	now                func() time.Time
 }
 
-// NewBillingResource creates the billing routes' handlers.
-// A nil logger falls back to slog.Default.
-func NewBillingResource(service organizationtenancy.BillingReport, logger *slog.Logger, isLocalSeedRequest func(*http.Request) bool) *BillingResource {
+// NewBillingResource creates the billing routes' handlers; now is the
+// root's clock the demo capture stamps its snapshot with.
+// A nil logger falls back to slog.Default, a nil clock to the real one.
+func NewBillingResource(service organizationtenancy.BillingReport, logger *slog.Logger, isLocalSeedRequest func(*http.Request) bool, now func() time.Time) *BillingResource {
 	if service == nil {
 		panic("organization tenancy operator: billing report is required")
 	}
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &BillingResource{service: service, logger: logger, isLocalSeedRequest: isLocalSeedRequest}
+	if now == nil {
+		now = time.Now
+	}
+	return &BillingResource{service: service, logger: logger, isLocalSeedRequest: isLocalSeedRequest, now: now}
 }
 
 type billingKeyDayResponse struct {
@@ -133,7 +138,7 @@ func (rs *BillingResource) SeedKeyDateCounts(w http.ResponseWriter, r *http.Requ
 		common.RenderError(w, r, common.OperatorForbidden("Die Demo-Erfassung ist nur lokal verfügbar."))
 		return
 	}
-	written, err := rs.service.SeedBillingKeyDateCounts(r.Context(), time.Now())
+	written, err := rs.service.SeedBillingKeyDateCounts(r.Context(), rs.now())
 	if err != nil {
 		common.RenderError(w, r, rs.billingError(r, err))
 		return

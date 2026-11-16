@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	mealInputs "github.com/moto-ogs/project-phoenix/modules/mealplan"
 
 	carePlanModule "github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -54,12 +56,14 @@ func newTimetable(db transactionruntime.Database, students peopleModule.StudentQ
 
 // ComposeSchoolMembership composes the observed School Membership owner. A
 // staff member is School Membership's membership row plus Workforce's
-// employment profile (#2753); the membership owner composes the two.
-func ComposeSchoolMembership(db transactionruntime.Database) (schoolMembershipModule.Owner, error) {
+// employment profile (#2753); the membership owner composes the two. Its
+// writes and reads decide on the Berlin day of now, the root's clock.
+func ComposeSchoolMembership(db transactionruntime.Database, now func() time.Time) (schoolMembershipModule.Owner, error) {
 	dependencies, err := SchoolMembershipDependencies(db)
 	if err != nil {
 		return nil, err
 	}
+	dependencies.Today = calendar.CalendarDateClock(now)
 	return schoolMembershipCompose.New(dependencies)
 }
 

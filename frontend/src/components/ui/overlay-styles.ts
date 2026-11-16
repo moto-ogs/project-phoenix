@@ -5,12 +5,20 @@
  * Drawer and SlideOver, so stacked or adjacent overlays dim the page in the
  * same gray instead of three different ones (#2932).
  *
- * Deliberately without `backdrop-filter`: a blurred full-screen backdrop has
- * the browser blur the whole page again in every frame of the open and close
- * animation. With 4x CPU throttling the search dialog (Cmd/Ctrl+K) drew 6
- * frames in its first 500 ms with the blur and 22 without it.
+ * The blur comes from `OVERLAY_BACKDROP_BLUR_CLASS` on the same element.
  */
 export const OVERLAY_BACKDROP_TINT_CLASS = "bg-black/40";
+
+/**
+ * Blurs the page behind an overlay once the overlay has landed
+ * (`.moto-overlay-blur` in globals.css). The element carries
+ * `data-state="open"` while it is open; `closed` drops the blur at once.
+ * A blur that is on while the panel moves costs every frame of the motion:
+ * with 4x CPU throttling the search (Cmd/Ctrl+K) drew 7–8 frames in its
+ * first 250 ms with it and 12–13 with the delayed blur, as many as without
+ * any. The delay defaults to the modal's enter time; the drawers set theirs.
+ */
+export const OVERLAY_BACKDROP_BLUR_CLASS = "moto-overlay-blur";
 
 /**
  * Panel look of the centered dialog (`Modal`, and through it `FormModal`,

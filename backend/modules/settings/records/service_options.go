@@ -19,6 +19,8 @@ type ServiceOptions struct {
 	TraegerValues TraegerSettingRepository
 	// SchoolTraeger names the Träger of each school for the batch read.
 	SchoolTraeger func(context.Context, []int64) (map[int64]int64, error)
+	// Now is the clock the audit entries are stamped with.
+	Now func() time.Time
 }
 
 // SideEffectDispatcher applies the handlers fixed at construction.

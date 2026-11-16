@@ -119,6 +119,7 @@ func TestConfirmationLetterFollowsTheBissendorfTemplate(t *testing.T) {
 				{Label: "Gesamtbetrag", Value: "92,50 €", Bold: true},
 			}},
 			{Text: "Bitte überweisen Sie 92,50 € bis zum 15.12.2026 auf das Konto unten. Geben Sie als Verwendungszweck die Rechnungsnummer FE-2026-0007 an.", Bold: true},
+			{PaymentCode: goldenPaymentCode("FE-2026-0007")},
 			{Heading: "Bitte beachten Sie", Text: "Bitte denken Sie an: Frühstück, Wechselkleidung, Hausschuhe.\nKinder mit ansteckenden Krankheiten bleiben zu Hause."},
 			{
 				Heading: "Notfallnummern",
@@ -135,6 +136,7 @@ func TestConfirmationLetterFollowsTheBissendorfTemplate(t *testing.T) {
 			"Vorstand: Anna Brandt",
 			"Bankverbindung: Ganztag im Quartier e.V. · IBAN DE02 1203 0000 0000 2020 51 · BIC BYLADEM1001 · Beispielbank",
 		},
+		OnePage: true,
 	}
 	assert.Equal(t, want, confirmationLetter(goldenLetterContent(t)))
 
@@ -151,8 +153,25 @@ func TestConfirmationLetterFollowsTheBissendorfTemplate(t *testing.T) {
 		Text: "Bitte überweisen Sie 92,50 € bis zum 15.12.2026 auf das Konto unten. Geben Sie als Verwendungszweck Ihre Debitorennummer 10 4711 an.",
 		Bold: true,
 	}
+	want.Blocks[3] = LetterBlock{PaymentCode: goldenPaymentCode("FE-2026-0007 Debitorennummer 10 4711")}
 	assert.Equal(t, want, confirmationLetter(withDebtor),
 		"the debtor number stands under the invoice number and is the reference to pay with")
+}
+
+// goldenPaymentCode is the transfer code of the golden invoice (#4818):
+// 92,50 € to the account of the Träger under reference.
+func goldenPaymentCode(reference string) *PaymentCode {
+	return &PaymentCode{
+		Payload: "BCD\n002\n1\nSCT\nBYLADEM1001\nGanztag im Quartier e.V.\nDE02120300000000202051\nEUR92.50\n\n\n" + reference,
+		Heading: "Bezahlen per QR-Code",
+		Text:    "Scannen Sie den Code mit Ihrer Banking-App und überweisen Sie.",
+		Facts: []LetterFact{
+			{Label: "Empfänger", Value: "Ganztag im Quartier e.V."},
+			{Label: "IBAN", Value: "DE02 1203 0000 0000 2020 51"},
+			{Label: "Betrag", Value: "92,50 €"},
+			{Label: "Verwendungszweck", Value: reference},
+		},
+	}
 }
 
 // bissendorfPaymentText is the payment text of the Bissendorf letter with
@@ -334,8 +353,10 @@ func TestConfirmationLetterFollowsTheTemplateOfTheTraeger(t *testing.T) {
 		{Label: "OGS Am Lindenhof", Value: "0170 0000001"},
 		{Label: "OGS Schule am Hang", Value: "0170 0000002"},
 	}}, letter.Blocks[2])
-	// Without free text the paragraph "Hinweise" is left out.
-	assert.Len(t, letter.Blocks, 3)
+	// Without free text the paragraph "Hinweise" is left out. A template
+	// without the payment text gets the transfer code last (#4818).
+	require.Len(t, letter.Blocks, 4)
+	assert.Equal(t, LetterBlock{PaymentCode: goldenPaymentCode("FE-2026-0007")}, letter.Blocks[3])
 	assert.Equal(t, []string{"Familie Beispiel", "Erika Beispiel"}, letter.Recipient)
 	assert.Equal(t, "Rechnungsnummer", letter.Facts[0].Label)
 }
@@ -391,7 +412,8 @@ func TestConfirmationLetterPrintsTheTableInTheLayoutOfTheTemplate(t *testing.T) 
 	}
 
 	letter := confirmationLetter(content)
-	require.Len(t, letter.Blocks, 2)
+	require.Len(t, letter.Blocks, 3)
+	assert.Equal(t, LetterBlock{PaymentCode: goldenPaymentCode("FE-2026-0007 Debitorennummer 10234")}, letter.Blocks[2])
 	assert.Equal(t, "Debitorennummer 10234", letter.Blocks[0].Text)
 	assert.Equal(t, []LetterFact{
 		{Label: "Lina", Bold: true},

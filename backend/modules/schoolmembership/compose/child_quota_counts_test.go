@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -51,7 +53,7 @@ func TestChildQuotaCountsCountTheKontingentzahlOfEverySchool(t *testing.T) {
 func TestChildQuotaCountsRefuseATenantTransaction(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	counts := NewChildQuotaCounts()
+	counts := NewChildQuotaCounts(func() calendar.Date { return calendar.NewDate(2099, 6, 15) })
 
 	_, err := counts.CountChildQuotaByTenant(testpkg.Ctx(t))
 	require.ErrorContains(t, err, "transaction is required")

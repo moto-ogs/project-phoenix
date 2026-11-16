@@ -12,6 +12,9 @@ type PhotoSettings interface {
 	ResolveBool(ctx context.Context, key string) (bool, error)
 	HasTenantOverride(ctx context.Context, key string) (bool, error)
 	ResolveString(ctx context.Context, key string) (string, error)
+	// ResolveBoolForTenantInTx reads the committed value on the caller's
+	// transaction, past the request-scoped memo (#7208).
+	ResolveBoolForTenantInTx(ctx context.Context, tenantID int64, key string) (bool, error)
 }
 
 // PhotoUnlinker deletes a previously-stored photo file.

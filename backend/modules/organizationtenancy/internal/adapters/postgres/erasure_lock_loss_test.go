@@ -14,7 +14,7 @@ func TestErasureStopsNextDatabaseStepAfterLockSessionDies(t *testing.T) {
 	db := testpkg.SetupIsolatedTestDB(t)
 	id := testpkg.Tenant(t)
 	operator := testpkg.CreateTestOperator(t, db)
-	store, err := NewErasureStore(db)
+	store, err := NewErasureStore(db, time.Now)
 	require.NoError(t, err)
 	err = store.WithSchoolLock(t.Context(), id, func(ctx context.Context) error {
 		// This isolated clone has only this test's coordination advisory lock.

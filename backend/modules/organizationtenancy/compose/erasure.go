@@ -2,6 +2,7 @@ package compose
 
 import (
 	"errors"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/adapters/postgres"
@@ -10,7 +11,7 @@ import (
 )
 
 func NewErasure(db *bun.DB, files organizationtenancy.ErasureFiles, ledger organizationtenancy.ErasureLedger) (organizationtenancy.Erasure, error) {
-	store, err := postgres.NewErasureStore(db)
+	store, err := postgres.NewErasureStore(db, time.Now)
 	if err != nil {
 		return nil, err
 	}

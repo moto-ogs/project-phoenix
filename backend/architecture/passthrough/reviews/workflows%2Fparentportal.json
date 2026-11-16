@@ -648,7 +648,7 @@
     {
       "decision": "0090",
       "id": "workflows/parentportal/internal/care/studentRecords[C, P].SetStudentPhotoConsent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+      "reason": "Owner-edge translation: converts the portal photo slice to People Directory and maps its disabled-feature and busy-gate outcomes to distinct portal errors; technical lookup failures retain their error chain. Exact evidence, ADR 0075 eligibility unchanged."
     },
     {
       "decision": "0161",

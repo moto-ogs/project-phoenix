@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
@@ -131,7 +130,7 @@ func (rs *FeedbackResource) validateFeedbackStudent(w http.ResponseWriter, r *ht
 
 func (rs *FeedbackResource) submitFeedback(w http.ResponseWriter, r *http.Request, req *IoTFeedbackRequest) {
 	// Create feedback entry with server-side timestamps
-	now := time.Now()
+	now := rs.runtime.Now()
 	day, feedbackTime := feedbackModule.TimestampParts(now)
 	input := feedbackModule.CreateEntry{
 		StudentID:       req.StudentID,

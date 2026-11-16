@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	listexport "github.com/moto-ogs/project-phoenix/modules/documentrendering/records"
 
@@ -44,7 +43,7 @@ func exportRoomSnapshot(ctx context.Context, dependencies Dependencies, request 
 	document := listexport.Document{
 		Title:       roomSnapshotTitle(request.Title),
 		Subtitle:    roomSnapshotSubtitle(locations),
-		GeneratedAt: time.Now(),
+		GeneratedAt: dependencies.Now(),
 		Columns: []listexport.Column{
 			{ID: listexport.ColumnRoomName, Label: "Raum"},
 			{ID: listexport.ColumnRoomStatus, Label: "Status"},

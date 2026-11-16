@@ -14,7 +14,8 @@ import (
 )
 
 // newRootEnvironment validates the portal links of the configuration and
-// fixes the clock: production requires https links.
+// fixes the clock, the real one unless a test passes its own: production
+// requires https links.
 func newRootEnvironment(cfg owners.ServiceConfig, logger *slog.Logger, clock func() time.Time, observe owners.RootObservers) (owners.RootEnvironment, error) {
 	if logger == nil {
 		return owners.RootEnvironment{}, fmt.Errorf("root environment: logger is required")

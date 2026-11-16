@@ -37,6 +37,11 @@ type Letter struct {
 	Blocks      []LetterBlock
 	Closing     []string
 	Footer      []string
+	// OnePage lets the renderer set the body in smaller type, down to 8
+	// points, when that keeps the letter on one page (#4818). An invoice
+	// with a transfer code sets it, so the code does not push the closing
+	// lines onto a page of their own; a fee notice keeps its full type.
+	OnePage bool
 }
 
 // LetterFact is a label with its value; Bold marks a total.
@@ -47,12 +52,14 @@ type LetterFact struct {
 }
 
 // LetterBlock is a paragraph of the body with an optional heading and an
-// optional two-column table after it.
+// optional two-column table after it. A block with a PaymentCode prints
+// the transfer code instead (#4818).
 type LetterBlock struct {
-	Heading string
-	Text    string
-	Bold    bool
-	Facts   []LetterFact
+	Heading     string
+	Text        string
+	Bold        bool
+	Facts       []LetterFact
+	PaymentCode *PaymentCode
 }
 
 // LetterRenderer lays out a letter as a PDF. The adapter binds it to
@@ -85,7 +92,8 @@ func confirmationLetter(content letterContent) Letter {
 	document, head := content.document, content.letterhead
 	kind := templateKindOf(document.DocumentKind)
 	filled := templates.Fill(letterTemplate(head.Template, kind), letterValues(content))
-	blocks := letterBlocks(filled.Blocks)
+	blocks := withTransferCode(letterBlocks(filled.Blocks), paymentText(content), transferCodeOf(head, document.Payment,
+		document.TotalCents, documentReference(document.Number, document.DebtorNumber, document.DocumentKind)))
 	if kind != templates.KindConfirmation {
 		if notes := strings.TrimSpace(content.input.Notes); notes != "" {
 			blocks = append(blocks, LetterBlock{Heading: "Hinweise", Text: notes})
@@ -101,6 +109,7 @@ func confirmationLetter(content letterContent) Letter {
 	}
 	blocks = append(blocks, legalRemedyBlocks(filled.LegalRemedy)...)
 	return Letter{
+		OnePage:     kind != templates.KindFeeNotice && carriesPaymentCode(blocks),
 		Title:       documentTitle(document.DocumentKind) + " " + document.Number,
 		AccentColor: head.AccentColor,
 		Logo:        head.Logo,

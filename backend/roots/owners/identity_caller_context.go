@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
@@ -33,11 +35,14 @@ type CallerSettings interface {
 func NewCallerContext(
 	tokens TokenAdapter, accounts identityaccess.AccountProfiles, persons CallerPersons, membership schoolmembership.Capability,
 	staffGroups schoolstructure.StaffGroupQuery, classes CallerSchoolClasses, activities identityCompose.CallerActivities,
-	presence studentpresence.Owner, settings CallerSettings, logger *slog.Logger,
+	presence studentpresence.Owner, settings CallerSettings, logger *slog.Logger, today func() timezone.Date,
 ) (identityaccess.CallerContext, error) {
 	if accounts == nil || persons.Rows == nil || persons.People == nil || membership == nil || staffGroups == nil ||
 		classes == nil || activities == nil || presence == nil || logger == nil {
 		return identityaccess.CallerContext{}, errors.New("compose caller context: the accounts, persons, membership, staff groups, school classes, supervised activities, presence and a logger are required")
+	}
+	if today == nil {
+		return identityaccess.CallerContext{}, errors.New("compose caller context: the day clock is required")
 	}
 	review := &identityCompose.ParentRequestReviewDependencies{
 		Permissions:           ReviewPermissions,
@@ -53,7 +58,7 @@ func NewCallerContext(
 		Accounts:   accounts,
 		People:     callerPeople{persons: persons},
 		Membership: callerMembership{membership: membership},
-		Structure:  callerStructure{groups: staffGroups, CallerSchoolClasses: classes},
+		Structure:  callerStructure{groups: staffGroups, CallerSchoolClasses: classes, today: today},
 		Activities: activities,
 		Sessions:   callerSessions{presence: presence},
 		LiveTopics: callerLiveTopics{presence: presence},
@@ -129,6 +134,9 @@ type CallerSchoolClasses interface {
 type callerStructure struct {
 	groups schoolstructure.StaffGroupQuery
 	CallerSchoolClasses
+	// today is the root's day clock; the caller's navigation groups cover
+	// the substitutions of that school day (Europe/Berlin).
+	today func() timezone.Date
 }
 
 func (s callerStructure) TeacherGroupIDs(ctx context.Context, teacherID int64) ([]int64, error) {
@@ -144,7 +152,7 @@ func (s callerStructure) TeacherGroupIDs(ctx context.Context, teacherID int64) (
 }
 
 func (s callerStructure) SubstitutedGroups(ctx context.Context, staffID int64) (map[int64]bool, error) {
-	groups, err := schoolstructure.ListSubstitutedGroupsToday(ctx, s.groups, staffID)
+	groups, err := schoolstructure.ListSubstitutedGroupsToday(ctx, s.groups, staffID, s.today)
 	if err != nil {
 		return nil, err
 	}

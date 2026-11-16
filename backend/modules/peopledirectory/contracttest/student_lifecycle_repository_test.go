@@ -21,9 +21,9 @@ func TestStudentRepository_FindPendingDueForActivation(t *testing.T) {
 	repo := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).Student
 	ctx := testpkg.Ctx(t)
 
-	yesterday := calendar.TodayDate().AddDays(-1)
-	tomorrow := calendar.TodayDate().AddDays(1)
-	asOf := calendar.TodayDate()
+	asOf := lifecycleAsOf
+	yesterday := asOf.AddDays(-1)
+	tomorrow := asOf.AddDays(1)
 
 	t.Run("returns pending students with enrolled_from <= asOf", func(t *testing.T) {
 		dueStudent := testpkg.CreateTestStudent(t, db, "PendingDue", "Lifecycle", "1a")
@@ -66,9 +66,9 @@ func TestStudentRepository_FindActiveDueForDeactivation(t *testing.T) {
 	repo := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).Student
 	ctx := testpkg.Ctx(t)
 
-	yesterday := calendar.TodayDate().AddDays(-1)
-	tomorrow := calendar.TodayDate().AddDays(1)
-	asOf := calendar.TodayDate()
+	asOf := lifecycleAsOf
+	yesterday := asOf.AddDays(-1)
+	tomorrow := asOf.AddDays(1)
 
 	t.Run("returns active students with enrolled_until <= asOf", func(t *testing.T) {
 		dueStudent := testpkg.CreateTestStudent(t, db, "ActiveDue", "Lifecycle", "1a")
@@ -140,3 +140,6 @@ func TestStudentRepository_TransitionStatus(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, peopleValues.StudentStatusActive, found.Status)
 }
+
+// lifecycleAsOf is the fixed day the lifecycle sweeps are asked about (#7104).
+var lifecycleAsOf = calendar.NewDate(2026, 11, 2)

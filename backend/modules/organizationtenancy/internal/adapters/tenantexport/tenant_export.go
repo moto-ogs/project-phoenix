@@ -22,11 +22,12 @@ type tenantExporter struct {
 	projected    organizationtenancy.TenantExportProjectedFields
 	sepaFiles    organizationtenancy.TenantExportSEPADebitFiles
 	audit        organizationtenancy.TenantExportAudit
+	now          func() time.Time
 }
 
 func NewTenantExporter(db *bun.DB, dependencies organizationtenancy.TenantExportDependencies) organizationtenancy.TenantExporter {
 	return &tenantExporter{db: db, fingerprints: dependencies.Fingerprints, sealed: dependencies.Sealed, projected: dependencies.Projected,
-		sepaFiles: dependencies.SEPADebitFiles, audit: dependencies.Audit}
+		sepaFiles: dependencies.SEPADebitFiles, audit: dependencies.Audit, now: dependencies.Now}
 }
 
 type exportRun struct {

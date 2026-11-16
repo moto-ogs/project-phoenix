@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	iotcompose "github.com/moto-ogs/project-phoenix/api/iot/compose"
 
@@ -24,7 +25,7 @@ func (routerFeedback) Submit(context.Context, feedbackModule.CreateEntry) (feedb
 // routerStaffClock satisfies the kiosk staff clock contract during route
 // composition; the routes are never exercised here.
 func newIoTRouterTestResource() *iotcompose.Resource {
-	return &iotcompose.Resource{ServiceDependencies: iotcompose.ServiceDependencies{Runtime: NewIoTHTTPRuntime(), ErrorReports: NewIoTErrorReporter(nil), Administration: NewIoTAdministration(nil),
+	return &iotcompose.Resource{ServiceDependencies: iotcompose.ServiceDependencies{Runtime: NewIoTHTTPRuntime(time.Now), ErrorReports: NewIoTErrorReporter(nil), Administration: NewIoTAdministration(nil, time.Now),
 		DeviceScan:               routerDeviceScan{},
 		StaffClock:               routerStaffClock{},
 		FeedbackStudents:         routerDeviceScan{},

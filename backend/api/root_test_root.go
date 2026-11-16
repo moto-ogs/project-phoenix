@@ -144,10 +144,10 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			mailSender, mailDispatcher, mailFrom, pushVAPID, err = owners.BuildMailTransport(env)
 			return
 		},
-		func() (err error) { organizations, err = owners.BuildServeOrganizations(db); return },
-		func() (err error) { groups, err = owners.BuildServeSchoolStructure(db); return },
+		func() (err error) { organizations, err = owners.BuildServeOrganizations(db, env.Now); return },
+		func() (err error) { groups, err = owners.BuildServeSchoolStructure(db, env.Now); return },
 		func() (err error) { rooms, err = owners.BuildServeRooms(db); return },
-		func() (err error) { membership, err = owners.ComposeSchoolMembership(db); return },
+		func() (err error) { membership, err = owners.ComposeSchoolMembership(db, env.Now); return },
 		func() error { bookings = owners.NewEnrollmentBookings(env.Now); return nil },
 		func() (err error) {
 			settings, err = owners.BuildSettingsOwner(db, unit, env, organizations, hub, bookings)
@@ -169,7 +169,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return nil
 		},
 		func() (err error) {
-			persons, err = owners.BuildPeopleDirectory(db, owners.ObservePeopleDirectory, photoRuntime, owners.GuardianDirectoryProvider(db, guardian))
+			persons, err = owners.BuildPeopleDirectory(db, owners.ObservePeopleDirectory, photoRuntime, owners.GuardianDirectoryProvider(db, guardian), env.Now)
 			return
 		},
 		func() (err error) {
@@ -189,7 +189,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			structure = owners.BuildStructureRows(db, persons, people, peopleIdentity, rooms, membership, workTime)
 			presencePeople = owners.BuildPresencePeopleReads(db, env.Logger, persons, groups, organizations, people)
 			careRows = owners.BuildTimetableCareRows(carePlan)
-			devices, err = owners.NewDeviceFleet(db)
+			devices, err = owners.NewDeviceFleet(db, env.Now)
 			return owners.StepError("compose device fleet", err)
 		},
 		func() error {
@@ -246,7 +246,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		},
 		func() (err error) {
 			schedules, err = owners.BuildCarePlanSchedules(db, env.Logger, carePlan, persons, carePlanRows, classArrivals,
-				enrollment.ApprovedOfferings, settings.Service, timetableRows.RecurrenceLock.LockRecurrenceWrites, presence.Presence, timetableRows.StudentTemplateDays)
+				enrollment.ApprovedOfferings, settings.Service, timetableRows.RecurrenceLock.LockRecurrenceWrites, presence.Presence, timetableRows.StudentTemplateDays, owners.CarePlanClassTimetableNotices(db, notifications, people, membership, tokens.AuditActor))
 			return
 		},
 		func() (err error) {
@@ -300,7 +300,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return
 		},
 		func() (err error) {
-			structureViews.Education = buildGroupManagement(db, hub, structure, people, substitutions, audit)
+			structureViews.Education = buildGroupManagement(db, hub, structure, people, substitutions, audit, env.Now)
 			structureViews.Substitution, err = buildSubstitutions(db, env, hub, structure, people, substitutions, workTime,
 				caller.Caller(), presence.SessionRecords, supervisions, active, lifecycle.Deviations, timetableRows, audit, settings.Service, identity)
 			return

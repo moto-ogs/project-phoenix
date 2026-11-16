@@ -149,7 +149,7 @@ func mountPeopleRoutes(
 		return found, err
 	}).Router())
 	// Birthday display and staff birthday list (#1542).
-	tenant.Mount("/birthdays", birthdaysAPI.NewResource(birthdays, renderer, caller, logger.With("handler", "birthdays")).Router(ProtectedTenantRoutes))
+	tenant.Mount("/birthdays", birthdaysAPI.NewResource(birthdays, renderer, caller, logger.With("handler", "birthdays"), now).Router(ProtectedTenantRoutes))
 	tenant.Mount("/me", meAPI.NewResource(caller.Caller(), caller, TenantSessionChain, nativeUploads.UploadFiles{}, settings).Router())
 	tenant.Mount("/emergency", emergencyAPI.NewResource(emergency).Router(ProtectedTenantRoutes))
 }

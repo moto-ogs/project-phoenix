@@ -16221,7 +16221,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.CallerStructure.SubstitutedGroups",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.ListSubstitutedGroupsToday; modules/schoolstructure/staff_groups.go:50. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.ListSubstitutedGroupsToday; modules/schoolstructure/staff_groups.go:50. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.ListSubstitutedGroupsToday",
       "target_owner": "school-structure"
@@ -22594,7 +22594,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerStructure.SubstitutedGroups",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.ListSubstitutedGroupsToday; modules/schoolstructure/staff_groups.go:50. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.ListSubstitutedGroupsToday; modules/schoolstructure/staff_groups.go:50. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.ListSubstitutedGroupsToday",
       "target_owner": "school-structure"
@@ -22835,6 +22835,39 @@
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.DemoSessions.IssueDemoTokens",
       "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/identityaccess/internal/application.AccountAuthentication.IssueDemoTokens. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7068 (code step in the running Träger session): a code redeemed for a session mint now clears the device mark the source family would pass on (auth.tokens.mfa_by_device); the step itself mints through the existing session-mint unit with its account lock and retires the presented family there. No new write target, transaction start, after-commit hook or lock, so unit, scope, lock order and effect classification are unchanged. Re-reviewed for #7104: the binding changed only in how its clock reaches it; Identity \u0026 Access reads the clock of its composition instead of time.Now, and the real clock where go-webauthn or the jwtauth verifier checks the value (ADR 0261); effect and classification are unchanged.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.AccountAuthentication.IssueDemoTraegerTokens",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.DemoSessions.IssueDemoTraegerTokens",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.RegisterAfterCommit (tenant-runtime) through *modules/identityaccess/internal/application.AccountAuthentication.IssueDemoTraegerTokens. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added for #6193 (ADR 0271): the demo role Träger-Büro mints the Träger-Portal session through the existing session-mint unit (mintTraegerSession), like IssueDemoParentTokens does for the parents portal; no new write target, transaction start, after-commit hook or lock.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.AccountAuthentication.IssueDemoTraegerTokens",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.DemoSessions.IssueDemoTraegerTokens",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through *modules/identityaccess/internal/application.AccountAuthentication.IssueDemoTraegerTokens. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added for #6193 (ADR 0271): the demo role Träger-Büro mints the Träger-Portal session through the existing session-mint unit (mintTraegerSession), like IssueDemoParentTokens does for the parents portal; no new write target, transaction start, after-commit hook or lock.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.AccountAuthentication.IssueDemoTraegerTokens",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.DemoSessions.IssueDemoTraegerTokens",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/identityaccess/internal/application.AccountAuthentication.IssueDemoTraegerTokens. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added for #6193 (ADR 0271): the demo role Träger-Büro mints the Träger-Portal session through the existing session-mint unit (mintTraegerSession), like IssueDemoParentTokens does for the parents portal; no new write target, transaction start, after-commit hook or lock.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"

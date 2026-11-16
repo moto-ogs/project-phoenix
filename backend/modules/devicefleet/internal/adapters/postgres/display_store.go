@@ -32,14 +32,21 @@ type displayRow struct {
 }
 
 // DisplayStore reads and writes display.displays for the Device Fleet owner.
-type DisplayStore struct{ database Database }
+type DisplayStore struct {
+	database Database
+	// now is the owner's clock an update stamps updated_at with.
+	now func() time.Time
+}
 
 // NewDisplayStore builds the display adapter over the supplied runtime.
-func NewDisplayStore(database Database) *DisplayStore {
+func NewDisplayStore(database Database, now func() time.Time) *DisplayStore {
 	if database == nil {
 		panic("devicefleet postgres: database runtime is required")
 	}
-	return &DisplayStore{database: database}
+	if now == nil {
+		panic("devicefleet postgres: the clock is required")
+	}
+	return &DisplayStore{database: database, now: now}
 }
 
 // Create registers one display for the caller's tenant.
@@ -73,7 +80,7 @@ func (s *DisplayStore) Update(ctx context.Context, input domain.UpdateDisplay) (
 	if scope.TenantID <= 0 {
 		return 0, domain.OperationStats{}, errDisplayTenantRequired
 	}
-	row := displayRow{ID: input.ID, UpdatedAt: time.Now()}
+	row := displayRow{ID: input.ID, UpdatedAt: s.now()}
 	columns := []string{"updated_at"}
 	if input.Name != nil {
 		row.Name = *input.Name

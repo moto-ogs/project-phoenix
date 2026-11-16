@@ -1125,7 +1125,7 @@ func newHarness(t *testing.T) *provisioningHarness {
 		ErasureOrderRecords: newFakeOwner(engine),
 		Transaction:         h.tx, Dashboard: h.dashboard, Identity: h.identity, Devices: h.devices,
 		People: h.people, Presence: h.presence, Categories: h.categories, Settings: h.settings,
-		Audit: h.audit, Secrets: h.secrets,
+		Audit: h.audit, Secrets: h.secrets, Now: func() time.Time { return fixedTime },
 		Logger: slog.New(slog.NewTextHandler(h.logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
 	})
 	require.NoError(t, err)
