@@ -205,7 +205,10 @@ export function SegmentedControl<T extends string>({
               aria-pressed={active}
               disabled={item.disabled}
               onClick={() => onChange(item.value)}
-              className={`${base} rounded-md ${
+              // Ein langes Wort („Homeoffice") passt am Telefon nicht in ein
+              // Drittel der Breite: weniger Rand, Silbentrennung, notfalls
+              // Umbruch im Wort, statt in das Nachbarsegment zu laufen.
+              className={`${base} rounded-md [overflow-wrap:anywhere] hyphens-auto max-sm:px-2 ${
                 active
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-600 hover:text-gray-900"
