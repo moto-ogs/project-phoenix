@@ -209,7 +209,7 @@ function LoginForm() {
         <AuthProgress
           state="checking"
           title="Einen Moment bitte"
-          description="moto prüft, ob Sie schon angemeldet sind."
+          description="moto prüft Ihre Anmeldung."
         />
       </AuthShell>
     );
@@ -385,7 +385,7 @@ export default function TraegerLoginPage() {
           <AuthProgress
             state="checking"
             title="Einen Moment bitte"
-            description="moto prüft, ob Sie schon angemeldet sind."
+            description="moto prüft Ihre Anmeldung."
           />
         </AuthShell>
       }

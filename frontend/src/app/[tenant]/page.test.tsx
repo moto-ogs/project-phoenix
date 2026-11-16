@@ -303,7 +303,7 @@ describe("HomePage (Login)", () => {
 
     // Anker: die Prüfanzeige steht statt des Formulars.
     expect(screen.getByRole("status")).toHaveTextContent(
-      "moto prüft, ob Sie schon angemeldet sind.",
+      "moto prüft Ihre Anmeldung.",
     );
     expect(screen.queryByTestId("input-email")).not.toBeInTheDocument();
     // Während moto prüft, fordert die Karte zu nichts auf.

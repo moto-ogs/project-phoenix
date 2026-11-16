@@ -283,7 +283,7 @@ export default function HomePage() {
         <AuthProgress
           state="checking"
           title="Einen Moment bitte"
-          description="moto prüft, ob Sie schon angemeldet sind."
+          description="moto prüft Ihre Anmeldung."
         />
       ) : mfaStep ? (
         <MFAChallengeForm
