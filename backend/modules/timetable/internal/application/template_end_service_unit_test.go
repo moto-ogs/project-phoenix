@@ -72,7 +72,7 @@ func TestValidateProtectedEnrollmentRebaseRejectsActiveScopedCollision(t *testin
 	)
 	require.ErrorIs(t, err, timetable.ErrTemplateRosterRebaseConflict)
 
-	boundedUntil := activityContract.Date(calendar.TodayDate().AddDays(30))
+	boundedUntil := activityContract.Date(templateEndUnitToday.AddDays(30))
 	activeB.ValidUntil = &boundedUntil
 	require.NoError(t, validateProtectedEnrollmentRebase(
 		[]*activityContract.StudentEnrollment{activeA, activeB},
@@ -91,7 +91,7 @@ func testInt64Ptr(value int64) *int64 {
 func TestTemplateEndFromDate_RequiresTenantBeforeMutation(t *testing.T) {
 	t.Parallel()
 
-	future := calendar.TodayDate().AddDays(1)
+	future := templateEndUnitToday.AddDays(1)
 	groupRepo := &templateEndUnitGroupRepo{group: templateEndUnitGroup(201)}
 	svc := templateEndUnitService(
 		groupRepo,
@@ -156,7 +156,7 @@ func TestTemplateEndFromDate_ErrorBranches(t *testing.T) {
 	t.Parallel()
 
 	ctx := tenant.WithTenantID(context.Background(), 7402)
-	future := calendar.TodayDate().AddDays(1)
+	future := templateEndUnitToday.AddDays(1)
 	group := templateEndUnitGroup(203)
 
 	tests := []struct {
@@ -234,6 +234,9 @@ func TestTemplateEndFromDate_ErrorBranches(t *testing.T) {
 	}
 }
 
+// templateEndUnitToday is the school day of templateEndUnitService.
+var templateEndUnitToday = calendar.NewDate(2026, 8, 24)
+
 func templateEndUnitService(
 	groupRepo *templateEndUnitGroupRepo,
 	scheduleRepo *templateEndUnitScheduleRepo,
@@ -249,7 +252,7 @@ func templateEndUnitService(
 			EnrollmentRepo: enrollmentRepo,
 			SupervisorRepo: supervisorRepo,
 			InstanceRepo:   fakeInstanceRows(instanceRepo),
-			Today:          func() calendar.Date { return calendar.NewDate(2026, 8, 24) },
+			Today:          func() calendar.Date { return templateEndUnitToday },
 			Logger:         slog.New(slog.DiscardHandler),
 		},
 		lockTenantRecurrence: func(context.Context) error { return nil },

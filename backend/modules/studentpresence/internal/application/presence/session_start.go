@@ -357,7 +357,7 @@ func (s *service) createSessionBase(ctx context.Context, activityID, deviceID, r
 		return s.joinOpenSession(ctx, existing, deviceID, roomID)
 	}
 
-	now := time.Now()
+	now := s.now()
 	newGroup := &ports.ActiveGroup{
 		StartTime:      now,
 		LastActivity:   now,

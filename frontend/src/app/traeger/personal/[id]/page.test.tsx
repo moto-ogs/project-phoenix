@@ -24,6 +24,25 @@ vi.mock("~/lib/traeger-absence-api", () => ({
   fetchTraegerAbsenceAccounts: vi.fn().mockResolvedValue([]),
   setTraegerAbsenceAllowance: vi.fn(),
 }));
+// Das Stundenkonto (#4711) hat seinen eigenen Test: ein leerer Monat.
+vi.mock("~/lib/traeger-time-account-api", async (original) => ({
+  ...(await original<typeof import("~/lib/traeger-time-account-api")>()),
+  fetchTraegerTimeAccount: (_recordId: string, year: number, month: number) =>
+    Promise.resolve({
+      year,
+      month,
+      state: "school",
+      ended: true,
+      schools: [],
+      targetMinutes: 0,
+      actualMinutes: 0,
+      creditedMinutes: 0,
+      adjustmentMinutes: 0,
+      balanceMinutes: 0,
+      carryInMinutes: 0,
+      closingBalanceMinutes: 0,
+    }),
+}));
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
 }));
@@ -44,8 +63,20 @@ const RECORD: StaffRecordDetail = {
   personnelNumber: "70001",
   hasFinancial: true,
   employments: [
-    { schoolId: "1", schoolName: "OGS Nord", staffId: "11", active: true },
-    { schoolId: "2", schoolName: "OGS Süd", staffId: "22", active: false },
+    {
+      schoolId: "1",
+      schoolName: "OGS Nord",
+      staffId: "11",
+      active: true,
+      viaPool: false,
+    },
+    {
+      schoolId: "2",
+      schoolName: "OGS Süd",
+      staffId: "22",
+      active: false,
+      viaPool: false,
+    },
   ],
   financial: { iban: "•••• 3000", taxId: null, socialSecurityNumber: null },
   changes: [
@@ -136,6 +167,58 @@ describe("TraegerStaffRecordPage", () => {
     expect(screen.getByText("•••• 3000")).toBeInTheDocument();
     expect(
       screen.getByText("Nachname „Sommer“ von OGS Nord nicht übernommen"),
+    ).toBeInTheDocument();
+  });
+
+  it("marks the Einsatzorte of the Vertretungspool and says when they end", async () => {
+    api.fetchStaffRecord.mockResolvedValue({
+      ...RECORD,
+      employments: [
+        { ...RECORD.employments[0]!, viaPool: true },
+        {
+          schoolId: "3",
+          schoolName: "OGS West",
+          staffId: "33",
+          active: false,
+          viaPool: true,
+        },
+      ],
+      changes: [
+        {
+          kind: "resumed",
+          field: "school",
+          value: "",
+          schoolName: "OGS Nord",
+          occurredAt: "2026-11-15T08:00:00Z",
+        },
+        {
+          kind: "ended",
+          field: "school",
+          value: "",
+          schoolName: "OGS West",
+          occurredAt: "2026-11-15T01:00:00Z",
+        },
+      ],
+    });
+    renderPage();
+    expect(
+      await screen.findByText("Endet nach der letzten Blockung der Schule."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Die nächste Blockung beschäftigt die Person hier wieder.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Vertretungspool")).toHaveLength(2);
+    expect(
+      screen.getByText(
+        "Beschäftigung an der Schule OGS West nach der letzten Blockung beendet",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Beschäftigung an der Schule OGS Nord mit einer neuen Blockung wieder aufgenommen",
+      ),
     ).toBeInTheDocument();
   });
 

@@ -42,6 +42,7 @@ func careInvoiceLetter(content careLetterContent) Letter {
 	letter := careLetterFrame(content, "Rechnung "+invoice.Number, "Rechnung "+invoice.Number+": "+period)
 	letter.Facts = careLetterFacts(content, []LetterFact{{Label: "Rechnungsnummer", Value: invoice.Number}})
 	intro, heading := careInvoiceIntro(content)
+	payment := carePaymentText(content)
 	blocks := []LetterBlock{
 		{Text: intro},
 		// A table follows a paragraph: the letter layout pulls it up by one
@@ -50,15 +51,16 @@ func careInvoiceLetter(content careLetterContent) Letter {
 		{Facts: append(slices.Concat(carePositionFacts(invoice.Positions, 1), careReductionFacts(invoice.Reductions, 1),
 			careMealFacts(invoice.MealPositions, 1), careCostShareFacts(invoice, 1), careCorrectionFacts(invoice, 1)),
 			LetterFact{Label: careTotalLabel(invoice), Value: formatEuro(invoice.TotalCents), Bold: true})},
-		{Text: carePaymentText(content), Bold: true},
+		{Text: payment, Bold: true},
 	}
+	blocks = withTransferCode(blocks, payment, careTransferCode(content))
 	if notes := strings.TrimSpace(content.input.Notes); notes != "" {
 		blocks = append(blocks, LetterBlock{Heading: "Hinweise", Text: notes})
 	}
 	if question := questionText(head); question != "" {
 		blocks = append(blocks, LetterBlock{Text: question})
 	}
-	letter.Blocks = blocks
+	letter.Blocks, letter.OnePage = blocks, carriesPaymentCode(blocks)
 	return letter
 }
 
@@ -282,7 +284,7 @@ func careNoticeLetter(content careLetterContent) Letter {
 	letter.Facts = careLetterFacts(content, []LetterFact{{Label: "Bescheidnummer", Value: invoice.Number}})
 	letter.Salutation = filled.Salutation
 	letter.Closing = filled.Closing
-	letter.Blocks = letterBlocks(filled.Blocks)
+	letter.Blocks = withTransferCode(letterBlocks(filled.Blocks), values["zahlungshinweis"].Text, careTransferCode(content))
 	if notes := strings.TrimSpace(content.input.Notes); notes != "" {
 		letter.Blocks = append(letter.Blocks, LetterBlock{Heading: "Hinweise", Text: notes})
 	}

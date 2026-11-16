@@ -3,6 +3,9 @@
     "GET traeger /traeger/staff-records/",
     "POST traeger /traeger/staff-records/"
   ],
+  "api/traeger/staff-records/hire": [
+    "POST traeger /traeger/staff-records/hire"
+  ],
   "api/traeger/staff-records/[id]": [
     "DELETE traeger /traeger/staff-records/id%2F1",
     "GET traeger /traeger/staff-records/id%2F1"

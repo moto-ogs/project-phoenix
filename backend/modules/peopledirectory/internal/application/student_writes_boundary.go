@@ -114,7 +114,7 @@ func (r *StudentRecords) FindByTeacherIDWithGroups(
 		return []*peopleModule.StudentRosterEntry{}, nil
 	}
 	return r.roster(ctx, "find by teacher id with groups", func() ([]domain.StudentRosterEntry, error) {
-		return r.directory.ListRosterByGroups(ctx, groupIDs, owner1.TodayDate().String())
+		return r.directory.ListRosterByGroups(ctx, groupIDs, r.directory.today().String())
 	})
 }
 
@@ -137,7 +137,7 @@ func (r *StudentRecords) FindByTeacherStaffIDsWithGroups(
 		return []*peopleModule.StudentRosterEntry{}, nil
 	}
 	return r.roster(ctx, "find by teacher id with groups", func() ([]domain.StudentRosterEntry, error) {
-		return r.directory.ListRosterByGroups(ctx, groupIDs, owner1.TodayDate().String())
+		return r.directory.ListRosterByGroups(ctx, groupIDs, r.directory.today().String())
 	})
 }
 

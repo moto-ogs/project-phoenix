@@ -162,7 +162,10 @@ func TestDataDeletion_Validate(t *testing.T) {
 	}
 }
 
-func TestDataDeletion_Validate_SetsDefaultDeletedAt(t *testing.T) {
+// TestDataDeletion_ValidateLeavesTheDeletionTimeToTheAppender: a deletion
+// without its time is valid; the Audit Appender stamps it from the Audit
+// clock (TestAuditAppenderStampsEventsWithoutTheirTime, ADR 0239).
+func TestDataDeletion_ValidateLeavesTheDeletionTimeToTheAppender(t *testing.T) {
 	t.Parallel()
 
 	dd := &DataDeletion{
@@ -173,20 +176,12 @@ func TestDataDeletion_Validate_SetsDefaultDeletedAt(t *testing.T) {
 		DeletedAt:      time.Time{}, // Zero time
 	}
 
-	before := time.Now()
-	err := dd.Validate()
-	after := time.Now()
-
-	if err != nil {
+	if err := dd.Validate(); err != nil {
 		t.Fatalf("DataDeletion.Validate() unexpected error = %v", err)
 	}
 
-	if dd.DeletedAt.IsZero() {
-		t.Error("DataDeletion.Validate() should set DeletedAt when zero")
-	}
-
-	if dd.DeletedAt.Before(before) || dd.DeletedAt.After(after) {
-		t.Errorf("DataDeletion.DeletedAt = %v, want between %v and %v", dd.DeletedAt, before, after)
+	if !dd.DeletedAt.IsZero() {
+		t.Errorf("DataDeletion.Validate() set DeletedAt = %v; the Appender stamps it", dd.DeletedAt)
 	}
 }
 
@@ -255,9 +250,7 @@ func TestDataDeletion_Metadata(t *testing.T) {
 func TestNewDataDeletion(t *testing.T) {
 	t.Parallel()
 
-	before := time.Now()
 	dd := NewDataDeletion(123, DeletionTypeGDPRRequest, 50, "admin@example.com")
-	after := time.Now()
 
 	if dd.StudentID == nil || *dd.StudentID != 123 {
 		t.Errorf("NewDataDeletion().StudentID = %v, want 123", dd.StudentID)
@@ -278,8 +271,8 @@ func TestNewDataDeletion(t *testing.T) {
 		t.Errorf("NewDataDeletion().DeletedBy = %v, want admin@example.com", dd.DeletedBy)
 	}
 
-	if dd.DeletedAt.Before(before) || dd.DeletedAt.After(after) {
-		t.Errorf("NewDataDeletion().DeletedAt = %v, want between %v and %v", dd.DeletedAt, before, after)
+	if !dd.DeletedAt.IsZero() {
+		t.Errorf("NewDataDeletion().DeletedAt = %v, want zero: the Appender stamps it from the Audit clock", dd.DeletedAt)
 	}
 
 	if dd.Metadata == nil {

@@ -1,6 +1,8 @@
 package compose
 
 import (
+	"time"
+
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application"
@@ -10,7 +12,7 @@ import (
 type PastMealDay = mealplan.PastMealDay
 
 // NewParticipationHistory is the dev CLI's past-registration writer.
-func NewParticipationHistory() mealplan.ParticipationHistory {
+func NewParticipationHistory(now func() time.Time) mealplan.ParticipationHistory {
 	store := postgres.New(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext))
-	return application.NewParticipationHistory(store, transaction{})
+	return application.NewParticipationHistory(store, transaction{}, now)
 }

@@ -94,7 +94,7 @@ func (c *StudentImportConfig) createStudentEntities(ctx context.Context, personI
 }
 
 func (c *StudentImportConfig) createPersonFromRow(ctx context.Context, row importModels.StudentImportRow) (ports.Person, error) {
-	person, err := c.Persons.CreatePerson(ctx, personInputFromRow(row))
+	person, err := c.Persons.CreatePerson(ctx, personInputFromRow(row, c.now()))
 	if err != nil {
 		return ports.Person{}, fmt.Errorf("create person: %w", err)
 	}
@@ -102,8 +102,8 @@ func (c *StudentImportConfig) createPersonFromRow(ctx context.Context, row impor
 }
 
 // personInputFromRow is the person a create row files.
-func personInputFromRow(row importModels.StudentImportRow) ports.CreatePerson {
-	birthday, _ := parseOptionalDate(row.Birthday)
+func personInputFromRow(row importModels.StudentImportRow, now time.Time) ports.CreatePerson {
+	birthday, _ := parseOptionalDate(row.Birthday, now)
 	return ports.CreatePerson{
 		FirstName: strings.TrimSpace(row.FirstName),
 		LastName:  strings.TrimSpace(row.LastName),
@@ -141,14 +141,14 @@ func (c *StudentImportConfig) createStudentFromRow(ctx context.Context, personID
 		// Collected with this row's own instant, taken here as on the row path.
 		leafs.transitions = append(leafs.transitions, ports.ConsentTransition{
 			After:  consentSnapshot(created.ID, patch.AGBAcceptedAt, patch.DataProcessingAcceptedAt, patch.EmailContactAcceptedAt, patch.PhotoConsentGivenAt),
-			Source: consents.ConsentSourceImport, ChangedAt: time.Now(),
+			Source: consents.ConsentSourceImport, ChangedAt: c.now(),
 		})
 		return created, nil
 	}
 	if c.ConsentHistory != nil {
 		after := consentSnapshot(created.ID, patch.AGBAcceptedAt, patch.DataProcessingAcceptedAt, patch.EmailContactAcceptedAt, patch.PhotoConsentGivenAt)
 		if err := ports.ObserveCommand(ctx, "audit-platform", "record_consent_transitions", func() error {
-			return c.ConsentHistory.RecordTransitions(ctx, nil, after, consents.ConsentSourceImport, nil, time.Now())
+			return c.ConsentHistory.RecordTransitions(ctx, nil, after, consents.ConsentSourceImport, nil, c.now())
 		}); err != nil {
 			return ports.CreatedEnrollmentStudent{}, fmt.Errorf("create student consent history: %w", err)
 		}
@@ -189,7 +189,13 @@ func (c *StudentImportConfig) todayDate() timezone.Date {
 	if c.Today != nil {
 		return c.Today()
 	}
-	return timezone.TodayDate()
+	return timezone.DateFromTime(c.now())
+}
+
+// now is the instant of the import's clock. Decision tests build the config
+// bare; it then reads the real clock.
+func (c *StudentImportConfig) now() time.Time {
+	return clockOr(c.Now)()
 }
 
 // enrollmentInputFromRow is the enrollment a create row files, without its
@@ -315,7 +321,7 @@ func (c *StudentImportConfig) createPrivacyConsentIfNeeded(ctx context.Context, 
 	if c.PrivacyConsents == nil {
 		return errors.New("privacy consent capability is not wired")
 	}
-	if _, err := c.PrivacyConsents.RecordPrivacyConsent(ctx, buildPrivacyConsent(studentID, row)); err != nil {
+	if _, err := c.PrivacyConsents.RecordPrivacyConsent(ctx, buildPrivacyConsent(studentID, row, c.now())); err != nil {
 		return fmt.Errorf("create privacy consent: %w", err)
 	}
 	return nil
@@ -328,11 +334,11 @@ func (c *StudentImportConfig) collectPrivacyConsent(studentID int64, row importM
 	if !row.PrivacyAccepted && row.DataRetentionDays <= 0 {
 		return nil
 	}
-	leafs.consents = append(leafs.consents, buildPrivacyConsent(studentID, row))
+	leafs.consents = append(leafs.consents, buildPrivacyConsent(studentID, row, c.now()))
 	return nil
 }
 
-func buildPrivacyConsent(studentID int64, row importModels.StudentImportRow) ports.PrivacyConsent {
+func buildPrivacyConsent(studentID int64, row importModels.StudentImportRow, now time.Time) ports.PrivacyConsent {
 	consent := ports.PrivacyConsent{
 		StudentID:         studentID,
 		PolicyVersion:     privacyConsentPolicyVersion,
@@ -340,7 +346,6 @@ func buildPrivacyConsent(studentID int64, row importModels.StudentImportRow) por
 		DataRetentionDays: validateRetentionDays(row.DataRetentionDays),
 	}
 	if row.PrivacyAccepted {
-		now := time.Now()
 		consent.AcceptedAt = &now
 	}
 	return consent
@@ -422,7 +427,7 @@ func (c *StudentImportConfig) updatePersonFromRow(ctx context.Context, person po
 		input.LastName = lastName
 		changed = true
 	}
-	if birthday, _ := parseOptionalDate(row.Birthday); birthday != nil && person.Birthday != birthday.String() {
+	if birthday, _ := parseOptionalDate(row.Birthday, c.now()); birthday != nil && person.Birthday != birthday.String() {
 		input.Birthday = birthday.String()
 		changed = true
 	}
@@ -441,7 +446,7 @@ func (c *StudentImportConfig) updatePersonFromRow(ctx context.Context, person po
 
 // renewalFromRow is the class, lifecycle window and status an update row
 // leaves on an existing child: only the cells the row carries change.
-func renewalFromRow(record ports.EnrollmentRecord, row importModels.StudentImportRow) ports.EnrollmentStudent {
+func renewalFromRow(record ports.EnrollmentRecord, row importModels.StudentImportRow, today timezone.Date) ports.EnrollmentStudent {
 	renewal := ports.EnrollmentStudent{
 		PersonID: record.PersonID, SchoolClass: record.SchoolClass, Status: record.Status,
 		EnrolledFrom: record.EnrolledFrom, EnrolledUntil: record.EnrolledUntil,
@@ -451,7 +456,7 @@ func renewalFromRow(record ports.EnrollmentRecord, row importModels.StudentImpor
 	}
 	if d := parseOptionalImportCalendarDate(row.EnrolledFrom); d != nil {
 		renewal.EnrolledFrom = d.String()
-		if enrollmentStartsInFuture(d) {
+		if enrollmentStartsAfter(d, today) {
 			renewal.Status = ports.StudentStatusPending
 		} else if renewal.Status == ports.StudentStatusPending {
 			renewal.Status = ports.StudentStatusActive
@@ -465,8 +470,8 @@ func renewalFromRow(record ports.EnrollmentRecord, row importModels.StudentImpor
 
 // newEnrollmentStatus is the status a created child starts with: pending
 // while its care starts in the future, active otherwise.
-func newEnrollmentStatus(enrolledFrom *timezone.Date) string {
-	if enrollmentStartsInFuture(enrolledFrom) {
+func newEnrollmentStatus(enrolledFrom *timezone.Date, today timezone.Date) string {
+	if enrollmentStartsAfter(enrolledFrom, today) {
 		return ports.StudentStatusPending
 	}
 	return ports.StudentStatusActive
@@ -481,24 +486,25 @@ func (c *StudentImportConfig) AddsToChildQuota(ctx context.Context, row importMo
 	if c.CountsTowardChildQuota == nil {
 		return false, errChildQuotaRuleUnbound
 	}
-	day := timezone.TodayDate().String()
+	today := c.todayDate()
+	day := today.String()
 	if existingID == nil {
 		enrolledFrom := parseOptionalImportCalendarDate(row.EnrolledFrom)
-		return c.CountsTowardChildQuota(newEnrollmentStatus(enrolledFrom),
+		return c.CountsTowardChildQuota(newEnrollmentStatus(enrolledFrom, today),
 			calendarDateString(enrolledFrom), calendarDateString(parseOptionalImportCalendarDate(row.EnrolledUntil)), day), nil
 	}
 	record, err := c.Students.ReadEnrollmentStudent(ctx, *existingID, "")
 	if err != nil {
 		return false, fmt.Errorf("read student for child quota: %w", err)
 	}
-	after := renewalFromRow(record, row)
+	after := renewalFromRow(record, row, today)
 	return !c.CountsTowardChildQuota(record.Status, record.EnrolledFrom, record.EnrolledUntil, day) &&
 		c.CountsTowardChildQuota(after.Status, after.EnrolledFrom, after.EnrolledUntil, day), nil
 }
 
 func (c *StudentImportConfig) updateStudentFromRow(ctx context.Context, record ports.EnrollmentRecord, row importModels.StudentImportRow) error {
 	// Class, lifecycle window and status go through the renewal command.
-	renewal := renewalFromRow(record, row)
+	renewal := renewalFromRow(record, row, c.todayDate())
 	if renewal.SchoolClass != record.SchoolClass || renewal.Status != record.Status ||
 		renewal.EnrolledFrom != record.EnrolledFrom || renewal.EnrolledUntil != record.EnrolledUntil {
 		if err := c.Students.RenewEnrollmentStudent(ctx, record.ID, renewal); err != nil {
@@ -527,7 +533,7 @@ func (c *StudentImportConfig) updateStudentFromRow(ctx context.Context, record p
 	if c.ConsentHistory != nil {
 		before := consentSnapshot(record.ID, record.AGBAcceptedAt, record.DataProcessingAcceptedAt, record.EmailContactAcceptedAt, record.PhotoConsentGivenAt)
 		if err := ports.ObserveCommand(ctx, "audit-platform", "record_consent_transitions", func() error {
-			return c.ConsentHistory.RecordTransitions(ctx, before, after, consents.ConsentSourceImport, nil, time.Now())
+			return c.ConsentHistory.RecordTransitions(ctx, before, after, consents.ConsentSourceImport, nil, c.now())
 		}); err != nil {
 			return copyErrorf("Einwilligungsverlauf aktualisieren: %w", err)
 		}

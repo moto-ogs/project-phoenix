@@ -99,6 +99,9 @@ type ChangeRequestDependencies struct {
 	ParentsURL             string
 	Runtime                Runtime
 	Logger                 *slog.Logger
+	// Now is the clock of the enrollment window and the review stamps
+	// (ADR 0239); nil is the real clock.
+	Now func() time.Time
 
 	// LateInviteIdentities batch-loads the approval's invitation identities.
 	// The owner composition binds its private store in the same transaction.
@@ -124,6 +127,9 @@ func NewChangeRequests(deps ChangeRequestDependencies) *ChangeRequests {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
 	deps.ParentsURL = strings.TrimRight(strings.TrimSpace(deps.ParentsURL), "/")
 	if deps.ParentsURL == "" {
 		panic("PARENTS_URL is required")
@@ -132,7 +138,7 @@ func NewChangeRequests(deps ChangeRequestDependencies) *ChangeRequests {
 	intake := NewIntake(IntakeDependencies{
 		Requests: deps.Requests, Children: deps.Children, Catalog: deps.Catalog, Offerings: deps.Offerings,
 		Capacity: deps.Capacity, Students: deps.Students, GuardianHold: deps.GuardianHold,
-		Settings: deps.Settings, Runtime: deps.Runtime, Logger: deps.Logger, LockTemplateRecurrence: deps.LockTemplateRecurrence,
+		Settings: deps.Settings, Runtime: deps.Runtime, Logger: deps.Logger, LockTemplateRecurrence: deps.LockTemplateRecurrence, Now: deps.Now,
 	})
 	return &ChangeRequests{deps: deps, intake: intake}
 }
@@ -520,7 +526,7 @@ func applyReviewOutcome(ctx context.Context, row *ChangeRequest, input enrollmen
 
 func (s *ChangeRequests) recordChangeRequestReview(ctx context.Context, changeRequestID int64, status, note string, actorAccountID int64) error {
 	decisionNote := trimToNil(note)
-	if err := s.deps.Requests.MarkChangeRequestReviewed(ctx, changeRequestID, status, decisionNote, actorAccountID, time.Now()); err != nil {
+	if err := s.deps.Requests.MarkChangeRequestReviewed(ctx, changeRequestID, status, decisionNote, actorAccountID, s.deps.Now()); err != nil {
 		return err
 	}
 	if decisionNote == nil {
@@ -589,7 +595,7 @@ func (s *ChangeRequests) ensureCanCreate(ctx context.Context, req *enrollmentNat
 	if err != nil || phase == nil || !phase.IsActive {
 		return enrollmentNative.ErrChangeRequestNotAllowed
 	}
-	if !phase.EnrollmentWindowOpen(time.Now()) {
+	if !phase.EnrollmentWindowOpen(s.deps.Now()) {
 		return enrollmentNative.ErrEnrollmentWindowClosed
 	}
 	return nil

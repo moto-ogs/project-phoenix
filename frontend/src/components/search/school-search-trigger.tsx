@@ -45,7 +45,7 @@ function loadSchoolSearchDialog(): Promise<SchoolSearchDialogComponent> {
 const PRELOAD_DELAY_MS = 2000;
 
 const SEARCH_BUTTON_TOOLTIP =
-  "Öffnet die Suche nach Kindern, Familien, Team, Räumen und Seiten.";
+  "Öffnet die Suche nach Kindern, Familien, Team, Räumen, Seiten, Einstellungen und Hilfe.";
 
 const subscribeNothing = () => () => undefined;
 

@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	educationRepo "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // supervisionTeacherStaff maps every given live teacher to its staff member.
@@ -260,12 +261,13 @@ func HandoverFilter(query educationRepo.HandoverQuery) workforce.GroupSubstituti
 
 // NewGroupSubstitutionRepository serves the retained group substitution
 // contract over Workforce (#2688): the rows are Workforce's, the groups
-// resolve through the group store and the staff through School Membership.
-func NewGroupSubstitutionRepository(groups EducationGroupRows, membership StaffLookup, workTime workforce.Capability) GroupSubstitutions {
+// resolve through the group store and the staff through School Membership;
+// today is the day an active substitution covers.
+func NewGroupSubstitutionRepository(groups EducationGroupRows, membership StaffLookup, workTime workforce.Capability, today func() timezone.Date) GroupSubstitutions {
 	return newGroupSubstitutions(
 		workforceCompose.NewGroupSubstitutionRepository(workTime, func(ctx context.Context, ids []int64) (map[int64]string, error) {
 			return educationRepo.NewGroupNames(groups).GroupNamesByID(ctx, ids)
-		}),
+		}, today),
 		groups.FindByIDs,
 		membership,
 	)

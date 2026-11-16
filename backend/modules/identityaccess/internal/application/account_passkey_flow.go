@@ -55,6 +55,8 @@ type AccountPasskeyFlowDependencies struct {
 	// CatererFrontendURL is the caterer portal the caterer's ceremonies are
 	// pinned to (#4497).
 	CatererFrontendURL string
+	// Now is the composition's clock (ADR 0239).
+	Now func() time.Time
 }
 
 // accountPasskeyGate is the second factor a registration is gated by: the
@@ -75,7 +77,7 @@ type accountPasskeySessions interface {
 // tenant domain is a wiring error and surfaces at startup.
 func NewAccountPasskeyFlows(deps AccountPasskeyFlowDependencies) (*AccountPasskeyFlows, error) {
 	switch {
-	case deps.Accounts == nil, deps.Records == nil, deps.MFA == nil, deps.Sessions == nil, deps.Runtime == nil:
+	case deps.Accounts == nil, deps.Records == nil, deps.MFA == nil, deps.Sessions == nil, deps.Runtime == nil, deps.Now == nil:
 		return nil, errors.New("identity access account passkey: all dependencies are required")
 	}
 	rpID := strings.TrimSpace(deps.RPID)
@@ -94,7 +96,7 @@ func NewAccountPasskeyFlows(deps AccountPasskeyFlowDependencies) (*AccountPasske
 		accounts: deps.Accounts, records: deps.Records, mfa: deps.MFA, sessions: deps.Sessions,
 		runtime: deps.Runtime, attach: deps.Attach,
 		rpID: domain.HostWithoutPort(rpID), rpName: rpName,
-		tenantDomain: domain.HostWithoutPort(tenantDomain), catererHost: catererHost(deps.CatererFrontendURL), now: time.Now,
+		tenantDomain: domain.HostWithoutPort(tenantDomain), catererHost: catererHost(deps.CatererFrontendURL), now: deps.Now,
 	}, nil
 }
 
@@ -200,7 +202,9 @@ func (f *AccountPasskeyFlows) FinishRegistration(ctx context.Context, request do
 // refused ceremony is a rejection: the consumption stays committed, so the
 // same challenge cannot be retried.
 func (f *AccountPasskeyFlows) verifyRegistration(ctx context.Context, request domain.AccountPasskeyRegistrationFinish) (domain.AccountPasskeyCredential, error) {
-	session, err := f.records.ConsumeSession(ctx, request.SessionID, domain.PasskeySessionPurposeRegistration, f.now())
+	// go-webauthn stamps and validates the ceremony's expiry on the real
+	// clock, so its stored expiry is compared on that clock too (ADR 0261).
+	session, err := f.records.ConsumeSession(ctx, request.SessionID, domain.PasskeySessionPurposeRegistration, time.Now())
 	if err != nil {
 		if errors.Is(err, identityaccess.ErrAccountPasskeySessionNotFound) {
 			return domain.AccountPasskeyCredential{}, rejectCeremony(identityaccess.ErrPasskeySessionInvalid)
@@ -353,7 +357,9 @@ func (f *AccountPasskeyFlows) verifyLogin(ctx context.Context, request domain.Ac
 
 // consumeLoginSession completes a login ceremony exactly once.
 func (f *AccountPasskeyFlows) consumeLoginSession(ctx context.Context, sessionID string) (domain.AccountPasskeySession, error) {
-	session, err := f.records.ConsumeSession(ctx, sessionID, domain.PasskeySessionPurposeLogin, f.now())
+	// go-webauthn stamps and validates the ceremony's expiry on the real
+	// clock, so its stored expiry is compared on that clock too (ADR 0261).
+	session, err := f.records.ConsumeSession(ctx, sessionID, domain.PasskeySessionPurposeLogin, time.Now())
 	if err != nil {
 		if errors.Is(err, identityaccess.ErrAccountPasskeySessionNotFound) {
 			return domain.AccountPasskeySession{}, rejectCeremony(identityaccess.ErrPasskeySessionInvalid)

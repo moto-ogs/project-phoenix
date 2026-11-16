@@ -143,3 +143,11 @@ existiert.
 - Ein neuer Fremdschlüssel oder eine neue Mandantentabelle ohne Plan lässt
   die Preflight-Prüfung scheitern; die Schule bleibt dann fällig und der
   Sidecar `unhealthy`, bis der Plan nachgezogen ist.
+
+## Nachtrag 2026-11-16: der eigene Demo-Träger geht mit (#6193)
+
+[ADR 0271](0271-jeder-demo-besuch-bekommt-einen-eigenen-demo-traeger.md):
+Hat eine Bestellung einen eigenen Träger, bleibt nach der Löschung ihrer
+letzten Schule nichts beim Träger. Derselbe Lauf löscht den Träger mit allen
+Träger-Tabellen. Die Schullöschung löscht `users.rfid_cards` seitdem nach
+`users.persons`; vorher brach sie an jeder Schule mit Karten ab.

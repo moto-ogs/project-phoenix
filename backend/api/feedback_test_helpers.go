@@ -4,6 +4,7 @@ package api
 
 import (
 	"context"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -42,7 +43,7 @@ func NewFeedbackTestModuleWithSettings(db transactionruntime.Database, unit tena
 		return FeedbackTestModule{}, owners.SettingsTestModule{}, err
 	}
 	feedback, err := feedbackCompose.New(feedbackCompose.Dependencies{
-		DB: db.Pool(), Settings: resolvers, Today: feedbackModule.Today, Observe: func(feedbackCompose.Observation) {},
+		DB: db.Pool(), Settings: resolvers, Today: feedbackModule.TodayOf(time.Now), Observe: func(feedbackCompose.Observation) {},
 	})
 	if err != nil {
 		return FeedbackTestModule{}, owners.SettingsTestModule{}, err

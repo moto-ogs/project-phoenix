@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/require"
@@ -35,7 +36,9 @@ func composeRooms(t *testing.T) (*bun.DB, RoomsComposition, func(chi.Router, fun
 			Facilities:          svcFacilities.Facilities,
 			RoomHistorySettings: api.NewRoomHistorySettings(svcSettings.Settings, slog.Default(), prefetch),
 			UserContext:         svcCaller, Active: svcPresence.Active, Users: api.NewRoomSnapshotPeople(svcPeople.Users), Education: svcEducation.Education,
-			ListExport: listExport,
+			// The real clock: the default history window is today, and the
+			// fixtures stamp their sessions with the real clock.
+			ListExport: listExport, Now: time.Now,
 		},
 		Settings:   svcSettings.Settings,
 		Usage:      svcFacilities.RoomUsage,

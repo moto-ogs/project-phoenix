@@ -649,7 +649,7 @@ func ownerRetentionStep(kind string, deleteExpired func(context.Context) (int, i
 // newSchoolContentRetentionSteps builds the owners of the content a school
 // creates itself (#4045) over db and returns their retention steps.
 func newSchoolContentRetentionSteps(db transactionruntime.Database, settings retentionSettings, announcements communicationModule.ParentAnnouncementRetention, homework timetableContentRetention) ([]schedulerPorts.RetentionStep, error) {
-	appointments, err := BuildServeAppointments(db)
+	appointments, err := BuildServeAppointments(db, time.Now)
 	if err != nil {
 		return nil, fmt.Errorf("compose worker appointment retention: %w", err)
 	}
@@ -658,7 +658,7 @@ func newSchoolContentRetentionSteps(db transactionruntime.Database, settings ret
 		return nil, fmt.Errorf("compose worker grade transition retention: %w", err)
 	}
 	steps := schoolContentRetentionSteps(
-		settings, announcements, timetable.NewStaffNoticeRetention(timetableCompose.NewStaffNoticeRepository(db.Pool()), calendar.TodayDate),
+		settings, announcements, timetable.NewStaffNoticeRetention(timetableCompose.NewStaffNoticeRepository(db.Pool(), time.Now), calendar.TodayDate),
 		appointments, transitions, fileStorageCompose.NewCleanupRetention(), homework,
 		homework,
 	)

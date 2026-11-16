@@ -112,7 +112,7 @@ func (s *Scheduler) getCleanupMinuteSnapshot(ctx context.Context) (*schedulerMin
 
 func (s *Scheduler) getSettingsMinuteSnapshot(ctx context.Context, slot **schedulerMinuteSnapshotLoad, loader func(context.Context) (*schedulerMinuteSnapshot, error)) (*schedulerMinuteSnapshot, error) {
 	ctx = s.withUnitOfWork(ctx)
-	now := time.Now
+	now := s.clock
 	if s.minuteSnapshotNow != nil {
 		now = s.minuteSnapshotNow
 	}

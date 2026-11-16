@@ -18,7 +18,7 @@ func NewGuardianChangeRepository(runtime Runtime) audit.GuardianChangeRepository
 }
 
 func (r *guardianChangeRepository) Create(ctx context.Context, entry *audit.GuardianChange) error {
-	return NewAppender(r.runtime).Append(ctx, entry)
+	return NewAppender(r.runtime, nil).Append(ctx, entry)
 }
 
 func (r *guardianChangeRepository) ListByStudentID(ctx context.Context, studentID int64) ([]*audit.GuardianChange, error) {

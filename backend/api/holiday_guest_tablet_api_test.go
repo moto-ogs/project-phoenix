@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +32,7 @@ func (f holidayGuestFixture) tabletHints(t *testing.T, school int64) map[int64]*
 		NewDeviceScanHolidayGuestSchools(clock), nil, DeviceScanPrincipal)
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantTxMiddleware(f.db))
-	router.Mount("/api/iot", NewIoTHTTPRuntime().Data(directory, nil, nil).Router())
+	router.Mount("/api/iot", NewIoTHTTPRuntime(time.Now).Data(directory, nil, nil).Router())
 
 	device := testpkg.CreateTestDeviceForTenant(t, f.db, school, "kiosk-feriengast")
 	req := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/api/iot/students", nil, testutil.WithDeviceContext(device))

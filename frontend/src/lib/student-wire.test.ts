@@ -4,13 +4,15 @@ import {
   mapStudentListRow,
   mapStudentResponse,
   prepareStudentForBackend,
-  type BackendSlimStudent,
-  type BackendStudent,
-  type BackendStudentDetail,
 } from "~/lib/student-wire";
+import type {
+  SlimStudentResponse,
+  StudentDetailResponse,
+  StudentResponse,
+} from "~/lib/contract/students.generated";
 import { buildBackendStudent } from "~/test/fixtures/students";
 
-const sampleBackendStudent = buildBackendStudent({
+const sampleStudentResponse = buildBackendStudent({
   id: 1,
   person_id: 100,
   first_name: "Max",
@@ -34,10 +36,10 @@ const sampleBackendStudent = buildBackendStudent({
 });
 
 function detail(
-  overrides: Partial<BackendStudentDetail> = {},
-): BackendStudentDetail {
+  overrides: Partial<StudentDetailResponse> = {},
+): StudentDetailResponse {
   return {
-    ...sampleBackendStudent,
+    ...sampleStudentResponse,
     has_full_access: true,
     has_write_access: true,
     has_absence_write_access: true,
@@ -63,8 +65,8 @@ it("does not expose retired student contact fields", () => {
 
 describe("mapStudentListRow", () => {
   it("keeps the selected day's departure modes of the slim projection", () => {
-    const row: BackendSlimStudent = {
-      id: 7,
+    const row: SlimStudentResponse = {
+      id: "7",
       first_name: "Mila",
       last_name: "Meyer",
       school_class: "2a",
@@ -90,7 +92,7 @@ describe("mapStudentListRow", () => {
   it("keeps only the name of the names projection (#4996)", () => {
     expect(
       mapStudentListRow(
-        { id: 9, first_name: "Ida", last_name: "Neu" },
+        { id: "9", first_name: "Ida", last_name: "Neu" },
         "names",
       ),
     ).toEqual({
@@ -114,13 +116,13 @@ describe("mapStudentResponse", () => {
       },
     ];
 
-    const result = mapStudentResponse({ ...sampleBackendStudent, consents });
+    const result = mapStudentResponse({ ...sampleStudentResponse, consents });
 
     expect(result.consents).toEqual(consents);
   });
 
   it("maps backend student to frontend structure", () => {
-    const result = mapStudentResponse(sampleBackendStudent);
+    const result = mapStudentResponse(sampleStudentResponse);
 
     expect(result.id).toBe("1");
     expect(result.name).toBe("Max Mustermann");
@@ -141,53 +143,51 @@ describe("mapStudentResponse", () => {
 
   it("builds the name from whichever part is present", () => {
     expect(
-      mapStudentResponse({ ...sampleBackendStudent, first_name: "" }).name,
+      mapStudentResponse({ ...sampleStudentResponse, first_name: "" }).name,
     ).toBe("Mustermann");
     expect(
-      mapStudentResponse({ ...sampleBackendStudent, last_name: "" }).name,
+      mapStudentResponse({ ...sampleStudentResponse, last_name: "" }).name,
     ).toBe("Max");
   });
 
-  it("normalizes legacy and missing location values", () => {
+  it("normalizes legacy and empty location values", () => {
     expect(
       mapStudentResponse({
-        ...sampleBackendStudent,
+        ...sampleStudentResponse,
         current_location: "Abwesend",
       }).current_location,
     ).toBe("Zuhause");
     expect(
-      mapStudentResponse({ ...sampleBackendStudent, current_location: null })
+      mapStudentResponse({ ...sampleStudentResponse, current_location: "" })
         .current_location,
     ).toBe("Unbekannt");
   });
 
   it("converts undefined group_id to undefined", () => {
     const result = mapStudentResponse({
-      ...sampleBackendStudent,
+      ...sampleStudentResponse,
       group_id: undefined,
     });
 
     expect(result.group_id).toBeUndefined();
   });
 
-  it("derives bus from bus_days and defaults sick to false", () => {
-    const student: BackendStudent = {
-      ...sampleBackendStudent,
+  it("derives bus from bus_days", () => {
+    const student: StudentResponse = {
+      ...sampleStudentResponse,
       bus: true,
       bus_days: undefined,
-      sick: undefined,
     };
 
     const result = mapStudentResponse(student);
 
     // bus_days is the single source of truth (#1582).
     expect(result.bus).toBe(false);
-    expect(result.sick).toBe(false);
   });
 
   it("folds a plan that predates departure_days from the legacy maps (#1610)", () => {
     const result = mapStudentResponse({
-      ...sampleBackendStudent,
+      ...sampleStudentResponse,
       bus_days: { mon: true, tue: true },
       pickup_days: { tue: true },
       departure_days: undefined,
@@ -204,11 +204,11 @@ describe("mapStudentResponse", () => {
   it("threads the actual times independently and never synthesizes them", () => {
     expect(
       mapStudentResponse({
-        ...sampleBackendStudent,
+        ...sampleStudentResponse,
         actual_arrival_time: "08:05",
       }),
     ).toMatchObject({ actual_arrival_time: "08:05" });
-    const untouched = mapStudentResponse(sampleBackendStudent);
+    const untouched = mapStudentResponse(sampleStudentResponse);
     expect(untouched.actual_arrival_time).toBeUndefined();
     expect(untouched.actual_pickup_time).toBeUndefined();
   });
@@ -231,7 +231,7 @@ describe("mapStudentDetailResponse", () => {
         feedback_enabled: true,
         group_supervisors: [
           {
-            id: 1,
+            id: "1",
             first_name: "John",
             last_name: "Teacher",
             role: "teacher",
@@ -281,7 +281,7 @@ describe("prepareStudentForBackend", () => {
       birthday: "2015-06-15",
     });
     // bus_days is the single source of truth (#1582).
-    expect(result.bus).toBeUndefined();
+    expect(result).not.toHaveProperty("bus");
   });
 
   // The submitted list REPLACES the stored one, so the backend needs to know

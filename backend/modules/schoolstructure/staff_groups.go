@@ -45,8 +45,8 @@ type StaffGroupQuery interface {
 }
 
 // ListSubstitutedGroupsToday answers the staff member's substitutions on the
-// school's current calendar day (Europe/Berlin), the day a caller's
-// navigation groups cover.
-func ListSubstitutedGroupsToday(ctx context.Context, query StaffGroupQuery, staffID int64) ([]SubstitutedGroup, error) {
-	return query.ListSubstitutedGroups(ctx, staffID, calendar.TodayDate().String())
+// school's current calendar day (Europe/Berlin) by the caller's day clock,
+// the day a caller's navigation groups cover.
+func ListSubstitutedGroupsToday(ctx context.Context, query StaffGroupQuery, staffID int64, today func() calendar.Date) ([]SubstitutedGroup, error) {
+	return query.ListSubstitutedGroups(ctx, staffID, today().String())
 }

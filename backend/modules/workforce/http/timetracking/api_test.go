@@ -9,10 +9,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -398,6 +400,7 @@ func TestNewResource(t *testing.T) {
 		AccountStartDate:   func(context.Context) (string, error) { return "", nil },
 		Identity:           func(context.Context) Identity { return Identity{AccountID: testAccountID} },
 		WithinTenant:       testWithinTenant(db),
+		Today:              func() calendar.Date { return calendar.NewDate(2026, time.August, 24) },
 	})
 	assert.NotNil(t, rs)
 	assert.NotNil(t, rs.WorkSessionService)

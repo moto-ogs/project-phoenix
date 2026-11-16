@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 )
 
 // ErrRetentionUnresolved means the tenant's retention window could not be
@@ -44,7 +43,7 @@ func (s *Service) CleanupExpiredMessages(ctx context.Context) (CleanupResult, er
 	}
 	result := CleanupResult{RetentionDays: days}
 
-	cutoff := time.Now().AddDate(0, 0, -days)
+	cutoff := s.Now().AddDate(0, 0, -days)
 
 	messages, err := s.MessageRepo.DeleteOlderThan(ctx, cutoff)
 	if err != nil {

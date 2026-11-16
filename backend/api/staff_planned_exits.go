@@ -25,8 +25,10 @@ import (
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	schedulerPorts "github.com/moto-ogs/project-phoenix/modules/schedulerruntime/ports"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	"github.com/moto-ogs/project-phoenix/realtime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/workflows/staffoffboarding"
 )
@@ -62,6 +64,7 @@ func PlannedStaffExitsJob(db transactionruntime.Database, hub *realtime.Hub, log
 		if err != nil {
 			panic(err)
 		}
+		springers := springerStaffExits(due, identity)
 		return func(ctx context.Context) error {
 			_, err := due.RunDue(ctx)
 			if err != nil {
@@ -70,9 +73,52 @@ func PlannedStaffExitsJob(db transactionruntime.Database, hub *realtime.Hub, log
 					"error", err,
 				)
 			}
+			// After the last block, a Springer's employment ends the
+			// same way (#7197).
+			if _, springerErr := springers.RunDue(ctx); springerErr != nil {
+				logger.Error("springer exits run aborted",
+					"tenant_id", tenant.FromContext(ctx),
+					"error", springerErr,
+				)
+				err = errors.Join(err, springerErr)
+			}
 			return err
 		}
 	}
+}
+
+// springerStaffExits binds the Springer exits of #7197 to Workforce's pool
+// and Identity & Access's windows, beside the planned exits they share
+// their units with.
+func springerStaffExits(due *staffoffboarding.DueExits, identity identityaccess.Owner) *staffoffboarding.SpringerExits {
+	access, err := springerAccessOf(identity)
+	if err != nil {
+		panic(err)
+	}
+	pool := workforceCompose.NewSchoolSpringerExits()
+	springers, err := staffoffboarding.NewSpringerExits(due, staffoffboarding.SpringerExitPorts{
+		Due: func(ctx context.Context, today calendar.Date) ([]staffoffboarding.SpringerExit, error) {
+			exits, err := pool.DueSpringerExits(ctx, today)
+			out := make([]staffoffboarding.SpringerExit, 0, len(exits))
+			for _, exit := range exits {
+				out = append(out, staffoffboarding.SpringerExit(exit))
+			}
+			return out, err
+		},
+		Lock: func(ctx context.Context, recordID int64, today calendar.Date) (staffoffboarding.SpringerExit, bool, error) {
+			exit, due, err := pool.LockSpringerExit(ctx, recordID, today)
+			return staffoffboarding.SpringerExit(exit), due, err
+		},
+		Record: func(ctx context.Context, exit staffoffboarding.SpringerExit) error {
+			return pool.RecordSpringerExit(ctx, workforce.SpringerExit(exit))
+		},
+		HoldsOnlySpringerAccess: access.HoldsOnlySpringerAccess,
+		PruneWindows:            access.PruneSpringerWindows,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return springers
 }
 
 // staffExitNotifier tells the Leitung, the holders of users:delete, about a

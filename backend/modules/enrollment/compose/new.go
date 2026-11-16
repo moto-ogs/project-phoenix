@@ -1,15 +1,18 @@
 package compose
 
 import (
+	"time"
+
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/internal/adapters/postgres"
 	applicationNative "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// New binds Enrollment to the ambient transaction, never to an unscoped pool when a caller forgot its transaction.
-func New() enrollment.Owner {
-	return NewWithStore(newStore(), applicationNative.ObserveOfferingStorage())
+// NewClocked binds Enrollment to the ambient transaction, never to an unscoped pool when a caller forgot its
+// transaction; now stamps its writes (ADR 0239), nil is the real clock.
+func NewClocked(now func() time.Time) enrollment.Owner {
+	return NewWithStore(newStore().WithClock(now), applicationNative.ObserveOfferingStorage())
 }
 
 // NewWithStore binds owner commands to a supplied store and the tenant runtime.

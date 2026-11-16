@@ -12,6 +12,7 @@ import (
 var (
 	ErrPhotoFeatureDisabled    = errors.New("photo feature disabled")
 	ErrPhotoFeatureDisabledMid = errors.New("photo feature disabled mid-operation")
+	ErrPhotoFeatureBusy        = errors.New("photo feature is busy; retry the operation")
 	ErrPhotoStudentForbidden   = errors.New("student photo access denied")
 	ErrPhotoConsentRequired    = errors.New("photo consent required")
 	ErrPhotoConsentWithdrawn   = errors.New("photo consent withdrawn mid-operation")

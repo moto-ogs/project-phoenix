@@ -378,6 +378,7 @@ func init() {
 	registerSchoolTypes()
 	registerStaffAppointmentTypes()
 	registerStaffingTypes()
+	registerClassTimetableTypes()
 	registerStaffNoticeTypes()
 }
 

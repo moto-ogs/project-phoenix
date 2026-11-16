@@ -14,6 +14,9 @@ type Runtime struct {
 	StudentGuard func(http.Handler) http.Handler
 	Actor        func(*http.Request) studentpresence.StatisticsActor
 	Export       func(ExportDocument, ExportFormat, string) (ExportFile, error)
+	// Now stamps the creation time of an export (ADR 0239); required with
+	// Export.
+	Now func() time.Time
 }
 
 // ExportFormat selects the statistics download format.

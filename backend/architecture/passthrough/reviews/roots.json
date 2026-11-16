@@ -1276,6 +1276,16 @@
       "reason": "ADR 0084 (#4676): Consumer-port adapter of the Träger projection's group names port; it translates School Structure's named groups of each school into the projection's NamedGroup vocabulary."
     },
     {
+      "decision": "0254",
+      "id": "api/traegerHireEmployments.CreateSchoolEmployment",
+      "reason": "ADR 0254 (#7206): Consumer-port adapter that translates Workforce's TraegerSchoolEmploymentInput into School Membership's CreateStaff and returns only the employment's ID."
+    },
+    {
+      "decision": "0254",
+      "id": "api/traegerHirePersons.CreateSchoolPerson",
+      "reason": "ADR 0254 (#7206): Consumer-port adapter that translates Workforce's TraegerSchoolPersonInput into the People Directory's CreatePerson and returns only the person's ID."
+    },
+    {
       "decision": "0137",
       "id": "api/traegerHolidayTrail.ListHolidayTrail",
       "reason": "ADR 0137 (#5326): root translation of Enrollment's holiday registration trail into the Träger projection's trail entries without a school."
@@ -2613,11 +2623,6 @@
     {
       "decision": "0090",
       "id": "roots/owners/StudentConsents.CurrentStudentConsents",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/StudentPhotoRuntime.PhotoFeatureEnabled",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

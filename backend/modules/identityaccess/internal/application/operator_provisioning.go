@@ -83,7 +83,7 @@ func NewOperatorProvisioning(operators *Service, deps OperatorProvisioningDepend
 	return &OperatorProvisioning{
 		operators: operators, tokens: deps.Tokens, passwords: deps.Passwords, hasher: deps.Hasher,
 		format: deps.Format, audit: deps.Audit, invites: deps.Invites, changes: deps.Changes,
-		runtime: deps.Runtime, attach: deps.Attach, expiry: deps.Expiry, now: time.Now,
+		runtime: deps.Runtime, attach: deps.Attach, expiry: deps.Expiry, now: operators.now,
 		logger: logger.With("component", "operator-provisioning"),
 	}, nil
 }

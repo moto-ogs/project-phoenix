@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"strings"
+	"time"
 
 	seedapi "github.com/moto-ogs/project-phoenix/internal/devtools/seedapi"
 	mealcompose "github.com/moto-ogs/project-phoenix/modules/mealplan/compose"
@@ -61,7 +62,7 @@ func openMealHistory() (func(context.Context, int64, []seedapi.PastMealDay) erro
 	if err != nil {
 		return nil, nil, err
 	}
-	history := mealcompose.NewParticipationHistory()
+	history := mealcompose.NewParticipationHistory(time.Now)
 	return func(ctx context.Context, schoolID int64, days []seedapi.PastMealDay) error {
 		ctx = tenant.WithTenantID(tenant.WithUnitOfWork(ctx, db.UnitOfWork()), schoolID)
 		owned := make([]mealcompose.PastMealDay, len(days))

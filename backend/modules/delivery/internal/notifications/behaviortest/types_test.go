@@ -31,7 +31,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 
 	t.Run("staff catalogue is grouped and ordered", func(t *testing.T) {
 		defs := notifications.TypesForPortal(notifications.PortalStaff)
-		require.Len(t, defs, 20)
+		require.Len(t, defs, 22)
 
 		keys := make([]string, len(defs))
 		for i, def := range defs {
@@ -47,6 +47,8 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 			notifications.TypeMyActivityStarting,
 			notifications.TypeStudentAbsenceReported,
 			notifications.TypeStaffStudentNoteShared,
+			notifications.TypeClassTimetableChanged,
+			notifications.TypeClassTimetableChangedAhead,
 			notifications.TypeStaffParentMessage,
 			notifications.TypeStaffMessage,
 			notifications.TypeStaffSurvey,
@@ -63,7 +65,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 
 	t.Run("parent catalogue is separate", func(t *testing.T) {
 		defs := notifications.TypesForPortal(notifications.PortalParent)
-		require.Len(t, defs, 7)
+		require.Len(t, defs, 8)
 
 		keys := make([]string, len(defs))
 		for i, def := range defs {
@@ -71,6 +73,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 		}
 		assert.Equal(t, []string{
 			notifications.TypeParentRequestDecided,
+			notifications.TypeParentClassTimetableChanged,
 			notifications.TypeParentAnnouncement,
 			notifications.TypeParentMessage,
 			notifications.TypeParentBillingDocument,
@@ -102,16 +105,19 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 
 	t.Run("tenant gates point at registered settings", func(t *testing.T) {
 		gated := map[string]string{
-			notifications.TypePickupUpcoming:            "reminders.pickup_upcoming_enabled",
-			notifications.TypePickupOverdue:             "reminders.pickup_overdue_enabled",
-			notifications.TypeActivityStart:             "reminders.activity_start_enabled",
-			notifications.TypeActivityOverdue:           "reminders.activity_overdue_enabled",
-			notifications.TypeActivityRunningOver:       "reminders.activity_running_over_enabled",
-			notifications.TypeStudentAbsenceReported:    "notifications.absence_reported_enabled",
-			notifications.TypeStaffParentMessage:        "operations.parent_notes_enabled",
-			notifications.TypeParentMessage:             "operations.parent_notes_enabled",
-			notifications.TypeParentRequestDecided:      "operations.parent_notes_enabled",
-			notifications.TypeParentAppointmentReminder: "calendar.appointment_reminder_enabled",
+			notifications.TypePickupUpcoming:              "reminders.pickup_upcoming_enabled",
+			notifications.TypePickupOverdue:               "reminders.pickup_overdue_enabled",
+			notifications.TypeActivityStart:               "reminders.activity_start_enabled",
+			notifications.TypeActivityOverdue:             "reminders.activity_overdue_enabled",
+			notifications.TypeActivityRunningOver:         "reminders.activity_running_over_enabled",
+			notifications.TypeStudentAbsenceReported:      "notifications.absence_reported_enabled",
+			notifications.TypeStaffParentMessage:          "operations.parent_notes_enabled",
+			notifications.TypeParentMessage:               "operations.parent_notes_enabled",
+			notifications.TypeParentRequestDecided:        "operations.parent_notes_enabled",
+			notifications.TypeParentAppointmentReminder:   "calendar.appointment_reminder_enabled",
+			notifications.TypeClassTimetableChanged:       "notifications.class_timetable_changed_enabled",
+			notifications.TypeClassTimetableChangedAhead:  "notifications.class_timetable_changed_enabled",
+			notifications.TypeParentClassTimetableChanged: "notifications.class_timetable_changed_enabled",
 		}
 		for key, expected := range gated {
 			def, ok := notifications.GetType(key)

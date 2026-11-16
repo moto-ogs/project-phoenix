@@ -185,7 +185,7 @@ func (s *Intake) acceptRenewalTerms(ctx context.Context, req *enrollmentNative.R
 	if renewalConfirmedAt(req.LegalBlocksSnapshot, form, s.deps.Fingerprint) != nil {
 		return nil
 	}
-	entry, err := legalBlocksSnapshotEntry(form.blocks, flags, formsOf(form.schema, confirmation.DisplayedFormSchemaID), time.Now(), s.deps.Fingerprint)
+	entry, err := legalBlocksSnapshotEntry(form.blocks, flags, formsOf(form.schema, confirmation.DisplayedFormSchemaID), s.now(), s.deps.Fingerprint)
 	if err != nil {
 		return fmt.Errorf("renewal terms: snapshot: %w", err)
 	}

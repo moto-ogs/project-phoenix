@@ -167,7 +167,7 @@ func (rs *Resource) listedAmong(r *http.Request, ids []int64) (map[int64]bool, e
 	if len(ids) == 0 {
 		return listed, nil
 	}
-	params := parseStudentListParams(r)
+	params := parseStudentListParams(r, rs.todayDate())
 	params.careStatus = CareStatusRunning
 	params.studentIDs = ids
 	params.fetchAll = true

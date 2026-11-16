@@ -156,10 +156,10 @@ const guardianHasNoLink = `NOT EXISTS (SELECT 1 FROM users.student_guardian_rela
 	WHERE link.tenant_id = guardian.tenant_id AND link.guardian_profile_id = guardian.id)`
 
 // MarkChildlessGuardians clears the mark of the tenant's profiles that have
-// a relationship and marks those without one from now (#4043). The nightly
-// run calls it before it deletes, so a profile counts from the first run that
-// sees it without a child.
-func (s *GuardianStore) MarkChildlessGuardians(ctx context.Context) (domain.OperationStats, error) {
+// a relationship and marks those without one from now, the run's instant that
+// also sets its cut-off (#4043). The nightly run calls it before it deletes,
+// so a profile counts from the first run that sees it without a child.
+func (s *GuardianStore) MarkChildlessGuardians(ctx context.Context, now time.Time) (domain.OperationStats, error) {
 	db, scope, err := s.tenantDB(ctx)
 	if err != nil {
 		return domain.OperationStats{}, err
@@ -175,7 +175,7 @@ func (s *GuardianStore) MarkChildlessGuardians(ctx context.Context) (domain.Oper
 	}
 	_, marked, err := exec(ctx, "mark childless guardians", db.NewUpdate().
 		TableExpr("users.guardian_profiles AS guardian").
-		Set("childless_since = NOW()").
+		Set("childless_since = ?", now).
 		Where("guardian.tenant_id = ?", scope.TenantID).
 		Where("guardian.childless_since IS NULL").
 		Where(guardianHasNoLink).Exec)

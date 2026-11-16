@@ -198,7 +198,7 @@ func newAbsenceWorld() (notifications.AbsenceNotifier, *absenceWorld) {
 		duty:     &fakeDutyReader{onDuty: map[int64]struct{}{absenceStaffA: {}, absenceAdminStaff: {}}},
 	}
 	recipients := notifications.NewStaffRecipientResolver(
-		w.consent, w.students, w.groups, w.staff, w.admins, w.settings, w.duty)
+		w.consent, w.students, w.groups, w.staff, w.admins, w.settings, w.duty, calendar.CalendarDateClock())
 	producer := notifications.NewAbsenceNotifier(w.notifier, recipients, nil, nil)
 	return producer, w
 }

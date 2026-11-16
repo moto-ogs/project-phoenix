@@ -26,13 +26,19 @@ func (l *observationLog) record(observation Observation) {
 	l.seen = append(l.seen, observation)
 }
 
+// appointmentsTestNow is the fixed instant of the module clock: a school
+// Monday before the 2030 fixture days (ADR 0239).
+var appointmentsTestNow = time.Date(2026, time.November, 2, 9, 30, 0, 0, time.UTC)
+
+func appointmentsTestClock() time.Time { return appointmentsTestNow }
+
 func buildModule(t *testing.T, db *bun.DB, observe ...func(Observation)) appointments.Owner {
 	t.Helper()
 	observer := func(Observation) {}
 	if len(observe) > 0 {
 		observer = observe[0]
 	}
-	module, err := New(Dependencies{DB: db, Observe: observer})
+	module, err := New(Dependencies{DB: db, Observe: observer, Now: appointmentsTestClock})
 	require.NoError(t, err)
 	return module
 }

@@ -51,13 +51,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (req *SessionActivityRequest) Bind(_ *http.Request) error {\n\tif err := validation.ValidateStruct(req, validation.Field(\u0026req.ActivityType, validation.Required, validation.In(\"rfid_scan\", \"button_press\", \"ui_interaction\"))); err != nil {\n\t\treturn err\n\t}\n\tif req.Timestamp.IsZero() {\n\t\treq.Timestamp = time.Now()\n\t}\n\treturn nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/devicescan/http/sessions/SessionActivityRequest.Bind",
-      "owner": "modules/devicescan"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Service) Status(ctx context.Context) (*devicescan.DeviceStatus, error) {\n\tdevice, err := s.device(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026devicescan.DeviceStatus{Device: publicDevice(device), IsOnline: s.fleet.IsDeviceOnline(ctx, devicefleet.Device{LastSeen: device.LastSeen}), AuthenticatedAt: s.now()}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/devicescan/internal/application/Service.Status",

@@ -5882,7 +5882,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollRuleAudit.RecordPayrollRuleChange",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/settings/records.SettingAuditRepository.Create (settings-platform) through roots/owners.payrollRuleAudit.RecordPayrollRuleChange (#4807). The wage type, rule or mapping change and its settings audit row commit in the caller's tenant unit; the audit insert is append-only and its transaction stays with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/settings/records.SettingAuditRepository.Create (settings-platform) through roots/owners.payrollRuleAudit.RecordPayrollRuleChange (#4807). The wage type, rule or mapping change and its settings audit row commit in the caller's tenant unit; the audit insert is append-only and its transaction stays with the platform behavior tests (ADR 0098). Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingAuditRepository.Create",
       "target_owner": "settings-platform"
@@ -5892,7 +5892,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollRuleAudit.RecordPayrollRuleChange",
-      "reason": "Read or pure value helper of the payroll rule audit (#4807): workforce reaches tenant.TenantFromContext (tenant-runtime) through roots/owners.payrollRuleAudit.RecordPayrollRuleChange. No persistent, lock or scope effect at this terminal.",
+      "reason": "Read or pure value helper of the payroll rule audit (#4807): workforce reaches tenant.TenantFromContext (tenant-runtime) through roots/owners.payrollRuleAudit.RecordPayrollRuleChange. No persistent, lock or scope effect at this terminal. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -5902,7 +5902,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.PayrollRuleAudit.RecordPayrollRuleChange",
-      "reason": "Read or pure value helper of the payroll rule audit (#4807): workforce reaches tenant.TenantID.Int64 (tenant-runtime) through roots/owners.payrollRuleAudit.RecordPayrollRuleChange. No persistent, lock or scope effect at this terminal.",
+      "reason": "Read or pure value helper of the payroll rule audit (#4807): workforce reaches tenant.TenantID.Int64 (tenant-runtime) through roots/owners.payrollRuleAudit.RecordPayrollRuleChange. No persistent, lock or scope effect at this terminal. Re-reviewed for #7104: only how the owners' clocks reach the binding changed (ADR 0268); effect and classification are unchanged.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
       "target_owner": "tenant-runtime"
@@ -10445,6 +10445,28 @@
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RenderWorkbook",
       "target_owner": "document-rendering"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerHireEmployments.CreateSchoolEmployment",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerHireEmployments.CreateSchoolEmployment",
+      "reason": "Guarded leaf command (mutation): workforce reaches schoolmembership.Command.CreateStaff (school-membership) through api.traegerHireEmployments.CreateSchoolEmployment. Participates in the tenant unit of one Einsatzort of a hire of the Träger (#7206, ADR 0254); the hire is the only caller, each owner keeps its validation and mutation, and no lock order or combined check spans the owners.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Command.CreateStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerHirePersons.CreateSchoolPerson",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerHirePersons.CreateSchoolPerson",
+      "reason": "Guarded leaf command (mutation): workforce reaches peopledirectory.Command.CreatePerson (people-directory) through api.traegerHirePersons.CreateSchoolPerson. Participates in the tenant unit of one Einsatzort of a hire of the Träger (#7206, ADR 0254); the hire is the only caller, each owner keeps its validation and mutation, and no lock order or combined check spans the owners.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Command.CreatePerson",
+      "target_owner": "people-directory"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerPayrollSettings.TraegerPayrollSettings",

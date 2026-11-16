@@ -239,7 +239,7 @@ func (s *service) completeTimetableMirrorsForEndedSessions(ctx context.Context, 
 	if s.TimetableBridgeCompleter == nil || len(endedSessionIDs) == 0 {
 		return nil
 	}
-	completed, err := s.TimetableBridgeCompleter.CompleteActiveByActiveGroupIDs(ctx, endedSessionIDs, time.Now())
+	completed, err := s.TimetableBridgeCompleter.CompleteActiveByActiveGroupIDs(ctx, endedSessionIDs, s.now())
 	if err != nil {
 		return fmt.Errorf("complete timetable mirrors for ended sessions: %w", err)
 	}

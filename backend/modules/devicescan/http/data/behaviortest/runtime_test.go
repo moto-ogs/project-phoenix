@@ -1,6 +1,8 @@
 package data_test
 
 import (
+	"time"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	dataAPI "github.com/moto-ogs/project-phoenix/modules/devicescan/http/data"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -9,6 +11,7 @@ import (
 func testRuntime() dataAPI.Runtime {
 	return dataAPI.Runtime{
 		ParseID: testpkg.ParseHTTPIDParam,
+		Now:     time.Now,
 		Device:  testutil.DeviceIdentity,
 		Success: testutil.RespondSuccess,
 		Failure: func(w testpkg.HTTPResponseWriter, r *testpkg.HTTPRequest, status int, err error, message string) {

@@ -163,7 +163,7 @@ func tenantLegalTexts(settings LegalSettings) enrollmentNative.LegalTexts {
 // behind the public phase gate: the template's enabled blocks win,
 // otherwise the tenant-wide ones apply.
 func (s *Intake) LegalTextsForPhaseWithLateInvite(ctx context.Context, phaseID int64, lateInviteToken string) (enrollmentNative.LegalTexts, error) {
-	phase, err := s.loadPublicPhaseWithLateInvite(ctx, phaseID, time.Now(), lateInviteToken)
+	phase, err := s.loadPublicPhaseWithLateInvite(ctx, phaseID, s.now(), lateInviteToken)
 	if err != nil {
 		return enrollmentNative.LegalTexts{}, err
 	}
@@ -171,7 +171,7 @@ func (s *Intake) LegalTextsForPhaseWithLateInvite(ctx context.Context, phaseID i
 }
 
 func (s *Intake) legalTextsForEnrolleePhase(ctx context.Context, phaseID int64, lateInviteToken string, access enrollmentNative.EnrolleeAudienceAccess) (enrollmentNative.LegalTexts, error) {
-	phase, err := s.loadEditablePhaseWithLateInvite(ctx, phaseID, time.Now(), lateInviteToken, access)
+	phase, err := s.loadEditablePhaseWithLateInvite(ctx, phaseID, s.now(), lateInviteToken, access)
 	if err != nil {
 		return enrollmentNative.LegalTexts{}, err
 	}

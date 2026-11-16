@@ -45,7 +45,7 @@ func (s *service) getDeviceSupervisorID(ctx context.Context, deviceID int64) (in
 	}
 
 	// Get supervisors for the active group
-	day := calendar.TodayDate().String()
+	day := s.todayDate().String()
 	supervisors, err := s.SchoolPresence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{activeGroup.ID}, ActiveOn: &day})
 	if err != nil {
 		return 0, fmt.Errorf("failed to get supervisors for group %d: %w", activeGroup.ID, &ActiveError{Op: "FindSupervisorsByActiveGroupID", Err: ErrDatabaseOperation})
@@ -56,7 +56,7 @@ func (s *service) getDeviceSupervisorID(ctx context.Context, deviceID int64) (in
 	}
 
 	// Use first active supervisor
-	today := calendar.TodayDate()
+	today := s.todayDate()
 	for _, supervisor := range supervisors {
 		running, err := supervisionRunsOn(supervisor, today)
 		if err != nil {

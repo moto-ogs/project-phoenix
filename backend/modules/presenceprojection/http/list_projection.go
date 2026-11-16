@@ -100,14 +100,14 @@ type SlimStudentResponse struct {
 	DepartureLabel string                    `json:"departure_label,omitempty"`
 	// DepartureIsException marks a day Abholart (#3945) in DepartureModes.
 	DepartureIsException bool    `json:"departure_is_exception,omitempty"`
-	PickupTime           *string `json:"pickup_time,omitempty"`
+	PickupTime           *string `json:"pickup_time,omitempty" contract:"clock"`
 	PickupIsException    bool    `json:"pickup_is_exception,omitempty"`
 	PickupNotes          string  `json:"pickup_notes,omitempty"`
-	ArrivalTime          *string `json:"arrival_time,omitempty"`
+	ArrivalTime          *string `json:"arrival_time,omitempty" contract:"clock"`
 	ArrivalIsException   bool    `json:"arrival_is_exception,omitempty"`
 	ArrivalNotes         string  `json:"arrival_notes,omitempty"`
-	ActualArrivalTime    *string `json:"actual_arrival_time,omitempty"`
-	ActualPickupTime     *string `json:"actual_pickup_time,omitempty"`
+	ActualArrivalTime    *string `json:"actual_arrival_time,omitempty" contract:"clock"`
+	ActualPickupTime     *string `json:"actual_pickup_time,omitempty" contract:"clock"`
 
 	// "Nach Laufgemeinschaft" grouping; only with include_companions=true.
 	CompanionStudentIDs []int64 `json:"companion_student_ids,omitempty"`

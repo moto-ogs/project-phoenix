@@ -49,11 +49,11 @@ func (s *Scheduler) checkAndRunSessionEnd(ctx context.Context, task *ScheduledTa
 		}
 
 		endTime := s.resolveStringSetting(tenantCtx, settingSessionEndTime, "18:00")
-		if !timeMatchesNow(endTime) {
+		if !s.timeMatchesNow(endTime) {
 			return nil
 		}
 
-		if wasRunToday(&s.lastSessionEnd, tenantID) {
+		if s.wasRunToday(&s.lastSessionEnd, tenantID) {
 			return nil
 		}
 
@@ -166,10 +166,12 @@ func (s *Scheduler) runSessionCleanupForTenant(tenantCtx context.Context, tenant
 	intervalMinutes := s.resolveIntSetting(tenantCtx, settingSessionCleanupIntervalMinutes, 15)
 	thresholdMinutes := s.resolveIntSetting(tenantCtx, settingSessionAbandonedThresholdMin, 60)
 
-	// Check if enough time has passed since last run for this tenant
+	// Check if enough time has passed since last run for this tenant. The
+	// last run is stamped with the scheduler's clock, so the interval counts
+	// on it too.
 	if val, ok := s.lastSessionCleanup.Load(tenantID); ok {
 		if lastRun, ok := val.(time.Time); ok {
-			if time.Since(lastRun) < time.Duration(intervalMinutes)*time.Minute {
+			if s.clock().Sub(lastRun) < time.Duration(intervalMinutes)*time.Minute {
 				return nil // not yet time for this tenant
 			}
 		}
@@ -189,6 +191,6 @@ func (s *Scheduler) runSessionCleanupForTenant(tenantCtx context.Context, tenant
 		)
 	}
 
-	s.markRunAtAfterCommit(tenantCtx, &s.lastSessionCleanup, tenantID, time.Now())
+	s.markRunAtAfterCommit(tenantCtx, &s.lastSessionCleanup, tenantID, s.clock())
 	return nil
 }

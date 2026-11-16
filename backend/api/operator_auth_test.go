@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityoperator "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 )
 
 // Mock OperatorAuthService
@@ -609,4 +610,31 @@ func (m *mockOperatorAuthService) ChangeOperatorStatus(context.Context, identity
 
 func (m *mockOperatorAuthService) DeleteDeactivatedOperators(context.Context) (int, error) {
 	return 0, nil
+}
+
+// A failed revocation answers with its code (#7209); the operator portal
+// still drops its cookie and says the session ends at its expiry.
+func TestOperatorLogout_FailedRevocationCarriesItsCode(t *testing.T) {
+	t.Parallel()
+
+	var gotOperator int64
+	var gotFamily string
+	resource := newIdentityResource(&mockOperatorAuthService{
+		logoutFn: func(_ context.Context, operatorID int64, familyID string) error {
+			gotOperator, gotFamily = operatorID, familyID
+			return errors.New("operator session family revocation unconfirmed after 4 passes")
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+	req = req.WithContext(context.WithValue(req.Context(), sessiontoken.CtxClaims,
+		sessiontoken.AppClaims{ID: 42, FamilyID: "family-42"}))
+	rr := httptest.NewRecorder()
+
+	resource.Logout(rr, req)
+
+	assert.Equal(t, int64(42), gotOperator)
+	assert.Equal(t, "family-42", gotFamily)
+	assert.Equal(t, http.StatusServiceUnavailable, rr.Code)
+	assert.Contains(t, rr.Body.String(), `"code":"identity.logout_not_revoked"`)
 }

@@ -75,7 +75,7 @@ func TestPlatformAnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 		},
 	}
 	platformRouter := platformHTTP.NewResource(platformHTTP.ResourceConfig{AnnouncementsService: module, Runtime: runtime}).Router()
-	operatorResource := operatorHTTP.NewAnnouncementsResource(module)
+	operatorResource := operatorHTTP.NewAnnouncementsResource(module, time.Now)
 	operatorRouter := chi.NewRouter()
 	operatorRouter.Get("/", operatorResource.ListAnnouncements)
 	operatorRouter.Get("/{id}/views", operatorResource.GetViewDetails)

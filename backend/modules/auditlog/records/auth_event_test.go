@@ -168,7 +168,10 @@ func TestAuthEvent_Validate(t *testing.T) {
 	}
 }
 
-func TestAuthEvent_Validate_SetsDefaultCreatedAt(t *testing.T) {
+// TestAuthEvent_ValidateLeavesTheRecordingTimeToTheAppender: an event
+// without its time is valid; the Audit Appender stamps it from the Audit
+// clock (TestAuditAppenderStampsEventsWithoutTheirTime, ADR 0239).
+func TestAuthEvent_ValidateLeavesTheRecordingTimeToTheAppender(t *testing.T) {
 	t.Parallel()
 
 	ae := &AuthEvent{
@@ -179,20 +182,12 @@ func TestAuthEvent_Validate_SetsDefaultCreatedAt(t *testing.T) {
 		CreatedAt: time.Time{}, // Zero time
 	}
 
-	before := time.Now()
-	err := ae.Validate()
-	after := time.Now()
-
-	if err != nil {
+	if err := ae.Validate(); err != nil {
 		t.Fatalf("AuthEvent.Validate() unexpected error = %v", err)
 	}
 
-	if ae.CreatedAt.IsZero() {
-		t.Error("AuthEvent.Validate() should set CreatedAt when zero")
-	}
-
-	if ae.CreatedAt.Before(before) || ae.CreatedAt.After(after) {
-		t.Errorf("AuthEvent.CreatedAt = %v, want between %v and %v", ae.CreatedAt, before, after)
+	if !ae.CreatedAt.IsZero() {
+		t.Errorf("AuthEvent.Validate() set CreatedAt = %v; the Appender stamps it", ae.CreatedAt)
 	}
 }
 
@@ -260,9 +255,7 @@ func TestAuthEvent_Metadata(t *testing.T) {
 func TestNewAuthEvent(t *testing.T) {
 	t.Parallel()
 
-	before := time.Now()
 	ae := NewAuthEvent(42, EventTypeLogin, true, "10.0.0.1")
-	after := time.Now()
 
 	if ae.AccountID != 42 {
 		t.Errorf("NewAuthEvent().AccountID = %v, want 42", ae.AccountID)
@@ -280,8 +273,8 @@ func TestNewAuthEvent(t *testing.T) {
 		t.Errorf("NewAuthEvent().IPAddress = %v, want 10.0.0.1", ae.IPAddress)
 	}
 
-	if ae.CreatedAt.Before(before) || ae.CreatedAt.After(after) {
-		t.Errorf("NewAuthEvent().CreatedAt = %v, want between %v and %v", ae.CreatedAt, before, after)
+	if !ae.CreatedAt.IsZero() {
+		t.Errorf("NewAuthEvent().CreatedAt = %v, want zero: the Appender stamps it from the Audit clock", ae.CreatedAt)
 	}
 
 	if ae.Metadata == nil {

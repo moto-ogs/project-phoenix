@@ -82,7 +82,7 @@ func (rs *Resource) listClassLetters(w http.ResponseWriter, r *http.Request) {
 	out := make([]announcementResponse, 0)
 	for _, a := range rows {
 		if a.IsClassLetter() && a.CreatedBy == int64(claims.ID) {
-			out = append(out, toAnnouncementResponse(&a))
+			out = append(out, toAnnouncementResponse(&a, rs.now()))
 		}
 	}
 	common.Respond(w, r, http.StatusOK, out, "Class letters retrieved")
@@ -105,7 +105,7 @@ func (rs *Resource) createClassLetter(w http.ResponseWriter, r *http.Request) {
 		renderAnnouncementError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusCreated, toAnnouncementResponse(a), "Class letter created")
+	common.Respond(w, r, http.StatusCreated, toAnnouncementResponse(a, rs.now()), "Class letter created")
 }
 
 // classLetterSender resolves the one class target against the caller's

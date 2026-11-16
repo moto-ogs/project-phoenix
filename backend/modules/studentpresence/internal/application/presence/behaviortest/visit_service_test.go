@@ -801,9 +801,9 @@ func TestActiveService_CheckIn_RejectsAlumnus(t *testing.T) {
 	})
 }
 
-func testSchoolPresence(t *testing.T, db *testpkg.DB) studentpresence.Owner {
+func testSchoolPresence(t *testing.T, db *testpkg.DB, clocks ...func() time.Time) studentpresence.Owner {
 	t.Helper()
-	module, err := presenceCompose.New(presenceCompose.Dependencies{DB: db, Observe: func(presenceCompose.Observation) {}})
+	module, err := presenceCompose.New(presenceCompose.Dependencies{DB: db, Observe: func(presenceCompose.Observation) {}, Now: api.OptionalClock(clocks)})
 	require.NoError(t, err)
 	return module
 }

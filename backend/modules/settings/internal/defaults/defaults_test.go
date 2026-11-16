@@ -445,7 +445,7 @@ func TestFederalStateSetting(t *testing.T) {
 	def := config.GetDefinition(config.KeyFederalState)
 	require.NotNil(t, def, "operations.federal_state should be registered")
 	assert.Equal(t, config.FieldSelect, def.Type)
-	assert.Equal(t, "DE-NW", def.Default, "default must stay DE-NW - existing schools are NRW")
+	assert.Equal(t, "", def.Default, "no default state (#7174): the operator names it on creating the school, an unset state fails visibly")
 	assert.Equal(t, config.AccessOperatorManaged, def.AccessPolicy, "schools see federal_state read-only (#4775); only operators change it - it shifts the whole Arbeitszeitkonto")
 	assert.Equal(t, "operations", def.Tab)
 

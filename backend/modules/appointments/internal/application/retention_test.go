@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -44,7 +45,7 @@ func (s *retentionStore) DeleteParentConferenceAppointments(_ context.Context, i
 func TestRetentionDeletesParentConferenceAppointmentsBeforeTheCutoff(t *testing.T) {
 	t.Parallel()
 	store := &retentionStore{}
-	retention := NewRetention(store)
+	retention := NewRetention(store, retentionTestToday)
 	deleted, err := retention.DeleteParentConferenceAppointmentsBefore(context.Background(), appointments.NewDate(2026, 8, 1))
 	require.NoError(t, err)
 	assert.Equal(t, 1, deleted)
@@ -55,10 +56,16 @@ func TestRetentionDeletesParentConferenceAppointmentsBeforeTheCutoff(t *testing.
 	require.ErrorIs(t, err, appointments.ErrInvalidAppointment, "nothing is deleted without a cutoff")
 }
 
+// retentionTestDay is the fixed school day the retention window counts back
+// from, so the cutoff does not depend on the day the tests run (ADR 0239).
+var retentionTestDay = calendar.NewDate(2026, 11, 2)
+
+func retentionTestToday() time.Time { return retentionTestDay.BerlinMidnight().Add(9 * time.Hour) }
+
 func TestRetentionRereadsCandidateBeforeDeleting(t *testing.T) {
 	t.Parallel()
 	const retentionDays = 30
-	cutoff := appointments.Date(calendar.TodayDate().AddDays(-retentionDays).String())
+	cutoff := appointments.Date(retentionTestDay.AddDays(-retentionDays).String())
 	store := &retentionStore{
 		listed: []appointments.RetentionCandidate{{Appointment: &appointments.Appointment{
 			ID: 1, StartDate: cutoff.AddDays(-2), EndDate: cutoff.AddDays(-1),
@@ -68,7 +75,7 @@ func TestRetentionRereadsCandidateBeforeDeleting(t *testing.T) {
 		}}},
 	}
 
-	deleted, err := NewRetention(store).DeleteExpiredAppointments(context.Background(), retentionDays)
+	deleted, err := NewRetention(store, retentionTestToday).DeleteExpiredAppointments(context.Background(), retentionDays)
 
 	require.NoError(t, err)
 	assert.Zero(t, deleted)

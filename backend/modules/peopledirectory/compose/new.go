@@ -71,7 +71,7 @@ type Dependencies struct {
 	GuardianRolePresets peoplePorts.GuardianRolePresets
 	// GuardianLinkRows is the root-bound guardian link projection; reads fail closed without it.
 	GuardianLinkRows postgres.GuardianLinks
-	// Now stamps a granted photo consent. Optional; time.Now by default.
+	// Now is the root's clock of photo consents and rosters; time.Now by default.
 	Now func() time.Time
 	// GuardianProvider serves the guardian, phone-number and link
 	// capability. Optional: without it those flows refuse with
@@ -109,8 +109,12 @@ func New(dependencies Dependencies, memberships GuardianMembershipQuery) (*Direc
 	if dependencies.StudentNoteDeletionAudit != nil {
 		noteDeletionAudit = dependencies.StudentNoteDeletionAudit
 	}
-	students := application.NewStudents(postgres.NewStudentStore(database, dependencies.StudentDirectory, owners.LockClassWrites, dependencies.StudentClassWriteGateQuery), noteStore, companions, owners, transaction{}, observe)
-	guardians := application.NewGuardians(postgres.NewGuardianStore(database, postgres.PortalMembershipQuery(memberships), dependencies.GuardianLinkRows), dependencies.GuardianLinkOwners, transaction{}, observe)
+	now := dependencies.Now
+	if now == nil {
+		now = time.Now
+	}
+	students := application.NewStudents(postgres.NewStudentStore(database, dependencies.StudentDirectory, owners.LockClassWrites, dependencies.StudentClassWriteGateQuery), noteStore, companions, owners, transaction{}, observe, now)
+	guardians := application.NewGuardians(postgres.NewGuardianStore(database, postgres.PortalMembershipQuery(memberships), dependencies.GuardianLinkRows, now), dependencies.GuardianLinkOwners, transaction{}, observe)
 	var auditLog internalports.StudentFieldAuditLog
 	if dependencies.StudentFieldAudit != nil {
 		auditLog = application.NewStudentFieldAuditLog(dependencies.StudentFieldAudit)
@@ -118,10 +122,6 @@ func New(dependencies Dependencies, memberships GuardianMembershipQuery) (*Direc
 	studentAudit := application.NewStudentAudit(auditLog, observe)
 	studentConsents := application.NewStudentConsents(dependencies.StudentConsentHistory, observe)
 	photoRuntime := application.StudentPhotoPort(dependencies.StudentPhotos)
-	now := dependencies.Now
-	if now == nil {
-		now = time.Now
-	}
 	studentPhotos := application.NewStudentPhotos(
 		postgres.NewStudentStore(database, dependencies.StudentDirectory, owners.LockClassWrites, dependencies.StudentClassWriteGateQuery), photoRuntime, transaction{}, observe, now)
 	noteStudents := postgres.NewStudentStore(database, dependencies.StudentDirectory, owners.LockClassWrites, dependencies.StudentClassWriteGateQuery)

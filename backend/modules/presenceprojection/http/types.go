@@ -23,7 +23,7 @@ type StudentResponse struct {
 	FirstName          string               `json:"first_name"`
 	LastName           string               `json:"last_name"`
 	TagID              string               `json:"tag_id,omitempty"`
-	Birthday           string               `json:"birthday,omitempty"` // Date in YYYY-MM-DD format
+	Birthday           string               `json:"birthday,omitempty" contract:"date"` // Date in YYYY-MM-DD format
 	SchoolClass        string               `json:"school_class"`
 	Location           string               `json:"current_location"`
 	LocationSince      *time.Time           `json:"location_since,omitempty"`     // When student entered current location
@@ -36,15 +36,15 @@ type StudentResponse struct {
 	ExtraInfo          string               `json:"extra_info,omitempty"`
 	HealthInfo         string               `json:"health_info,omitempty"`
 	PickupStatus       string               `json:"pickup_status,omitempty"`
-	PickupDays         departure.PickupDays `json:"pickup_days,omitempty"`          // Weekdays on which the child is picked up
-	PickupTime         *string              `json:"pickup_time,omitempty"`          // Today's effective pickup time (HH:MM)
-	PickupIsException  bool                 `json:"pickup_is_exception,omitempty"`  // True if today's pickup time is an exception
-	PickupNotes        string               `json:"pickup_notes,omitempty"`         // Exception reason or schedule notes
-	ArrivalTime        *string              `json:"arrival_time,omitempty"`         // Today's effective arrival time (HH:MM)
-	ArrivalIsException bool                 `json:"arrival_is_exception,omitempty"` // True if today's arrival time is an exception
-	ArrivalNotes       string               `json:"arrival_notes,omitempty"`        // Exception reason or schedule notes
-	ActualArrivalTime  *string              `json:"actual_arrival_time,omitempty"`  // Today's actual arrival time from attendance (HH:MM)
-	ActualPickupTime   *string              `json:"actual_pickup_time,omitempty"`   // Today's actual pickup time from attendance (HH:MM)
+	PickupDays         departure.PickupDays `json:"pickup_days,omitempty"`                          // Weekdays on which the child is picked up
+	PickupTime         *string              `json:"pickup_time,omitempty" contract:"clock"`         // Today's effective pickup time (HH:MM)
+	PickupIsException  bool                 `json:"pickup_is_exception,omitempty"`                  // True if today's pickup time is an exception
+	PickupNotes        string               `json:"pickup_notes,omitempty"`                         // Exception reason or schedule notes
+	ArrivalTime        *string              `json:"arrival_time,omitempty" contract:"clock"`        // Today's effective arrival time (HH:MM)
+	ArrivalIsException bool                 `json:"arrival_is_exception,omitempty"`                 // True if today's arrival time is an exception
+	ArrivalNotes       string               `json:"arrival_notes,omitempty"`                        // Exception reason or schedule notes
+	ActualArrivalTime  *string              `json:"actual_arrival_time,omitempty" contract:"clock"` // Today's actual arrival time from attendance (HH:MM)
+	ActualPickupTime   *string              `json:"actual_pickup_time,omitempty" contract:"clock"`  // Today's actual pickup time from attendance (HH:MM)
 	// TeacherHints are today's hints of the Lehrkraft for this child or its
 	// class (#4795), oldest first. Only the list fills them, for today and
 	// with users:read.
@@ -149,7 +149,7 @@ type StudentResponse struct {
 	// render the two states differently: a planned exit stays in the list with
 	// "Betreuung endet am …", an effective one only appears in the archive
 	// view. The exit REASON is NOT here — it is read behind users:delete.
-	CareEndsOn string `json:"care_ends_on,omitempty"`
+	CareEndsOn string `json:"care_ends_on,omitempty" contract:"date"`
 	CareEnded  bool   `json:"care_ended,omitempty"`
 	// CareExitRecorded says the end of care was ENTERED by the school
 	// ("Betreuung beenden"), as opposed to the interval simply carrying the end
@@ -163,13 +163,16 @@ type StudentResponse struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 
+// SupervisorRoleTeacher is the one role a supervisor contact carries today.
+const SupervisorRoleTeacher = "teacher"
+
 // SupervisorContact represents contact information for a group supervisor
 type SupervisorContact struct {
 	ID        int64  `json:"id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Email     string `json:"email,omitempty"`
-	Role      string `json:"role"` // "teacher" or "staff"
+	Role      string `json:"role"` // SupervisorRoleTeacher
 }
 
 // StudentPrivacyConsentResponse is the optional retention-consent projection.

@@ -1117,7 +1117,7 @@ func newAuthFixture(t *testing.T) *authFixture {
 	t.Helper()
 	store := newFakeStore()
 	runtime := &fakeRuntime{}
-	sessions := New(store, store, store, fakeTransaction{}, runtime.TenantID, func(ports.Observation) {})
+	sessions := New(store, store, store, fakeTransaction{}, runtime.TenantID, func(ports.Observation) {}, time.Now)
 	schools := newFakeSchools()
 	persons := newFakePersons(runtime)
 	mfa := &fakeMFA{}

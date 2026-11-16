@@ -12,7 +12,7 @@ import (
 func TestPublicEnrollmentContractRoundTripsPhaseDatesAndUpdates(t *testing.T) {
 	t.Parallel()
 	testpkg.SetupTestDB(t)
-	module := compose.New()
+	module := compose.NewClocked(nil)
 	phase := &enrollment.Phase{Name: "Contract phase", ServiceStartDate: "2026-08-24", ServiceEndDate: "2027-07-31", IsActive: true}
 	require.NoError(t, testpkg.TenantCommand1(t, testpkg.Ctx(t), testpkg.SetupTestDB(t), module.InsertPhase, phase))
 	require.Positive(t, phase.ID)

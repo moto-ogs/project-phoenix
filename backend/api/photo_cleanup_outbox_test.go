@@ -23,14 +23,19 @@ type photoCleanupRuntime struct {
 	enqueue func(context.Context, string) error
 }
 
-func (r photoCleanupRuntime) PhotoFeatureEnabled(context.Context) (bool, error) { return true, nil }
-func (r photoCleanupRuntime) ActingAccountID(context.Context) int64             { return 0 }
+func (r photoCleanupRuntime) PhotoFeatureEnabled(context.Context, bool) (bool, error) {
+	return true, nil
+}
+func (r photoCleanupRuntime) ActingAccountID(context.Context) int64 { return 0 }
 func (r photoCleanupRuntime) QueueUnlinkStoredPhoto(ctx context.Context, url string) error {
 	return r.enqueue(ctx, url)
 }
 func (photoCleanupRuntime) UnlinkStoredPhoto(string)                  {} // simulate death before the optional fast path
 func (photoCleanupRuntime) BroadcastPhotoChange(int64, int64, string) {}
 func (photoCleanupRuntime) RecordPhotoConsent(context.Context, peopleCompose.StudentPhotoConsentSnapshot, peopleCompose.StudentPhotoConsentSnapshot, *int64, time.Time) error {
+	return nil
+}
+func (photoCleanupRuntime) RecordPhotoConsentsEnded(context.Context, []int64, *int64, time.Time) error {
 	return nil
 }
 
@@ -41,7 +46,7 @@ func TestPhotoCleanupOutboxSharesEveryDetachingTransaction(t *testing.T) {
 			testpkg.OwnTenant(t)
 			db := testpkg.SetupTestDB(t)
 			ctx := testpkg.WithTenantRuntime(t, testpkg.Ctx(t), db)
-			cleanup := fileStorageCompose.NewUploadCleanup(db, "student-photos")
+			cleanup := fileStorageCompose.NewUploadCleanup(db, "student-photos", time.Now)
 			photos, err := peopleCompose.New(peopleCompose.Dependencies{DB: db, StudentDirectory: testpkg.StudentDirectory{}, Observe: func(peopleCompose.Observation) {}, StudentPhotos: photoCleanupRuntime{enqueue: cleanup.Queue}}, nil)
 			require.NoError(t, err)
 			student := testpkg.CreateTestStudent(t, db, "Atomic", "Photo", "1a")
@@ -101,7 +106,7 @@ func TestPhotoCleanupWorkerRecoversCommittedIntentAndRetriesRemovalFailure(t *te
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.WithTenantRuntime(t, testpkg.Ctx(t), db)
-	cleanup := fileStorageCompose.NewUploadCleanup(db, "student-photos")
+	cleanup := fileStorageCompose.NewUploadCleanup(db, "student-photos", time.Now)
 	publicDir := t.TempDir()
 	photoDir := filepath.Join(publicDir, "uploads", "student-photos")
 	require.NoError(t, os.MkdirAll(photoDir, 0700))
@@ -140,7 +145,7 @@ func TestPhotoCleanupNamespaceCannotConsumeFolderIntents(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.WithTenantRuntime(t, testpkg.Ctx(t), db)
-	cleanup := fileStorageCompose.NewUploadCleanup(db, "student-photos")
+	cleanup := fileStorageCompose.NewUploadCleanup(db, "student-photos", time.Now)
 	require.NoError(t, testpkg.WithinTenantTransaction(ctx, db, testpkg.Tenant(t), func(txCtx context.Context, tx bun.Tx) error {
 		_, err := tx.NewRaw(`INSERT INTO documents.file_cleanup (tenant_id,owner_id,filename_stored,retry_after) VALUES (?, ?, ?, NOW())`, testpkg.Tenant(t), testpkg.Tenant(t), "shared-name.jpg").Exec(txCtx)
 		if err != nil {
@@ -169,7 +174,7 @@ func TestLegalDocumentCleanupOutboxIsAtomicWithSetting(t *testing.T) {
 	tenantID := testpkg.Tenant(t)
 	oldURL := fmt.Sprintf("/uploads/enrollment-legal-documents/%d_old.pdf", tenantID)
 	newURL := fmt.Sprintf("/uploads/enrollment-legal-documents/%d_new.pdf", tenantID)
-	cleanup := fileStorageCompose.NewUploadCleanup(db, "enrollment-legal-documents")
+	cleanup := fileStorageCompose.NewUploadCleanup(db, "enrollment-legal-documents", time.Now)
 	enqueue := func(txCtx context.Context, _ int64, oldURL, newURL string) (func(), error) {
 		if oldURL == "" || oldURL == newURL {
 			return nil, nil

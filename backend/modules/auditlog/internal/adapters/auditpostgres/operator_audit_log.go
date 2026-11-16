@@ -20,7 +20,7 @@ func NewOperatorAuditLogRepository(runtime Runtime) *OperatorAuditLogRepository 
 }
 
 func (r *OperatorAuditLogRepository) Create(ctx context.Context, entry *auditModels.OperatorAuditEntry) error {
-	return NewAppender(r.runtime).Append(ctx, entry)
+	return NewAppender(r.runtime, nil).Append(ctx, entry)
 }
 
 func (r *OperatorAuditLogRepository) FindByOperatorID(ctx context.Context, operatorID int64, limit int) ([]*auditModels.OperatorAuditEntry, error) {

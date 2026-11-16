@@ -133,7 +133,7 @@ func (r staffNoticeRepository) Acknowledge(ctx context.Context, noticeID, accoun
 	ack := &StaffNoticeAck{
 		NoticeID:       noticeID,
 		AccountID:      accountID,
-		AcknowledgedAt: time.Now(),
+		AcknowledgedAt: r.store.currentTime(),
 	}
 	if err := r.store.AcknowledgeStaffNotice(ctx, ack); err != nil {
 		return &domain.StoreError{Op: "acknowledge staff notice", Err: TranslateNotFound(err)}

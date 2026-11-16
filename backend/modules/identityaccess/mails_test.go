@@ -65,7 +65,8 @@ func TestGuardianInvitationExpiryAndMail(t *testing.T) {
 	require.Error(t, err)
 
 	recipient := identityaccess.GuardianMailRecipient{FirstName: " Kim ", LastName: "Beispiel", Email: " kim@example.test "}
-	invitation := identityaccess.GuardianInvitationMailOf(recipient, "", "tok", time.Now().Add(10*time.Minute), "")
+	now := time.Date(2026, time.November, 16, 9, 0, 0, 0, time.UTC)
+	invitation := identityaccess.GuardianInvitationMailOf(recipient, "", "tok", now.Add(10*time.Minute), now, "")
 	assert.Equal(t, 1, invitation.ExpiryHours)
 	assert.Equal(t, "http://localhost:3000/accept-guardian-invite/tok", invitation.InvitationURL)
 	assert.Equal(t, "kim@example.test", invitation.Recipient)

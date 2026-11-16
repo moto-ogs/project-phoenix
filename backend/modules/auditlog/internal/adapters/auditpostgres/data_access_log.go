@@ -20,7 +20,7 @@ func NewDataAccessLogRepository(runtime Runtime) audit.DataAccessLogRepository {
 }
 
 func (r *dataAccessLogRepository) Create(ctx context.Context, entry *audit.DataAccessLog) error {
-	return NewAppender(r.runtime).Append(ctx, entry)
+	return NewAppender(r.runtime, nil).Append(ctx, entry)
 }
 
 // ExistsSince implements audit.DataAccessLogRepository. Metadata values are

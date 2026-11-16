@@ -27,6 +27,7 @@ type ArrivalScheduleDependencies struct {
 	Students        ArrivalBulkStudents
 	Classes         ArrivalClassPlans
 	ClassExceptions careplan.ClassArrivalExceptions
+	Notices         careplan.ClassTimetableNotices // #7142: a changed class Stundenplan; nil tells nobody
 	Logger          *slog.Logger
 	Today           func() calendar.Date
 }
@@ -35,5 +36,5 @@ func NewArrivalSchedules(db *bun.DB, records carePlanBindingPorts.ArrivalSchedul
 	if db == nil || records == nil {
 		return nil, errors.New("arrival schedules: database and records are required")
 	}
-	return application.NewArrivalSchedules(application.ArrivalScheduleRecords(records), application.ArrivalExceptionRecords(records), application.ArrivalNoteRecords(records), baselines, rules, pickupScheduleTransaction{excusalTransaction: excusalTransaction{db: db}}, deps.Students, deps.Classes, deps.ClassExceptions, deps.Logger, deps.Today), nil
+	return application.NewArrivalSchedules(application.ArrivalScheduleRecords(records), application.ArrivalExceptionRecords(records), application.ArrivalNoteRecords(records), baselines, rules, pickupScheduleTransaction{excusalTransaction: excusalTransaction{db: db}}, deps.Students, deps.Classes, deps.ClassExceptions, deps.Notices, deps.Logger, deps.Today), nil
 }

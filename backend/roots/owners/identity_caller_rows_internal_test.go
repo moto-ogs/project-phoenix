@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"testing"
 
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -25,7 +27,7 @@ func TestNewCallerRowsRequiresEveryDependency(t *testing.T) {
 func TestNewCallerContextRequiresEveryDependency(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewCallerContext(TokenAdapter{}, nil, CallerPersons{}, nil, nil, nil, nil, nil, nil, slog.Default())
+	_, err := NewCallerContext(TokenAdapter{}, nil, CallerPersons{}, nil, nil, nil, nil, nil, nil, slog.Default(), timezone.TodayDate)
 	require.EqualError(t, err, "compose caller context: the accounts, persons, membership, staff groups, school classes, supervised activities, presence and a logger are required")
 }
 

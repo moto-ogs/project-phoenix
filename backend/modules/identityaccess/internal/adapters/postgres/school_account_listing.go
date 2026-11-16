@@ -25,7 +25,7 @@ func (s *Store) ListSchoolAccountListings(ctx context.Context, schoolIDs []int64
 		return nil, stats, err
 	}
 	started = time.Now()
-	invitations, err := listSchoolAccountInvitations(ctx, db, schoolIDs)
+	invitations, err := listSchoolAccountInvitations(ctx, db, schoolIDs, s.now())
 	stats.Add(domain.OperationStats{Queries: 1, Rows: int64(len(invitations)), StatementDuration: time.Since(started)})
 	if err != nil {
 		return nil, stats, err
@@ -51,7 +51,9 @@ func listSchoolAccountMappings(ctx context.Context, db bun.IDB, schoolIDs []int6
 	return rows, err
 }
 
-func listSchoolAccountInvitations(ctx context.Context, db bun.IDB, schoolIDs []int64) ([]domain.SchoolAccountListing, error) {
+// listSchoolAccountInvitations lists the invitations still open at now, the
+// owner's clock that also set their expiry.
+func listSchoolAccountInvitations(ctx context.Context, db bun.IDB, schoolIDs []int64, now time.Time) ([]domain.SchoolAccountListing, error) {
 	var rows []domain.SchoolAccountListing
 	err := db.NewSelect().
 		ColumnExpr("inv.tenant_id AS school_id, inv.email").
@@ -61,7 +63,7 @@ func listSchoolAccountInvitations(ctx context.Context, db bun.IDB, schoolIDs []i
 		Join("LEFT JOIN auth.roles AS r ON r.id = inv.role_id").
 		Where("inv.tenant_id IN (?)", bun.List(schoolIDs)).
 		Where("inv.used_at IS NULL").
-		Where("inv.expires_at > NOW()").
+		Where("inv.expires_at > ?", now).
 		Where(`NOT EXISTS (
  SELECT 1 FROM auth.account_tenants AS existing
  JOIN auth.accounts AS ea ON ea.id = existing.account_id

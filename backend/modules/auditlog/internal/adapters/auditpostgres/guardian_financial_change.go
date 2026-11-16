@@ -26,5 +26,5 @@ func (r *GuardianFinancialChangeRepository) Create(ctx context.Context, event *a
 	if err := event.Validate(); err != nil {
 		return fmt.Errorf("invalid guardian financial change audit event: %w", err)
 	}
-	return NewAppender(r.runtime).Append(ctx, event)
+	return NewAppender(r.runtime, nil).Append(ctx, event)
 }

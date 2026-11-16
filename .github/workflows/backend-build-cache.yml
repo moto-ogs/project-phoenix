@@ -373,6 +373,9 @@ jobs:
       contents: read
       # Deletes the superseded entries of this cache.
       actions: write
+    env:
+      # As the seed smoke job in test.yml, or its compile actions miss.
+      GOFLAGS: -tags=testhooks,seedsmoke -trimpath
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

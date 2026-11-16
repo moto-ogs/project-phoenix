@@ -131,7 +131,7 @@ func (s *workSessionService) EndBreakOn(ctx context.Context, staffID int64, day 
 	}
 
 	// End the break
-	now := time.Now()
+	now := s.now()
 	duration := int(math.Round(now.Sub(activeBreak.StartedAt).Minutes()))
 	affected, err := s.breakRepo.EndWorkSessionBreak(ctx, activeBreak.ID, now, duration)
 	err = breakMutationError("end break", affected, err)
@@ -209,7 +209,7 @@ func (s *workSessionService) recalcBreakMinutes(ctx context.Context, sessionID i
 }
 
 func (s *workSessionService) AutoEndExpiredBreaks(ctx context.Context) (int, error) {
-	now := time.Now()
+	now := s.now()
 
 	// Get all expired breaks
 	expiredBreaksRecords, err := s.breakRepo.ExpiredWorkSessionBreaks(ctx, now)

@@ -14,10 +14,6 @@ func ParseDate(value string) (Date, error) {
 	return calendar.ParseDate(value)
 }
 
-func TodayDate() Date {
-	return calendar.TodayDate()
-}
-
 // DateFromTime maps an instant to its Berlin calendar date for DATE queries.
 func DateFromTime(value time.Time) Date {
 	return calendar.DateFromTime(value)

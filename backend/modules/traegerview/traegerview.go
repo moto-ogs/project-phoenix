@@ -243,6 +243,8 @@ type SchoolIDs interface {
 // Ports are what the projection reads from and writes to at other owners;
 // the root binds them.
 type Ports struct {
+	// Now is the clock of the overview; the root binds the real one.
+	Now func() time.Time
 	// SchoolIDs is the school set of Organisation & Tenancy.
 	SchoolIDs SchoolIDs
 	// Trail and Recorder are the Audit Platform's access trail and the

@@ -38,7 +38,8 @@ func (e *SettingAuditEntry) Validate() error {
 	return nil
 }
 
-// NewAuditEntry creates a new audit entry for a setting change.
+// NewAuditEntry creates a new audit entry for a setting change made at
+// changedAt, the caller's clock.
 func NewAuditEntry(
 	tenantID int64,
 	key string,
@@ -46,6 +47,7 @@ func NewAuditEntry(
 	oldValue json.RawMessage,
 	newValue json.RawMessage,
 	changedBy *int64,
+	changedAt time.Time,
 ) *SettingAuditEntry {
 	return &SettingAuditEntry{
 		TenantID:   tenantID,
@@ -54,6 +56,6 @@ func NewAuditEntry(
 		OldValue:   oldValue,
 		NewValue:   newValue,
 		ChangedBy:  changedBy,
-		ChangedAt:  time.Now(),
+		ChangedAt:  changedAt,
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -82,7 +81,7 @@ func (s *Rollovers) createRolloverRequest(ctx context.Context, input rolloverReq
 	if err != nil {
 		return nil, fmt.Errorf("rollover: generate status token: %w", err)
 	}
-	now := time.Now()
+	now := s.deps.Now()
 	expiresAt := now.Add(lifetime)
 	// The new phase gets a new contract per child (ADR 0153 section 2), so
 	// the request carries neither the source's legal evidence

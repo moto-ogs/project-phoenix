@@ -176,7 +176,7 @@ export function AttachmentViewer({
         role="dialog"
         aria-modal="true"
         aria-label={item.name}
-        className={`fixed inset-0 ${Z_LAYER.modal} flex flex-col bg-black/90 text-white backdrop-blur-sm`}
+        className={`fixed inset-0 ${Z_LAYER.modal} flex flex-col bg-black/90 text-white`}
         style={{ pointerEvents: "auto" }}
       >
         <div className="flex items-center gap-2 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">

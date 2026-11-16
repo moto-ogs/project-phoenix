@@ -1908,6 +1908,17 @@
       "source_owner": "organization-tenancy",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveIntForTenant",
       "target_owner": "settings-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningSettings.RecordFederalState",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningSettings.RecordFederalState",
+      "reason": "Platform protocol participation (mutation): organization-tenancy reaches modules/settings/compose.SchoolCreationSettings.RecordFederalState (settings-platform) through the embedded school-creation settings of roots/owners.provisioningSettings (#7174). Settings checks the region against the options of operations.federal_state and stores it with its audit entry in the caller's administrative unit of the school creation; no own transaction, no scope switch, failures propagate and an unsupported region records nothing, so the school and its state commit together (ADR 0067 command participation).",
+      "source_owner": "organization-tenancy",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.SchoolCreationSettings.RecordFederalState",
+      "target_owner": "settings-platform"
     }
   ]
 }
