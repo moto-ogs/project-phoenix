@@ -70,9 +70,7 @@ function notificationFeedApi(basePath: string): NotificationFeedApi {
 }
 
 /** Der Feed des Kontos in der Schule der Sitzung (Staff-Portal, #7148). */
-export const staffNotificationFeedApi = notificationFeedApi(
-  "/api/notifications/feed",
-);
+const staffNotificationFeedApi = notificationFeedApi("/api/notifications/feed");
 
 /** Der Feed des Elternkontos über alle Schulen der Familie (#7140). */
 export const parentNotificationFeedApi = notificationFeedApi(

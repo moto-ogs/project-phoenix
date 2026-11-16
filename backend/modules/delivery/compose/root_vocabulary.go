@@ -111,7 +111,3 @@ func NewRequestDecisionNotifier(notifier NotificationService, preferences notifi
 
 // PWAUsageWindowDays is the reporting window the root supplies to dashboards.
 const PWAUsageWindowDays = pwa.UsageWindowDays
-
-// NewTenantGuardianFeed serves the parents portal its notification feed
-// across the schools of the family (#7140).
-var NewTenantGuardianFeed = notifications.NewTenantGuardianFeed

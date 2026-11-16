@@ -9,7 +9,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/domain"
 	deliveryPorts "github.com/moto-ogs/project-phoenix/modules/delivery/internal/ports"
-	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
@@ -30,15 +29,24 @@ type guardianFeed struct {
 	now     func() time.Time
 }
 
-// NewTenantGuardianFeed builds the guardian feed over the tenant unit of
-// work. The broadcaster tells the account's open sessions of the parents
-// portal about a change of the read state; the signal is lossy (ADR 0145).
-func NewTenantGuardianFeed(runtime tenant.UnitOfWork, db *bun.DB, store deliveryPorts.GuardianFeedStore, broadcaster realtime.Broadcaster, logger *slog.Logger, now func() time.Time) (contract.GuardianNotificationFeed, error) {
-	if err := requireTenantRuntime("guardian notification feed", runtime, db != nil && store != nil && broadcaster != nil && now != nil); err != nil {
-		return nil, err
+// newGuardianFeed builds the guardian feed beside the router's feed: the
+// SSE channel brings the database, the tenant unit of work and the
+// broadcaster it already uses for guardians. A channel without them (a test
+// router) leaves the guardian feed out.
+func newGuardianFeed(channel *sseChannel, store deliveryPorts.GuardianFeedStore, logger *slog.Logger, now func() time.Time) *guardianFeed {
+	if channel.db == nil || channel.tenantRuntime == nil || store == nil || now == nil {
+		return nil
 	}
-	channel := &sseChannel{broadcaster: broadcaster}
-	return &guardianFeed{db: db, runtime: runtime, store: store, signal: channel.signalGuardianFeed, logger: logger, now: now}, nil
+	return &guardianFeed{db: channel.db, runtime: *channel.tenantRuntime, store: store, signal: channel.signalGuardianFeed, logger: logger, now: now}
+}
+
+// GuardianFeed serves the parents portal its notification feed across the
+// schools of the family (#7140); nil when the router has none.
+func (r *router) GuardianFeed() contract.GuardianNotificationFeed {
+	if r.guardian == nil {
+		return nil
+	}
+	return r.guardian
 }
 
 func (f *guardianFeed) getLogger() *slog.Logger {

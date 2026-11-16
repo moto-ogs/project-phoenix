@@ -26895,6 +26895,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": true
+        },
+        {
+          "name": "student_ids",
+          "type": "ARRAY",
+          "udt": "_int8",
+          "nullable": false
         }
       ],
       "relationships": [

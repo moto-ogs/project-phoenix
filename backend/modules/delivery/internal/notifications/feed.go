@@ -77,6 +77,19 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 		}
 	}
 	now := r.now()
+	content, recipients := feedEntryOf(*event)
+	write, err := r.store.PublishFeedEntries(ctx, event.Audience.TenantID, content, recipients, now, now.Add(-domain.FeedBundleWindow))
+	if err != nil {
+		return false, fmt.Errorf("write notification feed: %w", err)
+	}
+	event.feedChanged = append(slices.Clone(write.Created), write.Updated...)
+	narrowToPush(event, write, pushAllowed)
+	return len(event.feedChanged) > 0, nil
+}
+
+// feedEntryOf is the entry an event writes and the accounts it reaches: the
+// staff accounts, or the guardian accounts with the children (#7140).
+func feedEntryOf(event Event) (domain.FeedEntryContent, []int64) {
 	content := domain.FeedEntryContent{
 		Type: event.Type, Title: event.Title, Body: event.Body, DeepLink: event.DeepLink,
 		RelatedType: event.RelatedType, RelatedID: event.RelatedID,
@@ -87,16 +100,16 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 		content.Title = clipFeedText(event.Feed.Title, feedTitleMaxRunes)
 		content.Body = clipFeedText(event.Feed.Body, feedBodyMaxRunes)
 	}
-	recipients := event.Audience.StaffAccountIDs
-	if event.Audience.Scope == ScopeGuardian {
-		recipients = guardianAccountIDs(event.Audience)
-		content.StudentIDs = slices.Clone(event.Audience.StudentIDs)
+	if event.Audience.Scope != ScopeGuardian {
+		return content, event.Audience.StaffAccountIDs
 	}
-	write, err := r.store.PublishFeedEntries(ctx, event.Audience.TenantID, content, recipients, now, now.Add(-domain.FeedBundleWindow))
-	if err != nil {
-		return false, fmt.Errorf("write notification feed: %w", err)
-	}
-	event.feedChanged = append(slices.Clone(write.Created), write.Updated...)
+	content.StudentIDs = slices.Clone(event.Audience.StudentIDs)
+	return content, guardianAccountIDs(event.Audience)
+}
+
+// narrowToPush leaves in the audience only the accounts with a new entry the
+// producer lets a push reach, and marks the event feed-only without them.
+func narrowToPush(event *Event, write domain.FeedWrite, pushAllowed bool) {
 	var push []int64
 	if pushAllowed {
 		for _, accountID := range write.Created {
@@ -111,7 +124,6 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 		event.Audience.StaffAccountIDs = push
 	}
 	event.feedOnly = len(push) == 0
-	return len(event.feedChanged) > 0, nil
 }
 
 // feedType checks the shape a feed event needs: a staff audience with a

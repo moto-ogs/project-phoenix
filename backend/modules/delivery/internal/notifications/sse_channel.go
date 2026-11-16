@@ -124,26 +124,7 @@ func (c *sseChannel) Deliver(ctx context.Context, event Event) error {
 		stored.Scope = domain.RealtimeScopeAdmin
 		return c.broadcaster.BroadcastToTenantAdmins(audience.TenantID, c.relayable(ctx, sseEvent, stored, nil))
 	case ScopeGuardian:
-		if len(event.feedChanged) > 0 {
-			if err := c.signalGuardianFeed(audience.TenantID, event.feedChanged); err != nil {
-				return err
-			}
-		}
-		if event.feedOnly {
-			return nil
-		}
-		recipients, err := c.permittedGuardians(ctx, audience)
-		if err != nil || len(recipients) == 0 {
-			return err
-		}
-		stored.Scope, stored.AccountIDs = domain.RealtimeScopeGuardian, recipients
-		sseEvent = c.relayable(ctx, sseEvent, stored, audience.StudentIDs)
-		for _, accountID := range recipients {
-			if err := c.broadcaster.BroadcastToGuardian(audience.TenantID, accountID, sseEvent); err != nil {
-				return err
-			}
-		}
-		return nil
+		return c.deliverToGuardians(ctx, event, sseEvent, stored)
 	case ScopeGroup:
 		stored.Scope = domain.RealtimeScopeGroup
 		return c.broadcaster.BroadcastToGroup(audience.TenantID, audience.ActiveGroupID, c.relayable(ctx, sseEvent, stored, nil))
@@ -179,6 +160,33 @@ func (c *sseChannel) deliverToStaff(ctx context.Context, event Event, sseEvent r
 	}
 	if stored.SchoolPortal {
 		return c.broadcaster.BroadcastToSchoolAccounts(event.Audience.TenantID, accountIDs, sseEvent)
+	}
+	return nil
+}
+
+// deliverToGuardians tells the guardians' sessions about a changed feed
+// (#7140) and shows the notice to the recipients that still see one of its
+// children.
+func (c *sseChannel) deliverToGuardians(ctx context.Context, event Event, sseEvent realtime.Event, stored domain.RealtimeNotification) error {
+	audience := event.Audience
+	if len(event.feedChanged) > 0 {
+		if err := c.signalGuardianFeed(audience.TenantID, event.feedChanged); err != nil {
+			return err
+		}
+	}
+	if event.feedOnly {
+		return nil
+	}
+	recipients, err := c.permittedGuardians(ctx, audience)
+	if err != nil || len(recipients) == 0 {
+		return err
+	}
+	stored.Scope, stored.AccountIDs = domain.RealtimeScopeGuardian, recipients
+	sseEvent = c.relayable(ctx, sseEvent, stored, audience.StudentIDs)
+	for _, accountID := range recipients {
+		if err := c.broadcaster.BroadcastToGuardian(audience.TenantID, accountID, sseEvent); err != nil {
+			return err
+		}
 	}
 	return nil
 }

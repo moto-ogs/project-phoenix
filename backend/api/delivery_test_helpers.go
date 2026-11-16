@@ -146,10 +146,9 @@ func NewDeliveryTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return DeliveryTestModule{}, err
 	}
-	guardianFeed, err := deliveryCompose.NewTenantGuardianFeed(unit, db.Pool(), delivery.Store, hub, logger, time.Now)
-	if err != nil {
-		return DeliveryTestModule{}, err
-	}
+	guardianFeed := service.(interface {
+		GuardianFeed() deliveryContract.GuardianNotificationFeed
+	}).GuardianFeed()
 	return DeliveryTestModule{Runtime: delivery, EmailOutbox: deliveryCompose.NewEmailOutbox(deliveryCompose.NewDurableEmails(delivery.Module)),
 		Notifications: service, PushSubscriptions: push, NotificationPreferences: preferences, Feed: feed, Hub: hub, GuardianFeed: guardianFeed}, nil
 }
