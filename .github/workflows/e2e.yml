@@ -9,8 +9,8 @@ name: Frontend E2E
 # Layouttests unter frontend/e2e/layout/ laufen weiter in test.yml.
 #
 # Jede Suite läuft mit einem Worker. Darum laufen die Suites parallel in
-# eigenen Jobs: die Flows in drei Shards, die Seed und Build einmal vom Job
-# `prepare` übernehmen, die Netzwerksuiten ohne Datenbank gegen ihr
+# eigenen Jobs: die Flows in drei Shards, die Seed und Build einmal von den
+# Jobs `seed` und `build` übernehmen, die Netzwerksuiten ohne Datenbank gegen ihr
 # synthetisches Backend mit `next dev` (e2e/network/server.mjs). Das
 # Repository ist öffentlich, die GitHub-Runner kosten nichts; jeder Job
 # kostet seinen Aufbau an Zeit.
@@ -109,17 +109,18 @@ jobs:
           NODE_OPTIONS: "--require ./e2e/network/no-subdomain-dns.cjs"
         run: pnpm run test:tenant-switch
 
-  # Seed und Frontend-Build einmal pro Lauf statt in jedem Shard. Der Job
-  # seedet wie bisher gegen den frisch migrierten Stack, sichert die Datenbank
-  # samt Rollen, das Backend-Binary, backend/.seed-state.json, die Uploads und
-  # den Production-Build von frontend/.next; die Shards stellen sie wieder her.
-  # Ein Cache über Läufe hinweg trüge nicht: der Seed schreibt relativ zum
-  # echten Heute (Anwesenheiten, Schichten, Fristen), ein Stand von gestern
-  # gäbe den Flows falsche Tage.
-  prepare:
-    name: Seed and build for the E2E flows
+  # Seed und Frontend-Build einmal pro Lauf statt in jedem Shard, in zwei
+  # Jobs nebeneinander: in einem Job bremsten sich Next-Build, Go-Build und
+  # Seed auf vier Kernen gegenseitig aus. `seed` seedet wie bisher gegen den
+  # frisch migrierten Stack und sichert die Datenbank samt Rollen, das
+  # Backend-Binary, backend/.seed-state.json und die Uploads; die Shards
+  # stellen sie wieder her. Ein Cache über Läufe hinweg trüge nicht: der Seed
+  # schreibt relativ zum echten Heute (Anwesenheiten, Schichten, Fristen), ein
+  # Stand von gestern gäbe den Flows falsche Tage.
+  seed:
+    name: Seed the E2E flow database
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     permissions:
       contents: read
 
@@ -210,30 +211,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Enable corepack
-        run: corepack enable
-
-      - name: Setup Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "26"
-          cache: "pnpm"
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      # The production build runs beside the backend build and the seed, which
-      # waits on API latency rather than on the cores.
-      - name: Start frontend production build
-        working-directory: frontend
-        run: |
-          (
-            pnpm run build
-            echo $? > "${RUNNER_TEMP}/frontend-build.rc"
-          ) > "${RUNNER_TEMP}/frontend-build.log" 2>&1 &
-
       - name: Setup Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -304,26 +281,17 @@ jobs:
             phoenix_e2e > e2e-stack/phoenix_e2e.dump
           ls -l e2e-stack
 
-      - name: Wait for frontend production build
-        timeout-minutes: 10
-        run: |
-          while [ ! -f "${RUNNER_TEMP}/frontend-build.rc" ]; do sleep 1; done
-          cat "${RUNNER_TEMP}/frontend-build.log"
-          exit "$(cat "${RUNNER_TEMP}/frontend-build.rc")"
-
-      # `next start` needs .next without the build cache and the standalone copy.
       - name: Pack the seeded stack
         run: |
-          tar --zstd -cf "${RUNNER_TEMP}/e2e-stack.tar.zst" \
-            --exclude=frontend/.next/cache --exclude=frontend/.next/standalone \
-            e2e-stack backend/.seed-state.json backend/public/uploads frontend/.next
-          ls -l "${RUNNER_TEMP}/e2e-stack.tar.zst"
+          tar --zstd -cf "${RUNNER_TEMP}/e2e-seed.tar.zst" \
+            e2e-stack backend/.seed-state.json backend/public/uploads
+          ls -l "${RUNNER_TEMP}/e2e-seed.tar.zst"
 
       - name: Upload the seeded stack
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: e2e-stack-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/e2e-stack.tar.zst
+          name: e2e-seed-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/e2e-seed.tar.zst
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
@@ -336,9 +304,57 @@ jobs:
         if: always()
         run: kill "$(cat "${RUNNER_TEMP}/server.pid")" 2>/dev/null || true
 
+  # Production-Build für `next start` in den Shards, mit denselben
+  # NEXT_PUBLIC_*-Werten, die sie zur Laufzeit lesen.
+  build:
+    name: Build the frontend for the E2E flows
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env: *stack-env
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build the frontend
+        working-directory: frontend
+        run: pnpm run build
+
+      # `next start` needs .next without the build cache and the standalone copy.
+      - name: Pack the frontend build
+        run: |
+          tar --zstd -cf "${RUNNER_TEMP}/e2e-frontend.tar.zst" \
+            --exclude=frontend/.next/cache --exclude=frontend/.next/standalone \
+            frontend/.next
+          ls -l "${RUNNER_TEMP}/e2e-frontend.tar.zst"
+
+      - name: Upload the frontend build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-frontend-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/e2e-frontend.tar.zst
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
   flows:
     name: Playwright E2E flows (${{ matrix.part }})
-    needs: prepare
+    needs: [seed, build]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -416,10 +432,11 @@ jobs:
             echo $? > "${RUNNER_TEMP}/chrome-install.rc"
           ) > "${RUNNER_TEMP}/chrome-install.log" 2>&1 &
 
-      - name: Download the seeded stack
+      - name: Download the seeded stack and the frontend build
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: e2e-stack-${{ github.run_id }}-${{ github.run_attempt }}
+          pattern: e2e-*-${{ github.run_id }}-${{ github.run_attempt }}
+          merge-multiple: true
           path: ${{ runner.temp }}
 
       # The service database is replaced by the seeded one (--clean --create
@@ -430,7 +447,8 @@ jobs:
         env:
           PG_CONTAINER: ${{ job.services.postgres.id }}
         run: |
-          tar --zstd -xf "${RUNNER_TEMP}/e2e-stack.tar.zst"
+          tar --zstd -xf "${RUNNER_TEMP}/e2e-seed.tar.zst"
+          tar --zstd -xf "${RUNNER_TEMP}/e2e-frontend.tar.zst"
           grep -Ev '^(CREATE|ALTER) ROLE postgres[ ;]' e2e-stack/roles.sql \
             | docker exec -i "${PG_CONTAINER}" psql -q -v ON_ERROR_STOP=1 -U postgres -d postgres
           docker exec -i "${PG_CONTAINER}" pg_restore -U postgres --exit-on-error \

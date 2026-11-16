@@ -11,6 +11,7 @@
     "eltern /login": ["label-content-name-mismatch"],
     "eltern /login @mobil": ["label-content-name-mismatch"],
     "eltern /messages @mobil": ["label-content-name-mismatch"],
+    "schule /": ["label-content-name-mismatch"],
     "tenant /active-supervisions": [
       "aria-prohibited-attr",
       "label-content-name-mismatch"
