@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 )
@@ -153,7 +152,9 @@ func openGuardianAttachment(ctx context.Context, store MessageAttachmentStore, a
 // MessageAttachmentCleanupStore is the cleanup side of the attachment store.
 type MessageAttachmentCleanupStore interface {
 	PendingMessageAttachmentCleanups(ctx context.Context, limit int) ([]communication.MessageAttachmentCleanupIntent, error)
-	CompleteMessageAttachmentCleanup(ctx context.Context, intentID int64, at time.Time) error
+	// CompleteMessageAttachmentCleanup settles one intent on the database
+	// clock, which also ages the settled intents out (ADR 0277).
+	CompleteMessageAttachmentCleanup(ctx context.Context, intentID int64) error
 }
 
 const messageAttachmentSweepBatchSize = 200
@@ -161,7 +162,6 @@ const messageAttachmentSweepBatchSize = 200
 // MessageAttachmentSweep removes the objects of deleted attachments.
 type MessageAttachmentSweep struct {
 	Store  MessageAttachmentCleanupStore
-	Now    func() time.Time
 	Logger *slog.Logger
 }
 
@@ -171,14 +171,13 @@ var _ communication.MessageAttachmentCleanup = MessageAttachmentSweep{}
 // intents in the caller's tenant transaction. The intents stay locked until
 // it commits, so two passes never race on one object.
 func (s MessageAttachmentSweep) SweepMessageAttachmentObjects(ctx context.Context, remove func(context.Context, int64, string) error) (int, error) {
-	if s.Store == nil || remove == nil || s.Now == nil {
+	if s.Store == nil || remove == nil {
 		return 0, ErrMessageAttachmentsNotConfigured
 	}
 	intents, err := s.Store.PendingMessageAttachmentCleanups(ctx, messageAttachmentSweepBatchSize)
 	if err != nil {
 		return 0, err
 	}
-	now := s.Now
 	var removed int
 	var failures []error
 	for _, intent := range intents {
@@ -186,7 +185,7 @@ func (s MessageAttachmentSweep) SweepMessageAttachmentObjects(ctx context.Contex
 			failures = append(failures, fmt.Errorf("remove message attachment object: %w", err))
 			continue
 		}
-		if err := s.Store.CompleteMessageAttachmentCleanup(ctx, intent.ID, now()); err != nil {
+		if err := s.Store.CompleteMessageAttachmentCleanup(ctx, intent.ID); err != nil {
 			return removed, errors.Join(append(failures, err)...)
 		}
 		removed++

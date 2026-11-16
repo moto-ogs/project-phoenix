@@ -112,7 +112,7 @@ func BuildCommunicationMessaging(
 		MessageRepo: staffStore.NewStaffMessageRepository(db.Pool()), ReadRepo: portal.StaffMessageRead,
 		Persons: BindStaffSenderNames(users), Session: session, Settings: settingsValues.NewStaffMessagingValues(settings), Broadcaster: hub,
 		Logger: logger.With("service", "staffmessaging"), Notifier: BindCommunicationNotificationSender(notifications.Notifier),
-		Preferences: notifications.Preferences, Observe: env.Observe.Communication, Now: env.Now,
+		Preferences: notifications.Preferences, Observe: env.Observe.Communication,
 	}, CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	return CommunicationMessaging{
 		Messaging: messaging, StaffMessaging: staffMessaging, GroupThreads: groupThreads, TeamHandling: teamHandling, MessageMails: messageMails,

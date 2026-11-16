@@ -2,7 +2,6 @@ package compose
 
 import (
 	"context"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres"
@@ -18,9 +17,9 @@ type ParentMessageRetentionSettings interface {
 
 // NewParentMessageRetention composes the nightly deletion of expired parent
 // messages (#3959) over the ambient tenant transaction of db.
-func NewParentMessageRetention(db *bun.DB, settings ParentMessageRetentionSettings, now func() time.Time) communication.ParentMessageCleanup {
+func NewParentMessageRetention(db *bun.DB, settings ParentMessageRetentionSettings) communication.ParentMessageCleanup {
 	return application.NewParentMessageRetention(parentMessages.Retention{
 		Store:    parentpostgres.NewRetentionStore(parentDatabase(db)),
-		Settings: settings, Now: now,
+		Settings: settings,
 	})
 }

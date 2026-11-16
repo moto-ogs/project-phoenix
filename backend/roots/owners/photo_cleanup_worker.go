@@ -44,7 +44,7 @@ func newFileStoreCleaner(db transactionruntime.Database, files fileStorage.Capab
 	}
 	// Fotos und Dateien geloeschter Nachrichten (#6685): der Loeschtrigger
 	// reiht die Objekte ein, dieser Lauf entfernt sie.
-	attachments := communicationCompose.NewMessageAttachmentCleanup(db.Pool(), logger.With("service", "message-attachment-cleanup"), clockOrReal(now))
+	attachments := communicationCompose.NewMessageAttachmentCleanup(db.Pool(), logger.With("service", "message-attachment-cleanup"))
 	removeAttachment := func(ctx context.Context, tenantID int64, storedName string) error {
 		backend, err := nativeUploads.PrivateUploadsBackend()
 		if err != nil {

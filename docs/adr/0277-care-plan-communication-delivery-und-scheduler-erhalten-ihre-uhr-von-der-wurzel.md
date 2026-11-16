@@ -26,8 +26,15 @@ reichten tatsächlich keine Uhr:
   der Wurzel.
 - Die Vorschau zum Buchungsmodus entschied auf dem echten Tag.
 - Die Elternnachrichten-Repositories bekamen in allen drei Wurzeln `nil`.
-- Die Aufbewahrung der Elternnachrichten und das Aufräumen der
-  Nachrichtenanhänge hatten gar keine Uhr.
+- Die Aufbewahrung der Team- und Elternnachrichten rechnete ihre Grenze mit
+  der Go-Uhr, obwohl PostgreSQL die Nachrichten und Unterhaltungen stempelt.
+  Das Aufräumen der Nachrichtenanhänge stempelte `cleaned_at` mit der
+  Go-Uhr und löschte nach `clock_timestamp()`.
+- Die PWA-Nutzung stempelte `last_seen_at` mit `NOW()`, ihre Aufbewahrung
+  und das Nutzungsfenster des Betreiber-Dashboards rechneten mit der Go-Uhr.
+- Elternmitteilungen werden mit der Uhr des Stores veröffentlicht; ob sie
+  live sind, ob eine Erklärung offen ist und ob eine Umfrage noch Antworten
+  nimmt, entschied aber `NOW()` bzw. `clock_timestamp()`.
 
 `moduleLiveClockBudget` führte für Care Plan einen benannten direkten Aufruf
 (`PickupBaselineQueries.HasBookedOfferingPickupForWeekday`), weil die
@@ -35,7 +42,8 @@ reichten tatsächlich keine Uhr:
 
 ## Entscheidung
 
-1. **Jeder dieser Konstruktoren verlangt seine Uhr.** Fehlt sie, scheitert
+1. **Jeder dieser Konstruktoren verlangt seine Uhr**, außer den Diensten
+   der Nachrichtenaufbewahrung (Punkt 7). Fehlt sie, scheitert
    der Bau (Fehler oder Panik, je nach bisherigem Stil des Konstruktors).
    Die Wurzeln reichen `env.Now`/`env.Today`; wo keine Umgebung erreichbar
    ist (Worker-Läufe), bindet die Wurzel die echte Uhr ausdrücklich
@@ -57,7 +65,29 @@ reichten tatsächlich keine Uhr:
    Idempotenz-Nanosekunden) bleiben unverändert.
 5. **Budgets.** Die Compose-LOC-Budgets bleiben gleich: Die Uhrfelder passen
    in zusammengelegte Importgruppen und einen gekürzten Kommentar.
-6. Die 59 Effekt-Bindungen in Care Plan (28), Facilities (10) und
+6. **Wer stempelt, entscheidet.** Jede Entscheidung liest die Uhr, die ihren
+   Wert gestempelt hat:
+   - Die PWA-Nutzung stempelt `last_seen_at` mit der Uhr des Dienstes.
+     `iot.record_pwa_standalone_usage` nimmt dafür den Zeitpunkt des Berichts
+     als vierten Parameter (wiederholbare Definition, die alte Fassung mit
+     drei Parametern entfällt). Aufbewahrung und Nutzungsfenster rechnen mit
+     derselben Uhr.
+   - Die Live- und Antwortprüfungen der Elternmitteilungen
+     (`liveVersionGuardCTE`, `responseGuardCTE`) und `ReadOpenDeclarations`
+     binden einen Zeitpunkt der Store-Uhr statt `NOW()`/`clock_timestamp()`.
+7. **Die Aufbewahrung der Nachrichten ist eine benannte Entscheidung der
+   Datenbankuhr.** Team- und Elternnachrichten bekommen ihr `created_at` von
+   PostgreSQL (`clock_timestamp()` bzw. Spaltenvorgabe), und diese
+   Reihenfolge ist die, die Chat und Posteingang zeigen; ein Go-Stempel
+   könnte zwei Nachrichten derselben Unterhaltung vertauschen. Deshalb
+   stempelt weiter die Datenbank, und die Aufbewahrung zählt ihr Fenster
+   auch dort: Die Stores bekommen die Tage und vergleichen mit
+   `now() - make_interval(days => ?)`. Die Dienste der Aufbewahrung haben
+   keine Uhr mehr (`staffmessaging.Config.Now`, `Retention.Now` und der
+   Uhr-Parameter von `NewParentMessageRetention` entfallen). Das Aufräumen
+   der Nachrichtenanhänge stempelt `cleaned_at` ebenfalls mit
+   `clock_timestamp()`; seine Uhr entfällt.
+8. Die 59 Effekt-Bindungen in Care Plan (28), Facilities (10) und
    Timetable (21), deren Körper oder Aufrufspur sich nur durch ihre Uhr
    geändert haben, sind mit dieser ADR neu bestätigt, die 42 Ausnahmen
    darunter per `approval_adr`. Effekt und Einstufung bleiben gleich.
@@ -69,9 +99,10 @@ reichten tatsächlich keine Uhr:
 - Die Tests der berührten Owner bauen mit fester Uhr: Care Plans
   Vertragstests auf dem Entscheidungstag 2026-08-24, Delivery und Scheduler
   auf festen Instants weit vom echten Tag.
-- Die Aufbewahrung der Elternnachrichten vergleicht weiter ein
-  `created_at`, das PostgreSQL stempelt, mit einer Grenze aus der Go-Uhr.
-  Die Gruppen-Tests altern ihre Fixtures mit `NOW()` und lesen das Fenster
-  deshalb auf der echten Uhr. Eine einzige Uhr bräuchte Go-Stempel für
-  Elternnachrichten, deren Reihenfolge bewusst die Datenbank bestimmt; das
-  bleibt offen.
+- Die Tests der Nachrichtenaufbewahrung altern ihre Zeilen per SQL relativ
+  zur Datenbankuhr und brauchen keine Go-Uhr. Mit einer Uhr der Wurzel weit
+  vom Tag der Datenbank entscheiden PWA-Nutzung, Live-Prüfungen und
+  Aufbewahrung jetzt gleich; Tests mit einer Uhr im Jahr 2031 belegen es.
+- Offen bleibt außerhalb dieser Owner: `parentannouncementaudience`
+  vergleicht `published_at` und `expires_at` der Elternmitteilungen weiter
+  mit `NOW()`.

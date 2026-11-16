@@ -15,7 +15,8 @@ import (
 
 var errUsageRepo = errors.New("usage repository failure")
 
-// usageTestNow is the fixed clock the usage service dates its retention on.
+// usageTestNow is the fixed clock the usage service stamps its reports and
+// dates its retention on.
 func usageTestNow() time.Time { return time.Date(2031, time.June, 2, 3, 0, 0, 0, time.UTC) }
 
 type recordingUsageRepository struct {
@@ -31,13 +32,14 @@ type recordedUsage struct {
 	tenantID  int64
 	accountID int64
 	portal    string
+	seenAt    time.Time
 }
 
-func (r *recordingUsageRepository) RecordSeen(_ context.Context, tenantID, accountID int64, portal string) error {
+func (r *recordingUsageRepository) RecordSeen(_ context.Context, tenantID, accountID int64, portal string, seenAt time.Time) error {
 	if r.recordErr != nil {
 		return r.recordErr
 	}
-	r.recorded = append(r.recorded, recordedUsage{tenantID: tenantID, accountID: accountID, portal: portal})
+	r.recorded = append(r.recorded, recordedUsage{tenantID: tenantID, accountID: accountID, portal: portal, seenAt: seenAt})
 	return nil
 }
 
@@ -88,6 +90,7 @@ func TestUsageServiceReportStaff(t *testing.T) {
 	require.Len(t, repo.recorded, 1)
 	assert.Equal(t, int64(42), repo.recorded[0].accountID)
 	assert.Equal(t, deliveryModels.PushPortalStaff, repo.recorded[0].portal)
+	assert.Equal(t, usageTestNow(), repo.recorded[0].seenAt, "the service's clock stamps the report it later ages out")
 
 	require.Error(t, service.ReportStaff(context.Background(), 0), "invalid account must not reach the repository")
 	require.Len(t, repo.recorded, 1)
@@ -111,6 +114,7 @@ func TestUsageServiceReportParent(t *testing.T) {
 		for _, usage := range repo.recorded {
 			assert.Equal(t, deliveryModels.PushPortalParent, usage.portal)
 			assert.Equal(t, int64(42), usage.accountID)
+			assert.Equal(t, usageTestNow(), usage.seenAt)
 		}
 	})
 
