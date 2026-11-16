@@ -42,7 +42,8 @@ func transferCode(account *parentbilling.LetterheadBankAccount, senderName strin
 		return PaymentCode{}, false
 	}
 	iban := compactIBAN(account.IBAN)
-	name := firstNonBlank(account.AccountHolder, senderName)
+	// One line each: a line break would shift every later field.
+	name := strings.Join(strings.Fields(firstNonBlank(account.AccountHolder, senderName)), " ")
 	reference = strings.Join(strings.Fields(reference), " ")
 	if iban == "" || len(iban) > epcIBANLimit || name == "" || reference == "" {
 		return PaymentCode{}, false

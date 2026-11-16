@@ -122,3 +122,18 @@ func TestTransferCodeLeavesOutAnUnusableBIC(t *testing.T) {
 		assert.Equal(t, want, strings.Split(code.Payload, "\n")[4], bic)
 	}
 }
+
+// A name with a line break or tabs stays one line: a break would shift
+// every later field of the code, the IBAN into the place of the amount.
+func TestTransferCodeKeepsTheNameOnOneLine(t *testing.T) {
+	t.Parallel()
+
+	account := &parentbilling.LetterheadBankAccount{AccountHolder: " Förderverein\nGanztag\t e.V. ", IBAN: "DE02120300000000202051"}
+	code, ok := transferCode(account, "", 500, "R-1")
+	require.True(t, ok)
+	lines := strings.Split(code.Payload, "\n")
+	require.Len(t, lines, 11)
+	assert.Equal(t, "Förderverein Ganztag e.V.", lines[5])
+	assert.Equal(t, "DE02120300000000202051", lines[6])
+	assert.Equal(t, "EUR5.00", lines[7])
+}
