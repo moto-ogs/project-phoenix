@@ -40,8 +40,8 @@ type Dependencies struct {
 
 func New(dependencies Dependencies) (careplan.Owner, error) {
 	if dependencies.DB == nil || dependencies.Observe == nil || dependencies.AmbientDB == nil || dependencies.StatusStudents == nil || dependencies.StatusSlots == nil ||
-		dependencies.People == nil || dependencies.StudentLock == nil || dependencies.StudentNotFound == nil || dependencies.StudentDirectory == nil {
-		return nil, errors.New("care plan compose: database, observer, ambient database resolver, people directory, status-student directory, status-slot directory, student lock, and student directory are required")
+		dependencies.People == nil || dependencies.StudentLock == nil || dependencies.StudentNotFound == nil || dependencies.StudentDirectory == nil || dependencies.Now == nil {
+		return nil, errors.New("care plan compose: database, observer, ambient database resolver, people directory, status-student directory, status-slot directory, student lock, student directory, and clock are required")
 	}
 	postgres.BindCareLocks(dependencies.DB, dependencies.StudentLock, dependencies.StudentNotFound, dependencies.AmbientDB)
 	store := postgres.New(postgres.CarePlanDatabase(dependencies.DB)).WithClock(dependencies.Now)

@@ -224,7 +224,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	}
 	pickup, err := careplanCompose.NewPickupBaselines(carePlan, approvedOfferings, func(ctx context.Context) (bool, error) {
 		return settings.Settings.ResolveBool(ctx, configModels.KeyEnrollmentBookingsAuthoritative)
-	})
+	}, calendar.CalendarDateClock(clocks...))
 	if err != nil {
 		return fail(err)
 	}
@@ -280,7 +280,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	presence := presenceservice.NewPresence(presenceDeps, presenceservice.WithPresenceSettings(settingsCompose.PresenceSettings(settings.Settings)))
 	yard := facilitiesCompose.NewSchulhofService(dataFacilities, FacilitiesActivityCatalog(dataActivityService), facilitiesCompose.NewOpenGroupCatalog(FacilitiesGroupSupervisions(owners.NewLoggedStudentPresence(db, logger)), FacilitiesRoomSessions(owners.NewLoggedStudentPresence(db, logger)), FacilitiesGroupVisits(owners.NewLoggedStudentPresence(db, logger))), logger)
 	autoExcusal, err := careplanCompose.NewPickupAutoExcusal(careplanCompose.PickupExcusalDependencies{
-		DB: db.Pool(), Records: carePlan, Baselines: pickup, Blocks: owners.NewLoggedStudentPresence(db, logger), Preview: owners.NewPickupExcusalTimetable(rt.Timetable, owners.NewPartialAbsencePreview(db)),
+		DB: db.Pool(), Records: carePlan, Baselines: pickup, Blocks: owners.NewLoggedStudentPresence(db, logger), Preview: owners.NewPickupExcusalTimetable(rt.Timetable, owners.NewPartialAbsencePreview(db)), Today: calendar.CalendarDateClock(clocks...),
 	})
 	if err != nil {
 		return fail(err)

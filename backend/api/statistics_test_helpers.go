@@ -66,7 +66,7 @@ func NewStatisticsTestModule(db transactionruntime.Database, unit tenant.UnitOfW
 	if err != nil {
 		return StatisticsTestModule{}, err
 	}
-	pickups, err := careplanCompose.NewPickupBaselines(r.CarePlan, noApprovedBookings{}, func(context.Context) (bool, error) { return false, nil })
+	pickups, err := careplanCompose.NewPickupBaselines(r.CarePlan, noApprovedBookings{}, func(context.Context) (bool, error) { return false, nil }, timezone.TodayDate)
 	if err != nil {
 		return StatisticsTestModule{}, err
 	}

@@ -90,7 +90,7 @@ func TestStudentParentRecordsListLettersAndDeclarationsOfOneChild(t *testing.T) 
 	require.NoError(t, err)
 
 	access := &studentAccess{}
-	service, err := owners.BuildParentAnnouncements(owners.RootEnvironment{Logger: slog.Default(), Links: owners.ServiceLinks{ParentsURL: "http://localhost"}},
+	service, err := owners.BuildParentAnnouncements(owners.RootEnvironment{Logger: slog.Default(), Links: owners.ServiceLinks{ParentsURL: "http://localhost"}, Now: time.Now},
 		settings.Settings, delivery.EmailOutbox, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes,
 		owners.DeliveryNotifications{Notifier: delivery.Notifications, Preferences: delivery.NotificationPreferences}, repos.MessagingRepositories, files,
 		communicationCompose.ParentLetterPorts{Access: access})

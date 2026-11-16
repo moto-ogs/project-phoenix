@@ -59,12 +59,14 @@ func buildTodayStatusServiceWithSchedule(t *testing.T) (*parentportal.ChildFlows
 	reposPeople := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db))
 	arrivalRules, arrivalDeps, err := owners.ArrivalScheduleBinding(owners.MustNewPeopleDirectory(testpkg.MustDatabase(db)), nil, nil, slog.Default())
 	require.NoError(t, err)
+	today := func() calendar.Date { return calendar.NewDate(2026, 8, 24) }
+	arrivalDeps.Today = today
 	arrivals, err := careplanCompose.NewArrivalSchedules(db, repos.CarePlan(), nil, arrivalRules, arrivalDeps)
 	require.NoError(t, err)
 	pickupStudents, err := owners.PickupPlanStudents(owners.MustNewPeopleDirectory(testpkg.MustDatabase(db)))
 	require.NoError(t, err)
 	pickups, err := careplanCompose.NewPickupSchedules(db, repos.CarePlan(), newPickupBaselineService(repos.CarePlan(), approvedOfferingProjection(t)), // Auto-excusal (#2360) is not what these cases assert.
-		nil, pickupStudents, slog.Default(), nil)
+		nil, pickupStudents, slog.Default(), today)
 	require.NoError(t, err)
 	return parentportal.NewChildFlows(parentportal.ChildConfig{
 		GuardianPolicy: owners.NewParentGuardianPolicy(),

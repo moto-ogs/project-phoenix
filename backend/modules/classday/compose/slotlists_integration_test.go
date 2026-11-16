@@ -312,8 +312,8 @@ type slotListRenderer interface {
 
 func newTestServiceWithRenderer(db *bun.DB, rooms roomReader, settings settingsReader, userCtx slotListUserContext, participation carePlanTest.CareParticipationResolver, renderer slotListRenderer) classday.SlotLists {
 	people := newTestPeople(db)
-	carePlan := carePlanTest.NewCarePlan(slotListTestTB{}, db, testpkg.StudentDirectory{})
-	arrivals := carePlanTest.NewArrivalQueries(slotListTestTB{}, db, carePlan)
+	carePlan := carePlanTest.NewCarePlan(slotListTestTB{}, db, testpkg.StudentDirectory{}, func() time.Time { return pickupNow })
+	arrivals := carePlanTest.NewArrivalQueries(slotListTestTB{}, db, carePlan, func() calendar.Date { return pickupDate })
 	service := compose.NewSlotLists(compose.SlotListDependencies{
 		Timetable:       slotListTimetableRows{rows: owners.NewTimetableTestLegacyRows(slotListTestTB{}, owners.NewTimetablePresenceProjection(testpkg.MustDatabase(db)))},
 		Presence:        newSlotListPresence(db),
@@ -322,10 +322,10 @@ func newTestServiceWithRenderer(db *bun.DB, rooms roomReader, settings settingsR
 		Persons:         people,
 		Groups:          newTestGroups(db),
 		Rooms:           rooms,
-		CareDays:        carePlanTest.NewCareDays(carePlan, carePlanTest.NewStoredPickupBaselines(carePlan, newApprovedOfferingProjection(db)), participation),
-		PickupTimes:     carePlanTest.NewPickupQueries(slotListTestTB{}, db, carePlan, carePlanTest.NewStoredPickupBaselines(carePlan, newApprovedOfferingProjection(db))),
+		CareDays:        carePlanTest.NewCareDays(carePlan, carePlanTest.NewStoredPickupBaselines(carePlan, newApprovedOfferingProjection(db), func() calendar.Date { return pickupDate }), participation),
+		PickupTimes:     carePlanTest.NewPickupQueries(slotListTestTB{}, db, carePlan, carePlanTest.NewStoredPickupBaselines(carePlan, newApprovedOfferingProjection(db), func() calendar.Date { return pickupDate }), func() calendar.Date { return pickupDate }),
 		ArrivalTimes:    arrivals,
-		PickupBaselines: carePlanTest.NewStoredPickupBaselines(carePlan, newApprovedOfferingProjection(db)),
+		PickupBaselines: carePlanTest.NewStoredPickupBaselines(carePlan, newApprovedOfferingProjection(db), func() calendar.Date { return pickupDate }),
 		ListExport:      renderer,
 		Settings:        settingsAdapter{Settings: settings},
 		EnrolledOn:      api.ClassDayEnrolledOn,

@@ -235,14 +235,16 @@ func (s *Store) PendingMessageAttachmentCleanups(ctx context.Context, limit int)
 	return out, nil
 }
 
-// CompleteMessageAttachmentCleanup settles one intent.
-func (s *Store) CompleteMessageAttachmentCleanup(ctx context.Context, intentID int64, at time.Time) error {
+// CompleteMessageAttachmentCleanup settles one intent. The database stamps
+// cleaned_at: its clock also ages the settled intents out with the parent
+// message retention (ADR 0277).
+func (s *Store) CompleteMessageAttachmentCleanup(ctx context.Context, intentID int64) error {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {
 		return err
 	}
 	if _, err := db.NewUpdate().TableExpr("users.message_attachment_cleanup AS intent").
-		Set("cleaned_at = ?", at).
+		Set("cleaned_at = clock_timestamp()").
 		Where("intent.tenant_id = ? AND intent.id = ?", tenantID, intentID).Exec(ctx); err != nil {
 		return fmt.Errorf("complete message attachment cleanup: %w", err)
 	}

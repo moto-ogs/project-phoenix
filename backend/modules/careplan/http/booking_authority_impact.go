@@ -37,8 +37,7 @@ type BookingAuthorityImpactConfig struct {
 	// WithinSchool runs fn in the tenant transaction of the school.
 	WithinSchool func(ctx context.Context, schoolID int64, fn func(context.Context) error) error
 	Surface      Surface
-	// Today is the day the impact is previewed on; nil is the real Berlin
-	// day.
+	// Today is the day the impact is previewed on, the root's day clock.
 	Today func() calendar.Date
 }
 
@@ -56,14 +55,10 @@ type bookingAuthorityImpact struct {
 func NewBookingAuthorityImpact(cfg BookingAuthorityImpactConfig) http.Handler {
 	surface := cfg.Surface
 	if cfg.Authority == nil || cfg.WithinSchool == nil || surface.InvalidRequest == nil ||
-		surface.Internal == nil || surface.RenderError == nil || surface.Respond == nil {
+		surface.Internal == nil || surface.RenderError == nil || surface.Respond == nil || cfg.Today == nil {
 		panic("booking authority impact: all dependencies are required")
 	}
-	today := cfg.Today
-	if today == nil {
-		today = calendar.TodayDate
-	}
-	return &bookingAuthorityImpact{authority: cfg.Authority, withinSchool: cfg.WithinSchool, surface: surface, today: today}
+	return &bookingAuthorityImpact{authority: cfg.Authority, withinSchool: cfg.WithinSchool, surface: surface, today: cfg.Today}
 }
 
 func (h *bookingAuthorityImpact) ServeHTTP(w http.ResponseWriter, r *http.Request) {

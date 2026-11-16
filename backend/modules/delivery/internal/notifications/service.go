@@ -243,18 +243,22 @@ type DeliveryObserver func(transport, template, caller string, duration time.Dur
 // the one type exempt from the delivery window.
 const TypeTest = "test"
 
-// NewService builds the channel router. Channels are fixed at wiring time.
+// NewService builds the channel router. Channels are fixed at wiring time;
+// now, the composition's clock, tells the delivery window and is required.
 // It returns Notifier so wiring can reach NotifyBatch; the value stays
 // assignable to Service for consumers that only notify one audience.
-func NewService(settings RouterSettings, logger *slog.Logger, channels ...Channel) Notifier {
-	return &router{settings: settings, channels: channels, logger: logger, clock: time.Now}
+func NewService(settings RouterSettings, logger *slog.Logger, now func() time.Time, channels ...Channel) Notifier {
+	if now == nil {
+		panic("notification router: the composition's clock is required")
+	}
+	return &router{settings: settings, channels: channels, logger: logger, clock: now}
 }
 
 // NewServiceWithDeliveryObserver builds the production router with runtime
 // evidence for fail-closed sends. NewService remains the small test and local
 // adapter constructor.
-func NewServiceWithDeliveryObserver(settings RouterSettings, logger *slog.Logger, observe DeliveryObserver, channels ...Channel) Notifier {
-	service := NewService(settings, logger, channels...).(*router)
+func NewServiceWithDeliveryObserver(settings RouterSettings, logger *slog.Logger, observe DeliveryObserver, now func() time.Time, channels ...Channel) Notifier {
+	service := NewService(settings, logger, now, channels...).(*router)
 	service.observe = observe
 	return service
 }
@@ -265,10 +269,7 @@ func NewServiceWithDeliveryObserver(settings RouterSettings, logger *slog.Logger
 // feed (contract.NotificationFeed); the SSE channel signals its changes. A
 // nil store leaves the feed out.
 func NewServiceWithFeed(settings RouterSettings, logger *slog.Logger, observe DeliveryObserver, feed deliveryPorts.FeedStore, now func() time.Time, channels ...Channel) Notifier {
-	service := NewServiceWithDeliveryObserver(settings, logger, observe, channels...).(*router)
-	if now != nil {
-		service.clock = now
-	}
+	service := NewServiceWithDeliveryObserver(settings, logger, observe, now, channels...).(*router)
 	if feed == nil {
 		return service
 	}

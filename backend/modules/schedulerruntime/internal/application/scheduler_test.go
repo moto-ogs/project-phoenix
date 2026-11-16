@@ -280,7 +280,7 @@ func TestRunCleanupJobsRejectsMissingRuntime(t *testing.T) {
 
 	auth := &fakeAuthCleanup{}
 	var outcomes []string
-	s := newScheduler(ports.WorkerDependencies{
+	s := newScheduler(ports.WorkerDependencies{Now: time.Now,
 		Logger:      slog.Default(),
 		AuthCleanup: auth,
 		TenantRuntimeObserver: func(entryPoint, outcome string) {
@@ -1196,7 +1196,7 @@ func TestRunSessionCleanupTask_StopsDuringStartupDelay(t *testing.T) {
 	t.Parallel()
 
 	synctest.Test(t, func(t *testing.T) {
-		s := &Scheduler{schedulerLifecycle: schedulerLifecycle{done: make(chan struct{})}}
+		s := &Scheduler{now: time.Now, schedulerLifecycle: schedulerLifecycle{done: make(chan struct{})}}
 		s.wg.Go(func() {
 			s.runSessionCleanupTaskPolling(&ScheduledTask{Name: "session-cleanup"})
 		})
@@ -1566,7 +1566,7 @@ func TestWasRunToday_NotRun(t *testing.T) {
 	t.Parallel()
 
 	var m sync.Map
-	assert.False(t, (&Scheduler{}).wasRunToday(&m, 1))
+	assert.False(t, (&Scheduler{now: time.Now}).wasRunToday(&m, 1))
 }
 
 func TestWasRunToday_RanToday(t *testing.T) {
@@ -1575,7 +1575,7 @@ func TestWasRunToday_RanToday(t *testing.T) {
 	var m sync.Map
 	tenantID := testpkg.UniqueTestTenantID(t)
 	m.Store(tenantID, time.Now())
-	assert.True(t, (&Scheduler{}).wasRunToday(&m, tenantID))
+	assert.True(t, (&Scheduler{now: time.Now}).wasRunToday(&m, tenantID))
 }
 
 func TestWasRunToday_RanYesterday(t *testing.T) {
@@ -1584,7 +1584,7 @@ func TestWasRunToday_RanYesterday(t *testing.T) {
 	var m sync.Map
 	tenantID := testpkg.UniqueTestTenantID(t)
 	m.Store(tenantID, time.Now().Add(-25*time.Hour))
-	assert.False(t, (&Scheduler{}).wasRunToday(&m, tenantID))
+	assert.False(t, (&Scheduler{now: time.Now}).wasRunToday(&m, tenantID))
 }
 
 func TestWasRunToday_InvalidType(t *testing.T) {
@@ -1593,7 +1593,7 @@ func TestWasRunToday_InvalidType(t *testing.T) {
 	var m sync.Map
 	tenantID := testpkg.UniqueTestTenantID(t)
 	m.Store(tenantID, "not a time")
-	assert.False(t, (&Scheduler{}).wasRunToday(&m, tenantID))
+	assert.False(t, (&Scheduler{now: time.Now}).wasRunToday(&m, tenantID))
 }
 
 func TestWasRunToday_DifferentTenant(t *testing.T) {
@@ -1603,7 +1603,7 @@ func TestWasRunToday_DifferentTenant(t *testing.T) {
 	tenantID := testpkg.UniqueTestTenantID(t)
 	otherTenantID := testpkg.UniqueTestTenantID(t)
 	m.Store(tenantID, time.Now())
-	assert.False(t, (&Scheduler{}).wasRunToday(&m, otherTenantID))
+	assert.False(t, (&Scheduler{now: time.Now}).wasRunToday(&m, otherTenantID))
 }
 
 func TestResolveStringSetting_NoSettings(t *testing.T) {

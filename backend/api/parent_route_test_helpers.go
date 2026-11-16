@@ -61,8 +61,7 @@ func NewParentRouteTestRepositories(db transactionruntime.Database, members owne
 		return ParentRouteTestRepositories{}, err
 	}
 	excusedRequests, err := owners.NewExcusedAbsenceRequests(owners.ExcusedRequestWiring{
-		CarePlan: care, Students: members.Student, Persons: members.Person, Scope: schoolWideReviewScope,
-		Now: OptionalClock(clocks),
+		CarePlan: care, Students: members.Student, Persons: members.Person, Scope: schoolWideReviewScope, Now: realClockUnless(clocks),
 	})
 	if err != nil {
 		return ParentRouteTestRepositories{}, err

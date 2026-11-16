@@ -2,6 +2,9 @@ package careplantest
 
 import (
 	"context"
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	carePlanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
@@ -17,8 +20,8 @@ type TB interface {
 }
 
 // NewStoredPickupBaselines composes fixture reads with booking authority off.
-func NewStoredPickupBaselines(records carePlanPorts.PickupBaselineRecords, links careplan.ApprovedBookingReader) careplan.PickupBaselineReader {
-	baselines, err := carePlanCompose.NewPickupBaselines(records, links, func(context.Context) (bool, error) { return false, nil })
+func NewStoredPickupBaselines(records carePlanPorts.PickupBaselineRecords, links careplan.ApprovedBookingReader, today func() calendar.Date) careplan.PickupBaselineReader {
+	baselines, err := carePlanCompose.NewPickupBaselines(records, links, func(context.Context) (bool, error) { return false, nil }, today)
 	if err != nil {
 		panic(err)
 	}
@@ -26,20 +29,22 @@ func NewStoredPickupBaselines(records carePlanPorts.PickupBaselineRecords, links
 }
 
 // NewArrivalQueries binds schedule reads for integration fixtures that do not
-// exercise arrival mutations. The caller supplies its existing owner records.
-func NewArrivalQueries(tb TB, db *bun.DB, records careplan.Capability) careplan.ArrivalScheduleService {
+// exercise arrival mutations. The caller supplies its existing owner records
+// and the fixture's school day.
+func NewArrivalQueries(tb TB, db *bun.DB, records careplan.Capability, today func() calendar.Date) careplan.ArrivalScheduleService {
 	tb.Helper()
-	queries, err := carePlanCompose.NewArrivalSchedules(db, records, nil, nil, carePlanCompose.ArrivalScheduleDependencies{})
+	queries, err := carePlanCompose.NewArrivalSchedules(db, records, nil, nil, carePlanCompose.ArrivalScheduleDependencies{Today: today})
 	if err != nil {
 		tb.Fatalf("compose test arrival queries: %v", err)
 	}
 	return queries
 }
 
-// NewPickupQueries binds schedule reads for fixtures without pickup mutations.
-func NewPickupQueries(tb TB, db *bun.DB, records careplan.Capability, baselines careplan.PickupBaselineReader) careplan.PickupScheduleService {
+// NewPickupQueries binds schedule reads for fixtures without pickup mutations
+// on the fixture's school day.
+func NewPickupQueries(tb TB, db *bun.DB, records careplan.Capability, baselines careplan.PickupBaselineReader, today func() calendar.Date) careplan.PickupScheduleService {
 	tb.Helper()
-	queries, err := carePlanCompose.NewPickupSchedules(db, records, baselines, nil, nil, nil, nil)
+	queries, err := carePlanCompose.NewPickupSchedules(db, records, baselines, nil, nil, nil, today)
 	if err != nil {
 		tb.Fatalf("compose test pickup queries: %v", err)
 	}
@@ -63,16 +68,17 @@ func NewOfferingBookings() *careplan.OfferingBookings {
 }
 
 // NewCarePlan composes the owner capability for integration tests. The
-// caller supplies the student directory reader; test support may not reach
+// caller supplies the student directory reader and the clock the owner
+// stamps its writes and dates its retention with; test support may not reach
 // the projection (ADR 0058).
-func NewCarePlan(tb TB, db *bun.DB, directory StudentDirectory) careplan.Capability {
+func NewCarePlan(tb TB, db *bun.DB, directory StudentDirectory, now func() time.Time) careplan.Capability {
 	tb.Helper()
 	students := newStudentDirectory(tb, db, directory)
 	capability, err := carePlanCompose.New(carePlanCompose.Dependencies{
 		DB: db, Observe: func(carePlanCompose.Observation) {}, AmbientDB: carePlanCompose.TenantAmbientDatabase(db),
 		StatusStudents: newStatusStudentDirectory(db, students, directory), StatusSlots: emptyStatusSlots{}, StudentDirectory: directory,
 		People:      studentNameFinder(students),
-		StudentLock: students.LockStudent, StudentNotFound: peopledirectory.ErrStudentNotFound,
+		StudentLock: students.LockStudent, StudentNotFound: peopledirectory.ErrStudentNotFound, Now: now,
 	})
 	if err != nil {
 		tb.Fatalf("compose test Care Plan: %v", err)

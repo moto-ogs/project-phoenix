@@ -22,7 +22,8 @@ type Database func(context.Context) (bun.IDB, int64, error)
 type Store struct {
 	database Database
 	// now stamps the rows the store writes (updated_at, decided_at,
-	// cleanup times); nil is the real clock.
+	// cleanup times). Only the composition's writing store carries it
+	// (WithClock); the read stores never stamp.
 	now func() time.Time
 }
 
@@ -33,20 +34,24 @@ func New(database Database) *Store {
 	return &Store{database: database}
 }
 
-// WithClock returns the store stamping its writes with now (ADR 0239).
+// WithClock returns the store stamping its writes with now (ADR 0239); now
+// is required.
 func (s *Store) WithClock(now func() time.Time) *Store {
+	if now == nil {
+		panic("care plan postgres: the composition's clock is required")
+	}
 	clocked := *s
 	clocked.now = now
 	return &clocked
 }
 
-// currentTime is the instant the store stamps a write with.
+// currentTime is the instant the store stamps a write with. A store built
+// without WithClock serves reads only; stamping on it is a wiring error.
 func (s *Store) currentTime() time.Time {
-	now := s.now
-	if now == nil {
-		now = time.Now
+	if s.now == nil {
+		panic("care plan postgres: a store without the composition's clock stamps a write")
 	}
-	return now()
+	return s.now()
 }
 
 // LockExceptionDay takes the transaction-scoped advisory lock shared by all

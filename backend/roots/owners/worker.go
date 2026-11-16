@@ -101,7 +101,7 @@ func NewWorker(
 		return nil, err
 	}
 	return schedulerRuntimeCompose.NewWorker(schedulerPorts.WorkerDependencies{
-		Logger: logger.With("service", "scheduler"), Now: now,
+		Logger: logger.With("service", "scheduler"), Now: clockOrReal(now),
 		Getenv:                       os.Getenv,
 		SchoolRepo:                   schedulerTenantDirectory{schools: organizations, billing: billing, schoolNames: schoolNames},
 		TenantRuntime:                runtime,

@@ -5,6 +5,7 @@ package api
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -74,7 +75,7 @@ func NewCommunicationTestNotifier(settings interface {
 	ResolveBoolForTenant(context.Context, int64, string) (bool, error)
 	ResolveStringForTenant(context.Context, int64, string) (string, error)
 }, logger *slog.Logger) devices.NotificationCommands {
-	return deliveryCompose.NewNotifier(settings, logger, nil, nil, nil)
+	return deliveryCompose.NewNotifier(settings, logger, nil, nil, time.Now)
 }
 
 // NewCommunicationRequestDecisionNotifier binds the real producer to a native

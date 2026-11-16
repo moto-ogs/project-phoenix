@@ -94,7 +94,7 @@ func TestForEachTenantSettings_Wired_ListerError_IsLogged(t *testing.T) {
 func TestForEachTenant_MissingRuntimeFailsClosed(t *testing.T) {
 	t.Parallel()
 
-	s := &Scheduler{logger: slog.Default()}
+	s := &Scheduler{now: time.Now, logger: slog.Default()}
 	called := false
 
 	err := s.forEachTenant(context.Background(), "missing-runtime", func(context.Context) error {
@@ -110,7 +110,7 @@ func TestForEachTenant_MissingRuntimeFailsClosed(t *testing.T) {
 func TestForEachTenantSettings_MissingRuntimeSkipsWork(t *testing.T) {
 	t.Parallel()
 
-	s := &Scheduler{logger: slog.Default()}
+	s := &Scheduler{now: time.Now, logger: slog.Default()}
 	called := false
 
 	completed := s.forEachTenantSettings(context.Background(), "missing-runtime", func(context.Context, int64) error {
@@ -131,7 +131,7 @@ func TestForEachKnownTenantObservesMissingTenantAndTransactionFailure(t *testing
 
 	var outcomes []string
 	var unitOfWorkResults []string
-	s := &Scheduler{tenantRuntime: runtime}
+	s := &Scheduler{now: time.Now, tenantRuntime: runtime}
 	s.tenantRuntimeObserver = func(entryPoint, outcome string) {
 		assert.Equal(t, "worker", entryPoint)
 		outcomes = append(outcomes, outcome)

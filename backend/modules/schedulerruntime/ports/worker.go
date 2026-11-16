@@ -15,7 +15,7 @@ import (
 // Construction replaces the former post-construction Set* graph.
 type WorkerDependencies struct {
 	Logger *slog.Logger
-	// Now supplies the worker clock; nil uses time.Now.
+	// Now supplies the worker clock; required.
 	Now                       func() time.Time
 	Getenv                    func(string) string
 	SchoolRepo                TenantDirectory

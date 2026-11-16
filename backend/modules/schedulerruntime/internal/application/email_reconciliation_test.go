@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -22,7 +23,7 @@ func TestEmailReconciliationTaskReportsTheAlarmAsAFailure(t *testing.T) {
 	t.Parallel()
 	reconciler := &stubEmailReconciler{err: errors.New("email webhook is disabled at the provider")}
 	var failures []string
-	s := &Scheduler{emailReconciliation: reconciler}
+	s := &Scheduler{now: time.Now, emailReconciliation: reconciler}
 	s.workerTracer.Failure = func(_ context.Context, operation, outcome string, _ error) {
 		failures = append(failures, operation+"/"+outcome)
 	}
@@ -36,7 +37,7 @@ func TestEmailReconciliationTaskReportsTheAlarmAsAFailure(t *testing.T) {
 func TestEmailReconciliationTaskDoesNotOverlap(t *testing.T) {
 	t.Parallel()
 	reconciler := &stubEmailReconciler{}
-	s := &Scheduler{emailReconciliation: reconciler}
+	s := &Scheduler{now: time.Now, emailReconciliation: reconciler}
 
 	s.checkAndRunEmailReconciliation(context.Background(), &ScheduledTask{Name: "email-delivery-reconciliation", Running: true})
 

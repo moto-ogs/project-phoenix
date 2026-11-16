@@ -387,7 +387,7 @@ const (
 // newPickupBaselineService binds native records in the fixture's legacy
 // booking mode.
 func newPickupBaselineService(records careplan.Capability, links careplan.ApprovedBookingReader) careplan.PickupBaselineReader {
-	return testutil.NewStoredPickupBaselines(records, links)
+	return testutil.NewStoredPickupBaselines(records, links, calendar.TodayDate)
 }
 
 // guardianLinkHasPermission reports whether a relationship grants the

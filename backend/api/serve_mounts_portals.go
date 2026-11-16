@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/spf13/viper"
 
@@ -166,7 +168,7 @@ func newOperatorRouter(
 				Schools:    operatorSettingsSchools{schools: organizations},
 				OperatorID: operatorIDFromSession,
 			}),
-			bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle),
+			bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle, calendar.CalendarDateClock(now)),
 			traegerValues:          traegerSettings,
 		},
 		communication,

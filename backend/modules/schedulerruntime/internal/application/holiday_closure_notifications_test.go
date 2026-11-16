@@ -17,7 +17,7 @@ func TestHolidayClosureWatchdogRunsWhileProcessingIsStuck(t *testing.T) {
 	t.Parallel()
 	var logs bytes.Buffer
 	started, release, finished := make(chan struct{}), make(chan struct{}), make(chan struct{})
-	scheduler := newScheduler(ports.WorkerDependencies{
+	scheduler := newScheduler(ports.WorkerDependencies{Now: time.Now,
 		Logger: slog.New(slog.NewJSONHandler(&logs, nil)),
 		HolidayClosureNotifications: ports.HolidayClosureNotifications{
 			ProcessDue: func(context.Context) error { close(started); <-release; return nil },
