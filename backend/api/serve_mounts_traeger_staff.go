@@ -14,6 +14,7 @@ import (
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
+	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
@@ -29,10 +30,11 @@ import (
 // the schools and the Dienstplan of the schools.
 func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.StaffAdmin, months workforce.TraegerStaffMonths, organizations HolidayOrganizations,
 	persons TraegerPersons, membership TraegerStaff, accessLog owners.DataAccessAppender, sites workforce.TraegerShiftSites,
+	exports workforce.TraegerStaffExportSchool, settings TraegerBrandingSettings,
 	identity identityaccess.Owner,
 ) error {
-	if staffAdmin == nil || months == nil {
-		return errors.New("traeger staff records: the personnel record and the school months are required")
+	if staffAdmin == nil || months == nil || exports == nil || settings == nil {
+		return errors.New("traeger staff records: the personnel record, the school months and exports and the settings are required")
 	}
 	springers, err := springerAccessOf(identity)
 	if err != nil {
@@ -49,6 +51,9 @@ func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.Staf
 		Months: months,
 		// The first block employs a Springer at the school (#7173).
 		Springers: traegerSpringerEmployments{access: springers},
+		// The payroll file and the time export (#4712).
+		Exports: exports,
+		Payroll: traegerPayrollSettings{settings: settings},
 	}
 	records := staffAdmin.TraegerStaffRecords(collaborators)
 	requireStaff := common.RequiresPermission(identityaccess.TraegerRightStaffManage)
@@ -77,8 +82,19 @@ func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.Staf
 	// The Einsatzplanung over all Einsatzorte (#4708).
 	planning := staffAdmin.TraegerStaffPlanning(collaborators, sites)
 	root.Mount("/traeger/staff-planning", traegerstaff.NewPlanningResource(planning, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
-	// The Vertretungspool over the same records (#4709): the Träger's view
-	// and, under /api with the right that plans shifts, the school's.
+	// The payroll file and the time export over all schools (#4712).
+	staffExports, ok := records.(workforce.TraegerStaffExports)
+	if !ok {
+		return errors.New("traeger staff records: the Personalstamm serves no exports")
+	}
+	root.Mount("/traeger/staff-exports", traegerstaff.NewExportsResource(staffExports, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
+	return mountTraegerStaffPool(root, tenant, records, requireStaff)
+}
+
+// mountTraegerStaffPool mounts the Vertretungspool over the same records
+// (#4709): the Träger's view and, under /api with the right that plans
+// shifts, the school's.
+func mountTraegerStaffPool(root, tenant chi.Router, records workforce.TraegerStaffRecords, requireStaff common.Middleware) error {
 	pool, ok := records.(workforce.TraegerStaffPool)
 	schoolPool, schoolOK := records.(workforce.SchoolStaffPool)
 	if !ok || !schoolOK {
@@ -88,6 +104,44 @@ func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.Staf
 	tenant.Mount("/staff-pool", traegerstaff.NewSchoolPoolResource(schoolPool,
 		common.RequiresPermission(permissions.TimeTrackingManage)).Router(ProtectedTenantRoutes))
 	return nil
+}
+
+// traegerPayrollSettings reads the Träger values of the payroll file
+// (#4712): its DATEV client and a Lohnart per category and kind, or the
+// empty registry defaults.
+type traegerPayrollSettings struct {
+	settings TraegerBrandingSettings
+}
+
+func (s traegerPayrollSettings) TraegerPayrollSettings(ctx context.Context, organizationID int64) (workforce.TraegerPayrollSettings, error) {
+	keys := []string{configModels.KeyTraegerPayrollConsultantNumber, configModels.KeyTraegerPayrollClientNumber}
+	for _, category := range workforce.TraegerPayrollCategories {
+		for _, kind := range workforce.TraegerContractKinds {
+			keys = append(keys, configModels.TraegerPayrollWageTypeKey(category, kind))
+		}
+	}
+	for _, category := range workforce.TraegerPayrollDayCategories {
+		keys = append(keys, configModels.TraegerPayrollUnitKey(category))
+	}
+	texts, err := s.settings.TraegerTexts(ctx, organizationID, keys)
+	if err != nil {
+		return workforce.TraegerPayrollSettings{}, err
+	}
+	result := workforce.TraegerPayrollSettings{
+		ConsultantNumber: texts[configModels.KeyTraegerPayrollConsultantNumber],
+		ClientNumber:     texts[configModels.KeyTraegerPayrollClientNumber],
+		WageTypes:        map[string]map[string]string{}, Units: map[string]string{},
+	}
+	for _, category := range workforce.TraegerPayrollCategories {
+		result.WageTypes[category] = map[string]string{}
+		for _, kind := range workforce.TraegerContractKinds {
+			result.WageTypes[category][kind] = texts[configModels.TraegerPayrollWageTypeKey(category, kind)]
+		}
+	}
+	for _, category := range workforce.TraegerPayrollDayCategories {
+		result.Units[category] = texts[configModels.TraegerPayrollUnitKey(category)]
+	}
+	return result, nil
 }
 
 // traegerStaffSchools lists the undeleted schools of the Träger by name.

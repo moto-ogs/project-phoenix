@@ -44,6 +44,9 @@ type TimeTracking struct {
 	// TraegerMonths serves the school's months to the Stundenkonto of the
 	// Träger (#4711).
 	TraegerMonths workforce.TraegerStaffMonths
+	// TraegerExports serves the school's months and days to the payroll
+	// file and the time export of the Träger (#4712).
+	TraegerExports workforce.TraegerStaffExportSchool
 	// AutoCheckIn serves Student Presence's NFC auto-check-in.
 	AutoCheckIn AutoCheckInBinding
 	// Jobs are the scheduler's open-session, break and auto-checkout sweeps.
@@ -92,6 +95,7 @@ func (s *WorkSessionSide) TimeTracking() (*TimeTracking, error) {
 		VacationTakeovers:  VacationTakeoverCapability(services.Absences),
 		OpeningBalances:    OpeningBalanceBookingCapability(services.Ledger),
 		TraegerMonths:      TraegerMonthCapability(services.Closing, WorkTimeMonthCapability(services.Months)),
+		TraegerExports:     TraegerExportCapability(services.Overview, services.Sessions),
 		AutoCheckIn:        s.AutoCheckIn,
 		Jobs:               services.Sessions,
 		StaffDay:           StaffDay{WorkSessionService: services.Sessions, StaffAbsenceService: services.Absences},

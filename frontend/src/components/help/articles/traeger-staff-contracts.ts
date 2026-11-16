@@ -26,7 +26,7 @@ export function traegerStaffContractsTopic(): HelpTopic {
         steps: [
           "Öffnen Sie die Akte im Reiter `Akten`.",
           "Wählen Sie bei `Arbeitsverträge` den Knopf `Vertrag anlegen`.",
-          "Wählen Sie `Teilzeit`, `Vollzeit` oder `Minijob`.",
+          "Wählen Sie die Art: `Teilzeit`, `Vollzeit`, `Minijob`, `Übungsleiter` oder `Ehrenamt`.",
           "Wählen Sie den `Ersten Tag`. Den `Letzten Tag` lassen Sie leer, wenn der Vertrag unbefristet ist.",
           "Tragen Sie je Schule die Stunden von Montag bis Freitag ein. Ein leeres Feld ist ein freier Tag.",
           "Wählen Sie `Vertrag anlegen`.",
@@ -34,7 +34,8 @@ export function traegerStaffContractsTopic(): HelpTopic {
       },
       {
         title: "Soll ändern",
-        description: "Zum Beispiel, wenn die Person ab dem nächsten Monat mehr Stunden hat.",
+        description:
+          "Zum Beispiel, wenn die Person ab dem nächsten Monat mehr Stunden hat.",
         steps: [
           "Wählen Sie beim Vertrag das Menü mit den drei Punkten. Wählen Sie `Soll ändern`.",
           "Wählen Sie bei `Gilt ab` den ersten Tag mit den neuen Stunden.",
@@ -43,7 +44,8 @@ export function traegerStaffContractsTopic(): HelpTopic {
       },
       {
         title: "Ferien-Soll eintragen",
-        description: "Für Ferienwochen mit anderen Stunden, zum Beispiel in der Ferienbetreuung.",
+        description:
+          "Für Ferienwochen mit anderen Stunden, zum Beispiel in der Ferienbetreuung.",
         steps: [
           "Wählen Sie beim Vertrag das Menü. Wählen Sie `Ferien-Soll eintragen`.",
           "Wählen Sie die Schule, die erste und, für mehrere Wochen, die letzte Woche.",
@@ -65,6 +67,7 @@ export function traegerStaffContractsTopic(): HelpTopic {
       "Abgeschlossene Monate bleiben, wie sie sind. Eine Änderung geht an einer Schule erst ab dem Tag nach ihrem letzten abgeschlossenen Monat.",
       "Den Verlauf des Solls sehen Sie beim Vertrag unter `Weiteres Soll`.",
       "Eine Person kann mehrere Verträge haben, zum Beispiel Teilzeit an einer Schule und einen Minijob an einer anderen.",
+      "Jede Art rechnet der Lohnexport mit eigenen Lohnarten ab. Übungsleiter ist für die Übungsleiterpauschale, Ehrenamt für die Ehrenamtspauschale.",
       "Das Ferien-Soll gilt auch an Schließtagen der Schule. Arbeitet die Person dort nicht, tragen Sie für den Tag 0 Stunden ein.",
       "Löschen Sie einen falschen Vertrag, rechnet die Schule wieder mit ihrem eigenen Soll.",
     ],

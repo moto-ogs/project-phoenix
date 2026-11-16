@@ -631,6 +631,12 @@
       "legacy": "workforce.traeger_month_not_kept"
     },
     {
+      "code": "workforce.traeger_payroll_not_ready",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_payroll_not_ready"
+    },
+    {
       "code": "workforce.traeger_planning_shift_not_found",
       "class": "input",
       "parameters": [],

@@ -123,5 +123,6 @@
   "pool_block_not_found": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "pool_block_taken": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "pool_springer_not_found": "Не вдалося зберегти: {object}. Перевірте введені дані.",
-  "pool_springer_busy": "Не вдалося змінити: {object}. Перевірте поточний стан."
+  "pool_springer_busy": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "traeger_payroll_not_ready": "Не вдалося змінити: {object}. Перевірте поточний стан."
 }

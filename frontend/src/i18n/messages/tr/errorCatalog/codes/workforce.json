@@ -123,5 +123,6 @@
   "pool_block_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "pool_block_taken": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "pool_springer_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
-  "pool_springer_busy": "{object} değiştirilemedi. Güncel durumu kontrol edin."
+  "pool_springer_busy": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "traeger_payroll_not_ready": "{object} değiştirilemedi. Güncel durumu kontrol edin."
 }

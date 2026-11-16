@@ -787,6 +787,7 @@ describe("getParentHelpTopicForPath", () => {
       HELP_TOPICS.traegerStaffPlanning,
       HELP_TOPICS.traegerStaffPool,
       HELP_TOPICS.traegerStaffTimeAccount,
+      HELP_TOPICS.traegerPayrollExport,
       HELP_TOPICS.traegerSharedDocuments,
       HELP_TOPICS.traegerCareTimeOverruns,
       HELP_TOPICS.traegerArrivalPickupTimes,

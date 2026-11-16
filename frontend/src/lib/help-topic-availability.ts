@@ -299,6 +299,7 @@ export const HELP_TOPIC_AUDIENCE = {
   [HELP_TOPICS.traegerStaffPool]: "traeger",
   [HELP_TOPICS.traegerStaffContracts]: "traeger",
   [HELP_TOPICS.traegerStaffTimeAccount]: "traeger",
+  [HELP_TOPICS.traegerPayrollExport]: "traeger",
   [HELP_TOPICS.schoolTraegerDocuments]: "lead",
   [HELP_TOPICS.traegerSchoolSwitch]: "traeger",
   [HELP_TOPICS.traegerSchoolView]: "traeger",

@@ -376,4 +376,9 @@ type TraegerStaffPorts struct {
 	Months TraegerStaffMonths
 	// Springers employs a Springer at the school that blocks them (#7173).
 	Springers SpringerEmployments
+	// Exports are the school's months and days for the payroll file and the
+	// time export, Payroll the Träger's payroll values (#4712); nil outside
+	// the exports.
+	Exports TraegerStaffExportSchool
+	Payroll TraegerPayrollSettingsReader
 }

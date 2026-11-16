@@ -1,0 +1,6 @@
+﻿Personalnummer;Nachname;Vorname;Datum;Einsatzort;Beginn;Ende;Pause_Minuten;Ist_Minuten;Abwesenheit;Abwesenheitsart
+00523;Keller;Jonas;2026-10-07;Träger Personal OGS Nord;07:00;09:00;0;120;;
+00523;Keller;Jonas;2026-10-12;Träger Personal OGS Nord;;;0;0;vacation;Urlaub
+00523;Keller;Jonas;2026-10-13;Träger Personal OGS Nord;;;0;0;vacation;Urlaub
+00417;Sommer;Mira;2026-10-05;Träger Personal OGS Nord;08:00;12:00;0;240;;
+00417;Sommer;Mira;2026-10-06;Träger Personal OGS Süd;14:00;16:30;30;120;;

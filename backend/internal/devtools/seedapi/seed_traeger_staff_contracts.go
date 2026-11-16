@@ -26,6 +26,10 @@ var seedTraegerContractPatterns = []struct {
 	{"full_time", []int{480, 480, 480, 480, 480}},
 	{"part_time", []int{240, 240, 0, 240, 240}},
 	{"minijob", []int{120, 0, 120, 0, 120}},
+	// Übungsleiter and Ehrenamt (#4712): a training group twice a week and
+	// a reading hour, each with its own Lohnarten in the payroll file.
+	{"uebungsleiter", []int{90, 0, 90, 0, 0}},
+	{"ehrenamt", []int{0, 60, 0, 0, 0}},
 }
 
 // seedTraegerPoolRecord marks the second and the fourth record as Springer

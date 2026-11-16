@@ -4,17 +4,18 @@
 // anlegen, Soll ab einem Tag ändern, Ferien-Soll eintragen und Art oder Ende
 // ändern. Jeder Dialog schickt eine Änderung; die Akte kommt danach neu.
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button } from "~/components/ui/button";
+import { ChoiceTile } from "~/components/ui/choice-tile";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
-import { FieldLabel } from "~/components/ui/field-label";
+import { FormFieldset } from "~/components/ui/form-fieldset";
 import { FormModal } from "~/components/ui/form-modal";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { Input } from "~/components/ui/input";
+import { Radio } from "~/components/ui/radio";
 import { SectionLabel } from "~/components/ui/section-label";
-import { SegmentedControl } from "~/components/ui/segmented-control";
 import { SwitchRow } from "~/components/ui/switch";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
@@ -32,6 +33,7 @@ import {
 } from "~/lib/traeger-staff-api";
 import {
   CONTRACT_KINDS,
+  CONTRACT_KIND_HINTS,
   CONTRACT_KIND_LABELS,
   CONTRACT_WEEKDAYS,
   changeableFrom,
@@ -138,7 +140,9 @@ function SitesFieldset({
           invalid={error !== undefined && parseHoursFields(site.hours) === null}
           onChange={(hours) =>
             onChange(
-              sites.map((entry, i) => (i === index ? { ...entry, hours } : entry)),
+              sites.map((entry, i) =>
+                i === index ? { ...entry, hours } : entry,
+              ),
             )
           }
         />
@@ -233,20 +237,43 @@ function KindChoice({
   value: StaffContractKind;
   onChange: (kind: StaffContractKind) => void;
 }>) {
+  const name = useId();
   return (
-    <div className="space-y-1.5">
-      <FieldLabel>Art des Vertrags</FieldLabel>
-      <SegmentedControl<StaffContractKind>
-        ariaLabel="Art des Vertrags"
-        fullWidth
-        items={CONTRACT_KINDS.map((kind) => ({
-          value: kind,
-          label: CONTRACT_KIND_LABELS[kind],
-        }))}
-        value={value}
-        onChange={onChange}
-      />
-    </div>
+    <FormFieldset
+      legend="Art des Vertrags"
+      hint="Jede Art rechnet der Lohnexport mit eigenen Lohnarten ab."
+    >
+      <div className="grid gap-2 sm:grid-cols-3">
+        {CONTRACT_KINDS.map((kind) => {
+          const id = `${name}-${kind}`;
+          const selected = value === kind;
+          return (
+            <ChoiceTile
+              key={kind}
+              htmlFor={id}
+              selected={selected}
+              className="items-start py-3"
+            >
+              <Radio
+                id={id}
+                name={name}
+                value={kind}
+                checked={selected}
+                onChange={() => onChange(kind)}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold">
+                  {CONTRACT_KIND_LABELS[kind]}
+                </span>
+                <span className="mt-0.5 block text-xs leading-5 font-normal text-gray-500">
+                  {CONTRACT_KIND_HINTS[kind]}
+                </span>
+              </span>
+            </ChoiceTile>
+          );
+        })}
+      </div>
+    </FormFieldset>
   );
 }
 
@@ -302,7 +329,11 @@ function PoolSwitch({
 }
 
 /** Arbeitsvertrag anlegen: Art, Laufzeit und das erste Soll je Schule. */
-export function CreateContractDialog({ record, onClose, onSaved }: DialogProps) {
+export function CreateContractDialog({
+  record,
+  onClose,
+  onSaved,
+}: DialogProps) {
   const [kind, setKind] = useState<StaffContractKind>("part_time");
   const [startsOn, setStartsOn] = useState("");
   const [endsOn, setEndsOn] = useState("");
@@ -336,7 +367,10 @@ export function CreateContractDialog({ record, onClose, onSaved }: DialogProps) 
             : undefined,
     };
     if (inputs === null || fields.starts_on || fields.ends_on || fields.sites) {
-      errors.invalid("Bitte prüfen Sie die markierten Felder.", fieldErrors(fields));
+      errors.invalid(
+        "Bitte prüfen Sie die markierten Felder.",
+        fieldErrors(fields),
+      );
       return;
     }
     void run(
@@ -471,7 +505,10 @@ export function ChangeSollDialog({
             : undefined,
     };
     if (inputs === null || fields.valid_from || fields.sites) {
-      errors.invalid("Bitte prüfen Sie die markierten Felder.", fieldErrors(fields));
+      errors.invalid(
+        "Bitte prüfen Sie die markierten Felder.",
+        fieldErrors(fields),
+      );
       return;
     }
     void run(
@@ -537,13 +574,18 @@ export function HolidayWeeksDialog({
   const [fromDay, setFromDay] = useState("");
   const [toDay, setToDay] = useState("");
   const [hours, setHours] = useState<readonly string[]>(() =>
-    hoursFields(contract.sites[0] ? (latestSoll(contract.sites[0])?.weekdayMinutes ?? null) : null),
+    hoursFields(
+      contract.sites[0]
+        ? (latestSoll(contract.sites[0])?.weekdayMinutes ?? null)
+        : null,
+    ),
   );
   const { save, errors, run } = useContractSave(true, "das Ferien-Soll");
 
   const fromWeek = fromDay ? mondayOf(fromDay) : "";
   const toWeek = toDay ? mondayOf(toDay) : fromWeek;
-  const weeks = fromWeek && toWeek >= fromWeek ? weekCount(fromWeek, toWeek) : 0;
+  const weeks =
+    fromWeek && toWeek >= fromWeek ? weekCount(fromWeek, toWeek) : 0;
   const minutes = parseHoursFields(hours);
   const earliest = site?.changeableFrom;
 
@@ -557,7 +599,10 @@ export function HolidayWeeksDialog({
       weekday_minutes: minutes === null ? HOURS_ERROR : undefined,
     };
     if (!site || minutes === null || fields.from_week || fields.to_week) {
-      errors.invalid("Bitte prüfen Sie die markierten Felder.", fieldErrors(fields));
+      errors.invalid(
+        "Bitte prüfen Sie die markierten Felder.",
+        fieldErrors(fields),
+      );
       return;
     }
     void run(
@@ -607,8 +652,14 @@ export function HolidayWeeksDialog({
             }))}
             onChange={(value) => {
               setSchoolId(value);
-              const next = contract.sites.find((entry) => entry.schoolId === value);
-              setHours(hoursFields(next ? (latestSoll(next)?.weekdayMinutes ?? null) : null));
+              const next = contract.sites.find(
+                (entry) => entry.schoolId === value,
+              );
+              setHours(
+                hoursFields(
+                  next ? (latestSoll(next)?.weekdayMinutes ?? null) : null,
+                ),
+              );
             }}
           />
         ) : null}
@@ -722,7 +773,9 @@ export function ContractTermsDialog({
           id="contract-terms-ends-on"
           label="Letzter Tag"
           hint={`Leer lassen, wenn der Vertrag unbefristet ist.${
-            earliest ? ` Frühestens am ${formatDate(previousDay(earliest))}.` : ""
+            earliest
+              ? ` Frühestens am ${formatDate(previousDay(earliest))}.`
+              : ""
           }`}
           error={errors.fieldError("ends_on")}
           value={endsOn}

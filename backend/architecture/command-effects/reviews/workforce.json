@@ -10447,6 +10447,16 @@
       "target_owner": "document-rendering"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerPayrollSettings.TraegerPayrollSettings",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerPayrollSettingsReader.TraegerPayrollSettings",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/settings/compose.TraegerSettings.TraegerTexts: the payroll values of the session's Träger (Berater- and Mandantennummer of the Lohn, a Lohnart per category and kind of Arbeitsvertrag and the unit of each day category; its values of traeger_payroll.* or the empty registry defaults), read before the Träger's payroll file over all schools is computed (#4712).",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
+      "target_owner": "settings-platform"
+    },
+    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerProofReminders.RunDue",
       "classification": "platform",
@@ -19317,6 +19327,66 @@
       "source_owner": "workforce",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
       "target_owner": ""
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.overviewStaffQuery.FindOverviewStaff",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0249) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.overviewStaffQuery.FindOverviewStaff",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0249) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.overviewStaffQuery.FindOverviewStaff",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0249) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindWithPersonByIDs",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.overviewStaffQuery.FindOverviewStaff",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0249) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.overviewStaffQuery.FindOverviewStaff",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0249) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.overviewStaffQuery.FindOverviewStaff",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.OverviewStaffQuery.FindOverviewStaff",
+      "reason": "Read-only target: the Träger payroll file (#4712, ADR 0249) resolves its employments by id through roots/owners.overviewStaffQuery.FindOverviewStaff, offboarded memberships included. Same hydration as ListOverviewStaff; value mapping only, no owned-row mutation, locking read or scope switch.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
+      "target_owner": "school-membership"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.overviewStaffQuery.ListOverviewStaff",

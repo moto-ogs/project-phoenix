@@ -19,13 +19,31 @@ export const CONTRACT_KIND_LABELS: Readonly<Record<StaffContractKind, string>> =
     part_time: "Teilzeit",
     full_time: "Vollzeit",
     minijob: "Minijob",
+    uebungsleiter: "Übungsleiter",
+    ehrenamt: "Ehrenamt",
   };
 
 export const CONTRACT_KINDS: readonly StaffContractKind[] = [
   "part_time",
   "full_time",
   "minijob",
+  "uebungsleiter",
+  "ehrenamt",
 ];
+
+/**
+ * Was eine Art für die Abrechnung heißt (#4712). Jede Art bekommt im
+ * Lohnexport eigene Lohnarten, so bleiben zum Beispiel Minijob und
+ * Übungsleiterpauschale getrennt.
+ */
+export const CONTRACT_KIND_HINTS: Readonly<Record<StaffContractKind, string>> =
+  {
+    part_time: "Weniger als volle Stunden.",
+    full_time: "Volle Wochenstunden.",
+    minijob: "Geringfügig beschäftigt.",
+    uebungsleiter: "Mit Übungsleiterpauschale.",
+    ehrenamt: "Mit Ehrenamtspauschale.",
+  };
 
 /** Montag bis Freitag, die Tage, für die ein Soll gilt. */
 export const CONTRACT_WEEKDAYS = [
@@ -103,7 +121,8 @@ export function contractPhaseLabel(
   contract: StaffContract,
   phase: ContractPhase,
 ): string {
-  if (phase === "upcoming") return `Beginnt am ${formatDate(contract.startsOn)}`;
+  if (phase === "upcoming")
+    return `Beginnt am ${formatDate(contract.startsOn)}`;
   if (phase === "ended") return "Beendet";
   return "Läuft";
 }

@@ -236,6 +236,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/personal/einsatzplanung": "Einsatzplanung",
     "/personal/vertretungspool": "Vertretungspool",
     "/personal/import": "Personal importieren",
+    "/personal/lohnexport": "Lohnexport",
     "/reset-password": "Passwort zurücksetzen",
     "/schliesstage": "Schließtage und Feiertage",
     "/schulen/:id": "Schule",

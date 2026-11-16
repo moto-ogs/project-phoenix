@@ -36,6 +36,7 @@ import { useTraegerSettingsSchema } from "~/components/traeger/use-traeger-resou
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useTraegerMasterData } from "~/components/traeger/use-traeger-master-data";
 import { TRAEGER_BRANDING_TAB } from "~/lib/traeger-branding";
+import { PAYROLL_SETTINGS_TAB } from "~/lib/traeger-staff-exports-api";
 import { metadataLoadError } from "~/components/traeger/metadata-load-error";
 import { TraegerContactSection } from "~/components/traeger/traeger-contact-section";
 import { FutureShiftsList } from "~/components/traeger/planning/future-shifts-list";
@@ -145,9 +146,11 @@ function TraegerSettingsContent() {
     [refresh],
   );
 
-  // The branding has its own page with the preview (#4653).
+  // The branding has its own page with the preview (#4653); the Lohnarten
+  // are a table on the Lohnexport page (#4712).
   const tabs = (schema?.tabs ?? []).filter(
-    (tab) => tab.key !== TRAEGER_BRANDING_TAB,
+    (tab) =>
+      tab.key !== TRAEGER_BRANDING_TAB && tab.key !== PAYROLL_SETTINGS_TAB,
   );
 
   const contactOpen = selectedTab === CONTACT_TAB;

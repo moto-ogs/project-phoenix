@@ -523,6 +523,10 @@ type TraegerProofStore interface {
 // tracking in that school's tenant transaction.
 type TraegerStaffContractStore interface {
 	ListStaffContracts(ctx context.Context, organizationID, recordID int64) ([]domain.TraegerStaffContract, error)
+	// ListMonthContracts returns every contract of the Träger that runs on
+	// a day of first..last, with the Einsatzorte whose Soll starts by last
+	// (#4712): the employments the Träger closes and pays that month.
+	ListMonthContracts(ctx context.Context, organizationID int64, first, last calendar.Date) ([]domain.TraegerStaffContract, error)
 	InsertStaffContract(ctx context.Context, contract domain.TraegerStaffContract, accountID int64) (int64, error)
 	UpdateStaffContractTerms(ctx context.Context, contract domain.TraegerStaffContract) error
 	ReplaceContractTargetsFrom(ctx context.Context, organizationID, contractID, accountID int64, validFrom calendar.Date, targets []domain.ContractTarget) error

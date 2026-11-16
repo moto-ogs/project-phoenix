@@ -168,6 +168,7 @@ const TRAEGER_PAGE_TITLES: ReadonlyArray<
   ["/personal/abwesenheitsarten", "Abwesenheitsarten"],
   ["/personal/einsatzplanung", "Einsatzplanung"],
   ["/personal/vertretungspool", "Vertretungspool"],
+  ["/personal/lohnexport", "Lohnexport"],
   ["/personal", "Personalakten"],
   ["/nachweise", "Personalnachweise"],
   // Die drei Bereiche der Abrechnung (#5145): die genaueren Adressen zuerst,

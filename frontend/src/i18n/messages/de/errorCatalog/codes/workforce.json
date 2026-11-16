@@ -123,5 +123,6 @@
   "pool_block_not_found": "Diese Blockung gibt es nicht mehr. Bitte laden Sie die Woche neu.",
   "pool_block_taken": "Diese Person ist zu dieser Zeit schon geblockt. Bitte wählen Sie eine andere Zeit.",
   "pool_springer_not_found": "Diese Person ist an diesem Tag nicht im Vertretungspool. Bitte laden Sie die Woche neu.",
-  "pool_springer_busy": "Die Person arbeitet zu dieser Zeit an einer anderen Schule. Bitte wählen Sie eine andere Zeit."
+  "pool_springer_busy": "Die Person arbeitet zu dieser Zeit an einer anderen Schule. Bitte wählen Sie eine andere Zeit.",
+  "traeger_payroll_not_ready": "Die Lohndatei kann noch nicht entstehen. Die Prüfung auf der Seite nennt, was noch fehlt."
 }

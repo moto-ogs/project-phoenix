@@ -123,5 +123,6 @@
   "pool_block_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "pool_block_taken": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "pool_springer_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
-  "pool_springer_busy": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
+  "pool_springer_busy": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "traeger_payroll_not_ready": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
 }

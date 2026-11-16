@@ -304,7 +304,7 @@ function ContractPanel({
             {
               label: "Vertrag ändern",
               description:
-                "Teilzeit, Vollzeit oder Minijob, der letzte Tag und der Vertretungspool.",
+                "Die Art des Vertrags, der letzte Tag und der Vertretungspool.",
               icon: <CalendarPlusIcon className="size-4" aria-hidden="true" />,
               onClick: () => onOpen({ kind: "terms", contract }),
             },

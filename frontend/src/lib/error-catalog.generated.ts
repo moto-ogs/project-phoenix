@@ -2043,6 +2043,8 @@ export const ERROR_CATALOG = {
         "An der Schule {school} ist {month} schon abgeschlossen. Bitte öffnen Sie zuerst diesen späteren Monat.",
       "workforce.traeger_month_not_kept":
         "In diesem Monat gilt kein Arbeitsvertrag des Trägers. Die Schulen schließen den Monat selbst ab.",
+      "workforce.traeger_payroll_not_ready":
+        "Die Lohndatei kann noch nicht entstehen. Die Prüfung auf der Seite nennt, was noch fehlt.",
       "workforce.traeger_planning_shift_not_found":
         "Die Schicht gibt es nicht mehr. Bitte laden Sie die Woche neu.",
       "workforce.traeger_planning_site_invalid":
