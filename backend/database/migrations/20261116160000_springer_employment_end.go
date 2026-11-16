@@ -36,7 +36,11 @@ func init() {
 //     for it: a block and an exit of one Springer wait for each other.
 //   - workforce.pool_ended writes the end into the record's trail, kind
 //     'ended' with the school and the acting account.
+//
+// workforce.pool_due_exits locks the record FOR NO KEY UPDATE, like
+// workforce.pool_springer_identity (repeatable_workforce_pool_springer_identity.go).
 const springerEmploymentEndUpSQL = `
+
 ALTER TABLE workforce.staff_record_changes DROP CONSTRAINT chk_workforce_staff_record_changes_kind;
 ALTER TABLE workforce.staff_record_changes ADD CONSTRAINT chk_workforce_staff_record_changes_kind
 	CHECK (kind IN ('linked', 'not_chosen', 'changed', 'added', 'removed', 'imported', 'ended'));
@@ -53,7 +57,7 @@ BEGIN
 	END IF;
 	IF p_staff_record_id IS NOT NULL THEN
 		PERFORM FROM workforce.staff_records AS record
-		WHERE record.organization_id = v_org AND record.id = p_staff_record_id FOR UPDATE;
+		WHERE record.organization_id = v_org AND record.id = p_staff_record_id FOR NO KEY UPDATE;
 	END IF;
 	RETURN QUERY
 	SELECT link.staff_record_id, link.membership_id, span.last_day, actor.account_id, actor.staff_id
