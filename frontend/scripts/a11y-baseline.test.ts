@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
-  maxCounts,
+  foundRules,
   readBaseline,
   routeKey,
   selectsSubset,
@@ -80,7 +80,7 @@ describe("unlisted", () => {
 
 describe("shrink", () => {
   it("drops rules a full run no longer finds, unseen routes and unused reasons, never adds", () => {
-    const seen = maxCounts([
+    const seen = foundRules([
       { route: "tenant /rooms", counts: { "color-contrast": 2 } },
       { route: "tenant /rooms", counts: { "color-contrast": 3 } },
       { route: "eltern /", counts: { "image-alt": 5 } },
@@ -91,13 +91,13 @@ describe("shrink", () => {
       routes: { "tenant /rooms": ["color-contrast"] },
     });
     expect(hints).toEqual([
-      "tenant /rooms: aria-prohibited-attr behoben, Eintrag entfällt",
+      "tenant /rooms: aria-prohibited-attr nicht mehr gefunden, Eintrag entfällt",
       "tenant /gone: in keinem Test geprüft, Eintrag entfällt",
     ]);
   });
 
   it("keeps a rule that only some scans of the route find", () => {
-    const seen = maxCounts([
+    const seen = foundRules([
       { route: "tenant /rooms", counts: {} },
       {
         route: "tenant /rooms",
@@ -110,7 +110,7 @@ describe("shrink", () => {
 });
 
 describe("readBaseline", () => {
-  it("reads the checked-in baseline: every rule has a reason, lists are sorted", () => {
+  it("keeps the checked-in baseline readable: sorted rules, no empty route", () => {
     const checkedIn = readBaseline(
       join(import.meta.dirname, "..", "e2e", "a11y", "baseline.json"),
     );

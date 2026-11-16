@@ -19,7 +19,7 @@ export interface Baseline {
 
 export interface ScanRecord {
   route: string;
-  /** axe-Regel → betroffene Knoten, nur für die Meldung. */
+  /** axe-Regel mit Fund → betroffene Knoten; die Zahl steht nur in der Meldung. */
   counts: Record<string, number>;
 }
 
@@ -79,30 +79,32 @@ export function routeKey(
   return `${portal} /${segments.join("/")}`;
 }
 
-/** Regeln mit Funden, die für die Route nicht in der Baseline stehen. */
+/**
+ * Regeln mit Funden, die für die Route nicht in der Baseline stehen. Eine
+ * gelistete Regel besteht mit jeder Knotenzahl: Neue Stellen einer bekannten
+ * Regel auf derselben Route fallen hier nicht auf, bis der Eintrag entfällt.
+ */
 export function unlisted(
   baseline: Baseline,
   record: ScanRecord,
 ): Array<{ rule: string; count: number }> {
   const known = new Set(baseline.routes[record.route]);
   return Object.entries(record.counts)
-    .filter(([rule, count]) => count > 0 && !known.has(rule))
+    .filter(([rule]) => !known.has(rule))
     .map(([rule, count]) => ({ rule, count }));
 }
 
-/** Höchste Knotenzahl je Route und Regel über alle Prüfungen eines Laufs. */
-export function maxCounts(
+/** Route → Regeln, die mindestens eine Prüfung des Laufs dort fand. */
+export function foundRules(
   records: readonly ScanRecord[],
-): Map<string, Record<string, number>> {
-  const max = new Map<string, Record<string, number>>();
+): Map<string, Set<string>> {
+  const found = new Map<string, Set<string>>();
   for (const { route, counts } of records) {
-    const entry = max.get(route) ?? {};
-    for (const [rule, count] of Object.entries(counts)) {
-      entry[rule] = Math.max(entry[rule] ?? 0, count);
-    }
-    max.set(route, entry);
+    const rules = found.get(route) ?? new Set<string>();
+    for (const rule of Object.keys(counts)) rules.add(rule);
+    found.set(route, rules);
   }
-  return max;
+  return found;
 }
 
 /**
@@ -112,19 +114,19 @@ export function maxCounts(
  */
 export function shrink(
   baseline: Baseline,
-  seen: Map<string, Record<string, number>>,
+  found: Map<string, Set<string>>,
 ): { next: Baseline; hints: string[] } {
   const hints: string[] = [];
   const routes: Baseline["routes"] = {};
   for (const [route, rules] of Object.entries(baseline.routes)) {
-    const measured = seen.get(route);
-    if (!measured) {
+    const foundHere = found.get(route);
+    if (!foundHere) {
       hints.push(`${route}: in keinem Test geprüft, Eintrag entfällt`);
       continue;
     }
     const kept = rules.filter((rule) => {
-      if ((measured[rule] ?? 0) > 0) return true;
-      hints.push(`${route}: ${rule} behoben, Eintrag entfällt`);
+      if (foundHere.has(rule)) return true;
+      hints.push(`${route}: ${rule} nicht mehr gefunden, Eintrag entfällt`);
       return false;
     });
     if (kept.length > 0) routes[route] = kept;

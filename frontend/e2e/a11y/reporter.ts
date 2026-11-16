@@ -8,7 +8,7 @@ import type {
 import { writeFileSync } from "node:fs";
 
 import {
-  maxCounts,
+  foundRules,
   readBaseline,
   selectsSubset,
   shrink,
@@ -60,7 +60,7 @@ export default class A11yReporter implements Reporter {
       this.config?.shard === null &&
       !selectsSubset(process.argv);
     const baseline = readBaseline(BASELINE_PATH);
-    const seen = maxCounts(this.records);
+    const seen = foundRules(this.records);
     // Ein Teillauf (CI-Shard, eine Datei) meldet nur Routen, die er sah.
     const { next, hints } = shrink(
       complete
@@ -87,7 +87,7 @@ export default class A11yReporter implements Reporter {
     console.log(
       [
         complete
-          ? "A11y-Baseline kann kürzer werden: A11Y_BASELINE_SHRINK=1 pnpm run test:e2e. Ohne behobene Ursache erst, wenn ein zweiter Lauf auf frisch geseedeter Datenbank es bestätigt: Manche Funde hängen an Daten, die nicht jeder Lauf zeigt."
+          ? "A11y-Baseline kann kürzer werden: A11Y_BASELINE_SHRINK=1 pnpm run test:e2e. Ohne behobene Ursache nicht kürzen: Manche Funde hängen an Daten oder am Wochentag, ein Lauf ohne sie beweist nichts, und der nächste Lauf mit ihnen wäre rot."
           : "A11y-Baseline: Hinweise aus einem Teillauf; kürzen darf nur ein grüner, voller Lauf:",
         ...lines,
       ].join("\n"),

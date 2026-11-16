@@ -14,9 +14,14 @@ import {
 // Die Baseline nennt je Route die axe-Regeln, die dort als offene Schuld
 // bekannt sind. Eine Regel, die für die Route nicht in der Baseline steht,
 // macht den Test rot; findet ein voller Lauf eine gelistete Regel nicht mehr,
-// meldet reporter.ts, dass der Eintrag entfallen kann. Die Baseline zählt
-// bewusst keine Knoten oder Stellen (#7196): Die Zahl hängt an Daten und
-// Wochentag, nicht am Code.
+// meldet reporter.ts, dass der Eintrag entfallen kann.
+//
+// Die Baseline zählt bewusst keine Knoten oder Stellen (#7196): Die Zahl
+// hängt an Daten und Wochentag, nicht am Code. Der Preis: Eine neue Stelle
+// einer gelisteten Regel auf derselben Route fällt nicht auf, bis die Schuld
+// dort getilgt ist (#7112) und der Eintrag entfällt. Fingerprints pro Knoten
+// gibt es ebenso bewusst nicht: Sie brechen bei jedem Umbau und laden dazu
+// ein, die Baseline blind neu zu erzeugen (Spec in #2790).
 //
 // Specs importieren `test` und `expect` von hier statt von
 // "@playwright/test". Der Fixture-Wrapper prüft nach `page.goto`,
