@@ -39,7 +39,7 @@ func (d *closingDayPreferencesDouble) FilterPermitted(_ context.Context, notific
 func TestClosingDayNoticesExcludeStaffWithoutTheTypePermission(t *testing.T) {
 	t.Parallel()
 	preferences := &closingDayPreferencesDouble{permitted: []int64{11}}
-	var sent deliveryCompose.NotificationEvent
+	var sent []deliveryCompose.NotificationEvent
 	notices := schoolCalendarClosingDayNotices{
 		audience: closingDayAudienceFunc(func(context.Context, int64) (deliveryContract.SchoolAudienceMembers, error) {
 			return deliveryContract.SchoolAudienceMembers{
@@ -47,7 +47,10 @@ func TestClosingDayNoticesExcludeStaffWithoutTheTypePermission(t *testing.T) {
 				SchoolAccountIDs: []int64{12, 13},
 			}, nil
 		}),
-		notifier:    staffPushRouterFunc(func(_ context.Context, event deliveryCompose.NotificationEvent) error { sent = event; return nil }),
+		notifier: staffPushRouterFunc(func(_ context.Context, event deliveryCompose.NotificationEvent) error {
+			sent = append(sent, event)
+			return nil
+		}),
 		preferences: preferences,
 		actor:       func(context.Context) int64 { return 0 },
 		now:         func() time.Time { return time.Unix(0, 0) },
@@ -58,7 +61,22 @@ func TestClosingDayNoticesExcludeStaffWithoutTheTypePermission(t *testing.T) {
 
 	assert.Equal(t, deliveryContract.NotificationSchoolClosingDayChanged, preferences.permittedType)
 	assert.Equal(t, []int64{11, 12, 14}, preferences.permittedInput)
-	assert.Equal(t, []int64{11, 12, 13}, sent.Audience.StaffAccountIDs)
-	assert.NotNil(t, sent.Feed)
-	assert.Equal(t, []int64{11, 12, 13}, sent.Feed.PushAccountIDs)
+	require.Len(t, sent, 2)
+	assert.Equal(t, []int64{11}, sent[0].Audience.StaffAccountIDs)
+	assert.Empty(t, sent[0].Portal)
+	require.NotNil(t, sent[0].Feed)
+	assert.Equal(t, []int64{11}, sent[0].Feed.PushAccountIDs)
+	assert.Equal(t, []int64{12, 13}, sent[1].Audience.StaffAccountIDs)
+	assert.Equal(t, "school", sent[1].Portal)
+	assert.Empty(t, sent[1].DeepLink)
+	assert.Equal(t, closingDaySchoolLink, sent[1].SchoolDeepLink)
+	require.NotNil(t, sent[1].Feed)
+	assert.Equal(t, []int64{12, 13}, sent[1].Feed.PushAccountIDs)
+}
+
+func TestClosingDayParentLinkUsesTheParentsCalendar(t *testing.T) {
+	t.Parallel()
+	days := schoolcalendar.ClosingDayRange{StartsOn: calendar.NewDate(2030, time.June, 12), EndsOn: calendar.NewDate(2030, time.June, 12)}
+
+	assert.Equal(t, "/parents/calendar?date=2030-06-12", closingDayParentLinkFor(schoolcalendar.ClosingDayNotice{Current: &days}))
 }

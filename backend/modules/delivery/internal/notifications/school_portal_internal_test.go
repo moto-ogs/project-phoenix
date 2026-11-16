@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/subscriptiontest"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
@@ -197,6 +198,29 @@ func TestSchoolPushDeliveryIsLimitedToSupportedTypes(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []*deliveryModels.PushSubscription{schoolSub}, schoolOnly,
 		"a school-only type never reaches an OGS device of the same account (#4792)")
+}
+
+func TestSchoolPortalNarrowingKeepsAStaffTypeOutOfOGS(t *testing.T) {
+	t.Parallel()
+
+	event := Event{Type: TypeSchoolClosingDayChanged, Portal: PortalSchool}
+	assert.False(t, deliversToStaffPortal(event))
+	assert.True(t, deliversToSchoolPortal(event))
+}
+
+func TestSchoolOnlyFeedEventUsesTheSchoolLink(t *testing.T) {
+	t.Parallel()
+
+	_, err := feedType(Event{
+		Type:           TypeSchoolClosingDayChanged,
+		Portal:         PortalSchool,
+		SchoolDeepLink: "/school/kalender",
+		RelatedType:    "closing_day",
+		RelatedID:      7,
+		Audience:       Audience{Scope: ScopeStaff},
+		Feed:           &contract.NotificationFeedDelivery{},
+	})
+	require.NoError(t, err)
 }
 
 // The same split holds for the devices: a test fired in moto schule reaches

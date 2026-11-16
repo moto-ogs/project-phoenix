@@ -20,7 +20,7 @@ import (
 const (
 	closingDayStaffLink  = "/calendar"
 	closingDaySchoolLink = "/school/kalender"
-	closingDayParentLink = "/calendar"
+	closingDayParentLink = "/parents/calendar"
 )
 
 // schoolCalendarClosingDayNotices binds School Calendar's notice about a
@@ -70,9 +70,17 @@ func (n schoolCalendarClosingDayNotices) NotifyClosingDayChanged(ctx context.Con
 	if err != nil {
 		return fmt.Errorf("closing day notice: filter staff recipients: %w", err)
 	}
-	staff = append(staff, withoutAccount(audience.SchoolAccountIDs, actor)...)
 	slices.Sort(staff)
 	staff = slices.Compact(staff)
+	school := withoutAccount(audience.SchoolAccountIDs, actor)
+	// An account that may read the notice in the OGS portal is sent one
+	// regular event for both portals. The remaining school accounts must not
+	// re-enter that audience: they lack the OGS permission this type requires.
+	school = slices.DeleteFunc(school, func(accountID int64) bool {
+		return slices.Contains(staff, accountID)
+	})
+	slices.Sort(school)
+	school = slices.Compact(school)
 	guardians := withoutAccount(audience.GuardianAccountIDs, actor)
 	title, body := closingDayNoticeCopy(notice)
 	key := fmt.Sprintf("school_closing_day:%d:%d", notice.ClosingDayID, n.now().UnixNano())
@@ -87,6 +95,21 @@ func (n schoolCalendarClosingDayNotices) NotifyClosingDayChanged(ctx context.Con
 			TenantID: tenantID, Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: staff,
 		}
 		if err := n.send(ctx, staffEvent, staff, notice.Push); err != nil {
+			return err
+		}
+	}
+	if len(school) > 0 {
+		schoolEvent := event
+		schoolEvent.Type, schoolEvent.IdempotencyKey = deliveryContract.NotificationSchoolClosingDayChanged, key+":school"
+		schoolEvent.Portal = deliveryCompose.NotificationPortalSchool
+		// An empty OGS link keeps this entry out of the OGS feed. Delivery
+		// sends the event only to moto-schule devices and exposes its school
+		// link in that portal.
+		schoolEvent.SchoolDeepLink = closingDaySchoolLink
+		schoolEvent.Audience = deliveryCompose.NotificationAudience{
+			TenantID: tenantID, Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: school,
+		}
+		if err := n.send(ctx, schoolEvent, school, notice.Push); err != nil {
 			return err
 		}
 	}

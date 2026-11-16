@@ -70,6 +70,9 @@ const (
 // enrollment.
 const NotificationEnrollmentSubmitted = notifications.TypeEnrollmentSubmitted
 
+// NotificationPortalSchool narrows a staff notification to moto schule.
+const NotificationPortalSchool = notifications.PortalSchool
+
 var (
 	NewEmailOutbox                   = emailoutbox.NewService
 	NewEmailTemplateRegistry         = emailoutbox.NewTemplateRegistry

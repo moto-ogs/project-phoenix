@@ -75,10 +75,12 @@ const publishFeedEntriesSQL = `WITH recipient AS (
 // its entries. A staff or school session never reads a guardian entry (#7140),
 // even when its account is a guardian too. The predicate applies the
 // delivery-time conditions of platform.delivery_realtime_recipients, as Web
-// Push and SSE do.
+// Push and SSE do. An empty OGS link marks an entry that exists exclusively
+// in moto schule (#7144).
 const feedReaderSQL = `EXISTS (SELECT 1 FROM platform.delivery_realtime_recipients AS reader
 	WHERE reader.tenant_id = ? AND reader.account_id = ? AND reader.active
 		AND CASE WHEN ? THEN reader.has_school_role ELSE reader.has_staff_role END)
+	AND (? OR deep_link <> '')
 	AND cardinality(student_ids) = 0`
 
 // guardianFeedReadableSQL admits the entry of a guardian only while the
@@ -148,7 +150,7 @@ func (s *Store) ListFeedEntries(ctx context.Context, tenantID, accountID int64, 
 		Where("tenant_id = ?", tenantID).
 		Where("account_id = ?", accountID).
 		Where("type = ANY(?)", pgdialect.Array(view.Types)).
-		Where(feedReaderSQL, tenantID, accountID, view.School)
+		Where(feedReaderSQL, tenantID, accountID, view.School, view.School)
 	if after != nil {
 		query = query.Where("(updated_at, id) < (?, ?)", after.UpdatedAt, after.ID)
 	}
@@ -199,7 +201,7 @@ func (s *Store) CountUnreadFeedEntries(ctx context.Context, tenantID, accountID 
 		Where("account_id = ?", accountID).
 		Where("type = ANY(?)", pgdialect.Array(view.Types)).
 		Where("read_at IS NULL").
-		Where(feedReaderSQL, tenantID, accountID, view.School).
+		Where(feedReaderSQL, tenantID, accountID, view.School, view.School).
 		Count(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("delivery postgres: count unread feed entries: %w", err)
@@ -216,7 +218,7 @@ func (s *Store) MarkFeedEntryRead(ctx context.Context, tenantID, accountID int64
 	err = db.NewRaw(`UPDATE platform.notification_feed_entries
 		SET read_at = COALESCE(read_at, ?)
 		WHERE tenant_id = ? AND account_id = ? AND id = ? AND type = ANY(?) AND `+feedReaderSQL+`
-		RETURNING id`, now, tenantID, accountID, entryID, pgdialect.Array(view.Types), tenantID, accountID, view.School).Scan(ctx, &ids)
+		RETURNING id`, now, tenantID, accountID, entryID, pgdialect.Array(view.Types), tenantID, accountID, view.School, view.School).Scan(ctx, &ids)
 	if err != nil {
 		return false, fmt.Errorf("delivery postgres: mark feed entry read: %w", err)
 	}
@@ -231,7 +233,7 @@ func (s *Store) MarkAllFeedEntriesRead(ctx context.Context, tenantID, accountID 
 	return affected("mark all feed entries read")(db.ExecContext(ctx, `UPDATE platform.notification_feed_entries
 		SET read_at = ?
 		WHERE tenant_id = ? AND account_id = ? AND read_at IS NULL AND type = ANY(?) AND `+feedReaderSQL,
-		now, tenantID, accountID, pgdialect.Array(view.Types), tenantID, accountID, view.School))
+		now, tenantID, accountID, pgdialect.Array(view.Types), tenantID, accountID, view.School, view.School))
 }
 
 func (s *Store) DeleteExpiredFeedEntries(ctx context.Context, tenantID int64, before time.Time) (int, error) {

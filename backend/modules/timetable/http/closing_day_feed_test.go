@@ -212,6 +212,8 @@ func TestClosingDayFeedReachesEveryAccountOfTheSchoolOnly(t *testing.T) {
 	f := newClosingFeedFixture(t)
 	leitung, staff, quiet, departed := f.staff(t, "Leitung"), f.staff(t, "Betreuung"), f.staff(t, "Ruhig"), f.staff(t, "Ausgeschieden")
 	withoutActivities := f.staffWithoutActivities(t, "Ohne Recht")
+	testpkg.AssignLehrkraftSystemRole(t, f.db, withoutActivities.accountID, f.tenantID)
+	f.device(t, withoutActivities.accountID, "school")
 	teacher := f.teacher(t)
 	family, withoutAccess := f.family(t), f.family(t)
 	f.consent(quiet.accountID, deliveryContract.NotificationSchoolClosingDayChanged, false)
@@ -236,11 +238,14 @@ func TestClosingDayFeedReachesEveryAccountOfTheSchoolOnly(t *testing.T) {
 	school := f.entries(t, teacher.accountID, f.tenantID, "school")
 	require.Len(t, school, 1, "the Lehrkraft reads it in moto schule")
 	assert.Equal(t, "/school/kalender", school[0].DeepLink)
+	schoolWithoutActivities := f.entries(t, withoutActivities.accountID, f.tenantID, "school")
+	require.Len(t, schoolWithoutActivities, 1, "the account reads it only in moto schule")
+	assert.Equal(t, "/school/kalender", schoolWithoutActivities[0].DeepLink)
 	parent := f.entries(t, family.AccountID, 0, "parent")
 	require.Len(t, parent, 1, "the family reads it in the parents portal")
 	assert.Equal(t, deliveryContract.NotificationParentSchoolClosingDayChanged, parent[0].Type)
 	assert.Equal(t, body, parent[0].Body)
-	assert.Equal(t, "/calendar?date=2030-06-12", parent[0].DeepLink)
+	assert.Equal(t, "/parents/calendar?date=2030-06-12", parent[0].DeepLink)
 
 	assert.Empty(t, f.entries(t, leitung.accountID, f.tenantID, "staff"), "who entered it gets nothing")
 	assert.Empty(t, f.entries(t, departed.accountID, f.tenantID, "staff"), "who left the school gets nothing")
@@ -254,7 +259,7 @@ func TestClosingDayFeedReachesEveryAccountOfTheSchoolOnly(t *testing.T) {
 	assert.Zero(t, f.pushes(t, quiet.accountID), "who switched it off gets the entry without a push")
 	assert.Zero(t, f.pushes(t, leitung.accountID))
 	assert.Zero(t, f.pushes(t, departed.accountID))
-	assert.Zero(t, f.pushes(t, withoutActivities.accountID))
+	assert.Equal(t, 1, f.pushes(t, withoutActivities.accountID), "the school-only account gets the school push")
 
 	// The family's access is checked on every read: once the school takes
 	// parent_portal.access back, the entry is gone without being deleted.

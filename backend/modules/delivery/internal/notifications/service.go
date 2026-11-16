@@ -132,11 +132,11 @@ type Event struct {
 	// the push and in-app hint channels then skip it.
 	feedOnly bool
 
-	// Portal names the portal that asked for the event. It is only consulted
-	// for TypeTest (#2208): the test notification proves the setup of the
-	// portal the person is standing in, so it must not fan out into the other
-	// staff portal. Empty means PortalStaff. Catalogue types ignore it — where
-	// they are delivered is decided by the catalogue, not by the producer.
+	// Portal narrows a staff event to one portal. It normally belongs only to
+	// TypeTest (#2208), which proves the setup of the portal the person is
+	// standing in. A catalogue type may use PortalSchool when an audience has
+	// access only in moto schule; the catalogue must still offer the type
+	// there. Empty means both portals the catalogue offers the type in.
 	Portal string
 }
 
