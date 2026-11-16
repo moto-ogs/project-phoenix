@@ -249,7 +249,9 @@ const ALL_CHILDREN: NavEntry = {
   },
 };
 const SEARCH = 'input[placeholder^="Name suchen"]';
-const CHECKIN_TOGGLE = 'button[aria-label="Kinder an- und abmelden"]';
+// The switch into the mode, desktop and phone; named by its visible text
+// since #7112, so the tour finds it by a marker.
+const CHECKIN_TOGGLE = "button[data-checkin-toggle]";
 const CHECKIN_BAR = '[aria-label="An- und Abmelde-Modus"]';
 
 /** Die geführten Touren der ersten Schritte (#3748). */

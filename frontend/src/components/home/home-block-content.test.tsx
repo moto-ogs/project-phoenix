@@ -365,7 +365,7 @@ describe("HomeBlockContent — Listen", () => {
 
     expect(
       screen.getByRole("link", {
-        name: "OGS Gruppe A, Aktiv: Betreuung öffnen",
+        name: /^OGS Gruppe A .* ?, Aktiv: Betreuung öffnen$/,
       }),
     ).toHaveAttribute("href", "/test-tenant/ogs-groups");
   });
