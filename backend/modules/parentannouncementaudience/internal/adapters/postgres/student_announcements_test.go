@@ -50,17 +50,25 @@ func TestStudentAnnouncementsListWhatReachedTheChild(t *testing.T) {
 	recorded := announce("Recorded letter", "letter", []int64{family.StudentID}, "4c", true)
 	legacy := announce("Legacy letter", "letter", nil, "1a", true)
 	answered := announce("Answered consent", "declaration", []int64{other.ID}, "4c", true)
+	// Answered, then retracted by the school: the answers and their proof stay.
+	retracted := announce("Retracted consent", "declaration", nil, "1a", false)
+	// A retracted class letter is its author's private draft again.
+	classDraft := announce("Retracted class consent", "declaration", nil, "1a", false)
+	_, err := db.NewRaw(`UPDATE users.parent_announcements SET sender_name = 'Lena Lehrerin', sender_school_class = '1a' WHERE id = ?`, classDraft).Exec(ctx)
+	require.NoError(t, err)
 	announce("Other child", "letter", []int64{other.ID}, "1a", true)
 	announce("Draft letter", "letter", nil, "1a", false)
 	announce("Plain news", "standard", []int64{family.StudentID}, "1a", true)
 
-	_, err := db.NewRaw(`INSERT INTO users.parent_announcement_reads (tenant_id, announcement_id, account_id, acknowledged_at)
+	_, err = db.NewRaw(`INSERT INTO users.parent_announcement_reads (tenant_id, announcement_id, account_id, acknowledged_at)
 		VALUES (?, ?, ?, NOW())`, tenantID, recorded, family.AccountID).Exec(ctx)
 	require.NoError(t, err)
 
 	projection := New(func(context.Context) (bun.IDB, int64, error) { return db, 0, nil }, noApplicants{}, testpkg.GuardianLinks{})
 	history := []contract.DeclarationHistoryLink{
 		{TenantID: tenantID, AnnouncementID: answered, StudentID: family.StudentID},
+		{TenantID: tenantID, AnnouncementID: retracted, StudentID: family.StudentID},
+		{TenantID: tenantID, AnnouncementID: classDraft, StudentID: family.StudentID},
 		// Another child's answer names nothing of this child.
 		{TenantID: tenantID, AnnouncementID: answered + 1000, StudentID: other.ID},
 	}
@@ -70,7 +78,10 @@ func TestStudentAnnouncementsListWhatReachedTheChild(t *testing.T) {
 	for _, row := range rows {
 		byID[row.AnnouncementID] = row
 	}
-	require.Len(t, rows, 3)
+	require.Len(t, rows, 4)
+	require.Contains(t, byID, retracted, "a retracted declaration keeps the answers given for the child")
+	require.Nil(t, byID[retracted].PublishedAt)
+	require.NotContains(t, byID, classDraft, "a retracted class letter stays private to its author")
 	require.Contains(t, byID, recorded)
 	require.Contains(t, byID, legacy, "a publication from before the record follows the targets of today")
 	require.Contains(t, byID, answered, "an answered declaration stays in the child's record")

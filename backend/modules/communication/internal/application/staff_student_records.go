@@ -60,8 +60,11 @@ func (s *service) studentParentRecords(ctx context.Context, actorAccountID, stud
 
 func studentLetter(a *communication.PortalStudentAnnouncement) communication.StudentParentLetter {
 	letter := communication.StudentParentLetter{
-		AnnouncementID: a.AnnouncementID, Title: a.Title, PublishedAt: a.PublishedAt,
+		AnnouncementID: a.AnnouncementID, Title: a.Title,
 		CanConfirm: a.CanConfirm || a.AcknowledgedAt != nil, AcknowledgedAt: a.AcknowledgedAt,
+	}
+	if a.PublishedAt != nil {
+		letter.PublishedAt = *a.PublishedAt
 	}
 	if a.AcknowledgedAt != nil {
 		letter.AcknowledgedBy = strings.TrimSpace(a.AckFirstName + " " + a.AckLastName)
@@ -95,11 +98,16 @@ func studentDeclaration(a *communication.PortalStudentAnnouncement, rows *commun
 		}
 	}
 	declaration := communication.StudentParentDeclaration{
-		AnnouncementID: a.AnnouncementID, Title: a.Title, PublishedAt: a.PublishedAt, Deadline: a.ResponseDeadline,
+		AnnouncementID: a.AnnouncementID, Title: a.Title, Deadline: a.ResponseDeadline,
 		Signers: []communication.DeclarationSignerStatus{},
 	}
 	if current := facts.currentVersion(); current != nil {
 		declaration.VersionNo = current.VersionNo
+		// A retracted declaration keeps the day its answered version went out.
+		declaration.PublishedAt = current.PublishedAt
+	}
+	if a.PublishedAt != nil {
+		declaration.PublishedAt = *a.PublishedAt
 	}
 	for _, child := range declarationChildStatuses(facts, now) {
 		declaration.State = child.State

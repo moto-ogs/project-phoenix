@@ -228,6 +228,16 @@ function DeclarationGroup({
   const waiting = declarations.filter(
     (d) => d.state === "open" || d.state === "partial",
   ).length;
+  const answered = declarations.every(
+    (d) =>
+      d.state === "agreed" || d.state === "declined" || d.state === "revoked",
+  );
+  const summary =
+    waiting > 0
+      ? `${waiting} offen`
+      : answered
+        ? "Alle beantwortet"
+        : undefined;
 
   const downloadProof = async (declaration: StudentParentDeclaration) => {
     setDownloading(declaration.announcement_id);
@@ -257,7 +267,7 @@ function DeclarationGroup({
     <section aria-labelledby="kind-einverstaendnisse">
       <ListGroupHeader
         title={<span id="kind-einverstaendnisse">Einverständnisse</span>}
-        meta={waiting > 0 ? `${waiting} offen` : "Alle beantwortet"}
+        meta={summary}
         className="mb-3"
       />
       <ResponsiveActionList id="kind-einverstaendnisse-liste">

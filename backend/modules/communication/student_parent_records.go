@@ -13,12 +13,13 @@ import (
 
 // PortalStudentAnnouncement is one published Elternbrief or Einverständnis
 // that reached a child, or that a guardian answered for it. The
-// confirmation fields belong to a letter.
+// confirmation fields belong to a letter. PublishedAt is nil for an answered
+// declaration the school retracted.
 type PortalStudentAnnouncement struct {
 	AnnouncementID   int64
 	Title            string
 	DeliveryMode     string
-	PublishedAt      time.Time
+	PublishedAt      *time.Time
 	ResponseDeadline *time.Time
 	CanConfirm       bool
 	AcknowledgedAt   *time.Time

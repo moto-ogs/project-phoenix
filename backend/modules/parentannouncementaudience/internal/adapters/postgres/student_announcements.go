@@ -12,7 +12,9 @@ import (
 // Einverständnis of the school that reached one child (#4814): its recorded
 // children once published (#6988), the targets of today before that, and
 // every declaration a guardian answered for the child (the history links),
-// so a given consent stays in the child's record after a class change. A
+// so a given consent stays in the child's record after a class change and
+// after the school retracted it (published_at is then NULL; the answers and
+// their proof remain, as the declaration's retention guards intend). A
 // letter carries the child's confirmation as letterChildStatusesSQL derives
 // it: the first acknowledgement by a portal guardian of exactly this child.
 //
@@ -53,27 +55,28 @@ const studentAnnouncementsSQL = `WITH history AS (
 				LIMIT 1
 			) ack ON ra.delivery_mode = 'letter'
 			WHERE ra.tenant_id = ?
-				AND ra.published_at IS NOT NULL
 				AND ra.system_kind IS NULL
 				AND ra.delivery_mode IN ('letter', 'declaration')
 				AND (
-					ra.id IN (SELECT announcement_id FROM history)
-					OR EXISTS (
+					-- A retracted class letter is its author's private draft again.
+					(ra.delivery_mode = 'declaration' AND ra.id IN (SELECT announcement_id FROM history)
+						AND (ra.published_at IS NOT NULL OR ra.sender_name IS NULL))
+					OR (ra.published_at IS NOT NULL AND EXISTS (
 						SELECT 1
 						FROM users.parent_announcement_targets pt
 						JOIN users.student_profiles s ON s.id = ? AND s.tenant_id = ?` + studentMembershipJoins + ` AND (` + studentReachedBound + `
 						)
 						JOIN users.persons p ON p.id = s.person_id AND p.deleted_at IS NULL
 						WHERE pt.announcement_id = ra.id AND pt.tenant_id = ra.tenant_id
-					)
+					))
 				)
-			ORDER BY ra.published_at DESC, ra.id DESC`
+			ORDER BY ra.published_at DESC NULLS LAST, ra.id DESC`
 
 type studentAnnouncementRow struct {
 	AnnouncementID   int64      `bun:"announcement_id"`
 	Title            string     `bun:"title"`
 	DeliveryMode     string     `bun:"delivery_mode"`
-	PublishedAt      time.Time  `bun:"published_at"`
+	PublishedAt      *time.Time `bun:"published_at"`
 	ResponseDeadline *time.Time `bun:"response_deadline"`
 	CanConfirm       bool       `bun:"can_confirm"`
 	AcknowledgedAt   *time.Time `bun:"acknowledged_at"`

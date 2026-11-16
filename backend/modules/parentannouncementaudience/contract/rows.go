@@ -235,11 +235,12 @@ type GroupStudent struct {
 // reached a child, or that a guardian answered for it (#4814). The
 // confirmation fields belong to a letter: the first guardian of the child
 // who confirmed it, and whether any guardian of the child can confirm.
+// PublishedAt is nil for an answered declaration the school retracted.
 type StudentAnnouncement struct {
 	AnnouncementID   int64
 	Title            string
 	DeliveryMode     string
-	PublishedAt      time.Time
+	PublishedAt      *time.Time
 	ResponseDeadline *time.Time
 	CanConfirm       bool
 	AcknowledgedAt   *time.Time

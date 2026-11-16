@@ -174,6 +174,26 @@ describe("StudentParentRecordsCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("claims all answered only when every declaration got an answer", () => {
+    swrResult.data = {
+      letters: [],
+      declarations: [
+        { ...records.declarations[1]!, announcement_id: "31" },
+        {
+          ...records.declarations[0]!,
+          announcement_id: "32",
+          title: "Abgelaufen",
+          state: "expired",
+        },
+      ],
+    };
+    renderCard();
+
+    expect(screen.getByText("Abgelaufen")).toBeInTheDocument();
+    expect(screen.queryByText("Alle beantwortet")).not.toBeInTheDocument();
+    expect(screen.queryByText(/offen$/)).not.toBeInTheDocument();
+  });
+
   it("says what will appear when nothing was sent yet", () => {
     swrResult.data = { letters: [], declarations: [] };
     renderCard();
