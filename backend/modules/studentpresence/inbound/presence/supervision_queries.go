@@ -15,7 +15,7 @@ func (rs *Resource) presenceSupervisionResponses(ctx context.Context, filter stu
 	}
 	responses := make([]SupervisorResponse, 0, len(rows))
 	for _, row := range rows {
-		response, err := presenceSupervisionResponse(row, calendar.TodayDate())
+		response, err := presenceSupervisionResponse(row, rs.today())
 		if err != nil {
 			return nil, &presenceError{Op: operation, Err: studentpresence.ErrDatabaseOperation}
 		}
@@ -79,8 +79,8 @@ func (rs *Resource) presenceSupervisionRow(ctx context.Context, id int64) (stude
 
 // supervisionRowResponse renders a persisted supervision row when the
 // trailing re-read after a write fails.
-func supervisionRowResponse(row studentpresence.GroupSupervision) SupervisorResponse {
-	response, err := presenceSupervisionResponse(row, calendar.TodayDate())
+func supervisionRowResponse(row studentpresence.GroupSupervision, today calendar.Date) SupervisorResponse {
+	response, err := presenceSupervisionResponse(row, today)
 	if err != nil {
 		return SupervisorResponse{ID: row.ID, StaffID: row.StaffID, ActiveGroupID: row.GroupID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt}
 	}

@@ -13,7 +13,7 @@ import (
 func TestRoomUtilizationRequiresTenantAndValidWindows(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}})
+	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}, Now: presenceClock})
 	require.NoError(t, err)
 	_, err = module.RoomUtilization(context.Background(), nil)
 	require.Error(t, err, "even an empty report requires a tenant")
@@ -23,7 +23,7 @@ func TestRoomUtilizationRequiresTenantAndValidWindows(t *testing.T) {
 	_, err = module.RoomUtilization(testpkg.Ctx(t), []studentpresence.StudentVisitWindow{{StudentID: 1}})
 	require.Error(t, err, "invalid intervals must not reach the aggregate")
 	student := testpkg.CreateTestStudent(t, db, "Visit", "Window", "3a")
-	start := testpkg.TodayDate().BerlinMidnight()
+	start := presenceToday.BerlinMidnight()
 	window := studentpresence.StudentVisitWindow{StudentID: student.ID, StartAt: start, EndAt: start.AddDate(0, 0, 1)}
 	_, err = module.RoomUtilization(testpkg.Ctx(t), []studentpresence.StudentVisitWindow{window, window})
 	require.ErrorContains(t, err, "overlapping", "duplicate windows must not double-count a visit")

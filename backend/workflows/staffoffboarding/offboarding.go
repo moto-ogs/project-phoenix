@@ -29,6 +29,9 @@ type Actor struct {
 	// PlannedExitDay is the last working day when the scheduler runs a
 	// planned exit in the planner's name (#4809), empty for a request.
 	PlannedExitDay *calendar.Date
+	// SpringerLastBlockDay is the day of the last block when the scheduler
+	// ends a Springer's employment after it (#7197), empty otherwise.
+	SpringerLastBlockDay *calendar.Date
 }
 
 type AccessPreview struct {

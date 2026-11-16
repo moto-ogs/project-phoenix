@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"errors"
+	"time"
 
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
@@ -20,8 +21,12 @@ import (
 // values the caller sets (all notification dependencies are optional: nil
 // disables e-mail, the in-app calendar is unaffected). It binds the
 // root's missing-record, notification-copy, logo and push rules; without a
-// Runtime it runs without a database. It does not build a legacy factory.
+// Runtime it runs without a database, without a clock on the real one. It
+// does not build a legacy factory.
 func NewCalendarPortal(cfg calendarCompose.Config) calendarCompose.Application {
+	if cfg.Now == nil {
+		cfg.Now = time.Now
+	}
 	cfg.MissingRecord = func(err error) bool { return errors.Is(err, transactionruntime.ErrNoRows) }
 	cfg.MissingRecordCause = transactionruntime.ErrNoRows
 	if cfg.Runtime == nil {

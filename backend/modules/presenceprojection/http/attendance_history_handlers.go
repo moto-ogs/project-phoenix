@@ -780,7 +780,7 @@ func (rs *Resource) writeAttendanceHistoryAudit(r *http.Request, studentID int64
 		StudentID:      &studentIDPtr,
 		RangeStart:     start,
 		RangeEnd:       end,
-		AccessedAt:     time.Now(),
+		AccessedAt:     rs.Now(),
 	}
 
 	if err := rs.StudentHistoryService.RecordDataAccess(r.Context(), entry); err != nil {

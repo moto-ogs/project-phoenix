@@ -67,7 +67,7 @@ func newTraegerStaffFixtureWith(t *testing.T, db *bun.DB, now func() time.Time, 
 		Now: now,
 	})
 	require.NoError(t, err)
-	tenantAudit, err := auditCompose.NewTenantPersistence(db)
+	tenantAudit, err := auditCompose.NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
 	router := chi.NewRouter()
 	router.Use(func(next http.Handler) http.Handler {
@@ -97,7 +97,7 @@ func newTraegerStaffFixtureWith(t *testing.T, db *bun.DB, now func() time.Time, 
 	identity, err := lifecycleTestModule(testpkg.NewDatabase(t, db), unit, GuardianInvitationTestConfig{})
 	require.NoError(t, err)
 	require.NoError(t, mountTraegerStaffRoutes(router, tenantAPI, admin, workforceModule.TimeTracking.TraegerMonths, organizations, persons, membership, tenantAudit.DataAccessLog, sites,
-		workforceModule.TimeTracking.TraegerExports, settings.Traeger, identity))
+		workforceModule.TimeTracking.TraegerExports, settings.Traeger, identity, workforceModule.TimeTracking.Today))
 	office := newTraegerOffice(t, db, portal, "Träger Personal", identityaccess.TraegerRolePersonnel)
 	return testpkg.SessionVerifier(router), portal, admin, unit, office, schoolRoutes
 }

@@ -22,7 +22,7 @@ func newSessionRoomResponse(room studentpresence.SessionRoomSummary) *RoomSimple
 	return &RoomSimple{ID: room.ID, Name: room.Name, Color: room.Color}
 }
 
-func newPresenceCombinationResponse(group studentpresence.CombinedGroup) CombinedGroupResponse {
+func newPresenceCombinationResponse(group studentpresence.CombinedGroup, now time.Time) CombinedGroupResponse {
 	response := CombinedGroupResponse{
 		ID:          group.ID,
 		Name:        "Combined Group #" + strconv.FormatInt(group.ID, 10), // Using ID as name since the model doesn't have name
@@ -30,7 +30,7 @@ func newPresenceCombinationResponse(group studentpresence.CombinedGroup) Combine
 		RoomID:      0,                                                    // Using default value since the model doesn't have roomID
 		StartTime:   group.StartTime,
 		EndTime:     group.EndTime,
-		IsActive:    group.EndTime == nil || time.Now().Before(*group.EndTime),
+		IsActive:    group.EndTime == nil || now.Before(*group.EndTime),
 		CreatedAt:   group.CreatedAt,
 		UpdatedAt:   group.UpdatedAt,
 	}
@@ -40,8 +40,8 @@ func newPresenceCombinationResponse(group studentpresence.CombinedGroup) Combine
 
 // newCombinationWithGroupsResponse adds the mapped session count to the
 // combination response.
-func newCombinationWithGroupsResponse(group studentpresence.CombinedGroup, groups []studentpresence.LiveGroup) CombinedGroupResponse {
-	response := newPresenceCombinationResponse(group)
+func newCombinationWithGroupsResponse(group studentpresence.CombinedGroup, groups []studentpresence.LiveGroup, now time.Time) CombinedGroupResponse {
+	response := newPresenceCombinationResponse(group, now)
 	response.GroupCount = len(groups)
 	return response
 }

@@ -13,8 +13,6 @@ import (
 	"context"
 	"errors"
 	"time"
-
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // ErrNotConfigured reports a missing queue or access port.
@@ -33,9 +31,10 @@ type Query interface {
 // Dependencies are the consumer-owned ports the projection reads through.
 // Queues and Access are required. Students, FamilyProtection and Submitters
 // are optional: without them the open page omits group names and reports no
-// Familienschutz, and no row of either view names who filed it. Today defaults to the Berlin calendar day of the wall
-// clock; it is resolved once per call so the queues' urgency phase and the
-// rows' urgency and past flags never straddle midnight.
+// Familienschutz, and no row of either view names who filed it. Today is the
+// Berlin calendar day the composition binds (ADR 0239); it is resolved once
+// per call so the queues' urgency phase and the rows' urgency and past flags
+// never straddle midnight.
 type Dependencies struct {
 	Queues           Queues
 	Access           Access
@@ -50,9 +49,6 @@ type service struct{ deps Dependencies }
 // New builds the projection. Missing wiring surfaces as ErrNotConfigured on
 // the first call, never as a partial list.
 func New(deps Dependencies) Query {
-	if deps.Today == nil {
-		deps.Today = func() Date { return Date(calendar.TodayDate()) }
-	}
 	return &service{deps: deps}
 }
 
@@ -171,7 +167,7 @@ type Page struct {
 func (s *service) configured() error {
 	q := s.deps.Queues
 	if q.MasterData == nil || q.CareSchedule == nil || q.Offering == nil || q.Excused == nil ||
-		q.DirectCorrections == nil || s.deps.Access == nil {
+		q.DirectCorrections == nil || s.deps.Access == nil || s.deps.Today == nil {
 		return ErrNotConfigured
 	}
 	return nil

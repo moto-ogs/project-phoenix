@@ -23,7 +23,7 @@ import (
 // routed through an Audit command over the test append store, the way the
 // test service graph (NewServiceGraphForTests) routes its repositories.
 func NewRoutedTestAuditPersistence(db transactionruntime.Database) (*auditCompose.Persistence, error) {
-	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return nil, err
 	}

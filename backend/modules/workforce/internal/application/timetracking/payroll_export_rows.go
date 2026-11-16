@@ -28,7 +28,7 @@ func (s *staffOverviewService) loadExportPayroll(ctx context.Context, first, las
 	if err != nil {
 		return nil, fmt.Errorf("failed to load payroll rules: %w", err)
 	}
-	payroll := &exportPayroll{current: current, holidays: map[calendar.Date]bool{}, now: calendar.Now()}
+	payroll := &exportPayroll{current: current, holidays: map[calendar.Date]bool{}, now: s.now().In(calendar.Berlin)}
 	if s.statutoryHolidays != nil {
 		if payroll.holidays, err = s.statutoryHolidays.HolidayDates(ctx, first.firstDay(), last.lastDay()); err != nil {
 			return nil, fmt.Errorf("failed to load statutory holidays: %w", err)

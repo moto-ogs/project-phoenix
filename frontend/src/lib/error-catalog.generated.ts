@@ -2063,6 +2063,12 @@ export const ERROR_CATALOG = {
         "Diese Nachweisart gibt es nicht mehr oder sie ist archiviert. Bitte laden Sie die Seite neu.",
       "workforce.traeger_staff_already_linked":
         "Eine dieser Personen hat schon eine Personalakte. Bitte laden Sie die Seite neu.",
+      "workforce.traeger_staff_hire_duplicate":
+        "Diese Person gibt es vielleicht schon. Bitte prüfen Sie die Angaben.",
+      "workforce.traeger_staff_hire_incomplete":
+        "Die Person ist nur zum Teil angelegt. Bitte stellen Sie sie nicht noch einmal ein.",
+      "workforce.traeger_staff_hire_invalid":
+        "Die Person konnte nicht eingestellt werden. Bitte prüfen Sie Ihre Angaben.",
       "workforce.traeger_staff_import_changed":
         "Seit der Vorschau hat sich etwas an den Personalakten geändert. Bitte prüfen Sie die Vorschau noch einmal und übernehmen Sie dann.",
       "workforce.traeger_staff_import_file_invalid":

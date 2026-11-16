@@ -442,6 +442,10 @@ type TraegerStaffStore interface {
 	SchoolFinancialRows(ctx context.Context, staffIDs []int64) ([]domain.StaffFinancialData, error)
 	DeleteSchoolFinancialRow(ctx context.Context, staffID int64) error
 	InsertSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error
+	// InsertSchoolHireData writes the master data row of an employment a
+	// hire just created at the school (#7206): entry day, last day, address
+	// and phone. The employment has no row yet.
+	InsertSchoolHireData(ctx context.Context, data domain.StaffMasterData) error
 
 	ReleaseOfTraeger(ctx context.Context, organizationID int64) (*domain.TraegerStaffRelease, error)
 	CountStaffRecords(ctx context.Context, organizationID int64) (int, error)
@@ -470,6 +474,9 @@ type TraegerStaffPoolStore interface {
 	// LinkPoolEmployment links a live employment of the school as an
 	// Einsatzort the pool created and writes it into the record's trail.
 	LinkPoolEmployment(ctx context.Context, recordID, staffID, accountID int64) error
+	// RecordPoolResumed writes into the record's trail that a block resumed
+	// the pool's former employment at the school (#7197).
+	RecordPoolResumed(ctx context.Context, recordID, accountID int64) error
 
 	TraegerPoolSpringers(ctx context.Context, organizationID int64, from, to calendar.Date) ([]domain.PoolSpringer, error)
 	TraegerPoolBlocks(ctx context.Context, organizationID int64, recordIDs []int64, from, to calendar.Date) ([]domain.PoolBlock, error)
@@ -539,7 +546,8 @@ type TraegerStaffContractStore interface {
 	SollKeptStaffIDs(ctx context.Context, staffIDs []int64, day calendar.Date) ([]int64, error)
 	KeepTemplateHistory(ctx context.Context, staffID int64, until calendar.Date) error
 	ReleaseMirror(ctx context.Context, staffID int64, from calendar.Date) error
-	MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule) error
+	// MirrorStaffSchedule stamps its writes with now.
+	MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule, now time.Time) error
 	MirrorStaffHolidayWeeks(ctx context.Context, staffID int64, from calendar.Date, overrides []domain.StaffTargetOverride) error
 }
 

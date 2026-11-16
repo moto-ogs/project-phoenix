@@ -39,11 +39,11 @@ func NewStaffAdmin(dependencies StaffAdminDependencies) (*workforce.StaffAdmin, 
 	if dependencies.DB == nil || dependencies.Subjects == nil || dependencies.Audit == nil || dependencies.Allows == nil || dependencies.BankData == nil {
 		return nil, errors.New("staff admin: database, staff subjects, audit trail, permission matcher and bank data cipher are required")
 	}
-	store := postgres.New(postgres.DatabaseRuntime(dependencies.DB))
 	now := dependencies.Now
 	if now == nil {
 		now = time.Now
 	}
+	store := postgres.New(postgres.DatabaseRuntime(dependencies.DB)).WithClock(now)
 	logger := dependencies.Logger
 	if logger == nil {
 		logger = slog.Default()
@@ -58,6 +58,12 @@ func NewStaffAdmin(dependencies StaffAdminDependencies) (*workforce.StaffAdmin, 
 // NewTraegerStaffReleases composes the release „Personal beim Träger“ (#4705).
 func NewTraegerStaffReleases() workforce.TraegerStaffReleases {
 	return application.NewTraegerStaffReleases(postgres.NewTraegerStaffStore())
+}
+
+// NewSchoolSpringerExits composes the exits of Springer after their last
+// block at a school (#7197); the Worker binds them to the staff offboarding.
+func NewSchoolSpringerExits() workforce.SchoolSpringerExits {
+	return postgres.NewTraegerStaffStore()
 }
 
 // --- documents --------------------------------------------------------------

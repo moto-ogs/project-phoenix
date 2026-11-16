@@ -77,8 +77,8 @@ interface ModalProps {
   readonly onClose: () => void;
   readonly title: string;
   /**
-   * Name of the dialog when it shows no `title` and draws its own heading
-   * (the password-reset dialog of the login pages). A dialog needs a name.
+   * Name of the dialog when it shows no `title` and draws its own
+   * heading. A dialog needs a name.
    */
   readonly ariaLabel?: string;
   /**

@@ -310,7 +310,7 @@ func (rs *StaffAdminResource) getStaffVacationQuota(w http.ResponseWriter, r *ht
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	year, err := parseYearQuery(r, calendar.TodayDate())
+	year, err := parseYearQuery(r, rs.today())
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -341,7 +341,7 @@ func (rs *StaffAdminResource) setStaffVacationQuota(w http.ResponseWriter, r *ht
 		return
 	}
 	if body.Year == 0 {
-		body.Year = calendar.TodayDate().Year()
+		body.Year = rs.today().Year()
 	}
 	// Every change of the Urlaubsanspruch is recorded with its reason (#3256).
 	if strings.TrimSpace(body.Reason) == "" {

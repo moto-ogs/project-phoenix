@@ -106,10 +106,6 @@ func (ae *AuthEvent) Validate() error {
 		return errors.New("IP address is required")
 	}
 
-	if ae.CreatedAt.IsZero() {
-		ae.CreatedAt = time.Now()
-	}
-
 	return nil
 }
 
@@ -151,7 +147,6 @@ func NewAuthEvent(accountID int64, eventType string, success bool, ipAddress str
 		EventType: eventType,
 		Success:   success,
 		IPAddress: ipAddress,
-		CreatedAt: time.Now(),
 		Metadata:  make(map[string]interface{}),
 	}
 }

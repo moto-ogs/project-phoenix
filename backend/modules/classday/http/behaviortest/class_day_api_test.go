@@ -31,7 +31,7 @@ import (
 func setupClassDayRoute(t *testing.T) (*testpkg.DB, chi.Router) {
 	t.Helper()
 	db, factory := setupClassDayModule(t)
-	return db, classdayhttp.NewResource(factory.ClassDay, nil).SchoolRouter(rootAPI.ProtectedSchoolRoutes)
+	return db, classdayhttp.NewResource(factory.ClassDay, nil, factory.Today).SchoolRouter(rootAPI.ProtectedSchoolRoutes)
 }
 
 func TestClassDayAPI(t *testing.T) {

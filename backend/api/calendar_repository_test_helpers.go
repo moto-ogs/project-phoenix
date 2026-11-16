@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -68,6 +69,7 @@ func NewAppointments(db transactionruntime.Database) (appointments.Capability, e
 	return appointmentsCompose.New(appointmentsCompose.Dependencies{
 		DB:      db.Pool(),
 		Observe: func(appointmentsCompose.Observation) {},
+		Now:     time.Now,
 	})
 }
 
