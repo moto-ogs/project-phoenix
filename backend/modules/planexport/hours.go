@@ -99,7 +99,7 @@ func (s *service) ExportDienstplanHours(ctx context.Context, params Params, read
 	}
 	weeks = narrowWeeks(weeks, nil)
 
-	doc := hoursDocument(hours, s.shiftTypes(ctx), weeks)
+	doc := hoursDocument(hours, s.shiftTypes(ctx), weeks, s.deps.Now())
 	s.getLogger().Info("dienstplan hours export rendered",
 		"from", weeks[0].days[0].String(),
 		"to", weeks[len(weeks)-1].last().String(),
@@ -113,13 +113,13 @@ func (s *service) ExportDienstplanHours(ctx context.Context, params Params, read
 // staff member and week. Columns are document-level, so the sheet carries
 // every Schichtart planned anywhere in the range — sorted by name, the shifts
 // without one last — and a week that does not use one prints a dash there.
-func hoursDocument(hours WeeklyHours, shiftTypes map[int64]shiftTypeInfo, weeks []week) listexport.Document {
+func hoursDocument(hours WeeklyHours, shiftTypes map[int64]shiftTypeInfo, weeks []week, generatedAt time.Time) listexport.Document {
 	typeColumns := hoursTypeColumns(hours.Summaries, shiftTypes)
 
 	return listexport.Document{
 		Title:       "Stundenübersicht",
 		Subtitle:    rangeSubtitle(weeks),
-		GeneratedAt: time.Now(),
+		GeneratedAt: generatedAt,
 		Filters: []string{
 			"Geplante Stunden ohne Pausen, ausgefallene Dienste zählen nicht",
 			"Soll aus dem Arbeitszeitmodell",

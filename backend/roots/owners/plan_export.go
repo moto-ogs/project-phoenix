@@ -81,6 +81,7 @@ type planExportSources struct {
 	EducationGroupNames planExportGroupNameReader
 	Renderer            planexport.Renderer
 	Logger              *slog.Logger
+	Now                 func() time.Time
 }
 
 // newPlanExport binds the owner reads to the plan export ports and returns
@@ -100,6 +101,7 @@ func newPlanExport(sources planExportSources) planexport.Service {
 		Holidays:       sources.Holidays,
 		Filter:         planExportInstanceFilter{blockGroups: sources.BlockGroups, groupNames: sources.EducationGroupNames},
 		Renderer:       sources.Renderer,
+		Now:            sources.Now,
 	}, sources.Logger)
 }
 

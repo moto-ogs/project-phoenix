@@ -18,13 +18,34 @@ import (
 
 type Database func(context.Context) (bun.IDB, int64, error)
 
-type Store struct{ database Database }
+type Store struct {
+	database Database
+	// now stamps the rows the store writes (updated_at, archived_at,
+	// acknowledged_at); nil is the real clock.
+	now func() time.Time
+}
 
 func New(database Database) *Store {
 	if database == nil {
 		panic("timetable postgres: database runtime is required")
 	}
 	return &Store{database: database}
+}
+
+// WithClock returns the store stamping its writes with now (ADR 0239).
+func (s *Store) WithClock(now func() time.Time) *Store {
+	clocked := *s
+	clocked.now = now
+	return &clocked
+}
+
+// currentTime is the instant the store stamps a write with.
+func (s *Store) currentTime() time.Time {
+	now := s.now
+	if now == nil {
+		now = time.Now
+	}
+	return now()
 }
 
 // CompletionTimestamp returns PostgreSQL's stable timestamp for the current

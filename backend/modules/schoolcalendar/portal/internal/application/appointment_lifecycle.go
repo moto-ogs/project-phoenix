@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
@@ -431,7 +430,7 @@ func (s *service) cancelStaffAppointment(ctx context.Context, appointmentID int6
 		}
 		return s.appointmentDetail(ctx, reloaded)
 	}
-	now := time.Now()
+	now := s.now()
 	appointment.CancelledAt = &now
 	// Only the caller that performed the transition does the notification work,
 	// so two concurrent cancels can't send duplicate guardian e-mails. And even

@@ -157,7 +157,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			calendar, err = owners.BuildSchoolCalendarRecords(db, owners.ObserveSchoolCalendar, settings.Service)
 			return
 		},
-		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, membership, calendar); return },
+		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, env, membership, calendar); return },
 		func() error {
 			people, peopleIdentity = owners.BuildPeopleRows(db, env.Observe.IdentityAccess, groups, rooms, membership, workTime)
 			return nil
@@ -173,11 +173,11 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return
 		},
 		func() (err error) {
-			timetableOwner, err = owners.BuildServeTimetable(db, persons, rooms, membership)
+			timetableOwner, err = owners.BuildServeTimetable(db, persons, rooms, membership, env.Now)
 			return
 		},
 		func() error {
-			timetableRepos = owners.NewTimetableRepositories(db, timetableOwner, persons, groups, rooms, calendar, membership, workTime)
+			timetableRepos = owners.NewTimetableRepositories(db, timetableOwner, persons, groups, rooms, calendar, membership, workTime, env.Now)
 			return nil
 		},
 		func() (err error) {
@@ -195,7 +195,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		func() error {
 			presence = owners.BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
 			facilitiesRooms = buildFacilitiesRooms(presence.Presence, rooms, timetableOwner, membership, persons)
-			substitutions = owners.NewGroupSubstitutionRepository(structure.Groups, membership, workTime)
+			substitutions = owners.NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today)
 			supervisions = owners.NewGroupSupervisionRecords(presence.SessionRecords, groups)
 			return nil
 		},
@@ -277,7 +277,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			return
 		},
 		func() (err error) {
-			activities, err = owners.BuildActivities(timetableRows, timetableOwner, presence.SessionRecords, people)
+			activities, err = owners.BuildActivities(timetableRows, timetableOwner, presence.SessionRecords, people, env.Today)
 			yard = buildFacilitiesYard(env, facilitiesRooms, activities)
 			return
 		},

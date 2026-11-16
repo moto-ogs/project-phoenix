@@ -216,7 +216,7 @@ func holidayFilesRouter(t *testing.T, f reviewFixture, account int64, rights ...
 	_, wishes := enrollmentCompose.NewHolidayWishes(testHealthCipher())
 	resource := enrollmentHTTP.NewHolidayPeriodResource(enrollmentCompose.NewHolidayPeriods(nil, owners.HolidayTestSchoolCalendar{}),
 		review, records, wishes, places, allocation, allocation, unnamedHolidaySchools{},
-		holidayKnownChildren{}, enrollmentCompose.NewHolidayKnownChildTrail(),
+		holidayKnownChildren{}, enrollmentCompose.NewHolidayKnownChildTrail(), traegerListRenderer(NewSimpleListRenderer()),
 		common.RequiresPermission(identityaccess.TraegerRightEnrollmentManage), common.RequiresPermission(identityaccess.TraegerRightHealthRead))
 	router := chi.NewRouter()
 	router.Use(func(next http.Handler) http.Handler {

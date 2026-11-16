@@ -163,6 +163,8 @@ func buildEmergencySnapshot(env owners.RootEnvironment, presence owners.Presence
 type ClassDayViews struct {
 	ClassDay  classday.ClassDay
 	SlotLists classday.SlotLists
+	// Today is the day the class-day routes read without ?date= (ADR 0239).
+	Today func() calendar.Date
 }
 
 // buildClassDayViews binds the class day and the slot lists.
@@ -214,9 +216,9 @@ func buildClassDayViews(
 		Students: persons, Persons: persons, Groups: groups, Rooms: rooms, CareDays: schedules.CareDay,
 		PickupTimes: schedules.Pickups, ArrivalTimes: schedules.Arrivals, PickupBaselines: schedules.PickupBaselines,
 		Settings: settingsCompose.NewSlotListSettings(settings), Access: ClassDaySlotListAccess{Staff: caller},
-		ListExport: ClassDaySlotListRenderer{Renderer: renderer}, EnrolledOn: ClassDayEnrolledOn,
+		ListExport: ClassDaySlotListRenderer{Renderer: renderer}, EnrolledOn: ClassDayEnrolledOn, Now: env.Now,
 	})
-	return ClassDayViews{ClassDay: classDay, SlotLists: slotLists}, nil
+	return ClassDayViews{ClassDay: classDay, SlotLists: slotLists, Today: env.Today}, nil
 }
 
 // buildGroupLive binds the live group view (#2253).

@@ -39,6 +39,15 @@ export function traegerHolidayPlacesTopic(): HelpTopic {
         ],
       },
       {
+        title: "Plätze herunterladen",
+        description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+        steps: [
+          "Öffnen Sie den Ferienzeitraum und wählen Sie den Reiter `Plätze`.",
+          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Die Datei enthält je Woche die Plätze und die Kinder auf der Warteliste.",
+        ],
+      },
+      {
         title: "Wann ein Kind nachrückt",
         steps: [
           "Sie stornieren eine Anmeldung mit Platz.",

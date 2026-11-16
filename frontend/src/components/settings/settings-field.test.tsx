@@ -99,6 +99,11 @@ describe("SettingsField", () => {
           onReset={onReset}
         />,
       );
+      // Anker: A reset that switches the protocol off warns before the
+      // click; the stored-off case (#7218) asserts this warning's absence.
+      expect(
+        getByRole("button", { name: "Zurücksetzen" }),
+      ).toHaveAccessibleDescription(/Daten gelöscht/);
       const trigger = () =>
         fireEvent.click(
           action === "switch"
@@ -224,6 +229,47 @@ describe("SettingsField", () => {
       ),
     );
   });
+
+  it.each(["admin", "operator"] as const)(
+    "resets a stored off switch without the deletion dialog for %s (#7218)",
+    async (audience) => {
+      const onReset = vi.fn().mockResolvedValue(undefined);
+      const { getByRole, queryByRole, findByText } = renderWithProviders(
+        <SettingsField
+          audience={audience}
+          setting={makeSetting({
+            key: "gdpr.attendance_log_enabled",
+            label: "Anwesenheitsprotokoll",
+            type: "boolean",
+            value: false,
+            default: false,
+            is_default: false,
+          })}
+          onSave={vi.fn()}
+          onReset={onReset}
+        />,
+      );
+      // Anker: The reset button is there; nothing is on, so nothing is
+      // deleted and its tooltip must not warn.
+      const reset = getByRole("button", { name: "Zurücksetzen" });
+      expect(reset).not.toHaveAccessibleDescription(/Daten gelöscht/);
+      fireEvent.click(reset);
+      expect(queryByRole("dialog")).toBeNull();
+      await waitFor(() =>
+        expect(onReset).toHaveBeenCalledExactlyOnceWith(
+          "gdpr.attendance_log_enabled",
+        ),
+      );
+      expect(
+        await findByText(
+          "Die Einstellung „Anwesenheitsprotokoll“ steht wieder auf dem Standard.",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        getByRole("switch", { name: "Anwesenheitsprotokoll" }),
+      ).toHaveAttribute("aria-checked", "false");
+    },
+  );
 
   const visibilityKey = "operations.operational_overview_scope";
   const attendanceKey = "operations.attendance_edit_scope";

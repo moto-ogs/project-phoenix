@@ -1,6 +1,8 @@
 package ports
 
 import (
+	"time"
+
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
@@ -27,6 +29,9 @@ type InstanceRows struct {
 	Plans    timetable.ActivityInstanceCapability
 	Sessions InstanceSessions
 	Reads    LegacyInstanceReads
+	// Now starts and ends the session of a row created running without its
+	// instants; nil is the real clock.
+	Now func() time.Time
 }
 
 // LegacyParticipantReads list the participants of the blocks with their

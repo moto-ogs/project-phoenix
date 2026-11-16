@@ -78,7 +78,7 @@ func NewAnnouncingBookingMaterialization(db transactionruntime.Database, unit te
 }
 
 func newBookingMaterializationTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, options BookingMaterializationTestOptions, broadcaster realtime.Broadcaster) (BookingMaterializationTestModule, error) {
-	auditCommand, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	auditCommand, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return BookingMaterializationTestModule{}, err
 	}

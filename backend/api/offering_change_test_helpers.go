@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -48,7 +49,7 @@ func NewOfferingChangeTestModule(db transactionruntime.Database, options Offerin
 	if options.Settings == nil || options.Bookings == nil {
 		return nil, errors.New("offering change test module: settings and bookings are required")
 	}
-	auditCommand, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	auditCommand, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return nil, err
 	}

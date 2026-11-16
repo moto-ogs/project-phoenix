@@ -429,7 +429,7 @@ func openingBalanceAt(db *bun.DB) func(*testing.T, int, int) positionOutcome {
 			rows[i] = importModels.OpeningBalanceImportRow{FirstName: first, LastName: "Salden", HoursBalance: "-3,25", VacationEntitled: "30", VacationCarryover: "4", VacationRemaining: "12,5"}
 		}
 		rows[k-1].HoursBalance = "-2,5"
-		svc := module.OpeningBalanceImport(testpkg.Date(2026, time.September, 1), "Übernahme", actor.staffID)
+		svc := module.OpeningBalanceImport.Build(testpkg.Date(2026, time.September, 1), "Übernahme", actor.staffID)
 		result, err := svc.ImportBatches(uploadContext(t, db), importModels.ImportRequest[importModels.OpeningBalanceImportRow]{
 			Rows: rows, Mode: importModels.ImportModeCreate, UserID: actor.accountID, SkipInvalidRows: true,
 		}, importModels.BatchAudit{EntityType: "opening_balance", Filename: "position.csv", AccountID: actor.accountID, Options: "2026-09-01"})

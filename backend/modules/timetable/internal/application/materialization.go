@@ -133,6 +133,7 @@ func (s *materializationService) MaterializeForTenant(
 	source timetable.MaterializationSource,
 ) (*timetable.MaterializationResult, error) {
 	start := time.Now()
+	elapsed := func() time.Duration { return time.Since(start) }
 	tenantID := tenant.FromContext(ctx)
 
 	if err := validateMaterializationWindow(from, to); err != nil {
@@ -157,7 +158,7 @@ func (s *materializationService) MaterializeForTenant(
 		}
 	}
 
-	return s.materializeForTenantLocked(ctx, tenantID, from, to, source, start)
+	return s.materializeForTenantLocked(ctx, tenantID, from, to, source, elapsed)
 }
 
 func validateMaterializationWindow(from, to calendar.Date) error {
@@ -212,7 +213,7 @@ func (s *materializationService) materializeForTenantLocked(
 	tenantID int64,
 	from, to calendar.Date,
 	source timetable.MaterializationSource,
-	start time.Time,
+	elapsed func() time.Duration,
 ) (*timetable.MaterializationResult, error) {
 	result := &timetable.MaterializationResult{From: from, To: to}
 
@@ -228,7 +229,7 @@ func (s *materializationService) materializeForTenantLocked(
 		return nil, err
 	}
 	if done {
-		s.finishLog(tenantID, source, result, start)
+		s.finishLog(tenantID, source, result, elapsed())
 		return result, nil
 	}
 	world, err := s.loadMaterializationWorld(ctx, from, to, periods)
@@ -263,7 +264,7 @@ func (s *materializationService) materializeForTenantLocked(
 		announceStaffingChanged(ctx, s.staffing, s.getLogger(), "materialization")
 	}
 
-	s.finishLog(tenantID, source, result, start)
+	s.finishLog(tenantID, source, result, elapsed())
 	return result, nil
 }
 
@@ -414,8 +415,8 @@ func (s *materializationService) loadTimeframes(ctx context.Context, op string) 
 	return timeframeByID, nil
 }
 
-func (s *materializationService) finishLog(tenantID int64, source timetable.MaterializationSource, r *timetable.MaterializationResult, start time.Time) {
-	r.DurationMS = time.Since(start).Milliseconds()
+func (s *materializationService) finishLog(tenantID int64, source timetable.MaterializationSource, r *timetable.MaterializationResult, elapsed time.Duration) {
+	r.DurationMS = elapsed.Milliseconds()
 	s.getLogger().Info("materialization completed",
 		slog.Int64("tenant_id", tenantID),
 		slog.String("source", string(source)),

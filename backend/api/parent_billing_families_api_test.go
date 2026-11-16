@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -181,6 +183,37 @@ func TestBillingFamiliesShowEveryDocumentWhoPaysAndWhatIsOpen(t *testing.T) {
 		WHERE run_id = ? AND action = 'read' AND details->>'view' = 'family' ORDER BY id DESC LIMIT 2`, run.ID).
 		Scan(context.Background(), &documentIDs))
 	assert.NotEmpty(t, documentIDs, "the trail names the documents the reader saw")
+
+	// #4718: the list and the documents of a family as files. Each download
+	// reads like the page and stands in the same trail.
+	lines := billingListCSV(t, f.traeger, billing, billingFamiliesPath+"/export")
+	require.Len(t, lines, 3, "the header and both families")
+	assert.Equal(t, "Nachname;Vorname;E-Mail;Debitorennummer;Zahlung;Zahlungsart;Ausgestellt (Euro);Storniert (Euro);Gutgeschrieben (Euro);Offene Forderung (Euro)", lines[0])
+	assert.Contains(t, strings.Join(lines, "\n"), ";papa.muster@example.org;")
+	assert.Contains(t, strings.Join(lines, "\n"), ";Familie zahlt selbst;")
+	lines = billingListCSV(t, f.traeger, billing, fmt.Sprintf("%s/%d/export", billingFamiliesPath, eva.ID))
+	require.Len(t, lines, 4, "the header and the three documents of the family")
+	assert.Equal(t, "Datum;Dokument;Nummer;Stand;Bezug;Zahlung;Zeitraum;Betreuung;Kinder;Betrag (Euro);Offene Forderung (Euro)", lines[0])
+	assert.Contains(t, strings.Join(lines, "\n"), ";Storno;")
+	assert.Contains(t, strings.Join(lines, "\n"), "Zu "+first.Number+" · Anschrift falsch")
+	spreadsheet := assertTraegerListFormats(t, f.traeger, billing, billingFamiliesPath+"/export", "familien")
+	assertTraegerListNumbers(t, spreadsheet, map[string]string{
+		"G7": strconv.FormatFloat(float64(eva.IssuedCents)/100, 'f', -1, 64),
+		"H7": strconv.FormatFloat(float64(eva.CancelledCents)/100, 'f', -1, 64), "I7": "0",
+		"J7": strconv.FormatFloat(float64(eva.OpenCents)/100, 'f', -1, 64),
+		"G8": strconv.FormatFloat(float64(papa.IssuedCents)/100, 'f', -1, 64), "H8": "0", "I8": "5",
+		"J8": strconv.FormatFloat(float64(papa.OpenCents)/100, 'f', -1, 64),
+	})
+	spreadsheet = assertTraegerListFormats(t, f.traeger, billing, fmt.Sprintf("%s/%d/export", billingFamiliesPath, eva.ID), "familie-dokumente")
+	assertTraegerListNumbers(t, spreadsheet, map[string]string{
+		"J7": strconv.FormatFloat(float64(evaDetail.Documents[0].TotalCents)/100, 'f', -1, 64),
+		"K7": strconv.FormatFloat(float64(evaDetail.Documents[0].OpenCents)/100, 'f', -1, 64),
+	})
+	views = nil
+	require.NoError(t, f.db.NewRaw(`SELECT details->>'view' FROM parent_billing.run_events
+		WHERE run_id = ? AND action = 'read' AND details->>'view' IS NOT NULL ORDER BY id`, secondRun).Scan(context.Background(), &views))
+	assert.Equal(t, []string{"families", "family", "family", "families", "family", "families", "families", "family", "family"}, views,
+		"every download stands in the trail like the read of the page")
 }
 
 func TestBillingFamiliesNeedTheBillingRightAndStayWithTheirTraeger(t *testing.T) {
@@ -191,7 +224,7 @@ func TestBillingFamiliesNeedTheBillingRightAndStayWithTheirTraeger(t *testing.T)
 	run := releasedBillingRun(t, f, billing)
 	familyPath := fmt.Sprintf("%s/%d", billingFamiliesPath, run.Documents[0].ID)
 
-	for _, path := range []string{billingFamiliesPath, familyPath} {
+	for _, path := range []string{billingFamiliesPath, familyPath, billingFamiliesPath + "/export", familyPath + "/export"} {
 		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, path, nil)
 		assert.Equal(t, http.StatusForbidden, rec.Code, "GET %s without the right Abrechnung: %s", path, rec.Body.String())
 	}
@@ -199,7 +232,8 @@ func TestBillingFamiliesNeedTheBillingRightAndStayWithTheirTraeger(t *testing.T)
 	rec := traegerJSON(t, f.traeger, foreign.token, http.MethodGet, billingFamiliesPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, decodeSchoolPortalData[[]billingFamilyBody](t, rec.Body.Bytes()), "another Träger lists none of these families")
-	for _, path := range []string{familyPath, billingFamiliesPath + "/999999999"} {
+	assert.Len(t, billingListCSV(t, f.traeger, foreign.token, billingFamiliesPath+"/export"), 1, "the file of another Träger holds no family")
+	for _, path := range []string{familyPath, billingFamiliesPath + "/999999999", familyPath + "/export"} {
 		rec = traegerJSON(t, f.traeger, foreign.token, http.MethodGet, path, nil)
 		require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 		code, _ := registrationRefusalOf(t, rec)

@@ -64,7 +64,7 @@ func (c *StudentImportConfig) findStudentByTag(ctx context.Context, tagID string
 // findStudentByNameAndBirthday matches a child that changed class: same
 // name, same birthday, exactly one hit.
 func (c *StudentImportConfig) findStudentByNameAndBirthday(ctx context.Context, row importModels.StudentImportRow) (*int64, error) {
-	birthday, err := parseOptionalDate(row.Birthday)
+	birthday, err := parseOptionalDate(row.Birthday, c.now())
 	if err != nil || birthday == nil {
 		return nil, nil
 	}

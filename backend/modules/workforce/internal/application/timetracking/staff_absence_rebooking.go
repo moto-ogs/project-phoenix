@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -530,7 +529,7 @@ func (s *staffAbsenceService) writeRebookedAbsences(ctx context.Context, actorAc
 	if s.auditRepo == nil {
 		return fmt.Errorf("staff absence audit repository is not configured")
 	}
-	now := time.Now()
+	now := s.now()
 	for _, entry := range entries {
 		after := entry.after
 		after.UpdatedAt = now

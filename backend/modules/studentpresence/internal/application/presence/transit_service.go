@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"slices"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
@@ -202,7 +201,7 @@ func (s *service) assignTransitStudent(ctx context.Context, targetGroupID, stude
 	visit := &studentpresence.Visit{
 		StudentID:     studentID,
 		ActiveGroupID: targetGroupID,
-		EntryTime:     time.Now(),
+		EntryTime:     s.now(),
 	}
 	// The lock-free path, not CreateVisit: this transaction already holds
 	// the group row lock, and CreateVisit locks the student row before the

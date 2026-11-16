@@ -56,7 +56,7 @@ const errorMessage = (err: unknown) =>
 const HOURS_ERROR = "Bitte je Tag 0 bis 12 Stunden eingeben.";
 
 /** Eine Schule mit ihren Stunden Montag bis Freitag im Formular. */
-interface SiteDraft {
+export interface SiteDraft {
   readonly schoolId: string;
   readonly schoolName: string;
   readonly staffId: string;
@@ -65,7 +65,7 @@ interface SiteDraft {
   readonly before: readonly number[] | null;
 }
 
-function WeekHoursRow({
+export function WeekHoursRow({
   site,
   index,
   invalid,
@@ -230,7 +230,7 @@ function DialogFooter({
   );
 }
 
-function KindChoice({
+export function KindChoice({
   value,
   onChange,
 }: Readonly<{

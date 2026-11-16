@@ -288,36 +288,45 @@ func TestPersonExportIncludesDocumentsAndOnlySelectedEnrollmentChild(t *testing.
 // A record the staff member only handled (created_by, checked_in_by) stays in
 // the package as one marked row. It is not the staff member's own data, so
 // neither its dependent rows nor the children it names follow (#3838).
-func TestPersonExportStaffHandledRecordsBringNoForeignChildren(t *testing.T) {
+//
+// Records the staff member organised or wrote are theirs, but the rows other
+// people attach to them (bookings, letter copies, answers) and the profiles of
+// the two children their notes are about are not (#7207).
+func TestPersonExportStaffPackageHoldsNoForeignChildData(t *testing.T) {
 	t.Parallel()
 	f := newPersonExportFixture(t)
+	ctx := t.Context()
 	// A child the staff member never wrote about: only handled records name it.
 	other := testpkg.CreateTestStudent(t, f.db, "SyntheticHandled", "Fixture", "X").ID
 	group := testpkg.CreateTestActivityGroup(t, f.db, "SyntheticHandled")
-	_, err := f.db.NewRaw("UPDATE activities.groups SET created_by = ? WHERE id = ?", f.staff, group.ID).Exec(t.Context())
+	_, err := f.db.NewRaw("UPDATE activities.groups SET created_by = ? WHERE id = ?", f.staff, group.ID).Exec(ctx)
 	require.NoError(t, err)
 	_, err = f.db.NewRaw(`INSERT INTO activities.student_enrollments (tenant_id, student_id, activity_group_id, valid_from)
-		VALUES (?, ?, ?, '2026-01-12')`, f.school, other, group.ID).Exec(t.Context())
+		VALUES (?, ?, ?, '2026-01-12')`, f.school, other, group.ID).Exec(ctx)
 	require.NoError(t, err)
 	day := calendar.NewDate(2026, time.January, 12)
 	device := testpkg.CreateTestDevice(t, f.db, fmt.Sprintf("synthetic-handled-%d", f.school))
 	testpkg.CreateTestAttendanceForDate(t, f.db, other, f.staff, device.ID, day, day.BerlinMidnight().Add(8*time.Hour), nil)
-	letter := testpkg.CreateTestParentAnnouncement(t, f.db, f.staffAccount, "SyntheticLetter")
-	_, err = f.db.NewRaw(`INSERT INTO users.parent_announcement_options (tenant_id, announcement_id, label, position)
-		VALUES (?, ?, 'synthetic-option', 1)`, f.school, letter.ID).Exec(t.Context())
-	require.NoError(t, err)
+	createStaffRecordsOthersAttachTo(t, f)
 
 	out := personExport(t, f, "staff:"+strconv.FormatInt(f.staff, 10))
 	require.Len(t, personTable(t, out, "activities.groups"), 1, "the group the staff member created")
 	require.Len(t, personTable(t, out, "active.attendance"), 1, "the check-in the staff member recorded")
 	require.Empty(t, personTable(t, out, "activities.student_enrollments"), "children of a created group are not the creator's data")
-	for _, profile := range personTable(t, out, "users.student_profiles") {
-		require.NotEqual(t, strconv.FormatInt(other, 10), string(profile["id"]), "a handled record names a child, it does not bring the child's profile")
-	}
 	// Notes the staff member wrote are their own statements and stay.
 	require.Len(t, personTable(t, out, "users.student_notes"), 2)
 	require.Len(t, personTable(t, out, "users.parent_announcements"), 1)
 	require.Len(t, personTable(t, out, "users.parent_announcement_options"), 1, "a letter the staff member wrote keeps its content")
+	require.Len(t, personTable(t, out, "calendar.appointments"), 1, "the appointment the staff member organised")
+	require.Len(t, personTable(t, out, "calendar.parent_conferences"), 1, "the conference the staff member organised")
+	for _, table := range []string{
+		"users.parent_announcement_letter_copies", "users.parent_announcement_responses",
+		"calendar.appointment_recipients", "calendar.appointment_recipient_students", "calendar.parent_conference_bookings",
+		"users.student_profiles", "users.guardian_profiles",
+	} {
+		require.Empty(t, personTable(t, out, table), table)
+	}
+	require.Empty(t, personTable(t, out, "objects"), "no child's photo travels with a note about it")
 
 	rules := personReviewRulesByTable(t, out)
 	for _, table := range []string{"activities.groups", "active.attendance"} {
@@ -327,6 +336,43 @@ func TestPersonExportStaffHandledRecordsBringNoForeignChildren(t *testing.T) {
 	require.NotContains(t, rules["audit.staff_master_data_changes"], "handled-by-subject-not-about-subject",
 		"a row about the staff member stays theirs even when they also handled it")
 	assertPersonReview(t, out, false)
+}
+
+// createStaffRecordsOthersAttachTo has the staff member write a letter and
+// organise an appointment and a parent conference. The guardian answers, is
+// invited and books, and each record names both children.
+func createStaffRecordsOthersAttachTo(t *testing.T, f personExportFixture) {
+	t.Helper()
+	ctx := t.Context()
+	var guardianAccount, option, appointment, invitation, conference int64
+	require.NoError(t, f.db.NewRaw("SELECT account_id FROM users.guardian_profiles WHERE id = ?", f.guardian).Scan(ctx, &guardianAccount))
+	letter := testpkg.CreateTestParentAnnouncement(t, f.db, f.staffAccount, "SyntheticLetter")
+	require.NoError(t, f.db.NewRaw(`INSERT INTO users.parent_announcement_options (tenant_id, announcement_id, label, position)
+		VALUES (?, ?, 'synthetic-option', 1) RETURNING id`, f.school, letter.ID).Scan(ctx, &option))
+	require.NoError(t, f.db.NewRaw(`INSERT INTO calendar.appointments
+		(tenant_id, organizer_staff_id, title, start_date, end_date, start_time, end_time, delivery_mode)
+		VALUES (?, ?, 'synthetic-appointment', '2026-01-12', '2026-01-12', '08:00', '09:00', 'informational') RETURNING id`,
+		f.school, f.staff).Scan(ctx, &appointment))
+	require.NoError(t, f.db.NewRaw(`INSERT INTO calendar.appointment_recipients
+		(tenant_id, appointment_id, recipient_type, guardian_profile_id, status)
+		VALUES (?, ?, 'guardian_profile', ?, 'info') RETURNING id`, f.school, appointment, f.guardian).Scan(ctx, &invitation))
+	require.NoError(t, f.db.NewRaw(`INSERT INTO calendar.parent_conferences
+		(tenant_id, organizer_staff_id, school_class, conference_date, start_minute, end_minute, slot_minutes)
+		VALUES (?, ?, 'synthetic-class', '2026-01-12', 840, 960, 15) RETURNING id`, f.school, f.staff).Scan(ctx, &conference))
+	for i, child := range []int64{f.child, f.sibling} {
+		_, err := f.db.NewRaw(`INSERT INTO users.parent_announcement_letter_copies (tenant_id, announcement_id, student_id, first_name, body)
+			VALUES (?, ?, ?, 'SyntheticChild', 'synthetic-letter-copy')`, f.school, letter.ID, child).Exec(ctx)
+		require.NoError(t, err)
+		_, err = f.db.NewRaw(`INSERT INTO users.parent_announcement_responses (tenant_id, announcement_id, option_id, student_id, account_id)
+			VALUES (?, ?, ?, ?, ?)`, f.school, letter.ID, option, child, guardianAccount).Exec(ctx)
+		require.NoError(t, err)
+		_, err = f.db.NewRaw(`INSERT INTO calendar.appointment_recipient_students (tenant_id, recipient_id, student_id)
+			VALUES (?, ?, ?)`, f.school, invitation, child).Exec(ctx)
+		require.NoError(t, err)
+		_, err = f.db.NewRaw(`INSERT INTO calendar.parent_conference_bookings (tenant_id, conference_id, student_id, guardian_profile_id, slot_start_minute)
+			VALUES (?, ?, ?, ?, ?)`, f.school, conference, child, f.guardian, 840+15*i).Exec(ctx)
+		require.NoError(t, err)
+	}
 }
 
 func personReviewRulesByTable(t *testing.T, out string) map[string][]string {

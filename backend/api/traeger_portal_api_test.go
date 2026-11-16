@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -118,7 +119,7 @@ func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdent
 	database := testpkg.NewDatabase(t, db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
-	audit, err := auditCompose.NewTenantPersistence(db)
+	audit, err := auditCompose.NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
 	membership, err := owners.ComposeSchoolMembership(database)
 	require.NoError(t, err)

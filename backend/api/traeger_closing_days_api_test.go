@@ -89,6 +89,15 @@ func TestTraegerPlansClosingDaysAndSeesEachSchoolsFederalState(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.ElementsMatch(t, office.schools, traegerCalendarOf(t, router, office).ClosingDays[0].SchoolIDs)
 
+	// The list as a file, for the window of the page (#4718).
+	exportPath := "/traeger/closing-days/export?from=2027-01-01&to=2027-12-31"
+	export := traegerJSON(t, router, office.token, http.MethodGet, exportPath, nil)
+	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
+	assert.Contains(t, export.Body.String(), "07.05.2027;08.05.2027;2;Brückentag;Alle Schulen\n")
+	assertTraegerListFormats(t, router, office.token, exportPath, "schliesstage-2027-01-01-bis-2027-12-31")
+	rec = traegerJSON(t, router, office.token, http.MethodGet, "/traeger/closing-days/export?from=2027-01-01", nil)
+	assert.Equal(t, http.StatusBadRequest, rec.Code, "the export needs the window: "+rec.Body.String())
+
 	rec = traegerJSON(t, router, office.token, http.MethodPost, "/traeger/closing-days/", traegerClosingDayBody{
 		StartDate: "2027-05-07", EndDate: "2027-05-06", Reason: "Rückwärts", SchoolIDs: office.schools,
 	})

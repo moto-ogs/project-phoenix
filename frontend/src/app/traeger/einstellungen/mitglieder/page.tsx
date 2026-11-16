@@ -15,6 +15,7 @@ import {
 } from "~/components/traeger/traeger-account-modals";
 import { isRefusal } from "~/components/traeger/use-traeger-confirmed-resource";
 import { TraegerAccountHistory } from "~/components/traeger/traeger-account-history";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { Button } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -42,6 +43,7 @@ import {
   type TraegerInvitation,
   type TraegerMember,
 } from "~/lib/traeger-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { TRAEGER_ROLE_LABELS, type TraegerRole } from "~/lib/traeger-roles";
 import { traegerPath } from "~/lib/traeger-url";
 
@@ -80,6 +82,26 @@ export default function TraegerAccountsPage() {
   const confirmErrors = useApiFormError();
   const { success } = useToast();
 
+  // A refusal ends the access: the page drops what it loaded, also after a
+  // refused download.
+  const dropOnRefusal = useCallback((error: unknown) => {
+    if (!isRefusal(error)) return;
+    setBuero({ members: [], invitations: [] });
+    setLoaded(false);
+    loadedRef.current = false;
+    setAccessRefused(true);
+    setInviting(false);
+    setEditing(null);
+    setNaming(null);
+    setPending(null);
+  }, []);
+
+  const onExportError = (error: unknown) => {
+    if (!isRefusal(error)) return;
+    dropOnRefusal(error);
+    void showLoadError(error, { object: "die Liste der Personen" });
+  };
+
   const fetchBuero = useCallback(async () => {
     const request = ++latestRead.current;
     try {
@@ -92,19 +114,10 @@ export default function TraegerAccountsPage() {
       clearLoadError();
     } catch (error) {
       if (request !== latestRead.current) return;
-      if (isRefusal(error)) {
-        setBuero({ members: [], invitations: [] });
-        setLoaded(false);
-        loadedRef.current = false;
-        setAccessRefused(true);
-        setInviting(false);
-        setEditing(null);
-        setNaming(null);
-        setPending(null);
-      }
+      dropOnRefusal(error);
       throw error;
     }
-  }, [clearLoadError]);
+  }, [clearLoadError, dropOnRefusal]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -359,16 +372,29 @@ export default function TraegerAccountsPage() {
       loading={accessRefused && !bueroLoad.error && !afterWrite.error}
       actions={
         accessRefused ? undefined : (
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            tooltip="Öffnet ein Fenster, um eine Person ins Träger-Büro einzuladen."
-            onClick={() => setInviting(true)}
-          >
-            <UserPlus className="mr-2 h-4 w-4" aria-hidden="true" />
-            Person einladen
-          </Button>
+          <>
+            <TraegerListExportMenu
+              download={(format) =>
+                downloadTraegerList("/api/traeger/accounts/export", format)
+              }
+              scope="Träger-Büro"
+              ariaLabel="Mitglieder und Einladungen herunterladen"
+              fallbackName="mitglieder"
+              errorObject="die Liste der Personen"
+              unavailable={!loaded}
+              onError={onExportError}
+            />
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              tooltip="Öffnet ein Fenster, um eine Person ins Träger-Büro einzuladen."
+              onClick={() => setInviting(true)}
+            >
+              <UserPlus className="mr-2 h-4 w-4" aria-hidden="true" />
+              Person einladen
+            </Button>
+          </>
         )
       }
       error={loaded ? null : (afterWrite.error ?? bueroLoad.error)}
@@ -474,7 +500,10 @@ export default function TraegerAccountsPage() {
         </SectionCard>
       ) : null}
       {accessRefused || bueroLoad.error ? null : (
-        <TraegerAccountHistory version={historyVersion} />
+        <TraegerAccountHistory
+          version={historyVersion}
+          onExportError={onExportError}
+        />
       )}
     </TenantPage>
   );

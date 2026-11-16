@@ -205,7 +205,7 @@ func (s *InstanceLifecycleService) snapshotDeviations(ctx context.Context, from,
 // a past occurrence may still name a retired person, who is left out (only a
 // live person can be offboarded, and only then close a cycle).
 func (s *InstanceLifecycleService) liveStaffOf(ctx context.Context, rows []*scheduleModel.InstanceStaff, instances []*scheduleModel.ActivityInstance) ([]int64, error) {
-	today := calendar.TodayDate()
+	today := calendar.DateFromTime(s.now())
 	past := make(map[int64]bool, len(instances))
 	for _, inst := range instances {
 		past[inst.ID] = calendar.Date(inst.Date).Before(today)

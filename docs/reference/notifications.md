@@ -184,7 +184,7 @@ mechanical: **no row means off**.
 |---|---|---|
 | SSE / in-app | active | `realtime.Broadcaster` → SSE event `notification` → toast |
 | Web Push | active (#2003/#2657) | leased `platform.push_outbox` → `webpush-go` (VAPID) → browser push service → service worker notification |
-| Feed | active (#7148 staff portal, #7139 moto schule) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
+| Feed | active (#7148 staff portal, #7139 moto schule, #7140 parents portal) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
 | E-Mail | future | wrap `email.Mailer` + audience→address resolution as a `Channel` |
 
 E-mail is still not a `Channel`: features that mail enqueue through the same
@@ -295,6 +295,31 @@ push is off by default (`FilterOptedIn`); the school switch is
 `notifications.staff_notice_published_enabled`. The link
 `/tagesinformationen?hinweis=<id>` opens the notice through
 `GET /api/staff-notices/{id}`, also before it applies.
+
+#### Parents portal (#7140)
+
+A guardian-scoped event with `Feed` and `Audience.StudentIDs` writes one
+entry per guardian account of its audience, with the children it is about
+(`student_ids`). Only parent types (`PortalParent`) reach the feed of a
+guardian; staff types such as substitutions or Dienstplan changes never do.
+
+- Reading: `GET /parent/me/notifications/feed/` and the same three routes
+  below it, across every school of the family in one administrative
+  transaction. Every read checks again that the account is an active guardian
+  member of the entry's school and still holds `parent_portal.access` for at
+  least one of its children (`platform.delivery_realtime_recipients`). Losing
+  the right hides the entries; nothing is deleted. A staff session never
+  reads an entry of a guardian, and a guardian never one of staff.
+- `Feed.Title`/`Feed.Body` carry the entry's text when it may say more than
+  the push: the entry is read only after login, the push keeps its
+  lock-screen copy without child data.
+- `notification_feed_changed` reaches the account's parents-portal sessions
+  (`BroadcastToGuardian`), once per school whose entries changed.
+
+The first parent producer is Communication's cancellation notice
+(`parent_care_cancelled`, #2601): the one notice the person cancelling sends
+to the families writes the feed next to its push and its news entry; there is
+no second message. The family's switch decides only the push.
 
 ### Web Push (#2003)
 

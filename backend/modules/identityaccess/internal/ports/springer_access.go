@@ -11,4 +11,6 @@ type SpringerAccessStore interface {
 	EnsureSpringerAccountTenant(ctx context.Context, accountID, tenantID int64) error
 	SaveAccessWindow(ctx context.Context, accountID, tenantID, blockID int64, startsAt, endsAt time.Time) error
 	DeleteAccessWindow(ctx context.Context, tenantID, blockID int64) error
+	PruneAccessWindows(ctx context.Context, tenantID int64) error
+	HoldsOnlySpringerRoles(ctx context.Context, accountID, tenantID int64, springerRole string) (bool, error)
 }

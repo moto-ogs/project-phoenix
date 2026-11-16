@@ -29,7 +29,7 @@ func mountTraegerClosingDayRoutes(root chi.Router, schools traegercalendar.Schoo
 	closures := newHolidayClosures(organizations, mail, holidayCalendar, holidays, today)
 	requireManage := common.RequiresPermission(identityaccess.TraegerRightSettingsManage)
 	resource := schoolCalendarHTTP.NewTraegerClosingDayResource(
-		schoolCalendarCompose.NewTraegerClosingDays(schools, owners.NewTraegerClosingDayHolidayNotices(closures)),
+		schoolCalendarCompose.NewTraegerClosingDays(schools, owners.NewTraegerClosingDayHolidayNotices(closures)), traegerListRenderer(NewSimpleListRenderer()),
 		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), requireManage)
 	root.Mount("/traeger/closing-days", resource.TraegerRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/holiday-closures", enrollmentAPI.NewHolidayClosureResource(closures, requireManage).TraegerRouter(ProtectedTraegerRoutes))

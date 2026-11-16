@@ -9,9 +9,9 @@ import (
 func TestGroupSupervisorValidate(t *testing.T) {
 	t.Parallel()
 
-	nowDate := calendar.TodayDate()
-	futureDate := nowDate.AddDays(30) // 30 days in the future
-	pastDate := nowDate.AddDays(-30)  // 30 days in the past
+	nowDate := calendar.NewDate(2026, 11, 2) // a fixed Monday: validation takes its dates from the row
+	futureDate := nowDate.AddDays(30)        // 30 days in the future
+	pastDate := nowDate.AddDays(-30)         // 30 days in the past
 
 	tests := []struct {
 		name            string
@@ -121,9 +121,9 @@ func TestGroupSupervisorValidate(t *testing.T) {
 func TestGroupSupervisorSetEndDate(t *testing.T) {
 	t.Parallel()
 
-	nowDate := calendar.TodayDate()
-	futureDate := nowDate.AddDays(30) // 30 days in the future
-	pastDate := nowDate.AddDays(-30)  // 30 days in the past
+	nowDate := calendar.NewDate(2026, 11, 2) // a fixed Monday: validation takes its dates from the row
+	futureDate := nowDate.AddDays(30)        // 30 days in the future
+	pastDate := nowDate.AddDays(-30)         // 30 days in the past
 
 	tests := []struct {
 		name            string

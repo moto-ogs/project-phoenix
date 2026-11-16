@@ -24,18 +24,19 @@ type CareBillingResource struct {
 	discard        capability.CareRunDiscard
 	letters        capability.CareLetterService
 	requireBilling common.Middleware
+	lists          common.ListRenderer
 }
 
 // NewCareBillingResource builds the resource with the discard of an empty
 // open run (#6626) and the letters of the released runs (#4684, ADR 0165).
 // requireBilling admits only a session with the Träger right "Abrechnung".
 func NewCareBillingResource(billing capability.CareBilling, discard capability.CareRunDiscard, letters capability.CareLetterService,
-	requireBilling common.Middleware,
+	requireBilling common.Middleware, lists common.ListRenderer,
 ) *CareBillingResource {
-	if billing == nil || discard == nil || letters == nil || requireBilling == nil {
-		panic("parent billing http: the monthly billing, its discard, its letters and the right check are required")
+	if billing == nil || discard == nil || letters == nil || requireBilling == nil || lists == nil {
+		panic("parent billing http: the monthly billing, its discard, its letters, the right check and the list export are required")
 	}
-	return &CareBillingResource{billing: billing, discard: discard, letters: letters, requireBilling: requireBilling}
+	return &CareBillingResource{billing: billing, discard: discard, letters: letters, requireBilling: requireBilling, lists: lists}
 }
 
 // TariffRouter returns the routes mounted at /traeger/care-tariffs.
@@ -59,7 +60,9 @@ func (rs *CareBillingResource) RunRouter(protectedTraegerRoutes func(chi.Router,
 		billing := r.With(rs.requireBilling, withTx)
 		billing.Get("/", rs.list)
 		billing.Post("/", rs.start)
+		billing.Get("/export", rs.exportList)
 		billing.Get("/{id}", rs.detail)
+		billing.Get("/{id}/invoices/export", rs.exportInvoices)
 		billing.Post("/{id}/release", rs.release)
 		billing.Post("/{id}/discard", rs.discardRun)
 		rs.mountReview(billing)

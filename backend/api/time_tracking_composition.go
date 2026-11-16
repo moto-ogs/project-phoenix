@@ -99,6 +99,7 @@ func newTimeTrackingResource(
 		AllowanceResponses: timeTrackingAllowanceResponses,
 		AccountStartDate:   timeTrackingAccountStartDate(settings),
 		AbsenceMails:       timeTracking.AbsenceMails,
+		Today:              timeTracking.Today,
 		Identity:           timeTrackingIdentity,
 		WithinTenant: func(ctx context.Context, tenantID int64, run func(context.Context) error) error {
 			id, err := tenant.NewTenantID(tenantID)
@@ -153,6 +154,7 @@ func newStaffAdminResource(capabilities owners.WorkforceAdminCapabilities, absen
 		QualificationTypes: qualifications,
 		Qualifications:     qualifications,
 		AbsenceMails:       absenceMails,
+		Today:              capabilities.Today,
 		Logger:             logger,
 	})
 }

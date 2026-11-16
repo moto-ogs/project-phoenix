@@ -1,6 +1,6 @@
 "use client";
 
-// Die Träger-Werte der Lohndatei (#4712, ADR 0249 Punkt 3): der
+// Die Träger-Werte der Lohndatei (#4712, ADR 0250 Punkt 3): der
 // DATEV-Mandant des Lohns und eine Lohnart je Kategorie und Art des
 // Vertrags. Die Werte sind Einstellungen des Trägers (`traeger_payroll.*`);
 // die Seite zeigt sie als eine Tabelle statt 40 einzelner Felder und

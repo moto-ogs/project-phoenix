@@ -105,7 +105,7 @@ func operatorRouter(
 	billing *provisioningOperatorAPI.BillingResource,
 	schoolSettings *operatorSchoolSettings,
 	announcements communicationModule.Capability,
-	unregisteredTagScans http.Handler,
+	unregisteredTagScans unregisteredTagScanReview,
 	limiters authRateLimiters,
 	staffPersonMerge http.Handler,
 	sampleChildren http.HandlerFunc,
@@ -430,15 +430,21 @@ func mountOperatorPersonRoutes(r chi.Router, provisioning *provisioningOperatorA
 }
 
 // mountOperatorTagScanRoutes mounts the optional Device Fleet review of
-// unregistered RFID scans (GET / and POST /{id}/resolve).
-func mountOperatorTagScanRoutes(r chi.Router, unregisteredTagScans http.Handler, provisioning *provisioningOperatorAPI.ProvisioningResource) {
+// unregistered RFID scans (GET / and POST /{id}/resolve). The review runs the
+// audit as route middleware, after its route matched, so the audit names the
+// resolved scan (#7212).
+func mountOperatorTagScanRoutes(r chi.Router, unregisteredTagScans unregisteredTagScanReview, provisioning *provisioningOperatorAPI.ProvisioningResource) {
 	if unregisteredTagScans == nil {
 		return
 	}
-	r.With(func(next http.Handler) http.Handler {
+	r.Mount("/unregistered-tag-scans", unregisteredTagScans(func(next http.Handler) http.Handler {
 		return provisioning.AuditReadAccess(organizationtenancy.ReadUnregisteredTagScans, next.ServeHTTP)
-	}).Mount("/unregistered-tag-scans", unregisteredTagScans)
+	}))
 }
+
+// unregisteredTagScanReview builds Device Fleet's review routes with the
+// operator router's route middleware.
+type unregisteredTagScanReview func(routeMiddleware ...func(http.Handler) http.Handler) chi.Router
 
 // mountAccountMFARoutes registers the account-wide MFA override surface
 // ("mailbox lockout emergency switch"). Deliberately decoupled from

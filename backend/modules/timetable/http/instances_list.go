@@ -553,7 +553,7 @@ func (rs *Resource) enrichInstance(
 		AssignedStaffCount:     len(staffRows) - absentCount,
 		RequiredStaffOverride:  inst.RequiredStaff,
 		ConflictWarnings:       []timetable.InstanceConflictWarning{},
-		CanReopen:              reopenEligibility(ctx, inst, studentRows),
+		CanReopen:              reopenEligibility(ctx, inst, studentRows, rs.Now()),
 		CanComplete:            availability.CanComplete,
 		CompleteAvailableAt:    availability.CompleteAvailableAt.Format(time.RFC3339),
 	}
@@ -572,13 +572,13 @@ func (rs *Resource) completionAvailability(ctx context.Context, inst timetable.S
 		return timetable.LifecycleAvailability{}, err
 	}
 	return timetable.EvaluateLifecycleAvailability(
-		timetable.LifecycleWindow{Date: inst.Date, StartTime: inst.StartTime, EndTime: inst.EndTime, IsSpontaneous: inst.IsSpontaneous}, time.Now(), 0, completeLead, enforcePlannedEnd,
+		timetable.LifecycleWindow{Date: inst.Date, StartTime: inst.StartTime, EndTime: inst.EndTime, IsSpontaneous: inst.IsSpontaneous}, rs.Now(), 0, completeLead, enforcePlannedEnd,
 	), nil
 }
 
-func reopenEligibility(ctx context.Context, inst timetable.ScheduledInstance, attendance []timetable.ScheduledParticipant) bool {
+func reopenEligibility(ctx context.Context, inst timetable.ScheduledInstance, attendance []timetable.ScheduledParticipant, now time.Time) bool {
 	claims := sessiontoken.ClaimsFromCtx(ctx)
-	return timetable.CanReopenInstance(inst, int64(claims.ID), common.HasEffectiveAdminScope(ctx), time.Now()) &&
+	return timetable.CanReopenInstance(inst, int64(claims.ID), common.HasEffectiveAdminScope(ctx), now) &&
 		timetable.AttendanceUnchangedSinceCompletion(inst, attendance)
 }
 

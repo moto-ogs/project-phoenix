@@ -48,7 +48,13 @@ func communicationNotificationsToDelivery(events []communication.NotificationEve
 func communicationNotificationToDelivery(event communication.NotificationEvent) devices.NotificationEvent {
 	var feed *deliveryContract.NotificationFeedDelivery
 	if event.Feed != nil {
-		feed = &deliveryContract.NotificationFeedDelivery{PushAccountIDs: event.Feed.PushAccountIDs}
+		feed = &deliveryContract.NotificationFeedDelivery{
+			PushAccountIDs:    event.Feed.PushAccountIDs,
+			Title:             event.Feed.Title,
+			Body:              event.Feed.Body,
+			DeepLink:          event.Feed.DeepLink,
+			HoldOutsideWindow: event.Feed.HoldOutsideWindow,
+		}
 	}
 	return devices.NotificationEvent{
 		Type: event.Type, IdempotencyKey: event.IdempotencyKey,

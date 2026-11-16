@@ -320,7 +320,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			calendar, err = BuildSchoolCalendarRecords(db, ObserveSchoolCalendar, settings.Service)
 			return
 		},
-		func() (err error) { workTime, err = BuildServeWorkforce(db, membership, calendar); return },
+		func() (err error) { workTime, err = BuildServeWorkforce(db, env, membership, calendar); return },
 		func() error {
 			people, peopleIdentity = BuildPeopleRows(db, env.Observe.IdentityAccess, groups, rooms, membership, workTime)
 			return nil
@@ -335,16 +335,19 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			persons, err = BuildPeopleDirectory(db, ObservePeopleDirectory, photoRuntime, GuardianDirectoryProvider(db, guardian))
 			return
 		},
-		func() (err error) { timetableOwner, err = BuildServeTimetable(db, persons, rooms, membership); return },
+		func() (err error) {
+			timetableOwner, err = BuildServeTimetable(db, persons, rooms, membership, env.Now)
+			return
+		},
 		func() error {
-			timetableRepos = NewTimetableRepositories(db, timetableOwner, persons, groups, rooms, calendar, membership, workTime)
+			timetableRepos = NewTimetableRepositories(db, timetableOwner, persons, groups, rooms, calendar, membership, workTime, env.Now)
 			return nil
 		},
 		func() (err error) {
 			carePlan, err = ComposeCarePlan(db, persons, CarePlanStatusSlots(timetableRepos.InstanceStudent), env.Now)
 			return
 		},
-		func() (err error) { appointments, err = BuildServeAppointments(db); return },
+		func() (err error) { appointments, err = BuildServeAppointments(db, env.Now); return },
 		func() error { operatorAuditLog = NewOperatorAuditLog(db); return nil },
 		func() (err error) { mealPlan, err = workerMealPlan(db, settings, people, persons, calendar); return },
 		func() (err error) { feedbackSettings, err = BuildFeedbackSettings(settings.Service); return },
@@ -358,7 +361,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() error {
 			presence = BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
-			substitutions = NewGroupSubstitutionRepository(structure.Groups, membership, workTime)
+			substitutions = NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today)
 			supervisions = NewGroupSupervisionRecords(presence.SessionRecords, groups)
 			return nil
 		},
@@ -440,7 +443,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			activities, err = BuildActivities(timetableRows, timetableOwner, presence.SessionRecords, people)
+			activities, err = BuildActivities(timetableRows, timetableOwner, presence.SessionRecords, people, env.Today)
 			return
 		},
 		func() (err error) {
@@ -537,7 +540,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			facilities, err = BuildFacilitiesModule(db, ObserveFacilities, timetableRows.RecurrenceLock, presence.Presence, requests.CareOfferings, groups, devices)
+			facilities, err = BuildFacilitiesModule(db, ObserveFacilities, timetableRows.RecurrenceLock, presence.Presence, requests.CareOfferings, groups, devices, env.Today)
 			return
 		},
 		func() (err error) {

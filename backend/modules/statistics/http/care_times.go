@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -61,7 +60,7 @@ func (rs *Resource) getCareTimeOverruns(w http.ResponseWriter, r *http.Request) 
 }
 
 func (rs *Resource) exportCareTimeOverruns(w http.ResponseWriter, r *http.Request) {
-	if rs.Runtime.Export == nil {
+	if rs.Runtime.Export == nil || rs.Runtime.Now == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("statistics export service is not configured")))
 		return
 	}
@@ -85,7 +84,9 @@ func (rs *Resource) exportCareTimeOverruns(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	filename := "soll-und-ist-" + result.From.String() + "-" + result.To.String()
-	file, err := rs.Runtime.Export(buildCareTimeExportDocument(result), format, filename)
+	doc := buildCareTimeExportDocument(result)
+	doc.GeneratedAt = rs.Runtime.Now()
+	file, err := rs.Runtime.Export(doc, format, filename)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -250,9 +251,8 @@ const (
 // the definitions the screen shows.
 func buildCareTimeExportDocument(result *studentpresence.CareTimeOverruns) ExportDocument {
 	doc := ExportDocument{
-		Title:       "Soll und Ist",
-		Subtitle:    fmt.Sprintf("Kinder mit Überschreitungen vom %s bis %s", result.From.Format("02.01.2006"), result.To.Format("02.01.2006")),
-		GeneratedAt: time.Now(),
+		Title:    "Soll und Ist",
+		Subtitle: fmt.Sprintf("Kinder mit Überschreitungen vom %s bis %s", result.From.Format("02.01.2006"), result.To.Format("02.01.2006")),
 		Columns: []ExportColumn{
 			{ID: columnName, Label: "Name"},
 			{ID: columnSchoolClass, Label: "Klasse"},

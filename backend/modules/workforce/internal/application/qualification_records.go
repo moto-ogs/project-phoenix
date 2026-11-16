@@ -51,11 +51,7 @@ func (r qualificationRecords) load(ctx context.Context, staffID int64) ([]domain
 }
 
 func (r qualificationRecords) today() calendar.Date {
-	today, err := calendar.ParseDate(r.clock.Today())
-	if err != nil {
-		return calendar.TodayDate()
-	}
-	return today
+	return calendar.DateFromTime(r.clock.Now())
 }
 
 // Qualifications is the Nachweise of #4808: the kinds, the list and the

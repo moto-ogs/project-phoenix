@@ -50,6 +50,9 @@ type DeliveryNotifications struct {
 	UnreportedAbsences deliveryContract.UnreportedAbsenceNotifier
 	// Feed serves an account its own notification feed (#7148).
 	Feed deliveryContract.NotificationFeed
+	// GuardianFeed serves a guardian account its feed across the schools of
+	// the family in the parents portal (#7140).
+	GuardianFeed deliveryContract.GuardianNotificationFeed
 }
 
 // BuildDeliveryNotifications binds the notification router over the realtime
@@ -82,9 +85,9 @@ func BuildDeliveryNotifications(
 		clock = time.Now
 	}
 	notifier := deliveryCompose.NewNotifier(settings, logger.With("service", "notifications"), deliveryCompose.NotificationDeliveryObserver(env.Observe.Delivery), delivery.Runtime.Store, clock, sse, push)
-	feed, ok := notifier.(deliveryContract.NotificationFeed)
-	if !ok {
-		return DeliveryNotifications{}, fmt.Errorf("notification router does not serve the notification feed")
+	feed, guardianFeed, err := deliveryFeeds(notifier)
+	if err != nil {
+		return DeliveryNotifications{}, err
 	}
 	preferences, err := deliveryCompose.NewTenantPreferenceService(unit, consent, DeliveryPreferenceSettings(settings), db.Pool(), identity, securityruntime.HasPermission)
 	if err != nil {
@@ -119,6 +122,7 @@ func BuildDeliveryNotifications(
 		AbsenceNotifier:  absences,
 		ResponsibleStaff: responsible,
 		Feed:             feed,
+		GuardianFeed:     guardianFeed,
 	}, nil
 }
 
@@ -201,4 +205,18 @@ func buildDeliveryWorker(
 		return nil, fmt.Errorf("initialize delivery module: %w", err)
 	}
 	return worker, nil
+}
+
+// deliveryFeeds are the two read sides of the router's notification feed:
+// the feed of a staff account in its school (#7148) and the feed of a
+// guardian across the family's schools (#7140).
+func deliveryFeeds(notifier deliveryCompose.Notifier) (deliveryContract.NotificationFeed, deliveryContract.GuardianNotificationFeed, error) {
+	feed, ok := notifier.(deliveryContract.NotificationFeed)
+	guardians, served := notifier.(interface {
+		GuardianFeed() deliveryContract.GuardianNotificationFeed
+	})
+	if !ok || !served || guardians.GuardianFeed() == nil {
+		return nil, nil, fmt.Errorf("notification router does not serve the notification feeds")
+	}
+	return feed, guardians.GuardianFeed(), nil
 }

@@ -33,6 +33,7 @@ const CodeIdentityInvitationMailDelayed = "identity.invitation_mail_delayed"
 const CodeIdentityInvitationNotFound = "identity.invitation_not_found"
 const CodeIdentityInvitationRateLimited = "identity.invitation_rate_limited"
 const CodeIdentityLehrkraftRoleImmutable = "identity.lehrkraft_role_immutable"
+const CodeIdentityLogoutNotRevoked = "identity.logout_not_revoked"
 const CodeIdentityMailBlockUnreadable = "identity.mail_block_unreadable"
 const CodeIdentityMailBlockedAtProvider = "identity.mail_blocked_at_provider"
 const CodeIdentityMfaAlreadyEnrolled = "identity.mfa_already_enrolled"
@@ -97,6 +98,7 @@ var errorCodeClassesIdentity = []errorCodeClass{
 	{CodeIdentityInvitationNotFound, "input"},
 	{CodeIdentityInvitationRateLimited, "unavailable"},
 	{CodeIdentityLehrkraftRoleImmutable, "business_rejection"},
+	{CodeIdentityLogoutNotRevoked, "unavailable"},
 	{CodeIdentityMailBlockUnreadable, "unavailable"},
 	{CodeIdentityMailBlockedAtProvider, "business_rejection"},
 	{CodeIdentityMfaAlreadyEnrolled, "business_rejection"},

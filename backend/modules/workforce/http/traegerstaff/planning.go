@@ -18,15 +18,17 @@ import (
 type PlanningResource struct {
 	planning     workforce.TraegerStaffPlanning
 	requireStaff common.Middleware
+	lists        common.ListRenderer
 }
 
 // NewPlanningResource builds the resource; the root binds requireStaff to
-// the Träger right traeger_staff:manage.
-func NewPlanningResource(planning workforce.TraegerStaffPlanning, requireStaff common.Middleware) *PlanningResource {
-	if planning == nil || requireStaff == nil {
-		panic("workforce traeger planning: the planning and the right check are required")
+// the Träger right traeger_staff:manage and lists to Document Rendering
+// (#4718).
+func NewPlanningResource(planning workforce.TraegerStaffPlanning, requireStaff common.Middleware, lists common.ListRenderer) *PlanningResource {
+	if planning == nil || requireStaff == nil || lists == nil {
+		panic("workforce traeger planning: the planning, the right check and the list renderer are required")
 	}
-	return &PlanningResource{planning: planning, requireStaff: requireStaff}
+	return &PlanningResource{planning: planning, requireStaff: requireStaff, lists: lists}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/staff-planning.
@@ -36,6 +38,7 @@ func (rs *PlanningResource) TraegerRouter(protectedTraegerRoutes func(chi.Router
 	protectedTraegerRoutes(r, func(r chi.Router, _ common.Middleware) {
 		staff := r.With(rs.requireStaff)
 		staff.Get("/", rs.week)
+		staff.Get("/export", rs.weekExport)
 		staff.Get("/future-shifts", rs.futureShifts)
 		staff.Post("/records/{id}/shifts", rs.plan)
 		staff.Put("/records/{id}/shifts/{shiftId}", rs.change)
@@ -79,21 +82,30 @@ func (rs *PlanningResource) week(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var weekStart calendar.Date
-	if raw := r.URL.Query().Get("week"); raw != "" {
-		parsed, err := calendar.ParseDate(raw)
-		if err != nil {
-			common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("week must be YYYY-MM-DD")))
-			return
-		}
-		weekStart = parsed
+	weekStart, ok := weekParam(w, r)
+	if !ok {
+		return
 	}
-	week, err := rs.planning.PlanningWeek(r.Context(), session, weekStart)
+	week, err := rs.planning.PlanningWeek(r.Context(), session, weekStart, workforce.TraegerStaffViewPlanning)
 	if err != nil {
 		renderPlanningError(w, r, err)
 		return
 	}
 	common.Respond(w, r, http.StatusOK, week, "Planning week retrieved successfully")
+}
+
+// weekParam reads the optional week= of the plan; empty is this week.
+func weekParam(w http.ResponseWriter, r *http.Request) (calendar.Date, bool) {
+	raw := r.URL.Query().Get("week")
+	if raw == "" {
+		return "", true
+	}
+	parsed, err := calendar.ParseDate(raw)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("week must be YYYY-MM-DD")))
+		return "", false
+	}
+	return parsed, true
 }
 
 func (rs *PlanningResource) futureShifts(w http.ResponseWriter, r *http.Request) {

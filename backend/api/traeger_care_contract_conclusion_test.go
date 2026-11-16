@@ -40,7 +40,7 @@ func careContractConclusionRun(t *testing.T, f careContractFixture) carecontract
 	unit := testpkg.TenantRuntime(t, f.db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
-	audit, err := auditCompose.NewTenantPersistence(f.db)
+	audit, err := auditCompose.NewTenantPersistence(f.db, time.Now)
 	require.NoError(t, err)
 	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil)
 	require.NoError(t, err)

@@ -1,6 +1,10 @@
 package api
 
 import (
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
+	"time"
+
 	"context"
 	"log/slog"
 	"net/http"
@@ -97,7 +101,7 @@ func mountStaffRoutes(
 
 func schoolVacationHints(
 	db transactionruntime.Database, groups timetableModule.ActivityGroupQuery, days schoolcalendar.Calendar,
-	vacations schoolcalendar.SchoolVacationOwner,
+	vacations schoolcalendar.SchoolVacationOwner, now func() time.Time,
 ) (timetableModule.SchoolVacationHintQuery, error) {
 	rows := struct {
 		timetableCompose.PresenceReads
@@ -106,7 +110,8 @@ func schoolVacationHints(
 		PresenceReads:      owners.MustPresenceReads(db),
 		ActivityGroupQuery: groups,
 	}
-	return timetableCompose.NewSchoolVacationHints(rows, days, vacations, nil)
+	today := timezone.CalendarDateClock(now)
+	return timetableCompose.NewSchoolVacationHints(rows, days, vacations, func() string { return today().String() })
 }
 
 // mountSchoolPortalRoutes serves the school portal ("moto schule", #2207) at
@@ -124,6 +129,7 @@ func mountSchoolPortalRoutes(
 	planExport planexport.Service, chat owners.CommunicationMessaging, persons peopledirectory.Capability, notifications owners.DeliveryNotifications,
 	devices owners.DeliveryDevices, classDay ClassDayViews, identity identityaccess.Owner, calendarApp calendarCompose.Application,
 	announcements communicationModule.ParentAnnouncementCapability, shiftSeries workforceModule.ShiftPlanReferenceQuery, staff owners.StaffPermissionHolders,
+	now func() time.Time,
 ) error {
 	pickupExtensions, err := careexit.NewPickupExtensions(timetableOwner, presence)
 	if err != nil {
@@ -141,12 +147,12 @@ func mountSchoolPortalRoutes(
 	if err != nil {
 		return err
 	}
-	vacationHints, err := schoolVacationHints(db, timetableOwner, calendar, vacations)
+	vacationHints, err := schoolVacationHints(db, timetableOwner, calendar, vacations, now)
 	if err != nil {
 		return err
 	}
 	timetableResource := newTimetableResource(calendar, vacations, vacationHints, timetableOwner, materialization, lifecycle, planning, planningTracks, users, schedules,
-		caller, settings, careOfferings, classDay, planExport, pickupExtensions, persons, classArrivals, shiftSeries, logger)
+		caller, settings, careOfferings, classDay, planExport, pickupExtensions, persons, classArrivals, shiftSeries, logger, now)
 	// OGS-internal colleague chat (#2598) — staff-to-staff, deliberately a
 	// separate surface from /messages (which is parent-facing).
 	staffMessaging := staffMessagingAPI.NewResource(chat.StaffMessaging)
@@ -157,15 +163,15 @@ func mountSchoolPortalRoutes(
 	// pattern and the People Directory names of the acknowledgement list
 	// (#3418). All staff read them, admins write them; a new one reaches the feed (#7143).
 	staffNotices := timetableAPI.NewStaffNoticeResource(timetableCompose.NewStaffNotices(timetableCompose.StaffNoticeDependencies{
-		DB: db.Pool(), Periods: timetableCompose.NewCalendarPeriodRepository(calendar, newCalendarPeriodUsage(timetableOwner)), Names: staffNoticeNames(persons),
+		DB: db.Pool(), Periods: timetableCompose.NewCalendarPeriodRepository(calendar, newCalendarPeriodUsage(timetableOwner)), Names: staffNoticeNames(persons), Now: now,
 		Publications: owners.NewTimetableStaffNoticePublications(staff, notifications), Logger: logger.With("service", "staffnotice"),
-	}), func(ctx context.Context) int64 { return timeTrackingIdentity(ctx).AccountID })
+	}), func(ctx context.Context) int64 { return timeTrackingIdentity(ctx).AccountID }, timezone.CalendarDateClock(now))
 	// Notification abstraction (#1624).
 	notificationRoutes := NewNotificationHTTP(notifications.Notifier, devices.PushSubscriptions, notifications.Preferences, notifications.Feed)
 	// The class-day surface reads the class-day projection (#2701): the day
 	// report over Enrollment's day roster and the arrival-exception write
 	// seam (#2970) behind its one public capability.
-	classDayResource := classdayHTTP.NewResource(classDay.ClassDay, logger.With("handler", "class-day"))
+	classDayResource := classdayHTTP.NewResource(classDay.ClassDay, logger.With("handler", "class-day"), classDay.Today)
 	// The calendar of moto schule (#4798): the same calendar service as
 	// /api/calendar, behind calendar:school and the school-portal mantle.
 	schoolCalendar := calendarAPI.NewResource(calendarApp, nil, logger.With("handler", "school-calendar"))
@@ -196,6 +202,7 @@ func newTimetableResource(
 	careOfferings carePlanModule.CareOfferingCapability, classDay ClassDayViews, planExport planexport.Service,
 	pickupExtensions timetableAPI.PickupExtensionDecisions, hints peopledirectory.SchoolDayHintQuery,
 	classArrivals timetableModule.ClassArrivalQuery, shiftSeries workforceModule.ShiftPlanReferenceQuery, logger *slog.Logger,
+	now func() time.Time,
 ) *timetableAPI.Resource {
 	return timetableAPI.NewResource(timetableAPI.Dependencies{
 		CalendarPeriods:         calendar,
@@ -235,6 +242,7 @@ func newTimetableResource(
 		PickupExtensions:        pickupExtensions,
 		Staffing:                timetableStaffingAnnouncer(lifecycle.Instances),
 		Logger:                  logger.With("handler", "timetable"),
+		Now:                     now,
 	})
 }
 
@@ -254,8 +262,9 @@ func mountSchoolRoutes(
 	membership schoolMembershipModule.Capability, classListEntries schoolMembershipModule.ClassListEntries, databaseStats DatabaseStatsReader,
 	dataImports imports, persons peopledirectory.Capability, gradeTransition *gradetransition.Workflow, enrollment *enrollmentAPI.Resource,
 	appEnv string, weekProtocolSeed schedulerPorts.WeekProtocolEvenings, healthData enrollmentOwner.HolidayHealthCipher, holidayNoCare enrollmentOwner.HolidayHostCalendar,
+	now func() time.Time,
 ) {
-	mountWeekProtocolRoutes(tenant, timetableOwner, logger, caller, holidayAccessLog, persons, appEnv, weekProtocolSeed)
+	mountWeekProtocolRoutes(tenant, timetableOwner, logger, caller, holidayAccessLog, persons, appEnv, weekProtocolSeed, now)
 	tenant.Mount("/rooms", roomsHTTPAdapter.NewResource(facilities, roomsHTTPAdapter.Dependencies{
 		Facilities:          rooms.RoomService,
 		RoomHistorySettings: NewRoomHistorySettings(settings, logger.With("handler", "rooms"), settingsFacts.PrefetchSettings),

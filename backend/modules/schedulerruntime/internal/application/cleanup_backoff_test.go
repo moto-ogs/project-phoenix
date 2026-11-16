@@ -34,24 +34,29 @@ func (l *cleanupLogs) logger() *slog.Logger {
 	return slog.New(slog.NewJSONHandler(l, &slog.HandlerOptions{Level: slog.LevelInfo}))
 }
 
-// take returns the records with message msg and drops them from the buffer.
+// take returns the records with message msg and empties the buffer.
 func (l *cleanupLogs) take(t *testing.T, msg string) []map[string]any {
+	t.Helper()
+	return l.byMessage(t)[msg]
+}
+
+// byMessage returns every record grouped by message and empties the buffer.
+func (l *cleanupLogs) byMessage(t *testing.T) map[string][]map[string]any {
 	t.Helper()
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	var matched []map[string]any
+	grouped := map[string][]map[string]any{}
 	for _, line := range bytes.Split(l.buf.Bytes(), []byte("\n")) {
 		if len(line) == 0 {
 			continue
 		}
 		var record map[string]any
 		require.NoError(t, json.Unmarshal(line, &record))
-		if record["msg"] == msg {
-			matched = append(matched, record)
-		}
+		msg, _ := record["msg"].(string)
+		grouped[msg] = append(grouped[msg], record)
 	}
 	l.buf.Reset()
-	return matched
+	return grouped
 }
 
 const (

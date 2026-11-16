@@ -131,7 +131,7 @@ func TestParseStudentListParamsReadsAdministrativeFilters(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest("GET", "/students?bus=yes&photo_consent=no&pickup_status=self", nil)
-	params := parseStudentListParams(req)
+	params := parseStudentListParams(req, calendar.NewDate(2026, 11, 2))
 
 	assert.Equal(t, "yes", params.bus)
 	assert.Equal(t, "no", params.photoConsent)
@@ -146,7 +146,7 @@ func TestParseStudentListParamsAdministrativeFiltersDefaultOff(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest("GET", "/students?bus=all", nil)
-	params := parseStudentListParams(req)
+	params := parseStudentListParams(req, calendar.NewDate(2026, 11, 2))
 
 	assert.False(t, params.hasAdministrativeFilters())
 	assert.False(t, params.hasInMemoryFilters())

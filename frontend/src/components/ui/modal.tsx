@@ -5,9 +5,7 @@ import { createPortal } from "react-dom";
 import { FocusScope } from "@radix-ui/react-focus-scope";
 import { useLatest } from "~/lib/hooks/use-latest";
 import {
-  OVERLAY_BACKDROP_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
-  OVERLAY_BACKDROP_TINT_HIDDEN_CLASS,
   OVERLAY_PANEL_STYLE,
   Z_LAYER,
 } from "./overlay-styles";
@@ -77,8 +75,8 @@ interface ModalProps {
   readonly onClose: () => void;
   readonly title: string;
   /**
-   * Name of the dialog when it shows no `title` and draws its own heading
-   * (the password-reset dialog of the login pages). A dialog needs a name.
+   * Name of the dialog when it shows no `title` and draws its own
+   * heading. A dialog needs a name.
    */
   readonly ariaLabel?: string;
   /**
@@ -383,19 +381,11 @@ export function Modal({
           onClick={handleClose}
           disabled={isDismissDisabled || isBackdropDismissDisabled}
           aria-label={backdropLabel}
-          // No bg-transparent reset here: Tailwind emits it after bg-black/*
-          // and the tint never rendered. The hidden state below is the reset.
-          className={`absolute inset-0 cursor-default border-none p-0 ${OVERLAY_BACKDROP_CLASS} transition-all duration-200 ease-out ${
-            isAnimating && !isExiting
-              ? OVERLAY_BACKDROP_TINT_CLASS
-              : OVERLAY_BACKDROP_TINT_HIDDEN_CLASS
+          // The tint stays put and only its opacity fades: the compositor
+          // runs an opacity transition without repainting the page.
+          className={`absolute inset-0 cursor-default border-none p-0 ${OVERLAY_BACKDROP_TINT_CLASS} transition-opacity duration-200 ease-out ${
+            isAnimating && !isExiting ? "opacity-100" : "opacity-0"
           }`}
-          style={{
-            animation:
-              isAnimating && !isExiting
-                ? "backdropEnter 200ms ease-out"
-                : undefined,
-          }}
         />
         {/* Dialog container */}
         <div
@@ -462,7 +452,7 @@ export function Modal({
             </Button>
           )}
 
-          {/* Content area with hidden scrollbar and reveal animation */}
+          {/* Content area with hidden scrollbar; it fades in with the panel */}
           {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling body without focusable content must be reachable by keyboard (axe scrollable-region-focusable); it is a labelled region only while it scrolls */}
           <div
             ref={bodyRef}
@@ -473,13 +463,7 @@ export function Modal({
             aria-labelledby={bodyScrolls && title ? titleId : undefined}
             aria-label={bodyScrolls && !title ? ariaLabel : undefined}
           >
-            <div
-              className={`p-4 leading-relaxed text-gray-700 md:p-6 ${
-                isAnimating && !isExiting
-                  ? "animate-contentReveal"
-                  : "opacity-0"
-              }`}
-            >
+            <div className="p-4 leading-relaxed text-gray-700 md:p-6">
               {children}
             </div>
           </div>
@@ -517,6 +501,8 @@ interface ConfirmationModalProps {
   readonly onClose: () => void;
   readonly onConfirm: () => void;
   readonly title: string;
+  /** Leading icon in the header, left of the title (e.g. an `IconTile`). */
+  readonly icon?: React.ReactNode;
   readonly children: React.ReactNode;
   readonly confirmText?: string;
   readonly cancelText?: string;
@@ -578,6 +564,7 @@ export function ConfirmationModal({
   onClose,
   onConfirm,
   title,
+  icon,
   children,
   confirmText = "Bestätigen",
   cancelText,
@@ -636,6 +623,7 @@ export function ConfirmationModal({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
+      icon={icon}
       footer={modalFooter}
       isDismissDisabled={dismissLocked}
       busy={isConfirmLoading}

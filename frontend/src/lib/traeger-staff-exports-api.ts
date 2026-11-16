@@ -1,5 +1,5 @@
 /**
- * Lohnexport und Zeitexport des Trägers über alle Schulen (#4712, ADR 0249).
+ * Lohnexport und Zeitexport des Trägers über alle Schulen (#4712, ADR 0250).
  *
  * Die Prüfung und die Datei kommen aus derselben Rechnung: Jede Schule rechnet
  * den Monat ihrer Beschäftigungen, der Träger bucht jede Art des

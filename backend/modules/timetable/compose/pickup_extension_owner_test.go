@@ -7,6 +7,7 @@ import (
 	"time"
 
 	directoryPorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -14,6 +15,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 )
+
+// pickupExtensionNow pins the module and the fixtures' dates to a school
+// Monday.
+var pickupExtensionNow = time.Date(2030, 8, 26, 12, 0, 0, 0, calendar.Berlin)
 
 func buildPickupExtensionModule(t *testing.T, db *bun.DB, observers ...func(Observation)) timetable.Owner {
 	return buildPickupExtensionModuleWithStudents(t, db, directoryPorts.StudentDirectoryFunc(func(context.Context) ([]directoryPorts.TargetStudent, error) {
@@ -43,6 +48,7 @@ func buildPickupExtensionModuleWith(t *testing.T, db *bun.DB, students directory
 		Provenance: testpkg.EnrollmentProvenance{},
 		DB:         db, Students: students, Rooms: testRooms(), Sessions: sessions,
 		LockStaffAssignments: func(context.Context, []int64) error { return nil }, Observe: observe,
+		Now: func() time.Time { return pickupExtensionNow },
 	})
 	require.NoError(t, err)
 	return module
@@ -301,7 +307,7 @@ func TestModuleRestoresNotScheduledPickupWeekdayInstance(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	today := time.Now()
+	today := pickupExtensionNow
 	nextTuesday := nextPickupExtensionWeekday(today, time.Tuesday)
 	fixture := newOwnedActivityInstanceFixture(t, db, "restore-pickup-weekday")
 	instanceInput := ownedActivityInstanceInput(fixture, nextTuesday.Format(time.DateOnly), "14:45:00", "Freies Spiel")
@@ -503,7 +509,7 @@ func TestModuleUsesEffectivePickupWeekdaySchedules(t *testing.T) {
 	oldFrame := createOwnedTimeframe(t, module, ctx, "14:45:00", "15:30:00", true, "Alte Zeit")
 	currentFrame := createOwnedTimeframe(t, module, ctx, "14:45:00", "17:00:00", true, "Neue Zeit")
 	futureFrame := createOwnedTimeframe(t, module, ctx, "14:45:00", "18:00:00", true, "Zukünftige Zeit")
-	oldFrom, currentFrom, futureFrom := "2020-01-01", "2020-02-01", time.Now().AddDate(0, 0, 7).Format(time.DateOnly)
+	oldFrom, currentFrom, futureFrom := "2020-01-01", "2020-02-01", pickupExtensionNow.AddDate(0, 0, 7).Format(time.DateOnly)
 	for _, input := range []timetable.ScheduleInput{
 		{ActivityGroupID: current.ID, Weekday: timetable.WeekdayTuesday, TimeframeID: &oldFrame.ID, ValidFrom: &oldFrom},
 		{ActivityGroupID: current.ID, Weekday: timetable.WeekdayTuesday, TimeframeID: &currentFrame.ID, ValidFrom: &currentFrom},
@@ -550,7 +556,7 @@ func TestModuleUsesCurrentPickupWeekdaySchedules(t *testing.T) {
 	currentTemplate := createTemplate("Aktuelles Angebot")
 	oldFrame := createOwnedTimeframe(t, module, ctx, "14:45:00", "16:30:00", true, "Alte Zeit")
 	currentFrame := createOwnedTimeframe(t, module, ctx, "14:45:00", "17:00:00", true, "Neue Zeit")
-	today := time.Now()
+	today := pickupExtensionNow
 	effectiveFrom := today.AddDate(0, 0, -7).Format(time.DateOnly)
 	validUntil := today.Format(time.DateOnly)
 	currentFrom := today.Format(time.DateOnly)
@@ -596,7 +602,7 @@ func TestModuleUsesCurrentPickupWeekdayEnrollments(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	today := time.Now()
+	today := pickupExtensionNow
 	effectiveFrom := today.AddDate(0, 0, -7).Format(time.DateOnly)
 	validUntil := today.Format(time.DateOnly)
 	tuesday := timetable.WeekdayTuesday
@@ -630,7 +636,7 @@ func TestModuleLimitsPickupWeekdayResolutionToCalendarPeriod(t *testing.T) {
 	})
 	require.NoError(t, err)
 	frame := createOwnedTimeframe(t, module, ctx, "14:45:00", "16:00:00", true, "Freies Spiel")
-	today := time.Now()
+	today := pickupExtensionNow
 	selectedPeriod := createOwnerCalendarPeriod(t, db, today.Format(time.DateOnly), today.AddDate(0, 0, 30).Format(time.DateOnly))
 	otherPeriod := createOwnerCalendarPeriod(t, db, today.Format(time.DateOnly), today.AddDate(0, 0, 30).Format(time.DateOnly))
 	_, err = module.CreateSchedule(ctx, timetable.ScheduleInput{
@@ -721,7 +727,7 @@ func TestModuleUsesCurrentPickupDateForTargets(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	suffix := time.Now().UnixNano()
 	child := testpkg.CreateTestStudent(t, db, "Mia", fmt.Sprintf("Current target-%d", suffix), "1a")
-	today := time.Now()
+	today := pickupExtensionNow
 	students := directoryPorts.StudentDirectoryFunc(func(context.Context) ([]directoryPorts.TargetStudent, error) {
 		return []directoryPorts.TargetStudent{{
 			ID: child.ID, SchoolClass: child.SchoolClass, EnrolledUntil: today.AddDate(0, 0, -1).Format(time.DateOnly),

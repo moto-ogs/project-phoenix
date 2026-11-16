@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	deliveryModule "github.com/moto-ogs/project-phoenix/modules/delivery/devices"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 )
@@ -95,4 +96,38 @@ func bindParentLocale(source interface {
 		return nil
 	}
 	return source.ParentPreferences().SupportedLocale
+}
+
+// bindParentNotificationFeed binds the bell of the parents portal (#7140) to
+// Delivery's guardian feed: the page translates onto the adapter's types,
+// and the adapter classifies Delivery's errors.
+func bindParentNotificationFeed(source deliveryContract.GuardianNotificationFeed) parentAPI.NotificationFeed {
+	if source == nil {
+		return nil
+	}
+	return parentNotificationFeed{GuardianNotificationFeed: source}
+}
+
+type parentNotificationFeed struct {
+	deliveryContract.GuardianNotificationFeed
+}
+
+func (f parentNotificationFeed) Page(ctx context.Context, accountID int64, cursor string, limit int) (parentAPI.FeedPage, error) {
+	page, err := f.GuardianNotificationFeed.Page(ctx, accountID, cursor, limit)
+	if err != nil {
+		return parentAPI.FeedPage{}, err
+	}
+	out := parentAPI.FeedPage{NextCursor: page.NextCursor, UnreadCount: page.UnreadCount, Entries: make([]parentAPI.FeedEntry, len(page.Entries))}
+	for i, entry := range page.Entries {
+		out.Entries[i] = parentAPI.FeedEntry(entry)
+	}
+	return out, nil
+}
+
+func (parentNotificationFeed) IsNotFound(err error) bool {
+	return errors.Is(err, deliveryContract.ErrNotificationFeedEntryNotFound)
+}
+
+func (parentNotificationFeed) IsInvalidCursor(err error) bool {
+	return errors.Is(err, deliveryContract.ErrInvalidNotificationFeedCursor)
 }

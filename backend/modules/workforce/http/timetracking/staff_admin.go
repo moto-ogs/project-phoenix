@@ -11,6 +11,7 @@ import (
 	"log/slog"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -69,6 +70,8 @@ type StaffAdminResource struct {
 	// absenceMails says what became of the decision mails (#7058); nil
 	// leaves the route away.
 	absenceMails workforce.AbsenceMailStatus
+	// today is the day a missing year defaults to.
+	today func() calendar.Date
 
 	logger *slog.Logger
 }
@@ -116,12 +119,14 @@ type StaffAdminDependencies struct {
 	AbsenceMails workforce.AbsenceMailStatus
 
 	Logger *slog.Logger
+	// Today is the composition's calendar day (ADR 0239); required.
+	Today func() calendar.Date
 }
 
 // NewStaffAdminResource wires the workforce resource.
 func NewStaffAdminResource(deps StaffAdminDependencies) *StaffAdminResource {
-	if deps.Staff == nil || deps.Documents == nil || deps.OffboardingCleanup == nil || deps.WorkSessions == nil || deps.StaffAbsences == nil || deps.AbsenceWrites == nil || deps.Identity == nil {
-		panic("staff admin resource: staff directory, documents, work sessions, absences, absence writes and identity are required")
+	if deps.Staff == nil || deps.Documents == nil || deps.OffboardingCleanup == nil || deps.WorkSessions == nil || deps.StaffAbsences == nil || deps.AbsenceWrites == nil || deps.Identity == nil || deps.Today == nil {
+		panic("staff admin resource: staff directory, documents, work sessions, absences, absence writes, identity and day clock are required")
 	}
 	if deps.Uploads == nil {
 		panic("staff admin resource: upload storage is required")
@@ -175,6 +180,7 @@ func NewStaffAdminResource(deps StaffAdminDependencies) *StaffAdminResource {
 		qualifications:       deps.Qualifications,
 		absenceMails:         deps.AbsenceMails,
 		logger:               logger,
+		today:                deps.Today,
 	}
 }
 

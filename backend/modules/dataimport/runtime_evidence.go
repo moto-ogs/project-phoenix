@@ -10,22 +10,27 @@ import (
 // OpeningBalanceImportFactory builds a request-scoped import service: the
 // Stichtag, note, and acting staff member come from the upload form, so the
 // config cannot be a shared singleton like the student/staff ones.
-type OpeningBalanceImportFactory func(effectiveDate timezone.Date, note string, decidedByStaffID int64) RowImporter[OpeningBalanceImportRow]
+type OpeningBalanceImportFactory struct {
+	// Build creates the import of one upload.
+	Build func(effectiveDate timezone.Date, note string, decidedByStaffID int64) RowImporter[OpeningBalanceImportRow]
+	// Today is the day the Stichtag must lie before, in its vacation year.
+	Today func() timezone.Date
+}
 
 func (f OpeningBalanceImportFactory) ForUpload(raw, note string, staffID int64) (RowImporter[OpeningBalanceImportRow], error) {
 	date, err := timezone.ParseDate(raw)
 	if err != nil {
 		return nil, err
 	}
-	return f(date, note, staffID), nil
+	return f.Build(date, note, staffID), nil
 }
 
-func (OpeningBalanceImportFactory) ValidateDate(raw string) (string, error) {
+func (f OpeningBalanceImportFactory) ValidateDate(raw string) (string, error) {
 	date, err := timezone.ParseDate(raw)
 	if err != nil {
 		return "", fmt.Errorf("ungültiger Stichtag (erwartet JJJJ-MM-TT)")
 	}
-	today := timezone.TodayDate()
+	today := f.Today()
 	if !date.Before(today) {
 		return "", fmt.Errorf("stichtag muss vor dem heutigen Tag liegen")
 	}
