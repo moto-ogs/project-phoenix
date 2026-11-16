@@ -85,10 +85,19 @@ function motionProblems(css) {
     }
   }
 
-  for (const [utility] of text.matchAll(
-    /@apply[^;]*?\b(transition-all|backdrop-[\w-]+)/g,
-  )) {
-    problems.push(`@apply ${utility}`);
+  for (const [, utilities] of text.matchAll(/@apply\s+([^;]+)/g)) {
+    for (const utility of utilities.split(/\s+/)) {
+      const name = utility.slice(utility.lastIndexOf(":") + 1);
+      const list = /^transition-\[(.*)\]$/.exec(name)?.[1];
+      if (
+        name === "transition-all" ||
+        name.startsWith("backdrop-") ||
+        (list !== undefined &&
+          list.split(/[,_]+/).some((token) => LAYOUT_PROPERTY_RE.test(token)))
+      ) {
+        problems.push(`@apply ${utility}`);
+      }
+    }
   }
   return problems;
 }
@@ -114,6 +123,7 @@ test("the check finds each kind of costly motion", () => {
       .a { transition: all 200ms; }
       .b { transition: height 200ms ease, opacity 200ms; }
       .c { transition-property: color, box-shadow; }
+      .d { @apply transition-[width] md:backdrop-blur-sm transition-[opacity,transform]; }
       /* @keyframes inComment { from { left: 0 } } */
     `),
     [
@@ -123,6 +133,8 @@ test("the check finds each kind of costly motion", () => {
       "-webkit-backdrop-filter: blur(8px)",
       "transition of all",
       "transition of height",
+      "@apply transition-[width]",
+      "@apply md:backdrop-blur-sm",
     ],
   );
 });
