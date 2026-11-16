@@ -293,7 +293,7 @@ func (n classTimetableNotices) send(ctx context.Context, event deliveryCompose.N
 // classTimetableBody is the display-safe text of a change: the class, the
 // day or the weekdays and the time, never a reason.
 func classTimetableBody(class string, notice careplan.ClassTimetableNotice) string {
-	label := classTimetableClassLabel(class)
+	label := collation.SchoolClassLabel(class)
 	day := staffCancellationWeekdays[notice.Day.Weekday()] + " " + notice.Day.Format("02.01.")
 	switch notice.Kind {
 	case careplan.ClassTimetableDay:
@@ -312,12 +312,6 @@ func classTimetableBody(class string, notice careplan.ClassTimetableNotice) stri
 	}
 	// The day already ends with a full stop ("12.06.").
 	return fmt.Sprintf("Neuer Unterrichtsschluss für %s: %s. Gilt ab %s", label, strings.Join(times, ", "), day)
-}
-
-// classTimetableClassLabel names the class as "Klasse 3a", also when the
-// school entered the word itself.
-func classTimetableClassLabel(class string) string {
-	return collation.SchoolClassLabel(class)
 }
 
 // classTimetableRelatedID is the stable object id of a class: a class has no

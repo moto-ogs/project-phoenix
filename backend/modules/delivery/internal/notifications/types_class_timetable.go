@@ -50,7 +50,7 @@ func registerClassTimetableTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeParentClassTimetableChanged,
 		Label:       "Stundenplan der Klasse",
-		Description: "Wenn sich der Unterrichtsschluss in der Klasse Ihres Kindes ändert. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy bei Änderungen in den nächsten 14 Tagen.",
+		Description: "Wenn sich der Unterrichtsschluss in der Klasse Ihres Kindes ändert. Der Hinweis in moto kommt immer. Schalten Sie das hier ein, kommt bei Änderungen in den nächsten 14 Tagen auch eine Mitteilung aufs Handy.",
 		Group:       GroupChildren,
 		Portal:      PortalParent,
 		TenantGate:  settingClassTimetableChangedEnabled,

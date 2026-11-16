@@ -445,7 +445,7 @@ var notificationBudgetCatalogues = map[string]string{
   {
     "key": "parent_class_timetable_changed",
     "label": "Stundenplan der Klasse",
-    "description": "Wenn sich der Unterrichtsschluss in der Klasse Ihres Kindes ändert. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy bei Änderungen in den nächsten 14 Tagen.",
+    "description": "Wenn sich der Unterrichtsschluss in der Klasse Ihres Kindes ändert. Der Hinweis in moto kommt immer. Schalten Sie das hier ein, kommt bei Änderungen in den nächsten 14 Tagen auch eine Mitteilung aufs Handy.",
     "group": "kinder",
     "enabled": false,
     "available": true
