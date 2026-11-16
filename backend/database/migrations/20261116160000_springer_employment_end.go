@@ -31,7 +31,8 @@ func init() {
 //     at the school that have no live block from p_today on: their last
 //     block is over, or every block was lifted. Each row names the last
 //     block day and who acts for the exit: the most recent blocking
-//     Leitung that still works at the school. With p_staff_record_id it
+//     Leitung that still works at the school, else the Springer's own
+//     account and employment. With p_staff_record_id it
 //     locks that record first, as the first block does, and answers only
 //     for it: a block and an exit of one Springer wait for each other.
 //   - workforce.pool_ended writes the end into the record's trail, kind
@@ -60,10 +61,12 @@ BEGIN
 		WHERE record.organization_id = v_org AND record.id = p_staff_record_id FOR NO KEY UPDATE;
 	END IF;
 	RETURN QUERY
-	SELECT link.staff_record_id, link.membership_id, span.last_day, actor.account_id, actor.staff_id
+	SELECT link.staff_record_id, link.membership_id, span.last_day,
+		COALESCE(actor.account_id, springer.account_id), COALESCE(actor.staff_id, CASE WHEN springer.account_id IS NOT NULL THEN link.membership_id END)
 	FROM workforce.staff_record_links AS link
 	JOIN users.staff_school_memberships AS membership
 		ON membership.tenant_id = link.school_id AND membership.id = link.membership_id AND membership.deleted_at IS NULL
+	JOIN users.persons AS springer ON springer.tenant_id = membership.tenant_id AND springer.id = membership.person_id
 	CROSS JOIN LATERAL (
 		SELECT max(block.date) FILTER (WHERE block.lifted_at IS NULL) AS live_day, max(block.date) AS any_day,
 			COALESCE(max(block.date) FILTER (WHERE block.lifted_at IS NULL), max(block.date)) AS last_day

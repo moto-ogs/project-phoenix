@@ -168,8 +168,8 @@ type SpringerEmployments interface {
 // 0252): every block of the school lies before today or was lifted.
 // LastBlockDay is the day of the last block. The exit runs in the name of
 // the most recent blocking Leitung who still works at the school,
-// ActorAccountID with their employment ActorStaffID; both are 0 without
-// one.
+// ActorAccountID with their employment ActorStaffID, else in the name of
+// the Springer's own account and employment.
 type SpringerExit struct {
 	TenantID       int64
 	RecordID       int64

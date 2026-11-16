@@ -47,23 +47,26 @@ verschoben hat, und folgt
    bleibt die Beschäftigung.
 4. **Im Namen der Leitung der letzten Blockung.** Der Austritt braucht ein
    Konto und eine Beschäftigung an der Schule. Er handelt für die Leitung,
-   die zuletzt geblockt hat und noch an der Schule arbeitet. Gibt es keine,
-   bleibt die Beschäftigung und der Lauf meldet eine Warnung.
-5. **Die Beschäftigung bleibt, wenn sie mehr ist als der Pool.**
-   - Hat das Konto an der Schule eine Rolle außer `springer` und `guardian`,
-     beschäftigt die Schule die Person selbst (ADR 0251 Punkt 6).
-   - Würde der Austritt das Konto sperren, weil es an keiner anderen Schule
-     aktiv ist, bleibt sie auch. Der Vertrag im Pool läuft weiter, und die
-     nächste Blockung braucht ein Konto, das sich anmelden kann.
-   Ohne Fenster lässt eine solche Beschäftigung niemanden herein.
-6. **Verlauf und Protokoll.** Workforce schreibt das Ende in den Verlauf
-   der Akte (`staff_record_changes`, Art `ended`, mit Schule und Konto der
-   Leitung). Das Löschprotokoll der Schule nennt den Grund „springer
+   die zuletzt geblockt hat und noch an der Schule arbeitet. Gibt es keine
+   mehr, handelt er im Namen der Beschäftigung des Springers selbst. So
+   bleibt kein Austritt liegen, weil eine Leitung gegangen ist.
+5. **Eine eigene Rolle der Schule hält die Beschäftigung.** Hat das Konto an
+   der Schule eine Rolle außer `springer` und `guardian`, beschäftigt die
+   Schule die Person selbst (ADR 0251 Punkt 6). Der Lauf lässt sie stehen.
+6. **Die Springer-Rolle hält das Konto.** Der Austritt sperrt ein Konto
+   sonst, wenn es an keiner anderen Schule aktiv ist. Ein Konto mit der
+   Systemrolle `springer` an der Schule bleibt aktiv, wie eines mit einer
+   Mitgliedschaft beim Träger: Der Vertrag im Pool läuft weiter, und die
+   nächste Blockung braucht ein Konto, das sich anmelden kann. Das gilt auch,
+   wenn eine Leitung die Beschäftigung von Hand beendet.
+7. **Verlauf und Protokoll.** Workforce schreibt das Ende in den Verlauf
+   der Akte (`staff_record_changes`, Art `ended`, mit Schule und dem Konto
+   aus Punkt 4). Das Löschprotokoll der Schule nennt den Grund „springer
    employment ended after last block day …“.
-7. **Abgelaufene Fenster räumt der Lauf mit weg.** Vor den Austritten löscht
+8. **Abgelaufene Fenster räumt der Lauf mit weg.** Vor den Austritten löscht
    Identity & Access an jeder Zuordnung der Schule die Fenster, die vorbei
    sind (`PruneSpringerWindows`).
-8. **Die Träger-Akte zeigt den Pool.** Ein Einsatzort mit `via_pool` trägt
+9. **Die Träger-Akte zeigt den Pool.** Ein Einsatzort mit `via_pool` trägt
    in der Akte das Merkmal „Vertretungspool“ und sagt, wann er endet oder
    dass die nächste Blockung die Person wieder beschäftigt.
 
@@ -89,3 +92,5 @@ ADR 0251 Punkt 1). Der Einsatzort bleibt dabei verknüpft.
   am nächsten Morgen neu an.
 - Eine Beschäftigung, die eine Aufsicht hält, wartet wie ein blockierter
   Austritt auf den nächsten Lauf.
+- Eine Beschäftigung mit eigener Rolle der Schule prüft jeder Lauf wieder.
+  Das kostet je Springer drei kurze Abfragen und schreibt nichts.

@@ -41,7 +41,7 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 	manage := []string{permissions.TimeTrackingManage}
 
 	mira, miraAccount := testpkg.CreateTestStaffWithAccountForTenant(t, db, north, "Mira", "Springer")
-	_, southLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, south, "Sina", "Süd")
+	southStaff, southLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, south, "Sina", "Süd")
 	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
 		"members": []map[string]int64{{"school_id": north, "staff_id": mira.ID}},
 	})
@@ -122,21 +122,9 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 			WHERE tenant_id = ? AND account_id = ?`, south, account)
 		require.NoError(t, err)
 		pastBlocks(t, db, record, south)
-		// Only the pool's school is left: the exit would deactivate the
-		// account.
-		_, err = db.ExecContext(t.Context(), `UPDATE auth.account_tenants SET status = 'inactive', deactivated_at = now()
-			WHERE account_id = ? AND tenant_id <> ?`, account, south)
-		require.NoError(t, err)
+		testpkg.MapAccountToTenant(t, db, account, north)
 
 		result := run(south)
-		require.Len(t, result, 1)
-		assert.Equal(t, "kept", result[0],
-			"without another school the exit would deactivate the account the next block needs")
-		_, live := employment()
-		require.True(t, live)
-
-		testpkg.MapAccountToTenant(t, db, account, north)
-		result = run(south)
 		require.Len(t, result, 1)
 		assert.Equal(t, "succeeded", result[0])
 		staffID, live := employment()
@@ -185,5 +173,31 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 		assert.Equal(t, "kept", result[0])
 		_, live := employment()
 		assert.True(t, live, "the school employs the person beyond the pool")
+		_, err = db.ExecContext(t.Context(), `DELETE FROM auth.account_roles AS held USING auth.roles AS role
+			WHERE held.role_id = role.id AND role.name = 'user' AND role.tenant_id IS NULL AND held.account_id = ? AND held.tenant_id = ?`, account, south)
+		require.NoError(t, err)
+	})
+
+	t.Run("the last school ends the employment and keeps the account", func(t *testing.T) {
+		// No other school is left, and the Leitung who blocked has left.
+		_, err := db.ExecContext(t.Context(), `UPDATE auth.account_tenants SET status = 'inactive', deactivated_at = now()
+			WHERE account_id = ? AND tenant_id <> ?`, account, south)
+		require.NoError(t, err)
+		_, err = db.ExecContext(t.Context(), `UPDATE users.staff_school_memberships SET deleted_at = now() WHERE tenant_id = ? AND id = ?`, south, southStaff.ID)
+		require.NoError(t, err)
+		pastBlocks(t, db, record, south)
+
+		result := run(south)
+		require.Len(t, result, 1)
+		assert.Equal(t, "succeeded", result[0])
+		_, live := employment()
+		assert.False(t, live)
+		var accountActive bool
+		require.NoError(t, db.NewRaw(`SELECT active FROM auth.accounts WHERE id = ?`, account).Scan(t.Context(), &accountActive))
+		assert.True(t, accountActive, "the pool contract runs on, so the next block needs an account that signs in")
+		var trail int
+		require.NoError(t, db.NewRaw(`SELECT count(*) FROM workforce.staff_record_changes
+			WHERE staff_record_id = ? AND kind = 'ended' AND school_id = ? AND account_id = ?`, record, south, account).Scan(t.Context(), &trail))
+		assert.Equal(t, 1, trail, "without a Leitung the exit runs in the Springer's own name")
 	})
 }

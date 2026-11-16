@@ -19,7 +19,7 @@ import (
 // SpringerExit is an employment the pool created whose last block at the
 // school is over. The exit acts in the name of ActorAccountID with the
 // employment ActorStaffID at the school: the most recent blocking Leitung
-// who still works there.
+// who still works there, else the Springer's own employment.
 type SpringerExit struct {
 	TenantID       int64
 	RecordID       int64
@@ -44,13 +44,12 @@ type SpringerExitPorts struct {
 }
 
 // Outcome of a Springer exit that found nothing to end: a new block keeps
-// the employment, the school gave the account a role of its own, or the
-// account has no other school and would be deactivated.
+// the employment, or the school gave the account a role of its own.
 const ExitKept = "kept"
 
-// ErrSpringerExitWithoutActor defers an exit no blocking Leitung of the
-// school can act for any more. The employment stays; without a window it
-// admits no one (ADR 0251 point 6).
+// ErrSpringerExitWithoutActor defers an exit without an account to act in
+// the name of. Workforce names one for every employment the pool created,
+// so this is a broken record; without a window it admits no one.
 var ErrSpringerExitWithoutActor = errors.New("staff offboarding: no Leitung of the school can act for the Springer exit")
 
 // SpringerExits ends the employments of Springer after their last block.
@@ -77,7 +76,9 @@ func (s *SpringerExits) RunDue(ctx context.Context) (DueRun, error) {
 	if err != nil {
 		return run, err
 	}
-	failed, err := s.due.deps.Within(ctx, s.ports.PruneWindows)
+	failed, err := s.due.deps.Within(ctx, func(txCtx context.Context) error {
+		return s.due.deps.BoundLockWaits(txCtx, s.ports.PruneWindows)
+	})
 	if err != nil {
 		return run, fmt.Errorf("prune springer windows: %w", err)
 	}
@@ -139,8 +140,11 @@ func (s *SpringerExits) runUnit(ctx context.Context, listed SpringerExit, today 
 // supervision (ErrInUse) or without an actor. err rolls the unit back.
 func (s *SpringerExits) end(ctx context.Context, recordID int64, today calendar.Date) (kept bool, exitErr, err error) {
 	exit, due, err := s.ports.Lock(ctx, recordID, today)
-	if err != nil || !due {
-		return !due, nil, err
+	if err != nil {
+		return false, nil, err
+	}
+	if !due {
+		return true, nil, nil
 	}
 	if exit.ActorAccountID <= 0 || exit.ActorStaffID <= 0 {
 		return false, ErrSpringerExitWithoutActor, nil
@@ -152,8 +156,14 @@ func (s *SpringerExits) end(ctx context.Context, recordID int64, today calendar.
 	if err := s.due.planner.workflow.deps.Workforce.Lock(ctx, exit.StaffID); err != nil {
 		return false, nil, err
 	}
-	if keep, err := s.keepsAccess(ctx, accounts); err != nil || keep {
-		return keep, nil, err
+	for _, account := range accounts {
+		only, err := s.ports.HoldsOnlySpringerAccess(ctx, account)
+		if err != nil {
+			return false, nil, err
+		}
+		if !only {
+			return true, nil, nil
+		}
 	}
 	result, err := s.due.planner.workflow.executeAs(ctx, "springer_exit", exit.StaffID, "", springerActor(exit))
 	if errors.Is(err, ErrInUse) {
@@ -163,24 +173,6 @@ func (s *SpringerExits) end(ctx context.Context, recordID int64, today calendar.
 		return false, nil, err
 	}
 	return false, nil, s.ports.Record(ctx, exit)
-}
-
-// keepsAccess reports whether the exit must leave the employment: the
-// school gave the account a role of its own, or the exit would deactivate
-// the account because it has no other school. The pool contract still
-// runs, so the next block must find a working account (ADR 0252).
-func (s *SpringerExits) keepsAccess(ctx context.Context, accounts []int64) (bool, error) {
-	for _, account := range accounts {
-		only, err := s.ports.HoldsOnlySpringerAccess(ctx, account)
-		if err != nil || !only {
-			return !only, err
-		}
-		access, err := s.due.planner.workflow.deps.PreviewAccess(ctx, account)
-		if err != nil || access.DeactivateAccount {
-			return access.DeactivateAccount, err
-		}
-	}
-	return false, nil
 }
 
 // springerActor is the Leitung whose last block ended the employment.

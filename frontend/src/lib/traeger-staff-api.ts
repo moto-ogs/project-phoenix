@@ -241,7 +241,7 @@ interface BackendEmployment {
   school_name: string;
   staff_id: number;
   active: boolean;
-  via_pool?: boolean;
+  via_pool: boolean;
 }
 
 interface BackendSummary {
@@ -352,7 +352,7 @@ function mapSummary(record: BackendSummary): StaffRecordSummary {
       schoolName: employment.school_name,
       staffId: String(employment.staff_id),
       active: employment.active,
-      viaPool: employment.via_pool ?? false,
+      viaPool: employment.via_pool,
     })),
   };
 }
