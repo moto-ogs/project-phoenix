@@ -397,6 +397,12 @@
       "legacy": "payer_guardian_protected"
     },
     {
+      "code": "care.photo_consent_busy",
+      "class": "unavailable",
+      "parameters": [],
+      "legacy": "care.photo_consent_busy"
+    },
+    {
       "code": "care.photo_consent_not_withdrawn",
       "class": "business_rejection",
       "parameters": [],

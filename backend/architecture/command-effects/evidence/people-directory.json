@@ -10602,7 +10602,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentPhotoRuntime.ActingAccountID",
-      "binding_digest": "0b941968eec3bb8eff1817f057d239cd",
+      "binding_digest": "1cf3c6d9468875bc207c3b349a8f4125",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.ActingAccountID",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",
@@ -11802,7 +11802,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.ActingAccountID",
-      "binding_digest": "0b941968eec3bb8eff1817f057d239cd",
+      "binding_digest": "1cf3c6d9468875bc207c3b349a8f4125",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.ActingAccountID",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",
@@ -12466,7 +12466,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.ActingAccountID",
-      "binding_digest": "0b941968eec3bb8eff1817f057d239cd",
+      "binding_digest": "1cf3c6d9468875bc207c3b349a8f4125",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.ActingAccountID",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",

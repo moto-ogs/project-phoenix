@@ -31,7 +31,7 @@ func mapGuardianPortalError(err error) error {
 		return peopledirectory.ErrGuardianNotFound
 	case errors.Is(err, domain.ErrGuardianPhoneNotFound):
 		return peopledirectory.ErrGuardianPhoneNotFound
-	case errors.Is(err, domain.ErrPhotoFeatureDisabled), errors.Is(err, domain.ErrPhotoFeatureDisabledMid):
+	case errors.Is(err, domain.ErrPhotoFeatureDisabled), errors.Is(err, domain.ErrPhotoFeatureDisabledMid), errors.Is(err, domain.ErrPhotoFeatureBusy):
 		return mapPhotoError(err)
 	default:
 		return MapError(err)

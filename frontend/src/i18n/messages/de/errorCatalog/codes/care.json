@@ -59,6 +59,7 @@
   "offering_change_invalid": "{object} enthält ungültige Angaben. Bitte prüfen Sie Ihre Eingaben.",
   "offering_changes_disabled": "{object} ist hier zurzeit nicht verfügbar. Bitte fragen Sie Ihre Ansprechperson.",
   "payer_guardian_protected": "Für {object} fehlt Ihnen die Berechtigung. Bitte fragen Sie die Schule.",
+  "photo_consent_busy": "Die Foto-Einwilligung konnte gerade nicht gespeichert werden. Bitte versuchen Sie es noch einmal.",
   "photo_consent_not_withdrawn": "{object} konnte nicht geändert werden. Bitte prüfen Sie den aktuellen Stand.",
   "photos_disabled": "Die Schule hat Kinderfotos ausgeschaltet. Sie können die Einwilligung später wieder geben.",
   "pickup_change_care_day_ended": "{object} konnte nicht geändert werden. Bitte prüfen Sie den aktuellen Stand.",

@@ -15154,7 +15154,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.ActingAccountID",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope (identity-access) through roots/owners.StudentPhotoRuntime.ActingAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only request identity mapping for photo-consent attribution: RequestClaims.AccountReferenceID excludes platform operator IDs from auth.accounts references. IsSchoolScope only reads the verified claims; no persistent write, lock or tenant-scope change. Operator attribution stays in the operator audit path.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",
       "target_owner": "identity-access"
@@ -16771,7 +16771,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.ActingAccountID",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope (identity-access) through modules/peopledirectory/compose.StudentPhotoRuntime.ActingAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only request identity mapping for photo-consent attribution: RequestClaims.AccountReferenceID excludes platform operator IDs from auth.accounts references. IsSchoolScope only reads the verified claims; no persistent write, lock or tenant-scope change. Operator attribution stays in the operator audit path.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",
       "target_owner": "identity-access"
@@ -17675,7 +17675,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.ActingAccountID",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope (identity-access) through modules/peopledirectory/internal/application.StudentPhotoRuntime.ActingAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only request identity mapping for photo-consent attribution: RequestClaims.AccountReferenceID excludes platform operator IDs from auth.accounts references. IsSchoolScope only reads the verified claims; no persistent write, lock or tenant-scope change. Operator attribution stays in the operator audit path.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",
       "target_owner": "identity-access"

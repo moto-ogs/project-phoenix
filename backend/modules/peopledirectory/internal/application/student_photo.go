@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -427,7 +428,10 @@ func (s *StudentPhotoService) lockPhotoCommitFeature(txCtx context.Context, stat
 		return err
 	}
 	if err := s.requireFeatureEnabledNow(txCtx); err != nil {
-		return domain.ErrPhotoFeatureDisabledMid
+		if errors.Is(err, domain.ErrPhotoFeatureDisabled) {
+			return domain.ErrPhotoFeatureDisabledMid
+		}
+		return err
 	}
 
 	return nil

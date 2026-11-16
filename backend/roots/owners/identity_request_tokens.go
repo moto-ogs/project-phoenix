@@ -23,6 +23,15 @@ type RequestClaims struct {
 	Username    string
 }
 
+// AccountReferenceID returns an auth.accounts reference, never a platform
+// operator ID. Operators are attributed by the separate operator audit trail.
+func (c RequestClaims) AccountReferenceID() int64 {
+	if c.Scope == "platform" {
+		return 0
+	}
+	return c.AccountID
+}
+
 // TokenAdapter carries what the root's compositions read from Identity's
 // session token adapter: the authenticated request's claims, permissions and
 // identity memo, the session token codec and the opaque capability tokens.

@@ -2,6 +2,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -20,6 +21,7 @@ type enabledPhotoRuntime struct {
 	switchedOff bool
 	// staleOn is a request memo that still reads "on" after a switch-off
 	// committed: only the in-transaction read sees switchedOff.
+	committedErr  error
 	staleOn       bool
 	actor         int64
 	endedConsents []int64
@@ -29,7 +31,7 @@ func (r *enabledPhotoRuntime) QueueUnlinkStoredPhoto(context.Context, string) er
 
 func (r *enabledPhotoRuntime) PhotoFeatureEnabled(_ context.Context, committed bool) (bool, error) {
 	if committed {
-		return !r.switchedOff, nil
+		return !r.switchedOff, r.committedErr
 	}
 	return r.staleOn || !r.switchedOff, nil
 }
@@ -308,4 +310,50 @@ func TestPhotoWritesUnderTheLockReadTheCommittedSwitch(t *testing.T) {
 	_, err = module.ApplyStudentPhotoConsent(ctx, peopledirectory.StudentPhotoState{StudentID: student.ID}, &grant)
 	require.ErrorIs(t, err, peopledirectory.ErrPhotoFeatureDisabled, "the staff grant")
 	assert.Nil(t, studentPhotoConsent(t, db, student.ID))
+}
+
+func TestPhotoWritesPreservePostLockSettingsFailure(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module, runtime := buildPhotoModule(t, db)
+	ctx := testpkg.Ctx(t)
+	runtime.actor = testpkg.CreateTestAccount(t, db, "photo-settings-error@example.test").ID
+	student := testpkg.CreateTestStudent(t, db, "Lookup", "Failure", "1a")
+	runtime.committedErr = errors.New("settings read failed")
+	givenAt := time.Date(2026, time.November, 16, 9, 0, 0, 0, time.UTC)
+
+	err := module.SetStudentPhotoConsent(ctx, peopledirectory.StudentPhotoState{
+		StudentID: student.ID, PhotoConsentGivenAt: &givenAt, PhotoConsentGivenBy: &runtime.actor,
+	})
+	assert.ErrorIs(t, err, runtime.committedErr, "a failed settings read is not a disabled feature")
+	err = module.CommitStudentPhoto(ctx, student.ID, "/uploads/student-photos/lookup-failure.jpg", true)
+	assert.ErrorIs(t, err, runtime.committedErr, "uploads preserve the same lookup failure")
+	assert.Nil(t, studentPhotoConsent(t, db, student.ID))
+	assert.Nil(t, studentPhotoPath(t, db, student.ID))
+}
+
+func TestPortalPhotoGrantReportsContentionAndCanBeRetried(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module, runtime := buildPhotoModule(t, db)
+	ctx := testpkg.Ctx(t)
+	runtime.actor = testpkg.CreateTestAccount(t, db, "photo-lock-busy@example.test").ID
+	student := testpkg.CreateTestStudent(t, db, "Busy", "Photo", "1a")
+	givenAt := time.Date(2026, time.November, 16, 9, 0, 0, 0, time.UTC)
+	photo := peopledirectory.StudentPhotoState{
+		StudentID: student.ID, PhotoConsentGivenAt: &givenAt, PhotoConsentGivenBy: &runtime.actor,
+	}
+	holding, err := db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	defer func() { _ = holding.Rollback() }()
+	require.NoError(t, module.LockStudentPhotoFeature(tenanttest.WithTransaction(ctx, holding)))
+
+	err = module.SetStudentPhotoConsent(ctx, photo)
+	require.ErrorIs(t, err, peopledirectory.ErrPhotoFeatureBusy)
+	assert.NotErrorIs(t, err, peopledirectory.ErrPhotoFeatureDisabledMid, "photos are still enabled")
+	assert.Nil(t, studentPhotoConsent(t, db, student.ID), "a conflict writes nothing")
+
+	require.NoError(t, holding.Rollback())
+	require.NoError(t, module.SetStudentPhotoConsent(ctx, photo), "retry succeeds once the photo gate is free")
+	assert.NotNil(t, studentPhotoConsent(t, db, student.ID))
 }

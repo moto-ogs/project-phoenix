@@ -50,17 +50,19 @@ type StudentRecordRows[C, P any] struct {
 	Photo func(StudentPhotoState) P
 }
 type studentRecords[C, P any] struct {
-	care      StudentCare[C]
-	people    StudentPeople[P]
-	rows      StudentRecordRows[C, P]
-	photosOff []error
+	care       StudentCare[C]
+	people     StudentPeople[P]
+	rows       StudentRecordRows[C, P]
+	photosOff  []error
+	photosBusy error
 }
 
 // NewStudentRecords binds the owners' student writes. photosOff are the
 // owner's refusals of a photo consent while child photos are switched off;
-// the portal answers them as ErrPhotosDisabled.
-func NewStudentRecords[C, P any](care StudentCare[C], people StudentPeople[P], rows StudentRecordRows[C, P], photosOff ...error) StudentRecords {
-	return studentRecords[C, P]{care: care, people: people, rows: rows, photosOff: photosOff}
+// the portal answers them as ErrPhotosDisabled. photosBusy is the separate,
+// retryable refusal when another photo operation holds the gate.
+func NewStudentRecords[C, P any](care StudentCare[C], people StudentPeople[P], rows StudentRecordRows[C, P], photosBusy error, photosOff ...error) StudentRecords {
+	return studentRecords[C, P]{care: care, people: people, rows: rows, photosOff: photosOff, photosBusy: photosBusy}
 }
 func portalLiveAbsence[C any](absence StudentLiveAbsence, convert func(int64, bool, *time.Time, bool, *time.Time) C) C {
 	return convert(absence.StudentID, absence.Sick != nil && *absence.Sick, absence.SickSince, absence.Excused != nil && *absence.Excused, absence.ExcusedSince)
@@ -158,6 +160,9 @@ func requireCareProfileWrite(studentID, rows int64, err error) error {
 
 func (s studentRecords[C, P]) SetStudentPhotoConsent(ctx context.Context, photo StudentPhotoState) error {
 	err := s.people.SetStudentPhotoConsent(ctx, portalRecord(photo, s.rows.Photo))
+	if s.photosBusy != nil && errors.Is(err, s.photosBusy) {
+		return fmt.Errorf("%w: %w", ErrPhotoConsentBusy, err)
+	}
 	for _, refusal := range s.photosOff {
 		if errors.Is(err, refusal) {
 			return fmt.Errorf("%w: %w", ErrPhotosDisabled, err)

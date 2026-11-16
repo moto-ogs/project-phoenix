@@ -51,6 +51,9 @@ var ErrPhotoConsentNotWithdrawn = errors.New("parent: photo consent was not with
 // photos switched off (#7208); a withdrawal stays possible.
 var ErrPhotosDisabled = errors.New("parent: child photos are switched off at this school")
 
+// ErrPhotoConsentBusy asks the parent to retry without claiming photos are off.
+var ErrPhotoConsentBusy = errors.New("parent: photo consent is busy; retry the operation")
+
 func (s *Service) GetChildConsents(ctx context.Context, accountID, studentID int64) ([]ChildConsent, error) {
 	var consents []ChildConsent
 	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, func(*Child) error {
