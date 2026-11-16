@@ -21,6 +21,8 @@ export const localCommands = {
   'Frontend React Doctor': 'cd frontend && bash ../scripts/check-quality.sh react-doctor origin/development',
   // Same cold two-tree comparison as CI (docs/agents/frontend-performance.md); commit first.
   'Frontend build': 'cd frontend && node scripts/perf/bundle-measurement.mjs --prepare-ci "$(git merge-base HEAD origin/development)" && node scripts/perf/bundle-measurement.mjs --build-base && pnpm run perf:bundle-ratchet',
+  // The build environment is in lint.yml; SKIP_ENV_VALIDATION covers what a local .env lacks.
+  'Frontend merge build': 'cd frontend && SKIP_ENV_VALIDATION=true pnpm run build',
   // Same selection as CI; without STORYBOOK_SHARD it runs every shard's files.
   'Storybook tests': 'cd frontend && BASE_SHA="$(git merge-base HEAD origin/development)" node scripts/storybook-test-changed.mjs',
   'Frontend tests': 'node scripts/test-frontend-changed.mjs --check-guards && node scripts/test-frontend-changed.mjs origin/development',

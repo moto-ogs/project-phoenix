@@ -57,7 +57,7 @@ Proven here (#5700, #5762, #5770) or in pingdotgg/t3code (#14025, #19587,
 - **Size by cores used.** Same price per vCPU-minute on every size: a larger
   runner pays only where the work scales with cores. `frontend-build` cost a
   third less on 4 vCPU than on 8 (4 billed minutes at half the rate instead
-  of 3), and runs free on a hosted runner since #7287.
+  of 3); since #7287 it runs free on a hosted runner.
 - **Skip what a change cannot affect, fail open.** Unknown paths, workflow and
   lockfile changes run everything; protected-branch pushes and nightly run full
   as the backstop. The gate job (`ci-gate`) is the only required check, so
@@ -246,12 +246,14 @@ Proven here (#5700, #5762, #5770) or in pingdotgg/t3code (#14025, #19587,
   one after the other (207 s against 210 s).
 - `next build --analyze` writes the same analysis data as
   `next experimental-analyze` (next 16.4.5: 279 of 279 routes byte-equal in
-  one directory), so one build is both the regular build and the bundle
+  one directory), so one build could be both the regular build and the bundle
   measurement (#7287). Merged into Blacksmith 4 vCPU it took 256-428 s
   (compile 2.5-3.9 min, TypeScript 58-138 s serial after it): longer and
-  dearer than a free hosted merge build beside the analysis. Moving work from
-  a free hosted job onto a paid one is no saving while the repository is
-  public.
+  dearer than a free hosted merge build beside the analysis, and hosted
+  4.5-5.3 min of compile against 62-68 s for a plain `next build`: the
+  analysis inside a build costs more than a separate `experimental-analyze`.
+  Moving work from a free hosted job onto a paid one is no saving while the
+  repository is public.
 - The architecture ratchet's projections (25–33 s) beside its check on four
   vCPU, alternating reruns with a warm cache: 43–76 s against 59–86 s one
   after the other. The check itself slowed down, the pair still gained 7–16 s

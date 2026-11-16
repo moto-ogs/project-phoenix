@@ -24,13 +24,12 @@ env:
   GOTOOLCHAIN: local
 
 # Runners: standard GitHub runners are free for this public repository and run
-# every job here except backend-lint. Blacksmith bills per vCPU-minute,
-# rounded up to whole minutes per job, so a larger runner pays off only on the
-# job that sets the pull request's wall-clock time, or where it cuts the job's
-# time in half or more. frontend-build ran on Blacksmith (4 vCPU) beside a free
-# hosted regular build of the merge; it is now that one build and runs hosted:
-# on Blacksmith 4 vCPU the single build took 256-428 s (16.11.2026), longer
-# and dearer than the two jobs side by side.
+# every job here except backend-lint. Blacksmith bills per vCPU-minute, rounded
+# up to whole minutes per job, so a larger runner pays off only on the job that
+# sets the pull request's wall-clock time, or where it cuts the job's time in
+# half or more. frontend-build ran on Blacksmith 4 vCPU for 116-210 s (2-4
+# billed minutes) beside the free hosted merge build (177-242 s), which set the
+# wall-clock time of frontend pull requests; it now runs hosted too.
 # backend-lint took 6-8 minutes on a hosted runner; a cold
 # full lint took 195 s on four vCPUs and 101 s on eight, at the same cost.
 # nightly.yml runs this workflow on development to keep the caches warm.
@@ -295,6 +294,60 @@ jobs:
           STORYBOOK_SHARD: ${{ matrix.shard }}/3
         run: node scripts/storybook-test-changed.mjs
 
+  # The regular build of the tested tree: on pull requests GitHub's synthetic
+  # merge, which this job checks out by default. It ran in "Frontend build"
+  # before the two cold bundle builds and took 76-138 s there, on the job that
+  # set the wall-clock time of frontend pull requests (306-458 s, 13.11.2026).
+  # The bundle comparison reads nothing from it. Inside "Frontend quality" it
+  # took 154 s and brought that job to 273-294 s, so it has its own hosted
+  # runner, which is free for this repository. Without a Next.js cache: a
+  # hosted runner would save it into the repository's 10 GB GitHub cache on
+  # every push.
+  frontend-merge-build:
+    name: Frontend merge build
+    if: ${{ inputs.run-frontend }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: "pnpm"
+          cache-dependency-path: "frontend/pnpm-lock.yaml"
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend merge integration
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: "http://localhost:8080"
+          SKIP_ENV_VALIDATION: "true"
+          API_URL: "http://localhost:8080"
+          NEXT_PUBLIC_OPERATOR_HOSTNAME: "operator.localhost:3000"
+          NEXT_PUBLIC_PARENTS_HOSTNAME: "parents.localhost:3000"
+          NEXT_PUBLIC_APP_ENV: test
+          NEXT_PUBLIC_SCHOOL_HOSTNAME: "schule.localhost:3000"
+          NEXT_PUBLIC_CATERER_HOSTNAME: "caterer.localhost:3000"
+          NEXT_PUBLIC_TRAEGER_HOSTNAME: "traeger.localhost:3000"
+          TENANT_DOMAIN: "localhost"
+          NEXT_PUBLIC_TENANT_DOMAIN: "localhost"
+          NEXTAUTH_URL: "http://localhost:3000"
+          NEXTAUTH_SECRET: "ci-bundle-ratchet-throwaway-secret"
+          AUTH_JWT_EXPIRY: "15m"
+          AUTH_JWT_REFRESH_EXPIRY: "168h"
+          METRICS_BEARER_TOKEN: "ci-bundle-ratchet-token"
+        run: pnpm run build
+
   frontend-react-doctor:
     name: Frontend React Doctor
     # Changed-scope only: the existing codebase has ~1000 findings, so a full
@@ -367,12 +420,11 @@ jobs:
             echo "approved=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # Every event builds and measures the checked-out tree: on pull requests
-      # GitHub's synthetic merge. Its first parent is the base tip it merges
-      # into, the feature PR's delta reference; depth 2 holds both parents.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 2
+          # Feature bundle measurements switch to the PR head below; release
+          # pull requests and pushes measure the checked-out tree.
+          fetch-depth: 0
           filter: blob:none
           persist-credentials: false
 
@@ -394,25 +446,24 @@ jobs:
         working-directory: frontend
         run: node --test scripts/bundle-workflow-permissions.node-test.mjs scripts/perf/bundle-policy.node-test.mjs scripts/perf/bundle-measurement.node-test.mjs scripts/perf/bundle-base.node-test.mjs
 
-      # The synthetic merge is the head's changes applied to the base tip, so
-      # its delta against that tip is exactly what the pull request adds to
-      # development; base drift since the merge-base cancels out. A checkout
-      # that is not the merge of this head fails instead of measuring a
-      # different comparison.
+      - name: Select feature PR head for bundle delta measurements
+        if: github.event_name == 'pull_request' && github.base_ref != 'main'
+        working-directory: frontend
+        env:
+          HEAD_REVISION: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git checkout --detach "$HEAD_REVISION"
+          pnpm install --frozen-lockfile
+
       - name: Identify bundle observation source and configuration
         id: bundle-key
         working-directory: frontend
         env:
           BASE_REVISION: ${{ github.event_name == 'pull_request' && github.base_ref != 'main' && github.event.pull_request.base.sha || '' }}
-          HEAD_REVISION: ${{ github.event.pull_request.head.sha }}
         run: |
           if [[ -n "$BASE_REVISION" && ! "$BASE_REVISION" =~ ^0+$ ]]; then
-            if [[ "$(git rev-parse --verify --quiet HEAD^2)" != "$HEAD_REVISION" ]]; then
-              echo "::error::Checkout is not GitHub's synthetic merge of $HEAD_REVISION; no exact delta reference."
-              exit 1
-            fi
-            merge_parent=$(git rev-parse HEAD^1)
-            node scripts/perf/bundle-measurement.mjs --prepare-ci "$merge_parent"
+            merge_base=$(git merge-base HEAD "$BASE_REVISION")
+            node scripts/perf/bundle-measurement.mjs --prepare-ci "$merge_base"
           else
             node scripts/perf/bundle-measurement.mjs --prepare-ci
           fi
@@ -447,15 +498,17 @@ jobs:
           path: frontend/perf-results/bundle-base.json
           key: ${{ steps.bundle-key.outputs.base-measurement-key }}
 
-      # The ratchet's cold `next build --analyze` is the regular build of the
-      # tested tree (types, route validation, prerender) and writes the same
-      # Turbopack analysis data as `next experimental-analyze`: on next 16.4.5
-      # both gave identical bytes on all 279 routes of one tree. A separate
-      # hosted "Frontend merge build" ran the same build again (160-187 s).
-      # Feature PRs enforce their own delta against the base tip's cold
-      # measurement; the approval label turns it into a warning. Release PRs
-      # into main and nightly enforce only the few absolute ceilings:
-      # release-cycle growth is not a feature PR regression.
+      # Feature PRs enforce their own delta against the cold merge-base build;
+      # the approval label turns it into a warning. Release PRs into main and
+      # nightly enforce only the few absolute ceilings: release-cycle growth is
+      # not a feature PR regression. The regular build in "Frontend merge
+      # build" still catches semantic integration failures before merging.
+      # Keep that build. One `next build --analyze` would serve both (same
+      # analysis bytes as experimental-analyze on all 279 routes, next 16.4.5),
+      # but its compile took 2.5-3.9 min on Blacksmith 4 vCPU and 4.5-5.3 min
+      # hosted against 62-68 s for a plain build, plus 58-138 s of TypeScript
+      # after it: 256-716 s for the job against two side-by-side jobs of
+      # about 200 s (#7287).
       - name: Bundle size ratchet
         working-directory: frontend
         env:
