@@ -11098,7 +11098,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.studentNoteTeamReach.NotifyStudentNoteShared",
-      "binding_digest": "a44b8549820bd9da9d16f44a0477b096",
+      "binding_digest": "eea7038fd3422fd89ba5262d84362233",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/students.StudentNoteTeamReach.NotifyStudentNoteShared",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
@@ -11106,7 +11106,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.studentNoteTeamReach.NotifyStudentNoteShared",
-      "binding_digest": "ca234980010223d5ae6d95ce61709b42",
+      "binding_digest": "8f3f14c7ba734d5a072cabb5269dd5ff",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/students.StudentNoteTeamReach.NotifyStudentNoteShared",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",

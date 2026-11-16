@@ -7474,7 +7474,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.pickupChangeTeamReach.NotifyPickupChanged",
-      "binding_digest": "20ad49e39c6ab94f1fc4dc1e32ef5ce9",
+      "binding_digest": "100af8f52cf5b6f0287fe1b53ee5674a",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupChangeTeamReach.NotifyPickupChanged",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
@@ -7482,7 +7482,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.pickupChangeTeamReach.NotifyPickupChanged",
-      "binding_digest": "115f503500888064fb2618558a886d9b",
+      "binding_digest": "3219fcb3ba746c1a01c41296126071f0",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupChangeTeamReach.NotifyPickupChanged",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
