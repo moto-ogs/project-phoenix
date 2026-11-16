@@ -114,6 +114,15 @@ func (f *staffingFixture) bulk(t *testing.T, in timetable.BulkSubstitutionInput)
 	})
 }
 
+// sickNotice runs the staffing-notice half of a Krankmeldung cascade inside
+// the same tenant transaction as the cascade itself.
+func (f *staffingFixture) sickNotice(t *testing.T, in timetable.SickAbsenceNotice) error {
+	t.Helper()
+	return testpkg.TenantCommand0(t, f.s.ctx, f.s.db, func(ctx context.Context) error {
+		return f.deviations.NoticeSickAbsence(ctx, in)
+	})
+}
+
 type feedEntry struct{ Type, Title, Body, DeepLink string }
 
 // typedPushes counts the push intents of the type for the account.

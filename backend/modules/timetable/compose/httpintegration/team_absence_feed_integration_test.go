@@ -29,12 +29,13 @@ func TestTeamFeedOfASammelVertretung(t *testing.T) {
 	group := testpkg.CreateTestEducationGroup(t, f.s.db, "Sonne")
 	other := testpkg.CreateTestEducationGroup(t, f.s.db, "Mond")
 	actor, absent, substitute := f.person(t, "Leitung"), f.person(t, "Anna"), f.person(t, "Ben")
-	holder, otherHolder, pastHolder, unrelated := f.person(t, "Clara"), f.person(t, "Dana"), f.person(t, "Emil"), f.person(t, "Unbeteiligt")
+	holder, otherHolder, pastHolder, legacyHolder, unrelated := f.person(t, "Clara"), f.person(t, "Dana"), f.person(t, "Emil"), f.person(t, "Frida"), f.person(t, "Unbeteiligt")
 	lead := f.teacher(t, "Lehrkraft", group.ID)
 	from, to := calendar.NewDate(2030, 6, 17), calendar.NewDate(2030, 6, 19)
 	f.handover(t, group.ID, holder, from, to)
 	f.handover(t, group.ID, substitute, from, to)
 	f.handover(t, group.ID, actor, from, to)
+	testpkg.CreateTestGroupSubstitution(t, f.s.db, group.ID, &absent.staffID, legacyHolder.staffID, from, to)
 	f.handover(t, group.ID, pastHolder, calendar.NewDate(2030, 6, 10), calendar.NewDate(2030, 6, 16))
 	f.handover(t, other.ID, otherHolder, from, to)
 	var dates []calendar.Date
@@ -60,6 +61,7 @@ func TestTeamFeedOfASammelVertretung(t *testing.T) {
 	assert.Equal(t, []string{"staffing_changed"}, entryTypes(f.entries(t, absent)), "the absent person is no team of their own absence")
 	assert.Empty(t, f.entries(t, actor), "the person who saved gets nothing, also when holding the group")
 	assert.Empty(t, f.entries(t, pastHolder), "a handover that ended before the absence makes no team")
+	assert.Empty(t, f.entries(t, legacyHolder), "a legacy personnel substitution does not make someone the group's team")
 	assert.Empty(t, f.entries(t, otherHolder), "the team of another group gets nothing")
 	assert.Empty(t, f.entries(t, unrelated))
 
@@ -70,6 +72,32 @@ func TestTeamFeedOfASammelVertretung(t *testing.T) {
 	code, body := f.call(t, holder.accountID, foreign.TenantID, "GET", "/api/notifications/feed")
 	require.Equal(t, 200, code, string(body))
 	assert.Contains(t, string(body), `"entries":[]`)
+}
+
+func TestTeamFeedBundlesReturnOfSickAbsenceFromLaterDay(t *testing.T) {
+	t.Parallel()
+	f := newStaffingFixture(t)
+	group := testpkg.CreateTestEducationGroup(t, f.s.db, "Stern")
+	actor, absent, holder := f.person(t, "Leitung"), f.person(t, "Anna"), f.person(t, "Clara")
+	from, returned := calendar.NewDate(2030, 6, 17), calendar.NewDate(2030, 6, 19)
+	f.handover(t, group.ID, holder, from, returned)
+	firstBlock, returnedBlock := f.groupBlock(t, from, group.ID, absent), f.groupBlock(t, returned, group.ID, absent)
+	absenceType := testpkg.CreateTestStaffAbsenceType(t, f.s.db, "Krank")
+	absence := testpkg.CreateTestStaffAbsenceToday(t, f.s.db, absent.staffID, absenceType.ID)
+
+	require.NoError(t, f.sickNotice(t, timetable.SickAbsenceNotice{
+		AbsenceID: absence.ID, StaffID: absent.staffID, ActorAccountID: &actor.accountID,
+		Blocks: []timetable.SickAbsenceNoticeBlock{{InstanceID: firstBlock, Date: from}, {InstanceID: returnedBlock, Date: returned}},
+	}))
+	require.NoError(t, f.sickNotice(t, timetable.SickAbsenceNotice{
+		AbsenceID: absence.ID, StaffID: absent.staffID, Returned: true, ActorAccountID: &actor.accountID,
+		Blocks: []timetable.SickAbsenceNoticeBlock{{InstanceID: returnedBlock, Date: returned}},
+	}))
+
+	assert.Equal(t, []feedEntry{{
+		Type: "team_member_absent", Title: "Dienstplan geändert", Body: "Anna Feed ist am Mi. 19.06. doch da.", DeepLink: "/tagesplan?d=2030-06-19",
+	}}, f.entries(t, holder))
+	assert.Equal(t, 1, f.typedPushes(t, holder, "team_member_absent"), "the return updates the absence instead of sending a second push")
 }
 
 func TestTeamFeedOfAnAbsenceItsReturnAndTheSchoolSwitch(t *testing.T) {

@@ -24,6 +24,10 @@ import (
 // same person on another day stays an entry of its own.
 const staffingObjectTeamDay = "staffing_team_day"
 
+// staffingObjectTeamAbsence is what a team notice about a Krankmeldung is
+// about. The Workflow uses the same absence ID for its absence and return.
+const staffingObjectTeamAbsence = "staffing_team_absence"
+
 // teamDayObject packs the person and the first day into one object id; the
 // day counts from 2000-01-01, which leaves 20 bits for days.
 func teamDayObject(subjectID int64, first calendar.Date) int64 {
@@ -204,6 +208,9 @@ func teamNotice(story teamStory, op staffingOperation, today calendar.Date, team
 		Kind: ports.StaffingChangeAbsent, SubjectName: staffName(staff[story.key.subjectID]), InstanceID: first.instanceID,
 		ObjectType: staffingObjectTeamDay, ObjectID: teamDayObject(story.key.subjectID, first.date),
 		Push: today.DaysUntil(first.date) <= staffNoticePushDays,
+	}
+	if first.teamAbsenceID > 0 {
+		notice.ObjectType, notice.ObjectID = staffingObjectTeamAbsence, first.teamAbsenceID
 	}
 	if story.key.back {
 		notice.Kind = ports.StaffingChangePresent

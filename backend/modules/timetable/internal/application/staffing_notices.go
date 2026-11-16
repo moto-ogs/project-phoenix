@@ -32,9 +32,12 @@ type staffingChange struct {
 	kind         string
 	subjectID    int64
 	substituteID int64
-	instanceID   int64
-	date         calendar.Date
-	start        time.Time
+	// teamAbsenceID ties the absence and its return to the same Krankmeldung.
+	// Manual deviations have no durable absence object and leave it zero.
+	teamAbsenceID int64
+	instanceID    int64
+	date          calendar.Date
+	start         time.Time
 	// knownAbsent marks a substitution of a person who was already absent:
 	// no new absence for the team.
 	knownAbsent bool
@@ -117,7 +120,9 @@ func (s *staffDeviations) NoticeSickAbsence(ctx context.Context, in timetable.Si
 	}
 	changes := make([]staffingChange, 0, len(in.Blocks))
 	for _, block := range in.Blocks {
-		changes = append(changes, staffingChange{kind: kind, subjectID: in.StaffID, instanceID: block.InstanceID, date: block.Date})
+		changes = append(changes, staffingChange{
+			kind: kind, subjectID: in.StaffID, teamAbsenceID: in.AbsenceID, instanceID: block.InstanceID, date: block.Date,
+		})
 	}
 	return s.noticeStaffingChanges(ctx, staffingOperation{changes: changes, actor: in.ActorAccountID})
 }

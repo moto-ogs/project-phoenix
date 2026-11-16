@@ -28866,7 +28866,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupHandovers.GroupHandovers",
-      "binding_digest": "6d50f79c85fdb16b522b475061e9e400",
+      "binding_digest": "5eaafc7ca1417572c25b44be73ce9c03",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupHandoverStaff.GroupHandovers",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.ListGroupSubstitutions",

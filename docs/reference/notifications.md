@@ -266,7 +266,8 @@ same people that the person is there again.
 A colleague's absence also reaches the rest of the team of the affected
 groups (`team_member_absent`, #7138). The team of a group on a day is who
 "my groups" names: the assigned teachers and whoever holds the group by a
-Gruppenübergabe (`education.group_substitution`) covering that day. Whoever
+Gruppenübergabe (`education.group_substitution` mit Zieltyp
+`group_handover`) covering that day. Whoever
 already receives a staffing notice about the same absence or return in the
 same operation gets no team entry; the teachers therefore usually hear it as
 `group_staffing_changed`. Neither the absent person nor the person who made
@@ -275,9 +276,10 @@ operation are one absence: one entry per operation, „… ist an 3 Tagen
 (17.–19.11.) nicht da.“ A cover entered later for someone already marked
 absent (a sick report, then its cover) is no new absence. A return reads
 „… ist … doch da.“ Bundling object: the person and the first day
-(`staffing_team_day`), so a return within the bundle window updates the
-unread absence entry without a second push, while an absence on another day
-stays an entry of its own. The type sits under „Dienstplan und Vertretung“,
+(`staffing_team_day`). A Krankmeldung instead uses its stable absence ID
+(`staffing_team_absence`), so its return also updates the unread absence entry
+when it affects a later day. Another manual absence on another day stays an
+entry of its own. The type sits under „Dienstplan und Vertretung“,
 pushes by default within the same 14-day window, shares the school switch
 and links to `/tagesplan?d=…` of the first day, since a handover holder
 usually lacks the `schedules:manage` right the Vertretungsplan needs.

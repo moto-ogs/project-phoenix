@@ -50,8 +50,8 @@ func NewTimetableStaffNotices(notifications DeliveryNotifications, membership sc
 }
 
 // timetableGroupHandovers lists the Gruppenübergaben of OGS groups over a
-// period in one Workforce read, whatever their target type, as the
-// supervision of a group on a day counts them.
+// period in one Workforce read. Only Gruppenübergaben make somebody part of
+// the group team; legacy personnel substitutions remain readable history.
 type timetableGroupHandovers struct {
 	substitutions groupSubstitutionLister
 }
@@ -66,7 +66,8 @@ func (h timetableGroupHandovers) GroupHandovers(ctx context.Context, groupIDs []
 		return nil, nil
 	}
 	rows, err := h.substitutions.ListGroupSubstitutions(ctx, workforce.GroupSubstitutionFilter{
-		GroupIDs: groupIDs, OverlapFrom: from.String(), OverlapTo: to.String(),
+		GroupIDs: groupIDs, TargetType: workforce.GroupSubstitutionTypeGroupHandover,
+		OverlapFrom: from.String(), OverlapTo: to.String(),
 	})
 	if err != nil {
 		return nil, err
