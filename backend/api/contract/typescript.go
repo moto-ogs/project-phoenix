@@ -179,9 +179,6 @@ func (w *tsWriter) visit(s Schema) {
 	if s.Elem != nil {
 		w.visit(*s.Elem)
 	}
-	if s.Kind == KindEnum {
-		w.helpers["type OpenEnum"] = true
-	}
 	if s.Kind == KindEnum && !w.done["enum:"+s.Ref] {
 		w.done["enum:"+s.Ref] = true
 		w.enumOrder = append(w.enumOrder, s.Ref)
@@ -262,7 +259,7 @@ func (w *tsWriter) object(out *strings.Builder, object Object) {
 		if field.Deprecated {
 			out.WriteString("  /** @deprecated leaves the contract with the next release */\n")
 		}
-		fmt.Fprintf(out, "  %s%s: %s;\n", field.Name, optionalMark(field.Optional), tsType(field.Schema, object.Request))
+		fmt.Fprintf(out, "  %s%s: %s;\n", field.Name, optionalMark(field.Optional), w.tsType(field.Schema, object.Request))
 	}
 	out.WriteString("}\n")
 	if object.Request {
@@ -319,7 +316,7 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	}
 	if route.Request != nil {
 		w.helpers["requestBody"] = true
-		fmt.Fprintf(out, "    request: requestBody<%s>(),\n", tsType(*route.Request, true))
+		fmt.Fprintf(out, "    request: requestBody<%s>(),\n", w.tsType(*route.Request, true))
 	}
 	if route.Variants != nil {
 		fmt.Fprintf(out, "    variantParam: %q,\n    defaultVariant: %q,\n    response: {\n", route.Variants.QueryParam, route.Variants.Default)
@@ -384,7 +381,7 @@ func sortedKeys[V any](m map[string]V) []string {
 // tsType is the type a decoder hands out or, for a request, the type the
 // client sends. An identifier is a string except where Go reads only a JSON
 // number.
-func tsType(s Schema, request bool) string {
+func (w *tsWriter) tsType(s Schema, request bool) string {
 	var t string
 	switch s.Kind {
 	case KindLegacyID:
@@ -399,15 +396,16 @@ func tsType(s Schema, request bool) string {
 	case KindInt, KindNumber:
 		t = "number"
 	case KindEnum:
+		w.helpers["type OpenEnum"] = true
 		t = "OpenEnum<" + s.Ref + ">"
 	case KindArray:
-		elem := tsType(*s.Elem, request)
+		elem := w.tsType(*s.Elem, request)
 		if strings.Contains(elem, " ") {
 			elem = "(" + elem + ")"
 		}
 		t = elem + "[]"
 	case KindMap:
-		t = "Record<string, " + tsType(*s.Elem, request) + ">"
+		t = "Record<string, " + w.tsType(*s.Elem, request) + ">"
 	case KindRef:
 		t = s.Ref
 	}
