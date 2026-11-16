@@ -15,3 +15,8 @@ const KeyNotificationsStaffingChangedEnabled = "notifications.staffing_changed_e
 // notice about a new Hinweis der Leitung (#7143): neither feed entry nor push
 // is written then.
 const KeyNotificationsStaffNoticePublishedEnabled = "notifications.staff_notice_published_enabled"
+
+// KeyNotificationsClassTimetableChangedEnabled lets a school switch off the
+// notices about a changed Stundenplan of a class (#7142): neither feed entry
+// nor push is written then, for the staff of the class and its families.
+const KeyNotificationsClassTimetableChangedEnabled = "notifications.class_timetable_changed_enabled"
