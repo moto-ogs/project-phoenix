@@ -30,6 +30,9 @@ type StudentPhotoConsentRecorder interface {
 		actorAccountID *int64,
 		changedAt time.Time,
 	) error
+	// RecordPhotoConsentsWithdrawn appends one photo withdrawal per child in
+	// one write.
+	RecordPhotoConsentsWithdrawn(ctx context.Context, studentIDs []int64, source string, actorAccountID *int64, changedAt time.Time) error
 }
 
 type StudentPhotoRuntime struct {
@@ -122,6 +125,24 @@ func (r StudentPhotoRuntime) RecordPhotoConsent(
 	afterRow.ID = after.StudentID
 	return r.Consents.RecordTransitions(
 		ctx, beforeRow, afterRow, auditModels.StudentConsentSourceTenantPortal, actorAccountID, changedAt)
+}
+
+// RecordPhotoConsentsEnded records the photo consents the feature switch-off
+// ended. The switch is made in the tenant portal's settings.
+func (r StudentPhotoRuntime) RecordPhotoConsentsEnded(
+	ctx context.Context,
+	studentIDs []int64,
+	actorAccountID *int64,
+	changedAt time.Time,
+) error {
+	if len(studentIDs) == 0 {
+		return nil
+	}
+	if r.Consents == nil {
+		return errors.New("student photo runtime: consent trail is not wired")
+	}
+	return r.Consents.RecordPhotoConsentsWithdrawn(
+		ctx, studentIDs, auditModels.StudentConsentSourceTenantPortal, actorAccountID, changedAt)
 }
 
 // StudentPhotos adapts the owner capability to the retained contract the

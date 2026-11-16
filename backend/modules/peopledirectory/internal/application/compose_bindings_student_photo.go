@@ -20,6 +20,10 @@ func (DisabledStudentPhotos) RecordPhotoConsent(context.Context, internalports.S
 	return ErrStudentPhotoRuntimeUnbound
 }
 
+func (DisabledStudentPhotos) RecordPhotoConsentsEnded(context.Context, []int64, *int64, time.Time) error {
+	return ErrStudentPhotoRuntimeUnbound
+}
+
 var ErrStudentPhotoRuntimeUnbound = errors.New("people directory: student photo runtime is not bound")
 
 // studentPhotoPort is the root's photo runtime, or the disabled one.
@@ -43,4 +47,5 @@ type StudentPhotoRuntime interface {
 		actorAccountID *int64,
 		changedAt time.Time,
 	) error
+	RecordPhotoConsentsEnded(ctx context.Context, studentIDs []int64, actorAccountID *int64, changedAt time.Time) error
 }

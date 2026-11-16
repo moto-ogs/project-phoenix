@@ -33,6 +33,9 @@ func (photoCleanupRuntime) BroadcastPhotoChange(int64, int64, string) {}
 func (photoCleanupRuntime) RecordPhotoConsent(context.Context, peopleCompose.StudentPhotoConsentSnapshot, peopleCompose.StudentPhotoConsentSnapshot, *int64, time.Time) error {
 	return nil
 }
+func (photoCleanupRuntime) RecordPhotoConsentsEnded(context.Context, []int64, *int64, time.Time) error {
+	return nil
+}
 
 func TestPhotoCleanupOutboxSharesEveryDetachingTransaction(t *testing.T) {
 	t.Parallel()

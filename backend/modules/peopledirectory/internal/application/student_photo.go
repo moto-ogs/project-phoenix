@@ -155,36 +155,65 @@ func (s *StudentPhotoService) FindPhoto(ctx context.Context, studentID int64, fi
 
 // PurgePhotos detaches every stored photo of the tenant inside the caller's
 // transaction and returns the URLs whose files the caller must remove after
-// the commit.
+// the commit. Every photo consent ends with it (#7208): a consent given for
+// the feature does not outlive it, so a photo after switching the feature on
+// again needs a new confirmation. The consent trail records each ended
+// consent as withdrawn, in one write, which also lets guardians give it again.
 func (s *StudentPhotoService) PurgePhotos(ctx context.Context) (result []string, err error) {
 	err = s.run(ctx, "purge_student_photos", func(txCtx context.Context, stats *domain.OperationStats) error {
+		result = nil
 		lockStats, err := s.store.LockPhotoFeature(txCtx)
 		stats.Add(lockStats)
 		if err != nil {
 			return err
 		}
-		var purgeStats domain.OperationStats
-		result, purgeStats, err = s.store.PurgePhotos(txCtx)
+		cleared, purgeStats, err := s.store.PurgePhotos(txCtx)
 		stats.Add(purgeStats)
 		if err != nil {
 			return err
 		}
-		if s.runtime != nil {
-			for _, url := range result {
-				if err := s.runtime.QueueUnlinkStoredPhoto(txCtx, url); err != nil {
-					return err
-				}
+		var endedConsents []int64
+		for _, photo := range cleared {
+			if url := photo.StoredPhoto(); url != "" {
+				result = append(result, url)
+			}
+			if photo.PhotoConsentGivenAt != nil {
+				endedConsents = append(endedConsents, photo.StudentID)
 			}
 		}
-		return nil
+		for _, url := range result {
+			if err := s.runtime.QueueUnlinkStoredPhoto(txCtx, url); err != nil {
+				return err
+			}
+		}
+		return s.recordConsentsEnded(txCtx, endedConsents)
 	})
-	return result, err
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// recordConsentsEnded appends the withdrawal of every consent the purge
+// ended, attributed to the account that switched the feature off.
+func (s *StudentPhotoService) recordConsentsEnded(ctx context.Context, studentIDs []int64) error {
+	if len(studentIDs) == 0 {
+		return nil
+	}
+	var actorAccountID *int64
+	if actor := s.runtime.ActingAccountID(ctx); actor > 0 {
+		actorAccountID = &actor
+	}
+	return s.runtime.RecordPhotoConsentsEnded(ctx, studentIDs, actorAccountID, s.now())
 }
 
 // ApplyPhotoConsent reconciles a requested consent against the row the caller
 // holds and returns the photo slice as it must be written. The caller persists
 // it with its own write, so the consent commits with the edit that carries it;
 // the file a withdrawal detaches is scheduled for removal after that commit.
+// A new consent needs the feature switched on (#7208): switching it off ends
+// every consent, so one recorded meanwhile would bypass that. A withdrawal
+// stays possible at any time (Art. 7 Abs. 3 DSGVO).
 func (s *StudentPhotoService) ApplyPhotoConsent(
 	ctx context.Context,
 	current domain.StudentPhoto,
@@ -195,6 +224,11 @@ func (s *StudentPhotoService) ApplyPhotoConsent(
 	}
 	updated, transition := domain.ApplyPhotoConsent(
 		requestedConsent, current, s.now(), s.runtime.ActingAccountID(ctx))
+	if transition.GrantedNow {
+		if err := s.requireFeatureEnabled(ctx); err != nil {
+			return current, err
+		}
+	}
 	if transition.RemovedPhotoPath != "" {
 		if err := s.runtime.QueueUnlinkStoredPhoto(ctx, transition.RemovedPhotoPath); err != nil {
 			return current, err

@@ -20,9 +20,9 @@ type StudentPhotoStore interface {
 	LockPhotoFeature(ctx context.Context) (domain.OperationStats, error)
 	// SavePhoto writes the photo slice of one child.
 	SavePhoto(ctx context.Context, photo domain.StudentPhoto) (domain.OperationStats, error)
-	// PurgePhotos clears every stored photo of the tenant and returns the
-	// URLs it detached.
-	PurgePhotos(ctx context.Context) ([]string, domain.OperationStats, error)
+	// PurgePhotos clears every stored photo and photo consent of the tenant
+	// and returns the cleared rows as they were before.
+	PurgePhotos(ctx context.Context) ([]domain.StudentPhoto, domain.OperationStats, error)
 	// ListPhotosPastPurpose names the children whose care is over on today
 	// and whose row still holds photo data, in ascending id order (#6650).
 	ListPhotosPastPurpose(ctx context.Context, today calendar.Date) ([]int64, domain.OperationStats, error)
@@ -54,6 +54,9 @@ type StudentPhotoRuntime interface {
 	// RecordPhotoConsent appends the Audit Platform trail entry for a
 	// consent that changed with the photo.
 	RecordPhotoConsent(ctx context.Context, before, after StudentPhotoConsentSnapshot, actorAccountID *int64, changedAt time.Time) error
+	// RecordPhotoConsentsEnded appends one withdrawal trail entry per child
+	// whose photo consent ended with the feature, all in one write.
+	RecordPhotoConsentsEnded(ctx context.Context, studentIDs []int64, actorAccountID *int64, changedAt time.Time) error
 }
 
 // StudentPhotoConsentSnapshot is the photo slice of a consent change the

@@ -37,5 +37,7 @@ type StudentConsentChange struct {
 
 type StudentConsentChangeRepository interface {
 	Create(ctx context.Context, entry *StudentConsentChange) error
+	// CreateAll appends many entries in one statement, all or nothing.
+	CreateAll(ctx context.Context, entries []*StudentConsentChange) error
 	ListByStudentID(ctx context.Context, studentID int64) ([]*StudentConsentChange, error)
 }

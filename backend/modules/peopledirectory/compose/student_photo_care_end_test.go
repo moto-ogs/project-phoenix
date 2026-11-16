@@ -50,6 +50,12 @@ func (r *careEndPhotoRuntime) RecordPhotoConsent(context.Context, StudentPhotoCo
 	r.consents++
 	return nil
 }
+func (r *careEndPhotoRuntime) RecordPhotoConsentsEnded(_ context.Context, studentIDs []int64, _ *int64, _ time.Time) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.consents += len(studentIDs)
+	return nil
+}
 
 // careEndToday is the fixed school day of every run below.
 var careEndToday = calendar.NewDate(2026, time.November, 11)

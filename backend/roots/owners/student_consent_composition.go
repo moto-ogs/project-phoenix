@@ -159,6 +159,38 @@ func (s studentConsentTrail) RecordStudentConsentTransitions(
 	return nil
 }
 
+// RecordPhotoConsentsWithdrawn appends one photo withdrawal per child in a
+// single statement, all or nothing (#7208).
+func (s studentConsentTrail) RecordPhotoConsentsWithdrawn(
+	ctx context.Context,
+	studentIDs []int64,
+	source string,
+	actorAccountID *int64,
+	changedAt time.Time,
+) error {
+	if s.trail == nil {
+		return fmt.Errorf("student consent recorder: repository not wired")
+	}
+	entries := make([]*auditModels.StudentConsentChange, 0, len(studentIDs))
+	for _, studentID := range studentIDs {
+		if studentID <= 0 {
+			return fmt.Errorf("student consent recorder: persisted student is required")
+		}
+		entries = append(entries, &auditModels.StudentConsentChange{
+			Model:          auditModels.Model{CreatedAt: changedAt, UpdatedAt: changedAt},
+			StudentID:      studentID,
+			ConsentKey:     peopleModule.StudentConsentPhoto,
+			Action:         auditModels.StudentConsentWithdrawn,
+			Source:         source,
+			ActorAccountID: actorAccountID,
+		})
+	}
+	if err := s.trail.CreateAll(ctx, entries); err != nil {
+		return fmt.Errorf("student consent recorder: record photo withdrawals: %w", err)
+	}
+	return nil
+}
+
 func studentConsentSnapshot(student *peopleModule.StudentState) peopleModule.StudentConsentSnapshot {
 	return peopleModule.StudentConsentSnapshot{
 		StudentID:                student.ID,
