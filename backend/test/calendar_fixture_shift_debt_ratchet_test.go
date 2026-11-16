@@ -34,13 +34,33 @@ import (
 //   - A raised entry or a new key fails the architecture check against the
 //     base; never raise a number and never add a key.
 var calendarFixtureShiftedLiveDateDebt = map[string]int{
-	"api/data_return_http_test.go":                                                               1,
-	"api/runtime_checkpoint_test.go":                                                             9,
-	"api/runtime_checkpoint_v2_test.go":                                                          3,
-	"cmd/cleanup_test.go":                                                                        6,
-	"cmd/devtools/demo_runtime_test.go":                                                          2,
-	"cmd/tenant_erasure_integration_test.go":                                                     2,
-	"modules/organizationtenancy/compose/data_return_export_test.go":                             1,
+	// Named exception (#7104, ADR 0274), the data return: the release
+	// runs as phoenix_data_return, which holds no table right, only EXECUTE
+	// on the SECURITY DEFINER functions of migrations 1.15.917/1.15.919.
+	// platform.data_return_issue bounds keep_until (up to 366 days) and the
+	// token lifetime (up to 30 days) against PostgreSQL's now(); revoke,
+	// purge and issued_at stamp now() as well. The database clock is the
+	// security boundary of the release: an instant passed in by the caller
+	// would let the role choose its own "now" and void both bounds. The
+	// tests therefore place keep_until relative to the real day the
+	// database decides on; the three data-return entries below share this
+	// reason.
+	"api/data_return_http_test.go": 1,
+	// Named exception (#7104, ADR 0274), the opt-in runtime checkpoint
+	// (docs/runtime-checkpoints): measureRuntimeCheckpoint and
+	// newTargetRiskWorkload time the complete production Serve graph that
+	// WithRuntime builds, which keeps the real clock by design
+	// (newProductionEnvironment) and has no clock input. Its enrollment
+	// service window and care-end days must lie around that real day.
+	// Pinning them would need a clock on the production ServeConfig only
+	// for this measurement; it runs in no CI job.
+	"api/runtime_checkpoint_test.go":    9,
+	"api/runtime_checkpoint_v2_test.go": 3,
+	// Data return, see api/data_return_http_test.go.
+	"cmd/tenant_erasure_integration_test.go": 2,
+	// Data return, see api/data_return_http_test.go.
+	"modules/organizationtenancy/compose/data_return_export_test.go": 1,
+	// Data return, see api/data_return_http_test.go.
 	"modules/organizationtenancy/internal/adapters/datareturn/datareturn_test.go":                3,
 	"modules/parentrequestfeedprojection/internal/adapters/postgres/query_budget_growth_test.go": 1,
 	"modules/parentrequestfeedprojection/internal/adapters/postgres/query_test.go":               1,
