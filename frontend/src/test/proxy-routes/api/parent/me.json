@@ -170,7 +170,7 @@
     "GET parent /parent/me/news/unread-count"
   ],
   "api/parent/me/notifications/feed": [
-    "GET parent /parent/me/notifications/feed query=limit,cursor"
+    "GET parent /parent/me/notifications/feed/ query=limit,cursor"
   ],
   "api/parent/me/notifications/feed/[id]/read": [
     "POST parent /parent/me/notifications/feed/id%2F1/read"

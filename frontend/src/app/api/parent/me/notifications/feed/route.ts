@@ -5,6 +5,7 @@ import { proxyGet } from "~/lib/parent/route-wrapper.server";
  * über alle Schulen der Familie (#7140), neueste Aktualisierung zuerst. Nur
  * Seitengröße und der undurchsichtige Cursor gehen weiter.
  */
-export const GET = proxyGet("/parent/me/notifications/feed", {
+// The backend collection route is registered with this trailing slash.
+export const GET = proxyGet("/parent/me/notifications/feed/", {
   forwardQuery: ["limit", "cursor"],
 });
