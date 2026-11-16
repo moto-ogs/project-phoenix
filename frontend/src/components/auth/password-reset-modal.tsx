@@ -349,7 +349,11 @@ export function PasswordResetModal({
           spellCheck={false}
           required
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            // The announcement belonged to the address just replaced.
+            setWaitAnnouncement("");
+          }}
           className="w-full"
           label={copy.emailLabel}
           disabled={isLoading}

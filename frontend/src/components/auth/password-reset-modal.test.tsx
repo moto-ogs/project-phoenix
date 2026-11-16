@@ -296,6 +296,7 @@ describe("PasswordResetModal", () => {
 
     fireEvent.change(input, { target: { value: "richtig@example.com" } });
     expect(screen.queryByTestId("alert-warning")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
     fireEvent.click(screen.getByRole("button", { name: /Link senden/i }));
     expect(
       await screen.findByRole("heading", {
