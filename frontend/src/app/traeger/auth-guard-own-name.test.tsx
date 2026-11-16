@@ -31,6 +31,11 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/traeger/konto",
 }));
 vi.mock("~/lib/traeger-api", () => api);
+// „Konto“ also lists the trusted devices; these tests cover the name only.
+vi.mock("~/lib/mfa-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/mfa-api")>()),
+  listTrustedDevices: () => Promise.resolve([]),
+}));
 // The real shell needs the whole portal; the header reads the same context.
 vi.mock("~/components/traeger/traeger-shell", () => ({
   TraegerShell: ({ children }: { children: React.ReactNode }) => (

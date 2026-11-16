@@ -52,6 +52,23 @@ vi.mock("~/lib/enrollment-submission-api", () => ({
   withdrawStatus: vi.fn(),
 }));
 
+// The family-children card side-loads its own data; a registration that does
+// not ask for the number hides the card.
+vi.mock("~/lib/parent-family-children-api", () => ({
+  fetchFamilyChildren: vi.fn(async () => ({
+    statedChildren: null,
+    statedAt: null,
+    confirmedChildren: null,
+    confirmedAt: null,
+    validFrom: null,
+    validUntil: null,
+    canState: false,
+    asked: false,
+    accepted: false,
+  })),
+  stateFamilyChildren: vi.fn(),
+}));
+
 const mockFetchStatus = vi.mocked(fetchStatus);
 const mockListEnrollmentChangeRequests = vi.mocked(
   listEnrollmentChangeRequests,
