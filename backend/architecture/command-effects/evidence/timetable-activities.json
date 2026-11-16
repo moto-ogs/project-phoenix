@@ -28865,6 +28865,14 @@
       "target_owner": "care-plan"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupHandovers.GroupHandovers",
+      "binding_digest": "6d50f79c85fdb16b522b475061e9e400",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupHandoverStaff.GroupHandovers",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.ListGroupSubstitutions",
+      "target_owner": "workforce"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Capability.ArchiveTemplate",
       "binding_digest": "2eef4db4e743348713d19b841d40ab0c",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupRows.ArchiveTemplate",

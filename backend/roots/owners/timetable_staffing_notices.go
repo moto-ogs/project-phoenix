@@ -12,13 +12,15 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
+	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 // TimetableStaffNotices are the notices Timetable writes into Delivery's
-// notification feed: a cancelled block (#7148) and a staffing change
-// (#7136). Their zero value tells nobody.
+// notification feed: a cancelled block (#7148), a staffing change (#7136)
+// and a colleague's absence to the team (#7138). Their zero value tells
+// nobody.
 type TimetableStaffNotices struct {
 	Cancellations timetablePorts.StaffCancellationNotices
 	Staffing      timetablePorts.StaffingNoticeDependencies
@@ -26,10 +28,10 @@ type TimetableStaffNotices struct {
 
 // NewTimetableStaffNotices binds both notices over the root's notifications.
 // The staffing notice names the teachers of a block's OGS groups through
-// School Membership's teaching assignments and the groups through
-// Timetable's own block groups. Without Delivery's notifications both stay
-// nil.
-func NewTimetableStaffNotices(notifications DeliveryNotifications, membership schoolmembership.Query, groups timetable.BlockGroupQuery) TimetableStaffNotices {
+// School Membership's teaching assignments, the groups through Timetable's
+// own block groups and the Gruppenübergaben through Workforce. Without
+// Delivery's notifications both stay nil.
+func NewTimetableStaffNotices(notifications DeliveryNotifications, membership schoolmembership.Query, groups timetable.BlockGroupQuery, handovers groupSubstitutionLister) TimetableStaffNotices {
 	cancellations := NewTimetableStaffCancellationNotices(notifications)
 	if cancellations == nil {
 		return TimetableStaffNotices{}
@@ -40,10 +42,45 @@ func NewTimetableStaffNotices(notifications DeliveryNotifications, membership sc
 			Notices: timetableStaffingNotices{
 				notifier: notifications.Notifier, preferences: notifications.Preferences, now: time.Now,
 			},
-			Groups:   groups,
-			Teachers: timetableGroupTeachers{membership: membership},
+			Groups:    groups,
+			Teachers:  timetableGroupTeachers{membership: membership},
+			Handovers: timetableGroupHandovers{substitutions: handovers},
 		},
 	}
+}
+
+// timetableGroupHandovers lists the Gruppenübergaben of OGS groups over a
+// period in one Workforce read, whatever their target type, as the
+// supervision of a group on a day counts them.
+type timetableGroupHandovers struct {
+	substitutions groupSubstitutionLister
+}
+
+// groupSubstitutionLister is the Workforce read of the Gruppenübergaben.
+type groupSubstitutionLister interface {
+	ListGroupSubstitutions(context.Context, workforce.GroupSubstitutionFilter) ([]workforce.GroupSubstitution, error)
+}
+
+func (h timetableGroupHandovers) GroupHandovers(ctx context.Context, groupIDs []int64, from, to calendar.Date) ([]timetablePorts.GroupHandover, error) {
+	if len(groupIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := h.substitutions.ListGroupSubstitutions(ctx, workforce.GroupSubstitutionFilter{
+		GroupIDs: groupIDs, OverlapFrom: from.String(), OverlapTo: to.String(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]timetablePorts.GroupHandover, 0, len(rows))
+	for _, row := range rows {
+		start, startErr := calendar.ParseDate(row.StartDate)
+		end, endErr := calendar.ParseDate(row.EndDate)
+		if startErr != nil || endErr != nil {
+			return nil, fmt.Errorf("group handover %d: invalid period: %w", row.ID, errors.Join(startErr, endErr))
+		}
+		result = append(result, timetablePorts.GroupHandover{GroupID: row.GroupID, StaffID: row.SubstituteStaffID, From: start, To: end})
+	}
+	return result, nil
 }
 
 // timetableGroupTeachers names the teachers of OGS groups as staff ids: the
@@ -149,7 +186,7 @@ func (n timetableStaffingNotices) notify(ctx context.Context, notice timetablePo
 // staffingAudiences is the display-safe copy of a notice for each audience:
 // who covers or is not there and when, never why. The people concerned land
 // on their own Dienstplan on the first day, the teachers on the
-// Vertretungsplan at the first block.
+// Vertretungsplan at the first block, the rest of the team on the Tagesplan.
 func staffingAudiences(notice timetablePorts.StaffingNotice) []staffingAudience {
 	if len(notice.Days) == 0 {
 		return nil
@@ -161,7 +198,11 @@ func staffingAudiences(notice timetablePorts.StaffingNotice) []staffingAudience 
 	audience := func(role, kind string, accounts []int64, title, body, link string) staffingAudience {
 		return staffingAudience{role: role, kind: kind, accounts: accounts, title: title, body: sentence(body), link: link}
 	}
+	// The team holds the group by a handover and often lacks the right to
+	// plan substitutions: its link opens the Tagesplan of the first day.
+	day := "/tagesplan?d=" + notice.Days[0].String()
 	ownKind, groupKind := deliveryContract.NotificationStaffingChanged, deliveryContract.NotificationGroupStaffingChanged
+	teamKind := deliveryContract.NotificationTeamMemberAbsent
 	switch notice.Kind {
 	case timetablePorts.StaffingChangeSubstituted:
 		return []staffingAudience{
@@ -173,11 +214,13 @@ func staffingAudiences(notice timetablePorts.StaffingNotice) []staffingAudience 
 		return []staffingAudience{
 			audience("subject", ownKind, notice.SubjectAccountIDs, "Dienstplan geändert", fmt.Sprintf("Sie sind %s als nicht da eingetragen.", when), own),
 			audience("teacher", groupKind, notice.TeacherAccountIDs, "Ausfall in Ihrer Gruppe", fmt.Sprintf("%s ist %s nicht da.", subject, when), group),
+			audience("team", teamKind, notice.TeamAccountIDs, "Ausfall im Team", fmt.Sprintf("%s ist %s nicht da.", subject, when), day),
 		}
 	case timetablePorts.StaffingChangePresent:
 		return []staffingAudience{
 			audience("subject", ownKind, notice.SubjectAccountIDs, "Dienstplan geändert", fmt.Sprintf("Sie sind %s wieder eingeplant.", when), own),
 			audience("teacher", groupKind, notice.TeacherAccountIDs, "Dienstplan geändert", fmt.Sprintf("%s ist %s doch da.", subject, when), group),
+			audience("team", teamKind, notice.TeamAccountIDs, "Dienstplan geändert", fmt.Sprintf("%s ist %s doch da.", subject, when), day),
 		}
 	case timetablePorts.StaffingChangeSubstituteRemoved:
 		return []staffingAudience{

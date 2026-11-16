@@ -263,6 +263,21 @@ staffing rows do not record which substitution a later removal undoes, so a
 removal is an entry of its own. Withdrawing or shortening an absence tells the
 same people that the person is there again.
 
+A colleague's absence also reaches the rest of the team of the affected
+groups (`team_member_absent`, #7138). The team of a group on a day is who
+"my groups" names: the assigned teachers and whoever holds the group by a
+Gruppenübergabe (`education.group_substitution`, any target type) covering
+that day. The teachers already hear it as `group_staffing_changed`, and
+anyone who receives a staffing notice about the same person in the same
+operation gets no team entry; neither do the absent person nor the person who
+made the change. Uncovered and substituted blocks of one person in one
+operation are one absence to the team: one entry per operation, „… ist an 3
+Tagen (17.–19.06.) nicht da.“, and a return is an entry of its own („… ist …
+doch da.“). The type sits under „Dienstplan und Vertretung“, pushes by
+default within the same 14-day window, shares the school switch and links to
+`/tagesplan?d=…` of the first day, since a handover holder usually lacks the
+`schedules:manage` right the Vertretungsplan needs.
+
 A new Hinweis der Leitung (`staff_notice_published`, #7143) reaches the
 readers of the Tagesinformationen in the OGS portal: the school's staff whose
 account holds `users:read`, without the person who saved it. It is written

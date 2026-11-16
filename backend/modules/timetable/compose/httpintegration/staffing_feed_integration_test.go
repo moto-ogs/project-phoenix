@@ -40,7 +40,7 @@ func newStaffingFixture(t *testing.T) *staffingFixture {
 	notifier, err := api.NewDeliveryTestFeedNotifier(database, testpkg.TenantRuntime(t, f.s.db), settings.Settings, module)
 	require.NoError(t, err)
 	notices := owners.NewTimetableStaffNotices(owners.DeliveryNotifications{Notifier: notifier, Preferences: module.NotificationPreferences},
-		owners.MustNewSchoolMembership(database), owners.MustNewUnobservedTimetable(database))
+		owners.MustNewSchoolMembership(database), owners.MustNewUnobservedTimetable(database), owners.MustNewWorkforce(database))
 	require.NotNil(t, notices.Staffing.Notices)
 
 	repos, err := api.NewTimetableTestRepositories(database)

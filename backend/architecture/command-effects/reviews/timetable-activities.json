@@ -38608,6 +38608,16 @@
       "target_owner": "care-plan"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupHandovers.GroupHandovers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupHandoverStaff.GroupHandovers",
+      "reason": "Read-only target: timetable-activities reaches modules/workforce/compose.WorkTime.ListGroupSubstitutions (workforce) through roots/owners.timetableGroupHandovers.GroupHandovers (#7138). No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.ListGroupSubstitutions",
+      "target_owner": "workforce"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Capability.ArchiveTemplate",
       "classification": "platform",

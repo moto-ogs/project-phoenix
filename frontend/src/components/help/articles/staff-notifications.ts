@@ -5,7 +5,8 @@ import { HELP_TOPICS } from "~/lib/help-topics";
  * Die Glocke oben rechts im Staff-Portal (#7148): oben `Erinnerungen`, darunter
  * `Hinweise` (der Benachrichtigungs-Feed). Hinweise kommen zur Absage eines
  * Termins, zu Vertretungen, Änderungen im Dienstplan, neuen Hinweisen der
- * Leitung und zu weiteren Mitteilungs-Arten außer Nachrichten (#7136, #7137, #7143).
+ * Leitung, zum Ausfall im Team und zu weiteren Mitteilungs-Arten außer
+ * Nachrichten (#7136, #7137, #7138, #7143).
  */
 export function staffNotificationsTopic(): HelpTopic {
   return {
@@ -30,6 +31,7 @@ export function staffNotificationsTopic(): HelpTopic {
       "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis. Nimmt die Leitung die Absage zurück, steht dort `Termin findet doch statt`.",
       "Vertreten Sie jemanden, werden Sie vertreten oder sind Sie an einem Tag als nicht da eingetragen, sehen Sie es hier. Eine Vertretung über mehrere Tage ist ein einziger Hinweis. Der Hinweis öffnet `Mein Dienstplan` an dem Tag.",
       "Sind Sie einer Gruppe zugeordnet, sehen Sie auch, wer in Ihrer Gruppe fehlt oder vertritt. Der Hinweis öffnet den `Vertretungsplan` an dem Tag. Einen Grund nennt moto nie, auch keine Krankheit.",
+      "Wurde Ihnen eine Gruppe übergeben, sehen Sie unter `Ausfall im Team`, wer in dieser Gruppe nicht da ist. Der Hinweis öffnet `Heute` an dem Tag.",
       "Wer die Änderung selbst einträgt, bekommt keinen Hinweis.",
       "Schreibt die Leitung unter `Hinweise der Leitung` etwas Neues für die Betreuung, steht es hier als `Neuer Hinweis der Leitung`. Ein Klick darauf öffnet die Seite `Hinweise der Leitung` mit diesem Text, auch wenn er erst später gilt.",
       "Auch diese Arten kommen als Hinweis: `Geänderte Abholzeit`, `Krankmeldung eines Kindes`, `Notizen für das Team` und `Umfragen der Einrichtung`.",
