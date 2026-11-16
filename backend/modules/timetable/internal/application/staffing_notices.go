@@ -35,6 +35,9 @@ type staffingChange struct {
 	instanceID   int64
 	date         calendar.Date
 	start        time.Time
+	// knownAbsent marks a substitution of a person who was already absent:
+	// no new absence for the team.
+	knownAbsent bool
 }
 
 // staffingStoryKey groups the changes of one person and kind.
@@ -92,9 +95,13 @@ func substitutionChanges(ops []deviationSubOp) []staffingChange {
 	for _, op := range ops {
 		switch op.write.Action {
 		case timetable.SubstituteActionSubstituted:
-			changes = append(changes, changeOf(ports.StaffingChangeSubstituted, op.write.OrigRow.StaffID, op.subID, op.write.Instance))
+			change := changeOf(ports.StaffingChangeSubstituted, op.write.OrigRow.StaffID, op.subID, op.write.Instance)
+			change.knownAbsent = op.wasAbsent
+			changes = append(changes, change)
 		case timetable.SubstituteActionAlreadyOnInstance:
-			changes = append(changes, changeOf(ports.StaffingChangeAbsent, op.write.OrigRow.StaffID, 0, op.write.Instance))
+			change := changeOf(ports.StaffingChangeAbsent, op.write.OrigRow.StaffID, 0, op.write.Instance)
+			change.knownAbsent = op.wasAbsent
+			changes = append(changes, change)
 		}
 	}
 	return changes

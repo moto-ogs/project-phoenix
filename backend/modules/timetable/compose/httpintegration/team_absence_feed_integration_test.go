@@ -101,14 +101,29 @@ func TestTeamFeedOfAnAbsenceItsReturnAndTheSchoolSwitch(t *testing.T) {
 	assert.Equal(t, feedEntry{Type: "team_member_absent", Title: "Dienstplan geändert", Body: "Anna Feed ist am Di. 11.06. doch da.", DeepLink: "/tagesplan?d=2030-06-11"}, entries[0])
 	assert.Equal(t, 2, f.typedPushes(t, holder, "team_member_absent"))
 
+	// A cover entered later for a person already marked absent, as after a
+	// sick report, is no second absence to the team.
+	thursday := f.groupBlock(t, calendar.NewDate(2030, 6, 13), group.ID, absent)
+	require.NoError(t, f.apply(t, thursday, timetable.ApplyDeviationsInput{
+		Absences: []timetable.DeviationAbsenceInput{{StaffID: absent.staffID}}, ActorAccountID: &actor.accountID,
+	}))
+	require.NoError(t, f.apply(t, thursday, timetable.ApplyDeviationsInput{
+		Substitutions:  []timetable.DeviationSubstitutionInput{{AbsentStaffID: absent.staffID, SubstituteStaffID: substitute.staffID}},
+		ActorAccountID: &actor.accountID,
+	}))
+	entries = f.entries(t, holder)
+	require.Len(t, entries, 3)
+	assert.Equal(t, "Anna Feed ist am Do. 13.06. nicht da.", entries[0].Body)
+	assert.Equal(t, 3, f.typedPushes(t, holder, "team_member_absent"))
+
 	// More than 14 days ahead reaches the feed only.
 	later := f.groupBlock(t, calendar.NewDate(2030, 7, 1), group.ID, absent)
 	require.NoError(t, f.apply(t, later, timetable.ApplyDeviationsInput{
 		Absences: []timetable.DeviationAbsenceInput{{StaffID: absent.staffID}}, ActorAccountID: &actor.accountID,
 	}))
-	require.Len(t, f.entries(t, holder), 3)
+	require.Len(t, f.entries(t, holder), 4)
 	assert.Equal(t, "Anna Feed ist am Mo. 01.07. nicht da.", f.entries(t, holder)[0].Body)
-	assert.Equal(t, 2, f.typedPushes(t, holder, "team_member_absent"))
+	assert.Equal(t, 3, f.typedPushes(t, holder, "team_member_absent"))
 
 	// The school switch stops feed and push.
 	testpkg.SetTestTenantSetting(t, f.s.db, testpkg.Tenant(t), "notifications.staffing_changed_enabled", `false`)
@@ -116,8 +131,8 @@ func TestTeamFeedOfAnAbsenceItsReturnAndTheSchoolSwitch(t *testing.T) {
 	require.NoError(t, f.apply(t, soon, timetable.ApplyDeviationsInput{
 		Absences: []timetable.DeviationAbsenceInput{{StaffID: absent.staffID}}, ActorAccountID: &actor.accountID,
 	}))
-	assert.Len(t, f.entries(t, holder), 3)
-	assert.Equal(t, 2, f.typedPushes(t, holder, "team_member_absent"))
+	assert.Len(t, f.entries(t, holder), 4)
+	assert.Equal(t, 3, f.typedPushes(t, holder, "team_member_absent"))
 }
 
 func entryTypes(entries []feedEntry) []string {

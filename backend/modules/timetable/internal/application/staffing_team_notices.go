@@ -126,11 +126,16 @@ type teamStory struct {
 }
 
 // teamStories groups the sorted changes into absences and returns, in the
-// order of their first block. A removed substitute is no absence.
+// order of their first block. A removed substitute is no absence, and
+// neither is the cover for someone already marked absent: the team heard of
+// that absence when it was entered (a sick report, then its cover).
 func teamStories(changes []staffingChange) []teamStory {
 	index := map[teamStoryKey]int{}
 	var stories []teamStory
 	for _, change := range changes {
+		if change.knownAbsent {
+			continue
+		}
 		var key teamStoryKey
 		switch change.kind {
 		case ports.StaffingChangeAbsent, ports.StaffingChangeSubstituted:
