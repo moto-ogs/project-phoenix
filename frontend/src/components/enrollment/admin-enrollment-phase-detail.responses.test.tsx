@@ -1,6 +1,36 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as renderComponent,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Reads of the phase and its requests run through real SWR under a staff
+// session, a fresh cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const render = (ui: ReactElement) =>
+  renderComponent(ui, { wrapper: Providers });
 
 const mocks = vi.hoisted(() => ({
   getCareUsageReport: vi.fn(),
@@ -37,17 +67,38 @@ vi.mock("~/lib/enrollment-report-api", async (importOriginal) => {
   };
 });
 
-vi.mock("~/lib/swr", () => ({
-  useSWRAuth: (key: string | null) =>
-    key?.startsWith("enrollment-phase-responses-")
-      ? {
-          data: mocks.responses,
-          error: mocks.responseError,
-          isLoading: false,
-          mutate: vi.fn(),
-        }
-      : { data: ["1a"], error: undefined, isLoading: false, mutate: vi.fn() },
-}));
+// The response overview and the school classes keep their fixtures; the
+// phase and its requests read for real.
+vi.mock("~/lib/swr", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/swr")>();
+  return {
+    ...actual,
+    useSWRAuth: ((
+      key: string | null,
+      fetcher: () => Promise<unknown>,
+      options?: Parameters<typeof actual.useSWRAuth>[2],
+    ) =>
+      key?.startsWith("enrollment-phase-responses-")
+        ? {
+            data: mocks.responses,
+            error: mocks.responseError,
+            isLoading: false,
+            mutate: vi.fn(),
+          }
+        : key === "enrollment-phase-school-classes"
+          ? {
+              data: ["1a"],
+              error: undefined,
+              isLoading: false,
+              mutate: vi.fn(),
+            }
+          : actual.useSWRAuth(
+              key,
+              fetcher,
+              options,
+            )) as typeof actual.useSWRAuth,
+  };
+});
 
 vi.mock("~/lib/tenant-context", () => ({
   useCareOfferingsEnabled: () => true,

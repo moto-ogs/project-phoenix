@@ -2,11 +2,14 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CalendarAppointmentMails } from "~/lib/personal-calendar-api";
+import { SWRConfig } from "~/lib/swr/testing";
 
 import {
   AppointmentMailStatus,
   appointmentMailNote,
 } from "./appointment-mail-status";
+
+vi.unmock("swr");
 
 const { mockGetStaffAppointmentMails } = vi.hoisted(() => ({
   mockGetStaffAppointmentMails: vi.fn(),
@@ -16,9 +19,19 @@ vi.mock("~/lib/personal-calendar-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/personal-calendar-api")>()),
   getStaffAppointmentMails: mockGetStaffAppointmentMails,
 }));
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1" }, expires: "2099-01-01" },
+  }),
+}));
 
 function renderStatus() {
-  return render(<AppointmentMailStatus appointmentId="42" />);
+  return render(
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <AppointmentMailStatus appointmentId="42" />
+    </SWRConfig>,
+  );
 }
 
 const BOUNCED: CalendarAppointmentMails = {

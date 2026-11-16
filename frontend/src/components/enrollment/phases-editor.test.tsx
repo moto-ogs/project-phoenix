@@ -3,13 +3,28 @@ import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
 restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
 import {
   fireEvent,
-  render,
+  render as renderComponent,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Reads run through real SWR, a fresh cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+const render = (ui: ReactElement) =>
+  renderComponent(ui, { wrapper: Providers });
 
 const careExit = vi.hoisted(() => ({
   permissions: [] as string[],
@@ -27,7 +42,12 @@ vi.mock("~/lib/care-exit-api", async (importOriginal) => ({
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {
-      user: { id: "1", permissions: careExit.permissions },
+      user: {
+        id: "1",
+        permissions: careExit.permissions,
+        scope: "tenant",
+        tenantId: 42,
+      },
       expires: "2099-01-01",
     },
     status: "authenticated",
@@ -108,11 +128,6 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
     show: mocks.showActionError,
     showMessage: mocks.showActionMessage,
   }),
-}));
-
-vi.mock("~/lib/swr", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useSWRAuth: () => ({ data: [], error: undefined, isLoading: false }),
 }));
 
 vi.mock("./rollover-form", async () =>

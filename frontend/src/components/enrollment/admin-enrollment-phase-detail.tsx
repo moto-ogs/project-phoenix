@@ -40,7 +40,6 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import {
   getPhaseResponseOverview,
   listPhases,
-  type Phase,
   type PhaseResponseOverview,
 } from "~/lib/enrollment-phase-api";
 import { PhaseResponseOverview as PhaseResponseOverviewPanel } from "~/components/enrollment/phase-response-overview";
@@ -73,7 +72,10 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { Alert } from "~/components/ui/alert";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useSwrLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { ActionHint } from "~/components/ui/action-hint";
 import { DECISION_HINTS } from "~/components/enrollment/decision-hints";
 import { Button, ButtonLink, buttonClassName } from "~/components/ui/button";
@@ -97,11 +99,13 @@ import {
   ENROLLMENT_QR_CODE,
   PublicLinkCopyButton,
 } from "~/components/enrollment/public-link-copy-button";
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { ApiError } from "~/lib/api-error";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { fetchSchoolClasses } from "~/lib/student-api";
 import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import {
   CHILD_STATUS_LABELS,
   ChildQuotaHeldBadge,
@@ -111,6 +115,8 @@ import {
 import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 
 const logger = createLogger({ component: "AdminEnrollmentPhaseDetail" });
+
+const NO_REQUESTS: AdminRequestSummary[] = [];
 
 type PhaseDetailTab = "requests" | "responses";
 
@@ -129,19 +135,40 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
   const tenantPath = useTenantAwarePath();
   const toast = useToast();
   const { show: showActionError } = useApiErrorDisplay();
-  const pageError = useApiLoadError();
-  const showPageError = pageError.show;
-  const clearPageError = pageError.clear;
   const reportLoadError = useApiLoadError();
   // „Wiederholen“ ruft die aktuelle Fassung auf, nicht die vom Fehler.
-  const reloadPageRef = useRef<() => Promise<void>>(async () => undefined);
   const handleToggleReadRef = useRef<
     (requestId: string, read: boolean) => Promise<void>
   >(async () => undefined);
   const showReportError = reportLoadError.show;
   const clearReportError = reportLoadError.clear;
-  const [phase, setPhase] = useState<Phase | null>(null);
-  const [requests, setRequests] = useState<AdminRequestSummary[]>([]);
+  const phasesRead = useSWRAuth(enrollmentKeys.phases(), () => listPhases());
+  const requestsRead = useSWRAuth(
+    enrollmentKeys.adminRequests(phaseId),
+    () => listAdminRequests({ phaseId }),
+    { keepPreviousData: false },
+  );
+  const { mutate: mutatePhases } = phasesRead;
+  const { mutate: mutateRequests } = requestsRead;
+  const pageError = useSwrResourceLoadError(
+    [
+      { data: phasesRead.data, error: phasesRead.error },
+      { data: requestsRead.data, error: requestsRead.error },
+    ],
+    "die Anmeldephase",
+    () => Promise.all([mutatePhases(), mutateRequests()]),
+  );
+  // A refused read shows nothing of the phase, its list or its report.
+  const accessRefused =
+    isAccessRefusal(phasesRead.error) || isAccessRefusal(requestsRead.error);
+  const phase = accessRefused
+    ? null
+    : (phasesRead.data?.find((item) => item.id === phaseId) ?? null);
+  const requests = accessRefused
+    ? NO_REQUESTS
+    : (requestsRead.data ?? NO_REQUESTS);
+  const loadFailed = pageError.failure !== undefined || accessRefused;
+  const loading = !loadFailed && (!phasesRead.data || !requestsRead.data);
   const [statusFilter, setStatusFilter] =
     useState<EnrollmentReportStatus>(ALL_VALUE);
   const [defaultOfferingIds, setDefaultOfferingIds] = useState<string[]>([]);
@@ -156,9 +183,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
     useState<string>(ALL_VALUE);
   const [search, setSearch] = useState("");
   const [report, setReport] = useState<CareUsageReport | null>(null);
-  const [loading, setLoading] = useState(true);
   const [reportLoading, setReportLoading] = useState(false);
-  const [loadFailed, setLoadFailed] = useState(false);
   const [reportFailed, setReportFailed] = useState(false);
   const [reportAttempt, setReportAttempt] = useState(0);
   const [busyChildId, setBusyChildId] = useState<string | null>(null);
@@ -402,84 +427,27 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
     [tenantPath],
   );
 
-  const dataRequestRef = useRef(0);
-  const loadData = useCallback(
-    async (
-      isCancelled?: () => boolean,
-      // Nach einem Schreiben: die bestätigte Liste bleibt stehen, ein Fehler
-      // geht an den Aufrufer (#6652).
-      options: { rethrow?: boolean } = {},
-    ) => {
-      const request = ++dataRequestRef.current;
-      const superseded = () =>
-        isCancelled?.() || request !== dataRequestRef.current;
-      if (!options.rethrow) {
-        setLoading(true);
-        clearPageError();
-        setLoadFailed(false);
-      }
-      try {
-        const [phasesData, requestsData] = await Promise.all([
-          listPhases(),
-          listAdminRequests({ phaseId }),
-        ]);
-        if (superseded()) return;
-        setPhase(phasesData.find((item) => item.id === phaseId) ?? null);
-        setRequests(requestsData);
-        setLoadFailed(false);
-        clearPageError();
-      } catch (err) {
-        if (superseded()) return;
-        logger.error("admin_enrollment_phase_detail_load_failed", {
-          error: err instanceof Error ? err.message : "unknown",
-          phase_id: phaseId,
-        });
-        if (
-          err instanceof ApiError &&
-          (err.status === 401 || err.status === 403)
-        ) {
-          setLoadFailed(true);
-          setPhase(null);
-          setRequests([]);
-          setReport(null);
-          reportRequestRef.current++;
-          setReportLoading(false);
-          setDefaultOfferingIds([]);
-          setExplicitOfferingIds(null);
-          setApprovalWithoutOfferingRow(null);
-        }
-        if (options.rethrow) throw err;
-        setLoadFailed(true);
-        await showPageError(err, {
-          object: "die Anmeldephase",
-          retry: () => void reloadPageRef.current(),
-        });
-      } finally {
-        if (!superseded()) setLoading(false);
-      }
-    },
-    [phaseId, clearPageError, showPageError],
-  );
+  useEffect(() => {
+    if (!accessRefused) return;
+    setReport(null);
+    reportRequestRef.current++;
+    setReportLoading(false);
+    setDefaultOfferingIds([]);
+    setExplicitOfferingIds(null);
+    setApprovalWithoutOfferingRow(null);
+  }, [accessRefused]);
   // Nachladen nach einer Schnellentscheidung: ein Fehler dabei steht über der
   // Tabelle und entscheidet nichts erneut (#6652).
   const decisionAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Anmeldephase",
     async () => {
-      await loadData(undefined, { rethrow: true });
+      await Promise.all([
+        mutatePhases(listPhases(), { revalidate: false }),
+        mutateRequests(listAdminRequests({ phaseId }), { revalidate: false }),
+      ]);
       await loadReport(reportFiltersRef.current, undefined, { rethrow: true });
     },
   );
-  useLayoutEffect(() => {
-    reloadPageRef.current = () => loadData();
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-    void loadData(() => cancelled);
-    return () => {
-      cancelled = true;
-    };
-  }, [loadData]);
 
   const stats = useMemo(
     () => countChildStatuses(requests.flatMap((request) => request.children)),
@@ -521,12 +489,14 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
     async (requestId: string, read: boolean) => {
       try {
         await setAdminRequestRead(requestId, read);
-        setRequests((current) =>
-          current.map((request) =>
-            request.id === requestId
-              ? { ...request, is_unread: !read }
-              : request,
-          ),
+        void mutateRequests(
+          (current) =>
+            current?.map((request) =>
+              request.id === requestId
+                ? { ...request, is_unread: !read }
+                : request,
+            ),
+          { revalidate: false },
         );
       } catch (err) {
         logger.error("admin_enrollment_toggle_read_failed", {
@@ -539,7 +509,7 @@ export function AdminEnrollmentPhaseDetail({ phaseId }: Props) {
         });
       }
     },
-    [showActionError],
+    [mutateRequests, showActionError],
   );
   useLayoutEffect(() => {
     handleToggleReadRef.current = handleToggleRead;

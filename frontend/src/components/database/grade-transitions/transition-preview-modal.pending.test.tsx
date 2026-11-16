@@ -5,13 +5,15 @@
 import {
   act,
   fireEvent,
-  render,
+  render as rtlRender,
   screen,
   waitFor,
 } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import type {
   GradeTransition,
   TransitionPreview,
@@ -25,6 +27,23 @@ import {
 } from "~/test/helpers/form-modal-pending";
 
 vi.mock("vaul", () => import("~/test/mocks/vaul"));
+vi.unmock("swr");
+
+const session = {
+  data: { user: { id: "1", tenantId: 1, scope: "tenant" } },
+  status: "authenticated",
+};
+vi.mock("next-auth/react", () => ({ useSession: () => session }));
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, {
+    wrapper: ({ children }: { readonly children: ReactNode }) => (
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    ),
+  });
+}
 
 const { api } = vi.hoisted(() => ({
   api: {

@@ -1,11 +1,30 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
+import type { ReactNode } from "react";
+
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import type { AuditLogEvent } from "~/lib/staff-audit-log-api";
 import { setTestClock } from "~/test/clock";
 
 import { StaffAuditLog } from "./staff-audit-log";
+
+vi.unmock("swr");
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1" }, expires: "2099-01-01" },
+  }),
+}));
+
+function Providers({ children }: { children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>{children}</ToastProvider>
+    </SWRConfig>
+  );
+}
 
 // Runs in `school-date-dom`: only forked processes apply a runtime TZ change.
 afterEach(() => vi.unstubAllEnvs());
@@ -50,7 +69,7 @@ describe("StaffAuditLog in a browser outside Germany (#6293)", () => {
       retentionCutoff: "2024-01-01",
     });
 
-    render(<StaffAuditLog staffOptions={[]} />, { wrapper: ToastProvider });
+    render(<StaffAuditLog staffOptions={[]} />, { wrapper: Providers });
 
     // The table renders each row for desktop and phone.
     expect(

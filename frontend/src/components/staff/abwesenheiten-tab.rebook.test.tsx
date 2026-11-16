@@ -6,6 +6,10 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
@@ -45,7 +49,8 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   useApiErrorDisplay: () => ({ show: actionErrors.show }),
 }));
 const actionErrors = vi.hoisted(() => ({ show: vi.fn() }));
-vi.mock("~/lib/swr", () => ({
+vi.mock("~/lib/swr", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/swr")>()),
   useTenantMutateMatching: () => stable.mutateMatching,
 }));
 
@@ -165,7 +170,7 @@ describe("AbwesenheitenTab Art ändern (#3258)", () => {
   });
 
   it("wählt Einträge aus und bucht sie mit Grund um", async () => {
-    render(
+    renderWithCache(
       <AbwesenheitenTab
         staffId="4"
         canEdit
@@ -222,7 +227,7 @@ describe("AbwesenheitenTab Art ändern (#3258)", () => {
 
   it("lässt die Umbuchung gelten, wenn das Nachladen scheitert (#6652)", async () => {
     failSecondLoad(mocks.getAbsences);
-    render(
+    renderWithCache(
       <AbwesenheitenTab
         staffId="4"
         canEdit
@@ -263,7 +268,7 @@ describe("AbwesenheitenTab Art ändern (#3258)", () => {
   });
 
   it("verlässt den Auswahlmodus mit Abbrechen", async () => {
-    render(
+    renderWithCache(
       <AbwesenheitenTab
         staffId="4"
         canEdit
@@ -285,7 +290,7 @@ describe("AbwesenheitenTab Art ändern (#3258)", () => {
   });
 
   it("zeigt das Umbuchen ohne Recht zum Eintragen nicht", async () => {
-    render(
+    renderWithCache(
       <AbwesenheitenTab
         staffId="4"
         canEdit
@@ -300,3 +305,23 @@ describe("AbwesenheitenTab Art ändern (#3258)", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+// Echter SWR-Cache je Render und eine Sitzung mit Konto, sonst liest
+// useSWRAuth nichts.
+function TenantSWR({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-test", tenantId: 1 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const renderWithCache = (ui: React.ReactElement) =>
+  render(ui, { wrapper: TenantSWR });

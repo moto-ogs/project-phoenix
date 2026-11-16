@@ -1,9 +1,9 @@
 "use client";
 
 import {
-  useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type FormEvent,
@@ -31,7 +31,7 @@ import {
 } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
 import { Modal } from "~/components/ui/modal";
 import {
   SlideOver,
@@ -58,11 +58,16 @@ import {
   type CareOfferingBookingStats,
   fetchCareOfferingBookingStats,
 } from "~/lib/care-offering-booking-stats";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { withLateInviteQuery } from "~/lib/enrollment-http";
 import { Loading } from "~/components/ui/loading";
 
 const logger = createLogger({ component: "PhaseEnrollmentActions" });
+
+const NO_STATS: Record<string, CareOfferingBookingStats> = {};
 
 export function LateInviteModal({
   isOpen,
@@ -223,13 +228,24 @@ export function ManualApprovedEnrollmentModal({
   phase: Phase;
   gradeLevelMax: number | null;
 }>) {
-  const [prefetchedData, setPrefetchedData] =
-    useState<EnrollmentFormPrefetchedData | null>(null);
-  // Occupancy per offering (#2186). Advisory only: a failed load simply
-  // hides the capacity lines, it must never block a manual enrollment.
-  const [bookingStats, setBookingStats] = useState<
-    Record<string, CareOfferingBookingStats>
-  >({});
+  const bootstrapRead = useSWRAuth(
+    isOpen ? enrollmentKeys.manualEnrollmentBootstrap(phase.id) : null,
+    () => fetchManualEnrollmentBootstrap(phase.id),
+    { keepPreviousData: false },
+  );
+  const bootstrap = bootstrapRead.data;
+  const prefetchedData = useMemo<EnrollmentFormPrefetchedData | null>(
+    () => (bootstrap ? toManualPrefetchedData(bootstrap) : null),
+    [bootstrap],
+  );
+  // Occupancy per offering (#2186). Advisory only: a failed load (SWR logs
+  // it) simply hides the capacity lines, it must never block a manual
+  // enrollment.
+  const { data: bookingStats = NO_STATS } = useSWRAuth(
+    isOpen ? enrollmentKeys.bookingStats(phase.id) : null,
+    () => fetchCareOfferingBookingStats(phase.id),
+    { keepPreviousData: false },
+  );
   const [reason, setReason] = useState("");
   const [externalConsentConfirmed, setExternalConsentConfirmed] =
     useState(false);
@@ -247,72 +263,30 @@ export function ManualApprovedEnrollmentModal({
   // included (#6593): the question dialog sits outside the panel, so neither
   // a click on it nor the focus it hands back may close the waiting form.
   const send = useFormModalPending(isOpen, phase.id);
-  const [loading, setLoading] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
+  const loadError = useSwrResourceLoadError(
+    [{ data: bootstrap, error: bootstrapRead.error }],
+    "das Formular",
+    () => bootstrapRead.mutate(),
+  );
+  const loading = isOpen && !bootstrap && !loadError.failure;
   const checks = useApiFormError();
   const clearChecks = checks.clear;
-  const reload = useCallback(() => setAttempt((value) => value + 1), []);
+  const invalidateFamily = useInvalidateFamily();
   const configurationError =
     gradeLevelMax === null
       ? "Die Klassenstufen der Schule fehlen. Bitte laden Sie die Seite neu."
       : null;
 
+  // Every opening starts with an empty form.
   useEffect(() => {
     if (!isOpen) return;
-    let cancelled = false;
-    setPrefetchedData(null);
-    setBookingStats({});
     setReason("");
     setExternalConsentConfirmed(false);
     setSendNotification(false);
     setStatusUrl("");
     setRenewedChildName(null);
-    clearLoadError();
     clearChecks();
-    setLoading(true);
-    void fetchManualEnrollmentBootstrap(phase.id)
-      .then((bootstrap) => {
-        if (!cancelled) setPrefetchedData(toManualPrefetchedData(bootstrap));
-      })
-      .catch((err: unknown) => {
-        logger.warn("manual_enrollment_bootstrap_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!cancelled) {
-          void showLoadError(err, { object: "das Formular", retry: reload });
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    void fetchCareOfferingBookingStats(phase.id)
-      .then((stats) => {
-        if (!cancelled) setBookingStats(stats);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        // Die Belegung ist nur ein Hinweis: ohne sie meldet erst das Speichern
-        // ein volles Angebot. Das Formular bleibt bedienbar.
-        setBookingStats({});
-        logger.warn("manual_enrollment_booking_stats_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isOpen,
-    phase.id,
-    attempt,
-    reload,
-    clearLoadError,
-    clearChecks,
-    showLoadError,
-  ]);
+  }, [isOpen, phase.id, clearChecks]);
 
   const submitter = async (
     payload: SubmitEnrollmentPayload,
@@ -362,6 +336,8 @@ export function ManualApprovedEnrollmentModal({
               });
             }),
         );
+        // The new enrollment changed the phase's occupancy.
+        if (result) void invalidateFamily(enrollmentKeys.bookingStatsFamily);
         // A late answer shows neither success nor error in a panel that was
         // closed, reopened or switched to another phase meanwhile.
         if (!result || !op.isCurrent()) return null;

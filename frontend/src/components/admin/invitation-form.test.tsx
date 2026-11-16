@@ -4,12 +4,37 @@
  */
 import {
   act,
-  render,
+  render as renderComponent,
   screen,
   waitFor,
   fireEvent,
 } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// The role list reads through real SWR under a staff session, a fresh cache
+// per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const render = (ui: ReactElement) =>
+  renderComponent(ui, { wrapper: Providers });
 import { ApiError } from "~/lib/api-error";
 import { releaseFakeTimers } from "~/test/clock";
 import { InvitationForm } from "./invitation-form";

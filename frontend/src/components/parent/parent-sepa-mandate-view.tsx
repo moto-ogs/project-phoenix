@@ -38,7 +38,7 @@ import { downloadBlob } from "~/lib/file-download";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { createLogger } from "~/lib/logger";
 import {
@@ -111,11 +111,14 @@ export function ParentSepaMandateView({
     t("errorObject"),
     () => mutate(),
   );
+  const invalidateFamily = useInvalidateFamily();
+  // A granted or revoked mandate changes the contract in the documents inbox.
   const setView = useCallback(
     (next: SepaMandateView) => {
       void mutate(next, { revalidate: false });
+      void invalidateFamily(parentInboxKeys.documents());
     },
-    [mutate],
+    [mutate, invalidateFamily],
   );
   // Rejects on failure: after the revocation the card shows it as a reload
   // of a saved change; a refusal reaches the reader and discards the mandate.
@@ -124,11 +127,12 @@ export function ParentSepaMandateView({
       await mutate(await fetchSepaMandate(organizationId, contractId), {
         revalidate: false,
       });
+      void invalidateFamily(parentInboxKeys.documents());
     } catch (error) {
       if (isMandateRefusal(error)) void mutate();
       throw error;
     }
-  }, [organizationId, contractId, mutate]);
+  }, [organizationId, contractId, mutate, invalidateFamily]);
   const afterRevoke = useRefreshAfterWrite(t("reloadObject"), fetchView, {
     savedSuffix: t("savedButStale"),
   });

@@ -2,6 +2,10 @@ import { act } from "@testing-library/react";
 import { setTestClock } from "~/test/clock";
 import { schoolDateCases, setSchoolDateClock } from "~/test/school-date-cases";
 import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
 import {
   fireEvent,
@@ -54,11 +58,23 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   useApiErrorDisplay: () => ({ show: actionErrors.show }),
 }));
 const actionErrors = vi.hoisted(() => ({ show: vi.fn() }));
-vi.mock("~/lib/swr", () => ({
-  useTenantMutateMatching: () => stable.mutateMatching,
-  // Soll-Hinweis des Buchungsdialogs (#6887): unbekannt, also kein Hinweis.
-  useSWRAuth: () => ({ data: undefined }),
-}));
+vi.mock("~/lib/swr", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/swr")>();
+  return {
+    ...actual,
+    useTenantMutateMatching: () => stable.mutateMatching,
+    // Soll-Hinweis des Buchungsdialogs (#6887): unbekannt, also kein Hinweis.
+    useSWRAuth: ((key: unknown, ...rest: unknown[]) => {
+      const monthSummary =
+        typeof key === "string" && key.startsWith("staff-month-summary-");
+      const result = (actual.useSWRAuth as (...args: unknown[]) => object)(
+        monthSummary ? null : key,
+        ...rest,
+      );
+      return monthSummary ? { ...result, data: undefined } : result;
+    }) as typeof actual.useSWRAuth,
+  };
+});
 
 const mocks = vi.hoisted(() => ({
   getVacationQuota: vi.fn(),
@@ -131,7 +147,7 @@ const regeneration = {
 };
 
 function renderTab(props: Partial<{ canEditQuota: boolean }> = {}) {
-  return render(
+  return renderWithCache(
     <AbwesenheitenTab
       staffId="4"
       canEdit
@@ -438,3 +454,23 @@ describe("AbwesenheitenTab Kontingente (#3256)", () => {
     },
   );
 });
+
+// Echter SWR-Cache je Render und eine Sitzung mit Konto, sonst liest
+// useSWRAuth nichts.
+function TenantSWR({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-test", tenantId: 1 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const renderWithCache = (ui: React.ReactElement) =>
+  render(ui, { wrapper: TenantSWR });

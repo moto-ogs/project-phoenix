@@ -17,6 +17,16 @@ import deMessages from "~/i18n/messages/de.generated";
 // render.
 vi.unmock("next-intl");
 
+// Echtes SWR statt des globalen Stubs, mit frischem Cache je Render.
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
+
 const mocks = vi.hoisted(() => ({
   getDailyMealParticipants: vi.fn(),
   downloadDailyMealParticipants: vi.fn(),
@@ -46,6 +56,7 @@ vi.mock("~/lib/hooks/use-berlin-today", () => ({
 }));
 
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { MealParticipantList } from "./meal-participant-list";
@@ -58,7 +69,9 @@ function render(ui: ReactElement) {
         messages={deMessages}
         timeZone="Europe/Berlin"
       >
-        <ToastProvider>{children}</ToastProvider>
+        <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+          <ToastProvider>{children}</ToastProvider>
+        </SWRConfig>
       </NextIntlClientProvider>
     ),
   });

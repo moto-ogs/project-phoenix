@@ -22,6 +22,24 @@ import {
 
 vi.mock("vaul", () => import("~/test/mocks/vaul"));
 
+// Keine gebuchten Kinder: die Absage braucht keinen Elternhinweis.
+vi.mock("~/lib/swr", async (importOriginal) => {
+  const noFamilies = { childCount: 0, familyCount: 0 };
+  const actual = await importOriginal<typeof import("~/lib/swr")>();
+  const useSWRAuth = ((key: unknown) => ({
+    data:
+      typeof key === "string" &&
+      key.startsWith("timetable-guardian-notice-reach-")
+        ? noFamilies
+        : undefined,
+    error: undefined,
+    isLoading: false,
+    isValidating: false,
+    mutate: () => Promise.resolve(undefined),
+  })) as unknown as typeof actual.useSWRAuth;
+  return { ...actual, useSWRAuth };
+});
+
 import { InstanceDetailModal } from "./instance-detail-modal";
 
 function instance(overrides: Partial<EnrichedInstance> = {}): EnrichedInstance {

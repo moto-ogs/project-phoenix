@@ -6,7 +6,6 @@
 // portal speaks the parent's language, its copy.
 
 import {
-  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -24,14 +23,13 @@ import {
 import { Input } from "~/components/ui/input";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import type { EmailCodeFactorApi } from "~/lib/email-code-factor-api";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useShellAuth } from "~/lib/shell-auth-context";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 
 const logger = createLogger({ component: "EmailCodeFactorSection" });
 
@@ -147,44 +145,31 @@ export function EmailCodeFactorSection({
 }: EmailCodeFactorSectionProps) {
   const { logout } = useShellAuth();
   const toast = useToast();
-  const [state, setStateValue] = useState<FactorState | null>(null);
-  const setState = useCallback(
-    (value: FactorState) => {
-      setStateValue(value);
-      onEnabledChange(value.enabled);
-    },
-    [onEnabledChange],
+  const { data, error, mutate } = useSWRAuth<FactorState>(
+    tenantAdminKeys.emailCodeFactor(),
+    () => api.status(),
   );
+  const state = data ?? null;
+  const setState = (value: FactorState) =>
+    void mutate(value, { revalidate: false });
+  const enabled = data?.enabled;
+  useEffect(() => {
+    if (enabled !== undefined) onEnabledChange(enabled);
+  }, [enabled, onEnabledChange]);
   const [step, setStep] = useState<Step>({ kind: "idle" });
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const { error: loadError, show: showLoadError, clear } = useApiLoadError();
+  const { error: loadError } = useSwrResourceLoadError(
+    [{ data, error }],
+    copy.loadObject,
+    () => mutate(),
+  );
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
-  const latestLoadRef = useRef<() => void>(() => undefined);
   const latestStartRef = useRef<() => void>(() => undefined);
   const latestConfirmRef = useRef<() => void>(() => undefined);
   const latestDisableRef = useRef<() => void>(() => undefined);
-
-  const load = useCallback(async () => {
-    clear();
-    try {
-      setState(await api.status());
-    } catch (err) {
-      logger.warn("email_code_factor_status_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showLoadError(err, {
-        object: copy.loadObject,
-        retry: () => latestLoadRef.current(),
-      });
-    }
-  }, [api, clear, copy.loadObject, setState, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const reset = () => {
     setStep({ kind: "idle" });
@@ -278,7 +263,6 @@ export function EmailCodeFactorSection({
   };
 
   useLayoutEffect(() => {
-    latestLoadRef.current = () => void load();
     latestStartRef.current = () => void start();
     latestConfirmRef.current = () => void confirm();
     latestDisableRef.current = () => void disable();

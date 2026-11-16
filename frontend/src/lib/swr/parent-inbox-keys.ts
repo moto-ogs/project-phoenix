@@ -1,3 +1,5 @@
+import { parentKeys } from "./parent-keys";
+
 /**
  * Elternportal, Postfach und Verträge: Neuigkeiten, Nachrichten, Dokumente, Speiseplan, Verträge, Lastschrift.
  * Keys describe the response, not its screen; a family prefix ends in `-`.
@@ -32,9 +34,11 @@ export const parentInboxKeys = {
   /** Both conversations of one child with the OGS, with unread counts (#5200). */
   childThreads: (studentId: string) =>
     `parent-child-threads-${encodeURIComponent(studentId)}`,
-  /** The coming Elternsprechtage of one child's class (#4801). */
-  conferences: (studentId: string) =>
-    `parent-conferences-${encodeURIComponent(studentId)}`,
+  /**
+   * The coming Elternsprechtage of one child's class (#4801). The child page
+   * reads the same response, so a booking refreshes both.
+   */
+  conferences: (studentId: string) => parentKeys.conferences(studentId),
   /** The meal plan of one child's school for the week from `monday`. */
   mealPlan: (studentId: string, monday: string) =>
     `parent-meal-plan-${encodeURIComponent(studentId)}-${monday}`,

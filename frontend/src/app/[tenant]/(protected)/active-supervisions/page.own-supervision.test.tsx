@@ -457,13 +457,7 @@ describe("MeinRaumPage without groups:read (#4573)", () => {
   });
 
   it("reopens a block ended by mistake from the past blocks list (#5676)", async () => {
-    vi.mocked(useSWRAuth).mockImplementation(((key: string | null) => {
-      if (key === "active-supervisions-own-sessions") return swr([]);
-      if (key === "active-supervisions-own-day") return swr([]);
-      if (key === "active-supervisions-own-planned-now") return swr([]);
-      return swr(undefined);
-    }) as never);
-    vi.mocked(timetableOperationsApi.plannedNow).mockResolvedValue([
+    const pastBlocks = [
       {
         ...runningBlock,
         status: "completed",
@@ -472,7 +466,24 @@ describe("MeinRaumPage without groups:read (#4573)", () => {
         // Testuhr 12:00 Berlin; das geplante Ende ist 13:00.
         reopenUntil: "2026-09-09T11:00:00Z",
       },
-    ] as never);
+    ];
+    vi.mocked(useSWRAuth).mockImplementation(((
+      key: string | null,
+      fetcher: () => Promise<unknown>,
+    ) => {
+      if (key === "active-supervisions-own-sessions") return swr([]);
+      if (key === "active-supervisions-own-day") return swr([]);
+      if (key === "active-supervisions-own-planned-now") return swr([]);
+      // The past blocks list reads through the shared cache once opened.
+      if (key === "timetable-planned-past") {
+        void fetcher();
+        return swr(pastBlocks);
+      }
+      return swr(undefined);
+    }) as never);
+    vi.mocked(timetableOperationsApi.plannedNow).mockResolvedValue(
+      pastBlocks as never,
+    );
     vi.mocked(timetableOperationsApi.reopen).mockResolvedValue({
       instanceId: "99",
       activeGroupId: "500",

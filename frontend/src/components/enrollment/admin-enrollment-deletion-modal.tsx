@@ -2,14 +2,7 @@
 
 import { ShieldAlert } from "lucide-react";
 import { InsetPanel } from "~/components/ui/inset-panel";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Alert } from "~/components/ui/alert";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -17,7 +10,7 @@ import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import NavigationLink from "~/components/ui/navigation-link";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
 import {
   type AdminEnrollmentDeletionImpact,
   deleteAdminChild,
@@ -25,7 +18,10 @@ import {
   getAdminChildDeleteImpact,
   getAdminRequestDeleteImpact,
 } from "~/lib/enrollment-admin-api";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 
 const logger = createLogger({ component: "AdminEnrollmentDeletionModal" });
 
@@ -64,72 +60,41 @@ export function AdminEnrollmentDeletionModal({
   onDeleted,
 }: Props) {
   const childId = child?.id;
-  const [impact, setImpact] = useState<AdminEnrollmentDeletionImpact | null>(
-    null,
-  );
   const [reason, setReason] = useState("");
-  const [loadingPreview, setLoadingPreview] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [previewAttempt, setPreviewAttempt] = useState(0);
   const errors = useApiFormError();
   const clearErrors = errors.clear;
-  const previewError = useApiLoadError();
-  const showPreviewError = previewError.show;
-  const clearPreviewError = previewError.clear;
-  const retryPreview = useCallback(
-    () => setPreviewAttempt((attempt) => attempt + 1),
-    [],
-  );
   // „Wiederholen“ löscht mit dem aktuellen Grund, nicht dem vom Fehler.
   const latestDeleteRef = useRef<() => Promise<void>>(async () => undefined);
 
+  const {
+    data: impact,
+    error: impactError,
+    mutate: mutateImpact,
+  } = useSWRAuth(
+    isOpen
+      ? childId
+        ? enrollmentKeys.childDeleteImpact(requestId, childId)
+        : enrollmentKeys.requestDeleteImpact(requestId)
+      : null,
+    () =>
+      childId
+        ? getAdminChildDeleteImpact(requestId, childId)
+        : getAdminRequestDeleteImpact(requestId),
+    { keepPreviousData: false },
+  );
+  const previewError = useSwrResourceLoadError(
+    [{ data: impact, error: impactError }],
+    "die Vorschau der Löschung",
+    () => mutateImpact(),
+  );
+  const loadingPreview = isOpen && !impact && !previewError.failure;
+
   useEffect(() => {
-    if (!isOpen) {
-      setImpact(null);
-      setReason("");
-      clearErrors();
-      clearPreviewError();
-      return;
-    }
-    let active = true;
-    setLoadingPreview(true);
-    clearPreviewError();
-    const preview = childId
-      ? getAdminChildDeleteImpact(requestId, childId)
-      : getAdminRequestDeleteImpact(requestId);
-    void preview
-      .then((result) => {
-        if (active) setImpact(result);
-      })
-      .catch((loadError: unknown) => {
-        logger.error("enrollment_delete_preview_failed", {
-          error: loadError instanceof Error ? loadError.message : "unknown",
-          request_id: requestId,
-          child_id: childId,
-        });
-        if (active) {
-          void showPreviewError(loadError, {
-            object: "die Vorschau der Löschung",
-            retry: retryPreview,
-          });
-        }
-      })
-      .finally(() => {
-        if (active) setLoadingPreview(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [
-    childId,
-    isOpen,
-    requestId,
-    previewAttempt,
-    clearErrors,
-    clearPreviewError,
-    showPreviewError,
-    retryPreview,
-  ]);
+    if (isOpen) return;
+    setReason("");
+    clearErrors();
+  }, [isOpen, clearErrors]);
 
   const countRows = useMemo(() => {
     if (!impact) return [];

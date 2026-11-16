@@ -36,6 +36,9 @@ import {
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
   type ArrivalData,
   createArrivalException,
@@ -47,7 +50,6 @@ import {
   updateArrivalException,
   updateArrivalNote,
   updateArrivalSchedules,
-  type CareDaysSource,
   type CareTimePresets,
   type SchoolPeriod,
 } from "~/lib/student-arrival-api";
@@ -294,6 +296,23 @@ function getAbsenceStatus(
 }
 
 // Wochenwechsel am Desktop und auf dem Handy erklären sich gleich (#6765).
+const EMPTY_ARRIVAL_DATA: ArrivalData = {
+  schedules: [],
+  exceptions: [],
+  notes: [],
+};
+const EMPTY_PICKUP_DATA: PickupData = {
+  schedules: [],
+  exceptions: [],
+  notes: [],
+};
+const EMPTY_SCHOOL_PERIODS: readonly SchoolPeriod[] = [];
+const CARE_WEEK_READER = {
+  keepPreviousData: false,
+  revalidateOnFocus: false,
+  revalidateOnReconnect: false,
+} as const;
+
 const PREVIOUS_WEEK_HINT = "Zeigt die Betreuungszeiten der Woche davor.";
 const NEXT_WEEK_HINT = "Zeigt die Betreuungszeiten der Woche danach.";
 const CURRENT_WEEK_HINT = "Springt zurück zu den Zeiten dieser Woche.";
@@ -311,26 +330,10 @@ export function CareScheduleManager({
   onVisibleDateRangeChange,
   weeklyDepartureModes,
 }: CareScheduleManagerProps) {
-  const [arrivalData, setArrivalData] = useState<ArrivalData>({
-    schedules: [],
-    exceptions: [],
-    notes: [],
-  });
-  const [pickupData, setPickupData] = useState<PickupData>({
-    schedules: [],
-    exceptions: [],
-    notes: [],
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [careDaysSource, setCareDaysSource] = useState<CareDaysSource | null>(
-    null,
-  );
-  const [schoolPeriods, setSchoolPeriods] = useState<readonly SchoolPeriod[]>(
-    [],
-  );
-  const [timePresets, setTimePresets] = useState<CareTimePresets>();
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
+  // A failed reload after the user's own write (the shared reads report
+  // their own load errors below).
+  const refreshLoad = useApiLoadError();
+  const { show: showRefreshError, clear: clearRefreshError } = refreshLoad;
   const deleteErrors = useApiFormError();
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   // The day exception slide-over. null = closed; { date } = opened from a day
@@ -375,6 +378,100 @@ export function CareScheduleManager({
       ),
     [weekDays],
   );
+  const firstWeekDay = weekDays[0];
+  const lastWeekDay = weekDays[weekDays.length - 1];
+  const fromISO = firstWeekDay ? formatDateISO(firstWeekDay) : null;
+  const toISO = lastWeekDay ? formatDateISO(lastWeekDay) : null;
+  const weekKnown = fromISO !== null && toISO !== null;
+  // Not under the "arrival-data-"/"pickup-data-" prefixes the global SSE hook
+  // revalidates: the editors seed their drafts from these props, so a remote
+  // change arrives through CARE_SCHEDULE_STALE_EVENT below and waits while one
+  // is open. Focus and reconnect would replace the data the same way.
+  const arrivalWeek = useSWRAuth(
+    weekKnown ? tenantStudentKeys.arrivalWeek(studentId, fromISO, toISO) : null,
+    () => fetchArrivalData(studentId, fromISO ?? "", toISO ?? ""),
+    CARE_WEEK_READER,
+  );
+  const pickupWeek = useSWRAuth(
+    weekKnown ? tenantStudentKeys.pickupWeek(studentId, fromISO, toISO) : null,
+    () =>
+      fetchStudentPickupData(studentId, {
+        from: fromISO ?? "",
+        to: toISO ?? "",
+      }),
+    CARE_WEEK_READER,
+  );
+  const arrivalSettings = useSWRAuth(
+    tenantStudentKeys.arrivalSettings(),
+    fetchArrivalSettings,
+  );
+  const { mutate: mutateArrivalWeek } = arrivalWeek;
+  const { mutate: mutatePickupWeek } = pickupWeek;
+  const { mutate: mutateArrivalSettings } = arrivalSettings;
+  const reloadCareData = useCallback(
+    () =>
+      Promise.all([
+        mutateArrivalWeek(),
+        mutatePickupWeek(),
+        mutateArrivalSettings(),
+      ]),
+    [mutateArrivalWeek, mutatePickupWeek, mutateArrivalSettings],
+  );
+  const load = useSwrResourceLoadError(
+    [arrivalWeek, pickupWeek, arrivalSettings],
+    "die Übersicht der Betreuungszeiten",
+    () => {
+      clearRefreshError();
+      return reloadCareData();
+    },
+  );
+
+  // Another week of the same child keeps the previous week on screen until
+  // its own answer arrives; a different child never shows this one's plan.
+  const [shownWeek, setShownWeek] = useState<{
+    studentId: string;
+    arrival: ArrivalData;
+    pickup: PickupData;
+  } | null>(null);
+  if (
+    arrivalWeek.data &&
+    pickupWeek.data &&
+    (shownWeek?.studentId !== studentId ||
+      shownWeek.arrival !== arrivalWeek.data ||
+      shownWeek.pickup !== pickupWeek.data)
+  ) {
+    setShownWeek({
+      studentId,
+      arrival: arrivalWeek.data,
+      pickup: pickupWeek.data,
+    });
+  }
+  const previousWeek = shownWeek?.studentId === studentId ? shownWeek : null;
+  const arrivalData =
+    (pickupWeek.data ? arrivalWeek.data : undefined) ??
+    previousWeek?.arrival ??
+    EMPTY_ARRIVAL_DATA;
+  const pickupData =
+    (arrivalWeek.data ? pickupWeek.data : undefined) ??
+    previousWeek?.pickup ??
+    EMPTY_PICKUP_DATA;
+  const settings = arrivalSettings.data;
+  const careDaysSource = settings?.careDaysSource ?? null;
+  const schoolPeriods = settings?.schoolPeriods ?? EMPTY_SCHOOL_PERIODS;
+  const timePresets = useMemo<CareTimePresets | undefined>(
+    () =>
+      settings
+        ? {
+            arrival: settings.defaultArrivalTime ?? "",
+            pickup: settings.defaultPickupTime ?? "",
+          }
+        : undefined,
+    [settings],
+  );
+  const isLoading =
+    load.failure === undefined &&
+    (!arrivalWeek.data || !pickupWeek.data || !settings);
+
   // The edit state needs the care-days source and write access; without either
   // the section stays on its display, so the header never loses its controls.
   const isEditingWeeklyView =
@@ -498,148 +595,48 @@ export function CareScheduleManager({
     setSelectedDateKey(formatDateISO((today ?? days[0])!.date));
   }, [days, selectedDateKey]);
 
-  // Monotonic id claimed by every care-data fetch, in start order: arrival and
-  // pickup are two independent requests and several fetches can be in flight at
-  // once (two SSE announcements, or one racing the refetch after a local save).
-  // A later-started fetch reads the server later, so its data is at least as
-  // fresh — which makes start order the right ordering key.
-  const careDataRequestId = useRef(0);
-  // The newest id whose result actually reached the screen. Ordering is decided
-  // against THIS, not against the newest claim: a claim only means a fetch
-  // started, and it may still fail. Comparing against the newest claim discarded
-  // a successful result the moment any later fetch existed, so an initial load
-  // that succeeded while a doomed SSE refresh was in flight was thrown away and
-  // the editor rendered blank — no data, no error, nothing to retry.
-  const renderedCareDataRequestId = useRef(0);
-
-  const claimCareDataRequest = useCallback(
-    () => ++careDataRequestId.current,
-    [],
-  );
-  /** Would this result be newer than what the user is already looking at? */
-  const isFresherThanRendered = useCallback(
-    (requestId: number) => requestId > renderedCareDataRequestId.current,
-    [],
-  );
-
-  const fetchCareDataInto = useCallback(
-    async (requestId: number) => {
-      const firstDay = weekDays[0];
-      const lastDay = weekDays[weekDays.length - 1];
-      if (!firstDay || !lastDay) throw new Error("Ungültige Wochenansicht");
-      const [arrival, pickup, settings] = await Promise.all([
-        fetchArrivalData(
-          studentId,
-          formatDateISO(firstDay),
-          formatDateISO(lastDay),
-        ),
-        fetchStudentPickupData(studentId, {
-          from: formatDateISO(firstDay),
-          to: formatDateISO(lastDay),
-        }),
-        fetchArrivalSettings(),
-      ]);
-      // Older than what is on screen — drop it rather than clobber newer state.
-      // A result is never dropped merely because a newer fetch is still running:
-      // if that one succeeds it simply overwrites this a moment later, and if it
-      // fails the user keeps real data instead of an empty editor.
-      if (!isFresherThanRendered(requestId)) return;
-      renderedCareDataRequestId.current = requestId;
-      setArrivalData(arrival);
-      setPickupData(pickup);
-      setCareDaysSource(settings.careDaysSource);
-      setSchoolPeriods(settings.schoolPeriods);
-      setTimePresets({
-        arrival: settings.defaultArrivalTime ?? "",
-        pickup: settings.defaultPickupTime ?? "",
-      });
-      // A newer read succeeded, so any banner or spinner an older attempt is
-      // still going to leave behind is already obsolete. Clearing here (rather
-      // than only in loadCareData) is what lets the failure path below bail out
-      // without stranding the UI.
-      clearLoadError();
-      setIsLoading(false);
-    },
-    [studentId, isFresherThanRendered, weekDays, clearLoadError],
-  );
-
-  const loadCareData = useCallback(async () => {
-    const requestId = claimCareDataRequest();
-    try {
-      setIsLoading(true);
-      clearLoadError();
-      await fetchCareDataInto(requestId);
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Betreuungsplan konnte nicht geladen werden";
-      logger.error("care_schedule_load_failed", {
-        error: message,
-        student_id: studentId,
-      });
-      // Same ordering rule as the success path, against the same marker: only
-      // stay silent when newer data is ALREADY rendered. If nothing has been
-      // rendered yet the failure is what the user needs to see, even when a
-      // later fetch happens to be in flight.
-      if (!isFresherThanRendered(requestId)) return;
-      await showLoadError(err, {
-        object: "die Übersicht der Betreuungszeiten",
-        retry: () => void loadCareDataRef.current(),
-      });
-    } finally {
-      // Deliberately NOT gated on the request id: this is the only path that
-      // sets isLoading, so skipping it for a superseded attempt could strand the
-      // spinner forever when the superseding fetch also fails (the remote
-      // refresh path reports failures to the log only). Clearing it early at
-      // worst hides the spinner a moment before newer data lands.
-      setIsLoading(false);
-    }
-  }, [
-    claimCareDataRequest,
-    fetchCareDataInto,
-    isFresherThanRendered,
-    studentId,
-    clearLoadError,
-    showLoadError,
-  ]);
-  const loadCareDataRef = useRef(loadCareData);
-  useLayoutEffect(() => {
-    loadCareDataRef.current = loadCareData;
-  });
-
+  // After the user's own write: put the fresh week into the cache and show a
+  // failed reload (writes have already committed, so its retry only reloads
+  // and never repeats the mutation).
   const refreshCareData = useCallback(async () => {
-    const requestId = claimCareDataRequest();
-    try {
-      await fetchCareDataInto(requestId);
-    } catch (err) {
-      // Writes have already committed. Retrying here must only reload, not
-      // repeat the mutation and potentially create another exception.
-      logger.error("care_schedule_refresh_failed", {
-        error: err instanceof Error ? err.message : String(err),
-        student_id: studentId,
-      });
-      if (isFresherThanRendered(requestId)) {
-        await showLoadError(err, {
+    if (fromISO !== null && toISO !== null) {
+      try {
+        await Promise.all([
+          mutateArrivalWeek(fetchArrivalData(studentId, fromISO, toISO), {
+            revalidate: false,
+          }),
+          mutatePickupWeek(
+            fetchStudentPickupData(studentId, { from: fromISO, to: toISO }),
+            { revalidate: false },
+          ),
+        ]);
+        clearRefreshError();
+      } catch (err) {
+        logger.error("care_schedule_refresh_failed", {
+          error: err instanceof Error ? err.message : String(err),
+          student_id: studentId,
+        });
+        await showRefreshError(err, {
           object: "die Übersicht der Betreuungszeiten",
-          retry: () => void loadCareDataRef.current(),
+          retry: () => {
+            clearRefreshError();
+            void reloadCareData();
+          },
         });
       }
     }
     onUpdate?.();
   }, [
-    claimCareDataRequest,
-    fetchCareDataInto,
-    isFresherThanRendered,
-    onUpdate,
-    showLoadError,
+    fromISO,
+    toISO,
     studentId,
+    mutateArrivalWeek,
+    mutatePickupWeek,
+    clearRefreshError,
+    showRefreshError,
+    reloadCareData,
+    onUpdate,
   ]);
-
-  useEffect(() => {
-    // loadCareData reports its own failure in place; nothing is left to catch.
-    loadCareData().catch(() => undefined);
-  }, [loadCareData]);
 
   // An open editor holds an unsaved draft that was seeded from arrivalData /
   // pickupData: the exception slide-over re-reads its day whenever those props
@@ -654,22 +651,33 @@ export function CareScheduleManager({
   }, [isEditorOpen]);
   const hasDeferredRemoteRefresh = useRef(false);
 
+  // Background refresh: a failure keeps the data on screen and is only
+  // logged, the user did not ask for it. Written as a mutation, so an older
+  // refresh that answers last cannot overwrite a newer one. Before the first
+  // answer, a failed refresh hands over to a fresh read instead of leaving the
+  // initial load it overtook discarded.
   const refreshFromRemote = useCallback(() => {
-    // Background refresh: a failure is logged, never surfaced — the user did not
-    // ask for it, and the data already on screen stays valid.
-    fetchCareDataInto(claimCareDataRequest()).catch((err) => {
+    if (fromISO === null || toISO === null) return;
+    const onlyWithoutData = (current: unknown) => current === undefined;
+    const logFailure = (err: unknown) => {
       logger.debug("care_schedule_remote_refresh_failed", {
         error: err instanceof Error ? err.message : String(err),
         student_id: studentId,
       });
-    });
-  }, [claimCareDataRequest, fetchCareDataInto, studentId]);
+    };
+    mutateArrivalWeek(fetchArrivalData(studentId, fromISO, toISO), {
+      revalidate: onlyWithoutData,
+    }).catch(logFailure);
+    mutatePickupWeek(
+      fetchStudentPickupData(studentId, { from: fromISO, to: toISO }),
+      { revalidate: onlyWithoutData },
+    ).catch(logFailure);
+  }, [fromISO, toISO, studentId, mutateArrivalWeek, mutatePickupWeek]);
 
-  // React to REMOTE arrival/pickup changes. This editor keeps its arrival/pickup
-  // in local state (not SWR) and stays force-mounted across tabs, so the global
-  // SSE hook's SWR invalidation never reaches it. It announces staleness on this
-  // window event instead; re-fetch quietly (no spinner, no onUpdate — that would
-  // ripple a parent refresh for a change the parent already heard about).
+  // React to REMOTE arrival/pickup changes, announced on this window event
+  // instead of the global SSE invalidation (see the readers above). Re-fetch
+  // quietly: no onUpdate, that would ripple a parent refresh for a change the
+  // parent already heard about.
   //
   // While a modal is open the refresh is DEFERRED, not dropped: someone else's
   // edit must never cost this user their in-progress work, and the update is
@@ -1031,8 +1039,9 @@ export function CareScheduleManager({
     );
   }
 
-  if (load.error) {
-    return <LoadErrorAlert error={load.error} />;
+  const loadError = load.error ?? refreshLoad.error;
+  if (loadError) {
+    return <LoadErrorAlert error={loadError} />;
   }
 
   return (

@@ -1,5 +1,12 @@
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  render as rtlRender,
+  screen,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { SWRConfig } from "~/lib/swr/testing";
 
 import type { GuardianWithRelationship } from "@/lib/guardian-helpers";
 import { StudentPaymentCard } from "./student-payment-card";
@@ -10,6 +17,26 @@ const mockFetchPayment = vi.fn();
 const mockRevealPayment = vi.fn();
 const mockUpdatePayment = vi.fn();
 const mockSetPayer = vi.fn();
+
+// Echtes SWR statt des globalen Stubs, mit frischem Cache je Render.
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    ),
+  });
+}
 
 vi.mock("~/lib/guardian-payment-api", () => ({
   fetchGuardianPayment: (id: string) => mockFetchPayment(id),

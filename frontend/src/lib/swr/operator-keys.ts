@@ -15,4 +15,7 @@ export const operatorKeys = {
   /** Whether a device can move to another school now (online, session). */
   deviceTransferStatus: (deviceId: string) =>
     `operator-device-transfer-status-${encodeURIComponent(deviceId)}`,
+  /** One account's account-wide second-factor override (`operatorAdminGetGlobalMFAOverride`). */
+  accountGlobalMfaOverride: (accountId: string) =>
+    `operator-account-global-mfa-override-${encodeURIComponent(accountId)}`,
 } as const;

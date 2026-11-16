@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 import { Check, UserPen, Utensils } from "lucide-react";
 
@@ -21,7 +14,10 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
 import { MealRegistrationChangeModal } from "~/components/meal-plan/meal-registration-change-modal";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
@@ -32,7 +28,6 @@ import {
   getWeeklyMealParticipants,
   mondayOf,
   workWeekDates,
-  type DailyMealList,
   type DailyMealParticipant,
   type WeeklyMealList,
 } from "~/lib/meal-plan-api";
@@ -108,13 +103,8 @@ export function MealParticipantList({
   const datePicker = useLocalizedDatePicker();
   const today = useBerlinToday();
   const { show: showActionError } = useApiErrorDisplay();
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  // „Wiederholen“ lädt bzw. exportiert mit dem aktuell gewählten Tag.
-  const reloadRef = useRef<() => void>(() => undefined);
+  const invalidateFamily = useInvalidateFamily();
+  // „Wiederholen“ exportiert mit dem aktuell gewählten Tag.
   const retryDownloadRef = useRef<(format: "pdf" | "xlsx") => void>(
     () => undefined,
   );
@@ -125,77 +115,37 @@ export function MealParticipantList({
   // Offenes Änderungsfenster; `studentId` ist das vorgewählte Kind.
   const [changing, setChanging] = useState<{ studentId?: string } | null>(null);
   const weekStart = mondayOf(parseISODate(date));
-  // Jede Liste trägt den Tag bzw. die Woche, für die sie geladen wurde.
-  // Angezeigt wird sie nur unter genau dieser Auswahl (#6503).
-  const dayKey = `${date}|${canRegister}`;
-  const [loadedDay, setLoadedDay] = useState<{
-    key: string;
-    list: DailyMealList;
-  } | null>(null);
-  const [loadedWeek, setLoadedWeek] = useState<{
-    weekStart: string;
-    week: WeeklyMealList;
-  } | null>(null);
-  const dayList = loadedDay?.key === dayKey ? loadedDay.list : null;
-  const week = loadedWeek?.weekStart === weekStart ? loadedWeek.week : null;
+  const errorObject = view === "week" ? t("weekErrorObject") : t("errorObject");
+  // Jede Liste gehört zu genau dem Tag bzw. der Woche, unter der sie
+  // angezeigt wird (#6503). Ein Wechsel der Ansicht liest die Liste neu.
+  const dayResource = useSWRAuth(
+    view === "day"
+      ? tenantContactKeys.mealParticipantsDay(date, canRegister)
+      : null,
+    () => getDailyMealParticipants(date, canRegister),
+    { keepPreviousData: false, dedupingInterval: 0 },
+  );
+  const weekResource = useSWRAuth(
+    view === "week" ? tenantContactKeys.mealParticipantsWeek(weekStart) : null,
+    () => getWeeklyMealParticipants(weekStart),
+    { keepPreviousData: false, dedupingInterval: 0 },
+  );
+  const current = view === "week" ? weekResource : dayResource;
+  // Eine bereits geladene Liste derselben Auswahl bleibt stehen; der Fehler
+  // eines Neuladens steht dann darüber.
+  const loadError = useSwrLoadError(current.error, errorObject, () =>
+    current.mutate(),
+  );
+  const dayList = dayResource.data ?? null;
+  const week = weekResource.data ?? null;
   const participants = dayList?.participants ?? NO_PARTICIPANTS;
   // Die übrigen Kinder des Tages, für Änderungen durch die Schule (#3873).
   const others = dayList?.others ?? NO_PARTICIPANTS;
   const deadline = dayList?.deadline ?? "";
   const closed = dayList?.closed ?? false;
   const hasList = view === "week" ? week !== null : dayList !== null;
-  // Nur der jüngste Abruf darf Liste, Fehler und Ladezustand setzen: Eine
-  // spät eintreffende Antwort für einen anderen Tag wird verworfen.
-  const latestLoad = useRef(0);
-  const [loading, setLoading] = useState(true);
+  const loading = current.data === undefined && !current.error;
   const [exporting, setExporting] = useState<"pdf" | "xlsx" | null>(null);
-  const errorObject = view === "week" ? t("weekErrorObject") : t("errorObject");
-
-  const load = useCallback(async () => {
-    const request = ++latestLoad.current;
-    const isLatest = () => request === latestLoad.current;
-    setLoading(true);
-    clearLoadError();
-    try {
-      if (view === "week") {
-        const loaded = await getWeeklyMealParticipants(weekStart);
-        if (isLatest()) setLoadedWeek({ weekStart, week: loaded });
-      } else {
-        const list = await getDailyMealParticipants(date, canRegister);
-        if (isLatest()) setLoadedDay({ key: dayKey, list });
-      }
-    } catch (cause) {
-      logger.error("meal_participant_list_load_failed", {
-        error: cause instanceof Error ? cause.message : String(cause),
-      });
-      // Eine bereits geladene Liste derselben Auswahl bleibt stehen; der
-      // Fehler steht dann darüber.
-      if (isLatest()) {
-        void showLoadError(cause, {
-          object: errorObject,
-          retry: () => reloadRef.current(),
-        });
-      }
-    } finally {
-      if (isLatest()) setLoading(false);
-    }
-  }, [
-    canRegister,
-    view,
-    date,
-    dayKey,
-    weekStart,
-    errorObject,
-    showLoadError,
-    clearLoadError,
-  ]);
-  useLayoutEffect(() => {
-    reloadRef.current = () => void load();
-  });
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   // Ändern geht nur in der Tagesansicht, für einen geöffneten Tag ab heute,
   // und erst, wenn die Liste geladen ist.
@@ -521,8 +471,12 @@ export function MealParticipantList({
       <MealRegistrationChangeModal
         isOpen={canRegister && changing !== null}
         onClose={() => setChanging(null)}
-        onSaved={() => {
-          void load();
+        onSaved={(studentId) => {
+          void invalidateFamily(tenantContactKeys.mealParticipantsFamily);
+          void invalidateFamily(tenantContactKeys.mealOrdersFamily);
+          void invalidateFamily(
+            tenantContactKeys.childMealScheduleFamily(studentId),
+          );
           onRegistrationChanged?.();
         }}
         date={date}

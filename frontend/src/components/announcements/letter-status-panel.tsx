@@ -4,7 +4,6 @@ import { FramedList } from "~/components/ui/framed-list";
 import { JumpButton } from "~/components/ui/jump-button";
 import {
   useCallback,
-  useEffect,
   useId,
   useLayoutEffect,
   useMemo,
@@ -22,13 +21,12 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import type { StatusBadgeTone } from "~/components/ui/status-badge";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import type { SegmentedControlItem } from "~/components/ui/segmented-control";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { formatDate } from "~/lib/date-helpers";
 import {
   CHECK_ADDRESS_AT_GUARDIAN,
@@ -48,7 +46,6 @@ import type {
   AnnouncementEmailAudience,
   LetterChild,
   LetterRecipient,
-  LetterStatus,
 } from "~/lib/parent-announcements-api";
 import { SpinnerIcon } from "~/components/ui/icons";
 
@@ -124,76 +121,43 @@ export function LetterStatusPanel({
   readonly canAct: boolean;
   readonly emailAudience: AnnouncementEmailAudience;
 }) {
-  const [status, setStatus] = useState<LetterStatus | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const { data, error, mutate } = useSWRAuth(
+    tenantContactKeys.letterStatus(announcementId, apiBase),
+    () => withApiBase(fetchLetterStatus, announcementId, apiBase),
+    { keepPreviousData: false },
+  );
+  const status = data ?? null;
+  const loadError = useSwrResourceLoadError(
+    [{ data, error }],
+    "die Übersicht zum Elternbrief",
+    () => mutate(),
+  );
+  const loadFailed = loadError.failure !== undefined;
   // The list „Empfänger“, which the mail notice points to (#7054).
   const recipientsId = useId();
-  const latestRequest = useRef(0);
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
   const { show: showError } = useApiErrorDisplay();
   const { success: toastSuccess } = useToast();
   const [busy, setBusy] = useState<"remind" | "resend" | null>(null);
   const [childFilter, setChildFilter] = useState<ChildFilter>("all");
-  // „Wiederholen“ ruft Laden bzw. die Aktion mit dem dann aktuellen Stand auf.
-  const latestLoadRef = useRef<() => void>(() => undefined);
+  // „Wiederholen“ ruft die Aktion mit dem dann aktuellen Stand auf.
   const latestActionRef = useRef<(action: "remind" | "resend") => void>(
     () => undefined,
   );
 
   // Rejects on failure: after an action the caller shows it as a reload of a
-  // saved change (#6652).
-  const readStatus = useCallback(async () => {
-    const request = ++latestRequest.current;
-    try {
-      const next = await withApiBase(
-        fetchLetterStatus,
-        announcementId,
-        apiBase,
-      );
-      if (request !== latestRequest.current) return;
-      setStatus(next);
-      setLoadFailed(false);
-      clearLoadError();
-    } catch (error) {
-      if (request !== latestRequest.current) return;
-      throw error;
-    }
-  }, [announcementId, apiBase, clearLoadError]);
-  // Never rejects: a failed load shows its error in place.
-  const load = useCallback(async () => {
-    const request = latestRequest.current + 1;
-    try {
-      await readStatus();
-    } catch (error) {
-      if (request !== latestRequest.current) return;
-      logger.error("letter_status_load_failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      setLoadFailed(true);
-      void showLoadError(error, {
-        object: "die Übersicht zum Elternbrief",
-        retry: () => latestLoadRef.current(),
-      });
-    }
-  }, [readStatus, showLoadError]);
+  // saved change (#6652). A mutation drops an answer to a request that
+  // started before it.
+  const readStatus = useCallback(
+    () =>
+      mutate(withApiBase(fetchLetterStatus, announcementId, apiBase), {
+        revalidate: false,
+      }),
+    [announcementId, apiBase, mutate],
+  );
   const afterAction = useRefreshAfterWrite(
     "die Anzeige der Übersicht zum Elternbrief",
     readStatus,
   );
-  useLayoutEffect(() => {
-    latestLoadRef.current = () => void load();
-  });
-
-  const invalidateRequest = useCallback(() => {
-    latestRequest.current++;
-  }, []);
-  useEffect(() => {
-    void load();
-    return invalidateRequest;
-  }, [load, invalidateRequest]);
-
   const children = useMemo(() => {
     const all = status?.children ?? [];
     // "Nur offene" means what the reminder button reaches: confirmable and not
@@ -466,7 +430,6 @@ export function LetterStatusPanel({
       {/* Ein Neuladen ist gescheitert: der alte Stand bleibt sichtbar, der
           Fehler steht darüber. Nach einer Aktion sagt er, dass sie
           gespeichert ist (#6652). */}
-      <LoadErrorAlert error={loadFailed ? loadError.error : null} />
       <LoadErrorAlert error={afterAction.error} className="mb-4" />
 
       <section>

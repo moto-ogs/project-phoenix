@@ -1,19 +1,36 @@
 import {
   act,
   fireEvent,
-  render,
+  render as renderComponent,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { StrictMode } from "react";
+import type { ReactElement, ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Reads run through real SWR, a fresh cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+const render = (ui: ReactElement) =>
+  renderComponent(ui, { wrapper: Providers });
 
 // useTenantMutate scopes its keys to the signed-in account (#5006).
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "1" }, expires: "2099-01-01" },
+    data: {
+      user: { id: "1", scope: "tenant", tenantId: 42 },
+      expires: "2099-01-01",
+    },
     status: "authenticated",
   }),
 }));
@@ -92,11 +109,6 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
     show: mocks.showActionError,
     showMessage: mocks.showActionMessage,
   }),
-}));
-
-vi.mock("~/lib/swr", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useSWRAuth: () => ({ data: [], error: undefined, isLoading: false }),
 }));
 
 vi.mock("./rollover-form", async () =>
@@ -193,7 +205,6 @@ import type { CareOffering } from "~/lib/care-offering-api";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
-import type { Phase } from "~/lib/enrollment-phase-api";
 import {
   phase,
   offering,
@@ -1778,39 +1789,6 @@ describe("CareOfferingsEditor", () => {
       metadataRequest.resolve({ templates: [] });
       await metadataRequest.promise;
     });
-  });
-
-  it("ignores an out-of-order catalog load under React StrictMode", async () => {
-    const stalePhaseRequest = deferred<Phase[]>();
-    mocks.listPhases
-      .mockReturnValueOnce(stalePhaseRequest.promise)
-      .mockResolvedValueOnce([
-        phase({ id: "11", name: "Aktuelle Phase", kind: "custom" }),
-      ]);
-    mocks.listCareOfferings.mockResolvedValue([
-      offering({
-        id: "current-offer",
-        phase_id: "11",
-        name: "Aktuelles Angebot",
-      }),
-    ]);
-
-    render(
-      <StrictMode>
-        <CareOfferingsEditor />
-      </StrictMode>,
-    );
-
-    expect(await screen.findByText("Aktuelles Angebot")).toBeInTheDocument();
-
-    await act(async () => {
-      stalePhaseRequest.resolve([phase()]);
-      await stalePhaseRequest.promise;
-    });
-
-    expect(screen.getByText("Aktuelles Angebot")).toBeInTheDocument();
-    expect(mocks.listCareOfferings).toHaveBeenCalledTimes(1);
-    expect(mocks.listCareOfferings).toHaveBeenCalledWith("11");
   });
 
   it("allows an unresolved linked template period to be removed", async () => {

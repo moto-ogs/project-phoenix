@@ -1,7 +1,13 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as renderRaw,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 import { CaregiverBlockerResolutionPanel } from "./caregiver-blocker-resolution-panel";
 
@@ -12,6 +18,24 @@ const { mockToastSuccess, mockGetAllAvailableStaff, mockFetch } = vi.hoisted(
     mockFetch: vi.fn(),
   }),
 );
+
+vi.unmock("swr");
+
+// A signed-in session for the shared cache; global fetch stays the test's.
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "1", scope: "tenant" }, expires: "2099-01-01" },
+    status: "authenticated",
+  }),
+}));
+
+function render(ui: ReactNode) {
+  return renderRaw(
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {ui}
+    </SWRConfig>,
+  );
+}
 
 vi.mock("~/components/ui/alert", async () => {
   const { createElement } = await import("react");

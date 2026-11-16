@@ -44,11 +44,9 @@ import type { AbsenceType } from "~/lib/absence-type-api";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
-import {
-  staffAbsenceService,
-  type AbsenceRebooking,
-  type StaffAbsenceRow,
-} from "~/lib/staff-api";
+import { staffAbsenceService, type StaffAbsenceRow } from "~/lib/staff-api";
+import { useSWRAuth } from "~/lib/swr";
+import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
 const logger = createLogger({ component: "AbsenceRebookModal" });
@@ -64,46 +62,28 @@ function useRebookingPreview(args: {
   value: string;
 }) {
   const { staffId, absenceIds, value } = args;
-  const [preview, setPreview] = useState<AbsenceRebooking | null>(null);
-  const [error, setError] = useState<unknown>(null);
-  const [attempt, setAttempt] = useState(0);
-  const reload = useCallback(() => setAttempt((value) => value + 1), []);
-  const idsKey = absenceIds.join(",");
-
-  useEffect(() => {
-    setPreview(null);
-    setError(null);
-    if (!value || !idsKey) return;
-    let stale = false;
-    const request = absenceRequestFor(value);
-    staffAbsenceService
-      .rebookAbsences(staffId, {
-        absenceIds: idsKey.split(","),
+  // Eine gesperrte Umbuchung (workforce.rebooking_*) ist kein Defekt; sie
+  // steht wie jeder andere Fehler der Vorschau im Dialog.
+  const { data, error, mutate } = useSWRAuth(
+    value && absenceIds.length > 0
+      ? staffAbsenceKeys.rebookingPreview(staffId, absenceIds, value)
+      : null,
+    () => {
+      const request = absenceRequestFor(value);
+      return staffAbsenceService.rebookAbsences(staffId, {
+        absenceIds: absenceIds.map(String),
         absenceType: request.absence_type,
         absenceTypeId: request.absence_type_id,
         reason: "",
         dryRun: true,
-      })
-      .then((result) => {
-        if (!stale) setPreview(result);
-      })
-      .catch((err: unknown) => {
-        if (stale) return;
-        // Eine gesperrte Umbuchung (workforce.rebooking_*) ist kein Defekt;
-        // sie steht wie jeder andere Fehler der Vorschau im Dialog.
-        logger.warn("rebooking_preview_failed", {
-          staff_id: staffId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setError(err);
       });
-    return () => {
-      stale = true;
-    };
-  }, [staffId, idsKey, value, attempt]);
-
-  const loading = Boolean(value) && !preview && !error;
-  return { preview, error, loading, reload };
+    },
+    { keepPreviousData: false },
+  );
+  const reload = useCallback(() => void mutate(), [mutate]);
+  const failure = data === undefined ? error : undefined;
+  const loading = Boolean(value) && data === undefined && !failure;
+  return { preview: data ?? null, error: failure ?? null, loading, reload };
 }
 
 function BalanceLine({ minutes }: { readonly minutes: number }) {

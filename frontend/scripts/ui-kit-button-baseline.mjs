@@ -64,13 +64,13 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/messaging/new-message-modal.tsx",
-    lines: [396],
+    lines: [351],
     reason: "Elternteil in der Empfängerliste wählen: Auswahlzeile",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/messaging/new-team-message-modal.tsx",
-    lines: [159],
+    lines: [147],
     reason: "Person in der Empfängerliste wählen: Auswahlzeile",
   },
   {
@@ -108,7 +108,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/active-supervisions/spontaneous-activity-start.tsx",
-    lines: [329],
+    lines: [296],
     reason: "Startkachel mit Symbol, Titel und Beschreibung: Kachel",
   },
   {
@@ -120,7 +120,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/care-schedule-manager.tsx",
-    lines: [1583],
+    lines: [1592],
     reason: "Wochentagskarte, öffnet den Editor: Kachel",
   },
   {
@@ -172,7 +172,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/care-schedule-manager.tsx",
-    lines: [1540],
+    lines: [1549],
     reason: "Statustag-Karte, öffnet das Entfernen: Kachel",
   },
   {

@@ -60,6 +60,8 @@ vi.mock("~/lib/swr", () => ({
   useTenantMutateMatching: () => () => Promise.resolve(),
 }));
 
+const NO_FAMILIES = { childCount: 0, familyCount: 0 };
+
 vi.mock("~/lib/hooks/use-timetable-day-hours", () => ({
   useTimetableDayHours: () => ({ dayStartHour: 9, dayEndHour: 17 }),
 }));
@@ -221,6 +223,10 @@ describe("VertretungView: Absage aus dem Panel (#6593)", () => {
       }
       if (key?.startsWith("vertretung-staff-list-")) {
         return { data: { appointments: [], staff: [] } };
+      }
+      // Keine gebuchten Kinder: die Absage braucht keinen Elternhinweis.
+      if (key?.startsWith("timetable-guardian-notice-reach-")) {
+        return { data: NO_FAMILIES };
       }
       return {};
     });

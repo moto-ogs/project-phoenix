@@ -2,17 +2,38 @@ import "@testing-library/jest-dom/vitest";
 import {
   act,
   fireEvent,
-  render,
+  render as renderRaw,
   screen,
   waitFor,
 } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SWRConfig } from "~/lib/swr/testing";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { ApiError } from "~/lib/api-error";
 import type { Permission, Role } from "~/lib/auth-helpers";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { RolePermissionsTab } from "./role-permissions-tab";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in session per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+const render = (ui: ReactElement) => renderRaw(ui, { wrapper: Providers });
 
 const {
   mockToastSuccess,

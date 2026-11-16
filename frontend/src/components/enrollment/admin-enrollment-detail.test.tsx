@@ -6,7 +6,8 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
@@ -14,9 +15,29 @@ import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { releaseFakeTimers, setTestClock } from "~/test/clock";
 
-// Errors and success messages run through the real display path (#2515).
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Errors and success messages run through the real display path (#2515),
+// reads through real SWR under a staff session, a fresh cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <ToastProvider>{children}</ToastProvider>
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
 const render = (ui: ReactElement) =>
-  renderComponent(ui, { wrapper: ToastProvider });
+  renderComponent(ui, { wrapper: Providers });
 
 import type { AdminRequestChild } from "~/lib/enrollment-admin-api";
 import type { CareOffering } from "~/lib/care-offering-api";
@@ -112,7 +133,8 @@ describe("AdminEnrollmentDetail mail updates", () => {
       .mockResolvedValue([
         { kind: "enrollment_waitlisted", outcome: "delivered" },
       ]);
-    const interval = vi.spyOn(globalThis, "setInterval");
+    // SWR schedules each poll as a timeout of the refresh interval.
+    const interval = vi.spyOn(globalThis, "setTimeout");
     const { unmount } = render(<AdminEnrollmentDetail requestId="request-1" />);
     fireEvent.click(await screen.findByRole("button", { name: "Warteliste" }));
     expect(await screen.findByText("Wird gesendet")).toBeVisible();
@@ -124,8 +146,13 @@ describe("AdminEnrollmentDetail mail updates", () => {
       .spyOn(document, "visibilityState", "get")
       .mockReturnValue("visible");
     await act(async () => {
+      // The poll fires at once, not 15 s later: end SWR's 5-s deduping window
+      // of the reload after the decision first.
+      for (const call of interval.mock.calls)
+        if (call[1] === 5_000 && typeof call[0] === "function") call[0]();
       if (typeof poll === "function") poll();
     });
+
     expect(await screen.findByText("Zugestellt")).toBeVisible();
     unmount();
     interval.mockRestore();

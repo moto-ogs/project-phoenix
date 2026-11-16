@@ -8,8 +8,19 @@ import {
   type StaffCareRequestDetail,
 } from "~/lib/care-request-review-api";
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 import { PickupRequestDetailModal } from "./pickup-request-detail-modal";
+
+// Echtes SWR statt des globalen Stubs, mit frischem Cache je Render.
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    status: "authenticated",
+  }),
+}));
 
 vi.mock("~/lib/care-request-review-api", async () => {
   const actual = await vi.importActual<
@@ -46,7 +57,11 @@ function detail(
 }
 
 function Wrapper({ children }: { readonly children: ReactNode }) {
-  return <ModalProvider>{children}</ModalProvider>;
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ModalProvider>{children}</ModalProvider>
+    </SWRConfig>
+  );
 }
 
 describe("PickupRequestDetailModal", () => {

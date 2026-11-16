@@ -1,5 +1,13 @@
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchAnnouncements,
@@ -11,6 +19,25 @@ import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { ApiError, unavailableApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import ParentAnnouncementsPage from "./page";
+
+vi.unmock("swr");
+
+// The draft's attachments read through real SWR under a staff session; the
+// other resources stay per-key fakes.
+function render(ui: ReactElement) {
+  return rtlRender(
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {ui}
+      </SWRConfig>
+    </SessionProvider>,
+  );
+}
 import { stashAnnouncementStudents } from "~/lib/announcement-prefill";
 
 const { searchParams, pushMock, updateUrlParamsMock, listState, previewLoad } =
@@ -46,25 +73,40 @@ vi.mock("~/lib/tenant-context", () => ({
   useTenantRoutingModeSafe: () => "subdomain",
 }));
 
-vi.mock("~/lib/swr", () => ({
-  useSWRAuth: (key: string | null) =>
-    key === "parent-announcements-list"
-      ? {
-          ...listState,
-          mutate: vi.fn(
-            async (data?: Promise<Announcement[]>) =>
-              data ?? fetchAnnouncements(true).catch(() => listState.data),
-          ),
-        }
-      : key === "parent-letter-preview-children-school"
-        ? {
-            data: undefined,
-            isLoading: false,
-            error: previewLoad.error,
-            mutate: previewLoad.retry,
-          }
-        : { data: undefined, isLoading: false, error: null, mutate: vi.fn() },
-}));
+vi.mock("~/lib/swr", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/swr")>();
+  return {
+    ...actual,
+    useSWRAuth: ((
+      key: string | null,
+      fetcher: () => Promise<unknown>,
+      options?: object,
+    ) =>
+      key?.startsWith("announcement-attachments-")
+        ? actual.useSWRAuth(key, fetcher, options)
+        : key === "parent-announcements-list"
+          ? {
+              ...listState,
+              mutate: vi.fn(
+                async (data?: Promise<Announcement[]>) =>
+                  data ?? fetchAnnouncements(true).catch(() => listState.data),
+              ),
+            }
+          : key === "parent-letter-preview-children-school"
+            ? {
+                data: undefined,
+                isLoading: false,
+                error: previewLoad.error,
+                mutate: previewLoad.retry,
+              }
+            : {
+                data: undefined,
+                isLoading: false,
+                error: null,
+                mutate: vi.fn(),
+              }) as typeof actual.useSWRAuth,
+  };
+});
 
 vi.mock("~/lib/parent-announcements-api", async (importOriginal) => {
   const actual =

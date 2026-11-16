@@ -1,14 +1,7 @@
 "use client";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { StatCard } from "~/components/ui/stat-card";
 import { Button } from "~/components/ui/button";
@@ -21,11 +14,7 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import {
   absenceStatusMeta,
   dayCountFor as sharedDayCountFor,
@@ -38,10 +27,10 @@ import {
   absenceDisplayLabel,
   type StaffAbsence,
 } from "~/lib/time-tracking-helpers";
-import {
-  timeTrackingService,
-  type VacationQuotaSummary,
-} from "~/lib/time-tracking-api";
+import { timeTrackingService } from "~/lib/time-tracking-api";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import { VacationRequestModal } from "./vacation-request-modal";
 import {
   AbsenceRequestMails,
@@ -93,65 +82,61 @@ function isRequestFlowAbsence(absence: StaffAbsence): boolean {
 export function LeaveRequestsCard() {
   const currentTimestamp = useCurrentTimestamp();
   const [modalOpen, setModalOpen] = useState(false);
-  const [quota, setQuota] = useState<VacationQuotaSummary | null>(null);
-  const [vacations, setVacations] = useState<StaffAbsence[]>([]);
-  const [questionedVacations, setQuestionedVacations] = useState<
-    StaffAbsence[]
-  >([]);
-  const [loading, setLoading] = useState(true);
   const toast = useToast();
-  // A failed load stays in the card (#2514): without the quota the tiles
-  // would read as "0 Tage", which is wrong, not empty.
-  const load = useApiLoadError();
-  const showLoadError = load.show;
-  const clearLoadError = load.clear;
   const cancelErrors = useApiFormError();
-  const loadAllRef = useRef<() => Promise<void>>(async () => undefined);
 
   const today = useBerlinToday();
   const year = Number(today.slice(0, 4));
+  const yearStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
-    try {
-      const yearStart = `${year}-01-01`;
-      const yearEnd = `${year}-12-31`;
-      const [q, abs, questions] = await Promise.all([
-        timeTrackingService.getVacationQuota(year),
-        timeTrackingService.getAbsences(yearStart, yearEnd),
-        timeTrackingService.getQuestionedAbsences(),
-      ]);
-      setQuota(q);
-      // Neben Urlaub laufen Anträge beantragbarer Arten hier mit (#4710):
-      // alles, was nicht direkt eingetragen ist.
-      setVacations(abs.filter(isRequestFlowAbsence));
-      setQuestionedVacations(
-        questions.filter(
-          (a) => isRequestFlowAbsence(a) && a.status === "question",
-        ),
-      );
-      clearLoadError();
-    } catch (err) {
-      logger.error("load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Urlaubsübersicht",
-        retry: () => void loadAllRef.current(),
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [year, showLoadError, clearLoadError]);
-
-  useLayoutEffect(() => {
-    loadAllRef.current = loadAll;
-  });
-
-  useEffect(() => {
-    // loadAll shows its own failure in the card.
-    void loadAll();
-  }, [loadAll]);
+  const quotaResource = useSWRAuth(
+    staffAbsenceKeys.ownVacationQuota(year),
+    () => timeTrackingService.getVacationQuota(year),
+  );
+  const absencesResource = useSWRAuth(
+    staffAbsenceKeys.ownList(yearStart, yearEnd),
+    () => timeTrackingService.getAbsences(yearStart, yearEnd),
+  );
+  const questionsResource = useSWRAuth(staffAbsenceKeys.ownQuestioned(), () =>
+    timeTrackingService.getQuestionedAbsences(),
+  );
+  const { mutate: mutateQuota } = quotaResource;
+  const { mutate: mutateAbsences } = absencesResource;
+  const { mutate: mutateQuestions } = questionsResource;
+  const loadAll = useCallback(
+    () =>
+      Promise.all([mutateQuota(), mutateAbsences(), mutateQuestions()]).then(
+        () => undefined,
+      ),
+    [mutateQuota, mutateAbsences, mutateQuestions],
+  );
+  // A failed load stays in the card (#2514): without the quota the tiles
+  // would read as "0 Tage", which is wrong, not empty.
+  const load = useSwrResourceLoadError(
+    [quotaResource, absencesResource, questionsResource],
+    "die Urlaubsübersicht",
+    loadAll,
+  );
+  const quota = quotaResource.data ?? null;
+  const loading =
+    !load.failure &&
+    (quotaResource.data === undefined ||
+      absencesResource.data === undefined ||
+      questionsResource.data === undefined);
+  // Neben Urlaub laufen Anträge beantragbarer Arten hier mit (#4710): alles,
+  // was nicht direkt eingetragen ist.
+  const vacations = useMemo(
+    () => (absencesResource.data ?? []).filter(isRequestFlowAbsence),
+    [absencesResource.data],
+  );
+  const questionedVacations = useMemo(
+    () =>
+      (questionsResource.data ?? []).filter(
+        (a) => isRequestFlowAbsence(a) && a.status === "question",
+      ),
+    [questionsResource.data],
+  );
 
   const counts = useMemo(() => {
     const reserved = vacations.filter((v) => v.status === "requested").length;
@@ -271,7 +256,7 @@ export function LeaveRequestsCard() {
               variant="primary"
               size="md"
               onClick={() => setModalOpen(true)}
-              disabled={loading || load.error !== null}
+              disabled={loading || Boolean(load.failure)}
               tooltip="Öffnet ein Formular für einen neuen Urlaubsantrag."
             >
               Urlaub beantragen
@@ -280,7 +265,7 @@ export function LeaveRequestsCard() {
         }
         bodyClassName="compact:mt-4 mt-5 max-sm:mt-4"
       >
-        {load.error ? (
+        {load.failure ? (
           <LoadErrorAlert error={load.error} />
         ) : (
           <>

@@ -1,14 +1,31 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
 import type { StaffNotice } from "~/lib/staff-notices-api";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 
 import { StaffNoticeAcknowledgementsModal } from "./staff-notice-acknowledgements-modal";
 
+vi.unmock("swr");
 const fetchNoticeAcknowledgements = vi.hoisted(() => vi.fn());
+
+// Real SWR with a fresh cache and a signed-in session per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
 
 vi.mock("~/components/ui/modal", () => ({
   Modal: ({ isOpen, children }: { isOpen: boolean; children: ReactNode }) =>
@@ -47,6 +64,7 @@ describe("StaffNoticeAcknowledgementsModal", () => {
   it("zeigt den Zeitpunkt der Bestätigung mit Datum und Uhrzeit", async () => {
     render(
       <StaffNoticeAcknowledgementsModal notice={notice} onClose={vi.fn()} />,
+      { wrapper: Providers },
     );
 
     expect(await screen.findByText("15.01.2026, 14:30")).toBeInTheDocument();
@@ -60,6 +78,7 @@ describe("StaffNoticeAcknowledgementsModal", () => {
     );
     render(
       <StaffNoticeAcknowledgementsModal notice={notice} onClose={vi.fn()} />,
+      { wrapper: Providers },
     );
 
     expect(

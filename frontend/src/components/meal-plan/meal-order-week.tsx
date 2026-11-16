@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
 import { CalendarRange, FileSpreadsheet, FileText } from "lucide-react";
 
@@ -15,7 +15,10 @@ import {
   OverflowMenu,
   type OverflowMenuEntry,
 } from "~/components/ui/page-header/OverflowMenu";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { useExportRun } from "~/hooks/use-export-run";
 import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
@@ -34,6 +37,7 @@ type MonthFormat = "pdf" | "xlsx";
 
 const DELIVERY_FORMATS: readonly DeliveryFormat[] = ["pdf", "xlsx", "csv"];
 const MONTH_FORMATS: readonly MonthFormat[] = ["pdf", "xlsx"];
+const NO_DAYS: MealOrderDay[] = [];
 
 /**
  * Die Bestellung der Woche (#3873): je Tag, ob die Frist noch läuft oder
@@ -43,23 +47,21 @@ const MONTH_FORMATS: readonly MonthFormat[] = ["pdf", "xlsx"];
 export function MealOrderWeek({
   mondayISO,
   canExportMonth,
-  refreshVersion = 0,
 }: Readonly<{
   mondayISO: string;
   canExportMonth: boolean;
+  /**
+   * @deprecated A registration change refreshes the orders through
+   * `tenantContactKeys.mealOrdersFamily`; the value is ignored.
+   */
   refreshVersion?: number;
 }>) {
   const t = useCareTermTranslations("mealOrders");
   const locale = useLocale();
-  const [days, setDays] = useState<MealOrderDay[]>([]);
-  const [loading, setLoading] = useState(true);
   const [deliveryBusy, setDeliveryBusy] = useState<DeliveryFormat | null>(null);
   const [monthExportOpen, setMonthExportOpen] = useState(false);
   const [monthBusy, setMonthBusy] = useState<MonthFormat | null>(null);
-  const { error, show, clear } = useApiLoadError();
   const { show: showActionError } = useApiErrorDisplay();
-  const reloadRef = useRef<() => void>(() => undefined);
-  const requestGeneration = useRef(0);
 
   const friday = useMemo(() => {
     const date = parseISODate(mondayISO);
@@ -83,39 +85,16 @@ export function MealOrderWeek({
     [locale],
   );
 
-  const load = useCallback(async () => {
-    const generation = ++requestGeneration.current;
-    setLoading(true);
-    clear();
-    try {
-      const orders = await getMealOrders(mondayISO, friday);
-      if (generation !== requestGeneration.current) return;
-      setDays(orders.days);
-    } catch (cause) {
-      // A superseded request must not replace the current week's view.
-      if (generation !== requestGeneration.current) return;
-      logger.error("meal_orders_load_failed", {
-        error: cause instanceof Error ? cause.message : String(cause),
-      });
-      setDays([]);
-      void show(cause, {
-        object: t("errorObject"),
-        retry: () => reloadRef.current(),
-      });
-    } finally {
-      if (generation === requestGeneration.current) setLoading(false);
-    }
-  }, [clear, friday, mondayISO, show, t]);
-  const invalidateRequests = useCallback(() => {
-    requestGeneration.current++;
-  }, []);
-  useEffect(() => {
-    reloadRef.current = () => void load();
-  });
-  useEffect(() => {
-    void load();
-    return invalidateRequests;
-  }, [invalidateRequests, load, refreshVersion]);
+  const orders = useSWRAuth(
+    tenantContactKeys.mealOrders(mondayISO, friday),
+    () => getMealOrders(mondayISO, friday),
+    { keepPreviousData: false },
+  );
+  const { error } = useSwrResourceLoadError([orders], t("errorObject"), () =>
+    orders.mutate(),
+  );
+  const days: MealOrderDay[] = orders.data?.days ?? NO_DAYS;
+  const loading = orders.data === undefined && !orders.error;
 
   async function downloadDeliveries(format: DeliveryFormat) {
     setDeliveryBusy(format);

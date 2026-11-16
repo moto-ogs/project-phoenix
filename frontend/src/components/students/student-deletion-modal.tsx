@@ -11,7 +11,7 @@ import { ChoiceTile } from "~/components/ui/choice-tile";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
 import {
   DataField,
   DataGrid,
@@ -26,7 +26,10 @@ import {
   type StudentDeletionReason,
 } from "~/lib/student-api";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 
 const logger = createLogger({ component: "StudentDeletionModal" });
@@ -96,65 +99,53 @@ export function StudentDeletionModal({
   const [impact, setImpact] = useState<StudentDeletionImpact | null>(null);
   const [reason, setReason] = useState<StudentDeletionReason | "">("");
   const [acknowledged, setAcknowledged] = useState(false);
-  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [refreshingPreview, setRefreshingPreview] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const errors = useApiFormError();
   const clearErrors = errors.clear;
-  const previewLoad = useApiLoadError();
-  const showPreviewError = previewLoad.show;
-  const clearPreviewError = previewLoad.clear;
   // Bumped after a 409 so the dialog returns to its first confirmation step.
   const [gateReset, setGateReset] = useState(0);
-  // Bumped by „Wiederholen“ on a failed preview to load it again.
-  const [previewAttempt, setPreviewAttempt] = useState(0);
+  // The impact the person confirms stays fixed for this opening: no focus or
+  // reconnect refresh replaces it under the acknowledgement. A changed impact
+  // comes back as a 409 and is then shown fresh (below).
+  const previewRead = useSWRAuth(
+    isOpen ? tenantStudentKeys.deletionImpact(studentId, completionId) : null,
+    () => fetchStudentDeletionImpact(studentId, completionId),
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    },
+  );
+  const { mutate: mutatePreview } = previewRead;
+  const previewLoad = useSwrResourceLoadError(
+    [previewRead],
+    "die Vorschau der Löschung",
+    () => mutatePreview(),
+  );
+  // Whether this opening already took its impact (also when a refresh after
+  // a 409 failed and left none).
+  const [impactTaken, setImpactTaken] = useState(false);
+  const previewData = previewRead.data;
+  const previewValidating = previewRead.isValidating;
+  const loadingPreview =
+    isOpen &&
+    (refreshingPreview || (!impactTaken && previewLoad.failure === undefined));
 
   useEffect(() => {
-    if (!isOpen) {
-      setImpact(null);
-      setReason("");
-      setAcknowledged(false);
-      clearErrors();
-      clearPreviewError();
-      return;
-    }
+    if (isOpen) return;
+    setImpact(null);
+    setImpactTaken(false);
+    setReason("");
+    setAcknowledged(false);
+    clearErrors();
+  }, [clearErrors, isOpen]);
 
-    let active = true;
-    setLoadingPreview(true);
-    clearPreviewError();
-    void fetchStudentDeletionImpact(studentId, completionId)
-      .then((result) => {
-        if (active) setImpact(result);
-      })
-      .catch((previewError: unknown) => {
-        logger.error("student_delete_preview_failed", {
-          student_id: studentId,
-          error:
-            previewError instanceof Error
-              ? previewError.message
-              : String(previewError),
-        });
-        if (!active) return;
-        void showPreviewError(previewError, {
-          object: "die Vorschau der Löschung",
-          retry: () => setPreviewAttempt((attempt) => attempt + 1),
-        });
-      })
-      .finally(() => {
-        if (active) setLoadingPreview(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [
-    clearErrors,
-    clearPreviewError,
-    completionId,
-    isOpen,
-    previewAttempt,
-    showPreviewError,
-    studentId,
-  ]);
+  useEffect(() => {
+    if (!isOpen || impactTaken || !previewData || previewValidating) return;
+    setImpact(previewData);
+    setImpactTaken(true);
+  }, [impactTaken, isOpen, previewData, previewValidating]);
 
   const countRows = useMemo(() => {
     if (!impact) return [];
@@ -208,9 +199,13 @@ export function StudentDeletionModal({
         // which returns the two-step gate to its first step.
         setAcknowledged(false);
         setGateReset((count) => count + 1);
-        setLoadingPreview(true);
+        setRefreshingPreview(true);
         try {
-          setImpact(await fetchStudentDeletionImpact(studentId, completionId));
+          const fresh = await mutatePreview(
+            fetchStudentDeletionImpact(studentId, completionId),
+            { revalidate: false },
+          );
+          setImpact(fresh ?? null);
         } catch (refreshError) {
           logger.error("student_delete_preview_refresh_failed", {
             student_id: studentId,
@@ -221,7 +216,7 @@ export function StudentDeletionModal({
           });
           setImpact(null);
         } finally {
-          setLoadingPreview(false);
+          setRefreshingPreview(false);
         }
       }
       // Kein „Wiederholen“: ein erneutes Löschen geht wieder durch beide

@@ -1,12 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   act,
-  render,
+  render as renderComponent,
   screen,
   fireEvent,
   waitFor,
 } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
+import type { ReactElement, ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 
 // ============================================================================
 // Mocks
@@ -20,7 +25,8 @@ const { mockListReview, mockDecideReview, mockTenantMutate } = vi.hoisted(
   }),
 );
 
-vi.mock("~/lib/swr", () => ({
+vi.mock("~/lib/swr", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/swr")>()),
   useTenantMutate: () => mockTenantMutate,
 }));
 
@@ -44,13 +50,28 @@ import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { RolloverReviewQueue as Queue } from "./rollover-review-queue";
 
+// The queue reads through real SWR under a staff session; each render starts
+// with a fresh cache, a rerender keeps it.
 function RolloverReviewQueue(props: { phaseID: string }) {
+  return <Queue {...props} />;
+}
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <ToastProvider>
-      <Queue {...props} />
-    </ToastProvider>
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <ToastProvider>{children}</ToastProvider>
+      </SWRConfig>
+    </SessionProvider>
   );
 }
+const render = (ui: ReactElement) =>
+  renderComponent(ui, { wrapper: Providers });
 import type { ReviewQueueItem } from "~/lib/enrollment-phase-api";
 import {
   expectPageReloadedAfterRefusal,

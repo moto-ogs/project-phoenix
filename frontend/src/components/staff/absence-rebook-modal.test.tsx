@@ -6,6 +6,10 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 
 import type { AbsenceType } from "~/lib/absence-type-api";
 import { ApiError } from "~/lib/api-error";
@@ -109,7 +113,7 @@ function renderModal(
   onSaved = vi.fn().mockResolvedValue(undefined),
   absences = fridays,
 ) {
-  render(
+  renderWithCache(
     <AbsenceRebookModal
       staff={staff}
       types={[sickLeave]}
@@ -162,7 +166,7 @@ describe("AbsenceRebookModal", () => {
   });
 
   it("hides every type already used by a mixed selection", () => {
-    render(
+    renderWithCache(
       <AbsenceRebookModal
         staff={staff}
         types={[sickLeave]}
@@ -312,3 +316,23 @@ describe("AbsenceRebookModal", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+// Echter SWR-Cache je Render und eine Sitzung mit Konto, sonst liest
+// useSWRAuth nichts.
+function TenantSWR({ children }: { children: React.ReactNode }) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-test", tenantId: 1 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const renderWithCache = (ui: React.ReactElement) =>
+  render(ui, { wrapper: TenantSWR });

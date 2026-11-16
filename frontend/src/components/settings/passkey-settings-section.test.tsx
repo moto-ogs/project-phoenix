@@ -11,13 +11,32 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
+import { SessionProvider } from "next-auth/react";
+import type { ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
 
-// The shared error path shows failures through the toast provider (#2517).
+vi.unmock("swr");
+
+// The shared error path shows failures through the toast provider (#2517);
+// the list is read through a fresh shared cache of a signed-in session.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <ToastProvider>{children}</ToastProvider>
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
 function renderWithToast(
   ui: Parameters<typeof render>[0],
   options?: Parameters<typeof render>[1],
 ) {
-  return render(ui, { wrapper: ToastProvider, ...options });
+  return render(ui, { wrapper: Providers, ...options });
 }
 
 const {

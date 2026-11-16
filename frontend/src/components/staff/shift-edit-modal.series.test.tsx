@@ -1,4 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as renderUi,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
+import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
 import { setTestClock } from "~/test/clock";
@@ -7,6 +14,28 @@ import { catalogText } from "~/test/error-catalog-text";
 import { ShiftEditModal } from "./shift-edit-modal";
 import type { CalendarPeriod } from "~/lib/calendar-period-helpers";
 import type { StaffShift } from "~/lib/shift-helpers";
+
+vi.unmock("swr");
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1" }, expires: "2099-01-01" },
+  }),
+}));
+
+// Real SWR with a fresh cache per render: the modal reads calendar periods
+// and the series rule through the shared cache.
+function FreshCache({ children }: { children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return renderUi(ui, { wrapper: FreshCache });
+}
 
 const createSeries = vi.fn();
 const splitSeries = vi.fn();

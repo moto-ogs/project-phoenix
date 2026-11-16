@@ -1,4 +1,12 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
+import { SWRConfig } from "~/lib/swr/testing";
 import type { DateRange } from "react-day-picker";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,7 +26,8 @@ vi.mock("~/lib/timetable-api", () => ({
   timetableService: { bulkCancel: mockBulkCancel },
 }));
 
-vi.mock("~/lib/swr", () => ({
+vi.mock("~/lib/swr", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/swr")>()),
   useTenantMutateMatching: () => mockRefreshPlan,
 }));
 
@@ -54,6 +63,28 @@ vi.mock("~/components/ui/date-range-picker", () => ({
 }));
 
 import { BulkCancelAppointmentsModal } from "./bulk-cancel-appointments-modal";
+
+vi.unmock("swr");
+
+function SWRTestWrapper({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+function render(
+  ui: Parameters<typeof rtlRender>[0],
+  options?: Parameters<typeof rtlRender>[1],
+) {
+  return rtlRender(ui, { wrapper: SWRTestWrapper, ...options });
+}
 
 function preview(overrides: Partial<BulkCancelResult>): BulkCancelResult {
   return {

@@ -1,5 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 
 const mocks = vi.hoisted(() => ({
   deleteAdminRequest: vi.fn(),
@@ -46,13 +50,23 @@ const impact = {
 
 function renderModal() {
   return render(
-    <AdminEnrollmentDeletionModal
-      isOpen
-      requestId="7"
-      studentHref={(id) => `/students/${id}`}
-      onClose={vi.fn()}
-      onDeleted={vi.fn()}
-    />,
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <AdminEnrollmentDeletionModal
+          isOpen
+          requestId="7"
+          studentHref={(id) => `/students/${id}`}
+          onClose={vi.fn()}
+          onDeleted={vi.fn()}
+        />
+      </SWRConfig>
+    </SessionProvider>,
   );
 }
 

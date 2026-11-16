@@ -4,20 +4,19 @@
 // Informiert vor dem Eintragen; ein negativer Stand wird bestätigt, nicht
 // verhindert. Seit #3256 Teil des gemeinsamen Dialogs „Abwesenheit eintragen".
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 
 import { formatSignedDuration } from "~/components/staff/staff-time-views";
 import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiLoadError } from "~/contexts/ToastContext";
-import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import {
   staffAbsenceService,
   type CompTimeBalancePreview,
 } from "~/lib/staff-api";
 import { InsetPanel } from "~/components/ui/inset-panel";
-
-const logger = createLogger({ component: "CompTimePreview" });
 
 export function useCompTimePreview({
   enabled,
@@ -37,47 +36,32 @@ export function useCompTimePreview({
   error: unknown;
   reload: () => void;
 } {
-  const [preview, setPreview] = useState<CompTimeBalancePreview | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-  const [attempt, setAttempt] = useState(0);
-  const reload = useCallback(() => setAttempt((value) => value + 1), []);
-
-  useEffect(() => {
-    // Sofort verwerfen: die alte Projektion darf während des Nachladens weder
-    // angezeigt werden noch eine Buchung ohne Bestätigung durchlassen.
-    setPreview(null);
-    setError(null);
-    if (!enabled || !dateStart || !dateEnd) {
-      setLoading(false);
-      return;
-    }
-    let stale = false;
-    setLoading(true);
-    staffAbsenceService
-      .getCompTimePreview(staffId, { dateStart, dateEnd, halfDay })
-      .then((result) => {
-        if (!stale) setPreview(result);
-      })
-      .catch((err: unknown) => {
-        if (stale) return;
-        // Rein informativ: der Block zeigt den Ladefehler, die Buchung
-        // selbst bleibt möglich und meldet ihre eigenen Fehler.
-        logger.error("comp_time_preview_failed", {
-          staff_id: staffId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setError(err);
-      })
-      .finally(() => {
-        if (!stale) setLoading(false);
-      });
-    return () => {
-      stale = true;
-    };
-  }, [enabled, staffId, dateStart, dateEnd, halfDay, attempt]);
-
-  return { preview, loading, error, reload };
+  const { data, error, mutate } = useSWRAuth(
+    enabled && dateStart && dateEnd
+      ? staffAbsenceKeys.compTimePreview(staffId, dateStart, dateEnd, halfDay)
+      : null,
+    () =>
+      staffAbsenceService.getCompTimePreview(staffId, {
+        dateStart,
+        dateEnd,
+        halfDay,
+      }),
+    // Die alte Projektion darf während des Nachladens weder angezeigt werden
+    // noch eine Buchung ohne Bestätigung durchlassen.
+    { keepPreviousData: false },
+  );
+  const reload = useCallback(() => void mutate(), [mutate]);
+  // Rein informativ: der Block zeigt den Ladefehler (das Panel), die Buchung
+  // selbst bleibt möglich und meldet ihre eigenen Fehler. Ein gescheitertes
+  // Auffrischen lässt die gezeigte Vorschau stehen.
+  const failure = data === undefined ? error : undefined;
+  const active = enabled && Boolean(dateStart && dateEnd);
+  return {
+    preview: data ?? null,
+    loading: active && data === undefined && !failure,
+    error: failure ?? null,
+    reload,
+  };
 }
 
 export function CompTimePreviewPanel({

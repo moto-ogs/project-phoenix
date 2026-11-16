@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useApiLoadError } from "~/contexts/ToastContext";
-import { createLogger } from "~/lib/logger";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { externalStaffNote } from "~/lib/staff-helpers";
 import { substitutionService } from "~/lib/substitution-api";
 import type { RunningSupervision } from "~/lib/substitution-helpers";
-
-const logger = createLogger({ component: "RunningSupervision" });
+import { useSWRAuth } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 export type SupervisionTarget = RunningSupervision["availableTargets"][number];
 
@@ -20,40 +18,25 @@ export function useRunningSupervision(
   isOpen: boolean,
   object: string,
 ) {
-  const [overview, setOverview] = useState<RunningSupervision | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  // Erhöht von „Wiederholen“: lädt die Aufsicht erneut.
-  const [attempt, setAttempt] = useState(0);
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  useEffect(() => {
-    if (!isOpen || !activeGroupId) return;
-    let current = true;
-    setOverview(null);
-    clearLoadError();
-    setIsLoading(true);
-    void substitutionService
-      .fetchRunningSupervision(activeGroupId)
-      .then((result) => current && setOverview(result))
-      .catch((cause: unknown) => {
-        logger.error("running_supervision_load_failed", {
-          error: cause instanceof Error ? cause.message : String(cause),
-        });
-        if (current)
-          void showLoadError(cause, {
-            object,
-            retry: () => setAttempt((value) => value + 1),
-          });
-      })
-      .finally(() => current && setIsLoading(false));
-    return () => {
-      current = false;
-    };
-  }, [activeGroupId, isOpen, attempt, object, showLoadError, clearLoadError]);
-  return { overview, loadError, isLoading };
+  const key =
+    isOpen && activeGroupId
+      ? tenantDailyKeys.runningSupervision(activeGroupId)
+      : null;
+  const { data, error, mutate } = useSWRAuth(
+    key,
+    () => substitutionService.fetchRunningSupervision(activeGroupId ?? ""),
+    { keepPreviousData: false },
+  );
+  const { error: loadError } = useSwrResourceLoadError(
+    [{ data, error }],
+    object,
+    () => mutate(),
+  );
+  return {
+    overview: data ?? null,
+    loadError,
+    isLoading: key !== null && data === undefined && !error,
+  };
 }
 
 // Wie in den anderen Auswahllisten: „Name (Extern · Musikschule, Einladung

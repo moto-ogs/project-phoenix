@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Mail } from "lucide-react";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { EmploymentCarryover } from "./invitation-employment-carryover";
@@ -26,6 +26,8 @@ import {
 } from "~/lib/invitation-helpers";
 import { looksLikeEmail } from "~/lib/email-format";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { useDebounce } from "~/lib/use-debounce";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -182,8 +184,6 @@ export function InvitationForm({
   existingPositions = EMPTY_POSITIONS,
 }: InvitationFormProps) {
   const [form, setForm] = useState<CreateInvitationRequest>(initialForm);
-  const [roles, setRoles] = useState<RoleOption[]>([]);
-  const [isLoadingRoles, setIsLoadingRoles] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Every failure of this form, validation included, comes from the server
   // and is shown on the shared error path (#2511): the message in the alert
@@ -203,40 +203,32 @@ export function InvitationForm({
   } | null>(null);
   const { success: toastSuccess } = useToast();
 
-  const loadRoles = useCallback(
-    async (isCancelled: () => boolean = () => false) => {
-      try {
-        setIsLoadingRoles(true);
-        const roleList = await authService.getRoles();
-        if (isCancelled()) return;
-        setRoles(toAssignableRoleOptions(roleList));
-        clearErrors();
-      } catch (err) {
-        logger.error("failed to load roles", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!isCancelled()) {
-          void showError(err, {
-            object: "die Rollenauswahl",
-            retry: () => void loadRoles(),
-          });
-        }
-      } finally {
-        if (!isCancelled()) {
-          setIsLoadingRoles(false);
-        }
-      }
-    },
-    [clearErrors, showError],
+  const {
+    data: roleList,
+    error: rolesError,
+    mutate: mutateRoles,
+  } = useSWRAuth(enrollmentKeys.roles(), () => authService.getRoles());
+  const roles = useMemo<RoleOption[]>(
+    () => (roleList ? toAssignableRoleOptions(roleList) : []),
+    [roleList],
   );
-
+  const isLoadingRoles = !roleList && !rolesError;
+  // A failed role list stands in the form's alert; a later answer clears it.
+  const rolesErrorShown = useRef(false);
   useEffect(() => {
-    let cancelled = false;
-    void loadRoles(() => cancelled);
-    return () => {
-      cancelled = true;
-    };
-  }, [loadRoles]);
+    if (roleList) {
+      if (!rolesErrorShown.current) return;
+      rolesErrorShown.current = false;
+      clearErrors();
+      return;
+    }
+    if (!rolesError) return;
+    rolesErrorShown.current = true;
+    void showError(rolesError, {
+      object: "die Rollenauswahl",
+      retry: () => void mutateRoles(),
+    });
+  }, [roleList, rolesError, clearErrors, showError, mutateRoles]);
 
   const inviteBaseUrl = useMemo(() => {
     if (typeof globalThis !== "undefined" && "location" in globalThis) {

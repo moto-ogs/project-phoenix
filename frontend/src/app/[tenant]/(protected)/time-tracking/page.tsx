@@ -2,6 +2,8 @@
 
 import { useOptimisticStamp } from "~/lib/hooks/use-optimistic-stamp";
 import { timeTrackingKeys } from "~/lib/swr/portal-keys";
+import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import React, {
   useState,
   useEffect,
@@ -624,7 +626,6 @@ function ClockInCard({
   const isCheckedOut =
     currentSession !== null && currentSession.checkOutTime !== null;
 
-  // Derive active break from breaks array
   const activeBreak = breaks.find((b) => !b.endedAt) ?? null;
   const isOnBreak = activeBreak !== null;
 
@@ -672,7 +673,6 @@ function ClockInCard({
         )
       : now;
 
-  // Calculate derived time values using extracted helpers
   const liveBreakMins = startedBeforeToday
     ? calcBreakMinutesSince(breaks, dayStart, liveEnd)
     : calcLiveBreakMins(breakMins, activeBreak, liveEnd);
@@ -3142,6 +3142,8 @@ function CreateAbsenceModal({
 
 // ─── Main Content ─────────────────────────────────────────────────────────────
 
+const NO_BREAKS: WorkSessionBreak[] = [];
+
 function TimeTrackingContent() {
   const { data: authSession, status: authStatus } = useSession({
     required: true,
@@ -3257,7 +3259,6 @@ function TimeTrackingContent() {
     absence: StaffAbsence | null;
     laborDay?: WorkDayLaborHint;
   } | null>(null);
-  const [currentBreaks, setCurrentBreaks] = useState<WorkSessionBreak[]>([]);
   const [absenceModalOpen, setAbsenceModalOpen] = useState(false);
   const handleCloseEditModal = useCallback(() => setEditModal(null), []);
   const handleCloseAbsenceModal = useCallback(
@@ -3473,7 +3474,6 @@ function TimeTrackingContent() {
   const historyLoad = useApiLoadError();
   const absencesLoad = useApiLoadError();
   const profileLoad = useApiLoadError();
-  const breaksLoad = useApiLoadError();
   const metricsLoad = useApiLoadError();
 
   const metricsError = ownMetrics.error;
@@ -3560,46 +3560,26 @@ function TimeTrackingContent() {
     }
   }, [profileError, retryProfile, showProfileLoadError, clearProfileLoadError]);
 
-  // Fetch breaks for current session
-  const showBreaksLoadError = breaksLoad.show;
-  const clearBreaksLoadError = breaksLoad.clear;
-  const fetchBreaks = useCallback(async () => {
-    if (!confirmedSession?.id || confirmedSession.checkOutTime) {
-      setCurrentBreaks([]);
-      clearBreaksLoadError();
-      return;
-    }
-    try {
-      const breaks = await timeTrackingService.getSessionBreaks(
-        confirmedSession.id,
-      );
-      setCurrentBreaks(breaks);
-      clearBreaksLoadError();
-    } catch (err) {
-      logger.error("fetch_breaks_failed", {
-        error: err instanceof Error ? err.message : String(err),
-        session_id: confirmedSession?.id,
-      });
-      await showBreaksLoadError(err, {
-        object: "die Liste der Pausen",
-        retry: () => void fetchBreaksRef.current(),
-      });
-    }
-  }, [
-    confirmedSession?.id,
-    confirmedSession?.checkOutTime,
-    showBreaksLoadError,
-    clearBreaksLoadError,
-  ]);
-  const fetchBreaksRef = useRef(fetchBreaks);
-  useLayoutEffect(() => {
-    fetchBreaksRef.current = fetchBreaks;
-  });
-
-  useEffect(() => {
-    // fetchBreaks shows its own failure in place; nothing is left to catch.
-    void fetchBreaks();
-  }, [fetchBreaks]);
+  // The breaks of the open session. A failed reload shows in place, also
+  // next to breaks loaded before.
+  const breaksSessionId =
+    confirmedSession?.id && !confirmedSession.checkOutTime
+      ? confirmedSession.id
+      : null;
+  const breaks = useSWRAuth(
+    breaksSessionId ? tenantListKeys.sessionBreaks(breaksSessionId) : null,
+    () => timeTrackingService.getSessionBreaks(breaksSessionId ?? ""),
+    { keepPreviousData: false, revalidateOnFocus: false },
+  );
+  const { mutate: mutateBreaks } = breaks;
+  const breaksLoadError = useSwrLoadError(
+    breaksSessionId ? breaks.error : undefined,
+    "die Liste der Pausen",
+    () => mutateBreaks(),
+  );
+  const currentBreaks =
+    (breaksSessionId && !currentSession?.checkOutTime && breaks.data) ||
+    NO_BREAKS;
 
   // Weekly and daily minutes for the stamp card. Every block is booked on the
   // Berlin calendar day its minutes actually fall on — a block from 22:00 to
@@ -3755,7 +3735,6 @@ function TimeTrackingContent() {
       });
       return;
     }
-    setCurrentBreaks([]);
     void Promise.all([mutateHistory(), refreshTableData()]);
     toast.success("Sie sind ausgestempelt.");
   }, [
@@ -3785,7 +3764,6 @@ function TimeTrackingContent() {
       );
       if (outcome.status === "discarded") return;
       if (outcome.status === "failed") throw outcome.error;
-      if (pending.action === "check_out") setCurrentBreaks([]);
     } catch (err) {
       logger.error("deviation_reason_submit_failed", {
         error: err instanceof Error ? err.message : String(err),
@@ -3831,9 +3809,9 @@ function TimeTrackingContent() {
         });
         return;
       }
-      await fetchBreaks();
+      await mutateBreaks();
     },
-    [fetchBreaks, showActionError],
+    [mutateBreaks, showActionError],
   );
 
   const handleEndBreak = useCallback(async () => {
@@ -3867,7 +3845,7 @@ function TimeTrackingContent() {
       mutateCurrentSession(),
       mutateHistory(),
       refreshTableData(),
-      fetchBreaks(),
+      mutateBreaks(),
     ]);
     // The break ended, but the page could not reload: say so instead of
     // leaving the old running break on screen without explanation.
@@ -3886,7 +3864,7 @@ function TimeTrackingContent() {
     mutateCurrentSession,
     mutateHistory,
     refreshTableData,
-    fetchBreaks,
+    mutateBreaks,
     showActionError,
   ]);
 
@@ -4251,12 +4229,12 @@ function TimeTrackingContent() {
           50/50 nebeneinander. Drunter eine Placeholder-Section für den
           Urlaubs-Workflow (kommt in eigenem Chat). */}
       {currentLoad.error ||
-      breaksLoad.error ||
+      breaksLoadError ||
       absencesLoad.error ||
       profileLoad.error ? (
         <div className="space-y-3">
           <LoadErrorAlert error={currentLoad.error} />
-          <LoadErrorAlert error={breaksLoad.error} />
+          <LoadErrorAlert error={breaksLoadError} />
           <LoadErrorAlert error={absencesLoad.error} />
           <LoadErrorAlert error={profileLoad.error} />
         </div>

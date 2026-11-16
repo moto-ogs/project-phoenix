@@ -13,7 +13,19 @@ import { deferred } from "~/test/helpers/form-modal-pending";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 
+import { SWRConfig } from "~/lib/swr/testing";
+
 import MealPlanPage from "./page";
+
+vi.unmock("swr");
+
+function FreshSwrCache({ children }: { children: React.ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
 
 const { getMealPlanWeek, getMealOrders, setDay, rights, features } = vi.hoisted(
   () => ({
@@ -98,6 +110,7 @@ function renderPage() {
     <ToastProvider>
       <MealPlanPage />
     </ToastProvider>,
+    { wrapper: FreshSwrCache },
   );
 }
 

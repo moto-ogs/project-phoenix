@@ -33,7 +33,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import type {
   ContractNotice,
@@ -109,13 +109,16 @@ export function ParentContractNoticePage({
   const refresh = useCallback(async () => {
     await mutate();
   }, [mutate]);
+  const invalidateFamily = useInvalidateFamily();
   const declared = useCallback(
     (next: ContractNoticeOptions) => {
       void mutate((current) => current && { ...current, options: next }, {
         revalidate: false,
       });
+      // The documents inbox shows the contract's end too.
+      void invalidateFamily(parentInboxKeys.documents());
     },
-    [mutate],
+    [mutate, invalidateFamily],
   );
 
   const ended = options?.notice ?? null;

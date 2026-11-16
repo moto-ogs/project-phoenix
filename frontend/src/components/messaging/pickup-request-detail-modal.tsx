@@ -7,8 +7,6 @@
  * Hier wird nichts entschieden: eine offene Anfrage verweist auf `Anfragen`.
  */
 
-import { useEffect, useState } from "react";
-
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { formErrorMessage } from "~/components/ui/form-error";
@@ -31,13 +29,12 @@ import {
   fetchCareScheduleChangeRequest,
   type StaffCareRequestDetail,
 } from "~/lib/care-request-review-api";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { formatChatDateTime, formatDate } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { DEPARTURE_MODE_LABELS } from "~/lib/departure-plan";
-
-const logger = createLogger({ component: "PickupRequestDetailModal" });
 
 // Die Historie kennt nur entschiedene Anfragen; hier kommt der offene Status
 // dazu, mit demselben Wort wie in der Arbeitsliste.
@@ -76,6 +73,19 @@ type LoadState =
   | { readonly kind: "forbidden" }
   | { readonly kind: "failed" };
 
+/**
+ * Eine entfernte Anfrage und fehlende Rechte sind kein Ladefehler, sondern
+ * ein erklärter Zustand: der Hinweis im Verlauf bleibt (#2517: am Code
+ * erkannt).
+ */
+function explainedState(err: unknown): "gone" | "forbidden" | null {
+  if (!(err instanceof ApiError)) return null;
+  const code = wireErrorCode(err.code);
+  if (code === "care.request_not_found") return "gone";
+  if (code === "general.permission") return "forbidden";
+  return null;
+}
+
 function clockLabel(time: string): string {
   return `${time} Uhr`;
 }
@@ -94,55 +104,29 @@ export function PickupRequestDetailModal({
    */
   onOpenQueue?: () => void;
 }>) {
-  const [state, setState] = useState<LoadState>({ kind: "loading" });
-  // Erhöht sich bei „Wiederholen“ und lädt die Anfrage neu.
-  const [loadAttempt, setLoadAttempt] = useState(0);
+  const { data, error, mutate } = useSWRAuth(
+    requestId ? tenantContactKeys.careRequest(requestId) : null,
+    () => fetchCareScheduleChangeRequest(requestId ?? ""),
+    {
+      keepPreviousData: false,
+      shouldRetryOnError: (err: unknown) => explainedState(err) === null,
+    },
+  );
+  const explained = data === undefined ? explainedState(error) : null;
   // Ein echter Ladefehler steht im Fenster, mit Wiederholen (#2517).
-  const loadError = useApiLoadError();
-  const showLoadError = loadError.show;
-  const clearLoadError = loadError.clear;
-
-  useEffect(() => {
-    if (!requestId) return;
-    let cancelled = false;
-    setState({ kind: "loading" });
-    clearLoadError();
-    fetchCareScheduleChangeRequest(requestId)
-      .then((detail) => {
-        if (!cancelled) setState({ kind: "loaded", detail });
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        // Eine entfernte Anfrage ist kein Fehler, sondern ein erklärter
-        // Zustand: der Hinweis im Verlauf bleibt (#2517: am Code erkannt).
-        if (
-          err instanceof ApiError &&
-          wireErrorCode(err.code) === "care.request_not_found"
-        ) {
-          setState({ kind: "gone" });
-          return;
-        }
-        if (
-          err instanceof ApiError &&
-          wireErrorCode(err.code) === "general.permission"
-        ) {
-          setState({ kind: "forbidden" });
-          return;
-        }
-        logger.error("pickup_request_detail_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-          request_id: requestId,
-        });
-        setState({ kind: "failed" });
-        void showLoadError(err, {
-          object: "die Anfrage",
-          retry: () => setLoadAttempt((attempt) => attempt + 1),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [requestId, loadAttempt, showLoadError, clearLoadError]);
+  const loadError = useSwrResourceLoadError(
+    [{ data, error: explained ? undefined : error }],
+    "die Anfrage",
+    () => mutate(),
+  );
+  const state: LoadState =
+    data !== undefined
+      ? { kind: "loaded", detail: data }
+      : explained
+        ? { kind: explained }
+        : loadError.failure !== undefined
+          ? { kind: "failed" }
+          : { kind: "loading" };
 
   const pending = state.kind === "loaded" && state.detail.status === "pending";
 

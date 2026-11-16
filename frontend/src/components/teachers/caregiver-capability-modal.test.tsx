@@ -1,7 +1,32 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ChangeEvent, ReactNode } from "react";
+import {
+  fireEvent,
+  render as renderRaw,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
+import type { ChangeEvent, ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache and a signed-in session per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{ user: { id: "1", scope: "tenant" }, expires: "2099-01-01" }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+
+const render = (ui: ReactElement) => renderRaw(ui, { wrapper: Providers });
 import { catalogText } from "~/test/error-catalog-text";
 import { CaregiverCapabilityModal } from "./caregiver-capability-modal";
 

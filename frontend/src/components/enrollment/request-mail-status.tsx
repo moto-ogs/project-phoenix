@@ -1,10 +1,9 @@
 "use client";
 
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback } from "react";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import {
   CHECK_ADDRESS_AT_GUARDIAN,
   GUARDIAN_STOPPED_COPY,
@@ -15,9 +14,9 @@ import {
   getAdminRequestMails,
 } from "~/lib/enrollment-admin-api";
 import { formatBerlinDate, formatTime } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
-
-const logger = createLogger({ component: "RequestMailStatus" });
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 
 const REQUEST_MAIL_LABELS: Record<string, string> = {
   enrollment_submitted: "Eingangsbestätigung",
@@ -36,35 +35,23 @@ const REQUEST_MAIL_LABELS: Record<string, string> = {
 // A request can come before any child exists at the school.
 const CHECK_REQUEST_ADDRESS = `Ist das Kind schon aufgenommen: ${CHECK_ADDRESS_AT_GUARDIAN}`;
 
-// What became of the mails to the family (#5934).
+const NO_MAILS: AdminRequestMail[] = [];
+
+// What became of the mails to the family (#5934). Polls every 15 s while the
+// tab is visible (SWR skips hidden tabs).
 export function useRequestMails(requestId: string) {
-  const [mails, setMails] = useState<AdminRequestMail[]>([]);
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
-  const refresh = useCallback(async () => {
-    try {
-      setMails(await getAdminRequestMails(requestId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("enrollment_request_mails_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showLoadError(err, {
-        object: "der Stand der E-Mails",
-        retry: () => void refresh(),
-      });
-    }
-  }, [requestId, showLoadError, clearLoadError]);
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, 15_000);
-    return () => clearInterval(timer);
-  }, [refresh]);
-  return { mails, loadError: load.error, refresh };
+  const { data, error, mutate } = useSWRAuth(
+    enrollmentKeys.requestMails(requestId),
+    () => getAdminRequestMails(requestId),
+    { keepPreviousData: false, refreshInterval: 15_000 },
+  );
+  const load = useSwrResourceLoadError(
+    [{ data, error }],
+    "der Stand der E-Mails",
+    () => mutate(),
+  );
+  const refresh = useCallback(() => mutate(), [mutate]);
+  return { mails: data ?? NO_MAILS, loadError: load.error, refresh };
 }
 
 /**

@@ -11,10 +11,11 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import type {
   GradeTransition,
@@ -24,6 +25,13 @@ import { catalogText } from "~/test/error-catalog-text";
 import { deferred } from "~/test/helpers/form-modal-pending";
 
 vi.mock("vaul", () => import("~/test/mocks/vaul"));
+vi.unmock("swr");
+
+const session = {
+  data: { user: { id: "1", tenantId: 1, scope: "tenant" } },
+  status: "authenticated",
+};
+vi.mock("next-auth/react", () => ({ useSession: () => session }));
 
 const { api } = vi.hoisted(() => ({
   api: {
@@ -66,8 +74,16 @@ const alma: TransitionHistoryEntry = {
   studentState: "alumnus",
 };
 
+function Providers({ children }: { readonly children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>{children}</ToastProvider>
+    </SWRConfig>
+  );
+}
+
 function render(ui: ReactElement) {
-  return rtlRender(ui, { wrapper: ToastProvider });
+  return rtlRender(ui, { wrapper: Providers });
 }
 
 function renderModal() {

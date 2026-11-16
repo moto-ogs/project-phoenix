@@ -61,7 +61,6 @@ import {
 import type { EnrollmentAnswerFilter } from "~/lib/student-helpers";
 import { answerQuestionLabel } from "~/lib/school-search";
 import { hasPermission } from "~/lib/auth-utils";
-import { createLogger } from "~/lib/logger";
 import type { Student } from "~/lib/student-helpers";
 import type { Group, Room } from "~/lib/api";
 import { Button } from "~/components/ui/button";
@@ -185,6 +184,7 @@ import {
 } from "~/lib/tenant-context";
 import { useSWRAuth, useImmutableSWR } from "~/lib/swr";
 import { normalizeSearchStudentsGroupId } from "~/lib/swr/search-students-key";
+import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 import {
   encodeMultiValueParam,
   normalizeMultiValues,
@@ -337,7 +337,25 @@ const FILTER_QUERY_PARAMS = [
 
 const SEARCH_QUERY_PARAM = "search";
 
-const studentSearchLogger = createLogger({ component: "StudentSearchPage" });
+const NO_ENROLLMENT_ANSWER_QUESTIONS: readonly EnrollmentAnswerFilter[] = [];
+
+/**
+ * Whether the server lets this account filter by registration answers. Any
+ * failure other than a refusal says nothing about the access: an active
+ * filter keeps working and its chip; only the choice lacks its questions.
+ */
+function enrollmentAnswerAccessOf(
+  sessionLoading: boolean,
+  mayAsk: boolean,
+  options: { data?: unknown; error?: unknown },
+): "pending" | "granted" | "denied" {
+  if (sessionLoading) return "pending";
+  if (!mayAsk) return "denied";
+  if (options.data !== undefined) return "granted";
+  if (options.error instanceof ApiError && options.error.status === 403)
+    return "denied";
+  return options.error ? "granted" : "pending";
+}
 
 type FilterQueryParam = (typeof FILTER_QUERY_PARAMS)[number];
 type PersistedSearchFilters = Partial<Record<FilterQueryParam, string>>;
@@ -1594,45 +1612,22 @@ function SearchPageContent() {
   // the server granted it, and a refused (403) account loses a filter from a
   // saved link or state instead of a whole list refused for it.
   const mayAskEnrollmentAnswers = hasPermission(session, "users:read");
-  const [enrollmentAnswerAccess, setEnrollmentAnswerAccess] = useState<
-    "pending" | "granted" | "denied"
-  >("pending");
-  const [enrollmentAnswerQuestions, setEnrollmentAnswerQuestions] = useState<
-    readonly EnrollmentAnswerFilter[]
-  >([]);
-  useEffect(() => {
-    // A session that is still loading names no permissions yet: deciding now
-    // would refuse the account and drop its saved filter.
-    if (status === "loading") return;
-    if (!mayAskEnrollmentAnswers) {
-      setEnrollmentAnswerAccess("denied");
-      return;
-    }
-    let cancelled = false;
-    fetchEnrollmentAnswerFilters()
-      .then((questions) => {
-        if (cancelled) return;
-        setEnrollmentAnswerQuestions(questions);
-        setEnrollmentAnswerAccess("granted");
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        if (error instanceof ApiError && error.status === 403) {
-          setEnrollmentAnswerAccess("denied");
-          return;
-        }
-        // Any other failure says nothing about the access: an active filter
-        // keeps working and its chip; only the choice lacks its questions.
-        // The log names no child and no answer.
-        setEnrollmentAnswerAccess("granted");
-        studentSearchLogger.warn("enrollment_answer_filters_load_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [mayAskEnrollmentAnswers, status]);
+  // A session that is still loading names no permissions yet: deciding now
+  // would refuse the account and drop its saved filter.
+  const enrollmentAnswerFilters = useSWRAuth(
+    status !== "loading" && mayAskEnrollmentAnswers
+      ? tenantListKeys.enrollmentAnswerFilters()
+      : null,
+    fetchEnrollmentAnswerFilters,
+  );
+  const enrollmentAnswerAccess = enrollmentAnswerAccessOf(
+    status === "loading",
+    mayAskEnrollmentAnswers,
+    enrollmentAnswerFilters,
+  );
+  const enrollmentAnswerQuestions: readonly EnrollmentAnswerFilter[] =
+    (enrollmentAnswerAccess === "granted" && enrollmentAnswerFilters.data) ||
+    NO_ENROLLMENT_ANSWER_QUESTIONS;
   const effectiveEnrollmentAnswer =
     enrollmentAnswerAccess === "granted" ? enrollmentAnswerFilter : "";
   // A saved filter waits for the server's answer. Loaded before it, the list

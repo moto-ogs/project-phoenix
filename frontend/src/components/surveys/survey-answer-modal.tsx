@@ -55,7 +55,7 @@ export function SurveyAnswerModal({
         load={load}
         submit={submit}
         respondent="staff"
-        reloadKey={survey.id}
+        formId={survey.id}
         onBusyChange={setBusy}
         onSubmitted={onSubmitted}
       />

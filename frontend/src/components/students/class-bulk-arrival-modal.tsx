@@ -9,14 +9,13 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { SegmentedControl } from "~/components/ui/segmented-control";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { ClassArrivalExceptionPanel } from "./class-arrival-exception-panel";
 import type { Student } from "~/lib/student-helpers";
 import { createLogger } from "~/lib/logger";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
   type ArrivalScheduleInput,
   type BulkArrivalFilter,
@@ -69,6 +68,8 @@ const DAY_CODES: Record<number, string> = {
   5: "fri",
 };
 
+const NO_SCHOOL_PERIODS: readonly SchoolPeriod[] = [];
+
 function childCountLabel(count: number): string {
   return count === 1 ? "1 Kind" : `${count} Kinder`;
 }
@@ -105,23 +106,31 @@ export function FilteredBulkArrivalModal({
   const clearFormErrors = formErrors.clear;
   // „Wiederholen“ speichert den aktuellen Entwurf, nicht den vom Fehler.
   const latestSubmitRef = useRef<() => Promise<void>>(async () => undefined);
-  const classTimesLoad = useApiLoadError();
-  const { show: showClassTimesError, clear: clearClassTimesError } =
-    classTimesLoad;
   const [
     arrivalExceptionConfirmationOpen,
     setArrivalExceptionConfirmationOpen,
   ] = useState(false);
   const [lastChanged, setLastChanged] = useState<string | null>(null);
-  const [classTimesLoading, setClassTimesLoading] = useState(false);
-  const [classTimesError, setClassTimesError] = useState(false);
-  const [classTimesLoadAttempt, setClassTimesLoadAttempt] = useState(0);
-  const [collisionCount, setCollisionCount] = useState(0);
+  // Bewusst still: der Hinweis auf eigene Ankunftszeiten ist nur eine
+  // Zusatzinfo, das Speichern hängt nicht davon ab.
+  const collisionStudentIds = useMemo(
+    () => studentsInFilter.map(({ id }) => id),
+    [studentsInFilter],
+  );
+  const { data: collisionCount = 0 } = useSWRAuth(
+    isOpen
+      ? tenantStudentKeys.arrivalScheduleCollisions(collisionStudentIds)
+      : null,
+    () => fetchBulkArrivalScheduleStatus(collisionStudentIds),
+    { keepPreviousData: false },
+  );
   // Lessons a time can be picked by (#3372). The modal works without them, so
   // a failed read only leaves the choice out.
-  const [schoolPeriods, setSchoolPeriods] = useState<readonly SchoolPeriod[]>(
-    [],
+  const { data: arrivalSettings } = useSWRAuth(
+    isOpen ? tenantStudentKeys.arrivalSettings() : null,
+    fetchArrivalSettings,
   );
+  const schoolPeriods = arrivalSettings?.schoolPeriods ?? NO_SCHOOL_PERIODS;
   const [view, setView] = useState<ClassArrivalView>("weekly");
   // A school class sets the class timetable once for everyone (#2414); a group
   // is not a class, so there it still sets a time per child.
@@ -133,98 +142,56 @@ export function FilteredBulkArrivalModal({
   const schoolClass =
     filter.type === "school_class" ? filter.schoolClass : null;
 
+  const classTimes = useSWRAuth(
+    isOpen && schoolClass
+      ? tenantStudentKeys.classArrivalTimes(schoolClass)
+      : null,
+    () => fetchClassArrivalTimes(schoolClass ?? ""),
+    { keepPreviousData: false },
+  );
+  const classTimesLoad = useSwrResourceLoadError(
+    [classTimes],
+    "die Klassenzeit",
+    () => classTimes.mutate(),
+  );
+  // The class the draft was filled from in this opening; null = not yet.
+  const [seededClass, setSeededClass] = useState<string | null>(null);
+  const classTimesError = classTimesLoad.failure !== undefined;
+  const classTimesLoading =
+    schoolClass !== null && seededClass !== schoolClass && !classTimesError;
+
   useEffect(() => {
-    if (!isOpen) return;
-    setDraft(initialDraft());
-    setLastChanged(null);
-    setClassTimesError(false);
-    clearClassTimesError();
-    setView("weekly");
-    if (!schoolClass) {
-      setClassTimesLoading(false);
+    if (!isOpen) {
+      setSeededClass(null);
       return;
     }
-
     setDraft(initialDraft());
-    setClassTimesLoading(true);
-    let cancelled = false;
+    setLastChanged(null);
+    setView("weekly");
+  }, [isOpen, schoolClass]);
 
-    const load = async () => {
-      try {
-        const current = await fetchClassArrivalTimes(schoolClass);
-        if (cancelled) return;
-        const next = initialDraft();
-        for (const day of WEEKDAYS) {
-          next[day.value] = current.times[DAY_CODES[day.value] ?? ""] ?? "";
-        }
-        setDraft(next);
-        setLastChanged(current.updated_at ?? null);
-      } catch (err) {
-        if (cancelled) return;
-        logger.warn("class_arrival_times_fetch_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setClassTimesError(true);
-        await showClassTimesError(err, {
-          object: "die Klassenzeit",
-          retry: () => setClassTimesLoadAttempt((attempt) => attempt + 1),
-        });
-      } finally {
-        if (!cancelled) setClassTimesLoading(false);
-      }
-    };
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isOpen,
-    schoolClass,
-    classTimesLoadAttempt,
-    clearClassTimesError,
-    showClassTimesError,
-  ]);
-
+  // Fill the draft once per opening, from an answer read in this opening
+  // (not while it still revalidates), so later refreshes never replace
+  // what is being typed.
+  const classTimesData = classTimes.data;
+  const classTimesValidating = classTimes.isValidating;
   useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    void fetchBulkArrivalScheduleStatus(studentsInFilter.map(({ id }) => id))
-      .then((count) => {
-        if (!cancelled) setCollisionCount(count);
-      })
-      .catch((err) => {
-        logger.warn("bulk_arrival_schedule_status_fetch_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        // Bewusst still: der Hinweis auf eigene Ankunftszeiten ist nur eine
-        // Zusatzinfo, das Speichern hängt nicht davon ab.
-        if (!cancelled) setCollisionCount(0);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, studentsInFilter]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    void fetchArrivalSettings()
-      .then((settings) => {
-        if (!cancelled) setSchoolPeriods(settings.schoolPeriods);
-      })
-      .catch((err) => {
-        logger.warn("school_periods_fetch_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        // Bewusst still: ohne Schulstunden fehlt nur die Auswahl nach
-        // Stunde, die Uhrzeit lässt sich weiter eintippen.
-        if (!cancelled) setSchoolPeriods([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen]);
+    if (
+      !isOpen ||
+      !schoolClass ||
+      seededClass === schoolClass ||
+      !classTimesData ||
+      classTimesValidating
+    )
+      return;
+    const next = initialDraft();
+    for (const day of WEEKDAYS) {
+      next[day.value] = classTimesData.times[DAY_CODES[day.value] ?? ""] ?? "";
+    }
+    setDraft(next);
+    setLastChanged(classTimesData.updated_at ?? null);
+    setSeededClass(schoolClass);
+  }, [isOpen, schoolClass, seededClass, classTimesData, classTimesValidating]);
 
   const targetTitle =
     filter.type === "school_class"
@@ -285,7 +252,10 @@ export function FilteredBulkArrivalModal({
             : `Die Ankunftszeiten für ${childCountLabel(studentsInFilter.length)} aus ${targetTitle} sind gespeichert.`,
         );
         onSuccess?.();
-        if (op.isCurrent()) onClose();
+        if (op.isCurrent()) {
+          if (isClassTimetable) void classTimes.mutate();
+          onClose();
+        }
       } catch (err) {
         logger.error("failed to bulk upsert arrival schedules", {
           filter_type: filter.type,

@@ -1,13 +1,38 @@
 import {
   act,
   fireEvent,
-  render,
+  render as renderComponent,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
+import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+// Reads of the phase and its requests run through real SWR under a staff
+// session, a fresh cache per render.
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
+const render = (ui: ReactElement) =>
+  renderComponent(ui, { wrapper: Providers });
 
 const mocks = vi.hoisted(() => ({
   decideAdminChild: vi.fn(),
@@ -58,13 +83,21 @@ vi.mock("~/lib/enrollment-report-api", async (importOriginal) => {
   };
 });
 
-vi.mock("~/lib/swr", () => ({
-  useSWRAuth: () => ({
-    data: ["1a", "2b"],
-    error: undefined,
-    isLoading: false,
-  }),
-}));
+// The school classes keep their fixture; every other key reads for real.
+vi.mock("~/lib/swr", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/swr")>();
+  return {
+    ...actual,
+    useSWRAuth: ((
+      key: string | null,
+      fetcher: () => Promise<unknown>,
+      options?: Parameters<typeof actual.useSWRAuth>[2],
+    ) =>
+      key === "enrollment-phase-school-classes"
+        ? { data: ["1a", "2b"], error: undefined, isLoading: false }
+        : actual.useSWRAuth(key, fetcher, options)) as typeof actual.useSWRAuth,
+  };
+});
 
 vi.mock("~/lib/tenant-context", () => ({
   useCareOfferingsEnabled: mocks.useCareOfferingsEnabled,

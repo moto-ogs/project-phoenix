@@ -315,14 +315,14 @@ const ROW_ACTION_BASELINE = new Map(
       "aus Zielen entfernen@785",
     ],
     "src/app/[tenant]/(protected)/meal-plan/page.tsx": [
-      "Gericht entfernen@891",
+      "Gericht entfernen@877",
     ],
     "src/app/[tenant]/(protected)/parent-announcements/page.tsx": [
       "Antwort entfernen@1687",
       "Entfernen@2103",
     ],
     "src/components/enrollment/care-offerings-editor.tsx": [
-      "Bedingung löschen@2036",
+      "Bedingung löschen@1994",
     ],
     "src/components/guardians/guardian-form-modal.tsx": [
       "Entfernen@596",
@@ -334,7 +334,7 @@ const ROW_ACTION_BASELINE = new Map(
     ],
     "src/components/students/companion-picker.tsx": ["entfernen@297"],
     "src/components/students/student-create-modal.tsx": [
-      "Erziehungsberechtigte/n entfernen@818",
+      "Erziehungsberechtigte/n entfernen@793",
     ],
     "src/components/timetable/substitution-slide-over.tsx": [
       "Rückgängig Entfernen@810",
@@ -1604,7 +1604,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Schuljahreswechsel bearbeiten Neuer Schuljahreswechsel@274",
     ],
     "src/components/enrollment/care-offerings-editor.tsx": [
-      "Betreuungsangebot duplizieren new Neues Betreuungsangebot Betreuungsangebot bearbeiten@1011",
+      "Betreuungsangebot duplizieren new Neues Betreuungsangebot Betreuungsangebot bearbeiten@969",
     ],
     "src/components/enrollment/phases-editor.tsx": [
       "Anmeldephase übertragen new Neue Anmeldephase Anmeldephase bearbeiten@1036",
@@ -1626,7 +1626,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
     // Betreuung): keine Feldgruppe des Datensatzes, aus dem Kebab der
     // Personalakte geöffnet (#3116).
     "src/components/auth/mfa-admin-override-modal.tsx": [
-      "Zwei-Faktor-Authentifizierung verwalten@379",
+      "Zwei-Faktor-Authentifizierung verwalten@328",
     ],
     "src/components/teachers/caregiver-capability-modal.tsx": [
       "resolve Zuordnungen auflösen: Betreuung verwalten:@337",

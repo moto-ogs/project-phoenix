@@ -2,14 +2,27 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ParentSettingsPage from "./page";
+import type { ReactNode } from "react";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 
-// The shared error path shows failures through the toast provider (#2517).
+vi.unmock("swr");
+
+// Real SWR and a parent session; the shared error path shows failures
+// through the toast provider (#2517).
+function Providers({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <ParentResourceTestProvider>
+      <ToastProvider>{children}</ToastProvider>
+    </ParentResourceTestProvider>
+  );
+}
+
 function renderWithToast(
   ui: Parameters<typeof render>[0],
   options?: Parameters<typeof render>[1],
 ) {
-  return render(ui, { wrapper: ToastProvider, ...options });
+  return render(ui, { wrapper: Providers, ...options });
 }
 
 let mockSearch = "";
