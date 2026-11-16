@@ -666,3 +666,27 @@ func TestCatererAcceptanceKeepsTheCountWhenTheAuditFails(t *testing.T) {
 	require.NoError(t, db.NewRaw(`SELECT password_attempts FROM auth.accounts WHERE id = ?`, acceptance.AccountID).Scan(context.Background(), &attempts))
 	assert.Equal(t, 1, attempts, "the wrong password stays counted")
 }
+
+// #4496: an inactive caterer account is refused after its correct password,
+// as at the sign-in, and does not get the inviting school.
+func TestInactiveCatererCannotAcceptAnotherSchool(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	caterers := setupAuthFactory(t, db).Caterers()
+	first := testpkg.Tenant(t)
+	second, _ := testpkg.CreateTestTenant(t, db)
+	staff := testpkg.CreateTestAccount(t, db, "caterer-accept-inactive")
+	email := fmt.Sprintf("kueche-inaktiv-%d@example.com", time.Now().UnixNano())
+	acceptance, err := accept(t, db, caterers, first, invite(t, db, caterers, first, staff.ID, email), identityaccess.CatererRegistration{Password: catererPassword, ConfirmPassword: catererPassword})
+	require.NoError(t, err)
+	forgetCaterer(t, db, acceptance)
+	secondToken := invite(t, db, caterers, second, staff.ID, email)
+	_, err = db.NewRaw(`UPDATE auth.accounts SET active = FALSE WHERE id = ?`, acceptance.AccountID).Exec(context.Background())
+	require.NoError(t, err)
+
+	_, err = accept(t, db, caterers, second, secondToken, identityaccess.CatererRegistration{Password: catererPassword})
+	require.ErrorIs(t, err, identityaccess.ErrAccountInactive)
+	_, schools, err := caterers.CatererSchools(context.Background(), acceptance.AccountID)
+	require.NoError(t, err)
+	assert.Equal(t, []int64{first}, schools, "the inactive caterer did not get the second school")
+}
