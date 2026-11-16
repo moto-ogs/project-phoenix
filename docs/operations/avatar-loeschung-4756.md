@@ -60,8 +60,18 @@ für das produktive System.
 Produktions- oder Staging-Zugriffe ausgeführt. Die Befehle verwenden die bereits
 bereitgestellte Compose-Konfiguration in `~/production/`, keine API und kein SSH.
 Die drei SQL-Dateien aus `docs/operations/sql/` dieses geprüften Releases müssen
-lokal auf dem Server bereitliegen: aus dem ausgerollten Release-Verzeichnis
-übernehmen oder aus dem Repo-Stand genau dieser Version per `scp` übertragen.
+lokal auf dem Server bereitliegen. Das Deployment überträgt nur `.env`, Compose-Datei
+und Skripte, kein `docs/`. Deshalb auf dem Server
+`mkdir -p ~/production/docs/operations/sql` ausführen und die Dateien aus einem
+Checkout genau des ausgerollten Release-Tags per `scp` dorthin übertragen:
+
+```bash
+scp docs/operations/sql/avatar-referenzen-4756.sql \
+  docs/operations/sql/avatar-waisen-eintragen-4756.sql \
+  docs/operations/sql/avatar-waisen-status-4756.sql \
+  root@<server>:~/production/docs/operations/sql/
+```
+
 Nicht die `.env` ausgeben oder verändern.
 
 Geprüfter Speicherort: `environments/production.compose.yml` bindet das Volume
