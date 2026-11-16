@@ -66,7 +66,7 @@ func BuildParentPortal(
 	if err != nil {
 		return nil, fmt.Errorf("compose parent portal children: %w", err)
 	}
-	wishProofs, _ := enrollmentCompose.NewHolidayWishes(env.HealthData)
+	wishProofs, _ := enrollmentCompose.NewHolidayWishes(env.HealthData, env.Now)
 	return parentportalcompose.New(parentportalcompose.Dependencies{
 		GuardianChanges: ParentGuardianChanges(),
 		Signatures:      ParentDeclarationSignatures{Ledger: SignatureLedger()},
@@ -100,7 +100,7 @@ func BuildParentPortal(
 		Memberships: NewParentSchoolMembershipLock(db), InvitationAccounts: NewParentInvitationAccountLock(db), GuardianInvites: NewParentGuardianAccess(identity), GuardianInvitations: NewGuardianInvitationReads(identity), InvalidateInvites: NewGuardianInvitationInvalidation(db, env.Now),
 		StudentGuardianRepo: NewParentStudentGuardianReads(people.StudentGuardians), GuardianPhoneRepo: NewParentGuardianPhoneReads(peopleCompose.NewGuardianPhoneNumberRepository(db.Pool())),
 		StudentConsents: NewParentStudentConsents(services.StudentConsents), StudentPhotos: photos, ChildDataAccess: NewParentChildDataAccess(audit.Persistence.DataAccessLog),
-		HolidayWishes: NewParentHolidayWishes(wishProofs), HolidayAnnouncements: NewParentHolidayAnnouncements(), HolidayRegistrations: NewParentHolidayRegistrations(organizations), HolidayAccountProofs: NewParentHolidayAccountProofs(env.HealthData),
+		HolidayWishes: NewParentHolidayWishes(wishProofs), HolidayAnnouncements: NewParentHolidayAnnouncements(), HolidayRegistrations: NewParentHolidayRegistrations(organizations), HolidayAccountProofs: NewParentHolidayAccountProofs(env.HealthData, env.Now),
 		AbsenceNotifier: bindParentAbsenceNotifier(notifications.AbsenceNotifier), CarePeriods: parentportal.NewCarePeriodReads(enrollment.ParentCarePeriods.CarePeriods),
 		OfferingHistory: parentportal.NewOfferingHistoryReads(enrollment.ParentOfferingHistory.OfferingHistory), CareOfferingRepo: NewParentCareOfferingReads(notices.CareOfferings),
 		OfferingChanges: NewParentOfferingChangeRequests(requests.OfferingChanges), Logger: env.Logger.With("service", "parent"), Now: env.Now,

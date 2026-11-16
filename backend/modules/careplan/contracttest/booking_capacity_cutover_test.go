@@ -3,6 +3,7 @@ package contracttest_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	api "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -18,7 +19,7 @@ func TestBookingCapacityCutoverPreservesBoundariesAndTenantIsolation(t *testing.
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	bookings := carePlanTest.NewOfferingBookings()
-	projection := api.NewEnrollmentBookings(nil)
+	projection := api.NewEnrollmentBookings(time.Now)
 	type school struct {
 		ctx                               context.Context
 		phaseID, offeringID, firstChildID int64

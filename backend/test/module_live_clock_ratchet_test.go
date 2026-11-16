@@ -121,7 +121,6 @@ var moduleLiveClockBudget = map[string]int{
 // slices of #7104 (110 references in 28 owners, ADR 0271); a mismatch prints
 // the measured values.
 var moduleLiveClockValueBudget = map[string]int{
-	"modules/carecontract":         1,
 	"modules/careplan":             16,
 	"modules/classday":             2,
 	"modules/communication":        6,
@@ -129,11 +128,8 @@ var moduleLiveClockValueBudget = map[string]int{
 	"modules/delivery":             5,
 	"modules/devicefleet":          1,
 	"modules/emergencysnapshot":    1,
-	"modules/enrollment":           24,
 	"modules/filestorage":          1,
-	"modules/identityaccess":       1,
 	"modules/organizationtenancy":  3,
-	"modules/parentbilling":        5,
 	"modules/peopledirectory":      3,
 	"modules/planexport":           1,
 	"modules/presenceprojection":   1,

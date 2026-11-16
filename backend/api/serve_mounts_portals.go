@@ -175,6 +175,7 @@ func newOperatorRouter(
 		mergeRoutes,
 		newSampleChildrenRoute(provisioning, students),
 		newDemoPresenceHistoryRoute(db, viper.GetString("app_env")),
+		now,
 	), nil
 }
 
@@ -200,7 +201,7 @@ func newParentResource(
 		),
 		GuardianProfileLoader: newParentGuardianProfiles(guardianProfiles),
 		Schools:               parentSchoolDirectory{schools: organizations},
-		HolidayLinks:          newParentHolidayRegistrationLinks(organizations, delivery, healthData, traegerSettings, logger),
+		HolidayLinks:          newParentHolidayRegistrationLinks(organizations, delivery, healthData, traegerSettings, logger, now),
 		Push:                  bindParentPushSubscriptions(devices.PushSubscriptions),
 		Preferences:           bindParentPreferences(notifications.Preferences),
 		Feed:                  bindParentNotificationFeed(notifications.GuardianFeed),

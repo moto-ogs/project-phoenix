@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -113,11 +114,11 @@ func traegerCatalogContractTemplates(intake carecontract.Intake) ports.ContractT
 // over the same ports as their own Träger routes.
 func newTraegerCatalogBilling(organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings TraegerSchoolSettings,
 	marks owners.MealAttendanceMarks, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog owners.DataAccessAppender,
-	holidays carecontract.SchoolHolidays, parentsURL string, today func() calendar.Date,
+	holidays carecontract.SchoolHolidays, parentsURL string, today func() calendar.Date, now func() time.Time,
 ) (parentbilling.CareModulePrices, carecontract.Intake) {
 	contracts := parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}
 	billing, _ := parentBillingCompose.NewCareBilling(contracts, parentBillingCareSchools{organizations: organizations},
-		parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks), newParentBillingLetterheads(settings), today)
+		parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks), newParentBillingLetterheads(settings), today, now)
 	_, intakePorts := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL)
 	return billing, careContractCompose.NewIntake(intakePorts, today)
 }

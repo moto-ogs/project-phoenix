@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,9 +51,10 @@ func setupFamilyChildren(t *testing.T, asks bool) familyChildrenEnv {
 	reposCare := api.NewEnrollmentCarePlanRows(testpkg.NewDatabase(t, env.db))
 	reposSchools := api.NewOrganizationTestRows(testpkg.NewDatabase(t, env.db))
 	intake := owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
+		Now:      time.Now,
 		Requests: repos.Enrollment(), Children: repos.Enrollment(), Guardians: repos.Enrollment(),
 		CareOfferingRepo: enrollmentCompose.NewCareOfferingRecords(reposCare.CarePlan),
-		Capacity:         owners.NewEnrollmentOfferingCapacity(enrollmentCompose.NewCareOfferingRecords(reposCare.CarePlan), repos.Enrollment(), settings, nil),
+		Capacity:         owners.NewEnrollmentOfferingCapacity(enrollmentCompose.NewCareOfferingRecords(reposCare.CarePlan), repos.Enrollment(), settings, calendar.TodayDate),
 		Catalog:          repos.Enrollment(), SchoolRepo: capabilitySchools{schools: reposSchools.School},
 		Notifications: NewTestNotifications(repos.Enrollment(), notifyModeSettings{settings: settings}, discardingOutbox{}, capabilitySchools{schools: reposSchools.School}),
 		RateLimitRepo: repos.Enrollment(), OutboxEnqueuer: discardingOutbox{}, Settings: settings,
@@ -60,7 +62,7 @@ func setupFamilyChildren(t *testing.T, asks bool) familyChildrenEnv {
 		FamilyChildrenPurpose: familyChildrenPurpose{asks: asks},
 	})
 	resource := enrollmentAPI.NewResource(nil, nil, newFixtureRequestRoot(intake), nil, nil, nil, nil, nil, nil, nil, nil, nil,
-		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation})
+		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, time.Now)
 	resource.FamilyChildren = intake
 	env.router = testpkg.TenantRuntimeMiddleware(t, env.db)(resource.Router(api.TenantSessionChain))
 

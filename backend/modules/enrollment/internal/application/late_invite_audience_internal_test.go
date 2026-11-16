@@ -46,6 +46,7 @@ func linkedParentsPhaseOpenWindow() *enrollmentNative.Phase {
 
 func audienceTestService(invite *enrollmentNative.LateInvite, inviteErr error, phase *enrollmentNative.Phase) *Intake {
 	return NewIntake(IntakeDependencies{
+		Now:         time.Now,
 		Settings:    intakeSettingsFake{enrollmentEnabled: true},
 		Catalog:     stubAudiencePhaseRepo{phase: phase},
 		LateInvites: stubAudienceLateInviteRepo{invite: invite, err: inviteErr},

@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
@@ -27,8 +28,8 @@ func TestEnrollmentExportsPositiveGrowthQueryBudget(t *testing.T) {
 	env := f.env
 	ctx := testpkg.Ctx(t)
 	audit := owners.NewTestAuditPersistence(testpkg.NewDatabase(t, env.db), nil).DataAccessLog
-	f.resource.DecisionService = newTestDecisionService(compose.DecisionDependencies{Requests: env.repos.Enrollment(), Children: env.repos.Enrollment(), Guardians: env.repos.Enrollment(), Phases: env.repos.Enrollment(), Schemas: env.repos.Enrollment(), Offerings: compose.NewCareOfferingRecords(env.reposCare.CarePlan), People: owners.EnrollmentDecisionPeopleDirectory(nil, nil, env.repos.Student, nil, nil, nil, nil), AccessLog: owners.EnrollmentDecisionAccessLog(audit)}, f.settings.Settings)
-	f.resource.ReportService = owners.NewEnrollmentReports(owners.EnrollmentReportSources{Owner: env.repos.Enrollment(), Offerings: compose.NewCareOfferingRecords(env.reposCare.CarePlan), AccessLog: audit, Students: env.repos.Student, Persons: env.repos.Person, Settings: f.settings.Settings})
+	f.resource.DecisionService = newTestDecisionService(compose.DecisionDependencies{Now: time.Now, Requests: env.repos.Enrollment(), Children: env.repos.Enrollment(), Guardians: env.repos.Enrollment(), Phases: env.repos.Enrollment(), Schemas: env.repos.Enrollment(), Offerings: compose.NewCareOfferingRecords(env.reposCare.CarePlan), People: owners.EnrollmentDecisionPeopleDirectory(nil, nil, env.repos.Student, nil, nil, nil, nil), AccessLog: owners.EnrollmentDecisionAccessLog(audit)}, f.settings.Settings)
+	f.resource.ReportService = owners.NewEnrollmentReports(owners.EnrollmentReportSources{Now: time.Now, Owner: env.repos.Enrollment(), Offerings: compose.NewCareOfferingRecords(env.reposCare.CarePlan), AccessLog: audit, Students: env.repos.Student, Persons: env.repos.Person, Settings: f.settings.Settings})
 	f.resource.ListExportService = lists.NewRenderer().(lists.DocumentRenderer)
 	token := testutil.MintTestJWT(t, sessiontoken.AppClaims{ID: int(env.creatorID), Sub: "export@example.test", Username: "export", TenantID: testpkg.Tenant(t), Roles: []string{"admin"}, Permissions: []string{"config:manage", "users:read"}})
 	router := f.router(t)

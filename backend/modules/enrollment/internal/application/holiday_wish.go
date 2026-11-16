@@ -184,7 +184,7 @@ func NewHolidayWishProofs(store HolidayCareWishStore, cipher enrollment.HolidayH
 		panic("enrollment: the holiday wish proofs need the care wish store and the cipher")
 	}
 	if now == nil {
-		now = time.Now
+		panic("enrollment: the holiday wish proofs need the clock")
 	}
 	return &HolidayWishProofs{store: store, cipher: cipher, now: now}
 }

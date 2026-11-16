@@ -38,6 +38,7 @@ func boundsPhases(t *testing.T, env *decisionTestEnv, lock func(context.Context)
 	pendingWindows, err := owners.ComposePendingWindows(testpkg.NewDatabase(t, env.db))
 	require.NoError(t, err)
 	return enrollmentTest.NewPhases(enrollmentTest.PhaseDependencies{
+		Now:                    time.Now,
 		Records:                api.NewEnrollmentSuiteRepositories(testpkg.NewDatabase(t, env.db)).Enrollment(),
 		Offerings:              phaseOfferings{carePlan: api.NewRepositoryTestFactory(testpkg.NewDatabase(t, env.db)).CarePlan()},
 		LockTemplateRecurrence: lock,

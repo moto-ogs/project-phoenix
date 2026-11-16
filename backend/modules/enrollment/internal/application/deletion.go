@@ -97,7 +97,7 @@ func NewDeletions(deps DeletionDependencies) *Deletions {
 		deps.Logger = slog.Default()
 	}
 	if deps.Now == nil {
-		deps.Now = time.Now
+		panic("enrollment deletions: the clock is required")
 	}
 	return &Deletions{deps: deps}
 }

@@ -185,6 +185,7 @@ func TestClassRosterAppliesStudentLimitAfterParticipationFiltering(t *testing.T)
 		})
 	}
 	svc := NewReports(ReportDependencies{
+		Now:               enrollmentTestClock,
 		Students:          &fakeClassRosterStudentRepo{students: students},
 		CareParticipation: participating,
 	})
@@ -284,7 +285,7 @@ func TestReportServiceClassRosterGroupNamesLoadsUniqueGroups(t *testing.T) {
 		groupID:      "Klasse 2a",
 		otherGroupID: "Klasse 3b",
 	}}
-	svc := NewReports(ReportDependencies{Groups: repo, Persons: &fakeClassRosterPersonRepo{}})
+	svc := NewReports(ReportDependencies{Now: enrollmentTestClock, Groups: repo, Persons: &fakeClassRosterPersonRepo{}})
 	in := &classRosterInputs{students: []*RosterStudent{
 		{GroupID: &groupID},
 		{GroupID: &groupID},

@@ -20,7 +20,7 @@ import (
 // counts in and deletes through, over db and without observation, as the
 // workflow composition did before (#4004, ADR 0059 point 6), with the
 // ambient-transaction audit command and the Audit owner's deletion records;
-// now is Enrollment's root clock (ADR 0265), nil the real one.
+// now is Enrollment's root clock (ADR 0265) and required.
 func NewStudentDeletionOwners(db transactionruntime.Database, now func() time.Time) (studentdeletioncompose.Owners, error) {
 	presence, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: func(presenceCompose.Observation) {}})
 	if err != nil {

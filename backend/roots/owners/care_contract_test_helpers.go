@@ -5,6 +5,7 @@ package owners
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
@@ -78,7 +79,7 @@ func NewParentContractSigningForTests(mails *CareContractTestMails) carecontract
 	return careContractCompose.NewInboxSigning(careContractCompose.SignaturePorts{
 		Ledger: NewCareContractSignatures(), Links: CareContractLinks("http://parents.localhost:3000"),
 		Sender: careContractTestSender{}, Post: mails, Runtime: CareContractRuntime{}, Holidays: CareContractTestHolidays{}, Families: NewCareContractFamilyNumbers(),
-	}, nil)
+	}, time.Now)
 }
 
 // RecordCareContractSendForTests stores the signing link of a contract a

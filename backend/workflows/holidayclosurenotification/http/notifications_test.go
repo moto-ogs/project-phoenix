@@ -100,7 +100,7 @@ func newClosureWorldIn(t *testing.T, name string, db *bun.DB) closureWorld {
 	require.NoError(t, err)
 	mail := owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}
 	closures := owners.NewHolidayClosures(owners.NewHolidaySchoolCalendar(settings.Settings, records, organizations), records,
-		owners.NewHolidayOfficeTraeger(organizations), mail, nil)
+		owners.NewHolidayOfficeTraeger(organizations), mail, calendar.TodayDate)
 	return closureWorld{
 		db: db, ctx: tenant.WithUnitOfWork(context.Background(), unit), organization: organization, school: school, records: records,
 		notices: owners.NewHolidayClosureNotifications(closures, organizations, mail, slog.Default()), closures: closures, mail: mail,

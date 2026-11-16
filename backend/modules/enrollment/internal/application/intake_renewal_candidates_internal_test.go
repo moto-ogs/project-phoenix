@@ -35,7 +35,7 @@ func (r *renewalCandidateMatches) LockStudents(_ context.Context, ids []int64) e
 func TestRenewalCandidatesBatchUniqueMatchesAndCarriedPins(t *testing.T) {
 	t.Parallel()
 	repo := &renewalCandidateMatches{matches: [][]int64{{30}, {10, 20}, nil, {30}}}
-	svc := NewIntake(IntakeDependencies{Students: repo, Settings: intakeSettingsFake{}})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Students: repo, Settings: intakeSettingsFake{}})
 	children := []SubmitChild{
 		{FirstName: "Lina", LastName: "Test", DateOfBirth: calendar.NewDate(2018, 4, 15)},
 		{FirstName: "Mila", LastName: "Test", DateOfBirth: calendar.NewDate(2018, 4, 15)},
@@ -65,7 +65,7 @@ func TestRenewalCandidatesFailClosedOnLookupErrors(t *testing.T) {
 	t.Parallel()
 	lookupErr := errors.New("directory unavailable")
 	for _, repo := range []*renewalCandidateMatches{{err: lookupErr}, {matches: nil}} {
-		svc := NewIntake(IntakeDependencies{Students: repo, Settings: intakeSettingsFake{}})
+		svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Students: repo, Settings: intakeSettingsFake{}})
 		ids, err := svc.renewalCandidates(context.Background(), 7001,
 			eligibilityTestPhase(enrollment.PhaseAudienceExistingStudents), []SubmitChild{{FirstName: "Lina"}}, nil, true)
 		require.Error(t, err)
@@ -79,7 +79,7 @@ func TestRenewalCandidatesFailClosedOnLookupErrors(t *testing.T) {
 func TestRenewalCandidatesHoldSiblingsOnce(t *testing.T) {
 	t.Parallel()
 	hold := &countingRenewalHold{}
-	svc := NewIntake(IntakeDependencies{Students: &renewalCandidateMatches{matches: [][]int64{{30}, {10}}}, GuardianHold: hold, Settings: intakeSettingsFake{}})
+	svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Students: &renewalCandidateMatches{matches: [][]int64{{30}, {10}}}, GuardianHold: hold, Settings: intakeSettingsFake{}})
 	account := int64(7)
 	holds, err := svc.holdRenewalCandidates(context.Background(), 7001, eligibilityTestPhase(enrollment.PhaseAudienceExistingStudents), []SubmitChild{{}, {}}, nil,
 		func() (reEnrollmentSubmitter, error) { return reEnrollmentSubmitter{GuardianAccountID: &account}, nil })
@@ -111,7 +111,7 @@ func TestIntakeRejectsMatchesOutsideItsHeldCandidates(t *testing.T) {
 		t.Run(fmt.Sprintf("staff=%t", staff), func(t *testing.T) {
 			t.Parallel()
 			repo := &renewalCandidateMatches{matches: [][]int64{{10}}}
-			svc := NewIntake(IntakeDependencies{Students: repo, GuardianHold: &countingRenewalHold{}, Settings: intakeSettingsFake{}})
+			svc := NewIntake(IntakeDependencies{Now: enrollmentTestClock, Students: repo, GuardianHold: &countingRenewalHold{}, Settings: intakeSettingsFake{}})
 			account := int64(7)
 			submitter := reEnrollmentSubmitter{GuardianAccountID: &account, AdminManaged: staff}
 			phase := eligibilityTestPhase(enrollment.PhaseAudienceExistingStudents)

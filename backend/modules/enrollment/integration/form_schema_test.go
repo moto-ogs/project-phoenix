@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -17,7 +18,7 @@ import (
 func TestSchemaQueriesTenantIsolationAndReadFailure(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.NewClocked(nil)
+	module := enrollmentCompose.NewClocked(time.Now)
 	account := testpkg.CreateTestAccount(t, db, "schema-query")
 	tenantIDs := make([]int64, 0, 2)
 	schemaIDs := make([]int64, 0, 2)

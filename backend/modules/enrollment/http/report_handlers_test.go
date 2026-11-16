@@ -52,6 +52,7 @@ func TestParseClassRosterExportRequestRejectsMissingClass(t *testing.T) {
 func TestClassRosterExportRequiresConfigManageAndUsersRead(t *testing.T) {
 	t.Parallel()
 	router := (&Resource{
+		Now:               resourceTestClock,
 		Failures:          DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation},
 		ReportService:     &fakeClassRosterReportService{},
 		ListExportService: newTestDocumentRenderer(),

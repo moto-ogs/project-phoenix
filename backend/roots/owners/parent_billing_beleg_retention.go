@@ -12,8 +12,8 @@ import (
 
 // NewBelegRetention binds the retention of the Belege of every Träger
 // (#4720, ADR 0184) to the contracts of Care Contract, whose read and
-// deletion join the administrative unit of the caller. nil today: Berlin
-// day.
+// deletion join the administrative unit of the caller, on the root's day
+// clock today.
 func NewBelegRetention(today func() calendar.Date) parentbilling.BelegRetention {
 	return parentBillingCompose.NewBelegRetention(retainedContracts{careContractCompose.NewContractRetention()}, today)
 }

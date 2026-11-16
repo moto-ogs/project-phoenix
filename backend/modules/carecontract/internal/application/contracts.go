@@ -53,6 +53,7 @@ type ContractPorts struct {
 var _ carecontract.Contracts = (*Contracts)(nil)
 
 func NewContracts(store ContractStore, renderer LetterRenderer, ports ContractPorts, clock Clock, versions carecontract.ContractVersions) *Contracts {
+	requireClock(clock, "contracts")
 	if store == nil || renderer == nil || ports.Letterheads == nil || ports.Post == nil || ports.Runtime == nil || ports.Access == nil ||
 		ports.Ledger == nil || ports.Links.Tokens == nil || ports.Links.Fingerprint == nil || versions == nil || ports.Holidays == nil {
 		panic("care contract: the store, the renderer, the letterhead, the post, the runtime, the access log, the ledger, the link tokens, the versions and the school holidays are required")

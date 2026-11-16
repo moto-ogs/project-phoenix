@@ -48,6 +48,7 @@ func samplePhaseForAudit() *enrollmentModels.Phase {
 
 func newAuditDecisionService(repo api.EnrollmentFlowDataAccessLogs) enrollmentAPI.DecisionService {
 	return enrollmentAPI.NewDecisionService(enrollmentCompose.PublicDecisions(newTestDecisions(enrollmentCompose.DecisionDependencies{
+		Now:       time.Now,
 		AccessLog: owners.EnrollmentDecisionAccessLog(repo),
 	}, nil)))
 }

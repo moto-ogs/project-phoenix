@@ -248,6 +248,7 @@ func newDecisionsForTestWithBookings(
 	}
 	studentEnrollment := testStudentEnrollment(env.db)
 	return newTestDecisions(enrollmentCompose.DecisionDependencies{
+		Now:            time.Now,
 		Requests:       repoFactory.Enrollment(),
 		Children:       repoFactory.Enrollment(),
 		Guardians:      repoFactory.Enrollment(),
@@ -4007,6 +4008,7 @@ func TestDecisionService_ListChildOfferings_DegradesOnCatalogFailure(t *testing.
 
 	repoFactory, repoFactoryCare, _, _, _, _ := flowRepositories(t, env.db)
 	degraded := newTestDecisionService(enrollmentCompose.DecisionDependencies{
+		Now:       time.Now,
 		Requests:  repoFactory.Enrollment(),
 		Children:  repoFactory.Enrollment(),
 		Phases:    repoFactory.Enrollment(),

@@ -63,7 +63,7 @@ func setupContractConsentTest(t *testing.T, tenantID int64) (*signatureEnv, int6
 	offerings := enrollmentCompose.NewCareOfferingRecords(reposCare.CarePlan)
 	requests := newFixtureRequestRoot(owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
 		Requests: repos.Enrollment(), ParentChanges: repos.Enrollment(), Children: repos.Enrollment(), Guardians: repos.Enrollment(),
-		CareOfferingRepo: offerings, Capacity: owners.NewEnrollmentOfferingCapacity(offerings, repos.Enrollment(), settings, nil),
+		CareOfferingRepo: offerings, Capacity: owners.NewEnrollmentOfferingCapacity(offerings, repos.Enrollment(), settings, calendar.TodayDate),
 		Catalog: repos.Enrollment(), SchoolRepo: capabilitySchools{schools: reposSchools.School},
 		Notifications: NewTestNotifications(repos.Enrollment(), notifyModeSettings{settings: settings}, discardingOutbox{}, capabilitySchools{schools: reposSchools.School}),
 		RateLimitRepo: repos.Enrollment(), OutboxEnqueuer: discardingOutbox{}, Settings: settings,
@@ -73,7 +73,7 @@ func setupContractConsentTest(t *testing.T, tenantID int64) (*signatureEnv, int6
 	resource := enrollmentAPI.NewResource(
 		nil, nil, requests, nil, nil, nil, nil, nil, nil,
 		nil, nil, nil,
-		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation})
+		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, func() time.Time { return consentEditNow })
 	return &signatureEnv{
 		db: db, router: testpkg.TenantRuntimeMiddleware(t, db)(resource.Router(api.TenantSessionChain)),
 		tenantID: tenantID, phaseID: phase.ID, requests: requests,

@@ -333,7 +333,9 @@ var moduleLegacyFileBudgets = map[string]int{
 // modules/peopledirectory/compose (+6), modules/schoolmembership/compose (+5),
 // modules/schoolstructure/compose (+8) and modules/settings/compose (+3)
 // add exactly 38 LOC.
-const moduleComposeBudgetTotal = 13643
+// ADR 0275: the root clock of modules/parentbilling/compose (+2: the time
+// import of the overview's and the exports' clock).
+const moduleComposeBudgetTotal = 13645
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -354,6 +356,7 @@ const moduleComposeBudgetTotal = 13643
 // ADR 0264 raised modules/workforce/compose for the cleanup clock (+2).
 // ADR 0265 raised modules/enrollment/compose for the clock fields (+7).
 // ADR 0268 raised six compositions for their clock fields (+38).
+// ADR 0275 raised modules/parentbilling/compose for the root clock (+2).
 var moduleComposeBudgets = map[string]int{
 	"modules/appointments/compose": 45,
 	// ADR 0103: the signature ledger constructor, construction only.
@@ -471,7 +474,8 @@ var moduleComposeBudgets = map[string]int{
 	// Jahresbescheide (+5).
 	// ADR 0218: the handovers of the finance exports (+5).
 	// ADR 0232: the debtor numbers of an import of care contracts (+5).
-	"modules/parentbilling/compose":               134,
+	// ADR 0275: the time import of the root clock (+2).
+	"modules/parentbilling/compose":               136,
 	"modules/parentrequestfeedprojection/compose": 11,
 	// Raised by ADR 0076: the restricted administrative repair constructor.
 	// ADR 0188: the guardian bank backfill/rekey constructor (+6).

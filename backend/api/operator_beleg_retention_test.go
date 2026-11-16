@@ -37,7 +37,7 @@ func TestOperatorRecordsBelegRetentionWithAudit(t *testing.T) {
 	organizationID, _ := provisionTestSchool(t, db, service, operatorID, "traeger-belege")
 	ctx := provisioningContext(t, db)
 	operator := chi.NewRouter()
-	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}))
+	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), calendar.TodayDate)
 	call := func(method, path string, body any) *httptest.ResponseRecorder {
 		t.Helper()
 		var payload bytes.Buffer
@@ -181,7 +181,7 @@ func TestOperatorRecordsTheReviewOfAClarificationEntry(t *testing.T) {
 	organizationID, _ := provisionTestSchool(t, db, service, operatorID, "traeger-klaerung")
 	ctx := provisioningContext(t, db)
 	operator := chi.NewRouter()
-	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}))
+	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), calendar.TodayDate)
 	call := func(method, path string, body any) *httptest.ResponseRecorder {
 		t.Helper()
 		var payload bytes.Buffer
@@ -253,7 +253,7 @@ func TestClarificationReviewEscalatesBeforeTheReviewMoves(t *testing.T) {
 	organizationID, _ := provisionTestSchool(t, db, service, operatorID, "traeger-eskalation")
 	ctx := provisioningContext(t, db)
 	operator := chi.NewRouter()
-	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}))
+	mountOperatorBelegRetentionRoutes(operator, provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: service, BelegRetentionAudit: belegRetentionAuditOf(t, service)}), calendar.TodayDate)
 	call := func(body any) *httptest.ResponseRecorder {
 		t.Helper()
 		var payload bytes.Buffer

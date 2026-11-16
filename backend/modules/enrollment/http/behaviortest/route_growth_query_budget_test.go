@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
@@ -189,8 +190,8 @@ func newEnrollmentGrowthFixture(t *testing.T) *enrollmentGrowthFixture {
 	cfg.Capacity = requestTestCapacity(cfg)
 	requests := newTestRequestService(cfg)
 	catalog := enrollmentHTTP.NewCareOfferingCatalog(api.NewEnrollmentCareOfferingValues(newCareOfferingCatalog(t, env.db).Catalog))
-	phases := NewTestPhases(TestPhaseDependencies{Records: env.repos.Enrollment(), Offerings: phaseOfferings{rows: newCareOfferingFixtures(env.reposCare.CarePlan)}, LockTemplateRecurrence: func(context.Context) error { return nil }, Resyncer: &recordingSourcedTemplateResyncer{}, Settings: collectionSettings{settings: settings.Settings}})
-	resource := enrollmentHTTP.NewResource(compose.NewFormSchemas(env.repos.Enrollment(), collectionSettings{settings: settings.Settings}, nil), catalog, requests, compose.NewCaptcha(owners.EnrollmentCaptchaSettings{Settings: settings.Settings}, "", nil), phases, nil, nil, nil, nil, nil, nil, dbPublicSchools{db: env.db}, uploads.UploadFiles{}, enrollmentHTTP.DatabaseFailures{Transient: failures.IsTransientDatabaseError, Constraint: failures.IsConstraintViolation})
+	phases := NewTestPhases(TestPhaseDependencies{Now: time.Now, Records: env.repos.Enrollment(), Offerings: phaseOfferings{rows: newCareOfferingFixtures(env.reposCare.CarePlan)}, LockTemplateRecurrence: func(context.Context) error { return nil }, Resyncer: &recordingSourcedTemplateResyncer{}, Settings: collectionSettings{settings: settings.Settings}})
+	resource := enrollmentHTTP.NewResource(compose.NewFormSchemas(env.repos.Enrollment(), collectionSettings{settings: settings.Settings}, nil), catalog, requests, compose.NewCaptcha(owners.EnrollmentCaptchaSettings{Settings: settings.Settings}, "", nil), phases, nil, nil, nil, nil, nil, nil, dbPublicSchools{db: env.db}, uploads.UploadFiles{}, enrollmentHTTP.DatabaseFailures{Transient: failures.IsTransientDatabaseError, Constraint: failures.IsConstraintViolation}, time.Now)
 	account := testpkg.CreateTestAccount(t, env.db, "enrollment-growth")
 	token := testutil.MintTestJWT(t, sessiontoken.AppClaims{ID: int(account.ID), Sub: account.Email, Username: account.Email, TenantID: testpkg.Tenant(t), Roles: []string{"admin"}, Permissions: []string{"config:read", "config:manage"}})
 	var slug string

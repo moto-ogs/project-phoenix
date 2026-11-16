@@ -9,8 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// NewClocked binds Enrollment to the ambient transaction, never to an unscoped pool when a caller forgot its
-// transaction; now stamps its writes (ADR 0239), nil is the real clock.
+// NewClocked binds Enrollment to the ambient transaction (never an unscoped pool) and stamps its writes with the required now (ADR 0239).
 func NewClocked(now func() time.Time) enrollment.Owner {
 	return NewWithStore(newStore().WithClock(now), applicationNative.ObserveOfferingStorage())
 }

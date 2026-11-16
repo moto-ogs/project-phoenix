@@ -8,7 +8,7 @@ import (
 
 func TestEnrollmentRejectsMissingSettingsAtConstruction(t *testing.T) {
 	t.Parallel()
-	assert.Panics(t, func() { NewIntake(IntakeDependencies{}) })
-	assert.Panics(t, func() { NewDecisions(DecisionDependencies{}) })
+	assert.Panics(t, func() { NewIntake(IntakeDependencies{Now: enrollmentTestClock}) })
+	assert.Panics(t, func() { NewDecisions(DecisionDependencies{Now: enrollmentTestClock}) })
 	assert.Panics(t, func() { NewCaptcha(nil, &captchaProviderStub{}, nil) })
 }

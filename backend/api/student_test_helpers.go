@@ -262,7 +262,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
 	enrollmentDecisionService := enrollmentCompose.PublicDecisions(owners.NewEnrollmentDecisions(enrollmentCompose.DecisionDependencies{
-		Requests:       repos.Enrollment(),
+		Now: time.Now, Requests: repos.Enrollment(),
 		Children:       repos.Enrollment(),
 		Guardians:      repos.Enrollment(),
 		LateInvites:    repos.Enrollment(),

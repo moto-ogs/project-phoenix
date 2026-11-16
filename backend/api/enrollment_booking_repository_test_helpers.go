@@ -24,7 +24,7 @@ type EnrollmentBookingFixture struct {
 }
 
 func NewEnrollmentBookingFixtureWithin(withinTenant func(context.Context, func(context.Context) error) error) EnrollmentBookingFixture {
-	return EnrollmentBookingFixture{owners.NewEnrollmentBookingProjection(owners.NewEnrollmentBookings(nil), owners.UngatedEnrollmentPhaseBounds()), withinTenant}
+	return EnrollmentBookingFixture{owners.NewEnrollmentBookingProjection(owners.NewEnrollmentBookings(time.Now), owners.UngatedEnrollmentPhaseBounds()), withinTenant}
 }
 
 // These retained composition methods translate the old fixture-facing command

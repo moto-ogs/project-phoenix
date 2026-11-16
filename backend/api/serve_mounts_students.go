@@ -334,9 +334,10 @@ func newEnrollmentResource(
 		nativeUploads.UploadFiles{},
 		enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation,
 			SavepointRollback: func(err error) bool { return errors.Is(err, tenant.ErrSavepointRollback) }},
+		now,
 		owners.NewEnrollmentBookings(now),
 	)
-	resource.ListExportService, resource.Now = renderer, now
+	resource.ListExportService = renderer
 	resource.Uploads = enrollmentUploadUnits{intake: flows.Intake, records: owners.NewEnrollmentBookings(now), reads: flows.Uploads}
 	resource.UploadList = flows.Uploads
 	resource.FamilyChildren = flows.Intake

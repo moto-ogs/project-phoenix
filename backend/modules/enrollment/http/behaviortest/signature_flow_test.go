@@ -77,14 +77,16 @@ func setupSignatureTest(t *testing.T, tenantID int64) *signatureEnv {
 
 	offerings := enrollmentCompose.NewCareOfferingRecords(reposCare.CarePlan)
 	requests := newFixtureRequestRoot(owners.NewEnrollmentIntake(owners.EnrollmentIntakeSources{
+		Now:      time.Now,
 		Requests: repos.Enrollment(), ParentChanges: repos.Enrollment(), Children: repos.Enrollment(), Guardians: repos.Enrollment(),
-		CareOfferingRepo: offerings, Capacity: owners.NewEnrollmentOfferingCapacity(offerings, repos.Enrollment(), settings, nil),
+		CareOfferingRepo: offerings, Capacity: owners.NewEnrollmentOfferingCapacity(offerings, repos.Enrollment(), settings, calendar.TodayDate),
 		Catalog: repos.Enrollment(), SchoolRepo: capabilitySchools{schools: reposSchools.School},
 		Notifications: NewTestNotifications(repos.Enrollment(), notifyModeSettings{settings: settings}, discardingOutbox{}, capabilitySchools{schools: reposSchools.School}),
 		RateLimitRepo: repos.Enrollment(), OutboxEnqueuer: discardingOutbox{}, Settings: settings,
 		FrontendURL: "http://localhost:3000", ParentsURL: "http://parents.localhost:3000", Logger: slog.Default(),
 	}))
 	decisions := enrollmentAPI.NewDecisionService(enrollmentCompose.PublicDecisions(owners.NewEnrollmentDecisions(enrollmentCompose.DecisionDependencies{
+		Now:      time.Now,
 		Requests: repos.Enrollment(), Children: repos.Enrollment(), Guardians: repos.Enrollment(), LateInvites: repos.Enrollment(),
 		Phases: repos.Enrollment(), Schemas: repos.Enrollment(), Offerings: offerings,
 		ParentsURL: owners.EnrollmentDecisionParentsURL("http://parents.localhost:3000", ""),
@@ -93,7 +95,7 @@ func setupSignatureTest(t *testing.T, tenantID int64) *signatureEnv {
 	resource := enrollmentAPI.NewResource(
 		nil, nil, requests, nil, nil, decisions, nil, nil, nil,
 		nil, nil, nil,
-		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation})
+		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, time.Now)
 	resource.ListExportService = lists.NewRendererService()
 	return &signatureEnv{
 		db: db, router: testpkg.TenantRuntimeMiddleware(t, db)(resource.Router(api.TenantSessionChain)),

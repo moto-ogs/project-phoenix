@@ -50,7 +50,7 @@ func holidayWishProofFor(t *testing.T, f reviewFixture, school, student int64) e
 	id, err := tenant.NewTenantID(school)
 	require.NoError(t, err)
 	var statement enrollment.HolidayWishStatement
-	proofs, _ := enrollmentCompose.NewHolidayWishes(testHealthCipher())
+	proofs, _ := enrollmentCompose.NewHolidayWishes(testHealthCipher(), holidayFixtureNow)
 	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
 	require.NoError(t, tenant.WithinTenant(ctx, id, func(txCtx context.Context) error {
 		statement, err = proofs.HolidayWishProof(txCtx, enrollment.HolidayWishClaim{

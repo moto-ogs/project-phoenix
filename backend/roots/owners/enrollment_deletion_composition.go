@@ -144,7 +144,7 @@ type EnrollmentDeletionSources struct {
 	}
 	Logger *slog.Logger
 	// Now is the clock of the deletion audit and the retention cutoffs
-	// (ADR 0239); nil is the real clock. Today is the retention cleanup's
+	// (ADR 0239); required. Today is the retention cleanup's
 	// school day; nil is Now's Berlin day.
 	Now   func() time.Time
 	Today func() calendar.Date

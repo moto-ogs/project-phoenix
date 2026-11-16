@@ -42,6 +42,7 @@ func TestUploadLegalDocument_SavesTenantPrefixedPDF(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	(&Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation},
 		uploads:  nativeUploads.UploadFiles{}}).uploadLegalDocument(w, req)
 
@@ -70,6 +71,7 @@ func TestUploadLegalDocument_RejectsNonPDF(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	(&Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation},
 		uploads:  nativeUploads.UploadFiles{}}).uploadLegalDocument(w, req)
 
@@ -86,6 +88,7 @@ func TestDeleteLegalDocument_RemovesUnreferencedTenantPDF(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	res := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation},
 		uploads:  nativeUploads.UploadFiles{}, legalDocumentRefs: fakeLegalDocumentReferenceRepository{}}
 	res.deleteLegalDocument(w, req)
@@ -105,6 +108,7 @@ func TestDeleteLegalDocument_KeepsReferencedTenantPDF(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	res := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation},
 		uploads:  nativeUploads.UploadFiles{}, legalDocumentRefs: fakeLegalDocumentReferenceRepository{referenced: true}}
 	res.deleteLegalDocument(w, req)
@@ -126,6 +130,7 @@ func TestDeleteLegalDocument_ChecksReferencesInTenantTx(t *testing.T) {
 	type txContextKey struct{}
 	sawTenantTxContext := false
 	res := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation},
 		uploads:  nativeUploads.UploadFiles{},
 		legalDocumentRefs: fakeLegalDocumentReferenceRepository{
@@ -155,6 +160,7 @@ func TestDeleteLegalDocument_RejectsOtherTenantPDF(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	res := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation},
 		uploads:  nativeUploads.UploadFiles{}, legalDocumentRefs: fakeLegalDocumentReferenceRepository{}}
 	res.deleteLegalDocument(w, req)

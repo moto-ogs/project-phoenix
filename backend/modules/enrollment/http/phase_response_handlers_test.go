@@ -37,6 +37,7 @@ func (m *mockPhaseService) ResponseOverview(context.Context, int64) (*enrollment
 
 func buildPhaseResponseRouter(svc enrollmentOwner.PhaseAdministration) chi.Router {
 	rs := &Resource{
+		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, PhaseService: svc}
 	r := chi.NewRouter()
 	r.Use(render.SetContentType(render.ContentTypeJSON))

@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 
 	"github.com/go-chi/chi/v5"
@@ -160,7 +162,7 @@ func newIoTResource(
 		StaffClock:       newStaffClockService(users, owners.NewPeopleIdentityAccess(db, observability.ObserveIdentityAccessOperation), timeTracking.TimeClock),
 		Configuration:    devicescanCompose.NewConfiguration(DeviceConfiguration{Settings: settings}, DeviceScanPrincipal),
 		Rooms:            devicescanCompose.NewRoomAvailability(rooms.RoomService, DeviceScanPrincipal),
-		Directory:        devicescanCompose.NewDirectory(NewDeviceScanDirectoryPeople(users, invitations), DeviceActivityCatalog(activities), NewDeviceScanHolidayGuestSchools(nil), logger, DeviceScanPrincipal),
+		Directory:        devicescanCompose.NewDirectory(NewDeviceScanDirectoryPeople(users, invitations), DeviceActivityCatalog(activities), NewDeviceScanHolidayGuestSchools(calendar.CalendarDateClock(now)), logger, DeviceScanPrincipal),
 		TagAssignments:   devicescanCompose.NewTagAssignments(NewDeviceScanPeople(users), logger, DeviceScanPrincipal, now),
 		FeedbackStudents: devicescanCompose.NewFeedbackStudents(NewDeviceScanPeople(users)),
 		FeedbackService:  feedback,

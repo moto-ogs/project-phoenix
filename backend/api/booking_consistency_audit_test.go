@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"testing"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -21,7 +22,7 @@ func bookingConsistencyAuditUnderTest(t *testing.T, db *bun.DB) testpkg.BookingC
 	t.Helper()
 	carePlan, err := owners.NewUnobservedCarePlan(testpkg.NewDatabase(t, db), owners.MustNewUnobservedTimetable(testpkg.NewDatabase(t, db)), owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, db)))
 	require.NoError(t, err)
-	audit, err := owners.NewBookingConsistencyAudit(testpkg.NewDatabase(t, db), owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, db)), carePlan, nil)
+	audit, err := owners.NewBookingConsistencyAudit(testpkg.NewDatabase(t, db), owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, db)), carePlan, time.Now)
 	require.NoError(t, err)
 	return func(ctx context.Context, auditDate string) (testpkg.BookingConsistencyFindings, error) {
 		report, err := audit(ctx, auditModels.Date(auditDate))
