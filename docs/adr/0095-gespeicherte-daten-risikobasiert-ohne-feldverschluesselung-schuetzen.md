@@ -4,9 +4,11 @@ status: accepted
 
 # Gespeicherte Daten risikobasiert ohne Feldverschlüsselung schützen
 
-> **Teilweise abgelöst** seit November 2026: Gesundheitsangaben der
-> Kinderakte und der Ferienanmeldung sowie IBAN, Kontoinhaber, Steuer-ID und
-> SV-Nummer von Eltern, Personal und SEPA-Zahlern liegen feldverschlüsselt in der Datenbank (AES-256-GCM mit
+> **Teilweise abgelöst** seit November 2026: Das Gesundheitsfeld der
+> Kinderakte (`health_data`), die als Gesundheit gekennzeichneten Angaben der
+> Ferienanmeldung sowie IBAN, Kontoinhaber, Steuer-ID und SV-Nummer von
+> Eltern, Personal und SEPA-Zahlern liegen feldverschlüsselt in der
+> Datenbank (AES-256-GCM mit
 > Security Runtimes Feld-Cipher, jeder Wert an Schule oder Träger gebunden).
 > Dazu kommen bestätigte Mandatstexte, PAIN.008-Dateien, die Bank- und
 > Steuerwerte in der Änderungshistorie des Personalstamms, das SFTP-Passwort
@@ -47,7 +49,9 @@ status: accepted
 > (`enrollment.request_children.custom_data` und die Snapshots in
 > `enrollment.change_requests`), für Konten der Träger, für Zugangsgeheimnisse
 > in den Schuleinstellungen (SFTP-Passwort und Geräte-PIN in
-> `config.setting_values`), für die übrigen Personal-, Eltern- und
+> `config.setting_values`), für weitere Gesundheitsbezüge im Klartext
+> (Krankstatus und Krankmeldungen, Unfallanzeigen, nachträglich als Gesundheit
+> eingestufte Feriengast-Antworten), für die übrigen Personal-, Eltern- und
 > Kinderdaten sowie für Datenträger-,
 > Sicherungs-, Diagnose- und Protokollmaßnahmen. Die
 > Abwägung unten bleibt gültig: Der Anwendungsprozess erhält die
