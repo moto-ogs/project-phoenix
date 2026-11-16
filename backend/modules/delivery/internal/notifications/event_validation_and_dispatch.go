@@ -156,7 +156,7 @@ func (r *router) withinActiveWindow(ctx context.Context, tenantID int64) (bool, 
 		return true, nil
 	}
 
-	now := calendar.Now()
+	now := r.clock().In(calendar.Berlin)
 	nowMin := now.Hour()*60 + now.Minute()
 	return withinWindow(nowMin, start, end), nil
 }

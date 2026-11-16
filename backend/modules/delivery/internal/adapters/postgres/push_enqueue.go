@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/uptrace/bun"
 
@@ -18,8 +19,8 @@ const pushEnqueueSQL = `
 	WITH inserted AS (
 		INSERT INTO platform.push_outbox (
 			tenant_id, organization_id, kind, idempotency_key, related_entity_type,
-			related_entity_id, recipient, payload, status, next_retry_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+			related_entity_id, recipient, payload, status, next_retry_at, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
 		ON CONFLICT (tenant_id, organization_id, idempotency_key)
 			WHERE idempotency_key IS NOT NULL DO NOTHING
 		RETURNING id
@@ -48,8 +49,8 @@ const pushExistingEnqueueSQL = `
 
 // enqueuePushIntent inserts a push intent of a school or, with a Träger, a
 // deferred push of that Träger (ADR 0126), or reads the one with its
-// idempotency key.
-func enqueuePushIntent(ctx context.Context, db bun.IDB, intent domain.Intent) (domain.Enqueued, error) {
+// idempotency key. now stamps the new intent.
+func enqueuePushIntent(ctx context.Context, db bun.IDB, intent domain.Intent, now time.Time) (domain.Enqueued, error) {
 	var scope, organization any
 	if intent.TenantID != 0 {
 		scope = intent.TenantID
@@ -60,7 +61,7 @@ func enqueuePushIntent(ctx context.Context, db bun.IDB, intent domain.Intent) (d
 	var result domain.Enqueued
 	err := db.NewRaw(pushEnqueueSQL,
 		scope, organization, intent.Template, intent.IdempotencyKey, intent.RelatedEntityType,
-		intent.RelatedEntityID, intent.Recipient, intent.Payload, intent.NextRetryAt,
+		intent.RelatedEntityID, intent.Recipient, intent.Payload, intent.NextRetryAt, now, now,
 		intent.Template, intent.Recipient, intent.Payload, intent.RelatedEntityType, intent.RelatedEntityID,
 		intent.IdempotencyKey, scope, organization, intent.IdempotencyKey,
 	).Scan(ctx, &result)

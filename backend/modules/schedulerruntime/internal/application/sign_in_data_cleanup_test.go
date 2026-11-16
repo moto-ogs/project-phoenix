@@ -47,7 +47,7 @@ func TestTokenCleanupRunsTheSignInDataRetention(t *testing.T) {
 	t.Parallel()
 	cleaner := &fakeSignInDataCleaner{}
 
-	jobs := signInDataCleanupJobs(cleaner)
+	jobs := signInDataCleanupJobs(cleaner, time.Now)
 	before := time.Now()
 	deleted := 0
 	for _, job := range jobs {

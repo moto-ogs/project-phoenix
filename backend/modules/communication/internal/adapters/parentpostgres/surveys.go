@@ -16,11 +16,15 @@ import (
 // are written and read apart: no statement here returns a participation
 // together with an answer, and no answer statement returns a response id,
 // an account of an anonymous survey or an order that follows the insertion.
-type SurveyStore struct{ store }
+type SurveyStore struct {
+	store
+	now func() time.Time
+}
 
-// NewSurveyStore builds the survey store over the ambient transaction runtime.
-func NewSurveyStore(database Database) *SurveyStore {
-	return &SurveyStore{store: newStore(database)}
+// NewSurveyStore builds the survey store over the ambient transaction runtime;
+// now stamps the rows it changes.
+func NewSurveyStore(database Database, now func() time.Time) *SurveyStore {
+	return &SurveyStore{store: newStore(database), now: now}
 }
 
 type surveyRow struct {
@@ -206,7 +210,9 @@ func (s *SurveyStore) CreateSurvey(ctx context.Context, in communication.SurveyI
 	row := &surveyRow{
 		TenantID: tenantID, Title: in.Title, Intro: in.Intro, Audience: in.Audience, Anonymous: in.Anonymous,
 		SendEmail: in.SendEmail, Targets: in.Targets, ClosesAt: in.ClosesAt, CreatedBy: createdBy,
+		CreatedAt: s.now(),
 	}
+	row.UpdatedAt = row.CreatedAt
 	if row.Targets == nil {
 		row.Targets = []communication.SurveyTarget{}
 	}
@@ -313,7 +319,6 @@ func (s *SurveyStore) CloseSurvey(ctx context.Context, id int64, at time.Time, a
 	}
 	result, err = db.NewUpdate().TableExpr("users.parent_announcements").
 		Set("expires_at = ?", at).
-		Set("updated_at = ?", time.Now()).
 		Where("id = ? AND tenant_id = ? AND system_kind = ?", *announcementID, tenantID, "survey").
 		Exec(ctx)
 	if err != nil {

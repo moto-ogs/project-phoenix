@@ -208,7 +208,7 @@ func (s *AnnouncementStore) MarkRead(ctx context.Context, tenantID, announcement
 	var live bool
 	if err := db.NewRaw(markReadSQL,
 		announcementID, tenantID, expectedPublishedAt,
-		tenantID, announcementID, accountID, time.Now(),
+		tenantID, announcementID, accountID, s.now(),
 	).Scan(ctx, &live); err != nil {
 		return false, fmt.Errorf("mark parent announcement read: %w", err)
 	}
@@ -257,7 +257,7 @@ func (s *AnnouncementStore) MarkAcknowledged(ctx context.Context, tenantID, anno
 	if err != nil {
 		return false, err
 	}
-	now := time.Now()
+	now := s.now()
 	update := func() (guardedWriteRow, error) {
 		var row guardedWriteRow
 		if err := db.NewRaw(acknowledgeExistingSQL,
@@ -384,7 +384,7 @@ func (s *AnnouncementStore) InsertResponse(ctx context.Context, tenantID, announ
 	if err := db.NewRaw(insertResponseSQL,
 		announcementID, tenantID, expectedPublishedAt,
 		pgdialect.Array(optionIDs), announcementID, tenantID,
-		tenantID, announcementID, studentID, accountID, time.Now(), announcementID, tenantID, bun.List(optionIDs),
+		tenantID, announcementID, studentID, accountID, s.now(), announcementID, tenantID, bun.List(optionIDs),
 	).Scan(ctx, &live); err != nil {
 		return false, fmt.Errorf("insert parent announcement response: %w", err)
 	}

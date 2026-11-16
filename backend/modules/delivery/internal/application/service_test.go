@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/domain"
@@ -25,7 +26,7 @@ func TestEmailDeliveryStatusesFailsWhenGuardianDisplayLookupFails(t *testing.T) 
 	profileID := int64(51)
 	store := &workerStore{statuses: []deliveryContract.EmailDeliveryStatus{{DeliveryID: 7, GuardianProfileID: &profileID}}}
 	lookupErr := errors.New("people directory unavailable")
-	service := NewService(store, guardianDirectory{err: lookupErr}, func(domain.Observation) {})
+	service := NewService(store, guardianDirectory{err: lookupErr}, func(domain.Observation) {}, time.Now)
 
 	_, err := service.EmailDeliveryStatuses(context.Background(), 3, deliveryContract.RelatedEntity{Type: "announcement", ID: 9})
 
@@ -43,7 +44,7 @@ func TestEmailDeliveryStatusesAddsNamesAndSorts(t *testing.T) {
 	service := NewService(store, guardianDirectory{displays: []deliveryContract.GuardianDisplay{
 		{GuardianProfileID: firstID, FirstName: "Ada", LastName: "A"},
 		{GuardianProfileID: secondID, FirstName: "Berta", LastName: "B"},
-	}}, func(domain.Observation) {})
+	}}, func(domain.Observation) {}, time.Now)
 
 	rows, err := service.EmailDeliveryStatuses(context.Background(), 3, deliveryContract.RelatedEntity{Type: "announcement", ID: 9})
 
@@ -69,7 +70,7 @@ func (r *enqueueRecorder) Enqueue(_ context.Context, intent domain.Intent) (doma
 func TestEnqueueDeferredPushNamesExactlyOneScope(t *testing.T) {
 	t.Parallel()
 	store := &enqueueRecorder{workerStore: &workerStore{}}
-	service := NewService(store, guardianDirectory{}, func(domain.Observation) {})
+	service := NewService(store, guardianDirectory{}, func(domain.Observation) {}, time.Now)
 	intent := deliveryContract.DeferredPushIntent{
 		Template: "parent_billing_document", IdempotencyKey: "parent-billing-document:31", Payload: []byte(`{"document_id":31}`),
 		Related: deliveryContract.RelatedEntity{Type: "parent_billing_document", ID: 31},

@@ -34,15 +34,13 @@ import (
 //   - A raised entry or a new key fails the architecture check against the
 //     base; never raise a number and never add a key.
 var calendarFixtureShiftedLiveDateDebt = map[string]int{
-	"api/data_return_http_test.go":                                                                    1,
-	"api/operator_mfa_verify_success_internal_test.go":                                                1,
-	"api/runtime_checkpoint_test.go":                                                                  9,
-	"api/runtime_checkpoint_v2_test.go":                                                               3,
-	"cmd/cleanup_test.go":                                                                             6,
-	"cmd/devtools/demo_runtime_test.go":                                                               2,
-	"cmd/tenant_erasure_integration_test.go":                                                          2,
-	"modules/communication/internal/staffannouncements/surveys_anonymity_test.go":                     3,
-	"modules/delivery/internal/adapters/postgres/email_delivery_events_test.go":                       2,
+	"api/data_return_http_test.go":                     1,
+	"api/operator_mfa_verify_success_internal_test.go": 1,
+	"api/runtime_checkpoint_test.go":                   9,
+	"api/runtime_checkpoint_v2_test.go":                3,
+	"cmd/cleanup_test.go":                              6,
+	"cmd/devtools/demo_runtime_test.go":                2,
+	"cmd/tenant_erasure_integration_test.go":           2,
 	"modules/devicefleet/compose/httpadapter/compose_unregistered_tag_scan_runtime_test.go":           5,
 	"modules/devicefleet/compose/httpadapter/compose_unregistered_tag_scan_test.go":                   7,
 	"modules/devicefleet/http/devices/behaviortest/list_query_budget_test.go":                         1,

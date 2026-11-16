@@ -4,7 +4,6 @@ import (
 	"context"
 
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
-
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/adapters/webpush"
 )
 

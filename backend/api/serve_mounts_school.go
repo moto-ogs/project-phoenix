@@ -178,7 +178,7 @@ func mountSchoolPortalRoutes(
 	school := NewSchoolPortalHTTP(SchoolPortalAuth(identity), SchoolPortalMFA(identity), portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeSchool), classDayResource, timetableResource, staffMessaging, staffNotices, notificationRoutes, schoolCalendar)
 	// Parent letters of a Lehrkraft to her classes (#4800): the OGS's
 	// announcement resource, narrowed by the caller's class reach.
-	parentLetters := announcementAPI.NewResource(announcements, newDeclarationReports())
+	parentLetters := announcementAPI.NewResource(announcements, newDeclarationReports(), time.Now)
 	parentLetters.Classes = classLetterCaller{caller.Caller()}
 	parentLetters.Letters = owners.NewParentLetterPrinter()
 	school.ParentLetters = parentLetters

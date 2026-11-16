@@ -90,7 +90,7 @@ func BuildMailTransport(env RootEnvironment) (email.Mailer, email.Dispatcher, em
 		return nil, nil, email.Email{}, deliveryCompose.VAPIDConfig{}, fmt.Errorf("invalid VAPID configuration: %w", err)
 	}
 	return mailer,
-		deliveryCompose.NewMailDispatcher(mailer, logger.With("component", "email"), email.DeliveryObserver(env.Observe.Delivery)),
+		deliveryCompose.NewMailDispatcher(mailer, logger.With("component", "email"), clockOrReal(env.Now), email.DeliveryObserver(env.Observe.Delivery)),
 		email.NewEmail(deliveryModule.SenderOrDefault(cfg.EmailFromName, cfg.EmailFromAddress)), vapid, nil
 }
 
@@ -295,7 +295,7 @@ func BuildDeliveryRuntime(db transactionruntime.Database, env RootEnvironment, g
 	observe := env.Observe.DurableDelivery
 	runtime, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{
 		DB: db.Pool(), People: GuardianDisplayResolver{Query: guardians},
-		EmailProvider: withProviderLogger(env),
+		EmailProvider: withProviderLogger(env), Now: env.Now,
 		Observe: func(observation deliveryContract.Observation) {
 			observe(string(observation.Transport), observation.Template, observation.Operation, observation.Duration, observation.Count, observation.Err)
 		},

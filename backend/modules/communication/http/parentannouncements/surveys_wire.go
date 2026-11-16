@@ -107,7 +107,7 @@ func toSurveyQuestions(questions []announcementService.SurveyQuestion) []surveyQ
 	return out
 }
 
-func toSurveyResponse(s *announcementService.Survey) surveyResponse {
+func toSurveyResponse(s *announcementService.Survey, now time.Time) surveyResponse {
 	targets := make([]surveyTargetWire, 0, len(s.Targets))
 	for _, t := range s.Targets {
 		target := surveyTargetWire{TargetType: t.TargetType, RefText: t.RefText}
@@ -119,7 +119,7 @@ func toSurveyResponse(s *announcementService.Survey) surveyResponse {
 	}
 	return surveyResponse{
 		ID: strconv.FormatInt(s.ID, 10), Title: s.Title, Intro: s.Intro, Audience: s.Audience, Anonymous: s.Anonymous,
-		SendEmail: s.SendEmail, Status: s.Status(time.Now()), ClosesAt: s.ClosesAt, PublishedAt: s.PublishedAt,
+		SendEmail: s.SendEmail, Status: s.Status(now), ClosesAt: s.ClosesAt, PublishedAt: s.PublishedAt,
 		CreatedAt: s.CreatedAt, UpdatedAt: s.UpdatedAt, ParticipantCount: s.ParticipantCount,
 		Targets: targets, Questions: toSurveyQuestions(s.Questions),
 	}
