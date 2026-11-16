@@ -2,6 +2,7 @@ package enrollmenthttp_test
 
 import (
 	"context"
+	"time"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
@@ -28,7 +29,7 @@ func TestPhaseExpiryProjection_ListSnapshots_RequiresEffectiveSuccessorBooking(t
 	phaseRepo := api.NewEnrollmentBookingFixtureWithin(testpkg.WithinCurrentTenant)
 	requestRepo := api.NewEnrollmentBookingFixtureWithin(testpkg.WithinCurrentTenant)
 	childRepo := api.NewEnrollmentBookingFixtureWithin(testpkg.WithinCurrentTenant)
-	offeringRepo := newCareOfferingFixtures(testutil.NewTestCarePlan(t, db, testpkg.StudentDirectory{}))
+	offeringRepo := newCareOfferingFixtures(testutil.NewTestCarePlan(t, db, testpkg.StudentDirectory{}, time.Now))
 	linkRepo := api.NewEnrollmentBookingFixtureWithin(testpkg.WithinCurrentTenant)
 
 	source := makeOwnerEligibilityPhase(uniquePhaseName("expiry-source"))
