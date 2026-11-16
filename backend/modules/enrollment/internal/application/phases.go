@@ -52,9 +52,11 @@ type PhaseDependencies struct {
 	// without it TraegerCopies reports no copy commands.
 	TraegerCopies TraegerPhaseCopyStore
 	Logger        *slog.Logger
-	// Today returns the current calendar day; tests inject a fixed date so
-	// resync/detach boundaries stay deterministic. Nil falls back to
-	// calendar.TodayDate.
+	// Now is the clock of the public enrollment window (ADR 0239); nil is
+	// the real clock. Today returns the current calendar day; tests inject
+	// a fixed date so resync/detach boundaries stay deterministic. Nil is
+	// Now's Berlin day.
+	Now   func() time.Time
 	Today func() calendar.Date
 }
 
@@ -84,6 +86,12 @@ func newPhases(deps PhaseDependencies) *Phases {
 	if logger == nil {
 		logger = slog.Default()
 	}
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
+	if deps.Today == nil {
+		deps.Today = calendar.CalendarDateClock(deps.Now)
+	}
 	return &Phases{PhaseList: deps.Records, deps: deps, logger: logger}
 }
 
@@ -107,10 +115,7 @@ func NewResyncingPhases(deps PhaseDependencies) (*Phases, error) {
 }
 
 func (s *Phases) todayDate() calendar.Date {
-	if s.deps.Today != nil {
-		return s.deps.Today()
-	}
-	return calendar.TodayDate()
+	return s.deps.Today()
 }
 
 func (s *Phases) notFound(err error) bool {
@@ -175,7 +180,7 @@ func (s *Phases) translatePhaseWriteError(err error) error {
 // at now; a zero now means the current instant.
 func (s *Phases) ListPublicOpen(ctx context.Context, now time.Time) ([]*enrollment.Phase, error) {
 	if now.IsZero() {
-		now = time.Now()
+		now = s.deps.Now()
 	}
 	return s.deps.Records.PublicOpenPhases(ctx, now)
 }

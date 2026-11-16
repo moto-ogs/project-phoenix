@@ -373,7 +373,8 @@ func TestPhaseService_ListPublicOpen_FiltersInactiveAndClosedWindow(t *testing.T
 	svc, _, _, _, _ := setupPhaseTest(t)
 	ctx := testpkg.Ctx(t)
 
-	now := time.Now()
+	// A fixed Wednesday 10:00 in Berlin decides the window (#7104).
+	now := calendar.NewDate(2026, time.November, 18).BerlinMidnight().Add(10 * time.Hour)
 	openStart := now.AddDate(0, 0, -7)
 	openEnd := now.AddDate(0, 0, 7)
 	pastEnd := now.AddDate(0, 0, -1)

@@ -14,6 +14,7 @@ import (
 	schoolCalendarHTTP "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	holidayClosureHTTP "github.com/moto-ogs/project-phoenix/workflows/holidayclosurenotification/http"
 )
 
@@ -23,9 +24,9 @@ import (
 // holiday bookings it affects (#6434); /traeger/holiday-closures previews
 // them and lists the closed days nobody told yet, behind the planning right.
 func mountTraegerClosingDayRoutes(root chi.Router, schools traegercalendar.Schools, organizations HolidayOrganizations,
-	mail owners.HolidayClosureMail, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, holidays owners.HolidayClosureHolidays,
+	mail owners.HolidayClosureMail, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, holidays owners.HolidayClosureHolidays, today func() calendar.Date,
 ) {
-	closures := newHolidayClosures(organizations, mail, holidayCalendar, holidays)
+	closures := newHolidayClosures(organizations, mail, holidayCalendar, holidays, today)
 	requireManage := common.RequiresPermission(identityaccess.TraegerRightSettingsManage)
 	resource := schoolCalendarHTTP.NewTraegerClosingDayResource(
 		schoolCalendarCompose.NewTraegerClosingDays(schools, owners.NewTraegerClosingDayHolidayNotices(closures)), traegerListRenderer(NewSimpleListRenderer()),
@@ -35,11 +36,12 @@ func mountTraegerClosingDayRoutes(root chi.Router, schools traegercalendar.Schoo
 }
 
 // newHolidayClosures builds Enrollment's closing day notices over the
-// Träger directory, the outbox and the host schools' calendar.
+// Träger directory, the outbox and the host schools' calendar on the root's
+// day today.
 func newHolidayClosures(organizations HolidayOrganizations, mail owners.HolidayClosureMail, holidayCalendar enrollmentOwner.HolidaySchoolCalendar,
-	holidays owners.HolidayClosureHolidays,
+	holidays owners.HolidayClosureHolidays, today func() calendar.Date,
 ) enrollmentOwner.HolidayClosures {
-	return owners.NewHolidayClosures(holidayCalendar, holidays, newHolidayOfficeTraeger(organizations), mail)
+	return owners.NewHolidayClosures(holidayCalendar, holidays, newHolidayOfficeTraeger(organizations), mail, today)
 }
 
 // mountHolidayClosureNotificationRoutes serves the notices after a school
@@ -48,9 +50,9 @@ func newHolidayClosures(organizations HolidayOrganizations, mail owners.HolidayC
 // closing days, and the Träger-Büro's list "Eltern noch nicht informiert"
 // at /traeger/holiday-closures/pending behind "Einstellungen verwalten".
 func mountHolidayClosureNotificationRoutes(root, tenant chi.Router, organizations HolidayOrganizations,
-	mail owners.HolidayClosureMail, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, holidays owners.HolidayClosureHolidays, logger *slog.Logger,
+	mail owners.HolidayClosureMail, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, holidays owners.HolidayClosureHolidays, logger *slog.Logger, today func() calendar.Date,
 ) {
-	notices := owners.NewHolidayClosureNotifications(newHolidayClosures(organizations, mail, holidayCalendar, holidays), organizations, mail,
+	notices := owners.NewHolidayClosureNotifications(newHolidayClosures(organizations, mail, holidayCalendar, holidays, today), organizations, mail,
 		logger.With("workflow", "holiday-closure-notification"))
 	resource := holidayClosureHTTP.NewResource(notices, common.RequiresPermission(permissions.SchedulesUpdate),
 		common.RequiresPermission(permissions.SchedulesUpdate), common.RequiresPermission(identityaccess.TraegerRightSettingsManage))

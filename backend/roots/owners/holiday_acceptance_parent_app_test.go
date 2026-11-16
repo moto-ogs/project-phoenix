@@ -42,7 +42,7 @@ func renderAcceptance(t *testing.T, accounts HolidayAcceptanceAccounts, parentsU
 	t.Helper()
 	raw, err := json.Marshal(mail)
 	require.NoError(t, err)
-	renderer := enrollmentCompose.NewMailRenderers(newHolidayAcceptanceAccounts(accounts, parentsURL), parentsURL).HolidayRegistrationAccepted
+	renderer := enrollmentCompose.NewMailRenderers(newHolidayAcceptanceAccounts(accounts, parentsURL), parentsURL, nil).HolidayRegistrationAccepted
 	return renderer(context.Background(), enrollmentOwner.MailKindHolidayRegistrationAccepted, raw)
 }
 
@@ -186,7 +186,7 @@ func TestHolidayParentAccountOfferIsDecidedAtSending(t *testing.T) {
 			"period_name": "Herbstferien", "organization_id": organizationID, "setup_url": "https://evil.example.org/ferienkonto/alt",
 		})
 		require.NoError(t, err)
-		renderer := enrollmentCompose.NewMailRenderers(newHolidayAcceptanceAccounts(accounts, "https://eltern.example.org/"), "https://eltern.example.org/").HolidayParentAccountOffer
+		renderer := enrollmentCompose.NewMailRenderers(newHolidayAcceptanceAccounts(accounts, "https://eltern.example.org/"), "https://eltern.example.org/", nil).HolidayParentAccountOffer
 		rendered, err := renderer(context.Background(), enrollmentOwner.MailKindHolidayParentAccountOffer, raw)
 		require.NoError(t, err)
 		assert.Equal(t, "holiday-parent-account-offer.html", rendered.Template)
@@ -205,6 +205,6 @@ func TestHolidayParentAccountOfferIsDecidedAtSending(t *testing.T) {
 
 	raw, err := json.Marshal(map[string]any{"recipient_email": "neu@example.org", "organization_id": organizationID})
 	require.NoError(t, err)
-	_, err = enrollmentCompose.NewMailRenderers(nil, "").HolidayParentAccountOffer(context.Background(), enrollmentOwner.MailKindHolidayParentAccountOffer, raw)
+	_, err = enrollmentCompose.NewMailRenderers(nil, "", nil).HolidayParentAccountOffer(context.Background(), enrollmentOwner.MailKindHolidayParentAccountOffer, raw)
 	require.Error(t, err, "without the account lookup and the parents portal the offer is not sent")
 }

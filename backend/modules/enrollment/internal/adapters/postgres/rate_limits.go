@@ -16,10 +16,29 @@ import (
 type Store struct {
 	resolve  func(context.Context) (bun.IDB, error)
 	tenantID func(context.Context) (int64, error)
+	// now stamps the rows the store writes (updated_at, reviewed_at,
+	// late-invite creation); nil is the real clock.
+	now func() time.Time
 }
 
 func NewStore(resolve func(context.Context) (bun.IDB, error), tenantID func(context.Context) (int64, error)) *Store {
 	return &Store{resolve: resolve, tenantID: tenantID}
+}
+
+// WithClock returns the store stamping its writes with now (ADR 0239).
+func (r *Store) WithClock(now func() time.Time) *Store {
+	clocked := *r
+	clocked.now = now
+	return &clocked
+}
+
+// currentTime is the instant the store stamps a write with.
+func (r *Store) currentTime() time.Time {
+	now := r.now
+	if now == nil {
+		now = time.Now
+	}
+	return now()
 }
 
 // IncrementAttempts mirrors auth.PasswordResetRateLimitRepository.IncrementAttempts

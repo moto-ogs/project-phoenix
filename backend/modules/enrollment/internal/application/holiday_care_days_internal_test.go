@@ -49,7 +49,7 @@ func (s *careDayPeriodStore) FindHolidayPeriod(context.Context, int64, int64, bo
 	return s.stored, true, nil
 }
 
-func (s *careDayPeriodStore) InsertHolidayPeriod(context.Context, int64, enrollment.HolidayPeriodInput) (int64, error) {
+func (s *careDayPeriodStore) InsertHolidayPeriod(context.Context, int64, enrollment.HolidayPeriodInput, calendar.Date) (int64, error) {
 	s.written++
 	return s.stored.ID, nil
 }

@@ -39,5 +39,5 @@ func NewCareContractImports(organizations HolidayOrganizations, settings Traeger
 		Access:       careContractAccessLog{log: accessLog}, Runtime: owners.CareContractRuntime{},
 		Numbers:     owners.NewCareContractDebtorNumbers(parentBillingSettings{settings: settings}, today),
 		Fingerprint: securityruntime.Fingerprint,
-	})
+	}, today)
 }

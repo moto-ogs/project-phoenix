@@ -242,7 +242,7 @@ func (rs *Resource) publicFormBootstrap(w http.ResponseWriter, r *http.Request) 
 	schoolID, resolveErr := rs.resolvePublicTenantID(r.Context(), slug)
 	if resolveErr == nil {
 		resolveErr = withinTenant(r.Context(), schoolID, func(txCtx context.Context) error {
-			loaded, loadErr := rs.RequestService.LoadPublicFormBootstrap(txCtx, phaseID, time.Now(), lateInviteToken)
+			loaded, loadErr := rs.RequestService.LoadPublicFormBootstrap(txCtx, phaseID, rs.now(), lateInviteToken)
 			if loadErr != nil {
 				return loadErr
 			}
@@ -336,7 +336,7 @@ func (rs *Resource) listPublicPhases(w http.ResponseWriter, r *http.Request) {
 			if rs.RequestService != nil && !rs.RequestService.IsEnrollmentEnabled(txCtx) {
 				return capability.ErrEnrollmentDisabled
 			}
-			list, listErr := rs.PhaseService.ListPublicOpen(txCtx, time.Now())
+			list, listErr := rs.PhaseService.ListPublicOpen(txCtx, rs.now())
 			phases = list
 			return listErr
 		})

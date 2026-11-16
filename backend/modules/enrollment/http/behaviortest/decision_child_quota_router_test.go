@@ -116,7 +116,7 @@ func TestDecideAdminChild_RenewalOfADepartedChildRefusedByAFullKinderkontingent(
 	testpkg.CreateTestStudent(t, db, "Schon", "Da", "1a")
 	departed := matchExistingStudent(t, db, harness, peopleValues.StudentStatusActive)
 	_, err := db.NewUpdate().TableExpr("users.student_school_memberships").
-		Set("enrolled_until = ?", calendar.TodayDate().AddDays(-1)).
+		Set("enrolled_until = ?", offeringGuardDay.AddDays(-1)).
 		Where("student_profile_id = ? AND deleted_at IS NULL", departed.ID).Exec(harness.ctx)
 	require.NoError(t, err)
 	testpkg.SetTestChildQuota(t, db, 1, 1)
