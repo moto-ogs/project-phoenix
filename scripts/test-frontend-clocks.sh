@@ -10,7 +10,8 @@
 # scripts/clock-boundaries.mjs. Every test starts on the given time instead of
 # TEST_CLOCK_INSTANT's default (frontend/src/test/clock-instant.ts); a test
 # that sets its own time keeps it. For every time OUT_DIR gets the Vitest JSON
-# report, and summary.md lists the failed tests per time
+# report and, after a red run, its exit status; summary.md lists the failed
+# tests per time
 # (scripts/clock-early-warning.mjs). Every time runs even after a failure; the
 # exit status is 1 when any of them failed.
 set -euo pipefail
@@ -38,8 +39,12 @@ while IFS= read -r line; do
   instant=$(node -e 'console.log(new Date(Number(process.argv[1]) * 1000).toISOString())' "$seconds")
   printf '%s\t%s\n' "$at" "$reason" >> "$out/times.tsv"
   echo "::group::Frontend tests at $at ($reason)"
-  if ! TEST_CLOCK_INSTANT=$instant pnpm exec vitest run --reporter=dot --reporter=json \
-    --outputFile.json="$out/vitest-$name.json" "$@"; then
+  run_status=0
+  TEST_CLOCK_INSTANT=$instant pnpm exec vitest run --reporter=dot --reporter=json \
+    --outputFile.json="$out/vitest-$name.json" "$@" || run_status=$?
+  if ((run_status != 0)); then
+    # A run can exit red although every test passed (unhandled rejection).
+    echo "$run_status" > "$out/vitest-$name.exit"
     status=1
   fi
   echo "::endgroup::"

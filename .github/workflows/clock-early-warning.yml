@@ -161,9 +161,9 @@ jobs:
   frontend:
     name: Frontend tests at moved clocks
     # A hosted runner: free in this public repository, and nothing waits for
-    # this job. The suite at one time takes MEASURED_ONE there.
+    # this job. Measurement pending on this branch.
     runs-on: ubuntu-latest
-    timeout-minutes: MEASURED_TIMEOUT
+    timeout-minutes: 240
     permissions:
       contents: read
       issues: write

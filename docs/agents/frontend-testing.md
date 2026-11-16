@@ -187,10 +187,10 @@ Outside Vitest nothing freezes the clock for the test code.
   `useRealClock()` without a non-empty literal reason, `vi.getRealSystemTime()`
   and statically identifiable replacement of the global `Date`, including
   direct assignments and `Object.defineProperty` / `Reflect` writes. In
-  `e2e/` and in `*.stories.*` it rejects every read of the host clock:
-  `new Date()`, `Date.now()` and, in `e2e/`, `berlinTodayISO()` and
-  `todayISO()` outside `e2e/clock.ts`, and `realClock()` without a literal
-  reason. There is no baseline and no allowlist; the exception is the reason
+  `e2e/`, `.storybook/` and `*.stories.*` it rejects every read of the host
+  clock outside `e2e/clock.ts` and `.storybook/clock.ts`: `new Date()`,
+  `Date.now()`, `berlinTodayISO()` and `todayISO()`, and `realClock()` without
+  a literal reason. There is no baseline and no allowlist; the exception is the reason
   inside the `useRealClock` or `realClock` call.
 - `.claude/rules/no-test-modifications.md` applies: a date-dependent failure is
   fixed by pinning the clock, not by loosening the assertion.

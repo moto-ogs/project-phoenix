@@ -249,6 +249,33 @@ describe("test-clock/no-real-clock", () => {
     expect(countReports(helper.output)).toBe(0);
   });
 
+  it("reports the today readers in a story and clock reads in Storybook fixtures", () => {
+    const story = lintSource(
+      `
+      import { berlinTodayISO } from "~/lib/date-helpers";
+      export const today = berlinTodayISO();
+      `,
+      "src/components/probe.stories.tsx",
+    );
+    expect(story.status).toBe(1);
+    expect(countReports(story.output)).toBe(1);
+    expect(story.output).toContain("storyNow()");
+
+    const fixture = lintSource(
+      `export const createdAt = new Date().toISOString();`,
+      ".storybook/fixtures/probe.ts",
+    );
+    expect(fixture.status).toBe(1);
+    expect(countReports(fixture.output)).toBe(1);
+
+    const helper = lintSource(
+      `export function storyNow(): Date { return new Date(); }`,
+      ".storybook/clock.ts",
+    );
+    expect(helper.status).toBe(0);
+    expect(countReports(helper.output)).toBe(0);
+  });
+
   it("requires a non-empty literal reason for realClock()", () => {
     const result = lintSource(
       `

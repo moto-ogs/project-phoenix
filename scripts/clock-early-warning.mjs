@@ -109,7 +109,12 @@ export function collect(dir, suite = 'backend') {
   return readTimes(dir).map(({ at, reason }) => {
     const path = join(dir, `${SUITES[suite].filePrefix}-${at.replaceAll(':', '')}.json`);
     if (!existsSync(path)) return { at, reason, ran: false, failed: [] };
-    return { at, reason, ran: true, failed: failures(readFileSync(path, 'utf8'), suite) };
+    const failed = failures(readFileSync(path, 'utf8'), suite);
+    // The runner exits red without a red test, e.g. for an unhandled rejection.
+    const exitPath = path.replace(/\.json$/, '.exit');
+    const exit = existsSync(exitPath) ? readFileSync(exitPath, 'utf8').trim() : '0';
+    if (failed.length === 0 && exit !== '0') failed.push(`Lauf endete mit Status ${exit} ohne roten Test (Log des Laufs lesen)`);
+    return { at, reason, ran: true, failed };
   });
 }
 

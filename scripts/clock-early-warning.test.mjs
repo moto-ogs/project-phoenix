@@ -127,3 +127,15 @@ test('the frontend suite reads the Vitest reports and reports under its own issu
   assert.notEqual(SUITES.frontend.title, TITLE);
   assert.match(sent[0].body.body, /frontend-testing\.md/);
 });
+
+test('a frontend run that exits red without a red test is still red', () => {
+  // Vitest exits 1 for an unhandled rejection while every test passed.
+  const dir = resultsDir([['2027-03-28T00:30', 'Tag der Zeitumstellung'], ['2027-03-29T00:30', 'Tag danach']], {
+    'vitest-2027-03-28T0030.json': vitestReport(['src/a.test.tsx', 'passed', [['adds', 'passed']]]),
+    'vitest-2027-03-28T0030.exit': '1\n',
+    'vitest-2027-03-29T0030.json': vitestReport(['src/a.test.tsx', 'passed', [['adds', 'passed']]]),
+  });
+  const results = collect(dir, 'frontend');
+  assert.deepEqual(results.map(result => result.failed), [['Lauf endete mit Status 1 ohne roten Test (Log des Laufs lesen)'], []]);
+  assert.equal(isRed(results), true);
+});

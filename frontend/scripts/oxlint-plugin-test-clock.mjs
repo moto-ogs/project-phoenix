@@ -21,9 +21,9 @@
 //
 //     - Playwright specs and helpers (`e2e/`) and stories (`*.stories.*`)
 //       run outside that freeze (#7296): browser, Next server and backend
-//       keep the host clock. There the rule rejects every read of it:
-//       `new Date()`, `Date.now()` and, in `e2e/`, the app's today readers
-//       (`berlinTodayISO()`, `todayISO()`). A spec takes its day from
+//       keep the host clock. There, and in `.storybook/`, the rule rejects
+//       every read of it: `new Date()`, `Date.now()` and the app's today
+//       readers (`berlinTodayISO()`, `todayISO()`). A spec takes its day from
 //       `runToday()` in `e2e/clock.ts`, measures with `performance.now()`
 //       and declares a wall-clock need as `realClock("reason")`; a story
 //       takes the time from `storyNow()` in `.storybook/clock.ts`, which the
@@ -39,14 +39,15 @@ const CLOCK_HELPER_FILE = "src/test/clock.ts";
 // the declared wall-clock exception.
 const RUN_CLOCK_FILE = "e2e/clock.ts";
 const REAL_CLOCK_FILE = "e2e/real-clock.mjs";
+const STORY_CLOCK_FILE = ".storybook/clock.ts";
 const TODAY_READERS = new Set(["berlinTodayISO", "todayISO"]);
 const STORY_FILE = /\.stories\.[cm]?[jt]sx?$/;
 
-/** Repo-relative posix path ("src/…", "e2e/…" or "scripts/…"), or "" when unavailable. */
+/** Repo-relative posix path ("src/…", "e2e/…", ".storybook/…" or "scripts/…"), or "" when unavailable. */
 function fileKey(context) {
   const raw = String(context.physicalFilename ?? context.filename ?? "");
   const posix = raw.replaceAll("\\", "/");
-  for (const marker of ["/src/", "/e2e/", "/scripts/"]) {
+  for (const marker of ["/src/", "/e2e/", "/.storybook/", "/scripts/"]) {
     const idx = posix.lastIndexOf(marker);
     if (idx !== -1) return posix.slice(idx + 1);
   }
@@ -166,9 +167,11 @@ function isGlobalDateNow(callee, sourceCode) {
 
 /** Where the Vitest freeze does not reach: "spec", "story" or null. */
 function hostClockSurface(file) {
-  if (file === REAL_CLOCK_FILE) return null;
+  if (file === REAL_CLOCK_FILE || file === STORY_CLOCK_FILE) return null;
   if (file.startsWith("e2e/")) return "spec";
-  return STORY_FILE.test(file) ? "story" : null;
+  return file.startsWith(".storybook/") || STORY_FILE.test(file)
+    ? "story"
+    : null;
 }
 
 const noRealClock = {
@@ -221,15 +224,18 @@ const noRealClock = {
           return;
         }
 
+        if (
+          surface &&
+          file !== RUN_CLOCK_FILE &&
+          callee.type === "Identifier" &&
+          TODAY_READERS.has(callee.name) &&
+          node.arguments.length === 0
+        ) {
+          context.report({ node, messageId: clockRead });
+          return;
+        }
+
         if (surface === "spec" && callee.type === "Identifier") {
-          if (
-            file !== RUN_CLOCK_FILE &&
-            TODAY_READERS.has(callee.name) &&
-            node.arguments.length === 0
-          ) {
-            context.report({ node, messageId: "specClockRead" });
-            return;
-          }
           if (callee.name === "realClock") {
             const reason = node.arguments[0];
             if (!isStringLiteral(reason) || literalText(reason).trim() === "") {
