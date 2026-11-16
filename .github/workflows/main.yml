@@ -463,7 +463,7 @@ jobs:
           # runner before that. A changed test file selects only its own
           # package, so test files in at most 15 directories plus ./test stay
           # within the 16 packages four vCPUs are sized for. Every other
-          # change may reach any number of importers and gets eight.
+          # change may reach any number of importers and gets sixteen.
           small=$(jq 'length > 0 and all(.[]; endswith("_test.go")) and
             (map(split("/")[:-1] | join("/")) | unique | length <= 15)' <<< "$CHANGED_FILES")
           echo "small=$small" >> "$GITHUB_OUTPUT"
