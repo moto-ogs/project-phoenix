@@ -6,7 +6,11 @@ import {
   BirthdayList,
   dayMonthLabel,
 } from "~/components/dashboard/birthday-list";
-import { HomeCard, HomeCardIcon } from "~/components/home/home-card";
+import {
+  HomeCard,
+  HomeCardEmpty,
+  HomeCardIcon,
+} from "~/components/home/home-card";
 import { useHomeCardRows } from "~/components/home/home-card-rows";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -136,6 +140,12 @@ export function BirthdaysBlock({
         )}
         {loadError ? (
           <LoadErrorAlert error={loadError} />
+        ) : !isLoading && celebrations.length === 0 ? (
+          // Die Wochenleiste bleibt oben, der Leertext steht in der Mitte
+          // der Fläche darunter.
+          <div className="flex flex-1 flex-col justify-center">
+            <HomeCardEmpty title="Keine Geburtstage in dieser Woche" />
+          </div>
         ) : (
           <div className="min-h-0">
             <BirthdayList
