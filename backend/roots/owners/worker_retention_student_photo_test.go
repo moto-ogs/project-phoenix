@@ -44,7 +44,7 @@ func TestStudentPhotoCareEndStepRunsOnTheServePool(t *testing.T) {
 	audit, _, _, err := NewRetentionTestOwners(db, testpkg.TenantRuntime(t, admin))
 	require.NoError(t, err)
 	unlinker := &recordingPhotoUnlinker{}
-	cleanup := fileStorageCompose.NewUploadCleanup(admin, "student-photos")
+	cleanup := fileStorageCompose.NewUploadCleanup(admin, "student-photos", time.Now)
 	runtime := StudentPhotoRuntime{Cleanup: cleanup.Queue, CleanupBatch: cleanup.QueueAll, Unlinker: unlinker}
 	directory, err := NewPeopleDirectoryWithObserver(db, func(peopleCompose.Observation) {}, nil, runtime)
 	require.NoError(t, err)

@@ -152,9 +152,9 @@ func NewDocumentCoordinator(kind string, backend apiDocuments.Objects, store api
 
 // --- foreign facts -------------------------------------------------------------
 
-// NewUploadCleanup uses the existing file cleanup outbox, partitioned by kind, on the real clock: its roots hold none.
-func NewUploadCleanup(db *bun.DB, kind filestorage.UploadCleanupKind) *filestorage.UploadCleanup {
-	cleanup := application.NewUploadCleanup(postgres.NewUploadCleanupStore(postgres.DatabaseRuntime(db), string(kind), time.Now), transaction{}, string(kind), time.Now)
+// NewUploadCleanup uses the existing file cleanup outbox, partitioned by kind, on the clock its root passes; nil means time.Now.
+func NewUploadCleanup(db *bun.DB, kind filestorage.UploadCleanupKind, now func() time.Time) *filestorage.UploadCleanup {
+	cleanup := application.NewUploadCleanup(postgres.NewUploadCleanupStore(postgres.DatabaseRuntime(db), string(kind), application.Clock(now)), transaction{}, string(kind), application.Clock(now))
 	return filestorage.NewUploadCleanup(cleanup.Queue, cleanup.QueueAll, cleanup.Sweep)
 }
 
