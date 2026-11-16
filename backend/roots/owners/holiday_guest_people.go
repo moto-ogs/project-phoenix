@@ -35,8 +35,8 @@ type HolidayGuestDirectory interface {
 // to Organisation & Tenancy (#5630) and every transfer and sheet read to the
 // school's access log at the Audit Platform; health opens and seals the
 // health information (#4722). The school's own children of a hosted week
-// (#6678) are found among students and planned in Care Plan. A nil today
-// uses the Berlin calendar day.
+// (#6678) are found among students and planned in Care Plan, on the root's
+// day clock today.
 func NewHolidayGuests(people HolidayGuestDirectory, students HolidayOwnChildStudents, schools HolidayHostSchools, care HolidayGuestCarePlan, accessLog DataAccessAppender, health enrollmentOwner.HolidayHealthCipher, today func() calendar.Date) enrollmentOwner.HolidayGuests {
 	return enrollmentCompose.NewHolidayGuests(NewHolidayGuestPeople(people), NewHolidayHostSchoolNames(schools), NewHolidayGuestCareDays(care),
 		StatisticsHolidayStudents{Students: students}, NewHolidayOwnChildPlans(care), health, NewHolidayGuestAccessLog(accessLog), today)

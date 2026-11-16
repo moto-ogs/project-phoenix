@@ -54,7 +54,7 @@ func (settingsFailureCaptcha) Verify(context.Context, string, string) error { re
 func TestEnrollmentResponsesHideSettingsReadFailures(t *testing.T) {
 	t.Parallel()
 	testpkg.SetupTestDB(t)
-	rs := &Resource{RequestService: failedSettingsIntake{}, ChangeRequestService: failedSettingsChange{}, CaptchaService: settingsFailureCaptcha{}, SchoolService: settingsFailureSchool{tenantID: testpkg.Tenant(t)}}
+	rs := &Resource{Now: resourceTestClock, RequestService: failedSettingsIntake{}, ChangeRequestService: failedSettingsChange{}, CaptchaService: settingsFailureCaptcha{}, SchoolService: settingsFailureSchool{tenantID: testpkg.Tenant(t)}}
 	for _, tc := range []struct {
 		name, method, path string
 		handler            http.HandlerFunc

@@ -15,7 +15,8 @@ func TestApplyDueClassSwitchesLocksGatesBeforeReadingPlans(t *testing.T) {
 	t.Parallel()
 
 	var calls []string
-	decisions := NewDecisions(DecisionDependencies{Settings: unusedDecisionSettings{},
+	decisions := NewDecisions(DecisionDependencies{
+		Now: enrollmentTestClock, Settings: unusedDecisionSettings{},
 		Children: classSwitchOrderChildren{calls: &calls},
 		StudentEnrollment: classSwitchOrderStudentEnrollment{
 			calls: &calls,

@@ -55,6 +55,7 @@ func TestOpenAdminRequestUpload_StorageFactoryFailureIsServerError(t *testing.T)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
 	w := httptest.NewRecorder()
 	resource := &Resource{
+		Now: resourceTestClock,
 		Uploads: uploadOpenStub{upload: &capability.RequestUpload{
 			ID: 34, TenantID: 56, StoredName: "proof.pdf", Filename: "Nachweis.pdf", ContentType: "application/pdf",
 		}},

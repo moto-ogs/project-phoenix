@@ -59,7 +59,7 @@ type PhaseDependencies struct {
 	CareExits      enrollment.PhaseResponseCareExits
 	PortalAccounts enrollment.PhaseResponsePortalAccounts
 	Logger         *slog.Logger
-	Now            func() time.Time // the public window's clock (ADR 0239); nil is the real one, a nil Today its Berlin day
+	Now            func() time.Time // the public window's clock (ADR 0239), required; a nil Today is its Berlin day
 	Today          func() calendar.Date
 }
 
@@ -124,7 +124,7 @@ func NewNotifications(deps NotificationDependencies) enrollment.Notifications {
 	})
 }
 
-// NewMailRenderers binds account eligibility, the parents URL and the day of dispatch (nil: Berlin day) to Enrollment's renderers.
+// NewMailRenderers binds account eligibility, the parents URL and the day of dispatch (the root's day clock) to Enrollment's renderers.
 func NewMailRenderers(accounts enrollment.HolidayAcceptanceAccounts, parentsURL string, today func() calendar.Date) enrollment.MailRenderers {
 	return application.NewMailRenderers(accounts, parentsURL, today)
 }

@@ -253,7 +253,7 @@ func TestBelegRetentionRefusesTheTraegerTransaction(t *testing.T) {
 	}
 	unit := tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db))
 	err := tenant.WithinTraeger(unit, organization, func(traegerCtx context.Context) error {
-		_, err := NewBelegRetention(nil).Overview(traegerCtx, organization)
+		_, err := NewBelegRetention(calendar.TodayDate).Overview(traegerCtx, organization)
 		return err
 	})
 	assert.ErrorContains(t, err, "administrative transaction")

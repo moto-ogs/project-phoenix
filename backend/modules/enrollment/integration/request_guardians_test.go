@@ -20,7 +20,7 @@ import (
 func TestRequestGuardiansIsolationRollbackAndRetry(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.NewClocked(nil)
+	module := enrollmentCompose.NewClocked(time.Now)
 	var schools, requests, guardians, profiles, phases, children []int64
 	for _, school := range []string{"first", "second"} {
 		t.Run(school, func(t *testing.T) {

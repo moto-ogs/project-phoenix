@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	deliverycompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	delivery "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/mail"
@@ -61,7 +63,7 @@ func TestOrphanReleaseAccountPushStartsRetentionWhenWorkerMarksSent(t *testing.T
 			Students: NewStudentRepository(database, nil, nil), GuardianProfiles: NewGuardianProfileRepository(database),
 		}}, DeliveryNotifications{}, runtime.Module)
 	transport := &documentPushTransport{}
-	worker, err := buildDeliveryWorker(database, RootEnvironment{Logger: slog.Default()}, nil,
+	worker, err := buildDeliveryWorker(database, RootEnvironment{Logger: slog.Default(), Now: time.Now, Today: calendar.TodayDate}, nil,
 		mail.Email{}, nil, DeliveryRuntime{Runtime: runtime}, nil, nil, nil, cancelledModules{}, notices, transport, nil)
 	require.NoError(t, err)
 	for _, release := range releases {

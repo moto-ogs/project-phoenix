@@ -17,6 +17,7 @@ type sourcedTemplateResyncerStub struct {
 
 func resyncingPhaseDependencies() PhaseDependencies {
 	return PhaseDependencies{
+		Now:     enrollmentTestClock,
 		Records: phaseRecordsStub{}, Offerings: phaseOfferingsStub{},
 		LockTemplateRecurrence: func(context.Context) error { return nil },
 		Resyncer:               sourcedTemplateResyncerStub{},
