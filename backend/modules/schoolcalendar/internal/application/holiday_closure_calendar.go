@@ -58,7 +58,7 @@ func (c HolidayClosureCalendar) HolidayClosureNoCareDays(ctx context.Context, or
 // holidayDays are the statutory holidays of a federal state in [from, to].
 func (c HolidayClosureCalendar) holidayDays(ctx context.Context, region string, from, to calendar.Date) ([]schoolcalendar.HolidayClosureNoCareDay, error) {
 	if !c.holidays.ValidHolidayRegion(region) {
-		return nil, fmt.Errorf("%w: unsupported region %q", schoolcalendar.ErrFederalStateUnavailable, region)
+		return nil, fmt.Errorf("%w: unsupported region %q", schoolcalendar.ErrFederalStateMissing, region)
 	}
 	listed, err := c.holidays.ListHolidays(ctx, region, from.String(), to.String())
 	if err != nil {
@@ -92,7 +92,7 @@ func closingNoCareDays(closingDays []schoolcalendar.HolidayClosureCalendarDay, f
 // school without one fails instead of getting another state's holidays.
 func (c HolidayClosureCalendar) region(stored string) (string, error) {
 	if stored == "" {
-		return "", fmt.Errorf("%w: not set", schoolcalendar.ErrFederalStateUnavailable)
+		return "", schoolcalendar.ErrFederalStateMissing
 	}
 	return stored, nil
 }

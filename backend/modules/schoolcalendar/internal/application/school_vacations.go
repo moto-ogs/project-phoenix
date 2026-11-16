@@ -220,7 +220,7 @@ func (s *SchoolVacationService) region(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("%w: %w", schoolcalendar.ErrFederalStateUnavailable, err)
 	}
 	if !ValidHolidayRegion(region) {
-		return "", fmt.Errorf("%w: unsupported region %q", schoolcalendar.ErrFederalStateUnavailable, region)
+		return "", fmt.Errorf("%w: unsupported region %q", schoolcalendar.ErrFederalStateMissing, region)
 	}
 	return region, nil
 }

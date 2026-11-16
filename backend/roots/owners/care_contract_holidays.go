@@ -91,7 +91,7 @@ func schoolFederalStates(ctx context.Context, settings CareContractHolidaySettin
 // regionHolidays asks School Calendar for the holidays of one region.
 func (h careContractSchoolHolidays) regionHolidays(ctx context.Context, region string, from, to calendar.Date) (map[calendar.Date]bool, error) {
 	if !h.holidays.ValidHolidayRegion(region) {
-		return nil, fmt.Errorf("%w: unsupported region %q", schoolcalendar.ErrFederalStateUnavailable, region)
+		return nil, fmt.Errorf("%w: unsupported region %q", schoolcalendar.ErrFederalStateMissing, region)
 	}
 	dates, err := h.holidays.HolidayDates(ctx, region, from.String(), to.String())
 	if err != nil {

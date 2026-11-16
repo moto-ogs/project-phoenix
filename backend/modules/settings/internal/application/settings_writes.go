@@ -43,6 +43,15 @@ func (s *settingsService) ResetValue(ctx context.Context, key string, changedBy 
 	if err != nil {
 		return err
 	}
+	// A select whose default is none of its options, such as the federal
+	// state without a default (#7174): a reset would leave the school
+	// without a valid value. Choosing another option stays possible.
+	if def.Type == config.FieldSelect && def.Options != nil && !isValidSelectOption(def.Default, def.Options.Static) {
+		return &config.SettingsError{
+			Op:  "reset_value",
+			Err: &config.InvalidValueError{Key: key, Reason: "the default is no option; choose a value instead"},
+		}
+	}
 
 	tenantID := s.tenantID(ctx)
 	if tenantID <= 0 {
