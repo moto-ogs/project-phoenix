@@ -543,8 +543,8 @@
    own disclosure toggle (`SectionCollapseToggle`) opens no layer: it must not
    lift the card above a sticky save bar. */
 .moto-content-surface:has(
-    [aria-expanded="true"]:not([data-section-collapse-toggle])
-  ) {
+  [aria-expanded="true"]:not([data-section-collapse-toggle])
+) {
   position: relative;
   z-index: 60;
 }
@@ -885,12 +885,12 @@ html[data-chat-page-lock] body {
    größere Schrift bleibt. */
 @media (pointer: coarse) {
   :is(input, textarea, select):not(
-      [class*="text-lg"],
-      [class*="text-xl"],
-      [class*="text-2xl"],
-      [class*="text-3xl"],
-      [class*="text-4xl"]
-    ) {
+    [class*="text-lg"],
+    [class*="text-xl"],
+    [class*="text-2xl"],
+    [class*="text-3xl"],
+    [class*="text-4xl"]
+  ) {
     font-size: 16px;
   }
 }
@@ -988,6 +988,44 @@ html[data-chat-page-lock] body {
 
 .animate-fadeInUp {
   animation: fadeInUp 300ms ease-out forwards;
+}
+
+/* Der Weichzeichner hinter Dialogen, Seitenleisten und Schubladen
+   (`OVERLAY_BACKDROP_BLUR_CLASS`). Er setzt erst ein, wenn das Fenster
+   gelandet ist, und fällt beim Schließen sofort weg: Solange das Fenster
+   gleitet, müsste der Browser die ganze Seite in jedem Bild neu weichzeichnen
+   (#7252). Eine Animation statt eines Übergangs, weil sie auch beim ersten
+   Bild läuft: die Schubladen erscheinen schon mit `data-state="open"`. */
+.moto-overlay-blur[data-state="open"] {
+  /* `forwards`, nicht `both`: in der Wartezeit muss der Wert `none` sein.
+     Schon `blur(0px)` legt die teure Ebene an. */
+  animation: moto-overlay-blur 0s linear
+    var(--moto-overlay-blur-delay, var(--moto-modal-enter, 200ms)) forwards;
+}
+
+/* vaul gibt seinem Overlay die Einblende-Animation `fadeIn` mit einem
+   spezifischeren Selektor; ohne diese Regel ersetzte sie den Weichzeichner.
+   Beide laufen hier nebeneinander. */
+[data-vaul-overlay][data-vaul-snap-points="false"].moto-overlay-blur[data-state="open"] {
+  animation-name: fadeIn, moto-overlay-blur;
+  animation-duration: 0.5s, 0s;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1), linear;
+  animation-delay: 0s, var(--moto-overlay-blur-delay, 500ms);
+  animation-fill-mode: none, forwards;
+}
+
+@keyframes moto-overlay-blur {
+  to {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+/* Glas für kleine, ruhende Flächen (Chips der Anmeldeseite): wenig Fläche,
+   nichts darunter bewegt sich. Nie auf Leisten über scrollendem Inhalt. */
+.moto-glass {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* A short bar that fills once, before a redirect (invitation accepted). It

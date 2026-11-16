@@ -1124,7 +1124,7 @@ const noCostlyMotion = {
     },
     messages: {
       backdropFilter:
-        "'{{match}}' blurs or filters everything behind the element, again on every frame something there moves. Use an opaque or tinted background instead (see .claude/rules/frontend-ui-kit.md, Motion).",
+        "'{{match}}' blurs or filters everything behind the element, again on every frame something there moves. Overlays take OVERLAY_BACKDROP_BLUR_CLASS (blurs once the overlay has landed), small resting chips moto-glass; everything else an opaque or tinted background (see .claude/rules/frontend-ui-kit.md, Motion).",
       transitionAll:
         "transition-all also animates size and position, which costs a layout per frame. Name the properties: transition (colours, opacity, shadow, transform), transition-colors, transition-opacity or transition-transform.",
       layoutTransition:
