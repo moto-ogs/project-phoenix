@@ -10,6 +10,9 @@ import {
   sentryDataCollection,
 } from "./sentry.shared";
 
+// A Sentry user pseudonym as the session callback derives it (#3843).
+const PSEUDONYM = "0123456789abcdef0123456789abcdef";
+
 type SpanJSON = Parameters<NonNullable<BrowserOptions["beforeSendSpan"]>>[0];
 type TracesSamplingContext = Parameters<
   NonNullable<BrowserOptions["tracesSampler"]>
@@ -85,7 +88,7 @@ describe("scrubEvent", () => {
   it("strips PII from user context", () => {
     const event = makeEvent({
       user: {
-        id: "42",
+        id: PSEUDONYM,
         ip_address: "192.168.1.1",
         email: "test@example.com",
         username: "testuser",
@@ -96,7 +99,7 @@ describe("scrubEvent", () => {
 
     expect(result).not.toBeNull();
     if (result === null) throw new Error("expected event to be kept");
-    expect(result.user).toStrictEqual({ id: "42" });
+    expect(result.user).toStrictEqual({ id: PSEUDONYM });
   });
 
   it("handles events with no request or user context", () => {
@@ -325,11 +328,11 @@ describe("scrubEvent", () => {
     expect(result?.breadcrumbs?.[0]?.message).toBe("Speichern fehlgeschlagen?");
   });
 
-  it("keeps only the account ID of the user: no name, e-mail or IP", () => {
+  it("keeps only the pseudonym of the user: no name, e-mail or IP", () => {
     const result = scrubEvent(
       makeEvent({
         user: {
-          id: "17",
+          id: PSEUDONYM,
           name: "Mia Muster",
           email: "mia@example.com",
           ip_address: "203.0.113.7",
@@ -339,7 +342,15 @@ describe("scrubEvent", () => {
       }),
     );
 
-    expect(result?.user).toStrictEqual({ id: "17" });
+    expect(result?.user).toStrictEqual({ id: PSEUDONYM });
+  });
+
+  // #3843: a raw account ID, set by whatever path, never leaves.
+  it("drops a user ID that is not a pseudonym", () => {
+    for (const id of ["17", "erika@example.com", PSEUDONYM.toUpperCase()]) {
+      const result = scrubEvent(makeEvent({ user: { id, email: "a@b.com" } }));
+      expect(result?.user).toStrictEqual({});
+    }
   });
 
   it("redacts request-feed tokens from frontend and backend paths", () => {
@@ -486,11 +497,11 @@ describe("scrubSpan", () => {
     });
   });
 
-  it("keeps only the account ID of the user: no name, e-mail or IP", () => {
+  it("keeps only the pseudonym of the user: no name, e-mail or IP", () => {
     const span = makeSpan({
       is_segment: true,
       attributes: {
-        "user.id": "17",
+        "user.id": PSEUDONYM,
         "user.email": "mia@example.com",
         "user.name": "Mia Muster",
         "user.username": "mia",
@@ -502,7 +513,19 @@ describe("scrubSpan", () => {
 
     const result = scrubSpan(span);
 
-    expect(result.attributes).toStrictEqual({ "user.id": "17" });
+    expect(result.attributes).toStrictEqual({ "user.id": PSEUDONYM });
+  });
+
+  // #3843: the span copy of a raw account ID never leaves either.
+  it("drops a span user ID that is not a pseudonym", () => {
+    const span = makeSpan({
+      is_segment: true,
+      attributes: { "user.id": "17", "sentry.op": "pageload" },
+    });
+
+    expect(scrubSpan(span).attributes).toStrictEqual({
+      "sentry.op": "pageload",
+    });
   });
 
   it("strips auth and cookie headers, whatever their case", () => {
