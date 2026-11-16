@@ -126,11 +126,12 @@ func BuildQualificationReminders(
 	return qualifications, qualifications.TraegerProofs, nil
 }
 
-// qualificationNotifier sends a reminder to the recipients who did not
-// switch it off (the Leitung's type is on by default) or, for the person's
-// own reminder, who switched it on. A school that turned notifications off
-// gets the mail only; the notification window holds a notice back for a
-// later run.
+// qualificationNotifier writes the reminder into the feed of every
+// recipient (#7137) and pushes it to those who did not switch it off (the
+// Leitung's type is on by default) or, for the person's own reminder, who
+// switched it on. A school that turned notifications off gets the mail only;
+// the notification window holds a notice back for a later run, feed entry
+// included.
 func qualificationNotifier(notifications DeliveryNotifications, logger *slog.Logger) workforce.QualificationNotifier {
 	return func(ctx context.Context, notice workforce.QualificationNotice) (bool, error) {
 		kind := deliveryContract.NotificationStaffQualificationExpiry
@@ -139,19 +140,22 @@ func qualificationNotifier(notifications DeliveryNotifications, logger *slog.Log
 			kind = deliveryContract.NotificationStaffQualificationOwnExpiry
 			filter = notifications.Preferences.FilterOptedIn
 		}
-		recipients, err := filter(ctx, kind, notice.RecipientAccountIDs)
+		if len(notice.RecipientAccountIDs) == 0 {
+			return true, nil
+		}
+		push, err := filter(ctx, kind, notice.RecipientAccountIDs)
 		if err != nil {
 			return false, fmt.Errorf("filter qualification reminder recipients: %w", err)
 		}
-		if len(recipients) == 0 {
-			return true, nil
-		}
 		err = notifications.Notifier.Notify(ctx, deliveryCompose.NotificationEvent{
-			Type: kind, IdempotencyKey: notice.IdempotencyKey, RelatedType: "staff", RelatedID: notice.StaffID,
+			// The object is the Nachweis: two Nachweise of one person due in
+			// one run are two feed entries, each with its push (#7137).
+			Type: kind, IdempotencyKey: notice.IdempotencyKey, RelatedType: "staff_qualification", RelatedID: notice.QualificationID,
 			Title: notice.Title, Body: notice.Body, DeepLink: notice.DeepLink,
 			Audience: deliveryCompose.NotificationAudience{
-				TenantID: notice.TenantID, Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: recipients,
+				TenantID: notice.TenantID, Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: notice.RecipientAccountIDs,
 			},
+			Feed: &deliveryContract.NotificationFeedDelivery{PushAccountIDs: push, HoldOutsideWindow: true},
 		})
 		switch {
 		case errors.Is(err, deliveryCompose.ErrNotificationsDisabled):

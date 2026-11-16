@@ -32,6 +32,7 @@ type NotificationEvent struct {
 	SchoolDeepLink string
 	Data           map[string]string
 	Portal         string
+	Feed           *communication.NotificationFeed
 }
 
 // NotificationSender is the producer's port.
@@ -103,6 +104,7 @@ func (event NotificationEvent) Public() communication.NotificationEvent {
 		SchoolDeepLink: event.SchoolDeepLink,
 		Data:           event.Data,
 		Portal:         event.Portal,
+		Feed:           event.Feed,
 	}
 }
 
