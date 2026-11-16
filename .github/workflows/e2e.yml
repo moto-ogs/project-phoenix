@@ -2,15 +2,18 @@ name: Frontend E2E
 
 # Playwright-Flows aus frontend/e2e/*.spec.ts (#4436) gegen einen frisch
 # geseedeten Stack: Postgres und Mailpit als Services, Backend-Binary,
-# migrate, seed (alle Profile, Standardprofil `vollbetrieb`), Next-Dev-Server
-# über den webServer-Block von frontend/playwright.config.ts. Die serverlosen
+# migrate, seed (alle Profile, Standardprofil `vollbetrieb`) und ein
+# Production-Build des Frontends, den der webServer-Block von
+# frontend/playwright.config.ts mit `next start` bedient
+# (E2E_FRONTEND_SERVER=start; lokal bleibt es `next dev`). Die serverlosen
 # Layouttests unter frontend/e2e/layout/ laufen weiter in test.yml.
 #
-# Jede Suite läuft mit einem Worker; die meiste Zeit kompiliert `next dev`
-# Seiten beim ersten Aufruf. Darum laufen die Suites parallel in eigenen Jobs:
-# die Flows in Shards mit je eigenem Seed, die Netzwerksuiten ohne Datenbank
-# gegen ihr synthetisches Backend. Das Repository ist öffentlich, die
-# GitHub-Runner kosten nichts; jeder Shard kostet nur seinen Aufbau an Zeit.
+# Jede Suite läuft mit einem Worker. Darum laufen die Suites parallel in
+# eigenen Jobs: die Flows in drei Shards, die Seed und Build einmal vom Job
+# `prepare` übernehmen, die Netzwerksuiten ohne Datenbank gegen ihr
+# synthetisches Backend mit `next dev` (e2e/network/server.mjs). Das
+# Repository ist öffentlich, die GitHub-Runner kosten nichts; jeder Job
+# kostet seinen Aufbau an Zeit.
 #
 # Kein Required Check und kein PR-Lauf: die Flows hängen am echten Heute und
 # an den Seed-Daten. Auf PRs dauerten sie 9-11 min und fanden in einer Woche
@@ -106,26 +109,19 @@ jobs:
           NODE_OPTIONS: "--require ./e2e/network/no-subdomain-dns.cjs"
         run: pnpm run test:tenant-switch
 
-  flows:
-    name: Playwright E2E flows (${{ matrix.part }})
+  # Seed und Frontend-Build einmal pro Lauf statt in jedem Shard. Der Job
+  # seedet wie bisher gegen den frisch migrierten Stack, sichert die Datenbank
+  # samt Rollen, das Backend-Binary, backend/.seed-state.json, die Uploads und
+  # den Production-Build von frontend/.next; die Shards stellen sie wieder her.
+  # Ein Cache über Läufe hinweg trüge nicht: der Seed schreibt relativ zum
+  # echten Heute (Anwesenheiten, Schichten, Fristen), ein Stand von gestern
+  # gäbe den Flows falsche Tage.
+  prepare:
+    name: Seed and build for the E2E flows
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      # The tour spec runs in order (mode "default") and is one indivisible
-      # block of about five minutes; Playwright's --shard would put it and
-      # half of the rest into one shard. A misspelled list fails safe:
-      # --test-list then finds no test (rejected below), the invert runs all.
-      matrix:
-        include:
-          - part: Touren
-            tests: --test-list "${RUNNER_TEMP}/tours.list"
-          - part: Rest 1/2
-            tests: --test-list-invert "${RUNNER_TEMP}/tours.list" --shard=1/2
-          - part: Rest 2/2
-            tests: --test-list-invert "${RUNNER_TEMP}/tours.list" --shard=2/2
 
     services:
       postgres:
@@ -150,7 +146,8 @@ jobs:
           - 1025:1025
           - 8025:8025
 
-    env:
+
+    env: &stack-env
       # --- Backend (validateServeConfig() requires every one of these) ---
       DB_DSN: postgres://postgres:postgres@localhost:5432/phoenix_e2e?sslmode=disable
       DB_MAX_OPEN_CONNS: "40"
@@ -194,7 +191,8 @@ jobs:
       # The schedulers would mutate seeded rows during the run.
       CLEANUP_SCHEDULER_ENABLED: "false"
       SESSION_END_SCHEDULER_ENABLED: "false"
-      # --- Frontend: playwright.config.ts requires these for `next dev` ---
+      # --- Frontend: `next build` inlines the NEXT_PUBLIC_* values; the build
+      # and playwright.config.ts (`next start`) read the same ones. ---
       API_URL: http://localhost:8080
       NEXT_PUBLIC_API_URL: http://localhost:8080
       NEXT_PUBLIC_TENANT_DOMAIN: localhost
@@ -226,17 +224,15 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      # Systemweites Google Chrome statt des gebündelten Chromium (#5612):
-      # --force aktualisiert das veraltete Chrome des Runner-Images;
-      # frontend/scripts/secure-chrome.setup.ts lehnt ungepatchte Versionen ab.
-      # Läuft im Hintergrund, während Backend-Build und Seed laufen.
-      - name: Start Google Chrome install
+      # The production build runs beside the backend build and the seed, which
+      # waits on API latency rather than on the cores.
+      - name: Start frontend production build
         working-directory: frontend
         run: |
           (
-            pnpm exec playwright install --with-deps --force chrome
-            echo $? > "${RUNNER_TEMP}/chrome-install.rc"
-          ) > "${RUNNER_TEMP}/chrome-install.log" 2>&1 &
+            pnpm run build
+            echo $? > "${RUNNER_TEMP}/frontend-build.rc"
+          ) > "${RUNNER_TEMP}/frontend-build.log" 2>&1 &
 
       - name: Setup Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -248,22 +244,21 @@ jobs:
       - name: Build backend and dev tools binaries
         working-directory: backend
         run: |
-          go build -o "${RUNNER_TEMP}/phoenix" .
+          mkdir -p "${GITHUB_WORKSPACE}/e2e-stack"
+          go build -o "${GITHUB_WORKSPACE}/e2e-stack/phoenix" .
           go build -o "${RUNNER_TEMP}/devtools" ./cmd/devtools
 
       - name: Run migrations
         working-directory: backend
         run: |
-          "${RUNNER_TEMP}/phoenix" migrate
+          "${GITHUB_WORKSPACE}/e2e-stack/phoenix" migrate
 
-      # PORT only here: `next dev`, started by playwright.config.ts, reads PORT
-      # too and must stay on 3000.
       - name: Start backend
         working-directory: backend
         env:
           PORT: "8080"
         run: |
-          "${RUNNER_TEMP}/phoenix" serve > "${RUNNER_TEMP}/server.log" 2>&1 &
+          "${GITHUB_WORKSPACE}/e2e-stack/phoenix" serve > "${RUNNER_TEMP}/server.log" 2>&1 &
           echo $! > "${RUNNER_TEMP}/server.pid"
           for _ in $(seq 1 60); do
             if curl -fsS http://localhost:8080/health > /dev/null; then
@@ -286,6 +281,181 @@ jobs:
             --pin "${OGS_DEVICE_PIN}" \
             --url http://localhost:8080
 
+      # The server stops before the dump, so no outbox or session write lands
+      # after it. Roles are cluster objects that pg_dump leaves out; the
+      # migrations created them with their passwords.
+      - name: Dump the seeded database
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          pid=$(cat "${RUNNER_TEMP}/server.pid")
+          kill "${pid}"
+          for _ in $(seq 1 30); do
+            kill -0 "${pid}" 2>/dev/null || break
+            sleep 1
+          done
+          if kill -0 "${pid}" 2>/dev/null; then
+            echo "server did not stop in 30s"
+            exit 1
+          fi
+          docker exec "${PG_CONTAINER}" pg_dumpall -U postgres --roles-only \
+            > e2e-stack/roles.sql
+          docker exec "${PG_CONTAINER}" pg_dump -U postgres --format=custom \
+            phoenix_e2e > e2e-stack/phoenix_e2e.dump
+          ls -l e2e-stack
+
+      - name: Wait for frontend production build
+        timeout-minutes: 10
+        run: |
+          while [ ! -f "${RUNNER_TEMP}/frontend-build.rc" ]; do sleep 1; done
+          cat "${RUNNER_TEMP}/frontend-build.log"
+          exit "$(cat "${RUNNER_TEMP}/frontend-build.rc")"
+
+      # `next start` needs .next without the build cache and the standalone copy.
+      - name: Pack the seeded stack
+        run: |
+          tar --zstd -cf "${RUNNER_TEMP}/e2e-stack.tar.zst" \
+            --exclude=frontend/.next/cache --exclude=frontend/.next/standalone \
+            e2e-stack backend/.seed-state.json backend/public/uploads frontend/.next
+          ls -l "${RUNNER_TEMP}/e2e-stack.tar.zst"
+
+      - name: Upload the seeded stack
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-stack-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/e2e-stack.tar.zst
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Backend log
+        if: always()
+        run: tail -n 200 "${RUNNER_TEMP}/server.log" || true
+
+      - name: Stop backend
+        if: always()
+        run: kill "$(cat "${RUNNER_TEMP}/server.pid")" 2>/dev/null || true
+
+  flows:
+    name: Playwright E2E flows (${{ matrix.part }})
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      # The tour spec runs in order (mode "default") and is one indivisible
+      # block of about five minutes; Playwright's --shard would put it and
+      # half of the rest into one shard. A misspelled list fails safe:
+      # --test-list then finds no test (rejected below), the invert runs all.
+      matrix:
+        include:
+          - part: Touren
+            tests: --test-list "${RUNNER_TEMP}/tours.list"
+          - part: Rest 1/2
+            tests: --test-list-invert "${RUNNER_TEMP}/tours.list" --shard=1/2
+          - part: Rest 2/2
+            tests: --test-list-invert "${RUNNER_TEMP}/tours.list" --shard=2/2
+
+    services:
+      postgres:
+        image: postgres:17.12-alpine3.24@sha256:34261f594522cf41dfcb76aefd42b9d201098b0e6b23c9c68733f169e4218b6f
+        env:
+          POSTGRES_DB: phoenix_e2e
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          TZ: Europe/Berlin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 10
+      mailpit:
+        # Operator login enrolls MFA and reads the code back out of mailpit's
+        # REST API, so the seeder cannot authenticate without a mail sink.
+        image: axllent/mailpit:v1.30
+        ports:
+          - 1025:1025
+          - 8025:8025
+
+
+    env: *stack-env
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Systemweites Google Chrome statt des gebündelten Chromium (#5612):
+      # --force aktualisiert das veraltete Chrome des Runner-Images;
+      # frontend/scripts/secure-chrome.setup.ts lehnt ungepatchte Versionen ab.
+      # Läuft im Hintergrund, während der Stack wiederhergestellt wird. Der
+      # Download dauert unter einer Sekunde, die Zeit kosten apt und dpkg: ein
+      # Cache des Pakets spart nichts.
+      - name: Start Google Chrome install
+        working-directory: frontend
+        run: |
+          (
+            pnpm exec playwright install --with-deps --force chrome
+            echo $? > "${RUNNER_TEMP}/chrome-install.rc"
+          ) > "${RUNNER_TEMP}/chrome-install.log" 2>&1 &
+
+      - name: Download the seeded stack
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: e2e-stack-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}
+
+      # The service database is replaced by the seeded one (--clean --create
+      # also restores its database-level settings and grants). The dump of the
+      # roles carries the superuser the service already has; that role stays.
+      # pg_restore keeps no planner statistics, so ANALYZE follows.
+      - name: Restore the seeded database
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          tar --zstd -xf "${RUNNER_TEMP}/e2e-stack.tar.zst"
+          grep -Ev '^(CREATE|ALTER) ROLE postgres[ ;]' e2e-stack/roles.sql \
+            | docker exec -i "${PG_CONTAINER}" psql -q -v ON_ERROR_STOP=1 -U postgres -d postgres
+          docker exec -i "${PG_CONTAINER}" pg_restore -U postgres --exit-on-error \
+            --clean --if-exists --create -d postgres < e2e-stack/phoenix_e2e.dump
+          docker exec "${PG_CONTAINER}" psql -q -v ON_ERROR_STOP=1 -U postgres -d phoenix_e2e -c ANALYZE
+
+      # PORT only here: `next start`, started by playwright.config.ts, reads
+      # PORT too and must stay on 3000.
+      - name: Start backend
+        working-directory: backend
+        env:
+          PORT: "8080"
+        run: |
+          "${GITHUB_WORKSPACE}/e2e-stack/phoenix" serve > "${RUNNER_TEMP}/server.log" 2>&1 &
+          echo $! > "${RUNNER_TEMP}/server.pid"
+          for _ in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/health > /dev/null; then
+              echo "server up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "server did not become healthy in 60s"
+          exit 1
+
       - name: Wait for Google Chrome install
         timeout-minutes: 5
         run: |
@@ -293,11 +463,13 @@ jobs:
           cat "${RUNNER_TEMP}/chrome-install.log"
           exit "$(cat "${RUNNER_TEMP}/chrome-install.rc")"
 
-      # playwright.config.ts starts `next dev` on port 3000 itself (CI=true
+      # playwright.config.ts starts `next start` on port 3000 itself (CI=true
       # disables reuseExistingServer) and runs one worker. Each part has its
-      # own seeded database.
+      # own copy of the seeded database.
       - name: Run E2E flows
         working-directory: frontend
+        env:
+          E2E_FRONTEND_SERVER: start
         run: |
           echo onboarding-tours.spec.ts > "${RUNNER_TEMP}/tours.list"
           pnpm run test:e2e ${{ matrix.tests }}
