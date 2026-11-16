@@ -446,7 +446,8 @@ func TestFederalStateSetting(t *testing.T) {
 	require.NotNil(t, def, "operations.federal_state should be registered")
 	assert.Equal(t, config.FieldSelect, def.Type)
 	assert.Equal(t, "", def.Default, "no default state (#7174): the operator names it on creating the school, an unset state fails visibly")
-	assert.Equal(t, config.AccessOperatorManaged, def.AccessPolicy, "schools see federal_state read-only (#4775); only operators change it - it shifts the whole Arbeitszeitkonto")
+	assert.Equal(t, config.AccessShared, def.AccessPolicy, "the school's management sets its own state (#7174), the missing-state message links to it")
+	assert.Equal(t, "config:manage", def.WritePermission, "a change shifts the Arbeitszeitkonto: only config:manage writes it")
 	assert.Equal(t, "operations", def.Tab)
 
 	// The select options and the holiday computation must know the same

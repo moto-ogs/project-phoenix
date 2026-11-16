@@ -145,9 +145,13 @@ func newGuardianLinkOwners(db transactionruntime.Database) guardianLinkOwners {
 // portal reachability check joins (#2720, #2721). A new profile counts as
 // childless from the optional clock, the real one when none is given.
 func NewGuardianProfileRepository(db transactionruntime.Database, clocks ...func() time.Time) peoplePorts.GuardianProfileRepository {
+	now := firstClock(clocks)
+	if now == nil {
+		now = time.Now
+	}
 	identity := NewPeopleIdentityAccess(db, nil)
 	profiles := peopleCompose.NewGuardianProfileRepository(db.Pool(), StudentDirectoryReader(), guardianLinkView.NewReader(),
-		identity.FindActiveGuardianMemberships, identity.FindLoginReadyGuardianMemberships, firstClock(clocks))
+		identity.FindActiveGuardianMemberships, identity.FindLoginReadyGuardianMemberships, now)
 	return profiles
 }
 

@@ -2173,7 +2173,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostCalendar.HostedHolidayNoCareDays",
-      "reason": "Computes the statutory holidays of the hosting school's federal state locally, without database or network access (#5631).",
+      "reason": "Computes the statutory holidays of the hosting school's federal state locally, without database or network access (#5631). A school without a supported federal state answers schoolcalendar.ErrFederalStateMissing, the calendar.federal_state_missing rejection (#7174).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListHolidays",
       "target_owner": "school-calendar"
@@ -2183,7 +2183,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostCalendar.HostedHolidayNoCareDays",
-      "reason": "Checks the federal state against the known regions in memory (#5631).",
+      "reason": "Checks the federal state against the known regions in memory (#5631). A school without a supported federal state answers schoolcalendar.ErrFederalStateMissing, the calendar.federal_state_missing rejection (#7174).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ValidHolidayRegion",
       "target_owner": "school-calendar"
@@ -2474,7 +2474,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidaySchoolCalendar.HolidayNoCareDays",
-      "reason": "Computes the statutory holidays of a federal state locally, without database or network access (#4702).",
+      "reason": "Computes the statutory holidays of a federal state locally, without database or network access (#4702). A school without a supported federal state answers schoolcalendar.ErrFederalStateMissing, the calendar.federal_state_missing rejection (#7174).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListHolidays",
       "target_owner": "school-calendar"
@@ -2484,7 +2484,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidaySchoolCalendar.HolidayNoCareDays",
-      "reason": "Checks a federal-state code against School Calendar's supported regions, a pure value check (#4702).",
+      "reason": "Checks a federal-state code against School Calendar's supported regions, a pure value check (#4702). A school without a supported federal state answers schoolcalendar.ErrFederalStateMissing, the calendar.federal_state_missing rejection (#7174).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ValidHolidayRegion",
       "target_owner": "school-calendar"

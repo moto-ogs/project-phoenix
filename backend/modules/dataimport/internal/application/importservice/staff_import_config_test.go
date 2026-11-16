@@ -57,7 +57,7 @@ func TestStaffImportConfig_PreloadReferenceData_LoadsRoleDisplayNamesAndSchool(t
 	t.Parallel()
 
 	ctx := testpkg.ContextForTenant(context.Background(), staffImportTestTenantID)
-	config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
+	config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
 		Roles: stubStaffRoleRepo{roles: []*importModels.SchoolRole{
 			{ID: staffImportTestRoleID, Name: "user"},
 			{ID: staffImportTestRoleID + 10, Name: "koordination"},
@@ -77,7 +77,7 @@ func TestStaffImportConfig_PreloadReferenceData_LoadsRoleDisplayNamesAndSchool(t
 func TestStaffImportConfig_Validate_ResolvesGermanDisplayRole(t *testing.T) {
 	t.Parallel()
 
-	config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
+	config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
 		Roles: stubStaffRoleRepo{
 			findByName: func(_ context.Context, name string) (*importModels.SchoolRole, error) {
 				if name == "Betreuer" {
@@ -117,7 +117,7 @@ func TestStaffImportConfig_Validate_ResolvesCurrentAndEarlierRoleNames(t *testin
 		"Betreuung": "user", "Betreuer": "user",
 	} {
 		var looked string
-		config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
+		config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
 			Roles: stubStaffRoleRepo{
 				findByName: func(_ context.Context, name string) (*importModels.SchoolRole, error) {
 					looked = name
@@ -139,7 +139,7 @@ func TestStaffImportConfig_Validate_ResolvesCurrentAndEarlierRoleNames(t *testin
 func TestStaffImportConfig_Validate_NormalizesDisplayNameEmail(t *testing.T) {
 	t.Parallel()
 
-	config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
+	config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
 		Roles: stubStaffRoleRepo{
 			findByName: func(_ context.Context, name string) (*importModels.SchoolRole, error) {
 				if name == "Betreuer" {
@@ -167,7 +167,7 @@ func TestStaffImportConfig_Validate_RequiresManagePermissionForTenantRole(t *tes
 
 	baseRole := "user"
 	tenantID := staffImportTestTenantID
-	config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
+	config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
 		Roles: stubStaffRoleRepo{
 			findByName: func(_ context.Context, name string) (*importModels.SchoolRole, error) {
 				return &importModels.SchoolRole{
@@ -209,7 +209,7 @@ func TestStaffImportConfig_Validate_RejectsRolesReservedForOtherFlows(t *testing
 		Name:     "guardian-custom",
 		BaseRole: &guardian,
 	}
-	config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
+	config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
 		Roles: stubStaffRoleRepo{
 			findByName: func(context.Context, string) (*importModels.SchoolRole, error) {
 				return role, nil
@@ -232,7 +232,7 @@ func TestStaffImportConfig_Validate_RejectsRolesReservedForOtherFlows(t *testing
 func TestStaffImportConfig_ValidateBatch_DetectsDuplicateEmailsAfterNormalization(t *testing.T) {
 	t.Parallel()
 
-	config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions()})
+	config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions()})
 	rows := []importModels.StaffImportRow{
 		{Email: "Max Mustermann <max@example.com>"},
 		{Email: " max@example.COM "},
@@ -251,7 +251,7 @@ func TestStaffImportConfig_ValidateBatch_DetectsDuplicateEmailsAfterNormalizatio
 func TestStaffImportConfig_Validate_ReportsRequiredInvalidEmailAndRoleSuggestion(t *testing.T) {
 	t.Parallel()
 
-	config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
+	config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
 		Roles: stubStaffRoleRepo{
 			findByName: func(context.Context, string) (*importModels.SchoolRole, error) {
 				return nil, importModels.ErrRoleNotFound
@@ -282,7 +282,7 @@ func TestStaffImportConfig_Validate_RoleLookupError(t *testing.T) {
 	t.Parallel()
 
 	lookupErr := errors.New("repo unavailable")
-	config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
+	config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
 		Roles: stubStaffRoleRepo{
 			findByName: func(context.Context, string) (*importModels.SchoolRole, error) {
 				return nil, lookupErr
@@ -307,7 +307,7 @@ func TestStaffImportConfig_FindExisting(t *testing.T) {
 	t.Parallel()
 
 	t.Run("blank email skips lookup", func(t *testing.T) {
-		config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions()})
+		config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions()})
 
 		id, err := config.FindExisting(context.Background(), importModels.StaffImportRow{Email: "  "})
 
@@ -316,7 +316,7 @@ func TestStaffImportConfig_FindExisting(t *testing.T) {
 	})
 
 	t.Run("missing account returns nil", func(t *testing.T) {
-		config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
+		config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
 			FindSchoolAccount: func(context.Context, string) (int64, bool, error) { return 0, false, nil },
 		})
 
@@ -327,7 +327,7 @@ func TestStaffImportConfig_FindExisting(t *testing.T) {
 	})
 
 	t.Run("existing account in other tenant returns nil", func(t *testing.T) {
-		config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
+		config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
 			FindSchoolAccount: func(context.Context, string) (int64, bool, error) { return staffImportTestAccountID, false, nil },
 		})
 		ctx := testpkg.ContextForTenant(context.Background(), staffImportTestTenantID)
@@ -339,7 +339,7 @@ func TestStaffImportConfig_FindExisting(t *testing.T) {
 	})
 
 	t.Run("existing account in current tenant returns id", func(t *testing.T) {
-		config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
+		config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
 			FindSchoolAccount: func(context.Context, string) (int64, bool, error) { return staffImportTestAccountID, true, nil },
 		})
 		ctx := testpkg.ContextForTenant(context.Background(), staffImportTestTenantID)
@@ -356,7 +356,7 @@ func TestStaffImportConfig_FindExisting_PersonnelNumberDoesNotFallBackToNameWith
 	t.Parallel()
 
 	staff := &indexedStaff{ID: 99, FirstName: "Anna", LastName: "Lehmann"}
-	config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions()})
+	config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions()})
 	config.staffByName = map[string][]*indexedStaff{
 		staffNameKey("Anna", "Lehmann"): {staff},
 	}
@@ -373,7 +373,7 @@ func TestStaffImportConfig_Create_WithoutRepositoriesFails(t *testing.T) {
 	t.Parallel()
 
 	invitations, req := newStaffInvitationServiceMock(nil)
-	config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(), Invitations: invitations})
+	config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(), Invitations: invitations})
 
 	_, err := config.Create(context.Background(), importModels.StaffImportRow{FirstName: "Anna", LastName: "Lehmann", Email: "anna@example.com"})
 
@@ -384,7 +384,7 @@ func TestStaffImportConfig_Create_WithoutRepositoriesFails(t *testing.T) {
 func TestStaffImportConfig_PreloadReferenceData_ReturnsRoleListError(t *testing.T) {
 	t.Parallel()
 
-	config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
+	config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
 		Roles: stubStaffRoleRepo{listErr: errors.New("list failed")},
 	})
 
@@ -400,7 +400,7 @@ func TestStaffImportConfig_PreloadReferenceData_ReturnsRoleListError(t *testing.
 func TestStaffImportConfig_AuthorizeImportMode(t *testing.T) {
 	t.Parallel()
 
-	config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions()})
+	config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions()})
 	cases := []struct {
 		name        string
 		mode        importModels.ImportMode
@@ -432,7 +432,7 @@ func TestStaffImportConfig_AuthorizeImportMode(t *testing.T) {
 func TestStaffImportConfig_EntityNameAndUpdate(t *testing.T) {
 	t.Parallel()
 
-	config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions()})
+	config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions()})
 
 	assert.Equal(t, "Mitarbeiter", config.EntityName())
 	// Update writes the Stammdatensatz (#2600); without the repositories it
@@ -447,7 +447,7 @@ func TestStaffImportConfig_Validate_ExactRolePrecedesAlias(t *testing.T) {
 			baseRole := "user"
 			tenantID := staffImportTestTenantID
 			var looked []string
-			config := NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
+			config := NewStaffImportConfig(ports.StaffImportDeps{Now: studentImportTestClock, RolePolicy: newTestRolePolicy(), Authorization: newTestAuthorization(), Transactions: newTestTransactions(),
 				Roles: stubStaffRoleRepo{findByName: func(_ context.Context, lookup string) (*importModels.SchoolRole, error) {
 					looked = append(looked, lookup)
 					return &importModels.SchoolRole{ID: staffImportTestRoleID, TenantID: &tenantID, Name: name, BaseRole: &baseRole}, nil

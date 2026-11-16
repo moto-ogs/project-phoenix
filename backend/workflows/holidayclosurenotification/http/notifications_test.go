@@ -90,7 +90,7 @@ func newClosureWorldIn(t *testing.T, name string, db *bun.DB) closureWorld {
 	bookHolidayWeek(t, db, organization, school, "familie.zwei@example.org")
 	settings, err := owners.NewSettingsTestModule(database, unit)
 	require.NoError(t, err)
-	records, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings)
+	records, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings, holidayTestNow)
 	require.NoError(t, err)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
@@ -100,10 +100,10 @@ func newClosureWorldIn(t *testing.T, name string, db *bun.DB) closureWorld {
 	require.NoError(t, err)
 	mail := owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}
 	closures := owners.NewHolidayClosures(owners.NewHolidaySchoolCalendar(settings.Settings, records, organizations), records,
-		owners.NewHolidayOfficeTraeger(organizations), mail, calendar.TodayDate)
+		owners.NewHolidayOfficeTraeger(organizations), mail, holidayTestToday)
 	return closureWorld{
 		db: db, ctx: tenant.WithUnitOfWork(context.Background(), unit), organization: organization, school: school, records: records,
-		notices: owners.NewHolidayClosureNotifications(closures, organizations, mail, slog.Default()), closures: closures, mail: mail,
+		notices: owners.NewHolidayClosureNotifications(closures, organizations, mail, slog.Default(), holidayTestToday), closures: closures, mail: mail,
 	}
 }
 
@@ -413,7 +413,7 @@ func TestHolidayClosureNoticesKeepTheirFiltersBeneathRLS(t *testing.T) {
 		Scan(context.Background(), &foreignOperation))
 	require.NoError(t, foreign.db.NewRaw(`SELECT idempotency_key FROM enrollment.holiday_closure_sends WHERE organization_id = ?`, foreign.organization).
 		Scan(context.Background(), &foreignKeys))
-	events := schoolCalendarCompose.NewHolidayClosureEvents()
+	events := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 
 	ownSchool, err := tenant.NewTenantID(own.school)
 	require.NoError(t, err)
@@ -487,7 +487,7 @@ func TestConfirmedNoticeRequiresTheSameCalendarRevision(t *testing.T) {
 	}})
 	require.NoError(t, err)
 	seen := w.schoolNotices(t)[0]
-	proposals := schoolCalendarCompose.NewHolidayClosureEvents()
+	proposals := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 	require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
 		_, err := proposals.ConfirmHolidayClosureNotice(ctx, seen.ID, seen.Revision,
 			schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: seen.Token})
@@ -640,7 +640,7 @@ func TestUnresolvedHolidayClosureSurvivesRetirement(t *testing.T) {
 	w := newClosureWorld(t, "Träger offene Bestätigung behalten")
 	w.createClosingDay(t, "2030-07-10", "2030-07-10")
 	notice := w.schoolNotices(t)[0]
-	proposals := schoolCalendarCompose.NewHolidayClosureEvents()
+	proposals := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 	require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
 		_, err := proposals.ConfirmHolidayClosureNotice(ctx, notice.ID, notice.Revision,
 			schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: notice.Token})
@@ -702,7 +702,7 @@ func TestRenewedHolidayClosureConfirmationKeepsElapsedSpan(t *testing.T) {
 func TestHolidayClosureWatchdogFindsStalledCommands(t *testing.T) {
 	t.Parallel()
 	w := newClosureWorldIn(t, "Träger unabhängige Überwachung", testpkg.SetupIsolatedTestDB(t))
-	events := schoolCalendarCompose.NewHolidayClosureEvents()
+	events := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 	for _, date := range []string{"2030-07-08", "2030-07-09", "2030-07-10", "2030-07-11", "2030-07-12"} {
 		w.createClosingDay(t, date, date)
 	}

@@ -253,7 +253,8 @@ func TestPrintVisitCleanupSummary_WithErrors(t *testing.T) {
 
 func TestPrintPreviewHeader_WithOldestVisit(t *testing.T) {
 	t.Parallel()
-	oldestVisit := time.Now().Add(-48 * time.Hour)
+	now := cleanupPrintNow()
+	oldestVisit := now.Add(-48 * time.Hour)
 	preview := &studentpresence.CleanupPreview{
 		StudentVisitCounts: map[int64]int{1: 5, 2: 10},
 		TotalVisits:        15,
@@ -261,13 +262,14 @@ func TestPrintPreviewHeader_WithOldestVisit(t *testing.T) {
 	}
 
 	output := render(func(w io.Writer) {
-		printPreviewHeader(w, preview)
+		printPreviewHeader(w, preview, now)
 	})
 
 	assert.Contains(t, output, "Data Retention Cleanup Preview")
 	assert.Contains(t, output, "Total visits to delete: 15")
 	assert.Contains(t, output, "Oldest visit:")
 	assert.Contains(t, output, "days ago")
+	assert.Contains(t, output, "Oldest visit: 2026-11-16 (2 days ago)")
 	assert.Contains(t, output, "Students affected: 2")
 }
 
@@ -280,7 +282,7 @@ func TestPrintPreviewHeader_NoOldestVisit(t *testing.T) {
 	}
 
 	output := render(func(w io.Writer) {
-		printPreviewHeader(w, preview)
+		printPreviewHeader(w, preview, cleanupPrintNow())
 	})
 
 	assert.Contains(t, output, "Data Retention Cleanup Preview")
@@ -291,7 +293,8 @@ func TestPrintPreviewHeader_NoOldestVisit(t *testing.T) {
 
 func TestPrintRetentionStats_WithOldestExpiredVisit(t *testing.T) {
 	t.Parallel()
-	oldestExpired := time.Now().Add(-30 * 24 * time.Hour)
+	now := cleanupPrintNow()
+	oldestExpired := now.Add(-30 * 24 * time.Hour)
 	stats := &studentpresence.RetentionStats{
 		TotalExpiredVisits: 100,
 		StudentsAffected:   10,
@@ -299,7 +302,7 @@ func TestPrintRetentionStats_WithOldestExpiredVisit(t *testing.T) {
 	}
 
 	output := render(func(w io.Writer) {
-		printRetentionStats(w, stats)
+		printRetentionStats(w, stats, now)
 	})
 
 	assert.Contains(t, output, "Data Retention Statistics")
@@ -307,6 +310,7 @@ func TestPrintRetentionStats_WithOldestExpiredVisit(t *testing.T) {
 	assert.Contains(t, output, "Students affected: 10")
 	assert.Contains(t, output, "Oldest expired visit:")
 	assert.Contains(t, output, "days ago")
+	assert.Contains(t, output, "Oldest expired visit: 2026-10-19 (30 days ago)")
 }
 
 func TestPrintRetentionStats_NoOldestExpiredVisit(t *testing.T) {
@@ -318,7 +322,7 @@ func TestPrintRetentionStats_NoOldestExpiredVisit(t *testing.T) {
 	}
 
 	output := render(func(w io.Writer) {
-		printRetentionStats(w, stats)
+		printRetentionStats(w, stats, cleanupPrintNow())
 	})
 
 	assert.Contains(t, output, "Data Retention Statistics")
@@ -329,7 +333,8 @@ func TestPrintRetentionStats_NoOldestExpiredVisit(t *testing.T) {
 
 func TestPrintAttendancePreviewHeader_WithOldestRecord(t *testing.T) {
 	t.Parallel()
-	oldestRecord := timezone.TodayDate().AddDays(-1)
+	today := cleanupPrintToday()
+	oldestRecord := today.AddDays(-1)
 	preview := &studentpresence.AttendanceCleanupPreview{
 		TotalRecords:   20,
 		StudentRecords: map[int64]int{1: 10, 2: 10},
@@ -337,13 +342,14 @@ func TestPrintAttendancePreviewHeader_WithOldestRecord(t *testing.T) {
 	}
 
 	output := render(func(w io.Writer) {
-		printAttendancePreviewHeader(w, preview)
+		printAttendancePreviewHeader(w, preview, today)
 	})
 
 	assert.Contains(t, output, "Attendance Cleanup Preview:")
 	assert.Contains(t, output, "Total stale records: 20")
 	assert.Contains(t, output, "Oldest record:")
 	assert.Contains(t, output, "days ago")
+	assert.Contains(t, output, "Oldest record: 2026-11-17 (1 days ago)")
 	assert.Contains(t, output, "Students affected: 2")
 }
 
@@ -356,7 +362,7 @@ func TestPrintAttendancePreviewHeader_NoOldestRecord(t *testing.T) {
 	}
 
 	output := render(func(w io.Writer) {
-		printAttendancePreviewHeader(w, preview)
+		printAttendancePreviewHeader(w, preview, cleanupPrintToday())
 	})
 
 	assert.Contains(t, output, "Attendance Cleanup Preview:")
@@ -367,7 +373,7 @@ func TestPrintAttendancePreviewHeader_NoOldestRecord(t *testing.T) {
 
 func TestPrintAttendanceCleanupSummary_Success_WithOldestRecordDate(t *testing.T) {
 	t.Parallel()
-	oldestDate := timezone.TodayDate().AddDays(-2)
+	oldestDate := cleanupPrintToday().AddDays(-2)
 	result := &studentpresence.AttendanceCleanupResult{
 		StartedAt:        time.Now(),
 		CompletedAt:      time.Now().Add(time.Second),
@@ -386,7 +392,7 @@ func TestPrintAttendanceCleanupSummary_Success_WithOldestRecordDate(t *testing.T
 	assert.Contains(t, output, "Duration:")
 	assert.Contains(t, output, "Records closed: 15")
 	assert.Contains(t, output, "Students affected: 5")
-	assert.Contains(t, output, "Oldest record:")
+	assert.Contains(t, output, "Oldest record: 2026-11-16")
 	assert.Contains(t, output, "Status: SUCCESS")
 	assert.NotContains(t, output, "Errors:")
 }
@@ -536,7 +542,8 @@ func TestPrintDailySessionSummary_WithErrors(t *testing.T) {
 
 func TestPrintSupervisorPreviewHeader_WithOldestRecord(t *testing.T) {
 	t.Parallel()
-	oldestRecord := timezone.TodayDate().AddDays(-1)
+	today := cleanupPrintToday()
+	oldestRecord := today.AddDays(-1)
 	preview := &studentpresence.SupervisorCleanupPreview{
 		TotalRecords: 15,
 		StaffRecords: map[int64]int{1: 10, 2: 5},
@@ -544,13 +551,14 @@ func TestPrintSupervisorPreviewHeader_WithOldestRecord(t *testing.T) {
 	}
 
 	output := render(func(w io.Writer) {
-		printSupervisorPreviewHeader(w, preview)
+		printSupervisorPreviewHeader(w, preview, today)
 	})
 
 	assert.Contains(t, output, "Supervisor Cleanup Preview:")
 	assert.Contains(t, output, "Total stale records: 15")
 	assert.Contains(t, output, "Oldest record:")
 	assert.Contains(t, output, "days ago")
+	assert.Contains(t, output, "Oldest record: 2026-11-17 (1 days ago)")
 	assert.Contains(t, output, "Staff affected: 2")
 }
 
@@ -563,7 +571,7 @@ func TestPrintSupervisorPreviewHeader_NoOldestRecord(t *testing.T) {
 	}
 
 	output := render(func(w io.Writer) {
-		printSupervisorPreviewHeader(w, preview)
+		printSupervisorPreviewHeader(w, preview, cleanupPrintToday())
 	})
 
 	assert.Contains(t, output, "Supervisor Cleanup Preview:")
@@ -574,7 +582,7 @@ func TestPrintSupervisorPreviewHeader_NoOldestRecord(t *testing.T) {
 
 func TestPrintSupervisorCleanupSummary_Success_WithOldestRecordDate(t *testing.T) {
 	t.Parallel()
-	oldestDate := timezone.TodayDate().AddDays(-2)
+	oldestDate := cleanupPrintToday().AddDays(-2)
 	result := &studentpresence.SupervisorCleanupResult{
 		StartedAt:        time.Now(),
 		CompletedAt:      time.Now().Add(time.Second),
@@ -593,7 +601,7 @@ func TestPrintSupervisorCleanupSummary_Success_WithOldestRecordDate(t *testing.T
 	assert.Contains(t, output, "Duration:")
 	assert.Contains(t, output, "Records closed: 20")
 	assert.Contains(t, output, "Staff affected: 4")
-	assert.Contains(t, output, "Oldest record:")
+	assert.Contains(t, output, "Oldest record: 2026-11-16")
 	assert.Contains(t, output, "Status: SUCCESS")
 	assert.NotContains(t, output, "Errors:")
 }
@@ -1060,4 +1068,16 @@ func (detailedPresenceSettings) SessionInactivityTimeoutMinutes(context.Context)
 }
 func (detailedPresenceSettings) WebParticipantLimitEnforced(context.Context) (bool, error) {
 	return false, nil
+}
+
+// cleanupPrintNow is the fixed instant the printers count ages from: a
+// Wednesday morning in Berlin, so the ages do not depend on the day the
+// test runs.
+func cleanupPrintNow() time.Time {
+	return time.Date(2026, time.November, 18, 9, 30, 0, 0, timezone.Berlin)
+}
+
+// cleanupPrintToday is the Berlin day of cleanupPrintNow.
+func cleanupPrintToday() timezone.Date {
+	return timezone.DateFromTime(cleanupPrintNow())
 }

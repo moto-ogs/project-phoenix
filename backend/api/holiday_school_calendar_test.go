@@ -37,7 +37,7 @@ func TestHolidaySchoolCalendarNamesEachHostSchoolsDaysWithoutCare(t *testing.T) 
 
 	settings, err := owners.NewSettingsTestModule(database, unit)
 	require.NoError(t, err)
-	records, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings)
+	records, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings, nil)
 	require.NoError(t, err)
 	ctx := tenant.WithUnitOfWork(context.Background(), unit)
 

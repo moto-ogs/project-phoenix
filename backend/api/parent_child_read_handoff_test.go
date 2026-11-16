@@ -77,7 +77,7 @@ func newChildReadRigOn(t *testing.T, db *bun.DB, with ...func(*portalCompose.Dep
 	catalog := enrollmentCompose.NewCareOfferingRecords(repos.CareExceptions)
 	mealSettings, err := owners.BuildMealPlanSettings(settings.Settings)
 	require.NoError(t, err)
-	schoolCalendar, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings)
+	schoolCalendar, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings, nil)
 	require.NoError(t, err)
 	meals, err := owners.BuildServeMealPlan(database, mealSettings, owners.NewStudentRootReads(people.Student), directory, schoolCalendar)
 	require.NoError(t, err)

@@ -146,7 +146,7 @@ func classDayTestMorning(db transactionruntime.Database, hub *realtime.Hub, peop
 			Broadcaster: hub, Logger: slog.Default(), PeopleDirectory: people, StudentStatusDayService: classDayTestStatusDays(db, rCare, clocks),
 		}, presence), audits.StudentFieldEdit, unreported)
 	// The absence list (#4793), bound like buildClassDayViews binds it.
-	schoolDays, err := owners.BuildSchoolCalendarRecords(db, func(schoolCalendarCompose.Observation) {}, settings.Settings)
+	schoolDays, err := owners.BuildSchoolCalendarRecords(db, func(schoolCalendarCompose.Observation) {}, settings.Settings, nil)
 	mustActiveTestModule(err)
 	return withClassDayAbsenceList(morning, presence, rCare.StudentStatusDay, schoolDays, audits.DataAccessLog, lists.NewRenderer(), settings.Settings, participation, people)
 }

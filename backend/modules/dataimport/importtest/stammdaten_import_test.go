@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	dataImportCompose "github.com/moto-ogs/project-phoenix/modules/dataimport/compose"
 
@@ -30,7 +31,7 @@ func newStammdatenStaffConfig(t *testing.T, db *bun.DB, invitations importModels
 	require.NoError(t, err)
 	identity, err := api.NewIdentityAccessForTests(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
-	config := importService.NewStaffImportConfig(ports.StaffImportDeps{RolePolicy: dataImportCompose.NewSchoolRolePolicy(), Authorization: api.NewImportAuthorization(), Transactions: dataImportCompose.NewTransactions(),
+	config := importService.NewStaffImportConfig(ports.StaffImportDeps{Now: time.Now, RolePolicy: dataImportCompose.NewSchoolRolePolicy(), Authorization: api.NewImportAuthorization(), Transactions: dataImportCompose.NewTransactions(),
 		Invitations:                  invitations,
 		FindInvitedPeople:            identity.FindInvitedPersonIDs,
 		FindSchoolEmailIdentities:    api.NewImportSchoolEmailLookup(identity),
@@ -243,7 +244,7 @@ func newStammdatenStudentConfig(t *testing.T, db *bun.DB) (*importService.Studen
 	references := owners.NewReferences(groups, rooms)
 	rfid, err := api.NewIdentityAccessForTests(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
-	config := importService.NewStudentImportConfig(ports.StudentImportDeps{Transactions: dataImportCompose.NewTransactions(),
+	config := importService.NewStudentImportConfig(ports.StudentImportDeps{Now: time.Now, Transactions: dataImportCompose.NewTransactions(),
 		Persons:         students,
 		Students:        students,
 		Schedules:       repos.CarePlan(),

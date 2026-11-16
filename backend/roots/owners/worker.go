@@ -153,7 +153,7 @@ func NewWorker(
 		InstanceStudentRepo:    timetableRepos.ParticipantCheckouts(),
 		StudentStatusDayRepo:   NewStudentStatusDayRepository(carePlan),
 		OverdueBroadcaster:     newSchedulerOverdueBroadcaster(hub),
-		StudentLifecycleRepo:   schedulerStudentLifecycle(NewStudentRootReads(people.Students)), WeekProtocols: NewWeekProtocolEvenings(db, logger, settings, persons, services, reports, schedules, carePlan, timetableRepos, dayLog),
+		StudentLifecycleRepo:   schedulerStudentLifecycle(NewStudentRootReads(people.Students)), WeekProtocols: NewWeekProtocolEvenings(db, logger, settings, persons, services, reports, schedules, carePlan, timetableRepos, dayLog, now),
 		PayrollDispatch:       workforce.PayrollDispatch.RunDue,
 		ReminderNotifications: reminderNotifications, HolidayGuests: schedulerHolidayGuests(persons, people.Students, organizations, carePlan, accessLog, healthData, calendar.CalendarDateClock(now)), PlannedStaffExits: plannedExits(identity, notifications, people.Staff), CareContractConclusion: careContracts, CareContractReminders: careContractReminders, HolidayClosureNotifications: holidayClosures, StaffQualificationReminders: qualificationRemindersJob(workforce.QualificationReminders), TraegerStaffProofReminders: traegerProofRemindersJob(workforce.TraegerProofReminders, db.UnitOfWork()), SchoolVacations: schoolVacationSync(), TraegerDocumentReadRetention: organizationCompose.NewSharedTraegerDocuments(), BelegRetention: NewBelegRetention(calendar.CalendarDateClock(now)), SEPADebitDownloadRetention: parentBillingCompose.NewSEPADebitDownloadRetention(),
 	})
