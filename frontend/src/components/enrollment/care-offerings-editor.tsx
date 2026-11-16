@@ -15,6 +15,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { isAccessRefusal } from "~/lib/access-refusal";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { Check, Copy, Pencil, Plus, Trash2 } from "lucide-react";
@@ -420,6 +421,7 @@ export function CareOfferingsEditor({
 } = {}) {
   const { tenant } = useTenant();
   const gradeLevelMax = supportedGradeLevelMax(tenant?.gradeLevelMax);
+  const discard = useDiscardRefusedEntity();
   const phasesRead = useSWRAuth(enrollmentKeys.phases(), () => listPhases());
   const { mutate: mutatePhases } = phasesRead;
   // The phase the person picked; while it does not exist (first visit, phase
@@ -470,8 +472,14 @@ export function CareOfferingsEditor({
   // A failed catalog load stands where the catalog would be (#2515).
   const catalogLoad = useSwrResourceLoadError(
     [
-      { data: loadedPhases, error: phasesRead.error },
-      { data: offeringsRead.data, error: offeringsRead.error },
+      {
+        data: accessRefused ? undefined : loadedPhases,
+        error: phasesRead.error,
+      },
+      {
+        data: accessRefused ? undefined : offeringsRead.data,
+        error: offeringsRead.error,
+      },
     ],
     "die Liste der Betreuungsangebote",
     () =>
@@ -607,7 +615,34 @@ export function CareOfferingsEditor({
     setEditingId(null);
     setCloneSource(null);
     setDeleteTarget(null);
-  }, [accessRefused]);
+    if (isAccessRefusal(phasesRead.error) && loadedPhases !== undefined) {
+      const key = enrollmentKeys.phases();
+      discard(phasesRead.error, {
+        codes: ["general.permission", "module.not_booked"],
+        matches: (candidate) => candidate === key,
+        refusedKey: key,
+      });
+    }
+    if (
+      isAccessRefusal(offeringsRead.error) &&
+      offeringsRead.data !== undefined
+    ) {
+      const key = enrollmentKeys.careOfferings(selectedPhaseId);
+      discard(offeringsRead.error, {
+        codes: ["general.permission", "module.not_booked"],
+        matches: (candidate) => candidate === key,
+        refusedKey: key,
+      });
+    }
+  }, [
+    accessRefused,
+    discard,
+    loadedPhases,
+    phasesRead.error,
+    offeringsRead.data,
+    offeringsRead.error,
+    selectedPhaseId,
+  ]);
 
   // Nachladen nach Speichern, Löschen oder Duplizieren: ein Fehler dabei ist
   // ein Ladefehler über der Liste, kein Fehler der Aktion (#6652).

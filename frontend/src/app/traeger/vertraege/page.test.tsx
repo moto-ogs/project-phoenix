@@ -174,6 +174,32 @@ describe("TraegerVertraegePage", () => {
     ).toBeInTheDocument();
   });
 
+  it("withdraws cached contracts as soon as loading another page refuses access", async () => {
+    api.fetchCareContracts.mockResolvedValueOnce({
+      contracts: [SENT],
+      counts: { entwurf: 1100, versendet: 1 },
+      hasMore: true,
+    });
+    renderPage();
+    expect((await screen.findAllByText("Ben Muster"))[0]).toBeVisible();
+    api.fetchCareContracts
+      .mockRejectedValueOnce(new ApiError("refused", 403))
+      .mockImplementation(() => new Promise(() => undefined));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Weitere Verträge laden (1 von 1101)",
+      }),
+    );
+    // Anker: die ursprüngliche Verweigerung ist sichtbar, ohne einen zweiten Abruf abzuwarten.
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Verträge"),
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("Ben Muster")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
   it("loads older contracts and sends filters to the server", async () => {
     api.fetchCareContracts
       .mockResolvedValueOnce({

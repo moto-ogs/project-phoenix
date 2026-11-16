@@ -100,9 +100,14 @@ export function StudentPaymentCard({
   const [revealed, setRevealed] = useState<{
     payerId: string;
     iban: string | null;
+    source: typeof payment.data;
   } | null>(null);
   const revealedIban =
-    revealed !== null && revealed.payerId === payerId ? revealed.iban : null;
+    revealed !== null &&
+    revealed.payerId === payerId &&
+    revealed.source === payment.data
+      ? revealed.iban
+      : null;
   // „Anzeigen“ ist eine Aktion ohne Formular: Fehler als Toast.
   const { show: showActionError } = useApiErrorDisplay();
   const [isRevealing, setIsRevealing] = useState(false);
@@ -133,7 +138,7 @@ export function StudentPaymentCard({
     setIsRevealing(true);
     try {
       const data = await revealGuardianPayment(payerId);
-      setRevealed({ payerId, iban: data.iban });
+      setRevealed({ payerId, iban: data.iban, source: payment.data });
     } catch (error) {
       logger.error("reveal_guardian_payment_failed", {
         error: error instanceof Error ? error.message : String(error),

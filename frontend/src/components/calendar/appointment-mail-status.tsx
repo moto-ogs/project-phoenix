@@ -22,6 +22,7 @@ import {
   getStaffAppointmentMails,
   type CalendarAppointmentMails,
 } from "~/lib/personal-calendar-api";
+import { useSwrPollingRecovery } from "~/lib/hooks/use-swr-polling-recovery";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
@@ -43,6 +44,7 @@ function useAppointmentMails(appointmentId: string) {
     () => getStaffAppointmentMails(appointmentId),
     { refreshInterval: POLL_MS, keepPreviousData: false },
   );
+  useSwrPollingRecovery(error, mutate, POLL_MS);
   const { error: loadError } = useSwrResourceLoadError(
     [{ data, error }],
     "der Stand der E-Mails",

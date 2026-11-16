@@ -31,6 +31,7 @@ import {
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { formatChatDateTime, formatDate } from "~/lib/date-helpers";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { DEPARTURE_MODE_LABELS } from "~/lib/departure-plan";
@@ -103,29 +104,38 @@ export function PickupRequestDetailModal({
    */
   onOpenQueue?: () => void;
 }>) {
+  const discard = useDiscardRefusedEntity();
+  const key = requestId ? tenantContactKeys.careRequest(requestId) : null;
   const { data, error, mutate } = useSWRAuth(
-    requestId ? tenantContactKeys.careRequest(requestId) : null,
+    key,
     () => fetchCareScheduleChangeRequest(requestId ?? ""),
     {
       keepPreviousData: false,
+      onError: (failure) => {
+        if (key !== null)
+          discard(failure, {
+            codes: ["general.permission", "care.request_not_found"],
+            matches: (candidate) => candidate === key,
+            refusedKey: key,
+          });
+      },
       shouldRetryOnError: (err: unknown) => explainedState(err) === null,
     },
   );
-  const explained = data === undefined ? explainedState(error) : null;
+  const explained = explainedState(error);
   // Ein echter Ladefehler steht im Fenster, mit Wiederholen (#2517).
   const loadError = useSwrResourceLoadError(
     [{ data, error: explained ? undefined : error }],
     "die Anfrage",
     () => mutate(),
   );
-  const state: LoadState =
-    data !== undefined
+  const state: LoadState = explained
+    ? { kind: explained }
+    : data !== undefined
       ? { kind: "loaded", detail: data }
-      : explained
-        ? { kind: explained }
-        : loadError.failure !== undefined
-          ? { kind: "failed" }
-          : { kind: "loading" };
+      : loadError.failure !== undefined
+        ? { kind: "failed" }
+        : { kind: "loading" };
 
   const pending = state.kind === "loaded" && state.detail.status === "pending";
 

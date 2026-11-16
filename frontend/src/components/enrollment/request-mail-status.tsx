@@ -15,6 +15,7 @@ import {
 } from "~/lib/enrollment-admin-api";
 import { formatBerlinDate, formatTime } from "~/lib/date-helpers";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSwrPollingRecovery } from "~/lib/hooks/use-swr-polling-recovery";
 import { useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 
@@ -45,6 +46,7 @@ export function useRequestMails(requestId: string) {
     () => getAdminRequestMails(requestId),
     { keepPreviousData: false, refreshInterval: 15_000 },
   );
+  useSwrPollingRecovery(error, mutate, 15_000);
   const load = useSwrResourceLoadError(
     [{ data, error }],
     "der Stand der E-Mails",

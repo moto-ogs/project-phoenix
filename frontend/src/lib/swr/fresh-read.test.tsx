@@ -114,6 +114,57 @@ describe("useFreshSWR", () => {
     await waitFor(() => expect(result.current.data).toBe("fresh A"));
   });
 
+  it.each([false, true])(
+    "starts a new request if an earlier opening is still pending (remount=%s)",
+    async (remount) => {
+      const old = deferred<string>();
+      const current = deferred<string>();
+      const fetcher = vi
+        .fn()
+        .mockReturnValueOnce(old.promise)
+        .mockReturnValueOnce(current.promise);
+      const initialProps: { open: boolean } = { open: true };
+      const first = renderHook(
+        ({ open }: { open: boolean }) =>
+          useFreshSWR(open ? "fresh-pending" : null, fetcher),
+        { initialProps },
+      );
+      await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+      let active = first;
+      if (remount) {
+        first.unmount();
+        active = renderHook(
+          ({ open }: { open: boolean }) =>
+            useFreshSWR(open ? "fresh-pending" : null, fetcher),
+          { initialProps },
+        );
+      } else {
+        first.rerender({ open: false });
+        first.rerender({ open: true });
+      }
+      await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+      await act(async () => old.resolve("old"));
+      expect(active.result.current.data).toBeUndefined();
+      expect(active.result.current.fresh).toBe(false);
+      await act(async () => current.resolve("current"));
+      await waitFor(() => expect(active.result.current.data).toBe("current"));
+    },
+  );
+
+  it("keeps caller pauses and starts its own request when resumed", async () => {
+    const fetcher = vi.fn(async () => "fresh");
+    const { result, rerender } = renderHook(
+      ({ paused }) =>
+        useFreshSWR("fresh-paused", fetcher, { isPaused: () => paused }),
+      { initialProps: { paused: true } },
+    );
+    expect(result.current.fresh).toBe(false);
+    expect(fetcher).not.toHaveBeenCalled();
+    rerender({ paused: false });
+    await waitFor(() => expect(result.current.data).toBe("fresh"));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("ends loading with the error when the opening's request fails", async () => {
     const answer = deferred<string>();
     const { result } = renderHook(() =>

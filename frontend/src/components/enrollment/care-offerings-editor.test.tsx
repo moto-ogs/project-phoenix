@@ -1,3 +1,5 @@
+import { useSWRAuth } from "~/lib/swr";
+import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import {
   act,
   fireEvent,
@@ -227,6 +229,44 @@ beforeEach(() => {
 });
 
 describe("CareOfferingsEditor", () => {
+  it("shows a blocking catalog error when a cached catalog is refused", async () => {
+    mocks.listPhases.mockResolvedValue([phase()]);
+    mocks.listCareOfferings.mockResolvedValue([offering()]);
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const { mutate } = useSWRAuth(
+        enrollmentKeys.careOfferings(phase().id),
+        () => mocks.listCareOfferings(),
+      );
+      reload = () => mutate();
+      return null;
+    }
+    render(
+      <>
+        <CareOfferingsEditor />
+        <Probe />
+      </>,
+    );
+    expect(
+      await screen.findByRole("button", {
+        name: "Aktionen für Regelbetreuung",
+      }),
+    ).toBeVisible();
+    mocks.listCareOfferings.mockRejectedValueOnce(new ApiError("refused", 403));
+    await act(async () => {
+      await reload();
+    });
+    // Anker: der Ladefehler erklärt den entzogenenen Katalog.
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Betreuungsangebote"),
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Aktionen für Regelbetreuung" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("keeps the editor open while saving through outside dismissal", async () => {
     mocks.listPhases.mockResolvedValue([phase()]);
     mocks.listCareOfferings.mockResolvedValue([offering()]);

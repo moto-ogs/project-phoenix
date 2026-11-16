@@ -21,7 +21,7 @@ import { Modal } from "~/components/ui/modal";
 import { useSharingOptions } from "~/components/parent/sharing-options-context";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR, useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   getRequestSharing,
@@ -116,15 +116,23 @@ function useSharingState(
   studentId: string,
   requestType: ParentRequestShareType,
   requestId: string,
+  open: boolean,
 ) {
   const t = useCareTermTranslations("parentRequestSharing");
-  const resource = useSWRAuth(
-    enabled
+  const summary = useSWRAuth(
+    enabled && !open
       ? parentKeys.requestSharing(studentId, requestType, requestId)
       : null,
     () => getRequestSharing(studentId, requestType, requestId),
-    { keepPreviousData: false },
+    { keepPreviousData: false, revalidateIfStale: false },
   );
+  const dialog = useFreshSWR(
+    enabled && open
+      ? parentKeys.requestSharing(studentId, requestType, requestId)
+      : null,
+    () => getRequestSharing(studentId, requestType, requestId),
+  );
+  const resource = open ? dialog : summary;
   const { data, mutate, isValidating } = resource;
   const { error: loadError } = useSwrResourceLoadError(
     [resource],
@@ -146,7 +154,7 @@ function useSharingState(
     selected,
     setSelected,
     loading: enabled && !data && !resource.error,
-    reloading: isValidating,
+    reloading: resource.isLoading || isValidating,
     loadError,
   };
 }
@@ -164,6 +172,7 @@ function useSharingSave({
   selected,
   saved,
   failed,
+  enabled,
 }: Readonly<{
   studentId: string;
   requestType: ParentRequestShareType;
@@ -171,9 +180,11 @@ function useSharingSave({
   selected: string[];
   saved: (state: RequestSharingState) => void;
   failed: (err: unknown) => void;
+  enabled: boolean;
 }>) {
   const [saving, setSaving] = useState(false);
   const save = useCallback(async () => {
+    if (!enabled) return;
     setSaving(true);
     try {
       saved(
@@ -184,7 +195,7 @@ function useSharingSave({
     } finally {
       setSaving(false);
     }
-  }, [failed, requestId, requestType, saved, selected, studentId]);
+  }, [enabled, failed, requestId, requestType, saved, selected, studentId]);
   return { save, saving };
 }
 
@@ -273,7 +284,13 @@ function useRequestSharingControl(props: RequestSharingControlProps) {
   const { studentId, requestType, requestId, isSelf } = props;
   const t = useCareTermTranslations("parentRequestSharing");
   const [open, setOpen] = useState(false);
-  const sharing = useSharingState(isSelf, studentId, requestType, requestId);
+  const sharing = useSharingState(
+    isSelf,
+    studentId,
+    requestType,
+    requestId,
+    open,
+  );
   const {
     error: saveError,
     show: showSaveError,
@@ -304,6 +321,11 @@ function useRequestSharingControl(props: RequestSharingControlProps) {
     selected: sharing.selected,
     saved,
     failed,
+    enabled:
+      open &&
+      sharing.state !== null &&
+      !sharing.reloading &&
+      !sharing.loadError,
   });
   useLayoutEffect(() => {
     saveRef.current = save;
@@ -317,8 +339,7 @@ function useRequestSharingControl(props: RequestSharingControlProps) {
   const show = () => {
     clearSaveError();
     sharing.setSelected(selectedRecipients(sharing.state ?? undefined));
-    // Familienschutz may have changed since the list loaded.
-    void mutate();
+    // This opening confirms the recipients and Familienschutz before editing.
     setOpen(true);
   };
   return { open, setOpen, sharing, save, saving, saveError, toggle, show };
@@ -333,7 +354,10 @@ function SharingDialog({
 }>) {
   const { sharing, saving } = control;
   const footer =
-    sharing.state && !sharing.state.family_protected ? (
+    sharing.state &&
+    !sharing.reloading &&
+    !sharing.loadError &&
+    !sharing.state.family_protected ? (
       <SharingFooter
         saving={saving}
         close={() => control.setOpen(false)}
@@ -363,8 +387,9 @@ function SharingDialog({
             {t("loading")}
           </p>
         ) : null}
+        <LoadErrorAlert error={sharing.loadError} />
         <FormErrorAlert message={control.saveError} />
-        {sharing.state ? (
+        {sharing.state && !sharing.reloading && !sharing.loadError ? (
           <SharingRecipients
             state={sharing.state}
             selected={sharing.selected}
@@ -384,7 +409,7 @@ export function RequestSharingControl(props: RequestSharingControlProps) {
   const control = useRequestSharingControl(props);
   const { sharing } = control;
   if (!props.isSelf) return null;
-  if (sharing.loading)
+  if (sharing.loading && !control.open)
     return (
       <p
         aria-busy="true"
@@ -394,11 +419,11 @@ export function RequestSharingControl(props: RequestSharingControlProps) {
         {t("loading")}
       </p>
     );
-  if (sharing.loadError && !sharing.state)
+  if (sharing.loadError && !sharing.state && !control.open)
     return <LoadErrorAlert error={sharing.loadError} />;
   if (sharing.state?.family_protected)
     return <Alert type="info" message={t("protected")} />;
-  if (!sharing.state) return null;
+  if (!sharing.state && !control.open) return null;
   return (
     <>
       <Button

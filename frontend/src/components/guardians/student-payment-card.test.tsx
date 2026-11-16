@@ -1,4 +1,6 @@
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import {
+  act,
   render as rtlRender,
   screen,
   waitFor,
@@ -107,6 +109,47 @@ describe("StudentPaymentCard", () => {
       ibanMasked: "•••• 3000",
       accountHolder: null,
     });
+  });
+
+  it("withdraws the revealed IBAN when the same payer's payment details change", async () => {
+    mockRevealPayment.mockResolvedValue({
+      guardianId: "10",
+      iban: FULL_IBAN,
+      accountHolder: null,
+    });
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const { mutate } = useSWRAuth(
+        tenantContactKeys.guardianPayment("10"),
+        () => mockFetchPayment("10"),
+      );
+      reload = () => mutate();
+      return null;
+    }
+    render(
+      <>
+        <StudentPaymentCard
+          studentId="7"
+          guardians={[guardian("10", "Sabine", true)]}
+        />
+        <Probe />
+      </>,
+    );
+    await screen.findByText("•••• 3000");
+    fireEvent.click(screen.getByRole("button", { name: /Anzeigen/ }));
+    expect(await screen.findByText(FULL_IBAN)).toBeVisible();
+    mockFetchPayment.mockResolvedValue({
+      guardianId: "10",
+      ibanMasked: "•••• 9999",
+      accountHolder: "Neues Konto",
+    });
+    await act(async () => {
+      await reload();
+    });
+    // Anker: der neue Kontoinhaber gehört zur frisch geladenen Bankverbindung.
+    expect(await screen.findByText("Neues Konto")).toBeVisible();
+    expect(screen.queryByText(FULL_IBAN)).not.toBeInTheDocument();
+    expect(screen.getByText("•••• 9999")).toBeVisible();
   });
 
   it("shows only the masked IBAN until Anzeigen is pressed", async () => {

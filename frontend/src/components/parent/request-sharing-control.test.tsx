@@ -1,4 +1,6 @@
+import { deferred } from "~/test/helpers/form-modal-pending";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -133,6 +135,48 @@ describe("RequestSharingControl", () => {
       await screen.findByRole("checkbox", { name: "Mara Muster" }),
     ).toBeChecked();
     fireEvent.click(screen.getByText("Auswahl speichern"));
+    await waitFor(() =>
+      expect(setSharing).toHaveBeenCalledWith("42", "excused", "9", ["7"]),
+    );
+  });
+
+  it("waits for this opening's recipients before enabling edits or Save", async () => {
+    const shared = {
+      family_protected: false,
+      recipients: [
+        {
+          guardian_profile_id: "7",
+          first_name: "Mara",
+          last_name: "Muster",
+          selected: true,
+        },
+      ],
+    };
+    getSharing.mockResolvedValueOnce(shared);
+    renderControl();
+    await screen.findByText("Anfrage teilen");
+    const pending = deferred<typeof shared>();
+    getSharing.mockReturnValueOnce(pending.promise);
+    fireEvent.click(screen.getByText("Anfrage teilen"));
+    const dialog = await screen.findByRole("dialog");
+    const save = within(dialog).queryByRole("button", {
+      name: "Auswahl speichern",
+    });
+    if (save) expect(save).toBeDisabled();
+    for (const checkbox of within(dialog).queryAllByRole("checkbox"))
+      expect(checkbox).toBeDisabled();
+    await act(async () =>
+      pending.resolve({
+        ...shared,
+        recipients: [{ ...shared.recipients[0]!, selected: false }],
+      }),
+    );
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "Mara Muster",
+    });
+    expect(checkbox).not.toBeChecked();
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole("button", { name: "Auswahl speichern" }));
     await waitFor(() =>
       expect(setSharing).toHaveBeenCalledWith("42", "excused", "9", ["7"]),
     );

@@ -23,7 +23,11 @@ import {
 } from "~/components/traeger/care-contract-format";
 import { careContractTabs } from "~/components/traeger/care-contract-tabs";
 import { emptySearchText } from "~/components/traeger/empty-search";
-import { isRefusal } from "~/components/traeger/use-traeger-confirmed-resource";
+import { useSWRRequestGuard } from "~/lib/swr/hooks";
+import {
+  isRefusal,
+  useRefusalGuard,
+} from "~/components/traeger/use-traeger-confirmed-resource";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import {
@@ -263,6 +267,8 @@ export default function TraegerVertraegePage() {
     search: debouncedSearch,
   };
   const listKey = traegerContractKeys.list(filter);
+  const listGuard = useRefusalGuard(listKey);
+  const beginPageRead = useSWRRequestGuard();
   const firstPage = useTraegerResource(
     listKey,
     () => fetchCareContracts({ ...filter, offset: 0 }),
@@ -335,6 +341,7 @@ export default function TraegerVertraegePage() {
   const loadMore = async () => {
     const after = firstPage.data;
     if (!after || !data) return;
+    const complete = beginPageRead(listKey);
     setLoadingMore(true);
     moreLoad.clear();
     try {
@@ -353,8 +360,14 @@ export default function TraegerVertraegePage() {
             : page,
       }));
     } catch (err) {
-      // A refusal is the list's: its reader reads again and shows it.
-      if (isRefusal(err)) firstPage.reload();
+      // Pagination has the same access boundary as the first page. Record
+      // its refusal before any later request can replace it with a 5xx.
+      if (isRefusal(err))
+        complete(() => {
+          listGuard.callbacks.onError(err);
+          void firstPage.mutate(undefined, { revalidate: false });
+          setMore(null);
+        });
       else
         await moreLoad.show(err, {
           object: "die Liste der Verträge",

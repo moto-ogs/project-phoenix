@@ -366,6 +366,7 @@ function useScopedSWR<T, E>(
   fetcher: () => Promise<T>,
   options: ReaderOptions<T, E> | undefined,
   base: SWRConfiguration = swrConfig,
+  revalidateMissing = true,
 ): ScopedSWRResponse<T, E> {
   const { prefix, generation } = useSWRScope();
   const { cache, mutate: cacheMutate, fallback } = useSWRConfig();
@@ -458,7 +459,7 @@ function useScopedSWR<T, E>(
       ? null
       : discarded
         ? `request:${fullKey}:${requestGenerationOf(fullKey)}`
-        : !visible && error === undefined
+        : revalidateMissing && !visible && error === undefined
           ? `data:${fullKey}:${dataGenerationOf(fullKey)}`
           : null;
   const reloaded = useRef<string | null>(null);
@@ -548,39 +549,67 @@ export function useFreshSWR<T, E = Error>(
   fetcher: () => Promise<T>,
   options?: ReaderOptions<T, E>,
 ): ScopedSWRResponse<T, E> & { fresh: boolean } {
-  const read = useScopedSWR<T, E>(key, fetcher, {
-    keepPreviousData: false,
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    ...options,
-    revalidateOnMount: true,
-    dedupingInterval: 0,
-  });
-  const [openingKey, setOpeningKey] = useState(key);
-  const sameOpening = openingKey === key;
-  const [answeredKey, setAnsweredKey] = useState<string | null>(null);
-  // Seen in flight first: before SWR starts the request, a cached answer
-  // looks settled.
+  const { prefix, generation } = useSWRScope();
+  const opening =
+    key === null || prefix === null
+      ? null
+      : JSON.stringify([prefix, generation, key]);
+  const paused = options?.isPaused?.() === true;
+  const requestReady = useRef(false);
+  const requestOwner = useRef<SWRResponse<T, E>["mutate"] | null>(null);
+  const [openingKey, setOpeningKey] = useState(opening);
   const [flightKey, setFlightKey] = useState<string | null>(null);
+  const sameOpening = openingKey === opening;
   if (!sameOpening) {
-    setOpeningKey(key);
-    setAnsweredKey(null);
+    setOpeningKey(opening);
     setFlightKey(null);
-  } else if (key === null) {
-    if (answeredKey !== null) setAnsweredKey(null);
-    if (flightKey !== null) setFlightKey(null);
-  } else if (read.isValidating) {
-    if (flightKey !== key) setFlightKey(key);
-    if (answeredKey === key) setAnsweredKey(null);
-  } else if (flightKey === key && answeredKey !== key) {
-    setAnsweredKey(key);
+    requestReady.current = false;
+    requestOwner.current = null;
   }
+  const read = useScopedSWR<T, E>(
+    key,
+    fetcher,
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      ...options,
+      // SWR also starts automatic reads on key changes, even with mount
+      // revalidation disabled. Only this opening's explicit read may start it.
+      isPaused: () => !requestReady.current || options?.isPaused?.() === true,
+      revalidateOnMount: false,
+      dedupingInterval: 0,
+    },
+    swrConfig,
+    false,
+  );
+  const { mutate } = read;
+  useEffect(() => {
+    if (opening === null || paused) return;
+    requestReady.current = true;
+    requestOwner.current = mutate;
+    // mutate() removes the pending FETCH marker. A zero deduping interval
+    // alone still borrows a request that has not settled.
+    void mutate();
+    setFlightKey(opening);
+    return () => {
+      requestReady.current = false;
+      requestOwner.current = null;
+    };
+  }, [opening, mutate, paused]);
+  // A later explicit reload can overtake this opening's first request. Its
+  // confirmed answer counts too; never wait for the superseded flight.
   const fresh =
-    sameOpening && key !== null && answeredKey === key && !read.isValidating;
+    !paused &&
+    sameOpening &&
+    opening !== null &&
+    flightKey === opening &&
+    requestOwner.current === mutate &&
+    !read.isValidating;
   return {
     ...read,
-    // SWR keeps the earlier answer next to a failure; this opening has none.
     data: fresh && read.error === undefined ? read.data : undefined,
+    error: fresh ? read.error : undefined,
     isLoading: key !== null && !fresh,
     fresh,
   };

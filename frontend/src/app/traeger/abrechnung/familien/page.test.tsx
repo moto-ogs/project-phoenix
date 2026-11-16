@@ -1,3 +1,5 @@
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
@@ -109,6 +111,30 @@ describe("TraegerBillingFamiliesPage", () => {
     });
     api.fetchFamilyChildren.mockReset();
     api.setChildDebtorNumber.mockReset();
+  });
+
+  it("clears the settings failure after a successful retry", async () => {
+    api.fetchDebtorNumberSettings.mockRejectedValueOnce(
+      new ApiError("offline", 503),
+    );
+    renderPage();
+    const error = await screen.findByText(
+      catalogText(
+        "general.unavailable",
+        "die Einstellungen der Debitorennummer",
+      ),
+    );
+    expect(error).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    expect((await screen.findAllByText("Sabine Schneider"))[0]).toBeVisible();
+    expect(
+      screen.queryByText(
+        catalogText(
+          "general.unavailable",
+          "die Einstellungen der Debitorennummer",
+        ),
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("lists every family with who pays and its sums", async () => {

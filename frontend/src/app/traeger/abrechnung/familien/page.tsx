@@ -17,7 +17,7 @@
 import { Pencil, Plus } from "lucide-react";
 import { familyKeyLabel } from "~/lib/family-key";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import {
   BillingAmountCards,
@@ -58,7 +58,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ListSkeleton } from "~/components/ui/page-skeletons";
 import { Button } from "~/components/ui/button";
-import { useApiLoadError } from "~/contexts/ToastContext";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { parentsConcept } from "~/lib/concepts/parents";
 import { useInvalidateFamily } from "~/lib/swr";
 import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
@@ -435,17 +435,11 @@ export default function TraegerBillingFamiliesPage() {
   } = useDebtorNumberSettings();
   const format = settings?.format;
   const scope = settings?.scope;
-  const settingsLoad = useApiLoadError();
-  const { show: showLoadError } = settingsLoad;
-
-  // Without the scope the page cannot tell which numbers apply (#7007).
-  useEffect(() => {
-    if (!settingsError) return;
-    void showLoadError(settingsError, {
-      object: "die Einstellungen der Debitorennummer",
-      retry: reloadSettings,
-    });
-  }, [reloadSettings, settingsError, showLoadError]);
+  const settingsLoad = useSwrLoadError(
+    settingsError,
+    "die Einstellungen der Debitorennummer",
+    reloadSettings,
+  );
 
   // Without the scope the list waits: it cannot tell which numbers apply.
   const listed = useTraegerResource(
@@ -466,7 +460,7 @@ export default function TraegerBillingFamiliesPage() {
       ? withFamilyChildren(listed.data, children.data)
       : null;
   }, [scope, listed.data, children.data]);
-  const loadError = listed.error ?? children.error ?? settingsLoad.error;
+  const loadError = listed.error ?? children.error ?? settingsLoad;
   const invalidate = useInvalidateFamily();
   // A changed number shows in the list and on the family's page.
   const reload = useCallback(
