@@ -55,6 +55,8 @@ type AccountPasskeyFlowDependencies struct {
 	// CatererFrontendURL is the caterer portal the caterer's ceremonies are
 	// pinned to (#4497).
 	CatererFrontendURL string
+	// Now is the composition's clock (ADR 0239).
+	Now func() time.Time
 }
 
 // accountPasskeyGate is the second factor a registration is gated by: the
@@ -75,7 +77,7 @@ type accountPasskeySessions interface {
 // tenant domain is a wiring error and surfaces at startup.
 func NewAccountPasskeyFlows(deps AccountPasskeyFlowDependencies) (*AccountPasskeyFlows, error) {
 	switch {
-	case deps.Accounts == nil, deps.Records == nil, deps.MFA == nil, deps.Sessions == nil, deps.Runtime == nil:
+	case deps.Accounts == nil, deps.Records == nil, deps.MFA == nil, deps.Sessions == nil, deps.Runtime == nil, deps.Now == nil:
 		return nil, errors.New("identity access account passkey: all dependencies are required")
 	}
 	rpID := strings.TrimSpace(deps.RPID)
@@ -94,7 +96,7 @@ func NewAccountPasskeyFlows(deps AccountPasskeyFlowDependencies) (*AccountPasske
 		accounts: deps.Accounts, records: deps.Records, mfa: deps.MFA, sessions: deps.Sessions,
 		runtime: deps.Runtime, attach: deps.Attach,
 		rpID: domain.HostWithoutPort(rpID), rpName: rpName,
-		tenantDomain: domain.HostWithoutPort(tenantDomain), catererHost: catererHost(deps.CatererFrontendURL), now: time.Now,
+		tenantDomain: domain.HostWithoutPort(tenantDomain), catererHost: catererHost(deps.CatererFrontendURL), now: deps.Now,
 	}, nil
 }
 

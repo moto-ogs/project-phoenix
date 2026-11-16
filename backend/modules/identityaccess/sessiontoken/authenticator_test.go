@@ -417,9 +417,10 @@ func TestAuthenticateRefreshJWT_MalformedClaims(t *testing.T) {
 	auth, err := newTestTokenAuth(t, testSecret)
 	require.NoError(t, err)
 
-	// Create token with missing claims
+	// Create token with missing claims. The jwtauth verifier checks exp on
+	// the jwx clock, so the token expires at a fixed instant far ahead.
 	_, token, err := auth.JwtAuth.Encode(map[string]any{
-		"exp": time.Now().Add(24 * time.Hour).Unix(),
+		"exp": time.Date(2100, time.January, 1, 0, 0, 0, 0, time.UTC).Unix(),
 		"iat": time.Now().Unix(),
 		// Missing: id, token
 	})

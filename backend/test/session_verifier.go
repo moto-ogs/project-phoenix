@@ -15,6 +15,7 @@ func ConfiguredTokenAuth() (*sessiontoken.TokenAuth, error) {
 		viper.GetString("auth_jwt_secret"),
 		viper.GetDuration("auth_jwt_expiry"),
 		viper.GetDuration("auth_jwt_refresh_expiry"),
+		nil,
 	)
 }
 

@@ -14,11 +14,14 @@ type TokenAuth struct {
 	JwtAuth          *jwtauth.JWTAuth
 	JwtExpiry        time.Duration
 	JwtRefreshExpiry time.Duration
+	// now is the clock ParseAccessJWT checks the expiry against (ADR 0239).
+	now func() time.Time
 }
 
 // NewTokenAuthWithDurations creates an instance from explicit configuration.
 // The signing key is required configuration: no root generates or persists one.
-func NewTokenAuthWithDurations(secret string, expiry, refreshExpiry time.Duration) (*TokenAuth, error) {
+// now is the root's clock; nil reads the real one, as RootEnvironment.Now does.
+func NewTokenAuthWithDurations(secret string, expiry, refreshExpiry time.Duration, now func() time.Time) (*TokenAuth, error) {
 	if err := rejectGeneratedSecret(secret); err != nil {
 		return nil, err
 	}
@@ -29,6 +32,10 @@ func NewTokenAuthWithDurations(secret string, expiry, refreshExpiry time.Duratio
 		JwtAuth:          jwtauth.New("HS256", []byte(secret), nil),
 		JwtExpiry:        expiry,
 		JwtRefreshExpiry: refreshExpiry,
+		now:              now,
+	}
+	if a.now == nil {
+		a.now = time.Now
 	}
 
 	return a, nil
@@ -60,7 +67,7 @@ func (a *TokenAuth) ParseAccessJWT(tokenString string) (*AppClaims, error) {
 	if decoded.AccessErr != nil {
 		return nil, decoded.AccessErr
 	}
-	if decoded.access.ExpiresAt > 0 && decoded.access.ExpiresAt < time.Now().Unix() {
+	if decoded.access.ExpiresAt > 0 && decoded.access.ExpiresAt < a.now().Unix() {
 		return nil, errors.New("access token expired")
 	}
 	return &decoded.access, nil

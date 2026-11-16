@@ -167,7 +167,7 @@ func newGuardRig(t *testing.T, db *bun.DB, with ...func(*portalCompose.Dependenc
 			deps.ArrivalSchedules = owners.NewParentArrivalSchedules(schedules.Arrivals)
 			deps.PickupSchedules = owners.NewParentPickupSchedules(schedules.Pickups)
 		}
-		deps.InvalidateInvites = owners.NewGuardianInvitationInvalidation(database)
+		deps.InvalidateInvites = owners.NewGuardianInvitationInvalidation(database, nil)
 		deps.ChildRepo = owners.ParentChildReadsAfterCheck(deps.ChildRepo, rig.checked.park)
 		lock := deps.Memberships
 		deps.Memberships = func(ctx context.Context, accountID int64) (bool, error) {

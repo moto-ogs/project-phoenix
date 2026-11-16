@@ -29,7 +29,7 @@ import (
 func checkSchoolScopeMatrix(t *testing.T, apiInstance *goldenRuntime) {
 	t.Parallel()
 
-	tokenAuth, err := newSessionTokenAuth()
+	tokenAuth, err := newSessionTokenAuth(nil)
 	require.NoError(t, err)
 	schoolToken, err := tokentest.CreateJWT(tokenAuth, sessiontoken.AppClaims{
 		ID:  42,

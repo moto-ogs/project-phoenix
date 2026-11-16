@@ -249,7 +249,7 @@ func checkCatererPortal(t *testing.T, graph *goldenRuntime) {
 // token; a public one answers it exactly like an anonymous request.
 func checkCatererScopeMatrix(t *testing.T, graph *goldenRuntime) {
 	t.Parallel()
-	tokenAuth, err := newSessionTokenAuth()
+	tokenAuth, err := newSessionTokenAuth(nil)
 	require.NoError(t, err)
 	mint := func(claims sessiontoken.AppClaims) string {
 		token, mintErr := tokentest.CreateJWT(tokenAuth, claims)

@@ -297,7 +297,7 @@ type caregiverComposition struct {
 // over the golden graph with the builders the Serve root mounts them with.
 func setupCaregiverCompositionModule(t *testing.T, graph *goldenRuntime) *caregiverComposition {
 	t.Helper()
-	sessionAuth, err := newSessionTokenAuth()
+	sessionAuth, err := newSessionTokenAuth(nil)
 	require.NoError(t, err)
 	_, _, _, _, _, hub, _, _, settings, _, services, schedules, _, active, _, _, _, _, provisioning, _, _, _, deviceFleet, _, settingsWrites, _, _, err := composeTestRoot(graph.db, slog.Default(), currentTestServiceConfig())
 	require.NoError(t, err)
@@ -333,7 +333,7 @@ func setupOperatorInvitationRoute(t *testing.T, graph *goldenRuntime) chi.Router
 	t.Helper()
 	// Mount the operator routes of the golden graph again, with rate limiting
 	// enabled. The golden graph's router remains unchanged.
-	sessionAuth, err := newSessionTokenAuth()
+	sessionAuth, err := newSessionTokenAuth(nil)
 	require.NoError(t, err)
 	_, _, _, _, _, hub, _, _, settings, _, services, schedules, _, active, _, _, _, _, provisioning, _, _, _, deviceFleet, _, settingsWrites, _, _, err := composeTestRoot(graph.db, slog.Default(), currentTestServiceConfig())
 	require.NoError(t, err)
@@ -386,7 +386,7 @@ func checkOperatorInvitationMount(t *testing.T, graph *goldenRuntime) {
 
 func rateLimitTestAuth(t *testing.T) *sessiontoken.TokenAuth {
 	t.Helper()
-	tokenAuth, err := sessiontoken.NewTokenAuthWithDurations("rate-limit-test-secret-32-chars!!", 15*time.Minute, 24*time.Hour)
+	tokenAuth, err := sessiontoken.NewTokenAuthWithDurations("rate-limit-test-secret-32-chars!!", 15*time.Minute, 24*time.Hour, nil)
 	require.NoError(t, err)
 	return tokenAuth
 }

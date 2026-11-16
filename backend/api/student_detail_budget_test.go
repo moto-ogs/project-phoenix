@@ -22,7 +22,7 @@ func checkStudentDetailReadBudget(t *testing.T, runtime *goldenRuntime) {
 	claims := testpkg.TeacherTestClaims(int(account.ID))
 	claims.Permissions = []string{"users:read"}
 	token := testpkg.MintLiveSessionJWT(t, db, claims)
-	auth, err := sessiontoken.NewTokenAuthWithDurations(testpkg.TestJWTSecret, 15*time.Minute, 24*time.Hour)
+	auth, err := sessiontoken.NewTokenAuthWithDurations(testpkg.TestJWTSecret, 15*time.Minute, 24*time.Hour, nil)
 	require.NoError(t, err)
 	child := testpkg.CreateTestStudent(t, db, "Budget", "Visible", "1a")
 	// The query option cannot widen portal scope. Use the production auth

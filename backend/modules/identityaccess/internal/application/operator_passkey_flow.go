@@ -81,7 +81,7 @@ func NewOperatorPasskeyFlows(operators *Service, deps OperatorPasskeyFlowDepende
 	return &OperatorPasskeyFlows{
 		operators: operators, records: deps.Records, mfa: deps.MFA, sessions: deps.Sessions,
 		runtime: deps.Runtime,
-		rpID:    domain.HostWithoutPort(rpID), rpName: rpName, originHost: originHost, now: time.Now,
+		rpID:    domain.HostWithoutPort(rpID), rpName: rpName, originHost: originHost, now: operators.now,
 	}, nil
 }
 

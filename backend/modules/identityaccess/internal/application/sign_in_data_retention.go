@@ -30,14 +30,14 @@ type SignInDataRetention struct {
 	logger *slog.Logger
 }
 
-func NewSignInDataRetention(store ports.SignInDataRetentionStore, logger *slog.Logger, run func(context.Context, func(context.Context) error) error) *SignInDataRetention {
-	if store == nil {
-		panic("identity access application: sign-in data retention requires its store")
+func NewSignInDataRetention(store ports.SignInDataRetentionStore, logger *slog.Logger, run func(context.Context, func(context.Context) error) error, now func() time.Time) *SignInDataRetention {
+	if store == nil || now == nil {
+		panic("identity access application: sign-in data retention requires its store and clock")
 	}
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &SignInDataRetention{store: store, now: time.Now, logger: logger, run: run}
+	return &SignInDataRetention{store: store, now: now, logger: logger, run: run}
 }
 
 func (r *SignInDataRetention) DeleteExpiredGuardianInvitations(ctx context.Context) (value0 int, err error) {

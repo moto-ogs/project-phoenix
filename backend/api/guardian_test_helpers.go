@@ -58,7 +58,7 @@ func newGuardianTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return GuardianTestModule{}, err
 	}
-	invalidate, err := identityaccessCompose.NewGuardianInvitationInvalidation(db.Pool())
+	invalidate, err := identityaccessCompose.NewGuardianInvitationInvalidation(db.Pool(), nil)
 	if err != nil {
 		return GuardianTestModule{}, err
 	}

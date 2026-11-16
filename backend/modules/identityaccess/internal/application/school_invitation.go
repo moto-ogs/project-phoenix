@@ -79,6 +79,8 @@ type SchoolInvitationDependencies struct {
 	Attach func(context.Context) context.Context
 	Expiry time.Duration
 	Logger *slog.Logger
+	// Now is the composition's clock (ADR 0239).
+	Now func() time.Time
 }
 
 func NewSchoolInvitation(deps SchoolInvitationDependencies) (*SchoolInvitation, error) {
@@ -91,6 +93,8 @@ func NewSchoolInvitation(deps SchoolInvitationDependencies) (*SchoolInvitation, 
 		return nil, fmt.Errorf("identity access school invitation: owner tokens, password policy, delivery and tenant runtime are required")
 	case deps.Expiry <= 0:
 		return nil, fmt.Errorf("identity access school invitation: a positive link expiry is required")
+	case deps.Now == nil:
+		return nil, fmt.Errorf("identity access school invitation: a clock is required")
 	}
 	logger := deps.Logger
 	if logger == nil {
@@ -99,7 +103,7 @@ func NewSchoolInvitation(deps SchoolInvitationDependencies) (*SchoolInvitation, 
 	return &SchoolInvitation{
 		permissionGranted: deps.PermissionGranted, employmentReset: deps.EmploymentReset, store: deps.Store, logins: deps.Logins, roles: deps.Roles, policy: deps.Policy, grants: deps.Grants,
 		identity: deps.Identity, schools: deps.Schools, owners: deps.Owners, passwords: deps.Passwords,
-		delivery: deps.Delivery, mailStates: deps.MailStates, runtime: deps.Runtime, attach: deps.Attach, expiry: deps.Expiry, now: time.Now, logger: logger,
+		delivery: deps.Delivery, mailStates: deps.MailStates, runtime: deps.Runtime, attach: deps.Attach, expiry: deps.Expiry, now: deps.Now, logger: logger,
 	}, nil
 }
 

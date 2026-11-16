@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -44,7 +45,7 @@ func newProductionEnvironment(logger *slog.Logger, publicAPIURL string) (owners.
 // mountServeMiddleware sets up the global middleware chain of the server
 // root in its fixed order and returns the session runtime it verifies with.
 func mountServeMiddleware(
-	router chi.Router, unit tenant.UnitOfWork, logger *slog.Logger, config ServeConfig, tracer *observability.Tracer,
+	router chi.Router, unit tenant.UnitOfWork, logger *slog.Logger, now func() time.Time, config ServeConfig, tracer *observability.Tracer,
 	metrics *httpMetrics, tracker analytics.Tracker, settings settingsCompose.SettingsService, policy analytics.CollectionPolicy,
 	consent identityaccess.AccountAnalyticsConsent, guardianSchools identityaccess.GuardianSchools, sessions identityaccess.AccessSessions,
 	rateLimitEnabled bool,
@@ -78,7 +79,7 @@ func mountServeMiddleware(
 	// Setup CORS, security logging, and rate limiting
 	setupCORSIfEnabled(router, config.EnableCORS)
 	securityLogger := securityLoggerFromEnv()
-	sessionAuth, err := newSessionTokenAuth()
+	sessionAuth, err := newSessionTokenAuth(now)
 	if err != nil {
 		return nil, err
 	}

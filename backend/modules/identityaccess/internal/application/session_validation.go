@@ -25,7 +25,7 @@ func (s *AccountAuthentication) ValidateSessionTokens(ctx context.Context, acces
 	defer func() { err = authenticationError(err) }()
 	ctx = bindRuntime(s.attach, ctx)
 	claims, err := s.codec.ParseAccessToken(access)
-	now := time.Now().Unix()
+	now := s.sessions.now().Unix()
 	if err != nil || claims.AccountID <= 0 || claims.ExpiresAt <= now || !domain.SessionScopeMatches(claims.Scope, portal) {
 		return identityaccess.SessionClaims{}, identityaccess.ErrInvalidToken
 	}
@@ -118,7 +118,7 @@ func (s *AccountAuthentication) validateAccountSessionInTx(txCtx context.Context
 		head, err := s.sessions.LatestAccountSessionInFamily(txCtx, claims.FamilyID)
 		if err := familyBacks(head, err, domain.AccessSession{
 			AccountID: claims.AccountID, ActingAdminID: claims.ActingAdminID, Scope: claims.Scope, FamilyID: claims.FamilyID,
-		}); err != nil {
+		}, s.sessions.now()); err != nil {
 			return nil, err
 		}
 		session = domain.AccountSession(head)
@@ -174,7 +174,7 @@ func (s *AccountAuthentication) verifyOperatorFamily(ctx context.Context, claims
 	if err != nil {
 		return err
 	}
-	if head.OperatorID != claims.AccountID || !head.Expiry.After(time.Now()) {
+	if head.OperatorID != claims.AccountID || !head.Expiry.After(s.sessions.now()) {
 		return identityaccess.ErrInvalidToken
 	}
 	return nil
@@ -201,7 +201,7 @@ func (s *AccountAuthentication) validateOperatorSession(ctx context.Context, cla
 	if err != nil {
 		return err
 	}
-	if session.OperatorID != operator.ID || !session.Expiry.After(time.Now()) || session.RotatedAt != nil || session.ReplacementTokenHash != nil || session.FamilyID != claims.FamilyID {
+	if session.OperatorID != operator.ID || !session.Expiry.After(s.sessions.now()) || session.RotatedAt != nil || session.ReplacementTokenHash != nil || session.FamilyID != claims.FamilyID {
 		return identityaccess.ErrInvalidToken
 	}
 	return nil
@@ -235,7 +235,7 @@ func (s *AccountAuthentication) validateRefreshRow(ctx context.Context, kind dom
 	if err != nil {
 		return domain.AccountSession{}, err
 	}
-	if session.AccountID != accountID || (claims.TenantID > 0 && session.TenantID != claims.TenantID) || !sameTraeger(kind, claims.OrgID, session) || session.PortalScope != domain.PersistedPortalScope(claims.Scope) || !session.Expiry.After(time.Now()) || session.RotatedAt != nil || session.ReplacementTokenHash != nil || session.FamilyID != claims.FamilyID {
+	if session.AccountID != accountID || (claims.TenantID > 0 && session.TenantID != claims.TenantID) || !sameTraeger(kind, claims.OrgID, session) || session.PortalScope != domain.PersistedPortalScope(claims.Scope) || !session.Expiry.After(s.sessions.now()) || session.RotatedAt != nil || session.ReplacementTokenHash != nil || session.FamilyID != claims.FamilyID {
 		return domain.AccountSession{}, identityaccess.ErrInvalidToken
 	}
 	return session, nil
@@ -260,20 +260,20 @@ func (s *AccountAuthentication) VerifyAccessSession(ctx context.Context, session
 	// pinned to one school, and a tenant the caller's context may carry must
 	// not hide it.
 	head, err := s.sessions.LatestAccountSessionInFamily(s.runtime.Detach(bindRuntime(s.attach, ctx)), token.FamilyID)
-	return familyBacks(head, err, token)
+	return familyBacks(head, err, token, s.sessions.now())
 }
 
 // familyBacks judges the latest generation of the family a token names; the
 // predicate checks account and portal. ErrInvalidToken means revoked,
-// expired or foreign; any other error is the read that failed.
-func familyBacks(head ports.AccountSession, err error, token domain.AccessSession) error {
+// expired or foreign at now; any other error is the read that failed.
+func familyBacks(head ports.AccountSession, err error, token domain.AccessSession, now time.Time) error {
 	if errors.Is(err, identityaccess.ErrAccountSessionNotFound) {
 		return identityaccess.ErrInvalidToken
 	}
 	if err != nil {
 		return err
 	}
-	if !domain.AccessSessionLive(domain.AccountSession(head), token, time.Now()) {
+	if !domain.AccessSessionLive(domain.AccountSession(head), token, now) {
 		return identityaccess.ErrInvalidToken
 	}
 	return nil

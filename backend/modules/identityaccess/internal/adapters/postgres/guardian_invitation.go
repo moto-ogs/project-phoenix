@@ -106,7 +106,7 @@ func (s *Store) FindGuardianInvitation(ctx context.Context, id int64) (domain.Gu
 	var row guardianInvitationRow
 	started := time.Now()
 	err = guardianTenantFilter(s.scope(ctx), db.NewSelect().Model(&row).Where(`"guardian_invitation".id = ?`, id)).Scan(ctx)
-	found, _, err := scanOne("find guardian invitation", started, err)
+	found, _, err := scanOne("find guardian invitation", time.Since(started), err)
 	return row.toDomain(), found, err
 }
 
@@ -118,7 +118,7 @@ func (s *Store) FindGuardianInvitationByToken(ctx context.Context, token string)
 	var row guardianInvitationRow
 	started := time.Now()
 	err = guardianTenantFilter(s.scope(ctx), db.NewSelect().Model(&row).Where(`"guardian_invitation".token = ?`, domain.HashToken(token))).Scan(ctx)
-	found, _, err := scanOne("find guardian invitation by token", started, err)
+	found, _, err := scanOne("find guardian invitation by token", time.Since(started), err)
 	invitation := row.toDomain()
 	invitation.Token = token
 	return invitation, found, err
@@ -153,7 +153,7 @@ func (s *Store) ListPendingGuardianApprovals(ctx context.Context) ([]domain.Guar
 	err = guardianTenantFilter(s.scope(ctx), db.NewSelect().Model(&rows).
 		Where(`"guardian_invitation".approval_status = ?`, domain.GuardianInvitationApprovalPending).
 		Where(`"guardian_invitation".accepted_at IS NULL`).
-		Where(`"guardian_invitation".expires_at > ?`, time.Now())).
+		Where(`"guardian_invitation".expires_at > ?`, s.now())).
 		OrderExpr(`"guardian_invitation".created_at DESC`).
 		Scan(ctx)
 	if err != nil {

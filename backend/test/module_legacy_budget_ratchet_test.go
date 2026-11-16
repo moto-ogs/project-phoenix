@@ -315,7 +315,8 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0248: Communication's parent-letter child reader constructor (+6).
 // ADR 0246: the report templates of modules/organizationtenancy/compose (+5)
 // and the export adapter of modules/traegerview/compose (+1).
-const moduleComposeBudgetTotal = 13540
+// ADR 0261: the clock of modules/identityaccess/compose (+17).
+const moduleComposeBudgetTotal = 13557
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -397,7 +398,8 @@ var moduleComposeBudgets = map[string]int{
 	"modules/guardianlinkview/compose":             8,
 	// Raised by ADR 0106: the Träger-Büro account management (+24).
 	// Raised by ADR 0187: the operator directory of the Träger export CLI (+11).
-	"modules/identityaccess/compose": 1372, // raised by ADR 0077
+	// Raised by ADR 0261: the owner's clock, its nil default and imports (+17).
+	"modules/identityaccess/compose": 1389, // raised by ADR 0077
 	"modules/mealplan/compose":       102,  // raised by ADR 0078 and ADR 0168
 	// ADR 0097: the isolated tenant return constructor, no retained logic moved.
 	// Raised by ADR 0112: the Träger master data constructor (+13).

@@ -229,7 +229,7 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 	catererURL := strings.TrimRight(cfg.CatererURL, "/")
 	resetMinutes := authTestTokenExpiry(cfg.PasswordResetExpiryMinutes, 30, 1440)
 	inviteHours := authTestTokenExpiry(cfg.InvitationTokenExpiryHours, 48, 168)
-	codec, err := NewConfiguredSessionTokens(cfg.JWTSecret, cfg.JWTExpiry, cfg.JWTRefreshExpiry)
+	codec, err := NewConfiguredSessionTokens(cfg.JWTSecret, cfg.JWTExpiry, cfg.JWTRefreshExpiry, nil)
 	if err != nil {
 		return AuthTestModule{}, err
 	}
@@ -285,11 +285,11 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 	}
 	mfa.Capability = settingsOverrides.mfaCapability
 	guardianMail, enrollmentClaims, err := owners.GuardianInvitationDependencies(settings.Settings, organizations, owners.OutboxEnqueuer{Outbox: deliveryModule.EmailOutbox}, deliveryModule.Runtime.EmailOutcomes,
-		parentPortal.ParentEnrollmentRequest, parentsURL, logger)
+		parentPortal.ParentEnrollmentRequest, parentsURL, logger, nil)
 	if err != nil {
 		return AuthTestModule{}, err
 	}
-	catererMail, err := owners.CatererInvitationDelivery(organizations, owners.OutboxEnqueuer{Outbox: deliveryModule.EmailOutbox}, deliveryModule.Runtime.EmailOutcomes, catererURL)
+	catererMail, err := owners.CatererInvitationDelivery(organizations, owners.OutboxEnqueuer{Outbox: deliveryModule.EmailOutbox}, deliveryModule.Runtime.EmailOutcomes, catererURL, nil)
 	if err != nil {
 		return AuthTestModule{}, err
 	}
@@ -354,7 +354,7 @@ func IdentityAccessForTests(cfg IdentityAccessTestConfig, unit tenant.UnitOfWork
 	}
 	codec := cfg.SessionTokens
 	if codec == nil {
-		configured, err := newLegacyTokenAdapter()
+		configured, err := newLegacyTokenAdapter(nil)
 		if err != nil {
 			return nil, err
 		}

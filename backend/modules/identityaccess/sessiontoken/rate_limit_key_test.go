@@ -20,7 +20,7 @@ import (
 
 func rateLimitTestAuth(t *testing.T) *sessiontoken.TokenAuth {
 	t.Helper()
-	tokenAuth, err := sessiontoken.NewTokenAuthWithDurations("rate-limit-test-secret-32-chars!!", 15*time.Minute, 24*time.Hour)
+	tokenAuth, err := sessiontoken.NewTokenAuthWithDurations("rate-limit-test-secret-32-chars!!", 15*time.Minute, 24*time.Hour, nil)
 	require.NoError(t, err)
 	return tokenAuth
 }
@@ -194,7 +194,7 @@ func TestIdentityRateLimitKey_ExpiredTokenFallsBack(t *testing.T) {
 func TestIdentityRateLimitKey_TamperedTokenFallsBack(t *testing.T) {
 	t.Parallel()
 	tokenAuth := rateLimitTestAuth(t)
-	otherAuth, err := sessiontoken.NewTokenAuthWithDurations("a-completely-different-32char-key!!", 15*time.Minute, time.Hour)
+	otherAuth, err := sessiontoken.NewTokenAuthWithDurations("a-completely-different-32char-key!!", 15*time.Minute, time.Hour, nil)
 	require.NoError(t, err)
 
 	forged := mintRateLimitJWT(t, otherAuth, sessiontoken.AppClaims{ID: 42, Sub: "user@example.com", TenantID: 7})

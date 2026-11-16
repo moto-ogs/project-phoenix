@@ -1494,7 +1494,7 @@ var TestJWTSecret = NewTestSigningSecret()
 func GetTestTokenAuth(tb testing.TB) *sessiontoken.TokenAuth {
 	tb.Helper()
 
-	tokenAuth, err := sessiontoken.NewTokenAuthWithDurations(TestJWTSecret, 15*time.Minute, time.Hour)
+	tokenAuth, err := sessiontoken.NewTokenAuthWithDurations(TestJWTSecret, 15*time.Minute, time.Hour, nil)
 	require.NoError(tb, err, "Failed to create test TokenAuth")
 	return tokenAuth
 }

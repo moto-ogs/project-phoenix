@@ -61,7 +61,7 @@ func decodeTokenClaimsWith(t *testing.T, tokenAuth *sessiontoken.TokenAuth, toke
 func schoolTokenAuth(t *testing.T) *sessiontoken.TokenAuth {
 	t.Helper()
 	cfg := authTestFactoryConfig(false)
-	tokenAuth, err := sessiontoken.NewTokenAuthWithDurations(cfg.JWTSecret, cfg.JWTExpiry, cfg.JWTRefreshExpiry)
+	tokenAuth, err := sessiontoken.NewTokenAuthWithDurations(cfg.JWTSecret, cfg.JWTExpiry, cfg.JWTRefreshExpiry, nil)
 	require.NoError(t, err)
 	return tokenAuth
 }

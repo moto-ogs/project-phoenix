@@ -69,7 +69,7 @@ func TestInvitationExistingOwnerProof(t *testing.T) {
 				FirstName: testpkg.StrPtr("Invited"), LastName: testpkg.StrPtr("Owner"),
 			})
 			require.NoError(t, err)
-			signer, err := sessiontoken.NewTokenAuthWithDurations(authTestFactoryConfig(false).JWTSecret, 15*time.Minute, 24*time.Hour)
+			signer, err := sessiontoken.NewTokenAuthWithDurations(authTestFactoryConfig(false).JWTSecret, 15*time.Minute, 24*time.Hour, nil)
 			require.NoError(t, err)
 			accessToken, err := tokentest.CreateJWT(signer, sessiontoken.AppClaims{
 				ID: int(owner.ID), Sub: owner.Email, Roles: []string{}, Scope: scope,
@@ -151,7 +151,7 @@ func TestInvitationRejectsInvalidOwnerProofWithoutWrites(t *testing.T) {
 				wantErr = identityaccess.ErrAccountInactive
 			case "forged":
 				var err error
-				signer, err = sessiontoken.NewTokenAuthWithDurations(testpkg.NewTestSigningSecret(), 15*time.Minute, time.Hour)
+				signer, err = sessiontoken.NewTokenAuthWithDurations(testpkg.NewTestSigningSecret(), 15*time.Minute, time.Hour, nil)
 				require.NoError(t, err)
 			}
 			if strings.HasPrefix(name, "wrong-owner:") {

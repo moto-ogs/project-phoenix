@@ -42,7 +42,7 @@ type sessionEvents struct {
 func serveSentrySession(t *testing.T, session *sessiontoken.AppClaims, handler http.HandlerFunc) sessionEvents {
 	t.Helper()
 
-	tokenAuth, err := sessiontoken.NewTokenAuthWithDurations("sentry-session-test-secret-32-chars", 15*time.Minute, time.Hour)
+	tokenAuth, err := sessiontoken.NewTokenAuthWithDurations("sentry-session-test-secret-32-chars", 15*time.Minute, time.Hour, nil)
 	require.NoError(t, err)
 
 	transport := make(sessionRecordingTransport, 8)

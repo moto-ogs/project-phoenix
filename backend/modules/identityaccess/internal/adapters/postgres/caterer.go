@@ -71,7 +71,7 @@ func (s *Store) FindCatererOfAccount(ctx context.Context, accountID int64) (doma
 		Join(`JOIN auth.caterer_accounts AS "caterer_account" ON "caterer_account".caterer_id = "caterer".id`).
 		Where(`"caterer_account".account_id = ?`, accountID).
 		Scan(ctx)
-	found, stats, err := scanOne("find caterer of account", started, err)
+	found, stats, err := scanOne("find caterer of account", time.Since(started), err)
 	return domain.Caterer{ID: row.ID, Name: row.Name}, found, stats, err
 }
 
@@ -87,7 +87,7 @@ func (s *Store) CreateInvitedCaterer(ctx context.Context, invitationID, accountI
 	var catererID int64
 	started := time.Now()
 	err = db.NewRaw(`SELECT auth.create_invited_caterer(?, ?)`, invitationID, accountID).Scan(ctx, &catererID)
-	_, stats, err := scanOne("create invited caterer", started, err)
+	_, stats, err := scanOne("create invited caterer", time.Since(started), err)
 	return catererID, stats, err
 }
 
@@ -112,7 +112,7 @@ func (s *Store) ListCatererInvitations(ctx context.Context) ([]domain.CatererInv
 	err = catererInvitationTenantFilter(s.scope(ctx), db.NewSelect().Model(&rows)).
 		OrderExpr(`"caterer_invitation".created_at DESC, "caterer_invitation".id DESC`).
 		Scan(ctx)
-	_, stats, err := scanOne("list caterer invitations", started, err)
+	_, stats, err := scanOne("list caterer invitations", time.Since(started), err)
 	invitations := make([]domain.CatererInvitation, 0, len(rows))
 	for _, row := range rows {
 		invitations = append(invitations, row.toDomain())
@@ -143,7 +143,7 @@ func (s *Store) FindCatererInvitationByTokenHash(ctx context.Context, tokenHash 
 		Where(`"caterer_invitation".token_hash = ?`, tokenHash)).
 		For("UPDATE").
 		Scan(ctx)
-	found, stats, err := scanOne("find caterer invitation by token", started, err)
+	found, stats, err := scanOne("find caterer invitation by token", time.Since(started), err)
 	return row.toDomain(), found, stats, err
 }
 
@@ -196,7 +196,7 @@ func (s *Store) ListCatererSchools(ctx context.Context, catererID int64) ([]int6
 		Where(`"caterer_school".ended_at IS NULL`).
 		OrderExpr(`"caterer_school".started_at, "caterer_school".tenant_id`).
 		Scan(ctx)
-	_, stats, err := scanOne("list caterer schools", started, err)
+	_, stats, err := scanOne("list caterer schools", time.Since(started), err)
 	schools := make([]int64, 0, len(rows))
 	for _, row := range rows {
 		schools = append(schools, row.TenantID)
@@ -222,7 +222,7 @@ func (s *Store) FindSchoolCaterer(ctx context.Context) (domain.CatererSupply, bo
 		Join(`JOIN auth.caterers AS "caterer" ON "caterer".id = "caterer_school".caterer_id`).
 		Where(`"caterer_school".ended_at IS NULL`), `"caterer_school".tenant_id = ?`).
 		Scan(ctx, &row)
-	found, stats, err := scanOne("find school caterer", started, err)
+	found, stats, err := scanOne("find school caterer", time.Since(started), err)
 	return domain.CatererSupply{
 		Caterer:         domain.Caterer{ID: row.CatererID, Name: row.Name},
 		DeliveryAddress: row.DeliveryAddress, StartedAt: row.StartedAt,
@@ -258,7 +258,7 @@ func (s *Store) ListCatererAccountSecurity(ctx context.Context) ([]domain.Catere
  JOIN auth.caterer_accounts AS "caterer_account" ON "caterer_account".caterer_id = "caterer".id
  JOIN auth.accounts AS "account" ON "account".id = "caterer_account".account_id
  ORDER BY lower("caterer".name), "caterer".id, "caterer_account".account_id`).Scan(ctx, &rows)
-	_, stats, err := scanOne("list caterer account security", started, err)
+	_, stats, err := scanOne("list caterer account security", time.Since(started), err)
 	result := make([]domain.CatererAccountSecurity, 0, len(rows))
 	for _, row := range rows {
 		result = append(result, domain.CatererAccountSecurity(row))

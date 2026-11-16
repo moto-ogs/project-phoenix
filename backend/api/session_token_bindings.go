@@ -29,14 +29,15 @@ var requestTokenReads = owners.TokenAdapter{
 // builds the session
 // codec from the configured secret and token lifetimes; the signing primitive
 // stays in its session token adapter (ADR 0053 point 6).
-func newLegacyTokenAdapter() (owners.TokenAdapter, error) {
-	return tokenAdapterFor(viper.GetString("auth_jwt_secret"), viper.GetDuration("auth_jwt_expiry"), viper.GetDuration("auth_jwt_refresh_expiry"))
+func newLegacyTokenAdapter(now func() time.Time) (owners.TokenAdapter, error) {
+	return tokenAdapterFor(viper.GetString("auth_jwt_secret"), viper.GetDuration("auth_jwt_expiry"), viper.GetDuration("auth_jwt_refresh_expiry"), now)
 }
 
 // tokenAdapterFor binds the request reads to the session tokens of the given
-// signing secret and token lifetimes.
-func tokenAdapterFor(secret string, accessExpiry, refreshExpiry time.Duration) (owners.TokenAdapter, error) {
-	codec, err := NewConfiguredSessionTokens(secret, accessExpiry, refreshExpiry)
+// signing secret and token lifetimes, stamped and checked on now (nil: the
+// real clock).
+func tokenAdapterFor(secret string, accessExpiry, refreshExpiry time.Duration, now func() time.Time) (owners.TokenAdapter, error) {
+	codec, err := NewConfiguredSessionTokens(secret, accessExpiry, refreshExpiry, now)
 	if err != nil {
 		return owners.TokenAdapter{}, err
 	}
@@ -50,9 +51,9 @@ func tokenAdapterFor(secret string, accessExpiry, refreshExpiry time.Duration) (
 // the signing secret and the lifetimes of the access and refresh tokens. The
 // signing primitive stays in Identity's session token adapter, so the root
 // hands over values instead of building the signer (ADR 0053 point 6,
-// ADR 0056).
-func NewConfiguredSessionAuth(secret string, accessExpiry, refreshExpiry time.Duration) (*sessiontoken.TokenAuth, error) {
-	signer, err := sessiontoken.NewTokenAuthWithDurations(secret, accessExpiry, refreshExpiry)
+// ADR 0056). now is the root's clock; nil reads the real one.
+func NewConfiguredSessionAuth(secret string, accessExpiry, refreshExpiry time.Duration, now func() time.Time) (*sessiontoken.TokenAuth, error) {
+	signer, err := sessiontoken.NewTokenAuthWithDurations(secret, accessExpiry, refreshExpiry, now)
 	if err != nil {
 		return nil, fmt.Errorf("invalid auth JWT configuration: %w", err)
 	}
@@ -61,12 +62,12 @@ func NewConfiguredSessionAuth(secret string, accessExpiry, refreshExpiry time.Du
 
 // NewConfiguredSessionTokens builds the session token codec Identity's flows
 // sign with from the same configuration values, over the same signer.
-func NewConfiguredSessionTokens(secret string, accessExpiry, refreshExpiry time.Duration) (identityaccessCompose.SignedIdentityTokens, error) {
-	signer, err := NewConfiguredSessionAuth(secret, accessExpiry, refreshExpiry)
+func NewConfiguredSessionTokens(secret string, accessExpiry, refreshExpiry time.Duration, now func() time.Time) (identityaccessCompose.SignedIdentityTokens, error) {
+	signer, err := NewConfiguredSessionAuth(secret, accessExpiry, refreshExpiry, now)
 	if err != nil {
 		return nil, err
 	}
-	return identityaccessCompose.NewSessionTokenCodec(signer.JwtAuth, signer.JwtExpiry, signer.JwtRefreshExpiry)
+	return identityaccessCompose.NewSessionTokenCodec(signer.JwtAuth, signer.JwtExpiry, signer.JwtRefreshExpiry, now)
 }
 
 // CallerFromClaims resolves the principal the authenticator verified.

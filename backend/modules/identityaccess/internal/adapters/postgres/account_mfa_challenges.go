@@ -69,7 +69,7 @@ func (r *AccountMFARecords) FindActiveChallengeForAccount(ctx context.Context, i
 		return domain.AccountMFAChallenge{}, false, err
 	}
 	var row domain.AccountMFAChallenge
-	err = db.NewRaw("SELECT "+accountMFAChallengeColumns+" FROM auth.mfa_email_challenges WHERE id = ? AND account_id = ? AND consumed_at IS NULL AND mfa_reset_generation = (SELECT mfa_reset_generation FROM auth.accounts WHERE id = account_id) AND expires_at > ? LIMIT 1", id, accountID, time.Now()).Scan(ctx, &row)
+	err = db.NewRaw("SELECT "+accountMFAChallengeColumns+" FROM auth.mfa_email_challenges WHERE id = ? AND account_id = ? AND consumed_at IS NULL AND mfa_reset_generation = (SELECT mfa_reset_generation FROM auth.accounts WHERE id = account_id) AND expires_at > ? LIMIT 1", id, accountID, r.store.now()).Scan(ctx, &row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.AccountMFAChallenge{}, false, nil
 	}
@@ -86,7 +86,7 @@ func (r *AccountMFARecords) FindActiveChallengeInScope(ctx context.Context, acco
 	err = db.NewRaw("SELECT "+accountMFAChallengeColumns+` FROM auth.mfa_email_challenges
  WHERE account_id = ? AND scope = ? AND (? <= 0 OR tenant_id = ?)
  AND consumed_at IS NULL AND mfa_reset_generation = (SELECT mfa_reset_generation FROM auth.accounts WHERE id = account_id) AND expires_at > ? ORDER BY expires_at DESC LIMIT 1`,
-		accountID, scope, tenantID, tenantID, time.Now()).Scan(ctx, &row)
+		accountID, scope, tenantID, tenantID, r.store.now()).Scan(ctx, &row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.AccountMFAChallenge{}, false, nil
 	}

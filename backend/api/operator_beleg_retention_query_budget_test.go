@@ -34,7 +34,7 @@ func TestOperatorBelegRetentionOverviewQueryBudget(t *testing.T) {
 	operatorID := testpkg.CreateTestOperator(t, db).ID
 	organizationID, _ := provisionTestSchool(t, db, provisioning, operatorID, "beleg-budget")
 	ctx := provisioningContext(t, db)
-	auth, err := NewConfiguredSessionAuth(viper.GetString("auth_jwt_secret"), viper.GetDuration("auth_jwt_expiry"), viper.GetDuration("auth_jwt_refresh_expiry"))
+	auth, err := NewConfiguredSessionAuth(viper.GetString("auth_jwt_secret"), viper.GetDuration("auth_jwt_expiry"), viper.GetDuration("auth_jwt_refresh_expiry"), nil)
 	require.NoError(t, err)
 	token, _, err := identity.IssueTokensForAuthenticatedOperator(ctx, operatorID, nil, "127.0.0.1", "beleg-budget")
 	require.NoError(t, err)

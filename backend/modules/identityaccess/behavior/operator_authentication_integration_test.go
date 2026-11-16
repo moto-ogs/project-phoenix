@@ -37,7 +37,7 @@ func operatorLoginEmail(prefix string) string {
 // tokens a login never issues.
 func operatorRefreshJWT(t *testing.T, operatorID int64, handle, scope string) string {
 	t.Helper()
-	signer, err := sessiontoken.NewTokenAuthWithDurations(authSigningSecret, time.Minute, time.Hour)
+	signer, err := sessiontoken.NewTokenAuthWithDurations(authSigningSecret, time.Minute, time.Hour, nil)
 	require.NoError(t, err)
 	token, err := tokentest.CreateRefreshJWT(signer, tokentest.RefreshClaims{ID: int(operatorID), Token: handle, Scope: scope})
 	require.NoError(t, err)

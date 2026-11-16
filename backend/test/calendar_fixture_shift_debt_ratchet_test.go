@@ -35,7 +35,6 @@ import (
 //     base; never raise a number and never add a key.
 var calendarFixtureShiftedLiveDateDebt = map[string]int{
 	"api/data_return_http_test.go":                                                                           1,
-	"api/operator_mfa_verify_success_internal_test.go":                                                       1,
 	"api/runtime_checkpoint_test.go":                                                                         9,
 	"api/runtime_checkpoint_v2_test.go":                                                                      3,
 	"cmd/cleanup_test.go":                                                                                    6,
@@ -58,14 +57,6 @@ var calendarFixtureShiftedLiveDateDebt = map[string]int{
 	"modules/enrollment/internal/adapters/postgres/late_invite_repository_test.go":                           2,
 	"modules/enrollment/internal/application/rejected_cleanup_test.go":                                       8,
 	"modules/facilities/http/behaviortest/runtime_test.go":                                                   2,
-	"modules/identityaccess/behavior/auth_core_test.go":                                                      6,
-	"modules/identityaccess/caterer_mails_test.go":                                                           1,
-	"modules/identityaccess/inbound/account/behaviortest/identity_lists_growth_query_budget_test.go":         3,
-	"modules/identityaccess/integration/account_session_test.go":                                             1,
-	"modules/identityaccess/integration/operator_tokens_runtime_evidence_test.go":                            4,
-	"modules/identityaccess/integration/operator_tokens_test.go":                                             15,
-	"modules/identityaccess/integration/token_storage_test.go":                                               1,
-	"modules/identityaccess/sessiontoken/authenticator_test.go":                                              1,
 	"modules/organizationtenancy/compose/data_return_export_test.go":                                         1,
 	"modules/organizationtenancy/internal/adapters/datareturn/datareturn_test.go":                            3,
 	"modules/parentrequestfeedprojection/internal/adapters/postgres/query_budget_growth_test.go":             1,

@@ -195,7 +195,7 @@ func (s *AccountAuthentication) validateLoginCredentials(ctx context.Context, em
 		if !found {
 			account = domain.LoginAccount{}
 		}
-		accepted, err = checkPasswordLogin(txCtx, s.store, s.passwords, s.passwordPolicy, account.ID, account.PasswordHash, password, false)
+		accepted, err = checkPasswordLogin(txCtx, s.store, s.passwords, s.passwordPolicy, account.ID, account.PasswordHash, password, false, s.sessions.now)
 		return err
 	})
 	if err != nil {
