@@ -15,18 +15,20 @@ import (
 type feedEntryRow struct {
 	bun.BaseModel `bun:"table:platform.notification_feed_entries"`
 
-	ID          int64      `bun:"id,pk,autoincrement"`
-	TenantID    int64      `bun:"tenant_id,notnull"`
-	AccountID   int64      `bun:"account_id,notnull"`
-	Type        string     `bun:"type,notnull"`
-	Title       string     `bun:"title,notnull"`
-	Body        string     `bun:"body,notnull"`
-	DeepLink    string     `bun:"deep_link,notnull"`
-	RelatedType string     `bun:"related_type,notnull"`
-	RelatedID   int64      `bun:"related_id,notnull"`
-	CreatedAt   time.Time  `bun:"created_at,notnull"`
-	UpdatedAt   time.Time  `bun:"updated_at,notnull"`
-	ReadAt      *time.Time `bun:"read_at"`
+	ID        int64  `bun:"id,pk,autoincrement"`
+	TenantID  int64  `bun:"tenant_id,notnull"`
+	AccountID int64  `bun:"account_id,notnull"`
+	Type      string `bun:"type,notnull"`
+	Title     string `bun:"title,notnull"`
+	Body      string `bun:"body,notnull"`
+	DeepLink  string `bun:"deep_link,notnull"`
+	// SchoolDeepLink is the link in moto schule (#7139); NULL without one.
+	SchoolDeepLink *string    `bun:"school_deep_link"`
+	RelatedType    string     `bun:"related_type,notnull"`
+	RelatedID      int64      `bun:"related_id,notnull"`
+	CreatedAt      time.Time  `bun:"created_at,notnull"`
+	UpdatedAt      time.Time  `bun:"updated_at,notnull"`
+	ReadAt         *time.Time `bun:"read_at"`
 }
 
 // publishFeedEntriesSQL writes one publication in one statement: it updates
@@ -39,12 +41,13 @@ type feedEntryRow struct {
 //
 // ?0 tenant, ?1 recipients, ?2 type, ?3 title, ?4 body, ?5 deep link,
 // ?6 related type, ?7 related ID, ?8 now, ?9 start of the bundle window,
-// ?10 the types that bundle with ?2.
+// ?10 the types that bundle with ?2, ?11 deep link in moto schule (NULL
+// without one).
 const publishFeedEntriesSQL = `WITH recipient AS (
 		SELECT DISTINCT account_id FROM unnest(?1::bigint[]) AS input(account_id)
 	), refreshed AS (
 		UPDATE platform.notification_feed_entries AS entry
-		SET type = ?2, title = ?3, body = ?4, deep_link = ?5, updated_at = ?8
+		SET type = ?2, title = ?3, body = ?4, deep_link = ?5, school_deep_link = ?11, updated_at = ?8
 		FROM recipient
 		WHERE entry.tenant_id = ?0 AND entry.account_id = recipient.account_id
 			AND entry.type = ANY(?10::text[]) AND entry.related_type = ?6 AND entry.related_id = ?7
@@ -52,8 +55,8 @@ const publishFeedEntriesSQL = `WITH recipient AS (
 		RETURNING entry.account_id
 	), created AS (
 		INSERT INTO platform.notification_feed_entries
-			(tenant_id, account_id, type, title, body, deep_link, related_type, related_id, created_at, updated_at)
-		SELECT ?0, recipient.account_id, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8
+			(tenant_id, account_id, type, title, body, deep_link, school_deep_link, related_type, related_id, created_at, updated_at)
+		SELECT ?0, recipient.account_id, ?2, ?3, ?4, ?5, ?11, ?6, ?7, ?8, ?8
 		FROM recipient
 		WHERE NOT EXISTS (SELECT 1 FROM refreshed WHERE refreshed.account_id = recipient.account_id)
 		RETURNING account_id
@@ -63,12 +66,15 @@ const publishFeedEntriesSQL = `WITH recipient AS (
 	SELECT account_id, FALSE AS created FROM refreshed
 	ORDER BY account_id`
 
-// feedReaderIsStaffSQL admits the feed of an account only while it is an
-// active staff member of the school (#7148): a person who left the school
-// keeps no view of its entries. It applies the delivery-time predicates of
+// feedReaderSQL admits the feed of an account only while it is an active
+// member of the school with the role of the portal it reads in (#7148,
+// #7139): a staff role in the staff portal, a school-portal role in moto
+// schule (third argument true). A person who left the school keeps no view of
+// its entries. It applies the delivery-time predicates of
 // platform.delivery_realtime_recipients, as Web Push and SSE do.
-const feedReaderIsStaffSQL = `EXISTS (SELECT 1 FROM platform.delivery_realtime_recipients AS reader
-	WHERE reader.tenant_id = ? AND reader.account_id = ? AND reader.active AND reader.has_staff_role)`
+const feedReaderSQL = `EXISTS (SELECT 1 FROM platform.delivery_realtime_recipients AS reader
+	WHERE reader.tenant_id = ? AND reader.account_id = ? AND reader.active
+		AND CASE WHEN ? THEN reader.has_school_role ELSE reader.has_staff_role END)`
 
 const deleteExpiredFeedEntriesSQL = `DELETE FROM platform.notification_feed_entries
 	WHERE tenant_id = ? AND updated_at < ?`
@@ -89,7 +95,7 @@ func (s *Store) PublishFeedEntries(ctx context.Context, tenantID int64, content 
 	var rows []feedWriteRow
 	if err := db.NewRaw(publishFeedEntriesSQL,
 		tenantID, pgdialect.Array(accountIDs), content.Type, content.Title, content.Body, content.DeepLink,
-		content.RelatedType, content.RelatedID, now, bundleSince, pgdialect.Array(bundleTypes),
+		content.RelatedType, content.RelatedID, now, bundleSince, pgdialect.Array(bundleTypes), optionalFeedLink(content.SchoolDeepLink),
 	).Scan(ctx, &rows); err != nil {
 		return domain.FeedWrite{}, fmt.Errorf("delivery postgres: publish feed entries: %w", err)
 	}
@@ -104,7 +110,15 @@ func (s *Store) PublishFeedEntries(ctx context.Context, tenantID int64, content 
 	return write, nil
 }
 
-func (s *Store) ListFeedEntries(ctx context.Context, tenantID, accountID int64, after *domain.FeedCursor, limit int) ([]domain.FeedEntry, error) {
+// optionalFeedLink stores an empty link as NULL.
+func optionalFeedLink(link string) *string {
+	if link == "" {
+		return nil
+	}
+	return &link
+}
+
+func (s *Store) ListFeedEntries(ctx context.Context, tenantID, accountID int64, view domain.FeedView, after *domain.FeedCursor, limit int) ([]domain.FeedEntry, error) {
 	if limit <= 0 {
 		return nil, errors.New("delivery postgres: feed page size must be positive")
 	}
@@ -116,7 +130,8 @@ func (s *Store) ListFeedEntries(ctx context.Context, tenantID, accountID int64, 
 	query := db.NewSelect().Model(&rows).
 		Where("tenant_id = ?", tenantID).
 		Where("account_id = ?", accountID).
-		Where(feedReaderIsStaffSQL, tenantID, accountID)
+		Where("type = ANY(?)", pgdialect.Array(view.Types)).
+		Where(feedReaderSQL, tenantID, accountID, view.School)
 	if after != nil {
 		query = query.Where("(updated_at, id) < (?, ?)", after.UpdatedAt, after.ID)
 	}
@@ -129,7 +144,8 @@ func (s *Store) ListFeedEntries(ctx context.Context, tenantID, accountID int64, 
 			ID: row.ID, TenantID: row.TenantID, AccountID: row.AccountID,
 			FeedEntryContent: domain.FeedEntryContent{
 				Type: row.Type, Title: row.Title, Body: row.Body, DeepLink: row.DeepLink,
-				RelatedType: row.RelatedType, RelatedID: row.RelatedID,
+				SchoolDeepLink: derefFeedLink(row.SchoolDeepLink),
+				RelatedType:    row.RelatedType, RelatedID: row.RelatedID,
 			},
 			CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, ReadAt: row.ReadAt,
 		})
@@ -137,7 +153,14 @@ func (s *Store) ListFeedEntries(ctx context.Context, tenantID, accountID int64, 
 	return entries, nil
 }
 
-func (s *Store) CountUnreadFeedEntries(ctx context.Context, tenantID, accountID int64) (int, error) {
+func derefFeedLink(link *string) string {
+	if link == nil {
+		return ""
+	}
+	return *link
+}
+
+func (s *Store) CountUnreadFeedEntries(ctx context.Context, tenantID, accountID int64, view domain.FeedView) (int, error) {
 	db, err := s.tenantDB(ctx, tenantID)
 	if err != nil {
 		return 0, err
@@ -145,8 +168,9 @@ func (s *Store) CountUnreadFeedEntries(ctx context.Context, tenantID, accountID 
 	count, err := db.NewSelect().Model((*feedEntryRow)(nil)).
 		Where("tenant_id = ?", tenantID).
 		Where("account_id = ?", accountID).
+		Where("type = ANY(?)", pgdialect.Array(view.Types)).
 		Where("read_at IS NULL").
-		Where(feedReaderIsStaffSQL, tenantID, accountID).
+		Where(feedReaderSQL, tenantID, accountID, view.School).
 		Count(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("delivery postgres: count unread feed entries: %w", err)
@@ -154,7 +178,7 @@ func (s *Store) CountUnreadFeedEntries(ctx context.Context, tenantID, accountID 
 	return int(count), nil
 }
 
-func (s *Store) MarkFeedEntryRead(ctx context.Context, tenantID, accountID, entryID int64, now time.Time) (bool, error) {
+func (s *Store) MarkFeedEntryRead(ctx context.Context, tenantID, accountID int64, view domain.FeedView, entryID int64, now time.Time) (bool, error) {
 	db, err := s.tenantDB(ctx, tenantID)
 	if err != nil {
 		return false, err
@@ -162,22 +186,23 @@ func (s *Store) MarkFeedEntryRead(ctx context.Context, tenantID, accountID, entr
 	var ids []int64
 	err = db.NewRaw(`UPDATE platform.notification_feed_entries
 		SET read_at = COALESCE(read_at, ?)
-		WHERE tenant_id = ? AND account_id = ? AND id = ? AND `+feedReaderIsStaffSQL+`
-		RETURNING id`, now, tenantID, accountID, entryID, tenantID, accountID).Scan(ctx, &ids)
+		WHERE tenant_id = ? AND account_id = ? AND id = ? AND type = ANY(?) AND `+feedReaderSQL+`
+		RETURNING id`, now, tenantID, accountID, entryID, pgdialect.Array(view.Types), tenantID, accountID, view.School).Scan(ctx, &ids)
 	if err != nil {
 		return false, fmt.Errorf("delivery postgres: mark feed entry read: %w", err)
 	}
 	return len(ids) == 1, nil
 }
 
-func (s *Store) MarkAllFeedEntriesRead(ctx context.Context, tenantID, accountID int64, now time.Time) (int, error) {
+func (s *Store) MarkAllFeedEntriesRead(ctx context.Context, tenantID, accountID int64, view domain.FeedView, now time.Time) (int, error) {
 	db, err := s.tenantDB(ctx, tenantID)
 	if err != nil {
 		return 0, err
 	}
 	return affected("mark all feed entries read")(db.ExecContext(ctx, `UPDATE platform.notification_feed_entries
 		SET read_at = ?
-		WHERE tenant_id = ? AND account_id = ? AND read_at IS NULL AND `+feedReaderIsStaffSQL, now, tenantID, accountID, tenantID, accountID))
+		WHERE tenant_id = ? AND account_id = ? AND read_at IS NULL AND type = ANY(?) AND `+feedReaderSQL,
+		now, tenantID, accountID, pgdialect.Array(view.Types), tenantID, accountID, view.School))
 }
 
 func (s *Store) DeleteExpiredFeedEntries(ctx context.Context, tenantID int64, before time.Time) (int, error) {

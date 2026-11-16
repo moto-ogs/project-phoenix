@@ -109,6 +109,35 @@ func TestReinstatementFeedReachesThePlannedStaffAndBundles(t *testing.T) {
 	assert.Equal(t, "instance_cancelled", feed.Data.Entries[0].Type)
 }
 
+func TestReinstatementFeedReachesMotoSchule(t *testing.T) {
+	t.Parallel()
+	f := newFeedFixture(t)
+	actor, teacher := f.person(t, "Actor"), f.person(t, "Teacher")
+	_, err := f.s.db.ExecContext(context.Background(), `INSERT INTO iot.push_subscriptions (tenant_id, account_id, portal, endpoint, p256dh, auth)
+		VALUES (?, ?, 'school', ?, 'test-p256dh', 'test-auth')`, testpkg.Tenant(t), teacher.accountID, fmt.Sprintf("https://fcm.googleapis.com/fcm/send/reinstatement-school-%d", teacher.accountID))
+	require.NoError(t, err)
+	instanceID := f.block(t, calendar.NewDate(2030, 6, 11), actor, teacher)
+
+	f.cancel(t, instanceID, actor)
+	f.reinstated(t, instanceID, actor)
+
+	feed := f.schoolFeed(t, teacher)
+	require.Len(t, feed.Data.Entries, 1)
+	assert.Equal(t, "instance_reinstated", feed.Data.Entries[0].Type)
+	assert.Equal(t, "Termin findet doch statt", feed.Data.Entries[0].Title)
+	assert.Equal(t, "/school/aufsichten", feed.Data.Entries[0].DeepLink)
+	assert.Equal(t, 1, feed.Data.UnreadCount)
+
+	pushes, err := f.s.db.NewSelect().TableExpr("platform.push_outbox").
+		Where("tenant_id = ?", testpkg.Tenant(t)).
+		Where("(recipient->>'account_id')::bigint = ?", teacher.accountID).
+		Where("recipient->>'portal' = 'school'").
+		Where("payload->>'type' = 'instance_reinstated'").
+		Count(context.Background())
+	require.NoError(t, err)
+	assert.Zero(t, pushes, "an updated unread cancellation does not create a second push")
+}
+
 func TestReinstatementPushesWhenTheCancellationDidAndOnlyBeforeTheEnd(t *testing.T) {
 	t.Parallel()
 	f := newFeedFixture(t)

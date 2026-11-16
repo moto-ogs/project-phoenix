@@ -298,6 +298,7 @@ const TEACHER_DRAFT_TOPICS: readonly HelpTopic[] = [
   articles.teacherAccessTopic(),
   articles.teacherLoginTopic(),
   articles.teacherSettingsTopic(),
+  articles.teacherNotificationFeedTopic(),
 
   // --- Meine Klasse ---
   articles.teacherClassDayTopic(),

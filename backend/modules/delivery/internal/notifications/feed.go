@@ -75,7 +75,8 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 	now := r.now()
 	write, err := r.store.PublishFeedEntries(ctx, event.Audience.TenantID, domain.FeedEntryContent{
 		Type: event.Type, Title: event.Title, Body: event.Body, DeepLink: feedDeepLink(*event),
-		RelatedType: event.RelatedType, RelatedID: event.RelatedID,
+		SchoolDeepLink: feedSchoolDeepLink(*event),
+		RelatedType:    event.RelatedType, RelatedID: event.RelatedID,
 	}, feedBundleTypes(def), event.Audience.StaffAccountIDs, now, now.Add(-domain.FeedBundleWindow))
 	if err != nil {
 		return false, fmt.Errorf("write notification feed: %w", err)
@@ -88,6 +89,15 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 	event.Audience.StaffAccountIDs = push
 	event.feedOnly = len(push) == 0
 	return len(event.feedChanged) > 0, nil
+}
+
+// feedSchoolDeepLink is the link an entry keeps for moto schule (#7139): the
+// event's school link for a type the school portal shows, none otherwise.
+func feedSchoolDeepLink(event Event) string {
+	if !deliversToSchoolPortal(event) {
+		return ""
+	}
+	return event.SchoolDeepLink
 }
 
 // feedBundleTypes are the types whose unread entry about the same object a

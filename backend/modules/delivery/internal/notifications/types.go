@@ -193,6 +193,12 @@ type TypeDefinition struct {
 	// (#2208). Only types a Lehrkraft can actually receive belong here; the
 	// OGS supervision reminders never address a school-only account.
 	SchoolPortal bool
+	// SchoolPortalWithoutPermission offers a SchoolPortal type with a
+	// Permission to every account of the school portal (#7139). The
+	// Permission stands for "can be addressed by it" in the OGS portal; a
+	// Lehrkraft holds no OGS right, yet the producer addresses her the same
+	// way, for example as planned staff of a cancelled block.
+	SchoolPortalWithoutPermission bool
 	// Channel is ChannelPush (or empty) or ChannelEmail.
 	Channel string
 	// Permission is the right an e-mail type's recipient must hold when the
@@ -241,6 +247,7 @@ func RegisterType(def TypeDefinition) {
 	default:
 		panic("notifications: unknown portal " + def.Portal + " for key " + def.Key)
 	}
+	requireSchoolPortalWaiver(def)
 	validateTypeChannel(def)
 
 	typeMu.Lock()
@@ -285,9 +292,33 @@ func OfferedInPortal(def TypeDefinition, portal string) bool {
 		return false
 	}
 	if portal == PortalSchool {
-		return def.Portal == PortalSchool || (def.Portal == PortalStaff && def.SchoolPortal)
+		return typeDeliversToSchoolPortal(def)
 	}
 	return def.Portal == portal
+}
+
+// typeDeliversToSchoolPortal reports whether a type reaches moto schule. A
+// reversal is not offered as a separate preference, but it follows its
+// cancellation into the school portal's feed and devices.
+func typeDeliversToSchoolPortal(def TypeDefinition) bool {
+	return def.Portal == PortalSchool || (def.Portal == PortalStaff && def.SchoolPortal)
+}
+
+// requireSchoolPortalWaiver panics when a type waives a Permission in the
+// school portal it neither offers there nor declares.
+func requireSchoolPortalWaiver(def TypeDefinition) {
+	if def.SchoolPortalWithoutPermission && (!def.SchoolPortal || def.Permission == "") {
+		panic("notifications: type " + def.Key + " needs SchoolPortal and a Permission to waive it in the school portal")
+	}
+}
+
+// PermissionInPortal is the right a person using the portal must hold to be
+// offered the type; empty means none.
+func PermissionInPortal(def TypeDefinition, portal string) string {
+	if portal == PortalSchool && def.SchoolPortalWithoutPermission {
+		return ""
+	}
+	return def.Permission
 }
 
 // GetType returns one definition.
@@ -311,10 +342,23 @@ func EmailType(key string) (TypeDefinition, bool) {
 // TypesForPortal returns the catalogue of one portal, ordered by group and
 // then by SortOrder.
 func TypesForPortal(portal string) []TypeDefinition {
+	return typesForPortal(portal, false)
+}
+
+// FeedTypesForPortal returns the types a portal renders in its notification
+// feed. A reversal is not a preference a person can set, but it replaces a
+// cancellation in every portal that receives that cancellation (#7151).
+func FeedTypesForPortal(portal string) []TypeDefinition {
+	return typesForPortal(portal, true)
+}
+
+func typesForPortal(portal string, includeStaffReversals bool) []TypeDefinition {
 	typeMu.RLock()
 	defs := make([]TypeDefinition, 0, len(typeRegistry))
 	for _, def := range typeRegistry {
-		if OfferedInPortal(def, portal) {
+		if OfferedInPortal(def, portal) ||
+			(includeStaffReversals && def.Portal == PortalStaff && def.Reverses != "" &&
+				(portal == PortalStaff || (portal == PortalSchool && typeDeliversToSchoolPortal(def)))) {
 			defs = append(defs, def)
 		}
 	}
@@ -393,20 +437,26 @@ func registerStaffAppointmentTypes() {
 		SortOrder:   1,
 		Permission:  permissionActivitiesRead,
 		DefaultOn:   true,
-		Feed:        true,
+		// A Lehrkraft planned for a block in moto schule (#2527) hears
+		// about its cancellation and reinstatement there too (#7139).
+		SchoolPortal:                  true,
+		SchoolPortalWithoutPermission: true,
+		Feed:                          true,
 	})
 	RegisterType(TypeDefinition{
-		Key:         TypeInstanceReinstated,
-		Label:       "Absage zurückgenommen",
-		Description: "Wenn eine Absage zurückgenommen wird und der Termin doch stattfindet. Folgt dem Schalter für Absagen.",
-		Group:       GroupAppointments,
-		Portal:      PortalStaff,
-		TenantGate:  settingInstanceCancelledEnabled,
-		SortOrder:   2,
-		Permission:  permissionActivitiesRead,
-		DefaultOn:   true,
-		Reverses:    TypeInstanceCancelled,
-		Feed:        true,
+		Key:                           TypeInstanceReinstated,
+		Label:                         "Absage zurückgenommen",
+		Description:                   "Wenn eine Absage zurückgenommen wird und der Termin doch stattfindet. Folgt dem Schalter für Absagen.",
+		Group:                         GroupAppointments,
+		Portal:                        PortalStaff,
+		TenantGate:                    settingInstanceCancelledEnabled,
+		SortOrder:                     2,
+		Permission:                    permissionActivitiesRead,
+		DefaultOn:                     true,
+		Reverses:                      TypeInstanceCancelled,
+		SchoolPortal:                  true,
+		SchoolPortalWithoutPermission: true,
+		Feed:                          true,
 	})
 }
 

@@ -65,7 +65,7 @@ func (n timetableStaffCancellationNotices) notify(ctx context.Context, notificat
 		// keeps each change a notice of its own.
 		IdempotencyKey: fmt.Sprintf("%s:%d:%d", notificationType, notice.InstanceID, n.now().UnixNano()),
 		RelatedType:    "activity_instance", RelatedID: notice.InstanceID,
-		Title: title, Body: body, DeepLink: link,
+		Title: title, Body: body, DeepLink: link, SchoolDeepLink: staffCancellationSchoolLink,
 		Audience: deliveryCompose.NotificationAudience{
 			TenantID: tenant.FromContext(ctx), Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: notice.AccountIDs,
 		},
@@ -79,6 +79,11 @@ func (n timetableStaffCancellationNotices) notify(ctx context.Context, notificat
 	}
 	return nil
 }
+
+// staffCancellationSchoolLink leads a Lehrkraft in moto schule to her
+// Aufsichten (#7139), the blocks she is planned for. The page shows today;
+// the text of the notice names the day of a later block.
+const staffCancellationSchoolLink = "/school/aufsichten"
 
 // staffCancellationWeekdays are the short German weekday names, Sunday first.
 var staffCancellationWeekdays = [...]string{"So.", "Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa."}

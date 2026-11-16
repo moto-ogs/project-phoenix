@@ -160,12 +160,37 @@ export function NotificationsPanelContent({
 }
 
 /**
- * Das Blatt über den ganzen Telefonbildschirm. Einmal gerendert (untere
- * Leiste des Staff-Portals); Glocke und Menüzeile öffnen es über
- * `useOpenNotificationsSheet`.
+ * Nur die Hinweise, ohne Erinnerungen: moto schule (#7139) hat keine
+ * Erinnerungen der Aufsicht.
  */
-export function NotificationsSheet() {
+export function NotificationFeedPanelContent({
+  onNavigate,
+}: Readonly<{ onNavigate: () => void }>) {
+  const { unreadCount, setUnreadCount } = useNotificationFeedUnread();
+  const schoolId = useAnalyticsSchoolId();
+  return (
+    <NotificationFeedSection
+      schoolId={schoolId}
+      unreadCount={unreadCount}
+      onUnreadCount={setUnreadCount}
+      onNavigate={onNavigate}
+    />
+  );
+}
+
+/**
+ * Das Blatt über den ganzen Telefonbildschirm. Einmal gerendert (untere
+ * Leiste des Staff-Portals, Hülle von moto schule); Glocke und Menüzeile
+ * öffnen es über `useOpenNotificationsSheet`. `feedOnly` zeigt nur die
+ * Hinweise (moto schule).
+ */
+export function NotificationsSheet({
+  feedOnly = false,
+}: Readonly<{ feedOnly?: boolean }> = {}) {
   const open = useNotificationsSheetOpen();
+  const Content = feedOnly
+    ? NotificationFeedPanelContent
+    : NotificationsPanelContent;
   return (
     <Drawer
       open={open}
@@ -177,7 +202,9 @@ export function NotificationsSheet() {
         <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-3">
           <DrawerTitle>Benachrichtigungen</DrawerTitle>
           <DrawerDescription className="sr-only">
-            Erinnerungen und Hinweise für Sie.
+            {feedOnly
+              ? "Hinweise für Sie."
+              : "Erinnerungen und Hinweise für Sie."}
           </DrawerDescription>
           <Button
             type="button"
@@ -191,9 +218,7 @@ export function NotificationsSheet() {
           </Button>
         </div>
         <div className="min-h-0 flex-1 scrollbar-thin overflow-y-auto overscroll-contain border-t border-gray-100">
-          {open ? (
-            <NotificationsPanelContent onNavigate={closeNotificationsSheet} />
-          ) : null}
+          {open ? <Content onNavigate={closeNotificationsSheet} /> : null}
         </div>
       </DrawerContent>
     </Drawer>

@@ -312,6 +312,8 @@ import type { teacherNoClassesTopic as authored_teacherNoClassesTopic } from "./
 
 import type { teacherNoticesTopic as authored_teacherNoticesTopic } from "./articles/teacher-notices";
 
+import type { teacherNotificationFeedTopic as authored_teacherNotificationFeedTopic } from "./articles/teacher-notification-feed";
+
 import type { teacherParentConferenceTopic as authored_teacherParentConferenceTopic } from "./articles/teacher-parent-conference";
 
 import type { teacherParentLettersTopic as authored_teacherParentLettersTopic } from "./articles/teacher-parent-letters";
@@ -10272,6 +10274,50 @@ export const teacherNoticesTopic = function teacherNoticesTopic(): HelpTopic {
   };
 } satisfies typeof authored_teacherNoticesTopic;
 
+/**
+ * Die Glocke oben rechts in moto schule (#7139): die `Hinweise` der Lehrkraft,
+ * zuerst die Absage eines Termins, für den sie eingeplant ist.
+ */
+export const teacherNotificationFeedTopic =
+  function teacherNotificationFeedTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.teacherNotificationFeed,
+      title: "Hinweise in der Glocke",
+      question: "Wo sehe ich, was sich für mich geändert hat?",
+      summary:
+        "Die Glocke oben rechts zeigt Ihre Hinweise, zum Beispiel wenn ein Termin von Ihnen ausfällt.",
+      group: "einstieg",
+      audience: "teacher",
+      icon: "Bell",
+      steps: [
+        "Wählen Sie oben rechts die Glocke. Die Zahl daran zählt neue Hinweise. Ab 10 steht dort `9+`.",
+        "Neue Hinweise sind mit `Neu` markiert.",
+        "Wählen Sie einen Hinweis. moto öffnet die passende Seite, zum Beispiel `Meine Aufsichten`.",
+        "Mit `Alle als gelesen markieren` sind alle Hinweise auf einmal gelesen.",
+      ],
+      result:
+        "Erst Ihr Klick macht einen Hinweis zu „gelesen“. Das Öffnen der Glocke allein ändert nichts.",
+      notes: [
+        "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis.",
+        "Nimmt die Leitung die Absage zurück, steht dort `Termin findet doch statt`.",
+        "`Meine Aufsichten` zeigt den heutigen Tag. Liegt der Termin später, steht der Tag im Hinweis.",
+        "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
+        "Was Sie auf dem Handy gelesen haben, ist auch am Computer gelesen.",
+        "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Das passiert nur bei Absagen von heute bis in 14 Tagen.",
+        "Die Mitteilung aufs Handy schalten Sie unter `Einstellungen` bei `Absage eines Termins` aus. Der Hinweis in der Glocke kommt dann trotzdem.",
+        "Die Einstellung gilt auch, wenn eine Absage zurückgenommen wird.",
+      ],
+      differences: [
+        "Auf dem Handy öffnen sich die Hinweise über den ganzen Bildschirm. Mit dem X schließen Sie sie wieder.",
+        "Sie arbeiten auch in der OGS mit moto? Dort sehen Sie dieselben Hinweise. Was Sie hier lesen, ist dort auch gelesen.",
+      ],
+      troubleshootingDetails: [
+        "Es kommt kein Hinweis zu einer Absage? Die OGS-Leitung kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder Hinweis noch Mitteilung aufs Handy. Fragen Sie dort nach.",
+      ],
+      related: [HELP_TOPICS.teacherSettings, HELP_TOPICS.teacherSupervision],
+    };
+  } satisfies typeof authored_teacherNotificationFeedTopic;
+
 /** `/school/elternsprechtag`: Elternsprechtag einer eigenen Klasse (#4801). */
 export const teacherParentConferenceTopic =
   function teacherParentConferenceTopic(): HelpTopic {
@@ -10391,6 +10437,7 @@ export const teacherSettingsTopic = function teacherSettingsTopic(): HelpTopic {
       "Die Schulverwaltung bekommt diesen Hinweis für alle Klassen der Schule.",
       "`Fehlt ohne Meldung`: nur für die Schulverwaltung. moto meldet sich, wenn eine Lehrkraft ein Kind als fehlend einträgt und keine Meldung da ist. Im Hinweis steht nur die Zahl der Kinder. Diese Benachrichtigung ist von Anfang an eingeschaltet.",
       "`Nachrichten von Kolleginnen und Kollegen`: neue Nachrichten im Team-Chat der OGS.",
+      "`Absage eines Termins`: moto meldet sich, wenn ein Termin ausfällt, bei dem Sie eingeplant sind. Das gilt für Absagen von heute bis in 14 Tagen. Diese Benachrichtigung ist von Anfang an eingeschaltet. Den Hinweis in der Glocke bekommen Sie auch, wenn Sie sie ausschalten.",
       "Benachrichtigungen kommen erst an, wenn moto schule auf dem Startbildschirm liegt.",
       "Im Bereich `Vertraute Geräte` stehen die Geräte, die Sie sich beim Anmelden gemerkt haben. Öffnen Sie das Menü am Gerät und wählen Sie `Entfernen`. Dort fragt moto beim nächsten Anmelden wieder nach dem Code.",
     ],
@@ -10401,6 +10448,7 @@ export const teacherSettingsTopic = function teacherSettingsTopic(): HelpTopic {
       "Es kommt nichts an? Prüfen Sie, ob Sie moto auf dem Gerät erlaubt haben, Benachrichtigungen zu senden.",
     ],
     related: [
+      HELP_TOPICS.teacherNotificationFeed,
       HELP_TOPICS.teacherMessages,
       HELP_TOPICS.teacherNotices,
       HELP_TOPICS.teacherLogin,

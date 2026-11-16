@@ -679,6 +679,8 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/school/parent-letters/{announcementId}/remind"}:                                notCaptured,
 	{http.MethodPost, "/school/parent-letters/{announcementId}/resend-failed"}:                         notCaptured,
 	{http.MethodPost, "/school/parent-letters/{announcementId}/unpublish"}:                             notCaptured,
+	{http.MethodPost, "/school/notifications/feed/read-all"}:                                           notCaptured,
+	{http.MethodPost, "/school/notifications/feed/{id}/read"}:                                          notCaptured,
 	{http.MethodDelete, "/school/notifications/preferences/"}:                                          notCaptured,
 	{http.MethodPut, "/school/notifications/preferences/{type}"}:                                       notCaptured,
 	{http.MethodDelete, "/school/notifications/push/subscriptions"}:                                    notCaptured,
