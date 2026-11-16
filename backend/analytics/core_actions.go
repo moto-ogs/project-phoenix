@@ -232,7 +232,7 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/api/me/profile/avatar"}:                                                            notCaptured,
 	{http.MethodPost, "/api/meal-caterer/invitations"}:                                                     event("caterer_invited"),
 	{http.MethodDelete, "/api/meal-caterer/invitations/{invitationId}"}:                                    notCaptured,
-	{http.MethodDelete, "/api/meal-caterer/supply"}:                                                        event("caterer_supply_ended"),
+	{http.MethodDelete, "/api/meal-caterer/supply"}:                                                        createdEvent("caterer_supply_ended"),
 	{http.MethodPost, "/api/meal-billing-months/{month}/release"}:                                          event("meal_month_released"),
 	{http.MethodDelete, "/api/meal-plan/{date}"}:                                                           notCaptured,
 	{http.MethodPut, "/api/meal-plan/{date}"}:                                                              notCaptured,

@@ -49,9 +49,9 @@ const PORTALS = ['ogs', 'parents', 'school'];
 const CATERER = 'caterer';
 
 /**
- * HogQL aggregation: distinct school and day. The caterer writes are
- * idempotent (a repeated confirmation or end answers 2xx again), so the
- * caterer charts count days per school instead of events.
+ * HogQL aggregation: distinct school and day. Confirming an order is
+ * idempotent (a repeated confirmation answers 2xx again and is captured
+ * again), so the caterer charts count days per school instead of events.
  */
 const SCHOOL_DAYS = 'uniq(concat(toString(properties.school_id), toString(toDate(timestamp))))';
 

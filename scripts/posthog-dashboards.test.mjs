@@ -226,6 +226,15 @@ test('the caterer never makes its school look active, and its idempotent writes 
     } else if (/event != 'login_failed'/.test(query)) {
       checked++;
       assert.ok(query.includes(notCaterer), `${insight.name}: a caterer action is no use by the school`);
+    } else {
+      continue;
+    }
+    // Every events scan of a HogQL query that reads school_id leaves the caterer out itself.
+    const source = insight.query.source;
+    if (source.kind !== 'HogQLQuery') continue;
+    for (const scan of source.query.split(/\bfrom events\b/).slice(1)) {
+      const where = scan.split(/\bfrom events\b|\bgroup by\b|\) as /)[0];
+      if (where.includes('school_id')) assert.ok(where.includes(notCaterer), `${insight.name}: an events scan counts the caterer`);
     }
   }
   assert.ok(checked >= 10, `${checked} school activity insights`);

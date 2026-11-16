@@ -270,7 +270,9 @@ func TestRouteSchoolNeverReplacesASessionSchool(t *testing.T) {
 	routeCtx.URLParams.Add("schoolId", "44")
 	request = request.WithContext(context.WithValue(request.Context(), chi.RouteCtxKey, routeCtx))
 	action := catererEvent("meal_order_confirmed")
-	assert.Equal(t, staffActor, routeSchoolActor(request, action, staffActor), "only a caterer takes the route school")
+	assert.Equal(t, staffActor, routeSchoolActor(request, action, staffActor), "a session school stays")
+	parent := Actor{Surface: SurfaceParents, Role: RoleGuardian, AccountID: 91}
+	assert.Equal(t, parent, routeSchoolActor(request, action, parent), "only a caterer takes the route school")
 	own := Actor{Surface: SurfaceCaterer, SchoolID: 43}
 	assert.Equal(t, own, routeSchoolActor(request, action, own))
 	assert.Equal(t, Actor{Surface: SurfaceCaterer, SchoolID: 44, Role: RoleCaterer}, routeSchoolActor(request, action, Actor{Surface: SurfaceCaterer}))
