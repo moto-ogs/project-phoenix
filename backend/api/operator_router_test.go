@@ -166,7 +166,7 @@ func TestRouter(t *testing.T) {
 	})
 
 	t.Run("billing seed route is mounted with the billing report", func(t *testing.T) {
-		billing := provisioningoperator.NewBillingResource(stubBillingReport{}, nil, nil)
+		billing := provisioningoperator.NewBillingResource(stubBillingReport{}, nil, nil, nil)
 		router := operatorRouter(operatorIdentity{sessions: operatorTestSessions(t, nil)},
 			provisioningoperator.ProvisioningConfig{ErasureOrderRecords: stubErasureOrderRecords{}}, billing, nil, nil, nil, authRateLimiters{}, http.NotFoundHandler(), nil, nil)
 
@@ -405,7 +405,7 @@ func operatorRouteAccessToken(t *testing.T, operatorID int) string {
 }
 
 func newCreateSchoolRequest(accessToken string, organizationID int) *http.Request {
-	body := fmt.Sprintf(`{"organization_id":%d,"name":"Test School","slug":"test-school","subdomain":"test-sub","email":"school@example.com"}`, organizationID)
+	body := fmt.Sprintf(`{"organization_id":%d,"name":"Test School","slug":"test-school","subdomain":"test-sub","email":"school@example.com","federal_state":"DE-NW"}`, organizationID)
 	req := httptest.NewRequest(http.MethodPost, "/schools", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+accessToken)

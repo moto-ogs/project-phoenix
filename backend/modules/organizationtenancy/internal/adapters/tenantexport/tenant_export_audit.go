@@ -35,7 +35,7 @@ func (e *tenantExporter) exportAudited(ctx context.Context, options organization
 		return errors.New("tenant export: the operator of a package is required for its audit")
 	}
 	attempt := organizationtenancy.TenantExportAttempt{OperatorID: options.OperatorID, SchoolID: options.SchoolID,
-		OrganizationID: options.OrganizationID, StartedAt: time.Now().UTC().Format(time.RFC3339Nano)}
+		OrganizationID: options.OrganizationID, StartedAt: e.now().UTC().Format(time.RFC3339Nano)}
 	if err := e.audit.BeginTenantExport(ctx, attempt); err != nil {
 		return fmt.Errorf("tenant export: attempt not recorded, nothing was read: %w", err)
 	}

@@ -60,5 +60,5 @@ func (d *LastSeenDebouncer) heartbeatIsDue(id int64) bool {
 	state := cached.(*lastSeenDebounceState)
 	state.mu.Lock()
 	defer state.mu.Unlock()
-	return heartbeatDue(state, time.Now())
+	return heartbeatDue(state, d.now())
 }

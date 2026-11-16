@@ -216,8 +216,8 @@ func newAccountPasskeyFlows(
 	if transactions == nil {
 		runtime = &fakeRuntime{}
 	}
-	service := New(newFakeStore(), newFakeStore(), newFakeStore(), fakeTransaction{}, runtime.TenantID, func(ports.Observation) {})
-	flows, err := NewAccountPasskeyFlows(AccountPasskeyFlowDependencies{
+	service := New(newFakeStore(), newFakeStore(), newFakeStore(), fakeTransaction{}, runtime.TenantID, func(ports.Observation) {}, time.Now)
+	flows, err := NewAccountPasskeyFlows(AccountPasskeyFlowDependencies{Now: time.Now,
 		Accounts: directory, Records: NewAccountPasskey(service, store), MFA: gate, Sessions: sessions,
 		Runtime: runtime, RPID: "localhost", RPName: "moto", TenantDomain: "localhost",
 	})
@@ -801,7 +801,7 @@ func TestAccountPasskeyRecordsObserveStableOperations(t *testing.T) {
 	var observed []ports.Observation
 	service := New(newFakeStore(), newFakeStore(), newFakeStore(), fakeTransaction{}, (&fakeRuntime{}).TenantID, NewObserver(func(observation ports.Observation) {
 		observed = append(observed, observation)
-	}))
+	}), time.Now)
 	ctx := context.Background()
 	credential := domain.AccountPasskeyCredential{AccountID: 7, UserHandle: []byte("handle"), CredentialID: []byte("credential"), CredentialJSON: json.RawMessage(`{}`), Name: "Laptop"}
 	session := domain.AccountPasskeySession{ID: "session", Purpose: domain.PasskeySessionPurposeLogin, RPID: "localhost", ExpectedOrigin: "http://localhost", SessionJSON: json.RawMessage(`{}`), ExpiresAt: time.Now().Add(time.Minute)}
@@ -855,7 +855,7 @@ func TestAccountPasskeyRecordsObserveStableOperations(t *testing.T) {
 func TestAccountPasskeyRecordsValidateBeforeTheStore(t *testing.T) {
 	t.Parallel()
 
-	service := New(newFakeStore(), newFakeStore(), newFakeStore(), fakeTransaction{}, (&fakeRuntime{}).TenantID, func(ports.Observation) {})
+	service := New(newFakeStore(), newFakeStore(), newFakeStore(), fakeTransaction{}, (&fakeRuntime{}).TenantID, func(ports.Observation) {}, time.Now)
 	store := &fakeAccountPasskeyStore{}
 	records := NewAccountPasskey(service, store)
 	ctx := context.Background()

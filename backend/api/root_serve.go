@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
 
@@ -191,7 +192,7 @@ func composeServeRoot(
 		staffGroups      schoolstructure.StaffGroupQuery
 	)
 	err := owners.RunRootSteps(
-		func() (err error) { tokens, err = newLegacyTokenAdapter(); return },
+		func() (err error) { tokens, err = newLegacyTokenAdapter(env.Now); return },
 		func() (err error) {
 			objects, err = nativeUploads.PrivateUploadsBackend()
 			return owners.StepError("resolve uploads backend", err)
@@ -201,10 +202,10 @@ func composeServeRoot(
 			mailSender, mailDispatcher, mailFrom, pushVAPID, err = owners.BuildMailTransport(env)
 			return
 		},
-		func() (err error) { organizations, err = owners.BuildServeOrganizations(db); return },
-		func() (err error) { groups, err = owners.BuildServeSchoolStructure(db); return },
+		func() (err error) { organizations, err = owners.BuildServeOrganizations(db, env.Now); return },
+		func() (err error) { groups, err = owners.BuildServeSchoolStructure(db, env.Now); return },
 		func() (err error) { rooms, err = owners.BuildServeRooms(db); return },
-		func() (err error) { membership, err = owners.ComposeSchoolMembership(db); return },
+		func() (err error) { membership, err = owners.ComposeSchoolMembership(db, env.Now); return },
 		func() error { bookings = owners.NewEnrollmentBookings(env.Now); return nil },
 		func() (err error) {
 			settings, tracker, err = buildServeAnalyticsSettings(db, unit, env, organizations, hub, bookings, tracker)
@@ -216,7 +217,7 @@ func composeServeRoot(
 		},
 		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, env, membership, calendar); return },
 		func() error {
-			people, peopleIdentity = owners.BuildPeopleRows(db, env.Observe.IdentityAccess, groups, rooms, membership, workTime)
+			people, peopleIdentity = owners.BuildPeopleRows(db, env.Observe.IdentityAccess, env.Now, groups, rooms, membership, workTime)
 			return nil
 		},
 		func() (err error) { guardian, err = owners.BuildGuardianService(db, people, audit, env); return },
@@ -225,7 +226,7 @@ func composeServeRoot(
 			return nil
 		},
 		func() (err error) {
-			persons, err = owners.BuildPeopleDirectory(db, owners.ObservePeopleDirectory, photoRuntime, owners.GuardianDirectoryProvider(db, guardian))
+			persons, err = owners.BuildPeopleDirectory(db, owners.ObservePeopleDirectory, photoRuntime, owners.GuardianDirectoryProvider(db, guardian), env.Now)
 			return
 		},
 		func() (err error) {
@@ -261,7 +262,7 @@ func composeServeRoot(
 			structure = owners.BuildStructureRows(db, persons, people, peopleIdentity, rooms, membership, workTime)
 			presencePeople = owners.BuildPresencePeopleReads(db, env.Logger, persons, groups, organizations, people)
 			careRows = owners.BuildTimetableCareRows(carePlan)
-			devices, err = owners.NewDeviceFleet(db)
+			devices, err = owners.NewDeviceFleet(db, env.Now)
 			return owners.StepError("compose device fleet", err)
 		},
 		func() error {
@@ -318,7 +319,7 @@ func composeServeRoot(
 		},
 		func() (err error) {
 			schedules, err = owners.BuildCarePlanSchedules(db, env.Logger, carePlan, persons, carePlanRows, classArrivals,
-				enrollment.ApprovedOfferings, settings.Service, timetableRows.RecurrenceLock.LockRecurrenceWrites, presence.Presence, timetableRows.StudentTemplateDays)
+				enrollment.ApprovedOfferings, settings.Service, timetableRows.RecurrenceLock.LockRecurrenceWrites, presence.Presence, timetableRows.StudentTemplateDays, owners.CarePlanClassTimetableNotices(db, notifications, people, membership, tokens.AuditActor))
 			return
 		},
 		func() (err error) {
@@ -376,7 +377,7 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			structureViews.Education = buildGroupManagement(db, hub, structure, people, substitutions, audit)
+			structureViews.Education = buildGroupManagement(db, hub, structure, people, substitutions, audit, env.Now)
 			structureViews.Substitution, err = buildSubstitutions(db, env, hub, structure, people, substitutions, workTime,
 				caller.Caller(), presence.SessionRecords, supervisions, active, lifecycle.Deviations, timetableRows, audit, settings.Service, identity)
 			return
@@ -495,10 +496,10 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			iot = devicefleetCompose.NewIoTService(deviceFleet)
+			iot = devicefleetCompose.NewIoTService(deviceFleet, env.Now)
 			guardianProfiles = peopleCompose.NewGuardianProfileLoader(people.GuardianProfiles, db.Pool(), env.Logger.With("service", "guardian-profile-loader"))
 			birthdays, err = buildBirthdayEntry(db, membership, BirthdayRepositories{Students: people.Students, Staff: people.Staff, Persons: people.Persons},
-				settings.Service, env.Logger.With("service", "birthdays"), nil)
+				settings.Service, env.Logger.With("service", "birthdays"), env.Now)
 			dataImports = newServeImports(audit, identity, groups, rooms, persons, carePlan, presence, organizations, membership, workTime, workforce, newImportCohorts(offerings.Bookings, timetableRows.CohortRosters), env.Now)
 			databaseStats = newDatabaseStats(people.Repositories, structure.Groups, facilities, timetableRepos, identity, devices, env.Logger)
 			return err
@@ -518,12 +519,12 @@ func composeServeRoot(
 	if err != nil {
 		return nil, nil, err
 	}
-	logger, limiters, tenant, deviceAuth, studentPresence := newServeRouteRuntime(db, env.Logger, iot, organizations, settings.Service, env.Config.RateLimitEnabled)
+	logger, limiters, tenant, deviceAuth, studentPresence := newServeRouteRuntime(db, env.Logger, iot, organizations, settings.Service, env.Config.RateLimitEnabled, env.Now)
 	mountPublic(router, metricsToken, db, delivery.Runtime.EmailWebhooks, env.Config.RateLimitEnabled)
 	careOfferings, studentAnswers := requests.CareOfferings, newStudentAnswers()
 	err = owners.RunRootSteps(
 		func() error {
-			return mountDemoAccess(router, authAPI.ComposedDemoAccess(identity.DemoAccess()), viper.GetString("app_env"), config.FrontendURL, viper.GetString("tenant_domain"))
+			return mountDemoAccess(router, authAPI.ComposedDemoAccess(identity.DemoAccess()), viper.GetString("app_env"), config.FrontendURL, viper.GetString("tenant_domain"), env.Now)
 		},
 		func() error { return mountRequestFeed(router, tenant, db, logger, config.FrontendURL) },
 		func() error {
@@ -566,7 +567,7 @@ func composeServeRoot(
 		func() error { return mountCatererPortal(router, tenant, limiters, identity, mealPlan, organizations) },
 		func() error {
 			operator, err := newOperatorRouter(db, logger, sessionAuth, limiters, iot, organizations, settings.Service, hub,
-				active, settingsWrites, identity, provisioning, services.CaregiverCapability, schedules.Lifecycle, communication, dataImports.Student, settings.Traeger)
+				active, settingsWrites, identity, provisioning, services.CaregiverCapability, schedules.Lifecycle, communication, dataImports.Student, settings.Traeger, env.Now)
 			if err != nil {
 				return err
 			}
@@ -612,8 +613,8 @@ func developmentWeekProtocolEvenings(
 // its route mounting steps begin.
 func newServeRouteRuntime(
 	db transactionruntime.Database, logger *slog.Logger, iot devicefleetCompose.IoTService,
-	organizations organizationtenancy.Query, settings settingsCompose.SettingsService, rateLimitEnabled bool,
+	organizations organizationtenancy.Query, settings settingsCompose.SettingsService, rateLimitEnabled bool, now func() time.Time,
 ) (*slog.Logger, authRateLimiters, chi.Router, *deviceauth.Authenticators, studentpresence.Owner) {
 	return logger, authRateLimitersFromEnv(rateLimitEnabled), chi.NewRouter(),
-		newDeviceAuthentication(iot, organizations, settings, logger), owners.NewLoggedStudentPresence(db, logger)
+		newDeviceAuthentication(iot, organizations, settings, logger, now), owners.NewLoggedStudentPresence(db, logger)
 }

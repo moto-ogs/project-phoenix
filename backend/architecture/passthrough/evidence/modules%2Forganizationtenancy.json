@@ -107,7 +107,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (rs *BillingResource) SeedKeyDateCounts(w http.ResponseWriter, r *http.Request) {\n\tif rs.isLocalSeedRequest == nil || !rs.isLocalSeedRequest(r) {\n\t\tcommon.RenderError(w, r, common.OperatorForbidden(\"Die Demo-Erfassung ist nur lokal verfügbar.\"))\n\t\treturn\n\t}\n\twritten, err := rs.service.SeedBillingKeyDateCounts(r.Context(), time.Now())\n\tif err != nil {\n\t\tcommon.RenderError(w, r, rs.billingError(r, err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusCreated, map[string]int{\"written\": written}, \"Demo-Stichtagszahlen erfasst\")\n}",
+      "evidence": "func (rs *BillingResource) SeedKeyDateCounts(w http.ResponseWriter, r *http.Request) {\n\tif rs.isLocalSeedRequest == nil || !rs.isLocalSeedRequest(r) {\n\t\tcommon.RenderError(w, r, common.OperatorForbidden(\"Die Demo-Erfassung ist nur lokal verfügbar.\"))\n\t\treturn\n\t}\n\twritten, err := rs.service.SeedBillingKeyDateCounts(r.Context(), rs.now())\n\tif err != nil {\n\t\tcommon.RenderError(w, r, rs.billingError(r, err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusCreated, map[string]int{\"written\": written}, \"Demo-Stichtagszahlen erfasst\")\n}",
       "form": "unclassified-evidence",
       "id": "modules/organizationtenancy/inbound/operator/BillingResource.SeedKeyDateCounts",
       "owner": "modules/organizationtenancy"

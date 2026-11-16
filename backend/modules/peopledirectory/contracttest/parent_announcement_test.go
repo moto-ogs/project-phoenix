@@ -459,7 +459,11 @@ func TestParentAnnouncementAudience_FutureEnrollmentExcluded(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, db) // tenant 1
 
-	repo := api.NewPeopleRepositorySuiteAnnouncements(testpkg.NewDatabase(t, db))
+	// The audience is judged on a fixed school day (#7104).
+	today := calendar.NewDate(2026, 11, 2)
+	repo := api.NewPeopleRepositorySuiteAnnouncements(testpkg.NewDatabase(t, db), func() time.Time {
+		return today.BerlinMidnight()
+	})
 	ctx := tenantCtx(t)
 
 	group := testpkg.CreateTestActivityGroupForTenant(t, db, chain.TenantID, "AG-Regression")
@@ -468,7 +472,7 @@ func TestParentAnnouncementAudience_FutureEnrollmentExcluded(t *testing.T) {
 	enr := &testpkg.StudentEnrollment{
 		StudentID:       chain.StudentID,
 		ActivityGroupID: group.ID,
-		ValidFrom:       testpkg.ActivityDate(calendar.TodayDate().AddDays(7)),
+		ValidFrom:       testpkg.ActivityDate(today.AddDays(7)),
 	}
 	enr.TenantID = chain.TenantID
 	_, err := db.NewInsert().
@@ -492,7 +496,7 @@ func TestParentAnnouncementAudience_FutureEnrollmentExcluded(t *testing.T) {
 	_, err = db.NewUpdate().
 		Model((*testpkg.StudentEnrollment)(nil)).
 		ModelTableExpr("activities.student_enrollments").
-		Set("valid_from = ?", calendar.TodayDate()).
+		Set("valid_from = ?", today).
 		Where("id = ?", enr.ID).
 		Exec(context.Background())
 	require.NoError(t, err)

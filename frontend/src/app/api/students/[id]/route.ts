@@ -1,5 +1,8 @@
-import { apiDelete, apiGet, apiPut } from "~/lib/api-helpers.server";
-import { problemBody } from "~/lib/api-error";
+import { NextResponse } from "next/server";
+import { apiDelete, apiPut, handleApiError } from "~/lib/api-helpers.server";
+import { contractGet, decodeContract } from "~/lib/contract/client.server";
+import { routes } from "~/lib/contract/students.generated";
+import { problemBody, type ProblemBody } from "~/lib/api-error";
 import {
   ApiResponseError,
   isApiResponseError,
@@ -16,9 +19,8 @@ import {
   mapStudentDetailResponse,
   mapStudentResponse,
   prepareStudentForBackend,
+  studentWriteResponse,
   writeMayChangeCompanions,
-  type BackendStudent,
-  type BackendStudentDetail,
 } from "~/lib/student-wire";
 import {
   rejectRetiredStudentContacts,
@@ -32,6 +34,7 @@ import {
 import { PRIVACY_CONSENT_SAVED_DETAIL } from "~/lib/student-update-errors";
 
 const logger = createLogger({ component: "StudentDetailRoute" });
+const DETAIL = routes["GET /api/students/{id}"];
 
 /**
  * Re-shapes a failed student PUT into the SAME wire error plus the
@@ -46,7 +49,10 @@ const logger = createLogger({ component: "StudentDetailRoute" });
  * from. So the backend payload is parsed and re-emitted rather than replaced,
  * and only `details` grows a key.
  */
-function markPrivacyConsentSaved(error: unknown): ApiResponseError {
+async function markPrivacyConsentSaved(
+  error: unknown,
+  request: Request,
+): Promise<Response> {
   const original = error instanceof Error ? error : new Error(String(error));
   const status = isApiResponseError(original) ? original.status : 500;
   const parsed = isApiResponseError(original)
@@ -64,7 +70,7 @@ function markPrivacyConsentSaved(error: unknown): ApiResponseError {
     [PRIVACY_CONSENT_SAVED_DETAIL]: true,
   };
 
-  return new ApiResponseError(
+  const marked = new ApiResponseError(
     status,
     JSON.stringify({ ...envelope, details }),
     {
@@ -72,6 +78,15 @@ function markPrivacyConsentSaved(error: unknown): ApiResponseError {
       contentType: "application/problem+json",
       retryAfter: isApiResponseError(original) ? original.retryAfter : null,
     },
+  );
+  // Keep thrown 4xx errors on the session-renewal path. For 5xx, sanitize
+  // upstream diagnostics first, then attach only the locally known outcome.
+  if (status < 500) throw marked;
+  const response = handleApiError(marked, request);
+  const sanitized = (await response.json()) as ProblemBody;
+  return NextResponse.json(
+    { ...sanitized, details: { [PRIVACY_CONSENT_SAVED_DETAIL]: true } },
+    { status: response.status, headers: response.headers },
   );
 }
 
@@ -88,12 +103,15 @@ export const GET = createGetHandler<Student>(async (request, token, params) => {
   try {
     // The tenant-scoped backend projection carries the consent: one read-budget
     // unit and no BFF consent waterfall.
-    const response = await apiGet<{ data: BackendStudentDetail }>(
+    const result = await contractGet(
+      `${DETAIL.method} ${DETAIL.pattern}`,
+      DETAIL.response,
       `/api/students/${id}?include_privacy_consent=true`,
       token,
       { signal: request.signal },
     );
-    return mapStudentDetailResponse(response.data);
+    if (!result.ok) throw result.error.cause;
+    return mapStudentDetailResponse(result.value.data);
   } catch (error) {
     logFailure("student fetch failed", id, error);
     throw error;
@@ -121,8 +139,8 @@ export const GET = createGetHandler<Student>(async (request, token, params) => {
  * overwrite somebody else's newer consent while the user is told nothing was
  * saved.
  */
-export const PUT = createPutHandler<Student, StudentUpdateBody>(
-  async (_request, body, token, params) => {
+export const PUT = createPutHandler<Student | Response, StudentUpdateBody>(
+  async (request, body, token, params) => {
     const id = requirePathSegmentParam(params);
     try {
       rejectRetiredStudentContacts(body);
@@ -137,16 +155,29 @@ export const PUT = createPutHandler<Student, StudentUpdateBody>(
         }
       }
 
-      let response: { data: BackendStudent };
+      let answer: unknown;
       try {
-        response = await apiPut<{ data: BackendStudent }>(
+        answer = await apiPut<unknown>(
           `/api/students/${id}`,
           token,
           prepareStudentForBackend(body),
         );
       } catch (studentError) {
-        throw consent ? markPrivacyConsentSaved(studentError) : studentError;
+        if (consent)
+          return await markPrivacyConsentSaved(studentError, request);
+        throw studentError;
       }
+      const updated = decodeContract(
+        "PUT /api/students/{id}",
+        studentWriteResponse,
+        answer,
+      );
+      if (!updated.ok) {
+        if (consent)
+          return await markPrivacyConsentSaved(updated.error.cause, request);
+        throw updated.error.cause;
+      }
+      const response = updated.value;
 
       // Whether the write changed the "läuft mit" links (#1694): the
       // backend's verdict, or what the payload can change when it sent none.

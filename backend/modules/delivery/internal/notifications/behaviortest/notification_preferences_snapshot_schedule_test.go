@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -321,9 +322,11 @@ func preferenceScheduleAssertWriter(t *testing.T, pair preferenceGatePair, write
 	require.Equal(t, expectedWriterRows, counter.WriteRows())
 	var oldState, newState struct {
 		Values []struct {
-			Key   string `json:"setting_key"`
-			Value bool   `json:"value"`
-			Actor int64  `json:"updated_by"`
+			Key string `json:"setting_key"`
+			// Raw: the snapshot holds every setting of the school, also
+			// non-boolean ones like its federal state (#7174).
+			Value json.RawMessage `json:"value"`
+			Actor int64           `json:"updated_by"`
 		} `json:"values"`
 		Audit []struct {
 			Key   string `json:"setting_key"`
@@ -344,7 +347,7 @@ func preferenceScheduleAssertWriter(t *testing.T, pair preferenceGatePair, write
 		for _, value := range newState.Values {
 			if value.Key == key {
 				found = true
-				require.Equal(t, i == 1, value.Value, key)
+				require.JSONEq(t, strconv.FormatBool(i == 1), string(value.Value), key)
 				require.Equal(t, writerID, value.Actor, key)
 			}
 		}

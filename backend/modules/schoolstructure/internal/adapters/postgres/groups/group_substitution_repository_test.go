@@ -33,7 +33,7 @@ func TestGroupSubstitutionRepository_Create(t *testing.T) {
 		group := testpkg.CreateTestEducationGroup(t, db, "SubCreate")
 		substitute := testpkg.CreateTestStaff(t, db, "Substitute", "Staff")
 
-		startDate := calendar.TodayDate()
+		startDate := calendar.NewDate(2026, 11, 2)
 		endDate := startDate.AddDays(7)
 
 		sub := &api.SchoolStructureSuiteSubstitutionRow{
@@ -316,7 +316,7 @@ func TestGroupSubstitutionRepository_Create_Validation(t *testing.T) {
 		group := testpkg.CreateTestEducationGroup(t, db, "SubValidation")
 		substitute := testpkg.CreateTestStaff(t, db, "ValidationSub", "Staff")
 
-		today := calendar.TodayDate()
+		today := calendar.NewDate(2026, 11, 2)
 		sub := &api.SchoolStructureSuiteSubstitutionRow{
 			TargetType:        testpkg.EducationGroupSubstitutionTypeGroupHandover,
 			GroupID:           group.ID,

@@ -239,7 +239,7 @@ Review check: with two or more entries that carry actions, the screen shows one 
 
 `rounded-sm`=4px · `rounded-md`=8px · `rounded-lg`=12px · `rounded-xl`=16px · `rounded-2xl`=24px · `rounded-full`=9999px
 
-- **Card / panel wrapper** → `SectionCard`, which renders the `.moto-content-surface` utility class (defined in `globals.css`: white bg, gray-200 border color, shadow-sm, backdrop blur, print-mode resets) with `rounded-2xl border p-5 max-sm:p-4`. 24px = the design system's `--card-radius`. Do not invent another card shape, and never wrap content in a square `border-b`-only strip.
+- **Card / panel wrapper** → `SectionCard`, which renders the `.moto-content-surface` utility class (defined in `globals.css`) with `rounded-2xl border p-5 max-sm:p-4`. 24px = the design system's `--card-radius`. Do not invent another card shape, and never wrap content in a square `border-b`-only strip.
 - Inner controls (buttons, inputs, pills) get their radius from the kit component. Don't sprinkle bare `rounded` (= 4px Tailwind default, off the brand scale).
 - The code is the source (ADR 0149): controls (input, select, button) `rounded-lg` (12px; 32-px `compact`/`icon` buttons and the checkbox box `rounded-md`), inner surfaces and popovers `rounded-xl` (16px), cards `rounded-2xl` (24px), badge/pill `rounded-full`.
 
@@ -322,7 +322,9 @@ The three places where following the vendored skill literally produces wrong out
 | `better-colors`: express colors as OKLCH tokens | Brand semantics come from `LOCATION_COLORS` hex only. New chromatic Tailwind utilities trip the `ui-kit/no-generic-brand-colors` ratchet. Convert notation only in an explicit, approved color-system migration. |
 | `better-writing`: title case vs sentence case, English phrasing | All user-facing copy is German, with Umlauten. Take the structural advice (name the action in the label, errors next to the field, one clear action per empty state); match the wording of neighbouring screens. |
 
-On motion, `ui-skills` is stricter than `frontend/.claude/skills/better-ui/animations.md` and wins: no animation unless it was asked for, compositor properties only.
+## Motion
+
+`ui-skills` beats `better-ui/animations.md`: animate if asked, only `opacity`/`transform` (#7252). No `backdrop-filter`, `transition-all` or size/position transition (bars: `translateX`; reveals: `grid-template-rows`); `@keyframes` only in `src/styles`. Lint: `ui-kit/no-costly-motion`, `css-motion.node-test.mjs`.
 
 ## Detection
 
@@ -353,7 +355,7 @@ On motion, `ui-skills` is stricter than `frontend/.claude/skills/better-ui/anima
 
 `ui-kit/no-hand-rolled-dot` (hard-zero): no hand-built dot or colour bar outside `ui/`; `ui-kit/no-status-dot-outside-plans`: `StatusDot` only in the plugin's legends and plans (ADR 0149).
 
-`moto-content-surface` and `moto-popover-surface` are unlayered, so they beat Tailwind border, background, shadow and ring utilities on the same element; `ui-kit/no-dead-surface-utility` fails such utilities beside them (focus: `outline-2`, override: `!`). With a tinted branch (`danger ? "border-moto-red/20 bg-moto-red-soft" : …`), `moto-content-surface` goes in the neutral branch only. Its `backdrop-filter: blur(8px)` makes it the containing block for `position: fixed` descendants (kit `Modal` is portal-rendered and unaffected).
+`moto-content-surface` and `moto-popover-surface` are unlayered, so they beat Tailwind border, background, shadow and ring utilities on the same element; `ui-kit/no-dead-surface-utility` fails such utilities beside them (focus: `outline-2`, override: `!`). With a tinted branch (`danger ? "border-moto-red/20 bg-moto-red-soft" : …`), `moto-content-surface` goes in the neutral branch only. It is its own stacking context: floating parts portal to `body`.
 
 ## Design-review checklist
 

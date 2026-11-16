@@ -2,10 +2,8 @@ package compose
 
 import (
 	"context"
-	"time"
 
 	app "github.com/moto-ogs/project-phoenix/modules/settings/internal/application"
-	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
@@ -42,8 +40,6 @@ func (r TenantSettingsRuntime) DB(ctx context.Context) (bun.IDB, error) {
 func (r TenantSettingsRuntime) LockStaffBalance(ctx context.Context, staffID int64) error {
 	return app.LockSettingStaffBalance(ctx, staffID, r.TenantID, tenant.AdmitBefore(tenant.LockStaffWorkTime, tenant.StaffWorkTimeKey(staffID, false), r.AcquireLock))
 }
-
-func (TenantSettingsRuntime) TodayTime() time.Time { return timezone.TodayDate().UTCMidnight() }
 
 func (r TenantSettingsRuntime) WithinTenant(ctx context.Context, tenantID int64, fn func(context.Context) error) error {
 	return tenant.WithTenantTx(app.AttachSettingUnit(ctx, r.unit, tenant.WithUnitOfWork), r.db, tenantID, app.SettingContextCallback[bun.Tx](fn))

@@ -1,0 +1,119 @@
+package presenceprojectionhttp
+
+import (
+	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
+	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+)
+
+// StudentRouteContracts registers the typed contract of the student reads
+// (ADR 0270), with patterns relative to the resource's mount. A route listed
+// here is decoded by the frontend against these types.
+func StudentRouteContracts() []common.RouteContract {
+	tenant := []common.PortalScope{common.PortalTenant}
+	return []common.RouteContract{
+		{
+			Method: "GET", Pattern: "/", Portals: tenant, Paginated: true,
+			Query: studentListQuery(),
+			Variants: &common.ResponseVariants{
+				QueryParam: "view", Default: StudentListViewFull,
+				ByValue: map[string]any{
+					StudentListViewFull:  []StudentResponse{},
+					StudentListViewSlim:  []SlimStudentResponse{},
+					StudentListViewNames: []NameStudentResponse{},
+				},
+			},
+			Enums: studentEnums(),
+		},
+		{
+			Method: "GET", Pattern: "/{id}", Portals: tenant,
+			Query:    []common.QueryParam{{Name: "include_privacy_consent", Kind: common.QueryBool}},
+			Response: StudentDetailResponse{},
+		},
+	}
+}
+
+// studentListQuery names every parameter the list handler reads;
+// TestStudentListContractNamesEveryQueryParameterTheHandlerReads keeps it so.
+func studentListQuery() []common.QueryParam {
+	flag := func(name string) common.QueryParam { return common.QueryParam{Name: name, Kind: common.QueryBool} }
+	text := func(name string) common.QueryParam {
+		return common.QueryParam{Name: name, Kind: common.QueryString}
+	}
+	return []common.QueryParam{
+		{Name: "view", Kind: common.QueryString, Values: []string{StudentListViewFull, StudentListViewSlim, StudentListViewNames}},
+		{Name: "page", Kind: common.QueryInt},
+		{Name: "page_size", Kind: common.QueryInt},
+		text("search"), text("first_name"), text("last_name"),
+		{Name: "school_class", Kind: common.QueryString, Repeated: true},
+		{Name: "grade_level", Kind: common.QueryInt, Repeated: true},
+		{Name: "group_id", Kind: common.QueryID, Repeated: true},
+		{Name: "room_id", Kind: common.QueryID},
+		text("location"), text("location_state"),
+		{Name: "date", Kind: common.QueryDate},
+		{Name: "day_status", Kind: common.QueryString, Values: []string{DayPlanningStatusAll, DayPlanningStatusComesToday, DayPlanningStatusNotComingToday}},
+		{Name: "care_status", Kind: common.QueryString, Values: []string{CareStatusRunning, CareStatusEnded, CareStatusAll}},
+		{Name: "care_offering_id", Kind: common.QueryID},
+		text("enrollment_answer"), text("bus"), text("photo_consent"), text("pickup_status"),
+		flag("include_pickup_times"), flag("include_arrival_times"), flag("include_companions"), flag("include_pending_withdrawals"),
+	}
+}
+
+// studentEnums states the closed value sets reflection cannot see.
+func studentEnums() []common.EnumContract {
+	return []common.EnumContract{
+		{
+			Type:   departure.DepartureMode(""),
+			Values: []string{string(departure.DepartureAlone), string(departure.DepartureBus), string(departure.DeparturePickup), string(departure.DepartureAccompanied)},
+		},
+		{
+			Name:   "DayPlanningStatus",
+			Fields: []string{"StudentResponse.day_planning_status", "SlimStudentResponse.day_planning_status"},
+			Values: []string{DayPlanningStatusComesToday, DayPlanningStatusNotComingToday},
+		},
+		{
+			Name:   "DayPlanningReason",
+			Fields: []string{"StudentResponse.day_planning_reason", "SlimStudentResponse.day_planning_reason"},
+			Values: []string{
+				careplan.DayPlanningReasonSick, careplan.DayPlanningReasonExcused, careplan.DayPlanningReasonClassTrip,
+				careplan.DayPlanningReasonArrivalException, careplan.DayPlanningReasonPickupException,
+				careplan.DayPlanningReasonArrivalSchedule, careplan.DayPlanningReasonPickupSchedule,
+				careplan.DayPlanningReasonTimetable, careplan.DayPlanningReasonUnplanned, careplan.DayPlanningReasonNoPlan,
+			},
+		},
+		{
+			// A stored free text from before the departure plan still travels here.
+			Name:   "PickupStatus",
+			Fields: []string{"StudentResponse.pickup_status"},
+			Values: []string{departure.PickupStatusPickedUp, departure.PickupStatusGoesAlone, departure.PickupStatusAccompanied},
+		},
+		{
+			Name:   "SupervisorRole",
+			Fields: []string{"SupervisorContact.role"},
+			Values: []string{SupervisorRoleTeacher},
+		},
+		{
+			Name:   "StudentConsentKey",
+			Fields: []string{"StudentConsentResponse.key"},
+			Values: []string{
+				peopleModule.StudentConsentAGB, peopleModule.StudentConsentDataProcessing,
+				peopleModule.StudentConsentEmailContact, peopleModule.StudentConsentPhoto,
+			},
+		},
+		{
+			Name:   "AttendanceActorKind",
+			Fields: []string{"AttendanceActorResponse.kind"},
+			Values: []string{
+				string(studentpresence.AttendanceActorStaff), string(studentpresence.AttendanceActorDevice),
+				string(studentpresence.AttendanceActorFormerStaff), string(studentpresence.AttendanceActorAutomatic),
+			},
+		},
+		{
+			Name:   "StudentConsentState",
+			Fields: []string{"StudentConsentResponse.state"},
+			Values: []string{peopleModule.StudentConsentStateGranted, peopleModule.StudentConsentStateWithdrawn, peopleModule.StudentConsentStateNotRecorded},
+		},
+	}
+}

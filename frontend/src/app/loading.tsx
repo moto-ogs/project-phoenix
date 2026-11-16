@@ -3,5 +3,5 @@
 import { Loading } from "~/components/ui/loading";
 
 export default function RootLoadingPage() {
-  return <Loading fullPage message="Laden..." />;
+  return <Loading fullPage message="Seite wird geöffnet …" />;
 }

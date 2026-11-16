@@ -7411,6 +7411,7 @@ export const parentNotificationsTopic =
         "moto meldet sich ab jetzt bei den gewählten Themen. Auch wenn die App geschlossen ist.",
       notes: [
         "Jeder Hinweis steht auch in moto unter `Hinweise`, zum Beispiel wenn eine Betreuung Ihres Kindes ausfällt. Dafür müssen Sie nichts einschalten.",
+        "Ändert sich der Unterrichtsschluss in der Klasse Ihres Kindes, steht in moto `Stundenplan geändert`. Eine Mitteilung aufs Handy kommt dazu, wenn Sie `Stundenplan der Klasse` einschalten und die Änderung in den nächsten 14 Tagen gilt.",
         "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder `Alle als gelesen markieren` wählen.",
         "Auf dem Sperrbildschirm steht nie der Name Ihres Kindes. Was genau los ist, lesen Sie nach der Anmeldung in moto.",
         "Die Themen stehen unter `Kinder`, `Mitteilungen` und `Termine`.",
@@ -8633,8 +8634,8 @@ export const staffNoticesTopic = function staffNoticesTopic(): HelpTopic {
  * Die Glocke oben rechts im Staff-Portal (#7148): oben `Erinnerungen`, darunter
  * `Hinweise` (der Benachrichtigungs-Feed). Hinweise kommen zur Absage eines
  * Termins, zu Vertretungen, Änderungen im Dienstplan, neuen Hinweisen der
- * Leitung, zum Ausfall im Team und zu weiteren Mitteilungs-Arten außer
- * Nachrichten (#7136, #7137, #7138, #7143).
+ * Leitung, zum Ausfall im Team, zum Stundenplan einer Klasse und zu weiteren
+ * Mitteilungs-Arten außer Nachrichten (#7136, #7137, #7138, #7142, #7143).
  */
 export const staffNotificationsTopic =
   function staffNotificationsTopic(): HelpTopic {
@@ -8662,10 +8663,12 @@ export const staffNotificationsTopic =
         "Sind Sie einer Gruppe zugeordnet, sehen Sie auch, wer in Ihrer Gruppe fehlt oder vertritt. Der Hinweis öffnet den `Vertretungsplan` an dem Tag. Einen Grund nennt moto nie, auch keine Krankheit.",
         "Wurde Ihnen eine Gruppe übergeben, sehen Sie unter `Ausfall im Team`, wer in dieser Gruppe nicht da ist. Der Hinweis öffnet `Heute` an dem Tag.",
         "Wer die Änderung selbst einträgt, bekommt keinen Hinweis.",
+        "Ändert sich der Unterrichtsschluss einer Klasse, steht hier `Stundenplan geändert`. Das sehen Sie, wenn Sie der Klasse zugeordnet sind oder Kinder der Klasse in Ihrer Gruppe sind. Der Hinweis öffnet `Heute` an dem Tag.",
         "Schreibt die Leitung unter `Hinweise der Leitung` etwas Neues für die Betreuung, steht es hier als `Neuer Hinweis der Leitung`. Ein Klick darauf öffnet die Seite `Hinweise der Leitung` mit diesem Text, auch wenn er erst später gilt.",
         "Auch diese Arten kommen als Hinweis: `Geänderte Abholzeit`, `Krankmeldung eines Kindes`, `Notizen für das Team` und `Umfragen der Einrichtung`.",
         "Die Leitung bekommt außerdem `Austritte aus dem Team` und `Ablaufende Nachweise im Team`. Für Ihre eigenen Nachweise gibt es `Eigene Nachweise`.",
         "Nachrichten stehen nicht in der Glocke. Neue Nachrichten zählt moto bei `Nachrichten` und `Team-Chat`.",
+        "Werden zum Schuljahr viele Zeiten einer Klasse nacheinander eingetragen, bleibt es ein Hinweis pro Klasse.",
         "Ändert sich derselbe Termin kurz danach noch einmal, rückt der Hinweis nach oben. Sie bekommen dann keine zweite Mitteilung aufs Handy.",
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Was Sie auf dem Handy gelesen haben, ist auch am Tablet gelesen.",
@@ -8674,6 +8677,7 @@ export const staffNotificationsTopic =
         "Die Mitteilung aufs Handy stellen Sie in Ihrem `Profil` unter `Benachrichtigungen` für jede Art ein. Schalten Sie sie aus, kommt der Hinweis in der Glocke trotzdem.",
         "Zu neuen Hinweisen der Leitung kommt keine Mitteilung aufs Handy. Sie können sie im `Profil` unter `Benachrichtigungen` bei `Hinweise der Leitung` einschalten. Dann kommt sie, wenn der Hinweis schon gilt oder in den nächsten 14 Tagen beginnt.",
         "Die Einstellung für `Absage eines Termins` gilt auch, wenn die Absage zurückgenommen wird.",
+        "Zum Stundenplan einer Klasse kommt eine Mitteilung aufs Handy, wenn die Änderung heute oder morgen gilt. Für Änderungen in 2 bis 14 Tagen schalten Sie im `Profil` unter `Benachrichtigungen` den Punkt `Stundenplan Ihrer Klassen: spätere Tage` ein.",
       ],
       differences: [
         "Auf dem Handy und auf kleinen Tablets fehlt oben die Glocke. Tippen Sie unten auf `Mehr` und dann auf `Benachrichtigungen`. Die Zahl an `Mehr` zählt neue Hinweise mit.",
@@ -8684,6 +8688,7 @@ export const staffNotificationsTopic =
       troubleshootingDetails: [
         "Es kommt kein Hinweis zu einer Absage? Ihre Schule kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder einen Hinweis noch eine Mitteilung aufs Handy. Fragen Sie Ihre Leitung.",
         "Es kommt kein Hinweis zu einer Vertretung? Ihre Schule kann `Hinweis bei Vertretung und Dienstplanänderung` ausschalten. Fragen Sie Ihre Leitung.",
+        "Es kommt kein Hinweis zum Stundenplan einer Klasse? Ihre Schule kann `Hinweis bei geändertem Stundenplan einer Klasse` ausschalten. Fragen Sie Ihre Leitung.",
         "Es kommt kein Hinweis zu neuen Hinweisen der Leitung? Ihre Schule kann `Benachrichtigung bei neuem Hinweis der Leitung` ausschalten. Fragen Sie Ihre Leitung.",
         "Die Seite `Hinweise der Leitung` zeigt `Diesen Hinweis gibt es nicht mehr.`? Dann hat die Leitung ihn gelöscht oder abgeschaltet.",
         "Es kommt kein Hinweis zu einer Krankmeldung? Ihre Schule kann `Hinweis bei Krankmeldung` ausschalten. Manche Schulen melden sie auch nur Personen, die gerade im Dienst sind. Fragen Sie Ihre Leitung.",
@@ -10372,7 +10377,8 @@ export const teacherNoticesTopic = function teacherNoticesTopic(): HelpTopic {
 
 /**
  * Die Glocke oben rechts in moto schule (#7139): die `Hinweise` der Lehrkraft,
- * zuerst die Absage eines Termins, für den sie eingeplant ist.
+ * zuerst die Absage eines Termins, für den sie eingeplant ist, dazu der
+ * geänderte Stundenplan ihrer Klassen (#7142).
  */
 export const teacherNotificationFeedTopic =
   function teacherNotificationFeedTopic(): HelpTopic {
@@ -10396,12 +10402,14 @@ export const teacherNotificationFeedTopic =
       notes: [
         "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis.",
         "Nimmt die Leitung die Absage zurück, steht dort `Termin findet doch statt`.",
+        "Ändert sich der Unterrichtsschluss einer Ihrer Klassen, steht hier `Stundenplan geändert`. Der Hinweis öffnet die Klasse an dem Tag. Werden viele Zeiten einer Klasse nacheinander eingetragen, bleibt es ein Hinweis.",
         "`Meine Aufsichten` zeigt den heutigen Tag. Liegt der Termin später, steht der Tag im Hinweis.",
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Was Sie auf dem Handy gelesen haben, ist auch am Computer gelesen.",
         "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Das passiert nur bei Absagen von heute bis in 14 Tagen.",
         "Die Mitteilung aufs Handy schalten Sie unter `Einstellungen` bei `Absage eines Termins` aus. Der Hinweis in der Glocke kommt dann trotzdem.",
         "Die Einstellung gilt auch, wenn eine Absage zurückgenommen wird.",
+        "Zum Stundenplan einer Klasse kommt eine Mitteilung aufs Handy, wenn die Änderung heute oder morgen gilt. Für 2 bis 14 Tage vorher schalten Sie unter `Einstellungen` den Punkt `Stundenplan Ihrer Klassen: spätere Tage` ein.",
       ],
       differences: [
         "Auf dem Handy öffnen sich die Hinweise über den ganzen Bildschirm. Mit dem X schließen Sie sie wieder.",
@@ -10409,6 +10417,7 @@ export const teacherNotificationFeedTopic =
       ],
       troubleshootingDetails: [
         "Es kommt kein Hinweis zu einer Absage? Die OGS-Leitung kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder Hinweis noch Mitteilung aufs Handy. Fragen Sie dort nach.",
+        "Es kommt kein Hinweis zum Stundenplan? Die OGS-Leitung kann `Hinweis bei geändertem Stundenplan einer Klasse` ausschalten. Fragen Sie dort nach.",
       ],
       related: [HELP_TOPICS.teacherSettings, HELP_TOPICS.teacherSupervision],
     };
@@ -11437,6 +11446,9 @@ export const traegerBillingTermsTopic =
       notes: [
         "Die Ferienbetreuung hat immer eine eigene Rechnung. Sie steht nie auf der Rechnung der Betreuung.",
         "Bei `Lastschrift` buchen Sie den Betrag selbst ab. Dafür braucht die Familie ein SEPA-Mandat bei Ihnen, und Sie brauchen eine Gläubiger-ID. Ohne Mandat geht die Rechnung als Überweisung. moto bucht kein Geld ab.",
+        "Bei `Überweisung` steht auf jedem Schreiben eines Abrechnungslaufs ein QR-Code: auf Rechnung, Gebührenbescheid und Bestätigungsschreiben. Die Familie scannt ihn mit der Banking-App. Empfänger, IBAN, Betrag und Verwendungszweck sind dann schon ausgefüllt.",
+        "Der Verwendungszweck im QR-Code ist die Nummer der Rechnung. Hat die Familie eine Debitorennummer, steht sie dahinter. Bei einem Bescheid heißt sie Buchungszeichen.",
+        "Keinen QR-Code haben: Schreiben mit `Lastschrift`, Schreiben mit 0 €, Storno, Gutschrift und Jahresbescheide. Ein Jahresbescheid wird in Raten bezahlt.",
         "Unter `Familien und Zahlung` sehen Sie bei jeder Familie den Zahlungsweg ihrer Rechnungen.",
         "Beim Erstellen der Schreiben stehen die Fälligkeiten bereits fest. Das Feld `Zahlen bis` gilt nur für ältere Rechnungen ohne eigenes Datum.",
         "Welches Datum gilt: zuerst der eigene Zahltag der Familie, dann das Datum des Laufs, sonst das Zahlungsziel der Leistung.",
@@ -11516,7 +11528,7 @@ export const traegerBriefkopfTopic =
         "Die `Vorschau` oben auf der Seite `Briefkopf und Vorlagen` zeigt, wie Kopf und Fuß eines Briefs aussehen.",
       notes: [
         "Ein leeres Feld für Absender oder Fußzeile zeigt ein graues Beispiel. Das Beispiel steht nie im Brief.",
-        "Eine Bankverbindung ist der `Standard`. Sie steht auf allen Briefen und Rechnungen.",
+        "Eine Bankverbindung ist der `Standard`. Sie steht auf allen Briefen und Rechnungen. Auch der QR-Code zum Überweisen nimmt diese Bankverbindung.",
         "Eine andere Bankverbindung machen Sie im Menü der Zeile mit `Als Standard festlegen` zum Standard.",
         "Löschen Sie den Standard, wird die älteste andere Bankverbindung der Standard.",
         "Jedes Ansehen und jede Änderung von Ansprechperson und Bankverbindungen steht im Protokoll des Trägers.",

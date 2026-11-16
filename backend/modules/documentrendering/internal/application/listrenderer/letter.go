@@ -466,6 +466,9 @@ func (l *letterLayout) writeParagraph(s, style string) error {
 }
 
 func (l *letterLayout) writeBlock(block listrecords.LetterBlock) error {
+	if block.PaymentCode != nil {
+		return l.writePaymentCode(*block.PaymentCode)
+	}
 	if block.Heading != "" {
 		if err := l.ensure(3 * l.bodyLine); err != nil {
 			return err

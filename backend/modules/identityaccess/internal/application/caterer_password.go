@@ -79,7 +79,7 @@ func (c *CatererAccess) changePasswordInTx(ctx context.Context, accountID int64,
 	if !isCaterer {
 		return nil, domain.ErrAccountNotCaterer
 	}
-	accepted, err := checkPasswordLogin(ctx, c.auth.store, c.verifier, c.auth.passwordPolicy, account.ID, account.PasswordHash, currentPassword, false)
+	accepted, err := checkPasswordLogin(ctx, c.auth.store, c.verifier, c.auth.passwordPolicy, account.ID, account.PasswordHash, currentPassword, false, c.auth.sessions.now)
 	if err != nil {
 		return nil, err
 	}

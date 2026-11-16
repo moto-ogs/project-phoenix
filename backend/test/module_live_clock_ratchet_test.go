@@ -54,6 +54,21 @@ import (
 // Workforce (62 to 0, ADR 0264) reads the clock of its composition too.
 // Student Presence (86), Presence Projection (15) and Class Day (14) follow
 // with ADR 0262 (115 to 0).
+// Identity & Access (83 to 14, ADR 0261) keeps fourteen.
+// portalauth.PasswordResetRetryAfter is the RetryAfter func(error) of
+// api/common's PasswordResetRoutes, which five portal routers build without
+// a clock; sessiontoken's decode serves the package-level middleware
+// (ParseVerified, Authenticator, AuthenticateRefreshJWT, RateLimitKey), which
+// names no clock, behind the jwtauth verifier that checks exp on the jwx clock.
+// Five compare a passkey ceremony's expiry, which go-webauthn stamps and
+// validates on the real clock: verifyRegistration and consumeLoginSession of
+// AccountPasskeyFlows, verifyRegistration and verifyLogin of
+// OperatorPasskeyFlows, and SignInDataRetention's
+// inUnitDeleteExpiredPasskeySessions. Seven stamp or compare the iat and exp of
+// tokens the jwtauth verifier checks on the jwx clock: SessionCodec's
+// AccountOfAccessToken, IssueTokenPair, IssueAccessToken,
+// IssueMFAEnrollmentToken and ParseAccessToken, TokenAuth.ParseAccessJWT and
+// the access-token expiry in AccountAuthentication.ValidateSessionTokens.
 var moduleLiveClockBudget = map[string]int{
 	// PickupBaselineQueries.HasBookedOfferingPickupForWeekday: the public
 	// PickupBaselineReader method names no day.
@@ -69,26 +84,18 @@ var moduleLiveClockBudget = map[string]int{
 	// pinned clock would never re-check. RealtimePublisher.recordDrop: the
 	// interval between two drop log lines. usageService.SnapshotUsage: the
 	// age of the cached usage snapshot (time.Since).
-	"modules/delivery":    5,
-	"modules/devicefleet": 12,
-	"modules/devicescan":  6,
+	"modules/delivery": 5,
 	// records.GeneratedAtLabel: the public formatting function prints the
 	// moment of rendering for a zero creation time, and the renderer is also
 	// built bare (&RendererService{}), so it holds no clock to pass.
-	"modules/documentrendering":   1,
-	"modules/facilities":          2,
-	"modules/identityaccess":      83,
-	"modules/organizationtenancy": 7,
-	"modules/peopledirectory":     12,
+	"modules/documentrendering": 1,
+	"modules/identityaccess":    14,
 	// leadership (acquire, renew, step, expire, current, stepDown and
 	// newLeadership): the lease term is a local monotonic deadline armed as
 	// timers, and the standby time is measured since the last term.
 	// Scheduler.waitUntilNextMinute: the timer that aligns the minute tick
 	// with the wall clock. A pinned clock would stop both.
 	"modules/schedulerruntime":             11,
-	"modules/schoolmembership":             2,
-	"modules/schoolstructure":              3,
-	"modules/settings":                     3,
 	"workflows/catererportal":              2,
 	"workflows/holidayclosurenotification": 1,
 	"workflows/parentportal":               19,

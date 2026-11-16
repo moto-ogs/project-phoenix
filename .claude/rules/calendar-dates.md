@@ -27,14 +27,14 @@ the bug class.
 `YYYY-MM-DD` value with no instant and no location. bun binds that string
 directly — there is nothing for the driver to shift. The old
 compensation helpers `DateOfUTC`/`TodayUTC` are deleted; the remaining
-`Today()`/`DateOf()` return instants and exist only for TIMESTAMPTZ boundary
+`DateOf()` returns an instant and exists only for TIMESTAMPTZ boundary
 math.
 
 ## Need X → use Y (backend)
 
 | Need | Use | Never |
 |---|---|---|
-| Today as a calendar day | `calendar.TodayDate()` | `calendar.Today()`, `time.Now().Truncate(24h)` |
+| Today as a calendar day | `calendar.TodayDate()` | `calendar.DateOf(time.Now())`, `time.Now().Truncate(24h)` |
 | Calendar day of an instant | `calendar.DateFromTime(t)` | manual UTC/Berlin truncation |
 | Model field for a `DATE` column | `calendar.Date` / `*calendar.Date` (nullable) | `time.Time`, zero-Date sentinels |
 | Parse an API date | `calendar.ParseDate("2026-06-10")` | `time.Parse("2006-01-02", s)` |

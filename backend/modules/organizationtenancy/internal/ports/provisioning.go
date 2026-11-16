@@ -116,9 +116,16 @@ type ProvisioningCategories interface {
 	SeedCategories(ctx context.Context, tenantID int64, categories []domain.ActivityCategory) error
 }
 
-// ProvisioningSettings resolves the per-school device online window.
+// ProvisioningSettings resolves the per-school device online window and
+// records the federal state of a new school.
 type ProvisioningSettings interface {
 	DeviceOnlineWindowMinutes(ctx context.Context, tenantID int64) (int, error)
+	// RecordFederalState records the new school's federal state in the
+	// administrative unit that creates the school, so both commit together.
+	// It is a system write; the operator audit entry of the creation names
+	// the operator and the state. It reports false, recording nothing, for
+	// a region that is no federal state.
+	RecordFederalState(ctx context.Context, tenantID int64, region string) (bool, error)
 }
 
 // OperatorAudit appends to the platform operator audit ledger.

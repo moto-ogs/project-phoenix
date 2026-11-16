@@ -21,9 +21,9 @@ import (
 // setupIoTService drives the retained IoT service shape against the real
 // Device Fleet owner and a real database.
 func setupIoTService(t *testing.T, db *bun.DB) iot.Service {
-	fleet, err := api.NewDeviceFleet(testpkg.NewDatabase(t, db))
+	fleet, err := api.NewDeviceFleet(testpkg.NewDatabase(t, db), time.Now)
 	require.NoError(t, err, "Failed to compose the device fleet")
-	return iot.NewService(fleet)
+	return iot.NewService(fleet, time.Now)
 }
 
 // =============================================================================

@@ -184,7 +184,7 @@ func (s *Service) UpdateRoomID(ctx context.Context, id, roomID int64) error {
 		return s.reject("update_device_room", devicefleet.ErrInvalidDevice)
 	}
 	return s.updateOneColumnSet(ctx, "update_device_room",
-		domain.UpdateDevice{ID: id, RoomID: &roomID, UpdatedAt: s.deps.Now()}, []string{"room_id", "updated_at"})
+		domain.UpdateDevice{ID: id, RoomID: &roomID}, []string{"room_id"})
 }
 
 func (s *Service) updateOneColumnSet(ctx context.Context, operation string, input domain.UpdateDevice, columns []string) error {

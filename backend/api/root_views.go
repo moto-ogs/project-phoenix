@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"time"
 
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -49,11 +50,11 @@ type StructureServices struct {
 // buildGroupManagement binds School Structure's group management over the
 // People Directory, School Membership and Facilities directories; its group
 // events wake the open views.
-func buildGroupManagement(db transactionruntime.Database, hub *realtime.Hub, structure owners.StructureRows, people owners.PeopleRows, substitutions owners.GroupSubstitutions, audit owners.AuditOwner) schoolstructure.GroupManagement {
+func buildGroupManagement(db transactionruntime.Database, hub *realtime.Hub, structure owners.StructureRows, people owners.PeopleRows, substitutions owners.GroupSubstitutions, audit owners.AuditOwner, now func() time.Time) schoolstructure.GroupManagement {
 	return education.NewGroupManagement(
 		structure.Groups, structure.GroupTeachers, structure.ClassTeachers, structure.GroupRooms, structure.GroupTeacherDirectory,
 		structure.StaffChecks, people.Students, substitutions, education.NewLegacyRepositoryRuntime(db.Pool()),
-		education.GroupServiceOptions{Broadcaster: NewGroupEvents(hub, nil), Audit: NewEducationClassAssignmentAudit(audit.Persistence.StaffMasterDataChange)},
+		education.GroupServiceOptions{Broadcaster: NewGroupEvents(hub, nil), Audit: NewEducationClassAssignmentAudit(audit.Persistence.StaffMasterDataChange), Now: now},
 	)
 }
 

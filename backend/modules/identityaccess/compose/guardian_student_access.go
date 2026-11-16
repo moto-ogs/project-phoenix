@@ -2,6 +2,7 @@ package compose
 
 import (
 	"errors"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/adapters/postgres"
@@ -17,5 +18,5 @@ func NewGuardianStudentAccess(db *bun.DB, observe func(Observation)) (identityac
 	if db == nil || observe == nil {
 		return nil, errors.New("identity access guardian student access: database and observer are required")
 	}
-	return application.NewGuardianStudentAccessCommands(retainedGuardianStudentAccess{GuardianStudentAccessStore: postgres.NewStore(db), Observe: observe}, newCommandTransactions(nil)), nil
+	return application.NewGuardianStudentAccessCommands(retainedGuardianStudentAccess{GuardianStudentAccessStore: postgres.NewStore(db, time.Now), Observe: observe}, newCommandTransactions(nil)), nil
 }

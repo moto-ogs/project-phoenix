@@ -500,11 +500,14 @@ var operations_init_anwesenheit_erfassen_9Definitions = []config.Definition{
 
 var operations_init_standort_10Definitions = []config.Definition{
 	{
-		Key:             config.KeyFederalState,
-		Label:           "Bundesland",
-		Description:     "Bundesland der Schule. Danach richten sich die gesetzlichen Feiertage. An Feiertagen gibt es in der Zeiterfassung kein Soll. Der Dienstplan legt keine Schichten an. Regeltermine finden nicht statt.",
-		Type:            config.FieldSelect,
-		Default:         "DE-NW",
+		Key:         config.KeyFederalState,
+		Label:       "Bundesland",
+		Description: "Bundesland der Schule. Danach richten sich die gesetzlichen Feiertage. An Feiertagen gibt es in der Zeiterfassung kein Soll. Der Dienstplan legt keine Schichten an. Regeltermine finden nicht statt.",
+		Type:        config.FieldSelect,
+		// No default (#7174): the operator names the state when creating
+		// the school. Unset, every calendar read fails visibly instead of
+		// silently using another state's holidays and school vacations.
+		Default:         "",
 		ReadPermission:  "config:read",
 		WritePermission: "config:manage",
 		Tab:             "operations",

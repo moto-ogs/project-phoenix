@@ -64,6 +64,7 @@ describe("GET /api/students", () => {
 
   it("fetches paginated students from backend", async () => {
     const mockResponse = {
+      status: "success",
       data: [
         {
           id: 1,
@@ -73,7 +74,12 @@ describe("GET /api/students", () => {
           school_class: "1a",
           guardian_name: "Jane Smith",
           guardian_contact: "jane@example.com",
+          current_location: "",
           bus: false,
+          sick: false,
+          excused: false,
+          class_trip: false,
+          has_full_access: false,
           created_at: "2024-01-01T00:00:00Z",
           updated_at: "2024-01-01T00:00:00Z",
         },
@@ -108,6 +114,7 @@ describe("GET /api/students", () => {
 
   it("keeps slim responses slim after mapping them for the browser", async () => {
     const mockResponse = {
+      status: "success",
       data: [
         {
           id: 7,
@@ -211,6 +218,7 @@ describe("GET /api/students", () => {
 
   it("forwards query parameters to backend", async () => {
     const mockResponse = {
+      status: "success",
       data: [],
       pagination: {
         current_page: 1,
@@ -236,6 +244,7 @@ describe("GET /api/students", () => {
     // page_size value to 1000, which silently disabled the room-detail
     // modal's 200-card cap and the overflow notice that depends on it.
     const mockResponse = {
+      status: "success",
       data: [],
       pagination: {
         current_page: 1,
@@ -333,19 +342,26 @@ describe("POST /api/students", () => {
 
   it("creates a new student with the backend body built by the real request helpers", async () => {
     mockApiPost.mockResolvedValueOnce({
+      status: "success",
       data: {
         id: 42,
         person_id: 100,
         first_name: "Bob",
         last_name: "Jones",
         school_class: "2b",
+        current_location: "",
         bus: false,
+        sick: false,
+        excused: false,
+        class_trip: false,
+        has_full_access: false,
         created_at: "2024-01-15T10:00:00Z",
         updated_at: "2024-01-15T10:00:00Z",
       },
     });
     mockApiPut.mockResolvedValueOnce({});
     mockApiGet.mockResolvedValueOnce({
+      status: "success",
       data: { accepted: true, data_retention_days: 60 },
     });
 
@@ -400,9 +416,11 @@ describe("POST /api/students", () => {
 
   it("leaves the consent alone when the form did not change it", async () => {
     mockApiPost.mockResolvedValueOnce({
+      status: "success",
       data: buildBackendStudent({ id: 43 }),
     });
     mockApiGet.mockResolvedValueOnce({
+      status: "success",
       data: { accepted: false, data_retention_days: 14 },
     });
 
@@ -426,10 +444,12 @@ describe("POST /api/students", () => {
 
   it("answers the created child with the stored consent when the consent write fails", async () => {
     mockApiPost.mockResolvedValueOnce({
+      status: "success",
       data: buildBackendStudent({ id: 44 }),
     });
     mockApiPut.mockRejectedValueOnce(new ApiResponseError(500, "{}"));
     mockApiGet.mockResolvedValueOnce({
+      status: "success",
       data: { accepted: false, data_retention_days: 30 },
     });
 
@@ -461,10 +481,12 @@ describe("POST /api/students", () => {
 
   it("carries no consent marker when the consent write succeeded", async () => {
     mockApiPost.mockResolvedValueOnce({
+      status: "success",
       data: buildBackendStudent({ id: 46 }),
     });
     mockApiPut.mockResolvedValueOnce({});
     mockApiGet.mockResolvedValueOnce({
+      status: "success",
       data: { accepted: true, data_retention_days: 7 },
     });
 

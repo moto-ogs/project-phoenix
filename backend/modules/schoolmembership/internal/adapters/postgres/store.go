@@ -29,13 +29,21 @@ const (
 // Cross-school administrative access is an explicit scope, never tenant 0.
 type Database func(context.Context) (bun.IDB, TenantScope, error)
 
-type Store struct{ database Database }
+type Store struct {
+	database Database
+	// today is the composition's day clock: an external caregiver record
+	// counts for a staff member on the days of its window.
+	today func() calendar.Date
+}
 
-func New(database Database) *Store {
+func New(database Database, today func() calendar.Date) *Store {
 	if database == nil {
 		panic("school membership postgres: database runtime is required")
 	}
-	return &Store{database: database}
+	if today == nil {
+		panic("school membership postgres: the day clock is required")
+	}
+	return &Store{database: database, today: today}
 }
 
 // staffRow is a staff membership (#2753). The employment half of a staff
@@ -110,7 +118,7 @@ func (s *Store) FindStaff(ctx context.Context, id int64, lock string, includeDel
 		return schoolmembership.Staff{}, false, domain.OperationStats{}, err
 	}
 	row := &staffRow{}
-	query := withTenant(staffSelect(db, row, false).Where(`"staff".id = ?`, id), "staff", scope)
+	query := withTenant(staffSelect(db, row, false, s.today()).Where(`"staff".id = ?`, id), "staff", scope)
 	if !includeDeleted {
 		query = query.Where(`"staff".deleted_at IS NULL`)
 	}
@@ -130,7 +138,7 @@ func (s *Store) FindStaffByPerson(ctx context.Context, personID int64) (schoolme
 		return schoolmembership.Staff{}, false, domain.OperationStats{}, err
 	}
 	row := &staffRow{}
-	query := withTenant(staffSelect(db, row, false).
+	query := withTenant(staffSelect(db, row, false, s.today()).
 		Where(`"staff".person_id = ?`, personID).
 		Where(`"staff".deleted_at IS NULL`).
 		OrderExpr(`"staff".id ASC`).
@@ -148,7 +156,7 @@ func (s *Store) ListStaff(ctx context.Context, filter schoolmembership.StaffFilt
 		return nil, domain.OperationStats{}, err
 	}
 	rows := []staffRow{}
-	query := withTenant(staffSelect(db, &rows, filter.IncludeInactiveExternalCaregiverRecords), "staff", scope)
+	query := withTenant(staffSelect(db, &rows, filter.IncludeInactiveExternalCaregiverRecords, s.today()), "staff", scope)
 	if !filter.IncludeDeleted {
 		query = query.Where(`"staff".deleted_at IS NULL`)
 	}
@@ -333,7 +341,7 @@ func (s *Store) ListTeachers(ctx context.Context, filter schoolmembership.Teache
 		return nil, domain.OperationStats{}, err
 	}
 	if filter.IncludeStaff {
-		return listTeachersWithStaff(ctx, db, scope, filter)
+		return listTeachersWithStaff(ctx, db, scope, filter, s.today())
 	}
 	rows := []teacherRow{}
 	query, ok := teacherListQuery(withTenant(teacherSelect(db, &rows), "teacher", scope), filter)
@@ -593,7 +601,7 @@ func (s *Store) DeleteExternalCaregiverRecord(ctx context.Context, id int64) (do
 // columns are correlated
 // subqueries rather than a join, so FOR UPDATE locks stay on the membership
 // row alone.
-func staffSelect(db bun.IDB, model any, includeInactiveExternalCaregiverRecords bool) *bun.SelectQuery {
+func staffSelect(db bun.IDB, model any, includeInactiveExternalCaregiverRecords bool, today calendar.Date) *bun.SelectQuery {
 	query := db.NewSelect().Model(model).ModelTableExpr(`users.staff_school_memberships AS "staff"`).
 		ColumnExpr(`"staff".*`)
 	if includeInactiveExternalCaregiverRecords {
@@ -601,7 +609,6 @@ func staffSelect(db bun.IDB, model any, includeInactiveExternalCaregiverRecords 
 			ColumnExpr(`EXISTS (SELECT 1 FROM users.external_caregivers AS "external_caregiver" WHERE "external_caregiver".tenant_id = "staff".tenant_id AND "external_caregiver".staff_id = "staff".id) AS has_external_caregiver_record`).
 			ColumnExpr(`COALESCE((SELECT "external_caregiver".organization FROM users.external_caregivers AS "external_caregiver" WHERE "external_caregiver".tenant_id = "staff".tenant_id AND "external_caregiver".staff_id = "staff".id), '') AS external_organization`)
 	}
-	today := calendar.TodayDate()
 	return query.
 		ColumnExpr(`EXISTS (SELECT 1 FROM users.external_caregivers AS "external_caregiver" WHERE "external_caregiver".tenant_id = "staff".tenant_id AND "external_caregiver".staff_id = "staff".id AND ("external_caregiver".start_date IS NULL OR "external_caregiver".start_date <= ?) AND ("external_caregiver".end_date IS NULL OR "external_caregiver".end_date >= ?)) AS has_external_caregiver_record`, today, today).
 		ColumnExpr(`COALESCE((SELECT "external_caregiver".organization FROM users.external_caregivers AS "external_caregiver" WHERE "external_caregiver".tenant_id = "staff".tenant_id AND "external_caregiver".staff_id = "staff".id AND ("external_caregiver".start_date IS NULL OR "external_caregiver".start_date <= ?) AND ("external_caregiver".end_date IS NULL OR "external_caregiver".end_date >= ?)), '') AS external_organization`, today, today)

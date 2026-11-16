@@ -399,6 +399,8 @@ export interface CreateTestTraegerRequest {
   slug: string;
   school_count: number;
   contact_email: string;
+  /** Bundesland of every test school (#7174). */
+  federal_state: string;
 }
 
 export interface BackendTestTraeger {
@@ -455,8 +457,33 @@ export interface CreateSchoolRequest {
   zip?: string;
   phone?: string;
   email: string;
+  /** ISO 3166-2 code of the Bundesland; required, there is no default (#7174). */
+  federal_state: string;
   hidden?: boolean;
 }
+
+/**
+ * The federal states a school can be in, as the options of the setting
+ * `operations.federal_state`. Holidays and school vacations follow it.
+ */
+export const FEDERAL_STATES: readonly { value: string; label: string }[] = [
+  { value: "DE-BW", label: "Baden-Württemberg" },
+  { value: "DE-BY", label: "Bayern" },
+  { value: "DE-BE", label: "Berlin" },
+  { value: "DE-BB", label: "Brandenburg" },
+  { value: "DE-HB", label: "Bremen" },
+  { value: "DE-HH", label: "Hamburg" },
+  { value: "DE-HE", label: "Hessen" },
+  { value: "DE-MV", label: "Mecklenburg-Vorpommern" },
+  { value: "DE-NI", label: "Niedersachsen" },
+  { value: "DE-NW", label: "Nordrhein-Westfalen" },
+  { value: "DE-RP", label: "Rheinland-Pfalz" },
+  { value: "DE-SL", label: "Saarland" },
+  { value: "DE-SN", label: "Sachsen" },
+  { value: "DE-ST", label: "Sachsen-Anhalt" },
+  { value: "DE-SH", label: "Schleswig-Holstein" },
+  { value: "DE-TH", label: "Thüringen" },
+];
 
 export interface InviteAdminRequest {
   email: string;

@@ -2,6 +2,9 @@ package application
 
 import (
 	"context"
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain"
@@ -21,6 +24,9 @@ type StudentService struct {
 	companions ports.StudentCompanions
 	tx         ports.Transaction
 	observe    ports.Observer
+	// now is the composition's clock; the rosters list the children of its
+	// Berlin day.
+	now func() time.Time
 }
 
 func NewStudents(
@@ -30,12 +36,16 @@ func NewStudents(
 	owners ports.StudentOwners,
 	tx ports.Transaction,
 	observe ports.Observer,
+	now func() time.Time,
 ) *StudentService {
-	if store == nil || notes == nil || tx == nil || observe == nil {
+	if store == nil || notes == nil || tx == nil || observe == nil || now == nil {
 		panic("people directory application: all student dependencies are required")
 	}
-	return &StudentService{store: store, notes: notes, companions: companions, owners: owners, tx: tx, observe: observe}
+	return &StudentService{store: store, notes: notes, companions: companions, owners: owners, tx: tx, observe: observe, now: now}
 }
+
+// today is the Berlin calendar day of the composition's clock.
+func (s *StudentService) today() calendar.Date { return calendar.DateFromTime(s.now()) }
 
 func (s *StudentService) ListByIDs(ctx context.Context, ids []int64) (result []peopledirectory.Student, err error) {
 	err = s.run(ctx, "list_students_by_id", s.tx.RunRead, func(txCtx context.Context, stats *domain.OperationStats) error {

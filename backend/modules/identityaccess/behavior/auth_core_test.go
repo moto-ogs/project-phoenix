@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -94,11 +95,20 @@ func setupAuthFactory(t *testing.T, db *bun.DB, rateLimitEnabled ...bool) identi
 	return identityModule
 }
 
-func setupInvitationService(t *testing.T, db *bun.DB) api.InvitationCapability {
+// setupInvitationService composes the invitation flows, on the given clock
+// when a test pins one.
+func setupInvitationService(t *testing.T, db *bun.DB, clocks ...func() time.Time) api.InvitationCapability {
 	t.Helper()
-	service := setupAuthFactory(t, db)
+	service, err := api.NewTestIdentityAccessWithConfig(testpkg.NewDatabase(t, db), slog.Default(), authTestFactoryConfig(false), clocks...)
+	require.NoError(t, err, "Failed to create service factory")
 	return &fixtureOwnedInvitationService{InvitationCapability: service, t: t, db: db}
 }
+
+// invitationTestNow is the Monday morning the invitation tests run on; their
+// links expire relative to it, not to the day the suite runs.
+var invitationTestNow = time.Date(2026, time.November, 16, 9, 0, 0, 0, calendar.Berlin)
+
+func invitationTestClock() time.Time { return invitationTestNow }
 
 // newFixtureAuthService binds every capability the suites drive to the one
 // composed Identity & Access module.
@@ -2007,7 +2017,7 @@ func TestInvitationService_ValidateInvitation(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	invitationService := setupInvitationService(t, db)
+	invitationService := setupInvitationService(t, db, invitationTestClock)
 	authService := setupAuthService(t, db)
 	ctx := testpkg.Ctx(t)
 
@@ -2022,7 +2032,7 @@ func TestInvitationService_ValidateInvitation(t *testing.T) {
 		invitation := testpkg.CreateTestInvitationTokenWithOptions(
 			t, db, "validate",
 			role.ID, creator.ID,
-			time.Now().Add(24*time.Hour),
+			invitationTestNow.Add(24*time.Hour),
 			&testpkg.InvitationTokenOptions{FirstName: &firstName, LastName: &lastName},
 		)
 
@@ -2048,7 +2058,7 @@ func TestInvitationService_ValidateInvitation(t *testing.T) {
 		invitation := testpkg.CreateTestInvitationToken(
 			t, db, "expired",
 			role.ID, creator.ID,
-			time.Now().Add(-1*time.Hour), // Expired
+			invitationTestNow.Add(-1*time.Hour), // Expired
 		)
 
 		// ACT
@@ -2073,7 +2083,7 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	invitationService := setupInvitationService(t, db)
+	invitationService := setupInvitationService(t, db, invitationTestClock)
 	authService := setupAuthService(t, db)
 	ctx := testpkg.Ctx(t)
 
@@ -2087,7 +2097,7 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 		invitation := testpkg.CreateTestInvitationToken(
 			t, db, "accept",
 			role.ID, creator.ID,
-			time.Now().Add(24*time.Hour),
+			invitationTestNow.Add(24*time.Hour),
 		)
 
 		// ACT
@@ -2124,7 +2134,7 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 		invitation := testpkg.CreateTestInvitationToken(
 			t, db, "weakpass",
 			role.ID, creator.ID,
-			time.Now().Add(24*time.Hour),
+			invitationTestNow.Add(24*time.Hour),
 		)
 
 		// ACT
@@ -2154,7 +2164,7 @@ func TestInvitationService_AcceptInvitation(t *testing.T) {
 		invitation := testpkg.CreateTestInvitationToken(
 			t, db, "expiredaccept",
 			role.ID, creator.ID,
-			time.Now().Add(-1*time.Hour), // Expired
+			invitationTestNow.Add(-1*time.Hour), // Expired
 		)
 
 		// ACT
@@ -2176,7 +2186,7 @@ func TestInvitationService_RevokeInvitation(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	invitationService := setupInvitationService(t, db)
+	invitationService := setupInvitationService(t, db, invitationTestClock)
 	authService := setupAuthService(t, db)
 	ctx := testpkg.Ctx(t)
 
@@ -2190,7 +2200,7 @@ func TestInvitationService_RevokeInvitation(t *testing.T) {
 		invitation := testpkg.CreateTestInvitationToken(
 			t, db, "revoke",
 			role.ID, creator.ID,
-			time.Now().Add(24*time.Hour),
+			invitationTestNow.Add(24*time.Hour),
 		)
 
 		// ACT

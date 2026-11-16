@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 
+	"github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres/calendar"
+
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/domain"
 	"github.com/uptrace/bun"
@@ -15,9 +17,9 @@ type teacherWithStaffRow struct {
 
 // Both sides belong to School Membership. Reuse staffSelect for the active
 // external-caregiver window and lifecycle fields; no Workforce or People SQL.
-func listTeachersWithStaff(ctx context.Context, db bun.IDB, scope TenantScope, filter schoolmembership.TeacherFilter) ([]schoolmembership.Teacher, domain.OperationStats, error) {
+func listTeachersWithStaff(ctx context.Context, db bun.IDB, scope TenantScope, filter schoolmembership.TeacherFilter, today calendar.Date) ([]schoolmembership.Teacher, domain.OperationStats, error) {
 	rows := []teacherWithStaffRow{}
-	staff := withTenant(staffSelect(db, (*staffRow)(nil), false), "staff", scope).
+	staff := withTenant(staffSelect(db, (*staffRow)(nil), false, today), "staff", scope).
 		Where(`"staff".deleted_at IS NULL`)
 	query := teacherSelect(db, &rows).ColumnExpr(`"teacher".*`).
 		Join(`LEFT JOIN (?) AS "staff" ON "staff".id = "teacher".staff_id AND "staff".tenant_id = "teacher".tenant_id`, staff)

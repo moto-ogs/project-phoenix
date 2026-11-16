@@ -117,6 +117,7 @@ func newOperatorRouter(
 	provisioning organizationtenancy.OperatorProvisioning, caregivers peoplePorts.CaregiverCapabilityService,
 	lifecycle carePlanModule.CareLifecycle, communication communicationModule.Capability,
 	students importModels.RowImporter[importModels.StudentImportRow], traegerSettings settingsOperatorAPI.TraegerOperations,
+	now func() time.Time,
 ) (chi.Router, error) {
 	tagScanReview := tagScanOperatorAPI.NewResource(tagScanOperatorAPI.Config{
 		Scans:     iot.Fleet(),
@@ -142,6 +143,7 @@ func newOperatorRouter(
 		// trigger side effects (e.g. auto-creating the Schulhof/WC rooms when
 		// the corresponding checkout toggle flips on).
 		OnValueSet: settingsWrites.SideEffects.Dispatch,
+		Now:        now,
 	})
 	provisioningConfig, err := newProvisioningConfig(provisioning, caregiverCapabilityViews(db, caregivers))
 	if err != nil {
@@ -157,7 +159,7 @@ func newOperatorRouter(
 	return operatorRouter(
 		newOperatorIdentity(sessionAuth, identity),
 		provisioningConfig,
-		provisioningOperatorAPI.NewBillingResource(billing, nil, isLocalSeedRequest),
+		provisioningOperatorAPI.NewBillingResource(billing, nil, isLocalSeedRequest, now),
 		&operatorSchoolSettings{
 			values: settingsOperatorAPI.NewSettingsResource(settingsOperatorAPI.SettingsConfig{
 				Settings:   schoolSettings,

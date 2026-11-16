@@ -77,7 +77,7 @@ func newHolidayRegistrationFixtureIn(t *testing.T, days owners.HolidayTestSchool
 		_ = json.NewEncoder(w).Encode(map[string]any{"success": r.Form.Get("response") != failingCaptcha})
 	}))
 	t.Cleanup(turnstile.Close)
-	settings, err := owners.BuildTraegerSettings(testpkg.NewDatabase(t, db), unit, slog.Default(), organizations, nil)
+	settings, err := owners.BuildTraegerSettings(testpkg.NewDatabase(t, db), unit, slog.Default(), organizations, nil, time.Now)
 	require.NoError(t, err)
 	resource := NewHolidayRegistrationHTTP(organizations, delivery.Module, TurnstileKeys{SiteKey: "site-key", SecretKey: "secret-key"},
 		turnstile.URL, testHealthCipher(), days, settings, owners.NewHolidayParentAccountLinks(holidayTestSetupLinks{}, "https://eltern.example.org/"), appEnv, slog.Default(), holidayFixtureToday)

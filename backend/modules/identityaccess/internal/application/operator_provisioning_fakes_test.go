@@ -437,7 +437,7 @@ func newOperatorProvisioningFixture(t *testing.T) *operatorProvisioningFixture {
 	rotating := &rotatingOperatorStore{fakeStore: store}
 	tokenStore := newFakeOperatorTokenStore()
 	runtime := &fakeRuntime{}
-	operators := New(store, rotating, store, fakeTransaction{}, runtime.TenantID, func(ports.Observation) {})
+	operators := New(store, rotating, store, fakeTransaction{}, runtime.TenantID, func(ports.Observation) {}, time.Now)
 	audit := &fakeOperatorAudit{}
 	invites := &fakeOperatorInvitationDelivery{}
 	changes := &fakeOperatorEmailChangeDelivery{}

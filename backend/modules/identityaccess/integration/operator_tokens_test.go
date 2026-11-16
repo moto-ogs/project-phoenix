@@ -20,9 +20,16 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
+// operatorTokenTestNow is the instant the operator token tests run at: the
+// links expire relative to it and the owner stamps its rows with it, so the
+// tests do not depend on the day the suite runs.
+var operatorTokenTestNow = time.Date(2026, time.November, 16, 9, 0, 0, 0, time.UTC)
+
+func operatorTokenTestClock() time.Time { return operatorTokenTestNow }
+
 func newOperatorTokens(t *testing.T, db *bun.DB) ports.Records {
 	t.Helper()
-	module, err := identityCompose.New(identityCompose.Dependencies{DB: db, TenantRuntime: testpkg.TenantRuntime(t, db), Observe: func(identityCompose.Observation) {}})
+	module, err := identityCompose.New(identityCompose.Dependencies{DB: db, TenantRuntime: testpkg.TenantRuntime(t, db), Observe: func(identityCompose.Observation) {}, Now: operatorTokenTestClock})
 	require.NoError(t, err)
 	return module.(ports.Records)
 }
@@ -34,14 +41,14 @@ func inviteeEmail() string {
 func newInvitation(createdBy int64, email string) identityaccess.OperatorInvitation {
 	displayName := "Neue Operatorin"
 	return identityaccess.OperatorInvitation{
-		Email: email, Token: uuid.Must(uuid.NewV4()).String(), ExpiresAt: time.Now().Add(48 * time.Hour),
+		Email: email, Token: uuid.Must(uuid.NewV4()).String(), ExpiresAt: operatorTokenTestNow.Add(48 * time.Hour),
 		CreatedBy: createdBy, DisplayName: &displayName,
 	}
 }
 
 func newEmailChange(operatorID int64) identityaccess.OperatorEmailChange {
 	return identityaccess.OperatorEmailChange{
-		OperatorID: operatorID, NewEmail: inviteeEmail(), Token: uuid.Must(uuid.NewV4()).String(), Expiry: time.Now().Add(30 * time.Minute),
+		OperatorID: operatorID, NewEmail: inviteeEmail(), Token: uuid.Must(uuid.NewV4()).String(), Expiry: operatorTokenTestNow.Add(30 * time.Minute),
 	}
 }
 
@@ -62,7 +69,7 @@ func insertExpiredInvitation(t *testing.T, db *bun.DB, createdBy int64, email st
 	var id int64
 	token := uuid.Must(uuid.NewV4()).String()
 	require.NoError(t, db.NewRaw(`INSERT INTO platform.operator_invitation_tokens (email, token, expires_at, created_by, created_at)
-		VALUES (?, ?, ?, ?, ?) RETURNING id`, email, testpkg.TokenHash(t, db, token), time.Now().Add(-time.Minute), createdBy, createdAt).
+		VALUES (?, ?, ?, ?, ?) RETURNING id`, email, testpkg.TokenHash(t, db, token), operatorTokenTestNow.Add(-time.Minute), createdBy, createdAt).
 		Scan(context.Background(), &id))
 	return id, token
 }
@@ -84,10 +91,10 @@ func TestOperatorInvitationIsRedeemableOnce(t *testing.T) {
 	tokens := newOperatorTokens(t, db)
 	ctx := testpkg.Ctx(t)
 	inviter := testpkg.CreateTestOperator(t, db)
-	before := time.Now().Add(-time.Second)
+	before := operatorTokenTestNow.Add(-time.Second)
 
 	expired := newInvitation(inviter.ID, inviteeEmail())
-	expired.ExpiresAt = time.Now().Add(-time.Second)
+	expired.ExpiresAt = operatorTokenTestNow.Add(-time.Second)
 	_, err := tokens.CreateOperatorInvitation(ctx, expired)
 	require.EqualError(t, err, "identity access: create operator invitation: token has already expired",
 		"an invitation must never be mailed with a dead link")
@@ -130,23 +137,23 @@ func TestOperatorInvitationIsRedeemableOnce(t *testing.T) {
 	_, err = tokens.FindOperatorInvitation(ctx, invitation.ID+1_000_000)
 	require.ErrorIs(t, err, identityaccess.ErrOperatorInvitationNotFound)
 	require.ErrorIs(t, tokens.RevokeOperatorInvitation(ctx, invitation.ID), identityaccess.ErrOperatorInvitationNotFound)
-	_, err = tokens.ExtendOperatorInvitation(ctx, invitation.ID, time.Now().Add(time.Hour))
+	_, err = tokens.ExtendOperatorInvitation(ctx, invitation.ID, operatorTokenTestNow.Add(time.Hour))
 	require.ErrorIs(t, err, identityaccess.ErrOperatorInvitationNotFound,
 		"a spent invitation is not revived")
 
-	expiredID, expiredToken := insertExpiredInvitation(t, db, inviter.ID, inviteeEmail(), time.Now())
+	expiredID, expiredToken := insertExpiredInvitation(t, db, inviter.ID, inviteeEmail(), operatorTokenTestNow)
 	_, err = tokens.RedeemOperatorInvitation(ctx, expiredToken)
 	require.ErrorIs(t, err, identityaccess.ErrOperatorInvitationNotFound, "an expired invitation is not redeemable")
-	_, err = tokens.ExtendOperatorInvitation(ctx, expiredID, time.Now().Add(time.Hour))
+	_, err = tokens.ExtendOperatorInvitation(ctx, expiredID, operatorTokenTestNow.Add(time.Hour))
 	require.ErrorIs(t, err, identityaccess.ErrOperatorInvitationNotFound,
 		"a resend must not revive an expired invitation")
 
 	pending, err := tokens.CreateOperatorInvitation(ctx, newInvitation(inviter.ID, inviteeEmail()))
 	require.NoError(t, err)
-	_, err = tokens.ExtendOperatorInvitation(ctx, pending.ID, time.Now().Add(-time.Minute))
+	_, err = tokens.ExtendOperatorInvitation(ctx, pending.ID, operatorTokenTestNow.Add(-time.Minute))
 	require.ErrorIs(t, err, identityaccess.ErrOperatorInvitationNotFound,
 		"an extension into the past would hand out a dead link")
-	extendedTo := time.Now().Add(72 * time.Hour).Truncate(time.Microsecond)
+	extendedTo := operatorTokenTestNow.Add(72 * time.Hour).Truncate(time.Microsecond)
 	reissued, err := tokens.ExtendOperatorInvitation(ctx, pending.ID, extendedTo)
 	require.NoError(t, err)
 	reloaded, err := tokens.FindOperatorInvitation(ctx, pending.ID)
@@ -213,7 +220,7 @@ func TestOperatorTokenDeliveryIsRecordedAndBounded(t *testing.T) {
 	assert.Nil(t, reloaded.Delivery.SentAt)
 	assert.Equal(t, strings.Repeat("ü", 1500), failure, "the caller's value is not modified")
 
-	sentAt := time.Now().Truncate(time.Microsecond)
+	sentAt := operatorTokenTestNow.Truncate(time.Microsecond)
 	require.NoError(t, tokens.RecordOperatorInvitationDelivery(ctx, invitation.ID, identityaccess.TokenDelivery{SentAt: &sentAt, RetryCount: 4}))
 	reloaded, err = tokens.FindOperatorInvitation(ctx, invitation.ID)
 	require.NoError(t, err)
@@ -244,10 +251,10 @@ func TestOperatorEmailChangeIsRedeemableOnce(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	operator := testpkg.CreateTestOperator(t, db)
 	other := testpkg.CreateTestOperator(t, db)
-	before := time.Now().Add(-time.Second)
+	before := operatorTokenTestNow.Add(-time.Second)
 
 	expired := newEmailChange(operator.ID)
-	expired.Expiry = time.Now().Add(-time.Second)
+	expired.Expiry = operatorTokenTestNow.Add(-time.Second)
 	_, err := tokens.CreateOperatorEmailChange(ctx, expired)
 	require.EqualError(t, err, "identity access: create operator email change: token has already expired")
 	used := newEmailChange(operator.ID)
@@ -299,7 +306,7 @@ func TestOperatorEmailChangeCleanupKeepsTheRateLimitWindow(t *testing.T) {
 	tokens := newOperatorTokens(t, db)
 	ctx := testpkg.Ctx(t)
 	operator := testpkg.CreateTestOperator(t, db)
-	now := time.Now()
+	now := operatorTokenTestNow
 
 	expiredRecent := insertEmailChange(t, db, operator.ID, now.Add(-time.Minute), false, now.Add(-10*time.Minute))
 	usedOld := insertEmailChange(t, db, operator.ID, now.Add(time.Hour), true, now.Add(-2*time.Hour))
@@ -530,7 +537,7 @@ func TestOperatorTokenObservationsUseStableOperations(t *testing.T) {
 	var observations []identityCompose.Observation
 	owner, err := identityCompose.New(identityCompose.Dependencies{DB: db, TenantRuntime: testpkg.TenantRuntime(t, db), Observe: func(observation identityCompose.Observation) {
 		observations = append(observations, observation)
-	}})
+	}, Now: operatorTokenTestClock})
 	require.NoError(t, err)
 	tokens := owner.(ports.Records)
 	ctx := testpkg.Ctx(t)
