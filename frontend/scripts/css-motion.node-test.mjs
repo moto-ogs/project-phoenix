@@ -54,6 +54,13 @@ function keyframeBlocks(css) {
   return blocks;
 }
 
+// The two blurs the kit allows, each written once (frontend-ui-kit.md,
+// Motion): the overlay blur, which sets in only after the overlay has landed,
+// and the glass of small resting chips.
+const BLUR_KEYFRAMES = "moto-overlay-blur";
+const BLUR_RULE_RE = /^\.moto-glass$/;
+const BACKDROP_RE = /^(?:-webkit-)?backdrop-filter$/;
+
 /** Problems in one stylesheet's text. */
 function motionProblems(css) {
   const text = withoutComments(css);
@@ -61,17 +68,30 @@ function motionProblems(css) {
 
   for (const { name, body } of keyframeBlocks(text)) {
     for (const [, property] of body.matchAll(/([\w-]+)\s*:/g)) {
-      if (!KEYFRAME_PROPERTIES.has(property)) {
+      const allowed =
+        KEYFRAME_PROPERTIES.has(property) ||
+        (name === BLUR_KEYFRAMES && BACKDROP_RE.test(property));
+      if (!allowed) {
         problems.push(`@keyframes ${name} animates ${property}`);
       }
     }
   }
 
-  for (const [, property, value] of text.matchAll(
-    /(?:^|[;{\s])((?:-webkit-)?backdrop-filter)\s*:\s*([^;}]+)/g,
+  // Innermost rules only: a keyframe step is checked above.
+  const outsideKeyframes = keyframeBlocks(text).reduce(
+    (rest, { body }) => rest.replace(body, ""),
+    text,
+  );
+  for (const [, selector, body] of outsideKeyframes.matchAll(
+    /([^{};]+)\{([^{}]*)\}/g,
   )) {
-    if (value.trim() !== "none") {
-      problems.push(`${property}: ${value.trim()}`);
+    if (BLUR_RULE_RE.test(selector.trim())) continue;
+    for (const [, property, value] of body.matchAll(
+      /(?:^|[;\s])((?:-webkit-)?backdrop-filter)\s*:\s*([^;}]+)/g,
+    )) {
+      if (value.trim() !== "none") {
+        problems.push(`${property}: ${value.trim()}`);
+      }
     }
   }
 
@@ -119,6 +139,9 @@ test("the check finds each kind of costly motion", () => {
       @keyframes grow { from { width: 0; } to { width: 100%; } }
       @keyframes slide { from { transform: translateX(-100%); opacity: 0 } to { transform: none } }
       .glass { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+      .moto-glass { backdrop-filter: blur(8px); }
+      @keyframes moto-overlay-blur { to { backdrop-filter: blur(8px); } }
+      @keyframes other-blur { to { backdrop-filter: blur(8px); } }
       .print { backdrop-filter: none; }
       .a { transition: all 200ms; }
       .b { transition: height 200ms ease, opacity 200ms; }
@@ -129,6 +152,7 @@ test("the check finds each kind of costly motion", () => {
     [
       "@keyframes grow animates width",
       "@keyframes grow animates width",
+      "@keyframes other-blur animates backdrop-filter",
       "backdrop-filter: blur(8px)",
       "-webkit-backdrop-filter: blur(8px)",
       "transition of all",

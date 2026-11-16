@@ -117,7 +117,10 @@ export function MonthPlannerGrid({
               {...(!onInstanceClick
                 ? { type: "button" as const, onClick: () => onDayClick(iso) }
                 : {})}
-              className={`relative min-h-[112px] border-r border-b border-gray-100 p-2 text-left transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none focus-visible:ring-inset ${backgroundClass} ${outsideMonth ? "text-gray-500" : ""}`}
+              // min-w-0 + overflow-hidden: bei 360 px ist eine Spalte rund 48 px
+              // breit; der Inhalt bleibt in seiner Zelle, statt in die nächste
+              // zu laufen.
+              className={`relative min-h-[112px] min-w-0 overflow-hidden border-r border-b border-gray-100 p-2 text-left transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none focus-visible:ring-inset ${backgroundClass} ${outsideMonth ? "text-gray-500" : ""}`}
             >
               {onInstanceClick && (
                 <button
@@ -176,7 +179,8 @@ export function MonthPlannerGrid({
                   !planningDisabled && (
                     <div className="mt-5 flex items-center gap-1 text-xs text-gray-500">
                       <MotoConceptIcon concept={calendarConcept} size={14} />
-                      Leer
+                      {/* Bei 360 px passt das Wort nicht in die Spalte. */}
+                      <span className="max-sm:sr-only">Leer</span>
                     </div>
                   )
                 ) : (
