@@ -72,6 +72,7 @@ export function mapNotificationFeedPage(
  */
 export const NOTIFICATION_FEED_ANALYTICS_TYPES = [
   "instance_cancelled",
+  "instance_reinstated",
   "student_pickup_changed",
   "student_absence_reported",
   "staff_student_note_shared",

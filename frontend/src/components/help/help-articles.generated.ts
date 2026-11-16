@@ -4053,6 +4053,7 @@ export const leadBirthdaysTopic = function leadBirthdaysTopic(): HelpTopic {
  * Einen einzelnen Termin im Betreuungsplan absagen (#2601, #3731). Ob die
  * Eltern Bescheid bekommen, entscheidet die absagende Person im Dialog; es
  * gibt dafür keine Schuleinstellungen mehr. Beschriftungen live geprüft.
+ * Bis zum Ende des Termins lässt sich die Absage zurücknehmen (#7151).
  */
 export const leadCancelBlockTopic = function leadCancelBlockTopic(): HelpTopic {
   return {
@@ -4078,6 +4079,7 @@ export const leadCancelBlockTopic = function leadCancelBlockTopic(): HelpTopic {
     notes: [
       "Der interne Grund der Absage geht nicht an die Eltern. Sie sehen nur Ihren Text.",
       "Ohne Haken bekommen die Eltern keine Nachricht.",
+      "Bis zum Ende des Termins können Sie die Absage zurücknehmen: Termin wählen, dann `Absage zurücknehmen`. Das eingeplante Personal bekommt einen Hinweis „Termin findet doch statt“. Die Eltern bekommen keine Nachricht. Informieren Sie sie bei Bedarf selbst.",
     ],
     differences: [
       "Fehlt der Haken? Dann sind für diesen Termin keine Kinder eingetragen, oder der Termin liegt in der Vergangenheit.",
@@ -8554,7 +8556,7 @@ export const staffNotificationsTopic =
       result:
         "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder alle als gelesen markieren. Das Öffnen der Glocke allein ändert nichts.",
       notes: [
-        "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis.",
+        "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis. Nimmt die Leitung die Absage zurück, steht dort `Termin findet doch statt`.",
         "Auch diese Arten kommen als Hinweis: `Geänderte Abholzeit`, `Krankmeldung eines Kindes`, `Notizen für das Team` und `Umfragen der Einrichtung`.",
         "Die Leitung bekommt außerdem `Austritte aus dem Team` und `Ablaufende Nachweise im Team`. Für Ihre eigenen Nachweise gibt es `Eigene Nachweise`.",
         "Nachrichten stehen nicht in der Glocke. Neue Nachrichten zählt moto bei `Nachrichten` und `Team-Chat`.",
@@ -8564,6 +8566,7 @@ export const staffNotificationsTopic =
         "Weiter unten in der Liste lädt moto ältere Hinweise nach. Sie können auch `Weitere laden` wählen.",
         "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Bei Absagen passiert das nur von heute bis in 14 Tagen.",
         "Die Mitteilung aufs Handy stellen Sie in Ihrem `Profil` unter `Benachrichtigungen` für jede Art ein. Schalten Sie sie aus, kommt der Hinweis in der Glocke trotzdem.",
+        "Die Einstellung für `Absage eines Termins` gilt auch, wenn die Absage zurückgenommen wird.",
       ],
       differences: [
         "Auf dem Handy und auf kleinen Tablets fehlt oben die Glocke. Tippen Sie unten auf `Mehr` und dann auf `Benachrichtigungen`. Die Zahl an `Mehr` zählt neue Hinweise mit.",
