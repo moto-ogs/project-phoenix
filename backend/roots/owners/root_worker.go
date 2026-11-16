@@ -343,7 +343,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			carePlan, err = ComposeCarePlan(db, persons, CarePlanStatusSlots(timetableRepos.InstanceStudent), env.Now)
 			return
 		},
-		func() (err error) { appointments, err = BuildServeAppointments(db); return },
+		func() (err error) { appointments, err = BuildServeAppointments(db, env.Now); return },
 		func() error { operatorAuditLog = NewOperatorAuditLog(db); return nil },
 		func() (err error) { mealPlan, err = workerMealPlan(db, settings, people, persons, calendar); return },
 		func() (err error) { feedbackSettings, err = BuildFeedbackSettings(settings.Service); return },

@@ -244,7 +244,7 @@ func composeServeRoot(
 			carePlan, err = owners.ComposeCarePlan(db, persons, owners.CarePlanStatusSlots(timetableRepos.InstanceStudent), env.Now)
 			return
 		},
-		func() (err error) { appointments, err = owners.BuildServeAppointments(db); return },
+		func() (err error) { appointments, err = owners.BuildServeAppointments(db, env.Now); return },
 		func() (err error) {
 			operatorAuditLog = owners.NewOperatorAuditLog(db)
 			communication, err = buildCommunicationModule(db, env, organizations, persons, operatorAuditLog)
@@ -558,7 +558,7 @@ func composeServeRoot(
 				structureViews.Education, renderer, activities, timetableOwner, iot, settingsWrites, organizations, people.Students, carePlan, audit.Persistence.DataAccessLog,
 				membership, classListEntries, databaseStats, dataImports, persons, gradeTransition, enrollmentResource, env.Config.AppEnv, weekProtocolSeed, env.HealthData, owners.NewHolidayHostCalendar(settings.Service, calendar))
 			mountPeopleRoutes(tenant, db, logger, reports, renderer, persons, services.Guardian, identity, caller, feedback, mealPlan,
-				birthdays, emergency, settings.Service, GuardianEmailDelivery{Outcomes: delivery.Runtime.EmailOutcomes, Suppressions: delivery.Runtime.EmailReconciliation}, audit.Persistence.DataAccessLog)
+				birthdays, emergency, settings.Service, GuardianEmailDelivery{Outcomes: delivery.Runtime.EmailOutcomes, Suppressions: delivery.Runtime.EmailReconciliation}, audit.Persistence.DataAccessLog, env.Now)
 			mountCalendarRoutes(router, tenant, logger, calendarApp)
 			return errors.Join(mountMealBillingMonths(tenant, mealPlan, calendar, presence.Presence, settings.Service), mountCommunicationRoutes(tenant, logger, chat, announcements, reminders, deliveryDevices, communication),
 				mountDeliveryRoutes(router, tenant, logger, fileStore, parent, hub, caller, identity))

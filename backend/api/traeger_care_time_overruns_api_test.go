@@ -122,7 +122,7 @@ func newOverrunFixtureOn(t *testing.T, db *bun.DB) overrunFixture {
 	require.NoError(t, err)
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
-	audit, err := auditCompose.NewTenantPersistence(db)
+	audit, err := auditCompose.NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
 	router := chi.NewRouter()
 	router.Use(func(next http.Handler) http.Handler {

@@ -3,6 +3,7 @@ package audit
 import (
 	"context"
 	"fmt"
+	"time"
 
 	audit "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/uptrace/bun"
@@ -17,11 +18,12 @@ const (
 // WorkSessionEditRepository implements audit.WorkSessionEditRepository interface
 type WorkSessionEditRepository struct {
 	runtime Runtime
+	now     func() time.Time
 }
 
 // NewWorkSessionEditRepository creates a new WorkSessionEditRepository
-func NewWorkSessionEditRepository(runtime Runtime) audit.WorkSessionEditRepository {
-	return &WorkSessionEditRepository{runtime: requireRuntime(runtime)}
+func NewWorkSessionEditRepository(runtime Runtime, now func() time.Time) audit.WorkSessionEditRepository {
+	return &WorkSessionEditRepository{runtime: requireRuntime(runtime), now: now}
 }
 
 // CreateBatch inserts multiple edit audit records
@@ -30,7 +32,7 @@ func (r *WorkSessionEditRepository) CreateBatch(ctx context.Context, edits []*au
 		return nil
 	}
 
-	appender := NewAppender(r.runtime)
+	appender := NewAppender(r.runtime, r.now)
 	for _, edit := range edits {
 		if edit == nil {
 			return fmt.Errorf("edit cannot be nil")

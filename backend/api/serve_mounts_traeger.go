@@ -120,7 +120,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 	overview, reports, keyDateReports, err := traegerViewCompose.New(traegerview.Ports{
 		SchoolIDs: traegerSchoolIDs{organizations: organizations}, Trail: traegerAccessTrail{trail: audit.Trail},
 		Recorder: traegerAccessRecorder{log: audit.Log}, Holiday: traegerHolidayTrail{trail: enrollmentCompose.NewHolidayAccessTrail()}, Persons: traegerPersonDirectory{persons: persons}, Staff: traegerStaffDirectory{staff: staff},
-		Bureau:  traegerBureauAddresses{roles: identity},
+		Bureau: traegerBureauAddresses{roles: identity}, Now: time.Now,
 		Rosters: schoolMembershipCompose.NewSchoolRosters(), Present: presence,
 		Sick: sick, OnSite: workforceCompose.NewOnSiteStaff(),
 		KeyDates:    traegerKeyDateCounts{organizations: organizations},

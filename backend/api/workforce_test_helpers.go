@@ -71,7 +71,7 @@ func (payrollDispatchOff) Download(context.Context, int64, string) (workforce.Pa
 // NewWorkforceTestModule composes the Workforce owner over db and returns it
 // with the People Directory's person directory it reads staff through.
 func NewWorkforceTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, clocks ...func() time.Time) (WorkforceTestModule, peoplePorts.PersonDirectory, error) {
-	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return WorkforceTestModule{}, nil, err
 	}

@@ -13,7 +13,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -21,7 +20,7 @@ import (
 
 func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) {
 	t.Parallel()
-	tc := setupStudentsRoute(t)
+	tc := setupStudentsRoute(t, fixedCalendarClock)
 	chain := testpkg.CreateTestParentGuardianChain(t, tc.db)
 	teacher, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Scope", "Reviewer")
 	group := testpkg.CreateTestEducationGroup(t, tc.db, "ReviewScope")
@@ -32,7 +31,7 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 	var requestID int64
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), tc.db, testpkg.Tenant(t), func(ctx context.Context, _ bun.Tx) error {
 		request, err := tc.module.ExcusedRequests.CreateRequest(ctx, chain.StudentID, chain.AccountID,
-			[]excusedrequests.Date{excusedrequests.Date(calendar.TodayDate())}, note)
+			[]excusedrequests.Date{excusedrequests.Date(studentsTestToday)}, note)
 		if err == nil {
 			requestID = request.ID
 		}
@@ -135,7 +134,7 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 	// parent-request policy allows an unassigned reviewer to approve.
 	require.NoError(t, tc.settings().SetValue(testpkg.Ctx(t), settings.KeyStudentAbsenceEditScope,
 		settings.StudentAbsenceEditScopeAdmins, nil, nil))
-	date := calendar.TodayDate().AddDays(1)
+	date := studentsTestToday.AddDays(1)
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), tc.db, testpkg.Tenant(t), func(ctx context.Context, _ bun.Tx) error {
 		request, err := tc.module.ExcusedRequests.CreateRequest(ctx, chain.StudentID, chain.AccountID,
 			[]excusedrequests.Date{excusedrequests.Date(date)}, note)

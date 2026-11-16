@@ -52,8 +52,6 @@ import (
 // and Parent Billing (7 to 0) take their clocks from their compositions.
 // Workforce (62 to 0, ADR 0264) reads the clock of its composition too.
 var moduleLiveClockBudget = map[string]int{
-	"modules/appointments": 5,
-	"modules/auditlog":     15,
 	"modules/carecontract": 3,
 	// PickupBaselineQueries.HasBookedOfferingPickupForWeekday: the public
 	// PickupBaselineReader method names no day.
@@ -69,23 +67,16 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/documentrendering":            1,
 	"modules/enrollment":                   63,
 	"modules/facilities":                   2,
-	"modules/feedback":                     1,
 	"modules/identityaccess":               83,
-	"modules/mealplan":                     1,
-	"modules/operatordashboard":            2,
 	"modules/organizationtenancy":          7,
 	"modules/peopledirectory":              12,
 	"modules/presenceprojection":           15,
-	"modules/requestreview":                1,
 	"modules/schedulerruntime":             36,
-	"modules/schoolcalendar":               5,
 	"modules/schoolmembership":             2,
 	"modules/schoolstructure":              3,
 	"modules/settings":                     3,
-	"modules/statistics":                   6,
 	"modules/studentpresence":              86,
 	"modules/timetable":                    45,
-	"modules/traegerview":                  1,
 	"workflows/catererportal":              2,
 	"workflows/holidayclosurenotification": 1,
 	"workflows/parentportal":               19,

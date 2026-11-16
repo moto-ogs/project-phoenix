@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	appointmentsCompose "github.com/moto-ogs/project-phoenix/modules/appointments/compose"
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
@@ -24,7 +25,7 @@ func NewStudentDeletionOwners(db transactionruntime.Database) (studentdeletionco
 	if err != nil {
 		return studentdeletioncompose.Owners{}, err
 	}
-	appointments, err := appointmentsCompose.New(appointmentsCompose.Dependencies{DB: db.Pool(), Observe: func(appointmentsCompose.Observation) {}})
+	appointments, err := appointmentsCompose.New(appointmentsCompose.Dependencies{DB: db.Pool(), Observe: func(appointmentsCompose.Observation) {}, Now: time.Now})
 	if err != nil {
 		return studentdeletioncompose.Owners{}, err
 	}
@@ -40,7 +41,7 @@ func NewStudentDeletionOwners(db transactionruntime.Database) (studentdeletionco
 	if err != nil {
 		return studentdeletioncompose.Owners{}, err
 	}
-	audits, err := auditCompose.NewTenantPersistence(db.Pool())
+	audits, err := auditCompose.NewTenantPersistence(db.Pool(), time.Now)
 	if err != nil {
 		return studentdeletioncompose.Owners{}, err
 	}
