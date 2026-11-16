@@ -98,14 +98,14 @@ func NewAttachmentPurger(dependencies AttachmentPurgerDependencies) (filestorage
 	if dependencies.DB == nil || dependencies.Objects == nil || dependencies.Observe == nil {
 		return nil, errors.New("file storage compose: all dependencies are required")
 	}
-	runtime := postgres.DatabaseRuntime(dependencies.DB)
+	runtime, now := postgres.DatabaseRuntime(dependencies.DB), application.Clock(dependencies.Now)
 	return application.NewAttachmentPurger(application.AttachmentPurgerDependencies{
-		Attachments:        postgres.NewAttachmentStore(runtime),
-		AttachmentCleanups: postgres.NewAttachmentCleanupStore(runtime),
+		Attachments:        postgres.NewAttachmentStore(runtime, now),
+		AttachmentCleanups: postgres.NewAttachmentCleanupStore(runtime, now),
 		AttachmentObjects:  application.ObjectStore{Kind: attachmentObjectKind, Backend: dependencies.Objects},
 		Tx:                 transaction{},
 		Observe:            dependencies.Observe,
-		Now:                dependencies.Now,
+		Now:                now,
 	}), nil
 }
 
@@ -117,13 +117,13 @@ func New(dependencies Dependencies) (filestorage.Capability, error) {
 		dependencies.Observe == nil || dependencies.Logger == nil || dependencies.HasPermission == nil {
 		return nil, errors.New("file storage compose: all dependencies are required")
 	}
-	runtime := postgres.DatabaseRuntime(dependencies.DB)
+	runtime, now := postgres.DatabaseRuntime(dependencies.DB), application.Clock(dependencies.Now)
 	return application.New(application.Dependencies{
 		Folders:            postgres.NewFolderStore(runtime),
-		Files:              postgres.NewFileStore(runtime),
-		FileCleanups:       postgres.NewFileCleanupStore(runtime),
-		Attachments:        postgres.NewAttachmentStore(runtime),
-		AttachmentCleanups: postgres.NewAttachmentCleanupStore(runtime),
+		Files:              postgres.NewFileStore(runtime, now),
+		FileCleanups:       postgres.NewFileCleanupStore(runtime, now),
+		Attachments:        postgres.NewAttachmentStore(runtime, now),
+		AttachmentCleanups: postgres.NewAttachmentCleanupStore(runtime, now),
 		FileObjects:        application.ObjectStore{Kind: fileObjectKind, Backend: dependencies.Objects},
 		AttachmentObjects:  application.ObjectStore{Kind: attachmentObjectKind, Backend: dependencies.Objects},
 		Identity:           application.IdentityAdapter{Identity: dependencies.Identity, Module: dependencies.Identity},
@@ -136,7 +136,7 @@ func New(dependencies Dependencies) (filestorage.Capability, error) {
 		Observe:            dependencies.Observe,
 		Logger:             dependencies.Logger,
 		HasPermission:      dependencies.HasPermission,
-		Now:                dependencies.Now,
+		Now:                now,
 	}), nil
 }
 
@@ -152,9 +152,9 @@ func NewDocumentCoordinator(kind string, backend apiDocuments.Objects, store api
 
 // --- foreign facts -------------------------------------------------------------
 
-// NewUploadCleanup uses the existing file cleanup outbox, partitioned by kind.
+// NewUploadCleanup uses the existing file cleanup outbox, partitioned by kind, on the real clock: its roots hold none.
 func NewUploadCleanup(db *bun.DB, kind filestorage.UploadCleanupKind) *filestorage.UploadCleanup {
-	cleanup := application.NewUploadCleanup(postgres.NewUploadCleanupStore(postgres.DatabaseRuntime(db), string(kind)), transaction{}, string(kind))
+	cleanup := application.NewUploadCleanup(postgres.NewUploadCleanupStore(postgres.DatabaseRuntime(db), string(kind), time.Now), transaction{}, string(kind), time.Now)
 	return filestorage.NewUploadCleanup(cleanup.Queue, cleanup.QueueAll, cleanup.Sweep)
 }
 
