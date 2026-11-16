@@ -66,7 +66,7 @@ func workerRetentionOf(
 	db transactionruntime.Database, logger *slog.Logger, settings settingsCompose.BatchSettingsService, audit auditCommand,
 	fleet devicefleet.Capability, carePlan carePlanModule.Owner, parentMessages communication.ParentMessageCleanup,
 	rejected enrollmentOwner.RejectedEnrollmentCleaner, studentDeletion *studentdeletion.Workflow, identity identityaccess.Owner,
-	announcements communication.ParentAnnouncementCapability, homework timetableContentRetention, people peopledirectory.Owner,
+	announcements communication.ParentAnnouncementCapability, homework timetableContentRetention, people peopledirectory.Owner, now func() time.Time,
 ) (workerRetention, error) {
 	announcementRetention, ok := announcements.(communication.ParentAnnouncementRetention)
 	if !ok {
@@ -83,7 +83,7 @@ func workerRetentionOf(
 	steps := dataRetentionSteps(
 		settings, fleet, carePlan, parentMessages, rejected,
 		workforceCompose.NewSickNoteRetention(StaffSickNoteRetentionSettings{Settings: settings}),
-		audit, deliveryCompose.NewRetention(),
+		audit, deliveryCompose.NewRetention(now),
 	)
 	photoCareEnd, err := StudentPhotoCareEndOf(people)
 	if err != nil {

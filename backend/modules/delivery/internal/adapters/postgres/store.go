@@ -29,8 +29,8 @@ const emailEnqueueSQL = `
 	WITH inserted AS (
 		INSERT INTO platform.email_outbox (
 			tenant_id, organization_id, kind, idempotency_key, related_entity_type,
-			related_entity_id, recipient, payload, security, status, next_retry_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+			related_entity_id, recipient, payload, security, status, next_retry_at, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
 		ON CONFLICT (tenant_id, organization_id, idempotency_key)
 			WHERE idempotency_key IS NOT NULL DO NOTHING
 		RETURNING id
@@ -231,9 +231,9 @@ func (s *Store) Enqueue(ctx context.Context, intent domain.Intent) (domain.Enque
 	var result domain.Enqueued
 	switch intent.Transport {
 	case domain.TransportEmail:
-		result, err = enqueueEmailIntent(ctx, db, intent)
+		result, err = enqueueEmailIntent(ctx, db, intent, s.now())
 	case domain.TransportPush:
-		result, err = enqueuePushIntent(ctx, db, intent)
+		result, err = enqueuePushIntent(ctx, db, intent, s.now())
 	default:
 		return domain.Enqueued{}, unknownTransport(intent.Transport)
 	}
@@ -251,8 +251,9 @@ func (s *Store) Enqueue(ctx context.Context, intent domain.Intent) (domain.Enque
 
 // enqueueEmailIntent inserts an e-mail intent or reads the one with its
 // idempotency key. A mail of no school is a system mail or, with a Träger,
-// a mail of that Träger (ADR 0110).
-func enqueueEmailIntent(ctx context.Context, db bun.IDB, intent domain.Intent) (domain.Enqueued, error) {
+// a mail of that Träger (ADR 0110). now stamps the new intent: the worker
+// counts its age on the same clock.
+func enqueueEmailIntent(ctx context.Context, db bun.IDB, intent domain.Intent, now time.Time) (domain.Enqueued, error) {
 	var scope, organization any
 	if intent.TenantID != 0 {
 		scope = intent.TenantID
@@ -263,7 +264,7 @@ func enqueueEmailIntent(ctx context.Context, db bun.IDB, intent domain.Intent) (
 	var result domain.Enqueued
 	err := db.NewRaw(emailEnqueueSQL,
 		scope, organization, intent.Template, intent.IdempotencyKey, intent.RelatedEntityType,
-		intent.RelatedEntityID, intent.Recipient, intent.Payload, intent.Security, intent.NextRetryAt,
+		intent.RelatedEntityID, intent.Recipient, intent.Payload, intent.Security, intent.NextRetryAt, now, now,
 		intent.Template, intent.Recipient, intent.Payload, intent.RelatedEntityType, intent.RelatedEntityID,
 		intent.IdempotencyKey, scope, organization, intent.IdempotencyKey,
 	).Scan(ctx, &result)

@@ -85,7 +85,7 @@ func BuildMailTransport(env RootEnvironment) (email.Mailer, email.Dispatcher, em
 		return nil, nil, email.Email{}, deliveryCompose.VAPIDConfig{}, fmt.Errorf("invalid VAPID configuration: %w", err)
 	}
 	return mailer,
-		deliveryCompose.NewMailDispatcher(mailer, logger.With("component", "email"), email.DeliveryObserver(env.Observe.Delivery)),
+		deliveryCompose.NewMailDispatcher(mailer, logger.With("component", "email"), clockOrReal(env.Now), email.DeliveryObserver(env.Observe.Delivery)),
 		email.NewEmail(deliveryModule.SenderOrDefault(cfg.EmailFromName, cfg.EmailFromAddress)), vapid, nil
 }
 

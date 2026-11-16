@@ -200,7 +200,7 @@ func (w *Worker) finalizeCancelled(ctx context.Context, intent domain.Intent, to
 func (w *Worker) finalizeDeferred(ctx context.Context, intent domain.Intent, token string, reason error, stats *deliveryContract.WorkerStats) {
 	delay := retryBackoff[0]
 	if errors.Is(reason, domain.ErrThrottled) {
-		delay = throttleDelay(time.Since(intent.CreatedAt))
+		delay = throttleDelay(w.now().Sub(intent.CreatedAt))
 	}
 	finalized, err := w.store.FinalizeDeferred(ctx, intent.Transport, intent.ID, token, reason.Error(), w.now().Add(delay))
 	if err != nil {

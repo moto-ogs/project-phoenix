@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
+	postgresadapter "github.com/moto-ogs/project-phoenix/modules/delivery/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/domain"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -110,4 +112,43 @@ func TestRetentionDeletesExpiredRealtimeNotifications(t *testing.T) {
 	var remaining []int64
 	require.NoError(t, db.NewRaw(`SELECT id FROM platform.realtime_notifications WHERE tenant_id = ?`, school).Scan(context.Background(), &remaining))
 	assert.Equal(t, []int64{fresh}, remaining)
+}
+
+// The nightly retention dates a relayed notification's lifetime on the
+// module's clock, which stamped it: a clock far from the real day keeps a
+// fresh notification and removes an expired one.
+func TestRetentionDatesRealtimeNotificationsOnTheModuleClock(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.WithTenantRuntime(t, context.Background(), db)
+	school := testpkg.Tenant(t)
+	now := time.Date(2021, time.March, 10, 9, 30, 0, 0, time.UTC)
+	clock := func() time.Time { return now }
+	store := postgresadapter.New(postgresadapter.RequireTenantDatabase, postgresadapter.RequireAdminDatabase, clock)
+	retention := deliveryCompose.NewRetention(clock)
+	var id int64
+	require.NoError(t, tenant.WithTenantTx(ctx, db, school, func(txCtx context.Context, _ bun.Tx) error {
+		var err error
+		id, err = store.SaveRealtimeNotification(txCtx, domain.RealtimeNotification{
+			TenantID: school, Scope: domain.RealtimeScopeTenant, Content: json.RawMessage(`{"title":"Hinweis"}`),
+		})
+		return err
+	}))
+	remaining := func() int {
+		var count int
+		require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM platform.realtime_notifications WHERE id = ?`, id).Scan(context.Background(), &count))
+		return count
+	}
+	runRetention := func() {
+		require.NoError(t, tenant.WithTenantTx(ctx, db, school, func(txCtx context.Context, _ bun.Tx) error {
+			_, _, err := retention.DeleteExpiredDeliveries(txCtx)
+			return err
+		}))
+	}
+
+	runRetention()
+	assert.Equal(t, 1, remaining(), "a notification inside its lifetime stays")
+	now = now.Add(domain.RealtimeNotificationLifetime + time.Minute)
+	runRetention()
+	assert.Zero(t, remaining(), "a notification past its lifetime goes")
 }

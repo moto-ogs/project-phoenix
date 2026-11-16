@@ -35,12 +35,16 @@ func loggerOrDefault(logger *slog.Logger) *slog.Logger {
 	return logger
 }
 
-// NewDispatcher constructs a Dispatcher with sensible defaults.
-func NewDispatcher(mailer mailcontract.Mailer, logger *slog.Logger, observers ...mailcontract.DeliveryObserver) *Dispatcher {
+// NewDispatcher constructs a Dispatcher with sensible defaults; now stamps
+// the delivery results.
+func NewDispatcher(mailer mailcontract.Mailer, logger *slog.Logger, now func() time.Time, observers ...mailcontract.DeliveryObserver) *Dispatcher {
+	if now == nil {
+		panic("email dispatcher: clock is required")
+	}
 	dispatcher := &Dispatcher{
 		mailer:       mailer,
 		logger:       logger,
-		now:          time.Now,
+		now:          now,
 		defaultRetry: 3,
 		defaultBackoff: []time.Duration{
 			time.Minute,

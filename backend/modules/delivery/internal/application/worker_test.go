@@ -286,6 +286,25 @@ func TestWorkerPostponesAThrottledMailWithoutConsumingAnAttempt(t *testing.T) {
 	}
 }
 
+// The throttle delay counts the mail's age on the worker's clock, which also
+// stamped the mail: a clock far from the real day keeps the delay.
+func TestWorkerCountsTheThrottledMailsAgeOnItsClock(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2031, time.March, 12, 10, 0, 0, 0, time.UTC)
+	intent := claimedEmail(5)
+	intent.CreatedAt = now.Add(-10 * time.Minute)
+	store := &workerStore{claimed: []domain.Intent{intent}, renewed: true}
+	providerErr := fmt.Errorf("send throttled: %w: 421 4.7.0 rate limit", deliveryContract.ErrThrottled)
+	_, mapped := ProviderResult(deliveryContract.ProviderResult{}, fmt.Errorf("%w: %w", deliveryContract.ErrDeferred, providerErr))
+	worker := NewWorker(store, &workerProvider{err: mapped}, func(domain.Observation) {}, func() time.Time { return now })
+
+	stats, err := worker.RunOnce(context.Background(), 1, 6)
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, stats.Retried)
+	assert.Equal(t, now.Add(10*time.Minute), store.deferredUntil)
+}
+
 func TestWorkerCancelsNonRetryableProviderDecision(t *testing.T) {
 	t.Parallel()
 	store := &workerStore{claimed: []domain.Intent{claimedEmail(0)}, renewed: true, finalizeCancelled: true}

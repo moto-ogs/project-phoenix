@@ -170,7 +170,8 @@ func newRuntime(config ServeConfig) (*Runtime, error) {
 	if err != nil {
 		return nil, err
 	}
-	hub, transport, err := deliveryCompose.NewPostgresRealtimeHub(db.Pool(), db.UnitOfWork(), config.Logger.With("component", "sse-hub"), config.Process != ServeWorkerOnly)
+	// The production root keeps the real clock (newProductionEnvironment).
+	hub, transport, err := deliveryCompose.NewPostgresRealtimeHub(db.Pool(), db.UnitOfWork(), config.Logger.With("component", "sse-hub"), config.Process != ServeWorkerOnly, time.Now)
 	if err != nil {
 		return nil, errors.Join(err, closeRuntimeResources(db, tracker))
 	}

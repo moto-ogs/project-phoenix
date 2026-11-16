@@ -197,6 +197,7 @@ func buildDeliveryWorker(
 		PushObjects:    pushObjects,
 		DeferredPush:   deferredPushes(reminderRecovery(db, reminders), documents),
 		Deliverable:    moduleGate.deliverable,
+		Now:            clockOrReal(env.Now), // the clock of delivery.Runtime
 	})
 	if err != nil {
 		return nil, fmt.Errorf("initialize delivery module: %w", err)

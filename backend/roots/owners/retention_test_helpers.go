@@ -70,7 +70,7 @@ func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWo
 		settings.Settings, fleet, statusDays,
 		communicationCompose.NewParentMessageRetention(db.Pool(), settingsModule.NewParentMessageRetentionValues(settings.Settings)),
 		enrollments, workforceCompose.NewSickNoteRetention(StaffSickNoteRetentionSettings{Settings: settings.Settings}),
-		command, deliveryCompose.NewRetention(),
+		command, deliveryCompose.NewRetention(time.Now),
 	)
 	steps = append(steps, protocolRetentionSteps(command, settingsCompose.NewAuditRetention(), exportTransferCompose.NewJournalRetention())...)
 	steps = append(steps, cleanupJobRetentionSteps(

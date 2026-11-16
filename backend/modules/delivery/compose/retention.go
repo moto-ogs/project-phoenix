@@ -9,9 +9,9 @@ import (
 	delivery "github.com/moto-ogs/project-phoenix/modules/delivery/runtime"
 )
 
-// NewRetention binds the school's nightly cleanup (#3955) to its tenant transaction.
-func NewRetention() deliveryContract.Retention {
-	return application.NewRetention(postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase, time.Now))
+// NewRetention binds the school's nightly cleanup (#3955) to its tenant transaction and clock.
+func NewRetention(now func() time.Time) deliveryContract.Retention {
+	return application.NewRetention(postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase, now), now)
 }
 
 // NewHolidayRegistrationMailErasure needs only the caller's admin transaction.

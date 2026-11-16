@@ -41,7 +41,8 @@ in einer Entscheidung.
    Eltern-Ankündigungen und Umfragen sowie die HTTP-Ressourcen, die den Status
    einer Ankündigung oder Umfrage zeigen. Die Wurzel reicht
    `RootEnvironment.Now`; nil ist die echte Uhr, und dieser Standard steht in
-   der Komposition.
+   der Komposition oder, wo die Komposition die Uhr als Pflichtparameter
+   nimmt, in der Wurzel (`clockOrReal`).
 2. **Ein Takt bleibt monoton.** Die Lease-Laufzeit der Worker-Führung, der
    Minutentakt des Workers, die Nachprüfung eines offenen SSE-Streams, das
    Intervall der Drop-Logzeilen und das Alter des PWA-Snapshots messen
@@ -56,10 +57,20 @@ in einer Entscheidung.
    gesetzten Zeitpunkt und eine neue Umfrage bekommen `created_at` und
    `updated_at` aus der Uhr des Stores. Der Anonymitätstest läuft damit auf
    einem festen Tag, ohne dass der Check an einem späteren Tag bricht.
-5. **Budgets.** Das Compose-LOC-Budget steigt nur um die Uhrfelder, ihren
+5. **Wer einen Zeitpunkt vergleicht, liest die Uhr, die ihn gestempelt hat.**
+   Der Worker der Scheduler Runtime misst das Intervall der
+   Sitzungsbereinigung mit seiner Uhr, die auch den letzten Lauf stempelt.
+   Die Outboxen stempeln `created_at` und `updated_at` einer neuen Absicht mit
+   der Uhr des Stores statt mit `NOW()`; der Worker und der Mail-Transport
+   messen daran das Drossel-Fenster und die Wartezeit, der Worker das Alter
+   des Rückstands. Der Hub lädt weitergeleitete Benachrichtigungen und die
+   nächtliche Aufbewahrung löscht sie mit der Uhr, die sie gestempelt hat;
+   der Mail-Dispatcher stempelt `SentAt` mit der Uhr der Wurzel.
+6. **Budgets.** Das Compose-LOC-Budget steigt nur um die Uhrfelder, ihren
    nil-Standard und die `time`-Importe: `modules/communication/composition`
    von 380 auf 387 (+7), `modules/delivery/compose` von 393 auf 401 (+8), die
-   Summe von 13.540 auf 13.555.
+   Summe von 13.540 auf 13.555. Die Uhrparameter von Hub, Aufbewahrung und
+   Mail-Dispatcher passen in dieses Budget.
 
 ## Folgen
 
