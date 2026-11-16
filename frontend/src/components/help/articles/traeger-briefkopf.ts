@@ -58,7 +58,7 @@ export function traegerBriefkopfTopic(): HelpTopic {
       "Die `Vorschau` oben auf der Seite `Briefkopf und Vorlagen` zeigt, wie Kopf und Fuß eines Briefs aussehen.",
     notes: [
       "Ein leeres Feld für Absender oder Fußzeile zeigt ein graues Beispiel. Das Beispiel steht nie im Brief.",
-      "Eine Bankverbindung ist der `Standard`. Sie steht auf allen Briefen und Rechnungen.",
+      "Eine Bankverbindung ist der `Standard`. Sie steht auf allen Briefen und Rechnungen. Auch der QR-Code zum Überweisen nimmt diese Bankverbindung.",
       "Eine andere Bankverbindung machen Sie im Menü der Zeile mit `Als Standard festlegen` zum Standard.",
       "Löschen Sie den Standard, wird die älteste andere Bankverbindung der Standard.",
       "Jedes Ansehen und jede Änderung von Ansprechperson und Bankverbindungen steht im Protokoll des Trägers.",

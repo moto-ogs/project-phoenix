@@ -1439,6 +1439,14 @@
       "source_owner": "organization-tenancy",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveIntForTenant",
       "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.provisioningSettings.RecordFederalState",
+      "binding_digest": "cfb643fc2df932371c6ec7e21c8d562f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.ProvisioningSettings.RecordFederalState",
+      "source_owner": "organization-tenancy",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.SchoolCreationSettings.RecordFederalState",
+      "target_owner": "settings-platform"
     }
   ]
 }

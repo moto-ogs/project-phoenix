@@ -45,7 +45,7 @@ func TestSeedTestTraegerStepCreatesTheTestTraegerAndItsSampleChildren(t *testing
 	require.NoError(t, (seedTestTraegerStep{}).Run(context.Background(), runtime))
 	assert.Equal(t, []string{"/operator/organizations/test-traeger", "/operator/organizations/31/sample-children"}, paths)
 	assert.Equal(t, []string{"Bearer operator-token", "Bearer operator-token"}, authorizations)
-	assert.Equal(t, map[string]any{"name": "Test-Träger", "slug": "test-traeger", "school_count": float64(3), "contact_email": "admin@example.test"}, order)
+	assert.Equal(t, map[string]any{"name": "Test-Träger", "slug": "test-traeger", "school_count": float64(3), "contact_email": "admin@example.test", "federal_state": "DE-NW"}, order)
 	assert.Equal(t, tenantAuth, client.auth, "the step restores the client's own session")
 }
 

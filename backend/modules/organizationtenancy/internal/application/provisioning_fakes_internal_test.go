@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"sort"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -1003,6 +1004,28 @@ type fakeSettings struct {
 	err         error
 	tenants     []int64
 	adminCalled bool
+	// federalStates and stateErr serve SetFederalState (#7174).
+	federalStates map[int64]string
+	stateErr      error
+}
+
+// RecordFederalState records the state per school like Settings: only in
+// the administrative unit, only a "DE-XX" region; stateErr fails it.
+func (f *fakeSettings) RecordFederalState(ctx context.Context, tenantID int64, region string) (bool, error) {
+	if !isAdmin(ctx) {
+		return false, errors.New("fake settings: the federal state needs the administrative unit of the creation")
+	}
+	if f.stateErr != nil {
+		return false, f.stateErr
+	}
+	if !strings.HasPrefix(region, "DE-") || len(region) != 5 {
+		return false, nil
+	}
+	if f.federalStates == nil {
+		f.federalStates = map[int64]string{}
+	}
+	f.federalStates[tenantID] = region
+	return true, nil
 }
 
 func (f *fakeSettings) DeviceOnlineWindowMinutes(ctx context.Context, tenantID int64) (int, error) {

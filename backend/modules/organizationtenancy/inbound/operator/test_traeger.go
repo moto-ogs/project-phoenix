@@ -17,6 +17,7 @@ type createTestTraegerRequest struct {
 	Slug         string `json:"slug"`
 	SchoolCount  int    `json:"school_count"`
 	ContactEmail string `json:"contact_email"`
+	FederalState string `json:"federal_state"`
 }
 
 func (*createTestTraegerRequest) Bind(*http.Request) error { return nil }
@@ -30,6 +31,7 @@ func (rs *ProvisioningResource) CreateTestTraeger(w http.ResponseWriter, r *http
 	}
 	created, err := rs.service.CreateTestTraeger(r.Context(), organizationtenancy.CreateTestTraeger{
 		Name: req.Name, Slug: req.Slug, SchoolCount: req.SchoolCount, ContactEmail: req.ContactEmail,
+		FederalState: req.FederalState,
 	}, int64(sessiontoken.ClaimsFromCtx(r.Context()).ID), common.ParseClientIP(r))
 	if err != nil {
 		common.RenderError(w, r, ProvisioningErrorRenderer(err))

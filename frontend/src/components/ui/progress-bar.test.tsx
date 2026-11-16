@@ -29,8 +29,10 @@ describe("ProgressBar", () => {
   it("fills in proportion to the value", () => {
     render(<ProgressBar value={1} max={4} label="Schritte" />);
 
+    // The full-width bar shows its first quarter: three quarters sit left of
+    // the clipping track.
     expect(screen.getByRole("progressbar").firstElementChild).toHaveStyle({
-      width: "25%",
+      transform: "translateX(-75%)",
     });
   });
 

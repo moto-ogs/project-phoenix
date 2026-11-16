@@ -52,9 +52,25 @@ type LetterFact struct {
 // LetterBlock is a part of the body: a paragraph, then an optional
 // two-column table. Heading is printed bold above the paragraph; Bold
 // prints the paragraph itself bold. Line breaks in Text are kept.
+//
+// A block with a PaymentCode prints the payment code instead: the QR code
+// of its payload in a framed panel with heading, text and facts beside it
+// (#4818). The renderer encodes the payload as it is; the owner of the
+// letter decides what it carries.
 type LetterBlock struct {
+	Heading     string
+	Text        string
+	Bold        bool
+	Facts       []LetterFact
+	PaymentCode *LetterPaymentCode
+}
+
+// LetterPaymentCode is a QR code to pay with, such as the transfer code of
+// the European Payments Council, and the words printed beside it. Facts
+// are short label and value pairs, such as the IBAN.
+type LetterPaymentCode struct {
+	Payload string
 	Heading string
 	Text    string
-	Bold    bool
 	Facts   []LetterFact
 }
