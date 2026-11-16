@@ -145,8 +145,8 @@ type PayrollManagers interface {
 }
 
 // PayrollDispatchPorts are the collaborators of the payroll dispatch.
-// Every port but MailOutcomes is required; Now is optional and pins the
-// clock in tests.
+// Every port but MailOutcomes is required, Now included: the root binds its
+// clock, tests a fixed one.
 type PayrollDispatchPorts struct {
 	Settings PayrollDispatchSettings
 	Export   PayrollExport

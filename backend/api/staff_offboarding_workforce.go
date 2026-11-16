@@ -21,7 +21,7 @@ func NewStaffOffboardingWorkflow(deps offboardingcompose.Dependencies) (*staffof
 			_, err := membership.FindStaffForMutation(ctx, staffID)
 			return err
 		},
-		DB: deps.DB, Observe: func(workforcecompose.Observation) {},
+		DB: deps.DB, Observe: func(workforcecompose.Observation) {}, Now: deps.Now,
 		LiveStaffIDs: func(ctx context.Context, membershipIDs []int64) ([]int64, error) {
 			rows, err := membership.ListStaff(ctx, schoolmembership.StaffFilter{IDs: membershipIDs, MembershipOnly: true})
 			if err != nil {

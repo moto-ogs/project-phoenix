@@ -44,12 +44,12 @@ func TestLiveStatusHistoryFailuresDoNotClearFlags(t *testing.T) {
 				} else {
 					statuses.historyErr = injected
 				}
-				svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, StudentRepo: students, StudentStatusRepo: statuses}}
+				svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, StudentRepo: students, StudentStatusRepo: statuses}}
 				var err error
 				if flag == "sick" {
-					err = svc.clearSickFlagOnCheckin(context.Background(), student, time.Now())
+					err = svc.clearSickFlagOnCheckin(context.Background(), student, presenceTestNow())
 				} else {
-					err = svc.clearExcusedFlagOnCheckin(context.Background(), student, time.Now())
+					err = svc.clearExcusedFlagOnCheckin(context.Background(), student, presenceTestNow())
 				}
 				require.ErrorIs(t, err, injected)
 				assert.Zero(t, students.updateCalls)
@@ -90,9 +90,9 @@ func TestPlannedStatusClearFailuresPropagate(t *testing.T) {
 			if stage == "student write" {
 				students.updateErr = injected
 			}
-			svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, StudentStatusRepo: statuses, StudentRepo: students}}
+			svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, StudentStatusRepo: statuses, StudentRepo: students}}
 			rows := []*absencerecords.StudentStatusDay{{StudentID: 42, Status: absencerecords.StudentStatusDaySick, Source: absencerecords.StudentStatusSourcePlanned}}
-			require.ErrorIs(t, svc.clearPlannedStatusRows(context.Background(), 42, nil, rows, time.Now()), injected)
+			require.ErrorIs(t, svc.clearPlannedStatusRows(context.Background(), 42, nil, rows, presenceTestNow()), injected)
 			if stage != "student write" {
 				assert.Zero(t, students.updateCalls)
 			}
@@ -103,10 +103,10 @@ func TestPlannedStatusClearFailuresPropagate(t *testing.T) {
 func TestCheckinPlannedStatusReadFailuresPropagate(t *testing.T) {
 	t.Parallel()
 	injected := errors.New("planned status read failed")
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, StudentStatusRepo: &failingPlannedStatusRead{err: injected}}}
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, StudentStatusRepo: &failingPlannedStatusRead{err: injected}}}
 	svc.settings = &fakeSettingsResolver{resolved: "manual"}
 	require.ErrorIs(t, svc.autoClearPlannedStudentStatuses(context.Background(), 42), injected)
-	require.ErrorIs(t, svc.autoClearOnBatchCheckin(context.Background(), []int64{42}, nil, time.Now(), calendar.TodayDate()), injected)
+	require.ErrorIs(t, svc.autoClearOnBatchCheckin(context.Background(), []int64{42}, nil, presenceTestNow(), calendar.DateFromTime(presenceTestNow())), injected)
 }
 
 // fakeSettingsResolver is a minimal stub that satisfies the SettingsResolver
@@ -180,7 +180,7 @@ func TestResolveClearModeUsesResolvedValueAndPropagatesErrors(t *testing.T) {
 		{name: "no override probe", resolver: &fakeSettingsResolver{hasOverrideErr: injected, resolved: "end_of_day"}, want: "end_of_day"},
 	} {
 		t.Run(scenario.name, func(t *testing.T) {
-			svc := &service{settings: scenario.resolver}
+			svc := &service{Now: presenceTestNow, settings: scenario.resolver}
 			value, err := svc.resolveSickClearMode(context.Background())
 			if scenario.missing {
 				require.ErrorContains(t, err, "settings service is not configured")
@@ -222,7 +222,7 @@ func newTestServiceWithLogger(s SettingsResolver, repo PresenceStudents) *servic
 	if s == nil {
 		s = registryDefaultSettings{fakeSettingsResolver: &fakeSettingsResolver{}}
 	}
-	return &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, StudentRepo: repo, Logger: slog.New(slog.NewTextHandler(new(bytes.Buffer), nil))}, settings: s}
+	return &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, StudentRepo: repo, Logger: slog.New(slog.NewTextHandler(new(bytes.Buffer), nil))}, settings: s}
 }
 
 // TestAutoClearStudentSickness_SkipsWhenModeNotNextCheckin — no studentRepo

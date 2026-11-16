@@ -17,14 +17,9 @@ type RequestRuntime struct {
 	Now          func() time.Time
 }
 
-// now reads the runtime's clock. NewResource requires one; a Resource a unit
-// test builds without it reads the wall clock.
+// now reads the runtime's clock, which NewResource requires.
 func (rs *Resource) now() time.Time {
-	clock := rs.runtime.Now
-	if clock == nil {
-		clock = time.Now
-	}
-	return clock()
+	return rs.runtime.Now()
 }
 
 func (rs *Resource) today() calendar.Date { return calendar.DateFromTime(rs.now()) }

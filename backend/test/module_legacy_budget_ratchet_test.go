@@ -339,7 +339,10 @@ var moduleLegacyFileBudgets = map[string]int{
 // guardian profile clock of its retained test suites),
 // modules/schoolcalendar/compose (+7: the notices' day clock and the
 // root's clock of the Records) and modules/schoolsearchview/compose (+1).
-const moduleComposeBudgetTotal = 13651
+// ADR 0276: the time import of the sick note retention clock in
+// modules/workforce/compose (+1) and the clock field of the staff offboarding
+// with its time import in workflows/staffoffboarding/compose (+2).
+const moduleComposeBudgetTotal = 13654
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -363,6 +366,8 @@ const moduleComposeBudgetTotal = 13651
 // ADR 0278 raised modules/peopledirectory/compose,
 // modules/schoolcalendar/compose and modules/schoolsearchview/compose for the
 // import of their clocks (+1 each).
+// ADR 0276 raised modules/workforce/compose for the sick note retention clock (+1)
+// and workflows/staffoffboarding/compose for the offboarding clock (+2).
 var moduleComposeBudgets = map[string]int{
 	"modules/appointments/compose": 45,
 	// ADR 0103: the signature ledger constructor, construction only.
@@ -547,7 +552,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0242: the working-time check and the Einsatzplanung sites (+11).
 	// ADR 0264: the clock field of the time-tracking cleanup (+2).
 	// ADR 0253: the Springer exits after the last block (+6).
-	"modules/workforce/compose":       936,
+	"modules/workforce/compose":       937,
 	"workflows/catererportal/compose": 37, // added by ADR 0077
 	// Raised by ADR 0224: the class follow-up port (+2).
 	"workflows/gradetransition/compose": 51,
@@ -570,7 +575,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0273: the day clock of the Terminvertretung (+1).
 	"workflows/shiftplansync/compose":    125,
 	"workflows/staffclock/compose":       36,
-	"workflows/staffoffboarding/compose": 74,
+	"workflows/staffoffboarding/compose": 76,
 	// Added by ADR 0104: construction of the Träger projection, no retained logic.
 	// ADR 0246: the export adapter of the key-date report (+1).
 	"modules/traegerview/compose": 21,

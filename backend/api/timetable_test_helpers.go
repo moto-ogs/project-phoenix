@@ -70,7 +70,7 @@ func NewTimetableTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 	if err != nil {
 		return TimetableTestModule{}, nil, nil, err
 	}
-	now := OptionalClock(clocks)
+	now := clockOrNow(clocks)
 	today := timezone.CalendarDateClock(now)
 	logger := slog.Default()
 	hub := realtime.NewHub(logger)

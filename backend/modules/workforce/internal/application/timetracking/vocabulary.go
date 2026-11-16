@@ -21,7 +21,6 @@ var (
 	Berlin             = calendar.Berlin
 	NewDate            = calendar.NewDate
 	DateFromTime       = calendar.DateFromTime
-	TodayDate          = calendar.TodayDate
 	NormalizeWallClock = calendar.NormalizeWallClock
 )
 

@@ -104,7 +104,7 @@ func BuildStructureRows(
 // school reads to the People Directory, School Structure and Organisation &
 // Tenancy.
 func BuildPresencePeopleReads(db transactionruntime.Database, logger *slog.Logger, persons peopledirectory.Capability, groups schoolstructure.Query, organizations organizationtenancy.Query, people PeopleRows) PresencePeopleReads {
-	presence := NewLoggedStudentPresence(db, logger)
+	presence := NewLoggedStudentPresence(db, logger, time.Now)
 	return PresencePeopleReads{
 		StudentDisplay:      StudentDisplayProjection{Students: persons, Groups: groups},
 		CrossTenantStudents: NewCrossTenantQuery(presence, persons, groups),

@@ -41,7 +41,9 @@ func TestCreateMirroredSessionInstanceOwnsTheSpontaneousActiveDefaults(t *testin
 	t.Parallel()
 	recorder := &mirrorCreateRecorder{}
 	records := compose.Repositories{
-		ActivityInstance: timetablePorts.InstanceRows{Plans: recorder, Sessions: recorder, Reads: fixtures.InstanceReadsOf(recorder)},
+		ActivityInstance: timetablePorts.InstanceRows{Plans: recorder, Sessions: recorder, Reads: fixtures.InstanceReadsOf(recorder),
+			// The session starts on the mirrored day; the input names no instant.
+			Now: func() time.Time { return time.Date(2026, time.April, 20, 14, 5, 0, 0, calendar.Berlin) }},
 	}.NativeRecords()
 	sessionID := int64(77)
 

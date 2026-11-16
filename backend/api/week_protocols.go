@@ -63,22 +63,25 @@ func seedWeekProtocols(ctx context.Context, now time.Time, seed schedulerPorts.W
 }
 
 // WeekProtocolDayLog builds the weekly protocols' port onto the presence
-// projection's day log (#4769) for the Worker: the projection's resource
-// over the given sources, read without a request.
-func WeekProtocolDayLog(
-	logger *slog.Logger, persons peopledirectory.Capability, users peoplePorts.PersonDirectory,
-	history studentpresence.StudentHistory, careDays carePlanModule.CareDayQuery,
-	arrivals carePlanModule.ArrivalScheduleService, statusDays studentpresence.StatusDayReads,
-) timetableModule.WeekProtocolAttendance {
-	return weekProtocolAttendance{dayLog: projectionStudentsHTTP.NewResource(projectionStudentsHTTP.ResourceConfig{
-		Logger:                  logger,
-		PeopleDirectory:         persons,
-		Persons:                 peopleCompose.NewStudentRoutePersons(users),
-		StudentHistoryService:   history,
-		CareDayService:          careDays,
-		ArrivalScheduleService:  arrivals,
-		StudentStatusDayService: statusDays,
-	})}
+// projection's day log (#4769) for the Worker on the root's clock: the
+// projection's resource over the given sources, read without a request.
+func WeekProtocolDayLog(now func() time.Time) owners.WeekProtocolDayLogBuilder {
+	return func(
+		logger *slog.Logger, persons peopledirectory.Capability, users peoplePorts.PersonDirectory,
+		history studentpresence.StudentHistory, careDays carePlanModule.CareDayQuery,
+		arrivals carePlanModule.ArrivalScheduleService, statusDays studentpresence.StatusDayReads,
+	) timetableModule.WeekProtocolAttendance {
+		return weekProtocolAttendance{dayLog: projectionStudentsHTTP.NewResource(projectionStudentsHTTP.ResourceConfig{
+			Logger:                  logger,
+			PeopleDirectory:         persons,
+			Persons:                 peopleCompose.NewStudentRoutePersons(users),
+			StudentHistoryService:   history,
+			CareDayService:          careDays,
+			ArrivalScheduleService:  arrivals,
+			StudentStatusDayService: statusDays,
+			Now:                     now,
+		})}
+	}
 }
 
 // seedWeekProtocolDayLog supplies the current demo day's attendance to every
@@ -92,7 +95,7 @@ func seedWeekProtocolDayLog(
 	arrivals carePlanModule.ArrivalScheduleService, statusDays studentpresence.StatusDayReads,
 ) timetableModule.WeekProtocolAttendance {
 	return weekProtocolSeedAttendance{
-		source: WeekProtocolDayLog(logger, persons, users, history, careDays, arrivals, statusDays),
+		source: WeekProtocolDayLog(time.Now)(logger, persons, users, history, careDays, arrivals, statusDays),
 		today:  calendar.TodayDate,
 	}
 }

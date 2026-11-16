@@ -36,7 +36,7 @@ func TestFutureCompTimeCommitmentQueryBudget(t *testing.T) {
 		workTime, workTime, repos.StaffAbsence, workforceCompose.StaffScheduleAssignments(api.MustNewStaffEmployment(testpkg.NewDatabase(t, db))),
 		owners.NewWorkScheduleTargets(owners.NewStaffWorkScheduleRepository(workTime)), owners.NewWorkTimeTargetModels(owners.NewWorkTimeModelRepository(workTime)), workforceCompose.NewTimeTrackingShifts(workTime),
 		wtmIntSettings{accountStart: "2020-01-01"}, nil,
-		timetracking.WithMonthClock(func() time.Time { return monthBudgetDay.BerlinMidnight().Add(12 * time.Hour) }),
+		timetracking.WithMonthClock(func() time.Time { return monthBudgetDay.BerlinMidnight().Add(12 * time.Hour) }), timetracking.WithMonthTestClock(testNow),
 	)
 	first := monthBudgetDay.AddDays(14)
 	add := func(from, to int) {

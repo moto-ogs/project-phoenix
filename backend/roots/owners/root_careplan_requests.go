@@ -77,7 +77,7 @@ func BuildCarePlanRequests(
 	)
 	requests := CarePlanRequests{PickupChangeTeam: newPickupChangeTeam(pickupReach, env)}
 	requests.CareRequests = NewCareScheduleRequestServiceWithPickupChangesAndPolicy(requests.PickupChangeTeam,
-		carePlan, persons, schedules.Arrivals, schedules.Pickups, NewLoggedStudentPresence(db, env.Logger),
+		carePlan, persons, schedules.Arrivals, schedules.Pickups, NewLoggedStudentPresence(db, env.Logger, env.Now),
 		schedules.AutoExcusal, carePlan, caller, emitter, hub,
 		reviews, permissions, events, env.Logger.With("service", "care-requests"), services.StudentAudit,
 		WithRequestShareVisibility(shares), WithCareRequestToday(env.Today), WithPickupPermissions(pickupPermissions), WithPickupPermissionApprovals(pickupPermissionApprovals),

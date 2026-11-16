@@ -16,7 +16,7 @@ import (
 
 func newCareExitBaselineModule(t *testing.T, db *bun.DB, sessions timetable.SessionFacts) timetable.Owner {
 	t.Helper()
-	module, err := New(Dependencies{
+	module, err := New(Dependencies{Now: time.Now,
 		Provenance:           testpkg.EnrollmentProvenance{},
 		LockStaffAssignments: func(context.Context, []int64) error { return nil },
 		DB:                   db,

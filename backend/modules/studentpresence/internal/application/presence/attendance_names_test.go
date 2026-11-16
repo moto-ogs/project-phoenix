@@ -54,7 +54,7 @@ func TestAttendanceActorsPreserveDisplayAndLookupFailure(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
-			svc := &service{ServiceDependencies: ServiceDependencies{StaffNames: attendanceStaffNamesFunc(func(got context.Context, ids []int64) (map[int64]string, error) {
+			svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, StaffNames: attendanceStaffNamesFunc(func(got context.Context, ids []int64) (map[int64]string, error) {
 				assert.Equal(t, ctx, got)
 				assert.ElementsMatch(t, []int64{41, 42}, ids)
 				return tc.names, tc.err
@@ -92,7 +92,7 @@ func TestAttendanceActorsWithoutStaffSkipTheNameRead(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			svc := &service{ServiceDependencies: ServiceDependencies{StaffNames: attendanceStaffNamesFunc(func(context.Context, []int64) (map[int64]string, error) {
+			svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, StaffNames: attendanceStaffNamesFunc(func(context.Context, []int64) (map[int64]string, error) {
 				t.Fatal("no staff ID, no name read")
 				return nil, nil
 			})}}

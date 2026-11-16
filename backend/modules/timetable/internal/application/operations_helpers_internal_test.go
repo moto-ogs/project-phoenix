@@ -150,7 +150,7 @@ func TestTimetableOperationsDependencyAndErrorBranches(t *testing.T) {
 
 	assert.Equal(t, "timetable attendance validation failed", (&timetable.AttendanceValidationError{}).Error())
 
-	_, err := NewOperations(ports.OperationDependencies{}, sessionlessCaller{})
+	_, err := NewOperations(ports.OperationDependencies{Now: internalTestNow}, sessionlessCaller{})
 	require.Error(t, err, "a composition without its required ports must not build")
 
 	deps := newTimetableOpsDeps()

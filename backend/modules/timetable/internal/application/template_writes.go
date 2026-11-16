@@ -233,7 +233,7 @@ type TemplateService struct {
 // NewTemplateService creates the template writes.
 func NewTemplateService(deps TemplateServiceDependencies) *TemplateService {
 	if deps.Today == nil {
-		deps.Today = calendar.TodayDate
+		panic("timetable template service: the school day clock is required")
 	}
 	return &TemplateService{deps: deps}
 }
@@ -261,7 +261,7 @@ func (s *TemplateService) lockRecurrence(ctx context.Context, op string) error {
 // to align already-materialized occurrences, on the clock the instance rows
 // were composed with.
 func (s *TemplateService) newRosterReconciler() *RosterReconciler {
-	return newRosterReconcilerOn(s.deps.ActivityInstanceRepo, s.deps.InstanceStudentRepo, s.deps.StudentEnrollmentRepo, s.deps.Directories, s.deps.Logger, NewClock(s.deps.ActivityInstanceRepo.Now), s.deps.Today)
+	return newRosterReconcilerOn(s.deps.ActivityInstanceRepo, s.deps.InstanceStudentRepo, s.deps.StudentEnrollmentRepo, s.deps.Directories, s.deps.Logger, s.deps.ActivityInstanceRepo.Now, s.deps.Today)
 }
 
 // OrDefaultLogger falls back to slog.Default for services a test builds

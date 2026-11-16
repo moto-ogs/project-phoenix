@@ -118,20 +118,15 @@ var moduleLiveClockBudget = map[string]int{
 // slices of #7104 (111 references in 28 owners, ADR 0272); a mismatch prints
 // the measured values.
 var moduleLiveClockValueBudget = map[string]int{
-	"modules/carecontract":       1,
-	"modules/careplan":           16,
-	"modules/classday":           2,
-	"modules/communication":      6,
-	"modules/delivery":           5,
-	"modules/enrollment":         24,
-	"modules/identityaccess":     1,
-	"modules/parentbilling":      5,
-	"modules/presenceprojection": 1,
-	"modules/schedulerruntime":   1,
-	"modules/studentpresence":    5,
-	"modules/timetable":          14,
-	"modules/workforce":          8,
-	"workflows/parentportal":     3,
+	"modules/carecontract":     1,
+	"modules/careplan":         16,
+	"modules/communication":    6,
+	"modules/delivery":         5,
+	"modules/enrollment":       24,
+	"modules/identityaccess":   1,
+	"modules/parentbilling":    5,
+	"modules/schedulerruntime": 1,
+	"workflows/parentportal":   3,
 }
 
 const calendarImportPath = "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"

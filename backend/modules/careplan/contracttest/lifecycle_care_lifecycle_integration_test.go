@@ -69,6 +69,7 @@ func newActiveService(t *testing.T, db *bun.DB) studentpresence.Presence {
 		StaffNames:         owners.NewAttendanceStaffNames(repos.Staff),
 		DB:                 db,
 		Logger:             slog.Default(),
+		Now:                time.Now,
 	}, presenceservice.WithPresenceSettings(api.PresenceSettings(&settingsDouble{ResolveStringFn: func(context.Context, string) (string, error) {
 		return "binary", nil
 	}})))

@@ -47,11 +47,8 @@ var _ timetable.SchoolVacationHintQuery = (*SchoolVacationHintService)(nil)
 // NewSchoolVacationHints composes the hint; today names the school's
 // calendar day in YYYY-MM-DD, nil means the Berlin day.
 func NewSchoolVacationHints(rows SchoolVacationHintRows, days SchoolVacationDays, vacations SchoolVacationReader, today func() string) (*SchoolVacationHintService, error) {
-	if rows == nil || days == nil || vacations == nil {
+	if rows == nil || days == nil || vacations == nil || today == nil {
 		return nil, errors.New("timetable school vacation hints: all dependencies are required")
-	}
-	if today == nil {
-		today = NewToday()
 	}
 	return &SchoolVacationHintService{rows: rows, days: days, vacations: vacations, today: today}, nil
 }

@@ -11,7 +11,7 @@ import (
 func TestWorkSessionBreak_Validate(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now()
+	now := testNow()
 
 	validBreak := func() *WorkSessionBreak {
 		return &WorkSessionBreak{
@@ -76,7 +76,7 @@ func TestWorkSessionBreak_IsActive(t *testing.T) {
 	})
 
 	t.Run("inactive when ended", func(t *testing.T) {
-		now := time.Now()
+		now := testNow()
 		b := &WorkSessionBreak{EndedAt: &now}
 		assert.False(t, b.IsActive())
 	})

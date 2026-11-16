@@ -31,7 +31,7 @@ type conflictDetection struct {
 func NewConflictDetection(deps ports.ConflictDetectionDependencies) (timetable.ConflictDetectionCapability, error) {
 	if deps.Instances == nil || deps.InstanceStaff == nil || noParticipantRows(deps.InstanceStudents) || deps.Exceptions == nil ||
 		deps.Schedules == nil || deps.Shifts == nil || deps.Staff == nil || deps.CalendarPeriods == nil ||
-		deps.ArrivalExceptions == nil || deps.Presence == nil || deps.Sessions == nil || deps.ContentHash == nil {
+		deps.ArrivalExceptions == nil || deps.Presence == nil || deps.Sessions == nil || deps.ContentHash == nil || deps.Now == nil {
 		return nil, errors.New("timetable conflict detection: all dependencies are required")
 	}
 	logger := deps.Logger

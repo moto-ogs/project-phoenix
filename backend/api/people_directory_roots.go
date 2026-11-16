@@ -2,6 +2,7 @@ package api
 
 import (
 	"log/slog"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -26,7 +27,7 @@ import (
 // offboarding workflow over db and an unobserved Workforce employment owner
 // (#4007).
 func NewStaffMembershipRuntime(users peoplePorts.PersonDirectory, education schoolstructure.GroupManagement, staffDay workforceCompose.StaffDayStatus, hub *realtime.Hub, db transactionruntime.Database, identity identityaccess.Owner, logger *slog.Logger, hooks StaffMembershipHooks) StaffMembershipRuntime {
-	offboarding, err := NewStaffOffboardingOwners(db, peopleCompose.MustNewReads(db.Pool(), owners.StudentDirectoryReader()), owners.MembershipStaffEmployment(workforceCompose.MustNewStaffEmployment(db.Pool())), logger)
+	offboarding, err := NewStaffOffboardingOwners(db, peopleCompose.MustNewReads(db.Pool(), owners.StudentDirectoryReader()), owners.MembershipStaffEmployment(workforceCompose.MustNewStaffEmployment(db.Pool())), logger, time.Now)
 	if err != nil {
 		panic(err)
 	}

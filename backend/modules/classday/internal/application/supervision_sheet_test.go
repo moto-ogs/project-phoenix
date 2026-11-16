@@ -27,7 +27,7 @@ func TestRecordSupervisionSheetAuditStoresStudentID(t *testing.T) {
 	t.Parallel()
 
 	log := &fakeClassDayAccessLog{}
-	svc := newDayReports(ClassDayDependencies{AccessLog: log})
+	svc := newDayReports(ClassDayDependencies{AccessLog: log, MorningAttendanceDependencies: MorningAttendanceDependencies{Now: classDayTestNow}})
 	sheet := &classday.SupervisionStudentSheet{StudentID: 17, Date: calendar.NewDate(2026, 8, 24)}
 
 	require.NoError(t, svc.recordSupervisionSheetAudit(context.Background(), sheet, 42, "lehrkraft"))

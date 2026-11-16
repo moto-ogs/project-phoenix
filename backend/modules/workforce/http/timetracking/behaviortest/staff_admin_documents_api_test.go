@@ -469,10 +469,12 @@ func TestStaffDocumentsAPI_SickNoteRetentionRemovesTheFileThroughTheSweep(t *tes
 	filePath := filepath.Join(timetracking.StaffDocumentsDirForTest(testpkg.Tenant(t), nativeUploads.UploadFiles{}), storedName)
 	_, err := os.Stat(filePath)
 	require.NoError(t, err, "the upload stored the file")
-	_, err = c.tc.db.ExecContext(ctx, `UPDATE users.staff_documents SET created_at = NOW() - INTERVAL '400 days' WHERE id = ?`, docID)
+	// Uploaded 400 days before the pinned run day: outside a 365-day window.
+	runDay := time.Date(2027, time.February, 9, 10, 0, 0, 0, time.UTC)
+	_, err = c.tc.db.ExecContext(ctx, `UPDATE users.staff_documents SET created_at = ? WHERE id = ?`, runDay.AddDate(0, 0, -400), docID)
 	require.NoError(t, err)
 
-	retention := workforceCompose.NewSickNoteRetention(fixedSickNoteWindow(365))
+	retention := workforceCompose.NewSickNoteRetention(fixedSickNoteWindow(365), func() time.Time { return runDay })
 	require.NoError(t, testpkg.WithinTenantContext(t, ctx, c.tc.db, testpkg.Tenant(t), func(txCtx context.Context) error {
 		deleted, days, err := retention.DeleteExpiredStaffSickNotes(txCtx)
 		assert.Equal(t, 1, deleted)

@@ -43,7 +43,7 @@ func PlannedStaffExitsJob(db transactionruntime.Database, hub *realtime.Hub, log
 		if identity == nil || notifications.Notifier == nil || notifications.Preferences == nil || staff == nil {
 			panic("planned staff exits: identity, notifications and staff are required")
 		}
-		offboarding, err := NewStaffOffboardingOwners(db, peopleCompose.MustNewReads(db.Pool(), owners.StudentDirectoryReader()), owners.MembershipStaffEmployment(workforceCompose.MustNewStaffEmployment(db.Pool())), logger)
+		offboarding, err := NewStaffOffboardingOwners(db, peopleCompose.MustNewReads(db.Pool(), owners.StudentDirectoryReader()), owners.MembershipStaffEmployment(workforceCompose.MustNewStaffEmployment(db.Pool())), logger, time.Now)
 		if err != nil {
 			panic(err)
 		}

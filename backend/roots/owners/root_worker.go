@@ -83,7 +83,7 @@ func workerRetentionOf(
 	}
 	steps := dataRetentionSteps(
 		settings, fleet, carePlan, parentMessages, rejected,
-		workforceCompose.NewSickNoteRetention(StaffSickNoteRetentionSettings{Settings: settings}),
+		workforceCompose.NewSickNoteRetention(StaffSickNoteRetentionSettings{Settings: settings}, now),
 		audit, deliveryCompose.NewRetention(now),
 	)
 	photoCareEnd, err := StudentPhotoCareEndOf(people)

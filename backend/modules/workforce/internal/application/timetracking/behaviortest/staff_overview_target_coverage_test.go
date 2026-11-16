@@ -62,9 +62,9 @@ func TestTargetCoverage_CountsTheOverviewsHasTarget(t *testing.T) {
 		owners.NewWorkScheduleTargets(owners.NewStaffWorkScheduleRepository(f.workforce)), owners.NewWorkTimeTargetModels(owners.NewWorkTimeModelRepository(f.workforce)), workforceCompose.NewTimeTrackingShifts(f.workforce),
 		settings, nil,
 		timetracking.WithMonthAdjustments(f.workforce),
-		timetracking.WithMonthSnapshots(timetracking.MonthSnapshotCapability(f.workforce)),
+		timetracking.WithMonthSnapshots(timetracking.MonthSnapshotCapability(f.workforce)), timetracking.WithMonthTestClock(testNow),
 	)
-	closeSvc := timetracking.NewStaffMonthCloseService(timetracking.MonthSnapshotCapability(f.workforce), monthSvc, owners.MonthCloseStaff(f.repos.Staff), settings, nil, timetracking.WithMonthCloseUnitOfWork(testpkg.RunInTenantTransaction))
+	closeSvc := timetracking.NewStaffMonthCloseService(timetracking.MonthSnapshotCapability(f.workforce), monthSvc, owners.MonthCloseStaff(f.repos.Staff), settings, nil, timetracking.WithMonthCloseUnitOfWork(testpkg.RunInTenantTransaction), timetracking.WithMonthCloseClock(testNow))
 	_, err = closeSvc.CloseMonth(f.ctx, f.staff[0], previous.Year(), int(previous.Month()), "Abschluss")
 	require.NoError(t, err)
 	closed, err := testpkg.TenantQuery2(t, f.ctx, f.db, svc.TargetCoverage, 0, 0)

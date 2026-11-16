@@ -25,7 +25,7 @@ func NewSpringerExitsForTest(db transactionruntime.Database, unit tenant.UnitOfW
 		return nil, err
 	}
 	offboarding, err := NewStaffOffboardingOwners(db, peopleCompose.MustNewReads(db.Pool(), owners.StudentDirectoryReader()),
-		owners.MembershipStaffEmployment(MustNewStaffEmployment(db)), nil)
+		owners.MembershipStaffEmployment(MustNewStaffEmployment(db)), nil, time.Now)
 	if err != nil {
 		return nil, err
 	}

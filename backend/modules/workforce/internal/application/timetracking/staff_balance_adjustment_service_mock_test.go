@@ -95,7 +95,7 @@ func newRecordingBalanceAdjustmentService(
 		slog.New(slog.DiscardHandler),
 		// Deletes require the tombstone writer (#1417); the recording repo keeps
 		// its event log limited to the adjustment repo, so assertions are unchanged.
-		WithAdjustmentDeletionAudit(noopDeletionAuditRepo{}),
+		WithAdjustmentDeletionAudit(noopDeletionAuditRepo{}), WithAdjustmentClock(testNow),
 	).(*staffBalanceAdjustmentService)
 	return service
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -25,7 +26,7 @@ func TestStatusDayLocksKeepOrderAndStopOnFailure(t *testing.T) {
 			return wantErr
 		}
 		return nil
-	})
+	}, func() time.Time { return first.BerlinMidnight().Add(12 * time.Hour) })
 	assert.ErrorIs(t, service.lockStudentStatusDates(ctx, 7, dates), wantErr)
 	assert.Equal(t, []string{first.String(), first.AddDays(1).String()}, locked)
 	assert.Equal(t, []calendar.Date{first.AddDays(2), first, first.AddDays(1)}, dates)
