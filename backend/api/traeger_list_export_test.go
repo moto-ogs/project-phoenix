@@ -131,3 +131,29 @@ func TestTraegerListExcelNumericColumns(t *testing.T) {
 	assert.Empty(t, numbers, "all numeric cells must exist")
 	assert.Empty(t, texts, "all text cells must exist")
 }
+
+// Assert stored values and cell types, since SUM ignores text cells.
+func assertTraegerListNumbers(t *testing.T, data []byte, numbers map[string]string) {
+	t.Helper()
+	archive, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	require.NoError(t, err)
+	sheet, err := archive.Open("xl/worksheets/sheet2.xml")
+	require.NoError(t, err)
+	defer func() { require.NoError(t, sheet.Close()) }()
+	var worksheet struct {
+		Cells []struct {
+			Reference string `xml:"r,attr"`
+			Type      string `xml:"t,attr"`
+			Value     string `xml:"v"`
+		} `xml:"sheetData>row>c"`
+	}
+	require.NoError(t, xml.NewDecoder(sheet).Decode(&worksheet))
+	for _, cell := range worksheet.Cells {
+		if value, ok := numbers[cell.Reference]; ok {
+			assert.Empty(t, cell.Type, "numeric cell: %s", cell.Reference)
+			assert.Equal(t, value, cell.Value, cell.Reference)
+			delete(numbers, cell.Reference)
+		}
+	}
+	assert.Empty(t, numbers, "all numeric cells must exist")
+}

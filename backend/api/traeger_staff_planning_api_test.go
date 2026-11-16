@@ -257,6 +257,10 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 		assertTraegerListFormats(t, router, office.token, "/traeger/staff-planning/export?week=2026-11-25", "einsatzplanung-2026-11-23")
 		logged := staffAccessViews(t, db, office.organization, workforce.TraegerStaffViewPlanningExport)
 		assert.Equal(t, after[north]+2, logged[north], "the PDF and the Excel export are logged like the CSV")
+		rec = traegerJSON(t, router, office.token, http.MethodGet, "/traeger/staff-planning/export?week=2026-11-25&format=xlsx", nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assertTraegerListNumbers(t, rec.Body.Bytes(), map[string]string{"L7": "14.5", "M7": "24", "N7": "1"})
+
 		rec = traegerJSON(t, router, office.token, http.MethodGet, "/traeger/staff-planning/export?week=kw48", nil)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	})

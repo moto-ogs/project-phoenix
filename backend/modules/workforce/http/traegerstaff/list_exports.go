@@ -99,8 +99,8 @@ func planningWeekTable(week workforce.TraegerPlanningWeek) common.ListTable {
 	for i, weekday := range planningWeekdays {
 		columns = append(columns, common.ListColumn{ID: "day_" + strconv.Itoa(i+1), Label: weekday + ", " + monday.AddDays(i).Format("02.01.")})
 	}
-	columns = append(columns, common.ListColumn{ID: "planned_hours", Label: "Geplant (Stunden)"},
-		common.ListColumn{ID: "soll_hours", Label: "Soll (Stunden)"}, common.ListColumn{ID: "warnings", Label: "Hinweise"})
+	columns = append(columns, common.ListColumn{ID: "planned_hours", Label: "Geplant (Stunden)", Numeric: true},
+		common.ListColumn{ID: "soll_hours", Label: "Soll (Stunden)", Numeric: true}, common.ListColumn{ID: "warnings", Label: "Hinweise", Numeric: true})
 	rows := make([][]string, 0, len(week.People))
 	for _, person := range week.People {
 		rows = append(rows, planningPersonRow(person, monday))
@@ -111,7 +111,16 @@ func planningWeekTable(week workforce.TraegerPlanningWeek) common.ListTable {
 		for _, school := range week.Unreached {
 			names = append(names, school.Name)
 		}
-		filters = append(filters, "Ohne die Schichten von: "+strings.Join(names, ", "))
+		note := "Ohne die Schichten von: " + strings.Join(names, ", ")
+		filters = append(filters, note)
+		columns = append(columns, common.ListColumn{ID: "completeness", Label: "Vollständigkeit", SpreadsheetOnly: true})
+		// Keep the warning in CSV even when no person could be loaded.
+		if len(rows) == 0 {
+			rows = append(rows, make([]string, len(columns)-1))
+		}
+		for i := range rows {
+			rows[i] = append(rows[i], note)
+		}
 	}
 	return common.ListTable{
 		Title: "Einsatzplanung", Subtitle: "Woche vom " + monday.Format("02.01.2006"),

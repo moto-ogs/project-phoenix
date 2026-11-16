@@ -3,6 +3,7 @@ package parentbillinghttp
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
@@ -33,11 +34,11 @@ func (rs *FinanceExportResource) exportRuns(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	table := newListTable("Dateien je Lauf", "exportlaeufe", false,
-		column("run", "Lauf"), column("issued", "Ausgestellt am"), column("invoices", "Rechnungen"), column("total", "Summe"),
-		column("sollstellung", "Letzte Sollstellung"), column("datev", "DATEV-Datei"), column("files", "Dateien"))
+		column("run", "Lauf"), column("issued", "Ausgestellt am"), common.ListColumn{ID: "invoices", Label: "Rechnungen", Numeric: true}, common.ListColumn{ID: "total", Label: "Summe (Euro)", Numeric: true},
+		column("sollstellung", "Letzte Sollstellung"), column("datev", "DATEV-Datei"), common.ListColumn{ID: "files", Label: "Dateien", Numeric: true})
 	for _, run := range runs.Runs {
 		table.Rows = append(table.Rows, []string{
-			run.Label, dateText(run.IssuedOn), strconv.Itoa(run.InvoiceCount), euroText(run.TotalCents),
+			run.Label, dateText(run.IssuedOn), strconv.Itoa(run.InvoiceCount), decimalEuro(run.TotalCents),
 			lastFileText(run.LastSollstellung), lastFileText(run.LastDatev), strconv.Itoa(run.Exports),
 		})
 	}
@@ -77,18 +78,24 @@ func (rs *FinanceExportResource) exportFiles(w http.ResponseWriter, r *http.Requ
 	}
 	table := newListTable("Exportprotokoll", "exportprotokoll", false,
 		column("number", "Nr."), column("file", "Datei"), column("run", "Lauf"), column("kind", "Art"),
-		column("invoices", "Rechnungen"), column("total", "Summe"), column("exported", "Heruntergeladen"))
+		common.ListColumn{ID: "invoices", Label: "Rechnungen", Numeric: true}, common.ListColumn{ID: "total", Label: "Summe (Euro)", Numeric: true}, column("exported", "Heruntergeladen"))
 	for _, file := range files.Files {
 		if runID > 0 {
 			table.Subtitle = file.RunLabel
 		}
 		table.Rows = append(table.Rows, []string{
 			strconv.FormatInt(file.FileNumber, 10), file.FileName, file.RunLabel, financeFileKinds[file.Format],
-			strconv.Itoa(file.InvoiceCount), euroText(file.TotalCents), instantText(&file.ExportedAt),
+			strconv.Itoa(file.InvoiceCount), decimalEuro(file.TotalCents), instantText(&file.ExportedAt),
 		})
 	}
 	if len(files.Files) < files.Total {
 		common.MarkListTruncated(&table, capability.MaxExportListRows)
 	}
 	common.WriteList(w, r, rs.lists, format, table)
+}
+
+// decimalEuro keeps amounts parseable as numeric cells, with the currency
+// named in the column heading instead of every value.
+func decimalEuro(cents int64) string {
+	return strings.ReplaceAll(strings.TrimSuffix(euroText(cents), " €"), ".", "")
 }
