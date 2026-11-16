@@ -382,10 +382,7 @@ export function Modal({
           onClick={handleClose}
           disabled={isDismissDisabled || isBackdropDismissDisabled}
           aria-label={backdropLabel}
-          // The tint stays put and only its opacity fades: the compositor
-          // runs an opacity transition without repainting the page. The
-          // blur sets in once the panel has landed.
-          data-state={isAnimating && !isExiting ? "open" : "closed"}
+          // Tint and blur fade in together, as before #7252.
           className={`absolute inset-0 cursor-default border-none p-0 ${OVERLAY_BACKDROP_TINT_CLASS} ${OVERLAY_BACKDROP_BLUR_CLASS} transition-opacity duration-200 ease-out ${
             isAnimating && !isExiting ? "opacity-100" : "opacity-0"
           }`}

@@ -176,7 +176,6 @@ export function AttachmentViewer({
         role="dialog"
         aria-modal="true"
         aria-label={item.name}
-        data-state="open"
         className={`fixed inset-0 ${Z_LAYER.modal} flex flex-col bg-black/90 text-white ${OVERLAY_BACKDROP_BLUR_CLASS}`}
         style={{ pointerEvents: "auto" }}
       >

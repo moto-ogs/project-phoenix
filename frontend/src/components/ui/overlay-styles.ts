@@ -10,13 +10,10 @@
 export const OVERLAY_BACKDROP_TINT_CLASS = "bg-black/40";
 
 /**
- * Blurs the page behind an overlay once the overlay has landed
- * (`.moto-overlay-blur` in globals.css). The element carries
- * `data-state="open"` while it is open; `closed` drops the blur at once.
- * A blur that is on while the panel moves costs every frame of the motion:
- * with 4x CPU throttling the search (Cmd/Ctrl+K) drew 7–8 frames in its
- * first 250 ms with it and 12–13 with the delayed blur, as many as without
- * any. The delay defaults to the modal's enter time; the drawers set theirs.
+ * Blurs the page behind an overlay, together with the tint and from its first
+ * frame, as before #7252 (`.moto-overlay-blur` in globals.css). A blur that
+ * set in only after the panel had landed read as "grey first, blur later"
+ * and was reverted.
  */
 export const OVERLAY_BACKDROP_BLUR_CLASS = "moto-overlay-blur";
 

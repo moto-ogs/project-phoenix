@@ -991,41 +991,18 @@ html[data-chat-page-lock] body {
 }
 
 /* Der Weichzeichner hinter Dialogen, Seitenleisten und Schubladen
-   (`OVERLAY_BACKDROP_BLUR_CLASS`). Er setzt erst ein, wenn das Fenster
-   gelandet ist, und fällt beim Schließen sofort weg: Solange das Fenster
-   gleitet, müsste der Browser die ganze Seite in jedem Bild neu weichzeichnen
-   (#7252). Eine Animation statt eines Übergangs, weil sie auch beim ersten
-   Bild läuft: die Schubladen erscheinen schon mit `data-state="open"`. */
-.moto-overlay-blur[data-state="open"] {
-  /* `forwards`, nicht `both`: in der Wartezeit muss der Wert `none` sein.
-     Schon `blur(0px)` legt die teure Ebene an. */
-  animation: moto-overlay-blur 0s linear
-    var(--moto-overlay-blur-delay, var(--moto-modal-enter, 200ms)) forwards;
-}
-
-/* vaul gibt seinem Overlay die Einblende-Animation `fadeIn` mit einem
-   spezifischeren Selektor; ohne diese Regel ersetzte sie den Weichzeichner.
-   Beide laufen hier nebeneinander. */
-[data-vaul-overlay][data-vaul-snap-points="false"].moto-overlay-blur[data-state="open"] {
-  animation-name: fadeIn, moto-overlay-blur;
-  animation-duration: 0.5s, 0s;
-  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1), linear;
-  animation-delay: 0s, var(--moto-overlay-blur-delay, 500ms);
-  animation-fill-mode: none, forwards;
-}
-
-@keyframes moto-overlay-blur {
-  to {
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
+   (`OVERLAY_BACKDROP_BLUR_CLASS`): sofort mit dem Grau, wie vor #7252. Nur
+   die Form ohne Präfix: lightningcss fasst beide sonst im Produktions-Build
+   zu `-webkit-backdrop-filter` zusammen, das Chrome nicht kennt, und setzt
+   das Präfix selbst, wo die Zielbrowser es brauchen. */
+.moto-overlay-blur {
+  backdrop-filter: blur(8px);
 }
 
 /* Glas für kleine, ruhende Flächen (Chips der Anmeldeseite): wenig Fläche,
    nichts darunter bewegt sich. Nie auf Leisten über scrollendem Inhalt. */
 .moto-glass {
   backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 
 /* A short bar that fills once, before a redirect (invitation accepted). It
