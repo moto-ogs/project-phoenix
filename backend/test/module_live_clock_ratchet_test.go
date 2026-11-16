@@ -50,6 +50,8 @@ import (
 // Re-measured 2026-11-15 for #7104: not counting stopwatch starts and the
 // owner slices lowered the sum from 1,646 to 665 calls; Care Plan (139 to 1)
 // and Parent Billing (7 to 0) take their clocks from their compositions.
+// Student Presence (86), Presence Projection (15) and Class Day (14) follow
+// with ADR 0262 (115 to 0).
 var moduleLiveClockBudget = map[string]int{
 	"modules/appointments": 5,
 	"modules/auditlog":     15,
@@ -57,7 +59,6 @@ var moduleLiveClockBudget = map[string]int{
 	// PickupBaselineQueries.HasBookedOfferingPickupForWeekday: the public
 	// PickupBaselineReader method names no day.
 	"modules/careplan":                     1,
-	"modules/classday":                     14,
 	"modules/communication":                15,
 	"modules/dataimport":                   55,
 	"modules/delivery":                     44,
@@ -74,7 +75,6 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/organizationtenancy":          7,
 	"modules/peopledirectory":              12,
 	"modules/planexport":                   2,
-	"modules/presenceprojection":           15,
 	"modules/requestreview":                1,
 	"modules/schedulerruntime":             36,
 	"modules/schoolcalendar":               5,
@@ -82,7 +82,6 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/schoolstructure":              3,
 	"modules/settings":                     3,
 	"modules/statistics":                   6,
-	"modules/studentpresence":              86,
 	"modules/timetable":                    45,
 	"modules/traegerview":                  1,
 	"modules/workforce":                    62,

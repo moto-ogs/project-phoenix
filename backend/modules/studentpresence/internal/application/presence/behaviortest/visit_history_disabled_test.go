@@ -66,7 +66,7 @@ func TestDisabledVisitHistorySettingRollsBackOnAuditFailure(t *testing.T) {
 	injected := errors.New("synthetic audit failure")
 	fault := &retentionAuditFault{command: command, afterAppend: injected}
 	repos := api.NewRetentionCleanupRepositories(testpkg.NewDatabase(t, db), fault)
-	cleanup := activeService.NewCleanupService(testSchoolPresence(t, db), nil, owners.NewDeletionAudit(repos.Deletion), nil, func() calendar.Date { return day })
+	cleanup := activeService.NewCleanupService(testSchoolPresence(t, db), nil, owners.NewDeletionAudit(repos.Deletion), nil, func() time.Time { return day.BerlinMidnight().Add(12 * time.Hour) })
 	student := testpkg.CreateTestStudent(t, db, "Synthetisch", "Rollback", "3a")
 	group := testpkg.CreateTestActiveGroupForTenant(t, db, testpkg.Tenant(t))
 	exit := day.BerlinMidnight().Add(-time.Microsecond)
@@ -93,7 +93,7 @@ func TestVisitHistoryCleanupRefusesUnreadableSetting(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	injected := errors.New("synthetic setting failure")
-	cleanup := activeService.NewCleanupService(testSchoolPresence(t, db), nil, nil, unavailableVisitHistorySettings{injected})
+	cleanup := activeService.NewCleanupService(testSchoolPresence(t, db), nil, nil, unavailableVisitHistorySettings{injected}, time.Now)
 	result, err := cleanup.CleanupExpiredVisits(testpkg.Ctx(t))
 	require.ErrorIs(t, err, injected)
 	assert.False(t, result.Success)

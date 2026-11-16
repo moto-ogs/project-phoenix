@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 func (s *Store) RecordSupervision(ctx context.Context, input ports.GroupSupervision) (ports.GroupSupervision, ports.Stats, error) {
@@ -42,7 +43,7 @@ func (s *Store) ReviseSupervision(ctx context.Context, input ports.GroupSupervis
  SET group_id = ?, staff_id = ?, role = ?, start_date = ?, end_date = ?, updated_at = ?
  WHERE tenant_id = ? AND id = ?
  RETURNING id, tenant_id, group_id, staff_id, role, start_date, end_date, created_at, updated_at`,
-		input.GroupID, input.StaffID, input.Role, input.StartDate, input.EndDate, started, tenantID, input.ID).Scan(ctx, &result)
+		input.GroupID, input.StaffID, input.Role, input.StartDate, input.EndDate, s.now(), tenantID, input.ID).Scan(ctx, &result)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -92,7 +93,7 @@ func (s *Store) EndOpenGroupSupervisions(ctx context.Context, groupID, staffID i
 		return 0, ports.Stats{}, err
 	}
 	started := time.Now()
-	result, err := db.NewUpdate().Table("active.group_supervisors").Set("end_date = now()").
+	result, err := db.NewUpdate().Table("active.group_supervisors").Set("end_date = ?", calendar.DateFromTime(s.now())).
 		Where("tenant_id = ? AND group_id = ? AND staff_id = ?", tenantID, groupID, staffID).
 		Where("start_date <= ? AND end_date IS NULL", date).Exec(ctx)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}

@@ -43,7 +43,7 @@ func (s *Store) TransferOpenVisits(ctx context.Context, from, to int64) (ports.S
 	}
 	started := time.Now()
 	result, err := db.NewUpdate().Table("active.visits").
-		Set("active_group_id = ?", to).Set("updated_at = ?", time.Now()).
+		Set("active_group_id = ?", to).Set("updated_at = ?", s.now()).
 		Where("tenant_id = ?", tenantID).Where("active_group_id = ?", from).
 		Where("exit_time IS NULL").Where("id IN (?)", bun.List(visitWriteIDs(visits))).Exec(ctx)
 	stats := ports.Stats{Queries: 2, StatementDuration: time.Since(started)}
@@ -59,8 +59,10 @@ func (s *Store) TransferRecentDeviceVisits(ctx context.Context, to, deviceID int
 	if err != nil {
 		return ports.Stats{}, err
 	}
+	// Sessions end on the store's clock; "recent" is the hour before it.
+	since := s.now().Add(-time.Hour)
 	var groups []int64
-	err = db.NewRaw("SELECT id FROM active.groups WHERE tenant_id = ? AND device_id = ? AND end_time IS NOT NULL AND end_time > NOW() - INTERVAL '1 hour' ORDER BY id", tenantID, deviceID).Scan(ctx, &groups)
+	err = db.NewRaw("SELECT id FROM active.groups WHERE tenant_id = ? AND device_id = ? AND end_time IS NOT NULL AND end_time > ? ORDER BY id", tenantID, deviceID, since).Scan(ctx, &groups)
 	if err != nil {
 		return ports.Stats{Queries: 1}, err
 	}
@@ -73,8 +75,8 @@ func (s *Store) TransferRecentDeviceVisits(ctx context.Context, to, deviceID int
 		Where("tenant_id = ?", tenantID).
 		Where(`active_group_id IN (
 			SELECT id FROM active.groups WHERE tenant_id = ? AND device_id = ?
-			AND end_time IS NOT NULL AND end_time > NOW() - INTERVAL '1 hour'
-		) AND exit_time IS NULL`, tenantID, deviceID).Where("id IN (?)", bun.List(visitWriteIDs(visits))).Exec(ctx)
+			AND end_time IS NOT NULL AND end_time > ?
+		) AND exit_time IS NULL`, tenantID, deviceID, since).Where("id IN (?)", bun.List(visitWriteIDs(visits))).Exec(ctx)
 	stats := ports.Stats{Queries: 3, StatementDuration: time.Since(started)}
 	if err != nil {
 		return stats, err

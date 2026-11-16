@@ -134,7 +134,7 @@ func (s *Service) SetSupervisionEnd(ctx context.Context, id int64, endDate strin
 	return count, err
 }
 
-// EndOpenGroupSupervisions ends open assignments that started by eligibleOn, using the database's current date.
+// EndOpenGroupSupervisions ends open assignments that started by eligibleOn on the Berlin day of the store's clock.
 func (s *Service) EndOpenGroupSupervisions(ctx context.Context, groupID, staffID int64, eligibleOn string) (count int, err error) {
 	date, err := calendar.ParseDate(eligibleOn)
 	if err != nil {

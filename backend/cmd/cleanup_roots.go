@@ -42,7 +42,7 @@ func newRetentionCleanupService(db transactionruntime.Database, schools organiza
 	_, supervisors := presenceCompose.SessionRepositories(repos.Sessions)
 	return presenceservice.NewPresenceCleanup(
 		owners.NewLoggedStudentPresence(db, logger), supervisors, owners.NewDeletionAudit(repos.Deletion),
-		settingsCompose.PresenceSettings(newCleanupSettingsService(db, schools, logger)),
+		settingsCompose.PresenceSettings(newCleanupSettingsService(db, schools, logger)), time.Now,
 	)
 }
 

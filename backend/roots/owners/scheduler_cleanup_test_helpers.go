@@ -19,7 +19,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/compose/presenceservice"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -59,7 +58,7 @@ func NewSchedulerCleanupTestDependencies(db transactionruntime.Database, unit te
 		return schedulerPorts.WorkerDependencies{}, err
 	}
 	cleanup := presenceservice.NewPresenceCleanup(presence, supervisors, NewDeletionAudit(audit.DataDeletion),
-		settingsCompose.PresenceSettings(settings.Settings), func() calendar.Date { return calendar.DateFromTime(now()) })
+		settingsCompose.PresenceSettings(settings.Settings), now)
 	return schedulerPorts.WorkerDependencies{
 		Logger: slog.New(slog.DiscardHandler), Now: now,
 		SchoolRepo: schedulerTenantDirectory{schools: schools}, Settings: resolver,

@@ -13,13 +13,18 @@ import (
 
 type Database func(context.Context) (bun.IDB, int64, error)
 
-type Store struct{ database Database }
+// Store is the owner's persistence. now is the composition's clock
+// (ADR 0239): the created_at and updated_at stamps the store writes read it.
+type Store struct {
+	database Database
+	now      func() time.Time
+}
 
-func New(database Database) *Store {
-	if database == nil {
-		panic("student presence postgres: database is required")
+func New(database Database, now func() time.Time) *Store {
+	if database == nil || now == nil {
+		panic("student presence postgres: database and clock are required")
 	}
-	return &Store{database: database}
+	return &Store{database: database, now: now}
 }
 
 func (s *Store) ListOpenPresence(ctx context.Context, ids []int64) ([]int64, ports.Stats, error) {

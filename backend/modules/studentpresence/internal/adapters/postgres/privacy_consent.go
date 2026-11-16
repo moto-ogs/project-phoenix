@@ -120,7 +120,7 @@ func (s *Store) RevisePrivacyConsent(ctx context.Context, value *studentpresence
 	row := privacyConsentRow{ID: value.ID, StudentID: value.StudentID, TenantID: tenantID,
 		PolicyVersion: value.PolicyVersion, Accepted: value.Accepted, AcceptedAt: value.AcceptedAt,
 		ExpiresAt: value.ExpiresAt, DurationDays: value.DurationDays, RenewalRequired: value.RenewalRequired,
-		DataRetentionDays: value.DataRetentionDays, Details: value.Details, UpdatedAt: time.Now()}
+		DataRetentionDays: value.DataRetentionDays, Details: value.Details, UpdatedAt: s.now()}
 	started := time.Now()
 	err = db.NewUpdate().Model(&row).ModelTableExpr("users.privacy_consents AS privacy_consent").
 		Column("policy_version", "accepted", "accepted_at", "expires_at", "duration_days", "renewal_required", "data_retention_days", "details", "updated_at").
