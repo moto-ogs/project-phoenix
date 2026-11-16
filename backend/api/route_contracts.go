@@ -29,7 +29,8 @@ func ContractDocument() (contract.Document, error) {
 		// (studentHTTPResources binds it), so its type is named here.
 		{"/api/students", careStudentsHTTP.StudentWriteContracts(projectionStudentsHTTP.StudentResponse{})},
 		{"/parent", parentAPI.MeRouteContracts()},
-		{"/api/notifications", notificationFeedRouteContracts()},
+		{"/api/notifications", notificationFeedRouteContracts(common.PortalTenant)},
+		{"/school/notifications", notificationFeedRouteContracts(common.PortalSchool)},
 		{"/school/staff-messages", staffMessagingAPI.SchoolRouteContracts()},
 		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
 		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
@@ -67,16 +68,15 @@ func ContractDocument() (contract.Document, error) {
 	return contract.Build(registrations, options)
 }
 
-// notificationFeedRouteContracts registers the notification feed of the
-// staff portal, with patterns relative to the /api/notifications mount.
-// Delivery's http role may not import the contract types, so it hands over
-// the response type only. moto schule mounts the same routes; its
-// registration waits for contract types shared between resources.
-func notificationFeedRouteContracts() []common.RouteContract {
+// notificationFeedRouteContracts registers the notification feed, with
+// patterns relative to the /notifications mount of the portal. The staff
+// portal and moto schule mount the same routes. Delivery's http role may not
+// import the contract types, so it hands over the response type only.
+func notificationFeedRouteContracts(portal common.PortalScope) []common.RouteContract {
 	return []common.RouteContract{
 		{
 			Method: "GET", Pattern: "/feed/unread-count",
-			Portals:  []common.PortalScope{common.PortalTenant},
+			Portals:  []common.PortalScope{portal},
 			Response: notificationsHTTP.FeedUnreadCountContract(),
 		},
 	}

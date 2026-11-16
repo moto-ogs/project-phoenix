@@ -3,6 +3,7 @@ import { routes as catererSchools } from "./caterer-schools.generated";
 import { routes as notifications } from "./notifications.generated";
 import { routes as operatorBilling } from "./operator-billing.generated";
 import { routes as parentMe } from "./parent-me.generated";
+import { routes as schoolNotifications } from "./school-notifications.generated";
 import { routes as schoolStaffMessages } from "./school-staff-messages.generated";
 import { routes as students } from "./students.generated";
 import { routes as traegerBillingFamilies } from "./traeger-billing-families.generated";
@@ -23,6 +24,7 @@ export const portalRoutes = {
     operatorBilling["PUT /operator/billing/key-day"],
   ],
   school: [
+    schoolNotifications["GET /school/notifications/feed/unread-count"],
     schoolStaffMessages["GET /school/staff-messages/unread-count"],
   ],
   tenant: [
