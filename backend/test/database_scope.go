@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -36,7 +38,18 @@ func PerTestDatabases() { perTestDatabases = true }
 // per-test databases remain parallel.
 const maxConcurrentIsolatedTestDatabases = 2
 
-var isolatedTestDatabaseSlots = newIsolatedTestDatabaseLimiter(maxConcurrentIsolatedTestDatabases)
+// isolatedTestDatabaseSlotsEnv lets a runner with more cores than the eight
+// the cap was measured on widen the queue. Unset, empty or invalid: the cap.
+const isolatedTestDatabaseSlotsEnv = "PHX_TEST_ISOLATED_DB_SLOTS"
+
+func isolatedTestDatabaseSlotLimit(value string) int {
+	if limit, err := strconv.Atoi(value); err == nil && limit >= 1 && limit <= 8 {
+		return limit
+	}
+	return maxConcurrentIsolatedTestDatabases
+}
+
+var isolatedTestDatabaseSlots = newIsolatedTestDatabaseLimiter(isolatedTestDatabaseSlotLimit(os.Getenv(isolatedTestDatabaseSlotsEnv)))
 
 type isolatedTestDatabase struct {
 	source      *IsolatedTemplate // nil: a clone of the run's template

@@ -109,7 +109,7 @@ jobs:
           #
           # max_connections=600: twelve package binaries on 16 vCPU, twice the
           # six the 300 above were sized for.
-          POSTGRES_INITDB_ARGS: --set max_connections=600 --set scram_iterations=1
+          POSTGRES_INITDB_ARGS: --set max_connections=1000 --set scram_iterations=1
         ports:
           - 5432:5432
         # Package database drops force checkpoints. These disposable databases
@@ -344,6 +344,8 @@ jobs:
           SHARD_INDEX: ${{ matrix.shard }}
           BACKEND_RACE: ${{ inputs.backend-race }}
           SPLIT_SUITES: ${{ inputs.backend-race }}
+          # EXPERIMENT: four isolated clones per package on 16 vCPU.
+          PHX_TEST_ISOLATED_DB_SLOTS: ${{ !inputs.backend-small-runner && !inputs.backend-race && '4' || '' }}
         run: |
           # A migration this pull request adds below the newest one of its
           # base reaches deployed databases after it. Name those for
