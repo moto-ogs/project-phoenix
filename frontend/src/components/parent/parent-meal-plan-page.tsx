@@ -91,6 +91,25 @@ function mondayISOFromOffset(todayISO: string, weekOffset: number): string {
   return toISODate(base);
 }
 
+/**
+ * Die Woche, die ein Link aus den Hinweisen öffnet (`?week=<Montag>`, #7145):
+ * ihr Abstand zur aktuellen Woche. Ein ungültiger Wert, eine vergangene Woche
+ * oder eine Woche hinter der letzten erreichbaren öffnet die aktuelle Woche.
+ */
+export function weekOffsetFromParam(
+  todayISO: string,
+  week: string | undefined,
+): WeekOffset {
+  if (!week || !/^\d{4}-\d{2}-\d{2}$/.test(week)) return 0;
+  const monday = mondayISOFromOffset(week, 0);
+  for (let offset = 0; offset <= LAST_PARTICIPATION_WEEK; offset++) {
+    if (mondayISOFromOffset(todayISO, offset) === monday) {
+      return offset as WeekOffset;
+    }
+  }
+  return 0;
+}
+
 function workWeekDates(mondayISO: string): string[] {
   const monday = parseISODate(mondayISO);
   return Array.from({ length: 5 }, (_, i) => {
@@ -328,6 +347,7 @@ function ParticipationWeek({
   weekError,
   dishesByDate,
   planLater,
+  weekFromLink = false,
   onWeekChange,
   onEditingChange,
 }: Readonly<{
@@ -344,6 +364,8 @@ function ParticipationWeek({
   dishesByDate: ReadonlyMap<string, MealPlanEntry[]>;
   // The week lies beyond the meal plan parents may read.
   planLater: boolean;
+  // A link from the notices chose the week (#7145); the page keeps it.
+  weekFromLink?: boolean;
   onWeekChange: (offset: WeekOffset) => void;
   onEditingChange: (editing: boolean) => void;
 }>) {
@@ -457,7 +479,7 @@ function ParticipationWeek({
   useEffect(() => {
     if (!participation || weekChosenRef.current) return;
     weekChosenRef.current = true;
-    if (weekOffset !== 0) return;
+    if (weekOffset !== 0 || weekFromLink) return;
     const thisWeek = new Set(workWeekDates(mondayISOFromOffset(today, 0)));
     const thisWeekDays = participation.days.filter((day) =>
       thisWeek.has(day.date),
@@ -468,7 +490,7 @@ function ParticipationWeek({
     ) {
       onWeekChange(1);
     }
-  }, [onWeekChange, participation, today, weekOffset]);
+  }, [onWeekChange, participation, today, weekFromLink, weekOffset]);
 
   function toggleWeekday(weekday: number) {
     setWeekdays((current) =>
@@ -1197,7 +1219,14 @@ function ParticipationWeek({
   );
 }
 
-export function ParentMealPlanPage() {
+interface ParentMealPlanPageProps {
+  /** Montag der Woche, die ein Link aus den Hinweisen öffnet (#7145). */
+  readonly initialWeek?: string;
+}
+
+export function ParentMealPlanPage({
+  initialWeek,
+}: ParentMealPlanPageProps = {}) {
   const locale = useLocale();
 
   const [schools, setSchools] = useState<ChildOption[]>([]);
@@ -1214,7 +1243,17 @@ export function ParentMealPlanPage() {
   // switch to a child with another term must not reload it and reset the
   // selection.
   const tSchools = useTranslations("parentMealPlan");
-  const [weekOffset, setWeekOffset] = useState<WeekOffset>(0);
+  const today = useBerlinToday();
+  const [weekOffset, setWeekOffset] = useState<WeekOffset>(() =>
+    weekOffsetFromParam(today, initialWeek),
+  );
+  // Ein weiterer Link aus den Hinweisen, während die Seite offen ist, öffnet
+  // seine Woche ebenfalls; der Tageswechsel allein wechselt sie nicht.
+  const [linkedWeek, setLinkedWeek] = useState(initialWeek);
+  if (initialWeek !== linkedWeek) {
+    setLinkedWeek(initialWeek);
+    if (initialWeek) setWeekOffset(weekOffsetFromParam(today, initialWeek));
+  }
   const [entries, setEntries] = useState<MealPlanEntry[]>([]);
   // The Monday the current `entries` were loaded for. Used to detect when
   // `entries` belongs to a previous week (a slower request still in flight, or
@@ -1240,9 +1279,9 @@ export function ParentMealPlanPage() {
   const [weekAttempt, setWeekAttempt] = useState(0);
   const [participationEditing, setParticipationEditing] = useState(false);
 
-  // useBerlinToday re-renders on the Berlin midnight rollover, so a page left
-  // mounted overnight follows the date instead of freezing on yesterday.
-  const today = useBerlinToday();
+  // useBerlinToday (above) re-renders on the Berlin midnight rollover, so a
+  // page left mounted overnight follows the date instead of freezing on
+  // yesterday.
   // Anchor the week on the Berlin `today`, not just weekOffset: if the page
   // stays mounted across Berlin midnight, the selected week must roll forward
   // with the date. Keying the memo on `today` also keeps it aligned with the
@@ -1511,6 +1550,7 @@ export function ParentMealPlanPage() {
             weekError={weekError}
             dishesByDate={dishesByDate}
             planLater={planLater}
+            weekFromLink={initialWeek !== undefined}
             onWeekChange={setWeekOffset}
             onEditingChange={setParticipationEditing}
           />

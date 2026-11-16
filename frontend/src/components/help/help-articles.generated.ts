@@ -4903,6 +4903,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
     result: "Der Plan erscheint sofort im Elternportal.",
     notes: [
       "Pro Tag sind mehrere Gerichte möglich.",
+      "Ändern Sie einen Tag, der schon Gerichte hatte, bekommen die Eltern einen Hinweis in moto. Das gilt nur für Kinder, die an dem Tag ein Essen gebucht haben. Mehrere Änderungen einer Woche in 10 Minuten werden ein Hinweis.",
       "Zur Auswahl stehen die 14 Hauptallergene, jedes mit einem festen Buchstaben. Die Liste ist für alle Schulen gleich.",
       "Eltern sehen die Buchstaben am Gericht und darunter die Erklärung. Dort steht auch, dass die Angaben von der Schule oder vom Caterer kommen.",
       "Mit `Vorwoche übernehmen` holen Sie die Gerichte der Vorwoche in diese Woche.",
@@ -4920,6 +4921,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
       "Auch beim Neuladen mit `Wiederholen` fragt moto bei offenen Änderungen nach.",
     ],
     troubleshootingDetails: [
+      "Bekommen Eltern keinen Hinweis zu Änderungen? Prüfen Sie unter `Einstellungen` den Schalter `Hinweis an Eltern bei geändertem Speiseplan`. Für vergangene Tage gibt es keinen Hinweis.",
       "Fehlt `Speiseplan` in der Seitenleiste? Dann ist die Funktion für Ihre OGS ausgeschaltet, oder Ihrer Rolle fehlt das Recht `Mittagessen: Lesen`.",
     ],
     related: [
@@ -7381,7 +7383,8 @@ export const parentNewsTopic = function parentNewsTopic(): HelpTopic {
  *
  * Die `Hinweise` (#7140) stehen ohne Einstellung in moto: am Computer hinter
  * der Glocke oben rechts, auf dem Telefon unter `Mehr`. Erster Hinweis ist
- * die Absage einer Betreuung des Kindes.
+ * die Absage einer Betreuung des Kindes, dazu kommt der geänderte Speiseplan
+ * an einem Tag mit Essensbuchung (#7145).
  */
 export const parentNotificationsTopic =
   function parentNotificationsTopic(): HelpTopic {
@@ -7408,6 +7411,7 @@ export const parentNotificationsTopic =
         "moto meldet sich ab jetzt bei den gewählten Themen. Auch wenn die App geschlossen ist.",
       notes: [
         "Jeder Hinweis steht auch in moto unter `Hinweise`, zum Beispiel wenn eine Betreuung Ihres Kindes ausfällt. Dafür müssen Sie nichts einschalten.",
+        "Ändert sich das Essen an einem Tag, an dem Ihr Kind ein Essen gebucht hat, steht das auch unter `Hinweise`. Der Hinweis öffnet den Speiseplan dieser Woche. Aufs Handy kommt er nur, wenn Sie `Speiseplan geändert` einschalten.",
         "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder `Alle als gelesen markieren` wählen.",
         "Auf dem Sperrbildschirm steht nie der Name Ihres Kindes. Was genau los ist, lesen Sie nach der Anmeldung in moto.",
         "Die Themen stehen unter `Kinder`, `Mitteilungen` und `Termine`.",

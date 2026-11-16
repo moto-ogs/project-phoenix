@@ -33,6 +33,10 @@
       "label": "Vendim për kërkesën tuaj",
       "description": "Kur {careTerm}-ja ka vendosur për një nga kërkesat tuaja."
     },
+    "meal_plan_changed": {
+      "label": "Menyja ndryshoi",
+      "description": "Kur ndryshon ushqimi në një ditë kur fëmija juaj ka rezervuar drekë. Njoftimi në portalin e prindërve vjen gjithmonë. Mesazhi në telefon vjen vetëm nëse e aktivizoni."
+    },
     "parent_care_cancelled": {
       "label": "Kujdesi anulohet",
       "description": "Kur {careTerm}-ja anulon një nga takimet e kujdesit të fëmijës suaj."

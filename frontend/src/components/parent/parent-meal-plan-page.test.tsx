@@ -93,7 +93,10 @@ vi.mock("~/lib/hooks/use-berlin-today", () => ({
   useBerlinToday: () => mocks.today,
 }));
 
-import { ParentMealPlanPage } from "./parent-meal-plan-page";
+import {
+  ParentMealPlanPage,
+  weekOffsetFromParam,
+} from "./parent-meal-plan-page";
 
 describe("ParentMealPlanPage", () => {
   beforeEach(() => {
@@ -224,6 +227,34 @@ describe("ParentMealPlanPage", () => {
       expect(weekStatus).toHaveTextContent(/KW 34\s*· Nächste Woche/);
       expect(weekStatus).toHaveTextContent("17.08. bis 21.08.2026");
     });
+  });
+
+  // Ein Hinweis zum geänderten Speiseplan öffnet seine Woche (#7145).
+  it("opens the week a notice links to", async () => {
+    render(<ParentMealPlanPage initialWeek="2026-08-17" />);
+
+    const weekStatus = within(
+      await screen.findByRole("navigation", { name: "Kalenderwoche wechseln" }),
+    ).getByRole("status");
+    await waitFor(() => {
+      expect(mocks.getChildMealPlan).toHaveBeenLastCalledWith(
+        "child-1",
+        "2026-08-17",
+      );
+      expect(weekStatus).toHaveTextContent(/KW 34\s*· Nächste Woche/);
+    });
+  });
+
+  it("maps a linked week to a reachable week of the page", () => {
+    expect(weekOffsetFromParam("2026-08-12", "2026-08-10")).toBe(0);
+    expect(weekOffsetFromParam("2026-08-12", "2026-08-17")).toBe(1);
+    expect(weekOffsetFromParam("2026-08-12", "2026-08-19")).toBe(1);
+    expect(weekOffsetFromParam("2026-08-12", "2026-08-31")).toBe(3);
+    // Vergangen, zu weit weg oder ungültig: die aktuelle Woche.
+    expect(weekOffsetFromParam("2026-08-12", "2026-08-03")).toBe(0);
+    expect(weekOffsetFromParam("2026-08-12", "2026-09-07")).toBe(0);
+    expect(weekOffsetFromParam("2026-08-12", "kw34")).toBe(0);
+    expect(weekOffsetFromParam("2026-08-12", undefined)).toBe(0);
   });
 
   describe("opening week with meal registration", () => {

@@ -28,6 +28,7 @@ export function mealPlanTopic(): HelpTopic {
     result: "Der Plan erscheint sofort im Elternportal.",
     notes: [
       "Pro Tag sind mehrere Gerichte möglich.",
+      "Ändern Sie einen Tag, der schon Gerichte hatte, bekommen die Eltern einen Hinweis in moto. Das gilt nur für Kinder, die an dem Tag ein Essen gebucht haben. Mehrere Änderungen einer Woche in 10 Minuten werden ein Hinweis.",
       "Zur Auswahl stehen die 14 Hauptallergene, jedes mit einem festen Buchstaben. Die Liste ist für alle Schulen gleich.",
       "Eltern sehen die Buchstaben am Gericht und darunter die Erklärung. Dort steht auch, dass die Angaben von der Schule oder vom Caterer kommen.",
       "Mit `Vorwoche übernehmen` holen Sie die Gerichte der Vorwoche in diese Woche.",
@@ -45,6 +46,7 @@ export function mealPlanTopic(): HelpTopic {
       "Auch beim Neuladen mit `Wiederholen` fragt moto bei offenen Änderungen nach.",
     ],
     troubleshootingDetails: [
+      "Bekommen Eltern keinen Hinweis zu Änderungen? Prüfen Sie unter `Einstellungen` den Schalter `Hinweis an Eltern bei geändertem Speiseplan`. Für vergangene Tage gibt es keinen Hinweis.",
       "Fehlt `Speiseplan` in der Seitenleiste? Dann ist die Funktion für Ihre OGS ausgeschaltet, oder Ihrer Rolle fehlt das Recht `Mittagessen: Lesen`.",
     ],
     related: [

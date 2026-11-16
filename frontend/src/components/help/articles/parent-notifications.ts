@@ -9,7 +9,8 @@ import { HELP_TOPICS } from "~/lib/help-topics";
  *
  * Die `Hinweise` (#7140) stehen ohne Einstellung in moto: am Computer hinter
  * der Glocke oben rechts, auf dem Telefon unter `Mehr`. Erster Hinweis ist
- * die Absage einer Betreuung des Kindes.
+ * die Absage einer Betreuung des Kindes, dazu kommt der geänderte Speiseplan
+ * an einem Tag mit Essensbuchung (#7145).
  */
 export function parentNotificationsTopic(): HelpTopic {
   return {
@@ -35,6 +36,7 @@ export function parentNotificationsTopic(): HelpTopic {
       "moto meldet sich ab jetzt bei den gewählten Themen. Auch wenn die App geschlossen ist.",
     notes: [
       "Jeder Hinweis steht auch in moto unter `Hinweise`, zum Beispiel wenn eine Betreuung Ihres Kindes ausfällt. Dafür müssen Sie nichts einschalten.",
+      "Ändert sich das Essen an einem Tag, an dem Ihr Kind ein Essen gebucht hat, steht das auch unter `Hinweise`. Der Hinweis öffnet den Speiseplan dieser Woche. Aufs Handy kommt er nur, wenn Sie `Speiseplan geändert` einschalten.",
       "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder `Alle als gelesen markieren` wählen.",
       "Auf dem Sperrbildschirm steht nie der Name Ihres Kindes. Was genau los ist, lesen Sie nach der Anmeldung in moto.",
       "Die Themen stehen unter `Kinder`, `Mitteilungen` und `Termine`.",

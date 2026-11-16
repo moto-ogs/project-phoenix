@@ -33,6 +33,10 @@
       "label": "Decision on your request",
       "description": "When the {careTerm} has decided on one of your requests."
     },
+    "meal_plan_changed": {
+      "label": "Meal plan changed",
+      "description": "When the meal changes on a day your child has a meal booked. The notice in the parent portal always arrives. The message on your phone only arrives if you switch it on."
+    },
     "parent_care_cancelled": {
       "label": "Care cancelled",
       "description": "When the {careTerm} cancels one of your child's care sessions."

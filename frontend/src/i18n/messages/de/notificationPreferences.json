@@ -33,6 +33,10 @@
       "label": "Entscheidung über Ihre Anfrage",
       "description": "Wenn die {careTerm} über eine Ihrer Anfragen entschieden hat."
     },
+    "meal_plan_changed": {
+      "label": "Speiseplan geändert",
+      "description": "Wenn sich das Essen an einem Tag ändert, an dem Ihr Kind ein Essen gebucht hat. Der Hinweis im Elternportal kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten."
+    },
     "parent_care_cancelled": {
       "label": "Betreuung fällt aus",
       "description": "Wenn die {careTerm} einen Betreuungstermin Ihres Kindes absagt."
