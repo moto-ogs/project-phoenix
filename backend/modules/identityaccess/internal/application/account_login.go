@@ -465,10 +465,17 @@ func (s *AccountAuthentication) resolveAccountTenantBySlug(ctx context.Context, 
 }
 
 // resolveAccountTenantDefault picks the first active mapping whose school is
-// alive and active, in mapping order.
+// alive and active, in mapping order. A Springer's school without an open
+// window is no default (ADR 0249).
 func (s *AccountAuthentication) resolveAccountTenantDefaultInTransaction(ctx context.Context, accountID int64) (int64, int64, error) {
-	// A Springer's school without an open window is no default (ADR 0249).
-	tenantIDs, _, err := s.store.ListAdmittedTenantIDs(ctx, accountID)
+	return s.firstLiveTenant(ctx, accountID, s.store.ListAdmittedTenantIDs)
+}
+
+// firstLiveTenant picks the first school of list whose school is alive and
+// active. A parent session lists every active mapping: a Springer's window
+// gates only the portals at a school.
+func (s *AccountAuthentication) firstLiveTenant(ctx context.Context, accountID int64, list func(context.Context, int64) ([]int64, domain.OperationStats, error)) (int64, int64, error) {
+	tenantIDs, _, err := list(ctx, accountID)
 	if err != nil {
 		s.logger.Warn("failed to resolve account tenant",
 			slog.Int64("account_id", accountID),

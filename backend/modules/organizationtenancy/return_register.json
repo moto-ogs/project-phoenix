@@ -6581,12 +6581,6 @@
           "nullable": false
         },
         {
-          "name": "access_windowed",
-          "type": "boolean",
-          "udt": "bool",
-          "nullable": false
-        },
-        {
           "name": "access_windows",
           "type": "jsonb",
           "udt": "jsonb",

@@ -79,7 +79,7 @@ func (s *SpringerAccess) unit(ctx context.Context) (context.Context, int64, erro
 	return txCtx, tenantID, nil
 }
 
-// employ maps the account windowed, assigns the role and completes person
+// employ maps the account, assigns the role and completes person
 // and employment, resuming a former employment (ADR 0021).
 func (s *SpringerAccess) employ(ctx context.Context, tenantID int64, window identityaccess.SpringerWindow) (*domain.SchoolIdentity, error) {
 	found, err := s.roles.LockAccount(ctx, window.AccountID)
@@ -89,7 +89,7 @@ func (s *SpringerAccess) employ(ctx context.Context, tenantID int64, window iden
 	if !found {
 		return nil, identityaccess.ErrAccountNotFound
 	}
-	if err := s.windows.EnsureWindowedAccountTenant(ctx, window.AccountID, tenantID); err != nil {
+	if err := s.windows.EnsureSpringerAccountTenant(ctx, window.AccountID, tenantID); err != nil {
 		return nil, err
 	}
 	role, found, err := s.roles.FindSystemRoleByName(ctx, identityaccess.SpringerRoleName)

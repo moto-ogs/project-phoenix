@@ -8,19 +8,18 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// The windowed access of a Springer (#7173, ADR 0249).
+// The access windows of a Springer (#7173, ADR 0249).
 
-// EnsureWindowedAccountTenant maps the account to the school. A new or an
-// inactive mapping becomes active and windowed; an active mapping keeps its
-// mark, so unlimited access stays unlimited. The SET reads the old row.
-func (s *Store) EnsureWindowedAccountTenant(ctx context.Context, accountID, tenantID int64) error {
-	_, err := s.bindAccountToSchool(ctx, "ensure windowed account tenant", func(db bun.IDB) *bun.RawQuery {
+// EnsureSpringerAccountTenant maps the account to the school. A new or an
+// inactive mapping becomes active; an active mapping keeps its activation,
+// so the account's default school stays where it was.
+func (s *Store) EnsureSpringerAccountTenant(ctx context.Context, accountID, tenantID int64) error {
+	_, err := s.bindAccountToSchool(ctx, "ensure springer account tenant", func(db bun.IDB) *bun.RawQuery {
 		return db.NewRaw(refuseCatererAccount+`INSERT INTO auth.account_tenants AS mapping
-				(account_id, tenant_id, status, activated_at, deactivated_at, access_windowed, created_at, updated_at)
-			SELECT ?, ?, 'active', NOW(), NULL::timestamptz, true, NOW(), NOW() FROM caterer WHERE NOT caterer.refused
+				(account_id, tenant_id, status, activated_at, deactivated_at, created_at, updated_at)
+			SELECT ?, ?, 'active', NOW(), NULL::timestamptz, NOW(), NOW() FROM caterer WHERE NOT caterer.refused
 			ON CONFLICT (account_id, tenant_id) DO UPDATE
-			SET access_windowed = mapping.access_windowed OR mapping.status <> 'active',
-				activated_at = CASE WHEN mapping.status = 'active' THEN mapping.activated_at ELSE NOW() END,
+			SET activated_at = CASE WHEN mapping.status = 'active' THEN mapping.activated_at ELSE NOW() END,
 				status = 'active', deactivated_at = NULL, updated_at = NOW()
 			RETURNING 1`+reportCatererRefusal, accountID, accountID, tenantID)
 	})

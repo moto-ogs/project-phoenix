@@ -38,8 +38,8 @@ type SpringerEmployment struct {
 // transaction.
 type SpringerAccess interface {
 	// GrantSpringerWindow creates what is missing at the school: the
-	// account's mapping, marked as windowed unless it already grants
-	// unlimited access; the system role springer; person and employment,
+	// account's mapping; the system role springer, which admits only in
+	// windows unless the account holds another role there; person and employment,
 	// resuming a former employment (ADR 0021); and the window of the block.
 	GrantSpringerWindow(ctx context.Context, window SpringerWindow) (SpringerEmployment, error)
 	// EndSpringerWindow deletes the window of a lifted block; a block

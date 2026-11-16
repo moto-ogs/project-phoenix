@@ -140,8 +140,8 @@ type AccountSession struct {
 	RotatedAt            *time.Time
 	ReplacementTokenHash *string
 	RecoveryProofHash    []byte
-	// OutsideAccessWindow: the session's school maps the account windowed
-	// and no window is open now (ADR 0249). Only the family lookup reads it.
+	// OutsideAccessWindow: the account is only a Springer at the session's
+	// school and no window is open now (ADR 0249). Only the family lookup reads it.
 	OutsideAccessWindow bool
 	CreatedAt           time.Time
 	UpdatedAt           time.Time

@@ -276,15 +276,13 @@ func (s *Store) InsertAccount(ctx context.Context, email, passwordHash string) (
 }
 
 // EnsureAccountTenant activates the mapping and reactivates a deactivated
-// one, so accepting a re-invitation after offboarding restores access. The
-// access it grants is unlimited, so it clears the window mark of a Springer
-// (ADR 0249).
+// one, so accepting a re-invitation after offboarding restores access.
 func (s *Store) EnsureAccountTenant(ctx context.Context, accountID, tenantID int64) (domain.OperationStats, error) {
 	return s.bindAccountToSchool(ctx, "ensure account tenant", func(db bun.IDB) *bun.RawQuery {
 		return db.NewRaw(refuseCatererAccount+`INSERT INTO auth.account_tenants (account_id, tenant_id, status, activated_at, deactivated_at, created_at, updated_at)
 			SELECT ?, ?, 'active', NOW(), NULL::timestamptz, NOW(), NOW() FROM caterer WHERE NOT caterer.refused
 			ON CONFLICT (account_id, tenant_id) DO UPDATE
-			SET status = 'active', activated_at = NOW(), deactivated_at = NULL, access_windowed = false, updated_at = NOW()
+			SET status = 'active', activated_at = NOW(), deactivated_at = NULL, updated_at = NOW()
 			RETURNING 1`+reportCatererRefusal, accountID, accountID, tenantID)
 	})
 }

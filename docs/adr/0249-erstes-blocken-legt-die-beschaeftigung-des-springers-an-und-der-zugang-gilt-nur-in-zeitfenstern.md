@@ -41,8 +41,7 @@ verschoben hat:
    `SpringerEmployments`. Die Wurzel bindet ihn an die Fähigkeit
    `identityaccess.SpringerAccess`. Sie legt in dieser Reihenfolge an,
    jeweils nur, was fehlt:
-   - die Zuordnung des Kontos zur Schule, mit der Marke „nur in
-     Zeitfenstern“ (`auth.account_tenants.access_windowed`);
+   - die Zuordnung des Kontos zur Schule;
    - die Systemrolle `springer`;
    - Personensatz und Beschäftigung über `EnsureSchoolIdentityChain`, mit
      Wiederaufnahme einer früheren Beschäftigung (ADR 0021);
@@ -61,9 +60,8 @@ verschoben hat:
    an.
 3. **Ein Einsatzort bleibt ein Einsatzort.** Ist die Schule schon ein
    Einsatzort der Akte, den die Personalverwaltung verknüpft hat, legt das
-   Blocken nichts an. Hat die Zuordnung zur Schule schon unbefristeten
-   Zugang, bleibt er unbefristet. Eine Einladung oder ein anderer
-   unbefristeter Zugang an derselben Schule nimmt die Marke wieder weg.
+   Blocken nichts an. Hat das Konto an der Schule schon eine andere Rolle,
+   bleibt sein Zugang unbefristet (Punkt 6).
 4. **Die Systemrolle `springer` hat ein Recht: `time_tracking:own`.** Der
    Springer sieht seinen Dienstplan und stempelt. Mehr gibt ihm die Schule
    bei Bedarf über eine weitere Rolle. Basisrolle ist `user`, damit die
@@ -75,13 +73,22 @@ verschoben hat:
    oder die Personalverwaltung die Blockung auf, löscht Workforce das
    Fenster in der Tenant-Transaktion der Schule.
 6. **Geprüft wird beim Anmelden und bei jeder Anfrage, ohne Abfrage mehr.**
-   `auth.account_tenant_admitted(account, school)` ist wahr, wenn die
-   Zuordnung keine Marke hat oder ein Fenster jetzt offen ist.
+   `auth.account_tenant_admitted(account, school)` ist falsch nur, wenn das
+   Konto an der Schule die Systemrolle `springer` hat, sonst höchstens
+   `guardian`, und kein Fenster offen ist. Die Rollen entscheiden, nicht der
+   Weg zur Zuordnung: Gibt eine Einladung, das moto-Team oder die Leitung
+   dem Konto eine weitere Rolle, gilt der Zugang unbefristet. Eine
+   Elternrolle gibt keinen Zugang zum Personalportal und zählt nicht.
    - Die Anmeldung und der Schulwechsel wählen nur zugelassene Schulen.
      Ausstellen und Erneuern einer Sitzung lesen die Zuordnung mit der
      Prüfung.
    - Die Prüfung der Refresh-Familie je Anfrage liest das Ergebnis in
-     derselben Abfrage. Ist das Fenster zu, gilt die Sitzung als beendet.
+     derselben Abfrage. Ist das Fenster zu, gilt eine Sitzung im Personal-
+     oder Schulportal als beendet. Eine Elternsitzung und ein Absprung über
+     den Träger bleiben: Sie beruhen nicht auf der Rolle an der Schule.
+   - Der Schulwechsel einer Träger-Sitzung behandelt eine Schule ohne
+     Zulassung wie eine ohne Zuordnung. Ein Mitglied des Trägers, das dort
+     Springer ist, kommt außerhalb der Fenster über den Träger hinein.
    - Der Austritt und andere Wege, die die Schulen eines Kontos zählen,
      sehen weiter jede aktive Zuordnung. Sonst hielte der Austritt an der
      Heimatschule einen Springer außerhalb seines Fensters für
@@ -105,16 +112,19 @@ verschoben hat:
   offenes Fenster kommt der Springer nicht an die Schule. Der Übergang in
   eine frühere Beschäftigung braucht den Austritt aus
   `workflows/staffoffboarding` und einen täglichen Lauf, der vergangene
-  Blockungen findet. Das ist ein eigener Workflow; er folgt in einem
-  eigenen Issue. Die nächste Blockung nimmt eine schon frühere
+  Blockungen findet. Das ist ein eigener Workflow; er folgt in
+  [#7197](https://github.com/moto-ogs/project-phoenix/issues/7197). Die nächste Blockung nimmt eine schon frühere
   Beschäftigung wieder auf (Punkt 1).
 
 ## Verworfene Optionen
 
 - **Prüfung über die Rolle im Token.** Eine Rolle `springer` im Token
-  sagt nichts über das Fenster. Die Prüfung bräuchte eine zweite Abfrage
-  je Anfrage, und ein Konto mit einer weiteren Rolle käme ohne Prüfung
-  durch.
+  sagt nichts über das Fenster, und das Token lebt über das Fensterende
+  hinaus. Die Prüfung liest die Rollen deshalb in der Abfrage je Anfrage.
+- **Eine Marke „nur in Zeitfenstern“ an der Zuordnung.** Jeder Weg, der
+  unbefristeten Zugang gibt, müsste die Marke löschen, und ein Konto, das
+  schon zugeordnet war, etwa als Elternteil, bekäme sie nie. Die Rollen
+  zeigen beides ohne zweite Quelle.
 - **Fenster aus den Blockungen von Workforce lesen.** Identity & Access
   läse dann eine Tabelle von Workforce. Die Prüfung gehört dem Owner, der
   den Zugang erteilt (ADR 0067).
@@ -124,8 +134,9 @@ verschoben hat:
 
 ## Folgen
 
-- Die Anmeldung eines Kontos mit Marke ist eine Abfrage teurer, nur für
-  dieses Konto. Jede andere Anfrage bleibt bei ihren Abfragen.
+- Die Prüfung je Anfrage liest zusätzlich die Rollen des Kontos an der
+  Schule, über den vorhandenen Index, in derselben Abfrage. Es kommt keine
+  Abfrage hinzu.
 - Die Funktionen umgehen RLS gezielt, wie in ADR 0242. Ihre Prüfung ist
   Teil der Migration und durch API-Tests mit zwei Schulen abgedeckt.
 - Hebt die Personalverwaltung eine Blockung auf, schließt das Fenster in

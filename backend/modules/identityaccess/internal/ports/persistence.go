@@ -290,11 +290,11 @@ type AccountLoginStore interface {
 	// SHARE lock so a revocation cannot commit under a mint.
 	LockActiveTenantMappingShared(ctx context.Context, accountID, tenantID int64) (bool, domain.OperationStats, error)
 	// AdmittedTenantMapping is HasActiveAccountTenant, or with lock
-	// LockActiveTenantMappingShared, that also refuses a windowed mapping
+	// LockActiveTenantMappingShared, that also refuses a Springer
 	// without an open window (#7173, ADR 0249). Sessions rest on it.
 	AdmittedTenantMapping(ctx context.Context, accountID, tenantID int64, lock bool) (bool, domain.OperationStats, error)
-	// ListAdmittedTenantIDs is ListActiveTenantIDs without the windowed
-	// mappings that have no open window; sign-in chooses from it.
+	// ListAdmittedTenantIDs is ListActiveTenantIDs without the schools
+	// where the account is only a Springer outside a window; sign-in chooses from it.
 	ListAdmittedTenantIDs(ctx context.Context, accountID int64) ([]int64, domain.OperationStats, error)
 	// ListAccountRolesAtTenant returns the roles the account holds at the
 	// school, with their role facts; forShare pins the assignment rows.
