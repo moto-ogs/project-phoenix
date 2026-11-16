@@ -203,7 +203,7 @@ func (rs *Resource) listSickDays(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	from, to, err := parseSickDayRange(r)
+	from, to, err := parseSickDayRange(r, timezone.DateFromTime(rs.Now()))
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -222,8 +222,7 @@ func (rs *Resource) listSickDays(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, out, "Sick days retrieved")
 }
 
-func parseSickDayRange(r *http.Request) (timezone.Date, timezone.Date, error) {
-	today := timezone.TodayDate()
+func parseSickDayRange(r *http.Request, today timezone.Date) (timezone.Date, timezone.Date, error) {
 
 	fromRaw := r.URL.Query().Get("from")
 	toRaw := r.URL.Query().Get("to")

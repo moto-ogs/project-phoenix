@@ -96,7 +96,6 @@ var moduleLiveClockBudget = map[string]int{
 	// Scheduler.waitUntilNextMinute: the timer that aligns the minute tick
 	// with the wall clock. A pinned clock would stop both.
 	"modules/schedulerruntime": 11,
-	"workflows/parentportal":   19,
 }
 
 // moduleLiveClockValueBudget caps, per owner directory, the references to the
@@ -131,7 +130,6 @@ var moduleLiveClockValueBudget = map[string]int{
 	"modules/studentpresence":    5,
 	"modules/timetable":          14,
 	"modules/workforce":          8,
-	"workflows/parentportal":     3,
 }
 
 const calendarImportPath = "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"

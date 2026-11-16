@@ -284,7 +284,7 @@ func (s *Service) RespondToAnnouncement(ctx context.Context, accountID, announce
 	if !isPoll {
 		return ErrAnnouncementNotAPoll
 	}
-	if deadline != nil && !deadline.After(time.Now()) {
+	if deadline != nil && !deadline.After(s.now()) {
 		return ErrPollClosed
 	}
 	var options []*ParentAnnouncementOption
@@ -471,12 +471,11 @@ func (s *Service) announcementTenants(ctx context.Context, accountID int64) ([]i
 }
 
 // announcementIsLive reports whether an announcement is currently visible to
-// guardians: active, published, publish time reached, not past expiry.
-func announcementIsLive(a *ParentAnnouncement) bool {
+// guardians at now: active, published, publish time reached, not past expiry.
+func announcementIsLive(a *ParentAnnouncement, now time.Time) bool {
 	if a == nil || !a.Active || a.PublishedAt == nil {
 		return false
 	}
-	now := time.Now()
 	if a.PublishedAt.After(now) {
 		return false
 	}

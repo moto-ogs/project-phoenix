@@ -61,25 +61,8 @@ var calendarFixtureShiftedLiveDateDebt = map[string]int{
 	// Data return, see api/data_return_http_test.go.
 	"modules/organizationtenancy/compose/data_return_export_test.go": 1,
 	// Data return, see api/data_return_http_test.go.
-	"modules/organizationtenancy/internal/adapters/datareturn/datareturn_test.go":                3,
-	"modules/parentrequestfeedprojection/internal/adapters/postgres/query_budget_growth_test.go": 1,
-	"modules/parentrequestfeedprojection/internal/adapters/postgres/query_test.go":               1,
-	"modules/peopledirectory/contracttest/staff_offboarding_test.go":                             6,
-	"workflows/parentportal/care_exception_auto_excusal_test.go":                                 8,
-	"workflows/parentportal/excused_request_error_test.go":                                       3,
-	"workflows/parentportal/excused_request_test.go":                                             10,
-	"workflows/parentportal/http/behaviortest/child_write_handlers_test.go":                      10,
-	"workflows/parentportal/http/behaviortest/pickup_change_cutoff_handlers_test.go":             1,
-	"workflows/parentportal/http/behaviortest/request_edit_handlers_test.go":                     1,
-	"workflows/parentportal/internal/care/behaviortest/parent_declaration_test.go":               1,
-	"workflows/parentportal/internal/care/parent_care_offerings_service_test.go":                 2,
-	"workflows/parentportal/parent_care_exception_emit_test.go":                                  3,
-	"workflows/parentportal/parent_pickup_change_service_test.go":                                12,
-	"workflows/parentportal/parent_request_edit_test.go":                                         10,
-	"workflows/parentportal/parent_request_ledger_test.go":                                       2,
-	"workflows/parentportal/parent_request_reason_enforcement_test.go":                           3,
-	"workflows/parentportal/parent_request_share_at_creation_test.go":                            3,
-	"workflows/parentportal/parent_write_service_test.go":                                        4,
+	"modules/organizationtenancy/internal/adapters/datareturn/datareturn_test.go": 3,
+	"modules/peopledirectory/contracttest/staff_offboarding_test.go":              6,
 }
 
 // applyCalendarShiftDebt removes the shifted-live-date findings that a

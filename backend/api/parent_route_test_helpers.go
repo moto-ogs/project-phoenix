@@ -4,6 +4,7 @@ package api
 
 import (
 	"context"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -41,7 +42,10 @@ func schoolWideReviewScope(context.Context) (carePlanCompose.ReviewScope, error)
 	return carePlanCompose.ReviewScope{SchoolWide: true}, nil
 }
 
-func NewParentRouteTestRepositories(db transactionruntime.Database, members owners.MembershipTestRepositories) (ParentRouteTestRepositories, error) {
+// NewParentRouteTestRepositories composes the guardian portal's Care Plan
+// rows; the excused requests judge their days on the clock a test pins, or on
+// the real one.
+func NewParentRouteTestRepositories(db transactionruntime.Database, members owners.MembershipTestRepositories, clocks ...func() time.Time) (ParentRouteTestRepositories, error) {
 	people := members.People
 	rooms, err := facilitiesCompose.NewUnobserved(db.Pool())
 	if err != nil {
@@ -58,6 +62,7 @@ func NewParentRouteTestRepositories(db transactionruntime.Database, members owne
 	}
 	excusedRequests, err := owners.NewExcusedAbsenceRequests(owners.ExcusedRequestWiring{
 		CarePlan: care, Students: members.Student, Persons: members.Person, Scope: schoolWideReviewScope,
+		Now: OptionalClock(clocks),
 	})
 	if err != nil {
 		return ParentRouteTestRepositories{}, err
