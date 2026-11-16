@@ -68,7 +68,7 @@ type ImportTestOptions struct {
 // NewImportTestRuntime is the import runtime NewImportTestModule composes,
 // for suites that drive their own config through the chunk executor.
 func NewImportTestRuntime(db transactionruntime.Database, options ImportTestOptions) (importPorts.ImportRuntime, *[]importModels.ImportObservation, error) {
-	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return importPorts.ImportRuntime{}, nil, err
 	}
@@ -118,7 +118,7 @@ func NewImportTestModuleWithAuth(db transactionruntime.Database, unit tenant.Uni
 // The auth module, which sends the staff invitations of an import, takes
 // authOptions (for example WithAuthTestMailer to accept and count mail).
 func NewImportTestModuleWithOwners(db transactionruntime.Database, unit tenant.UnitOfWork, options ImportTestOptions, authOptions ...AuthTestOption) (ImportTestModule, peopledirectory.Capability, schoolmembership.Capability, error) {
-	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return ImportTestModule{}, nil, nil, err
 	}

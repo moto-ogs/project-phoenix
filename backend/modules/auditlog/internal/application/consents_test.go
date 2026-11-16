@@ -54,7 +54,7 @@ func TestConsentRecorderPropagatesAppendFailure(t *testing.T) {
 
 func newConsentTestCommand(t *testing.T, store *consentAppender) *ConsentRecorder {
 	t.Helper()
-	command, err := NewCommand(store, func(AppendObservation) {})
+	command, err := NewCommand(store, func(AppendObservation) {}, retentionTestClock)
 	require.NoError(t, err)
 	return NewConsentRecorder(command)
 }

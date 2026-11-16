@@ -46,11 +46,11 @@ func NewSchedulerCleanupTestDependencies(db transactionruntime.Database, unit te
 		DB: db.Pool(), Now: now,
 	})
 	_, supervisors := presenceCompose.SessionRepositories(records)
-	audit, err := auditCompose.NewTenantPersistence(db.Pool())
+	audit, err := auditCompose.NewTenantPersistence(db.Pool(), now)
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
 	}
-	command, err := auditCompose.NewCommand(NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, now)
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
 	}

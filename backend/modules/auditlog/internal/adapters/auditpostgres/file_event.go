@@ -19,7 +19,7 @@ func NewFileEventRepository(runtime Runtime) audit.FileEventRepository {
 }
 
 func (r *fileEventRepository) Create(ctx context.Context, event *audit.FileEvent) error {
-	return NewAppender(r.runtime).Append(ctx, event)
+	return NewAppender(r.runtime, nil).Append(ctx, event)
 }
 
 func (r *fileEventRepository) ListRecent(ctx context.Context, limit int) ([]*audit.FileEvent, error) {

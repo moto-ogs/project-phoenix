@@ -95,9 +95,9 @@ func newTraegerDocumentsFixtureOn(t *testing.T, db *bun.DB) traegerDocumentsFixt
 		})
 	})
 	tenantRouter := chi.NewRouter()
-	audit, err := auditCompose.NewTenantPersistence(db)
+	audit, err := auditCompose.NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
-	ledger, err := auditCompose.NewObservedCommand(audit.AppendStore, slog.Default(), func(string, time.Duration, int, error) {})
+	ledger, err := auditCompose.NewObservedCommand(audit.AppendStore, slog.Default(), func(string, time.Duration, int, error) {}, time.Now)
 	require.NoError(t, err)
 	delivery, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{
 		DB: db, People: owners.EnrollmentFlowGuardianDirectory{}, Observe: func(deliveryContract.Observation) {},

@@ -4,6 +4,7 @@ package api
 
 import (
 	"log/slog"
+	"time"
 
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
@@ -40,7 +41,7 @@ func newGuardianTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return GuardianTestModule{}, err
 	}
-	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return GuardianTestModule{}, err
 	}

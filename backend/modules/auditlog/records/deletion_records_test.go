@@ -40,6 +40,6 @@ func TestDeletionRecordConstructorsKeepTheirLogShape(t *testing.T) {
 	assert.Equal(t, 5, staff.RecordsDeleted)
 	assert.Equal(t, "retention_expired", staff.DeletionReason)
 	assert.Equal(t, "system", staff.DeletedBy)
-	assert.False(t, staff.DeletedAt.IsZero())
+	assert.True(t, staff.DeletedAt.IsZero(), "the Audit Appender stamps the deletion time")
 	assert.Equal(t, map[string]interface{}{"person_anonymized": true, "external_caregivers": externals}, staff.Metadata)
 }

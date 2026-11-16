@@ -88,7 +88,7 @@ func BuildCalendarApp(
 		newWorkforceShiftRows(workTime), newWorkforceShiftTypeRows(workTime))
 	cfg = BindCalendarFeedFacts(cfg, organizations, identity, identity, people.Persons)
 	cfg = BindCalendarCaller(cfg, caller)
-	cfg.Appointments, cfg.SchoolDays = appointments, calendar
+	cfg.Appointments, cfg.SchoolDays, cfg.Now = appointments, calendar, env.Now
 	cfg.ParentConferences = BuildServeParentConferences(db)
 	cfg.Runtime, cfg.CalendarRenderer = calendarCompose.NewTenantRuntime(db.Pool()), calendarCompose.NewCalendarRenderer(calendar)
 	cfg.Outbox, cfg.PushOutbox = NewCalendarOutbox(delivery.Outbox), deliveryCompose.NewDurablePushOutbox(delivery.Runtime.Module)

@@ -66,7 +66,7 @@ func newTraegerStaffFixtureWith(t *testing.T, db *bun.DB, now func() time.Time, 
 		Now: now,
 	})
 	require.NoError(t, err)
-	tenantAudit, err := auditCompose.NewTenantPersistence(db)
+	tenantAudit, err := auditCompose.NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
 	router := chi.NewRouter()
 	router.Use(func(next http.Handler) http.Handler {
