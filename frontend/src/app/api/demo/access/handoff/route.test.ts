@@ -21,6 +21,7 @@ beforeEach(() => {
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
   vi.stubEnv("NEXT_PUBLIC_PARENTS_HOSTNAME", "eltern.demo.example");
+  vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", "traeger.demo.example");
 });
 
 afterEach(() => {
@@ -43,6 +44,36 @@ describe("demo handoff route", () => {
     );
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // The Träger-Portal (#6193) is a host of its own like the parents app.
+  it("sends the OGS app's visitor to the Träger-Portal's entry page", async () => {
+    const response = await handoff(
+      request("ogs-beispiel.demo.example", "traeger", "secret-token"),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("Location")).toBe(
+      "https://traeger.demo.example/demo#token=secret-token&role=traeger&switched=1",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("sends the Träger-Portal's visitor back to the demo school in the chosen role", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({
+        status: "ready",
+        school_url: "https://ogs-beispiel.demo.example",
+      }),
+    );
+
+    const response = await handoff(
+      request("traeger.demo.example", "caregiver", "secret-token"),
+    );
+
+    expect(response.headers.get("Location")).toBe(
+      "https://ogs-beispiel.demo.example/demo#token=secret-token&role=caregiver&switched=1",
+    );
   });
 
   it("sends the parents app's visitor back to the demo school in the chosen role", async () => {

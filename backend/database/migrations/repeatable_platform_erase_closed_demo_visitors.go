@@ -48,7 +48,7 @@ AS $function$
 			-- log line; every order stays for the next run (#5540).
 			BEGIN
 			FOR visitor IN
-				SELECT state.name, state.tenant_id, state.attempts,
+				SELECT state.name, state.tenant_id, state.attempts, state.traeger_id,
 					array_remove(state.visitor_account_ids || ARRAY[state.visitor_account_id], NULL) AS visitor_account_ids,
 					array_remove(state.visitor_parent_account_ids || ARRAY[state.visitor_parent_account_id], NULL) AS visitor_parent_account_ids,
 					array_remove(state.visitor_school_ids || ARRAY[state.tenant_id], NULL) AS visitor_school_ids
@@ -85,7 +85,7 @@ AS $function$
 				BEGIN
 				PERFORM pg_advisory_xact_lock(hashtextextended('demo school seed:' || target_name, 3461));
 				PERFORM pg_advisory_xact_lock(hashtextextended('platform.demo_school_states:' || target_name, 0));
-				SELECT state.name, state.tenant_id, state.attempts,
+				SELECT state.name, state.tenant_id, state.attempts, state.traeger_id,
 					array_remove(state.visitor_account_ids || ARRAY[state.visitor_account_id], NULL) AS visitor_account_ids,
 					array_remove(state.visitor_parent_account_ids || ARRAY[state.visitor_parent_account_id], NULL) AS visitor_parent_account_ids,
 					array_remove(state.visitor_school_ids || ARRAY[state.tenant_id], NULL) AS visitor_school_ids
@@ -645,6 +645,7 @@ AS $function$
 					DELETE FROM auth.mfa_overrides
 					WHERE account_id = ANY (visitor.visitor_account_ids || visitor.visitor_parent_account_ids)
 						AND tenant_id = ANY (visitor.visitor_school_ids);
+					PERFORM platform.erase_demo_visitor_traeger_member(visitor.traeger_id, visitor.visitor_account_ids || visitor.visitor_parent_account_ids); -- the visitor in the office of its own Träger (ADR 0271)
 					-- Hold the visitor accounts until the check below is done (#5540):
 					-- a school or Träger membership another transaction is writing
 					-- holds its account, so the erasure gives up after lock_timeout

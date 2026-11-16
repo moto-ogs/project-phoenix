@@ -835,7 +835,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (e DemoAccessEngine) RedeemDemoAccess(ctx context.Context, token, role, ipAddress, userAgent string) (identityaccess.DemoEntry, error) {\n\tentry, err := e.Flows.Redeem(ctx, token, domain.DemoRole(role), ipAddress, userAgent)\n\tif err != nil {\n\t\treturn identityaccess.DemoEntry{}, demoAccessError(err)\n\t}\n\treturn identityaccess.DemoEntry{AccessToken: entry.AccessToken, RefreshToken: entry.RefreshToken, AccessID: entry.AccessID, Role: string(entry.Role), Source: entry.Source, FixedRole: entry.FixedRole}, nil\n}",
+      "evidence": "func (e DemoAccessEngine) RedeemDemoAccess(ctx context.Context, token, role, ipAddress, userAgent string) (identityaccess.DemoEntry, error) {\n\tentry, err := e.Flows.Redeem(ctx, token, domain.DemoRole(role), ipAddress, userAgent)\n\tif err != nil {\n\t\treturn identityaccess.DemoEntry{}, demoAccessError(err)\n\t}\n\treturn identityaccess.DemoEntry{AccessToken: entry.AccessToken, RefreshToken: entry.RefreshToken, AccessID: entry.AccessID, Role: string(entry.Role), Source: entry.Source, FixedRole: entry.FixedRole, Traeger: entry.Traeger}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/DemoAccessEngine.RedeemDemoAccess",
       "owner": "modules/identityaccess"
@@ -870,7 +870,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p DemoSchoolsPort) DemoSchoolEntry(ctx context.Context, slug string) (domain.DemoSchoolEntry, error) {\n\tentry, err := p.DemoSchools.DemoSchoolEntry(ctx, slug)\n\treturn domain.DemoSchoolEntry{Exists: entry.Exists, Status: entry.Status, TenantID: entry.SchoolID, AccountID: entry.AccountID, ParentAccountID: entry.ParentAccountID}, err\n}",
+      "evidence": "func (p DemoSchoolsPort) DemoSchoolEntry(ctx context.Context, slug string) (domain.DemoSchoolEntry, error) {\n\tentry, err := p.DemoSchools.DemoSchoolEntry(ctx, slug)\n\treturn domain.DemoSchoolEntry{Exists: entry.Exists, Status: entry.Status, TenantID: entry.SchoolID, AccountID: entry.AccountID, ParentAccountID: entry.ParentAccountID, TraegerID: entry.TraegerID}, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/DemoSchoolsPort.DemoSchoolEntry",
       "owner": "modules/identityaccess"

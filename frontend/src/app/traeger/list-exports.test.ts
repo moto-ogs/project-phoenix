@@ -96,6 +96,7 @@ const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/anmeldephasen/neu": "Formular",
   "/berichte/vorlagen/[id]": "Formular",
   "/berichte/vorlagen/neu": "Formular",
+  "/demo": "Anmeldung",
   "/dokumente/[id]": "Einzelansicht",
   "/einstellungen": "Einstellungen",
   "/einstellungen/abrechnung": "Einstellungen",

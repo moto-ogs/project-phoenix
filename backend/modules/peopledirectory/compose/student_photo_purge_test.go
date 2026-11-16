@@ -2,6 +2,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -14,13 +15,27 @@ import (
 )
 
 // enabledPhotoRuntime is the smallest runtime the purge needs: the feature is
-// on, and nothing else about it is under test here.
-type enabledPhotoRuntime struct{ unlinked []string }
+// on unless a test switches it off, and the consents the purge ended are kept.
+type enabledPhotoRuntime struct {
+	unlinked    []string
+	switchedOff bool
+	// staleOn is a request memo that still reads "on" after a switch-off
+	// committed: only the in-transaction read sees switchedOff.
+	committedErr  error
+	staleOn       bool
+	actor         int64
+	endedConsents []int64
+}
 
 func (r *enabledPhotoRuntime) QueueUnlinkStoredPhoto(context.Context, string) error { return nil }
 
-func (r *enabledPhotoRuntime) PhotoFeatureEnabled(context.Context) (bool, error) { return true, nil }
-func (r *enabledPhotoRuntime) ActingAccountID(context.Context) int64             { return 0 }
+func (r *enabledPhotoRuntime) PhotoFeatureEnabled(_ context.Context, committed bool) (bool, error) {
+	if committed {
+		return !r.switchedOff, r.committedErr
+	}
+	return r.staleOn || !r.switchedOff, nil
+}
+func (r *enabledPhotoRuntime) ActingAccountID(context.Context) int64 { return r.actor }
 func (r *enabledPhotoRuntime) UnlinkStoredPhoto(storedURL string) {
 	r.unlinked = append(r.unlinked, storedURL)
 }
@@ -28,6 +43,10 @@ func (r *enabledPhotoRuntime) BroadcastPhotoChange(int64, int64, string) {}
 func (r *enabledPhotoRuntime) RecordPhotoConsent(
 	context.Context, StudentPhotoConsentSnapshot, StudentPhotoConsentSnapshot, *int64, time.Time,
 ) error {
+	return nil
+}
+func (r *enabledPhotoRuntime) RecordPhotoConsentsEnded(_ context.Context, studentIDs []int64, _ *int64, _ time.Time) error {
+	r.endedConsents = append(r.endedConsents, studentIDs...)
 	return nil
 }
 
@@ -164,4 +183,177 @@ func (r *enabledPhotoRuntime) QueueUnlinkStoredPhotos(ctx context.Context, urls 
 		}
 	}
 	return nil
+}
+
+func setStudentPhotoConsent(t *testing.T, db *bun.DB, studentID int64, givenAt *time.Time) {
+	t.Helper()
+	_, err := db.NewUpdate().
+		TableExpr("users.student_profiles").
+		Set("photo_consent_given_at = ?", givenAt).
+		Where("id = ?", studentID).
+		Exec(testpkg.Ctx(t))
+	require.NoError(t, err)
+}
+
+func studentPhotoConsent(t *testing.T, db *bun.DB, studentID int64) *time.Time {
+	t.Helper()
+	var row struct {
+		GivenAt *time.Time `bun:"photo_consent_given_at"`
+	}
+	require.NoError(t, db.NewSelect().
+		TableExpr("users.student_profiles").
+		Column("photo_consent_given_at").
+		Where("id = ?", studentID).
+		Scan(testpkg.Ctx(t), &row))
+	return row.GivenAt
+}
+
+// TestPhotoConsentDoesNotSurviveSwitchingTheFeatureOffAndOn is the regression
+// of #7208: switching child photos off ends every photo consent with the
+// photos, so after switching it on again an upload needs a new confirmation.
+// A child whose consent stood without a photo loses it too, and both ended
+// consents reach the trail; a child without either is left out.
+func TestPhotoConsentDoesNotSurviveSwitchingTheFeatureOffAndOn(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module, runtime := buildPhotoModule(t, db)
+	ctx := testpkg.Ctx(t)
+	runtime.actor = testpkg.CreateTestAccount(t, db, "photo-consent-7208@example.test").ID
+
+	withPhoto := testpkg.CreateTestStudent(t, db, "Consent", "Photo", "1a")
+	consentOnly := testpkg.CreateTestStudent(t, db, "Consent", "Only", "1a")
+	neither := testpkg.CreateTestStudent(t, db, "Consent", "None", "1a")
+	givenAt := time.Date(2026, time.September, 1, 9, 0, 0, 0, time.UTC)
+	oldURL := "/uploads/student-photos/before-off.jpg"
+	setStudentPhotoPath(t, db, withPhoto.ID, &oldURL)
+	setStudentPhotoConsent(t, db, withPhoto.ID, &givenAt)
+	setStudentPhotoConsent(t, db, consentOnly.ID, &givenAt)
+
+	// Off: the setting's purge.
+	runtime.switchedOff = true
+	urls, err := module.PurgeStudentPhotos(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, []string{oldURL}, urls)
+	assert.Nil(t, studentPhotoConsent(t, db, withPhoto.ID), "the consent ends with the photo")
+	assert.Nil(t, studentPhotoConsent(t, db, consentOnly.ID), "a consent without a photo ends as well")
+	assert.ElementsMatch(t, []int64{withPhoto.ID, consentOnly.ID}, runtime.endedConsents,
+		"every ended consent is recorded as withdrawn, the child without one is not")
+
+	// On again: the upload asks for a new confirmation.
+	runtime.switchedOff = false
+	newURL := "/uploads/student-photos/after-on.jpg"
+	err = module.CommitStudentPhoto(ctx, withPhoto.ID, newURL, false)
+	require.ErrorIs(t, err, peopledirectory.ErrPhotoConsentRequired)
+	assert.Nil(t, studentPhotoPath(t, db, withPhoto.ID))
+
+	require.NoError(t, module.CommitStudentPhoto(ctx, withPhoto.ID, newURL, true))
+	assert.Equal(t, &newURL, studentPhotoPath(t, db, withPhoto.ID))
+	assert.NotNil(t, studentPhotoConsent(t, db, withPhoto.ID), "the confirmation records a new consent")
+	assert.Nil(t, studentPhotoConsent(t, db, neither.ID))
+}
+
+// TestApplyStudentPhotoConsentGrantsOnlyWhileTheFeatureIsOn pins the gate of
+// #7208: a new consent needs the feature on, a repeated grant changes nothing
+// and a withdrawal stays possible while it is off.
+func TestApplyStudentPhotoConsentGrantsOnlyWhileTheFeatureIsOn(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module, runtime := buildPhotoModule(t, db)
+	ctx := testpkg.Ctx(t)
+	grant, withdraw := true, false
+	givenAt := time.Date(2026, time.September, 1, 9, 0, 0, 0, time.UTC)
+	withoutConsent := peopledirectory.StudentPhotoState{StudentID: 1}
+	withConsent := peopledirectory.StudentPhotoState{StudentID: 1, PhotoConsentGivenAt: &givenAt}
+
+	runtime.switchedOff = true
+	_, err := module.ApplyStudentPhotoConsent(ctx, withoutConsent, &grant)
+	require.ErrorIs(t, err, peopledirectory.ErrPhotoFeatureDisabled, "no new consent while photos are off")
+
+	kept, err := module.ApplyStudentPhotoConsent(ctx, withConsent, &grant)
+	require.NoError(t, err, "a repeated grant is no new consent")
+	assert.Equal(t, &givenAt, kept.PhotoConsentGivenAt)
+
+	withdrawn, err := module.ApplyStudentPhotoConsent(ctx, withConsent, &withdraw)
+	require.NoError(t, err, "a withdrawal stays possible while photos are off")
+	assert.Nil(t, withdrawn.PhotoConsentGivenAt)
+
+	runtime.switchedOff = false
+	granted, err := module.ApplyStudentPhotoConsent(ctx, withoutConsent, &grant)
+	require.NoError(t, err)
+	assert.NotNil(t, granted.PhotoConsentGivenAt)
+}
+
+// TestPhotoWritesUnderTheLockReadTheCommittedSwitch pins the freshness of
+// the checks under the photo lock (#7208): a request that read "on" before a
+// switch-off committed must not grant a consent or attach a photo after it.
+// The stale memo is the request-scoped settings cache.
+func TestPhotoWritesUnderTheLockReadTheCommittedSwitch(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module, runtime := buildPhotoModule(t, db)
+	ctx := testpkg.Ctx(t)
+	runtime.actor = testpkg.CreateTestAccount(t, db, "photo-stale-7208@example.test").ID
+	student := testpkg.CreateTestStudent(t, db, "Stale", "Switch", "1a")
+	runtime.switchedOff, runtime.staleOn = true, true
+
+	err := module.CommitStudentPhoto(ctx, student.ID, "/uploads/student-photos/stale.jpg", true)
+	require.ErrorIs(t, err, peopledirectory.ErrPhotoFeatureDisabledMid, "the upload")
+	assert.Nil(t, studentPhotoPath(t, db, student.ID))
+
+	grantedAt := time.Date(2026, time.September, 1, 9, 0, 0, 0, time.UTC)
+	err = module.SetStudentPhotoConsent(ctx, peopledirectory.StudentPhotoState{
+		StudentID: student.ID, PhotoConsentGivenAt: &grantedAt, PhotoConsentGivenBy: &runtime.actor,
+	})
+	require.ErrorIs(t, err, peopledirectory.ErrPhotoFeatureDisabledMid, "the parents' grant")
+
+	grant := true
+	_, err = module.ApplyStudentPhotoConsent(ctx, peopledirectory.StudentPhotoState{StudentID: student.ID}, &grant)
+	require.ErrorIs(t, err, peopledirectory.ErrPhotoFeatureDisabled, "the staff grant")
+	assert.Nil(t, studentPhotoConsent(t, db, student.ID))
+}
+
+func TestPhotoWritesPreservePostLockSettingsFailure(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module, runtime := buildPhotoModule(t, db)
+	ctx := testpkg.Ctx(t)
+	runtime.actor = testpkg.CreateTestAccount(t, db, "photo-settings-error@example.test").ID
+	student := testpkg.CreateTestStudent(t, db, "Lookup", "Failure", "1a")
+	runtime.committedErr = errors.New("settings read failed")
+	givenAt := time.Date(2026, time.November, 16, 9, 0, 0, 0, time.UTC)
+
+	err := module.SetStudentPhotoConsent(ctx, peopledirectory.StudentPhotoState{
+		StudentID: student.ID, PhotoConsentGivenAt: &givenAt, PhotoConsentGivenBy: &runtime.actor,
+	})
+	assert.ErrorIs(t, err, runtime.committedErr, "a failed settings read is not a disabled feature")
+	err = module.CommitStudentPhoto(ctx, student.ID, "/uploads/student-photos/lookup-failure.jpg", true)
+	assert.ErrorIs(t, err, runtime.committedErr, "uploads preserve the same lookup failure")
+	assert.Nil(t, studentPhotoConsent(t, db, student.ID))
+	assert.Nil(t, studentPhotoPath(t, db, student.ID))
+}
+
+func TestPortalPhotoGrantReportsContentionAndCanBeRetried(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module, runtime := buildPhotoModule(t, db)
+	ctx := testpkg.Ctx(t)
+	runtime.actor = testpkg.CreateTestAccount(t, db, "photo-lock-busy@example.test").ID
+	student := testpkg.CreateTestStudent(t, db, "Busy", "Photo", "1a")
+	givenAt := time.Date(2026, time.November, 16, 9, 0, 0, 0, time.UTC)
+	photo := peopledirectory.StudentPhotoState{
+		StudentID: student.ID, PhotoConsentGivenAt: &givenAt, PhotoConsentGivenBy: &runtime.actor,
+	}
+	holding, err := db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	defer func() { _ = holding.Rollback() }()
+	require.NoError(t, module.LockStudentPhotoFeature(tenanttest.WithTransaction(ctx, holding)))
+
+	err = module.SetStudentPhotoConsent(ctx, photo)
+	require.ErrorIs(t, err, peopledirectory.ErrPhotoFeatureBusy)
+	assert.NotErrorIs(t, err, peopledirectory.ErrPhotoFeatureDisabledMid, "photos are still enabled")
+	assert.Nil(t, studentPhotoConsent(t, db, student.ID), "a conflict writes nothing")
+
+	require.NoError(t, holding.Rollback())
+	require.NoError(t, module.SetStudentPhotoConsent(ctx, photo), "retry succeeds once the photo gate is free")
+	assert.NotNil(t, studentPhotoConsent(t, db, student.ID))
 }

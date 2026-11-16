@@ -202,7 +202,7 @@ func NewDocumentNotices(deps Dependencies, pushes care.DocumentPushPorts) parent
 	}
 	return &care.Service{Config: care.Config{Runtime: deps.Runtime, ChildRepo: deps.ChildRepo, SchoolTraeger: deps.SchoolTraeger,
 		ParentAccounts: deps.ParentAccounts, GuardianProfileRepo: deps.GuardianProfileRepo, DocumentNotifier: deps.DocumentNotifier,
-		TraegerRuntime: deps.TraegerRuntime, StudentRepo: deps.StudentRepo, DocumentPushPorts: pushes, Logger: deps.Logger}}
+		TraegerRuntime: deps.TraegerRuntime, StudentRepo: deps.StudentRepo, DocumentPushPorts: pushes, Logger: deps.Logger, Now: deps.Now}}
 }
 
 func NewDocumentPushAuthorization(deps parentportal.DocumentPushAuthorizationDependencies) parentportal.DocumentPushAuthorization {

@@ -29,6 +29,10 @@ type DemoVisit struct {
 // signatures carry no owner type.
 type demoSchoolStore interface {
 	ReserveDemoSchool(ctx context.Context, name string, schoolID, visitorAccountID, visitorParentAccountID int64) error
+	// RecordDemoTraeger and RecordDemoSchool name the order's own Demo-Träger
+	// and its neighbour schools (ADR 0271).
+	RecordDemoTraeger(ctx context.Context, name string, traegerID int64) error
+	RecordDemoSchool(ctx context.Context, name string, schoolID int64) error
 	WithDemoLease(ctx context.Context, name string, run func(context.Context) error) error
 }
 
