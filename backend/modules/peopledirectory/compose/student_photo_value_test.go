@@ -15,9 +15,11 @@ func TestStudentPhotoPort_TakesTheRuntimeValue(t *testing.T) {
 
 	runtime := &enabledPhotoRuntime{}
 	port := studentPhotoPort(runtime)
-	enabled, err := port.PhotoFeatureEnabled(ctx)
-	require.NoError(t, err)
-	require.True(t, enabled)
+	for _, committed := range []bool{false, true} {
+		enabled, err := port.PhotoFeatureEnabled(ctx, committed)
+		require.NoError(t, err)
+		require.True(t, enabled)
+	}
 	port.UnlinkStoredPhoto(t.Name())
 	require.Equal(t, []string{t.Name()}, runtime.unlinked)
 }
@@ -32,12 +34,14 @@ func TestDisabledStudentPhotos_MatchesTheUnboundRuntime(t *testing.T) {
 	disabled := studentPhotoPort(DisabledStudentPhotos())
 	unbound := studentPhotoPort(nil)
 	for _, port := range []interface {
-		PhotoFeatureEnabled(context.Context) (bool, error)
+		PhotoFeatureEnabled(context.Context, bool) (bool, error)
 		ActingAccountID(context.Context) int64
 	}{disabled, unbound} {
-		enabled, err := port.PhotoFeatureEnabled(ctx)
-		require.NoError(t, err)
-		require.False(t, enabled)
+		for _, committed := range []bool{false, true} {
+			enabled, err := port.PhotoFeatureEnabled(ctx, committed)
+			require.NoError(t, err)
+			require.False(t, enabled)
+		}
 		require.Zero(t, port.ActingAccountID(ctx))
 	}
 

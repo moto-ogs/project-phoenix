@@ -349,7 +349,21 @@ describe.each([
     parentPortal.handlers,
   ],
   ["messe-demo", "lead", "", "authjs.session-token", tenantPortal.handlers],
+  // The demo role Träger-Büro (#6193) redeems on the Träger host.
+  [
+    "traeger",
+    "traeger",
+    "org",
+    "traeger.session-token",
+    traegerPortal.handlers,
+  ],
 ] as const)("%s demo session", (host, role, scope, cookieName, handlers) => {
+  const sessionPath =
+    host === "parents"
+      ? "/api/parent/auth/session"
+      : host === "traeger"
+        ? "/api/traeger/auth/session"
+        : "/api/auth/session";
   it("installs the host's real session and returns allowlisted visit metadata only", async () => {
     backend
       .mockResolvedValueOnce(
@@ -371,7 +385,13 @@ describe.each([
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       session_created: true,
-      demo: { access_id: "4711", role, src: "fair", fixed_role: true },
+      demo: {
+        access_id: "4711",
+        role,
+        src: "fair",
+        fixed_role: true,
+        traeger: false,
+      },
     });
     expect(response.headers.getSetCookie()).toContainEqual(
       expect.stringMatching(new RegExp(`${cookieName}=.*HttpOnly`)),
@@ -382,10 +402,9 @@ describe.each([
       ),
     );
     const session = await handlers.GET(
-      new NextRequest(
-        `http://${state.host}/api/${host === "parents" ? "parent/" : ""}auth/session`,
-        { headers: { cookie: browserCookie(response) } },
-      ),
+      new NextRequest(`http://${state.host}${sessionPath}`, {
+        headers: { cookie: browserCookie(response) },
+      }),
     );
     expect((await session.json()).user.id).toBe("42");
   });
@@ -404,7 +423,12 @@ describe.each([
     );
     expect(await response.json()).toEqual({
       session_created: false,
-      demo: { access_id: "4711", role: otherRole, fixed_role: true },
+      demo: {
+        access_id: "4711",
+        role: otherRole,
+        fixed_role: true,
+        traeger: false,
+      },
     });
     expect(backend.mock.calls[1]?.[0]).toBe("http://server:8080/auth/logout");
     expect(response.headers.getSetCookie().join(";")).not.toContain(
@@ -424,7 +448,7 @@ describe.each([
   });
 });
 
-it.each(["operator", "schule", "traeger", "caterer"])(
+it.each(["operator", "schule", "caterer"])(
   "refuses demo session minting on the %s host",
   async (host) => {
     const response = await demo(
@@ -447,7 +471,7 @@ it("selects the parent demo cookie using the proxy-owned original host", async (
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({
     session_created: true,
-    demo: { access_id: "4711", role: "parent" },
+    demo: { access_id: "4711", role: "parent", traeger: false },
   });
   expect(response.headers.getSetCookie()).toContainEqual(
     expect.stringMatching(/parent\.session-token=.*HttpOnly/),

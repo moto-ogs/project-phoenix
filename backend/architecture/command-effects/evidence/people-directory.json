@@ -10602,7 +10602,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentPhotoRuntime.ActingAccountID",
-      "binding_digest": "0b941968eec3bb8eff1817f057d239cd",
+      "binding_digest": "1cf3c6d9468875bc207c3b349a8f4125",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.ActingAccountID",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",
@@ -10618,7 +10618,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "binding_digest": "2b34b76fb6e0ce1749f69cac075b8d84",
+      "binding_digest": "2f5f5ec022262c2856c6cd07e4bf95e4",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
@@ -10626,10 +10626,26 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "binding_digest": "5edad4ccc3761d3bc5c6c9b646571e68",
+      "binding_digest": "61862cc51f510217e3ff6971388fd58e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "binding_digest": "7519a5c3c33671cfd5d0bff15ad4e330",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "binding_digest": "f88bd049cdccad1597bffa04d5f6b652",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
       "target_owner": "settings-platform"
     },
     {
@@ -10654,6 +10670,14 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.RecordPhotoConsent",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "binding_digest": "b516e614cc4370f54f20fc987f964bd8",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.CreateAll",
       "target_owner": "audit-platform"
     },
     {
@@ -11778,7 +11802,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.ActingAccountID",
-      "binding_digest": "0b941968eec3bb8eff1817f057d239cd",
+      "binding_digest": "1cf3c6d9468875bc207c3b349a8f4125",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.ActingAccountID",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",
@@ -11794,7 +11818,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "binding_digest": "2b34b76fb6e0ce1749f69cac075b8d84",
+      "binding_digest": "2f5f5ec022262c2856c6cd07e4bf95e4",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
@@ -11802,10 +11826,26 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "binding_digest": "5edad4ccc3761d3bc5c6c9b646571e68",
+      "binding_digest": "61862cc51f510217e3ff6971388fd58e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "binding_digest": "7519a5c3c33671cfd5d0bff15ad4e330",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "binding_digest": "f88bd049cdccad1597bffa04d5f6b652",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
       "target_owner": "settings-platform"
     },
     {
@@ -11830,6 +11870,14 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.RecordPhotoConsent",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "binding_digest": "b516e614cc4370f54f20fc987f964bd8",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.CreateAll",
       "target_owner": "audit-platform"
     },
     {
@@ -12418,7 +12466,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.ActingAccountID",
-      "binding_digest": "0b941968eec3bb8eff1817f057d239cd",
+      "binding_digest": "1cf3c6d9468875bc207c3b349a8f4125",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.ActingAccountID",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.AppClaims.IsSchoolScope",
@@ -12434,7 +12482,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "binding_digest": "2b34b76fb6e0ce1749f69cac075b8d84",
+      "binding_digest": "2f5f5ec022262c2856c6cd07e4bf95e4",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.PhotoFeatureEnabled",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
@@ -12442,10 +12490,26 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "binding_digest": "5edad4ccc3761d3bc5c6c9b646571e68",
+      "binding_digest": "61862cc51f510217e3ff6971388fd58e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "binding_digest": "7519a5c3c33671cfd5d0bff15ad4e330",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.PhotoFeatureEnabled",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "binding_digest": "f88bd049cdccad1597bffa04d5f6b652",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
       "target_owner": "settings-platform"
     },
     {
@@ -12470,6 +12534,14 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.RecordPhotoConsent",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "binding_digest": "b516e614cc4370f54f20fc987f964bd8",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.CreateAll",
       "target_owner": "audit-platform"
     },
     {
@@ -13422,6 +13494,30 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PhotoSettings.ResolveBool",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "binding_digest": "af7b9f83e0bba76a161a0a95295716cd",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PhotoSettings.ResolveBoolForTenantInTx",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
+      "binding_digest": "af7b9f83e0bba76a161a0a95295716cd",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PhotoSettings.ResolveBoolForTenantInTx",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
+      "binding_digest": "13edc76c6162f06c1fe1ad2c15ccd839",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PhotoSettings.ResolveBoolForTenantInTx",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
       "target_owner": "settings-platform"
     },
     {
