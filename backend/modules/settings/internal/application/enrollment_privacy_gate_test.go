@@ -13,6 +13,9 @@ import (
 // The public enrollment form may only go online with a privacy notice under
 // Art. 13 DSGVO (#7176). The notice counts as present only when its switch is
 // on and its text is not blank, because the form shows the block only then.
+// gateTenant is a tenant of its own; the bootstrap tenant 1 is phased out.
+const gateTenant int64 = 47
+
 func TestSetValue_EnrollmentEnabled_RequiresPrivacyNotice(t *testing.T) {
 	t.Parallel()
 
@@ -24,7 +27,7 @@ func TestSetValue_EnrollmentEnabled_RequiresPrivacyNotice(t *testing.T) {
 		registerTestSetting(registry, config.KeyEnrollmentLegalDSGVOText, config.FieldTextarea, "")
 		repo := newMockValueRepo()
 		for key, value := range stored {
-			repo.values[repo.key(1, key)] = &config.SettingValue{TenantID: 1, SettingKey: key, Value: json.RawMessage(value)}
+			repo.values[repo.key(gateTenant, key)] = &config.SettingValue{TenantID: gateTenant, SettingKey: key, Value: json.RawMessage(value)}
 		}
 		return createService(registry, repo, &mockAuditRepo{})
 	}
@@ -51,13 +54,13 @@ func TestSetValue_EnrollmentEnabled_RequiresPrivacyNotice(t *testing.T) {
 			t.Parallel()
 			svc := setup(t, tc.stored)
 
-			err := svc.SetValue(tenantCtx(1), config.KeyEnrollmentEnabled, true, nil, nil)
+			err := svc.SetValue(tenantCtx(gateTenant), config.KeyEnrollmentEnabled, true, nil, nil)
 
 			gap, ok := errors.AsType[*config.EnrollmentPrivacyNoticeError](err)
 			require.True(t, ok, "want EnrollmentPrivacyNoticeError, got %v", err)
 			assert.Equal(t, tc.missing, gap.Missing)
 			assert.ErrorIs(t, err, config.ErrInvalidValue, "the rejection is a 400, not an operational failure")
-			enabled, resolveErr := svc.ResolveBool(tenantCtx(1), config.KeyEnrollmentEnabled)
+			enabled, resolveErr := svc.ResolveBool(tenantCtx(gateTenant), config.KeyEnrollmentEnabled)
 			require.NoError(t, resolveErr)
 			assert.False(t, enabled, "a rejected write must not persist")
 		})
@@ -70,7 +73,7 @@ func TestSetValue_EnrollmentEnabled_RequiresPrivacyNotice(t *testing.T) {
 			config.KeyEnrollmentLegalDSGVOText:    `"Wir verarbeiten Ihre Daten."`,
 		})
 
-		require.NoError(t, svc.SetValue(tenantCtx(1), config.KeyEnrollmentEnabled, true, nil, nil))
+		require.NoError(t, svc.SetValue(tenantCtx(gateTenant), config.KeyEnrollmentEnabled, true, nil, nil))
 	})
 
 	t.Run("switching off stays possible without a notice", func(t *testing.T) {
@@ -78,7 +81,7 @@ func TestSetValue_EnrollmentEnabled_RequiresPrivacyNotice(t *testing.T) {
 		// Bestandsschulen without a notice must be able to close the form.
 		svc := setup(t, map[string]string{config.KeyEnrollmentEnabled: `true`})
 
-		require.NoError(t, svc.SetValue(tenantCtx(1), config.KeyEnrollmentEnabled, false, nil, nil))
-		require.NoError(t, svc.ResetValue(tenantCtx(1), config.KeyEnrollmentEnabled, nil, nil))
+		require.NoError(t, svc.SetValue(tenantCtx(gateTenant), config.KeyEnrollmentEnabled, false, nil, nil))
+		require.NoError(t, svc.ResetValue(tenantCtx(gateTenant), config.KeyEnrollmentEnabled, nil, nil))
 	})
 }

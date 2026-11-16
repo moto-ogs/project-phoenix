@@ -181,6 +181,10 @@ func newEnrollmentGrowthFixture(t *testing.T) *enrollmentGrowthFixture {
 	settings, err := owners.NewSettingsTestModule(testpkg.NewDatabase(t, env.db), testpkg.TenantRuntime(t, env.db))
 	require.NoError(t, err)
 	ctx := testpkg.Ctx(t)
+	// The form goes online only with a privacy notice (#7176).
+	for key, value := range map[string]any{settingKeyLegalDSGVOText: "Datenschutzinformation der Schule", settingKeyLegalDSGVOEnabled: true} {
+		require.NoError(t, testpkg.TenantCommand4(t, ctx, env.db, settings.Settings.SetValue, key, value, &env.creatorID, []string{"config:manage"}))
+	}
 	for _, key := range []string{settingKeyEnrollmentEnabled, settingKeyAllowSubmissionEdit, settingKeyCareOfferingsEnabled} {
 		require.NoError(t, testpkg.TenantCommand4(t, ctx, env.db, settings.Settings.SetValue, key, any(true), &env.creatorID, []string{"config:update"}))
 	}
