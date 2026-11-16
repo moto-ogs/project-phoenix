@@ -140,4 +140,10 @@ func TestSettingsSchoolSetsItsFederalState(t *testing.T) {
 	invalid := testutil.NewAuthenticatedRequest(t, "PUT", "/values/operations.federal_state", map[string]any{"value": "DE-XX"}, testutil.WithTestTenant(t))
 	assert.Equal(t, 400, testutil.ExecuteRequest(router, invalid).Code, "only the 16 states with a holiday calendar")
 	assert.Equal(t, "DE-BY", schemaItems(t, ctx)["operations.federal_state"]["value"], "a refused value keeps the state")
+
+	// The empty default is no state: a reset would bring the missing-state
+	// error back, so the school chooses another state instead.
+	reset := testutil.NewAuthenticatedRequest(t, "DELETE", "/values/operations.federal_state", nil, testutil.WithTestTenant(t))
+	assert.Equal(t, 400, testutil.ExecuteRequest(router, reset).Code)
+	assert.Equal(t, "DE-BY", schemaItems(t, ctx)["operations.federal_state"]["value"], "a refused reset keeps the state")
 }

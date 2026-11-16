@@ -1644,6 +1644,15 @@ function offersReset(
   if (!setting.writable) return false;
   if (followsTraegerAfterReset(setting, audience)) return true;
   if (setting.is_default) return false;
+  // A select whose default is none of its options (the federal state,
+  // #7174): the backend refuses the reset; another option stays possible.
+  if (
+    setting.type === "select" &&
+    setting.options?.static &&
+    !setting.options.static.some((option) => option.value === setting.default)
+  ) {
+    return false;
+  }
   if (audience === "traeger") return true;
   return (
     (setting.type !== "boolean" || deletesRoomHistory) &&
