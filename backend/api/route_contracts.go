@@ -7,7 +7,12 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
+	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
+	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
+	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
+	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 )
 
@@ -24,6 +29,11 @@ func ContractDocument() (contract.Document, error) {
 		// (studentHTTPResources binds it), so its type is named here.
 		{"/api/students", careStudentsHTTP.StudentWriteContracts(projectionStudentsHTTP.StudentResponse{})},
 		{"/parent", parentAPI.MeRouteContracts()},
+		{"/api/notifications", notificationsHTTP.FeedRouteContracts()},
+		{"/school/staff-messages", staffMessagingAPI.SchoolRouteContracts()},
+		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
+		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
+		{"/caterer", catererPortalHTTP.RouteContracts()},
 	}
 	catalog, err := RouteCatalog()
 	if err != nil {
