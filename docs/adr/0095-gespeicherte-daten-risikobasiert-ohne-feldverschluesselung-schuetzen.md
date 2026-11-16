@@ -8,7 +8,8 @@ status: accepted
 > Kinderakte und der Ferienanmeldung sowie IBAN, Kontoinhaber, Steuer-ID und
 > SV-Nummer von Eltern, Personal und SEPA-Zahlern liegen feldverschlüsselt in der Datenbank (AES-256-GCM mit
 > Security Runtimes Feld-Cipher, jeder Wert an Schule oder Träger gebunden).
-> Dazu kommen ein Zugangsgeheimnis und das Rückgabearchiv. Für diese Daten
+> Dazu kommen bestätigte Mandatstexte, PAIN.008-Dateien, die Änderungshistorie
+> des Personalstamms, ein Zugangsgeheimnis und das Rückgabearchiv. Für diese Daten
 > gilt der Satz „keine Feld-/Dateiverschlüsselung in der Anwendung“ nicht mehr:
 >
 > - Gesundheitsangaben der Ferienanmeldung und des Feriengasts (#4722,
@@ -17,7 +18,9 @@ status: accepted
 > - Gesundheitsfeld der Kinderakte (#5472, Migration `1.15.730`):
 >   `users.student_care_profiles.health_info` ist durch das versiegelte
 >   `health_data` ersetzt, Ring `HEALTH_DATA_KEYS`. Dafür gibt es keine eigene ADR.
-> - IBAN und Kontoinhaber der SEPA-Mandate und -Lastschriften:
+> - IBAN und Kontoinhaber der SEPA-Mandate und -Lastschriften sowie der
+>   bestätigte Mandatstext und die PAIN.008-Dateien
+>   ([ADR 0187](0187-traegerpaket-enthaelt-pain008-originale-und-ein-operator-protokoll.md)):
 >   [ADR 0171](0171-sepa-mandat-gehoert-dem-zahler-der-familie-und-die-rechnung-haelt-es-fest.md),
 >   seit [ADR 0183](0183-bankdaten-haben-einen-eigenen-schluesselring-und-einen-wiederholbaren-rekey.md)
 >   mit dem eigenen Bankring `BANK_DATA_KEYS`.
@@ -26,7 +29,7 @@ status: accepted
 >   Klartextspalten mit `1.15.900` entfernt):
 >   [ADR 0188](0188-bankdaten-von-eltern-und-personal-liegen-versiegelt-im-bankring.md).
 >   Der Personalstamm des Trägers (#4705) speichert IBAN, Steuer-ID und
->   SV-Nummer von Anfang an versiegelt mit dem Bankring:
+>   SV-Nummer samt Änderungshistorie von Anfang an versiegelt mit dem Bankring:
 >   [ADR 0233](0233-personalakte-des-traegers-verknuepft-beschaeftigungen-und-uebernimmt-bankdaten.md).
 > - Das SFTP-Passwort des Export-Empfängers eines Trägers liegt nur versiegelt
 >   mit dem Bankring vor:
