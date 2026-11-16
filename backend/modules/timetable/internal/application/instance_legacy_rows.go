@@ -133,6 +133,9 @@ func createInstanceSession(ctx context.Context, sessions ports.InstanceSessions,
 	if value.ActiveGroupID == nil {
 		return errors.New("an instance created in an execution state needs its active group")
 	}
+	if now == nil && (value.StartedAt == nil || value.Status == scheduleModels.InstanceStatusCompleted && value.CompletedAt == nil) {
+		return errors.New("an instance created in an execution state without its instants needs the clock of its rows")
+	}
 	startedAt := value.StartedAt
 	if startedAt == nil {
 		started := now()

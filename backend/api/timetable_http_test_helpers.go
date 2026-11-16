@@ -90,11 +90,7 @@ func NewTimetableHTTPTestModule(db transactionruntime.Database, options Timetabl
 		return TimetableHTTPTestModule{}, err
 	}
 	members := owners.MustNewMembershipTestRepositories(db)
-	var today func() calendar.Date
-	if options.Clock != nil {
-		clock := options.Clock
-		today = func() calendar.Date { return calendar.DateFromTime(clock()) }
-	}
+	today := calendar.CalendarDateClock(clockOrNow([]func() time.Time{options.Clock}))
 	lock, err := owners.NewTimetableTestRecurrenceLock(db)
 	if err != nil {
 		return TimetableHTTPTestModule{}, err

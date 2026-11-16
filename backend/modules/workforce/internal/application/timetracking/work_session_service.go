@@ -96,7 +96,7 @@ func NewWorkSessionService(repo WorkSessionRecords, breakRepo WorkSessionBreakRe
 }
 
 func (s *workSessionService) now() time.Time {
-	return clockOrWall(s.nowFunc)()
+	return requireClock(s.nowFunc)()
 }
 
 // listSessionsByStaffAndDate applies the ordinary repository filter path for

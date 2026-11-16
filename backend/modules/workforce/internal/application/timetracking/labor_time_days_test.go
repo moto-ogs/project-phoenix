@@ -162,7 +162,7 @@ func TestWeeklySummaryMarksWeekOver48Hours(t *testing.T) {
 		block.BreakMinutes = 45
 		sessions = append(sessions, &SessionResponse{WorkSession: block})
 	}
-	svc := &workSessionService{}
+	svc := &workSessionService{nowFunc: testNow}
 
 	summaries := svc.buildWeeklySummaries(sessions, nil, monday, monday.AddDays(6))
 

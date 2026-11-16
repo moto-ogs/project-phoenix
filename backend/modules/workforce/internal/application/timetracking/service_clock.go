@@ -7,21 +7,22 @@ import (
 )
 
 // The time-tracking services read the clock of their composition (ADR 0239):
-// NewClock binds the root's clock to every service, tests a fixed one. A
-// service a unit test builds bare without a clock reads the wall clock.
+// NewClock binds the root's clock to every service, tests a fixed one. Only
+// the roots and the compositions name the real clock (ADR 0272), so a
+// service reached without its clock fails instead of reading the wall clock.
 
-// clockOrWall is now, or the wall clock when now is nil.
-func clockOrWall(now func() time.Time) func() time.Time {
+// requireClock is now; a service without the clock of its composition panics.
+func requireClock(now func() time.Time) func() time.Time {
 	if now == nil {
-		return time.Now
+		panic("time tracking: the clock of the composition is required")
 	}
 	return now
 }
 
-// dayOrWall is today, or the Berlin calendar day of now when today is nil.
-func dayOrWall(today func() calendar.Date, now func() time.Time) func() calendar.Date {
+// dayOf is today, or the Berlin calendar day of now when today is nil.
+func dayOf(today func() calendar.Date, now func() time.Time) func() calendar.Date {
 	if today == nil {
-		return calendar.CalendarDateClock(now)
+		return calendar.CalendarDateClock(requireClock(now))
 	}
 	return today
 }

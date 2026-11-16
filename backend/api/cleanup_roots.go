@@ -78,12 +78,12 @@ type SessionCleanupTimetableBridge interface {
 // on over the unobserved Device Fleet and Facilities owners and the given
 // Timetable: the Student Presence session and supervision records, the
 // devices of the sessions and the Timetable completion of their planned
-// instances.
-func NewSessionCleanupRepositories(db transactionruntime.Database, timetableCapability timetable.Capability) (studentpresence.SessionRecords, devicefleet.SessionDeviceRecords, SessionCleanupTimetableBridge) {
+// instances, on the caller's clock now.
+func NewSessionCleanupRepositories(db transactionruntime.Database, timetableCapability timetable.Capability, now func() time.Time) (studentpresence.SessionRecords, devicefleet.SessionDeviceRecords, SessionCleanupTimetableBridge) {
 	if timetableCapability == nil {
 		panic("session cleanup repositories: timetable capability is required")
 	}
-	fleet, err := owners.NewDeviceFleet(db, time.Now)
+	fleet, err := owners.NewDeviceFleet(db, now)
 	if err != nil {
 		panic(fmt.Sprintf("session cleanup repositories: compose device fleet: %v", err))
 	}
@@ -93,6 +93,6 @@ func NewSessionCleanupRepositories(db transactionruntime.Database, timetableCapa
 	}
 	sessions := owners.NewSessionRecords(db, nil, fleet, rooms, timetableCapability, nil, nil)
 	devices := devicefleetRepositoryAdapter.NewDeviceRepository(fleet)
-	completion := timetableCompose.NewSessionInstanceCompletion(owners.NewUnloggedStudentPresence(db))
+	completion := timetableCompose.NewSessionInstanceCompletion(owners.NewUnloggedStudentPresence(db, now))
 	return sessions, devices, completion
 }

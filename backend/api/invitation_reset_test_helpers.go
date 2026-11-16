@@ -26,6 +26,9 @@ func WithInvitationResetClock(now func() time.Time) AuthTestOption {
 }
 
 func authTestInvitationReset(db transactionruntime.Database, members owners.MembershipTestRepositories, persons peopledirectory.Capability, membership schoolmembership.Capability, audits *auditCompose.Persistence, settings settingsCompose.BatchSettingsService, now func() time.Time) (*identityPorts.EmploymentResetCommands, error) {
+	if now == nil {
+		now = time.Now
+	}
 	workforce, err := owners.NewWorkforceWithClock(db, membership, now)
 	if err != nil {
 		return nil, err
@@ -38,10 +41,7 @@ func authTestInvitationReset(db transactionruntime.Database, members owners.Memb
 	if err != nil {
 		return nil, err
 	}
-	env := owners.RootEnvironment{Logger: slog.Default(), Now: now, BankData: bankData}
-	if now != nil {
-		env.Today = func() calendar.Date { return calendar.DateFromTime(now()) }
-	}
+	env := owners.RootEnvironment{Logger: slog.Default(), Now: now, Today: calendar.CalendarDateClock(now), BankData: bankData}
 	people := owners.PeopleRows{Repositories: peopleCompose.Repositories{Staff: members.Staff, Persons: members.Person}}
 	return owners.BuildInvitationEmploymentReset(db, env, workforce, persons, membership, people, owners.AuditOwner{Persistence: audits}, settings, days)
 }

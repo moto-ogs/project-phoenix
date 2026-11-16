@@ -788,7 +788,7 @@ func TestTemplateSplit_HappyPath_CarriesRosterAndProtectsHistory(t *testing.T) {
 // the rows the template writes assign through.
 func scenarioPlanningTracks(t *testing.T, db *bun.DB) timetable.PlanningTrackAdministration {
 	t.Helper()
-	return timetableCompose.NewPlanningTrackAdministration(owners.MustNewUnobservedTimetable(testpkg.NewDatabase(t, db)), db, nil)
+	return timetableCompose.NewPlanningTrackAdministration(owners.MustNewUnobservedTimetable(testpkg.NewDatabase(t, db)), db, time.Now)
 }
 
 func TestTemplateSplitKeepsArchivedPlanningTrackAssignment(t *testing.T) {

@@ -208,7 +208,7 @@ func TestStaffBalanceAdjustmentService_OpeningRejectsExistingLaterReset(t *testi
 		repo,
 		month,
 		&wtmMockSettings{accountStart: "2026-06-01"},
-		slog.New(slog.DiscardHandler),
+		slog.New(slog.DiscardHandler), WithAdjustmentClock(testNow),
 	)
 
 	_, err := service.CreateOpeningBalance(
@@ -268,7 +268,7 @@ func newOpeningTestService(events *[]string, repo BalanceAdjustmentRecords, mont
 		repo,
 		month,
 		&wtmMockSettings{accountStart: "2026-06-01"},
-		slog.New(slog.DiscardHandler),
+		slog.New(slog.DiscardHandler), WithAdjustmentClock(testNow),
 	)
 }
 

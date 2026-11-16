@@ -37,7 +37,7 @@ func TestDeleteStatusDayProtectsSchoolSource(t *testing.T) {
 	rows, err := factory.StudentStatusDay.FindActiveByStudentAndDateRange(ctx, student.ID, date, date)
 	require.NoError(t, err)
 	require.Len(t, rows, 1)
-	svc := service.NewStudentStatusDayServiceWithPartialAbsences(factory.StudentStatusDay, nil, nil, factory.CarePlan().LockExceptionDay)
+	svc := service.NewStudentStatusDayServiceWithPartialAbsences(factory.StudentStatusDay, nil, nil, factory.CarePlan().LockExceptionDay, time.Now)
 	err = svc.DeleteByID(ctx, studentpresence.StatusDayWriteContext{
 		DB: db, TenantID: testpkg.Tenant(t), StudentService: api.StatusDayStudentsFromRepository(people.Student, api.AllowAllStatusDayWrites), AfterCommit: func(int64) {},
 	}, rows[0].ID, student.ID)
@@ -60,7 +60,7 @@ func TestDeleteStatusDayRechecksSourceAfterConcurrentReplacement(t *testing.T) {
 	rows, err := factory.StudentStatusDay.FindActiveByStudentAndDateRange(ctx, student.ID, date, date)
 	require.NoError(t, err)
 	require.Len(t, rows, 1)
-	svc := service.NewStudentStatusDayServiceWithPartialAbsences(factory.StudentStatusDay, nil, nil, factory.CarePlan().LockExceptionDay)
+	svc := service.NewStudentStatusDayServiceWithPartialAbsences(factory.StudentStatusDay, nil, nil, factory.CarePlan().LockExceptionDay, time.Now)
 	guarded := interceptStatusStudent{StatusDayStudents: api.StatusDayStudentsFromRepository(people.Student, api.AllowAllStatusDayWrites), beforeLock: func() {
 		// A committed same-status upsert in the gap preserves the row ID.
 		row.Source = "parent"

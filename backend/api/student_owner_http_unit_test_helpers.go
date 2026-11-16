@@ -14,7 +14,7 @@ import (
 )
 
 func NewCareHTTPUnitResource(cfg care.ResourceConfig) *care.Resource {
-	_, subject, _, _, _, _ := NewStudentHTTPResources(people.ResourceConfig{Now: time.Now}, cfg, projection.ResourceConfig{}, presence.ResourceConfig{}, delete.ResourceConfig{}, review.ResourceConfig{})
+	_, subject, _, _, _, _ := NewStudentHTTPResources(people.ResourceConfig{Now: time.Now}, cfg, projection.ResourceConfig{Now: time.Now}, presence.ResourceConfig{Now: time.Now}, delete.ResourceConfig{}, review.ResourceConfig{})
 	return subject
 }
 
@@ -23,10 +23,10 @@ func NewCareHTTPUnitResource(cfg care.ResourceConfig) *care.Resource {
 var unusedCareResource = care.ResourceConfig{Now: time.Now}
 
 func NewProjectionHTTPUnitResource(cfg projection.ResourceConfig) *projection.Resource {
-	_, _, subject, _, _, _ := NewStudentHTTPResources(people.ResourceConfig{Now: time.Now}, unusedCareResource, cfg, presence.ResourceConfig{}, delete.ResourceConfig{}, review.ResourceConfig{})
+	_, _, subject, _, _, _ := NewStudentHTTPResources(people.ResourceConfig{Now: time.Now}, unusedCareResource, cfg, presence.ResourceConfig{Now: time.Now}, delete.ResourceConfig{}, review.ResourceConfig{})
 	return subject
 }
 func NewReviewHTTPUnitResource(cfg review.ResourceConfig) *review.Resource {
-	_, _, _, _, _, subject := NewStudentHTTPResources(people.ResourceConfig{Now: time.Now}, unusedCareResource, projection.ResourceConfig{}, presence.ResourceConfig{}, delete.ResourceConfig{}, cfg)
+	_, _, _, _, _, subject := NewStudentHTTPResources(people.ResourceConfig{Now: time.Now}, unusedCareResource, projection.ResourceConfig{Now: time.Now}, presence.ResourceConfig{Now: time.Now}, delete.ResourceConfig{}, cfg)
 	return subject
 }

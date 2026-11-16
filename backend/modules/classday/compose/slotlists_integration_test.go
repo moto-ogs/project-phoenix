@@ -196,6 +196,7 @@ func TestSlotListEntryPointsRejectDisabledTimetable(t *testing.T) {
 		Settings: settingsAdapter{Settings: disabledTimetableSlotListSettings{
 			stubSlotListSettings: stubSlotListSettings{},
 		}},
+		Now: func() time.Time { return pickupNow },
 	})
 	params := classday.Params{
 		Date:   classday.Date(listDate.String()),

@@ -37,7 +37,7 @@ func TestDeviceSupervisorReadPreservesFailureClassification(t *testing.T) {
 			defer cancel()
 			group := &ports.ActiveGroup{}
 			group.ID = 7
-			s := &service{
+			s := &service{Now: presenceTestNow,
 				GroupRepo: &mockGroupRepository{findActiveByDeviceIDFunc: func(got context.Context, id int64) (*ports.ActiveGroup, error) {
 					assert.Same(t, ctx, got)
 					assert.Equal(t, int64(8), id)

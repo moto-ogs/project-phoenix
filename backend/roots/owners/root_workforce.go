@@ -71,7 +71,7 @@ func BuildWorkSessionSide(
 		return nil, fmt.Errorf("compose export transfer for the payroll dispatch: %w", err)
 	}
 	side.PayrollDispatch, err = BuildPayrollDispatch(db, settings, complete.TimeExport, transfer, durable,
-		mailFrom, mailIdentity, organizations, people.Staff, env.Links.FrontendURL, env.Logger)
+		mailFrom, mailIdentity, organizations, people.Staff, env.Links.FrontendURL, env.Logger, env.Now)
 	if err != nil {
 		return nil, fmt.Errorf("compose payroll dispatch: %w", err)
 	}

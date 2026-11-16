@@ -62,7 +62,6 @@ var calendarFixtureShiftedLiveDateDebt = map[string]int{
 	"modules/organizationtenancy/compose/data_return_export_test.go": 1,
 	// Data return, see api/data_return_http_test.go.
 	"modules/organizationtenancy/internal/adapters/datareturn/datareturn_test.go": 3,
-	"modules/peopledirectory/contracttest/staff_offboarding_test.go":              6,
 }
 
 // applyCalendarShiftDebt removes the shifted-live-date findings that a

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
@@ -23,9 +24,10 @@ func newStaffNotesResource(db *bun.DB) *studentsAPI.Resource {
 
 		PeopleDirectory: rows.PeopleDirectory,
 
-		StudentStatusDayService: presenceservice.NewStatusDays(rows.StudentStatusDay, nil, nil, rows.LockExceptionDay),
+		StudentStatusDayService: presenceservice.NewStatusDays(rows.StudentStatusDay, nil, nil, rows.LockExceptionDay, time.Now),
 		SettingsService:         &settingsDouble{},
 		Logger:                  slog.Default(),
+		Now:                     time.Now,
 	})
 }
 

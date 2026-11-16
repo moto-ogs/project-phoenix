@@ -33,9 +33,7 @@ func (w sickNoteWindowDouble) StaffSickNoteRetentionDays(context.Context) (int, 
 }
 
 func newSickNoteRetentionForTest(store *sickNoteStoreDouble, window sickNoteWindowDouble) *SickNoteRetention {
-	retention := NewSickNoteRetention(store, window)
-	retention.today = func() calendar.Date { return calendar.NewDate(2026, time.October, 15) }
-	return retention
+	return NewSickNoteRetention(store, window, func() time.Time { return calendar.NewDate(2026, time.October, 15).BerlinMidnight().Add(3 * time.Hour) })
 }
 
 func TestSickNoteRetentionDeletesBeforeTheFirstBerlinDayTheWindowKeeps(t *testing.T) {

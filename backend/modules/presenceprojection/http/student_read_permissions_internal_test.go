@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/internal/ptrtest"
@@ -25,7 +26,7 @@ func (studentReadStaffCaller) StudentAccessFacts(context.Context) (bool, bool) {
 func TestStudentSensitiveReadRequiresUsersRead(t *testing.T) {
 	t.Parallel()
 	student := &people.StudentState{ID: 42, PhotoPath: ptrtest.Ptr("/uploads/student-photos/test.jpg")}
-	rs := NewResource(ResourceConfig{UserContextService: studentReadStaffCaller{}})
+	rs := NewResource(ResourceConfig{UserContextService: studentReadStaffCaller{}, Now: time.Now})
 	for _, tc := range []struct {
 		name    string
 		granted []string

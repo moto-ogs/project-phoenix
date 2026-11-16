@@ -524,7 +524,7 @@ func TestSubmitSickNote_FutureWriteSerializesWithStaffConflictCheck(t *testing.T
 		CarePlanPolicy: owners.NewParentCarePlanPolicy(),
 	})
 
-	statusSvc := presenceservice.NewStatusDays(repos.StudentStatusDay, nil, nil, repos.CarePlan().LockExceptionDay)
+	statusSvc := presenceservice.NewStatusDays(repos.StudentStatusDay, nil, nil, repos.CarePlan().LockExceptionDay, time.Now)
 	staffAttempted := make(chan struct{})
 	staffStudentSvc := newSignalingStudentService(api.NewStudentDirectory(owners.MustNewPeopleDirectory(testpkg.MustDatabase(db))), reposPeople.Student, staffAttempted)
 	date := calendar.NewDate(2026, 8, 24).AddDays(40)

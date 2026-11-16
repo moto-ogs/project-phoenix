@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/ports"
@@ -18,11 +19,12 @@ type SickNoteRetention struct {
 	today    func() calendar.Date
 }
 
-func NewSickNoteRetention(store ports.SickNoteRetentionStore, settings ports.SickNoteRetentionSettings) *SickNoteRetention {
-	if store == nil || settings == nil {
-		panic("workforce application: sick note retention requires its store and settings")
+// NewSickNoteRetention composes the retention over the Berlin day of now.
+func NewSickNoteRetention(store ports.SickNoteRetentionStore, settings ports.SickNoteRetentionSettings, now func() time.Time) *SickNoteRetention {
+	if store == nil || settings == nil || now == nil {
+		panic("workforce application: sick note retention requires its store, settings and clock")
 	}
-	return &SickNoteRetention{store: store, settings: settings, today: calendar.TodayDate}
+	return &SickNoteRetention{store: store, settings: settings, today: calendar.CalendarDateClock(now)}
 }
 
 // DeleteExpiredStaffSickNotes deletes the sick notes uploaded before the first Berlin day

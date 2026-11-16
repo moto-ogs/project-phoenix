@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -121,7 +122,7 @@ func newStaffComposition(
 	module schoolMembershipModule.Capability, workforce workforceModule.Capability, users peoplePorts.PersonDirectory,
 	documents *workforceModule.StaffAdmin, timeTracking *workforceCompose.TimeTracking, payroll workforceModule.PayrollDispatch, absenceWrites timeTrackingHTTP.AdminAbsenceWrites, education schoolstructure.GroupManagement,
 	people peopleModule.Capability, settings settingsCompose.SettingsService, hub *realtime.Hub,
-	identity identityaccess.Owner, appEnv string, db transactionruntime.Database, logger *slog.Logger,
+	identity identityaccess.Owner, appEnv string, db transactionruntime.Database, logger *slog.Logger, now func() time.Time,
 ) (*staffHTTP.Resource, *timeTrackingHTTP.StaffAdminResource, error) {
 	exportTransfer, err := owners.BuildExportTransfer(settings, db, logger)
 	if err != nil {
@@ -134,7 +135,7 @@ func newStaffComposition(
 	capabilities := owners.NewWorkforceAdminCapabilities(users, documents, timeTracking)
 	staffAdmin := newStaffAdminResource(capabilities, absenceWrites, workforce, staffTimeTrackingNotifier(hub), exportTransfer, payroll, timeTracking.AbsenceMails, payrollRules, users.StaffRows(), db, logger)
 	resource, err := newStaffResource(module, people, identity, appEnv, func(hooks StaffMembershipHooks) StaffMembershipRuntime {
-		return NewStaffMembershipRuntime(users, education, timeTracking.StaffDay, hub, db, identity, logger, hooks)
+		return NewStaffMembershipRuntime(users, education, timeTracking.StaffDay, hub, db, identity, logger, hooks, now)
 	}, staffAdmin, logger)
 	if err != nil {
 		return nil, nil, err

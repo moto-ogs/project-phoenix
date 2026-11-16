@@ -108,8 +108,8 @@ type Ports struct {
 	// AbsenceEmail is optional: nil sends no absence email.
 	AbsenceEmail *AbsenceEmailDeps
 	Logger       *slog.Logger
-	// Now is the clock every service reads (ADR 0239); nil is the wall
-	// clock. Today is its calendar day; nil derives it from Now.
+	// Now is the clock every service reads (ADR 0239) and is required.
+	// Today is its calendar day; nil derives it from Now.
 	Now   func() time.Time
 	Today func() calendar.Date
 }
@@ -163,9 +163,9 @@ func NewClock(deps Dependencies) (*Clock, error) {
 	// Cross-staff payroll/evidence export (#1417 2b): rows via the overview's
 	// prefetch (month) and the single-staff export cells (day); every download
 	// writes an audit.data_access_logs row or fails.
-	export := NewStaffTimeExportService(overview, sessions, deps.ExportStaff, deps.DataAccessAudit, deps.Payroll, logger, deps.RenderWorkbook)
+	export := NewStaffTimeExportService(overview, sessions, deps.ExportStaff, deps.DataAccessAudit, deps.Payroll, logger, deps.RenderWorkbook, deps.Now)
 	export.payrollRules = deps.PayrollRules
-	export.nowFunc, export.todayFunc = deps.Now, deps.Today
+	export.todayFunc = deps.Today
 	// Cross-staff audit feed (#1417): merges the four change trails into one
 	// keyset-paginated view. Read-only; permission gating at the route.
 	auditLog := NewTimeTrackingAuditLogService(deps.AuditReader, deps.StaffNames, deps.Settings, deps.Today)
@@ -304,14 +304,16 @@ func (deps Dependencies) validate() error {
 		return errors.New("time tracking: the settings, payroll configuration, payroll rules and statutory holidays are required")
 	case deps.RenderPDF == nil || deps.RenderWorkbook == nil || deps.Events == nil:
 		return errors.New("time tracking: the document renderers and the change notification are required")
+	case deps.Now == nil:
+		return errors.New("time tracking: the clock is required")
 	}
 	return nil
 }
 
 // clocks returns the services' clock and its calendar day.
 func (deps Dependencies) clocks() (func() time.Time, func() calendar.Date) {
-	now := clockOrWall(deps.Now)
-	return now, dayOrWall(deps.Today, now)
+	now := requireClock(deps.Now)
+	return now, dayOf(deps.Today, now)
 }
 
 // CleanupDependencies are the collaborators of the retention cleanup, which
@@ -323,8 +325,7 @@ type CleanupDependencies struct {
 	Audit    DeletionAudit
 	Settings Settings
 	Logger   *slog.Logger
-	// Now is the clock of the cutoff and the deletion stamps; nil is the
-	// wall clock.
+	// Now is the clock of the cutoff and the deletion stamps; required.
 	Now func() time.Time
 }
 
@@ -332,8 +333,8 @@ type CleanupDependencies struct {
 // deletes work sessions and staff absences older than the tenant's
 // retention window.
 func NewCleanup(deps CleanupDependencies) (TimeTrackingCleanupService, error) {
-	if deps.Sessions == nil || deps.Absences == nil || deps.Settings == nil {
-		return nil, errors.New("time tracking cleanup: the session and absence rows and the settings are required")
+	if deps.Sessions == nil || deps.Absences == nil || deps.Settings == nil || deps.Now == nil {
+		return nil, errors.New("time tracking cleanup: the session and absence rows, the settings and the clock are required")
 	}
 	return NewTimeTrackingCleanupService(deps.Sessions, deps.Absences, deps.Audit, deps.Settings, deps.Logger, deps.Now), nil
 }

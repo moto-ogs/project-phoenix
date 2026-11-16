@@ -118,13 +118,7 @@ var moduleLiveClockBudget = map[string]int{
 // receive their clocks from the roots since ADR 0277 (28 to 0); Care Plan's
 // pickup baselines read the day of their composition, so its last direct
 // call goes too.
-var moduleLiveClockValueBudget = map[string]int{
-	"modules/classday":           2,
-	"modules/presenceprojection": 1,
-	"modules/studentpresence":    5,
-	"modules/timetable":          14,
-	"modules/workforce":          8,
-}
+var moduleLiveClockValueBudget = map[string]int{}
 
 const calendarImportPath = "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 

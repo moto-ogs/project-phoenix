@@ -34,7 +34,7 @@ func TestEnsureCapacityForStudentMoveDoesNotCountSameRoomTransfers(t *testing.T)
 	groupRepo := &groupRepoForActiveWrapperTest{groups: map[int64]*ports.ActiveGroup{
 		20: {ID: 20, RoomID: 12},
 	}}
-	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal,
+	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 		RoomRepo:       roomRepo,
 		SchoolPresence: visitRepo,
 		GroupRepo:      groupRepo,
@@ -68,7 +68,7 @@ func TestEnsureRoomCapacity(t *testing.T) {
 		visitRepo := &mockVisitRepository{countActiveByRoomIDFunc: func(context.Context, int64) (int, error) {
 			return 200, nil
 		}}
-		svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, RoomRepo: roomRepo, SchoolPresence: visitRepo}}
+		svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, RoomRepo: roomRepo, SchoolPresence: visitRepo}}
 
 		err := svc.ensureRoomCapacity(ctx, 12, 30)
 
@@ -82,7 +82,7 @@ func TestEnsureRoomCapacity(t *testing.T) {
 		visitRepo := &mockVisitRepository{countActiveByRoomIDFunc: func(context.Context, int64) (int, error) {
 			return 40, nil
 		}}
-		svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, RoomRepo: roomRepo, SchoolPresence: visitRepo}}
+		svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, RoomRepo: roomRepo, SchoolPresence: visitRepo}}
 
 		err := svc.ensureRoomCapacity(ctx, 12, 3)
 
@@ -95,7 +95,7 @@ func TestEnsureRoomCapacity(t *testing.T) {
 		visitRepo := &mockVisitRepository{countActiveByRoomIDFunc: func(context.Context, int64) (int, error) {
 			return 42, nil
 		}}
-		svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, RoomRepo: roomRepo, SchoolPresence: visitRepo}}
+		svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, RoomRepo: roomRepo, SchoolPresence: visitRepo}}
 
 		err := svc.ensureRoomCapacity(ctx, 12, 2)
 
