@@ -3,18 +3,18 @@
 // browser never sees these shapes.
 
 import { parseAttendanceActor } from "~/lib/attendance-actor";
-import { knownEnum, success } from "./contract/runtime";
+import { knownEnum } from "./contract/runtime";
 import {
   DAY_PLANNING_STATUS_VALUES,
   DEPARTURE_MODE_VALUES,
   STUDENT_CONSENT_KEY_VALUES,
   STUDENT_CONSENT_STATE_VALUES,
-  StudentResponseSchema,
   type NameStudentResponse,
   type SlimStudentResponse,
   type StudentConsentResponse,
   type StudentDetailResponse,
   type StudentResponse,
+  type UpdateStudentRequest,
   type routes,
 } from "./contract/students.generated";
 import { normalizeLocation } from "./location-helper";
@@ -31,9 +31,6 @@ import {
   type DepartureDays,
 } from "./departure-plan";
 import type { Student, StudentConsent, StudentUpdate } from "./student-helpers";
-
-/** The answer of a student create or update: the full row, like a list row. */
-export const studentWriteResponse = success(StudentResponseSchema);
 
 /** The three projections of `GET /api/students`. */
 export type StudentView =
@@ -231,9 +228,6 @@ export function prepareStudentForBackend(student: StudentUpdate) {
     first_name: student.first_name,
     last_name: student.second_name,
     school_class: student.school_class,
-    current_location: student.current_location
-      ? normalizeLocation(student.current_location)
-      : undefined,
     // bus_days is the single source of truth (#1582); the legacy bus boolean
     // is not sent. Each map only goes out when the caller set it, so partial
     // updates (sick/excused toggles) leave the stored plan untouched.
@@ -294,5 +288,5 @@ export function prepareStudentForBackend(student: StudentUpdate) {
     // The backend stamps a false→true change and clears photo and metadata on
     // true→false.
     photo_consent_given: student.photo_consent_given,
-  };
+  } satisfies UpdateStudentRequest;
 }

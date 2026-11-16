@@ -6,7 +6,9 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
+	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
+	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 )
 
 // ContractDocument builds the model of the frontend/backend contract from
@@ -18,6 +20,10 @@ func ContractDocument() (contract.Document, error) {
 		routes []common.RouteContract
 	}{
 		{"/api/students", projectionStudentsHTTP.StudentRouteContracts()},
+		// The projection renders the answer of Care Plan's student writes
+		// (studentHTTPResources binds it), so its type is named here.
+		{"/api/students", careStudentsHTTP.StudentWriteContracts(projectionStudentsHTTP.StudentResponse{})},
+		{"/parent", parentAPI.MeRouteContracts()},
 	}
 	catalog, err := RouteCatalog()
 	if err != nil {
@@ -37,10 +43,18 @@ func ContractDocument() (contract.Document, error) {
 			registrations = append(registrations, registration)
 		}
 	}
-	return contract.Build(registrations, contract.Legacy(map[reflect.Type]string{
+	options := contract.Legacy(map[reflect.Type]string{
 		reflect.TypeFor[common.ID]():     contract.KindID,
 		reflect.TypeFor[common.JSONID](): contract.KindLaxID,
-	}))
+	})
+	// Both student bodies only refuse retired keys before the plain decode;
+	// CompanionEntry takes its companion id as a number or a decimal string.
+	options.Readers = map[reflect.Type]string{
+		reflect.TypeFor[careStudentsHTTP.StudentRequest]():       contract.ReadsFields,
+		reflect.TypeFor[careStudentsHTTP.UpdateStudentRequest](): contract.ReadsFields,
+		reflect.TypeFor[careStudentsHTTP.CompanionEntry]():       contract.ReadsLaxIDs,
+	}
+	return contract.Build(registrations, options)
 }
 
 func contractRegistration(prefix string, route common.RouteContract) contract.Registration {

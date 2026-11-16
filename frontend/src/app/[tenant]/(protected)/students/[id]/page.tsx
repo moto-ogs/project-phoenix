@@ -115,7 +115,7 @@ import {
 } from "~/lib/student-status-days-api";
 import { parseISODate, berlinTodayISO } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { useWeekendFollowsFriday } from "~/lib/tenant-context";
+import { useModuleBooked, useWeekendFollowsFriday } from "~/lib/tenant-context";
 import { careWithdrawalNotice } from "~/lib/care-withdrawal-notice";
 import {
   fetchStudentCareWithdrawal,
@@ -603,6 +603,14 @@ function StudentDetailPageContent() {
   const canRecordAccidents =
     sessionStatus === "authenticated" &&
     hasPermission(session, "student_accidents:manage");
+  // „Aus moto“ im Dokumente-Tab (#4814): Elternbriefe und Einverständnisse
+  // lesen dieselben Rollen wie unter „Mitteilungen“ (admin:*), und nur an
+  // einer Schule mit der Eltern-App.
+  const elternAppBooked = useModuleBooked("eltern_app");
+  const showParentRecords =
+    sessionStatus === "authenticated" &&
+    elternAppBooked &&
+    hasPermission(session, "admin:*");
   // Eltern, Notizen und Nachrichten hängen an users:read; die Rolle „Gast“
   // sieht das Kind nur mit students:read (ADR 0091).
   const canReadParentData = sessionReadsChildDetails;
@@ -1849,6 +1857,7 @@ function StudentDetailPageContent() {
           canViewEnrollments={canViewEnrollments}
           canViewCarePlan={canViewCarePlan}
           canRecordAccidents={canRecordAccidents}
+          showParentRecords={showParentRecords}
           canManageFamilyProtection={canViewEnrollments}
           canViewCareTimes={canReadParentData}
           onTabChange={handleTabChange}
@@ -2142,6 +2151,8 @@ interface FullAccessViewProps {
   canViewCarePlan: boolean;
   /** student_accidents:manage: „Unfall erfassen“ (#4771). */
   canRecordAccidents: boolean;
+  /** admin:* with the Eltern-App: „Aus moto“ in Dokumente (#4814). */
+  showParentRecords: boolean;
   canManageFamilyProtection: boolean;
   /** Soll und Ist (#4774) reads with users:read, as the backend route does. */
   canViewCareTimes: boolean;
@@ -2170,6 +2181,7 @@ function FullAccessView({
   canViewEnrollments,
   canViewCarePlan,
   canRecordAccidents,
+  showParentRecords,
   canManageFamilyProtection,
   canViewCareTimes,
   onTabChange,
@@ -2386,6 +2398,7 @@ function FullAccessView({
           <StudentDokumenteTab
             studentId={studentId}
             canRecordAccidents={canRecordAccidents}
+            showParentRecords={showParentRecords}
           />
         )}
       </StudentTabPanel>

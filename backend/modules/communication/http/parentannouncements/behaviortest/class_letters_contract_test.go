@@ -259,6 +259,16 @@ func (s relatedReadContract) ParentDeclarationStatus(ctx context.Context, id int
 	return &communication.ParentDeclarationStatus{Title: s.row.Title}, s.call(ctx, "declaration-status", id)
 }
 
+// ParentDeclarationProof serves the export the way the status does: the
+// proof reads the declaration's status (#4814).
+func (s relatedReadContract) ParentDeclarationProof(ctx context.Context, _, id int64, _ *int64) (*communication.ParentDeclarationStatus, error) {
+	return s.ParentDeclarationStatus(ctx, id)
+}
+
+func (s relatedReadContract) StudentParentRecords(context.Context, int64, int64) (*communication.StudentParentRecords, error) {
+	return &communication.StudentParentRecords{}, nil
+}
+
 type classLetterReport struct{ calls int }
 
 func (r *classLetterReport) RenderReport(doc announcement.ReportDocument, _ string) (announcement.ReportFile, error) {
@@ -270,6 +280,7 @@ func TestOGSRelatedReadsHideClassLetterDrafts(t *testing.T) {
 	t.Parallel()
 	s, resource, token := announcementRoute(t)
 	resource.Service = relatedReadContract{s}
+	resource.StudentRecords = relatedReadContract{s}
 	reports := &classLetterReport{}
 	resource.Reports = reports
 	schoolClaims := routetest.DefaultTestClaims()

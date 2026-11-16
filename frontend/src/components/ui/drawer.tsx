@@ -53,8 +53,7 @@ const DrawerOverlay = React.forwardRef<
     className={cn(
       `fixed inset-0 ${Z_LAYER.sheet}`,
       OVERLAY_BACKDROP_TINT_CLASS,
-      // vaul slides for 500 ms; the blur waits for it.
-      `${OVERLAY_BACKDROP_BLUR_CLASS} [--moto-overlay-blur-delay:500ms]`,
+      OVERLAY_BACKDROP_BLUR_CLASS,
       className,
     )}
     {...props}

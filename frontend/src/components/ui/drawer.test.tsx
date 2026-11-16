@@ -81,7 +81,7 @@ describe("DrawerContent", () => {
     expect(screen.getByText("Drawer content")).toBeInTheDocument();
   });
 
-  it("dims the page and carries the shared delayed blur", () => {
+  it("dims and blurs the page with the shared overlay backdrop", () => {
     render(
       <DrawerContent>
         <div>Drawer content</div>

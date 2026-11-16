@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	marshalerType = reflect.TypeFor[json.Marshaler]()
-	timeType      = reflect.TypeFor[time.Time]()
-	dateType      = reflect.TypeFor[calendar.Date]()
+	marshalerType   = reflect.TypeFor[json.Marshaler]()
+	unmarshalerType = reflect.TypeFor[json.Unmarshaler]()
+	timeType        = reflect.TypeFor[time.Time]()
+	dateType        = reflect.TypeFor[calendar.Date]()
 )
 
 type builder struct {
@@ -28,6 +29,7 @@ type builder struct {
 	deprecated   map[string]bool
 	numericIDs   map[string]bool
 	identifiers  map[reflect.Type]string
+	readers      map[reflect.Type]string
 	used         map[string]bool
 	requestTypes map[string]bool
 }
@@ -39,7 +41,7 @@ func Build(routes []Registration, options Options) (Document, error) {
 		types: map[string]Object{}, names: map[reflect.Type]string{}, enums: map[string]Enum{},
 		enumByType: map[reflect.Type]string{}, enumByField: map[string]string{},
 		deprecated: map[string]bool{}, numericIDs: map[string]bool{}, used: map[string]bool{},
-		requestTypes: map[string]bool{}, identifiers: options.Identifiers,
+		requestTypes: map[string]bool{}, identifiers: options.Identifiers, readers: options.Readers,
 	}
 	for _, key := range options.NumericIDs {
 		b.numericIDs[key] = true
@@ -190,25 +192,20 @@ func (b *builder) responses(route *Route, rc Registration, options Options) erro
 }
 
 func (b *builder) unused(options Options) error {
+	registers := map[string][]string{
+		"id:": options.NumericIDs, "variants:": options.QueryVariants,
+		"enum:": sortedKeys(b.enumByField), "deprecated:": sortedKeys(b.deprecated),
+	}
+	for t := range options.Readers {
+		registers["reader:"] = append(registers["reader:"], t.String())
+	}
+	labels := map[string]string{"id:": "numeric id ", "variants:": "query variant ", "enum:": "enum field ", "deprecated:": "deprecated field ", "reader:": "reader "}
 	var stale []string
-	for _, key := range options.NumericIDs {
-		if !b.used["id:"+key] {
-			stale = append(stale, "numeric id "+key)
-		}
-	}
-	for _, key := range options.QueryVariants {
-		if !b.used["variants:"+key] {
-			stale = append(stale, "query variant "+key)
-		}
-	}
-	for key := range b.enumByField {
-		if !b.used["enum:"+key] {
-			stale = append(stale, "enum field "+key)
-		}
-	}
-	for key := range b.deprecated {
-		if !b.used["deprecated:"+key] {
-			stale = append(stale, "deprecated field "+key)
+	for prefix, keys := range registers {
+		for _, key := range keys {
+			if !b.used[prefix+key] {
+				stale = append(stale, labels[prefix]+key)
+			}
 		}
 	}
 	if len(stale) == 0 {
@@ -233,21 +230,8 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 		s.Nullable = true
 		return s, err
 	}
-	switch t {
-	case timeType:
-		return Schema{Kind: KindInstant}, nil
-	case dateType:
-		// calendar.Date renders its zero value as null.
-		return Schema{Kind: KindDate, Nullable: true}, nil
-	}
-	if kind, ok := b.identifiers[t]; ok {
-		return Schema{Kind: kind}, nil
-	}
-	if name, ok := b.enumByType[t]; ok {
-		return Schema{Kind: KindEnum, Ref: name}, nil
-	}
-	if t.Implements(marshalerType) || reflect.PointerTo(t).Implements(marshalerType) {
-		return Schema{}, fmt.Errorf("%s: %s has its own MarshalJSON and no entry in the contract generator", where, t)
+	if s, known, err := b.named(t, where, request); known || err != nil {
+		return s, err
 	}
 	switch t.Kind() {
 	case reflect.String:
@@ -279,6 +263,37 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 		return Schema{Kind: KindRef, Ref: name}, err
 	}
 	return Schema{}, fmt.Errorf("%s: unsupported type %s", where, t)
+}
+
+// named decides the types whose Go type, not their kind, says what travels:
+// instants, days, identifiers and enums. It also stops at a type that writes
+// or reads itself without an entry.
+func (b *builder) named(t reflect.Type, where string, request bool) (Schema, bool, error) {
+	switch t {
+	case timeType:
+		return Schema{Kind: KindInstant}, true, nil
+	case dateType:
+		// calendar.Date renders its zero value as null.
+		return Schema{Kind: KindDate, Nullable: true}, true, nil
+	}
+	if kind, ok := b.identifiers[t]; ok {
+		return Schema{Kind: kind}, true, nil
+	}
+	if name, ok := b.enumByType[t]; ok {
+		return Schema{Kind: KindEnum, Ref: name}, true, nil
+	}
+	if t.Implements(marshalerType) || reflect.PointerTo(t).Implements(marshalerType) {
+		return Schema{}, false, fmt.Errorf("%s: %s has its own MarshalJSON and no entry in the contract generator", where, t)
+	}
+	if request && reflect.PointerTo(t).Implements(unmarshalerType) {
+		// Reflection describes the fields, the type's own reader decides what
+		// it takes; only an entry can say how the two agree.
+		if _, known := b.readers[t]; !known {
+			return Schema{}, false, fmt.Errorf("%s: %s has its own UnmarshalJSON and no entry in the contract generator", where, t)
+		}
+		b.used["reader:"+t.String()] = true
+	}
+	return Schema{}, false, nil
 }
 
 func (b *builder) object(t reflect.Type, where string, request bool) (string, error) {

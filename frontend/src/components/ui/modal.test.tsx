@@ -431,9 +431,9 @@ describe("Modal", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  // The backdrop dims and blurs the page through the shared overlay blur,
-  // which sets in only after the panel has landed (`.moto-overlay-blur`).
-  it("dims the page and blurs it once the dialog is open, never by a utility", async () => {
+  // The backdrop dims and blurs the page through the shared overlay blur
+  // (`.moto-overlay-blur`), never through a blur utility of its own.
+  it("dims and blurs the page through the shared overlay blur", async () => {
     render(
       <TestWrapper>
         <Modal isOpen={true} onClose={vi.fn()} title="Test">
@@ -454,7 +454,6 @@ describe("Modal", () => {
       "moto-overlay-blur",
       "opacity-100",
     );
-    expect(backdrop).toHaveAttribute("data-state", "open");
     // A blur utility would be on from the first frame of the motion.
     expect(backdrop.className).not.toMatch(/backdrop-blur/);
     // Nor does the panel blur what lies behind it while it scales in.
