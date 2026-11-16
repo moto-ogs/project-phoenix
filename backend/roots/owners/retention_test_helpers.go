@@ -75,7 +75,7 @@ func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWo
 	steps = append(steps, protocolRetentionSteps(command, settingsCompose.NewAuditRetention(), exportTransferCompose.NewJournalRetention())...)
 	steps = append(steps, cleanupJobRetentionSteps(
 		filestorageCompose.NewCleanupRetention(), workforceCompose.NewCleanupRetention(),
-		carePlanCompose.NewCleanupRetention(), enrollmentCompose.New(),
+		carePlanCompose.NewCleanupRetention(), enrollmentCompose.NewClocked(nil),
 	)...)
 	announcements, err := newRetentionTestAnnouncements(db, settings.Settings)
 	if err != nil {
@@ -102,7 +102,7 @@ func newRetentionTestAnnouncements(db transactionruntime.Database, settings sett
 		return nil, err
 	}
 	announcements, err := communicationCompose.NewParentAnnouncementsWithAttachments(communicationCompose.ParentAnnouncementConfig{
-		Repo:     parentStore.NewParentAnnouncementRepository(db.Pool(), NewParentAnnouncementAudience(db, ParentAnnouncementApplicants(enrollmentCompose.New()))),
+		Repo:     parentStore.NewParentAnnouncementRepository(db.Pool(), NewParentAnnouncementAudience(db, ParentAnnouncementApplicants(enrollmentCompose.NewClocked(nil)))),
 		Settings: settingsModule.NewParentAnnouncementValues(settings), Logger: slog.Default(), Fingerprints: SecurityFingerprints{},
 	}, purger, CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	if err != nil {

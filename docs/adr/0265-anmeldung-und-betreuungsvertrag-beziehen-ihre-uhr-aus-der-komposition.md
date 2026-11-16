@@ -74,10 +74,16 @@ mit 29 verschobenen Live-Daten.
    `reviewed_at` von `request_children`, `request_guardians`, `created_at`
    beim Einfügen).
 6. **Budget.** Das Compose-LOC-Budget von `modules/enrollment/compose` steigt
-   um die Zeilen der Uhrfelder (+9, 639 auf 648: `NewClocked`, `Now` der
+   um die Zeilen der Uhrfelder (+7, 639 auf 646: `NewClocked`, `Now` der
    Phasen und des Löschmoduls und ihre `time`-Importe). Die Verdrahtung folgt
    ADR 0239 und ist keine abzubauende Altlast. Die Compose-Zeilen des
    Betreuungsvertrags bleiben gleich.
+7. **Bindungen.** `compose.New()` entfällt: Kein Produktionsaufrufer baut
+   Enrollment mehr ohne Uhr, Tests nehmen `NewClocked(nil)`. Weil die Wurzel
+   Care Plans Zeilen jetzt über `NewClocked` verdrahtet, ändern sich die
+   Digests von 28 Care-Plan-Bindungen der Stammdaten-Entscheidung. Sie sind
+   mit dieser ADR neu bestätigt, die 14 Ausnahmen darunter per
+   `approval_adr`. Effekt und Einstufung bleiben gleich.
 
 ## Folgen
 

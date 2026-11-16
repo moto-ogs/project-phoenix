@@ -23,7 +23,7 @@ type SettingsTestRepositories struct {
 // NewSettingsTestRepositories composes the settings stores over the caller's
 // settings runtime.
 func NewSettingsTestRepositories(runtime settingsCompose.PersistenceRuntime) SettingsTestRepositories {
-	phases := enrollmentCompose.New()
+	phases := enrollmentCompose.NewClocked(nil)
 	return SettingsTestRepositories{
 		Values: settingsCompose.NewSettingValueRepository(runtime), Audit: settingsCompose.NewSettingAuditRepository(runtime),
 		ClassRestriction: phases.HasActiveClassRestrictedPhase,
