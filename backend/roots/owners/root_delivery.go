@@ -207,9 +207,6 @@ func buildDeliveryWorker(
 	return worker, nil
 }
 
-// deliveryFeeds are the two read sides of the router's notification feed:
-// the feed of a staff account in its school (#7148) and the feed of a
-// guardian across the family's schools (#7140).
 // deliveryCapabilities are the further contracts of the composed Delivery:
 // the notice about children missing without a report, the staff responsible
 // for a child and the audience of the whole school (#7144).
@@ -229,6 +226,9 @@ func deliveryCapabilities(absences, recipients any, notifier deliveryCompose.Not
 	return unreported, responsible, audience, nil
 }
 
+// deliveryFeeds are the two read sides of the router's notification feed:
+// the feed of a staff account in its school (#7148) and the feed of a
+// guardian across the family's schools (#7140).
 func deliveryFeeds(notifier deliveryCompose.Notifier) (deliveryContract.NotificationFeed, deliveryContract.GuardianNotificationFeed, error) {
 	feed, ok := notifier.(deliveryContract.NotificationFeed)
 	guardians, served := notifier.(interface {

@@ -244,6 +244,13 @@ func TestClosingDayFeedReachesEveryAccountOfTheSchoolOnly(t *testing.T) {
 	assert.Zero(t, f.pushes(t, leitung.accountID))
 	assert.Zero(t, f.pushes(t, departed.accountID))
 
+	// The family's access is checked on every read: once the school takes
+	// parent_portal.access back, the entry is gone without being deleted.
+	_, err = f.db.ExecContext(context.Background(), `UPDATE auth.guardian_student_access SET permissions = '{}'::jsonb
+		WHERE relationship_id IN (SELECT id FROM users.student_guardian_relationships WHERE guardian_profile_id = ?)`, family.GuardianProfileID)
+	require.NoError(t, err)
+	assert.Empty(t, f.entries(t, family.AccountID, 0, "parent"), "a family that lost the access reads nothing")
+
 	// Another school sees nothing, not even a person who belongs to both.
 	foreign := testpkg.NewTenantScope(t, f.db)
 	testpkg.MapAccountToTenant(t, f.db, staff.accountID, foreign.TenantID)
