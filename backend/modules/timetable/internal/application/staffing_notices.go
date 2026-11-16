@@ -146,10 +146,10 @@ func (s *staffDeviations) noticeStaffingChanges(ctx context.Context, op staffing
 	if err != nil {
 		return &ports.ScheduleError{Op: "staffing notice: staff", Err: err}
 	}
-	reached := map[int64]map[int64]bool{}
+	reached := map[teamStoryKey]map[int64]bool{}
 	for _, story := range stories {
 		notice := s.staffingNotice(story, op, today, team.teachers, staff)
-		markReached(reached, story.key.subjectID, notice)
+		markReached(reached, story, notice)
 		if err := notifyStaffingStory(ctx, deps.Notices, notice); err != nil {
 			return err
 		}
@@ -157,12 +157,14 @@ func (s *staffDeviations) noticeStaffingChanges(ctx context.Context, op staffing
 	return s.noticeTeams(ctx, op, today, team, staff, reached)
 }
 
-// notifyStaffingStory hands one story's notice to Delivery under an object
-// of its own. Delivery updates unread entries with the same related object.
-// A story must therefore have its own object: a teacher affected by two
-// changes in one save needs both entries and both push attempts.
+// notifyStaffingStory hands one story's notice to Delivery. Delivery updates
+// unread entries with the same related object, so a notice without an object
+// gets one of its own: a teacher affected by two changes in one save needs
+// both entries and both push attempts.
 func notifyStaffingStory(ctx context.Context, notices ports.StaffingNotices, notice ports.StaffingNotice) error {
-	notice.ObjectType, notice.ObjectID = staffingObjectStory, rand.Int64N(math.MaxInt64)+1
+	if notice.ObjectType == "" {
+		notice.ObjectType, notice.ObjectID = staffingObjectStory, rand.Int64N(math.MaxInt64)+1
+	}
 	if len(notice.SubjectAccountIDs)+len(notice.SubstituteAccountIDs)+len(notice.TeacherAccountIDs)+len(notice.TeamAccountIDs) == 0 {
 		return nil
 	}

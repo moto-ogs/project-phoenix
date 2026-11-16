@@ -18,6 +18,18 @@ import (
 // notice per operation, whatever the number of days, and it never names a
 // reason.
 
+// staffingObjectTeamDay is what a team notice is about: one person's absence
+// starting on one day. A return within the bundle window updates the unread
+// absence entry instead of a second entry and push; another absence of the
+// same person on another day stays an entry of its own.
+const staffingObjectTeamDay = "staffing_team_day"
+
+// teamDayObject packs the person and the first day into one object id; the
+// day counts from 2000-01-01, which leaves 20 bits for days.
+func teamDayObject(subjectID int64, first calendar.Date) int64 {
+	return subjectID<<20 | int64(calendar.NewDate(2000, 1, 1).DaysUntil(first))
+}
+
 // blockTeam names, per block, the staff ids of its groups' team: the
 // assigned teachers and the handovers covering the block's day.
 type blockTeam struct {
@@ -99,15 +111,19 @@ func handoverStaff(handovers []ports.GroupHandover, groupID int64, day calendar.
 	return staffIDs
 }
 
-// markReached records the accounts a story's notice reaches, per person the
-// story is about.
-func markReached(reached map[int64]map[int64]bool, subjectID int64, notice ports.StaffingNotice) {
-	if reached[subjectID] == nil {
-		reached[subjectID] = map[int64]bool{}
+// markReached records the accounts a story's notice reaches, per absence or
+// return the story tells about. A removed substitute is neither.
+func markReached(reached map[teamStoryKey]map[int64]bool, story staffingStory, notice ports.StaffingNotice) {
+	key, ok := teamKeyOf(story.key.kind, story.key.subjectID)
+	if !ok {
+		return
+	}
+	if reached[key] == nil {
+		reached[key] = map[int64]bool{}
 	}
 	for _, accounts := range [][]int64{notice.SubjectAccountIDs, notice.SubstituteAccountIDs, notice.TeacherAccountIDs} {
 		for _, accountID := range accounts {
-			reached[subjectID][accountID] = true
+			reached[key][accountID] = true
 		}
 	}
 }
@@ -118,6 +134,17 @@ func markReached(reached map[int64]map[int64]bool, subjectID int64, notice ports
 type teamStoryKey struct {
 	subjectID int64
 	back      bool
+}
+
+// teamKeyOf names the absence or return a change of the kind is about.
+func teamKeyOf(kind string, subjectID int64) (teamStoryKey, bool) {
+	switch kind {
+	case ports.StaffingChangeAbsent, ports.StaffingChangeSubstituted:
+		return teamStoryKey{subjectID: subjectID}, true
+	case ports.StaffingChangePresent:
+		return teamStoryKey{subjectID: subjectID, back: true}, true
+	}
+	return teamStoryKey{}, false
 }
 
 type teamStory struct {
@@ -136,17 +163,12 @@ func teamStories(changes []staffingChange) []teamStory {
 		if change.knownAbsent {
 			continue
 		}
-		var key teamStoryKey
-		switch change.kind {
-		case ports.StaffingChangeAbsent, ports.StaffingChangeSubstituted:
-			key = teamStoryKey{subjectID: change.subjectID}
-		case ports.StaffingChangePresent:
-			key = teamStoryKey{subjectID: change.subjectID, back: true}
-		default:
+		key, ok := teamKeyOf(change.kind, change.subjectID)
+		if !ok {
 			continue
 		}
-		i, ok := index[key]
-		if !ok {
+		i, seen := index[key]
+		if !seen {
 			i = len(stories)
 			index[key] = i
 			stories = append(stories, teamStory{key: key})
@@ -158,9 +180,9 @@ func teamStories(changes []staffingChange) []teamStory {
 
 // noticeTeams tells the rest of the team about every absence and return of
 // the operation.
-func (s *staffDeviations) noticeTeams(ctx context.Context, op staffingOperation, today calendar.Date, team blockTeam, staff map[int64]*timetable.StaffMember, reached map[int64]map[int64]bool) error {
+func (s *staffDeviations) noticeTeams(ctx context.Context, op staffingOperation, today calendar.Date, team blockTeam, staff map[int64]*timetable.StaffMember, reached map[teamStoryKey]map[int64]bool) error {
 	for _, story := range teamStories(op.changes) {
-		notice := teamNotice(story, op, today, team, staff, reached[story.key.subjectID])
+		notice := teamNotice(story, op, today, team, staff, reached[story.key])
 		if len(notice.TeamAccountIDs) == 0 {
 			continue
 		}
@@ -172,12 +194,15 @@ func (s *staffDeviations) noticeTeams(ctx context.Context, op staffingOperation,
 }
 
 // teamNotice builds the notice of one absence or return for the team,
-// without the person, the actor and whoever already heard about the person
-// in this operation.
+// without the person, the actor and whoever already heard about the same
+// absence or return in this operation. The teachers are part of the team
+// but usually heard it already as teachers; they stay in for a block whose
+// teacher notice reached nobody new.
 func teamNotice(story teamStory, op staffingOperation, today calendar.Date, team blockTeam, staff map[int64]*timetable.StaffMember, reached map[int64]bool) ports.StaffingNotice {
 	first := story.changes[0]
 	notice := ports.StaffingNotice{
 		Kind: ports.StaffingChangeAbsent, SubjectName: staffName(staff[story.key.subjectID]), InstanceID: first.instanceID,
+		ObjectType: staffingObjectTeamDay, ObjectID: teamDayObject(story.key.subjectID, first.date),
 		Push: today.DaysUntil(first.date) <= staffNoticePushDays,
 	}
 	if story.key.back {
