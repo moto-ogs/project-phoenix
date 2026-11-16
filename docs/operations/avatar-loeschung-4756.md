@@ -57,8 +57,9 @@ für das produktive System.
 ## Altbestand: Probelauf und Eintragen in die Warteschlange
 
 **Nur für einen berechtigten Menschen auf dem Server.** Hier wurden keine
-Produktions- oder Staging-Zugriffe ausgeführt. Die Befehle verwenden die bereits
-bereitgestellte Compose-Konfiguration in `~/production/`, keine API und kein SSH.
+Produktions- oder Staging-Zugriffe ausgeführt. Die Befehle auf dem Server verwenden
+die bereits bereitgestellte Compose-Konfiguration in `~/production/` und keine API;
+nur die Dateiübertragung vorab läuft per `scp`.
 Die drei SQL-Dateien aus `docs/operations/sql/` dieses geprüften Releases müssen
 lokal auf dem Server bereitliegen. Das Deployment überträgt nur `.env`, Compose-Datei
 und Skripte, kein `docs/`. Deshalb auf dem Server
