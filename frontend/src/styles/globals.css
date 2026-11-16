@@ -1003,6 +1003,17 @@ html[data-chat-page-lock] body {
     var(--moto-overlay-blur-delay, var(--moto-modal-enter, 200ms)) forwards;
 }
 
+/* vaul gibt seinem Overlay die Einblende-Animation `fadeIn` mit einem
+   spezifischeren Selektor; ohne diese Regel ersetzte sie den Weichzeichner.
+   Beide laufen hier nebeneinander. */
+[data-vaul-overlay][data-vaul-snap-points="false"].moto-overlay-blur[data-state="open"] {
+  animation-name: fadeIn, moto-overlay-blur;
+  animation-duration: 0.5s, 0s;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1), linear;
+  animation-delay: 0s, var(--moto-overlay-blur-delay, 500ms);
+  animation-fill-mode: none, forwards;
+}
+
 @keyframes moto-overlay-blur {
   to {
     backdrop-filter: blur(8px);
