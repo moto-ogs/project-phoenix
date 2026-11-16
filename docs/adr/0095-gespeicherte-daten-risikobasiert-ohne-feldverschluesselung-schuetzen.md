@@ -1,8 +1,37 @@
 ---
-status: accepted
+status: superseded in part by ADR 0084, ADR 0171, ADR 0183 and ADR 0188
 ---
 
 # Gespeicherte Daten risikobasiert ohne Feldverschlüsselung schützen
+
+> **Teilweise abgelöst** seit November 2026: Gesundheits- und Bankdaten
+> liegen feldverschlüsselt in der Datenbank (AES-256-GCM mit Security
+> Runtimes Feld-Cipher, an Spalte, Mandant und Zeile gebunden). Für diese
+> Daten gilt der Satz „keine Feld-/Dateiverschlüsselung in der Anwendung“
+> nicht mehr:
+>
+> - Gesundheitsangaben der Ferienanmeldung und des Feriengasts (#4722,
+>   Migration `1.15.725`, Ring `HEALTH_DATA_KEYS`):
+>   [ADR 0084, Nachtrag 2026-11-01](0084-traeger-portal-liest-ueber-eine-projektion-und-schreibt-in-der-schule.md#nachtrag-2026-11-01-recht-gesundheitsangaben-sehen-4722).
+> - Gesundheitsfeld der Kinder (#5472, Migration `1.15.730`):
+>   `users.student_care_profiles.health_info` ist durch das versiegelte
+>   `health_data` ersetzt, Ring `HEALTH_DATA_KEYS`. Dafür gibt es keine eigene ADR.
+> - Bankdaten der SEPA-Mandate und -Lastschriften:
+>   [ADR 0171](0171-sepa-mandat-gehoert-dem-zahler-der-familie-und-die-rechnung-haelt-es-fest.md),
+>   seit [ADR 0183](0183-bankdaten-haben-einen-eigenen-schluesselring-und-einen-wiederholbaren-rekey.md)
+>   mit dem eigenen Bankring `BANK_DATA_KEYS`.
+> - IBAN, Kontoinhaber, Steuer-ID und SV-Nummer von Eltern und Personal (#6332,
+>   Migrationen `1.15.836`/`1.15.837`, Klartextspalten mit `1.15.900` entfernt):
+>   [ADR 0188](0188-bankdaten-von-eltern-und-personal-liegen-versiegelt-im-bankring.md).
+>
+> ADR 0171, 0183 und 0188 tragen noch `status: proposed`; ihr Code liegt auf
+> `development`. Weiter gilt diese Entscheidung für Datei-Uploads (ohne
+> Anwendungsverschlüsselung), für die übrigen Personal-, Eltern- und
+> Kinderdaten sowie für Datenträger-, Sicherungs-, Diagnose- und
+> Protokollmaßnahmen. Die Abwägung unten bleibt gültig: Der Anwendungsprozess
+> erhält die Schlüsselringe als Umgebungsvariablen und kann jeden Wert öffnen.
+> Aktueller Stand je Bestand:
+> [Schutz gespeicherter Daten](../reference/schutz-gespeicherter-daten.md).
 
 Entscheidung des Nutzers vom 23.10.2026, dokumentiert in Slice 3840-a für
 [#3840](https://github.com/moto-ogs/project-phoenix/issues/3840).
