@@ -4,8 +4,12 @@ package common
 // scope claim of that portal's session token.
 type PortalScope string
 
-// PortalTenant is the school staff portal.
-const PortalTenant PortalScope = "tenant"
+const (
+	// PortalTenant is the school staff portal.
+	PortalTenant PortalScope = "tenant"
+	// PortalParent is the guardians' portal, across every school of a guardian.
+	PortalParent PortalScope = "parent"
+)
 
 // RouteContract is the typed registration of one route (ADR 0270): what the
 // route catalog's METHOD /pattern line does not say. The owner's http role

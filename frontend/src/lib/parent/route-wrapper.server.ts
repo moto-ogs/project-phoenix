@@ -13,6 +13,7 @@ export const {
   proxyPut,
   proxyPatch,
   proxyDelete,
+  get: createParentGetHandler,
   del: createParentDeleteHandler,
   put: createParentPutHandler,
   patch: createParentPatchHandler,

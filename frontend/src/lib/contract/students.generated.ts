@@ -7,6 +7,7 @@ import {
   int64StringOrNumber,
   openEnum,
   paginated,
+  requestBody,
   safeInt,
   success,
   type OpenEnum,
@@ -23,6 +24,15 @@ export type DayPlanningStatus = (typeof DAY_PLANNING_STATUS_VALUES)[number];
 
 export const DEPARTURE_MODE_VALUES = ["accompanied", "alone", "bus", "pickup"] as const;
 export type DepartureMode = (typeof DEPARTURE_MODE_VALUES)[number];
+
+export const GUARDIAN_CONTACT_METHOD_VALUES = ["email", "mobile", "phone", "sms"] as const;
+export type GuardianContactMethod = (typeof GUARDIAN_CONTACT_METHOD_VALUES)[number];
+
+export const GUARDIAN_PHONE_TYPE_VALUES = ["home", "mobile", "other", "work"] as const;
+export type GuardianPhoneType = (typeof GUARDIAN_PHONE_TYPE_VALUES)[number];
+
+export const GUARDIAN_RELATIONSHIP_TYPE_VALUES = ["guardian", "other", "parent", "relative"] as const;
+export type GuardianRelationshipType = (typeof GUARDIAN_RELATIONSHIP_TYPE_VALUES)[number];
 
 export const PICKUP_STATUS_VALUES = ["Geht alleine nach Hause", "Geht mit anderem Kind", "Wird abgeholt"] as const;
 export type PickupStatus = (typeof PICKUP_STATUS_VALUES)[number];
@@ -482,6 +492,111 @@ export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unkno
   actual_pickup_by: AttendanceActorResponseSchema.optional(),
 });
 
+/** Go: peopledirectory.NewGuardianPhone */
+export interface NewGuardianPhone {
+  phone_number?: string;
+  phone_type?: OpenEnum<GuardianPhoneType>;
+  label?: string;
+  is_primary?: boolean;
+}
+
+/** Go: peopledirectory.NewStudentGuardian */
+export interface NewStudentGuardian {
+  guardian_profile_id?: number | null;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  address_street?: string;
+  address_city?: string;
+  address_postal_code?: string;
+  preferred_contact_method?: OpenEnum<GuardianContactMethod>;
+  language_preference?: string;
+  notes?: string;
+  relationship_type?: OpenEnum<GuardianRelationshipType>;
+  guardian_role?: string;
+  is_primary?: boolean;
+  is_emergency_contact?: boolean;
+  can_pickup?: boolean;
+  pickup_notes?: string;
+  emergency_priority?: number;
+  phone_numbers?: NewGuardianPhone[] | null;
+}
+
+/** Go: careplanhttp.ArrivalScheduleRequestItem */
+export interface ArrivalScheduleRequestItem {
+  weekday?: number;
+  expected_arrival?: string;
+  notes?: string | null;
+}
+
+/** Go: careplanhttp.PickupScheduleRequest */
+export interface PickupScheduleRequest {
+  weekday?: number;
+  pickup_time?: string;
+  notes?: string | null;
+}
+
+/** Go: careplanhttp.StudentRequest */
+export interface StudentRequest {
+  first_name?: string;
+  last_name?: string;
+  tag_id?: string;
+  birthday?: string;
+  school_class?: string;
+  group_id?: number | null;
+  address_street?: string;
+  address_city?: string;
+  address_postal_code?: string;
+  extra_info?: string | null;
+  health_info?: string | null;
+  departure_days?: Record<string, OpenEnum<DepartureMode>> | null;
+  allowed_departure_modes?: Record<string, OpenEnum<DepartureMode>[] | null> | null;
+  departure_companion_note?: string | null;
+  pickup_status?: OpenEnum<PickupStatus> | null;
+  pickup_days?: Record<string, boolean> | null;
+  bus?: boolean | null;
+  bus_days?: Record<string, boolean> | null;
+  guardians?: NewStudentGuardian[] | null;
+  arrival_schedules?: ArrivalScheduleRequestItem[] | null;
+  pickup_schedules?: PickupScheduleRequest[] | null;
+}
+
+/** Go: careplanhttp.CompanionEntry */
+export interface CompanionEntry {
+  companion_student_id?: string;
+  weekdays?: string[] | null;
+}
+
+/** Go: careplanhttp.UpdateStudentRequest */
+export interface UpdateStudentRequest {
+  first_name?: string | null;
+  last_name?: string | null;
+  birthday?: string | null;
+  tag_id?: string | null;
+  school_class?: string | null;
+  group_id?: number | null;
+  address_street?: string | null;
+  address_city?: string | null;
+  address_postal_code?: string | null;
+  health_info?: string | null;
+  extra_info?: string | null;
+  allowed_departure_modes?: Record<string, OpenEnum<DepartureMode>[] | null> | null;
+  departure_days?: Record<string, OpenEnum<DepartureMode>> | null;
+  departure_companion_note?: string | null;
+  pickup_status?: OpenEnum<PickupStatus> | null;
+  pickup_days?: Record<string, boolean> | null;
+  bus?: boolean | null;
+  bus_days?: Record<string, boolean> | null;
+  sick?: boolean | null;
+  sick_reason?: string | null;
+  excused?: boolean | null;
+  photo_consent_given?: boolean | null;
+  companions?: CompanionEntry[] | null;
+  companions_fingerprint?: string | null;
+  extend_companion_plans?: boolean;
+  confirmed_companion_extensions?: CompanionEntry[] | null;
+}
+
 /** Query of GET /api/students/ */
 export interface GetStudentsQuery {
   bus?: string;
@@ -533,5 +648,19 @@ export const routes = {
     pattern: "/api/students/{id}",
     portals: ["tenant"],
     response: success(StudentDetailResponseSchema),
+  },
+  "POST /api/students/": {
+    method: "POST",
+    pattern: "/api/students/",
+    portals: ["tenant"],
+    request: requestBody<StudentRequest>(),
+    response: success(StudentResponseSchema),
+  },
+  "PUT /api/students/{id}": {
+    method: "PUT",
+    pattern: "/api/students/{id}",
+    portals: ["tenant"],
+    request: requestBody<UpdateStudentRequest>(),
+    response: success(StudentResponseSchema),
   },
 } as const;
