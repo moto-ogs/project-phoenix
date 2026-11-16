@@ -43,7 +43,7 @@ die echte Uhr zurück, und ein Test mit fester Uhr merkte es nicht.
    `modules/schoolcalendar/compose` 162 auf 169 (Tagesuhr der Mitteilungen
    +1, Uhr der Wurzel für die Kalenderdaten +6),
    `modules/schoolsearchview/compose` 38 auf 39, zusammen mit ADR 0273
-   13.643 auf 13.653.
+   13.641 auf 13.651.
 6. **Der Schulkalender liest die Uhr der Wurzel.** `NewRecords` band den Tag
    der Schule fest an die echte Uhr; `RecordsDependencies.Now` reicht jetzt
    die Uhr der Wurzel (`BuildSchoolCalendarRecords`, Wochenprotokolle). Die

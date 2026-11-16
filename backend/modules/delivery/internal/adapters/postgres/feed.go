@@ -75,10 +75,12 @@ const publishFeedEntriesSQL = `WITH recipient AS (
 // its entries. A staff or school session never reads a guardian entry (#7140),
 // even when its account is a guardian too. The predicate applies the
 // delivery-time conditions of platform.delivery_realtime_recipients, as Web
-// Push and SSE do.
+// Push and SSE do. An empty OGS link marks an entry that exists exclusively
+// in moto schule (#7144).
 const feedReaderSQL = `EXISTS (SELECT 1 FROM platform.delivery_realtime_recipients AS reader
 	WHERE reader.tenant_id = ? AND reader.account_id = ? AND reader.active
 		AND CASE WHEN ? THEN reader.has_school_role ELSE reader.has_staff_role END)
+	AND (? OR deep_link <> '')
 	AND cardinality(student_ids) = 0`
 
 // guardianFeedReadableSQL admits the entry of a guardian only while the
@@ -148,7 +150,7 @@ func (s *Store) ListFeedEntries(ctx context.Context, tenantID, accountID int64, 
 		Where("tenant_id = ?", tenantID).
 		Where("account_id = ?", accountID).
 		Where("type = ANY(?)", pgdialect.Array(view.Types)).
-		Where(feedReaderSQL, tenantID, accountID, view.School)
+		Where(feedReaderSQL, tenantID, accountID, view.School, view.School)
 	if after != nil {
 		query = query.Where("(updated_at, id) < (?, ?)", after.UpdatedAt, after.ID)
 	}
@@ -199,7 +201,7 @@ func (s *Store) CountUnreadFeedEntries(ctx context.Context, tenantID, accountID 
 		Where("account_id = ?", accountID).
 		Where("type = ANY(?)", pgdialect.Array(view.Types)).
 		Where("read_at IS NULL").
-		Where(feedReaderSQL, tenantID, accountID, view.School).
+		Where(feedReaderSQL, tenantID, accountID, view.School, view.School).
 		Count(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("delivery postgres: count unread feed entries: %w", err)
@@ -216,7 +218,7 @@ func (s *Store) MarkFeedEntryRead(ctx context.Context, tenantID, accountID int64
 	err = db.NewRaw(`UPDATE platform.notification_feed_entries
 		SET read_at = COALESCE(read_at, ?)
 		WHERE tenant_id = ? AND account_id = ? AND id = ? AND type = ANY(?) AND `+feedReaderSQL+`
-		RETURNING id`, now, tenantID, accountID, entryID, pgdialect.Array(view.Types), tenantID, accountID, view.School).Scan(ctx, &ids)
+		RETURNING id`, now, tenantID, accountID, entryID, pgdialect.Array(view.Types), tenantID, accountID, view.School, view.School).Scan(ctx, &ids)
 	if err != nil {
 		return false, fmt.Errorf("delivery postgres: mark feed entry read: %w", err)
 	}
@@ -231,7 +233,7 @@ func (s *Store) MarkAllFeedEntriesRead(ctx context.Context, tenantID, accountID 
 	return affected("mark all feed entries read")(db.ExecContext(ctx, `UPDATE platform.notification_feed_entries
 		SET read_at = ?
 		WHERE tenant_id = ? AND account_id = ? AND read_at IS NULL AND type = ANY(?) AND `+feedReaderSQL,
-		now, tenantID, accountID, pgdialect.Array(view.Types), tenantID, accountID, view.School))
+		now, tenantID, accountID, pgdialect.Array(view.Types), tenantID, accountID, view.School, view.School))
 }
 
 func (s *Store) DeleteExpiredFeedEntries(ctx context.Context, tenantID int64, before time.Time) (int, error) {
@@ -316,4 +318,43 @@ func (s *Store) MarkAllGuardianFeedEntriesRead(ctx context.Context, accountID in
 		return nil, fmt.Errorf("delivery postgres: mark all guardian feed entries read: %w", err)
 	}
 	return tenants, nil
+}
+
+// schoolAudienceSQL names the audience of a notice to the whole school
+// (#7144) in one statement: the active members with a role of the OGS portal
+// or of moto schule, and the active guardian members with the children they
+// hold parent_portal.access for. It reads the projection the feed readers,
+// Web Push and SSE check on delivery, so it names nobody who could not read
+// the entry. An account that is staff and guardian at once is both.
+const schoolAudienceSQL = `SELECT reader.account_id,
+		reader.has_staff_role AS staff,
+		reader.has_school_role AS school,
+		CASE WHEN reader.has_guardian_role THEN reader.guardian_student_ids ELSE '{}'::bigint[] END AS student_ids
+	FROM platform.delivery_realtime_recipients AS reader
+	WHERE reader.tenant_id = ? AND reader.active
+		AND (reader.has_staff_role OR reader.has_school_role
+			OR (reader.has_guardian_role AND cardinality(reader.guardian_student_ids) > 0))
+	ORDER BY reader.account_id`
+
+type schoolAudienceRow struct {
+	AccountID  int64   `bun:"account_id"`
+	Staff      bool    `bun:"staff"`
+	School     bool    `bun:"school"`
+	StudentIDs []int64 `bun:"student_ids,array"`
+}
+
+func (s *Store) SchoolAudience(ctx context.Context, tenantID int64) ([]domain.SchoolAudienceMember, error) {
+	db, err := s.tenantDB(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	var rows []schoolAudienceRow
+	if err := db.NewRaw(schoolAudienceSQL, tenantID).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("delivery postgres: school audience: %w", err)
+	}
+	members := make([]domain.SchoolAudienceMember, 0, len(rows))
+	for _, row := range rows {
+		members = append(members, domain.SchoolAudienceMember{AccountID: row.AccountID, Staff: row.Staff, School: row.School, StudentIDs: row.StudentIDs})
+	}
+	return members, nil
 }

@@ -6,6 +6,7 @@ import (
 
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -38,4 +39,13 @@ func TestNewTimetableStaffingNoticeDependenciesDisablesStaffingWithoutWorkforce(
 	require.Nil(t, notices.Groups)
 	require.Nil(t, notices.Teachers)
 	require.Nil(t, notices.Handovers)
+}
+
+func TestRoomChangeStudentScopeDigestIsBoundedAndCanonical(t *testing.T) {
+	t.Parallel()
+
+	first := roomChangeStudentScopeDigest([]int64{17, 42})
+	assert.Len(t, first, 64)
+	assert.Equal(t, first, roomChangeStudentScopeDigest([]int64{42, 17}))
+	assert.NotEqual(t, first, roomChangeStudentScopeDigest([]int64{17, 43}))
 }
