@@ -21,6 +21,9 @@ type Administration struct {
 	RecurrenceGate    ports.RecurrenceGate
 	CareOfferingGuard ports.CareOfferingGuard
 	Today             ports.Today
+	// ClosingDayNotices tells the school about a changed closing day
+	// (#7144); nil tells nobody, as the Records without administration do.
+	ClosingDayNotices schoolcalendar.ClosingDayNotices
 }
 
 // AddCalendarPeriod creates a period under the recurrence gate. The

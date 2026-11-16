@@ -116,3 +116,11 @@ Personalstamm, Schule und Freigabe technisch zusammenhängen.
 - Die Löschfrist nach dem Vertragsende (ADR 0089 Abschnitt 12) kommt mit dem
   Arbeitsvertrag. Bis dahin endet eine Akte durch „Akte auflösen“ oder mit dem
   Träger.
+
+## Nachtrag 2026-11-16: eigener Demo-Träger je Besuch (#6193)
+
+[ADR 0271](0271-jeder-demo-besuch-bekommt-einen-eigenen-demo-traeger.md)
+ändert Punkt 9 für die Demo-Träger, die eine Bestellung für sich anlegt:
+Der Besucher ist Mitglied ihres Träger-Büros. Der Seed verknüpft dort
+Personalakten, aber keine, die die Beschäftigung des Besuchers nennt. Für den
+gemeinsamen Demo-Träger gilt Punkt 9 unverändert.

@@ -10,7 +10,7 @@ if [[ "${1:-quality}" == dependencies ]]; then
   exit 0
 fi
 if [[ "${1:-quality}" == react-doctor ]]; then
-  npx --ignore-scripts -y react-doctor@0.8.1 . --yes --scope changed \
+  npx --ignore-scripts -y --package=@typescript-eslint/types@8.72.1 --package=react-doctor@0.8.1 react-doctor . --yes --scope changed \
     --base "${2:?base revision is required}" --no-telemetry --no-supply-chain
   exit 0
 fi

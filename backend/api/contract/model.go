@@ -9,7 +9,7 @@ const (
 	KindInt      = "int"       // JSON number, safe integer
 	KindNumber   = "number"    // JSON number
 	KindID       = "id"        // identifier as a JSON string
-	KindLegacyID = "legacy_id" // identifier an existing route still sends as a JSON number
+	KindLegacyID = "legacy_id" // identifier an existing route still sends, or reads only, as a JSON number
 	KindLaxID    = "lax_id"    // common.JSONID: renders a number, reads number or string
 	KindDate     = "date"      // YYYY-MM-DD
 	KindInstant  = "instant"   // RFC 3339

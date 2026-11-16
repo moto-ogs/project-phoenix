@@ -185,22 +185,23 @@ func (rs *Resource) listMyChildren(w http.ResponseWriter, r *http.Request) {
 }
 
 // EnrollablePhaseResponse is the wire shape for /me/enrollable-schools.
-// Mirrors the workflow enrollable-phase projection but stringifies int64 ids.
+// Mirrors the workflow enrollable-phase projection; identifiers travel as
+// strings (common.ID).
 type EnrollablePhaseResponse struct {
-	SchoolID   string `json:"school_id"`
-	SchoolName string `json:"school_name"`
-	SchoolSlug string `json:"school_slug"`
+	SchoolID   common.ID `json:"school_id"`
+	SchoolName string    `json:"school_name"`
+	SchoolSlug string    `json:"school_slug"`
 	// SchoolSubdomain is the identifier the picker must put in enrollment
 	// links: both /auth/tenant/resolve and /api/parent/enrollments/{tenantSlug}/*
 	// resolve tenants by subdomain (#1663).
-	SchoolSubdomain string `json:"school_subdomain"`
-	PhaseID         string `json:"phase_id"`
-	PhaseName       string `json:"phase_name"`
+	SchoolSubdomain string    `json:"school_subdomain"`
+	PhaseID         common.ID `json:"phase_id"`
+	PhaseName       string    `json:"phase_name"`
 	// PhaseNameTranslations maps locale → translated phase name (#3377).
 	PhaseNameTranslations map[string]string `json:"phase_name_translations,omitempty"`
 	PhaseKind             string            `json:"phase_kind"`
-	ServiceStartDate      careplan.Date     `json:"service_start_date"`
-	ServiceEndDate        careplan.Date     `json:"service_end_date"`
+	ServiceStartDate      careplan.Date     `json:"service_start_date" contract:"date"`
+	ServiceEndDate        careplan.Date     `json:"service_end_date" contract:"date"`
 	EnrollmentOpenAt      *time.Time        `json:"enrollment_open_at,omitempty"`
 	EnrollmentCloseAt     *time.Time        `json:"enrollment_close_at,omitempty"`
 	AlreadyLinked         bool              `json:"already_linked"`
@@ -227,11 +228,11 @@ func (rs *Resource) listEnrollableSchools(w http.ResponseWriter, r *http.Request
 	out := make([]EnrollablePhaseResponse, 0, len(phases))
 	for _, p := range phases {
 		out = append(out, EnrollablePhaseResponse{
-			SchoolID:              strconv.FormatInt(p.SchoolID, 10),
+			SchoolID:              common.ID(p.SchoolID),
 			SchoolName:            p.SchoolName,
 			SchoolSlug:            p.SchoolSlug,
 			SchoolSubdomain:       p.SchoolSubdomain,
-			PhaseID:               strconv.FormatInt(p.PhaseID, 10),
+			PhaseID:               common.ID(p.PhaseID),
 			PhaseName:             p.PhaseName,
 			PhaseNameTranslations: p.PhaseNameTranslations,
 			PhaseKind:             p.PhaseKind,

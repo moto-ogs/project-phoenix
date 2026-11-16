@@ -258,6 +258,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/berichte",
   "/berichte/vorlagen/:id",
   "/berichte/vorlagen/neu",
+  "/demo",
   "/dokumente",
   "/dokumente/:id",
   "/einstellungen",

@@ -543,8 +543,8 @@
    own disclosure toggle (`SectionCollapseToggle`) opens no layer: it must not
    lift the card above a sticky save bar. */
 .moto-content-surface:has(
-    [aria-expanded="true"]:not([data-section-collapse-toggle])
-  ) {
+  [aria-expanded="true"]:not([data-section-collapse-toggle])
+) {
   position: relative;
   z-index: 60;
 }
@@ -885,12 +885,12 @@ html[data-chat-page-lock] body {
    größere Schrift bleibt. */
 @media (pointer: coarse) {
   :is(input, textarea, select):not(
-      [class*="text-lg"],
-      [class*="text-xl"],
-      [class*="text-2xl"],
-      [class*="text-3xl"],
-      [class*="text-4xl"]
-    ) {
+    [class*="text-lg"],
+    [class*="text-xl"],
+    [class*="text-2xl"],
+    [class*="text-3xl"],
+    [class*="text-4xl"]
+  ) {
     font-size: 16px;
   }
 }
@@ -988,6 +988,21 @@ html[data-chat-page-lock] body {
 
 .animate-fadeInUp {
   animation: fadeInUp 300ms ease-out forwards;
+}
+
+/* Der Weichzeichner hinter Dialogen, Seitenleisten und Schubladen
+   (`OVERLAY_BACKDROP_BLUR_CLASS`): sofort mit dem Grau, wie vor #7252. Nur
+   die Form ohne Präfix: lightningcss fasst beide sonst im Produktions-Build
+   zu `-webkit-backdrop-filter` zusammen, das Chrome nicht kennt, und setzt
+   das Präfix selbst, wo die Zielbrowser es brauchen. */
+.moto-overlay-blur {
+  backdrop-filter: blur(8px);
+}
+
+/* Glas für kleine, ruhende Flächen (Chips der Anmeldeseite): wenig Fläche,
+   nichts darunter bewegt sich. Nie auf Leisten über scrollendem Inhalt. */
+.moto-glass {
+  backdrop-filter: blur(8px);
 }
 
 /* A short bar that fills once, before a redirect (invitation accepted). It

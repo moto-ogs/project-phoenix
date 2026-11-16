@@ -70,7 +70,12 @@ nicht genutzt wird.
 Ein **Demo-Zugang** verbindet die E-Mail-Adresse eines Interessenten mit
 seiner Demo-Schule. Der Interessent betritt die Demo-Schule über einen Link
 aus einer E-Mail und wählt dort eine **Demo-Rolle** (Betreuungskraft,
-OGS-Leitung oder Elternteil), ohne sich ein Passwort zu setzen.
+OGS-Leitung, Elternteil oder Träger-Büro), ohne sich ein Passwort zu setzen.
+
+Ein **Demo-Träger** ist der Träger einer Demo-Schule. Jede Demo-Schule hat
+ihren eigenen, mit zwei Nachbarschulen; die Rolle Träger-Büro öffnet sein
+Träger-Portal. Er geht mit seiner letzten Schule
+([ADR 0271](docs/adr/0271-jeder-demo-besuch-bekommt-einen-eigenen-demo-traeger.md)).
 
 _Vermeiden_: Demo-Tenant (klingt nach einer gemeinsamen Schule für alle),
 Sandbox, Testzugang, Probeaccount.

@@ -57,6 +57,7 @@ const PARENT_TYPES = new Set([
   "parent_request_decided",
   "parent_care_cancelled",
   "parent_class_timetable_changed",
+  "parent_school_closing_day_changed",
   "parent_billing_document",
 ]);
 

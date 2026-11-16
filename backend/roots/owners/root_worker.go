@@ -328,7 +328,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		func() (err error) { guardian, err = BuildGuardianService(db, people, audit, env); return },
 		func() error {
 			unlinker := peopledirectory.NewPhotoUnlinker(env.Logger.With("component", "student-photo-unlinker"), "public", nativeUploads.UploadFiles{})
-			photoRuntime = BuildStudentPhotoRuntime(db, env, settings.Service, hub, audit, unlinker, func(ctx context.Context) int64 { claims, _ := tokens.Claims(ctx); return claims.AccountID })
+			photoRuntime = BuildStudentPhotoRuntime(db, env, settings.Service, hub, audit, unlinker, func(ctx context.Context) int64 { claims, _ := tokens.Claims(ctx); return claims.AccountReferenceID() })
 			return nil
 		},
 		func() (err error) {
@@ -460,7 +460,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() (err error) {
 			lifecycle, err = BuildTimetableLifecycle(db, env, hub, timetableRows, days, people, careRows, presence, supervisions,
-				WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, NewTimetableSickReports(workTime), NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime))
+				WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, NewTimetableSickReports(workTime), NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime).WithGuardianContacts(persons))
 			return
 		},
 		func() (err error) {

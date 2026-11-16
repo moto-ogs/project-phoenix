@@ -51,7 +51,7 @@ func (seedTraegerStaffStep) Run(ctx context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
-	linked, first, records, err := seedTraegerStaffLinkAll(rt.Client, auth, suggestions)
+	linked, first, records, err := seedTraegerStaffLinkAll(rt.Client, auth, withoutVisitorStaff(rt, suggestions))
 	if err != nil {
 		return err
 	}
@@ -135,6 +135,30 @@ type seedTraegerStaffSuggestion struct {
 		SchoolID int64 `json:"school_id"`
 		StaffID  int64 `json:"staff_id"`
 	} `json:"members"`
+}
+
+// withoutVisitorStaff drops the proposals that name the visitor's
+// employment: the visitor's name never reaches a record of the Träger, which
+// outlives the visit (ADR 0233 point 9, ADR 0271).
+func withoutVisitorStaff(rt *Runtime, suggestions []seedTraegerStaffSuggestion) []seedTraegerStaffSuggestion {
+	if rt.seedVisitor().empty() || rt.Bootstrap == nil || rt.FixedSeeder == nil {
+		return suggestions
+	}
+	staff := DemoStaff[visitorStaffIndex]
+	visitorStaffID := rt.FixedSeeder.staffIDs[staff.FirstName+" "+staff.LastName]
+	kept := make([]seedTraegerStaffSuggestion, 0, len(suggestions))
+	for _, suggestion := range suggestions {
+		named := false
+		for _, member := range suggestion.Members {
+			if member.SchoolID == rt.Bootstrap.SchoolID && member.StaffID == visitorStaffID {
+				named = true
+			}
+		}
+		if !named {
+			kept = append(kept, suggestion)
+		}
+	}
+	return kept
 }
 
 func seedTraegerStaffSuggestions(client *Client, auth AuthRef) ([]seedTraegerStaffSuggestion, error) {

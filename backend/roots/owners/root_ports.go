@@ -143,6 +143,7 @@ type (
 	}
 	StudentConsentAppender interface {
 		Create(ctx context.Context, entry *auditModels.StudentConsentChange) error
+		CreateAll(ctx context.Context, entries []*auditModels.StudentConsentChange) error
 	}
 	FileEventAppender interface {
 		Create(ctx context.Context, event *auditModels.FileEvent) error

@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
@@ -41,6 +43,8 @@ type childReadRig struct {
 	bookConference func(ctx context.Context, accountID, studentID int64, write func(context.Context) error) error
 	// childCheckDelay slows the child lookup of the administrative part.
 	childCheckDelay *atomic.Int64
+	// settings writes the school's settings, e.g. child photos on or off.
+	settings childReadSettings
 }
 
 func newChildReadRig(t *testing.T) childReadRig {
@@ -78,11 +82,15 @@ func newChildReadRigOn(t *testing.T, db *bun.DB, with ...func(*portalCompose.Dep
 	meals, err := owners.BuildServeMealPlan(database, mealSettings, owners.NewStudentRootReads(people.Student), directory, schoolCalendar)
 	require.NoError(t, err)
 	childCheckDelay := &atomic.Int64{}
+	// The portal's People Directory reads the photo feature from the school's
+	// settings, as in production (#7208): a photo consent needs photos on.
+	photoPeople, err := owners.NewPeopleDirectoryWithObserver(database, func(peopleCompose.Observation) {}, nil, owners.StudentPhotoRuntime{Settings: settings.Settings})
+	require.NoError(t, err)
 	deps := WithParentEnrollmentBudgetReads(portalCompose.Dependencies{
 		GuardianChanges: owners.ParentGuardianChanges(), DeparturePolicy: owners.ParentDeparturePolicy(), GuardianPolicy: owners.NewParentGuardianPolicy(), Fingerprints: owners.SecurityFingerprints{}, Declarations: owners.ParentDeclarationPolicy(), Locales: owners.ParentPortalLocales(), Runtime: owners.ParentPortalRuntime{}, Logger: slog.Default(), Now: now,
 		ChildRepo: owners.ParentChildReadsWithDelay(repos.ParentChildReads(), childCheckDelay), StudentRepo: owners.NewParentStudentReads(people.Student), PersonRepo: owners.NewParentPersonReads(people.Person), GuardianProfileRepo: owners.NewParentGuardianProfileReads(people.GuardianProfile), GuardianPhoneRepo: owners.NewParentGuardianPhoneReads(people.GuardianPhoneNumber), StudentGuardianRepo: owners.NewParentStudentGuardianReads(people.StudentGuardian),
 		Memberships: owners.NewParentSchoolMembershipLock(database),
-		Settings:    settings.Settings, CareRequests: module.CareRequests, OfferingChanges: owners.NewParentOfferingChangeRequests(module.OfferingChanges), CareOfferingRepo: owners.NewParentCareOfferingReads(catalog), MealPlan: meals, CareProfiles: profiles, People: owners.MustNewPeopleDirectory(database), CarePlan: owners.NewParentCarePlanCommands(repos.CareExceptions, nil), CareExceptions: owners.NewParentCareExceptions(repos.CareExceptions), CarePlanPolicy: owners.NewParentCarePlanPolicy(), DataRequests: owners.NewParentDataRequestCommands(repos.CareExceptions), ChangeRequestRepo: owners.NewParentDataRequestReads(repos.CareExceptions), ExcusedRequests: owners.NewParentExcusedAbsenceRequests(repos.ExcusedRequests), StudentConsents: owners.NewParentStudentConsents(NewStudentConsents(database)),
+		Settings:    settings.Settings, CareRequests: module.CareRequests, OfferingChanges: owners.NewParentOfferingChangeRequests(module.OfferingChanges), CareOfferingRepo: owners.NewParentCareOfferingReads(catalog), MealPlan: meals, CareProfiles: profiles, People: photoPeople, CarePlan: owners.NewParentCarePlanCommands(repos.CareExceptions, nil), CareExceptions: owners.NewParentCareExceptions(repos.CareExceptions), CarePlanPolicy: owners.NewParentCarePlanPolicy(), DataRequests: owners.NewParentDataRequestCommands(repos.CareExceptions), ChangeRequestRepo: owners.NewParentDataRequestReads(repos.CareExceptions), ExcusedRequests: owners.NewParentExcusedAbsenceRequests(repos.ExcusedRequests), StudentConsents: owners.NewParentStudentConsents(owners.NewStudentConsentsFor(photoPeople, owners.NewTestAuditPersistence(database, nil).StudentConsentChange)),
 		FamilyProtectionEvents: owners.BindParentFamilyProtectionReads(sharing.FamilyProtection), ParentRequestShares: owners.BindParentRequestShareRecords(sharing.ParentRequestShare), ParentRequestEvents: owners.NewParentRequestEvents(sharing.ParentRequestEvent),
 	}, enrollment)
 	for _, adjust := range with {
@@ -94,7 +102,7 @@ func newChildReadRigOn(t *testing.T, db *bun.DB, with ...func(*portalCompose.Dep
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
 	router.Use(RequestSettingsCacheMiddleware, RequestIdentityCacheMiddleware)
 	router.Mount("/parent", parentHTTP.NewResource(parentHTTP.ResourceConfig{Parent: portal, MessageAttachmentFiles: NewMemoryMessageAttachmentStorageForTests()}).Router(ParentSessionChain))
-	return childReadRig{db: db, router: router, bookConference: owners.ParentConferenceBooking(portal), childCheckDelay: childCheckDelay}
+	return childReadRig{db: db, router: router, bookConference: owners.ParentConferenceBooking(portal), childCheckDelay: childCheckDelay, settings: settings.Settings}
 }
 
 type childReadSettings interface {

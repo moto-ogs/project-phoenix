@@ -39484,6 +39484,47 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
+      "reason": "Platform protocol participation (durable): timetable-activities reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged (#7141). The feed entries of the staff and the families and their push outbox entries join the unit of the edit that moved the block to another room; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
+      "reason": "Read-only target: timetable-activities reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged (#7141) to narrow the push of a room change to the recipients whose switch allows it. No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
+      "reason": "Read-only target: timetable-activities reaches modules/delivery/internal/notifications.PreferenceService.FilterOptedIn (delivery-platform) through roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged (#7141) to narrow the push of a room change to the recipients whose switch allows it. No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
+      "reason": "Read-only target: timetable-activities reaches modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts (people-directory) through roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged (#7141) to name the guardians of the booked children with their stored parent_portal.access and portal language in one batched read inside the edit. No persistent, lock or scope effect.",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts",
+      "target_owner": "people-directory"
+    },
+    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.CompleteActivitySession",
       "classification": "leaf",

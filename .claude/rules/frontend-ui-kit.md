@@ -324,7 +324,9 @@ The three places where following the vendored skill literally produces wrong out
 
 ## Motion
 
-`ui-skills` beats `better-ui/animations.md`: animate if asked, only `opacity`/`transform` (#7252). No `backdrop-filter`, `transition-all` or size/position transition (bars: `translateX`; reveals: `grid-template-rows`); `@keyframes` only in `src/styles`. Lint: `ui-kit/no-costly-motion`, `css-motion.node-test.mjs`.
+`ui-skills` beats `better-ui/animations.md`: animate if asked, only `opacity`/`transform` (#7252). Blur only via `OVERLAY_BACKDROP_BLUR_CLASS` (overlays, with the tint) or `moto-glass` (small chips), written unprefixed; no `transition-all` or size/position transition; `@keyframes` only in `src/styles`. Lint: `ui-kit/no-costly-motion`, `css-motion.node-test.mjs`.
+
+No text over a control or other text: the Storybook test checks every story at 1200 and 360 px (`.storybook/text-collisions.ts`). Text beside actions wraps (`flex-wrap`, `min-w-48`) or truncates.
 
 ## Detection
 

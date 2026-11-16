@@ -335,7 +335,7 @@ var moduleLegacyFileBudgets = map[string]int{
 // add exactly 38 LOC.
 // ADR 0275: the root clock of modules/parentbilling/compose (+2: the time
 // import of the overview's and the exports' clock).
-const moduleComposeBudgetTotal = 13645
+const moduleComposeBudgetTotal = 13643
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -386,7 +386,7 @@ var moduleComposeBudgets = map[string]int{
 	"modules/dataimport/compose/imports": 29,
 	// ADR 0145: +40 LOC for transport lifecycle, -8 LOC for the retired local wrapper.
 	// ADR 0267: +8, the clock fields.
-	"modules/delivery/compose": 401,
+	"modules/delivery/compose": 399,
 	// ADR 0268: the clock of the administration and the IoT service (+6).
 	"modules/devicefleet/compose":                   209,
 	"modules/devicefleet/compose/repositoryadapter": 10,

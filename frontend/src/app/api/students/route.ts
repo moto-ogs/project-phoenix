@@ -1,6 +1,5 @@
 import type { NextRequest } from "next/server";
-import { apiPost } from "~/lib/api-helpers.server";
-import { contractGet, decodeContract } from "~/lib/contract/client.server";
+import { contractGet, contractWrite } from "~/lib/contract/client.server";
 import { routes } from "~/lib/contract/students.generated";
 import {
   createGetHandler,
@@ -11,7 +10,6 @@ import type { Student, StudentPage } from "~/lib/student-helpers";
 import {
   mapStudentListRow,
   mapStudentResponse,
-  studentWriteResponse,
   type StudentView,
 } from "~/lib/student-wire";
 import {
@@ -26,6 +24,7 @@ import {
 
 const logger = createLogger({ component: "StudentsRoute" });
 const LIST = routes["GET /api/students/"];
+const CREATE = routes["POST /api/students/"];
 
 // Callers that don't paginate (Kindersuche, database list views) get every row
 // in one trip; an explicit page_size is honored up to the cap, so an
@@ -89,10 +88,11 @@ export const POST = createPostHandler<Student, StudentCreateBody>(
   async (_request, body, token) => {
     const backendRequest = buildStudentCreateRequest(body);
     const consent = sentConsentPair(body);
-    const created = decodeContract(
-      "POST /api/students/",
-      studentWriteResponse,
-      await apiPost<unknown>("/api/students", token, backendRequest),
+    const created = await contractWrite(
+      CREATE,
+      "/api/students",
+      token,
+      backendRequest,
     );
     if (!created.ok) throw created.error.cause;
     const student = created.value.data;

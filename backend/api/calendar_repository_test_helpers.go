@@ -33,6 +33,12 @@ type federalStateResolver interface {
 // calendar's own sentinel; a nil catalog guards nothing. Production roots
 // compose the module themselves.
 func NewSchoolCalendarWithAdministration(db transactionruntime.Database, settings federalStateResolver, lockRecurrence func(context.Context) error, careOfferings careplan.CareOfferingGuards) (schoolcalendar.Calendar, error) {
+	return newSchoolCalendarWithAdministration(db, settings, lockRecurrence, careOfferings, schoolCalendarCompose.AdministrationDependencies{})
+}
+
+// newSchoolCalendarWithAdministration composes the same calendar with the
+// clock and the closing-day notices of extra (#7144).
+func newSchoolCalendarWithAdministration(db transactionruntime.Database, settings federalStateResolver, lockRecurrence func(context.Context) error, careOfferings careplan.CareOfferingGuards, extra schoolCalendarCompose.AdministrationDependencies) (schoolcalendar.Calendar, error) {
 	observe := func(schoolCalendarCompose.Observation) {}
 	records, err := schoolCalendarCompose.NewRecords(schoolCalendarCompose.RecordsDependencies{ClosingDayReads: owners.NewSchoolClosingDayReads(),
 		DB: db.Pool(), Observe: observe,
@@ -59,6 +65,7 @@ func NewSchoolCalendarWithAdministration(db transactionruntime.Database, setting
 	}
 	return schoolCalendarCompose.NewAdministration(records, schoolCalendarCompose.AdministrationDependencies{
 		DB: db.Pool(), Observe: observe, RecurrenceGate: lockRecurrence, CareOfferingGuard: guard,
+		Today: extra.Today, ClosingDayNotices: extra.ClosingDayNotices,
 	})
 }
 

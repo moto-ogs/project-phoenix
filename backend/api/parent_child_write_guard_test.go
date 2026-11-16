@@ -819,6 +819,8 @@ func guardedWrites() []guardedWrite {
 			name:        "Fotoeinwilligung erteilen",
 			permissions: []string{permConsent},
 			prepare: func(t *testing.T, r *guardRig, f childReadFamily) childWrite {
+				// A photo consent needs the school's child photos on (#7208).
+				r.set(t, map[string]any{"operations.student_photos_enabled": true})
 				r.givePhoto(t, f)
 				r.do(t, photoConsent(http.MethodDelete, f.StudentID), f.token)
 				return photoConsent(http.MethodPut, f.StudentID)

@@ -21,6 +21,8 @@ export default defineConfig({
   plugins: [storybookTest({ configDir })],
   test: {
     name: "storybook",
+    // Ein String: das Storybook-Plugin übernimmt nur diese Form.
+    setupFiles: path.join(configDir, "vitest.setup.ts"),
     browser: {
       enabled: true,
       headless: true,

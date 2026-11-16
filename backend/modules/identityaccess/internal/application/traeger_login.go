@@ -136,6 +136,28 @@ func (s *AccountAuthentication) IssueTraegerTokensForVerifiedMFA(ctx context.Con
 	})
 }
 
+// IssueDemoTraegerTokens mints the Träger session the demo role Träger-Büro
+// redeems (#6193, ADR 0271): the visitor's own account at the order's own
+// Demo-Träger. It skips the password and the code like the demo's other
+// sessions; the link left by mail only and proves the mailbox
+// (proofDemoLink). The mint guard still requires the Träger membership.
+func (s *AccountAuthentication) IssueDemoTraegerTokens(ctx context.Context, accountID, organizationID int64, ipAddress, userAgent string) (string, string, error) {
+	result, err := runFlow(ctx, s.flow(), func(ctx context.Context) (*identityaccess.TraegerLoginResult, error) {
+		if s.traeger == nil {
+			return nil, failed("Träger login", errTraegerMembershipsUnavailable)
+		}
+		account, err := s.authenticatedAccount(ctx, "issue demo Träger tokens", accountID)
+		if err != nil {
+			return nil, err
+		}
+		return s.mintTraegerSession(ctx, account, organizationID, mintProof{kind: proofDemoLink}, ipAddress, userAgent)
+	})
+	if err != nil {
+		return "", "", err
+	}
+	return result.AccessToken, result.RefreshToken, nil
+}
+
 // mintTraegerSession persists the Träger session and issues its pair. A
 // proof (a redeemed code or a remembered device) marks the session as
 // verified by a second factor; the mint refuses an unverified Träger session

@@ -105,6 +105,11 @@ type FeedStore interface {
 	// the portal's view.
 	MarkAllFeedEntriesRead(ctx context.Context, tenantID, accountID int64, view domain.FeedView, now time.Time) (int, error)
 	GuardianFeedStore
+	// SchoolAudience lists the active accounts of the school with a role of
+	// the OGS portal or of moto schule, and its active guardians with the
+	// children they hold parent_portal.access for (#7144), under the
+	// predicates the feed readers, Web Push and SSE apply.
+	SchoolAudience(ctx context.Context, tenantID int64) ([]domain.SchoolAudienceMember, error)
 }
 
 // GuardianFeedStore reads the feed of a guardian account across its schools

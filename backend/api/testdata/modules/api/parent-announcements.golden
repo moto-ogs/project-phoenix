@@ -1,6 +1,7 @@
 DELETE /api/parent-announcements/{announcementId} -> eltern_app
 GET /api/parent-announcements/ -> eltern_app
 GET /api/parent-announcements/letter-placeholders -> eltern_app
+GET /api/parent-announcements/students/{studentId} -> eltern_app
 GET /api/parent-announcements/{announcementId} -> eltern_app
 GET /api/parent-announcements/{announcementId}/declaration-export -> eltern_app
 GET /api/parent-announcements/{announcementId}/declaration-status -> eltern_app
