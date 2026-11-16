@@ -148,11 +148,14 @@ type TraegerSchoolStaffMember struct {
 
 // TraegerStaffEmployment is one Einsatzort of a record: the employment of
 // one school. Active is false once the school ended the employment.
+// ViaPool marks an Einsatzort a block of the Vertretungspool created: it
+// ends after the school's last block and resumes with the next (ADR 0253).
 type TraegerStaffEmployment struct {
 	SchoolID   int64  `json:"school_id"`
 	SchoolName string `json:"school_name"`
 	StaffID    int64  `json:"staff_id"`
 	Active     bool   `json:"active"`
+	ViaPool    bool   `json:"via_pool"`
 }
 
 // TraegerStaffRecordSummary is one record in the list.

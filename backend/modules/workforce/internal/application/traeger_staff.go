@@ -331,7 +331,7 @@ func summarize(record domain.TraegerStaffRecord, names map[int64]string, reads m
 	for _, link := range record.Links {
 		_, active := reads[link.SchoolID].members[link.StaffID]
 		summary.Employments = append(summary.Employments, workforce.TraegerStaffEmployment{
-			SchoolID: link.SchoolID, SchoolName: names[link.SchoolID], StaffID: link.StaffID, Active: active,
+			SchoolID: link.SchoolID, SchoolName: names[link.SchoolID], StaffID: link.StaffID, Active: active, ViaPool: link.ViaPool,
 		})
 	}
 	slices.SortStableFunc(summary.Employments, func(a, b workforce.TraegerStaffEmployment) int { return strings.Compare(a.SchoolName, b.SchoolName) })

@@ -60,6 +60,12 @@ func NewTraegerStaffReleases() workforce.TraegerStaffReleases {
 	return application.NewTraegerStaffReleases(postgres.NewTraegerStaffStore())
 }
 
+// NewSchoolSpringerExits composes the exits of Springer after their last
+// block at a school (#7197); the Worker binds them to the staff offboarding.
+func NewSchoolSpringerExits() workforce.SchoolSpringerExits {
+	return postgres.NewTraegerStaffStore()
+}
+
 // --- documents --------------------------------------------------------------
 
 // NewStaffBankExportFields opens the sealed staff bank and tax values for the return export of a school (#6412); only the administrative export CLI binds it, never HTTP.

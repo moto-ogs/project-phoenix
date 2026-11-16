@@ -44,8 +44,20 @@ const RECORD: StaffRecordDetail = {
   personnelNumber: "70001",
   hasFinancial: true,
   employments: [
-    { schoolId: "1", schoolName: "OGS Nord", staffId: "11", active: true },
-    { schoolId: "2", schoolName: "OGS Süd", staffId: "22", active: false },
+    {
+      schoolId: "1",
+      schoolName: "OGS Nord",
+      staffId: "11",
+      active: true,
+      viaPool: false,
+    },
+    {
+      schoolId: "2",
+      schoolName: "OGS Süd",
+      staffId: "22",
+      active: false,
+      viaPool: false,
+    },
   ],
   financial: { iban: "•••• 3000", taxId: null, socialSecurityNumber: null },
   changes: [
@@ -136,6 +148,58 @@ describe("TraegerStaffRecordPage", () => {
     expect(screen.getByText("•••• 3000")).toBeInTheDocument();
     expect(
       screen.getByText("Nachname „Sommer“ von OGS Nord nicht übernommen"),
+    ).toBeInTheDocument();
+  });
+
+  it("marks the Einsatzorte of the Vertretungspool and says when they end", async () => {
+    api.fetchStaffRecord.mockResolvedValue({
+      ...RECORD,
+      employments: [
+        { ...RECORD.employments[0]!, viaPool: true },
+        {
+          schoolId: "3",
+          schoolName: "OGS West",
+          staffId: "33",
+          active: false,
+          viaPool: true,
+        },
+      ],
+      changes: [
+        {
+          kind: "resumed",
+          field: "school",
+          value: "",
+          schoolName: "OGS Nord",
+          occurredAt: "2026-11-15T08:00:00Z",
+        },
+        {
+          kind: "ended",
+          field: "school",
+          value: "",
+          schoolName: "OGS West",
+          occurredAt: "2026-11-15T01:00:00Z",
+        },
+      ],
+    });
+    renderPage();
+    expect(
+      await screen.findByText("Endet nach der letzten Blockung der Schule."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Die nächste Blockung beschäftigt die Person hier wieder.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Vertretungspool")).toHaveLength(2);
+    expect(
+      screen.getByText(
+        "Beschäftigung an der Schule OGS West nach der letzten Blockung beendet",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Beschäftigung an der Schule OGS Nord mit einer neuen Blockung wieder aufgenommen",
+      ),
     ).toBeInTheDocument();
   });
 

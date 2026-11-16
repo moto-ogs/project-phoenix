@@ -55,6 +55,12 @@ interface StaffEmployment {
   readonly staffId: string;
   /** `false`, wenn die Schule die Beschäftigung beendet hat. */
   readonly active: boolean;
+  /**
+   * Die erste Blockung aus dem Vertretungspool hat den Einsatzort angelegt
+   * (#7173). Er endet nach der letzten Blockung der Schule, die nächste
+   * nimmt ihn wieder auf (#7197).
+   */
+  readonly viaPool: boolean;
 }
 
 export interface StaffRecordSummary {
@@ -104,9 +110,20 @@ export interface StaffFinancial {
 type StaffContractChangeField = "contract" | "contract_soll" | "holiday_week";
 
 export interface StaffChange {
-  /** `imported`: angelegt oder ergänzt vom Personal-Import (#4724). */
+  /**
+   * `imported`: angelegt oder ergänzt vom Personal-Import (#4724).
+   * `ended`: der Einsatzort aus dem Vertretungspool endete nach der letzten
+   * Blockung, `resumed`: eine neue Blockung nahm ihn wieder auf (#7197).
+   */
   readonly kind:
-    "linked" | "not_chosen" | "changed" | "added" | "removed" | "imported";
+    | "linked"
+    | "not_chosen"
+    | "changed"
+    | "added"
+    | "removed"
+    | "imported"
+    | "ended"
+    | "resumed";
   /** `record`: die ganze Akte, die der Personal-Import angelegt hat. */
   readonly field:
     StaffRecordField | "school" | "record" | StaffContractChangeField;
@@ -225,6 +242,7 @@ interface BackendEmployment {
   school_name: string;
   staff_id: number;
   active: boolean;
+  via_pool: boolean;
 }
 
 interface BackendSummary {
@@ -335,6 +353,7 @@ function mapSummary(record: BackendSummary): StaffRecordSummary {
       schoolName: employment.school_name,
       staffId: String(employment.staff_id),
       active: employment.active,
+      viaPool: employment.via_pool,
     })),
   };
 }

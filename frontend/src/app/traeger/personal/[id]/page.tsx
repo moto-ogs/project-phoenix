@@ -55,6 +55,17 @@ import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerStaffRecordPage" });
 
+/**
+ * Was mit einem Einsatzort aus dem Vertretungspool als Nächstes passiert
+ * (#7197): Er endet nach der letzten Blockung der Schule, die nächste
+ * Blockung nimmt ihn wieder auf.
+ */
+function poolEmploymentHint(active: boolean): string {
+  return active
+    ? "Endet nach der letzten Blockung der Schule."
+    : "Die nächste Blockung beschäftigt die Person hier wieder.";
+}
+
 // Die Arbeitsverträge (#4706) bringen Tabelle, Datumsauswahl und Dialoge mit;
 // sie laden nach, damit die Akte selbst klein bleibt.
 const StaffContractsCard = dynamic(
@@ -504,9 +515,25 @@ export default function TraegerStaffRecordPage() {
                     key={`${employment.schoolId}-${employment.staffId}`}
                     className="flex items-center justify-between gap-3 px-4 py-3"
                   >
-                    <span className="min-w-0 truncate text-sm font-medium text-gray-900">
-                      {employment.schoolName}
-                    </span>
+                    <div className="min-w-0">
+                      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="min-w-0 truncate text-sm font-medium text-gray-900">
+                          {employment.schoolName}
+                        </span>
+                        {employment.viaPool ? (
+                          <StatusBadge
+                            label="Vertretungspool"
+                            tone="blue"
+                            size="xs"
+                          />
+                        ) : null}
+                      </div>
+                      {employment.viaPool ? (
+                        <p className="mt-0.5 text-sm text-gray-500">
+                          {poolEmploymentHint(employment.active)}
+                        </p>
+                      ) : null}
+                    </div>
                     <StatusBadge
                       label={employment.active ? "Beschäftigt" : "Beendet"}
                       tone={employment.active ? "green" : "gray"}
