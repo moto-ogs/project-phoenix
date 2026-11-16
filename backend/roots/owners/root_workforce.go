@@ -52,7 +52,7 @@ func BuildWorkSessionSide(
 		AbsenceEmail:      absenceEmailDependencies(settings, mailFrom, mailIdentity, env.Links.FrontendURL, logger, people, organizations, durable),
 		// What became of the absence request mails (#7058).
 		MailOutcomes: workforceMailOutcomes(durable),
-		Logger:       logger,
+		Logger:       logger, Now: env.Now, Today: env.Today,
 	}, TimeTrackingAudits{
 		WorkSessionEdit: audits.WorkSessionEdit, TimeTrackingDeletion: audits.TimeTrackingDeletion,
 		DataAccessLog: audits.DataAccessLog, TimeTrackingAuditLog: audits.TimeTrackingAuditLog,
@@ -165,6 +165,7 @@ func BuildWorkforcePlanning(
 		Workforce: workTime, Absences: NewStaffAbsenceRepository(workTime, membership, persons),
 		Audit:    NewTimeTrackingRetentionAudit(audit.Persistence.DataDeletion),
 		Settings: settingsCompose.PresenceSettings(settings), Logger: env.Logger.With("service", "time-tracking-cleanup"),
+		Now: env.Now,
 	})
 	if err != nil {
 		return WorkforcePlanning{}, fmt.Errorf("compose time tracking cleanup: %w", err)

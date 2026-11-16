@@ -42,10 +42,14 @@ func insertWorkSession(t *testing.T, tc *testContext, staffID int64, day string,
 	require.NoError(t, err)
 }
 
+// balanceAdjustmentNow is the fixed instant the Stundenkonto routes run at:
+// a school Tuesday afternoon.
+var balanceAdjustmentNow = testpkg.Date(2026, time.November, 10).BerlinMidnight().Add(14 * time.Hour)
+
 func TestBalanceAdjustmentAPI(t *testing.T) {
 	t.Parallel()
 
-	tc := setupStaffRoute(t)
+	tc := setupStaffRoute(t, func() time.Time { return balanceAdjustmentNow })
 	suffix := time.Now().UnixNano()
 
 	editorPerson, editorAccount := testpkg.CreateTestPersonWithAccount(t, tc.db, "Balance", fmt.Sprintf("Editor-%d", suffix))
@@ -72,7 +76,7 @@ func TestBalanceAdjustmentAPI(t *testing.T) {
 		return rec
 	}
 
-	today := testpkg.TodayDate()
+	today := testpkg.Date(2026, time.November, 10)
 	resetDate := today.AddDays(-1)
 	// The earliest booking below is the accrual the day before resetDate. The
 	// account starts on the first of that month, so on 1 or 2 January it still
@@ -247,7 +251,7 @@ func TestBalanceAdjustmentAPI(t *testing.T) {
 		berlin, err := time.LoadLocation("Europe/Berlin")
 		require.NoError(t, err)
 		sessionDate := today
-		checkOut := time.Now().In(berlin).Add(-time.Minute)
+		checkOut := balanceAdjustmentNow.In(berlin).Add(-time.Minute)
 		checkIn := checkOut.Add(-4 * time.Hour)
 		if checkIn.Before(today.BerlinMidnight()) {
 			sessionDate = today.AddDays(-1)

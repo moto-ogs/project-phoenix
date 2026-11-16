@@ -539,7 +539,8 @@ type TraegerStaffContractStore interface {
 	SollKeptStaffIDs(ctx context.Context, staffIDs []int64, day calendar.Date) ([]int64, error)
 	KeepTemplateHistory(ctx context.Context, staffID int64, until calendar.Date) error
 	ReleaseMirror(ctx context.Context, staffID int64, from calendar.Date) error
-	MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule) error
+	// MirrorStaffSchedule stamps its writes with now.
+	MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule, now time.Time) error
 	MirrorStaffHolidayWeeks(ctx context.Context, staffID int64, from calendar.Date, overrides []domain.StaffTargetOverride) error
 }
 

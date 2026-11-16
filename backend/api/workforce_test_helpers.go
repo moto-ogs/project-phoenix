@@ -164,7 +164,7 @@ func NewWorkforceTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 		},
 		People: usersService, Holidays: nonWorkingDayService, StatutoryHolidays: schoolCalendarCompose.NewTenantHolidays(calendar),
 		Events: owners.TimeTrackingEvents(realtimeHub),
-		Logger: logger, Today: today,
+		Logger: logger, Now: OptionalClock(clocks), Today: today,
 	})
 	if err != nil {
 		return WorkforceTestModule{}, nil, err

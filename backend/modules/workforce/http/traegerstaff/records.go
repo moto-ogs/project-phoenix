@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // RecordsResource serves the staff records of the session's Träger. Every
@@ -25,19 +26,21 @@ type RecordsResource struct {
 	absences     workforce.TraegerAbsenceTypes
 	timeAccounts workforce.TraegerStaffTimeAccounts
 	requireStaff common.Middleware
+	// today is the day the Kontingente default their year to.
+	today func() calendar.Date
 }
 
 // NewRecordsResource builds the resource; the root binds requireStaff to
 // the Träger right traeger_staff:manage (ADR 0084 section 4). absences
 // serves the Kontingente of a record (#4710), timeAccounts its Stundenkonto
-// (#4711).
+// (#4711), today the composition's calendar day (ADR 0239).
 func NewRecordsResource(records workforce.TraegerStaffRecords, contracts workforce.TraegerStaffContracts,
-	absences workforce.TraegerAbsenceTypes, timeAccounts workforce.TraegerStaffTimeAccounts, requireStaff common.Middleware,
+	absences workforce.TraegerAbsenceTypes, timeAccounts workforce.TraegerStaffTimeAccounts, requireStaff common.Middleware, today func() calendar.Date,
 ) *RecordsResource {
-	if records == nil || contracts == nil || absences == nil || timeAccounts == nil || requireStaff == nil {
-		panic("workforce traeger staff: the records, the contracts, the Kontingente, the Stundenkonto and the right check are required")
+	if records == nil || contracts == nil || absences == nil || timeAccounts == nil || requireStaff == nil || today == nil {
+		panic("workforce traeger staff: the records, the contracts, the Kontingente, the Stundenkonto, the right check and the day clock are required")
 	}
-	return &RecordsResource{records: records, contracts: contracts, absences: absences, timeAccounts: timeAccounts, requireStaff: requireStaff}
+	return &RecordsResource{records: records, contracts: contracts, absences: absences, timeAccounts: timeAccounts, requireStaff: requireStaff, today: today}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/staff-records.

@@ -42,15 +42,17 @@ type GroupNames func(ctx context.Context, ids []int64) (map[int64]string, error)
 type groupSubstitutionRepository struct {
 	workforce workforce.Capability
 	groups    GroupNames
+	// today is the day the active filter and the blockers measure against.
+	today func() calendar.Date
 }
 
-// NewGroupSubstitutionRepository binds the adapter to the capability and the
-// group lookup.
-func NewGroupSubstitutionRepository(capability workforce.Capability, groups GroupNames) *groupSubstitutionRepository {
-	if capability == nil || groups == nil {
-		panic("group substitution repository adapter: Workforce capability and group lookup are required")
+// NewGroupSubstitutionRepository binds the adapter to the capability, the
+// group lookup and the calendar-day clock (ADR 0239).
+func NewGroupSubstitutionRepository(capability workforce.Capability, groups GroupNames, today func() calendar.Date) *groupSubstitutionRepository {
+	if capability == nil || groups == nil || today == nil {
+		panic("group substitution repository adapter: Workforce capability, group lookup and day clock are required")
 	}
-	return &groupSubstitutionRepository{workforce: capability, groups: groups}
+	return &groupSubstitutionRepository{workforce: capability, groups: groups, today: today}
 }
 
 func (r *groupSubstitutionRepository) Create(ctx context.Context, entity *GroupSubstitution) error {
@@ -124,18 +126,18 @@ func (r *groupSubstitutionRepository) List(ctx context.Context, filters map[stri
 		if value == nil {
 			continue
 		}
-		if err := applyGroupSubstitutionFilter(&filter, field, value); err != nil {
+		if err := applyGroupSubstitutionFilter(&filter, field, value, r.today); err != nil {
 			return nil, &databaseError{op: "list", err: err}
 		}
 	}
 	return r.list(ctx, "list", filter)
 }
 
-func applyGroupSubstitutionFilter(filter *workforce.GroupSubstitutionFilter, field string, value any) error {
+func applyGroupSubstitutionFilter(filter *workforce.GroupSubstitutionFilter, field string, value any, today func() calendar.Date) error {
 	switch field {
 	case "active":
 		if active, ok := value.(bool); ok && active {
-			filter.On = calendar.TodayDate().String()
+			filter.On = today().String()
 		}
 	case "date":
 		if date, ok := conditionDate(value); ok {
@@ -166,7 +168,7 @@ func (r *groupSubstitutionRepository) FindByGroup(ctx context.Context, groupID i
 func (r *groupSubstitutionRepository) ActiveSubstitutionBlockers(ctx context.Context, staffID, tenantID int64) ([]SubstitutionBlocker, error) {
 	rows, err := r.list(ctx, "list active substitution blockers", workforce.GroupSubstitutionFilter{
 		SubstituteStaffID: staffID, TargetType: workforce.GroupSubstitutionTypeGroupHandover,
-		EndsOnOrAfter: calendar.TodayDate().String(),
+		EndsOnOrAfter: r.today().String(),
 	})
 	if err != nil {
 		return nil, err

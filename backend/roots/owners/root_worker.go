@@ -319,7 +319,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			calendar, err = BuildSchoolCalendarRecords(db, ObserveSchoolCalendar, settings.Service)
 			return
 		},
-		func() (err error) { workTime, err = BuildServeWorkforce(db, membership, calendar); return },
+		func() (err error) { workTime, err = BuildServeWorkforce(db, env, membership, calendar); return },
 		func() error {
 			people, peopleIdentity = BuildPeopleRows(db, env.Observe.IdentityAccess, groups, rooms, membership, workTime)
 			return nil
@@ -357,7 +357,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() error {
 			presence = BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
-			substitutions = NewGroupSubstitutionRepository(structure.Groups, membership, workTime)
+			substitutions = NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today)
 			supervisions = NewGroupSupervisionRecords(presence.SessionRecords, groups)
 			return nil
 		},

@@ -20,7 +20,7 @@ func (s *workSessionService) withTargetOverrides(ctx context.Context, staffID in
 	if s.weeklyOverrides == nil || len(sessions) == 0 {
 		return targets
 	}
-	corrected, err := s.weeklyOverrides.OverriddenWeeklyTargets(ctx, staffID, sessionWeekStarts(sessions))
+	corrected, err := s.weeklyOverrides.OverriddenWeeklyTargets(ctx, staffID, s.sessionWeekStarts(sessions))
 	if err != nil {
 		s.getLogger().Warn("failed to load target overrides for weekly summaries", "error", err.Error())
 		return nil
