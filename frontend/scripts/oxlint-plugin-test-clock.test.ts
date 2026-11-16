@@ -181,4 +181,105 @@ describe("test-clock/no-real-clock", () => {
     expect(result.status).toBe(0);
     expect(countReports(result.output)).toBe(0);
   });
+
+  // Playwright specs and stories run outside the Vitest freeze (#7296): the
+  // browser, the Next server and the backend keep the host clock there.
+  it.each([
+    ["a Playwright spec", "e2e/probe.spec.ts", "runToday()"],
+    ["a Playwright helper", "e2e/a11y/probe.ts", "runToday()"],
+    ["a story", "src/components/probe.stories.tsx", "storyNow()"],
+  ])("reports host-clock reads in %s", (_name, path, advice) => {
+    const result = lintSource(
+      `
+      export const today = new Date();
+      export const stamp = Date.now();
+      export const year = new Date().getFullYear();
+      `,
+      path,
+    );
+
+    expect(result.status).toBe(1);
+    expect(countReports(result.output)).toBe(3);
+    expect(result.output).toContain(advice);
+  });
+
+  it("allows fixed dates and monotonic time in specs and stories", () => {
+    for (const path of ["e2e/probe.spec.ts", "src/probe.stories.tsx"]) {
+      const result = lintSource(
+        `
+        export const fixed = new Date("2026-09-09T12:00:00+02:00");
+        export const copy = new Date(fixed);
+        export const started = performance.now();
+        export const parsed = Date.parse("2026-09-09");
+        `,
+        path,
+      );
+
+      expect(result.status).toBe(0);
+      expect(countReports(result.output)).toBe(0);
+    }
+  });
+
+  it("keeps new Date() and Date.now() allowed under the Vitest freeze", () => {
+    const result = lintSource(`
+      export const today = new Date();
+      export const stamp = Date.now();
+    `);
+
+    expect(result.status).toBe(0);
+    expect(countReports(result.output)).toBe(0);
+  });
+
+  it("reports the app's today readers in a spec, not in the run clock helper", () => {
+    const source = `
+      import { berlinTodayISO, todayISO } from "../src/lib/date-helpers";
+
+      export const berlin = berlinTodayISO();
+      export const local = todayISO();
+      export const ofInstant = berlinTodayISO(new Date("2026-09-09T12:00:00Z"));
+    `;
+
+    const spec = lintSource(source, "e2e/probe.spec.ts");
+    expect(spec.status).toBe(1);
+    expect(countReports(spec.output)).toBe(2);
+    expect(spec.output).toContain("runToday()");
+
+    const helper = lintSource(source, "e2e/clock.ts");
+    expect(helper.status).toBe(0);
+    expect(countReports(helper.output)).toBe(0);
+  });
+
+  it("requires a non-empty literal reason for realClock()", () => {
+    const result = lintSource(
+      `
+      import { realClock } from "./real-clock.mjs";
+
+      const reason = "computed";
+      export const a = realClock();
+      export const b = realClock("   ");
+      export const c = realClock(reason);
+      export const d = realClock("Mailpit stempelt Mails mit der Wanduhr");
+      `,
+      "e2e/probe.ts",
+    );
+
+    expect(result.status).toBe(1);
+    expect(countReports(result.output)).toBe(3);
+    expect(result.output).toContain("realClock()");
+  });
+
+  it("leaves the real-clock helper of the specs alone", () => {
+    const result = lintSource(
+      `
+      export function realClock(reason) {
+        if (reason.trim() === "") throw new TypeError("reason");
+        return Date.now();
+      }
+      `,
+      "e2e/real-clock.mjs",
+    );
+
+    expect(result.status).toBe(0);
+    expect(countReports(result.output)).toBe(0);
+  });
 });

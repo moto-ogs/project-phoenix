@@ -19,18 +19,34 @@
 //       properties), and reflective `Object` / `Reflect` writes to global
 //       `Date`, which read or replace the real clock behind the setup's back.
 //
-// There is no baseline and no allowlist: an exception is `useRealClock` with
-// its reason in the call, not a disable comment.
+//     - Playwright specs and helpers (`e2e/`) and stories (`*.stories.*`)
+//       run outside that freeze (#7296): browser, Next server and backend
+//       keep the host clock. There the rule rejects every read of it:
+//       `new Date()`, `Date.now()` and, in `e2e/`, the app's today readers
+//       (`berlinTodayISO()`, `todayISO()`). A spec takes its day from
+//       `runToday()` in `e2e/clock.ts`, measures with `performance.now()`
+//       and declares a wall-clock need as `realClock("reason")`; a story
+//       takes the time from `storyNow()` in `.storybook/clock.ts`, which the
+//       Storybook tests and the pixel comparison freeze.
+//
+// There is no baseline and no allowlist: an exception is `useRealClock` or
+// `realClock` with its reason in the call, not a disable comment.
 
 const AFTER_HOOKS = new Set(["afterEach", "afterAll"]);
 const DATE_GLOBAL_OBJECTS = new Set(["globalThis", "global", "window", "self"]);
 const CLOCK_HELPER_FILE = "src/test/clock.ts";
+// The two files of the specs that may read the host clock: the run's day and
+// the declared wall-clock exception.
+const RUN_CLOCK_FILE = "e2e/clock.ts";
+const REAL_CLOCK_FILE = "e2e/real-clock.mjs";
+const TODAY_READERS = new Set(["berlinTodayISO", "todayISO"]);
+const STORY_FILE = /\.stories\.[cm]?[jt]sx?$/;
 
-/** Repo-relative posix path ("src/…" or "scripts/…"), or "" when unavailable. */
+/** Repo-relative posix path ("src/…", "e2e/…" or "scripts/…"), or "" when unavailable. */
 function fileKey(context) {
   const raw = String(context.physicalFilename ?? context.filename ?? "");
   const posix = raw.replaceAll("\\", "/");
-  for (const marker of ["/src/", "/scripts/"]) {
+  for (const marker of ["/src/", "/e2e/", "/scripts/"]) {
     const idx = posix.lastIndexOf(marker);
     if (idx !== -1) return posix.slice(idx + 1);
   }
@@ -138,6 +154,23 @@ function isGlobalDateWrite(callee, arguments_) {
   );
 }
 
+function isGlobalDateNow(callee, sourceCode) {
+  return (
+    callee.type === "MemberExpression" &&
+    !callee.computed &&
+    isGlobalDateIdentifier(callee.object, sourceCode) &&
+    callee.property.type === "Identifier" &&
+    callee.property.name === "now"
+  );
+}
+
+/** Where the Vitest freeze does not reach: "spec", "story" or null. */
+function hostClockSurface(file) {
+  if (file === REAL_CLOCK_FILE) return null;
+  if (file.startsWith("e2e/")) return "spec";
+  return STORY_FILE.test(file) ? "story" : null;
+}
+
 const noRealClock = {
   meta: {
     type: "problem",
@@ -154,16 +187,57 @@ const noRealClock = {
         'vi.getRealSystemTime() reads the host clock. Assert against the frozen test clock (TEST_CLOCK_INSTANT / setTestClock) or declare useRealClock("reason").',
       dateReplaced:
         "Replacing the global Date bypasses the deterministic test clock. Use setTestClock() / vi.setSystemTime() to move time, or vi.useFakeTimers() to control it.",
+      specClockRead:
+        'A Playwright spec reads the host clock here. Take the day from runToday() in e2e/clock.ts, measure durations with performance.now(), and declare a wall-clock need as realClock("reason").',
+      storyClockRead:
+        "A story reads the host clock here. Take the time from storyNow() in .storybook/clock.ts, which the Storybook tests and the pixel comparison freeze, and measure durations with performance.now().",
+      missingRealClockReason:
+        'realClock() needs its reviewed reason as a non-empty string literal, e.g. realClock("Mailpit stamps mails with the wall clock").',
     },
     schema: [],
   },
   create(context) {
-    if (fileKey(context) === CLOCK_HELPER_FILE) return {};
+    const file = fileKey(context);
+    if (file === CLOCK_HELPER_FILE) return {};
     const sourceCode = context.sourceCode ?? context.getSourceCode();
+    const surface = hostClockSurface(file);
+    const clockRead = surface === "story" ? "storyClockRead" : "specClockRead";
 
     return {
+      NewExpression(node) {
+        if (
+          surface &&
+          node.arguments.length === 0 &&
+          isGlobalDateIdentifier(node.callee, sourceCode)
+        ) {
+          context.report({ node, messageId: clockRead });
+        }
+      },
       CallExpression(node) {
         const { callee } = node;
+
+        if (surface && isGlobalDateNow(callee, sourceCode)) {
+          context.report({ node, messageId: clockRead });
+          return;
+        }
+
+        if (surface === "spec" && callee.type === "Identifier") {
+          if (
+            file !== RUN_CLOCK_FILE &&
+            TODAY_READERS.has(callee.name) &&
+            node.arguments.length === 0
+          ) {
+            context.report({ node, messageId: "specClockRead" });
+            return;
+          }
+          if (callee.name === "realClock") {
+            const reason = node.arguments[0];
+            if (!isStringLiteral(reason) || literalText(reason).trim() === "") {
+              context.report({ node, messageId: "missingRealClockReason" });
+            }
+            return;
+          }
+        }
 
         if (isViMember(callee, "useRealTimers")) {
           if (!isInsideAfterHook(sourceCode, node)) {
