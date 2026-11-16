@@ -67,7 +67,7 @@ func (s *Scheduler) materializationTime() time.Time {
 	if s.materializationNow != nil {
 		return s.materializationNow()
 	}
-	return time.Now()
+	return s.clock()
 }
 
 func (s *Scheduler) scheduleAutoStartTask() {
@@ -110,7 +110,7 @@ func (s *Scheduler) checkAndRunAutoStart(ctx context.Context, task *ScheduledTas
 			return nil
 		}
 
-		result, err := s.autoStart.RunForTenant(tenantCtx, time.Now())
+		result, err := s.autoStart.RunForTenant(tenantCtx, s.clock())
 		if err != nil {
 			return err
 		}

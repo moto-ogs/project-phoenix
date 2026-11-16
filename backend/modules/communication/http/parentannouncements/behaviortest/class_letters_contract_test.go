@@ -96,7 +96,7 @@ func newClassLetterRoute(t *testing.T) *classLetterRoute {
 		other: {ID: other, Title: "Fremd", CreatedBy: account.ID + 1, Sender: &communication.ParentLetterSender{Name: "Bert", SchoolClass: "3b"}},
 		ogs:   {ID: ogs, Title: "OGS", CreatedBy: account.ID, Targets: []communication.ParentAnnouncementTarget{{TargetType: "class", RefText: &class}}},
 	}}
-	resource := announcement.NewResource(contract, nil)
+	resource := announcement.NewResource(contract, nil, time.Now)
 	resource.Classes = classReach{classes: []string{"3b"}}
 	return &classLetterRoute{
 		contract: contract,
@@ -193,7 +193,7 @@ func TestOGSListShowsSentClassLettersOnly(t *testing.T) {
 	letter := route.contract.letters[11]
 	letter.PublishedAt = &sent
 	route.contract.letters[11] = letter
-	resource := announcement.NewResource(ogsListContract{route.contract}, nil)
+	resource := announcement.NewResource(ogsListContract{route.contract}, nil, time.Now)
 	claims := routetest.DefaultTestClaims()
 	claims.Permissions = []string{permissions.AdminWildcard}
 	claims.IsAdmin = true
@@ -226,7 +226,7 @@ func (s ogsListContract) GetParentAnnouncement(_ context.Context, id int64, _ ..
 func TestOGSDirectReadHidesClassLetterDrafts(t *testing.T) {
 	t.Parallel()
 	route := newClassLetterRoute(t)
-	resource := announcement.NewResource(ogsListContract{route.contract}, nil)
+	resource := announcement.NewResource(ogsListContract{route.contract}, nil, time.Now)
 	router := resource.Router(rootAPI.ProtectedTenantRoutes)
 	claims := routetest.DefaultTestClaims()
 	claims.ID = route.claims.ID // Even the same account needs the school portal for drafts.

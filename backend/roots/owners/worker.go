@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 
@@ -52,7 +53,7 @@ import (
 // own collaborators (lease, tenant runtime, settings snapshots, retention,
 // booking audit, reminder tick, document sweeps) are built here.
 func NewWorker(
-	db transactionruntime.Database, logger *slog.Logger, tracer *observability.Tracer, hub *realtime.Hub,
+	db transactionruntime.Database, logger *slog.Logger, now func() time.Time, tracer *observability.Tracer, hub *realtime.Hub,
 	settings settingsCompose.BatchSettingsService, audit auditCommand, accessLog DataAccessAppender, fleet devicefleet.Capability,
 	carePlan carePlanModule.Owner, persons peopledirectory.Capability, people PeopleRows,
 	organizations organizationtenancy.Query, identity identityaccess.Owner, rooms facilitiesModule.Capability,
@@ -73,7 +74,7 @@ func NewWorker(
 	if err != nil {
 		return nil, fmt.Errorf("compose worker billing: %w", err)
 	}
-	lease, runtime, err := newWorkerRuntime(db.UnitOfWork())
+	lease, runtime, err := newWorkerRuntime(db.UnitOfWork(), now)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +99,7 @@ func NewWorker(
 		return nil, err
 	}
 	return schedulerRuntimeCompose.NewWorker(schedulerPorts.WorkerDependencies{
-		Logger:                       logger.With("service", "scheduler"),
+		Logger: logger.With("service", "scheduler"), Now: now,
 		Getenv:                       os.Getenv,
 		SchoolRepo:                   schedulerTenantDirectory{schools: organizations, billing: billing, schoolNames: schoolNames},
 		TenantRuntime:                runtime,

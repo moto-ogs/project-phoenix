@@ -93,6 +93,8 @@ type usageService struct {
 	settings       RetentionSettings
 	logger         *slog.Logger
 	tenantRuntime  *tenant.UnitOfWork
+	// now dates the retention cutoff.
+	now func() time.Time
 
 	snapshotMu   sync.Mutex
 	snapshot     []UsageRow
@@ -118,12 +120,13 @@ func NewUsageService(
 		accountTenants: accountTenants,
 		settings:       settings,
 		logger:         logger,
+		now:            time.Now,
 	}
 }
 
 // NewTenantUsageService is NewUsageService over the root's tenant unit of
 // work (ADR 0059). A missing collaborator is a construction error; the
-// logger stays optional.
+// logger stays optional, and a nil clock is the real one.
 func NewTenantUsageService(
 	runtime tenant.UnitOfWork,
 	db *bun.DB,
@@ -132,6 +135,7 @@ func NewTenantUsageService(
 	accountTenants GuardianSchools,
 	settings RetentionSettings,
 	logger *slog.Logger,
+	now func() time.Time,
 ) (UsageService, error) {
 	if runtime.IsZero() {
 		return nil, fmt.Errorf("pwa usage: %w", tenant.ErrRuntimeRequired)
@@ -141,6 +145,9 @@ func NewTenantUsageService(
 	}
 	service := NewUsageService(db, repo, summaries, accountTenants, settings, logger).(*usageService)
 	service.tenantRuntime = &runtime
+	if now != nil {
+		service.now = now
+	}
 	return service, nil
 }
 
@@ -207,7 +214,7 @@ func (s *usageService) CleanupExpiredUsage(ctx context.Context) (*CleanupResult,
 		return nil, fmt.Errorf("pwa usage retention must be positive, got %d", retentionDays)
 	}
 
-	cutoff := time.Now().AddDate(0, 0, -retentionDays)
+	cutoff := s.now().AddDate(0, 0, -retentionDays)
 	deleted, err := s.repo.DeleteLastSeenBefore(ctx, tenantID, cutoff)
 	if err != nil {
 		return nil, fmt.Errorf("delete expired pwa usage rows: %w", err)

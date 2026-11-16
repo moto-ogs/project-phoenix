@@ -49,11 +49,11 @@ func (s *Scheduler) checkAndRunSessionEnd(ctx context.Context, task *ScheduledTa
 		}
 
 		endTime := s.resolveStringSetting(tenantCtx, settingSessionEndTime, "18:00")
-		if !timeMatchesNow(endTime) {
+		if !s.timeMatchesNow(endTime) {
 			return nil
 		}
 
-		if wasRunToday(&s.lastSessionEnd, tenantID) {
+		if s.wasRunToday(&s.lastSessionEnd, tenantID) {
 			return nil
 		}
 
@@ -189,6 +189,6 @@ func (s *Scheduler) runSessionCleanupForTenant(tenantCtx context.Context, tenant
 		)
 	}
 
-	s.markRunAtAfterCommit(tenantCtx, &s.lastSessionCleanup, tenantID, time.Now())
+	s.markRunAtAfterCommit(tenantCtx, &s.lastSessionCleanup, tenantID, s.clock())
 	return nil
 }

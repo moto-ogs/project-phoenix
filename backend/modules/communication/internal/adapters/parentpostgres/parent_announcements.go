@@ -28,11 +28,15 @@ const (
 // audience selectors, poll options, read/acknowledgement state, and poll
 // answers. Every statement here touches Communication's own tables only; the
 // audience reads that join People Directory live in the audience projection.
-type AnnouncementStore struct{ store }
+type AnnouncementStore struct {
+	store
+	now func() time.Time
+}
 
-// NewAnnouncementStore builds the store over the ambient transaction runtime.
-func NewAnnouncementStore(database Database) *AnnouncementStore {
-	return &AnnouncementStore{store: newStore(database)}
+// NewAnnouncementStore builds the store over the ambient transaction runtime;
+// now stamps the rows it changes and the reads and answers it records.
+func NewAnnouncementStore(database Database, now func() time.Time) *AnnouncementStore {
+	return &AnnouncementStore{store: newStore(database), now: now}
 }
 
 type parentAnnouncementRow struct {
@@ -149,7 +153,8 @@ type parentAnnouncementResponseRow struct {
 	RespondedAt    time.Time `bun:"responded_at,nullzero,notnull,default:current_timestamp"`
 }
 
-// Create inserts one announcement row. A zero tenant takes the ambient one.
+// Create inserts one announcement row. A zero tenant takes the ambient one,
+// and a zero creation time the store's clock.
 func (s *AnnouncementStore) Create(ctx context.Context, announcement *domain.ParentAnnouncement) error {
 	if announcement == nil {
 		return errors.New("create parent announcement: announcement is required")
@@ -162,6 +167,10 @@ func (s *AnnouncementStore) Create(ctx context.Context, announcement *domain.Par
 		announcement.TenantID = scope.TenantID
 	}
 	row := announcementRow(announcement)
+	if row.CreatedAt.IsZero() {
+		row.CreatedAt = s.now()
+		row.UpdatedAt = row.CreatedAt
+	}
 	if _, err := db.NewInsert().
 		Model(row).
 		ModelTableExpr(parentAnnouncementTable).
@@ -309,7 +318,7 @@ func (s *AnnouncementStore) UpdateDraft(ctx context.Context, announcement *domai
 	if err != nil {
 		return err
 	}
-	now := time.Now()
+	now := s.now()
 	query := db.NewUpdate().
 		Model((*parentAnnouncementRow)(nil)).
 		ModelTableExpr(parentAnnouncementTableExpr).
@@ -476,7 +485,7 @@ func (s *AnnouncementStore) SetReminder(ctx context.Context, id int64, reminderA
 		ModelTableExpr(parentAnnouncementTableExpr).
 		Set("reminder_at = ?", reminderAt).
 		Set("reminder_text = ?", reminderText).
-		Set("updated_at = ?", time.Now()).
+		Set("updated_at = ?", s.now()).
 		Where(`"parent_announcement".id = ?`, id).
 		Where(`"parent_announcement".reminder_sent_at IS NULL`)
 	query = withTenant(query, parentAnnouncementAlias, scope)

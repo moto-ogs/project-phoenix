@@ -20,6 +20,9 @@ type AdminDatabase func(context.Context) (bun.IDB, error)
 type Store struct {
 	tenantDB TenantDatabase
 	adminDB  AdminDatabase
+	// now stamps the store's own writes and dates what it compares; the
+	// worker passes its instants for claims, leases and fences.
+	now func() time.Time
 }
 
 const emailEnqueueSQL = `
@@ -213,11 +216,11 @@ type emailDeliveryRow struct {
 	UpdatedAt         time.Time `bun:"updated_at"`
 }
 
-func New(tenantDB TenantDatabase, adminDB AdminDatabase) *Store {
-	if tenantDB == nil || adminDB == nil {
-		panic("delivery postgres: tenant database and admin transaction are required")
+func New(tenantDB TenantDatabase, adminDB AdminDatabase, now func() time.Time) *Store {
+	if tenantDB == nil || adminDB == nil || now == nil {
+		panic("delivery postgres: tenant database, admin transaction and clock are required")
 	}
-	return &Store{tenantDB: tenantDB, adminDB: adminDB}
+	return &Store{tenantDB: tenantDB, adminDB: adminDB, now: now}
 }
 
 func (s *Store) Enqueue(ctx context.Context, intent domain.Intent) (domain.Enqueued, error) {
@@ -351,9 +354,9 @@ func (s *Store) StartDelivery(ctx context.Context, transport domain.Transport, i
 		var scanErr error
 		switch transport {
 		case domain.TransportEmail:
-			scanErr = db.NewRaw(emailStartDeliverySQL, leaseExpiresAt, time.Now(), id, token).Scan(txCtx, &dispatchToken)
+			scanErr = db.NewRaw(emailStartDeliverySQL, leaseExpiresAt, s.now(), id, token).Scan(txCtx, &dispatchToken)
 		case domain.TransportPush:
-			scanErr = db.NewRaw(pushStartDeliverySQL, leaseExpiresAt, time.Now(), id, token).Scan(txCtx, &dispatchToken)
+			scanErr = db.NewRaw(pushStartDeliverySQL, leaseExpiresAt, s.now(), id, token).Scan(txCtx, &dispatchToken)
 		default:
 			return unknownTransport(transport)
 		}
@@ -428,7 +431,7 @@ func (s *Store) FinalizeCancelled(ctx context.Context, transport domain.Transpor
 }
 
 func (s *Store) FinalizeDeferred(ctx context.Context, transport domain.Transport, id int64, token, reason string, nextRetryAt time.Time) (bool, error) {
-	now := time.Now()
+	now := s.now()
 	var finalized bool
 	err := s.inAdminTransaction(ctx, func(txCtx context.Context, db bun.IDB) error {
 		args := []any{reason, nextRetryAt, now, id, token}
@@ -460,7 +463,7 @@ func (s *Store) FinalizeFailure(ctx context.Context, transport domain.Transport,
 	if attempts >= maxAttempts {
 		state = "dead_letter"
 	}
-	now := time.Now()
+	now := s.now()
 	var finalized bool
 	err := s.inAdminTransaction(ctx, func(txCtx context.Context, db bun.IDB) error {
 		args := []any{state, attempts, lastError, nextRetryAt, state, now, now, id, token}

@@ -306,7 +306,7 @@ func NewPeopleRepositorySuiteParentMessaging(db transactionruntime.Database) (Pa
 // NewPeopleRepositorySuiteAnnouncements is the parent announcement store over
 // its Enrollment audience, constructed here rather than by shared fixtures.
 func NewPeopleRepositorySuiteAnnouncements(db transactionruntime.Database, clocks ...func() time.Time) recordports.ParentAnnouncementRepository {
-	return parentStore.NewParentAnnouncementRepository(db.Pool(), owners.NewParentAnnouncementAudience(db, owners.ParentAnnouncementApplicants(enrollmentCompose.New()), clocks...))
+	return parentStore.NewParentAnnouncementRepository(db.Pool(), owners.NewParentAnnouncementAudience(db, owners.ParentAnnouncementApplicants(enrollmentCompose.New()), clocks...), OptionalClock(clocks))
 }
 
 // NewPeopleRepositorySuiteCaregiverBindingLocker is the caregiver binding

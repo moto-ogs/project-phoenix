@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -72,7 +73,7 @@ func TestPickupChangeReachesOnlyTheChildsTeam(t *testing.T) {
 		}},
 		&fakeAdminReader{ids: []int64{absenceAdmin, absenceActorAcct}},
 		&fakeOnDutySetting{enabled: true},
-		&fakeDutyReader{},
+		&fakeDutyReader{}, calendar.CalendarDateClock(),
 	)
 	responsible, ok := resolver.(interface {
 		ResponsibleStaffAccountIDs(context.Context, int64, string, []int64) ([]int64, error)

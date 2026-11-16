@@ -61,7 +61,7 @@ func NewFileStoreTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 		return nil, nil, err
 	}
 	announcements, err := communicationCompose.NewParentAnnouncementsWithAttachments(communicationCompose.ParentAnnouncementConfig{
-		Repo: parentStore.NewParentAnnouncementRepository(db.Pool(), owners.NewParentAnnouncementAudience(db, owners.ParentAnnouncementApplicants(enrollmentAudience.New()))), Settings: settingsValues.NewParentAnnouncementValues(settings.Settings), Logger: slog.Default(),
+		Repo: parentStore.NewParentAnnouncementRepository(db.Pool(), owners.NewParentAnnouncementAudience(db, owners.ParentAnnouncementApplicants(enrollmentAudience.New())), nil), Settings: settingsValues.NewParentAnnouncementValues(settings.Settings), Logger: slog.Default(),
 		Fingerprints: owners.SecurityFingerprints{},
 	}, purger, owners.CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	if err != nil {

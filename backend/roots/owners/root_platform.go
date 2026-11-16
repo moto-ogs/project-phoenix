@@ -290,7 +290,7 @@ func BuildDeliveryRuntime(db transactionruntime.Database, env RootEnvironment, g
 	observe := env.Observe.DurableDelivery
 	runtime, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{
 		DB: db.Pool(), People: GuardianDisplayResolver{Query: guardians},
-		EmailProvider: withProviderLogger(env),
+		EmailProvider: withProviderLogger(env), Now: env.Now,
 		Observe: func(observation deliveryContract.Observation) {
 			observe(string(observation.Transport), observation.Template, observation.Operation, observation.Duration, observation.Count, observation.Err)
 		},

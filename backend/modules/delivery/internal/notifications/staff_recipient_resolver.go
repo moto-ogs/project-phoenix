@@ -54,6 +54,8 @@ type staffRecipientResolver struct {
 	accounts     authAccountReader
 	settings     settingsBoolReader
 	workSessions OnDutyStaff
+	// today is the day whose group supervisors are told.
+	today func() calendar.Date
 }
 
 // StudentGroups names the education group of each child that has one; a
@@ -106,6 +108,7 @@ func NewStaffRecipientResolver(
 	accounts authAccountReader,
 	settings settingsBoolReader,
 	workSessions OnDutyStaff,
+	today func() calendar.Date,
 ) StaffRecipientResolver {
 	return &staffRecipientResolver{
 		preferences:  preferences,
@@ -115,6 +118,7 @@ func NewStaffRecipientResolver(
 		accounts:     accounts,
 		settings:     settings,
 		workSessions: workSessions,
+		today:        today,
 	}
 }
 
@@ -192,7 +196,7 @@ func (r *staffRecipientResolver) ResponsibleStaffAccountIDs(ctx context.Context,
 
 func (r *staffRecipientResolver) configured() bool {
 	return r.preferences != nil && r.students != nil && r.groups != nil && r.staff != nil &&
-		r.accounts != nil && r.settings != nil && r.workSessions != nil
+		r.accounts != nil && r.settings != nil && r.workSessions != nil && r.today != nil
 }
 
 func (r *staffRecipientResolver) resolveVisibility(ctx context.Context, studentIDs []int64) (map[int64]map[int64]struct{}, error) {
@@ -218,7 +222,7 @@ func (r *staffRecipientResolver) addGroupStaff(ctx context.Context, visibleByAcc
 	if len(groupIDs) == 0 {
 		return nil
 	}
-	pairs, err := r.groups.ListGroupSupervisors(ctx, groupIDs, calendar.TodayDate())
+	pairs, err := r.groups.ListGroupSupervisors(ctx, groupIDs, r.today())
 	if err != nil {
 		return fmt.Errorf("resolve supervising staff: %w", err)
 	}

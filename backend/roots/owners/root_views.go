@@ -181,7 +181,7 @@ func BuildDeliveryDevices(db transactionruntime.Database, unit rootUnitOfWork, e
 		return DeliveryDevices{}, err
 	}
 	usage, err := deliveryCompose.NewTenantPWAUsageService(unit, db.Pool(), observabilityCompose.NewPWAStandaloneUsageRepository(db.Pool()),
-		pwaUsageCounts{provisioning: provisioning}, identity, settings, env.Logger.With("service", "pwa_usage"))
+		pwaUsageCounts{provisioning: provisioning}, identity, settings, env.Logger.With("service", "pwa_usage"), env.Now)
 	if err != nil {
 		return DeliveryDevices{}, err
 	}

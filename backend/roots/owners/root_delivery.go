@@ -30,6 +30,7 @@ import (
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -92,13 +93,13 @@ func BuildDeliveryNotifications(
 	}
 	recipients := deliveryCompose.NewStaffRecipientResolver(preferences, deliveryStudentGroups{students: people.Students},
 		structure.Groups, people.Staff, identity, settings,
-		deliveryOnDutyStaff{presence: workTime})
+		deliveryOnDutyStaff{presence: workTime}, timezone.CalendarDateClock(clock))
 	schoolClasses := deliveryContract.SchoolClassRecipients{
 		Reach:   deliverySchoolClassReach{students: people.Students, assignments: assignments, staff: people.Staff},
 		Consent: preferences, Subscribers: consent, Accounts: identity, Permissions: securityruntime.HasPermission,
 		Office: deliverySchoolOffice{staff: people.Staff},
 	}
-	absences, err := deliveryCompose.NewTenantAbsenceNotifier(unit, notifier, recipients, db.Pool(), logger.With("producer", "absence_notifications"), schoolClasses)
+	absences, err := deliveryCompose.NewTenantAbsenceNotifier(unit, notifier, recipients, db.Pool(), logger.With("producer", "absence_notifications"), schoolClasses, timezone.CalendarDateClock(clock))
 	if err != nil {
 		return DeliveryNotifications{}, err
 	}

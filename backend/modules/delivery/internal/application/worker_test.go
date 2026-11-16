@@ -160,7 +160,7 @@ func TestWorkerFinalizesWithClaimLeaseToken(t *testing.T) {
 	t.Parallel()
 	store := &workerStore{claimed: []domain.Intent{claimedEmail(0)}, renewed: true, finalizeSent: true}
 	provider := &workerProvider{}
-	worker := NewWorker(store, provider, func(domain.Observation) {})
+	worker := NewWorker(store, provider, func(domain.Observation) {}, time.Now)
 
 	stats, err := worker.RunOnce(context.Background(), 1, 6)
 
@@ -176,7 +176,7 @@ func TestWorkerFinalizesWithClaimLeaseToken(t *testing.T) {
 func TestWorkerCountsStaleFinalizeAsLeaseLoss(t *testing.T) {
 	t.Parallel()
 	store := &workerStore{claimed: []domain.Intent{claimedEmail(0)}, renewed: true, finalizeSent: false}
-	worker := NewWorker(store, &workerProvider{}, func(domain.Observation) {})
+	worker := NewWorker(store, &workerProvider{}, func(domain.Observation) {}, time.Now)
 
 	stats, err := worker.RunOnce(context.Background(), 1, 6)
 
@@ -189,7 +189,7 @@ func TestWorkerSkipsIntentWhenLeaseFenceIsStale(t *testing.T) {
 	t.Parallel()
 	store := &workerStore{claimed: []domain.Intent{claimedEmail(0)}}
 	provider := &workerProvider{}
-	worker := NewWorker(store, provider, func(domain.Observation) {})
+	worker := NewWorker(store, provider, func(domain.Observation) {}, time.Now)
 
 	stats, err := worker.RunOnce(context.Background(), 1, 6)
 
@@ -207,7 +207,7 @@ func TestWorkerDoesNotSendWhenCancellationWinsBeforeProvider(t *testing.T) {
 		cancelledBeforeSend: true,
 	}
 	provider := &workerProvider{}
-	worker := NewWorker(store, provider, func(domain.Observation) {})
+	worker := NewWorker(store, provider, func(domain.Observation) {}, time.Now)
 
 	stats, err := worker.RunOnce(context.Background(), 1, 6)
 
@@ -223,7 +223,7 @@ func TestWorkerRetriesProviderTimeout(t *testing.T) {
 		renewed:       true,
 		failureResult: domain.FinalizeResult{Finalized: true, State: string(domain.StatePending)},
 	}
-	worker := NewWorker(store, &workerProvider{err: context.DeadlineExceeded}, func(domain.Observation) {})
+	worker := NewWorker(store, &workerProvider{err: context.DeadlineExceeded}, func(domain.Observation) {}, time.Now)
 
 	stats, err := worker.RunOnce(context.Background(), 1, 6)
 
@@ -240,7 +240,7 @@ func TestWorkerDefersWithoutConsumingAnAttempt(t *testing.T) {
 		renewed:       true,
 		failureResult: domain.FinalizeResult{Finalized: true, State: string(domain.StatePending)},
 	}
-	worker := NewWorker(store, &workerProvider{err: fmt.Errorf("access email pending: %w", domain.ErrDeferred)}, func(domain.Observation) {})
+	worker := NewWorker(store, &workerProvider{err: fmt.Errorf("access email pending: %w", domain.ErrDeferred)}, func(domain.Observation) {}, time.Now)
 
 	stats, err := worker.RunOnce(context.Background(), 1, 3)
 
@@ -270,7 +270,7 @@ func TestWorkerPostponesAThrottledMailWithoutConsumingAnAttempt(t *testing.T) {
 			providerErr := fmt.Errorf("send throttled: %w: 421 4.7.0 rate limit", deliveryContract.ErrThrottled)
 			_, mapped := ProviderResult(deliveryContract.ProviderResult{}, fmt.Errorf("%w: %w", deliveryContract.ErrDeferred, providerErr))
 			var operations []string
-			worker := NewWorker(store, &workerProvider{err: mapped}, func(o domain.Observation) { operations = append(operations, o.Operation) })
+			worker := NewWorker(store, &workerProvider{err: mapped}, func(o domain.Observation) { operations = append(operations, o.Operation) }, time.Now)
 			started := time.Now()
 
 			stats, err := worker.RunOnce(context.Background(), 1, 6)
@@ -289,7 +289,7 @@ func TestWorkerPostponesAThrottledMailWithoutConsumingAnAttempt(t *testing.T) {
 func TestWorkerCancelsNonRetryableProviderDecision(t *testing.T) {
 	t.Parallel()
 	store := &workerStore{claimed: []domain.Intent{claimedEmail(0)}, renewed: true, finalizeCancelled: true}
-	worker := NewWorker(store, &workerProvider{err: fmt.Errorf("guardian access revoked: %w", domain.ErrCancelled)}, func(domain.Observation) {})
+	worker := NewWorker(store, &workerProvider{err: fmt.Errorf("guardian access revoked: %w", domain.ErrCancelled)}, func(domain.Observation) {}, time.Now)
 
 	stats, err := worker.RunOnce(context.Background(), 1, 6)
 
@@ -306,7 +306,7 @@ func TestWorkerDeadLettersAtAttemptLimit(t *testing.T) {
 		renewed:       true,
 		failureResult: domain.FinalizeResult{Finalized: true, State: string(domain.StateDeadLetter)},
 	}
-	worker := NewWorker(store, &workerProvider{err: errors.New("provider rejected")}, func(domain.Observation) {})
+	worker := NewWorker(store, &workerProvider{err: errors.New("provider rejected")}, func(domain.Observation) {}, time.Now)
 
 	stats, err := worker.RunOnce(context.Background(), 1, 2)
 
@@ -325,7 +325,7 @@ func TestWorkerDeadLettersExpiredDispatchFencesBeforeClaim(t *testing.T) {
 		if observation.Operation == "dispatch_outcome_unknown" {
 			unknown = append(unknown, observation)
 		}
-	})
+	}, time.Now)
 
 	stats, err := worker.RunOnce(context.Background(), 1, 6)
 
@@ -341,7 +341,7 @@ func TestWorkerStopsWhenExpiredDispatchRecoveryFails(t *testing.T) {
 	t.Parallel()
 	store := &workerStore{claimed: []domain.Intent{claimedEmail(0)}, renewed: true, expiredDispatchErr: errors.New("database unavailable")}
 	provider := &workerProvider{}
-	worker := NewWorker(store, provider, func(domain.Observation) {})
+	worker := NewWorker(store, provider, func(domain.Observation) {}, time.Now)
 
 	stats, err := worker.RunOnce(context.Background(), 1, 6)
 
@@ -362,7 +362,7 @@ func TestWorkerRetriesAfterSendSucceededButFinalizeFailed(t *testing.T) {
 		finalizeSentErr: errors.New("database unavailable after provider acceptance"),
 	}
 	provider := &workerProvider{}
-	worker := NewWorker(store, provider, func(domain.Observation) {})
+	worker := NewWorker(store, provider, func(domain.Observation) {}, time.Now)
 
 	first, err := worker.RunOnce(context.Background(), 1, 6)
 	require.NoError(t, err)
@@ -378,7 +378,7 @@ func TestWorkerRejectsInvalidRetryLimitBeforeClaim(t *testing.T) {
 	t.Parallel()
 	for _, limit := range []int{0, -1} {
 		t.Run(fmt.Sprint(limit), func(t *testing.T) {
-			worker := NewWorker(&workerStore{}, &workerProvider{}, func(domain.Observation) { t.Error("invalid policy must not start work") })
+			worker := NewWorker(&workerStore{}, &workerProvider{}, func(domain.Observation) { t.Error("invalid policy must not start work") }, time.Now)
 			stats, err := worker.RunOnce(context.Background(), 1, limit)
 			require.EqualError(t, err, "delivery worker: max attempts must be positive")
 			assert.Equal(t, deliveryContract.WorkerStats{}, stats)
@@ -430,7 +430,7 @@ func TestWorkerConcurrentRunsKeepIndependentRetryLimits(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	provider := blockedRetryProvider{started: make(chan struct{}, 2), release: make(chan struct{})}
-	worker := NewWorker(&concurrentRetryStore{}, provider, func(domain.Observation) {})
+	worker := NewWorker(&concurrentRetryStore{}, provider, func(domain.Observation) {}, time.Now)
 	type result struct {
 		stats deliveryContract.WorkerStats
 		err   error
@@ -474,7 +474,7 @@ func TestWorkerDeadLettersPermanentRejectionWithoutRetry(t *testing.T) {
 	}
 	providerErr := fmt.Errorf("push service returned 403 Forbidden: %w", deliveryContract.ErrPermanent)
 	_, mapped := ProviderResult(deliveryContract.ProviderResult{}, providerErr)
-	worker := NewWorker(store, &workerProvider{err: mapped}, func(domain.Observation) {})
+	worker := NewWorker(store, &workerProvider{err: mapped}, func(domain.Observation) {}, time.Now)
 
 	stats, err := worker.RunOnce(context.Background(), 1, 6)
 

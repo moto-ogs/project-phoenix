@@ -56,27 +56,42 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/carecontract": 3,
 	// PickupBaselineQueries.HasBookedOfferingPickupForWeekday: the public
 	// PickupBaselineReader method names no day.
-	"modules/careplan":                     1,
-	"modules/classday":                     14,
-	"modules/communication":                15,
-	"modules/dataimport":                   55,
-	"modules/delivery":                     44,
-	"modules/devicefleet":                  12,
-	"modules/devicescan":                   6,
-	"modules/documentrendering":            1,
-	"modules/enrollment":                   63,
-	"modules/facilities":                   2,
-	"modules/feedback":                     1,
-	"modules/filestorage":                  32,
-	"modules/identityaccess":               83,
-	"modules/mealplan":                     1,
-	"modules/operatordashboard":            2,
-	"modules/organizationtenancy":          7,
-	"modules/peopledirectory":              12,
-	"modules/planexport":                   2,
-	"modules/presenceprojection":           15,
-	"modules/requestreview":                1,
-	"modules/schedulerruntime":             36,
+	"modules/careplan": 1,
+	"modules/classday": 14,
+	// service.enqueueLetterRetry: the nanosecond only makes each retry's
+	// idempotency key unique; a pinned clock would give two retries one key
+	// and the outbox would swallow the second as a duplicate.
+	"modules/communication": 1,
+	"modules/dataimport":    55,
+	// Resource.sendTestNotification: the nanosecond only makes the key of
+	// each test notification unique, as in Communication.
+	// Resource.startSchoolStream and schoolDeliver: the access re-check of
+	// an open school stream runs on the elapsed time since the last check; a
+	// pinned clock would never re-check. RealtimePublisher.recordDrop: the
+	// interval between two drop log lines. usageService.SnapshotUsage: the
+	// age of the cached usage snapshot (time.Since).
+	"modules/delivery":            5,
+	"modules/devicefleet":         12,
+	"modules/devicescan":          6,
+	"modules/documentrendering":   1,
+	"modules/enrollment":          63,
+	"modules/facilities":          2,
+	"modules/feedback":            1,
+	"modules/filestorage":         32,
+	"modules/identityaccess":      83,
+	"modules/mealplan":            1,
+	"modules/operatordashboard":   2,
+	"modules/organizationtenancy": 7,
+	"modules/peopledirectory":     12,
+	"modules/planexport":          2,
+	"modules/presenceprojection":  15,
+	"modules/requestreview":       1,
+	// leadership (acquire, renew, step, expire, current, stepDown and
+	// newLeadership): the lease term is a local monotonic deadline armed as
+	// timers, and the standby time is measured since the last term.
+	// Scheduler.waitUntilNextMinute: the timer that aligns the minute tick
+	// with the wall clock. A pinned clock would stop both.
+	"modules/schedulerruntime":             11,
 	"modules/schoolcalendar":               5,
 	"modules/schoolmembership":             2,
 	"modules/schoolstructure":              3,

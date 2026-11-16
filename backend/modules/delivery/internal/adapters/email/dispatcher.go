@@ -19,6 +19,8 @@ type Dispatcher struct {
 	observe        mailcontract.DeliveryObserver
 	defaultRetry   int
 	defaultBackoff []time.Duration
+	// now stamps the delivery results the callbacks receive.
+	now func() time.Time
 }
 
 // getLogger returns a nil-safe logger, falling back to slog.Default() if logger is nil
@@ -38,6 +40,7 @@ func NewDispatcher(mailer mailcontract.Mailer, logger *slog.Logger, observers ..
 	dispatcher := &Dispatcher{
 		mailer:       mailer,
 		logger:       logger,
+		now:          time.Now,
 		defaultRetry: 3,
 		defaultBackoff: []time.Duration{
 			time.Minute,
@@ -220,8 +223,8 @@ func (d *Dispatcher) deliverWithRetry(ctx context.Context, cfg dispatchConfig) {
 				"max_attempts": cfg.maxAttempts,
 				"error":        lastErr.Error(),
 			},
-			Level:     sentry.LevelWarning,
-			Timestamp: time.Now(),
+			Level: sentry.LevelWarning,
+			// The hub stamps the breadcrumb when it is added.
 		}, nil)
 		if errors.Is(lastErr, mailcontract.ErrPermanentRejection) {
 			break
@@ -285,7 +288,7 @@ func (d *Dispatcher) invokeCallback(ctx context.Context, cfg dispatchConfig, att
 		MaxAttempt: cfg.maxAttempts,
 		Status:     status,
 		Err:        err,
-		SentAt:     time.Now(),
+		SentAt:     d.now(),
 		Final:      final,
 	})
 }

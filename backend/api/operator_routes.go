@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -129,7 +130,7 @@ func operatorRouter(
 	}
 	identityRoutes := identity.routes()
 	provisioningRoutes := provisioningOperatorAPI.NewProvisioningResource(provisioning)
-	announcementRoutes := operatorannouncements.NewAnnouncementsResource(announcements)
+	announcementRoutes := operatorannouncements.NewAnnouncementsResource(announcements, time.Now)
 
 	r := chi.NewRouter()
 	r.Use(render.SetContentType(render.ContentTypeJSON))

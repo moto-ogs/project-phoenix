@@ -95,8 +95,10 @@ func TestRetentionDeletesExpiredRealtimeNotifications(t *testing.T) {
 		return id
 	}
 	expired, fresh := save(), save()
+	// The store stamps created_at with its clock, which the retention cutoff
+	// is computed from too.
 	_, err := db.ExecContext(context.Background(), `UPDATE platform.realtime_notifications
-		SET created_at = NOW() - INTERVAL '10 minutes' WHERE id = ?`, expired)
+		SET created_at = ? WHERE id = ?`, time.Now().Add(-10*time.Minute), expired)
 	require.NoError(t, err)
 
 	var deleted int

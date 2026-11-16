@@ -43,7 +43,7 @@ type notificationDeliverer interface {
 func notificationChannel(t *testing.T, db *bun.DB, hub *realtime.Hub) notificationDeliverer {
 	t.Helper()
 	channel, err := deliveryCompose.NewTenantSSEChannel(testpkg.TenantRuntime(t, db), hub, db, everyGuardianStillPermitted{}, slog.Default(),
-		postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase))
+		postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase, time.Now))
 	require.NoError(t, err)
 	return channel
 }

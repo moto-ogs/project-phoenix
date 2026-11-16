@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications"
@@ -17,7 +18,7 @@ import (
 // listen and publish; standalone Workers publish without a listener connection.
 // Relayed notifications load in the school transaction of runtime (#5504).
 func NewPostgresRealtimeHub(db *bun.DB, runtime tenant.UnitOfWork, logger *slog.Logger, listen bool) (*realtime.Hub, io.Closer, error) {
-	content, err := notifications.NewRelayedContent(runtime, db, postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase))
+	content, err := notifications.NewRelayedContent(runtime, db, postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase, time.Now), time.Now)
 	if err != nil {
 		return nil, nil, err
 	}
