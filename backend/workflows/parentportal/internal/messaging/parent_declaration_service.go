@@ -184,8 +184,7 @@ func declarationAdmitsAction(a *ParentAnnouncement, action string, now time.Time
 // the child on the version the request names, which the parent news gate
 // needs: the wording revoked may be an older one (#6303).
 func (s *Service) requireDeclarationOpenFor(ctx context.Context, a *ParentAnnouncement, accountID, studentID, versionID int64, action string) (string, error) {
-	now := s.now()
-	if !declarationAdmitsAction(a, action, now) {
+	if !declarationAdmitsAction(a, action, s.now()) {
 		return "", ErrAnnouncementNotFound
 	}
 	if action != DeclarationActionRevoked {
@@ -195,7 +194,8 @@ func (s *Service) requireDeclarationOpenFor(ctx context.Context, a *ParentAnnoun
 	if err != nil {
 		return "", err
 	}
-	if !answered && !announcementIsLive(a, now) {
+	// Read again: the declaration may have expired during the history read.
+	if !answered && !announcementIsLive(a, s.now()) {
 		return "", ErrAnnouncementNotFound
 	}
 	return onVersion, nil
