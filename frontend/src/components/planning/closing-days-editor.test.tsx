@@ -214,7 +214,7 @@ describe("ClosingDaysEditor", () => {
     render(<ClosingDaysEditor />);
 
     const table = await screen.findByRole("table");
-    expect(within(table).getByText("Vom Träger")).toBeInTheDocument();
+    expect(await within(table).findByText("Vom Träger")).toBeInTheDocument();
     expect(
       within(table).getByRole("button", {
         name: "Aktionen für Pädagogischer Tag",

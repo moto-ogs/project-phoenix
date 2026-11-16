@@ -301,6 +301,18 @@ push is off by default (`FilterOptedIn`); the school switch is
 `/tagesinformationen?hinweis=<id>` opens the notice through
 `GET /api/staff-notices/{id}`, also before it applies.
 
+A planned, changed or cancelled closing day of the school
+(`school_closing_day_changed` and `parent_school_closing_day_changed`, #7144)
+reaches every active OGS-portal and moto-schule account and every guardian
+with `parent_portal.access` for a child of the school. School Calendar writes
+the notice in the closing-day transaction through
+`schoolcalendar.ClosingDayNotices`; Delivery's `SchoolAudience` supplies the
+audience and the guardian feed checks the child access again on every read.
+The request account is excluded. Feed and push apply while a changed day lies
+within 14 days, feed only later, and neither applies if every day is past or
+only the reason changed. The default-on push uses `FilterNotOptedOut`; the
+shared `notifications.school_closing_day_enabled` switch stops feed and push.
+
 A block that moves to another room (#7141) comes from Timetable's edit of a
 planned block (`UpdatePlanned`, also its series conversion): only a change
 from one room to another counts, not a first room or a removed one. The

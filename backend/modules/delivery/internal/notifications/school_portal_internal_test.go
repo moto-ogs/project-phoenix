@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/subscriptiontest"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
@@ -28,7 +29,7 @@ func TestSchoolPortalCatalogue(t *testing.T) {
 	for _, def := range TypesForPortal(PortalSchool) {
 		keys = append(keys, def.Key)
 	}
-	assert.Equal(t, []string{TypeSchoolClassAbsenceReported, TypeSchoolUnreportedAbsence, TypeClassTimetableChanged, TypeClassTimetableChangedAhead, TypeStaffMessage, TypeInstanceCancelled, TypeSchoolParentConferenceBooking, TypeInstanceRoomChanged, TypeInstanceRoomChangedLater}, keys)
+	assert.Equal(t, []string{TypeSchoolClassAbsenceReported, TypeSchoolUnreportedAbsence, TypeClassTimetableChanged, TypeClassTimetableChangedAhead, TypeStaffMessage, TypeInstanceCancelled, TypeSchoolParentConferenceBooking, TypeInstanceRoomChanged, TypeSchoolClosingDayChanged, TypeInstanceRoomChangedLater}, keys)
 
 	staffMessage, _ := GetType(TypeStaffMessage)
 	pickup, _ := GetType(TypePickupUpcoming)
@@ -50,6 +51,9 @@ func TestSchoolPortalCatalogue(t *testing.T) {
 	assert.False(t, OfferedInPortal(reinstated, PortalSchool), "a reinstatement follows the cancellation's switch instead of becoming another choice")
 	assert.True(t, reinstated.SchoolPortal)
 	assert.Empty(t, PermissionInPortal(reinstated, PortalSchool))
+	closingDay, _ := GetType(TypeSchoolClosingDayChanged)
+	assert.True(t, OfferedInPortal(closingDay, PortalSchool), "every Lehrkraft hears of a closing day in moto schule (#7144)")
+	assert.Empty(t, PermissionInPortal(closingDay, PortalSchool))
 }
 
 func TestFeedTypesIncludeReinstatementsInTheSchoolPortal(t *testing.T) {
@@ -194,6 +198,29 @@ func TestSchoolPushDeliveryIsLimitedToSupportedTypes(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []*deliveryModels.PushSubscription{schoolSub}, schoolOnly,
 		"a school-only type never reaches an OGS device of the same account (#4792)")
+}
+
+func TestSchoolPortalNarrowingKeepsAStaffTypeOutOfOGS(t *testing.T) {
+	t.Parallel()
+
+	event := Event{Type: TypeSchoolClosingDayChanged, Portal: PortalSchool}
+	assert.False(t, deliversToStaffPortal(event))
+	assert.True(t, deliversToSchoolPortal(event))
+}
+
+func TestSchoolOnlyFeedEventUsesTheSchoolLink(t *testing.T) {
+	t.Parallel()
+
+	_, err := feedType(Event{
+		Type:           TypeSchoolClosingDayChanged,
+		Portal:         PortalSchool,
+		SchoolDeepLink: "/school/kalender",
+		RelatedType:    "closing_day",
+		RelatedID:      7,
+		Audience:       Audience{Scope: ScopeStaff},
+		Feed:           &contract.NotificationFeedDelivery{},
+	})
+	require.NoError(t, err)
 }
 
 // The same split holds for the devices: a test fired in moto schule reaches

@@ -58,17 +58,15 @@ type (
 	PWAUsageService              = pwa.UsageService
 )
 
-// The kinds of the parent appointment notices.
+// Root vocabulary for parent appointments, enrollment and moto-schule-only staff delivery.
 const (
-	ParentAppointmentPublished = notifications.ParentAppointmentPublished
-	ParentAppointmentUpdated   = notifications.ParentAppointmentUpdated
-	ParentAppointmentCancelled = notifications.ParentAppointmentCancelled
-	ParentAppointmentReminder  = notifications.ParentAppointmentReminder
+	ParentAppointmentPublished      = notifications.ParentAppointmentPublished
+	ParentAppointmentUpdated        = notifications.ParentAppointmentUpdated
+	ParentAppointmentCancelled      = notifications.ParentAppointmentCancelled
+	ParentAppointmentReminder       = notifications.ParentAppointmentReminder
+	NotificationEnrollmentSubmitted = notifications.TypeEnrollmentSubmitted
+	NotificationPortalSchool        = notifications.PortalSchool
 )
-
-// NotificationEnrollmentSubmitted is the notification type of a new
-// enrollment.
-const NotificationEnrollmentSubmitted = notifications.TypeEnrollmentSubmitted
 
 var (
 	NewEmailOutbox                   = emailoutbox.NewService

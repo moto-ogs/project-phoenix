@@ -333,7 +333,7 @@ var moduleLegacyFileBudgets = map[string]int{
 // modules/peopledirectory/compose (+6), modules/schoolmembership/compose (+5),
 // modules/schoolstructure/compose (+8) and modules/settings/compose (+3)
 // add exactly 38 LOC.
-const moduleComposeBudgetTotal = 13643
+const moduleComposeBudgetTotal = 13641
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -383,7 +383,7 @@ var moduleComposeBudgets = map[string]int{
 	"modules/dataimport/compose/imports": 29,
 	// ADR 0145: +40 LOC for transport lifecycle, -8 LOC for the retired local wrapper.
 	// ADR 0267: +8, the clock fields.
-	"modules/delivery/compose": 401,
+	"modules/delivery/compose": 399,
 	// ADR 0268: the clock of the administration and the IoT service (+6).
 	"modules/devicefleet/compose":                   209,
 	"modules/devicefleet/compose/repositoryadapter": 10,

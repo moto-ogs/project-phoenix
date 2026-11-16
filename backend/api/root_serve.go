@@ -492,7 +492,7 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			calendarAdmin, err = buildCalendarAdministration(db, owners.ObserveSchoolCalendar, calendar, timetableRows.RecurrenceLock, requests.CareOfferings)
+			calendarAdmin, err = buildCalendarAdministration(db, owners.ObserveSchoolCalendar, calendar, timetableRows.RecurrenceLock, requests.CareOfferings, notifications)
 			return
 		},
 		func() (err error) {

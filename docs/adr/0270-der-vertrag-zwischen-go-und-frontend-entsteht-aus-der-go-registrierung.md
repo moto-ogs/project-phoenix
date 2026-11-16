@@ -114,4 +114,3 @@ angemeldet. Daraus folgen drei Ergänzungen:
 - **Eine Route, deren Antwort ein anderer Owner rendert**, meldet der Owner
   des Handlers an; die Wurzel nennt den Antworttyp, so wie sie auch die
   Antwortfunktion bindet.
-

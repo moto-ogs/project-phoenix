@@ -9,8 +9,8 @@ import { HELP_TOPICS } from "~/lib/help-topics";
  *
  * Die `Hinweise` (#7140) stehen ohne Einstellung in moto: am Computer hinter
  * der Glocke oben rechts, auf dem Telefon unter `Mehr`. Erster Hinweis ist
- * die Absage einer Betreuung des Kindes, dann die Raumänderung eines Termins
- * des Kindes (#7141).
+ * die Absage einer Betreuung des Kindes, dann Raumänderungen und Schließtage
+ * des Kindes (#7141, #7144).
  */
 export function parentNotificationsTopic(): HelpTopic {
   return {
@@ -37,6 +37,7 @@ export function parentNotificationsTopic(): HelpTopic {
     notes: [
       "Jeder Hinweis steht auch in moto unter `Hinweise`, zum Beispiel wenn eine Betreuung Ihres Kindes ausfällt. Dafür müssen Sie nichts einschalten.",
       "Findet ein Termin Ihres Kindes in einem anderen Raum statt, steht das auch unter `Hinweise`. Für heute und morgen bekommen Sie dazu eine Benachrichtigung, solange Sie `Raumänderung heute oder morgen` nicht ausschalten.",
+      "Trägt die OGS einen Schließtag ein, ändert oder löscht ihn, steht das ebenfalls unter `Hinweise`. Das Thema `Schließtage` ist von Anfang an eingeschaltet. Eine Mitteilung aufs Handy kommt nur, wenn der Tag in den nächsten 14 Tagen liegt.",
       "Für spätere Tage schalten Sie `Raumänderung an späteren Tagen` selbst ein. Sie gilt bis 14 Tage im Voraus.",
       "Ändert sich der Unterrichtsschluss in der Klasse Ihres Kindes, steht in moto `Stundenplan geändert`. Eine Mitteilung aufs Handy kommt dazu, wenn Sie `Stundenplan der Klasse` einschalten und die Änderung in den nächsten 14 Tagen gilt.",
       "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder `Alle als gelesen markieren` wählen.",

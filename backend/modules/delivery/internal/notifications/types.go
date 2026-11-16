@@ -385,6 +385,7 @@ func init() {
 	registerClassTimetableTypes()
 	registerStaffNoticeTypes()
 	registerRoomChangeTypes()
+	registerSchoolClosingDayTypes()
 }
 
 // registerStaffAppointmentTypes registers the staff notices about the

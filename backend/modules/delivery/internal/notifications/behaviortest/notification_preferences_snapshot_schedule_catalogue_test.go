@@ -19,6 +19,15 @@ func preferenceScheduleExpected(t *testing.T, pair preferenceGatePair, schedule 
 	t.Helper()
 	var rows []map[string]any
 	require.NoError(t, json.Unmarshal([]byte(preferenceScheduleCatalogues[pair.portal]), &rows))
+	if pair.portal == "school" {
+		closingDay := map[string]any{"key": "school_closing_day_changed", "label": "Schließtage", "description": "Wenn ein Schließtag eingetragen, geändert oder gelöscht wird. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Schließtagen in den nächsten 14 Tagen.", "group": "termine", "enabled": true, "available": true}
+		for i, row := range rows {
+			if row["key"] == "instance_room_changed" {
+				rows = append(rows[:i+1], append([]map[string]any{closingDay}, rows[i+1:]...)...)
+				break
+			}
+		}
+	}
 	for _, row := range rows {
 		if row["key"] == pair.firstType {
 			row["enabled"] = true
