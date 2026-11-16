@@ -13,6 +13,7 @@ const (
 	KindLaxID    = "lax_id"    // common.JSONID: renders a number, reads number or string
 	KindDate     = "date"      // YYYY-MM-DD
 	KindInstant  = "instant"   // RFC 3339
+	KindClock    = "clock"     // wall-clock time as HH:MM
 	KindEnum     = "enum"
 	KindArray    = "array"
 	KindMap      = "map"

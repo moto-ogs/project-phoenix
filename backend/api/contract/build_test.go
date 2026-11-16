@@ -50,11 +50,21 @@ type row struct {
 	Lax      laxID          `json:"lax_id"`
 	Weights  map[string]int `json:"weights,omitempty"`
 	Hidden   string         `json:"-"`
+	Born     string         `json:"born,omitempty" contract:"date"`
+	Pickup   *string        `json:"pickup,omitempty" contract:"clock"`
 }
 
 type body struct {
 	Name string `json:"name"`
 	ID   wireID `json:"id"`
+}
+
+type misformatted struct {
+	Count int `json:"count" contract:"clock"`
+}
+
+type unknownFormat struct {
+	Week string `json:"week" contract:"week"`
 }
 
 type stamp struct{}
@@ -110,7 +120,7 @@ func TestBuildFollowsEncodingJSON(t *testing.T) {
 			assert.Truef(t, field.Schema.Nullable, "%s renders null", name)
 		}
 	}
-	assert.Len(t, fields, len(keys)+5, "the five omitempty fields are absent for the zero value")
+	assert.Len(t, fields, len(keys)+7, "the seven omitempty fields are absent for the zero value")
 
 	schema := func(name string) Schema { return fields[name].Schema }
 	assert.Equal(t, KindBool, schema("shadowed").Kind, "the outer field wins over the embedded one")
@@ -122,6 +132,8 @@ func TestBuildFollowsEncodingJSON(t *testing.T) {
 	assert.Equal(t, KindID, schema("friend_ids").Elem.Kind)
 	assert.Equal(t, Schema{Kind: KindDate, Nullable: true}, schema("day"), "the zero date renders null")
 	assert.Equal(t, Schema{Kind: KindDate}, schema("birthday"))
+	assert.Equal(t, Schema{Kind: KindDate}, schema("born"), "the tag names the form of a plain string")
+	assert.Equal(t, Schema{Kind: KindClock}, schema("pickup"))
 	assert.Equal(t, Schema{Kind: KindEnum, Ref: "mode"}, schema("mode"))
 	assert.Equal(t, Schema{Kind: KindEnum, Ref: "Status"}, schema("status"))
 	assert.Equal(t, KindInt, schema("count").Kind)
@@ -154,12 +166,14 @@ func TestBuildRejects(t *testing.T) {
 		"an anonymous struct": {[]Registration{get("/api/rows/", struct {
 			S stamp `json:"s"`
 		}{})}, Options{Identifiers: identifiers}, "anonymous struct"},
-		"an unknown marshaler in a named type": {[]Registration{get("/api/rows/", []stamp{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
-		"a route without a portal":             {[]Registration{noPortal}, Options{Identifiers: identifiers}, "names no portal"},
-		"a route registered twice":             {[]Registration{get("/api/rows/", inner{}), get("/api/rows/", inner{})}, Options{Identifiers: identifiers}, "registered twice"},
-		"a numeric id entry nothing uses":      {[]Registration{get("/api/rows/", inner{})}, Options{NumericIDs: []string{"gone.Type.ID"}, Identifiers: identifiers}, "numeric id gone.Type.ID"},
-		"a variant entry nothing uses":         {[]Registration{get("/api/rows/", inner{})}, Options{QueryVariants: []string{"GET /api/gone/"}, Identifiers: identifiers}, "query variant GET /api/gone/"},
-		"an enum field nothing uses":           {[]Registration{strayEnum}, Options{Identifiers: identifiers}, "enum field inner.gone"},
+		"an unknown marshaler in a named type":      {[]Registration{get("/api/rows/", []stamp{})}, Options{Identifiers: identifiers}, "has its own MarshalJSON"},
+		"a route without a portal":                  {[]Registration{noPortal}, Options{Identifiers: identifiers}, "names no portal"},
+		"a route registered twice":                  {[]Registration{get("/api/rows/", inner{}), get("/api/rows/", inner{})}, Options{Identifiers: identifiers}, "registered twice"},
+		"a numeric id entry nothing uses":           {[]Registration{get("/api/rows/", inner{})}, Options{NumericIDs: []string{"gone.Type.ID"}, Identifiers: identifiers}, "numeric id gone.Type.ID"},
+		"a variant entry nothing uses":              {[]Registration{get("/api/rows/", inner{})}, Options{QueryVariants: []string{"GET /api/gone/"}, Identifiers: identifiers}, "query variant GET /api/gone/"},
+		"a format tag on a field that is no string": {[]Registration{get("/api/rows/", misformatted{})}, Options{Identifiers: identifiers}, `contract:"clock" needs a string field`},
+		"an unknown format tag":                     {[]Registration{get("/api/rows/", unknownFormat{})}, Options{Identifiers: identifiers}, `contract:"week" needs a string field`},
+		"an enum field nothing uses":                {[]Registration{strayEnum}, Options{Identifiers: identifiers}, "enum field inner.gone"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

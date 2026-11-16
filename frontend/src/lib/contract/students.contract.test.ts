@@ -98,6 +98,28 @@ describe("student contract decoders", () => {
     expect(list.full.parse(body(listBody(""))).data).toEqual([]);
   });
 
+  it.each([
+    ["a clock time with seconds", { pickup_time: "15:30:00" }],
+    ["a clock time outside the day", { arrival_time: "24:00" }],
+    ["a day that does not exist", { birthday: "2015-02-30" }],
+    ["an instant in place of a day", { care_ends_on: "2026-07-31T00:00:00Z" }],
+  ])("rejects %s", (_name, change) => {
+    const row = { ...(body(fullRow) as object), ...change };
+    expect(StudentResponseSchema.safeParse(row).success).toBe(false);
+  });
+
+  it("reads a clock time and a day in their wire form", () => {
+    const row = {
+      ...(body(fullRow) as object),
+      pickup_time: "15:30",
+      birthday: "2015-06-15",
+    };
+    expect(StudentResponseSchema.parse(row)).toMatchObject({
+      pickup_time: "15:30",
+      birthday: "2015-06-15",
+    });
+  });
+
   it("keeps the maximum int64 when it arrives as a string", () => {
     const row = fullRow.replace(`"id":7`, `"id":"9223372036854775807"`);
     expect(StudentResponseSchema.parse(body(row)).id).toBe(

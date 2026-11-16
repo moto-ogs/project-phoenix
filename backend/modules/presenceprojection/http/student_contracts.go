@@ -2,6 +2,7 @@ package presenceprojectionhttp
 
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
@@ -71,6 +72,35 @@ func studentEnums() []common.EnumContract {
 			Name:   "DayPlanningStatus",
 			Fields: []string{"StudentResponse.day_planning_status", "SlimStudentResponse.day_planning_status"},
 			Values: []string{DayPlanningStatusComesToday, DayPlanningStatusNotComingToday},
+		},
+		{
+			Name:   "DayPlanningReason",
+			Fields: []string{"StudentResponse.day_planning_reason", "SlimStudentResponse.day_planning_reason"},
+			Values: []string{
+				careplan.DayPlanningReasonSick, careplan.DayPlanningReasonExcused, careplan.DayPlanningReasonClassTrip,
+				careplan.DayPlanningReasonArrivalException, careplan.DayPlanningReasonPickupException,
+				careplan.DayPlanningReasonArrivalSchedule, careplan.DayPlanningReasonPickupSchedule,
+				careplan.DayPlanningReasonTimetable, careplan.DayPlanningReasonUnplanned, careplan.DayPlanningReasonNoPlan,
+			},
+		},
+		{
+			// A stored free text from before the departure plan still travels here.
+			Name:   "PickupStatus",
+			Fields: []string{"StudentResponse.pickup_status"},
+			Values: []string{departure.PickupStatusPickedUp, departure.PickupStatusGoesAlone, departure.PickupStatusAccompanied},
+		},
+		{
+			Name:   "SupervisorRole",
+			Fields: []string{"SupervisorContact.role"},
+			Values: []string{SupervisorRoleTeacher},
+		},
+		{
+			Name:   "StudentConsentKey",
+			Fields: []string{"StudentConsentResponse.key"},
+			Values: []string{
+				peopleModule.StudentConsentAGB, peopleModule.StudentConsentDataProcessing,
+				peopleModule.StudentConsentEmailContact, peopleModule.StudentConsentPhoto,
+			},
 		},
 		{
 			Name:   "AttendanceActorKind",

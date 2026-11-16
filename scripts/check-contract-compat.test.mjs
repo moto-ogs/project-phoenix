@@ -40,6 +40,9 @@ test("every change that breaks a reader of the base is named", () => {
   for (const [name, head, message] of cases) {
     assert.ok(breakingChanges(base, head).includes(message), `${name}: ${JSON.stringify(breakingChanges(base, head))}`);
   }
+  const named = model([field("id", "legacy_id"), field("name", "enum"), field("nick", "clock", { optional: true }), field("old", "string", { deprecated: true })]);
+  assert.deepEqual(breakingChanges(base, named), [], "naming the form of a string keeps the wire");
+  assert.ok(breakingChanges(named, base).includes("GET /api/rows/[].name: enum became string"));
   const stringBase = model([field("id", "id")]);
   assert.deepEqual(breakingChanges(stringBase, model([field("id", "legacy_id")])), ["GET /api/rows/[].id: id became legacy_id"]);
 });

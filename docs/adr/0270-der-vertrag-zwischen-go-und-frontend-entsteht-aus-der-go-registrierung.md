@@ -70,8 +70,9 @@ scheiterte der zweite Weg an zwei Stellen:
    angemeldeter Enum ist im Typ eine Vereinigung seiner bekannten Werte, der
    Decoder nimmt aber jeden String: Ein neuer Wert aus Go darf ein älteres
    Frontend nicht brechen.
-7. **Was Reflection nicht sieht, wird ausdrücklich angemeldet:** Enums und
-   Query-Parameter. Die Prüfung von Eingaben bleibt in Go (`Bind`) und
+7. **Was Reflection nicht sieht, wird ausdrücklich angemeldet:** Enums,
+   Query-Parameter und die Form eines Strings, der einen Tag oder eine Uhrzeit
+   trägt (Feld-Tag `contract:"date"` oder `contract:"clock"`). Die Prüfung von Eingaben bleibt in Go (`Bind`) und
    erreicht den Client über den Fehlervertrag; die Anmeldung wiederholt sie
    nicht.
 8. **Ein Typ mit eigenem `MarshalJSON` braucht einen Eintrag im Generator.**

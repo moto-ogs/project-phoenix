@@ -116,6 +116,9 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 	if errors.Is(err, errBareInt64) {
 		err = b.numericID(&schema, declaring.String()+"."+sf.Name, slices.Contains(options, "string"), at)
 	}
+	if err == nil {
+		err = setFormat(&schema, sf.Tag.Get("contract"), at)
+	}
 	if err != nil {
 		return Field{}, err
 	}
@@ -199,6 +202,28 @@ func (b *builder) numericID(schema *Schema, key string, asString bool, at string
 	default:
 		return fmt.Errorf("%s: int64 does not say what it is. Use common.ID for an identifier and int for a count (ADR 0270)", at)
 	}
+	return nil
+}
+
+// formats are the string forms a field names in its `contract` tag. A value
+// with its own Go type (calendar.Date, time.Time) needs no tag.
+var formats = map[string]string{"date": KindDate, "clock": KindClock}
+
+// setFormat applies `contract:"date"` or `contract:"clock"` to a string
+// field whose Go type does not say which form the string has.
+func setFormat(schema *Schema, format, at string) error {
+	if format == "" {
+		return nil
+	}
+	leaf := schema
+	for leaf.Kind == KindArray {
+		leaf = leaf.Elem
+	}
+	kind, known := formats[format]
+	if !known || leaf.Kind != KindString {
+		return fmt.Errorf("%s: the tag contract:%q needs a string field and one of date, clock", at, format)
+	}
+	leaf.Kind = kind
 	return nil
 }
 

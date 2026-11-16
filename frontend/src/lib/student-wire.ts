@@ -7,6 +7,7 @@ import { knownEnum, success } from "./contract/runtime";
 import {
   DAY_PLANNING_STATUS_VALUES,
   DEPARTURE_MODE_VALUES,
+  STUDENT_CONSENT_KEY_VALUES,
   STUDENT_CONSENT_STATE_VALUES,
   StudentResponseSchema,
   type NameStudentResponse,
@@ -54,19 +55,12 @@ type FullRow = StudentResponse &
     >
   >;
 
-const CONSENT_KEYS = [
-  "agb",
-  "data_processing",
-  "email_contact",
-  "photo",
-] as const satisfies readonly StudentConsent["key"][];
-
 /** Consents this build knows; an unknown key or state shows nothing. */
 function mapConsents(
   consents: StudentConsentResponse[] | undefined,
 ): StudentConsent[] | undefined {
   return consents?.flatMap((consent) => {
-    const key = knownEnum(CONSENT_KEYS, consent.key);
+    const key = knownEnum(STUDENT_CONSENT_KEY_VALUES, consent.key);
     const state = knownEnum(STUDENT_CONSENT_STATE_VALUES, consent.state);
     return key && state ? [{ key, state, changed_at: consent.changed_at }] : [];
   });

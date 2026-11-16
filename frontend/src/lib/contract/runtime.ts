@@ -25,6 +25,9 @@ export const safeInt = z.number().refine(Number.isSafeInteger);
 /** calendar.Date: a real day as YYYY-MM-DD. */
 export const calendarDate = z.iso.date();
 
+/** A wall-clock time of the school day as HH:MM. */
+export const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+
 /** time.Time: RFC 3339 with an offset, as Go writes a Berlin time. */
 export const instant = z.iso.datetime({ offset: true });
 

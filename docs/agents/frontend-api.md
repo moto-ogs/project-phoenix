@@ -315,6 +315,10 @@ or write a `Backend*` interface for a registered route.
   empty value.
 - Identifiers leave the decoder as strings. A registered enum is typed as its
   known values but decodes any string; narrow it with `knownEnum`.
+- A day is a `calendar.Date`, an instant a `time.Time`. A string field that
+  carries a day or a wall-clock time says so in its tag: `contract:"date"`
+  (`YYYY-MM-DD`) or `contract:"clock"` (`HH:MM`); the decoder then rejects
+  another form. Closed value sets are registered in `Enums`.
 - A new identifier is a `common.ID`, a count an `int`; the generator rejects a
   bare `int64` and a response shape that depends on a query parameter.
 - Removing or renaming a registered field or route needs one release as

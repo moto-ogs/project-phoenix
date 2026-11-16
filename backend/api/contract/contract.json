@@ -180,6 +180,21 @@
       ]
     },
     {
+      "name": "DayPlanningReason",
+      "values": [
+        "arrival_exception",
+        "arrival_schedule",
+        "class_trip",
+        "excused",
+        "no_plan",
+        "pickup_exception",
+        "pickup_schedule",
+        "sick",
+        "timetable",
+        "unplanned_attendance"
+      ]
+    },
+    {
       "name": "DayPlanningStatus",
       "values": [
         "comes_today",
@@ -196,11 +211,34 @@
       ]
     },
     {
+      "name": "PickupStatus",
+      "values": [
+        "Geht alleine nach Hause",
+        "Geht mit anderem Kind",
+        "Wird abgeholt"
+      ]
+    },
+    {
+      "name": "StudentConsentKey",
+      "values": [
+        "agb",
+        "data_processing",
+        "email_contact",
+        "photo"
+      ]
+    },
+    {
       "name": "StudentConsentState",
       "values": [
         "granted",
         "not_recorded",
         "withdrawn"
+      ]
+    },
+    {
+      "name": "SupervisorRole",
+      "values": [
+        "teacher"
       ]
     }
   ],
@@ -393,7 +431,8 @@
           "name": "day_planning_reason",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "enum",
+            "ref": "DayPlanningReason"
           }
         },
         {
@@ -458,7 +497,7 @@
           "name": "pickup_time",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "clock"
           }
         },
         {
@@ -479,7 +518,7 @@
           "name": "arrival_time",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "clock"
           }
         },
         {
@@ -500,14 +539,14 @@
           "name": "actual_arrival_time",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "clock"
           }
         },
         {
           "name": "actual_pickup_time",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "clock"
           }
         },
         {
@@ -549,7 +588,8 @@
         {
           "name": "key",
           "schema": {
-            "kind": "string"
+            "kind": "enum",
+            "ref": "StudentConsentKey"
           }
         },
         {
@@ -615,7 +655,7 @@
           "name": "birthday",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "date"
           }
         },
         {
@@ -697,7 +737,8 @@
           "name": "pickup_status",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "enum",
+            "ref": "PickupStatus"
           }
         },
         {
@@ -714,7 +755,7 @@
           "name": "pickup_time",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "clock"
           }
         },
         {
@@ -735,7 +776,7 @@
           "name": "arrival_time",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "clock"
           }
         },
         {
@@ -756,14 +797,14 @@
           "name": "actual_arrival_time",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "clock"
           }
         },
         {
           "name": "actual_pickup_time",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "clock"
           }
         },
         {
@@ -901,7 +942,8 @@
           "name": "day_planning_reason",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "enum",
+            "ref": "DayPlanningReason"
           }
         },
         {
@@ -979,7 +1021,7 @@
           "name": "care_ends_on",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "date"
           }
         },
         {
@@ -1141,7 +1183,7 @@
           "name": "birthday",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "date"
           }
         },
         {
@@ -1223,7 +1265,8 @@
           "name": "pickup_status",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "enum",
+            "ref": "PickupStatus"
           }
         },
         {
@@ -1240,7 +1283,7 @@
           "name": "pickup_time",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "clock"
           }
         },
         {
@@ -1261,7 +1304,7 @@
           "name": "arrival_time",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "clock"
           }
         },
         {
@@ -1282,14 +1325,14 @@
           "name": "actual_arrival_time",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "clock"
           }
         },
         {
           "name": "actual_pickup_time",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "clock"
           }
         },
         {
@@ -1427,7 +1470,8 @@
           "name": "day_planning_reason",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "enum",
+            "ref": "DayPlanningReason"
           }
         },
         {
@@ -1505,7 +1549,7 @@
           "name": "care_ends_on",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "date"
           }
         },
         {
@@ -1574,7 +1618,8 @@
         {
           "name": "role",
           "schema": {
-            "kind": "string"
+            "kind": "enum",
+            "ref": "SupervisorRole"
           }
         }
       ]

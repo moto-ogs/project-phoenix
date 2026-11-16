@@ -17,7 +17,9 @@ const describe = (schema) => schema.elem ? `${schema.kind}<${describe(schema.ele
 // A reader of the base decodes legacy_id as string or number, so the move to
 // a string identifier is the one kind change that does not break it.
 const sameKind = (before, after) => before.kind === after.kind
-  || (before.kind === "legacy_id" && after.kind === "id");
+  || (before.kind === "legacy_id" && after.kind === "id")
+  // Naming the form of a string narrows the type, not the wire.
+  || (before.kind === "string" && ["enum", "date", "clock"].includes(after.kind));
 
 export function breakingChanges(base, head) {
   const breaking = [];

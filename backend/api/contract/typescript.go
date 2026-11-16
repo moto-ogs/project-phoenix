@@ -249,7 +249,7 @@ func sortedKeys[V any](m map[string]V) []string {
 func tsType(s Schema) string {
 	var t string
 	switch s.Kind {
-	case KindString, KindDate, KindInstant, KindID, KindLegacyID, KindLaxID:
+	case KindString, KindDate, KindInstant, KindClock, KindID, KindLegacyID, KindLaxID:
 		t = "string"
 	case KindBool:
 		t = "boolean"
@@ -297,6 +297,8 @@ func (w *tsWriter) zod(s Schema) string {
 		z = helper("calendarDate")
 	case KindInstant:
 		z = helper("instant")
+	case KindClock:
+		z = helper("clockTime")
 	case KindEnum:
 		z = helper("openEnum") + "<" + s.Ref + ">()"
 	case KindArray:
