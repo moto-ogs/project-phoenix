@@ -351,9 +351,9 @@ function enrollmentAnswerAccessOf(
 ): "pending" | "granted" | "denied" {
   if (sessionLoading) return "pending";
   if (!mayAsk) return "denied";
-  if (options.data !== undefined) return "granted";
   if (options.error instanceof ApiError && options.error.status === 403)
     return "denied";
+  if (options.data !== undefined) return "granted";
   return options.error ? "granted" : "pending";
 }
 

@@ -14,7 +14,7 @@ import { PdfPreview, useObjectUrl } from "~/components/ui/pdf-preview";
 import { downloadBlob } from "~/lib/file-download";
 import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import type { BillingFile } from "~/lib/traeger-billing-api";
-import { useTraegerResource } from "./use-traeger-resource";
+import { useFreshTraegerResource } from "./use-traeger-resource";
 
 const OPEN_TAB_HINT = "Öffnet das Schreiben als PDF in einem neuen Tab.";
 const LOAD_FAILED_REASON =
@@ -35,7 +35,7 @@ export function LetterFileView({
   // nothing, so callers may pass it inline. The frame and the tab show the
   // file as a PDF whatever type the response named, so nothing else ever
   // renders on this origin.
-  const { data: file, error } = useTraegerResource(
+  const { data: file, error } = useFreshTraegerResource(
     fileKey ? traegerBillingRunKeys.letterFile(fileKey) : null,
     async () => {
       const next = await load();

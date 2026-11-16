@@ -10,7 +10,7 @@ import { formatSignedDuration } from "~/components/staff/staff-time-views";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiLoadError } from "~/contexts/ToastContext";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR } from "~/lib/swr";
 import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import {
   staffAbsenceService,
@@ -36,7 +36,7 @@ export function useCompTimePreview({
   error: unknown;
   reload: () => void;
 } {
-  const { data, error, mutate } = useSWRAuth(
+  const { data, error, mutate, fresh } = useFreshSWR(
     enabled && dateStart && dateEnd
       ? staffAbsenceKeys.compTimePreview(staffId, dateStart, dateEnd, halfDay)
       : null,
@@ -53,8 +53,8 @@ export function useCompTimePreview({
   const reload = useCallback(() => void mutate(), [mutate]);
   // Rein informativ: der Block zeigt den Ladefehler (das Panel), die Buchung
   // selbst bleibt möglich und meldet ihre eigenen Fehler. Ein gescheitertes
-  // Auffrischen lässt die gezeigte Vorschau stehen.
-  const failure = data === undefined ? error : undefined;
+  // Auffrischen zeigt keine alte Projektion als Grundlage einer Bestätigung.
+  const failure = fresh && data === undefined ? error : undefined;
   const active = enabled && Boolean(dateStart && dateEnd);
   return {
     preview: data ?? null,

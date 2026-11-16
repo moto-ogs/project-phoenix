@@ -1,4 +1,7 @@
+import { useSWRAuth } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -116,6 +119,68 @@ async function fillAccount() {
 
 describe("ParentSepaMandateView", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("never restores a refused mandate after a later server failure", async () => {
+    mocks.fetch.mockResolvedValue(granted);
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const { mutate } = useSWRAuth(
+        parentInboxKeys.sepaMandate("4", "75"),
+        () => mocks.fetch(),
+      );
+      reload = () => mutate();
+      return null;
+    }
+    render(
+      <ParentResourceTestProvider>
+        <ToastProvider>
+          <ParentSepaMandateView organizationId="4" contractId="75" />
+          <Probe />
+        </ToastProvider>
+      </ParentResourceTestProvider>,
+    );
+    expect(await screen.findByText(granted.mandate!.ibanMasked)).toBeVisible();
+    mocks.fetch.mockRejectedValueOnce(
+      new ApiError("gone", 404, {
+        code: "parent_billing.parent_document_not_found",
+      }),
+    );
+    await act(async () => {
+      await reload();
+    });
+    expect(
+      await screen.findByText(
+        catalogText(
+          "parent_billing.parent_document_not_found",
+          "das Lastschrift-Mandat",
+        ),
+      ),
+    ).toBeVisible();
+    mocks.fetch.mockRejectedValueOnce(new ApiError("down", 500));
+    await act(async () => {
+      await reload();
+    });
+    // Anker: der Ladefehler bleibt sichtbar, keine Finanzdaten ohne erfolgreichen Abruf.
+    expect(
+      screen.getByText(
+        catalogText(
+          "parent_billing.parent_document_not_found",
+          "das Lastschrift-Mandat",
+        ),
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(granted.mandate!.ibanMasked),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Mandat widerrufen" }),
+    ).not.toBeInTheDocument();
+    mocks.fetch.mockResolvedValue(granted);
+    await act(async () => {
+      await reload();
+    });
+    expect(await screen.findByText(granted.mandate!.ibanMasked)).toBeVisible();
+  });
 
   it("only points to paper while the Träger has the switch off", async () => {
     mocks.fetch.mockResolvedValue({ ...open, enabled: false });

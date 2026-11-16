@@ -79,6 +79,41 @@ describe("useFreshSWR", () => {
     await waitFor(() => expect(result.current.data).toBe("neu"));
   });
 
+  it("never exposes A as fresh after A to B to A before B settles", async () => {
+    const a = deferred<string>();
+    const b = deferred<string>();
+    const again = deferred<string>();
+    const fetchA = vi
+      .fn()
+      .mockReturnValueOnce(a.promise)
+      .mockReturnValue(again.promise);
+    const seen: { fresh: boolean; data: string | undefined }[] = [];
+    const { result, rerender } = renderHook(
+      ({ key }) => {
+        const read = useFreshSWR(
+          key,
+          key === "fresh-a" ? fetchA : () => b.promise,
+        );
+        seen.push({ fresh: read.fresh, data: read.data });
+        return read;
+      },
+      { initialProps: { key: "fresh-a" } },
+    );
+    await act(async () => a.resolve("old A"));
+    await waitFor(() => expect(result.current.data).toBe("old A"));
+    rerender({ key: "fresh-b" });
+    seen.length = 0;
+    rerender({ key: "fresh-a" });
+    expect(seen.every((read) => !read.fresh && read.data === undefined)).toBe(
+      true,
+    );
+    await act(async () => {
+      b.resolve("B");
+      again.resolve("fresh A");
+    });
+    await waitFor(() => expect(result.current.data).toBe("fresh A"));
+  });
+
   it("ends loading with the error when the opening's request fails", async () => {
     const answer = deferred<string>();
     const { result } = renderHook(() =>

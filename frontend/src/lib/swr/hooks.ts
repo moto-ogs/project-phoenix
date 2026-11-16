@@ -556,11 +556,17 @@ export function useFreshSWR<T, E = Error>(
     revalidateOnMount: true,
     dedupingInterval: 0,
   });
+  const [openingKey, setOpeningKey] = useState(key);
+  const sameOpening = openingKey === key;
   const [answeredKey, setAnsweredKey] = useState<string | null>(null);
   // Seen in flight first: before SWR starts the request, a cached answer
   // looks settled.
   const [flightKey, setFlightKey] = useState<string | null>(null);
-  if (key === null) {
+  if (!sameOpening) {
+    setOpeningKey(key);
+    setAnsweredKey(null);
+    setFlightKey(null);
+  } else if (key === null) {
     if (answeredKey !== null) setAnsweredKey(null);
     if (flightKey !== null) setFlightKey(null);
   } else if (read.isValidating) {
@@ -569,7 +575,8 @@ export function useFreshSWR<T, E = Error>(
   } else if (flightKey === key && answeredKey !== key) {
     setAnsweredKey(key);
   }
-  const fresh = key !== null && answeredKey === key && !read.isValidating;
+  const fresh =
+    sameOpening && key !== null && answeredKey === key && !read.isValidating;
   return {
     ...read,
     // SWR keeps the earlier answer next to a failure; this opening has none.

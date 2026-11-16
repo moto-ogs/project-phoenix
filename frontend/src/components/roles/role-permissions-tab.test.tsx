@@ -118,6 +118,61 @@ describe("RolePermissionsTab", () => {
     mockGetRolePermissions.mockResolvedValue([allPermissions[0]!]);
   });
 
+  it.each([true, false])(
+    "waits for fresh permissions when entering editing (remount=%s)",
+    async (remount) => {
+      const view = (show: boolean, editing = true) =>
+        show ? (
+          <RolePermissionsTab
+            role={role}
+            editing={editing}
+            onSaved={onSaved}
+            onCancelEdit={onCancelEdit}
+          />
+        ) : (
+          <></>
+        );
+      const { rerender } = render(view(true, remount));
+      if (remount) {
+        expect(
+          await screen.findByRole("checkbox", { name: /students:read/ }),
+        ).toBeChecked();
+        rerender(view(false));
+      } else {
+        expect(
+          await screen.findByText("1 Berechtigung zugewiesen."),
+        ).toBeVisible();
+      }
+      const fresh = deferred<Permission[]>();
+      mockGetRolePermissions.mockReturnValueOnce(fresh.promise);
+      rerender(view(true));
+      // Anker: dieses Öffnen wartet auf seinen eigenen Abruf.
+      expect(
+        screen.getByText("Berechtigungen werden geladen..."),
+      ).toBeVisible();
+      expect(
+        screen.queryByRole("checkbox", { name: /students:read/ }),
+      ).not.toBeInTheDocument();
+      await act(async () =>
+        fresh.resolve([allPermissions[0]!, allPermissions[2]!]),
+      );
+      expect(
+        await screen.findByRole("checkbox", { name: /rooms:read/ }),
+      ).toBeChecked();
+      fireEvent.click(
+        screen.getByRole("checkbox", { name: /students:update/ }),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      await waitFor(() =>
+        expect(mockReplaceRolePermissions).toHaveBeenCalledWith("1", [
+          "p1",
+          "p2",
+          "p3",
+        ]),
+      );
+    },
+  );
+
   it("lists the assigned permissions by resource in the view state", async () => {
     render(
       <RolePermissionsTab

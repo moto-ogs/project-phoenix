@@ -36,6 +36,8 @@ import {
   updateGuardianContact,
   updateGuardianRelationship,
 } from "~/lib/parent-api";
+import { useRefusalGuard } from "~/components/traeger/use-traeger-confirmed-resource";
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { ApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
@@ -137,15 +139,29 @@ export default function GuardiansPanel({
   const t = useCareTermTranslations("parentChildDetail");
   const visibilityT = useCareTermTranslations("parentVisibility");
   const tPermission = useCareTermTranslations("parentPickupPermission");
+  const guardiansGuard = useRefusalGuard(parentKeys.guardians(studentId));
+  const accountsGuard = useRefusalGuard(parentKeys.relatedAccounts(studentId));
   const guardiansResource = useSWRAuth(
     parentKeys.guardians(studentId),
     () => listChildGuardians(studentId),
-    PARENT_RESOURCE_OPTIONS,
+    {
+      ...PARENT_RESOURCE_OPTIONS,
+      onSuccess: guardiansGuard.callbacks.onSuccess,
+      onError: (error) => {
+        if (isAccessRefusal(error)) guardiansGuard.callbacks.onError(error);
+      },
+    },
   );
   const accountsResource = useSWRAuth(
     parentKeys.relatedAccounts(studentId),
     () => listRelatedAccounts(studentId),
-    PARENT_RESOURCE_OPTIONS,
+    {
+      ...PARENT_RESOURCE_OPTIONS,
+      onSuccess: accountsGuard.callbacks.onSuccess,
+      onError: (error) => {
+        if (isAccessRefusal(error)) accountsGuard.callbacks.onError(error);
+      },
+    },
   );
   // Offene Abholerlaubnis-Anfragen je Kontakt (#4780). Ohne die Liste fehlt
   // nur der Hinweis „Wartet auf die OGS“; die Kontakte bleiben vollständig.
@@ -156,11 +172,14 @@ export default function GuardiansPanel({
   );
   // Contacts and accounts project each other's data and actions: a refusal
   // of either withdraws both.
-  const accessRefused = [guardiansResource.error, accountsResource.error].some(
-    (error) =>
-      error instanceof ApiError &&
-      (error.status === 401 || error.status === 403),
-  );
+  const accessRefused =
+    guardiansGuard.refusal !== undefined ||
+    accountsGuard.refusal !== undefined ||
+    [guardiansResource.error, accountsResource.error].some(
+      (error) =>
+        error instanceof ApiError &&
+        (error.status === 401 || error.status === 403),
+    );
   const guardians: ChildGuardian[] = accessRefused
     ? []
     : (guardiansResource.data ?? []);
@@ -191,9 +210,11 @@ export default function GuardiansPanel({
   ) => ({
     data: accessRefused ? undefined : resource.data,
     error:
-      resource.data === undefined && resource.isValidating
+      guardiansGuard.refusal ??
+      accountsGuard.refusal ??
+      (resource.data === undefined && resource.isValidating
         ? undefined
-        : resource.error,
+        : resource.error),
   });
   const { error: guardiansLoadError } = useSwrResourceLoadError(
     [presented(guardiansResource)],
@@ -230,6 +251,37 @@ export default function GuardiansPanel({
     setUpgradePrompt(null);
     setConfirmRemoveId(null);
   }, [accessRefused]);
+
+  const { data: cachedGuardians, mutate: clearGuardians } = guardiansResource;
+  const { data: cachedAccounts, mutate: clearAccounts } = accountsResource;
+  const { data: cachedRequests, mutate: clearRequests } = requestsResource;
+  const wasRefused = useRef(false);
+  useEffect(() => {
+    if (!accessRefused) {
+      if (wasRefused.current) {
+        if (cachedGuardians === undefined) void clearGuardians();
+        if (cachedAccounts === undefined) void clearAccounts();
+        if (cachedRequests === undefined) void clearRequests();
+      }
+      wasRefused.current = false;
+      return;
+    }
+    wasRefused.current = true;
+    if (cachedGuardians !== undefined)
+      void clearGuardians(undefined, { revalidate: false });
+    if (cachedAccounts !== undefined)
+      void clearAccounts(undefined, { revalidate: false });
+    if (cachedRequests !== undefined)
+      void clearRequests(undefined, { revalidate: false });
+  }, [
+    accessRefused,
+    cachedGuardians,
+    cachedAccounts,
+    cachedRequests,
+    clearGuardians,
+    clearAccounts,
+    clearRequests,
+  ]);
 
   // The reload after a confirmed write (#6652) keeps the shown lists while it
   // runs; a failed or refused list rejects, so the hook reports it.

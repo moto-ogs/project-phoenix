@@ -18,7 +18,7 @@ import type { Permission, Role } from "~/lib/auth-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR, useSWRAuth } from "~/lib/swr";
 import { staffAccessKeys } from "~/lib/swr/staff-keys";
 import {
   formatPermissionDisplay,
@@ -96,7 +96,9 @@ export function RolePermissionsTab({
   onCancelEdit,
 }: RolePermissionsTabProps) {
   const { success: toastSuccess } = useToast();
-  const assignedRead = useSWRAuth(
+  const wasEditing = useRef(editing);
+  const enteringEdit = editing && !wasEditing.current;
+  const assignedRead = useFreshSWR(
     staffAccessKeys.rolePermissions(role.id),
     () => authService.getRolePermissions(role.id),
     {
@@ -137,7 +139,8 @@ export function RolePermissionsTab({
   );
   const loadFailed = failure !== undefined;
   const loading =
-    !loadFailed && (!assigned || (editing && catalogRead.data === undefined));
+    !loadFailed &&
+    (enteringEdit || !assigned || (editing && catalogRead.data === undefined));
   // Der Entwurf: null heißt unverändert, also der gespeicherte Stand. Ein
   // Klick setzt ihn auf Grundlage des gerade gezeigten Stands (#3346).
   const [draft, setDraft] = useState<AssignedMap | null>(null);
@@ -185,7 +188,6 @@ export function RolePermissionsTab({
   // Beim Umschalten zwischen Ansicht und Bearbeiten liest der Reiter den
   // gespeicherten Stand neu; der Entwurf beginnt dort, ein Abbruch wirft die
   // Kästchen zurück.
-  const wasEditing = useRef(editing);
   useEffect(() => {
     if (wasEditing.current === editing) return;
     wasEditing.current = editing;

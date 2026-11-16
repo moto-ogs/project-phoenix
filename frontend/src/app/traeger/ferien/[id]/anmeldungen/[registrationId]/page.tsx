@@ -46,6 +46,9 @@ import {
 import { RequestMailStatus } from "~/components/enrollment/request-mail-status";
 import { useHolidayPeriodBillingHref } from "~/components/traeger/use-holiday-period-billing-href";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
+import { useRefusalGuard } from "~/components/traeger/use-traeger-confirmed-resource";
+import { useSWRRequestGuard } from "~/lib/swr/hooks";
+import { ApiError } from "~/lib/api-error";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { metadataLoadError } from "~/components/traeger/metadata-load-error";
 import { DataField, DataGrid } from "~/components/ui/data-field";
@@ -278,35 +281,56 @@ export default function TraegerHolidayRegistrationPage() {
   const { mutate: mutateHealth } = healthReader;
   const { mutate: mutateConfirmation } = confirmationReader;
   const { mutate: mutateFamily } = familyReader;
+  const registrationGuard = useRefusalGuard(
+    ids ? traegerKeys.holidayRegistration(periodId, registrationId) : null,
+  );
+  const beginRegistrationRead = useSWRRequestGuard();
   const fetchRegistration = useCallback(async () => {
-    const [
-      loadedRegistration,
-      loadedContribution,
-      loadedHealth,
-      loadedConfirmation,
-      loadedFamilyDebtorNumber,
-    ] = await Promise.all([
-      fetchHolidayRegistration(periodId, registrationId),
-      fetchHolidayContribution(periodId, registrationId),
-      canSeeHealth
-        ? fetchHolidayRegistrationHealth(periodId, registrationId)
-        : Promise.resolve(null),
-      fetchHolidayConfirmationSettings(),
-      fetchHolidayFamilyDebtorNumber(periodId, registrationId),
-    ]);
-    const fresh = { revalidate: false } as const;
-    latestContribution.current++;
-    setPreviewPending(false);
-    setPreview(null);
-    setChoice(null);
-    await Promise.all([
-      mutateRegistration(loadedRegistration, fresh),
-      mutateContribution(loadedContribution, fresh),
-      loadedHealth ? mutateHealth(loadedHealth, fresh) : undefined,
-      mutateConfirmation(loadedConfirmation, fresh),
-      mutateFamily(loadedFamilyDebtorNumber, fresh),
-    ]);
+    const complete = beginRegistrationRead(registrationGuard.key);
+    try {
+      const [
+        loadedRegistration,
+        loadedContribution,
+        loadedHealth,
+        loadedConfirmation,
+        loadedFamilyDebtorNumber,
+      ] = await Promise.all([
+        fetchHolidayRegistration(periodId, registrationId),
+        fetchHolidayContribution(periodId, registrationId),
+        canSeeHealth
+          ? fetchHolidayRegistrationHealth(periodId, registrationId)
+          : Promise.resolve(null),
+        fetchHolidayConfirmationSettings(),
+        fetchHolidayFamilyDebtorNumber(periodId, registrationId),
+      ]);
+      const fresh = { revalidate: false } as const;
+      latestContribution.current++;
+      setPreviewPending(false);
+      setPreview(null);
+      setChoice(null);
+      await Promise.all([
+        mutateRegistration(loadedRegistration, fresh),
+        mutateContribution(loadedContribution, fresh),
+        loadedHealth ? mutateHealth(loadedHealth, fresh) : undefined,
+        mutateConfirmation(loadedConfirmation, fresh),
+        mutateFamily(loadedFamilyDebtorNumber, fresh),
+      ]);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        complete(() => {
+          registrationGuard.callbacks.onError(error);
+          void mutateRegistration(undefined, { revalidate: false });
+          void mutateContribution(undefined, { revalidate: false });
+          void mutateHealth(undefined, { revalidate: false });
+          void mutateFamily(undefined, { revalidate: false });
+        });
+      }
+      throw error;
+    }
   }, [
+    beginRegistrationRead,
+    registrationGuard.key,
+    registrationGuard.callbacks,
     periodId,
     registrationId,
     canSeeHealth,

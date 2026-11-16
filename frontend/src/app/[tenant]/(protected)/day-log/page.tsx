@@ -66,6 +66,7 @@ import {
   openBlobForPrint,
 } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
+import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -299,18 +300,26 @@ export default function DayLogPage() {
   const now = useMinuteClock();
   const todayISO = berlinTodayISO(now);
   const [dateISO, setDateISO] = useState<string>(() => berlinTodayISO());
+  const discard = useDiscardRefusedEntity();
+  const key = tenantStudentKeys.dayLog(dateISO);
   const {
     data,
     error: loadFailure,
     mutate,
-  } = useSWRAuth(
-    tenantStudentKeys.dayLog(dateISO),
-    () => fetchDayLog(dateISO),
-    { keepPreviousData: false },
-  );
+  } = useSWRAuth(key, () => fetchDayLog(dateISO), {
+    keepPreviousData: false,
+    onError: (error) => {
+      discard(error, {
+        codes: ["students.day_log_disabled", "students.day_log_no_groups"],
+        matches: (candidate) => candidate === key,
+        refusedKey: key,
+      });
+    },
+  });
   const loading = !data && !loadFailure;
-  const state: DayLogState | null =
-    !data && loadFailure ? dayLogState(loadFailure) : null;
+  const state: DayLogState | null = loadFailure
+    ? dayLogState(loadFailure)
+    : null;
   // Ladefehler stehen im Gerüst, mit Wiederholen (#2517).
   const load = useSwrResourceLoadError(
     [{ data, error: state ? undefined : loadFailure }],

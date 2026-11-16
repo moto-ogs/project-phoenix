@@ -331,6 +331,34 @@ describe("TraegerHolidayRegistrationPage", () => {
         },
       );
 
+      it("withdraws deleted registration and health data after a post-write 404", async () => {
+        sessionPermissions.current = [
+          "traeger_enrollment:manage",
+          "traeger_health:read",
+        ];
+        mockContribution.mockResolvedValue({
+          ...HOLIDAY_CONTRIBUTION,
+          siblings: SIBLINGS,
+        });
+        mockSplit.mockResolvedValue(undefined);
+        renderPage();
+        expect(await screen.findByText("Erdnüsse")).toBeVisible();
+        mockRegistration.mockRejectedValueOnce(
+          new ApiError("gone", 404, {
+            code: "enrollment.holiday_registration_not_found",
+          }),
+        );
+        await confirmSplit();
+        // Anker: die gespeicherte Trennung erhält einen sichtbaren Nachladefehler.
+        expect(
+          await screen.findByText(
+            `${catalogText("enrollment.holiday_registration_not_found", "die Anzeige der Anmeldung")} ${SAVED_BUT_STALE_SUFFIX}`,
+          ),
+        ).toBeVisible();
+        expect(screen.queryByText("Erdnüsse")).not.toBeInTheDocument();
+        expect(screen.queryByText("eva@example.org")).not.toBeInTheDocument();
+      });
+
       it("keeps a split registration split when the reload fails", async () => {
         mockContribution.mockResolvedValue({
           ...HOLIDAY_CONTRIBUTION,

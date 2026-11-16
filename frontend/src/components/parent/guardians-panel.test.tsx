@@ -1,3 +1,5 @@
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import "@testing-library/jest-dom/vitest";
 import { ApiError } from "~/lib/api-error";
 import {
@@ -135,6 +137,71 @@ describe("GuardiansPanel", () => {
       async (_studentId, input) =>
         `Ich erlaube, dass ${input.personName} das Kind Felix Schneider ${input.weekdays?.length ? "dienstags" : "an allen Tagen"} von der OGS abholt.`,
     );
+  });
+
+  it("keeps refused contacts and accounts withdrawn after a later server failure", async () => {
+    mocks.listRelatedAccounts.mockResolvedValue([
+      {
+        guardian_profile_id: "8",
+        first_name: "Eva",
+        last_name: "Elternkonto",
+        email: "eva@example.test",
+        relationship_type: "parent",
+        is_primary: false,
+        status: "active",
+        is_self: false,
+      },
+    ] satisfies RelatedAccount[]);
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const { mutate } = useSWRAuth(parentKeys.guardians("42"), () =>
+        mocks.listChildGuardians(),
+      );
+      reload = () => mutate();
+      return null;
+    }
+    render(
+      <>
+        <GuardiansPanel studentId="42" canInvite canRemove />
+        <Probe />
+      </>,
+    );
+    expect(await screen.findByText("Helga Schneider")).toBeVisible();
+    expect(await screen.findByText("Eva Elternkonto")).toBeVisible();
+    mocks.listChildGuardians.mockRejectedValueOnce(
+      new ApiError("forbidden", 403, {
+        code: "care.guardian_permission_denied",
+      }),
+    );
+    await act(async () => {
+      await reload();
+    });
+    await screen.findByText(
+      catalogText("care.guardian_permission_denied", "die Liste der Kontakte"),
+    );
+    mocks.listChildGuardians.mockRejectedValueOnce(new ApiError("down", 500));
+    await act(async () => {
+      await reload();
+    });
+    // Anker: der Fehler bleibt sichtbar, Kontakt und Aktionen bleiben entzogen.
+    expect(
+      screen.getByText(
+        catalogText(
+          "care.guardian_permission_denied",
+          "die Liste der Kontakte",
+        ),
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("Helga Schneider")).not.toBeInTheDocument();
+    expect(screen.queryByText("Eva Elternkonto")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Bearbeiten" }),
+    ).not.toBeInTheDocument();
+    mocks.listChildGuardians.mockResolvedValue([editableGuardian]);
+    await act(async () => {
+      await reload();
+    });
+    expect(await screen.findByText("Helga Schneider")).toBeVisible();
   });
 
   it("preserves phone labels and the existing primary phone on contact save", async () => {

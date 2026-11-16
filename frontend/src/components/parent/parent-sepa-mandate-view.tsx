@@ -9,8 +9,10 @@
 
 import { FileText } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useRefusalGuard } from "~/components/traeger/use-traeger-confirmed-resource";
+import { useSWRRequestGuard } from "~/lib/swr/hooks";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ConsentCheckbox } from "~/components/ui/consent-checkbox";
@@ -85,14 +87,28 @@ export function ParentSepaMandateView({
   contractId,
 }: Readonly<ContractKey>) {
   const t = useTranslations("parentSepaMandate");
+  const cacheKey = parentInboxKeys.sepaMandate(organizationId, contractId);
+  const guard = useRefusalGuard(cacheKey);
+  const beginRead = useSWRRequestGuard();
   const resource = useSWRAuth(
-    parentInboxKeys.sepaMandate(organizationId, contractId),
+    cacheKey,
     () => fetchSepaMandate(organizationId, contractId),
-    PARENT_RESOURCE_OPTIONS,
+    {
+      ...PARENT_RESOURCE_OPTIONS,
+      onSuccess: guard.callbacks.onSuccess,
+      onError: (error) => {
+        if (isMandateRefusal(error)) guard.callbacks.onError(error);
+      },
+    },
   );
   const { mutate } = resource;
   // Only an access refusal discards the shown mandate (#6652).
-  const refused = isMandateRefusal(resource.error);
+  const refused =
+    guard.refusal !== undefined || isMandateRefusal(resource.error);
+  useEffect(() => {
+    if (refused && resource.data !== undefined)
+      void mutate(undefined, { revalidate: false });
+  }, [refused, resource.data, mutate]);
   const view = refused ? null : (resource.data ?? null);
   // Granting and revoking swap the card the person acted in (#7111): the
   // heading of the new one takes the focus. Loading is no step.
@@ -104,7 +120,7 @@ export function ParentSepaMandateView({
       : null,
   );
   const { error: loadError } = useSwrResourceLoadError(
-    [refused ? { error: resource.error } : resource],
+    [refused ? { error: guard.refusal ?? resource.error } : resource],
     t("errorObject"),
     () => mutate(),
   );
@@ -120,16 +136,26 @@ export function ParentSepaMandateView({
   // Rejects on failure: after the revocation the card shows it as a reload
   // of a saved change; a refusal reaches the reader and discards the mandate.
   const fetchView = useCallback(async () => {
+    const complete = beginRead(cacheKey);
     try {
       await mutate(await fetchSepaMandate(organizationId, contractId), {
         revalidate: false,
       });
       void invalidateFamily(parentInboxKeys.documents());
     } catch (error) {
-      if (isMandateRefusal(error)) void mutate();
+      if (isMandateRefusal(error))
+        complete(() => guard.callbacks.onError(error));
       throw error;
     }
-  }, [organizationId, contractId, mutate, invalidateFamily]);
+  }, [
+    organizationId,
+    contractId,
+    mutate,
+    invalidateFamily,
+    beginRead,
+    cacheKey,
+    guard.callbacks,
+  ]);
   const afterRevoke = useRefreshAfterWrite(t("reloadObject"), fetchView, {
     savedSuffix: t("savedButStale"),
   });
@@ -138,7 +164,7 @@ export function ParentSepaMandateView({
   if ((loadError ?? afterRevoke.error) && !view) {
     return (
       <SectionCard concept={billingConcept} title={t("title")}>
-        <LoadErrorAlert error={loadError ?? afterRevoke.error} />
+        <LoadErrorAlert error={afterRevoke.error ?? loadError} />
       </SectionCard>
     );
   }

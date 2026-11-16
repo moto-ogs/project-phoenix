@@ -1,3 +1,6 @@
+import { useSWRAuth } from "~/lib/swr";
+import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
+import { fetchEnrollmentAnswerFilters } from "~/lib/student-api";
 /**
  * Behaviour tests for StudentSearchPage behind one stubbed mock header. Each
  * describe is a former test file and keeps its name and tests:
@@ -536,6 +539,53 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
     // Anker: die ungefilterte Kinderliste ist geladen.
     expect(await screen.findByTestId("student-card-7")).toBeInTheDocument();
     expect(screen.queryByText(/Seepferdchen/)).not.toBeInTheDocument();
+  });
+
+  it("drops an enrollment filter after cached options are refused", async () => {
+    mockUseSession.mockImplementation(() => ({
+      data: { user: { id: "7", token: "t", permissions: ["users:read"] } },
+      status: "authenticated",
+    }));
+    currentSearch = new URLSearchParams({
+      enrollment_answer: "seepferdchen=true",
+    });
+    let reload!: () => Promise<unknown>;
+    function Probe() {
+      const { mutate } = useSWRAuth(
+        tenantListKeys.enrollmentAnswerFilters(),
+        fetchEnrollmentAnswerFilters,
+      );
+      reload = () => mutate();
+      return null;
+    }
+    render(
+      <>
+        <StudentSearchPage />
+        <Probe />
+      </>,
+      { wrapper: FreshSwrCache },
+    );
+    await waitFor(() =>
+      expect(
+        mockGetStudents.mock.calls.some(
+          (call) =>
+            (call[0] as Record<string, unknown>).enrollmentAnswer ===
+            "seepferdchen=true",
+        ),
+      ).toBe(true),
+    );
+    mockGetStudents.mockClear();
+    mockFetchAnswerFilters.mockRejectedValueOnce(new ApiError("denied", 403));
+    await act(async () => {
+      await reload();
+    });
+    await waitFor(() => expect(mockGetStudents).toHaveBeenCalled());
+    expect(
+      mockGetStudents.mock.calls.every(
+        (call) =>
+          (call[0] as Record<string, unknown>).enrollmentAnswer === undefined,
+      ),
+    ).toBe(true);
   });
 
   it("holds the list and the export until the server has answered for a saved registration answer (#6954)", async () => {
