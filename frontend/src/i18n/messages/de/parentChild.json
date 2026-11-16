@@ -5,6 +5,10 @@
     "title": "Betreuung beendet",
     "body": "Ihr Kind wird in dieser {careTerm} nicht mehr betreut. Alles Bisherige können Sie weiter ansehen. Neue Meldungen sind nicht mehr möglich."
   },
+  "withoutCarePlace": {
+    "title": "Kein Platz in der {careTerm}",
+    "body": "Ihr Kind hat keinen Platz in der {careTerm}. Abholung, Betreuungszeiten, Essen und Nachrichten an die {careTerm} gibt es deshalb hier nicht."
+  },
   "notFound": "Zu dieser Adresse gibt es kein Kind in Ihrem Konto. Bitte wählen Sie Ihr Kind in der Übersicht.",
   "noChildren": "Mit Ihrem Konto ist noch kein Kind verknüpft. Die {careTerm} Ihrer Schule kann das einrichten.",
   "sections": {

@@ -30,16 +30,43 @@ func (s *Service) ChildFeatures(ctx context.Context, accountID, studentID int64)
 	if child.CareEnded {
 		return ChildFeatureFlags{
 			CareEnded:               true,
+			WithoutCarePlace:        child.WithoutCarePlace,
 			SickRequiresApproval:    settings.sickApproval,
 			ExcusedRequiresApproval: settings.excusedApproval,
-			MealPlanEnabled:         settings.mealPlan,
+			MealPlanEnabled:         settings.mealPlan && !child.WithoutCarePlace,
 			MealRegistrationEnabled: false,
 			NewsEnabled:             settings.news,
 			CareFacilityTerm:        settings.careTerm,
 		}, nil
 	}
 
-	return settings.activeChildFlags(child, s.hasOpenChangeRequest(ctx, child.TenantID, accountID, studentID)), nil
+	flags := settings.activeChildFlags(child, s.hasOpenChangeRequest(ctx, child.TenantID, accountID, studentID))
+	if child.WithoutCarePlace {
+		return withoutCarePlaceFlags(flags), nil
+	}
+	return flags, nil
+}
+
+// withoutCarePlaceFlags switches off every OGS function of a child without an
+// OGS place (#4803, ADR 0282): pickup, meals and the chat with the OGS team.
+// The care times, offerings and courses have no flag of their own; their
+// routes refuse such a child and the portal hides them on WithoutCarePlace.
+// The school's functions stay as the relationship grants them: sick and
+// excused notes, the parent-teacher conference, master data, guardians and
+// related accounts, letters and news. WithoutCarePlace travels along so the
+// portal can say why the OGS blocks are missing.
+func withoutCarePlaceFlags(flags ChildFeatureFlags) ChildFeatureFlags {
+	flags.WithoutCarePlace = true
+	flags.NotesEnabled = false
+	flags.PickupChangeEnabled = false
+	flags.PickupChangeModeEnabled = false
+	flags.PickupChangeCutoffTime = ""
+	flags.PickupChangeTodayClosed = false
+	flags.PickupChangeCareDayEnded = false
+	flags.PickupManageAllowed = false
+	flags.MealPlanEnabled = false
+	flags.MealRegistrationEnabled = false
+	return flags
 }
 
 // activeChildFlags combines the tenant settings with the guardian's

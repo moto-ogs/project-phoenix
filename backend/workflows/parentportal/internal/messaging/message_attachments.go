@@ -120,7 +120,7 @@ func (s *Service) attachmentWriteChild(ctx context.Context, accountID, studentID
 	if err != nil {
 		return nil, err
 	}
-	if err := child.RequireCareRunning(); err != nil {
+	if err := child.RequireOGSCareRunning(); err != nil {
 		return nil, err
 	}
 	if !s.MessagingEnabled(ctx, child.TenantID) {
@@ -136,7 +136,7 @@ func (s *Service) OpenChildMessageAttachment(ctx context.Context, accountID, stu
 	if s.MessageAttachments == nil {
 		return nil, errors.New("parent: message attachments are not configured")
 	}
-	child, err := s.resolveOwnedChild(ctx, accountID, studentID)
+	child, err := s.resolveChatChild(ctx, accountID, studentID)
 	if err != nil {
 		return nil, err
 	}

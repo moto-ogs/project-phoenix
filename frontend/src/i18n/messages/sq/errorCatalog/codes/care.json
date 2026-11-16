@@ -15,6 +15,7 @@
   "care_request_field_disabled": "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
   "child_care_ended": "Kujdesi për këtë fëmijë ka përfunduar. Ndryshimet nuk janë më të mundshme. Për pyetje kontaktoni OGS-në.",
   "child_not_linked": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
+  "child_without_care_place": "Fëmija juaj nuk ka vend në OGS. Prandaj ky funksion nuk është i disponueshëm për fëmijën tuaj.",
   "course_already_booked": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "course_request_invalid": "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
   "course_request_not_own": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",

@@ -32,6 +32,17 @@ var trackBRequestableFields = map[string]bool{
 	DataChangeTargetDeparture + "/allowed_departure_modes": true,
 }
 
+// requireDepartureCarePlace refuses a departure change for a child without an
+// OGS place (#4803); the other Track B fields stay requestable.
+func requireDepartureCarePlace(child *Child, changes []MasterDataFieldChange) error {
+	for _, c := range changes {
+		if c.Target == DataChangeTargetDeparture {
+			return child.RequireCarePlace()
+		}
+	}
+	return nil
+}
+
 // SubmitMasterDataChangeRequest records one or more pending Track B change
 // requests for staff approval. Fields whose proposed value equals the current
 // value are skipped; a field with an already-pending request is rejected.
@@ -52,6 +63,11 @@ func (s *Service) SubmitMasterDataChangeRequest(ctx context.Context, accountID, 
 	// A child whose care at this school has ended keeps read access to what
 	// happened, but nothing new can be submitted for them (#2487).
 	if err := child.RequireCareRunning(); err != nil {
+		return nil, err
+	}
+	// How the child leaves the OGS is an OGS function (#4803): a child
+	// without an OGS place keeps its name, birthday and class requests.
+	if err := requireDepartureCarePlace(child, changes); err != nil {
 		return nil, err
 	}
 

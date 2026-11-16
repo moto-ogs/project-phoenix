@@ -61,7 +61,11 @@ type ChildFeatureFlags struct {
 	// capability: when it is true every write flag below is false, and the
 	// portal shows a read-only profile with one sentence explaining why
 	// instead of buttons that would all fail the same way.
-	CareEnded          bool
+	CareEnded bool
+	// WithoutCarePlace says the child belongs to its class but has no OGS
+	// place (#4803, ADR 0282). It is STATE, not a capability: every OGS flag
+	// is false, the school's flags stay as the relationship grants them.
+	WithoutCarePlace   bool
 	SickNoteEnabled    bool
 	ExcusedNoteEnabled bool
 	// SickRequiresApproval is true when a Krankmeldung stays pending until the

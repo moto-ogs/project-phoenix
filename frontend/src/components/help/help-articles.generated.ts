@@ -6105,6 +6105,7 @@ export const parentChildOverviewTopic =
         "Ist Ihr Kind heute abgemeldet, steht dort `Heute abgemeldet, keine Abholung`.",
         "Wurde die Abholzeit für heute geändert, steht die Zeit mit dem Hinweis `geändert für heute`.",
         "Ist für heute nichts eingetragen, steht dort `Für heute ist keine Abholung eingetragen`.",
+        "Hat Ihr Kind keinen Platz in der OGS, steht unter `Betreuung` der Hinweis `Kein Platz in der OGS`. Abholung, Betreuungszeiten und Essen fehlen dann. Krankmeldung, Elternsprechtag und Angaben bleiben.",
       ],
       troubleshootingDetails: [
         "Sie sehen kein Kind? Dann hat die OGS Ihren Zugang noch nicht freigegeben.",
@@ -6529,6 +6530,7 @@ export const parentFeatureMissingTopic =
       ],
       differences: [
         "Manche Dinge dürfen Sie nur ansehen, nicht ändern. Dann fehlt der Knopf, nicht der Bereich.",
+        "Hat Ihr Kind keinen Platz in der OGS, fehlen für dieses Kind Abholung, Betreuungszeiten, Essen und Nachrichten an die OGS. Krankmeldung, Elternbriefe und Elternsprechtag nutzen Sie wie gewohnt.",
       ],
       troubleshootingDetails: [
         "Das Ändern von Angaben ist deaktiviert? Schreiben Sie der OGS, was geändert werden soll.",

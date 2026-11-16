@@ -123,7 +123,7 @@ func (s *Service) suppressDisabledUnread(ctx context.Context, rows []*InboxThrea
 // the per-child query then runs inside that child's tenant tx. Unlike
 // GetChildConversation this does NOT mark the thread read.
 func (s *Service) ListChildThreads(ctx context.Context, accountID, studentID int64) ([]*InboxThread, error) {
-	child, err := s.resolveOwnedChild(ctx, accountID, studentID)
+	child, err := s.resolveChatChild(ctx, accountID, studentID)
 	if err != nil {
 		return nil, err
 	}
@@ -239,9 +239,9 @@ func (s *Service) GetChildConversation(ctx context.Context, accountID, studentID
 	// write unit (ADR 0161, #5862). The only write is the reader's own read
 	// cursor, so it takes no child write guard (#6529).
 	var view *MessageThreadView
-	txErr := s.Children.WithPermittedChildForWrite(ctx, accountID, studentID, care.GuardianPermissionPortalAccess, func(child *Child) error {
-		view = childConversationView(child, studentID, normalized)
-		return nil
+	txErr := s.Children.WithPermittedChildForWrite(ctx, accountID, studentID, care.GuardianPermissionPortalAccess, func(child *Child) (err error) {
+		view, err = startChildConversation(child, studentID, normalized)
+		return err
 	}, func(txCtx context.Context, _ *Child) error {
 		thread, err := s.findChildConversation(txCtx, view, accountID)
 		if err != nil {
@@ -286,6 +286,15 @@ func (s *Service) GetChildConversation(ctx context.Context, accountID, studentID
 		return nil, childConversationError(view, txErr)
 	}
 	return view, nil
+}
+
+// startChildConversation builds the view of the child's conversation with
+// the OGS; a child without an OGS place has none (#4803).
+func startChildConversation(child *Child, studentID int64, audience string) (*MessageThreadView, error) {
+	if err := child.RequireCarePlace(); err != nil {
+		return nil, err
+	}
+	return childConversationView(child, studentID, audience), nil
 }
 
 // childConversationError returns the child check's own failure, before the
@@ -391,7 +400,7 @@ func (s *Service) guardianName(txCtx context.Context, accountID int64) (string, 
 func (s *Service) requireChildReply(ctx context.Context, child *Child, accountID, studentID, groupThreadID int64) (*int64, error) {
 	// A child whose care at this school has ended keeps read access to what
 	// happened, but nothing new can be submitted for them (#2487).
-	if err := child.RequireCareRunning(); err != nil {
+	if err := child.RequireOGSCareRunning(); err != nil {
 		return nil, err
 	}
 	// Fail OPEN on a transient resolve error (via the shared helper) so a config-DB

@@ -125,7 +125,12 @@ interface GuardiansPanelProps {
   readonly canRemove: boolean;
   readonly canAddContact?: boolean;
   readonly canManagePickup?: boolean;
+  /** Kind ohne OGS-Platz (#4803): es gibt keine Abholerlaubnis-Anfragen. */
+  readonly withoutCarePlace?: boolean;
 }
+
+const NO_PICKUP_PERMISSION_REQUESTS: Promise<PickupPermissionRequest[]> =
+  Promise.resolve([]);
 
 export default function GuardiansPanel({
   studentId,
@@ -133,6 +138,7 @@ export default function GuardiansPanel({
   canRemove,
   canAddContact = false,
   canManagePickup = false,
+  withoutCarePlace = false,
 }: GuardiansPanelProps) {
   const t = useCareTermTranslations("parentChildDetail");
   const visibilityT = useCareTermTranslations("parentVisibility");
@@ -215,7 +221,9 @@ export default function GuardiansPanel({
       await Promise.allSettled([
         listChildGuardians(studentId),
         listRelatedAccounts(studentId),
-        listPickupPermissionRequests(studentId),
+        withoutCarePlace
+          ? NO_PICKUP_PERMISSION_REQUESTS
+          : listPickupPermissionRequests(studentId),
       ]);
     if (request !== latestRequest.current) return;
     const refused = discardRefusedAccess(
@@ -277,6 +285,7 @@ export default function GuardiansPanel({
     showAccountsLoadError,
     showGuardiansLoadError,
     studentId,
+    withoutCarePlace,
     t,
   ]);
   // The retry runs the latest load, not the one of the failed attempt.
@@ -302,7 +311,9 @@ export default function GuardiansPanel({
       await Promise.allSettled([
         listChildGuardians(studentId),
         listRelatedAccounts(studentId),
-        listPickupPermissionRequests(studentId),
+        withoutCarePlace
+          ? NO_PICKUP_PERMISSION_REQUESTS
+          : listPickupPermissionRequests(studentId),
       ]);
     if (request !== latestRequest.current) return;
     setIsLoading(false);
@@ -343,6 +354,7 @@ export default function GuardiansPanel({
     clearGuardiansLoadError,
     discardRefusedAccess,
     studentId,
+    withoutCarePlace,
   ]);
   const { error: reloadError, refresh: refreshAfterWrite } =
     useRefreshAfterWrite(t("guardians.reloadObject"), readGuardians, {

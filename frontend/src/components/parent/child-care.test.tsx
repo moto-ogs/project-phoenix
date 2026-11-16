@@ -2011,6 +2011,31 @@ describe("useChildCare reportSick", () => {
   });
 });
 
+describe("useChildCare ohne OGS-Platz", () => {
+  // Der Server lehnt Abholung und Wochenplan eines Kindes ohne OGS-Platz ab
+  // (#4803); die Seite fragt sie deshalb gar nicht erst an.
+  it("laedt nur die Abwesenheiten und Funktionen", async () => {
+    vi.spyOn(parentApi, "listSickDays").mockResolvedValue([]);
+    vi.spyOn(parentApi, "listExcusedRequests").mockResolvedValue([]);
+    const exceptions = vi.spyOn(parentApi, "listCareExceptions");
+    const pickupRequests = vi.spyOn(parentApi, "listPickupChangeRequests");
+    const schedule = vi.spyOn(parentApi, "getChildCareSchedule");
+    vi.spyOn(parentApi, "getChildFeatures").mockRejectedValue(
+      new Error("no features"),
+    );
+
+    const { result } = renderHook(() =>
+      useChildCare("1", { withoutCarePlace: true }),
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(exceptions).not.toHaveBeenCalled();
+    expect(pickupRequests).not.toHaveBeenCalled();
+    expect(schedule).not.toHaveBeenCalled();
+    expect(parentApi.listSickDays).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("useChildCare studentId switch", () => {
   // Navigating from child A to child B reuses the hook instance (only the prop
   // changes). The loadSeqRef guard stops a late load(A) from overwriting B, but

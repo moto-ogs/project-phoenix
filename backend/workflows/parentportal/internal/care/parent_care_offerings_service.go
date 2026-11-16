@@ -96,9 +96,9 @@ func (s *Service) GetChildCareOfferings(ctx context.Context, accountID, studentI
 	var today calendar.Date
 	var canRequest bool
 	var changesDisabledReason string
-	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, func(*Child) error {
+	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, func(child *Child) error {
 		today = s.todayDate()
-		return nil
+		return child.RequireCarePlace()
 	}, func(txCtx context.Context, child *Child) error {
 		period, loadErr := s.loadChildCareOfferings(txCtx, studentID, today, view)
 		if loadErr == nil {
@@ -217,7 +217,7 @@ func (s *Service) GetChildOfferingCatalogAt(
 ) (*OfferingChangeCatalog, error) {
 	var catalog *OfferingChangeCatalog
 	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionRequestSubmit, func(child *Child) error {
-		if err := child.RequireCareRunning(); err != nil {
+		if err := child.RequireOGSCareRunning(); err != nil {
 			return err
 		}
 		if s.OfferingChanges == nil {
@@ -252,7 +252,7 @@ func (s *Service) CreateOfferingChangeRequest(
 	}
 	// A child whose care at this school has ended keeps read access to what
 	// happened, but nothing new can be submitted for them (#2487).
-	if err := child.RequireCareRunning(); err != nil {
+	if err := child.RequireOGSCareRunning(); err != nil {
 		return nil, err
 	}
 	if s.OfferingChanges == nil {
@@ -315,7 +315,7 @@ func (s *Service) EditOfferingChangeRequest(
 	if err != nil {
 		return nil, err
 	}
-	if err := child.RequireCareRunning(); err != nil {
+	if err := child.RequireOGSCareRunning(); err != nil {
 		return nil, err
 	}
 	if s.OfferingChanges == nil {

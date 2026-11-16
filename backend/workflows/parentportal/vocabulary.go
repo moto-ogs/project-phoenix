@@ -170,6 +170,7 @@ var (
 	ErrCareRequestNotFound              = care.ErrCareRequestNotFound
 	ErrCareRequestNotPending            = care.ErrCareRequestNotPending
 	ErrChildCareEnded                   = care.ErrChildCareEnded
+	ErrChildWithoutCarePlace            = care.ErrChildWithoutCarePlace
 	ErrChildNotAnswerable               = messaging.ErrChildNotAnswerable
 	ErrBillingDocumentNotFound          = care.ErrBillingDocumentNotFound
 	ErrContractNotEndable               = care.ErrContractNotEndable

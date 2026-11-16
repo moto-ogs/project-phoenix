@@ -80,7 +80,7 @@ func applyDateArrivalLeg(out *CareException, arrival *ArrivalException) bool {
 // switches the feature off, so existing entries never become stuck.
 func (s *Service) ListCareExceptions(ctx context.Context, accountID, studentID int64, from, to calendar.Date) ([]*CareException, error) {
 	var out []*CareException
-	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, nil, func(txCtx context.Context, _ *Child) error {
+	err := s.WithPermittedChild(ctx, accountID, studentID, GuardianPermissionPortalAccess, (*Child).RequireCarePlace, func(txCtx context.Context, _ *Child) error {
 		filter := StudentScheduleFilter{StudentIDs: []int64{studentID}, From: from, To: to}
 		pickups, err := s.CareExceptions.ListPickupExceptions(txCtx, filter)
 		if err != nil {

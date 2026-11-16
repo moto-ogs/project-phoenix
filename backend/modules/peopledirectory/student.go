@@ -50,6 +50,9 @@ type Student struct {
 	Excused       *bool      `json:"excused,omitempty"`
 	ExcusedSince  *time.Time `json:"excused_since,omitempty"`
 	PhotoPath     *string    `json:"photo_path,omitempty"`
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (#4803, ADR 0282). Not on the wire of this projection.
+	WithoutCarePlace bool `json:"-"`
 }
 
 // StudentName is the display identity of one student. Keeping this projection

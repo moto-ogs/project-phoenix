@@ -320,7 +320,17 @@ export interface ChildCare {
   refresh(): void;
 }
 
-export function useChildCare(studentId: string): ChildCare {
+export function useChildCare(
+  studentId: string,
+  options: Readonly<{
+    /**
+     * Das Kind hat keinen OGS-Platz (#4803). Abholung und Wochenplan gibt es
+     * dann nicht; der Server lehnt sie ab, also werden sie nicht geladen.
+     */
+    withoutCarePlace?: boolean;
+  }> = {},
+): ChildCare {
+  const withoutCarePlace = options.withoutCarePlace === true;
   const childRequests = useChildRequests();
   const sharedFeatures = useSharedParentFeatures();
   const hasSharedFeatures = sharedFeatures !== null;
@@ -461,23 +471,29 @@ export function useChildCare(studentId: string): ChildCare {
             failures.push(err);
             return [] as ExcusedRequest[];
           }),
-          listCareExceptions(studentId).catch((err: unknown) => {
-            exceptionsOk = false;
-            failures.push(err);
-            return [] as CareException[];
-          }),
-          listPickupChangeRequests(studentId).catch((err: unknown) => {
-            pickupRequestsOk = false;
-            failures.push(err);
-            return [] as PickupChangeRequest[];
-          }),
+          withoutCarePlace
+            ? Promise.resolve([] as CareException[])
+            : listCareExceptions(studentId).catch((err: unknown) => {
+                exceptionsOk = false;
+                failures.push(err);
+                return [] as CareException[];
+              }),
+          withoutCarePlace
+            ? Promise.resolve([] as PickupChangeRequest[])
+            : listPickupChangeRequests(studentId).catch((err: unknown) => {
+                pickupRequestsOk = false;
+                failures.push(err);
+                return [] as PickupChangeRequest[];
+              }),
           // Not part of loadError: the Heute card says the pickup time is
           // unavailable, and the care-schedule section shows its own load
           // error with retry. A third box would repeat the same outage.
-          childRequests.careSchedule(studentId).catch(() => {
-            weekPlanOk = false;
-            return null;
-          }),
+          withoutCarePlace
+            ? Promise.resolve(null)
+            : childRequests.careSchedule(studentId).catch(() => {
+                weekPlanOk = false;
+                return null;
+              }),
           // Approval settings have no safe fallback: keep them unknown when
           // the feature request fails so the modal uses neutral wording.
           (hasSharedFeatures
@@ -527,7 +543,7 @@ export function useChildCare(studentId: string): ChildCare {
       // after a newer one can't flip it back off prematurely.
       if (mountedRef.current && seq === loadSeqRef.current) setLoading(false);
     }
-  }, [childRequests, hasSharedFeatures, studentId]);
+  }, [childRequests, hasSharedFeatures, studentId, withoutCarePlace]);
 
   // Reload on mount, on a studentId change (load identity), AND when the Berlin
   // calendar day rolls over while the tab stays open — the windowed lists and

@@ -239,7 +239,9 @@ function ChildSections({
   const searchParams = useSearchParams();
   const router = useRouter();
   const t = useCareTermTranslations("parentChild");
-  const care = useChildCare(child.student_id);
+  const care = useChildCare(child.student_id, {
+    withoutCarePlace: child.without_care_place === true,
+  });
   const {
     error: careLoadError,
     show: showCareLoadError,
@@ -310,6 +312,11 @@ function ChildSections({
   // diesen einen Satz bliebe ein Profil zurück, dem still alle Aktionen fehlen
   // — und niemand wüsste warum.
   const careEnded = care.features.care_ended === true;
+  // Kind ohne OGS-Platz (#4803): die Kinderliste sagt es vor den Flags, damit
+  // keine OGS-Abschnitte erst aufblitzen und dann verschwinden.
+  const withoutCarePlace =
+    child.without_care_place === true ||
+    care.features.without_care_place === true;
 
   return (
     <>
@@ -346,7 +353,9 @@ function ChildSections({
             ? () => setModal("pickup")
             : undefined
         }
-        statusAside={<PickupSummary care={care} />}
+        statusAside={
+          withoutCarePlace ? undefined : <PickupSummary care={care} />
+        }
       />
       <ChildAreaTabs
         child={child}
@@ -356,6 +365,7 @@ function ChildSections({
         canAddContact={care.features.guardian_contact_manage_allowed}
         canManagePickup={care.features.pickup_manage_allowed === true}
         careEnded={careEnded}
+        withoutCarePlace={withoutCarePlace}
         sickDays={care.sickDays}
         excusedRequests={care.excusedRequests}
         canEditAbsenceRequests={
@@ -417,6 +427,7 @@ function ChildAreaTabs({
   canAddContact,
   canManagePickup,
   careEnded,
+  withoutCarePlace,
   sickDays,
   excusedRequests,
   canEditAbsenceRequests,
@@ -430,6 +441,7 @@ function ChildAreaTabs({
   canAddContact: boolean;
   canManagePickup: boolean;
   careEnded: boolean;
+  withoutCarePlace: boolean;
   sickDays: import("~/lib/parent-api").StatusDay[];
   excusedRequests: import("~/lib/parent-api").ExcusedRequest[];
   canEditAbsenceRequests: boolean;
@@ -568,23 +580,37 @@ function ChildAreaTabs({
               />
             </ParentSection>
           )}
-          <BookedCareSection
-            studentId={child.student_id}
-            childFirstName={child.first_name}
-            careEnded={careEnded}
-            enrolledUntil={child.enrolled_until}
-            reasonRequired={reasonRequired}
-          />
-          {/* Kurse (#3075): eigener Abschnitt, damit eine Kursanfrage nicht
-              zwischen Mittagessen und Betreuungszeiten verschwindet. Schaltet
-              die Schule sie aus, rendert der Abschnitt nichts. */}
-          <CoursesSection studentId={child.student_id} careEnded={careEnded} />
-          <ChildMasterDataView
-            studentId={child.student_id}
-            childName={childName}
-            area="departure"
-            masterData={masterData}
-          />
+          {withoutCarePlace ? (
+            // Ohne OGS-Platz (#4803) steht hier statt Betreuungszeiten,
+            // Kursen und Abholung ein Satz, warum es sie nicht gibt.
+            <ParentSubsection
+              title={t("withoutCarePlace.title")}
+              description={t("withoutCarePlace.body")}
+            />
+          ) : (
+            <>
+              <BookedCareSection
+                studentId={child.student_id}
+                childFirstName={child.first_name}
+                careEnded={careEnded}
+                enrolledUntil={child.enrolled_until}
+                reasonRequired={reasonRequired}
+              />
+              {/* Kurse (#3075): eigener Abschnitt, damit eine Kursanfrage
+                  nicht zwischen Mittagessen und Betreuungszeiten verschwindet.
+                  Schaltet die Schule sie aus, rendert der Abschnitt nichts. */}
+              <CoursesSection
+                studentId={child.student_id}
+                careEnded={careEnded}
+              />
+              <ChildMasterDataView
+                studentId={child.student_id}
+                childName={childName}
+                area="departure"
+                masterData={masterData}
+              />
+            </>
+          )}
         </TabsContent>
 
         <TabsContent
@@ -619,6 +645,7 @@ function ChildAreaTabs({
               canRemove={canRemove}
               canAddContact={canAddContact}
               canManagePickup={canManagePickup}
+              withoutCarePlace={withoutCarePlace}
             />
           )}
         </TabsContent>

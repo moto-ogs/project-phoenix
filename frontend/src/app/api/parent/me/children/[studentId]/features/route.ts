@@ -2,6 +2,7 @@ import { proxyGet } from "~/lib/parent/route-wrapper.server";
 import { requirePathSegmentParam } from "~/lib/route-wrapper-utils.server";
 
 interface BackendChildFeatures {
+  without_care_place?: boolean;
   sick_note_enabled: boolean;
   excused_note_enabled: boolean;
   sick_requires_approval: boolean;

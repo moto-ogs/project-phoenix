@@ -256,7 +256,10 @@ type ChildFeaturesResponse struct {
 	ConferenceBookAllowed bool `json:"conference_book_allowed"`
 	// CareEnded is state, not a capability: the child has left the OGS, so
 	// every write flag below is false (#2487).
-	CareEnded               bool `json:"care_ended"`
+	CareEnded bool `json:"care_ended"`
+	// WithoutCarePlace is state as well: the child belongs to its class but has
+	// no OGS place, so every OGS flag is false (#4803, ADR 0282).
+	WithoutCarePlace        bool `json:"without_care_place,omitempty"`
 	SickNoteEnabled         bool `json:"sick_note_enabled"`
 	ExcusedNoteEnabled      bool `json:"excused_note_enabled"`
 	SickRequiresApproval    bool `json:"sick_requires_approval"`
@@ -319,6 +322,7 @@ func (rs *Resource) getChildFeatures(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, ChildFeaturesResponse{
 		ConferenceBookAllowed:        flags.ConferenceBookAllowed,
 		CareEnded:                    flags.CareEnded,
+		WithoutCarePlace:             flags.WithoutCarePlace,
 		SickNoteEnabled:              flags.SickNoteEnabled,
 		ExcusedNoteEnabled:           flags.ExcusedNoteEnabled,
 		SickRequiresApproval:         flags.SickRequiresApproval,

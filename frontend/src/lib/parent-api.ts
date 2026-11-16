@@ -92,6 +92,10 @@ export interface Child {
   readonly enrolled_until?: string; // ISO date
   readonly school_name: string;
   readonly school_slug: string;
+  // Das Kind gehört zur Klasse, hat aber keinen OGS-Platz (#4803). Das Portal
+  // zeigt dann keine OGS-Funktionen, nur die der Schule. Fehlt das Feld
+  // (älteres Backend), hat das Kind einen Platz.
+  readonly without_care_place?: boolean;
 }
 
 export type ChildConsentState = ConsentState;
@@ -271,6 +275,10 @@ export interface ChildFeatures {
   // ein Nur-Lesen-Profil mit einem Satz dazu statt Knöpfe, die alle gleich
   // scheitern würden.
   readonly care_ended?: boolean;
+  // Zustand, keine Fähigkeit: Das Kind hat keinen OGS-Platz (#4803). Alle
+  // OGS-Flags sind dann false; Krankmeldung, Elternsprechtag und Stammdaten
+  // bleiben, wie die Beziehung sie erlaubt.
+  readonly without_care_place?: boolean;
   readonly sick_note_enabled: boolean;
   readonly excused_note_enabled?: boolean;
   // Whether a Krankmeldung stays pending until the OGS confirms it.
