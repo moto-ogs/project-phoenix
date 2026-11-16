@@ -101,7 +101,7 @@ function TagesinformationenContent() {
     linkedError instanceof ApiError && linkedError.status === 404;
   const linkedLoadError = useSwrLoadError(
     linkedGone ? undefined : linkedError,
-    "den Hinweis aus der Glocke",
+    "den Hinweis aus Ihren Benachrichtigungen",
     () => mutateLinked(),
   );
 
@@ -284,13 +284,13 @@ function TagesinformationenContent() {
       {/* Der Hinweis aus der Glocke (#7143), wenn er nicht unter „Heute“
           steht: etwa weil er erst nächste Woche gilt. */}
       {linkedId && !linkedInToday && (
-        <SectionCard title="Hinweis aus der Glocke">
+        <SectionCard title="Aus Ihren Benachrichtigungen">
           {linkedLoadError ? (
             <LoadErrorAlert error={linkedLoadError} />
           ) : linkedGone ? (
             <p className="text-sm leading-6 text-gray-600">
               Diesen Hinweis gibt es nicht mehr. Die Leitung hat ihn gelöscht
-              oder ausgeschaltet.
+              oder abgeschaltet.
             </p>
           ) : linkedNotice ? (
             <div>

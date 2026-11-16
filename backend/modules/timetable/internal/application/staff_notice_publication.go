@@ -14,24 +14,30 @@ import (
 // feed (#7127): a later one reaches the feed only.
 const staffNoticePublishPushDays = 14
 
-// publishes reports whether saving the notice publishes it to its audience:
-// a new active notice, or one switched on again. An edit of a notice that
-// was already on tells nobody (#7143).
-func publishes(wasActive bool, notice *scheduleModels.StaffNotice) bool {
-	return notice.Active && !wasActive
+// reachesStaff reports whether the notice reaches the readers of the OGS
+// portal, the only audience the feed serves until moto schule has one (#7139).
+func reachesStaff(notice *scheduleModels.StaffNotice) bool {
+	return notice.Active && notice.AppliesTo(scheduleModels.StaffNoticeAudienceStaff)
+}
+
+// publishes reports whether saving the notice publishes it to the OGS
+// readers (#7143): a new active notice, one switched on again, or one whose
+// audience now includes them. Any other edit tells nobody.
+func publishes(reachedStaff bool, notice *scheduleModels.StaffNotice) bool {
+	return reachesStaff(notice) && !reachedStaff
 }
 
 // acknowledgeAuthorAndPublish stamps the author's own acknowledgement where
 // the notice asks for one and tells the audience when saving published it.
 // Both run in the caller's unit: the routes open the request's tenant
 // transaction, so the feed entry commits or rolls back with the Hinweis.
-func (s *staffNoticeService) acknowledgeAuthorAndPublish(ctx context.Context, notice *scheduleModels.StaffNotice, wasActive bool, actorAccountID int64) error {
+func (s *staffNoticeService) acknowledgeAuthorAndPublish(ctx context.Context, notice *scheduleModels.StaffNotice, reachedStaff bool, actorAccountID int64) error {
 	if notice.RequiresAcknowledgement {
 		if err := s.repo.Acknowledge(ctx, notice.ID, notice.CreatedBy); err != nil {
 			return fmt.Errorf("staffnotice: acknowledge author: %w", err)
 		}
 	}
-	if !publishes(wasActive, notice) {
+	if !publishes(reachedStaff, notice) {
 		return nil
 	}
 	return s.noticeAudienceOfPublication(ctx, notice, actorAccountID)
@@ -40,11 +46,11 @@ func (s *staffNoticeService) acknowledgeAuthorAndPublish(ctx context.Context, no
 // noticeAudienceOfPublication tells the audience of a published Hinweis der
 // Leitung (#7143) in the transaction that saved it. The audience are the
 // readers of the Tagesinformationen in the OGS portal, without the person who
-// published it, whom the port leaves out. A notice only for the Lehrkräfte of moto schule reaches
-// nobody here: the feed of moto schule follows with #7139. A notice that has
+// published it, whom the port leaves out. The Lehrkräfte of moto schule hear
+// nothing here: the feed of moto schule follows with #7139. A notice that has
 // already ended tells nobody.
 func (s *staffNoticeService) noticeAudienceOfPublication(ctx context.Context, notice *scheduleModels.StaffNotice, actorAccountID int64) error {
-	if s.publications == nil || notice.Audience == scheduleModels.StaffNoticeAudienceLehrkraft {
+	if s.publications == nil {
 		return nil
 	}
 	today := s.currentDate()
@@ -52,11 +58,8 @@ func (s *staffNoticeService) noticeAudienceOfPublication(ctx context.Context, no
 		return nil
 	}
 	publication := ports.StaffNoticePublication{
-		NoticeID: notice.ID, Title: notice.Title, ValidFrom: notice.ValidFrom,
+		NoticeID: notice.ID, Title: notice.Title, ValidFrom: notice.ValidFrom, ValidUntil: notice.ValidUntil,
 		ActorAccountID: actorAccountID, Push: today.DaysUntil(notice.ValidFrom) <= staffNoticePublishPushDays,
-	}
-	if notice.ValidUntil != nil {
-		publication.ValidUntil = *notice.ValidUntil
 	}
 	if err := s.publications.NotifyStaffNoticePublished(ctx, publication); err != nil {
 		return fmt.Errorf("staffnotice: notify audience: %w", err)

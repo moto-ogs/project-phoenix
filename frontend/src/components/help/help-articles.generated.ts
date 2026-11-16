@@ -8508,12 +8508,12 @@ export const staffNoticesTopic = function staffNoticesTopic(): HelpTopic {
       "Wählen Sie `Speichern`.",
     ],
     result:
-      "Der Hinweis steht an seinen Tagen unter `Heute` für die gewählte Gruppe. Das Team sieht ihn außerdem sofort in der Glocke oben rechts.",
+      "Der Hinweis steht an seinen Tagen unter `Heute` für die gewählte Gruppe. Bei `Alle` und `Nur Betreuung` steht er außerdem sofort bei den Benachrichtigungen der Betreuung.",
     notes: [
       "Mit `Kenntnisnahme verlangen` sehen Sie später, wer den Hinweis bestätigt hat.",
       "`Nur Lehrkräfte` erreicht die Lehrkräfte in moto schule. Unter `Für wen` steht das auch im Fenster.",
-      "Sie selbst bekommen zu Ihrem eigenen Hinweis keinen Eintrag in der Glocke.",
-      "Speichern Sie einen Hinweis ohne Haken bei `Aktiv`, erscheint er erst in der Glocke, wenn Sie den Haken setzen.",
+      "Sie selbst bekommen zu Ihrem eigenen Hinweis keine Benachrichtigung. Ein Hinweis, der schon vorbei ist, auch nicht.",
+      "Speichern Sie einen Hinweis ohne Haken bei `Aktiv`, kommt die Benachrichtigung erst, wenn Sie den Haken setzen.",
     ],
     differences: [
       "Ein wichtiger Hinweis trägt `Wichtig`, ein abgeschalteter `Abgeschaltet`.",
@@ -8558,14 +8558,14 @@ export const staffNotificationsTopic =
         "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder alle als gelesen markieren. Das Öffnen der Glocke allein ändert nichts.",
       notes: [
         "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis.",
-        "Legt die Leitung unter `Hinweise der Leitung` einen neuen Hinweis an, sehen Sie ihn auch hier. Der Hinweis öffnet die Seite `Hinweise der Leitung`, auch wenn er erst später gilt.",
+        "Schreibt die Leitung unter `Hinweise der Leitung` etwas Neues für die Betreuung, steht es hier als `Neuer Hinweis der Leitung`. Ein Klick darauf öffnet die Seite `Hinweise der Leitung` mit diesem Text, auch wenn er erst später gilt.",
         "Ändert sich derselbe Termin kurz danach noch einmal, rückt der Hinweis nach oben. Sie bekommen dann keine zweite Mitteilung aufs Handy.",
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Was Sie auf dem Handy gelesen haben, ist auch am Tablet gelesen.",
         "Weiter unten in der Liste lädt moto ältere Hinweise nach. Sie können auch `Weitere laden` wählen.",
         "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Das passiert nur bei Absagen von heute bis in 14 Tagen.",
         "Die Mitteilung aufs Handy schalten Sie in Ihrem `Profil` unter `Benachrichtigungen` bei `Absage eines Termins` aus. Der Hinweis in der Glocke kommt dann trotzdem.",
-        "Zu neuen Hinweisen der Leitung kommt keine Mitteilung aufs Handy. Sie können sie im `Profil` unter `Benachrichtigungen` bei `Hinweise der Leitung` einschalten. Dann kommt sie bei Hinweisen, die in den nächsten 14 Tagen beginnen.",
+        "Zu neuen Hinweisen der Leitung kommt keine Mitteilung aufs Handy. Sie können sie im `Profil` unter `Benachrichtigungen` bei `Hinweise der Leitung` einschalten. Dann kommt sie, wenn der Hinweis schon gilt oder in den nächsten 14 Tagen beginnt.",
       ],
       differences: [
         "Auf dem Handy und auf kleinen Tablets fehlt oben die Glocke. Tippen Sie unten auf `Mehr` und dann auf `Benachrichtigungen`. Die Zahl an `Mehr` zählt neue Hinweise mit.",
@@ -8575,8 +8575,8 @@ export const staffNotificationsTopic =
       ],
       troubleshootingDetails: [
         "Es kommt kein Hinweis zu einer Absage? Ihre Schule kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder einen Hinweis noch eine Mitteilung aufs Handy. Fragen Sie Ihre Leitung.",
-        "Es kommt kein Hinweis zu neuen Hinweisen der Leitung? Ihre Schule kann `Neue Hinweise der Leitung in der Glocke` ausschalten. Fragen Sie Ihre Leitung.",
-        "Ein Hinweis öffnet die Seite `Hinweise der Leitung` mit `Diesen Hinweis gibt es nicht mehr.`? Dann hat die Leitung ihn gelöscht oder ausgeschaltet.",
+        "Es kommt kein Hinweis zu neuen Hinweisen der Leitung? Ihre Schule kann `Benachrichtigung bei neuem Hinweis der Leitung` ausschalten. Fragen Sie Ihre Leitung.",
+        "Die Seite `Hinweise der Leitung` zeigt `Diesen Hinweis gibt es nicht mehr.`? Dann hat die Leitung ihn gelöscht oder abgeschaltet.",
         "Ein Hinweis öffnet eine Seite mit `Sie haben keinen Zugriff auf einen eigenen Dienstplan.`? Dann führt Ihre Schule für Sie keinen eigenen Dienstplan in moto. Fragen Sie Ihre Leitung.",
       ],
       image: "/help/screens/benachrichtigungen-glocke.webp",

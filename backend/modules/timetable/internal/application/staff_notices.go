@@ -267,15 +267,16 @@ func (s *staffNoticeService) CreateStaffNotice(ctx context.Context, createdBy in
 	return staffNoticeContract(notice), nil
 }
 
-// UpdateStaffNotice speichert eine Änderung. Schaltet sie einen
-// ausgeschalteten Hinweis ein, erfährt die Zielgruppe davon wie bei einem
-// neuen Hinweis (#7143); updatedBy ist dann die auslösende Person.
+// UpdateStaffNotice speichert eine Änderung. Erreicht der Hinweis danach die
+// Betreuung, die er vorher nicht erreichte (eingeschaltet oder Zielgruppe
+// erweitert), erfährt sie davon wie bei einem neuen Hinweis (#7143);
+// updatedBy ist dann die auslösende Person.
 func (s *staffNoticeService) UpdateStaffNotice(ctx context.Context, id, updatedBy int64, in timetable.StaffNoticeInput) (timetable.StaffNotice, error) {
 	existing, err := s.find(ctx, id)
 	if err != nil {
 		return timetable.StaffNotice{}, err
 	}
-	wasActive := existing.Active
+	reachedStaff := reachesStaff(existing)
 	notice, err := s.apply(existing, in)
 	if err != nil {
 		return timetable.StaffNotice{}, err
@@ -285,7 +286,7 @@ func (s *staffNoticeService) UpdateStaffNotice(ctx context.Context, id, updatedB
 	}
 	// Wird die Kenntnisnahme erst nachträglich verlangt, gilt dasselbe wie beim
 	// Anlegen: die Verfasserin muss ihren eigenen Hinweis nicht bestätigen.
-	if err := s.acknowledgeAuthorAndPublish(ctx, notice, wasActive, updatedBy); err != nil {
+	if err := s.acknowledgeAuthorAndPublish(ctx, notice, reachedStaff, updatedBy); err != nil {
 		return timetable.StaffNotice{}, err
 	}
 	s.logger.Info("staff_notice_updated", slog.Int64("notice_id", notice.ID))

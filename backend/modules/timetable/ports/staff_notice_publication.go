@@ -14,8 +14,8 @@ type StaffNoticePublication struct {
 	NoticeID  int64
 	Title     string
 	ValidFrom calendar.Date
-	// ValidUntil is the zero Date for a notice without an end.
-	ValidUntil     calendar.Date
+	// ValidUntil is nil for a notice without an end.
+	ValidUntil     *calendar.Date
 	ActorAccountID int64
 	Push           bool
 }

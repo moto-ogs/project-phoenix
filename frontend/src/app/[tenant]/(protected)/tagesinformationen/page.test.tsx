@@ -137,7 +137,7 @@ describe("Tagesinformationen: Hinweis aus der Glocke (#7143)", () => {
     renderPage();
 
     expect(
-      screen.getByRole("heading", { name: "Hinweis aus der Glocke" }),
+      screen.getByRole("heading", { name: "Aus Ihren Benachrichtigungen" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Sommerfest")).toBeInTheDocument();
     expect(screen.getByText("Bitte Kuchen mitbringen.")).toBeInTheDocument();
@@ -149,7 +149,7 @@ describe("Tagesinformationen: Hinweis aus der Glocke (#7143)", () => {
     renderPage();
 
     expect(
-      screen.queryByRole("heading", { name: "Hinweis aus der Glocke" }),
+      screen.queryByRole("heading", { name: "Aus Ihren Benachrichtigungen" }),
     ).not.toBeInTheDocument();
     expect(screen.getAllByText("Sommerfest")).toHaveLength(1);
   });
@@ -161,7 +161,7 @@ describe("Tagesinformationen: Hinweis aus der Glocke (#7143)", () => {
 
     expect(
       screen.getByText(
-        "Diesen Hinweis gibt es nicht mehr. Die Leitung hat ihn gelöscht oder ausgeschaltet.",
+        "Diesen Hinweis gibt es nicht mehr. Die Leitung hat ihn gelöscht oder abgeschaltet.",
       ),
     ).toBeInTheDocument();
   });

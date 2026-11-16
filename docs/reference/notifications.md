@@ -234,8 +234,8 @@ period writes no entries per block.
 A new Hinweis der Leitung (`staff_notice_published`, #7143) reaches the
 readers of the Tagesinformationen in the OGS portal: the school's staff whose
 account holds `users:read`, without the person who saved it. It is written
-when a notice is created active or switched on again, never for an edit of an
-active notice. A notice only for the Lehrkräfte of moto schule writes no
+when a saved notice newly reaches them: created active, switched on again or
+its audience widened to include them; never for another edit. A notice only for the Lehrkräfte of moto schule writes no
 entries until the school portal has its feed (#7139). Feed and push while the
 notice starts within 14 days, feed only later, nothing once it has ended. The
 push is off by default (`FilterOptedIn`); the school switch is

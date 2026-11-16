@@ -102,10 +102,10 @@ func staffNoticePublicationCopy(publication timetablePorts.StaffNoticePublicatio
 	}
 	from := publication.ValidFrom.Format("02.01.2006")
 	switch {
-	case publication.ValidUntil == publication.ValidFrom:
-		body = fmt.Sprintf("„%s“ gilt am %s.", name, from)
-	case publication.ValidUntil.IsZero():
+	case publication.ValidUntil == nil:
 		body = fmt.Sprintf("„%s“ gilt ab %s.", name, from)
+	case *publication.ValidUntil == publication.ValidFrom:
+		body = fmt.Sprintf("„%s“ gilt am %s.", name, from)
 	default:
 		body = fmt.Sprintf("„%s“ gilt vom %s bis %s.", name, from, publication.ValidUntil.Format("02.01.2006"))
 	}

@@ -119,8 +119,8 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 	},
 	{
 		Key:             config.KeyNotificationsStaffNoticePublishedEnabled,
-		Label:           "Neue Hinweise der Leitung in der Glocke",
-		Description:     "Legt die Leitung einen Hinweis für das Team an, sieht das Team ihn in der Glocke. Eine Mitteilung aufs Handy bekommt nur, wer sie selbst einschaltet.",
+		Label:           "Benachrichtigung bei neuem Hinweis der Leitung",
+		Description:     "Legt die Leitung einen Hinweis für die Betreuung an, steht er bei den Benachrichtigungen. Eine Mitteilung aufs Handy bekommt nur, wer sie selbst einschaltet.",
 		Type:            config.FieldBoolean,
 		Default:         true,
 		ReadPermission:  "config:read",

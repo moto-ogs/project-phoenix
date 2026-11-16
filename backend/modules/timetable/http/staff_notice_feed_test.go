@@ -264,9 +264,27 @@ func TestStaffNoticeFeedFollowsTheWindowTheSwitchAndActivation(t *testing.T) {
 	assert.Len(t, f.entries(t, pushed, f.tenantID), 4)
 	assert.Len(t, f.entries(t, author, f.tenantID), 1)
 
+	// Switched off and on again within the bundle window while the entry is
+	// unread: the entry is updated and moves up, without a second push.
+	f.save(t, author, draft, noticeBody("Entwurf geändert", "all", "2030-06-12", "", false))
+	f.save(t, author, draft, noticeBody("Entwurf neu", "all", "2030-06-12", "", true))
+	entries = f.entries(t, pushed, f.tenantID)
+	require.Len(t, entries, 4)
+	assert.Equal(t, "„Entwurf neu“ gilt ab 12.06.2030.", entries[0].Body)
+	assert.Equal(t, 3, f.pushes(t, pushed), "a bundled update rings no phone again")
+
+	// A Hinweis that only the Lehrkräfte saw reaches the Betreuung once its
+	// audience includes them.
+	widened := f.save(t, author, 0, noticeBody("Übergabe", "lehrkraft", "2030-06-12", "", true))
+	assert.Len(t, f.entries(t, pushed, f.tenantID), 4)
+	f.save(t, author, widened, noticeBody("Übergabe", "all", "2030-06-12", "", true))
+	entries = f.entries(t, pushed, f.tenantID)
+	require.Len(t, entries, 5)
+	assert.Equal(t, "„Übergabe“ gilt ab 12.06.2030.", entries[0].Body)
+
 	// A school that switched the type off gets neither entry nor push.
 	testpkg.SetTestTenantSetting(t, f.db, f.tenantID, "notifications.staff_notice_published_enabled", "false")
 	f.save(t, author, 0, noticeBody("Ausflug", "all", "2030-06-12", "", true))
-	assert.Len(t, f.entries(t, pushed, f.tenantID), 4)
-	assert.Equal(t, 3, f.pushes(t, pushed))
+	assert.Len(t, f.entries(t, pushed, f.tenantID), 5)
+	assert.Equal(t, 4, f.pushes(t, pushed))
 }

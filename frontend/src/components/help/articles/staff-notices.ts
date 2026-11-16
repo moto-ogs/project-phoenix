@@ -31,12 +31,12 @@ export function staffNoticesTopic(): HelpTopic {
       "Wählen Sie `Speichern`.",
     ],
     result:
-      "Der Hinweis steht an seinen Tagen unter `Heute` für die gewählte Gruppe. Das Team sieht ihn außerdem sofort in der Glocke oben rechts.",
+      "Der Hinweis steht an seinen Tagen unter `Heute` für die gewählte Gruppe. Bei `Alle` und `Nur Betreuung` steht er außerdem sofort bei den Benachrichtigungen der Betreuung.",
     notes: [
       "Mit `Kenntnisnahme verlangen` sehen Sie später, wer den Hinweis bestätigt hat.",
       "`Nur Lehrkräfte` erreicht die Lehrkräfte in moto schule. Unter `Für wen` steht das auch im Fenster.",
-      "Sie selbst bekommen zu Ihrem eigenen Hinweis keinen Eintrag in der Glocke.",
-      "Speichern Sie einen Hinweis ohne Haken bei `Aktiv`, erscheint er erst in der Glocke, wenn Sie den Haken setzen.",
+      "Sie selbst bekommen zu Ihrem eigenen Hinweis keine Benachrichtigung. Ein Hinweis, der schon vorbei ist, auch nicht.",
+      "Speichern Sie einen Hinweis ohne Haken bei `Aktiv`, kommt die Benachrichtigung erst, wenn Sie den Haken setzen.",
     ],
     differences: [
       "Ein wichtiger Hinweis trägt `Wichtig`, ein abgeschalteter `Abgeschaltet`.",
