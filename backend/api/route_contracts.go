@@ -29,7 +29,7 @@ func ContractDocument() (contract.Document, error) {
 		// (studentHTTPResources binds it), so its type is named here.
 		{"/api/students", careStudentsHTTP.StudentWriteContracts(projectionStudentsHTTP.StudentResponse{})},
 		{"/parent", parentAPI.MeRouteContracts()},
-		{"/api/notifications", notificationsHTTP.FeedRouteContracts()},
+		{"/api/notifications", notificationFeedRouteContracts()},
 		{"/school/staff-messages", staffMessagingAPI.SchoolRouteContracts()},
 		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
 		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
@@ -65,6 +65,21 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[careStudentsHTTP.CompanionEntry]():       contract.ReadsLaxIDs,
 	}
 	return contract.Build(registrations, options)
+}
+
+// notificationFeedRouteContracts registers the notification feed of the
+// staff portal, with patterns relative to the /api/notifications mount.
+// Delivery's http role may not import the contract types, so it hands over
+// the response type only. moto schule mounts the same routes; its
+// registration waits for contract types shared between resources.
+func notificationFeedRouteContracts() []common.RouteContract {
+	return []common.RouteContract{
+		{
+			Method: "GET", Pattern: "/feed/unread-count",
+			Portals:  []common.PortalScope{common.PortalTenant},
+			Response: notificationsHTTP.FeedUnreadCountContract(),
+		},
+	}
 }
 
 func contractRegistration(prefix string, route common.RouteContract) contract.Registration {
