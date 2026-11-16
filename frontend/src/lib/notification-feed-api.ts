@@ -24,11 +24,9 @@ const NOTIFICATION_FEED_PAGE_SIZE = 20;
 
 export { NOTIFICATION_FEED_REFRESH_EVENT } from "./notification-events";
 
-const STAFF_FEED_API = "/api/notifications/feed";
-
 export async function fetchNotificationFeed(
+  apiBase: string,
   cursor?: string | null,
-  apiBase: string = STAFF_FEED_API,
 ): Promise<NotificationFeedPage> {
   const query = new URLSearchParams({
     limit: String(NOTIFICATION_FEED_PAGE_SIZE),
@@ -41,7 +39,7 @@ export async function fetchNotificationFeed(
 }
 
 export async function fetchNotificationFeedUnreadCount(
-  apiBase: string = STAFF_FEED_API,
+  apiBase: string,
 ): Promise<number> {
   const response = await authFetch<ProxyResponse<UnreadCountWire>>(
     `${apiBase}/unread-count`,
@@ -51,8 +49,8 @@ export async function fetchNotificationFeedUnreadCount(
 
 /** Markiert einen Eintrag als gelesen; liefert den neuen Zähler. */
 export async function markNotificationFeedEntryRead(
+  apiBase: string,
   id: string,
-  apiBase: string = STAFF_FEED_API,
 ): Promise<number> {
   const response = await authFetch<ProxyResponse<UnreadCountWire>>(
     `${apiBase}/${encodeURIComponent(id)}/read`,
@@ -63,7 +61,7 @@ export async function markNotificationFeedEntryRead(
 
 /** Markiert alle Einträge als gelesen; liefert den neuen Zähler. */
 export async function markAllNotificationFeedRead(
-  apiBase: string = STAFF_FEED_API,
+  apiBase: string,
 ): Promise<number> {
   const response = await authFetch<ProxyResponse<UnreadCountWire>>(
     `${apiBase}/read-all`,

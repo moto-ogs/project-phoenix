@@ -228,14 +228,15 @@ beforeEach(() => {
     tenantSlug: "test-tenant",
     tenant: { tenantId: 7 },
   } as unknown as ReturnType<typeof useTenantSafe>);
-  api.fetchNotificationFeed.mockImplementation((cursor?: string | null) =>
-    Promise.resolve(
-      state.feedPages.get(cursor ?? "") ?? {
-        entries: [],
-        nextCursor: null,
-        unreadCount: 0,
-      },
-    ),
+  api.fetchNotificationFeed.mockImplementation(
+    (_base: string, cursor?: string | null) =>
+      Promise.resolve(
+        state.feedPages.get(cursor ?? "") ?? {
+          entries: [],
+          nextCursor: null,
+          unreadCount: 0,
+        },
+      ),
   );
   api.fetchNotificationFeedUnreadCount.mockImplementation(() =>
     Promise.resolve(state.unreadCount),
@@ -474,8 +475,8 @@ describe("RemindersBell — Hinweise", () => {
     );
 
     expect(api.markNotificationFeedEntryRead).toHaveBeenCalledWith(
-      "41",
       "/api/notifications/feed",
+      "41",
     );
     expect(mockPush).toHaveBeenCalledWith("/mein-dienstplan?d=2026-11-20");
     expect(bell).toHaveAttribute("aria-expanded", "false");
@@ -503,8 +504,8 @@ describe("RemindersBell — Hinweise", () => {
     );
 
     expect(api.markNotificationFeedEntryRead).toHaveBeenCalledWith(
-      "42",
       "/api/notifications/feed",
+      "42",
     );
     expect(mockPush).not.toHaveBeenCalled();
     expect(bell).toHaveAttribute("aria-expanded", "true");
@@ -584,8 +585,8 @@ describe("RemindersBell — Hinweise", () => {
 
     expect(await screen.findByText("Seite zwei")).toBeInTheDocument();
     expect(api.fetchNotificationFeed).toHaveBeenCalledWith(
-      "c2",
       "/api/notifications/feed",
+      "c2",
     );
     expect(
       screen.queryByRole("button", { name: "Weitere laden" }),
@@ -718,7 +719,7 @@ describe("NotificationFeedBell — moto schule", () => {
     expect(
       screen.queryByRole("region", { name: "Erinnerungen" }),
     ).not.toBeInTheDocument();
-    expect(api.fetchNotificationFeed).toHaveBeenCalledWith(null, SCHOOL_FEED);
+    expect(api.fetchNotificationFeed).toHaveBeenCalledWith(SCHOOL_FEED);
     await waitFor(() =>
       expect(mockTrack).toHaveBeenCalledWith("notification_bell_opened", "5"),
     );
@@ -741,8 +742,8 @@ describe("NotificationFeedBell — moto schule", () => {
     );
 
     expect(api.markNotificationFeedEntryRead).toHaveBeenCalledWith(
-      "41",
       SCHOOL_FEED,
+      "41",
     );
     expect(mockPush).toHaveBeenCalledWith("/aufsichten");
     expect(bell).toHaveAttribute("aria-expanded", "false");

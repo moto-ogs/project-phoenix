@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -80,12 +81,13 @@ func (c *sseChannel) Name() string { return "sse" }
 // moto schule that their feed changed (#7148, #7139). The signal carries no
 // content; each session reloads the feed of its own portal, so a session
 // whose portal does not show the changed entry only reloads the same state.
+// A failed broadcast to one portal does not keep the other from its signal.
 func (c *sseChannel) signalFeed(tenantID int64, accountIDs []int64) error {
 	event := realtime.NewEvent(realtime.EventNotificationFeedChanged, "", realtime.EventData{})
-	if err := c.broadcaster.BroadcastToStaffAccounts(tenantID, accountIDs, event); err != nil {
-		return err
-	}
-	return c.broadcaster.BroadcastToSchoolAccounts(tenantID, accountIDs, event)
+	return errors.Join(
+		c.broadcaster.BroadcastToStaffAccounts(tenantID, accountIDs, event),
+		c.broadcaster.BroadcastToSchoolAccounts(tenantID, accountIDs, event),
+	)
 }
 
 func (c *sseChannel) getLogger() *slog.Logger {

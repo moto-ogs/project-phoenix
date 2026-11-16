@@ -142,7 +142,7 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
     portal.keyScope === "school"
       ? schoolPortalKeys.notificationFeedFirstPage()
       : notificationFeedKeys.firstPage(),
-    () => fetchNotificationFeed(null, apiBase),
+    () => fetchNotificationFeed(apiBase),
     {
       refreshInterval,
       // Auch bei verlorenen Live-Ereignissen stimmen Seiten und Cursor
@@ -176,7 +176,7 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
     setLoadingMore(true);
     setLoadMoreError(null);
     try {
-      const page = await fetchNotificationFeed(nextCursor, apiBase);
+      const page = await fetchNotificationFeed(apiBase, nextCursor);
       if (generation.current !== started) return;
       setExtra((current) => [...current, ...page.entries]);
       setExtraCursor(page.nextCursor);
@@ -211,7 +211,7 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
       const { id, updatedAt } = item.entry;
       setLocallyRead((current) => new Map(current).set(id, updatedAt));
       try {
-        const count = await markNotificationFeedEntryRead(id, apiBase);
+        const count = await markNotificationFeedEntryRead(apiBase, id);
         if (sessionGeneration.current === started) onUnreadCount(count);
       } catch {
         if (sessionGeneration.current !== started) return;
