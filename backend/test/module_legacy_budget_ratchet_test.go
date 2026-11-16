@@ -315,7 +315,10 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0248: Communication's parent-letter child reader constructor (+6).
 // ADR 0246: the report templates of modules/organizationtenancy/compose (+5)
 // and the export adapter of modules/traegerview/compose (+1).
-const moduleComposeBudgetTotal = 13540
+// ADR 0265: the clock fields of modules/enrollment/compose (+9: the owner's
+// write clock NewClocked, Now of the phases and the deletion module, and
+// their time imports).
+const moduleComposeBudgetTotal = 13549
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -333,6 +336,7 @@ const moduleComposeBudgetTotal = 13540
 // ADR 0231 raised modules/enrollment/compose for the registration answers and
 // added modules/schoolsearchview/compose for the school search.
 // ADR 0240 raised modules/careplan/compose for the clock fields (+8).
+// ADR 0265 raised modules/enrollment/compose for the clock fields (+9).
 var moduleComposeBudgets = map[string]int{
 	"modules/appointments/compose": 45,
 	// ADR 0103: the signature ledger constructor, construction only.
@@ -385,7 +389,8 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0215: NewTraegerPhases (+4) and NewOfferingSelectionReferences (+4),
 	// less shortened comments and a merged file (-6).
 	// ADR 0231: the registration answers constructor (+5).
-	"modules/enrollment/compose": 639,
+	// ADR 0265: +9, the clock fields of the owner, its phases and deletions.
+	"modules/enrollment/compose": 648,
 	// ADR 0218: the Träger scope and the recipient rekey (+33).
 	"modules/exporttransfer/compose": 182,
 	// ADR 0241: the rooms of the utilization (+13).

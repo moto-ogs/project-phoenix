@@ -28,7 +28,7 @@ func NewBookingConsistencyAudit(db transactionruntime.Database, students peopled
 	}
 	audits, err := auditCompose.NewPersistence(auditCompose.PersistenceDependencies{
 		DB:         db.Pool(),
-		Enrollment: auditEnrollmentBookings{bookings: NewEnrollmentBookings()},
+		Enrollment: auditEnrollmentBookings{bookings: NewEnrollmentBookings(nil)},
 		Students:   auditStudentDirectory{students: students},
 		CarePlan:   auditCarePlanDirectory{query: carePlan},
 	})

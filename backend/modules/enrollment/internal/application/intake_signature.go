@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/selection"
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -153,7 +152,7 @@ func (s *Intake) recordSignature(ctx context.Context, request *enrollmentNative.
 	signerName := strings.TrimSpace(request.GuardianFirstName + " " + request.GuardianLastName)
 	if _, err := s.deps.Signatures.RecordEnrollmentSignature(ctx, EnrollmentSignatureEntry{
 		RequestID: request.ID, SignerAccountID: request.GuardianAccountID, SignerName: signerName,
-		DocumentSHA256: s.deps.Fingerprint(encoded), SignedAt: time.Now(), Signature: *signature,
+		DocumentSHA256: s.deps.Fingerprint(encoded), SignedAt: s.now(), Signature: *signature,
 	}); err != nil {
 		return signatureWriteError(err)
 	}

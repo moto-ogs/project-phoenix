@@ -148,7 +148,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		func() (err error) { groups, err = owners.BuildServeSchoolStructure(db); return },
 		func() (err error) { rooms, err = owners.BuildServeRooms(db); return },
 		func() (err error) { membership, err = owners.ComposeSchoolMembership(db); return },
-		func() error { bookings = owners.NewEnrollmentBookings(); return nil },
+		func() error { bookings = owners.NewEnrollmentBookings(env.Now); return nil },
 		func() (err error) {
 			settings, err = owners.BuildSettingsOwner(db, unit, env, organizations, hub, bookings)
 			return

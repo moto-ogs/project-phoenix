@@ -191,7 +191,7 @@ func newParentResource(
 		Conferences: calendarApp,
 		Enrollment: parentEnrollmentForms(
 			enrollmentAPI.NewRequestService(flows.Intake),
-			enrollmentUploadUnits{intake: flows.Intake, records: owners.NewEnrollmentBookings(), reads: flows.Uploads},
+			enrollmentUploadUnits{intake: flows.Intake, records: owners.NewEnrollmentBookings(nil), reads: flows.Uploads},
 			NewEnrollmentUploadStorage(logger.With("handler", "parent-enrollment-uploads")),
 		),
 		GuardianProfileLoader: newParentGuardianProfiles(guardianProfiles),

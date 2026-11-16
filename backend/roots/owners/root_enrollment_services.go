@@ -49,7 +49,7 @@ func BuildEnrollmentNotices(
 		CountAuditAdjustments: audit.Persistence.EnrollmentOfferingAdjustment.CountForDeletion,
 		CountBookings:         carePlan.CountCareOfferingBookings, Audit: audit.Persistence.EnrollmentDeletionAudit,
 		Delivery: enrollmentDeliveryAdapter{module: module, outcomes: outcomes}, Settings: settings, Logger: env.Logger,
-		Today: env.Today,
+		Now: env.Now,
 	})
 	return EnrollmentNotices{
 		Notifications:   NewEnrollmentNotifications(enrollment.Bookings, settings, outbox, EnrollmentSchoolDirectory{Schools: organizations}),
@@ -78,7 +78,7 @@ func BuildEnrollmentPhases(
 		Bookings: NewEnrollmentPhaseBookings(carePlanCompose.NewOfferingBookings()), Settings: EnrollmentCollectionSettings{Settings: settings},
 		CareStudents: NewEnrollmentPhaseCareStudents(persons),
 		Roster:       phaseResponseRoster{query: persons}, CareExits: phaseResponseCareExits{query: carePlan},
-		PortalAccounts: persons, Logger: env.Logger.With("service", "enrollment-phase"),
+		PortalAccounts: persons, Logger: env.Logger.With("service", "enrollment-phase"), Now: env.Now,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("compose enrollment phases: %w", err)
@@ -123,7 +123,7 @@ func BuildEnrollmentDecisions(
 		LockTemplateRecurrence: owner.RecurrenceLock.LockRecurrenceWrites,
 		FollowClassChanges:     FollowClassChanges(owner.CohortRosters),
 		Pickups:                weeklyPickupHooks(schedules.AutoExcusal, carePlanRows.PickupStudentLocks),
-		Logger:                 env.Logger.With("service", "enrollment-decision"), Today: env.Today,
+		Logger:                 env.Logger.With("service", "enrollment-decision"), Now: env.Now, Today: env.Today,
 	})
 }
 
@@ -181,14 +181,14 @@ func BuildEnrollmentFlows(
 			AdminSubscribers: NewEnrollmentAdminSubscribers(consent, identity), ManualDecider: decisions,
 			FrontendURL: links.FrontendURL, ParentsURL: links.ParentsURL, Logger: env.Logger.With("service", "enrollment-request"),
 			FamilyChildrenPurpose:  NewEnrollmentFamilyChildrenPurpose(organizations),
-			LockTemplateRecurrence: owner.RecurrenceLock.LockRecurrenceWrites,
+			LockTemplateRecurrence: owner.RecurrenceLock.LockRecurrenceWrites, Now: env.Now,
 		}),
 		Reports: NewEnrollmentReports(EnrollmentReportSources{
 			Owner: records, Offerings: notices.CareOfferings, AccessLog: audit.Persistence.DataAccessLog,
 			Students: people.Students, Persons: people.Persons, Groups: education.NewGroupNames(structure.Groups),
 			StudentGuardians: people.StudentGuardians, Companions: NewStudentCompanionRepository(carePlan),
 			ClassListEntries: NewClassListEntryRosterReader(membership), PickupSchedules: schedules.Pickups,
-			CareParticipation: schedules.Lifecycle, Settings: settings,
+			CareParticipation: schedules.Lifecycle, Settings: settings, Now: env.Now,
 		}),
 		ChangeRequests: NewEnrollmentChangeRequests(EnrollmentChangeRequestSources{
 			Bookings: enrollment.CareBookings, Requests: records, Children: records, Guardians: records,
@@ -201,14 +201,14 @@ func BuildEnrollmentFlows(
 			CompanionGraphLocker: companionGraphCoordinator{CompanionLocks: carePlanRows.Companions, strandings: people.Students},
 			Settings:             settings, OutboxEnqueuer: intakeMailOutbox(outbox), FrontendURL: links.FrontendURL, ParentsURL: links.ParentsURL,
 			Logger:                 env.Logger.With("service", "enrollment-change-request"),
-			LockTemplateRecurrence: owner.RecurrenceLock.LockRecurrenceWrites,
+			LockTemplateRecurrence: owner.RecurrenceLock.LockRecurrenceWrites, Now: env.Now,
 		}),
 		Uploads: NewEnrollmentRequestUploads(records, audit.Persistence.DataAccessLog, settings, env.Logger.With("service", "enrollment-uploads")),
 		Rollovers: NewEnrollmentRollovers(EnrollmentRolloverSources{
 			Bookings: enrollment.CareBookings, Phases: records, Requests: records, Children: records,
 			Catalog: offerings.Catalog, Notifications: notices.Notifications, PhaseEligibility: phases,
 			Outbox: intakeMailOutbox(outbox), Settings: settings, Decisions: decisions, ParentsURL: links.ParentsURL,
-			Logger: env.Logger.With("service", "enrollment-rollover"),
+			Logger: env.Logger.With("service", "enrollment-rollover"), Now: env.Now,
 		}),
 	}
 }

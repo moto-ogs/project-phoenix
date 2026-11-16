@@ -119,5 +119,5 @@ func newTraegerCatalogBilling(organizations HolidayOrganizations, settings Traeg
 	billing, _ := parentBillingCompose.NewCareBilling(contracts, parentBillingCareSchools{organizations: organizations},
 		parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks), newParentBillingLetterheads(settings), today)
 	_, intakePorts := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL)
-	return billing, careContractCompose.NewIntake(intakePorts)
+	return billing, careContractCompose.NewIntake(intakePorts, today)
 }

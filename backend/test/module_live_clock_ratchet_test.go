@@ -53,7 +53,6 @@ import (
 var moduleLiveClockBudget = map[string]int{
 	"modules/appointments": 5,
 	"modules/auditlog":     15,
-	"modules/carecontract": 3,
 	// PickupBaselineQueries.HasBookedOfferingPickupForWeekday: the public
 	// PickupBaselineReader method names no day.
 	"modules/careplan":                     1,
@@ -64,7 +63,6 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/devicefleet":                  12,
 	"modules/devicescan":                   6,
 	"modules/documentrendering":            1,
-	"modules/enrollment":                   63,
 	"modules/facilities":                   2,
 	"modules/feedback":                     1,
 	"modules/filestorage":                  32,

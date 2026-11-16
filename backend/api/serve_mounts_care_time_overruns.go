@@ -20,8 +20,8 @@ import (
 // the figures per school behind "Berichte lesen", the children by name
 // behind "Verträge verwalten".
 func mountCareTimeOverrunRoutes(root chi.Router, organizations HolidayOrganizations, statistics studentpresence.StatisticsReports,
-	accessLog owners.DataAccessAppender) {
-	root.Mount("/traeger/care-time-overruns", NewCareTimeOverrunHTTP(organizations, statistics, accessLog).Router(ProtectedTraegerRoutes))
+	accessLog owners.DataAccessAppender, today func() calendar.Date) {
+	root.Mount("/traeger/care-time-overruns", NewCareTimeOverrunHTTP(organizations, statistics, accessLog, today).Router(ProtectedTraegerRoutes))
 }
 
 // NewCareTimeOverrunHTTP binds the evaluation's ports: the schools of the
@@ -29,11 +29,11 @@ func mountCareTimeOverrunRoutes(root chi.Router, organizations HolidayOrganizati
 // Ist of Student Presence (ADR 0139) in that school's tenant transaction,
 // and the names it shows to the school's access log.
 func NewCareTimeOverrunHTTP(organizations HolidayOrganizations, statistics studentpresence.StatisticsReports,
-	accessLog owners.DataAccessAppender) *careContractHTTP.OverrunResource {
+	accessLog owners.DataAccessAppender, today func() calendar.Date) *careContractHTTP.OverrunResource {
 	evaluations := careContractCompose.NewOverrunEvaluations(careContractCompose.OverrunPorts{
 		Schools: careContractSchools{organizations: organizations}, CareTimes: careContractCareTimes{statistics: statistics},
 		Access: careContractAccessLog{log: accessLog}, Runtime: owners.CareContractRuntime{},
-	})
+	}, today)
 	return careContractHTTP.NewOverrunResource(evaluations,
 		common.RequiresPermission(identityaccess.TraegerRightReportsRead),
 		common.RequiresPermission(identityaccess.TraegerRightContractsManage), careContractListRenderer(NewSimpleListRenderer()))

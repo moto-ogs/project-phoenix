@@ -1,6 +1,8 @@
 package api
 
 import (
+	"time"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -16,9 +18,9 @@ import (
 // /traeger/contract-notices behind the right "Verträge verwalten".
 func mountCareContractNoticeRoutes(root chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings,
 	schoolSettings CareContractSchoolSettings, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog owners.DataAccessAppender,
-	addressees carecontract.NoticeAddressees, holidays carecontract.SchoolHolidays, parentsURL string) {
+	addressees carecontract.NoticeAddressees, holidays carecontract.SchoolHolidays, parentsURL string, now func() time.Time) {
 	contractPorts, _ := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL)
-	notices := careContractCompose.NewNotices(contractPorts, owners.NewCareContractNoticePorts(settings, delivery, addressees, holidays))
+	notices := careContractCompose.NewNotices(contractPorts, owners.NewCareContractNoticePorts(settings, delivery, addressees, holidays), now)
 	resource := careContractHTTP.NewNoticeResource(notices, common.RequiresPermission(identityaccess.TraegerRightContractsManage))
 	root.Mount("/traeger/contract-notices", resource.Router(ProtectedTraegerRoutes))
 }

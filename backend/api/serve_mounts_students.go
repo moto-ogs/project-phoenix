@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
@@ -315,7 +316,7 @@ func newEnrollmentResource(
 	flows owners.EnrollmentFlows, phases enrollmentOwner.PhaseAdministration, decisions enrollmentOwner.Decisions,
 	deletions enrollmentOwner.EnrollmentDeletions,
 	guardianProfiles *peopleCompose.GuardianProfileLoader, organizations organizationtenancy.Query,
-	renderer *lists.RendererService, persons peopledirectory.Capability, carePlan carePlanModule.Capability,
+	renderer *lists.RendererService, persons peopledirectory.Capability, carePlan carePlanModule.Capability, now func() time.Time,
 ) *enrollmentAPI.Resource {
 	resource := enrollmentAPI.NewResource(
 		newEnrollmentFormSchemas(settings, logger),
@@ -333,10 +334,10 @@ func newEnrollmentResource(
 		nativeUploads.UploadFiles{},
 		enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation,
 			SavepointRollback: func(err error) bool { return errors.Is(err, tenant.ErrSavepointRollback) }},
-		owners.NewEnrollmentBookings(),
+		owners.NewEnrollmentBookings(nil),
 	)
-	resource.ListExportService = renderer
-	resource.Uploads = enrollmentUploadUnits{intake: flows.Intake, records: owners.NewEnrollmentBookings(), reads: flows.Uploads}
+	resource.ListExportService, resource.Now = renderer, now
+	resource.Uploads = enrollmentUploadUnits{intake: flows.Intake, records: owners.NewEnrollmentBookings(nil), reads: flows.Uploads}
 	resource.UploadList = flows.Uploads
 	resource.FamilyChildren = flows.Intake
 	resource.UploadFiles = NewEnrollmentUploadStorage(logger.With("handler", "enrollment-uploads"))

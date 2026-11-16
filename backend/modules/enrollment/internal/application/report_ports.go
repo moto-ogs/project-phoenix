@@ -184,8 +184,5 @@ func NewReports(deps ReportDependencies) *Reports {
 }
 
 func (s *Reports) today() calendar.Date {
-	if s.deps.Now == nil {
-		return calendar.TodayDate()
-	}
 	return calendar.DateFromTime(s.deps.Now())
 }

@@ -77,10 +77,17 @@ func traegerPortalOn(t *testing.T, db *bun.DB, unit tenant.UnitOfWork, options .
 // on days (#6447).
 func traegerPortalWithDays(t *testing.T, db *bun.DB, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar) *traegerPortalHandler {
 	t.Helper()
+	return traegerPortalWithDaysOn(t, db, unit, days, calendar.TodayDate)
+}
+
+// traegerPortalWithDaysOn is traegerPortalWithDays whose day-bound services
+// read today.
+func traegerPortalWithDaysOn(t *testing.T, db *bun.DB, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date) *traegerPortalHandler {
+	t.Helper()
 	mail := testpkg.NewCapturingMailer()
 	auth, err := NewAuthTestModule(testpkg.NewDatabase(t, db), unit, WithAuthTestMailer(mail))
 	require.NoError(t, err)
-	return &traegerPortalHandler{Handler: traegerPortalRouterWithDays(t, db, auth.Auth, unit, days), mail: mail}
+	return &traegerPortalHandler{Handler: testpkg.SessionVerifier(traegerPortalRoutesOn(t, db, auth.Auth, unit, days, today)), mail: mail}
 }
 
 // traegerPortalRouter builds the /traeger router over identity, with the
@@ -147,7 +154,7 @@ func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdent
 	mountHolidayClosureNotificationRoutes(router, router, organizations,
 		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, slog.Default())
 	mountCareContractRoutes(router, organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog,
-		owners.NewCareContractNoticeAddressees(owners.MustNewPeopleDirectory(database), identity), owners.CareContractTestHolidays{}, "http://parents.localhost:3000", today)
+		owners.NewCareContractNoticeAddressees(owners.MustNewPeopleDirectory(database), identity), owners.CareContractTestHolidays{}, "http://parents.localhost:3000", today, nil)
 	return router
 }
 
