@@ -286,3 +286,31 @@ func TestTypeScriptWritesTypesBeforeTheirUse(t *testing.T) {
 		assert.Contains(t, source, line)
 	}
 }
+
+func TestTypeScriptListsTheRoutesOfEachPortal(t *testing.T) {
+	t.Parallel()
+	staff := get("/api/rows/{id}", inner{})
+	staff.Query = []QueryParam{{Name: "view", Kind: "string"}, {Name: "page", Kind: "int"}}
+	shared := get("/parent/me/rows", body{})
+	shared.Portals = []string{"tenant", "parent"}
+	doc, err := Build([]Registration{staff, shared}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+
+	assert.Contains(t, files["rows.generated.ts"], `    query: ["page", "view"],`)
+	table := files["portals.generated.ts"]
+	for _, line := range []string{
+		`import { routes as parentMe } from "./parent-me.generated";`,
+		"  parent: [\n    parentMe[\"GET /parent/me/rows\"],\n  ],",
+		"  tenant: [\n    parentMe[\"GET /parent/me/rows\"],\n    rows[\"GET /api/rows/{id}\"],\n  ],",
+	} {
+		assert.Contains(t, table, line)
+	}
+
+	taken := get("/api/portals/", inner{})
+	doc, err = Build([]Registration{taken}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	_, err = TypeScript(doc)
+	assert.ErrorContains(t, err, "taken by the portal table")
+}

@@ -41,7 +41,48 @@ func TypeScript(doc Document) (map[string]string, error) {
 		}
 		files[resource+".generated.ts"] = w.file(resources[resource])
 	}
+	if _, taken := files[portalsFile]; taken {
+		return nil, fmt.Errorf("the resource name %q is taken by the portal table", strings.TrimSuffix(portalsFile, ".generated.ts"))
+	}
+	files[portalsFile] = portalTable(resources)
 	return files, nil
+}
+
+const portalsFile = "portals.generated.ts"
+
+// portalTable writes the routes each portal may reach: the allowlist of a
+// portal's proxy. A route that names no portal is in no list.
+func portalTable(resources map[string][]Route) string {
+	byPortal := map[string][]string{}
+	var out strings.Builder
+	out.WriteString(tsHeader)
+	for _, resource := range sortedKeys(resources) {
+		fmt.Fprintf(&out, "import { routes as %s } from \"./%s.generated\";\n", resourceAlias(resource), resource)
+		for _, route := range resources[resource] {
+			for _, portal := range route.Portals {
+				byPortal[portal] = append(byPortal[portal], fmt.Sprintf("%s[%q]", resourceAlias(resource), route.Key()))
+			}
+		}
+	}
+	out.WriteString("\n/** The registered routes of each portal, by the scope of its session token. */\nexport const portalRoutes = {\n")
+	for _, portal := range sortedKeys(byPortal) {
+		fmt.Fprintf(&out, "  %s: [\n", portal)
+		for _, entry := range byPortal[portal] {
+			fmt.Fprintf(&out, "    %s,\n", entry)
+		}
+		out.WriteString("  ],\n")
+	}
+	out.WriteString("} as const;\n")
+	return out.String()
+}
+
+// resourceAlias turns parent-me into parentMe.
+func resourceAlias(resource string) string {
+	parts := strings.Split(resource, "-")
+	for i := 1; i < len(parts); i++ {
+		parts[i] = upperFirst(parts[i])
+	}
+	return strings.Join(parts, "")
 }
 
 func (r Route) schemas() []Schema {
@@ -185,6 +226,13 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	fmt.Fprintf(out, "  %q: {\n    method: %q,\n    pattern: %q,\n    portals: [%s],\n", route.Key(), route.Method, route.Pattern, quoted(route.Portals))
 	if route.Deprecated {
 		out.WriteString("    deprecated: true,\n")
+	}
+	if len(route.Query) > 0 {
+		names := make([]string, len(route.Query))
+		for i, param := range route.Query {
+			names[i] = param.Name
+		}
+		fmt.Fprintf(out, "    query: [%s],\n", quoted(names))
 	}
 	if route.Request != nil {
 		w.helpers["requestBody"] = true

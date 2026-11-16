@@ -635,6 +635,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/",
     portals: ["tenant"],
+    query: ["bus", "care_offering_id", "care_status", "date", "day_status", "enrollment_answer", "first_name", "grade_level", "group_id", "include_arrival_times", "include_companions", "include_pending_withdrawals", "include_pickup_times", "last_name", "location", "location_state", "page", "page_size", "photo_consent", "pickup_status", "room_id", "school_class", "search", "view"],
     variantParam: "view",
     defaultVariant: "full",
     response: {
@@ -647,6 +648,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/{id}",
     portals: ["tenant"],
+    query: ["include_privacy_consent"],
     response: success(StudentDetailResponseSchema),
   },
   "POST /api/students/": {
