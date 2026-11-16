@@ -229,17 +229,7 @@ func CreateTestDevice(tb testing.TB, db *bun.DB, deviceID string) *Device {
 		APIKey:     StrPtr("test-api-key-" + uniqueDeviceID),
 	}
 	device.TenantID = fixtureTenantID(tb)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err := db.NewInsert().
-		Model(device).
-		ModelTableExpr(`iot.devices`).
-		Scan(ctx)
-	require.NoError(tb, err, "Failed to create test device")
-	ensureFixtureDevicePIN(tb, db, device.TenantID)
-
+	insertTestDevice(tb, db, device, "Failed to create test device")
 	return device
 }
 
@@ -1826,9 +1816,6 @@ func CreateTestTimeframeForTenant(tb testing.TB, db *bun.DB, tenantID int64, des
 func CreateTestDeviceForTenant(tb testing.TB, db *bun.DB, tenantID int64, deviceID string) *Device {
 	tb.Helper()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
 	uniqueDeviceID := fmt.Sprintf("%s-%d", deviceID, uniqueFixtureSuffix())
 
 	device := &Device{
@@ -1839,14 +1826,7 @@ func CreateTestDeviceForTenant(tb testing.TB, db *bun.DB, tenantID int64, device
 		APIKey:     StrPtr("test-api-key-" + uniqueDeviceID),
 	}
 	device.TenantID = tenantID
-
-	err := db.NewInsert().
-		Model(device).
-		ModelTableExpr(`iot.devices`).
-		Scan(ctx)
-	require.NoError(tb, err, "Failed to create test device for tenant")
-	ensureFixtureDevicePIN(tb, db, tenantID)
-
+	insertTestDevice(tb, db, device, "Failed to create test device for tenant")
 	return device
 }
 

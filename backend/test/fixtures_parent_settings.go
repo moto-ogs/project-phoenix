@@ -31,23 +31,3 @@ func SetTestTenantSetting(tb testing.TB, db *bun.DB, tenantID int64, key, jsonVa
 		tenantID, key, jsonValue).Exec(context.Background())
 	require.NoError(tb, err)
 }
-
-// devicePINSetting is models/config.KeyOGSDevicePIN, spelled out for the same
-// reason as parentPickupRequestSetting.
-const devicePINSetting = "security.ogs_device_pin"
-
-// FixtureDevicePIN is the device PIN of every school a fixture device belongs
-// to. The registry has no default PIN (#7175); like a school the migration kept
-// on the former default, fixture schools hold 1234 as their own value, so a
-// kiosk request of a test sends it as X-Staff-PIN.
-const FixtureDevicePIN = "1234"
-
-// ensureFixtureDevicePIN gives the school the fixture device PIN unless the
-// test already stored a PIN of its own.
-func ensureFixtureDevicePIN(tb testing.TB, db *bun.DB, tenantID int64) {
-	tb.Helper()
-	_, err := db.NewRaw(`INSERT INTO config.setting_values (tenant_id, setting_key, value)
-		VALUES (?, ?, to_jsonb(?::text)) ON CONFLICT (tenant_id, setting_key) DO NOTHING`,
-		tenantID, devicePINSetting, FixtureDevicePIN).Exec(context.Background())
-	require.NoError(tb, err, "Failed to store the fixture device PIN")
-}

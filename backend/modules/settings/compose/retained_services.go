@@ -37,7 +37,6 @@ var (
 	NewSettingsService       = configSvc.NewSettingsService
 	NewHomeLayoutService     = configSvc.NewHomeLayoutService
 	NewTenantOperations      = configSvc.NewTenantOperations
-	NewDevicePINStatus       = configSvc.NewDevicePINStatus
 	NewPayrollStatusService  = configSvc.NewPayrollStatusService
 	NewSFTPExportSettings    = configSvc.NewSFTPExportSettings
 	NewSettings              = configSvc.NewSettingsServiceWithDependencies
