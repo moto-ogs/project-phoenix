@@ -40,6 +40,21 @@ export const DEPLOYMENTS = Object.freeze({ production: 'moto-app.de', demo: 'dem
 /** Portals of real schools; `public` covers login, start, and demo pages. */
 const PORTALS = ['ogs', 'parents', 'school'];
 
+/**
+ * The caterer portal (ADR 0077). Its browser sends nothing (caterer accounts
+ * are not asked for consent, PortalAnalyticsSession), and a caterer session
+ * names no school: only its writes arrive, as core actions of the school in
+ * their route (backend/analytics/core_actions.go).
+ */
+const CATERER = 'caterer';
+
+/** Core actions of a school's caterer link (Belieferung), from the OGS and the caterer portal. */
+const CATERER_LINK_EVENTS = [
+  ['caterer_invited', 'Caterer eingeladen'],
+  ['caterer_invite_accepted', 'Einladung angenommen'],
+  ['caterer_supply_ended', 'Belieferung beendet'],
+];
+
 const ROUTE_LISTS = {
   ogs: ['TRACKED_TENANT_ROUTE_TEMPLATES', 'TRACKED_TENANT_PUBLIC_ROUTE_TEMPLATES'],
   parents: ['TRACKED_PARENT_ROUTE_TEMPLATES'],
@@ -303,6 +318,10 @@ export const FEATURES = Object.freeze([
       parents: ['/anmeldung/**', '/ferienanmeldung/**', '/ferienanmeldungen'],
     },
     events: ['enrollment_submitted'],
+  },
+  {
+    name: 'Essen vom Caterer',
+    events: ['caterer_invited', 'caterer_invite_accepted', 'caterer_supply_ended', 'meal_order_confirmed'],
   },
   { name: 'Stammdaten und Export', pages: { ogs: ['/database/**', '/eltern/bankverbindungen'] }, events: ['data_exported'] },
   { name: 'Einstellungen', pages: { ogs: ['/settings', '/profile'], parents: ['/settings'], school: ['/einstellungen'] }, events: ['settings_changed'] },
@@ -586,7 +605,7 @@ function viewsPerWeek(deployment, surface, name) {
 }
 
 /**
- * The dashboards: one per product surface (OGS-App, Eltern-App, Schul-App, Demo) plus
+ * The dashboards: one per product surface (OGS-App, Eltern-App, Schul-App, Caterer-Portal, Demo) plus
  * two across schools (Nutzung je Standort, Schule im Verlauf). `projectId`
  * feeds the heatmap links.
  */
@@ -892,6 +911,54 @@ order by Woche desc`),
           name: 'Schul-App: Wo klicken Lehrkräfte ins Leere?',
           description: 'Letzte 30 Tage. Dead Clicks und Rage Clicks je Seite, mit Link zur Heatmap.',
           ...frictionTable(projectId, 'production', ['school']),
+        },
+      ],
+    },
+    {
+      name: 'Nutzungsanalyse: Caterer-Portal',
+      description: `Was Caterer im Caterer-Portal tun (surface = caterer) und wie Schulen ihren Caterer anbinden, in echten Schulen (deployment = moto-app.de). Das Caterer-Portal sendet keine Seitenaufrufe: Caterer-Konten werden nicht nach einer Einwilligung gefragt, ihr Browser erfasst deshalb nichts. Gezählt werden nur die Speichervorgänge aus dem Backend, je Schule der Bestellung oder Einladung; ein Login des Caterers nennt keine Schule und fehlt. ${WORKDAYS_NOTE}`,
+      insights: [
+        {
+          name: 'Caterer-Portal: Was tun Caterer?',
+          description: 'Letzte 30 Tage. Erfolgreiche Speichervorgänge im Caterer-Portal: Einladung angenommen, Bestellung bestätigt.',
+          ...actionsByRole('production', CATERER, coreAction),
+        },
+        {
+          name: 'Caterer-Portal: Bestätigte Bestellungen je Schule (30 Tage)',
+          description: 'Je Schule: wie oft ihr Caterer eine Bestellung bestätigt hat und an wie vielen Werktagen. Eine Schule ohne Bestätigung fehlt.',
+          ...hogql('production', (where) => `
+select
+  ${SCHOOL_BREAKDOWN} as Standort,
+  count() as ${quoted('Bestätigungen')},
+  uniq(toDate(timestamp)) as ${quoted('Tage mit Bestätigung')},
+  max(toDate(timestamp)) as ${quoted('Letzte Bestätigung')}
+from events
+where ${where}
+  and event = 'meal_order_confirmed'
+  and properties.surface = ${sqlString(CATERER)}
+  and isNotNull(properties.school_id)
+  and timestamp > now() - interval 30 day
+group by Standort
+order by ${quoted('Bestätigungen')} desc, Standort`),
+        },
+        {
+          name: 'Caterer-Portal: Bestätigte Bestellungen pro Woche',
+          ...trends('production', {
+            series: [series('meal_order_confirmed', 'Bestätigte Bestellungen')],
+            dateFrom: '-180d',
+            breakdown: SCHOOL_BREAKDOWN,
+            breakdownType: 'hogql',
+            display: 'ActionsBar',
+          }),
+        },
+        {
+          name: 'Caterer-Anbindung: Einladungen und Enden pro Woche',
+          description: 'Schulen laden ihren Caterer in der OGS-App ein und beenden die Belieferung dort; der Caterer nimmt die Einladung im Caterer-Portal an.',
+          ...trends('production', {
+            series: CATERER_LINK_EVENTS.map(([event, name]) => series(event, name)),
+            dateFrom: '-180d',
+            display: 'ActionsBar',
+          }),
         },
       ],
     },

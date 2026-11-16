@@ -30,6 +30,11 @@ type CoreAction struct {
 	// ExportType is the only property a data export adds; it names the
 	// export by its route, never by the request body.
 	ExportType string
+	// SchoolFromRoute: a caterer names no school in its session (it may
+	// supply several), so the event counts for the school in the route's
+	// `schoolId`. Only a 2xx reaches capture, so the handler has accepted
+	// that school for the caterer; the school's switch then gates the event.
+	SchoolFromRoute bool
 }
 
 var notCaptured = CoreAction{}
@@ -43,6 +48,9 @@ func sessionOr(name, surface string) CoreAction {
 	return CoreAction{Event: name, Session: true, Surface: surface}
 }
 func public(name string) CoreAction { return CoreAction{Event: name, Surface: SurfacePublic} }
+func catererEvent(name string) CoreAction {
+	return CoreAction{Event: name, Surface: SurfaceCaterer, SchoolFromRoute: true}
+}
 func export(exportType string) CoreAction {
 	return CoreAction{Event: "data_exported", ExportType: exportType}
 }
@@ -710,7 +718,9 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/demo/access/reset"}:    notCaptured,
 
 	// Caterer portal (ADR 0077). Accepting the mailed invitation starts no
-	// session yet, so it counts on the caterer surface itself.
+	// session yet, so it counts on the caterer surface itself. Both writes
+	// count for the school in their route (catererEvent); a caterer login
+	// names no school and stays outside the school-gated collection.
 	// The caterer's second factor (#4497): a redeemed code or passkey
 	// starts the session like the login; switching the factor on or off and
 	// managing devices and passkeys are account settings.
@@ -730,8 +740,8 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/caterer/auth/password-reset"}:                         notCaptured,
 	{http.MethodPost, "/caterer/auth/password-reset/confirm"}:                 notCaptured,
 	{http.MethodPost, "/caterer/auth/login"}:                                  session("login_success"),
-	{http.MethodPost, "/caterer/invitations/{schoolId}/{token}/accept"}:       {Event: "caterer_invite_accepted", Surface: SurfaceCaterer},
-	{http.MethodPost, "/caterer/schools/{schoolId}/orders/{orderId}/confirm"}: event("meal_order_confirmed"),
+	{http.MethodPost, "/caterer/invitations/{schoolId}/{token}/accept"}:       catererEvent("caterer_invite_accepted"),
+	{http.MethodPost, "/caterer/schools/{schoolId}/orders/{orderId}/confirm"}: catererEvent("meal_order_confirmed"),
 }
 
 // CoreActions returns a copy of the route table for the guard tests.

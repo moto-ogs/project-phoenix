@@ -29,6 +29,7 @@ test('defines one dashboard per product surface plus the two across schools', ()
     'Nutzungsanalyse: OGS-App',
     'Nutzungsanalyse: Eltern-App',
     'Nutzungsanalyse: Schul-App',
+    'Nutzungsanalyse: Caterer-Portal',
     'Nutzungsanalyse: Schule im Verlauf',
     'Nutzungsanalyse: Demo',
   ]);
@@ -187,6 +188,19 @@ test('every portal of a school has its own page, action, and friction tables', (
       assert.match(tile.query.source.query, new RegExp(`properties\\.surface = '${surface}'`), tile.name);
     }
     assert.ok(tiles.some((insight) => insight.name.startsWith(`${dashboard}: Wo klicken`)), dashboard);
+  }
+});
+
+test('the caterer portal counts its core actions per school, since its browser sends nothing', () => {
+  const tiles = definitions.find((d) => d.name === 'Nutzungsanalyse: Caterer-Portal').insights;
+  const actions = tiles.find((insight) => insight.name === 'Caterer-Portal: Was tun Caterer?');
+  assert.match(actions.query.source.query, /properties\.surface = 'caterer'/);
+  assert.match(actions.query.source.query, /uniq\(toString\(properties\.school_id\)\) as Schulen/);
+  const queries = JSON.stringify(tiles.map((insight) => insight.query));
+  assert.ok(tiles.every((insight) => !/Seite|klicken/.test(insight.name)), 'the caterer portal has no page views');
+  for (const event of ['caterer_invited', 'caterer_invite_accepted', 'caterer_supply_ended', 'meal_order_confirmed']) {
+    assert.match(queries, new RegExp(`\\b${event}\\b`), event);
+    assert.equal(FEATURES.filter((f) => f.events?.includes(event)).length, 1, event);
   }
 });
 

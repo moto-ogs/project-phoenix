@@ -113,6 +113,7 @@ func captureCoreAction(cfg CoreActionConfig, r *http.Request, action CoreAction,
 	if !ok {
 		return
 	}
+	actor = routeSchoolActor(r, action, actor)
 	actor, ok = cfg.Policy.EnrollmentActor(r, actor)
 	if !ok || !cfg.Policy.AllowsActor(r.Context(), actor) {
 		return
@@ -170,6 +171,18 @@ func resolveActor(cfg CoreActionConfig, r *http.Request, action CoreAction, body
 		return Actor{Surface: action.Surface}, true
 	}
 	return Actor{}, false
+}
+
+// routeSchoolActor gives a caterer actor the school of the route
+// (CoreAction.SchoolFromRoute). Any other actor keeps its own school.
+func routeSchoolActor(r *http.Request, action CoreAction, actor Actor) Actor {
+	if !action.SchoolFromRoute || actor.Surface != SurfaceCaterer || actor.SchoolID > 0 {
+		return actor
+	}
+	if id, err := strconv.ParseInt(chi.URLParam(r, "schoolId"), 10, 64); err == nil && id > 0 {
+		actor.SchoolID = id
+	}
+	return actor
 }
 
 func mintedSessionActor(cfg CoreActionConfig, body *cappedBuffer) (Actor, bool) {
