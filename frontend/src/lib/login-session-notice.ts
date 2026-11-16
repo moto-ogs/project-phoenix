@@ -3,7 +3,10 @@ import type { Session } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
 import { useLatest } from "~/lib/hooks/use-latest";
 import { hasSessionAccess } from "~/lib/session-access";
-import { DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
+import {
+  DELIBERATE_LOGOUT_KEY,
+  LOGOUT_NOT_REVOKED_KEY,
+} from "~/lib/session-cache";
 
 const SESSION_ERRORS = new Set(["SessionRequired", "SessionExpired"]);
 
@@ -42,6 +45,37 @@ export function useSessionExpiredNotice() {
     clearSessionErrorFromUrl();
   }, []);
   return [sessionExpired, setSessionExpired] as const;
+}
+
+/**
+ * Records whether the logout running now ended the session on this device
+ * only: the server answered that it could not revoke it (#7209).
+ */
+export function markLogoutNotRevoked(notRevoked: boolean): void {
+  try {
+    if (notRevoked) sessionStorage.setItem(LOGOUT_NOT_REVOKED_KEY, "1");
+    else sessionStorage.removeItem(LOGOUT_NOT_REVOKED_KEY);
+  } catch {
+    // sessionStorage unavailable: the login page then shows no notice.
+  }
+}
+
+/**
+ * Whether a login page says that the last logout ended the session on this
+ * device only (#7209). The marker is read once, so a reload drops it.
+ */
+export function useLogoutNotRevokedNotice() {
+  const [notRevoked, setNotRevoked] = useState(false);
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(LOGOUT_NOT_REVOKED_KEY) !== "1") return;
+      sessionStorage.removeItem(LOGOUT_NOT_REVOKED_KEY);
+    } catch {
+      return;
+    }
+    setNotRevoked(true);
+  }, []);
+  return [notRevoked, setNotRevoked] as const;
 }
 
 interface StaleSessionSignOut {

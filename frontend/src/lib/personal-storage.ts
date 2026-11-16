@@ -100,6 +100,9 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   // Steuerwerte ohne Konto. deliberateLogout muss den Logout überleben: die
   // Login-Seite liest daraus, dass er gewollt war.
   "deliberateLogout",
+  // Ebenso der Merker, dass der letzte Logout die Sitzung nur auf diesem
+  // Gerät beendet hat (#7209); die Login-Seite liest ihn einmal.
+  "logoutNotRevoked",
   // „Mit Code neu anmelden“ (#6955) muss den Logout ebenso überleben: Die
   // nächste Träger-Anmeldung in diesem Tab fragt einmal nach dem Code. Nur
   // ein Merker ohne Konto; trifft er die nächste Person, fragt moto auch sie
