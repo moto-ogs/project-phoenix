@@ -116,7 +116,9 @@ func traegerPortalRoutes(t *testing.T, db *bun.DB, identity TraegerPortalIdentit
 // today, the day clock the serving root binds to its real clock.
 func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date) http.Handler {
 	t.Helper()
-	now := func() time.Time { return today().BerlinMidnight().Add(10 * time.Hour) }
+	// The instant clock stays the real one: the contract and billing routes
+	// compare their stamps with PostgreSQL's now(), as before #7104.
+	now := time.Now
 	database := testpkg.NewDatabase(t, db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
