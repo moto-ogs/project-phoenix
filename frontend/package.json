@@ -161,7 +161,8 @@
       "!src/**/*.{test,spec,stories}.{js,jsx,ts,tsx}!"
     ],
     "ignore": [
-      ".storybook/mocks/**"
+      ".storybook/mocks/**",
+      "src/lib/contract-spike/**"
     ],
     "ignoreIssues": {
       "playwright*.config.ts": [
@@ -172,6 +173,7 @@
       ]
     },
     "ignoreDependencies": [
+      "@hey-api/openapi-ts",
       "lint-staged",
       "react-scan"
     ]
