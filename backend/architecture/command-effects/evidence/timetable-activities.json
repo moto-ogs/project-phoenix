@@ -29521,6 +29521,38 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
+      "binding_digest": "6361a15d12ead9a81348761b660fef66",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
+      "binding_digest": "22ce7b6b3fca9816b35632d921d8e4cf",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
+      "binding_digest": "ee6688a96bb50048161cb4acff0690e5",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterOptedIn",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomChangeNotices.NotifyInstanceRoomChanged",
+      "binding_digest": "bfb5ac770f61f47bb3510e95bb04d4ac",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceRoomChangeNotices.NotifyInstanceRoomChanged",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.CompleteActivitySession",
       "binding_digest": "df968320f296a1379287d52a76a92953",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.InstanceSessions.CompleteActivitySession",

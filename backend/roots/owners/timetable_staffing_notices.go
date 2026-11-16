@@ -27,16 +27,16 @@ type TimetableStaffNotices struct {
 	Staffing      timetablePorts.StaffingNoticeDependencies
 	// RoomChanges tells the staff of a block, and with the guardian contacts
 	// the families of its children, that it moved to another room (#7141).
-	RoomChanges   timetablePorts.InstanceRoomChangeNotices
-	notifications DeliveryNotifications
+	RoomChanges timetablePorts.InstanceRoomChangeNotices
 }
 
 // WithGuardianContacts lets the room change notice reach the families too
 // (#7141): the People Directory names the guardians of the booked children
 // with their portal access and language.
 func (n TimetableStaffNotices) WithGuardianContacts(guardians peopledirectory.GuardianPortalContacts) TimetableStaffNotices {
-	if n.RoomChanges != nil && guardians != nil {
-		n.RoomChanges = newTimetableRoomChangeNotices(n.notifications, guardians)
+	if notices, ok := n.RoomChanges.(timetableRoomChangeNotices); ok && guardians != nil {
+		notices.guardians = guardians
+		n.RoomChanges = notices
 	}
 	return n
 }
@@ -56,7 +56,6 @@ func NewTimetableStaffNotices(notifications DeliveryNotifications, membership sc
 		Cancellations: cancellations,
 		Staffing:      newTimetableStaffingNoticeDependencies(notifications.Notifier, notifications.Preferences, membership, groups, handovers),
 		RoomChanges:   newTimetableRoomChangeNotices(notifications, nil),
-		notifications: notifications,
 	}
 }
 

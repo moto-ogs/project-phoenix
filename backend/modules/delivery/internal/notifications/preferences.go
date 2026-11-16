@@ -510,6 +510,8 @@ func (s *preferenceService) SetForParent(ctx context.Context, accountID int64, n
 
 // DisableAllForParent switches every stored parent-portal decision off at
 // every school.
+// A default-on type without a stored decision stays on unless its "off" is
+// stored too (#7141).
 func (s *preferenceService) DisableAllForParent(ctx context.Context, accountID int64) error {
 	ctx = s.withTenantRuntime(ctx)
 	if accountID <= 0 {
@@ -519,8 +521,6 @@ func (s *preferenceService) DisableAllForParent(ctx context.Context, accountID i
 		if err := s.consent.DisableConsent(tenantCtx, accountID, typeKeysForPortal(PortalParent)); err != nil {
 			return fmt.Errorf("disable notification preferences for tenant %d: %w", tenantID, err)
 		}
-		// A default-on type without a stored decision stays on unless the
-		// "off" is stored (#7141).
 		return s.declineDefaultOnTypes(tenantCtx, accountID, PortalParent)
 	})
 }
