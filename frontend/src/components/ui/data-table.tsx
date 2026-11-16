@@ -1321,6 +1321,23 @@ export function DataTable<T>({
                         .filter(Boolean)
                         .join(" ");
                       const summary = summaryRow?.(row);
+                      // A row that opens (not expands) gets its keyboard path
+                      // as a button in the first cell, named by that cell.
+                      const opensRow =
+                        !canExpand && onRowClick !== undefined && rowClickable;
+                      const rowActionLabelId = `${rowActionId}-${String(rowKey)}`;
+                      const rowAction = opensRow ? (
+                        <button
+                          type="button"
+                          data-row-action
+                          aria-labelledby={rowActionLabelId}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onRowClick(row);
+                          }}
+                          className="sr-only"
+                        />
+                      ) : null;
                       return (
                         <Fragment key={rowKey}>
                           {/* The row stays a table row: a click anywhere on
@@ -1403,28 +1420,22 @@ export function DataTable<T>({
                                       ) : (
                                         <span className="h-3.5 w-3.5 shrink-0" />
                                       )}
-                                      <div className="min-w-0">
+                                      {opensRow ? rowAction : null}
+                                      <div
+                                        className="min-w-0"
+                                        id={
+                                          opensRow
+                                            ? rowActionLabelId
+                                            : undefined
+                                        }
+                                      >
                                         {col.render(row)}
                                       </div>
                                     </div>
-                                  ) : colIndex === 0 &&
-                                    !canExpand &&
-                                    onRowClick &&
-                                    rowClickable ? (
+                                  ) : colIndex === 0 && opensRow ? (
                                     <>
-                                      <button
-                                        type="button"
-                                        data-row-action
-                                        aria-labelledby={`${rowActionId}-${String(rowKey)}`}
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          onRowClick(row);
-                                        }}
-                                        className="sr-only"
-                                      />
-                                      <div
-                                        id={`${rowActionId}-${String(rowKey)}`}
-                                      >
+                                      {rowAction}
+                                      <div id={rowActionLabelId}>
                                         {col.render(row)}
                                       </div>
                                     </>

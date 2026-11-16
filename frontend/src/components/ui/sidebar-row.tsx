@@ -57,10 +57,15 @@ export function combineSidebarRowBadges(
   if (parts.length === 0) return null;
   const labels = parts.map((badge) => badge.ariaLabel);
   const last = labels.pop();
+  const count = parts.reduce((sum, badge) => sum + badge.count, 0);
   return {
-    count: parts.reduce((sum, badge) => sum + badge.count, 0),
+    count,
     tone,
-    ariaLabel: labels.length > 0 ? `${labels.join(", ")} und ${last}` : last!,
+    // The visible sum leads what is read, then each part (WCAG 2.5.3, #7112).
+    ariaLabel:
+      labels.length > 0
+        ? `${count} neu: ${labels.join(", ")} und ${last}`
+        : last!,
   };
 }
 

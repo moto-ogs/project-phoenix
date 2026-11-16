@@ -312,6 +312,25 @@ function counters(
   });
 }
 
+/**
+ * Links and buttons whose accessible name contains `text`: what a screen
+ * reader hears at a sidebar entry, the behaviour the counter assertions
+ * check (#7112).
+ */
+function controlsNaming(
+  text: string | RegExp,
+  container: HTMLElement = document.body,
+): HTMLElement[] {
+  const name =
+    typeof text === "string"
+      ? new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      : text;
+  return [
+    ...within(container).queryAllByRole("link", { name }),
+    ...within(container).queryAllByRole("button", { name }),
+  ];
+}
+
 describe("Sidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -674,7 +693,7 @@ describe("Sidebar", () => {
       // Anker: die Staff-Navigation ist geladen, nicht nur das Skelett.
       expect(screen.getByText("Gruppen")).toBeInTheDocument();
       expect(screen.queryByText("Anfragen")).not.toBeInTheDocument();
-      expect(counters("2 offene Anfragen")).toHaveLength(0);
+      expect(controlsNaming("2 offene Anfragen")).toHaveLength(0);
     });
 
     it("prefixes the Team-Chat link in path-routing mode", () => {
@@ -2896,10 +2915,10 @@ describe("Sidebar", () => {
       const messages = screen.getByRole("link", {
         name: "Nachrichten , nicht gebucht",
       });
-      expect(counters("2 ungelesene Nachrichten", messages)).toHaveLength(0);
+      expect(messages).not.toHaveAccessibleName(/2 ungelesene Nachrichten/);
 
       const parents = screen.getByRole("button", { name: /^Eltern/ });
-      expect(counters("2 ungelesene Nachrichten", parents)).toHaveLength(0);
+      expect(parents).not.toHaveAccessibleName(/2 ungelesene Nachrichten/);
     });
 
     it("zeigt der Leitung gesperrte Datenverwaltung ohne Routenrecht", () => {
@@ -4138,7 +4157,7 @@ describe("Sidebar", () => {
       render(<Sidebar />);
 
       expect(counters("3 ungelesene Anmeldungen").length).toBeGreaterThan(0);
-      expect(counters(/offene Anfragen?$/)).toHaveLength(0);
+      expect(controlsNaming(/offene Anfragen?$/)).toHaveLength(0);
     });
 
     it("nennt am Unterpunkt eine Anmeldung in der Einzahl", () => {
@@ -4167,7 +4186,7 @@ describe("Sidebar", () => {
       fireEvent.click(screen.getByRole("button", { name: /^Eltern/ }));
 
       expect(counters("1 ungelesene Anmeldung").length).toBeGreaterThan(0);
-      expect(counters("1 ungelesene Anmeldungen")).toHaveLength(0);
+      expect(controlsNaming("1 ungelesene Anmeldungen")).toHaveLength(0);
     });
 
     it("zeigt den Zähler am zugeklappten Bereich", () => {
@@ -4201,7 +4220,7 @@ describe("Sidebar", () => {
       const header = screen.getByRole("button", { name: /^Eltern/ });
       expect(header).toHaveAttribute("aria-expanded", "false");
       expect(header).toHaveAccessibleName(
-        "Eltern 2 ungelesene Nachrichten und 3 ungelesene Anmeldungen",
+        "Eltern 5 neu: 2 ungelesene Nachrichten und 3 ungelesene Anmeldungen",
       );
     });
 
@@ -4228,7 +4247,7 @@ describe("Sidebar", () => {
 
       const header = screen.getByRole("button", { name: /^Eltern/ });
       expect(header).toHaveAccessibleName(
-        "Eltern 1 ungelesene Nachricht und 1 ungelesene Anmeldung",
+        "Eltern 2 neu: 1 ungelesene Nachricht und 1 ungelesene Anmeldung",
       );
     });
 
@@ -4241,7 +4260,7 @@ describe("Sidebar", () => {
 
       // Anker: die Staff-Navigation ist geladen.
       expect(screen.getByText("Mitarbeiter")).toBeInTheDocument();
-      expect(counters(/ungelesene Anmeldungen/)).toHaveLength(0);
+      expect(controlsNaming(/ungelesene Anmeldungen/)).toHaveLength(0);
     });
   });
 

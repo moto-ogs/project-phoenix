@@ -864,7 +864,7 @@ describe("AggregatedRequestList", () => {
       await oldPage;
     });
 
-    expect(screen.queryByRole("button", { name: /, Altes Kind$/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Altes Kind/ })).toBeNull();
     expect(mockListWithdrawals).toHaveBeenLastCalledWith(
       expect.objectContaining({ studentId: "20", page: 1 }),
     );

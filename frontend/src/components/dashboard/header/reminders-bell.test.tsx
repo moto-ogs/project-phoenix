@@ -699,7 +699,8 @@ describe("NotificationFeedBell — moto schule", () => {
 
     expect(await screen.findByText("9+")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Benachrichtigungen 12 neu" }),
+      // The capped number stays in the name, the full count follows.
+      screen.getByRole("button", { name: "Benachrichtigungen 9+ 12 neu" }),
     ).toBeInTheDocument();
     expect(api.fetchNotificationFeedUnreadCount).toHaveBeenCalledWith(
       SCHOOL_FEED,

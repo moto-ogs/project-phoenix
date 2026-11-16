@@ -216,7 +216,7 @@ describe("PlannedNowSection", () => {
       "Kommt heute um 12:45 Uhr (Klasse 2a: Unterricht fällt aus)",
     );
     expect(line.className).not.toContain("text-moto-amber-strong");
-    expect(document.querySelector("span[title] > .sr-only")).toBeNull();
+    expect(screen.queryByText(/^Planungs-Hinweis:/)).toBeNull();
   });
 
   it("renders roster planning warnings", () => {
@@ -256,7 +256,7 @@ describe("PlannedNowSection", () => {
     );
     expect(
       within(hint).getByText(
-        "Erwartete Ankunft liegt nach dem Start dieser Betreuung.",
+        "Planungs-Hinweis: Erwartete Ankunft liegt nach dem Start dieser Betreuung.",
       ),
     ).toHaveClass("sr-only");
     expect(
@@ -288,7 +288,7 @@ describe("PlannedNowSection", () => {
     );
 
     expect(screen.getByText("Mia Bauer")).toBeInTheDocument();
-    expect(document.querySelector("span[title] > .sr-only")).toBeNull();
+    expect(screen.queryByText(/^Planungs-Hinweis:/)).toBeNull();
   });
 
   // #4350: dieselbe Markierung wie im Tagesplan. Ob ein Block der eigene ist,

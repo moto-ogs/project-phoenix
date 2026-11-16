@@ -42,8 +42,11 @@ describe("NotificationBadge", () => {
     );
 
     expect(badge(container)).toHaveClass("bg-moto-blue-strong", "text-white");
-    // The capped number is only shown; the full count is read.
-    expect(screen.getByText("99+")).toHaveAttribute("aria-hidden", "true");
+    // The capped number stays part of the text (WCAG 2.5.3); the full
+    // count follows hidden.
+    expect(badge(container)).toHaveTextContent(
+      /^99\+ 120 ungelesene Nachrichten$/,
+    );
     expect(screen.getByText("120 ungelesene Nachrichten")).toHaveClass(
       "sr-only",
     );

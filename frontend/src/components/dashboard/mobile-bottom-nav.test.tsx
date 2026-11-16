@@ -545,23 +545,24 @@ describe("MobileBottomNav", () => {
 
     // Auf dem Telefon fehlt die Kopfzeile mit der Glocke (#7148): die Zeile
     // „Benachrichtigungen“ im Menü öffnet dasselbe Vollbild-Blatt.
-    it("öffnet die Benachrichtigungen aus dem Menü und zählt neue Hinweise", () => {
+    it("öffnet die Benachrichtigungen aus dem Menü und zählt neue Hinweise", async () => {
       feedUnread.count = 12;
       mockUseSession.mockReturnValue(createMockSession(false));
       try {
         render(<MobileBottomNav />);
         // Ohne „Neu für Sie“ zählt „Mehr“ nur die Hinweise, ab 10 als „9+“.
-        expect(getBadge("12 neu für Sie")).toHaveTextContent("9+");
+        expect(getBadge("9+ 12 neu für Sie")).toHaveTextContent("9+");
         const more = screen.getByRole("button", {
-          name: "Mehr 12 neu für Sie",
+          name: "Mehr 9+ 12 neu für Sie",
         });
+        // The sheet loads through next/dynamic: wait for it, no fixed sleep.
         expect(
-          screen.getByTestId("notifications-sheet-host"),
+          await screen.findByTestId("notifications-sheet-host"),
         ).toBeInTheDocument();
         fireEvent.click(more);
 
         const row = screen.getByRole("button", { name: /Benachrichtigungen/ });
-        expect(getBadge("12 neue Hinweise", row)).toHaveTextContent("9+");
+        expect(getBadge("9+ 12 neue Hinweise", row)).toHaveTextContent("9+");
         fireEvent.click(row);
         expect(mockOpenNotificationsSheet).toHaveBeenCalledTimes(1);
         expect(screen.getByTestId("drawer")).toHaveAttribute(

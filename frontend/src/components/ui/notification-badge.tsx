@@ -61,8 +61,10 @@ export function NotificationBadge({
   return (
     <span className={surface}>
       {rest === null ? (
+        // Capped („9+“) or worded otherwise: the shown text stays in the
+        // name, the full sentence follows it.
         <>
-          <span aria-hidden="true">{shown}</span>
+          {shown}
           <span className="sr-only">{` ${ariaLabel}`}</span>
         </>
       ) : (

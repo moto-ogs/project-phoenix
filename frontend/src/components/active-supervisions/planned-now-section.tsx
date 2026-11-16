@@ -549,7 +549,7 @@ function RosterPreviewRow({
               <CircleAlert className="h-4 w-4" aria-hidden="true" />
               {/* Der Hinweis selbst, nicht nur seine Zahl: ein title erreicht
                   weder Tastatur noch Vorleseprogramm (#7112). */}
-              <span className="sr-only">{warningLabel}</span>
+              <span className="sr-only">{`Planungs-Hinweis: ${warningLabel}`}</span>
             </span>
           ) : null}
           <StatusColorBadge

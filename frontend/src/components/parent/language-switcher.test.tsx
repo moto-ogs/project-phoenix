@@ -97,9 +97,11 @@ describe("LanguageSwitcher", () => {
 
     render(<LanguageSwitcher compact />);
 
-    const trigger = screen.getByRole("button", { name: "Language Русский" });
+    const trigger = screen.getByRole("button", {
+      name: /^Русский ?, Language$/,
+    });
     expect(trigger).toHaveTextContent("Русский");
-    expect(screen.getByText("Language")).toHaveClass("sr-only");
+    expect(screen.getByText(", Language")).toHaveClass("sr-only");
 
     fireEvent.click(trigger);
     fireEvent.click(screen.getByRole("option", { name: "Shqip" }));
