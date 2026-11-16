@@ -31,41 +31,48 @@ func TypeScript(doc Document) (map[string]string, error) {
 			return nil, fmt.Errorf("the resource name %q is taken by a generated table", strings.TrimSuffix(reserved, ".generated.ts"))
 		}
 	}
+	newWriter := func() *tsWriter {
+		return &tsWriter{byName: byName, enums: enums, done: map[string]bool{}, helpers: map[string]bool{}}
+	}
 	writers := map[string]*tsWriter{}
 	users := map[string]int{}
-	for _, resource := range sortedKeys(resources) {
-		w := &tsWriter{byName: byName, enums: enums, done: map[string]bool{}, helpers: map[string]bool{}}
-		for _, route := range resources[resource] {
-			for _, schema := range route.schemas() {
-				w.visit(schema)
-			}
-		}
-		for _, name := range w.typeOrder {
-			users[name]++
-		}
-		for _, name := range w.enumOrder {
-			users["enum:"+name]++
-		}
-		writers[resource] = w
+	for resource, routes := range resources {
+		writers[resource] = newWriter()
+		writers[resource].visitRoutes(routes, users)
 	}
 	// A type two resources use takes everything it refers to along: both
 	// resources visited those too. Each resource lists a type after the ones
 	// it refers to, so the shared file keeps that order.
-	shared := &tsWriter{byName: byName, enums: enums, done: map[string]bool{}, helpers: map[string]bool{}}
-	files := map[string]string{}
+	shared := newWriter()
 	for _, resource := range sortedKeys(resources) {
 		w := writers[resource]
 		w.typeOrder = shared.take(w.typeOrder, "", users)
 		w.enumOrder = shared.take(w.enumOrder, "enum:", users)
 	}
-	for _, resource := range sortedKeys(resources) {
-		files[resource+".generated.ts"] = writers[resource].file(resources[resource], shared)
+	files := map[string]string{portalsFile: portalTable(resources)}
+	for resource, routes := range resources {
+		files[resource+".generated.ts"] = writers[resource].file(routes, shared)
 	}
 	if len(shared.typeOrder)+len(shared.enumOrder) > 0 {
 		files[sharedFile] = shared.file(nil, nil)
 	}
-	files[portalsFile] = portalTable(resources)
 	return files, nil
+}
+
+// visitRoutes orders the types of a resource's routes and counts the
+// resource as a user of each.
+func (w *tsWriter) visitRoutes(routes []Route, users map[string]int) {
+	for _, route := range routes {
+		for _, schema := range route.schemas() {
+			w.visit(schema)
+		}
+	}
+	for _, name := range w.typeOrder {
+		users[name]++
+	}
+	for _, name := range w.enumOrder {
+		users["enum:"+name]++
+	}
 }
 
 // take moves the names more than one resource uses from a resource's order
@@ -73,15 +80,17 @@ func TypeScript(doc Document) (map[string]string, error) {
 func (w *tsWriter) take(names []string, prefix string, users map[string]int) []string {
 	var own []string
 	for _, name := range names {
-		switch {
-		case users[prefix+name] < 2:
+		if users[prefix+name] < 2 {
 			own = append(own, name)
-		case w.done[prefix+name]:
-		case prefix == "":
-			w.done[name] = true
+			continue
+		}
+		if w.done[prefix+name] {
+			continue
+		}
+		w.done[prefix+name] = true
+		if prefix == "" {
 			w.typeOrder = append(w.typeOrder, name)
-		default:
-			w.done[prefix+name] = true
+		} else {
 			w.enumOrder = append(w.enumOrder, name)
 		}
 	}
