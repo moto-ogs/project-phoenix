@@ -18,7 +18,7 @@ func NewEnrollmentOfferingAdjustmentRepository(runtime Runtime) audit.Enrollment
 }
 
 func (r *enrollmentOfferingAdjustmentRepository) Create(ctx context.Context, entry *audit.EnrollmentOfferingAdjustment) error {
-	return NewAppender(r.runtime).Append(ctx, entry)
+	return NewAppender(r.runtime, nil).Append(ctx, entry)
 }
 
 func (r *enrollmentOfferingAdjustmentRepository) CountForDeletion(

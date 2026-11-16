@@ -214,7 +214,7 @@ func composeServeRoot(
 			calendar, err = owners.BuildSchoolCalendarRecords(db, owners.ObserveSchoolCalendar, settings.Service)
 			return
 		},
-		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, membership, calendar); return },
+		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, env, membership, calendar); return },
 		func() error {
 			people, peopleIdentity = owners.BuildPeopleRows(db, env.Observe.IdentityAccess, groups, rooms, membership, workTime)
 			return nil
@@ -244,7 +244,7 @@ func composeServeRoot(
 			carePlan, err = owners.ComposeCarePlan(db, persons, owners.CarePlanStatusSlots(timetableRepos.InstanceStudent), env.Now)
 			return
 		},
-		func() (err error) { appointments, err = owners.BuildServeAppointments(db); return },
+		func() (err error) { appointments, err = owners.BuildServeAppointments(db, env.Now); return },
 		func() (err error) {
 			operatorAuditLog = owners.NewOperatorAuditLog(db)
 			communication, err = buildCommunicationModule(db, env, organizations, persons, operatorAuditLog)
@@ -267,7 +267,7 @@ func composeServeRoot(
 		func() error {
 			presence = owners.BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
 			facilitiesRooms = buildFacilitiesRooms(presence.Presence, rooms, timetableOwner, membership, persons)
-			substitutions = owners.NewGroupSubstitutionRepository(structure.Groups, membership, workTime)
+			substitutions = owners.NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today)
 			supervisions = owners.NewGroupSupervisionRecords(presence.SessionRecords, groups)
 			return nil
 		},
@@ -499,7 +499,7 @@ func composeServeRoot(
 			guardianProfiles = peopleCompose.NewGuardianProfileLoader(people.GuardianProfiles, db.Pool(), env.Logger.With("service", "guardian-profile-loader"))
 			birthdays, err = buildBirthdayEntry(db, membership, BirthdayRepositories{Students: people.Students, Staff: people.Staff, Persons: people.Persons},
 				settings.Service, env.Logger.With("service", "birthdays"), nil)
-			dataImports = newServeImports(audit, identity, groups, rooms, persons, carePlan, presence, organizations, membership, workTime, workforce, newImportCohorts(offerings.Bookings, timetableRows.CohortRosters))
+			dataImports = newServeImports(audit, identity, groups, rooms, persons, carePlan, presence, organizations, membership, workTime, workforce, newImportCohorts(offerings.Bookings, timetableRows.CohortRosters), env.Now)
 			databaseStats = newDatabaseStats(people.Repositories, structure.Groups, facilities, timetableRepos, identity, devices, env.Logger)
 			return err
 		},
@@ -543,7 +543,7 @@ func composeServeRoot(
 		},
 		func() error {
 			return errors.Join(mountStaffRoutes(router, tenant, db, logger, membership, workTime, workTime, workTime, services.Users, staffAdmin, workforce, shifts,
-				structureViews.Education, structureViews.Substitution, persons, settings.Service, hub, identity, caller, calendarAdmin), mountTraegerStaffRoutes(router, tenant, staffAdmin, workforce.TimeTracking.TraegerMonths, organizations, persons, membership, audit.Persistence.DataAccessLog, shifts.TraegerSites(workforce.StaffShifts), workforce.TimeTracking.TraegerExports, settings.Traeger, identity))
+				structureViews.Education, structureViews.Substitution, persons, settings.Service, hub, identity, caller, calendarAdmin), mountTraegerStaffRoutes(router, tenant, staffAdmin, workforce.TimeTracking.TraegerMonths, organizations, persons, membership, audit.Persistence.DataAccessLog, shifts.TraegerSites(workforce.StaffShifts), workforce.TimeTracking.TraegerExports, settings.Traeger, identity, env.Today))
 		},
 		func() error {
 			return mountSchoolPortalRoutes(router, tenant, db, logger, limiters, studentPresence, timetableOwner, calendarAdmin,
@@ -558,7 +558,7 @@ func composeServeRoot(
 				structureViews.Education, renderer, activities, timetableOwner, iot, settingsWrites, organizations, people.Students, carePlan, audit.Persistence.DataAccessLog,
 				membership, classListEntries, databaseStats, dataImports, persons, gradeTransition, enrollmentResource, env.Config.AppEnv, weekProtocolSeed, env.HealthData, owners.NewHolidayHostCalendar(settings.Service, calendar))
 			mountPeopleRoutes(tenant, db, logger, reports, renderer, persons, services.Guardian, identity, caller, feedback, mealPlan,
-				birthdays, emergency, settings.Service, GuardianEmailDelivery{Outcomes: delivery.Runtime.EmailOutcomes, Suppressions: delivery.Runtime.EmailReconciliation}, audit.Persistence.DataAccessLog)
+				birthdays, emergency, settings.Service, GuardianEmailDelivery{Outcomes: delivery.Runtime.EmailOutcomes, Suppressions: delivery.Runtime.EmailReconciliation}, audit.Persistence.DataAccessLog, env.Now)
 			mountCalendarRoutes(router, tenant, logger, calendarApp)
 			return errors.Join(mountMealBillingMonths(tenant, mealPlan, calendar, presence.Presence, settings.Service), mountCommunicationRoutes(tenant, logger, chat, announcements, reminders, deliveryDevices, communication),
 				mountDeliveryRoutes(router, tenant, logger, fileStore, parent, hub, caller, identity))

@@ -2,8 +2,8 @@
 
 // Die Prüfphase eines Monatslaufs vor der Freigabe (#5916, SJR-Abgleich E1
 // A): das Menü „Ausschließen“ je Rechnung, die Karte der ausgeschlossenen
-// Rechnungen mit dem Weg zurück und die Prüfliste als Excel oder CSV. Eine
-// ausgeschlossene Rechnung bekommt bei der Freigabe keine Nummer; ihr Kind
+// Rechnungen mit dem Weg zurück und die Prüfliste als PDF, Excel oder CSV.
+// Eine ausgeschlossene Rechnung bekommt bei der Freigabe keine Nummer; ihr Kind
 // kommt im nächsten Lauf desselben Monats wieder. Die Laufseite lädt diese
 // Datei erst in der Prüfphase (care-run-review-lazy.tsx), die Dialoge erst,
 // wenn jemand sie öffnet.
@@ -11,11 +11,7 @@
 import { Ban, Pencil, Wallet } from "lucide-react";
 import { useState } from "react";
 import { Button, ButtonLink } from "~/components/ui/button";
-import {
-  type ExportMenuOption,
-  ExportMenu,
-  exportFormatOptions,
-} from "~/components/ui/export-menu";
+import { ExportMenu } from "~/components/ui/export-menu";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
   ResponsiveActionList,
@@ -46,13 +42,9 @@ import {
 export { careDebitItems, debitHints, holidayDebitItems };
 import { formatEuro } from "./contribution-format";
 import { familiesLabel } from "./release-open-points";
+import { TRAEGER_LIST_FORMAT_OPTIONS } from "./traeger-list-export-menu";
 
 const logger = createLogger({ component: "CareRunReview" });
-
-const REVIEW_FORMATS: readonly ExportMenuOption[] = exportFormatOptions([
-  "xlsx",
-  "csv",
-]);
 
 function childName(invoice: CareInvoice): string {
   return `${invoice.childFirstName} ${invoice.childLastName}`.trim();
@@ -112,7 +104,7 @@ export function ExclusionMenu({
   );
 }
 
-/** „Prüfliste“: the preview as Excel or CSV, without invoice numbers. */
+/** „Prüfliste“: the preview as PDF, Excel or CSV, without invoice numbers. */
 export function CareReviewExport({ runId }: Readonly<{ runId: string }>) {
   const [busy, setBusy] = useState<string | null>(null);
   const errors = useApiErrorDisplay();
@@ -133,10 +125,14 @@ export function CareReviewExport({ runId }: Readonly<{ runId: string }>) {
   return (
     <ExportMenu
       label="Prüfliste herunterladen"
-      options={REVIEW_FORMATS}
+      options={TRAEGER_LIST_FORMAT_OPTIONS}
       busyKey={busy}
       onSelect={(option) => {
-        if (option.format === "xlsx" || option.format === "csv") {
+        if (
+          option.format === "pdf" ||
+          option.format === "xlsx" ||
+          option.format === "csv"
+        ) {
           void download(option.format);
         }
       }}

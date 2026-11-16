@@ -18,6 +18,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // mountTraegerStaffRoutes serves the Personalstamm of ADR 0089 (#4705) at
@@ -27,11 +28,12 @@ import (
 // Vertretungspool (#4709) at /traeger/staff-pool (the school's side at
 // /api/staff-pool) behind the Träger
 // right „Personal“, over the personnel record staffAdmin the root built for
-// the schools and the Dienstplan of the schools.
+// the schools and the Dienstplan of the schools; today is the root's calendar
+// day the Kontingente default their year to.
 func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.StaffAdmin, months workforce.TraegerStaffMonths, organizations HolidayOrganizations,
 	persons TraegerPersons, membership TraegerStaff, accessLog owners.DataAccessAppender, sites workforce.TraegerShiftSites,
 	exports workforce.TraegerStaffExportSchool, settings TraegerBrandingSettings,
-	identity identityaccess.Owner,
+	identity identityaccess.Owner, today func() timezone.Date,
 ) error {
 	if staffAdmin == nil || months == nil || exports == nil || settings == nil {
 		return errors.New("traeger staff records: the personnel record, the school months and exports and the settings are required")
@@ -63,14 +65,15 @@ func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.Staf
 	if !ok {
 		return errors.New("traeger staff records: the Personalstamm serves no Stundenkonto")
 	}
-	resource := traegerstaff.NewRecordsResource(records, staffAdmin.TraegerStaffContracts(collaborators), absences, timeAccounts, requireStaff)
+	lists := traegerListRenderer(NewSimpleListRenderer())
+	resource := traegerstaff.NewRecordsResource(records, staffAdmin.TraegerStaffContracts(collaborators), absences, timeAccounts, requireStaff, lists, today)
 	root.Mount("/traeger/staff-records", resource.TraegerRouter(ProtectedTraegerRoutes))
 	// The Personalstamm serves its Nachweise over the same records (#4707).
 	proofs, ok := records.(workforce.TraegerStaffProofs)
 	if !ok {
 		return errors.New("traeger staff records: the Personalstamm serves no Nachweise")
 	}
-	root.Mount("/traeger/staff-proofs", traegerstaff.NewProofsResource(proofs, requireStaff, traegerStaffListRenderer(NewSimpleListRenderer())).TraegerRouter(ProtectedTraegerRoutes))
+	root.Mount("/traeger/staff-proofs", traegerstaff.NewProofsResource(proofs, requireStaff, lists).TraegerRouter(ProtectedTraegerRoutes))
 	// The Personal-Import fills the same records from a file (#4724).
 	imports, ok := records.(workforce.TraegerStaffImports)
 	if !ok {
@@ -81,7 +84,7 @@ func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.Staf
 	root.Mount("/traeger/absence-types", traegerstaff.NewAbsenceTypesResource(absences, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
 	// The Einsatzplanung over all Einsatzorte (#4708).
 	planning := staffAdmin.TraegerStaffPlanning(collaborators, sites)
-	root.Mount("/traeger/staff-planning", traegerstaff.NewPlanningResource(planning, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
+	root.Mount("/traeger/staff-planning", traegerstaff.NewPlanningResource(planning, requireStaff, lists).TraegerRouter(ProtectedTraegerRoutes))
 	// The payroll file and the time export over all schools (#4712).
 	staffExports, ok := records.(workforce.TraegerStaffExports)
 	if !ok {
@@ -100,7 +103,7 @@ func mountTraegerStaffPool(root, tenant chi.Router, records workforce.TraegerSta
 	if !ok || !schoolOK {
 		return errors.New("traeger staff records: the Personalstamm serves no Vertretungspool")
 	}
-	root.Mount("/traeger/staff-pool", traegerstaff.NewTraegerPoolResource(pool, requireStaff, traegerStaffListRenderer(NewSimpleListRenderer())).TraegerRouter(ProtectedTraegerRoutes))
+	root.Mount("/traeger/staff-pool", traegerstaff.NewTraegerPoolResource(pool, requireStaff, traegerListRenderer(NewSimpleListRenderer())).TraegerRouter(ProtectedTraegerRoutes))
 	tenant.Mount("/staff-pool", traegerstaff.NewSchoolPoolResource(schoolPool,
 		common.RequiresPermission(permissions.TimeTrackingManage)).Router(ProtectedTenantRoutes))
 	return nil

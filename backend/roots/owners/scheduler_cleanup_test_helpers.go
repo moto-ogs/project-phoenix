@@ -51,11 +51,11 @@ func NewSchedulerCleanupTestDependencies(db transactionruntime.Database, unit te
 		DB: db.Pool(), Now: now,
 	})
 	_, supervisors := presenceCompose.SessionRepositories(records)
-	audit, err := auditCompose.NewTenantPersistence(db.Pool())
+	audit, err := auditCompose.NewTenantPersistence(db.Pool(), auditTestClock(now))
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
 	}
-	command, err := auditCompose.NewCommand(NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, auditTestClock(now))
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
 	}
@@ -119,3 +119,11 @@ func NewSchedulerFileRetentionTestDependencies(db transactionruntime.Database, u
 type cleanupTestUploads struct{ dir string }
 
 func (u cleanupTestUploads) PublicDir() (string, error) { return u.dir, nil }
+
+// auditTestClock is now, or the real clock for callers that pass none.
+func auditTestClock(now func() time.Time) func() time.Time {
+	if now == nil {
+		return time.Now
+	}
+	return now
+}

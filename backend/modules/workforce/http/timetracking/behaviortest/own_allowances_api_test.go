@@ -53,6 +53,7 @@ func setupOwnAllowancesRoute(t *testing.T) *ownAllowancesRoute {
 		},
 		Identity:     testIdentity,
 		WithinTenant: testWithinTenant(db),
+		Today:        capabilities.Today,
 	})
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))

@@ -343,12 +343,15 @@ func TestCareReviewListExportsThePreviewWithoutNumbers(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Header().Get("Content-Type"), "spreadsheetml")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, "/review-export?format=pdf"), nil)
+	require.Equal(t, http.StatusOK, rec.Code, "the review list as PDF too (#4718): %s", rec.Body.String())
+	assert.Equal(t, "application/pdf", rec.Header().Get("Content-Type"))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, "/review-export?format=docx"), nil)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 
 	var details []json.RawMessage
 	require.NoError(t, f.db.NewRaw(`SELECT details FROM parent_billing.care_run_events WHERE run_id = ? AND action = 'export'`, run.ID).
 		Scan(context.Background(), &details))
-	require.Len(t, details, 2, "every download is in the trail")
+	require.Len(t, details, 3, "every download is in the trail")
 	assert.Contains(t, string(details[0]), fmt.Sprintf("%d", mia), "the trail names the contracts the list shows")
 }
 

@@ -157,7 +157,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			calendar, err = owners.BuildSchoolCalendarRecords(db, owners.ObserveSchoolCalendar, settings.Service)
 			return
 		},
-		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, membership, calendar); return },
+		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, env, membership, calendar); return },
 		func() error {
 			people, peopleIdentity = owners.BuildPeopleRows(db, env.Observe.IdentityAccess, groups, rooms, membership, workTime)
 			return nil
@@ -195,7 +195,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		func() error {
 			presence = owners.BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
 			facilitiesRooms = buildFacilitiesRooms(presence.Presence, rooms, timetableOwner, membership, persons)
-			substitutions = owners.NewGroupSubstitutionRepository(structure.Groups, membership, workTime)
+			substitutions = owners.NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today)
 			supervisions = owners.NewGroupSupervisionRecords(presence.SessionRecords, groups)
 			return nil
 		},

@@ -3,6 +3,7 @@ package traeger
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -12,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/templates"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // Document templates of the Träger (#4677, ADR 0152) at
@@ -55,6 +57,55 @@ func (rs *MasterDataResource) listTemplates(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	common.Respond(w, r, http.StatusOK, list, "Document templates retrieved successfully")
+}
+
+// templateKindLabels name the kinds of document as the list of templates
+// does.
+var templateKindLabels = map[templates.Kind]string{
+	templates.KindConfirmation: "Bestätigung und Rechnung", templates.KindInvoice: "Rechnung",
+	templates.KindFeeNotice: "Gebührenbescheid", templates.KindContract: "Betreuungsvertrag",
+	templates.KindCancellation: "Bestätigung der Kündigung", templates.KindReminder: "Zahlungserinnerung",
+	templates.KindCertificate: "Bescheinigung über Betreuungskosten",
+}
+
+// exportTemplates answers GET /traeger/master-data/document-templates/export:
+// the list of the templates as PDF, Excel or CSV (format=, CSV without one)
+// (#4718), one row per kind of document. Templates hold no personal data, so
+// the export is not written to a log, like the list.
+func (rs *MasterDataResource) exportTemplates(w http.ResponseWriter, r *http.Request) {
+	format, ok := common.ListFormatOf(w, r)
+	if !ok {
+		return
+	}
+	organizationID, _, ok := session(w, r)
+	if !ok {
+		return
+	}
+	list, err := rs.templates.Overview(r.Context(), organizationID)
+	if err != nil {
+		renderTemplateError(w, r, err)
+		return
+	}
+	rows := make([][]string, 0, len(list))
+	for _, template := range list {
+		state, saved := "Standardvorlage", ""
+		if !template.Standard {
+			state = "Eigene, Version " + strconv.Itoa(template.Version)
+		}
+		if template.UpdatedAt != nil {
+			saved = template.UpdatedAt.In(calendar.Berlin).Format("02.01.2006")
+		}
+		label, known := templateKindLabels[template.Kind]
+		if !known {
+			label = string(template.Kind)
+		}
+		rows = append(rows, []string{label, state, saved})
+	}
+	common.WriteList(w, r, rs.lists, format, common.ListTable{
+		Title:   "Vorlagen",
+		Columns: []common.ListColumn{{ID: "kind", Label: "Dokument"}, {ID: "state", Label: "Vorlage"}, {ID: "saved", Label: "Gespeichert am"}},
+		Rows:    rows, Filename: "vorlagen",
+	})
 }
 
 func (rs *MasterDataResource) templateDetail(w http.ResponseWriter, r *http.Request) {

@@ -19,7 +19,7 @@ func (r *StudentDeletionRepository) Create(ctx context.Context, event *auditMode
 	if event == nil {
 		return fmt.Errorf("student deletion audit event is required")
 	}
-	return NewAppender(r.runtime).Append(ctx, event)
+	return NewAppender(r.runtime, nil).Append(ctx, event)
 }
 
 func (r *StudentDeletionRepository) CountStudentReferences(ctx context.Context, studentID int64) (int, error) {

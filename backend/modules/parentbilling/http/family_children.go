@@ -22,14 +22,15 @@ import (
 type FamilyChildrenResource struct {
 	office         capability.FamilyChildrenOffice
 	requireBilling common.Middleware
+	lists          common.ListRenderer
 }
 
 // NewFamilyChildrenResource builds the resource.
-func NewFamilyChildrenResource(office capability.FamilyChildrenOffice, requireBilling common.Middleware) *FamilyChildrenResource {
-	if office == nil || requireBilling == nil {
-		panic("parent billing http: the family children and the right check are required")
+func NewFamilyChildrenResource(office capability.FamilyChildrenOffice, requireBilling common.Middleware, lists common.ListRenderer) *FamilyChildrenResource {
+	if office == nil || requireBilling == nil || lists == nil {
+		panic("parent billing http: the family children, the right check and the list export are required")
 	}
-	return &FamilyChildrenResource{office: office, requireBilling: requireBilling}
+	return &FamilyChildrenResource{office: office, requireBilling: requireBilling, lists: lists}
 }
 
 // Router returns the routes mounted at /traeger/family-children.
@@ -39,6 +40,7 @@ func (rs *FamilyChildrenResource) Router(protectedTraegerRoutes func(chi.Router,
 	protectedTraegerRoutes(r, func(r chi.Router, withTx common.Middleware) {
 		billing := r.With(rs.requireBilling, withTx)
 		billing.Get("/", rs.list)
+		billing.Get("/export", rs.exportList)
 		billing.Put("/", rs.confirm)
 		billing.Delete("/{contractId}", rs.remove)
 	})

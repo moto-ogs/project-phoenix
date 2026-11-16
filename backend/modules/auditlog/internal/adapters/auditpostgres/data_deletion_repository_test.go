@@ -19,7 +19,7 @@ func TestDataDeletionRepository_Create(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	// Create a test student for FK reference
@@ -47,7 +47,7 @@ func TestDataDeletionRepository_Create(t *testing.T) {
 			RecordsDeleted: 5,
 			DeletionReason: "Parent requested data deletion",
 			DeletedBy:      "admin@example.com",
-			DeletedAt:      time.Now(),
+			DeletedAt:      auditTestNow,
 		}
 
 		err := testpkg.TenantCommand1(t, ctx, db, repo.Create, deletion)
@@ -84,7 +84,7 @@ func TestDataDeletionRepository_FindByID(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	student := testpkg.CreateTestStudent(t, db, "Find", "Student", "2a")
@@ -121,7 +121,7 @@ func TestDataDeletionRepository_FindByStudentID(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	student1 := testpkg.CreateTestStudent(t, db, "Student", "One", "3a")
@@ -155,13 +155,13 @@ func TestDataDeletionRepository_FindByDateRange(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	student := testpkg.CreateTestStudent(t, db, "Range", "Student", "4a")
 
 	t.Run("finds deletions in date range", func(t *testing.T) {
-		now := time.Now()
+		now := auditTestNow
 		weekAgo := now.AddDate(0, 0, -7)
 
 		deletion := audit.NewDataDeletion(student.ID, audit.DeletionTypeVisitRetention, 5, "system")
@@ -187,7 +187,7 @@ func TestDataDeletionRepository_FindByType(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	student := testpkg.CreateTestStudent(t, db, "Type", "Student", "5a")
@@ -224,7 +224,7 @@ func TestDataDeletionRepository_List(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	student := testpkg.CreateTestStudent(t, db, "List", "Student", "8a")
@@ -260,7 +260,7 @@ func TestTenantIsolation_DataDeletionVisibility(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	tenantA, ctxA := testpkg.Tenant(t), testpkg.Ctx(t)
 	scopeB := testpkg.NewTenantScope(t, db)
 	tenantB, ctxB := scopeB.TenantID, scopeB.Context()
@@ -306,7 +306,7 @@ func TestDataDeletionRepository_CreateAll(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
-	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewDataDeletionRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 	first := testpkg.CreateTestStudent(t, db, "Stapel", "Eins", "1a")
 	second := testpkg.CreateTestStudent(t, db, "Stapel", "Zwei", "1a")

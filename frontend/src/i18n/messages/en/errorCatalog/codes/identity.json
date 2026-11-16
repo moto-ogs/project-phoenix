@@ -60,5 +60,6 @@
   "guardian_email_address_blocked": "The invitation could not be sent right now. Please try again.",
   "invitation_mail_delayed": "The invitation could not be sent right now. Please try again.",
   "mail_blocked_at_provider": "This address is blocked. Sending again will not help. moto support needs to resolve this.",
-  "mail_block_unreadable": "We cannot check right now whether this address is blocked. Please try again later."
+  "mail_block_unreadable": "We cannot check right now whether this address is blocked. Please try again later.",
+  "logout_not_revoked": "You are signed out on this device. But moto could not fully end your sign-in. It will end on its own later. Did you use someone else's device? Then please change your password."
 }

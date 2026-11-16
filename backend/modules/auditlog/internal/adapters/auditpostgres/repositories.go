@@ -61,11 +61,14 @@ type RetentionSummaries interface {
 }
 
 // NewRepositories binds every retained Audit repository to reads and the
-// append store to appends.
-func NewRepositories(reads, appends Runtime) *Repositories {
-	deletions := NewDataDeletionRepository(reads)
+// append store to appends; now stamps the events recorded without a time.
+func NewRepositories(reads, appends Runtime, now func() time.Time) *Repositories {
+	if now == nil {
+		panic("audit repository: clock is required")
+	}
+	deletions := NewDataDeletionRepository(reads, now)
 	return &Repositories{
-		AppendStore:                  NewAppender(appends),
+		AppendStore:                  NewAppender(appends, now),
 		FileEvent:                    NewFileEventRepository(reads),
 		SubstitutionChange:           NewSubstitutionChangeRepository(reads),
 		DataDeletion:                 deletions,
@@ -79,10 +82,10 @@ func NewRepositories(reads, appends Runtime) *Repositories {
 		GuardianChange:               NewGuardianChangeRepository(reads),
 		StudentConsentChange:         NewStudentConsentChangeRepository(reads),
 		DeviationEvent:               NewDeviationEventRepository(reads),
-		AuthEvent:                    NewAuthEventRepository(reads),
+		AuthEvent:                    NewAuthEventRepository(reads, now),
 		DataImport:                   NewDataImportRepository(reads),
-		WorkSessionEdit:              NewWorkSessionEditRepository(reads),
-		StudentFieldEdit:             NewStudentFieldEditRepository(reads),
+		WorkSessionEdit:              NewWorkSessionEditRepository(reads, now),
+		StudentFieldEdit:             NewStudentFieldEditRepository(reads, now),
 		TimeTrackingDeletion:         NewTimeTrackingDeletionRepository(reads),
 		PersonnelNumberChange:        NewPersonnelNumberChangeRepository(reads),
 		StaffMasterDataChange:        NewStaffMasterDataChangeRepository(reads),

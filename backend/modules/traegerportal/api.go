@@ -93,6 +93,7 @@ type Resource struct {
 	stepUp         identityaccess.TraegerSessionStepUp
 	reports        TraegerRouter
 	reportTemps    TraegerRouter
+	lists          common.ListRenderer
 }
 
 // NewResource builds the Träger-Portal resource: the school list, the
@@ -105,12 +106,13 @@ type Resource struct {
 // reset (#5149) and stepUp the code step in the running session (#7068);
 // without them those routes answer 500. reports serves the key-date report
 // of the Träger projection and reportTemplates the report templates of
-// Organisation & Tenancy (#4716, ADR 0246).
-func NewResource(auth AuthRuntime, mfa MFARuntime, resets common.PasswordResetRoutes, schools, holidayPeriods, accessLog, settings, masterData TraegerRouter, accounts identityaccess.TraegerAccountManagement, profiles identityaccess.TraegerMemberProfiles, organization TraegerOrganizationRouter, schoolSessions identityaccess.TraegerSchoolSessions, stepUp identityaccess.TraegerSessionStepUp, reports, reportTemplates TraegerRouter) *Resource {
-	if schools == nil || holidayPeriods == nil || accessLog == nil || settings == nil || masterData == nil || organization == nil || reports == nil || reportTemplates == nil {
-		panic("traeger portal: the school list, holiday period, access log, settings, master data, Träger, report and report template routes are required")
+// Organisation & Tenancy (#4716, ADR 0246); lists renders the lists of the
+// Träger-Büro as PDF, Excel or CSV (#4718).
+func NewResource(auth AuthRuntime, mfa MFARuntime, resets common.PasswordResetRoutes, schools, holidayPeriods, accessLog, settings, masterData TraegerRouter, accounts identityaccess.TraegerAccountManagement, profiles identityaccess.TraegerMemberProfiles, organization TraegerOrganizationRouter, schoolSessions identityaccess.TraegerSchoolSessions, stepUp identityaccess.TraegerSessionStepUp, reports, reportTemplates TraegerRouter, lists common.ListRenderer) *Resource {
+	if schools == nil || holidayPeriods == nil || accessLog == nil || settings == nil || masterData == nil || organization == nil || reports == nil || reportTemplates == nil || lists == nil {
+		panic("traeger portal: the school list, holiday period, access log, settings, master data, Träger, report and report template routes and the list renderer are required")
 	}
-	return &Resource{auth: auth, mfa: mfa, resets: resets, schools: schools, holidayPeriods: holidayPeriods, accessLog: accessLog, settings: settings, masterData: masterData, accounts: accounts, profiles: profiles, organization: organization, schoolSessions: schoolSessions, stepUp: stepUp, reports: reports, reportTemps: reportTemplates}
+	return &Resource{auth: auth, mfa: mfa, resets: resets, schools: schools, holidayPeriods: holidayPeriods, accessLog: accessLog, settings: settings, masterData: masterData, accounts: accounts, profiles: profiles, organization: organization, schoolSessions: schoolSessions, stepUp: stepUp, reports: reports, reportTemps: reportTemplates, lists: lists}
 }
 
 var errLoginUnavailable = errors.New("the Träger sessions are not composed")

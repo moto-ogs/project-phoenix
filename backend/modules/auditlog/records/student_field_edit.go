@@ -121,10 +121,6 @@ func (e *StudentFieldEdit) Validate() error {
 		}
 	}
 
-	if e.CreatedAt.IsZero() {
-		e.CreatedAt = time.Now()
-	}
-
 	return nil
 }
 

@@ -63,9 +63,10 @@ Zwei Entscheidungen lasen dabei zwei Uhren:
    Daten von einem festen Montag (2026-11-02) statt vom heutigen Tag.
 6. **Bindungen.** Weil die Wurzel ihre Uhr an Student Presence reicht, ändern
    sich die Digests von 28 Care-Plan-Bindungen der Stammdaten-Entscheidung und
-   10 Facilities-Bindungen des Schulhofs. Sie sind mit dieser ADR neu
-   bestätigt, die 14 Ausnahmen darunter per `approval_adr`. Effekt und
-   Einstufung bleiben gleich.
+   10 Facilities-Bindungen des Schulhofs, nach dem Zusammenführen mit dem
+   Workforce-Schnitt (ADR 0264) außerdem 4 School-Structure-Bindungen der
+   Vertretung. Sie sind mit dieser ADR neu bestätigt, die 14 Ausnahmen
+   darunter per `approval_adr`. Effekt und Einstufung bleiben gleich.
 
 ## Folgen
 

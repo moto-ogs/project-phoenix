@@ -26,6 +26,7 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
 import { isTenantSessionEnding } from "~/lib/tenant-session-end";
 import { Loading } from "~/components/ui/loading";
+import { SCHOOL_SIGN_IN_LABEL, schoolSignInTooltip } from "./school-sign-in";
 
 const logger = createLogger({ component: "TenantGuard" });
 
@@ -651,7 +652,7 @@ function GuardedTenant({
                 <Button
                   type="button"
                   size="md"
-                  tooltip={`Meldet Sie ab und öffnet die Anmeldung von ${tenant.name}.`}
+                  tooltip={schoolSignInTooltip(tenant.name)}
                   onClick={() => {
                     void import("./tenant-relogin")
                       .then(({ reloginAtTenant }) =>
@@ -662,7 +663,7 @@ function GuardedTenant({
                       });
                   }}
                 >
-                  Zur Schulanmeldung
+                  {SCHOOL_SIGN_IN_LABEL}
                 </Button>
               ) : (
                 <>

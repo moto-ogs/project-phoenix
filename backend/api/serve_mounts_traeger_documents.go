@@ -49,15 +49,16 @@ func NewTraegerDocumentsHTTP(db transactionruntime.Database, organizations Holid
 	if err != nil {
 		return nil, fmt.Errorf("traeger documents: school groups: %w", err)
 	}
+	schools := traegerDocumentSchools{organizations: organizations}
 	documents := organizationTenancyCompose.NewTraegerDocuments(organizationtenancy.TraegerDocumentPorts{
-		Schools:   traegerDocumentSchools{organizations: organizations},
+		Schools:   schools,
 		Groups:    traegerDocumentGroups{groups: groups},
 		Runtime:   traegerDocumentRuntime{},
 		Access:    traegerDocumentAccessLog{log: accessLog},
 		Downloads: traegerDocumentDownloadLedger{command: ledger},
 		Notices:   owners.TraegerDocumentReleaseNotices{Delivery: delivery},
 	})
-	return organizationTenancyTraeger.NewDocumentsResource(documents,
+	return organizationTenancyTraeger.NewDocumentsResource(documents, schools, traegerListRenderer(NewSimpleListRenderer()),
 		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), common.RequiresPermission(identityaccess.TraegerRightDocumentsManage)), nil
 }
 

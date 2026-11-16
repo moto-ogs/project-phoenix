@@ -14,7 +14,7 @@ import (
 )
 
 // The DATEV payroll file of the Träger (#4712, ADR 0089 section 11,
-// ADR 0249): one file over every Arbeitsvertrag the Träger closes in the
+// ADR 0250): one file over every Arbeitsvertrag the Träger closes in the
 // month. Each school computes the month of its employments in its own tenant
 // transaction and writes the access log entry before the values leave it.
 // The Träger sums a contract over its Einsatzorte and books each category

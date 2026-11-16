@@ -40,7 +40,12 @@ import {
   useOpenTraegerSchool,
 } from "~/components/traeger/use-open-traeger-school";
 import { TraegerCodeStepModal } from "~/components/traeger/traeger-code-step-modal";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerSchoolsAlerts } from "~/components/traeger/use-traeger-schools-alerts";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { between, useMediaQuery } from "~/lib/hooks/use-media-query";
 import {
@@ -554,6 +559,20 @@ export default function TraegerDashboardPage() {
       }
       statsLoading={loading}
       error={error}
+      actions={
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerList("/api/traeger/schools/alerts/export", format, {
+              school: selected?.id,
+            })
+          }
+          scope={traegerExportScope(selected?.name)}
+          ariaLabel="Dashboard herunterladen"
+          fallbackName="dashboard"
+          errorObject="die Zahlen des Dashboards"
+          unavailable={!alerts || alerts.schools.length === 0}
+        />
+      }
       search={
         schools.length > 1
           ? {

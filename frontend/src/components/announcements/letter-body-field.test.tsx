@@ -174,9 +174,12 @@ describe("LetterBodyField", () => {
     const view = render(
       <LetterBodyField {...props} previewChildren={LINA_AND_EMIL} />,
     );
-    fireEvent.click(
-      await screen.findByRole("combobox", { name: "Kind für die Vorschau" }),
-    );
+    expect(await screen.findByText("Brief für Kind 7")).toBeInTheDocument();
+    const picker = screen.getByRole("combobox", {
+      name: "Kind für die Vorschau",
+    });
+    expect(picker).toBeEnabled();
+    fireEvent.click(picker);
     fireEvent.click(
       await screen.findByRole("option", { name: "Emil Weber (Klasse 1a)" }),
     );

@@ -23,6 +23,7 @@ import {
   schoolColors,
 } from "~/components/traeger/planning/planning-format";
 import { PlanningWeekGrid } from "~/components/traeger/planning/planning-week-grid";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -34,6 +35,7 @@ import { ApiError } from "~/lib/api-error";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
 import {
+  downloadTraegerPlanningWeek,
   fetchTraegerPlanningWeek,
   type TraegerPlanningWeek,
 } from "~/lib/traeger-planning-api";
@@ -136,16 +138,29 @@ export default function TraegerStaffPlanningPage() {
           : () => setWeekStart(mondayOf(today))
       }
       actions={
-        <ButtonLink
-          href={RULES_HREF}
-          variant="outline"
-          size="md"
-          className="gap-2"
-          tooltip="Öffnet die Arbeitszeitregeln in den Einstellungen."
-        >
-          <GearSixIcon className="h-4 w-4" aria-hidden="true" />
-          Regeln
-        </ButtonLink>
+        <>
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerPlanningWeek(weekStart, format)
+            }
+            scope="Alle Personen dieser Woche"
+            ariaLabel="Einsatzplanung herunterladen"
+            tooltip="Zeigt die Formate für die gezeigte Woche. Jeder Download steht im Zugriffsprotokoll der Schulen."
+            fallbackName={`einsatzplanung-${weekStart}`}
+            errorObject="die Einsatzplanung"
+            unavailable={!shownWeek || shownWeek.people.length === 0}
+          />
+          <ButtonLink
+            href={RULES_HREF}
+            variant="outline"
+            size="md"
+            className="gap-2"
+            tooltip="Öffnet die Arbeitszeitregeln in den Einstellungen."
+          >
+            <GearSixIcon className="h-4 w-4" aria-hidden="true" />
+            Regeln
+          </ButtonLink>
+        </>
       }
       contextRowWrap
     >

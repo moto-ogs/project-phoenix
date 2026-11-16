@@ -86,7 +86,7 @@ func NewClassDayTestModuleWithRealtime(db transactionruntime.Database, unit tena
 	if err != nil {
 		return ClassDayTestModule{}, err
 	}
-	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return ClassDayTestModule{}, err
 	}

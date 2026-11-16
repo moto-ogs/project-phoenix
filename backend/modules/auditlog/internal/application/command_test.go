@@ -37,7 +37,7 @@ func TestCommandAppendObservesSuccessAndFailure(t *testing.T) {
 			var observations []AppendObservation
 			command, err := NewCommand(store, func(event AppendObservation) {
 				observations = append(observations, event)
-			})
+			}, retentionTestClock)
 			require.NoError(t, err)
 
 			event := &struct{ ID int }{ID: 7}
@@ -57,8 +57,10 @@ func TestNewCommandRequiresDependencies(t *testing.T) {
 	t.Parallel()
 
 	store := &commandStore{}
-	_, err := NewCommand(nil, func(AppendObservation) {})
+	_, err := NewCommand(nil, func(AppendObservation) {}, retentionTestClock)
 	require.Error(t, err)
-	_, err = NewCommand(store, nil)
+	_, err = NewCommand(store, nil, retentionTestClock)
+	require.Error(t, err)
+	_, err = NewCommand(store, func(AppendObservation) {}, nil)
 	require.Error(t, err)
 }

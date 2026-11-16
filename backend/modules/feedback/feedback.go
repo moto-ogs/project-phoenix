@@ -18,7 +18,12 @@ const (
 
 type Date string
 
-func Today() Date { return Date(calendar.TodayDate().String()) }
+// TodayOf is the Berlin calendar day of the clock now, the day feedback is
+// counted on (ADR 0239).
+func TodayOf(now func() time.Time) func() Date {
+	day := calendar.CalendarDateClock(now)
+	return func() Date { return Date(day().String()) }
+}
 
 // TimestampParts returns the Berlin calendar day and wall-clock time stored
 // for one feedback instant, including across midnight and DST transitions.

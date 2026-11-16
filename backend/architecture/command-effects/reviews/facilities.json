@@ -977,7 +977,7 @@
       "target_owner": "people-directory"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0262",
       "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application/roomservice.openGroupCatalogAdapter.ListByRoom",
       "classification": "query",
       "effect": "query",
@@ -988,7 +988,7 @@
       "target_owner": "student-presence"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0262",
       "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application/roomservice.openGroupCatalogAdapter.ListByRoom",
       "classification": "query",
       "effect": "query",
@@ -999,7 +999,7 @@
       "target_owner": "student-presence"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0262",
       "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application/roomservice.openGroupCatalogAdapter.ListSupervisors",
       "classification": "query",
       "effect": "query",
@@ -1011,7 +1011,7 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0215",
+      "approval_adr": "0262",
       "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application/roomservice.openGroupCatalogAdapter.ListSupervisors",
       "classification": "leaf",
       "effect": "lock",
@@ -1023,7 +1023,7 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0215",
+      "approval_adr": "0262",
       "binding": "github.com/moto-ogs/project-phoenix/modules/facilities/internal/application/roomservice.openGroupCatalogAdapter.ListVisits",
       "classification": "leaf",
       "effect": "lock",
@@ -1034,7 +1034,7 @@
       "target_owner": "student-presence"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0262",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application/roomservice.schulhofService.GetSchulhofStatus",
       "classification": "query",
       "effect": "query",
@@ -1045,7 +1045,7 @@
       "target_owner": "student-presence"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0262",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application/roomservice.schulhofService.GetSchulhofStatus",
       "classification": "query",
       "effect": "query",
@@ -1057,7 +1057,7 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0215",
+      "approval_adr": "0262",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application/roomservice.schulhofService.GetSchulhofStatus",
       "classification": "leaf",
       "effect": "lock",
@@ -1069,7 +1069,7 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0215",
+      "approval_adr": "0262",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application/roomservice.schulhofService.GetSchulhofStatus",
       "classification": "leaf",
       "effect": "lock",
@@ -1080,7 +1080,7 @@
       "target_owner": "student-presence"
     },
     {
-      "approval_adr": "0215",
+      "approval_adr": "0262",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application/roomservice.schulhofService.GetSchulhofStatus",
       "classification": "query",
       "effect": "query",

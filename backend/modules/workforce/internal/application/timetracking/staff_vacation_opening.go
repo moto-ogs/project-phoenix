@@ -124,7 +124,7 @@ func (s *staffAbsenceService) SetVacationOpening(ctx context.Context, staffID, d
 		return nil, err
 	}
 
-	opening := vacationOpeningRecord(ctx, staffID, decidedBy, req, takenBefore)
+	opening := vacationOpeningRecord(ctx, staffID, decidedBy, req, takenBefore, s.now())
 
 	if err := opening.Validate(); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrVacationOpeningInvalid, err.Error())
@@ -144,8 +144,7 @@ func (s *staffAbsenceService) SetVacationOpening(ctx context.Context, staffID, d
 	return opening, nil
 }
 
-func vacationOpeningRecord(ctx context.Context, staffID, decidedBy int64, req SetVacationOpeningRequest, takenBefore float64) *StaffVacationOpening {
-	now := time.Now()
+func vacationOpeningRecord(ctx context.Context, staffID, decidedBy int64, req SetVacationOpeningRequest, takenBefore float64, now time.Time) *StaffVacationOpening {
 	opening := &StaffVacationOpening{StaffID: staffID, Year: req.EffectiveDate.Year(), EffectiveDate: req.EffectiveDate, TakenBeforeDays: takenBefore, EnteredRemainingDays: req.RemainingDays, Note: req.Note, DecidedBy: decidedBy, DecidedAt: now}
 	opening.CreatedAt = now
 	opening.UpdatedAt = now

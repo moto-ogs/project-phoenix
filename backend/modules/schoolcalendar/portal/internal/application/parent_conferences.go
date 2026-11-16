@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
@@ -371,11 +370,4 @@ func parseClockMinute(value string) (int, error) {
 
 func formatClockMinute(minute int) string {
 	return fmt.Sprintf("%02d:%02d", minute/60, minute%60)
-}
-
-func (s *service) now() time.Time {
-	if s.cfg.Now != nil {
-		return s.cfg.Now()
-	}
-	return time.Now()
 }

@@ -91,7 +91,7 @@ func (rs *StaffAdminResource) deleteVacationOpening(w http.ResponseWriter, r *ht
 	if !rs.requireBalanceAdjustmentStaff(w, r, staffID) {
 		return
 	}
-	year, err := parseYearQuery(r, calendar.TodayDate())
+	year, err := parseYearQuery(r, rs.today())
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

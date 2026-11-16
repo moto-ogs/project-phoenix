@@ -84,7 +84,9 @@ import {
   releaseCareRun,
 } from "~/lib/traeger-care-billing-api";
 import { includeCareInvoice } from "~/lib/traeger-care-review-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
 const logger = createLogger({ component: "TraegerCareRunPage" });
@@ -673,7 +675,25 @@ export default function TraegerCareRunPage() {
                   ? "Der Lauf ist ohne Rechnungen abgeschlossen. Die Schulen sind wieder frei."
                   : "Die Rechnungen sind ausgestellt und lassen sich nicht mehr ändern. Eine falsche Rechnung stornieren Sie auf der Seite „Schreiben“."
             }
-            action={preview ? <CareReviewExport runId={run.id} /> : undefined}
+            action={
+              preview ? (
+                <CareReviewExport runId={run.id} />
+              ) : run.previewCount > 0 ? (
+                <TraegerListExportMenu
+                  download={(format) =>
+                    downloadTraegerList(
+                      `/api/traeger/care-billing-runs/${run.id}/invoices/export`,
+                      format,
+                    )
+                  }
+                  scope="Alle Rechnungen des Laufs"
+                  ariaLabel="Rechnungen herunterladen"
+                  tooltip="Zeigt die Formate für alle Rechnungen des Laufs. Jeder Download wird protokolliert."
+                  fallbackName="rechnungen-monatsbeitrag"
+                  errorObject="die Rechnungen"
+                />
+              ) : undefined
+            }
           >
             <WizardStepper
               steps={RUN_STEPS}

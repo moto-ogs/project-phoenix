@@ -124,6 +124,27 @@ func TestTraegerAccountHistoryShowsTheChangesOfTheOwnTraeger(t *testing.T) {
 	assert.Empty(t, accepted.ActorEmail, "an erased account is named by no address")
 	assert.Equal(t, colleague.Email, accepted.TargetEmail, "the ledger keeps the address it recorded")
 
+	// The history and the member list as files (#4718); the member list is
+	// written to the ledger like its read.
+	export := traegerCall(t, router, http.MethodGet, "/traeger/accounts/history/export", session.AccessToken, nil)
+	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
+	assert.Contains(t, export.Body.String(), ";Rollen geändert;Vorher: Nur lesen. Jetzt: Personal, Nur lesen.;"+colleague.Email+";"+leader.Email+"\n")
+	assert.Contains(t, export.Body.String(), ";Einladung angenommen;Rolle: Nur lesen.;"+colleague.Email+";Gelöschtes Konto\n")
+	assert.NotContains(t, export.Body.String(), "fremd-verlauf", "no entry of another Träger")
+	assertTraegerListFormats(t, router, session.AccessToken, "/traeger/accounts/history/export", "verlauf-traeger-buero")
+	afterHistory := traegerLedger(t, db, own)
+	assert.Equal(t, "history_exported", afterHistory[len(afterHistory)-1], "the download of the history is in the ledger")
+	listed := traegerHistory(t, router, session.AccessToken, 0)
+	for _, entry := range listed.Entries {
+		assert.NotEqual(t, "history_exported", entry.Action, "a download is no change of the Büro")
+	}
+	members := traegerCall(t, router, http.MethodGet, "/traeger/accounts/export", session.AccessToken, nil)
+	require.Equal(t, http.StatusOK, members.Code, members.Body.String())
+	assert.Contains(t, members.Body.String(), ";"+leader.Email+";Leitung;\n")
+	ledger := traegerLedger(t, db, own)
+	assert.Equal(t, "members_listed", ledger[len(ledger)-1], "the export of the members is in the ledger")
+	assertTraegerListFormats(t, router, session.AccessToken, "/traeger/accounts/export", "mitglieder")
+
 	foreignHistory := traegerHistory(t, router, foreignSession.AccessToken, 0)
 	require.Len(t, foreignHistory.Entries, 1, "no Träger sees the history of another")
 	assert.NotEqual(t, address, foreignHistory.Entries[0].TargetEmail)
@@ -138,6 +159,10 @@ func TestTraegerAccountHistoryRequiresTheAccountsRight(t *testing.T) {
 		_, session := traegerMember(t, db, router, organizationID, role)
 		rec := traegerCall(t, router, http.MethodGet, "/traeger/accounts/history", session.AccessToken, nil)
 		assert.Equal(t, http.StatusForbidden, rec.Code, "%s gets 403", role)
+		for _, path := range []string{"/traeger/accounts/history/export", "/traeger/accounts/export"} {
+			rec = traegerCall(t, router, http.MethodGet, path, session.AccessToken, nil)
+			assert.Equal(t, http.StatusForbidden, rec.Code, "%s gets 403 on %s", role, path)
+		}
 	}
 	rec := traegerCall(t, router, http.MethodGet, "/traeger/accounts/history", "", nil)
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)

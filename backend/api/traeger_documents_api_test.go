@@ -95,9 +95,9 @@ func newTraegerDocumentsFixtureOn(t *testing.T, db *bun.DB) traegerDocumentsFixt
 		})
 	})
 	tenantRouter := chi.NewRouter()
-	audit, err := auditCompose.NewTenantPersistence(db)
+	audit, err := auditCompose.NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
-	ledger, err := auditCompose.NewObservedCommand(audit.AppendStore, slog.Default(), func(string, time.Duration, int, error) {})
+	ledger, err := auditCompose.NewObservedCommand(audit.AppendStore, slog.Default(), func(string, time.Duration, int, error) {}, time.Now)
 	require.NoError(t, err)
 	delivery, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{
 		DB: db, People: owners.EnrollmentFlowGuardianDirectory{}, Observe: func(deliveryContract.Observation) {},
@@ -291,6 +291,19 @@ func TestTraegerDocumentsReachOnlyTheReleasedSchool(t *testing.T) {
 	// A release for the parents of all schools shows at every school.
 	f.released(t, f.office.token, document.ID, map[string]any{"audience": "parents"})
 	assert.Len(t, f.schoolDocuments(t, suedLead), 1)
+
+	// The list as a file, with whom each document is released for (#4718).
+	f.released(t, f.office.token, document.ID, map[string]any{"audience": "schools", "school_id": sued})
+	export := traegerJSON(t, f.router, f.office.token, http.MethodGet, "/traeger/documents/export", nil)
+	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
+	assert.Contains(t, export.Body.String(), "Hausordnung 2026/27;hausordnung.pdf;")
+	assert.Contains(t, export.Body.String(), "Eltern an allen Schulen")
+	for _, school := range audiences {
+		if school.ID == sued {
+			assert.Contains(t, export.Body.String(), "OGS-Leitung: "+school.Name, "the release names its school")
+		}
+	}
+	assertTraegerListFormats(t, f.router, f.office.token, "/traeger/documents/export", "dokumente")
 }
 
 // TestTraegerDocumentsNeedTheirRights pins the rights of #4692 and #5992: a

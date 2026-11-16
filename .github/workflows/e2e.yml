@@ -94,6 +94,7 @@ jobs:
         with:
           name: portal-network-evidence-${{ github.run_id }}
           path: frontend/test-results/network/*/network*.json
+          retention-days: 7
           if-no-files-found: error
 
       # Shared-cookie fixture domains and keys; its own job starts with a fresh

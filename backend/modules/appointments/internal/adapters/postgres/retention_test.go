@@ -35,7 +35,7 @@ func TestDeleteAppointmentsKeepsFreshTombstone(t *testing.T) {
 	var transaction bun.IDB
 	store := New(func(context.Context) (bun.IDB, int64, error) {
 		return transaction, testpkg.Tenant(t), nil
-	})
+	}, time.Now)
 	err = testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context, tx bun.Tx) error {
 		transaction = tx
 		deleted, err := store.DeleteAppointments(txCtx, []int64{appointmentID})
@@ -66,7 +66,7 @@ func TestLockRetentionCandidatesBlocksAppointmentExtension(t *testing.T) {
 	var transaction bun.IDB
 	store := New(func(context.Context) (bun.IDB, int64, error) {
 		return transaction, testpkg.Tenant(t), nil
-	})
+	}, time.Now)
 	locked := make(chan struct{})
 	release := make(chan struct{})
 	retentionDone := make(chan error, 1)

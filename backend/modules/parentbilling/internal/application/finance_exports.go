@@ -261,8 +261,8 @@ func (f *FinanceExports) ExportRuns(ctx context.Context, reviewer parentbilling.
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.ExportRunPage{}, err
 	}
-	offset := max(page.Offset, 0)
-	runs, err := f.store.ExportRuns(ctx, reviewer.OrganizationID, offset, parentbilling.ExportPageSize)
+	offset, size := page.Limit()
+	runs, err := f.store.ExportRuns(ctx, reviewer.OrganizationID, offset, size)
 	if err != nil {
 		return parentbilling.ExportRunPage{}, err
 	}
@@ -328,8 +328,8 @@ func (f *FinanceExports) ExportProtocol(ctx context.Context, reviewer parentbill
 	if runKind != "" && (validRunKind(runKind) != nil || runID <= 0) {
 		return parentbilling.ExportProtocolPage{}, parentbilling.ErrExportRunNotFound
 	}
-	offset := max(page.Offset, 0)
-	files, err := f.store.ExportFiles(ctx, reviewer.OrganizationID, runKind, runID, offset, parentbilling.ExportPageSize)
+	offset, size := page.Limit()
+	files, err := f.store.ExportFiles(ctx, reviewer.OrganizationID, runKind, runID, offset, size)
 	if err != nil {
 		return parentbilling.ExportProtocolPage{}, err
 	}

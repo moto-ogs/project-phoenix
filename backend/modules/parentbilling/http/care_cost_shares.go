@@ -23,6 +23,7 @@ func (rs *CareReductionResource) CostShareRouter(protectedTraegerRoutes func(chi
 	protectedTraegerRoutes(r, func(r chi.Router, withTx common.Middleware) {
 		billing := r.With(rs.requireBilling, withTx)
 		billing.Get("/", rs.costShares)
+		billing.Get("/export", rs.exportCostShares)
 		billing.Post("/", rs.createCostShare)
 		billing.Put("/{id}", rs.updateCostShare)
 		billing.Delete("/{id}", rs.deleteCostShare)

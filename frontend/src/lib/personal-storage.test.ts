@@ -357,6 +357,7 @@ describe("inventory", () => {
     expect(allKeys).toEqual(
       expect.arrayContaining([
         "moto-pwa-usage-reported.*.*.*",
+        "passwordResetWaits",
         "passwordResetRateLimitUntil",
         "messages_unread_count:*:*",
         "collection-view:*:*:*",

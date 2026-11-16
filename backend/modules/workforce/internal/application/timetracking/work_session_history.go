@@ -161,7 +161,7 @@ func sessionHistoryResponses(sessions []*WorkSession, breaksBySession map[int64]
 // only the days inside the range are counted (#2402).
 func (s *workSessionService) buildWeeklySummaries(sessions []*SessionResponse, targetsByWeek map[summaryWeekKey]int, from, to calendar.Date) []WeeklySummary {
 	weeks := weeklySummaryAccumulator{weekMap: make(map[summaryWeekKey]*WeeklySummary), targetsByWeek: targetsByWeek}
-	now := time.Now()
+	now := s.now()
 	stampedMinutesByWeek := make(map[summaryWeekKey]int)
 
 	for _, session := range sessions {
@@ -259,7 +259,7 @@ func (s *workSessionService) getWeeklyTargetsForSummaries(ctx context.Context, s
 	if len(sessions) == 0 {
 		return nil
 	}
-	holidaySet, ok := s.holidayDatesForWeeks(ctx, sessionWeekStarts(sessions))
+	holidaySet, ok := s.holidayDatesForWeeks(ctx, s.sessionWeekStarts(sessions))
 	if !ok {
 		return nil
 	}
@@ -282,7 +282,7 @@ func (s *workSessionService) getWeeklyTargetsForSummaries(ctx context.Context, s
 		if staff.RotationAnchorDate != nil {
 			anchor = *staff.RotationAnchorDate
 		}
-		targets := WeeklyTargetsFromTemplate(model, anchor, sessionWeekStarts(sessions))
+		targets := WeeklyTargetsFromTemplate(model, anchor, s.sessionWeekStarts(sessions))
 		for weekStart, target := range targets {
 			targets[weekStart] = target - holidayTemplateMinutes(model, anchor, weekStart, holidaySet)
 		}
@@ -340,7 +340,7 @@ func (s *workSessionService) weeklyTargetsFromDateValidSchedule(
 	sessions []*SessionResponse,
 	holidaySet map[calendar.Date]bool,
 ) map[summaryWeekKey]int {
-	weekStarts := sessionWeekStarts(sessions)
+	weekStarts := s.sessionWeekStarts(sessions)
 	if len(weekStarts) == 0 {
 		return nil
 	}
@@ -380,10 +380,10 @@ func staffAnchorOf(staff *StaffScheduleAssignment) *calendar.Date {
 
 // sessionWeekStarts returns the deduplicated Monday week starts of the given
 // sessions in first-seen order.
-func sessionWeekStarts(sessions []*SessionResponse) []calendar.Date {
+func (s *workSessionService) sessionWeekStarts(sessions []*SessionResponse) []calendar.Date {
 	weekStarts := make([]calendar.Date, 0)
 	seen := make(map[calendar.Date]struct{})
-	now := time.Now()
+	now := s.now()
 	for _, session := range sessions {
 		end := BalanceSessionEnd(session.WorkSession, now)
 		for day := calendar.DateFromTime(session.CheckInTime); !day.After(calendar.DateFromTime(end)); day = day.AddDays(1) {
