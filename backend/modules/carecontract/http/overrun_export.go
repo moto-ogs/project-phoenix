@@ -41,9 +41,9 @@ func overrunSchoolsTable(result carecontract.OverrunEvaluation, filter carecontr
 	return ListTable{
 		Title: "Länger als gebucht", Subtitle: subtitle, Filters: filters,
 		Columns: []ListColumn{
-			{ID: "school", Label: "Schule"}, {ID: "children", Label: "Kinder"}, {ID: "overrun_days", Label: "Tage länger als gebucht"},
-			{ID: "unbooked_days", Label: "Tage ohne Buchung"}, {ID: "extra", Label: "Zusätzliche Zeit"},
-			{ID: "data_from", Label: "Daten ab"}, {ID: "compared_days", Label: "Verglichene Tage"},
+			{ID: "school", Label: "Schule"}, {ID: "children", Label: "Kinder", Numeric: true}, {ID: "overrun_days", Label: "Tage länger als gebucht", Numeric: true},
+			{ID: "unbooked_days", Label: "Tage ohne Buchung", Numeric: true}, {ID: "extra", Label: "Zusätzliche Zeit"},
+			{ID: "data_from", Label: "Daten ab"}, {ID: "compared_days", Label: "Verglichene Tage", Numeric: true},
 		},
 		Rows: rows, Filename: fmt.Sprintf("laenger-als-gebucht-%s-bis-%s", result.From, result.To),
 	}
@@ -76,8 +76,8 @@ func overrunChildrenTable(result carecontract.OverrunEvaluation, filter carecont
 		Title: "Länger als gebucht: Kinder", Subtitle: subtitle, Filters: filters,
 		Columns: []ListColumn{
 			{ID: "last_name", Label: "Nachname"}, {ID: "first_name", Label: "Vorname"}, {ID: "class", Label: "Klasse"},
-			{ID: "school", Label: "Schule"}, {ID: "overrun_days", Label: "Tage länger als gebucht"},
-			{ID: "unbooked_days", Label: "Tage ohne Buchung"}, {ID: "extra", Label: "Zusätzliche Zeit"},
+			{ID: "school", Label: "Schule"}, {ID: "overrun_days", Label: "Tage länger als gebucht", Numeric: true},
+			{ID: "unbooked_days", Label: "Tage ohne Buchung", Numeric: true}, {ID: "extra", Label: "Zusätzliche Zeit"},
 		},
 		Rows: rows, Footer: personalDataFooter,
 		Filename: fmt.Sprintf("laenger-als-gebucht-kinder-%s-bis-%s", result.From, result.To),

@@ -17,8 +17,10 @@ import (
 
 // ListColumn is one column of an exported list.
 type ListColumn struct {
-	ID    string
-	Label string
+	// Numeric marks a count or decimal; empty values remain empty in Excel.
+	Numeric bool
+	ID      string
+	Label   string
 }
 
 // ListTable is one exported list; the values of a row follow the columns.

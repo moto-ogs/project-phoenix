@@ -130,7 +130,7 @@ func dailyAttendanceTable(export traegerview.DailyAttendanceExport) ListTable {
 		Columns: []ListColumn{
 			{ID: "school", Label: "Einrichtung"}, {ID: "city", Label: "Ort"}, {ID: "day", Label: "Datum"},
 			{ID: "number", Label: "Lfd. Nr."}, {ID: "status", Label: "Status"}, {ID: "arrival", Label: "Ankunft"},
-			{ID: "pickup", Label: "Abholung"}, {ID: "minutes", Label: "Anwesenheit in Minuten"},
+			{ID: "pickup", Label: "Abholung"}, {ID: "minutes", Label: "Anwesenheit in Minuten", Numeric: true},
 		},
 		Rows: rows, Filename: fmt.Sprintf("tagesmeldung-mv-%s-bis-%s", export.From, export.To),
 	}

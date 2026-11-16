@@ -27,6 +27,7 @@ import {
   keyDateMonthRows,
   keyDateSchoolFigures,
   type KeyDateMonthRow,
+  type KeyDateMonthFigures,
   type KeyDateSchoolRow,
   selectKeyDateMonth,
 } from "~/components/traeger/key-date-counts-model";
@@ -44,7 +45,6 @@ import {
   formatBerlinTime,
   formatDate,
 } from "~/lib/date-helpers";
-import type { TraegerKeyDateMonth } from "~/lib/traeger-api";
 import { traegerPath } from "~/lib/traeger-url";
 import { foldForSearch } from "~/lib/search-fold";
 
@@ -65,7 +65,7 @@ function matchesSearch(row: KeyDateSchoolRow, search: string): boolean {
 /** „12 mehr als im September 2026", ohne Vormonat kein Vergleich. */
 function changeHint(
   change: number | null,
-  previous: TraegerKeyDateMonth | null,
+  previous: KeyDateMonthFigures | null,
 ): string | undefined {
   if (change === null || !previous) return undefined;
   const month = formatKeyDateMonth(previous.period);
@@ -112,7 +112,7 @@ function MissingFigure() {
  * mitten im Monat verschoben); sonst nennt ihn die Überschrift.
  */
 function schoolColumns(
-  previous: TraegerKeyDateMonth | null,
+  previous: KeyDateMonthFigures | null,
   showKeyDate: boolean,
 ): DataTableColumn<KeyDateSchoolRow>[] {
   const previousMonth = previous ? formatKeyDateMonth(previous.period) : null;
@@ -236,7 +236,9 @@ const MONTH_COLUMNS: DataTableColumn<KeyDateMonthRow>[] = [
     header: "Stichtage",
     render: (month) => (
       <span className="text-sm text-gray-700 tabular-nums">
-        {month.keyDates.map((date) => formatDate(date)).join(", ")}
+        {month.keyDates.length > 0
+          ? month.keyDates.map((date) => formatDate(date)).join(", ")
+          : EMPTY_VALUE}
       </span>
     ),
     sortValue: (month) => month.keyDates[0] ?? null,
@@ -248,7 +250,7 @@ const MONTH_COLUMNS: DataTableColumn<KeyDateMonthRow>[] = [
     align: "right",
     render: (month) => (
       <span className="text-sm font-semibold text-gray-900 tabular-nums">
-        {month.activeStudents}
+        {month.activeStudents ?? EMPTY_VALUE}
       </span>
     ),
     sortValue: (month) => month.activeStudents,
@@ -259,7 +261,7 @@ const MONTH_COLUMNS: DataTableColumn<KeyDateMonthRow>[] = [
     align: "right",
     render: (month) => (
       <span className="text-sm font-semibold text-gray-900 tabular-nums">
-        {month.activeTerminals}
+        {month.activeTerminals ?? EMPTY_VALUE}
       </span>
     ),
     sortValue: (month) => month.activeTerminals,
@@ -282,8 +284,8 @@ function MonthFigures({
   previous,
   schoolCount,
 }: Readonly<{
-  month: TraegerKeyDateMonth;
-  previous: TraegerKeyDateMonth | null;
+  month: KeyDateMonthFigures;
+  previous: KeyDateMonthFigures | null;
   schoolCount: number;
 }>) {
   const missing = schoolCount - month.schools;
@@ -291,7 +293,7 @@ function MonthFigures({
     <div className="grid grid-cols-2 gap-4 max-sm:gap-3 lg:grid-cols-3">
       <StatCard
         label="Aktive Kinder"
-        value={month.activeStudents}
+        value={month.activeStudents ?? EMPTY_VALUE}
         hint={
           changeHint(
             keyDateChange(month.activeStudents, previous?.activeStudents),
@@ -303,7 +305,7 @@ function MonthFigures({
       />
       <StatCard
         label="Aktive Geräte"
-        value={month.activeTerminals}
+        value={month.activeTerminals ?? EMPTY_VALUE}
         hint={
           changeHint(
             keyDateChange(month.activeTerminals, previous?.activeTerminals),
@@ -339,8 +341,9 @@ export default function TraegerKeyDateCountsPage() {
   const schools = counts?.schools ?? [];
   const chosenSchool = schools.find((school) => school.id === schoolId);
   const months = useMemo(
-    () => (counts ? keyDateMonthRows(counts.schools, counts.months) : []),
-    [counts],
+    () =>
+      counts ? keyDateMonthRows(counts.schools, counts.months, schoolId) : [],
+    [counts, schoolId],
   );
   const selection = useMemo(
     () =>

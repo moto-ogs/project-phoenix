@@ -19,6 +19,8 @@ import (
 // SpreadsheetOnly column repeats a value of the whole list on every row so a
 // spreadsheet can combine files; the PDF names it once in its head.
 type traegerListColumn struct {
+	// Numeric marks a count or decimal; empty values remain empty in Excel.
+	Numeric         bool
 	ID              string
 	Label           string
 	SpreadsheetOnly bool
@@ -51,7 +53,7 @@ func renderTraegerList(render SimpleListRenderer, list traegerList, format strin
 			continue
 		}
 		keep = append(keep, i)
-		columns = append(columns, SimpleListColumn{ID: column.ID, Label: column.Label})
+		columns = append(columns, SimpleListColumn{ID: column.ID, Label: column.Label, Numeric: column.Numeric})
 	}
 	rows := make([][]string, 0, len(list.Rows))
 	for rowIndex, row := range list.Rows {
@@ -75,7 +77,7 @@ func traegerViewListRenderer(render SimpleListRenderer) traegerViewHTTP.ListRend
 	return func(table traegerViewHTTP.ListTable, format string) (traegerViewHTTP.ListFile, error) {
 		columns := make([]traegerListColumn, len(table.Columns))
 		for i, column := range table.Columns {
-			columns[i] = traegerListColumn{ID: column.ID, Label: column.Label, SpreadsheetOnly: column.SpreadsheetOnly}
+			columns[i] = traegerListColumn{ID: column.ID, Label: column.Label, SpreadsheetOnly: column.SpreadsheetOnly, Numeric: column.Numeric}
 		}
 		file, err := renderTraegerList(render, traegerList{
 			Title: table.Title, Subtitle: table.Subtitle, Filters: table.Filters, Columns: columns,
@@ -90,7 +92,7 @@ func traegerStaffListRenderer(render SimpleListRenderer) traegerstaff.ListRender
 	return func(table traegerstaff.ListTable, format string) (traegerstaff.ListFile, error) {
 		columns := make([]traegerListColumn, len(table.Columns))
 		for i, column := range table.Columns {
-			columns[i] = traegerListColumn{ID: column.ID, Label: column.Label}
+			columns[i] = traegerListColumn{ID: column.ID, Label: column.Label, Numeric: column.Numeric}
 		}
 		file, err := renderTraegerList(render, traegerList{
 			Title: table.Title, Subtitle: table.Subtitle, Filters: table.Filters, Columns: columns,
@@ -105,7 +107,7 @@ func careContractListRenderer(render SimpleListRenderer) careContractHTTP.ListRe
 	return func(table careContractHTTP.ListTable, format string) (careContractHTTP.ListFile, error) {
 		columns := make([]traegerListColumn, len(table.Columns))
 		for i, column := range table.Columns {
-			columns[i] = traegerListColumn{ID: column.ID, Label: column.Label}
+			columns[i] = traegerListColumn{ID: column.ID, Label: column.Label, Numeric: column.Numeric}
 		}
 		file, err := renderTraegerList(render, traegerList{
 			Title: table.Title, Subtitle: table.Subtitle, Filters: table.Filters, Columns: columns,

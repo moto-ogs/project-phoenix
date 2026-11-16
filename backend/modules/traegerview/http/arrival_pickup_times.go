@@ -117,8 +117,8 @@ func arrivalPickupTable(times traegerview.ArrivalPickupTimes, schoolName string)
 		Columns: []ListColumn{
 			{ID: "from", Label: "Von", SpreadsheetOnly: true}, {ID: "to", Label: "Bis", SpreadsheetOnly: true},
 			{ID: "school", Label: "Schule"}, {ID: "city", Label: "Ort"}, {ID: "weekday", Label: "Wochentag"},
-			{ID: "slot", Label: "Uhrzeit"}, {ID: "arrivals", Label: "Ankunft je Tag"}, {ID: "pickups", Label: "Abholung je Tag"},
-			{ID: "days", Label: "Tage"},
+			{ID: "slot", Label: "Uhrzeit"}, {ID: "arrivals", Label: "Ankunft je Tag", Numeric: true}, {ID: "pickups", Label: "Abholung je Tag", Numeric: true},
+			{ID: "days", Label: "Tage", Numeric: true},
 		},
 		Rows: rows, Filename: fmt.Sprintf("ankunft-und-abholung-%s-bis-%s", times.From, times.To),
 	}

@@ -31,6 +31,8 @@ const (
 // a spreadsheet can filter and combine several files; the PDF names it once
 // in its head instead.
 type ListColumn struct {
+	// Numeric marks a count or decimal; empty values remain empty in Excel.
+	Numeric         bool
 	ID              string
 	Label           string
 	SpreadsheetOnly bool
