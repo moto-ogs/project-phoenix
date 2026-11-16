@@ -158,8 +158,10 @@ export default function TraegerHolidayPlacesPage() {
           : undefined
       }
     >
+      {/* Equal week cards in a grid: grids do not grow (TenantPage body
+          rule), so the last week keeps its height like its siblings. */}
       {weeks && weeks.length > 0 ? (
-        <div className="flex flex-col gap-6">
+        <div className="compact:gap-4 grid gap-6 max-sm:gap-3">
           {weeks.map((week) => (
             <HolidayWeekPlacesCard
               key={week.weekId}
