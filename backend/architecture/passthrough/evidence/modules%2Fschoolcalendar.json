@@ -100,7 +100,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *service) CleanupExpiredFeedTombstones(ctx context.Context) (int, error) {\n\tif s.cfg.StaffFeedTombstoneRepo == nil {\n\t\treturn 0, fmt.Errorf(\"%w: calendar feed cleanup not configured\", ErrInvalidRequest)\n\t}\n\tcutoff := time.Now().AddDate(0, 0, -feedTombstoneDays)\n\treturn s.cfg.StaffFeedTombstoneRepo.DeleteFeedCancellationsBefore(ctx, cutoff)\n}",
+      "evidence": "func (s *service) CleanupExpiredFeedTombstones(ctx context.Context) (int, error) {\n\tif s.cfg.StaffFeedTombstoneRepo == nil {\n\t\treturn 0, fmt.Errorf(\"%w: calendar feed cleanup not configured\", ErrInvalidRequest)\n\t}\n\tcutoff := s.now().AddDate(0, 0, -feedTombstoneDays)\n\treturn s.cfg.StaffFeedTombstoneRepo.DeleteFeedCancellationsBefore(ctx, cutoff)\n}",
       "form": "unclassified-evidence",
       "id": "modules/schoolcalendar/portal/internal/application/service.CleanupExpiredFeedTombstones",
       "owner": "modules/schoolcalendar"

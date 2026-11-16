@@ -61,8 +61,14 @@ func fixtureAccountCounts(ctx context.Context, groups map[int64][]int64) (map[in
 	return counts, nil
 }
 
+// operatorDashboardTestNow is the fixed instant of the projection's clock
+// (ADR 0239): the PWA usage window counts back from it on every day.
+var operatorDashboardTestNow = time.Date(2026, time.November, 2, 9, 30, 0, 0, time.UTC)
+
+func operatorDashboardTestClock() time.Time { return operatorDashboardTestNow }
+
 func newProjection() *operatordashboard.Projection {
-	return operatordashboard.New(ambientTransaction, fixtureAccountCounts)
+	return operatordashboard.New(ambientTransaction, fixtureAccountCounts, operatorDashboardTestClock)
 }
 
 // TestAccountCountsFailClosedWithoutMembershipQuery pins that the account
@@ -71,7 +77,7 @@ func newProjection() *operatordashboard.Projection {
 func TestAccountCountsFailClosedWithoutMembershipQuery(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	projection := operatordashboard.New(ambientTransaction, nil)
+	projection := operatordashboard.New(ambientTransaction, nil, operatorDashboardTestClock)
 	organizationID := testpkg.Tenant(t)
 
 	withinAdmin(t, db, func(ctx context.Context) error {
@@ -89,7 +95,7 @@ func TestAccountCountsFailClosedWithoutMembershipQuery(t *testing.T) {
 	failure := errors.New("identity counts unavailable")
 	failing := operatordashboard.New(ambientTransaction, func(context.Context, map[int64][]int64) (map[int64]int, error) {
 		return nil, failure
-	})
+	}, operatorDashboardTestClock)
 	withinAdmin(t, db, func(ctx context.Context) error {
 		_, err := failing.Counts(ctx)
 		require.ErrorIs(t, err, failure)
@@ -472,8 +478,8 @@ func TestProjection_PWAUsage(t *testing.T) {
 	// Usage: acctStaff fresh in X (staff), acctDual stale in X (staff, outside
 	// the window) and fresh in Y (parent). acctGuardian never reported.
 	// The projection compares against its own clock, so the rows are
-	// instants relative to now, not calendar dates.
-	fresh := time.Now()
+	// instants relative to that clock, not calendar dates.
+	fresh := operatorDashboardTestNow
 	stale := fresh.Add(-40 * 24 * time.Hour)
 	recordUsageRow(t, db, schoolX, acctStaff.ID, "staff", fresh)
 	recordUsageRow(t, db, schoolX, acctDual.ID, "staff", stale)

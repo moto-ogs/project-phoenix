@@ -28,16 +28,21 @@ type SessionMaintenance interface {
 }
 
 // ExpiredVisitCleanup reports the retention sweep of a school's visits.
+// Success is false when the sweep failed for some children; StudentsFailed
+// counts them.
 type ExpiredVisitCleanup struct {
 	StudentsProcessed int
 	RecordsDeleted    int64
+	StudentsFailed    int
 	Success           bool
 }
 
 // StaleSupervisorCleanup reports the supervisor records from previous days
-// that were closed.
+// that were closed. Success is false when some of them failed; RecordsFailed
+// counts those failures.
 type StaleSupervisorCleanup struct {
 	RecordsClosed int
+	RecordsFailed int
 	Success       bool
 }
 

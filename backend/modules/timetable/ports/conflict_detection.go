@@ -83,4 +83,6 @@ type ConflictDetectionDependencies struct {
 	Sessions          ConflictSessions
 	ContentHash       func([]byte) string
 	Logger            *slog.Logger
+	// Now dates the still-running supervisions; nil is the real clock.
+	Now func() time.Time
 }

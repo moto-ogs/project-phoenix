@@ -30,6 +30,10 @@ import {
   holidayPeriodTabs,
 } from "~/components/traeger/holiday-period-head";
 import { schoolNames } from "~/components/traeger/holiday-registration-format";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -52,6 +56,7 @@ import {
   type HolidayAllocationWeek,
   MAX_ALLOCATION_DECISIONS,
 } from "~/lib/traeger-holiday-allocation-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerHolidayAllocationPage" });
@@ -252,17 +257,36 @@ export default function TraegerHolidayAllocationPage() {
         period?.allocationMode,
       )}
       actions={
-        weeks.length > 1 ? (
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            disabled={busy}
-            tooltip="moto fragt vorher nach, dann vergibt es die Plätze und schreibt den Eltern."
-            onClick={() => setProposalScope("all")}
-          >
-            Vorschlag für alle Wochen übernehmen
-          </Button>
+        byCriteria ? (
+          <>
+            <TraegerListExportMenu
+              download={(format) =>
+                downloadTraegerList(
+                  `/api/traeger/holiday-periods/${id}/allocation/export`,
+                  format,
+                )
+              }
+              scope={traegerExportScope()}
+              ariaLabel="Vergabe herunterladen"
+              fallbackName="vergabe"
+              errorObject="die Vergabe"
+              unavailable={
+                !board || (weeks.length === 0 && board.decisions.length === 0)
+              }
+            />
+            {weeks.length > 1 ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                disabled={busy}
+                tooltip="moto fragt vorher nach, dann vergibt es die Plätze und schreibt den Eltern."
+                onClick={() => setProposalScope("all")}
+              >
+                Vorschlag für alle Wochen übernehmen
+              </Button>
+            ) : null}
+          </>
         ) : null
       }
       error={loadError}

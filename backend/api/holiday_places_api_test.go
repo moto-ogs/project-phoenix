@@ -179,6 +179,24 @@ func TestHolidayPlacesGoInOrderOfArrivalAndMoveUpOnCancellation(t *testing.T) {
 	assert.Nil(t, weeks[second.ID].Capacity, "a week without a capacity is unlimited")
 	assert.Empty(t, weeks[second.ID].Waitlist)
 
+	// The places as a file name the waiting children and land in the
+	// period's trail like the list (#4718).
+	placesRead := func() int {
+		var count int
+		require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM enrollment.holiday_registration_audit
+			WHERE holiday_period_id = ? AND action = 'places'`, f.period.ID).Scan(context.Background(), &count))
+		return count
+	}
+	readsBefore := placesRead()
+	export := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPlacesPath(f.period.ID)+"/export", nil)
+	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
+	assert.Contains(t, export.Body.String(), "06.07.2099 bis 10.07.2099;")
+	assert.Contains(t, export.Body.String(), ";Woche;2;2;0;;;;;;;\n")
+	assert.Contains(t, export.Body.String(), ";Warteliste;;;;1;")
+	assert.Contains(t, export.Body.String(), ";Tom;")
+	assert.Equal(t, readsBefore+1, placesRead(), "the export is in the trail")
+	assertTraegerListFormats(t, f.traeger, f.office.token, holidayPlacesPath(f.period.ID)+"/export", "plaetze-sommerferien-2099")
+
 	var receipt string
 	require.NoError(t, f.db.NewRaw(`SELECT payload::text FROM platform.email_outbox
 		WHERE organization_id = ? AND kind = 'holiday_registration_received' AND related_entity_id = ?`, f.office.organization, tom.ID).

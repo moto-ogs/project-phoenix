@@ -46,11 +46,16 @@ type AuditOwner struct {
 // tenant runtime's ambient transaction itself; writes are routed through the
 // command before any service captures them.
 func BuildAuditOwner(db transactionruntime.Database, env RootEnvironment) (AuditOwner, error) {
-	audits, err := auditCompose.NewTenantPersistence(db.Pool())
+	// A nil environment clock is the real one (RootEnvironment.Now).
+	clock := env.Now
+	if clock == nil {
+		clock = time.Now
+	}
+	audits, err := auditCompose.NewTenantPersistence(db.Pool(), clock)
 	if err != nil {
 		return AuditOwner{}, err
 	}
-	command, err := auditCompose.NewObservedCommand(audits.AppendStore, env.Logger.With("component", "audit-command"), env.Observe.AuditAppend)
+	command, err := auditCompose.NewObservedCommand(audits.AppendStore, env.Logger.With("component", "audit-command"), env.Observe.AuditAppend, clock)
 	if err != nil {
 		return AuditOwner{}, err
 	}

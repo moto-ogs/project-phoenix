@@ -55,6 +55,18 @@ vi.mock("~/lib/parent-api", () => ({
   getChildFeatures: async () => ({}),
 }));
 
+vi.mock("~/lib/notification-feed-api", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/lib/notification-feed-api")>();
+  return {
+    ...actual,
+    parentNotificationFeedApi: {
+      ...actual.parentNotificationFeedApi,
+      fetchUnreadCount: async () => 0,
+    },
+  };
+});
+
 describe("ParentShell", () => {
   it("hides only the parent header on mobile and preserves the top safe area", () => {
     render(

@@ -27,7 +27,7 @@ func (r *attendanceCorrectionRepository) CreateBatch(ctx context.Context, correc
 	if len(corrections) == 0 {
 		return nil
 	}
-	appender := NewAppender(r.runtime)
+	appender := NewAppender(r.runtime, nil)
 	for _, correction := range corrections {
 		if correction == nil {
 			return errors.New("attendance correction cannot be nil")

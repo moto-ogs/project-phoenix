@@ -54,6 +54,14 @@ export function traegerCareCostSharesTopic(): HelpTopic {
           "Schicken Sie die Liste an den Kostenträger.",
         ],
       },
+      {
+        title: "Alle Anteile herunterladen",
+        steps: [
+          "Wählen Sie `Familien und Zahlung` und dann den Reiter `Kostenübernahmen`.",
+          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Kinder, ohne Suche und Filter.",
+          "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
+        ],
+      },
     ],
     result:
       "Der Monatslauf rechnet erst alle Ermäßigungen aus. Danach zieht er den Anteil des Kostenträgers ab. Die Rechnung zeigt den Monatsbeitrag, den Anteil und den Rest. Ein Anteil für die Mensa zieht vom Mensa-Betrag ab. Übernimmt der Kostenträger alles, steht auf der Rechnung `Beitragsfrei` und 0 €.",

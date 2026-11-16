@@ -133,6 +133,7 @@ AS $function$
 						username = NULL, active = FALSE, password_hash = NULL, is_password_otp = FALSE,
 						last_login = NULL, avatar = NULL, calendar_feed_token = NULL,
 						mfa_attempts = 0, mfa_locked_until = NULL,
+						password_attempts = 0, password_locked_until = NULL, password_failed_at = NULL,
 						personal_data_erased_at = statement_timestamp(), updated_at = statement_timestamp()
 					WHERE account.id = candidate;
 					erased := erased + 1;

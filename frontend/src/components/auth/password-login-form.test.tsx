@@ -32,6 +32,29 @@ describe("PasswordLoginForm", () => {
     window.history.replaceState({}, "", "/login");
   });
 
+  // #7209: the logout ended the session on this device only.
+  it("says once that the last logout could not end the sign-in everywhere", async () => {
+    sessionStorage.setItem("logoutNotRevoked", "1");
+    const { unmount } = render(
+      <PasswordLoginForm portal="tenant" onSubmit={() => Promise.resolve()} />,
+    );
+
+    expect(
+      await screen.findByText(/Sie sind auf diesem Gerät abgemeldet\./),
+    ).toHaveTextContent("Dann ändern Sie bitte Ihr Passwort.");
+    expect(sessionStorage.getItem("logoutNotRevoked")).toBeNull();
+    unmount();
+
+    render(
+      <PasswordLoginForm portal="tenant" onSubmit={() => Promise.resolve()} />,
+    );
+    // Anker: das Formular steht, der Hinweis kommt nach einem Neuladen nicht wieder.
+    expect(screen.getByLabelText("E-Mail-Adresse")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Sie sind auf diesem Gerät abgemeldet\./),
+    ).not.toBeInTheDocument();
+  });
+
   it("opens the reset with the typed address, also from a wrong password", async () => {
     await signIn(() =>
       Promise.reject(refused(401, "identity.invalid_credentials")),

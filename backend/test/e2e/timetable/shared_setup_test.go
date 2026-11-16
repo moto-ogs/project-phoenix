@@ -87,6 +87,7 @@ func setupTimetableScenarioModule(t *testing.T, clocks ...func() time.Time) *sce
 		SettingsService:        liveSettings.Settings,
 		Staffing:               factory.Instance,
 		Logger:                 slog.Default(),
+		Now:                    rootAPI.OptionalClock(clocks),
 	})
 	s := &scenario{
 		t:        t,

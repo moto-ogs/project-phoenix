@@ -24,7 +24,7 @@ func (rs *Resource) exportContracts(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	format, err := listFormat(r)
+	format, err := common.ParseListFormat(r)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -41,12 +41,12 @@ func (rs *Resource) exportContracts(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, err)
 		return
 	}
-	writeList(w, r, rs.lists, format, contractTable(filter, list.Contracts))
+	common.WriteList(w, r, rs.lists, format, contractTable(filter, list.Contracts))
 }
 
 // contractTable is one row per contract. The school of a filter for one
 // school comes from its contracts; without a contract the file names none.
-func contractTable(filter carecontract.ContractFilter, contracts []carecontract.ContractSummary) ListTable {
+func contractTable(filter carecontract.ContractFilter, contracts []carecontract.ContractSummary) common.ListTable {
 	rows := make([][]string, 0, len(contracts))
 	schoolName := ""
 	for _, contract := range contracts {
@@ -66,14 +66,14 @@ func contractTable(filter carecontract.ContractFilter, contracts []carecontract.
 	if filter.Search != "" {
 		filters = append(filters, "Suche: "+filter.Search)
 	}
-	return ListTable{
+	return common.ListTable{
 		Title: "Betreuungsverträge", Filters: filters,
-		Columns: []ListColumn{
+		Columns: []common.ListColumn{
 			{ID: "last_name", Label: "Nachname"}, {ID: "first_name", Label: "Vorname"}, {ID: "school", Label: "Betreuungsort"},
 			{ID: "modules", Label: "Module"}, {ID: "party", Label: "Eltern"}, {ID: "email", Label: "E-Mail"},
 			{ID: "start", Label: "Beginn"}, {ID: "status", Label: "Status"}, {ID: "status_day", Label: "Seit"},
 		},
-		Rows: rows, Footer: personalDataFooter, Filename: "betreuungsvertraege",
+		Rows: rows, Footer: common.ListPersonalDataFooter, Filename: "betreuungsvertraege",
 	}
 }
 

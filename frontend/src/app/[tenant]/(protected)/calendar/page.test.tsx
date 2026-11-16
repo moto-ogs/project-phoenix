@@ -32,7 +32,9 @@ const {
   mockMutate,
   mockUseSession,
   mockGetStaffAppointmentOverview,
+  mockGetStaffAppointmentMails,
 } = vi.hoisted(() => ({
+  mockGetStaffAppointmentMails: vi.fn(),
   mockUseSWRAuth: vi.fn(),
   mockCreateStaffAppointment: vi.fn(),
   mockUpdateStaffAppointment: vi.fn(),
@@ -94,6 +96,7 @@ vi.mock("~/lib/personal-calendar-api", async () => {
     getStaffAppointmentDetail: mockGetStaffAppointmentDetail,
     respondStaffCalendar: mockRespondStaffCalendar,
     getStaffAppointmentOverview: mockGetStaffAppointmentOverview,
+    getStaffAppointmentMails: mockGetStaffAppointmentMails,
   };
 });
 
@@ -180,6 +183,8 @@ describe("StaffCalendarPage", () => {
     mockCreateStaffAppointment.mockResolvedValue({ appointment: { id: "1" } });
     mockUpdateStaffAppointment.mockResolvedValue({ appointment: { id: "5" } });
     mockMutate.mockResolvedValue(undefined);
+    // No e-mail went out for the appointment: the mail status stays empty.
+    mockGetStaffAppointmentMails.mockResolvedValue({ kinds: {} });
   });
 
   it("shows the personal calendar subscription below the calendar", () => {

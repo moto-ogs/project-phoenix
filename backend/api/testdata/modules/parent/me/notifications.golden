@@ -1,0 +1,4 @@
+GET /parent/me/notifications/feed/ -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
+GET /parent/me/notifications/feed/unread-count -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
+POST /parent/me/notifications/feed/read-all -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
+POST /parent/me/notifications/feed/{id}/read -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)

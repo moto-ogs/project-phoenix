@@ -108,7 +108,7 @@ func (rs *Resource) exportStudents(w http.ResponseWriter, r *http.Request) {
 	doc := lists.Document{
 		Title:       exportTitle(req),
 		Subtitle:    rs.exportSubtitle(r, len(sources)),
-		GeneratedAt: time.Now(),
+		GeneratedAt: rs.Now(),
 		Filters:     exportDocumentFilterLabels(req, planningDate, isToday),
 		Columns:     columns,
 		Rows:        rows,

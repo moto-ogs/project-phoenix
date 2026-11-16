@@ -31,16 +31,17 @@ type FinanceExportResource struct {
 	accounts       capability.BookingAccountService
 	requireExport  common.Middleware
 	requireBilling common.Middleware
+	lists          common.ListRenderer
 }
 
 // NewFinanceExportResource builds the resource.
 func NewFinanceExportResource(exports capability.FinanceExports, accounts capability.BookingAccountService,
-	requireExport, requireBilling common.Middleware,
+	requireExport, requireBilling common.Middleware, lists common.ListRenderer,
 ) *FinanceExportResource {
-	if exports == nil || accounts == nil || requireExport == nil || requireBilling == nil {
-		panic("parent billing http: the finance exports, the booking accounts and the right checks are required")
+	if exports == nil || accounts == nil || requireExport == nil || requireBilling == nil || lists == nil {
+		panic("parent billing http: the finance exports, the booking accounts, the right checks and the list export are required")
 	}
-	return &FinanceExportResource{exports: exports, accounts: accounts, requireExport: requireExport, requireBilling: requireBilling}
+	return &FinanceExportResource{exports: exports, accounts: accounts, requireExport: requireExport, requireBilling: requireBilling, lists: lists}
 }
 
 // Router returns the routes mounted at /traeger/finance-exports.
@@ -54,8 +55,10 @@ func (rs *FinanceExportResource) Router(protectedTraegerRoutes func(chi.Router, 
 		export.Delete("/settings/sollstellung", rs.resetMapping)
 		export.Put("/settings/file-number-start", rs.setStart)
 		export.Get("/runs", rs.runs)
+		export.Get("/runs/export", rs.exportRuns)
 		export.Get("/datev-runs", rs.datevRuns)
 		export.Get("/files", rs.files)
+		export.Get("/files/export", rs.exportFiles)
 		export.Get("/runs/{kind}/{id}/sollstellung", rs.sollstellung)
 		export.Get("/runs/{kind}/{id}/datev", rs.datev)
 		export.Get("/booking-accounts", rs.bookingAccounts)
@@ -199,16 +202,9 @@ func (rs *FinanceExportResource) files(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	kind, runID := "", int64(0)
-	if segment := r.URL.Query().Get("run_kind"); segment != "" {
-		var known bool
-		kind, known = exportRunKinds[segment]
-		id, err := strconv.ParseInt(r.URL.Query().Get("run_id"), 10, 64)
-		if !known || err != nil || id <= 0 {
-			common.RenderError(w, r, common.ErrorNotFoundWithCode(capability.ErrExportRunNotFound, common.CodeParentBillingExportRunNotFound))
-			return
-		}
-		runID = id
+	kind, runID, ok := protocolRun(w, r)
+	if !ok {
+		return
 	}
 	page, ok := exportPage(w, r)
 	if !ok {
@@ -220,6 +216,22 @@ func (rs *FinanceExportResource) files(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	common.Respond(w, r, http.StatusOK, files, "Export protocol retrieved successfully")
+}
+
+// protocolRun reads the optional run of the protocol: run_kind (the path
+// segment of its kind) and run_id; an unknown one answers 404.
+func protocolRun(w http.ResponseWriter, r *http.Request) (string, int64, bool) {
+	segment := r.URL.Query().Get("run_kind")
+	if segment == "" {
+		return "", 0, true
+	}
+	kind, known := exportRunKinds[segment]
+	id, err := strconv.ParseInt(r.URL.Query().Get("run_id"), 10, 64)
+	if !known || err != nil || id <= 0 {
+		common.RenderError(w, r, common.ErrorNotFoundWithCode(capability.ErrExportRunNotFound, common.CodeParentBillingExportRunNotFound))
+		return "", 0, false
+	}
+	return kind, id, true
 }
 
 // sollstellung answers the Sollstellung of a run.

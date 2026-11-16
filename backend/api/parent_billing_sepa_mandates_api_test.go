@@ -290,6 +290,7 @@ func TestSEPAMandatesNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 		{http.MethodGet, sepaCreditorPath, nil},
 		{http.MethodPut, sepaCreditorPath, map[string]any{"creditor_id": "", "prenotification_days": 14, "missing_mandate": "transfer"}},
 		{http.MethodGet, sepaMandatesPath, nil},
+		{http.MethodGet, sepaMandatesPath + "/export", nil},
 		{http.MethodPost, sepaMandatesPath, mandateBody(contract, "SJR-G-2")},
 		{http.MethodPut, item, map[string]any{"account_holder": "X", "sequence": "first"}},
 		{http.MethodPost, item + "/revoke", map[string]any{"revoked_on": "2026-10-01"}},
@@ -307,6 +308,7 @@ func TestSEPAMandatesNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 	rec := traegerJSON(t, f.traeger, foreign.token, http.MethodGet, sepaMandatesPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, decodeSchoolPortalData[[]sepaMandateBody](t, rec.Body.Bytes()), "no mandate of another Träger")
+	assert.Len(t, billingListCSV(t, f.traeger, foreign.token, sepaMandatesPath+"/export"), 1, "the file of another Träger holds no mandate")
 	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodGet, sepaCreditorPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.NotContains(t, rec.Body.String(), sepaCreditorID, "no creditor of another Träger")
@@ -461,4 +463,15 @@ func TestSEPAMandateReadsWithoutChangeAreAudited(t *testing.T) {
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.sepa_mandate_events WHERE mandate_id = ? AND actor_account_id IS NOT NULL`,
 		mandate.ID).Scan(context.Background(), &actors))
 	assert.Equal(t, 3, actors, "every entry names the account")
+
+	// #4718: the mandates as a file, with the masked IBAN of the list. Each
+	// download is a read in the trail of the mandate.
+	lines := billingListCSV(t, f.traeger, f.office.token, sepaMandatesPath+"/export")
+	require.Len(t, lines, 2, "the header and the mandate")
+	assert.Equal(t, "Familie;Mandatsreferenz;Art;Konto;Kontoinhaber;Unterschrieben;Zuletzt abgebucht;Verfällt ohne Abbuchung am;Stand", lines[0])
+	assert.Contains(t, lines[1], ";SJR-R-1;Dauermandat;"+mandate.IBANMasked+";Eva Beispiel;")
+	assert.NotContains(t, lines[1], "DE89370400440532013000", "the file never names the whole IBAN")
+	assertTraegerListFormats(t, f.traeger, f.office.token, sepaMandatesPath+"/export", "sepa-mandate")
+	assert.Equal(t, []string{"create:office", "read:office", "read:office", "read:office", "read:office", "read:office"},
+		mandateEvents(t, f, mandate.ID), "every download is a read")
 }

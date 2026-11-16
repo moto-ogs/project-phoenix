@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // AutoCheckIn opens today's block when a staff member's first NFC scan or
@@ -57,6 +58,9 @@ type TimeTracking struct {
 	// AbsenceMails says what became of the absence request mails (#7058);
 	// nil without the mail outcomes.
 	AbsenceMails workforce.AbsenceMailStatus
+	// Today is the calendar day the services read; the routes default a
+	// missing year to it (ADR 0239).
+	Today func() calendar.Date
 }
 
 // StaffDayStatus reads today's status of the staff members.
@@ -100,6 +104,7 @@ func (s *WorkSessionSide) TimeTracking() (*TimeTracking, error) {
 		Jobs:               services.Sessions,
 		StaffDay:           StaffDay{WorkSessionService: services.Sessions, StaffAbsenceService: services.Absences},
 		AbsenceMails:       workforce.NewAbsenceMailStatus(s.Clock.deps.MailOutcomes),
+		Today:              s.Clock.deps.Today,
 	}, nil
 }
 

@@ -21,7 +21,7 @@ type cancelledBlock struct {
 // only on a later day. A bulk cancellation therefore never holds one
 // block's rows while it waits for the next block's people.
 func (s *InstanceLifecycleService) lockCancelledBlockStaff(ctx context.Context, blocks []cancelledBlock, op string) error {
-	today := calendar.TodayDate()
+	today := calendar.DateFromTime(s.now())
 	ids := make([]int64, 0, len(blocks))
 	for _, block := range blocks {
 		if block.date.After(today) {

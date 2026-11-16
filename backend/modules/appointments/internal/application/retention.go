@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -26,14 +27,18 @@ type RetentionStore interface {
 	DeleteParentConferenceAppointments(ctx context.Context, ids []int64) (int, error)
 }
 
-// Retention deletes the ended appointments of the school in context.
-type Retention struct{ store RetentionStore }
+// Retention deletes the ended appointments of the school in context. today
+// is the Berlin calendar day the window counts back from (ADR 0239).
+type Retention struct {
+	store RetentionStore
+	today func() calendar.Date
+}
 
-func NewRetention(store RetentionStore) *Retention {
-	if store == nil {
-		panic("appointments application: retention requires its store")
+func NewRetention(store RetentionStore, now func() time.Time) *Retention {
+	if store == nil || now == nil {
+		panic("appointments application: retention requires its store and clock")
 	}
-	return &Retention{store: store}
+	return &Retention{store: store, today: calendar.CalendarDateClock(now)}
 }
 
 // DeleteExpiredAppointments deletes the appointments whose last day lies
@@ -42,7 +47,7 @@ func (r *Retention) DeleteExpiredAppointments(ctx context.Context, retentionDays
 	if retentionDays <= 0 {
 		return 0, fmt.Errorf("%w, got %d", appointments.ErrAppointmentRetentionWindow, retentionDays)
 	}
-	cutoff := appointments.Date(calendar.TodayDate().AddDays(-retentionDays).String())
+	cutoff := appointments.Date(r.today().AddDays(-retentionDays).String())
 	candidates, err := r.store.ListRetentionCandidates(ctx, cutoff)
 	if err != nil {
 		return 0, err

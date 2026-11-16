@@ -22,15 +22,16 @@ import (
 type BillingFamilyResource struct {
 	families       capability.BillingFamilies
 	requireBilling common.Middleware
+	lists          common.ListRenderer
 }
 
 // NewBillingFamilyResource builds the resource. requireBilling admits only
 // a session with the Träger right "Abrechnung".
-func NewBillingFamilyResource(families capability.BillingFamilies, requireBilling common.Middleware) *BillingFamilyResource {
-	if families == nil || requireBilling == nil {
-		panic("parent billing http: the families and the right check are required")
+func NewBillingFamilyResource(families capability.BillingFamilies, requireBilling common.Middleware, lists common.ListRenderer) *BillingFamilyResource {
+	if families == nil || requireBilling == nil || lists == nil {
+		panic("parent billing http: the families, the right check and the list export are required")
 	}
-	return &BillingFamilyResource{families: families, requireBilling: requireBilling}
+	return &BillingFamilyResource{families: families, requireBilling: requireBilling, lists: lists}
 }
 
 // Router returns the routes mounted at /traeger/billing-families.
@@ -41,7 +42,9 @@ func (rs *BillingFamilyResource) Router(protectedTraegerRoutes func(chi.Router, 
 		billing := r.With(rs.requireBilling, withTx)
 		billing.Get("/", rs.list)
 		billing.Get("/children", rs.children)
+		billing.Get("/export", rs.exportList)
 		billing.Get("/{id}", rs.detail)
+		billing.Get("/{id}/export", rs.exportDocuments)
 		billing.Put("/debtor-number", rs.setDebtorNumber)
 		billing.Put("/child-debtor-number", rs.setChildDebtorNumber)
 		billing.Get("/debtor-number-format", rs.debtorNumberFormat)

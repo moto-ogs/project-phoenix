@@ -13,7 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The Vertretungspool (#4709, ADR 0089 section 9, ADR 0250). A school reads
+// The Vertretungspool (#4709, ADR 0089 section 9, ADR 0252). A school reads
 // and blocks in the tenant transaction of its request; the functions behind
 // the store answer only that school. The Träger reads in its own
 // transaction and writes the access entry at each school a listed Springer

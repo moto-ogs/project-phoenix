@@ -24,15 +24,17 @@ type Resource struct {
 	phases        enrollment.TraegerPhases
 	offerings     careplan.TraegerOfferings
 	catalog       traegercatalog.Catalog
+	lists         common.ListRenderer
 	requireManage common.Middleware
 }
 
-// NewResource builds the resource; every collaborator is required.
-func NewResource(phases enrollment.TraegerPhases, offerings careplan.TraegerOfferings, catalog traegercatalog.Catalog, requireManage common.Middleware) *Resource {
-	if phases == nil || offerings == nil || catalog == nil || requireManage == nil {
-		panic("träger catalog HTTP: phases, offerings, catalog and the permission are required")
+// NewResource builds the resource; every collaborator is required. lists
+// renders the list of the phases as PDF, Excel or CSV (#4718).
+func NewResource(phases enrollment.TraegerPhases, offerings careplan.TraegerOfferings, catalog traegercatalog.Catalog, lists common.ListRenderer, requireManage common.Middleware) *Resource {
+	if phases == nil || offerings == nil || catalog == nil || lists == nil || requireManage == nil {
+		panic("träger catalog HTTP: phases, offerings, catalog, the list renderer and the permission are required")
 	}
-	return &Resource{phases: phases, offerings: offerings, catalog: catalog, requireManage: requireManage}
+	return &Resource{phases: phases, offerings: offerings, catalog: catalog, lists: lists, requireManage: requireManage}
 }
 
 // Router mounts the routes: the office keeps its catalog in the Träger
@@ -44,6 +46,7 @@ func (rs *Resource) Router(protectedTraegerRoutes func(chi.Router, func(chi.Rout
 	protectedTraegerRoutes(r, func(r chi.Router, withTx common.Middleware) {
 		keep := r.With(rs.requireManage, withTx)
 		keep.Get("/phases", rs.listPhases)
+		keep.Get("/phases/export", rs.exportPhases)
 		keep.Post("/phases", rs.createPhase)
 		keep.Get("/phases/{id}", rs.getPhase)
 		keep.Put("/phases/{id}", rs.updatePhase)

@@ -28,7 +28,7 @@ func (rs *Resource) getStudentStatusDays(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	from, to, err := parseStatusDayRange(r)
+	from, to, err := parseStatusDayRangeAt(r, rs.todayDate())
 	if err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -41,10 +41,6 @@ func (rs *Resource) getStudentStatusDays(w http.ResponseWriter, r *http.Request)
 	}
 
 	common.Respond(w, r, http.StatusOK, studentpresence.NewStudentStatusDayResponses(rows), "Student status days retrieved successfully")
-}
-
-func parseStatusDayRange(r *http.Request) (calendar.Date, calendar.Date, error) {
-	return parseStatusDayRangeAt(r, calendar.TodayDate())
 }
 
 func parseStatusDayRangeAt(r *http.Request, today calendar.Date) (calendar.Date, calendar.Date, error) {

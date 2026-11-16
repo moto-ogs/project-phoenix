@@ -15,11 +15,11 @@ func TestPresenceCombinationResponseActivity(t *testing.T) {
 	t.Parallel()
 	now := time.Now()
 	past, future := now.Add(-time.Hour), now.Add(time.Hour)
-	assert.True(t, newPresenceCombinationResponse(studentpresence.CombinedGroup{}).IsActive,
+	assert.True(t, newPresenceCombinationResponse(studentpresence.CombinedGroup{}, now).IsActive,
 		"nil end time is open-ended and active")
-	assert.True(t, newPresenceCombinationResponse(studentpresence.CombinedGroup{EndTime: &future}).IsActive,
+	assert.True(t, newPresenceCombinationResponse(studentpresence.CombinedGroup{EndTime: &future}, now).IsActive,
 		"future end time is still active")
-	assert.False(t, newPresenceCombinationResponse(studentpresence.CombinedGroup{EndTime: &past}).IsActive,
+	assert.False(t, newPresenceCombinationResponse(studentpresence.CombinedGroup{EndTime: &past}, now).IsActive,
 		"past end time is not active")
 }
 

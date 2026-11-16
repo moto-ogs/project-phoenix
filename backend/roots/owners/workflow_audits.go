@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
@@ -17,7 +18,7 @@ import (
 // writes in its caller's tenant transaction; a failed append is logged at
 // error level under message.
 func NewWorkflowAuditCommand(db transactionruntime.Database, logger *slog.Logger, message string) (auditModels.Command, error) {
-	audits, err := auditCompose.NewTenantPersistence(db.Pool())
+	audits, err := auditCompose.NewTenantPersistence(db.Pool(), time.Now)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +32,7 @@ func NewWorkflowAuditCommand(db transactionruntime.Database, logger *slog.Logger
 				"error", event.Err,
 			)
 		}
-	})
+	}, time.Now)
 	if err != nil {
 		return nil, err
 	}

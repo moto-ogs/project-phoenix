@@ -23,6 +23,10 @@ import {
 } from "~/components/traeger/care-notice-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -47,6 +51,7 @@ import {
   fetchCareNoticeRun,
   releaseCareNoticeRun,
 } from "~/lib/traeger-care-notices-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 const logger = createLogger({ component: "TraegerCareNoticeRunPage" });
 
@@ -267,60 +272,78 @@ export default function TraegerCareNoticeRunPage() {
       }
       statsLoading={!run && !pageLoad.error}
       actions={
-        empty ? (
-          <Button
-            type="button"
-            variant="outline_danger"
-            size="md"
-            tooltip="moto fragt vorher nach, dann ist das Jahr frei für einen neuen Lauf."
-            onClick={() => setConfirmingDiscard(true)}
-          >
-            Leeren Lauf verwerfen
-          </Button>
-        ) : preview ? (
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            disabled={!canRelease}
-            disabledReason={releaseBlockReason(run)}
-            tooltip={
-              run.previewCount === 0
-                ? "moto fragt vorher nach, dann ist der Jahreslauf ohne Bescheid abgeschlossen."
-                : "moto fragt vorher nach, dann sind alle Bescheide mit Nummer festgeschrieben."
-            }
-            onClick={() => setConfirming(true)}
-          >
-            {run.previewCount === 0
-              ? "Jahreslauf abschließen"
-              : "Bescheide ausstellen"}
-          </Button>
-        ) : run?.status === "released" && run.previewCount > 0 ? (
-          // The PAIN.008 file of the installments (#4697) and the delivery of
-          // the stored originals (#6347) have pages of their own.
-          <div className="flex flex-wrap gap-2">
-            <ButtonLink
-              href={traegerPath(
-                `/traeger/abrechnung/jahresbescheide/${run.id}/lastschrift`,
-              )}
-              variant="outline"
+        <>
+          {run ? (
+            <TraegerListExportMenu
+              download={(format) =>
+                downloadTraegerList(
+                  `/api/traeger/care-notice-runs/${run.id}/export`,
+                  format,
+                )
+              }
+              scope={traegerExportScope()}
+              ariaLabel="Bescheide herunterladen"
+              tooltip="Zeigt die Formate für alle Bescheide des Laufs. Jeder Download wird protokolliert."
+              fallbackName={`jahresbescheide-${run.year}`}
+              errorObject="die Bescheide"
+              unavailable={run.notices.length === 0}
+            />
+          ) : null}
+          {empty ? (
+            <Button
+              type="button"
+              variant="outline_danger"
               size="md"
-              tooltip="Öffnet die Lastschrift der Raten mit der Datei für Ihre Bank."
+              tooltip="moto fragt vorher nach, dann ist das Jahr frei für einen neuen Lauf."
+              onClick={() => setConfirmingDiscard(true)}
             >
-              Lastschrift der Raten
-            </ButtonLink>
-            <ButtonLink
-              href={traegerPath(
-                `/traeger/abrechnung/jahresbescheide/${run.id}/versand`,
-              )}
+              Leeren Lauf verwerfen
+            </Button>
+          ) : preview ? (
+            <Button
+              type="button"
               variant="primary"
               size="md"
-              tooltip="Öffnet den Versand, dort senden Sie die Bescheide an die Familien."
+              disabled={!canRelease}
+              disabledReason={releaseBlockReason(run)}
+              tooltip={
+                run.previewCount === 0
+                  ? "moto fragt vorher nach, dann ist der Jahreslauf ohne Bescheid abgeschlossen."
+                  : "moto fragt vorher nach, dann sind alle Bescheide mit Nummer festgeschrieben."
+              }
+              onClick={() => setConfirming(true)}
             >
-              An Familien senden
-            </ButtonLink>
-          </div>
-        ) : undefined
+              {run.previewCount === 0
+                ? "Jahreslauf abschließen"
+                : "Bescheide ausstellen"}
+            </Button>
+          ) : run?.status === "released" && run.previewCount > 0 ? (
+            // The PAIN.008 file of the installments (#4697) and the delivery of
+            // the stored originals (#6347) have pages of their own.
+            <div className="flex flex-wrap gap-2">
+              <ButtonLink
+                href={traegerPath(
+                  `/traeger/abrechnung/jahresbescheide/${run.id}/lastschrift`,
+                )}
+                variant="outline"
+                size="md"
+                tooltip="Öffnet die Lastschrift der Raten mit der Datei für Ihre Bank."
+              >
+                Lastschrift der Raten
+              </ButtonLink>
+              <ButtonLink
+                href={traegerPath(
+                  `/traeger/abrechnung/jahresbescheide/${run.id}/versand`,
+                )}
+                variant="primary"
+                size="md"
+                tooltip="Öffnet den Versand, dort senden Sie die Bescheide an die Familien."
+              >
+                An Familien senden
+              </ButtonLink>
+            </div>
+          ) : null}
+        </>
       }
       error={pageLoad.error}
       loading={!pageLoad.error && !run}

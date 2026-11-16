@@ -28,7 +28,7 @@ func TestImportCheckpoints_CommitRollbackUniquenessAndTenantIsolation(t *testing
 			return raw.(bun.Tx), auditModels.TenantIDFromContext(ctx)
 		}
 		return db, auditModels.TenantIDFromContext(ctx)
-	})
+	}, nil)
 	appendReceipt := func(ctx context.Context, lastRow int) error {
 		t.Helper()
 		stamp := time.Now()

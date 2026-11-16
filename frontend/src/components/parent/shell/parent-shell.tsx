@@ -22,6 +22,11 @@ import { ParentFirstSteps } from "~/components/parent/onboarding/parent-first-st
 import { useShellAuth } from "~/lib/shell-auth-context";
 import { ParentCareTermScope } from "~/lib/parent-care-term";
 import { MobilePageHelpPortal } from "~/components/help/mobile-page-help-portal";
+import {
+  ParentNotificationsBell,
+  useParentNotificationsUnread,
+} from "~/components/parent/notifications/parent-notifications-bell";
+import { ParentNotificationsSheet } from "~/components/parent/notifications/parent-notifications-sheet";
 
 /**
  * Die Huelle der Eltern-App.
@@ -42,6 +47,8 @@ export function ParentShell({
   const { unreadCount: messagesUnread } =
     useParentMessagesUnread(authenticated);
   const { unreadCount: newsOpen } = useParentNewsUnread(authenticated);
+  const { unreadCount: noticesUnread } =
+    useParentNotificationsUnread(authenticated);
   const { data: linkedChildren } = useParentChildren(authenticated);
   const scoped = useSWRCacheKey();
   const identity = scoped("");
@@ -75,7 +82,11 @@ export function ParentShell({
     linkedChildren ?? null,
   );
 
-  const badges = { messages: messagesUnread, news: newsOpen };
+  const badges = {
+    messages: messagesUnread,
+    news: newsOpen,
+    notifications: noticesUnread,
+  };
   const gates = { news: newsEnabled, mealPlan: mealPlanEnabled };
   const childCount = linkedChildren?.length ?? 0;
   // Öffentliche Demo (#3468): derselbe feste Streifen wie in der OGS-App
@@ -93,7 +104,13 @@ export function ParentShell({
       >
         <MobilePageHelpPortal>
           <PortalShell
-            header={<Header />}
+            header={
+              <Header
+                notificationBell={
+                  authenticated ? <ParentNotificationsBell /> : undefined
+                }
+              />
+            }
             headerClassName={
               eveningRow
                 ? "sticky top-20 z-50 hidden lg:block"
@@ -135,6 +152,7 @@ export function ParentShell({
             </Fragment>
           </PortalShell>
         </MobilePageHelpPortal>
+        {authenticated ? <ParentNotificationsSheet /> : null}
         {authenticated && shellAuth.user?.id && linkedChildren ? (
           <ParentFirstSteps
             accountId={shellAuth.user.id}

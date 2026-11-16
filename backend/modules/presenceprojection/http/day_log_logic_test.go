@@ -285,7 +285,7 @@ func TestBuildDayLogExportDocument_UsesMarkerRowConvention(t *testing.T) {
 		{Name: "Gruppe A", Counters: dayLogCounters{Present: 1, NotScheduled: 2}, Students: []dayLogStudent{{FirstName: "Mia", LastName: "Bauer", Status: dayLogStatusPresent, Label: "Anwesend"}}},
 		{Name: "Gruppe B", Students: []dayLogStudent{{FirstName: "Paul", LastName: "Wolf", Status: dayLogStatusAbsent, Label: "Abwesend"}}},
 	}}
-	doc := buildDayLogExportDocument(multi, calendar.TodayDate())
+	doc := buildDayLogExportDocument(multi, calendar.TodayDate(), time.Now())
 	require.Len(t, doc.Rows, 4)
 	assert.Equal(t, "Gruppe A", doc.Rows[0].GroupTitle)
 	assert.Empty(t, doc.Rows[0].Values, "marker rows carry no values")
@@ -296,7 +296,7 @@ func TestBuildDayLogExportDocument_UsesMarkerRowConvention(t *testing.T) {
 	assert.Equal(t, "Gruppe A: 1 Anwesend · 0 Krank · 0 Entschuldigt · 0 Klassenfahrt · 2 Nicht eingeplant · 0 Abwesend", doc.Filters[0])
 
 	single := dayLogResponse{Groups: multi.Groups[:1]}
-	doc = buildDayLogExportDocument(single, calendar.TodayDate())
+	doc = buildDayLogExportDocument(single, calendar.TodayDate(), time.Now())
 	require.Len(t, doc.Rows, 1)
 	assert.Empty(t, doc.Rows[0].GroupTitle, "single-group export stays ungrouped")
 	assert.Equal(t, "Bauer, Mia", doc.Rows[0].Values["name"])

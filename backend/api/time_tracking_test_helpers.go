@@ -5,6 +5,7 @@ package api
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -26,7 +27,9 @@ type timeTrackingTestGraph struct {
 	StatutoryHolidays workforceCompose.HolidayDatesReader
 	Events            workforceCompose.EventPublisher
 	Logger            *slog.Logger
-	Today             func() timezone.Date
+	// Now and Today are the clock of the services; nil is the wall clock.
+	Now   func() time.Time
+	Today func() timezone.Date
 	// MailOutcomes reads what became of the absence request mails (#7058).
 	MailOutcomes workforceModule.MailOutcomes
 }
@@ -58,7 +61,7 @@ func newTimeTrackingTestModule(db transactionruntime.Database, repos WorkSession
 		Absences: repos.StaffAbsence, AbsenceAudits: repos.Workforce,
 		Staff:        owners.WorkSessionStaff(staffRows, employment, membership),
 		Supervisions: presence.GroupSupervisor, SessionRecords: presence.ActiveGroup, Holidays: graph.Holidays, StatutoryHolidays: graph.StatutoryHolidays,
-		Events: graph.Events, Logger: graph.Logger, Today: graph.Today, AbsenceEmail: absenceEmail,
+		Events: graph.Events, Logger: graph.Logger, Now: graph.Now, Today: graph.Today, AbsenceEmail: absenceEmail,
 		MailOutcomes: graph.MailOutcomes,
 	}, graph.Audits, staffRows, graph.People, employment, owners.NewStaffWorkScheduleRepository(repos.Workforce), owners.NewWorkTimeModelRepository(repos.Workforce),
 		settings, payroll, db,

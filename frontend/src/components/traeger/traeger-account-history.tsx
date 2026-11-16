@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { History } from "lucide-react";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -20,6 +21,7 @@ import {
   type TraegerAccountChangeAction,
   type TraegerAccountHistoryEntry,
 } from "~/lib/traeger-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { TRAEGER_ROLE_LABELS, type TraegerRole } from "~/lib/traeger-roles";
 
 const logger = createLogger({ component: "TraegerAccountHistory" });
@@ -107,10 +109,16 @@ const COLUMNS: DataTableColumn<TraegerAccountHistoryEntry>[] = [
 /**
  * The history section of the page „Mitglieder und Rollen“. `version` changes after every
  * change on the page; the history then reads its first page again.
+ * „Herunterladen“ gives the whole history as PDF, Excel or CSV (#4718);
+ * `onExportError` hears a failed download first.
  */
 export function TraegerAccountHistory({
   version,
-}: Readonly<{ version: number }>) {
+  onExportError,
+}: Readonly<{
+  version: number;
+  onExportError?: (error: unknown) => void;
+}>) {
   const [entries, setEntries] = useState<readonly TraegerAccountHistoryEntry[]>(
     [],
   );
@@ -177,6 +185,19 @@ export function TraegerAccountHistory({
     <SectionCard
       title="Verlauf"
       description="Wer wann Personen eingeladen, Rollen oder Namen geändert oder entfernt hat. Nur zum Lesen."
+      action={
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerList("/api/traeger/accounts/history/export", format)
+          }
+          scope="Träger-Büro"
+          ariaLabel="Verlauf herunterladen"
+          fallbackName="verlauf-traeger-buero"
+          errorObject="den Verlauf"
+          unavailable={loading || entries.length === 0}
+          onError={onExportError}
+        />
+      }
     >
       {historyLoad.error ? (
         <LoadErrorAlert error={historyLoad.error} actionLayout="responsive" />

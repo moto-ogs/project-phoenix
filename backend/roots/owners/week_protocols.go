@@ -61,7 +61,7 @@ func NewWeekProtocolEvenings(
 		panic(fmt.Errorf("compose week protocol groups: %w", err))
 	}
 	notices := timetableCompose.NewStaffNotices(timetableCompose.StaffNoticeDependencies{
-		DB: db.Pool(), Logger: logger.With("service", "staffnotice"),
+		DB: db.Pool(), Logger: logger.With("service", "staffnotice"), Now: timetableRepos.ActivityInstance.Now,
 		Periods: timetableCompose.NewCalendarPeriodRepository(calendar,
 			timetableCompose.NewPlanningCalendarPeriodUsage(enrollmentCompose.New(), timetableRepos.Timetable)),
 	})

@@ -1,4 +1,5 @@
 DELETE /traeger/care-cost-shares/{id} -> basis
 GET /traeger/care-cost-shares/ -> basis
+GET /traeger/care-cost-shares/export -> basis
 POST /traeger/care-cost-shares/ -> basis
 PUT /traeger/care-cost-shares/{id} -> basis

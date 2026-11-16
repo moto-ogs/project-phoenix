@@ -545,6 +545,7 @@ type mockCleanupService struct {
 	attendanceCalls  int
 	attendanceResult *ports.StaleAttendanceCleanup
 	attendanceErr    error
+	supervisorResult *ports.StaleSupervisorCleanup
 }
 
 func (m *mockCleanupService) CleanupExpiredVisits(_ context.Context) (*ports.ExpiredVisitCleanup, error) {
@@ -562,6 +563,9 @@ func (m *mockCleanupService) CleanupStaleAttendance(_ context.Context) (*ports.S
 }
 
 func (m *mockCleanupService) CleanupStaleSupervisors(_ context.Context) (*ports.StaleSupervisorCleanup, error) {
+	if m.supervisorResult != nil {
+		return m.supervisorResult, nil
+	}
 	return &ports.StaleSupervisorCleanup{Success: true}, nil
 }
 
@@ -1337,6 +1341,71 @@ func TestExecuteCleanupForTenant_ReturnsFalseOnError(t *testing.T) {
 	result, err := cleanupComplete(context.Background(), s, testpkg.Tenant(t))
 	require.NoError(t, err)
 	assert.False(t, result)
+}
+
+// TestExecuteCleanupForTenant_PartialFailureIsReportedWithCounts pins
+// #7211: a presence step that failed for part of its records fails, and its
+// warning carries counts only, never who failed. The counts of the records
+// that did succeed are labelled as rolled back with the step's savepoint.
+func TestExecuteCleanupForTenant_PartialFailureIsReportedWithCounts(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		step    string
+		service *mockCleanupService
+		msg     string
+		counts  map[string]any
+	}{
+		{
+			step: "visits",
+			service: &mockCleanupService{cleanupResult: &ports.ExpiredVisitCleanup{
+				StudentsProcessed: 4, RecordsDeleted: 12, StudentsFailed: 2, Success: false,
+			}},
+			msg:    "visit cleanup partial failure",
+			counts: map[string]any{"students_failed": float64(2), "deletions_rolled_back": float64(12)},
+		},
+		{
+			step: "supervisors",
+			service: &mockCleanupService{
+				cleanupResult:    &ports.ExpiredVisitCleanup{Success: true},
+				supervisorResult: &ports.StaleSupervisorCleanup{RecordsClosed: 3, RecordsFailed: 1, Success: false},
+			},
+			msg:    "supervisor cleanup partial failure",
+			counts: map[string]any{"records_failed": float64(1), "closures_rolled_back": float64(3)},
+		},
+		{
+			step: "attendance",
+			service: &mockCleanupService{
+				cleanupResult: &ports.ExpiredVisitCleanup{Success: true},
+				attendanceResult: &ports.StaleAttendanceCleanup{
+					RecordsClosed: 5, Success: false, Errors: []string{"student 17: closed", "student 18: closed"},
+				},
+			},
+			msg:    "attendance cleanup partial failure",
+			counts: map[string]any{"records_failed": float64(2), "closures_rolled_back": float64(5)},
+		},
+	} {
+		t.Run(tc.step, func(t *testing.T) {
+			t.Parallel()
+			logs := &cleanupLogs{}
+			tenantID := testpkg.Tenant(t)
+			s := unitScheduler(&unitSchedulerDependencies{cleanupService: tc.service, logger: logs.logger()})
+
+			complete, err := cleanupComplete(context.Background(), s, tenantID)
+			require.NoError(t, err)
+			assert.False(t, complete, "a partial failure leaves the run due")
+
+			records := logs.byMessage(t)
+			require.Len(t, records[tc.msg], 1)
+			warning := records[tc.msg][0]
+			want := map[string]any{"time": warning["time"], "level": "WARN", "msg": tc.msg, "tenant_id": float64(tenantID)}
+			for key, value := range tc.counts {
+				want[key] = value
+			}
+			assert.Equal(t, want, warning, "the warning carries counts only")
+			require.Len(t, records["cleanup step failed"], 1)
+			assert.Equal(t, tc.step, records["cleanup step failed"][0]["step"])
+		})
+	}
 }
 
 type countingFeedbackCleaner struct{ calls int }

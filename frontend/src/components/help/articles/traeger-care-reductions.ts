@@ -82,6 +82,14 @@ export function traegerCareReductionsTopic(): HelpTopic {
           "Wählen Sie `Nachweis speichern`.",
         ],
       },
+      {
+        title: "Kinderzahl und Nachweise herunterladen",
+        steps: [
+          "Wählen Sie `Familien und Zahlung` und dann den Reiter `Kinderzahl` oder `Nachweise`.",
+          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält die ganze Liste, ohne Suche.",
+          "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
+        ],
+      },
     ],
     result:
       "Der nächste Monatslauf rechnet die Ermäßigungen aus. Jede Rechnung zeigt jede Ermäßigung mit Namen und Betrag. Bei Geschwistern steht dabei, das wievielte Kind es ist, zum Beispiel `2. Kind von 3`.",

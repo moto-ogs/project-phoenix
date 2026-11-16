@@ -71,6 +71,7 @@ type AbsenceListDependencies struct {
 type absenceList struct {
 	deps  AbsenceListDependencies
 	today func() calendar.Date
+	now   func() time.Time
 }
 
 // AbsenceListReport builds the list of one class and logs every read.
@@ -95,11 +96,11 @@ func (a absenceList) RenderAbsenceList(ctx context.Context, query classday.Absen
 	if err != nil {
 		return classday.File{}, err
 	}
-	file, err := a.deps.Renderer.Render(absenceListDocument(report, time.Now()), format, absenceListFilename(report))
+	file, err := a.deps.Renderer.Render(absenceListDocument(report, a.now()), format, absenceListFilename(report))
 	if err != nil {
 		return classday.File{}, err
 	}
-	entry, err := absenceListAccessRecord("absence list export audit", report, query.Actor)
+	entry, err := absenceListAccessRecord("absence list export audit", report, query.Actor, a.now())
 	if err != nil {
 		return classday.File{}, err
 	}
@@ -389,7 +390,7 @@ func (a absenceList) recordView(ctx context.Context, report *classday.AbsenceLis
 		return nil
 	}
 	const errPrefix = "absence list audit"
-	entry, err := absenceListAccessRecord(errPrefix, report, actor)
+	entry, err := absenceListAccessRecord(errPrefix, report, actor, a.now())
 	if err != nil {
 		return err
 	}
@@ -399,8 +400,8 @@ func (a absenceList) recordView(ctx context.Context, report *classday.AbsenceLis
 	return nil
 }
 
-func absenceListAccessRecord(errPrefix string, report *classday.AbsenceListReport, actor classday.Actor) (AccessRecord, error) {
-	entry, err := newAccessRecord(errPrefix, actor.AccountID, actor.Roles, report.From.BerlinMidnight(), report.To.EndOfDay(), time.Now())
+func absenceListAccessRecord(errPrefix string, report *classday.AbsenceListReport, actor classday.Actor, accessedAt time.Time) (AccessRecord, error) {
+	entry, err := newAccessRecord(errPrefix, actor.AccountID, actor.Roles, report.From.BerlinMidnight(), report.To.EndOfDay(), accessedAt)
 	if err != nil {
 		return AccessRecord{}, err
 	}

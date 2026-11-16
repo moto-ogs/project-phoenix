@@ -4,6 +4,7 @@ package api
 
 import (
 	"log/slog"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -39,6 +40,7 @@ func NewFileStoreTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 	command, err := auditCompose.NewCommand(
 		owners.NewTestAuditStore(db),
 		func(auditCompose.AppendObservation) {},
+		time.Now,
 	)
 	if err != nil {
 		return nil, nil, err

@@ -41,7 +41,7 @@ func TestWorkSessionEditRepository_CreateBatch(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewWorkSessionEditRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewWorkSessionEditRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("creates multiple edit records", func(t *testing.T) {
@@ -217,7 +217,7 @@ func TestWorkSessionEditRepository_GetBySessionID(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewWorkSessionEditRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewWorkSessionEditRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("returns edit records for session", func(t *testing.T) {
@@ -348,7 +348,7 @@ func TestWorkSessionEditRepository_CountBySessionID(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewWorkSessionEditRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewWorkSessionEditRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("returns count of edits for session", func(t *testing.T) {
@@ -414,7 +414,7 @@ func TestWorkSessionEditRepository_CountBySessionIDs(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewWorkSessionEditRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewWorkSessionEditRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("returns counts for multiple sessions", func(t *testing.T) {
@@ -515,7 +515,7 @@ func TestWorkSessionEditRepository_CountManualBySessionIDs(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewWorkSessionEditRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewWorkSessionEditRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("excludes system-authored edits", func(t *testing.T) {
@@ -655,7 +655,7 @@ func TestWorkSessionEditRepository_CountManualBySessionIDs(t *testing.T) {
 func TestWorkSessionEditRepository_WrapsDatabaseErrors(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	repo := NewWorkSessionEditRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewWorkSessionEditRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	edit := &audit.WorkSessionEdit{SessionID: 1, StaffID: 1, EditedBy: audit.SystemEditorID, FieldName: audit.FieldCheckOutTime}
 	for _, tc := range []struct {
 		name string

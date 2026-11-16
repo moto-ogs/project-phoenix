@@ -67,13 +67,14 @@ func (s *Store) RecordGroups(ctx context.Context, groups []studentpresence.LiveG
 		return nil, ports.Stats{}, err
 	}
 	started := time.Now()
+	stamp := s.now()
 	stored := make([]*pastGroupRow, 0, len(groups))
 	for _, group := range groups {
 		if group.CreatedAt.IsZero() {
-			group.CreatedAt = started
+			group.CreatedAt = stamp
 		}
 		if group.UpdatedAt.IsZero() {
-			group.UpdatedAt = started
+			group.UpdatedAt = stamp
 		}
 		stored = append(stored, &pastGroupRow{TenantID: tenantID, CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
 			StartTime: group.StartTime, EndTime: group.EndTime, LastActivity: group.LastActivity,

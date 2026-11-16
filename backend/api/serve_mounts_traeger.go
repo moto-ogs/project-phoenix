@@ -120,7 +120,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 	overview, reports, keyDateReports, err := traegerViewCompose.New(traegerview.Ports{
 		SchoolIDs: traegerSchoolIDs{organizations: organizations}, Trail: traegerAccessTrail{trail: audit.Trail},
 		Recorder: traegerAccessRecorder{log: audit.Log}, Holiday: traegerHolidayTrail{trail: enrollmentCompose.NewHolidayAccessTrail()}, Persons: traegerPersonDirectory{persons: persons}, Staff: traegerStaffDirectory{staff: staff},
-		Bureau:  traegerBureauAddresses{roles: identity},
+		Bureau: traegerBureauAddresses{roles: identity}, Now: time.Now,
 		Rosters: schoolMembershipCompose.NewSchoolRosters(), Present: presence,
 		Sick: sick, OnSite: workforceCompose.NewOnSiteStaff(),
 		KeyDates:    traegerKeyDateCounts{organizations: organizations},
@@ -136,14 +136,14 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 	_, allocationBilling := parentBillingCompose.NewHolidayContributions(parentBillingHolidayRegistrations{review: review}, parentBillingSettings{settings: settings}, today)
 	decide := newHolidayAllocation(allocationBilling, review, places, allocation)
 	_, wishes := enrollmentCompose.NewHolidayWishes(healthData)
+	traegerLists := traegerListRenderer(NewSimpleListRenderer())
 	holidayPeriods := enrollmentAPI.NewHolidayPeriodResource(enrollmentCompose.NewHolidayPeriods(nil, holidayCalendar), review, records, wishes, places, allocation, decide, holidaySchoolNames{overview: overview},
-		holidayKnownChildren{overview: overview}, enrollmentCompose.NewHolidayKnownChildTrail(),
+		holidayKnownChildren{overview: overview}, enrollmentCompose.NewHolidayKnownChildTrail(), traegerLists,
 		common.RequiresPermission(identityaccess.TraegerRightEnrollmentManage), common.RequiresPermission(identityaccess.TraegerRightHealthRead))
 	traegerSettings := settingsHTTP.NewTraegerSettingsResource(settings, identityaccess.TraegerRightOverviewRead,
 		identityaccess.TraegerRightSettingsManage, identityaccess.TraegerRightStaffManage, identityaccess.TraegerRightBillingManage)
 	masterData := organizationTenancyTraeger.NewMasterDataResource(organizationTenancyCompose.NewTraegerMasterData(), organizationTenancyCompose.NewTraegerDocumentTemplates(),
-		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage))
-	traegerLists := traegerViewListRenderer(NewSimpleListRenderer())
+		traegerLists, common.RequiresPermission(identityaccess.TraegerRightOverviewRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage))
 	overviewRoutes := traegerViewHTTP.NewResource(overview, reports, traegerLists)
 	// The names of the Träger-Büro (#4693); a route-sized test identity
 	// without them answers 500 on those routes, the serving root refuses it.
@@ -155,7 +155,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 		portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeTraeger), overviewRoutes, holidayPeriods,
 		traegerViewHTTP.NewAccessLogResource(overview, traegerLists), traegerSettings, masterData, identity, profiles, overviewRoutes, identity, stepUp,
 		traegerViewHTTP.NewReportResource(keyDateReports), organizationTenancyTraeger.NewReportTemplateResource(reportTemplates,
-			common.RequiresPermission(identityaccess.TraegerRightReportsRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage))), nil
+			common.RequiresPermission(identityaccess.TraegerRightReportsRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage)), traegerLists), nil
 }
 
 // TraegerPortalSettings is the Träger level of the settings system as the

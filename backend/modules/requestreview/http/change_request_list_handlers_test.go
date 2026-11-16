@@ -278,7 +278,7 @@ func newAggResource() (*requestreviewhttp.Resource, *aggFakes) {
 	}
 	review, err := requestreview.NewChecked(requestreview.Dependencies{
 		Queues: requestreview.Queues{DirectCorrections: fakes.offering, MasterData: masterQueue, CareSchedule: careQueue, Offering: offeringQueue, Excused: excusedQueue},
-		Access: access,
+		Access: access, Today: func() requestreview.Date { return requestreview.Date(calendar.TodayDate()) },
 	})
 	if err != nil {
 		panic(err)

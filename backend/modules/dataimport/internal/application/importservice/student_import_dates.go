@@ -9,11 +9,6 @@ import (
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// createStudentFromRow creates a student from person and row
-func enrollmentStartsInFuture(enrolledFrom *timezone.Date) bool {
-	return enrollmentStartsAfter(enrolledFrom, timezone.TodayDate())
-}
-
 func enrollmentStartsAfter(enrolledFrom *timezone.Date, today timezone.Date) bool {
 	return enrolledFrom != nil && enrolledFrom.After(today)
 }
@@ -40,12 +35,12 @@ func parseDateFormats(dateStr string) (time.Time, error) {
 	return time.Time{}, lastErr
 }
 
-func parseSupportedDate(dateStr string) (time.Time, error) {
+func parseSupportedDate(dateStr string, now time.Time) (time.Time, error) {
 	parsed, err := parseDateFormats(dateStr)
 	if err != nil {
 		return time.Time{}, err
 	}
-	if err := validateBirthdayDate(parsed); err != nil {
+	if err := validateBirthdayDate(parsed, now); err != nil {
 		return time.Time{}, err
 	}
 	return parsed, nil
@@ -79,8 +74,9 @@ func parseGermanShortDate(dateStr string) (time.Time, error) {
 	return parsed, nil
 }
 
-func validateBirthdayDate(parsed time.Time) error {
-	today := time.Now().In(time.UTC)
+// validateBirthdayDate rejects a date after the UTC day of now.
+func validateBirthdayDate(parsed, now time.Time) error {
+	today := now.In(time.UTC)
 	currentDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
 	if parsed.After(currentDate) {
 		return errFutureBirthday
@@ -117,13 +113,13 @@ func parseOptionalImportCalendarDate(dateStr string) *timezone.Date {
 }
 
 // parseOptionalDate parses a date string or returns nil
-func parseOptionalDate(dateStr string) (*timezone.Date, error) {
+func parseOptionalDate(dateStr string, now time.Time) (*timezone.Date, error) {
 	trimmed := strings.TrimSpace(dateStr)
 	if trimmed == "" {
 		return nil, nil
 	}
 
-	t, err := parseSupportedDate(trimmed)
+	t, err := parseSupportedDate(trimmed, now)
 	if err != nil {
 		return nil, err
 	}

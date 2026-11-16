@@ -22,5 +22,5 @@ func (r *PersonnelNumberChangeRepository) Create(ctx context.Context, event *aud
 	if err := event.Validate(); err != nil {
 		return fmt.Errorf("invalid personnel number change audit event: %w", err)
 	}
-	return NewAppender(r.runtime).Append(ctx, event)
+	return NewAppender(r.runtime, nil).Append(ctx, event)
 }

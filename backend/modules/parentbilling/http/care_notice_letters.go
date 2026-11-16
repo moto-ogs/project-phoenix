@@ -19,6 +19,7 @@ import (
 // mountLetters adds the routes of the originals of a released run.
 func (rs *CareNoticeResource) mountLetters(billing chi.Router) {
 	billing.Get("/{id}/letters", rs.noticeLetters)
+	billing.Get("/{id}/letters/export", rs.exportNoticeLetters)
 	billing.Post("/{id}/letters", rs.createNoticeLetters)
 	billing.Get("/{id}/letters/print", rs.printNoticeLetters)
 	billing.Post("/{id}/letters/mail", rs.mailNoticeLetters)

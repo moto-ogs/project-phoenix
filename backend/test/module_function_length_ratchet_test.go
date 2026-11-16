@@ -591,7 +591,8 @@ var moduleFuncLenAllowlist = map[string]int{
 	"roots/owners/parent_messaging_announcement_access_port.go:BindParentAnnouncementAccess": 125,
 	"roots/owners/root_identity.go:BuildIdentityAccess":                                      106,
 	// ADR 0078: the worker composes the Meal Plan whose orders it settles.
-	"roots/owners/root_worker.go:ComposeWorker": 347,
+	// ADR 0263: the worker hands its clock to the Timetable owner (+3).
+	"roots/owners/root_worker.go:ComposeWorker": 350,
 	// ADR 0110: the worker passes the retention of the public holiday
 	// registrations.
 	"roots/owners/worker.go:NewWorker": 87,

@@ -262,7 +262,7 @@ func (s *service) autoClearStudentSickness(ctx context.Context, studentID int64)
 		return ErrStudentNotFound
 	}
 
-	return s.clearSickFlagOnCheckin(ctx, student, time.Now())
+	return s.clearSickFlagOnCheckin(ctx, student, s.now())
 }
 
 // clearSickFlagOnCheckin is the write core of autoClearStudentSickness,
@@ -310,7 +310,7 @@ func (s *service) autoClearStudentExcused(ctx context.Context, studentID int64) 
 		return ErrStudentNotFound
 	}
 
-	return s.clearExcusedFlagOnCheckin(ctx, student, time.Now())
+	return s.clearExcusedFlagOnCheckin(ctx, student, s.now())
 }
 
 // clearExcusedFlagOnCheckin is the write core of autoClearStudentExcused —

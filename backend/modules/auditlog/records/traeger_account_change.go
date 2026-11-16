@@ -14,6 +14,8 @@ const (
 	TraegerAccountMemberRemoved      = "member_removed"
 	TraegerAccountMembersListed      = "members_listed"
 	TraegerAccountNameChanged        = "name_changed"
+	// TraegerAccountHistoryExported is a download of the history (#4718).
+	TraegerAccountHistoryExported = "history_exported"
 )
 
 // TraegerAccountChange is one step of the Träger-Büro account management in
@@ -48,7 +50,8 @@ func (c *TraegerAccountChange) Validate() error {
 	}
 	switch c.Action {
 	case TraegerAccountInvitationCreated, TraegerAccountInvitationRevoked, TraegerAccountInvitationAccepted,
-		TraegerAccountRolesChanged, TraegerAccountMemberRemoved, TraegerAccountMembersListed, TraegerAccountNameChanged:
+		TraegerAccountRolesChanged, TraegerAccountMemberRemoved, TraegerAccountMembersListed, TraegerAccountNameChanged,
+		TraegerAccountHistoryExported:
 	default:
 		return errors.New("unknown Träger account change action")
 	}

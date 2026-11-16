@@ -85,14 +85,14 @@ func TestWorkSessionEdit_Validate(t *testing.T) {
 		assert.Contains(t, err.Error(), "invalid field name")
 	})
 
-	t.Run("zero created_at gets set to now", func(t *testing.T) {
+	t.Run("zero created_at is left to the appender", func(t *testing.T) {
+		// The Audit Appender stamps it from the Audit clock
+		// (TestAuditAppenderStampsEventsWithoutTheirTime, ADR 0239).
 		e := validEdit()
 		e.CreatedAt = time.Time{}
-		before := time.Now()
 		err := e.Validate()
 		assert.NoError(t, err)
-		assert.False(t, e.CreatedAt.IsZero())
-		assert.True(t, e.CreatedAt.After(before) || e.CreatedAt.Equal(before))
+		assert.True(t, e.CreatedAt.IsZero())
 	})
 }
 

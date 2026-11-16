@@ -492,7 +492,9 @@ describe("TraegerLoginPage", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Link senden" }));
 
-    expect(await screen.findByText("E-Mail versendet!")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Bitte prüfen Sie Ihr Postfach"),
+    ).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/traeger/auth/password-reset",
       expect.objectContaining({
