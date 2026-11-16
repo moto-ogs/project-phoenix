@@ -29,18 +29,19 @@ func TestWriterOwnedSequencesHaveNoRuntimeRights(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	ctx := t.Context()
-	acls := func() []string {
+	// The rights of the runtime roles, independent of the owner's own.
+	rights := func() []string {
 		var rows []string
-		require.NoError(t, db.NewRaw(`SELECT relnamespace::regnamespace::text || '.' || relname || ' ' || coalesce(relacl::text, '')
-			FROM unnest(ARRAY['platform.billing_key_date_counts_id_seq', 'iot.pwa_standalone_usage_id_seq']::regclass[]) AS seq
-			JOIN pg_class ON pg_class.oid = seq ORDER BY 1`).Scan(ctx, &rows))
+		require.NoError(t, db.NewRaw(`SELECT c.relnamespace::regnamespace::text || '.' || c.relname || ' ' || r.rolname || ' ' || a.privilege_type
+			FROM pg_class AS c
+			CROSS JOIN LATERAL aclexplode(c.relacl) AS a
+			JOIN pg_roles AS r ON r.oid = a.grantee
+			WHERE c.oid IN ('platform.billing_key_date_counts_id_seq'::regclass, 'iot.pwa_standalone_usage_id_seq'::regclass)
+			  AND r.rolname IN ('phoenix_admin', 'phoenix_tenant', 'phoenix_auth')
+			ORDER BY 1`).Scan(ctx, &rows))
 		return rows
 	}
-	revoked := []string{
-		"iot.pwa_standalone_usage_id_seq {postgres=rwU/postgres}",
-		"platform.billing_key_date_counts_id_seq {postgres=rwU/postgres}",
-	}
-	assert.Equal(t, revoked, acls())
+	assert.Empty(t, rights())
 
 	var movable []string
 	require.NoError(t, db.NewRaw(sequenceUpdateWithoutInsertSQL).Scan(ctx, &movable))
@@ -48,11 +49,16 @@ func TestWriterOwnedSequencesHaveNoRuntimeRights(t *testing.T) {
 
 	require.NoError(t, billingCountSequenceGrantsDown(ctx, db))
 	assert.Equal(t, []string{
-		"iot.pwa_standalone_usage_id_seq {postgres=rwU/postgres,phoenix_admin=rwU/postgres,phoenix_tenant=U/postgres}",
-		"platform.billing_key_date_counts_id_seq {postgres=rwU/postgres,phoenix_admin=rwU/postgres}",
-	}, acls())
+		"iot.pwa_standalone_usage_id_seq phoenix_admin SELECT",
+		"iot.pwa_standalone_usage_id_seq phoenix_admin UPDATE",
+		"iot.pwa_standalone_usage_id_seq phoenix_admin USAGE",
+		"iot.pwa_standalone_usage_id_seq phoenix_tenant USAGE",
+		"platform.billing_key_date_counts_id_seq phoenix_admin SELECT",
+		"platform.billing_key_date_counts_id_seq phoenix_admin UPDATE",
+		"platform.billing_key_date_counts_id_seq phoenix_admin USAGE",
+	}, rights())
 	require.NoError(t, billingCountSequenceGrantsUp(ctx, db))
-	assert.Equal(t, revoked, acls())
+	assert.Empty(t, rights())
 
 	// The operator still captures through the writer, which draws the ID.
 	conn, err := db.Conn(ctx)
