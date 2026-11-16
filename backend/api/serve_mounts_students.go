@@ -158,7 +158,7 @@ func requestReviewDependencies(
 	return requestreviewcompose.ProjectionDependencies{
 		Queues:   requestreviewcompose.Queues{DirectCorrections: corrections, MasterData: masterQueue, CareSchedule: careQueue, Offering: offeringQueue, Excused: excusedQueue},
 		Students: reviewStudents, FamilyProtection: reviewbindings.NewFamilyProtection(persons), Access: reviewAccess,
-		Submitters: reviewbindings.NewSubmitterDirectory(persons),
+		Submitters: reviewbindings.NewSubmitterDirectory(persons), Today: func() requestreview.Date { return requestreview.Date(carePlanToday()) },
 	}, careReviews, nil
 }
 

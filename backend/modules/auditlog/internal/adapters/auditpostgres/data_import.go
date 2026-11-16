@@ -19,7 +19,7 @@ func NewDataImportRepository(runtime Runtime) *DataImportRepository {
 
 // Create creates a new data import audit record
 func (r *DataImportRepository) Create(ctx context.Context, dataImport *audit.DataImport) error {
-	return NewAppender(r.runtime).Append(ctx, dataImport)
+	return NewAppender(r.runtime, nil).Append(ctx, dataImport)
 }
 
 // FindByID finds a data import record by ID

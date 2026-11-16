@@ -315,7 +315,9 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0248: Communication's parent-letter child reader constructor (+6).
 // ADR 0246: the report templates of modules/organizationtenancy/compose (+5)
 // and the export adapter of modules/traegerview/compose (+1).
-const moduleComposeBudgetTotal = 13540
+// ADR 0269: the clocks of modules/auditlog/compose (+7),
+// modules/mealplan/compose (+2) and modules/schoolcalendar/compose (+4).
+const moduleComposeBudgetTotal = 13553
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -337,7 +339,8 @@ var moduleComposeBudgets = map[string]int{
 	"modules/appointments/compose": 45,
 	// ADR 0103: the signature ledger constructor, construction only.
 	// ADR 0155: the signature ledger at the Träger (+8).
-	"modules/auditlog/compose": 197,
+	// ADR 0269: the Audit clock of the persistence and the command (+7).
+	"modules/auditlog/compose": 204,
 	// Raised by ADR 0128: the manual plans port of the booking materialization (+1).
 	// ADR 0151: the school figure constructor (+13).
 	// ADR 0153: the contract offerings constructor (+9).
@@ -398,7 +401,8 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0106: the Träger-Büro account management (+24).
 	// Raised by ADR 0187: the operator directory of the Träger export CLI (+11).
 	"modules/identityaccess/compose": 1372, // raised by ADR 0077
-	"modules/mealplan/compose":       102,  // raised by ADR 0078 and ADR 0168
+	// ADR 0269: the clock of the participation history (+2).
+	"modules/mealplan/compose": 104, // raised by ADR 0078 and ADR 0168
 	// ADR 0097: the isolated tenant return constructor, no retained logic moved.
 	// Raised by ADR 0112: the Träger master data constructor (+13).
 	// Raised by ADR 0148: the demo school file erasure constructor (+10).
@@ -455,7 +459,8 @@ var moduleComposeBudgets = map[string]int{
 	"modules/schedulerruntime/compose":   45,
 	// Raised by ADR 0142: the Elternsprechtag constructor (+7) and by
 	// ADR 0144: the school vacation constructor (+11).
-	"modules/schoolcalendar/compose":        158,
+	// ADR 0269: the default day of the real clock (+4).
+	"modules/schoolcalendar/compose":        162,
 	"modules/schoolcalendar/portal/compose": 112,
 	// Raised by ADR 0076: the restricted administrative repair constructor.
 	// ADR 0151: the school figure constructor (+6).

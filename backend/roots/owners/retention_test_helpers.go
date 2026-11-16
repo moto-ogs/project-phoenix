@@ -42,7 +42,7 @@ import (
 // the technical remains of #4046. unit is the tenant runtime the settings
 // resolve in.
 func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWork) (*auditCompose.Command, settingsCompose.BatchSettingsService, []schedulerPorts.RetentionStep, error) {
-	command, err := auditCompose.NewCommand(NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return nil, nil, nil, err
 	}

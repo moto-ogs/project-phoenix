@@ -88,7 +88,7 @@ func NewIdentityAccessWithSessions(base identityaccessCompose.Dependencies, repo
 	if base.Traeger != nil {
 		// The history reads the ledger on the account management's
 		// administrative unit (#5474).
-		ledger, err := auditCompose.NewTenantPersistence(base.DB)
+		ledger, err := auditCompose.NewTenantPersistence(base.DB, time.Now)
 		if err != nil {
 			return nil, fmt.Errorf("identity access composition: %w", err)
 		}

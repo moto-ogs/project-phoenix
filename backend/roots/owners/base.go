@@ -113,7 +113,7 @@ func composeFeedback(db transactionruntime.Database, settings *feedbackCompose.S
 	return feedbackCompose.New(feedbackCompose.Dependencies{
 		DB:       db.Pool(),
 		Settings: settings,
-		Today:    feedbackModule.Today,
+		Today:    feedbackModule.TodayOf(time.Now),
 		Observe: func(observation feedbackCompose.Observation) {
 			observability.ObserveFeedbackOperation(
 				observation.Operation,

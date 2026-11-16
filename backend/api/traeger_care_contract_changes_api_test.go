@@ -57,7 +57,7 @@ func careContractChangeRouter(t *testing.T, db *bun.DB, review careplan.Offering
 	database := testpkg.NewDatabase(t, db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
-	audit, err := auditCompose.NewTenantPersistence(db)
+	audit, err := auditCompose.NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
 	schoolSettings, err := owners.NewSettingsTestModule(database, unit)
 	require.NoError(t, err)

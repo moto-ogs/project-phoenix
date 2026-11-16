@@ -2,6 +2,7 @@ package owners
 
 import (
 	"context"
+	"time"
 
 	organizationCompose "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
 
@@ -11,7 +12,7 @@ import (
 )
 
 func newOperatorDashboard(counts func(context.Context, map[int64][]int64) (map[int64]int, error)) organizationtenancy.OperatorDashboard {
-	return projection.Map(projection.New(organizationCompose.OperatorDatabase(), counts), contract.Rows[organizationtenancy.DashboardCounts, organizationtenancy.DashboardOrganization, organizationtenancy.DashboardSchool, organizationtenancy.DashboardPWAUsage]{
+	return projection.Map(projection.New(organizationCompose.OperatorDatabase(), counts, time.Now), contract.Rows[organizationtenancy.DashboardCounts, organizationtenancy.DashboardOrganization, organizationtenancy.DashboardSchool, organizationtenancy.DashboardPWAUsage]{
 		Counts: func(v contract.Counts) organizationtenancy.DashboardCounts {
 			return organizationtenancy.DashboardCounts(v)
 		},

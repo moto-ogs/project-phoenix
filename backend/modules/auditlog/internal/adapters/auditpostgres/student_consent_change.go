@@ -18,7 +18,7 @@ func NewStudentConsentChangeRepository(runtime Runtime) auditModels.StudentConse
 }
 
 func (r *studentConsentChangeRepository) Create(ctx context.Context, entry *auditModels.StudentConsentChange) error {
-	return NewAppender(r.runtime).Append(ctx, entry)
+	return NewAppender(r.runtime, nil).Append(ctx, entry)
 }
 
 // ListByStudentID is a custom ordered audit projection; the generic repository

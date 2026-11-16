@@ -52,7 +52,7 @@ func setupStatisticsRoute(t *testing.T, statisticsClocks ...func() time.Time) *s
 	db, svc := setupStatisticsModule(t, statisticsClocks...)
 	return &statisticsHTTPTestContext{
 		db:               db,
-		resource:         statisticsAPI.NewResource(svc.Statistics, statisticsHTTPRuntime(lists.NewRendererService()), slog.Default()),
+		resource:         statisticsAPI.NewResource(svc.Statistics, statisticsHTTPRuntime(lists.NewRendererService(), OptionalClock(statisticsClocks)), slog.Default()),
 		createClosingDay: svc.CreateClosingDay,
 	}
 }
