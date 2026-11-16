@@ -38,7 +38,7 @@ func NewSettingsBudgetRouterForTest(ctx context.Context, db transactionruntime.D
 		return nil, "", err
 	}
 	home := settings.Service.(settingsHTTP.HomeLayoutOperations)
-	schools, err := owners.BuildServeOrganizations(db)
+	schools, err := owners.BuildServeOrganizations(db, nil)
 	if err != nil {
 		return nil, "", err
 	}
