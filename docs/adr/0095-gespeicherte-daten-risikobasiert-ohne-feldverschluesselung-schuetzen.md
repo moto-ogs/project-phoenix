@@ -41,8 +41,9 @@ status: accepted
 >   [ADR 0203](0203-mandantenrueckgabe-wird-per-https-mit-kurzlebigem-token-abgerufen.md).
 >
 > ADR 0171, 0183, 0187, 0188 und 0203 tragen noch `status: proposed`; ihr Code liegt auf
-> `development`. Weiter gilt diese Entscheidung für Datei-Uploads, auch
-> solche in Datenbankzeilen, für Gesundheitsantworten in Anmeldeanträgen
+> `development`. Weiter gilt diese Entscheidung für Datei-Uploads, für
+> Dateien in Datenbankzeilen (Uploads und erzeugte Dokumente), für
+> Gesundheitsantworten in Anmeldeanträgen
 > (`enrollment.request_children.custom_data` und die Snapshots in
 > `enrollment.change_requests`), für Konten der Träger, für Zugangsgeheimnisse
 > in den Schuleinstellungen (SFTP-Passwort und Geräte-PIN in

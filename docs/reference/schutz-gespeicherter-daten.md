@@ -25,8 +25,9 @@ minimieren. Entscheidung und Abwägung: [ADR 0095](../adr/0095-gespeicherte-date
 ADR 0095 ist **teilweise abgelöst**. Feldverschlüsselt sind nur die Spalten,
 die die Tabelle unten als versiegelt nennt: Gesundheitsangaben der Kinderakte
 und der Ferienanmeldung (Ring `HEALTH_DATA_KEYS`, #4722, #5472) sowie
-Bankdaten von Eltern, Personal und SEPA-Zahlern (getrennter Ring
-`BANK_DATA_KEYS`, ADR 0183, ADR 0188). Verfahren: AES-256-GCM mit Security
+Bankdaten von Eltern, Personal und SEPA-Zahlern sowie das SFTP-Passwort des
+Trägers (getrennter Ring `BANK_DATA_KEYS`, ADR 0183, ADR 0188, ADR 0218).
+Verfahren: AES-256-GCM mit Security
 Runtimes Feld-Cipher, Schlüssel-ID im Chiffrat, jeder Wert an Schule oder
 Träger gebunden, die meisten zusätzlich an Spalte und Zeile; die Lastschrift
 übernimmt das Chiffrat ihres Mandats samt dessen Bindung [D12].
