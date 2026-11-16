@@ -40,6 +40,28 @@ export const DEPLOYMENTS = Object.freeze({ production: 'moto-app.de', demo: 'dem
 /** Portals of real schools; `public` covers login, start, and demo pages. */
 const PORTALS = ['ogs', 'parents', 'school'];
 
+/**
+ * The caterer portal (ADR 0077). Its browser sends nothing (caterer accounts
+ * are not asked for consent, PortalAnalyticsSession), and a caterer session
+ * names no school: only its writes arrive, as core actions of the school in
+ * their route (backend/analytics/core_actions.go).
+ */
+const CATERER = 'caterer';
+
+/**
+ * HogQL aggregation: distinct school and day. Confirming an order is
+ * idempotent (a repeated confirmation answers 2xx again and is captured
+ * again), so the caterer charts count days per school instead of events.
+ */
+const SCHOOL_DAYS = 'uniq(concat(toString(properties.school_id), toString(toDate(timestamp))))';
+
+/** Core actions of a school's caterer link (Belieferung), from the OGS and the caterer portal. */
+const CATERER_LINK_EVENTS = [
+  ['caterer_invited', 'Caterer eingeladen'],
+  ['caterer_invite_accepted', 'Einladung angenommen'],
+  ['caterer_supply_ended', 'Belieferung beendet'],
+];
+
 const ROUTE_LISTS = {
   ogs: ['TRACKED_TENANT_ROUTE_TEMPLATES', 'TRACKED_TENANT_PUBLIC_ROUTE_TEMPLATES'],
   parents: ['TRACKED_PARENT_ROUTE_TEMPLATES'],
@@ -130,14 +152,18 @@ export function publicHolidays([from, to] = HOLIDAY_YEARS) {
  */
 export const ON_WORKDAY = `toDayOfWeek(toDate(timestamp)) <= 5 and toString(toDate(timestamp)) not in ${sqlList(publicHolidays())}`;
 
-/**
- * HogQL condition on the deployment; every HogQL insight uses it. Production
- * counts school days only (ON_WORKDAY); the demo is open every day.
- */
 /** Note on every dashboard with school data. */
 const WORKDAYS_NOTE = 'Gezählt werden nur Werktage: Montag bis Freitag ohne gesetzliche Feiertage in NRW.';
 
-const onDeployment = (deployment) => deployment === 'production'
+/**
+ * Production counts school days only (ON_WORKDAY): the OGS is closed on the
+ * other days. `everyDay` lifts that for an outside party that also works on
+ * weekends (the caterer); the demo is open every day.
+ */
+const workdaysOnly = (deployment, everyDay) => deployment === 'production' && !everyDay;
+
+/** HogQL condition on the deployment; every HogQL insight uses it. */
+const onDeployment = (deployment, everyDay = false) => workdaysOnly(deployment, everyDay)
   ? `properties.deployment = ${sqlString(DEPLOYMENTS[deployment])} and ${ON_WORKDAY}`
   : `properties.deployment = ${sqlString(DEPLOYMENTS[deployment])}`;
 
@@ -150,10 +176,11 @@ function deploymentOf(deployment) {
  * A HogQL table (or number). `sql` receives the deployment condition and
  * must use it in every `from events`.
  */
-function hogql(deployment, sql, display = 'ActionsTable', chartSettings) {
-  const query = sql(onDeployment(deploymentOf(deployment))).trim();
+function hogql(deployment, sql, display = 'ActionsTable', chartSettings, { everyDay = false } = {}) {
+  const query = sql(onDeployment(deploymentOf(deployment), everyDay)).trim();
   return {
     deployment,
+    ...(everyDay ? { everyDay } : {}),
     query: {
       kind: 'DataVisualizationNode',
       source: { kind: 'HogQLQuery', query },
@@ -163,13 +190,13 @@ function hogql(deployment, sql, display = 'ActionsTable', chartSettings) {
   };
 }
 
-function deploymentFilter(deployment) {
+function deploymentFilter(deployment, everyDay = false) {
   return {
     type: 'AND',
     values: [{
       type: 'AND',
       values: [{ key: 'deployment', type: 'event', operator: 'exact', value: [DEPLOYMENTS[deploymentOf(deployment)]] }],
-    }, ...(deployment === 'production' ? [{ type: 'AND', values: [{ key: ON_WORKDAY, type: 'hogql' }] }] : [])],
+    }, ...(workdaysOnly(deployment, everyDay) ? [{ type: 'AND', values: [{ key: ON_WORKDAY, type: 'hogql' }] }] : [])],
   };
 }
 
@@ -192,9 +219,10 @@ export function schoolLabel(deployment) {
 /** Breakdown by school name (`schoolLabel`) for charts of real schools. */
 export const SCHOOL_BREAKDOWN = schoolLabel('production');
 
-function trends(deployment, { series: steps, interval = 'week', dateFrom = '-90d', breakdown, breakdownType = 'event', display = 'ActionsLineGraph', compare = false }) {
+function trends(deployment, { series: steps, interval = 'week', dateFrom = '-90d', breakdown, breakdownType = 'event', display = 'ActionsLineGraph', compare = false, everyDay = false }) {
   return {
     deployment,
+    ...(everyDay ? { everyDay } : {}),
     query: {
       kind: 'InsightVizNode',
       source: {
@@ -202,7 +230,7 @@ function trends(deployment, { series: steps, interval = 'week', dateFrom = '-90d
         series: steps,
         interval,
         dateRange: { date_from: dateFrom },
-        properties: deploymentFilter(deployment),
+        properties: deploymentFilter(deployment, everyDay),
         filterTestAccounts: false,
         ...(breakdown ? { breakdownFilter: { breakdown, breakdown_type: breakdownType } } : {}),
         ...(compare ? { compareFilter: { compare: true } } : {}),
@@ -304,6 +332,9 @@ export const FEATURES = Object.freeze([
     },
     events: ['enrollment_submitted'],
   },
+  // The school's own link actions; its caterer page is part of /meal-plan. What
+  // the caterer itself saves is no use by the school (NO_FEATURE_EVENTS).
+  { name: 'Caterer-Anbindung', events: ['caterer_invited', 'caterer_supply_ended'] },
   { name: 'Stammdaten und Export', pages: { ogs: ['/database/**', '/eltern/bankverbindungen'] }, events: ['data_exported'] },
   { name: 'Einstellungen', pages: { ogs: ['/settings', '/profile'], parents: ['/settings'], school: ['/einstellungen'] }, events: ['settings_changed'] },
   { name: 'Weitere Werkzeuge', pages: { ogs: ['/lists', '/reminders', '/emergency', '/info-displays', '/dateien', '/statistics'], parents: ['/documents', '/documents/**', '/vertrag-unterschreiben/**'] } },
@@ -316,8 +347,15 @@ export const NO_FEATURE_PAGES = Object.freeze({
   school: ['/login', '/invite', '/reset-password'],
 });
 
-/** Events that are no feature use: sessions, devices, and the demo funnel. */
-const NO_FEATURE_EVENTS = ['login_success', 'login_failed', 'tenant_switched', 'guardian_invite_accepted', 'pwa_installed', 'pwa_install_prompt_shown', 'page_viewed'];
+/**
+ * Events that are no feature use: sessions, devices, the demo funnel, and
+ * what the school's caterer saves (an outside party; the caterer dashboard
+ * counts it).
+ */
+const NO_FEATURE_EVENTS = [
+  'login_success', 'login_failed', 'tenant_switched', 'guardian_invite_accepted', 'pwa_installed', 'pwa_install_prompt_shown', 'page_viewed',
+  'caterer_invite_accepted', 'meal_order_confirmed',
+];
 
 /** Area unmatched pages and events fall into; growing means FEATURES lacks an entry. */
 const OTHER_FEATURE = 'Sonstiges';
@@ -373,11 +411,22 @@ const quoted = (name) => `\`${name}\``;
 const portalCondition = `properties.surface in ${sqlList(PORTALS)}`;
 
 /**
+ * HogQL condition: the event comes from the school's own people or devices.
+ * The school's caterer carries its school_id as well (an order confirmed for
+ * it), but is an outside party: its actions count on the caterer dashboard,
+ * never as the school using moto.
+ */
+const NOT_CATERER = `coalesce(properties.surface, '') != ${sqlString(CATERER)}`;
+
+/** HogQL condition: an event of the school itself (NOT_CATERER). */
+const SCHOOL_EVENT = `isNotNull(properties.school_id) and ${NOT_CATERER}`;
+
+/**
  * HogQL condition: the event shows that a school worked with moto. Page
  * views, core actions, and kiosk bookings count; other `$` events (dead
- * clicks, page leaves) and a failed login do not.
+ * clicks, page leaves), the caterer's actions, and a failed login do not.
  */
-const ACTIVE_USE = "(event = '$pageview' or not startsWith(event, '$')) and event != 'login_failed'";
+const ACTIVE_USE = `(event = '$pageview' or not startsWith(event, '$')) and ${NOT_CATERER} and event != 'login_failed'`;
 
 /** Host every heatmap URL of a deployment starts with (`analyticsHost`). */
 const heatmapOrigin = (deployment) => `https://${DEPLOYMENTS[deploymentOf(deployment)]}`;
@@ -586,7 +635,7 @@ function viewsPerWeek(deployment, surface, name) {
 }
 
 /**
- * The dashboards: one per product surface (OGS-App, Eltern-App, Schul-App, Demo) plus
+ * The dashboards: one per product surface (OGS-App, Eltern-App, Schul-App, Caterer-Portal, Demo) plus
  * two across schools (Nutzung je Standort, Schule im Verlauf). `projectId`
  * feeds the heatmap links.
  */
@@ -597,7 +646,7 @@ export function dashboards({ projectId, routes = readRouteTemplates(), browserEv
   return [
     {
       name: 'Nutzungsanalyse: Nutzung je Standort',
-      description: `Start hier. Wie viele Schulen moto nutzen, an welchen Tagen und wofür, je Schule (Schul-ID und Name), in echten Schulen (deployment = moto-app.de). Als aktiv zählen Seitenaufrufe, Kernaktionen und Kiosk-Buchungen. ${WORKDAYS_NOTE} Ferien und Schließtage kennt PostHog nicht, sie sind nicht abgezogen. Ein- und Auschecken wird erst seit dem 25.09.2026 erfasst. Das Elternportal kennt keine Schule und fehlt hier; es hat ein eigenes Dashboard.`,
+      description: `Start hier. Wie viele Schulen moto nutzen, an welchen Tagen und wofür, je Schule (Schul-ID und Name), in echten Schulen (deployment = moto-app.de). Als aktiv zählen Seitenaufrufe, Kernaktionen und Kiosk-Buchungen, nicht aber, was der Caterer der Schule speichert. ${WORKDAYS_NOTE} Ferien und Schließtage kennt PostHog nicht, sie sind nicht abgezogen. Ein- und Auschecken wird erst seit dem 25.09.2026 erfasst. Das Elternportal kennt keine Schule und fehlt hier; es hat ein eigenes Dashboard.`,
       insights: [
         {
           name: 'Aktive Schulen pro Woche',
@@ -805,7 +854,7 @@ from (
   select ${feature} as Funktion, toString(properties.school_id) as Schule, timestamp
   from events
   where ${where}
-    and isNotNull(properties.school_id)
+    and ${SCHOOL_EVENT}
     and timestamp > now() - interval 12 week
 )
 where Funktion != ''
@@ -896,6 +945,69 @@ order by Woche desc`),
       ],
     },
     {
+      name: 'Nutzungsanalyse: Caterer-Portal',
+      description: `Was Caterer im Caterer-Portal tun (surface = caterer) und wie Schulen ihren Caterer anbinden, in echten Schulen (deployment = moto-app.de). Das Caterer-Portal sendet keine Seitenaufrufe: Caterer-Konten werden nicht nach einer Einwilligung gefragt, ihr Browser erfasst deshalb nichts. Gezählt werden nur die Speichervorgänge aus dem Backend, je Schule der Bestellung oder Einladung; ein Login des Caterers nennt keine Schule und fehlt. Gezählt werden alle Tage, auch Wochenenden und Feiertage: Caterer planen auch dann.`,
+      insights: [
+        {
+          name: 'Caterer-Portal: Was tun Caterer?',
+          description: 'Letzte 30 Tage. Erfolgreiche Speichervorgänge im Caterer-Portal je Aktion, etwa Bestellung bestätigt, gezählt als Tage je Schule, auch am Wochenende: dieselbe Aktion für eine Schule am selben Tag zählt einmal.',
+          ...hogql('production', (where) => `
+select
+  event as Aktion,
+  ${SCHOOL_DAYS} as ${quoted('Tage je Schule')},
+  uniq(toString(properties.school_id)) as Schulen
+from events
+where ${where}
+  and properties.surface = ${sqlString(CATERER)}
+  and ${coreAction}
+  and timestamp > now() - interval 30 day
+group by Aktion
+order by ${quoted('Tage je Schule')} desc`, 'ActionsTable', undefined, { everyDay: true }),
+        },
+        {
+          name: 'Caterer-Portal: Tage mit bestätigter Bestellung je Schule (30 Tage)',
+          description: 'Je Schule: an wie vielen Tagen ihr Caterer mindestens eine Bestellung bestätigt hat, und wann zuletzt. Mehrere Bestätigungen am selben Tag zählen einmal. Eine Schule ohne Bestätigung fehlt.',
+          ...hogql('production', (where) => `
+select
+  any(Standort) as Standort,
+  Schule as ${quoted('Schul-ID')},
+  uniq(Tag) as ${quoted('Tage mit Bestätigung')},
+  max(Tag) as ${quoted('Letzte Bestätigung')}
+from (
+  select ${SCHOOL_BREAKDOWN} as Standort, toString(properties.school_id) as Schule, toDate(timestamp) as Tag
+  from events
+  where ${where}
+    and event = 'meal_order_confirmed'
+    and properties.surface = ${sqlString(CATERER)}
+    and isNotNull(properties.school_id)
+    and timestamp > now() - interval 30 day
+)
+group by Schule
+order by ${quoted('Tage mit Bestätigung')} desc, Schule`, 'ActionsTable', undefined, { everyDay: true }),
+        },
+        {
+          name: 'Caterer-Portal: Tage mit bestätigter Bestellung pro Woche',
+          description: 'Alle Schulen zusammen: Tage je Schule einer Woche, an denen ihr Caterer mindestens eine Bestellung bestätigt hat. Zwei Schulen mit je fünf Tagen ergeben 10. Die Aufteilung je Schule zeigt die Tabelle „Tage mit bestätigter Bestellung je Schule (30 Tage)“.',
+          ...trends('production', {
+            series: [series('meal_order_confirmed', 'Tage je Schule mit Bestätigung', { math: 'hogql', math_hogql: SCHOOL_DAYS })],
+            dateFrom: '-180d',
+            display: 'ActionsBar',
+            everyDay: true,
+          }),
+        },
+        {
+          name: 'Caterer-Anbindung: Einladungen, Annahmen und Enden pro Woche',
+          description: 'Schulen laden ihren Caterer in der OGS-App ein und beenden die Belieferung dort; der Caterer nimmt die Einladung im Caterer-Portal an. Gezählt werden Tage je Schule, auch Wochenenden und Feiertage: mehrere gleiche Vorgänge einer Schule am selben Tag zählen einmal. Die OGS-Dashboards zählen Einladen und Beenden nur an Werktagen.',
+          ...trends('production', {
+            series: CATERER_LINK_EVENTS.map(([event, name]) => series(event, name, { math: 'hogql', math_hogql: SCHOOL_DAYS })),
+            dateFrom: '-180d',
+            display: 'ActionsBar',
+            everyDay: true,
+          }),
+        },
+      ],
+    },
+    {
       name: 'Nutzungsanalyse: Schule im Verlauf',
       description: `Eine Schule über die Zeit, verglichen mit ihr selbst statt mit anderen Schulen. Oben unter „Filter“ die Ereigniseigenschaft school_id auf eine Schul-ID setzen (die IDs stehen im Dashboard „Nutzung je Standort“, Tabelle Überblick). Ohne Filter zeigen die Grafiken alle Schulen zusammen. Die gestrichelte Linie ist der Zeitraum davor. Nur echte Schulen (deployment = moto-app.de). ${WORKDAYS_NOTE}`,
       insights: [
@@ -939,7 +1051,7 @@ order by Woche desc`),
           description: 'Seitenaufrufe und Aktionen je Ablauf. Zeigt, welche Abläufe die Schule neu aufnimmt oder liegen lässt.',
           ...trends('production', {
             series: KEY_FLOWS.map((flow) => series(null, flow, {
-              properties: [{ key: `isNotNull(properties.school_id) and ${featureExpression()} = ${sqlString(flow)}`, type: 'hogql' }],
+              properties: [{ key: `${SCHOOL_EVENT} and ${featureExpression()} = ${sqlString(flow)}`, type: 'hogql' }],
             })),
             display: 'ActionsBar',
           }),
@@ -1162,13 +1274,13 @@ order by Nr`),
   ];
 }
 
-/** Production events of schools with their feature area (school_id set: no parents portal). */
+/** Production events of schools with their feature area (SCHOOL_EVENT: no parents portal, no caterer). */
 function schoolFeatureEvents(where, days) {
   return `
   select ${featureExpression()} as Funktion, toString(properties.school_id) as Schule, event, properties.$session_id as Sitzung
   from events
   where ${where}
-    and isNotNull(properties.school_id)
+    and ${SCHOOL_EVENT}
     and timestamp > now() - interval ${days} day`;
 }
 
@@ -1183,7 +1295,7 @@ const KEY_FLOWS = [
 /** School days (ON_WORKDAY) from a school's first attendance in `schoolDays` until yesterday. */
 const workdaysSinceFirstAttendance = `if(countIf(Anwesenheit) = 0, 0, length(arrayFilter(d -> toDayOfWeek(d) <= 5 and toString(d) not in ${sqlList(publicHolidays())}, arrayMap(i -> addDays(minIf(Tag, Anwesenheit), i), range(toInt(greatest(dateDiff('day', minIf(Tag, Anwesenheit), today()), 0)))))))`;
 
-/** Production events of schools with their day (project time zone) and feature area. */
+/** Production events of schools (SCHOOL_EVENT) with their day (project time zone) and feature area. */
 function schoolDays(where, days) {
   return `
   select
@@ -1196,7 +1308,7 @@ function schoolDays(where, days) {
     event
   from events
   where ${where}
-    and isNotNull(properties.school_id)
+    and ${SCHOOL_EVENT}
     and timestamp > now() - interval ${days} day`;
 }
 
