@@ -212,7 +212,7 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			calendar, err = owners.BuildSchoolCalendarRecords(db, owners.ObserveSchoolCalendar, settings.Service)
+			calendar, err = owners.BuildSchoolCalendarRecords(db, owners.ObserveSchoolCalendar, settings.Service, env.Now)
 			return
 		},
 		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, env, membership, calendar); return },
@@ -554,7 +554,7 @@ func composeServeRoot(
 		func() error {
 			enrollmentResource := newEnrollmentResource(logger, settings.Service, config.Turnstile, careOfferings, flows, phases,
 				enrollmentCompose.PublicDecisions(decisions), notices.Deletions, guardianProfiles, organizations, renderer, persons, carePlan, env.Now)
-			weekProtocolSeed := developmentWeekProtocolEvenings(env.Config.AppEnv, db, logger, settings.Service, persons, services, reports, schedules, carePlan, timetableRepos)
+			weekProtocolSeed := developmentWeekProtocolEvenings(env.Config.AppEnv, db, logger, settings.Service, persons, services, reports, schedules, carePlan, timetableRepos, env.Now)
 			mountSchoolRoutes(tenant, db, logger, facilities, facilitiesRooms, settings.Service, caller, active, services.Users,
 				structureViews.Education, renderer, activities, timetableOwner, iot, settingsWrites, organizations, people.Students, carePlan, audit.Persistence.DataAccessLog,
 				membership, classListEntries, databaseStats, dataImports, persons, gradeTransition, enrollmentResource, env.Config.AppEnv, weekProtocolSeed, env.HealthData, owners.NewHolidayHostCalendar(settings.Service, calendar), env.Now)
@@ -600,12 +600,12 @@ func composeServeRoot(
 func developmentWeekProtocolEvenings(
 	appEnv string, db transactionruntime.Database, logger *slog.Logger, settings settingsCompose.BatchSettingsService,
 	persons *peopleCompose.Directory, services owners.PeopleServices, reports owners.PresenceReports, schedules owners.CarePlanSchedules,
-	carePlan carePlanModule.Owner, timetableRepos owners.TimetableRepositories,
+	carePlan carePlanModule.Owner, timetableRepos owners.TimetableRepositories, now func() time.Time,
 ) schedulerPorts.WeekProtocolEvenings {
 	if !strings.EqualFold(appEnv, "development") {
 		return nil
 	}
-	return owners.NewWeekProtocolEvenings(db, logger, settings, persons, services, reports, schedules, carePlan, timetableRepos, seedWeekProtocolDayLog)
+	return owners.NewWeekProtocolEvenings(db, logger, settings, persons, services, reports, schedules, carePlan, timetableRepos, seedWeekProtocolDayLog, now)
 }
 
 // newServeRouteRuntime constructs the server-root routing dependencies before

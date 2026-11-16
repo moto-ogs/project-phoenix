@@ -30,7 +30,7 @@ func authTestInvitationReset(db transactionruntime.Database, members owners.Memb
 	if err != nil {
 		return nil, err
 	}
-	days, err := owners.BuildSchoolCalendarRecords(db, func(schoolCalendarCompose.Observation) {}, settings)
+	days, err := owners.BuildSchoolCalendarRecords(db, func(schoolCalendarCompose.Observation) {}, settings, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -337,9 +337,9 @@ var moduleLegacyFileBudgets = map[string]int{
 // workflows/shiftplansync/compose (+1).
 // ADR 0278: the clock imports of modules/peopledirectory/compose (+1, the
 // guardian profile clock of its retained test suites),
-// modules/schoolcalendar/compose (+1) and modules/schoolsearchview/compose
-// (+1).
-const moduleComposeBudgetTotal = 13647
+// modules/schoolcalendar/compose (+7: the notices' day clock and the
+// root's clock of the Records) and modules/schoolsearchview/compose (+1).
+const moduleComposeBudgetTotal = 13653
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -496,8 +496,9 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0142: the Elternsprechtag constructor (+7) and by
 	// ADR 0144: the school vacation constructor (+11).
 	// ADR 0269: the default day of the real clock (+4).
-	// ADR 0278: the calendar import of the notices' day clock (+1).
-	"modules/schoolcalendar/compose":        163,
+	// ADR 0278: the calendar import of the notices' day clock (+1) and the
+	// root's clock of the Records (+6).
+	"modules/schoolcalendar/compose":        169,
 	"modules/schoolcalendar/portal/compose": 112,
 	// Raised by ADR 0076: the restricted administrative repair constructor.
 	// ADR 0151: the school figure constructor (+6).

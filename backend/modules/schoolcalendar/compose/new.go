@@ -44,6 +44,8 @@ type RecordsDependencies struct {
 	Observe         func(Observation)
 	// FederalState resolves the tenant's federal-state ISO code (operations.federal_state).
 	FederalState func(context.Context) (string, error)
+	// Now is the root's clock of the school's day; nil is the real clock.
+	Now func() time.Time
 }
 
 // NewRecords composes the School Calendar without the period administration, for the owners a root builds before the ones the administration asks (#4080); NewAdministration adds it later.
@@ -53,7 +55,11 @@ func NewRecords(dependencies RecordsDependencies) (schoolcalendar.Days, error) {
 	}
 	// The records serve no period administration, so its gate and guard
 	// are never asked.
-	return application.New(postgres.New(postgres.NewCompositionDatabase(), dependencies.ClosingDayReads), ports.Observer(dependencies.Observe), application.Administration{Transaction: writeTransaction, Today: application.BerlinDay(time.Now), FederalState: dependencies.FederalState}, application.LocalCalendar{}), nil
+	now := dependencies.Now
+	if now == nil {
+		now = time.Now
+	}
+	return application.New(postgres.New(postgres.NewCompositionDatabase(), dependencies.ClosingDayReads), ports.Observer(dependencies.Observe), application.Administration{Transaction: writeTransaction, Today: application.BerlinDay(now), FederalState: dependencies.FederalState}, application.LocalCalendar{}), nil
 }
 
 // AdministrationDependencies are the collaborators of the period administration.

@@ -317,7 +317,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			calendar, err = BuildSchoolCalendarRecords(db, ObserveSchoolCalendar, settings.Service)
+			calendar, err = BuildSchoolCalendarRecords(db, ObserveSchoolCalendar, settings.Service, env.Now)
 			return
 		},
 		func() (err error) { workTime, err = BuildServeWorkforce(db, env, membership, calendar); return },

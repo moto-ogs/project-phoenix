@@ -24,7 +24,7 @@ func TestConfirmedNoticeWithoutRemainingBookingsNeedsNoMail(t *testing.T) {
 			w := newClosureWorldIn(t, "Träger ohne Buchungen", testpkg.SetupIsolatedTestDB(t))
 			w.createClosingDay(t, "2030-07-08", "2030-07-08")
 			n := w.schoolNotices(t)[0]
-			events := schoolCalendarCompose.NewHolidayClosureEvents(calendar.TodayDate)
+			events := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 			require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
 				_, err := events.ConfirmHolidayClosureNotice(ctx, n.ID, n.Revision, schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: n.Token})
 				return err
