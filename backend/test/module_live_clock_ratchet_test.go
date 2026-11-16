@@ -118,7 +118,7 @@ var moduleLiveClockBudget = map[string]int{
 // Same budget semantics as moduleLiveClockBudget; shrink-only.
 //
 // Seed: measured 2026-11-16 on development 77542c3af3, after the nine owner
-// slices of #7104 (110 references in 28 owners, ADR 0271); a mismatch prints
+// slices of #7104 (111 references in 28 owners, ADR 0271); a mismatch prints
 // the measured values.
 var moduleLiveClockValueBudget = map[string]int{
 	"modules/carecontract":         1,
@@ -223,10 +223,14 @@ func measureModuleLiveClock(root string) (map[string]int, map[string]int, error)
 }
 
 // inOwnerComposition reports whether a file belongs to a package that
-// composes its owner (a compose or composition directory, ADR 0068).
+// composes its owner (a compose or composition directory, ADR 0068). A
+// directory of that name below internal/ is an ordinary package.
 func inOwnerComposition(rel string) bool {
 	for _, segment := range strings.Split(filepath.ToSlash(filepath.Dir(rel)), "/") {
-		if segment == "compose" || segment == "composition" {
+		switch segment {
+		case "internal":
+			return false
+		case "compose", "composition":
 			return true
 		}
 	}
@@ -276,8 +280,8 @@ func countLiveClockUses(path string) (int, int, error) {
 	called := map[ast.Expr]bool{}
 	calls, values := 0, 0
 	ast.Inspect(file, func(node ast.Node) bool {
-		if call, ok := node.(*ast.CallExpr); ok && isLiveClock(call.Fun) {
-			called[call.Fun] = true
+		if call, ok := node.(*ast.CallExpr); ok && isLiveClock(ast.Unparen(call.Fun)) {
+			called[ast.Unparen(call.Fun)] = true
 			if !stopwatches[call] {
 				calls++
 			}
@@ -501,6 +505,16 @@ func newService(now func() time.Time) *service {
 	return &service{now: now}
 }
 `)
+	// A directory named compose below internal/ is no composition, and a
+	// parenthesised call is still a call, also inside a composition.
+	writeCalendarFixtureSourceAt(t, root, "modules/nested/internal/application/compose/service.go", `package compose
+import "time"
+var now = time.Now
+`)
+	writeCalendarFixtureSourceAt(t, root, "modules/nested/compose/new.go", `package compose
+import "time"
+var started = (time.Now)()
+`)
 	// Stopwatches: a start read only ever measured with time.Since is not a
 	// clock the code decides on. Any other use of the name in the function
 	// counts it (shadowed: both), and a package-level variable always counts.
@@ -546,13 +560,13 @@ func packageLevel() {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]int{"modules/sample": 3, "workflows/flow": 1, "workflows/timed": 6}
+	want := map[string]int{"modules/nested": 1, "modules/sample": 3, "workflows/flow": 1, "workflows/timed": 6}
 	if fmt.Sprint(measured) != fmt.Sprint(want) {
 		t.Fatalf("measured %v, want %v", measured, want)
 	}
 	// modules/sample: `now: stdtime.Now` in service.go and the nil default in
 	// internal/application; its compose package is not counted.
-	wantBound := map[string]int{"modules/sample": 2, "workflows/flow": 1}
+	wantBound := map[string]int{"modules/nested": 1, "modules/sample": 2, "workflows/flow": 1}
 	if fmt.Sprint(bound) != fmt.Sprint(wantBound) {
 		t.Fatalf("bound as a value %v, want %v", bound, wantBound)
 	}
@@ -567,7 +581,7 @@ func packageLevel() {
 			t.Errorf("problems %q lack %q", joined, fragment)
 		}
 	}
-	if problems := compareModuleLiveClockBudget(measured, map[string]int{"workflows/flow": 1, "workflows/timed": 6}); len(problems) != 1 ||
+	if problems := compareModuleLiveClockBudget(measured, map[string]int{"modules/nested": 1, "workflows/flow": 1, "workflows/timed": 6}); len(problems) != 1 ||
 		!strings.Contains(problems[0], "modules/sample: 3 direct clock call(s) and no budget") {
 		t.Errorf("unbudgeted owner problems = %v", problems)
 	}

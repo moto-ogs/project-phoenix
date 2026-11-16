@@ -31,7 +31,7 @@ das nicht, weil dort niemand die Uhr aufruft.
    die kein Aufruf sind und außerhalb der Kompositionen stehen. Gleiche Regeln
    wie `moduleLiveClockBudget`: nur schrumpfend, ein Owner ohne Eintrag darf
    keinen Verweis haben, ein zu hoher Eintrag schlägt fehl.
-3. **Startwert:** 110 Verweise in 28 Ownern, gemessen auf `development`
+3. **Startwert:** 111 Verweise in 28 Ownern, gemessen auf `development`
    `77542c3af3`. #7104 baut sie ab; was bleibt, steht mit Begründung über dem
    Eintrag.
 
