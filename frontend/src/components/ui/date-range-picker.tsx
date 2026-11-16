@@ -9,6 +9,7 @@ import {
   type OverlayOwner,
 } from "./overlay-stack";
 import { useAnchoredPanel } from "./anchored-panel";
+import { useKitDefault } from "./kit-locale";
 import { PANEL_VIEWPORT_MARGIN } from "./panel-geometry";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { parseISODate } from "~/lib/date-helpers";
@@ -51,6 +52,12 @@ interface DateRangePickerProps {
   /** Between the arrows of a framed group: frame and radius come from the group,
    * the trigger brings only content and height. */
   readonly embedded?: boolean;
+  /**
+   * What the range is for („Zeitraum“ by default). The trigger shows only the
+   * dates; this name follows them as hidden text (#7112). A translated
+   * surface passes its own word.
+   */
+  readonly fieldLabel?: string;
 }
 
 // Beside a second month the grid cannot follow the panel's width, so from `sm`
@@ -114,7 +121,9 @@ export function DateRangePicker({
   toMax,
   triggerClassName,
   embedded = false,
+  fieldLabel,
 }: DateRangePickerProps) {
+  const kitDefault = useKitDefault();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -153,6 +162,8 @@ export function DateRangePicker({
     onCovered: closeCovered,
   });
 
+  const resolvedFieldLabel = fieldLabel ?? kitDefault("Zeitraum");
+
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       <button
@@ -189,6 +200,9 @@ export function DateRangePicker({
         >
           {formatRangeLabel(value)}
         </span>
+        {resolvedFieldLabel ? (
+          <span className="sr-only">{`, ${resolvedFieldLabel}`}</span>
+        ) : null}
         <svg
           className="h-4 w-4 shrink-0 text-gray-400"
           aria-hidden="true"
