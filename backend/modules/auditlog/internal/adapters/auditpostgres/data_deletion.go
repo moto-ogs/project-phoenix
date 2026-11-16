@@ -19,11 +19,12 @@ const (
 // DataDeletionRepository implements audit.DataDeletionRepository interface
 type DataDeletionRepository struct {
 	runtime Runtime
+	now     func() time.Time
 }
 
 // NewDataDeletionRepository creates a new DataDeletionRepository
-func NewDataDeletionRepository(runtime Runtime) *DataDeletionRepository {
-	return &DataDeletionRepository{runtime: requireRuntime(runtime)}
+func NewDataDeletionRepository(runtime Runtime, now func() time.Time) *DataDeletionRepository {
+	return &DataDeletionRepository{runtime: requireRuntime(runtime), now: now}
 }
 
 // Create overrides base Create to handle validation
@@ -31,7 +32,7 @@ func (r *DataDeletionRepository) Create(ctx context.Context, deletion *audit.Dat
 	if deletion == nil {
 		return errors.New("data deletion cannot be nil")
 	}
-	return NewAppender(r.runtime).Append(ctx, deletion)
+	return NewAppender(r.runtime, r.now).Append(ctx, deletion)
 }
 
 // CreateAll appends every deletion in one statement, all or nothing.
@@ -40,7 +41,7 @@ func (r *DataDeletionRepository) CreateAll(ctx context.Context, deletions []*aud
 	if err != nil || len(events) == 0 {
 		return err
 	}
-	return NewAppender(r.runtime).AppendAll(ctx, events)
+	return NewAppender(r.runtime, r.now).AppendAll(ctx, events)
 }
 
 // dataDeletionEvents rejects a nil deletion before any row is written.

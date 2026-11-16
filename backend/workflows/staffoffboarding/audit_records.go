@@ -35,6 +35,9 @@ func NewStaffDeletion(actor Actor, result Result) StaffDeletion {
 	if actor.PlannedExitDay != nil {
 		reason = "planned staff exit after last working day " + actor.PlannedExitDay.String()
 	}
+	if actor.SpringerLastBlockDay != nil {
+		reason = "springer employment ended after last block day " + actor.SpringerLastBlockDay.String()
+	}
 	return StaffDeletion{
 		TenantID: actor.TenantID, StaffID: result.StaffID, RecordsDeleted: records,
 		DeletedBy: deletedBy, Reason: reason, Counts: counts,

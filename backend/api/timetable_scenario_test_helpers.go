@@ -39,7 +39,7 @@ func NewTimetableScenarioTestModule(db transactionruntime.Database, unit tenant.
 	if err != nil {
 		return TimetableScenarioTestModule{}, ActiveTestModule{}, nil, err
 	}
-	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return TimetableScenarioTestModule{}, ActiveTestModule{}, nil, err
 	}

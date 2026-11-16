@@ -3,6 +3,7 @@ package timetracking_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -15,6 +16,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// monthBudgetDay is the fixed school Tuesday the future comp-time
+// commitments count from.
+var monthBudgetDay = calendar.NewDate(2026, time.November, 10)
 
 func TestFutureCompTimeCommitmentQueryBudget(t *testing.T) {
 	t.Parallel()
@@ -31,8 +36,9 @@ func TestFutureCompTimeCommitmentQueryBudget(t *testing.T) {
 		workTime, workTime, repos.StaffAbsence, workforceCompose.StaffScheduleAssignments(api.MustNewStaffEmployment(testpkg.NewDatabase(t, db))),
 		owners.NewWorkScheduleTargets(owners.NewStaffWorkScheduleRepository(workTime)), owners.NewWorkTimeTargetModels(owners.NewWorkTimeModelRepository(workTime)), workforceCompose.NewTimeTrackingShifts(workTime),
 		wtmIntSettings{accountStart: "2020-01-01"}, nil,
+		timetracking.WithMonthClock(func() time.Time { return monthBudgetDay.BerlinMidnight().Add(12 * time.Hour) }),
 	)
-	first := calendar.TodayDate().AddDays(14)
+	first := monthBudgetDay.AddDays(14)
 	add := func(from, to int) {
 		for i := from; i < to; i++ {
 			date := first.AddDays(i * 7)

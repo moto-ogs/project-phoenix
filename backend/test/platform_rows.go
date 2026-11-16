@@ -12,6 +12,7 @@ import (
 type Operator struct {
 	PasswordAttempts    int        `bun:"password_attempts,scanonly"`
 	PasswordLockedUntil *time.Time `bun:"password_locked_until,scanonly"`
+	PasswordFailedAt    *time.Time `bun:"password_failed_at,scanonly"`
 	// CredentialGeneration starts at the column default; only the owner's
 	// credential writer moves it (#6308).
 	CredentialGeneration int64 `bun:"credential_generation,scanonly"`

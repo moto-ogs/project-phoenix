@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"slices"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -146,7 +144,7 @@ func (s *service) rejectInactiveMoveStudents(ctx context.Context, studentIDs []i
 	if err != nil {
 		return nil, &ActiveError{Op: opMoveStudents, Err: err}
 	}
-	today := calendar.TodayDate()
+	today := s.todayDate()
 	for _, studentID := range studentIDs {
 		student := lockedStudents[studentID]
 		if student == nil {
@@ -303,7 +301,7 @@ func (s *service) moveStudentIntoGroup(ctx context.Context, plan *studentMovePla
 	visit := &studentpresence.Visit{
 		StudentID:     studentID,
 		ActiveGroupID: plan.target.ID,
-		EntryTime:     time.Now(),
+		EntryTime:     s.now(),
 	}
 	if err := s.createMoveVisit(ctx, visit, &plan.guard); err != nil {
 		if errors.Is(err, ErrStudentAlreadyActive) {

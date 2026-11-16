@@ -107,7 +107,7 @@ func (s *Service) PatchSessionAttendance(ctx context.Context, participantID int6
 		if participantID <= 0 || !validSessionAttendancePatch(patch) {
 			return ports.Stats{}, errors.New("student presence: invalid session attendance patch")
 		}
-		return s.store.PatchSessionAttendance(txCtx, participantID, patch, time.Now().UTC())
+		return s.store.PatchSessionAttendance(txCtx, participantID, patch, s.now().UTC())
 	})
 }
 
@@ -163,7 +163,7 @@ func (s *Service) TransitionParticipants(ctx context.Context, participantIDs []i
 }
 
 func (s *Service) MarkParticipantsNotScheduled(ctx context.Context, participantIDs []int64) (int64, error) {
-	return s.participantWrite(ctx, "mark_participants_not_scheduled", participantIDs, time.Now(), func(txCtx context.Context) (ports.Stats, error) {
+	return s.participantWrite(ctx, "mark_participants_not_scheduled", participantIDs, s.now(), func(txCtx context.Context) (ports.Stats, error) {
 		return s.store.MarkParticipantsNotScheduled(txCtx, participantIDs)
 	})
 }

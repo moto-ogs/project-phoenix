@@ -42,15 +42,17 @@ const guardianRoleName = "guardian"
 type Projection struct {
 	database      Database
 	accountCounts ActiveAccountCounts
+	now           func() time.Time
 }
 
 // New builds the projection over the ambient transaction runtime. Without
-// accountCounts the account-counting reads fail closed.
-func New(database Database, accountCounts ActiveAccountCounts) *Projection {
-	if database == nil {
-		panic("organization tenancy operator dashboard: database runtime is required")
+// accountCounts the account-counting reads fail closed. now is the clock the
+// PWA usage window counts back from (ADR 0239).
+func New(database Database, accountCounts ActiveAccountCounts, now func() time.Time) *Projection {
+	if database == nil || now == nil {
+		panic("organization tenancy operator dashboard: database runtime and clock are required")
 	}
-	return &Projection{database: database, accountCounts: accountCounts}
+	return &Projection{database: database, accountCounts: accountCounts, now: now}
 }
 
 // accountReads fails closed when account facts are not composed.
@@ -370,7 +372,7 @@ func (p *Projection) PWAUsage(ctx context.Context, tenantID int64, window time.D
 	if err != nil {
 		return nil, err
 	}
-	return scanPWAUsage(ctx, db.NewRaw(schoolPWAUsageQuery, guardianRoleName, guardianRoleName, tenantID, time.Now().Add(-window)))
+	return scanPWAUsage(ctx, db.NewRaw(schoolPWAUsageQuery, guardianRoleName, guardianRoleName, tenantID, p.now().Add(-window)))
 }
 
 // AllSchoolsPWAUsage is the operator's cross-school aggregate.
@@ -379,7 +381,7 @@ func (p *Projection) AllSchoolsPWAUsage(ctx context.Context, window time.Duratio
 	if err != nil {
 		return nil, err
 	}
-	return scanPWAUsage(ctx, db.NewRaw(pwaUsageQuery, guardianRoleName, guardianRoleName, time.Now().Add(-window)))
+	return scanPWAUsage(ctx, db.NewRaw(pwaUsageQuery, guardianRoleName, guardianRoleName, p.now().Add(-window)))
 }
 
 func scanPWAUsage(ctx context.Context, query *bun.RawQuery) ([]contract.PWAUsageRow, error) {

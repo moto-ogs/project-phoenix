@@ -34,6 +34,7 @@ import (
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // The compositions the retained People Directory repository suites
@@ -94,7 +95,7 @@ func newPeopleRepositorySuiteFactory(
 		FamilyProtection:           peopleCompose.NewFamilyProtectionEventRepository(db.Pool()),
 		ParentRequestShare:         peopleCompose.NewParentRequestShareEventRepository(db.Pool()),
 		ParentRequestEvent:         peopleCompose.NewParentRequestEventRepository(db.Pool()),
-		GroupSubstitution:          owners.NewGroupSubstitutionRepository(owners.NewSchoolStructureRepositories(db, persons, identity, membership, rooms, workTime).Group, membership, workTime),
+		GroupSubstitution:          owners.NewGroupSubstitutionRepository(owners.NewSchoolStructureRepositories(db, persons, identity, membership, rooms, workTime).Group, membership, workTime, timezone.TodayDate),
 		CaregiverBindingLock:       owners.NewCaregiverBindingLocker(membership, workTime, NewStudentPresenceForTests(db), capability),
 		CareWithdrawal:             owners.NewCareWithdrawalCompletionRepository(carePlan),
 		StudentDataChangeRequest:   NewStudentDataChangeRequestRepository(carePlan),

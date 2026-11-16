@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
@@ -12,8 +13,14 @@ import (
 	presenceStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/studentpresence/http"
 )
 
-func statisticsHTTPRuntime(renderer *lists.RendererService) statisticsAPI.Runtime {
+// statisticsHTTPRuntime binds the statistics routes; now stamps the exports,
+// a nil clock is the real one (RootEnvironment.Now).
+func statisticsHTTPRuntime(renderer *lists.RendererService, now func() time.Time) statisticsAPI.Runtime {
+	if now == nil {
+		now = time.Now
+	}
 	runtime := statisticsAPI.Runtime{
+		Now:          now,
 		ReportGuard:  common.RequiresAllPermissions(presenceStudentsHTTP.StatisticsReportPermissions()...),
 		StudentGuard: common.RequiresAllPermissions(presenceStudentsHTTP.StudentCareTimePermissions()...),
 		Actor: func(r *http.Request) studentpresence.StatisticsActor {

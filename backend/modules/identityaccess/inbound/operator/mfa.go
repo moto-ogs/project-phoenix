@@ -53,9 +53,7 @@ var mfaRules = []common.ErrorRule{
 	{Target: identityaccess.ErrMFANotEnrolled, Render: operatorRejection(http.StatusForbidden, common.CodeIdentityMfaNotEnrolled, "MFA is not enrolled for this operator")},
 	{Target: identityaccess.ErrMFAAlreadyEnrolled, Render: operatorRejection(http.StatusConflict, common.CodeIdentityMfaAlreadyEnrolled, "MFA is already enrolled")},
 	{Target: identityaccess.ErrMFAPermissionDenied, Render: func(error) render.Renderer { return common.OperatorForbidden("Permission denied") }},
-	{Target: identityaccess.ErrMFAStatusUnavailable, Render: func(error) render.Renderer {
-		return common.OperatorServiceUnavailable("MFA ist gerade nicht verfügbar. Bitte versuchen Sie es erneut.")
-	}},
+	{Target: identityaccess.ErrMFAStatusUnavailable, Render: func(error) render.Renderer { return mfaStatusUnavailable() }},
 }
 
 func mapOperatorMFAError(w http.ResponseWriter, r *http.Request, err error) {

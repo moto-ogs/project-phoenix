@@ -19,7 +19,7 @@ func TestStudentFieldEditRepository_CreateBatchAndGetByStudentID(t *testing.T) {
 	student := testpkg.CreateTestStudent(t, db, "Audit", "History", "1a")
 	account := testpkg.CreateTestAccount(t, db, fmt.Sprintf("student-field-edit-%d@example.test", time.Now().UnixNano()))
 
-	repo := NewStudentFieldEditRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewStudentFieldEditRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.TenantContext(student.TenantID)
 	older := &audit.StudentFieldEdit{
 		StudentID:    student.ID,
@@ -70,7 +70,7 @@ func TestStudentFieldEditRepository_CreateBatchValidation(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := NewStudentFieldEditRepository(NewRuntime(db, auditTestTenantID))
+	repo := NewStudentFieldEditRepository(NewRuntime(db, auditTestTenantID), auditTestClock)
 	ctx := testpkg.TenantContext(testpkg.UniqueTestTenantID(t))
 
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, repo.CreateBatch, nil))

@@ -19,29 +19,30 @@ import (
 // NewTenantPersistence builds the Audit persistence of a service graph over
 // the tenant runtime's ambient transaction. Appends need the caller's
 // transaction. Reads and appends fail without the caller's transaction.
-func NewTenantPersistence(db *bun.DB) (*Persistence, error) {
-	if db == nil {
-		return nil, errors.New("audit persistence: database is required")
+func NewTenantPersistence(db *bun.DB, now func() time.Time) (*Persistence, error) {
+	if db == nil || now == nil {
+		return nil, errors.New("audit persistence: database and clock are required")
 	}
 
 	return NewPersistence(PersistenceDependencies{
 		Reads:   audit.NewHandoffRuntime(audit.NewTenantHandoff(tenant.FromContext, tenant.IsAdminTx, tenant.TransactionFromContext)),
 		Appends: audit.NewHandoffRuntime(audit.NewAppendHandoff(tenant.FromContext, tenant.IsAdminTx, tenant.TraegerTransactionFromContext, tenant.TransactionFromContext)),
+		Now:     now,
 	})
 }
 
 // NewHandoffPersistence builds the Audit persistence of a command root over
 // the Audit handoff of its unit of work, without a root database: outside a
 // transaction every write fails.
-func NewHandoffPersistence() (*Persistence, error) {
-	return NewPersistence(PersistenceDependencies{Reads: audit.NewHandoffRuntime(audit.ContextHandoff)})
+func NewHandoffPersistence(now func() time.Time) (*Persistence, error) {
+	return NewPersistence(PersistenceDependencies{Reads: audit.NewHandoffRuntime(audit.ContextHandoff), Now: now})
 }
 
 // NewObservedCommand builds the fail-closed append command over store. Every
 // append is reported to observe and logged, at error level when it failed.
-func NewObservedCommand(store auditModel.AppendStore, logger *slog.Logger, observe func(eventType string, duration time.Duration, rows int, err error)) (*Command, error) {
+func NewObservedCommand(store auditModel.AppendStore, logger *slog.Logger, observe func(eventType string, duration time.Duration, rows int, err error), now func() time.Time) (*Command, error) {
 	if store == nil || logger == nil || observe == nil {
 		return nil, errors.New("audit command store, logger, and observer are required")
 	}
-	return NewCommand(store, auditService.NewLoggingObserver(logger, observe))
+	return NewCommand(store, auditService.NewLoggingObserver(logger, observe), now)
 }

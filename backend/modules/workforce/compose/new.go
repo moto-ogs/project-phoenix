@@ -65,11 +65,11 @@ func newApplication(dependencies Dependencies) (*application.Service, error) {
 	if dependencies.DB == nil || dependencies.LiveStaffIDs == nil || dependencies.LockStaffAssignment == nil || dependencies.Observe == nil {
 		return nil, errors.New("workforce compose: all dependencies are required")
 	}
-	store := postgres.New(postgres.DatabaseRuntime(dependencies.DB))
 	now := dependencies.Now
 	if now == nil {
 		now = time.Now
 	}
+	store := postgres.New(postgres.DatabaseRuntime(dependencies.DB)).WithClock(now)
 	service := application.New(
 		store,
 		transaction{lock: store.AcquireXactLock},

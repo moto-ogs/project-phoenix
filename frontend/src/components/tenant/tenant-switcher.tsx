@@ -39,6 +39,7 @@ import {
   BrandTraegerLine,
   brandLabelClass,
 } from "~/components/dashboard/header/brand-link";
+import { SCHOOL_SIGN_IN_LABEL } from "./school-sign-in";
 
 const logger = createLogger({ component: "BrandTenantSwitcher" });
 
@@ -62,7 +63,7 @@ function switchErrorOptions(
   if (code === "identity.mfa_session_required") {
     return {
       object: targetName,
-      action: { label: "Zur Schulanmeldung", onClick: ways.openTargetLogin },
+      action: { label: SCHOOL_SIGN_IN_LABEL, onClick: ways.openTargetLogin },
     };
   }
   if (code === "traeger.school_requires_code") {

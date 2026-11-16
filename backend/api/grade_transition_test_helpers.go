@@ -31,7 +31,7 @@ type GradeTransitionTestModule struct {
 type OfferingResync func(ctx context.Context, effectiveFrom timezone.Date) error
 
 func NewGradeTransitionTestModule(db transactionruntime.Database, resync OfferingResync, clocks ...func() time.Time) (GradeTransitionTestModule, error) {
-	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return GradeTransitionTestModule{}, err
 	}

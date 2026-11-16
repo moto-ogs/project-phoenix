@@ -79,4 +79,8 @@ func WithAdministration(records schoolcalendar.Days, administration Administrati
 	return &Service{store: original.store, observe: original.observe, administration: administration, CalendarAlgorithms: original.CalendarAlgorithms}, nil
 }
 
-func BerlinToday() string { return time.Now().In(calendar.Berlin).Format(schoolcalendar.DateLayout) }
+// BerlinDay names the Berlin calendar day of the clock now in YYYY-MM-DD,
+// the school's day (ADR 0239).
+func BerlinDay(now func() time.Time) func() string {
+	return func() string { return now().In(calendar.Berlin).Format(schoolcalendar.DateLayout) }
+}

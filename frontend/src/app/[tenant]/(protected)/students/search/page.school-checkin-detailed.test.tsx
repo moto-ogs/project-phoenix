@@ -159,11 +159,18 @@ vi.mock("~/components/ui/alert", () => ({
 vi.mock("~/components/ui/tenant-page-search-row", () => ({
   TenantPageSearchRow: ({
     primaryAction,
+    primaryActionDesktopOnly,
   }: {
     primaryAction?: React.ReactNode;
+    primaryActionDesktopOnly?: boolean;
   }) => (
     <div data-testid="page-header">
-      <div data-testid="header-primary-action">{primaryAction}</div>
+      <div
+        data-testid="header-primary-action"
+        data-desktop-only={String(Boolean(primaryActionDesktopOnly))}
+      >
+        {primaryAction}
+      </div>
     </div>
   ),
 }));
@@ -334,6 +341,22 @@ describe("StudentSearchPage — check-in mode on detailed-mode tenants", () => {
       0,
     );
     expect(screen.getByTestId("school-checkin-mobile")).toBeInTheDocument();
+  });
+
+  it("keeps the header pill to the desktop, where the page has no other trigger", async () => {
+    render(<StudentSearchPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("student-card-11")).toBeInTheDocument();
+    });
+
+    // Unter `xl` lösen schwebender Knopf und Moduszeile den Modus aus; die
+    // Suchzeile zeigt ihre Hauptaktion dort nicht noch einmal (#7132).
+    const headerAction = screen.getByTestId("header-primary-action");
+    expect(headerAction).toHaveAttribute("data-desktop-only", "true");
+    expect(
+      within(headerAction).getByTestId("school-checkin-fab"),
+    ).toBeInTheDocument();
   });
 
   it("hides the mode when the school has web attendance switched off", async () => {

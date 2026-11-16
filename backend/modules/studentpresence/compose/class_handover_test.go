@@ -122,12 +122,12 @@ func TestMorningAttendanceRetentionDeletesClassHandovers(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}})
+	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}, Now: presenceClock})
 	require.NoError(t, err)
 	student := testpkg.CreateTestStudent(t, db, "Frist", "Übergabe", "1b")
 	staff := testpkg.CreateTestStaff(t, db, "Lehr", "Kraft")
-	expired := testpkg.TodayDate().AddDays(-400)
-	kept := testpkg.TodayDate().AddDays(-10)
+	expired := presenceToday.AddDays(-400)
+	kept := presenceToday.AddDays(-10)
 	for _, day := range []calendar.Date{expired, kept} {
 		_, err := module.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
 			SchoolClass: "1b", Date: day, HandedOverBy: staff.ID, AbsentStudentIDs: []int64{student.ID},

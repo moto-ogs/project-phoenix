@@ -15,7 +15,8 @@ func (s *Store) RecordGroupActivity(ctx context.Context, id int64, at time.Time)
 		return ports.Stats{}, err
 	}
 	started := time.Now()
-	result, err := db.NewUpdate().Table("active.groups").Set("last_activity = ?", at).Set("updated_at = ?", started).
+	// The table's update trigger owns updated_at (ADR 0262).
+	result, err := db.NewUpdate().Table("active.groups").Set("last_activity = ?", at).
 		Where("tenant_id = ? AND id = ? AND end_time IS NULL", tenantID, id).Exec(ctx)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {
@@ -53,13 +54,14 @@ func (s *Store) ReviseGroup(ctx context.Context, group studentpresence.LiveGroup
 	}
 	started := time.Now()
 	var row liveGroupRow
+	// The table's update trigger owns updated_at (ADR 0262); RETURNING reads the stored value.
 	err = db.NewRaw(`UPDATE active.groups SET start_time = ?, end_time = ?, last_activity = ?,
- timeout_minutes = NULLIF(?, 0), group_id = ?, device_id = ?, room_id = ?, updated_at = ?
+ timeout_minutes = NULLIF(?, 0), group_id = ?, device_id = ?, room_id = ?
  WHERE id = ? AND tenant_id = ?
  RETURNING id, tenant_id, created_at, updated_at, start_time, end_time, last_activity,
  timeout_minutes, group_id, device_id, room_id`,
 		group.StartTime, group.EndTime, group.LastActivity, group.TimeoutMinutes, group.ActivityGroupID,
-		group.DeviceID, group.RoomID, started, group.ID, tenantID).Scan(ctx, &row)
+		group.DeviceID, group.RoomID, group.ID, tenantID).Scan(ctx, &row)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {
 		return studentpresence.LiveGroup{}, stats, fmt.Errorf("revise group: %w", err)
@@ -74,11 +76,12 @@ func (s *Store) RecordGroup(ctx context.Context, group studentpresence.LiveGroup
 		return studentpresence.LiveGroup{}, ports.Stats{}, err
 	}
 	started := time.Now()
+	stamp := s.now()
 	if group.CreatedAt.IsZero() {
-		group.CreatedAt = started
+		group.CreatedAt = stamp
 	}
 	if group.UpdatedAt.IsZero() {
-		group.UpdatedAt = started
+		group.UpdatedAt = stamp
 	}
 	var row liveGroupRow
 	err = db.NewRaw(`INSERT INTO active.groups

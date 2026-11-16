@@ -234,6 +234,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/personal/:id": "Personalakte",
     "/personal/abwesenheitsarten": "Abwesenheitsarten",
     "/personal/einsatzplanung": "Einsatzplanung",
+    "/personal/einstellen": "Person einstellen",
     "/personal/vertretungspool": "Vertretungspool",
     "/personal/import": "Personal importieren",
     "/personal/lohnexport": "Lohnexport",

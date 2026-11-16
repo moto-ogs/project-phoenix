@@ -95,7 +95,7 @@ type studentListPlan struct {
 // active.visits state, so a non-today planning request has to be rejected
 // before that query runs, not after it (#1939).
 func (rs *Resource) parseStudentListPlan(r *http.Request) (studentListPlan, render.Renderer) {
-	params := parseStudentListParams(r)
+	params := parseStudentListParams(r, rs.todayDate())
 	view, viewErr := parseStudentListView(r.URL.Query().Get("view"))
 	if viewErr != nil {
 		return studentListPlan{}, common.ErrorInvalidRequest(viewErr)

@@ -148,7 +148,7 @@ type staffShiftService struct {
 // flag when a shift is assigned a type; it may be nil in unit tests that never
 // attach a shift type.
 func NewStaffShiftService(repo staffShiftOperations, staffRepo staffDirectory, shiftTypes ShiftTypeService, lockStaffShifts func(ctx context.Context, staffID int64) error, logger *slog.Logger, opts ...StaffShiftOption) StaffShiftService {
-	service := &staffShiftService{repo: repo, staffRepo: staffRepo, shiftTypes: shiftTypes, lockStaffShifts: lockStaffShifts, logger: logger}
+	service := &staffShiftService{repo: repo, staffRepo: staffRepo, shiftTypes: shiftTypes, lockStaffShifts: lockStaffShifts, logger: logger, today: calendar.TodayDate}
 	for _, opt := range opts {
 		if opt != nil {
 			opt(service)
