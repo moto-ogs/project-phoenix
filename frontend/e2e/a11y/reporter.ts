@@ -17,11 +17,11 @@ import {
 import { BASELINE_PATH, SCAN_ATTACHMENT, type ScanReport } from "./scan";
 
 // Abschluss des A11y-Ratchets (#7107): sammelt die Prüfungen aller Tests,
-// nennt ihre Laufzeit und meldet, wo die Baseline sinken kann. Mit
-// A11Y_BASELINE_SHRINK=1 senkt er sie selbst, aber nur nach einem grünen,
-// vollen Lauf ohne übersprungene Tests, Shard, Dateifilter oder --grep:
-// Ein Teillauf sieht nicht jede Route und würde zu viel streichen. Er erhöht
-// nie einen Wert und nimmt keine neue Route auf.
+// nennt ihre Laufzeit und meldet, welche Einträge der Baseline entfallen
+// können. Mit A11Y_BASELINE_SHRINK=1 streicht er sie selbst, aber nur nach
+// einem grünen, vollen Lauf ohne übersprungene Tests, Shard, Dateifilter oder
+// --grep: Ein Teillauf sieht nicht jede Route und würde zu viel streichen. Er
+// nimmt nie eine Regel oder Route auf.
 
 export default class A11yReporter implements Reporter {
   private config: FullConfig | null = null;
@@ -80,15 +80,15 @@ export default class A11yReporter implements Reporter {
     if (process.env.A11Y_BASELINE_SHRINK === "1" && complete) {
       writeFileSync(BASELINE_PATH, `${JSON.stringify(next, null, 2)}\n`);
       console.log(
-        [`A11y-Baseline gesenkt (${hints.length}):`, ...lines].join("\n"),
+        [`A11y-Baseline gekürzt (${hints.length}):`, ...lines].join("\n"),
       );
       return;
     }
     console.log(
       [
         complete
-          ? "A11y-Baseline kann sinken: A11Y_BASELINE_SHRINK=1 pnpm run test:e2e. Ohne behobene Ursache erst, wenn ein zweiter Lauf auf frisch geseedeter Datenbank es bestätigt: Zähler einer Route schwanken mit dem Datenstand um eine Stelle."
-          : "A11y-Baseline: Hinweise aus einem Teillauf; senken darf nur ein grüner, voller Lauf:",
+          ? "A11y-Baseline kann kürzer werden: A11Y_BASELINE_SHRINK=1 pnpm run test:e2e. Ohne behobene Ursache erst, wenn ein zweiter Lauf auf frisch geseedeter Datenbank es bestätigt: Manche Funde hängen an Daten, die nicht jeder Lauf zeigt."
+          : "A11y-Baseline: Hinweise aus einem Teillauf; kürzen darf nur ein grüner, voller Lauf:",
         ...lines,
       ].join("\n"),
     );

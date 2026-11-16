@@ -1,18 +1,25 @@
 import { readFileSync } from "node:fs";
 
 // Reine Logik des A11y-Ratchets (#7107), ohne Browser: Routen-Schlüssel,
-// Vergleich mit der Baseline und das Senken. Die Prüfung selbst steckt in
+// Vergleich mit der Baseline und das Kürzen. Die Prüfung selbst steckt in
 // e2e/a11y/scan.ts, die Zusammenfassung in e2e/a11y/reporter.ts.
 
 export interface Baseline {
   /** Warum eine Regel in der Baseline steht, mit Issue. Pflicht je Regel. */
   reasons: Record<string, string>;
-  /** Route → axe-Regel → erlaubte Stellen (distinctNodes). */
-  routes: Record<string, Record<string, number>>;
+  /**
+   * Route → axe-Regeln, die dort als offene Schuld bekannt sind, sortiert.
+   * Eine Anzahl steht bewusst nicht dabei (#7196): Wie viele Knoten eine
+   * Regel trifft, hängt an den Daten und am Tag. Dieselbe Seite zeigte je
+   * nach Woche 2, 6 oder 8 Stellen, und der erste Werktagslauf nach einer am
+   * Sonntag gemessenen Baseline war rot, ohne dass sich Code geändert hatte.
+   */
+  routes: Record<string, string[]>;
 }
 
 export interface ScanRecord {
   route: string;
+  /** axe-Regel → betroffene Knoten, nur für die Meldung. */
   counts: Record<string, number>;
 }
 
@@ -20,8 +27,13 @@ export interface ScanRecord {
 export function readBaseline(path: string): Baseline {
   const baseline = JSON.parse(readFileSync(path, "utf8")) as Baseline;
   const missing = new Set<string>();
-  for (const rules of Object.values(baseline.routes)) {
-    for (const rule of Object.keys(rules)) {
+  for (const [route, rules] of Object.entries(baseline.routes)) {
+    if (!Array.isArray(rules)) {
+      throw new Error(
+        `A11y-Baseline: "${route}" braucht eine Liste von Regeln, keine Anzahl je Regel.`,
+      );
+    }
+    for (const rule of rules) {
       if (!baseline.reasons[rule]) missing.add(rule);
     }
   }
@@ -67,53 +79,18 @@ export function routeKey(
   return `${portal} /${segments.join("/")}`;
 }
 
-/**
- * Ein axe-Selektor ohne das, was an den Daten hängt: Position in Listen
- * (`:nth-child`), Attributwerte und IDs (oft Namen), Zahlen. Die Reihenfolge
- * der Klassen wechselt zwischen Seiten, darum sortiert.
- */
-function place(selector: string): string {
-  return selector
-    .replace(/:nth-(?:last-)?(?:child|of-type)\(\d+\)/g, "")
-    .replace(/\[([\w-]+)[~|^$*]?="(?:[^"\\]|\\.)*"\]/g, "[$1]")
-    .replace(/#(?:[^\s.>#:[\\]|\\.)+/g, "#id")
-    .replace(/\d+/g, "0")
-    .split(/(\s*>\s*|\s+)/)
-    .map((compound) => {
-      const [head = "", ...classes] = compound.split(/(?<!\\)\./);
-      return [head, ...classes.sort()].join(".");
-    })
-    .join("");
-}
-
-/**
- * Verschiedene Stellen unter den Knoten einer axe-Regel (siehe place): Eine
- * Liste mit 5 oder 50 Kindern zählt gleich, die Zahl hängt am Markup, nicht
- * an den Testdaten, die parallele Specs anlegen. Roh zählten zwei Läufe auf
- * demselben Stand 31 und 43 Knoten auf /dienstplan.
- */
-export function distinctNodes(
-  nodes: ReadonlyArray<{ target: readonly unknown[] }>,
-): number {
-  const places = new Set<string>();
-  for (const node of nodes) {
-    places.add(node.target.flat().map(String).map(place).join(" >>> "));
-  }
-  return places.size;
-}
-
-/** Regeln, deren Stellenzahl über der Baseline liegt. */
-export function exceeding(
+/** Regeln mit Funden, die für die Route nicht in der Baseline stehen. */
+export function unlisted(
   baseline: Baseline,
   record: ScanRecord,
-): Array<{ rule: string; count: number; allowed: number }> {
-  const allowed = baseline.routes[record.route] ?? {};
+): Array<{ rule: string; count: number }> {
+  const known = new Set(baseline.routes[record.route]);
   return Object.entries(record.counts)
-    .filter(([rule, count]) => count > (allowed[rule] ?? 0))
-    .map(([rule, count]) => ({ rule, count, allowed: allowed[rule] ?? 0 }));
+    .filter(([rule, count]) => count > 0 && !known.has(rule))
+    .map(([rule, count]) => ({ rule, count }));
 }
 
-/** Höchste Stellenzahl je Route und Regel über alle Prüfungen eines Laufs. */
+/** Höchste Knotenzahl je Route und Regel über alle Prüfungen eines Laufs. */
 export function maxCounts(
   records: readonly ScanRecord[],
 ): Map<string, Record<string, number>> {
@@ -129,8 +106,9 @@ export function maxCounts(
 }
 
 /**
- * Gesenkte Baseline nach einem vollen Lauf: nur kleinere Werte, nie neue
- * Routen oder Regeln. Routen, die kein Test mehr öffnet, entfallen.
+ * Gekürzte Baseline nach einem vollen Lauf: Regeln, die keine Prüfung der
+ * Route mehr findet, entfallen; nie kommen Routen oder Regeln dazu. Routen,
+ * die kein Test mehr öffnet, entfallen.
  */
 export function shrink(
   baseline: Baseline,
@@ -144,16 +122,14 @@ export function shrink(
       hints.push(`${route}: in keinem Test geprüft, Eintrag entfällt`);
       continue;
     }
-    const kept: Record<string, number> = {};
-    for (const [rule, allowed] of Object.entries(rules)) {
-      const count = Math.min(measured[rule] ?? 0, allowed);
-      if (count < allowed)
-        hints.push(`${route}: ${rule} ${allowed} → ${count}`);
-      if (count > 0) kept[rule] = count;
-    }
-    if (Object.keys(kept).length > 0) routes[route] = kept;
+    const kept = rules.filter((rule) => {
+      if ((measured[rule] ?? 0) > 0) return true;
+      hints.push(`${route}: ${rule} behoben, Eintrag entfällt`);
+      return false;
+    });
+    if (kept.length > 0) routes[route] = kept;
   }
-  const used = new Set(Object.values(routes).flatMap(Object.keys));
+  const used = new Set(Object.values(routes).flat());
   const reasons = Object.fromEntries(
     Object.entries(baseline.reasons).filter(([rule]) => used.has(rule)),
   );
