@@ -248,6 +248,12 @@ func newSessionTokenAuth() (*sessiontoken.TokenAuth, error) {
 	)
 }
 
+// newSentryUserPseudonym keys the Sentry pseudonym of an account with the
+// session secret the verifier above reads (#3843).
+func newSentryUserPseudonym() (SentryUserPseudonym, error) {
+	return NewSentryUserPseudonym(viper.GetString("auth_jwt_secret"))
+}
+
 // newProvisioningConfig binds the operator provisioning routes to the
 // provisioning, the caregiver capability views and the audit of the Beleg
 // retention (#4720) of the same composition.
