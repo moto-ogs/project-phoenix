@@ -541,7 +541,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s birthdayStore) StudentBirthdaysOn(ctx context.Context, days []peopleCompose.BirthdayMonthDay) ([]peopleCompose.BirthdayEntry, error) {\n\trows, err := s.repos.Students.FindBirthdaysOn(ctx, days)\n\treturn rows, err\n}",
+      "evidence": "func (s birthdayStore) StudentBirthdaysOn(ctx context.Context, days []peopleCompose.BirthdayMonthDay, today calendar.Date) ([]peopleCompose.BirthdayEntry, error) {\n\trows, err := s.repos.Students.FindBirthdaysOn(ctx, days, today)\n\treturn rows, err\n}",
       "form": "forward-debt",
       "id": "api/birthdayStore.StudentBirthdaysOn",
       "owner": "roots"
@@ -3677,13 +3677,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (r StudentPhotoRuntime) PhotoFeatureEnabled(ctx context.Context) (bool, error) {\n\tif r.Settings == nil {\n\t\treturn false, nil\n\t}\n\treturn r.Settings.ResolveBool(ctx, configModel.KeyStudentPhotosEnabled)\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/StudentPhotoRuntime.PhotoFeatureEnabled",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (r StudentPhotoRuntime) RecordPhotoConsent(ctx context.Context, before, after peopleCompose.StudentPhotoConsentSnapshot, actorAccountID *int64, changedAt time.Time) error {\n\tif r.Consents == nil {\n\t\treturn nil\n\t}\n\tbeforeRow := \u0026peopleModule.StudentState{PhotoConsentGivenAt: before.PhotoConsentGivenAt}\n\tbeforeRow.ID = before.StudentID\n\tafterRow := \u0026peopleModule.StudentState{PhotoConsentGivenAt: after.PhotoConsentGivenAt}\n\tafterRow.ID = after.StudentID\n\treturn r.Consents.RecordTransitions(ctx, beforeRow, afterRow, auditModels.StudentConsentSourceTenantPortal, actorAccountID, changedAt)\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/StudentPhotoRuntime.RecordPhotoConsent",
@@ -5262,6 +5255,13 @@
       "evidence": "func (r communicationAnnouncementAudience) Stats(ctx context.Context, schoolID, announcementID int64) (*communication.PortalAnnouncementStats, error) {\n\trows, err := r.source.Stats(ctx, schoolID, announcementID)\n\treturn (*communication.PortalAnnouncementStats)(rows), err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/communicationAnnouncementAudience.Stats",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (r communicationAnnouncementAudience) StudentAnnouncements(ctx context.Context, schoolID, studentID int64, history []*communication.PortalDeclarationSubmission) ([]*communication.PortalStudentAnnouncement, error) {\n\trows, err := r.source.StudentAnnouncements(ctx, schoolID, studentID, projectionDeclarationHistory(history))\n\tif errors.Is(err, parentaudience.ErrStudentNotInSchool) {\n\t\treturn nil, communication.ErrStudentNotInSchool\n\t}\n\treturn mapProjectionRows(rows, func(row *parentaudience.StudentAnnouncement) *communication.PortalStudentAnnouncement {\n\t\treturn (*communication.PortalStudentAnnouncement)(row)\n\t}), err\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/communicationAnnouncementAudience.StudentAnnouncements",
       "owner": "roots"
     },
     {
@@ -6981,7 +6981,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (a payrollRuleAudit) RecordPayrollRuleChange(ctx context.Context, change workforceModule.PayrollRuleChange) error {\n\ttenantID, err := tenant.TenantFromContext(ctx)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"payroll rule audit: %w\", err)\n\t}\n\tvar changedBy *int64\n\tif change.ActorAccountID \u003e 0 {\n\t\tactor := change.ActorAccountID\n\t\tchangedBy = \u0026actor\n\t}\n\treturn a.audit.Create(ctx, configModels.NewAuditEntry(tenantID.Int64(), change.Key, change.Action, change.Old, change.New, changedBy))\n}",
+      "evidence": "func (a payrollRuleAudit) RecordPayrollRuleChange(ctx context.Context, change workforceModule.PayrollRuleChange) error {\n\ttenantID, err := tenant.TenantFromContext(ctx)\n\tif err != nil {\n\t\treturn fmt.Errorf(\"payroll rule audit: %w\", err)\n\t}\n\tvar changedBy *int64\n\tif change.ActorAccountID \u003e 0 {\n\t\tactor := change.ActorAccountID\n\t\tchangedBy = \u0026actor\n\t}\n\treturn a.audit.Create(ctx, configModels.NewAuditEntry(tenantID.Int64(), change.Key, change.Action, change.Old, change.New, changedBy, a.now()))\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/payrollRuleAudit.RecordPayrollRuleChange",
       "owner": "roots"

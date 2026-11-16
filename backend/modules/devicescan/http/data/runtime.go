@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
 )
@@ -16,10 +17,13 @@ type Runtime struct {
 	Device  func(context.Context) (id int64, deviceID string, found bool)
 	Success func(http.ResponseWriter, *http.Request, int, any, string)
 	Failure func(http.ResponseWriter, *http.Request, int, error, string)
+	// Now is the root's clock; feedback is stamped with its Berlin day and
+	// time.
+	Now func() time.Time
 }
 
 func (rt Runtime) valid() bool {
-	return rt.ParseID != nil && rt.Device != nil && rt.Success != nil && rt.Failure != nil
+	return rt.ParseID != nil && rt.Device != nil && rt.Success != nil && rt.Failure != nil && rt.Now != nil
 }
 
 type deviceIdentity struct {

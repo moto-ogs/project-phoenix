@@ -2,6 +2,7 @@ package contact
 
 import (
 	"errors"
+	"slices"
 	"strings"
 )
 
@@ -21,6 +22,27 @@ type GuardianRelationshipValues struct {
 }
 
 var validRelationshipTypes = map[string]bool{"parent": true, "guardian": true, "relative": true, "other": true}
+
+// RelationshipTypes lists the relationship types a guardian link stores.
+func RelationshipTypes() []string { return sortedKeys(validRelationshipTypes) }
+
+// contactMethods are the ways a guardian profile prefers to be reached.
+var contactMethods = map[string]bool{"email": true, "phone": true, "mobile": true, "sms": true}
+
+// PreferredContactMethods lists the contact methods a guardian profile stores.
+func PreferredContactMethods() []string { return sortedKeys(contactMethods) }
+
+// IsPreferredContactMethod reports whether a guardian profile may store value.
+func IsPreferredContactMethod(value string) bool { return contactMethods[value] }
+
+func sortedKeys(set map[string]bool) []string {
+	keys := make([]string, 0, len(set))
+	for key := range set {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+	return keys
+}
 
 func IsValidRelationshipType(value string) bool {
 	return validRelationshipTypes[strings.ToLower(strings.TrimSpace(value))]

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -90,7 +91,8 @@ func TestNewAuditEntry(t *testing.T) {
 	newValue := json.RawMessage(`"new"`)
 
 	const tenantID int64 = 5
-	entry := NewAuditEntry(tenantID, "test.key", "set", oldValue, newValue, changedBy)
+	changedAt := time.Date(2026, time.November, 2, 9, 0, 0, 0, time.UTC)
+	entry := NewAuditEntry(tenantID, "test.key", "set", oldValue, newValue, changedBy, changedAt)
 
 	assert.Equal(t, tenantID, entry.TenantID)
 	assert.Equal(t, "test.key", entry.SettingKey)
@@ -99,12 +101,13 @@ func TestNewAuditEntry(t *testing.T) {
 	assert.Equal(t, json.RawMessage(`"new"`), entry.NewValue)
 	assert.Equal(t, changedBy, entry.ChangedBy)
 	assert.False(t, entry.ChangedAt.IsZero())
+	assert.Equal(t, changedAt, entry.ChangedAt)
 }
 
 func TestNewAuditEntry_NilValues(t *testing.T) {
 	t.Parallel()
 
-	entry := NewAuditEntry(1, "test.reset", "reset", nil, nil, nil)
+	entry := NewAuditEntry(1, "test.reset", "reset", nil, nil, nil, time.Date(2026, time.November, 2, 9, 0, 0, 0, time.UTC))
 
 	assert.Equal(t, "reset", entry.Action)
 	assert.Nil(t, entry.OldValue)

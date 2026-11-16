@@ -3,6 +3,7 @@ package compose
 import (
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/adapters/datareturn"
@@ -17,7 +18,7 @@ func NewTenantExporter(db *bun.DB, fingerprints organizationtenancy.ExportFinger
 		return nil, errors.New("tenant export requires a database and its operator audit")
 	}
 	return tenantexport.NewTenantExporter(db, organizationtenancy.TenantExportDependencies{
-		Fingerprints: fingerprints, Sealed: sealed, Projected: projected, Audit: audit}), nil
+		Fingerprints: fingerprints, Sealed: sealed, Projected: projected, Audit: audit, Now: time.Now}), nil
 }
 
 // NewTraegerTenantExporter binds the return procedure with what a Träger
@@ -26,8 +27,8 @@ func NewTenantExporter(db *bun.DB, fingerprints organizationtenancy.ExportFinger
 // through it unchanged.
 func NewTraegerTenantExporter(db *bun.DB, dependencies organizationtenancy.TenantExportDependencies) (organizationtenancy.TenantExporter, error) {
 	if db == nil || dependencies.Fingerprints.Bytes == nil || dependencies.Fingerprints.Reader == nil ||
-		dependencies.SEPADebitFiles == nil || dependencies.Audit == nil {
-		return nil, errors.New("tenant export of a Träger requires a database, its PAIN.008 files and its operator audit")
+		dependencies.SEPADebitFiles == nil || dependencies.Audit == nil || dependencies.Now == nil {
+		return nil, errors.New("tenant export of a Träger requires a database, its PAIN.008 files, its operator audit and the clock")
 	}
 	return tenantexport.NewTenantExporter(db, dependencies), nil
 }

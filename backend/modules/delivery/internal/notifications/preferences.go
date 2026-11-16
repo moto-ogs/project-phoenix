@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/devices"
 
@@ -457,22 +456,22 @@ func (s *preferenceService) GetForParent(ctx context.Context, accountID int64) (
 
 	err := s.forEachGuardianTenant(ctx, accountID, func(tenantCtx context.Context, _ int64) error {
 		tenantCount++
+		// One settings read per school for the dispatch switch and every
+		// gate of the parent catalogue, however many types share a gate.
+		tenantCtx = s.withGateSnapshot(tenantCtx, PortalParent)
 		if err := s.countParentConsents(tenantCtx, accountID, defs, enabledTenantCount); err != nil {
-			return err
-		}
-		// One read of the school's switches: the dispatch switch and the
-		// gates of the parent types.
-		switches, err := s.resolveParentSwitches(tenantCtx, defs)
-		if err != nil {
 			return err
 		}
 		// Any school allowing dispatch is enough for the card to stop saying
 		// "your school switched this off".
-		if switches[settingDispatchEnabled] {
+		tenantEnabled, err := s.resolveBool(tenantCtx, settingDispatchEnabled)
+		if err != nil {
+			return err
+		}
+		if tenantEnabled {
 			overview.TenantEnabled = true
 		}
-		countAvailableTypes(defs, switches, availableTenantCount)
-		return nil
+		return s.countAvailableTypes(tenantCtx, defs, availableTenantCount)
 	})
 	if err != nil {
 		return nil, err
@@ -514,6 +513,8 @@ func (s *preferenceService) SetForParent(ctx context.Context, accountID int64, n
 
 // DisableAllForParent switches every stored parent-portal decision off at
 // every school.
+// A default-on type without a stored decision stays on unless its "off" is
+// stored too (#7141).
 func (s *preferenceService) DisableAllForParent(ctx context.Context, accountID int64) error {
 	ctx = s.withTenantRuntime(ctx)
 	if accountID <= 0 {
@@ -523,7 +524,6 @@ func (s *preferenceService) DisableAllForParent(ctx context.Context, accountID i
 		if err := s.consent.DisableConsent(tenantCtx, accountID, typeKeysForPortal(PortalParent)); err != nil {
 			return fmt.Errorf("disable notification preferences for tenant %d: %w", tenantID, err)
 		}
-		// A default-on type has no stored decision to switch off (#7144).
 		return s.declineDefaultOnTypes(tenantCtx, accountID, PortalParent)
 	})
 }
@@ -627,35 +627,26 @@ func notificationGateKeys(notificationTypes []string) ([]string, map[string]stri
 	return gateKeys, gateByType, nil
 }
 
-// resolveParentSwitches reads the dispatch switch and the gates of the
-// parent types of one school in one settings read.
-func (s *preferenceService) resolveParentSwitches(ctx context.Context, defs []TypeDefinition) (map[string]bool, error) {
-	if s.settings == nil {
-		return nil, errors.New("notification preferences service has no settings service configured")
-	}
-	keys := []string{settingDispatchEnabled}
+func (s *preferenceService) countAvailableTypes(ctx context.Context, defs []TypeDefinition, counts map[string]int) error {
 	for _, def := range defs {
-		if def.TenantGate != "" && !slices.Contains(keys, def.TenantGate) {
-			keys = append(keys, def.TenantGate)
+		if def.TenantGate == "" {
+			counts[def.Key]++
+			continue
 		}
-	}
-	switches, err := s.settings.ResolveBools(ctx, keys)
-	if err != nil {
-		return nil, fmt.Errorf("resolve notification switches: %w", err)
-	}
-	return switches, nil
-}
-
-func countAvailableTypes(defs []TypeDefinition, switches map[string]bool, counts map[string]int) {
-	for _, def := range defs {
-		if def.TenantGate == "" || switches[def.TenantGate] {
+		available, err := s.resolveBool(ctx, def.TenantGate)
+		if err != nil {
+			return err
+		}
+		if available {
 			counts[def.Key]++
 		}
 	}
+	return nil
 }
 
-// countParentConsents counts the types the guardian has on at one school:
-// a stored decision, else the type's default (#7144).
+// countParentConsents counts the school as enabled for every type the
+// guardian switched on there, and for a default-on type nobody decided there
+// (#7141): delivery reads that as on, so the switch must too.
 func (s *preferenceService) countParentConsents(tenantCtx context.Context, accountID int64, defs []TypeDefinition, enabledTenantCount map[string]int) error {
 	stored, err := s.consent.StoredConsent(tenantCtx, accountID)
 	if err != nil {

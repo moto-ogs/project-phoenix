@@ -200,7 +200,7 @@ type TypeDefinition struct {
 	// until the person switches it off, and delivery drops only explicit
 	// declines (FilterNotOptedOut). A staff type needs a Permission, so it is
 	// on only for the people whose task the notice is (#4791); a parent type
-	// reaches only guardians of the children it is about (#7144).
+	// is about the family's own children (#7141).
 	DefaultOn bool
 	// Reverses names the type whose change this one takes back (#7151), as
 	// "findet doch statt" takes back a cancellation. Such a type is no choice
@@ -257,8 +257,9 @@ func validateTypeChannel(def TypeDefinition) {
 		if _, ok := groupOrder[def.Group]; !ok {
 			panic("notifications: unknown group " + def.Group + " for key " + def.Key)
 		}
-		// A guardian holds no staff right: a parent type is addressed through
-		// the children the guardian holds parent_portal.access for (#7144).
+		// A parent type reaches only the families of the children it is
+		// about (parent_portal.access), so it needs no right to be on by
+		// default (#7141); a staff type does.
 		if def.DefaultOn && def.Permission == "" && def.Portal != PortalParent {
 			panic("notifications: default-on type " + def.Key + " needs a permission")
 		}
@@ -381,7 +382,9 @@ func init() {
 	registerSchoolTypes()
 	registerStaffAppointmentTypes()
 	registerStaffingTypes()
+	registerClassTimetableTypes()
 	registerStaffNoticeTypes()
+	registerRoomChangeTypes()
 	registerSchoolClosingDayTypes()
 }
 

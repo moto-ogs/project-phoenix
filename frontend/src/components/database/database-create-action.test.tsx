@@ -47,9 +47,8 @@ describe("DatabaseCreateAction", () => {
       ),
     ).toBe("4.5rem");
 
-    // The blurred TenantPage header is a containing block for `fixed`
-    // descendants. The FAB must be portaled outside its action slot so its
-    // viewport offsets remain stable while the header scrolls away.
+    // The TenantPage header is its own stacking context. The FAB must be
+    // portaled outside its action slot so it floats above the content.
     expect(container.querySelector("[data-icon-only]")).not.toBeInTheDocument();
     expect(document.body.querySelector("[data-icon-only]")).toHaveClass(
       "fixed",

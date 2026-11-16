@@ -74,8 +74,8 @@ func EnrichStudentGroupNames(ctx context.Context, groups schoolstructure.Query, 
 		"", "student roster")
 }
 
-func (r groupStudentRepository) FindBirthdaysOn(ctx context.Context, days []peopleBirthday.BirthdayMonthDay) ([]peopleBirthday.BirthdayEntry, error) {
-	rows, err := r.StudentRepository.FindBirthdaysOn(ctx, days)
+func (r groupStudentRepository) FindBirthdaysOn(ctx context.Context, days []peopleBirthday.BirthdayMonthDay, today timezone.Date) ([]peopleBirthday.BirthdayEntry, error) {
+	rows, err := r.StudentRepository.FindBirthdaysOn(ctx, days, today)
 	if err != nil {
 		return nil, err
 	}

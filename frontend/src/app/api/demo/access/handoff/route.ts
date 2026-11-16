@@ -10,8 +10,11 @@ const logger = createLogger({ component: "DemoHandoffRoute" });
 
 const OGS_ROLES = new Set(["caregiver", "lead", "all"]);
 
-// Switches the demo between the OGS app and the parents app (#3468). Both
-// apps redeem the same token on their own host, so the switch is an
+/** Roles of an app on a host of its own: the parents app, the Träger-Portal. */
+const HOSTED_ROLES = { parent: "parent", traeger: "traeger" } as const;
+
+// Switches the demo between the OGS app, the parents app (#3468) and the
+// Träger-Portal (#6193). Each app redeems the same token on its own host, so the switch is an
 // ordinary navigation with the token: this route reads it from the cookie
 // the entry left and redirects to the other app's entry page, the token in
 // the fragment. No script of this page ever sees the token, and no server
@@ -20,14 +23,16 @@ const OGS_ROLES = new Set(["caregiver", "lead", "all"]);
 async function GETHandler(request: NextRequest) {
   const role = request.nextUrl.searchParams.get("role") ?? "";
   const token = request.cookies.get(DEMO_TOKEN_COOKIE)?.value;
-  if (!token || (role !== "parent" && !OGS_ROLES.has(role))) {
+  const hosted =
+    role === "parent" || role === "traeger" ? HOSTED_ROLES[role] : null;
+  if (!token || (!hosted && !OGS_ROLES.has(role))) {
     return redirect("/demo");
   }
   const fragment = new URLSearchParams({ token, role, switched: "1" });
-  if (role === "parent") {
-    const parentsHost = requiredPortalHostname("parent");
+  if (hosted) {
+    const host = requiredPortalHostname(hosted);
     return redirect(
-      `${requestProtocol(request)}://${parentsHost}/demo#${fragment.toString()}`,
+      `${requestProtocol(request)}://${host}/demo#${fragment.toString()}`,
     );
   }
   const schoolUrl = await readySchoolUrl(request, token);

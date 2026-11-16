@@ -23,14 +23,19 @@ type photoCleanupRuntime struct {
 	enqueue func(context.Context, string) error
 }
 
-func (r photoCleanupRuntime) PhotoFeatureEnabled(context.Context) (bool, error) { return true, nil }
-func (r photoCleanupRuntime) ActingAccountID(context.Context) int64             { return 0 }
+func (r photoCleanupRuntime) PhotoFeatureEnabled(context.Context, bool) (bool, error) {
+	return true, nil
+}
+func (r photoCleanupRuntime) ActingAccountID(context.Context) int64 { return 0 }
 func (r photoCleanupRuntime) QueueUnlinkStoredPhoto(ctx context.Context, url string) error {
 	return r.enqueue(ctx, url)
 }
 func (photoCleanupRuntime) UnlinkStoredPhoto(string)                  {} // simulate death before the optional fast path
 func (photoCleanupRuntime) BroadcastPhotoChange(int64, int64, string) {}
 func (photoCleanupRuntime) RecordPhotoConsent(context.Context, peopleCompose.StudentPhotoConsentSnapshot, peopleCompose.StudentPhotoConsentSnapshot, *int64, time.Time) error {
+	return nil
+}
+func (photoCleanupRuntime) RecordPhotoConsentsEnded(context.Context, []int64, *int64, time.Time) error {
 	return nil
 }
 

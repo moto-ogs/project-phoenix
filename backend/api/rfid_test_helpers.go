@@ -3,6 +3,8 @@
 package api
 
 import (
+	"time"
+
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
 	devicescanCompose "github.com/moto-ogs/project-phoenix/modules/devicescan/compose"
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
@@ -27,7 +29,7 @@ func NewRFIDTestModule(db transactionruntime.Database) (RFIDTestModule, error) {
 	if err != nil {
 		return RFIDTestModule{}, err
 	}
-	return RFIDTestModule{FeedbackStudents: devicescanCompose.NewFeedbackStudents(NewDeviceScanPeople(people)), TagAssignments: devicescanCompose.NewTagAssignments(NewDeviceScanPeople(people), nil, DeviceScanPrincipal)}, nil
+	return RFIDTestModule{FeedbackStudents: devicescanCompose.NewFeedbackStudents(NewDeviceScanPeople(people)), TagAssignments: devicescanCompose.NewTagAssignments(NewDeviceScanPeople(people), nil, DeviceScanPrincipal, time.Now)}, nil
 }
 
 // NewRFIDTestPeople composes the People Directory's person directory with the

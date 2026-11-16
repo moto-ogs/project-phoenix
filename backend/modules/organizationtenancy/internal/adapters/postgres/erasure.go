@@ -11,16 +11,23 @@ import (
 	"github.com/uptrace/bun"
 )
 
-type ErasureStore struct{ db *bun.DB }
+type ErasureStore struct {
+	db *bun.DB
+	// now stamps the last confirmation of the coordination lock.
+	now func() time.Time
+}
 
-func NewErasureStore(db *bun.DB) (*ErasureStore, error) {
+func NewErasureStore(db *bun.DB, now func() time.Time) (*ErasureStore, error) {
 	if db == nil {
 		return nil, errors.New("erasure: database required")
+	}
+	if now == nil {
+		return nil, errors.New("erasure: clock required")
 	}
 	if db.Stats().MaxOpenConnections == 1 {
 		return nil, errors.New("erasure: pool requires at least two connections for coordination and work")
 	}
-	return &ErasureStore{db: db}, nil
+	return &ErasureStore{db: db, now: now}, nil
 }
 
 // Each SQL function call commits independently using PostgreSQL autocommit.
@@ -51,7 +58,7 @@ func (s *ErasureStore) WithSchoolLock(ctx context.Context, id int64, fn func(con
 		if !locked {
 			return errors.New("erasure: school already running")
 		}
-		lock := &erasureLock{conn: conn, lastConfirmed: time.Now()}
+		lock := &erasureLock{conn: conn, now: s.now, lastConfirmed: s.now()}
 		defer func() {
 			cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 			defer cancel()

@@ -9,8 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 )
 
-// GuardianAbsenceRecords and GuardianPickupRecords are satisfied by
-// the Care Plan owner.
+// GuardianAbsenceRecords and GuardianPickupRecords are satisfied by the Care Plan owner.
 type GuardianAbsenceRecords = ports.GuardianAbsenceRecords
 type GuardianPickupRecords = ports.GuardianPickupRecords
 

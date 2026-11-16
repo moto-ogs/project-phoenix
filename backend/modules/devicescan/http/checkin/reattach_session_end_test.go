@@ -30,6 +30,7 @@ import (
 func sessionStartRuntime() sessionsAPI.Runtime {
 	return sessionsAPI.Runtime{
 		ParseID:       testpkg.ParseHTTPIDParam,
+		Now:           time.Now,
 		Authenticated: func(ctx context.Context) bool { _, _, ok := testutil.DeviceIdentity(ctx); return ok },
 		Success:       testutil.RespondSuccess,
 		Failure: func(w testpkg.HTTPResponseWriter, r *testpkg.HTTPRequest, status int, err error, message string) {

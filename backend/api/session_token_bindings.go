@@ -86,8 +86,8 @@ func requestClaims(ctx context.Context) (owners.RequestClaims, bool) {
 	}, true
 }
 
-// actingAccountID reads the acting account of the request.
+// actingAccountID reads the school or parent account, excluding operators.
 func actingAccountID(ctx context.Context) int64 {
 	claims, _ := requestClaims(ctx)
-	return claims.AccountID
+	return claims.AccountReferenceID()
 }

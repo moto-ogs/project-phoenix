@@ -431,9 +431,9 @@ describe("Modal", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  // The backdrop dims the page without a blur: a full-screen backdrop-filter
-  // is redrawn in every frame of the open and close animation.
-  it("dims the obscured page without blurring it", async () => {
+  // The backdrop dims and blurs the page through the shared overlay blur
+  // (`.moto-overlay-blur`), never through a blur utility of its own.
+  it("dims and blurs the page through the shared overlay blur", async () => {
     render(
       <TestWrapper>
         <Modal isOpen={true} onClose={vi.fn()} title="Test">
@@ -449,7 +449,12 @@ describe("Modal", () => {
     const backdrop = screen.getByRole("button", {
       name: /hintergrund.*schließen/i,
     });
-    expect(backdrop).toHaveClass("bg-black/40", "opacity-100");
+    expect(backdrop).toHaveClass(
+      "bg-black/40",
+      "moto-overlay-blur",
+      "opacity-100",
+    );
+    // A blur utility would be on from the first frame of the motion.
     expect(backdrop.className).not.toMatch(/backdrop-blur/);
     // Nor does the panel blur what lies behind it while it scales in.
     expect(screen.getByRole("dialog").style.backdropFilter).toBe("");

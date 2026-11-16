@@ -15,6 +15,10 @@ type demoSchoolDatabaseStoreDouble struct {
 	listErr  error
 	outcomes map[int64]demoSchoolErasureOutcome
 	erased   []int64
+
+	traegers        []int64
+	traegerOutcomes map[int64]demoSchoolErasureOutcome
+	erasedTraegers  []int64
 }
 
 type demoSchoolErasureOutcome struct {
@@ -30,6 +34,16 @@ func (s *demoSchoolDatabaseStoreDouble) DueDemoSchoolDatabases(context.Context, 
 func (s *demoSchoolDatabaseStoreDouble) EraseDemoSchoolDatabase(_ context.Context, id int64) (string, string, error) {
 	s.erased = append(s.erased, id)
 	outcome := s.outcomes[id]
+	return outcome.status, outcome.code, outcome.err
+}
+
+func (s *demoSchoolDatabaseStoreDouble) DueDemoTraegers(context.Context, int) ([]int64, error) {
+	return s.traegers, nil
+}
+
+func (s *demoSchoolDatabaseStoreDouble) EraseDemoTraeger(_ context.Context, id int64) (string, string, error) {
+	s.erasedTraegers = append(s.erasedTraegers, id)
+	outcome := s.traegerOutcomes[id]
 	return outcome.status, outcome.code, outcome.err
 }
 
@@ -71,4 +85,28 @@ func TestEraseRetiredDemoSchoolDatabasesSucceedsWithBusySchoolsOnly(t *testing.T
 	require.NoError(t, err)
 	assert.Zero(t, erased)
 	assert.Equal(t, 1, busy)
+}
+
+// After the schools the run erases each Demo-Träger whose last school is
+// gone (ADR 0271); a failed Träger fails the run like a school.
+func TestEraseRetiredDemoSchoolDatabasesErasesFreedTraeger(t *testing.T) {
+	t.Parallel()
+	store := &demoSchoolDatabaseStoreDouble{
+		ids:      []int64{31},
+		outcomes: map[int64]demoSchoolErasureOutcome{31: {status: ports.DemoSchoolErased}},
+		traegers: []int64{7, 8},
+		traegerOutcomes: map[int64]demoSchoolErasureOutcome{
+			7: {status: ports.DemoSchoolErased},
+			8: {status: ports.DemoSchoolFailed, code: "23503"},
+		},
+	}
+	databases, err := NewDemoSchoolDatabases(store)
+	require.NoError(t, err)
+
+	erased, _, err := databases.EraseRetiredDemoSchoolDatabases(t.Context())
+
+	assert.Equal(t, 2, erased, "the school and one Träger")
+	assert.Equal(t, []int64{7, 8}, store.erasedTraegers)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "demo Träger 8")
 }

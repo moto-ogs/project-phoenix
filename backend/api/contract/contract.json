@@ -1,0 +1,2539 @@
+{
+  "routes": [
+    {
+      "method": "GET",
+      "pattern": "/api/students/",
+      "portals": [
+        "tenant"
+      ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "bus",
+          "kind": "string"
+        },
+        {
+          "name": "care_offering_id",
+          "kind": "id"
+        },
+        {
+          "name": "care_status",
+          "kind": "string",
+          "values": [
+            "all",
+            "ended",
+            "running"
+          ]
+        },
+        {
+          "name": "date",
+          "kind": "date"
+        },
+        {
+          "name": "day_status",
+          "kind": "string",
+          "values": [
+            "all",
+            "comes_today",
+            "not_coming_today"
+          ]
+        },
+        {
+          "name": "enrollment_answer",
+          "kind": "string"
+        },
+        {
+          "name": "first_name",
+          "kind": "string"
+        },
+        {
+          "name": "grade_level",
+          "kind": "int",
+          "repeated": true
+        },
+        {
+          "name": "group_id",
+          "kind": "id",
+          "repeated": true
+        },
+        {
+          "name": "include_arrival_times",
+          "kind": "bool"
+        },
+        {
+          "name": "include_companions",
+          "kind": "bool"
+        },
+        {
+          "name": "include_pending_withdrawals",
+          "kind": "bool"
+        },
+        {
+          "name": "include_pickup_times",
+          "kind": "bool"
+        },
+        {
+          "name": "last_name",
+          "kind": "string"
+        },
+        {
+          "name": "location",
+          "kind": "string"
+        },
+        {
+          "name": "location_state",
+          "kind": "string"
+        },
+        {
+          "name": "page",
+          "kind": "int"
+        },
+        {
+          "name": "page_size",
+          "kind": "int"
+        },
+        {
+          "name": "photo_consent",
+          "kind": "string"
+        },
+        {
+          "name": "pickup_status",
+          "kind": "string"
+        },
+        {
+          "name": "room_id",
+          "kind": "id"
+        },
+        {
+          "name": "school_class",
+          "kind": "string",
+          "repeated": true
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "view",
+          "kind": "string",
+          "values": [
+            "full",
+            "names",
+            "slim"
+          ]
+        }
+      ],
+      "variants": {
+        "query_param": "view",
+        "default": "full",
+        "cases": {
+          "full": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "StudentResponse"
+            }
+          },
+          "names": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "NameStudentResponse"
+            }
+          },
+          "slim": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "SlimStudentResponse"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/students/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "include_privacy_consent",
+          "kind": "bool"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StudentDetailResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/enrollable-schools",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "EnrollablePhaseResponse"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/students/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "StudentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StudentResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/students/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "UpdateStudentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StudentResponse"
+      }
+    }
+  ],
+  "enums": [
+    {
+      "name": "AttendanceActorKind",
+      "values": [
+        "automatic",
+        "device",
+        "former_staff",
+        "staff"
+      ]
+    },
+    {
+      "name": "DayPlanningReason",
+      "values": [
+        "arrival_exception",
+        "arrival_schedule",
+        "class_trip",
+        "excused",
+        "no_plan",
+        "pickup_exception",
+        "pickup_schedule",
+        "sick",
+        "timetable",
+        "unplanned_attendance"
+      ]
+    },
+    {
+      "name": "DayPlanningStatus",
+      "values": [
+        "comes_today",
+        "not_coming_today"
+      ]
+    },
+    {
+      "name": "DepartureMode",
+      "values": [
+        "accompanied",
+        "alone",
+        "bus",
+        "pickup"
+      ]
+    },
+    {
+      "name": "EnrollmentPhaseAudience",
+      "values": [
+        "existing_students",
+        "linked_parents",
+        "new_students",
+        "open"
+      ]
+    },
+    {
+      "name": "EnrollmentPhaseKind",
+      "values": [
+        "custom",
+        "holiday",
+        "school_year"
+      ]
+    },
+    {
+      "name": "GuardianContactMethod",
+      "values": [
+        "email",
+        "mobile",
+        "phone",
+        "sms"
+      ]
+    },
+    {
+      "name": "GuardianPhoneType",
+      "values": [
+        "home",
+        "mobile",
+        "other",
+        "work"
+      ]
+    },
+    {
+      "name": "GuardianRelationshipType",
+      "values": [
+        "guardian",
+        "other",
+        "parent",
+        "relative"
+      ]
+    },
+    {
+      "name": "PickupStatus",
+      "values": [
+        "Geht alleine nach Hause",
+        "Geht mit anderem Kind",
+        "Wird abgeholt"
+      ]
+    },
+    {
+      "name": "StudentConsentKey",
+      "values": [
+        "agb",
+        "data_processing",
+        "email_contact",
+        "photo"
+      ]
+    },
+    {
+      "name": "StudentConsentState",
+      "values": [
+        "granted",
+        "not_recorded",
+        "withdrawn"
+      ]
+    },
+    {
+      "name": "SupervisorRole",
+      "values": [
+        "teacher"
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "ArrivalScheduleRequestItem",
+      "go_type": "careplanhttp.ArrivalScheduleRequestItem",
+      "request": true,
+      "fields": [
+        {
+          "name": "weekday",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "expected_arrival",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "AttendanceActorResponse",
+      "go_type": "presenceprojectionhttp.AttendanceActorResponse",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "enum",
+            "ref": "AttendanceActorKind"
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassHandover",
+      "go_type": "presenceprojectionhttp.ClassHandover",
+      "fields": [
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "handed_over_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "handed_over_by",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absent",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CompanionEntry",
+      "go_type": "careplanhttp.CompanionEntry",
+      "request": true,
+      "fields": [
+        {
+          "name": "companion_student_id",
+          "optional": true,
+          "schema": {
+            "kind": "lax_id"
+          }
+        },
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "EnrollablePhaseResponse",
+      "go_type": "parent.EnrollablePhaseResponse",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_slug",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_subdomain",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phase_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "phase_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phase_name_translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "phase_kind",
+          "schema": {
+            "kind": "enum",
+            "ref": "EnrollmentPhaseKind"
+          }
+        },
+        {
+          "name": "service_start_date",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "service_end_date",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "enrollment_open_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "enrollment_close_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "already_linked",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "audience",
+          "schema": {
+            "kind": "enum",
+            "ref": "EnrollmentPhaseAudience"
+          }
+        }
+      ]
+    },
+    {
+      "name": "NameStudentResponse",
+      "go_type": "presenceprojectionhttp.NameStudentResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "NewGuardianPhone",
+      "go_type": "peopledirectory.NewGuardianPhone",
+      "request": true,
+      "fields": [
+        {
+          "name": "phone_number",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone_type",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "GuardianPhoneType"
+          }
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_primary",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "NewStudentGuardian",
+      "go_type": "peopledirectory.NewStudentGuardian",
+      "request": true,
+      "fields": [
+        {
+          "name": "guardian_profile_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_street",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_city",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_postal_code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "preferred_contact_method",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "GuardianContactMethod"
+          }
+        },
+        {
+          "name": "language_preference",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "relationship_type",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "GuardianRelationshipType"
+          }
+        },
+        {
+          "name": "guardian_role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_primary",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_emergency_contact",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "can_pickup",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "pickup_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "emergency_priority",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "phone_numbers",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "NewGuardianPhone"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PickupScheduleRequest",
+      "go_type": "careplanhttp.PickupScheduleRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "weekday",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "SlimStudentResponse",
+      "go_type": "presenceprojectionhttp.SlimStudentResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "current_location",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "location_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "current_room_color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sick",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "sick_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "excused",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "excused_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "class_trip",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "class_trip_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "day_planning_status",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "DayPlanningStatus"
+          }
+        },
+        {
+          "name": "day_planning_reason",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "DayPlanningReason"
+          }
+        },
+        {
+          "name": "day_planning_label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pending_excused_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "teacher_hints",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "TeacherHint"
+            }
+          }
+        },
+        {
+          "name": "class_handover",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ClassHandover"
+          }
+        },
+        {
+          "name": "departure_modes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "enum",
+              "ref": "DepartureMode"
+            }
+          }
+        },
+        {
+          "name": "departure_label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "departure_is_exception",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "pickup_is_exception",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "pickup_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "arrival_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "arrival_is_exception",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "arrival_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "actual_arrival_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "actual_pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "companion_student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "photo_url",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "photo_consent_given",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_full_access",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentConsentResponse",
+      "go_type": "presenceprojectionhttp.StudentConsentResponse",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "enum",
+            "ref": "StudentConsentKey"
+          }
+        },
+        {
+          "name": "state",
+          "schema": {
+            "kind": "enum",
+            "ref": "StudentConsentState"
+          }
+        },
+        {
+          "name": "changed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentDetailResponse",
+      "go_type": "presenceprojectionhttp.StudentDetailResponse",
+      "fields": [
+        {
+          "name": "privacy_consent",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "StudentPrivacyConsentResponse"
+          }
+        },
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "person_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tag_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birthday",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "current_location",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "location_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "current_room_color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_street",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_city",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_postal_code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "extra_info",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "health_info",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_status",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "PickupStatus"
+          }
+        },
+        {
+          "name": "pickup_days",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "pickup_is_exception",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "pickup_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "arrival_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "arrival_is_exception",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "arrival_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "actual_arrival_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "actual_pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "teacher_hints",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "TeacherHint"
+            }
+          }
+        },
+        {
+          "name": "actual_pickup_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "departure_days",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "enum",
+              "ref": "DepartureMode"
+            }
+          }
+        },
+        {
+          "name": "allowed_departure_modes",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "array",
+              "nullable": true,
+              "elem": {
+                "kind": "enum",
+                "ref": "DepartureMode"
+              }
+            }
+          }
+        },
+        {
+          "name": "departure_companion_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "companion_student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "companions_changed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "bus",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "bus_days",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "sick",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "sick_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "excused",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "excused_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "class_trip",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "class_trip_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "day_planning_status",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "DayPlanningStatus"
+          }
+        },
+        {
+          "name": "day_planning_reason",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "DayPlanningReason"
+          }
+        },
+        {
+          "name": "day_planning_label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pending_excused_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "class_handover",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ClassHandover"
+          }
+        },
+        {
+          "name": "photo_url",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "photo_consent_given",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "photo_consent_given_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "photo_consent_given_by",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "agb_accepted_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "data_processing_accepted_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "email_contact_accepted_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "care_ends_on",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "care_ended",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "care_exit_recorded",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "has_full_access",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_write_access",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "consents",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "StudentConsentResponse"
+            }
+          }
+        },
+        {
+          "name": "has_absence_write_access",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_sick_excused_write_access",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "group_supervisors",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "SupervisorContact"
+            }
+          }
+        },
+        {
+          "name": "attendance_log_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "feedback_enabled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "actual_arrival_by",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "AttendanceActorResponse"
+          }
+        },
+        {
+          "name": "actual_pickup_by",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "AttendanceActorResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentPrivacyConsentResponse",
+      "go_type": "presenceprojectionhttp.StudentPrivacyConsentResponse",
+      "fields": [
+        {
+          "name": "accepted",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "data_retention_days",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentRequest",
+      "go_type": "careplanhttp.StudentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tag_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birthday",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "address_street",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_city",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_postal_code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "extra_info",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "health_info",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "departure_days",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "enum",
+              "ref": "DepartureMode"
+            }
+          }
+        },
+        {
+          "name": "allowed_departure_modes",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "array",
+              "nullable": true,
+              "elem": {
+                "kind": "enum",
+                "ref": "DepartureMode"
+              }
+            }
+          }
+        },
+        {
+          "name": "departure_companion_note",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "pickup_status",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "nullable": true,
+            "ref": "PickupStatus"
+          }
+        },
+        {
+          "name": "pickup_days",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "bus",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "bus_days",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "guardians",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "NewStudentGuardian"
+            }
+          }
+        },
+        {
+          "name": "arrival_schedules",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ArrivalScheduleRequestItem"
+            }
+          }
+        },
+        {
+          "name": "pickup_schedules",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PickupScheduleRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StudentResponse",
+      "go_type": "presenceprojectionhttp.StudentResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "person_id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tag_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birthday",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "current_location",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "location_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "current_room_color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_street",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_city",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "address_postal_code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "extra_info",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "health_info",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_status",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "PickupStatus"
+          }
+        },
+        {
+          "name": "pickup_days",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "pickup_is_exception",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "pickup_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "arrival_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "arrival_is_exception",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "arrival_notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "actual_arrival_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "actual_pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "teacher_hints",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "TeacherHint"
+            }
+          }
+        },
+        {
+          "name": "actual_pickup_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "departure_days",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "enum",
+              "ref": "DepartureMode"
+            }
+          }
+        },
+        {
+          "name": "allowed_departure_modes",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "array",
+              "nullable": true,
+              "elem": {
+                "kind": "enum",
+                "ref": "DepartureMode"
+              }
+            }
+          }
+        },
+        {
+          "name": "departure_companion_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "companion_student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "legacy_id"
+            }
+          }
+        },
+        {
+          "name": "companions_changed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "bus",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "bus_days",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "sick",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "sick_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "excused",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "excused_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "class_trip",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "class_trip_since",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "day_planning_status",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "DayPlanningStatus"
+          }
+        },
+        {
+          "name": "day_planning_reason",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "DayPlanningReason"
+          }
+        },
+        {
+          "name": "day_planning_label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pending_excused_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "class_handover",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ClassHandover"
+          }
+        },
+        {
+          "name": "photo_url",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "photo_consent_given",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "photo_consent_given_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "photo_consent_given_by",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "agb_accepted_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "data_processing_accepted_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "email_contact_accepted_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "care_ends_on",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "care_ended",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "care_exit_recorded",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_full_access",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SupervisorContact",
+      "go_type": "presenceprojectionhttp.SupervisorContact",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "legacy_id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "role",
+          "schema": {
+            "kind": "enum",
+            "ref": "SupervisorRole"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TeacherHint",
+      "go_type": "presenceprojectionhttp.TeacherHint",
+      "fields": [
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "author_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "UpdateStudentRequest",
+      "go_type": "careplanhttp.UpdateStudentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "birthday",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "tag_id",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "legacy_id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "address_street",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "address_city",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "address_postal_code",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "health_info",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "extra_info",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "allowed_departure_modes",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "array",
+              "nullable": true,
+              "elem": {
+                "kind": "enum",
+                "ref": "DepartureMode"
+              }
+            }
+          }
+        },
+        {
+          "name": "departure_days",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "enum",
+              "ref": "DepartureMode"
+            }
+          }
+        },
+        {
+          "name": "departure_companion_note",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "pickup_status",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "nullable": true,
+            "ref": "PickupStatus"
+          }
+        },
+        {
+          "name": "pickup_days",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "bus",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "bus_days",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "sick",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "sick_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "excused",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "photo_consent_given",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "companions",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CompanionEntry"
+            }
+          }
+        },
+        {
+          "name": "companions_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "extend_companion_plans",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "confirmed_companion_extensions",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CompanionEntry"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

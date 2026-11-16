@@ -37,6 +37,8 @@ case "${1:-quality}" in
   quality)
     quality_step go-format formatting
     quality_step production-build go build -tags= ./...
+    # Links the build above and compares the generated contract with the commit.
+    quality_step contract go run . gencontract --check
     # CI runs ./test in test.yml for every backend selection, so the lint job
     # skips this step. Pre-push runs no changed-test selection and keeps it.
     if [[ "${SKIP_SOURCE_RATCHETS:-}" != true ]]; then

@@ -65,7 +65,7 @@ func (rs *Resource) exportStaffBirthdays(w http.ResponseWriter, r *http.Request)
 	doc := lists.Document{
 		Title:       title,
 		Subtitle:    staffExportSubtitle(len(entries)),
-		GeneratedAt: time.Now(),
+		GeneratedAt: rs.now(),
 		Filters:     monthFilterLabels(req.Months),
 		Columns:     lists.ResolveColumns(nil, lists.PresetStaffBirthdayList),
 		Rows:        buildStaffBirthdayRows(entries),

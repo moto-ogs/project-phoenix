@@ -1,27 +1,23 @@
-import { proxyGet } from "~/lib/parent/route-wrapper.server";
+import { contractGet } from "~/lib/contract/client.server";
+import { routes } from "~/lib/contract/parent-me.generated";
+import { createParentGetHandler } from "~/lib/parent/route-wrapper.server";
 
-interface BackendEnrollablePhase {
-  school_id: string;
-  school_name: string;
-  school_slug: string;
-  phase_id: string;
-  phase_name: string;
-  phase_kind: "school_year" | "holiday" | "custom";
-  service_start_date: string;
-  service_end_date: string;
-  enrollment_open_at?: string;
-  enrollment_close_at?: string;
-  already_linked: boolean;
-  audience: "open" | "new_students" | "linked_parents";
-}
+const ENROLLABLE = routes["GET /parent/me/enrollable-schools"];
 
 /**
- * Proxy GET /api/parent/me/enrollable-schools → backend
- * /parent/me/enrollable-schools. Returns the enrollment phases the calling
- * parent (matched by account_id from the parent JWT) may actually apply to,
- * pre-filtered and sorted server-side. account_id is read from the JWT,
- * never from query/body.
+ * The enrollment phases the calling guardian may apply to, pre-filtered and
+ * sorted by the backend. The account comes from the parent session's token,
+ * never from query or body. The answer is checked against the generated
+ * contract (ADR 0270); one that does not match is a 502.
  */
-export const GET = proxyGet<BackendEnrollablePhase[]>(
-  "/parent/me/enrollable-schools",
-);
+export const GET = createParentGetHandler(async (request, token) => {
+  const result = await contractGet(
+    `${ENROLLABLE.method} ${ENROLLABLE.pattern}`,
+    ENROLLABLE.response,
+    ENROLLABLE.pattern,
+    token,
+    { signal: request.signal },
+  );
+  if (!result.ok) throw result.error.cause;
+  return result.value.data;
+});

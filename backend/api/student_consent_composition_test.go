@@ -22,11 +22,21 @@ type stubStudentConsentTrail struct {
 	auditModels.StudentConsentChangeRepository
 	entries []*auditModels.StudentConsentChange
 	changes []*auditModels.StudentConsentChange
+	batches int
 }
 
 func (r *stubStudentConsentTrail) Create(_ context.Context, entry *auditModels.StudentConsentChange) error {
 	recorded := *entry
 	r.entries = append(r.entries, &recorded)
+	return nil
+}
+
+func (r *stubStudentConsentTrail) CreateAll(_ context.Context, entries []*auditModels.StudentConsentChange) error {
+	r.batches++
+	for _, entry := range entries {
+		recorded := *entry
+		r.entries = append(r.entries, &recorded)
+	}
 	return nil
 }
 
@@ -156,4 +166,35 @@ func TestStudentConsentsRecordGrantedFieldsOnCreate(t *testing.T) {
 	require.Len(t, trail.entries, 1)
 	assert.Equal(t, auditModels.StudentConsentEmailContact, trail.entries[0].ConsentKey)
 	assert.Nil(t, trail.entries[0].ActorAccountID)
+}
+
+// TestStudentPhotoRuntimeRecordsEndedConsentsInOneBatch pins the trail of a
+// photo switch-off (#7208): one withdrawal of the photo consent per child,
+// from the tenant portal and by the acting account, written in one batch.
+func TestStudentPhotoRuntimeRecordsEndedConsentsInOneBatch(t *testing.T) {
+	t.Parallel()
+
+	trail := &stubStudentConsentTrail{}
+	runtime := owners.StudentPhotoRuntime{ConsentTrail: trail}
+	actor := int64(4711)
+	changedAt := time.Date(2026, time.November, 16, 9, 30, 0, 0, time.UTC)
+
+	require.NoError(t, runtime.RecordPhotoConsentsEnded(context.Background(), []int64{11, 12}, &actor, changedAt))
+	require.NoError(t, runtime.RecordPhotoConsentsEnded(context.Background(), nil, &actor, changedAt),
+		"no ended consent writes nothing")
+
+	assert.Equal(t, 1, trail.batches)
+	require.Len(t, trail.entries, 2)
+	for i, studentID := range []int64{11, 12} {
+		entry := trail.entries[i]
+		assert.Equal(t, studentID, entry.StudentID)
+		assert.Equal(t, auditModels.StudentConsentPhoto, entry.ConsentKey)
+		assert.Equal(t, auditModels.StudentConsentWithdrawn, entry.Action)
+		assert.Equal(t, auditModels.StudentConsentSourceTenantPortal, entry.Source)
+		assert.Equal(t, &actor, entry.ActorAccountID)
+		assert.True(t, changedAt.Equal(entry.CreatedAt))
+	}
+
+	require.Error(t, owners.StudentPhotoRuntime{}.RecordPhotoConsentsEnded(context.Background(), []int64{11}, nil, changedAt),
+		"an unwired trail must not drop the withdrawals silently")
 }

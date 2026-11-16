@@ -23,34 +23,51 @@ func NewDemoSchoolDatabases(store ports.DemoSchoolDatabaseStore) (*DemoSchoolDat
 	return &DemoSchoolDatabases{store: store}, nil
 }
 
-// EraseRetiredDemoSchoolDatabases erases each due school on its own. Only an
-// erased school counts. A busy school waits for the next run without failing
-// it; a failed school is an error of the run, so the run never reports
-// success over a school it could not erase.
+// EraseRetiredDemoSchoolDatabases erases each due school on its own, then
+// each Demo-Träger whose last school is gone (ADR 0271). Only an erased
+// school or Träger counts. A busy one waits for the next run without failing
+// it; a failed one is an error of the run, so the run never reports success
+// over a school or Träger it could not erase.
 func (d *DemoSchoolDatabases) EraseRetiredDemoSchoolDatabases(ctx context.Context) (int, int, error) {
-	ids, err := d.store.DueDemoSchoolDatabases(ctx, demoSchoolDatabaseBatch)
+	schools, err := d.store.DueDemoSchoolDatabases(ctx, demoSchoolDatabaseBatch)
 	if err != nil {
 		return 0, 0, err
 	}
-	var (
-		erased, busy int
-		failed       []error
-	)
-	for _, id := range ids {
+	var run demoErasureRun
+	for _, id := range schools {
 		status, code, err := d.store.EraseDemoSchoolDatabase(ctx, id)
-		switch {
-		case err != nil:
-			failed = append(failed, fmt.Errorf("demo school %d: database not erased, retried next run: %w", id, err))
-		case status == ports.DemoSchoolErased:
-			erased++
-		case status == ports.DemoSchoolBusy:
-			busy++
-		case status == ports.DemoSchoolNotDue:
-		default:
-			failed = append(failed, fmt.Errorf("demo school %d: database erasure %s (SQLSTATE %q), retried next run", id, status, code))
-		}
+		run.note("demo school", id, status, code, err)
 	}
-	return erased, busy, errors.Join(failed...)
+	// Erased schools free their Träger in the same run.
+	traegers, err := d.store.DueDemoTraegers(ctx, demoSchoolDatabaseBatch)
+	if err != nil {
+		return run.erased, run.busy, errors.Join(append(run.failed, err)...)
+	}
+	for _, id := range traegers {
+		status, code, err := d.store.EraseDemoTraeger(ctx, id)
+		run.note("demo Träger", id, status, code, err)
+	}
+	return run.erased, run.busy, errors.Join(run.failed...)
+}
+
+// demoErasureRun counts the outcomes of one run.
+type demoErasureRun struct {
+	erased, busy int
+	failed       []error
+}
+
+func (r *demoErasureRun) note(kind string, id int64, status, code string, err error) {
+	switch {
+	case err != nil:
+		r.failed = append(r.failed, fmt.Errorf("%s %d: not erased, retried next run: %w", kind, id, err))
+	case status == ports.DemoSchoolErased:
+		r.erased++
+	case status == ports.DemoSchoolBusy:
+		r.busy++
+	case status == ports.DemoSchoolNotDue:
+	default:
+		r.failed = append(r.failed, fmt.Errorf("%s %d: database erasure %s (SQLSTATE %q), retried next run", kind, id, status, code))
+	}
 }
 
 // DemoSchoolErasure erases retired demo schools: their files first (#5544),

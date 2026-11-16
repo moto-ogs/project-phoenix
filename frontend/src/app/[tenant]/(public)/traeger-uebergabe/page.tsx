@@ -2,10 +2,10 @@
 
 import { signIn, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
+import { AuthProgress } from "~/components/auth/auth-progress";
 import { MotoBrand } from "~/components/auth/moto-brand";
 import { ButtonLink } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
-import { Loading } from "~/components/ui/loading";
 import { SectionCard } from "~/components/ui/section-card";
 import { createLogger } from "~/lib/logger";
 import { clearSessionCache } from "~/lib/session-cache";
@@ -99,8 +99,8 @@ export default function TraegerHandoffPage() {
       {/* `relative` lifts the content above the pattern's ::before layer. */}
       <div className="relative flex w-full max-w-md flex-col items-center gap-8">
         <MotoBrand />
-        {failed ? (
-          <SectionCard className="w-full">
+        <SectionCard className="w-full">
+          {failed ? (
             <EmptyState
               className="py-4"
               title={TRAEGER_HANDOFF_FAILED_TITLE}
@@ -111,10 +111,15 @@ export default function TraegerHandoffPage() {
                 </ButtonLink>
               }
             />
-          </SectionCard>
-        ) : (
-          <Loading message={TRAEGER_HANDOFF_OPENING} />
-        )}
+          ) : (
+            // Dieselbe Karte wie beim Fehler, damit nichts springt.
+            <AuthProgress
+              state="checking"
+              title="Einen Moment bitte"
+              description={TRAEGER_HANDOFF_OPENING}
+            />
+          )}
+        </SectionCard>
       </div>
     </main>
   );

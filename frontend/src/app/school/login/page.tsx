@@ -8,6 +8,7 @@
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AuthShell, MotoBrand } from "~/components/auth/auth-shell";
+import { AuthProgress } from "~/components/auth/auth-progress";
 import { MFAChallengeForm } from "~/components/auth/mfa-challenge-form";
 import { MFAEnrollmentScreen } from "~/components/auth/mfa-enrollment-screen";
 import {
@@ -22,7 +23,6 @@ import { useLoginSessionCheck } from "~/lib/login-session-notice";
 import type { MFAStep } from "~/lib/sign-in-answer";
 import { login as loginApi } from "~/lib/mfa-api";
 import { createLogger } from "~/lib/logger";
-import { Loading } from "~/components/ui/loading";
 
 const logger = createLogger({ component: "SchoolLoginPage" });
 
@@ -103,9 +103,19 @@ function LoginForm() {
   };
 
   return (
-    <AuthShell {...SHELL_COPY} variant="tenant" brand={<MotoBrand />}>
+    <AuthShell
+      {...SHELL_COPY}
+      // Während moto prüft, gibt es nichts einzugeben.
+      subtitle={isCheckingAuth ? undefined : SHELL_COPY.subtitle}
+      variant="tenant"
+      brand={<MotoBrand />}
+    >
       {isCheckingAuth ? (
-        <Loading message="Sitzung wird überprüft …" />
+        <AuthProgress
+          state="checking"
+          title="Einen Moment bitte"
+          description="moto prüft Ihre Anmeldung."
+        />
       ) : mfaStep ? (
         <MFAChallengeForm
           scope="school"
@@ -156,8 +166,16 @@ export default function SchoolLoginPage() {
   return (
     <Suspense
       fallback={
-        <AuthShell {...SHELL_COPY} variant="tenant" brand={<MotoBrand />}>
-          <Loading message="Anmeldung wird vorbereitet …" />
+        <AuthShell
+          title={SHELL_COPY.title}
+          variant="tenant"
+          brand={<MotoBrand />}
+        >
+          <AuthProgress
+            state="checking"
+            title="Einen Moment bitte"
+            description="moto prüft Ihre Anmeldung."
+          />
         </AuthShell>
       }
     >

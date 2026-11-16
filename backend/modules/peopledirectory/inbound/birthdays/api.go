@@ -16,6 +16,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -40,6 +41,8 @@ type Resource struct {
 	ListExportService  lists.Renderer
 	UserContextService common.StudentAccessSource
 	logger             *slog.Logger
+	// now is the root's clock the staff export is stamped with.
+	now func() time.Time
 }
 
 // NewResource creates the birthdays resource. The birthday settings are
@@ -50,12 +53,17 @@ func NewResource(
 	listExportService lists.Renderer,
 	userContextService common.StudentAccessSource,
 	logger *slog.Logger,
+	now func() time.Time,
 ) *Resource {
+	if now == nil {
+		panic("birthdays resource: the clock is required")
+	}
 	return &Resource{
 		BirthdayService:    birthdayService,
 		ListExportService:  listExportService,
 		UserContextService: userContextService,
 		logger:             logger,
+		now:                now,
 	}
 }
 

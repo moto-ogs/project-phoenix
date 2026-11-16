@@ -531,16 +531,20 @@
   border-color: var(--color-gray-200);
   background: var(--color-white);
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* Its own stacking context, as the former backdrop blur gave it: a raised
+     layer inside a card stays inside it. The blur itself sat under an opaque
+     white fill, so nothing showed it, yet the browser redrew it under every
+     card on every scrolled frame. No `backdrop-filter` (frontend-ui-kit.md,
+     Motion). */
+  isolation: isolate;
 }
 
 /* An open dropdown or popover lifts its surface above the next one. A card's
    own disclosure toggle (`SectionCollapseToggle`) opens no layer: it must not
    lift the card above a sticky save bar. */
 .moto-content-surface:has(
-    [aria-expanded="true"]:not([data-section-collapse-toggle])
-  ) {
+  [aria-expanded="true"]:not([data-section-collapse-toggle])
+) {
   position: relative;
   z-index: 60;
 }
@@ -753,8 +757,6 @@
   }
   .moto-content-surface {
     box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
   }
   .moto-dotted-background--guide .moto-content-surface {
     background: transparent;
@@ -770,7 +772,9 @@
 
 .moto-hover-elevated:not(:disabled):hover {
   border-color: #d1d5db;
-  background-color: rgb(249 250 251 / 0.4);
+  /* Opaque: gray-50 at 40 % over white, as it looked on a white card. A
+     translucent fill would show the dotted page behind a tile sharply. */
+  background-color: color-mix(in srgb, var(--color-gray-50) 40%, white);
   box-shadow:
     0 3px 10px rgb(15 23 42 / 0.045),
     0 0 0 1px rgb(15 23 42 / 0.045);
@@ -881,12 +885,12 @@ html[data-chat-page-lock] body {
    größere Schrift bleibt. */
 @media (pointer: coarse) {
   :is(input, textarea, select):not(
-      [class*="text-lg"],
-      [class*="text-xl"],
-      [class*="text-2xl"],
-      [class*="text-3xl"],
-      [class*="text-4xl"]
-    ) {
+    [class*="text-lg"],
+    [class*="text-xl"],
+    [class*="text-2xl"],
+    [class*="text-3xl"],
+    [class*="text-4xl"]
+  ) {
     font-size: 16px;
   }
 }
@@ -986,6 +990,36 @@ html[data-chat-page-lock] body {
   animation: fadeInUp 300ms ease-out forwards;
 }
 
+/* Der Weichzeichner hinter Dialogen, Seitenleisten und Schubladen
+   (`OVERLAY_BACKDROP_BLUR_CLASS`): sofort mit dem Grau, wie vor #7252. Nur
+   die Form ohne Präfix: lightningcss fasst beide sonst im Produktions-Build
+   zu `-webkit-backdrop-filter` zusammen, das Chrome nicht kennt, und setzt
+   das Präfix selbst, wo die Zielbrowser es brauchen. */
+.moto-overlay-blur {
+  backdrop-filter: blur(8px);
+}
+
+/* Glas für kleine, ruhende Flächen (Chips der Anmeldeseite): wenig Fläche,
+   nichts darunter bewegt sich. Nie auf Leisten über scrollendem Inhalt. */
+.moto-glass {
+  backdrop-filter: blur(8px);
+}
+
+/* A short bar that fills once, before a redirect (invitation accepted). It
+   slides in from the left; a growing width would cost a layout per frame. */
+@keyframes progressFill {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-progressFill {
+  animation: progressFill 1.5s ease-in-out forwards;
+}
+
 /* Wer weniger Bewegung eingestellt hat, sieht die eigenen Animationen nicht
    (#7114): Ein- und Ausblenden springen sofort an ihr Ende, Pulsieren steht
    still. `forwards` hält den Endzustand, die Schließ-Timer der Modals
@@ -997,7 +1031,8 @@ html[data-chat-page-lock] body {
   .animate-bounceIn,
   .animate-slideInRight,
   .animate-fadeIn,
-  .animate-fadeInUp {
+  .animate-fadeInUp,
+  .animate-progressFill {
     animation-duration: 1ms;
     animation-delay: 0ms;
   }
@@ -1057,5 +1092,57 @@ html[data-chat-page-lock] body {
   .moto-nav-progress {
     transform: scaleX(1);
     animation: moto-nav-progress-static 0s linear 150ms forwards;
+  }
+}
+
+/* Unbestimmter Fortschritt (ProgressBar indeterminate): ein Abschnitt
+   gleitet hin und her durch die Spur. Nur transform, damit der Kompositor ihn zeichnet;
+   bei reduzierter Bewegung steht der Balken ruhig und voll. */
+.moto-progress-indeterminate {
+  animation: moto-progress-indeterminate 1.2s cubic-bezier(0.65, 0, 0.35, 1)
+    infinite alternate;
+  will-change: transform;
+}
+
+@keyframes moto-progress-indeterminate {
+  /* Der Abschnitt (40 % der Spur) ragt an beiden Enden noch hinein: die
+     Spur wirkt nie leer, auch nicht im langsamen Teil der Kurve. */
+  0% {
+    transform: translateX(-60%);
+  }
+  100% {
+    transform: translateX(210%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moto-progress-indeterminate {
+    width: 100%;
+    animation: none;
+    transform: none;
+  }
+}
+
+/* Ganzseitige Ladeanzeige (Loading fullPage): erst nach 400 ms sichtbar.
+   Kürzere Wartezeiten, etwa ein Neuladen, zeigen sonst einen weißen Schirm
+   mit Spinner, der sofort wieder verschwindet. Solange nichts Sichtbares
+   gezeichnet ist, hält der Browser beim Neuladen die alte Seite stehen
+   (Paint Holding). Bei reduzierter Bewegung erscheint sie ohne Überblendung. */
+.moto-loading-delayed {
+  animation: moto-loading-appear 200ms ease-out 400ms both;
+}
+
+@keyframes moto-loading-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moto-loading-delayed {
+    animation-duration: 1ms;
   }
 }

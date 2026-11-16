@@ -164,9 +164,9 @@ func TestParentNotificationPreferencesHTTPQueryBudget(t *testing.T) {
 			require.NoError(t, testpkg.TenantCommand3(t, ctx, db, consent.RecordConsent, chain.AccountID, row.key, row.enabled))
 		}
 		for _, row := range expected {
-			// The closing day is on until the family switches it off (#7144).
-			row["enabled"] = (n >= 3 && row["key"] == "parent_announcement") || (n == 8 && row["key"] == "parent_appointment") ||
-				row["key"] == "parent_school_closing_day_changed"
+			// The room change for today or tomorrow is on without a stored
+			// decision (#7141).
+			row["enabled"] = row["key"] == "parent_room_changed" || row["key"] == "parent_school_closing_day_changed" || (n >= 3 && row["key"] == "parent_announcement") || (n == 8 && row["key"] == "parent_appointment")
 		}
 		count, countErr := db.NewSelect().TableExpr("users.notification_preferences").Where("account_id = ?", chain.AccountID).Where("tenant_id IN (?, ?)", chain.TenantID, second.TenantID).Count(context.Background())
 		require.NoError(t, countErr)
@@ -291,7 +291,30 @@ func notificationBudgetCatalogue(t *testing.T, portal string) []map[string]any {
 	t.Helper()
 	var rows []map[string]any
 	require.NoError(t, json.Unmarshal([]byte(notificationBudgetCatalogues[portal]), &rows))
+	if portal == "school" {
+		rows = insertBudgetRow(rows, "instance_room_changed", schoolClosingDayBudgetRow())
+	}
+	if portal == "parent" {
+		rows = insertBudgetRow(rows, "parent_room_changed", parentSchoolClosingDayBudgetRow())
+	}
 	return rows
+}
+
+func insertBudgetRow(rows []map[string]any, after string, entry map[string]any) []map[string]any {
+	for i, row := range rows {
+		if row["key"] == after {
+			return append(rows[:i+1], append([]map[string]any{entry}, rows[i+1:]...)...)
+		}
+	}
+	return rows
+}
+
+func schoolClosingDayBudgetRow() map[string]any {
+	return map[string]any{"key": "school_closing_day_changed", "label": "Schließtage", "description": "Wenn ein Schließtag eingetragen, geändert oder gelöscht wird. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Schließtagen in den nächsten 14 Tagen.", "group": "termine", "enabled": true, "available": true}
+}
+
+func parentSchoolClosingDayBudgetRow() map[string]any {
+	return map[string]any{"key": "parent_school_closing_day_changed", "label": "Schließtage", "description": "Wenn die Schule einen Schließtag einträgt, ändert oder löscht. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Schließtagen in den nächsten 14 Tagen.", "group": "termine", "enabled": true, "available": true}
 }
 
 var notificationBudgetCatalogues = map[string]string{
@@ -395,6 +418,22 @@ var notificationBudgetCatalogues = map[string]string{
     "available": true
   },
   {
+    "key": "class_timetable_changed",
+    "label": "Stundenplan Ihrer Klassen: heute und morgen",
+    "description": "Wenn sich der Unterrichtsschluss einer Klasse, der Sie zugeordnet sind oder deren Kinder in Ihrer Gruppe sind, für heute oder morgen ändert. Der Hinweis in moto kommt immer.",
+    "group": "kinder",
+    "enabled": true,
+    "available": true
+  },
+  {
+    "key": "class_timetable_changed_ahead",
+    "label": "Stundenplan Ihrer Klassen: spätere Tage",
+    "description": "Mitteilung aufs Handy auch, wenn sich der Unterrichtsschluss einer Ihrer Klassen in 2 bis 14 Tagen ändert. Der Hinweis in moto kommt immer.",
+    "group": "kinder",
+    "enabled": false,
+    "available": true
+  },
+  {
     "key": "staff_message",
     "label": "Nachrichten von Kolleginnen und Kollegen",
     "description": "Wenn Ihnen jemand aus dem Team eine Nachricht im Team-Chat schreibt.",
@@ -419,11 +458,19 @@ var notificationBudgetCatalogues = map[string]string{
     "available": true
   },
   {
-    "key": "school_closing_day_changed",
-    "label": "Schließtage",
-    "description": "Wenn ein Schließtag eingetragen, geändert oder gelöscht wird. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Schließtagen in den nächsten 14 Tagen.",
+    "key": "instance_room_changed",
+    "label": "Raumänderung heute oder morgen",
+    "description": "Wenn ein Termin, für den Sie eingeplant sind, heute oder morgen in einem anderen Raum stattfindet. Der Hinweis in moto kommt immer.",
     "group": "termine",
     "enabled": true,
+    "available": true
+  },
+  {
+    "key": "instance_room_changed_later",
+    "label": "Raumänderung an späteren Tagen",
+    "description": "Wenn ein Termin, für den Sie eingeplant sind, ab übermorgen in einem anderen Raum stattfindet. Der Hinweis in moto kommt immer. Die Mitteilung aufs Handy kommt nur, wenn Sie sie einschalten, und nur für die nächsten 14 Tage.",
+    "group": "termine",
+    "enabled": false,
     "available": true
   }
 ]`,
@@ -435,6 +482,14 @@ var notificationBudgetCatalogues = map[string]string{
     "group": "kinder",
     "enabled": false,
     "available": false
+  },
+  {
+    "key": "parent_class_timetable_changed",
+    "label": "Stundenplan der Klasse",
+    "description": "Wenn sich der Unterrichtsschluss in der Klasse Ihres Kindes ändert. Der Hinweis in moto kommt immer. Schalten Sie das hier ein, kommt bei Änderungen in den nächsten 14 Tagen auch eine Mitteilung aufs Handy.",
+    "group": "kinder",
+    "enabled": false,
+    "available": true
   },
   {
     "key": "parent_announcement",
@@ -485,11 +540,19 @@ var notificationBudgetCatalogues = map[string]string{
     "available": true
   },
   {
-    "key": "parent_school_closing_day_changed",
-    "label": "Schließtage",
-    "description": "Wenn die Schule einen Schließtag einträgt, ändert oder löscht. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Schließtagen in den nächsten 14 Tagen.",
+    "key": "parent_room_changed",
+    "label": "Raumänderung heute oder morgen",
+    "description": "Wenn ein Termin Ihres Kindes heute oder morgen in einem anderen Raum stattfindet.",
     "group": "termine",
     "enabled": true,
+    "available": true
+  },
+  {
+    "key": "parent_room_changed_later",
+    "label": "Raumänderung an späteren Tagen",
+    "description": "Wenn ein Termin Ihres Kindes ab übermorgen in einem anderen Raum stattfindet. Die Mitteilung kommt nur, wenn Sie sie einschalten, und nur für die nächsten 14 Tage.",
+    "group": "termine",
+    "enabled": false,
     "available": true
   }
 ]`,

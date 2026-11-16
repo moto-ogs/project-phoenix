@@ -60,11 +60,6 @@ func (req *SessionActivityRequest) Bind(_ *http.Request) error {
 		return err
 	}
 
-	// Set timestamp to now if not provided
-	if req.Timestamp.IsZero() {
-		req.Timestamp = time.Now()
-	}
-
 	return nil
 }
 

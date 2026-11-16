@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"fmt"
+	"time"
 
 	realtime "github.com/moto-ogs/project-phoenix/realtime"
 
@@ -123,7 +124,7 @@ func BuildDeviceFleet(
 			PickupSchedule: pickups,
 		}),
 		Tenants:             NewDisplayTenantFacts(displaySchoolDirectory{schools: organizations}, settings),
-		Now:                 timezone.Now,
+		Now:                 func() time.Time { return env.Now().In(timezone.Berlin) },
 		OnlineWindowMinutes: NewOnlineWindowMinutes(settings, env.Logger.With("module", "device-fleet")),
 		APIKeys:             DeviceAPIKeys{},
 		Observe: func(observation devicefleetCompose.Observation) {

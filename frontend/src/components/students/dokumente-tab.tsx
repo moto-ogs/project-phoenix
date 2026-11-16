@@ -17,6 +17,7 @@ import {
   type OverflowMenuEntry,
 } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
+import { StudentParentRecordsCard } from "~/components/students/student-parent-records";
 import { StatusBadge } from "~/components/ui/status-badge";
 import {
   useApiErrorDisplay,
@@ -100,10 +101,17 @@ function documentIcon(contentType: string) {
 export function StudentDokumenteTab({
   studentId,
   canRecordAccidents = false,
+  showParentRecords = false,
 }: {
   readonly studentId: string;
   /** student_accidents:manage: shows „Unfall erfassen“ (#4771). */
   readonly canRecordAccidents?: boolean;
+  /**
+   * „Aus moto“ (#4814): the child's Elternbriefe and Einverständnisse, for
+   * the roles that may read the school's letters (admin:*) at a school with
+   * the Eltern-App.
+   */
+  readonly showParentRecords?: boolean;
 }) {
   const [accidentOpen, setAccidentOpen] = useState(false);
   const { data, isLoading, error, mutate } = useSWRAuth<StudentDocumentList>(
@@ -461,6 +469,8 @@ export function StudentDokumenteTab({
           }
         />
       </SectionCard>
+
+      {showParentRecords && <StudentParentRecordsCard studentId={studentId} />}
 
       {canRecordAccidents && (
         <AccidentReportCreateModal

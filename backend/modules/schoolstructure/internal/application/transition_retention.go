@@ -21,15 +21,22 @@ type TransitionRetentionStore interface {
 }
 
 // TransitionRetention is the School Structure grade-transition retention.
-type TransitionRetention struct{ store TransitionRetentionStore }
+type TransitionRetention struct {
+	store TransitionRetentionStore
+	// today is the composition's day clock the retention window ends on.
+	today func() calendar.Date
+}
 
 // NewTransitionRetention composes the deletion of expired grade transitions
 // (#4045) over the store, counted in Berlin calendar days.
-func NewTransitionRetention(store TransitionRetentionStore) *TransitionRetention {
+func NewTransitionRetention(store TransitionRetentionStore, today func() calendar.Date) *TransitionRetention {
 	if store == nil {
 		panic("school structure application: transition retention requires its store")
 	}
-	return &TransitionRetention{store: store}
+	if today == nil {
+		panic("school structure application: transition retention requires its day clock")
+	}
+	return &TransitionRetention{store: store, today: today}
 }
 
 // DeleteExpiredGradeTransitions deletes the transitions that ended before the
@@ -50,6 +57,6 @@ func (r *TransitionRetention) DeleteExpiredGradeTransitions(ctx context.Context,
 	if _, err := lockTransitionGate(ctx, r.store, tenantID.Int64()); err != nil {
 		return 0, err
 	}
-	deleted, _, err := r.store.DeleteTransitionsEndedBefore(ctx, tenantID.Int64(), calendar.TodayDate().AddDays(-retentionDays).BerlinMidnight())
+	deleted, _, err := r.store.DeleteTransitionsEndedBefore(ctx, tenantID.Int64(), r.today().AddDays(-retentionDays).BerlinMidnight())
 	return int(deleted), err
 }

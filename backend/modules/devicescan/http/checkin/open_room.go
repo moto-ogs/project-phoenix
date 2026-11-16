@@ -102,7 +102,7 @@ func (rs *OpenRoomResource) moveToRoom(w http.ResponseWriter, r *http.Request) {
 		RoomName:      result.RoomName,
 		ActiveGroupID: result.RoomSessionID,
 		Moved:         result.Moved,
-		ProcessedAt:   time.Now(),
+		ProcessedAt:   rs.runtime.Now(),
 		Message:       result.Message,
 	}, result.Message)
 }

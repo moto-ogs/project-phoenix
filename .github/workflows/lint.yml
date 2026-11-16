@@ -79,6 +79,15 @@ jobs:
           git fetch --no-tags --filter=blob:none --unshallow origin "$HEAD_SHA"
           node scripts/check-migration-versions.mjs "origin/$BASE_REF" "$HEAD_SHA"
 
+      # One fixed commit is enough: the check reads one file of the base.
+      - name: Compare the contract with the base branch
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          node scripts/check-contract-compat.mjs "$BASE_SHA"
+
       - name: Setup Go with cache
         id: go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0

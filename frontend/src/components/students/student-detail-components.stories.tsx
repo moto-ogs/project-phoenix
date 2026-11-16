@@ -26,14 +26,14 @@ const mockStudent: Student = {
 
 const mockSupervisors: SupervisorContact[] = [
   {
-    id: 1,
+    id: "1",
     first_name: "Anna",
     last_name: "Schmidt",
     email: "anna.schmidt@example.com",
     role: "Gruppenleitung",
   },
   {
-    id: 2,
+    id: "2",
     first_name: "Tom",
     last_name: "Weber",
     role: "Gruppenleitung",

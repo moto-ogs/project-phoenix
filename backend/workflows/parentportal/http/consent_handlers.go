@@ -105,4 +105,11 @@ var grantPhotoConsentErrorRenderer = common.RulesRenderer([]common.ErrorRule{
 	{Target: parentService.ErrPhotoConsentNotWithdrawn, Render: func(err error) render.Renderer {
 		return common.ErrorConflictWithCode(err, common.CodeCarePhotoConsentNotWithdrawn)
 	}},
+	{Target: parentService.ErrPhotoConsentBusy, Render: func(err error) render.Renderer {
+		return common.ErrorConflictWithCode(err, common.CodeCarePhotoConsentBusy)
+	}},
+	// #7208: a new photo consent waits until the school switches photos on.
+	{Target: parentService.ErrPhotosDisabled, Render: func(err error) render.Renderer {
+		return common.ErrorConflictWithCode(err, common.CodeCarePhotosDisabled)
+	}},
 }, common.ErrorInternalServer)

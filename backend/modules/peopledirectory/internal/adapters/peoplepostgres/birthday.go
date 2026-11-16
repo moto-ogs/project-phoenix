@@ -63,7 +63,7 @@ func formatMonthDay(day peopleBirthday.MonthDay) string {
 // check), which is what makes the display degrade gracefully when a school has
 // not maintained every date — the card simply shows fewer names instead of
 // failing (#1542).
-func (r *studentRepository) FindBirthdaysOn(ctx context.Context, days []peopleBirthday.MonthDay) ([]peopleBirthday.BirthdayEntry, error) {
+func (r *studentRepository) FindBirthdaysOn(ctx context.Context, days []peopleBirthday.MonthDay, today calendar.Date) ([]peopleBirthday.BirthdayEntry, error) {
 	if len(days) == 0 {
 		return nil, nil
 	}
@@ -91,7 +91,7 @@ func (r *studentRepository) FindBirthdaysOn(ctx context.Context, days []peopleBi
 		// a staff-facing list of the children the school currently cares for.
 		Where(
 			`("student".enrolled_until IS NULL OR "student".enrolled_until >= ?)`,
-			calendar.TodayDate(),
+			today,
 		)
 
 	query = query.Where(birthdayDayCondition, bun.List(birthdayDayValues(days)))

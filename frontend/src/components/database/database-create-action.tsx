@@ -56,9 +56,9 @@ export function DatabaseCreateAction({
   menuItems,
   tooltip = DEFAULT_TOOLTIP,
 }: DatabaseCreateActionProps) {
-  // `TenantPage` renders actions inside a blurred content surface. A backdrop
-  // filter establishes a containing block for fixed descendants, so the mobile
-  // button must live outside that surface to remain viewport-fixed.
+  // `TenantPage` renders actions inside a content surface, which is its own
+  // stacking context: the mobile button lives outside it so it floats above
+  // the content that follows.
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

@@ -5,6 +5,7 @@ import { bffError } from "~/lib/api-response-error.server";
 import type { StudentGuardianPayload } from "~/lib/guardian-helpers";
 import type { ArrivalScheduleFormEntry } from "~/lib/arrival-schedule-helpers";
 import type { BackendPickupScheduleRequest } from "~/lib/pickup-schedule-helpers";
+import type { StudentRequest } from "./contract/students.generated";
 import { prepareStudentForBackend } from "./student-wire";
 import type { StudentUpdate } from "./student-helpers";
 import type { ConsentPairInput } from "./student-privacy-consent.server";
@@ -41,7 +42,9 @@ export function rejectRetiredStudentContacts(body: object): void {
 }
 
 /** The backend body of a create; refuses a body without the required names. */
-export function buildStudentCreateRequest(body: StudentCreateBody) {
+export function buildStudentCreateRequest(
+  body: StudentCreateBody,
+): StudentRequest {
   rejectRetiredStudentContacts(body);
   const required = [
     {

@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
@@ -19,6 +20,7 @@ func TestNewProvisioningRequiresEveryDependency(t *testing.T) {
 		Organizations:      newFakeOwner(h.engine), ErasureOrderRecords: newFakeOwner(h.engine), Transaction: h.tx, Dashboard: h.dashboard,
 		Identity: h.identity, Devices: h.devices, People: h.people, Presence: h.presence,
 		Categories: h.categories, Settings: h.settings, Audit: h.audit, Secrets: h.secrets,
+		Now: func() time.Time { return fixedTime },
 	}
 	svc, err := NewProvisioning(complete)
 	require.NoError(t, err, "a nil logger falls back to the default")
@@ -40,6 +42,7 @@ func TestNewProvisioningRequiresEveryDependency(t *testing.T) {
 		"settings":              func(d *ProvisioningDependencies) { d.Settings = nil },
 		"audit":                 func(d *ProvisioningDependencies) { d.Audit = nil },
 		"secrets":               func(d *ProvisioningDependencies) { d.Secrets = nil },
+		"clock":                 func(d *ProvisioningDependencies) { d.Now = nil },
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

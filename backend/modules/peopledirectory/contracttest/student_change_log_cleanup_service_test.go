@@ -91,6 +91,7 @@ func TestStudentChangeLogCleanup_DeletesOldEdits(t *testing.T) {
 		api.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).DataDeletion,
 		changeLogSettings(90),
 		nil,
+		time.Now,
 	)
 
 	result, err := testpkg.TenantQuery0(t, ctx, db, svc.CleanupExpiredChangeLog)
@@ -120,6 +121,7 @@ func TestStudentChangeLogCleanup_NoOpWhenNothingExpired(t *testing.T) {
 		api.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).DataDeletion,
 		changeLogSettings(90),
 		nil,
+		time.Now,
 	)
 
 	result, err := testpkg.TenantQuery0(t, ctx, db, svc.CleanupExpiredChangeLog)
