@@ -31,7 +31,8 @@ status: accepted
 > ADR 0171, 0183 und 0188 tragen noch `status: proposed`; ihr Code liegt auf
 > `development`. Weiter gilt diese Entscheidung für Datei-Uploads, auch
 > solche in Datenbankzeilen, für Gesundheitsantworten in Anmeldeanträgen
-> (`enrollment.request_children.custom_data`), für Konten der Träger, für die
+> (`enrollment.request_children.custom_data` und die Snapshots in
+> `enrollment.change_requests`), für Konten der Träger, für die
 > übrigen Personal-, Eltern- und Kinderdaten sowie für Datenträger-,
 > Sicherungs-, Diagnose- und Protokollmaßnahmen. Die
 > Abwägung unten bleibt gültig: Der Anwendungsprozess erhält die
