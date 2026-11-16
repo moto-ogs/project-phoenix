@@ -225,6 +225,46 @@ describe("SettingsField", () => {
     );
   });
 
+  it.each(["admin", "operator"] as const)(
+    "resets a stored off switch without the deletion dialog for %s (#7218)",
+    async (audience) => {
+      const onReset = vi.fn().mockResolvedValue(undefined);
+      const { getByRole, queryByRole, findByText } = renderWithProviders(
+        <SettingsField
+          audience={audience}
+          setting={makeSetting({
+            key: "gdpr.attendance_log_enabled",
+            label: "Anwesenheitsprotokoll",
+            type: "boolean",
+            value: false,
+            default: false,
+            is_default: false,
+          })}
+          onSave={vi.fn()}
+          onReset={onReset}
+        />,
+      );
+      const reset = getByRole("button", { name: "Zurücksetzen" });
+      // Nothing is on, so nothing is deleted: the tooltip must not warn.
+      expect(reset).not.toHaveAccessibleDescription(/Daten gelöscht/);
+      fireEvent.click(reset);
+      expect(queryByRole("dialog")).toBeNull();
+      await waitFor(() =>
+        expect(onReset).toHaveBeenCalledExactlyOnceWith(
+          "gdpr.attendance_log_enabled",
+        ),
+      );
+      expect(
+        await findByText(
+          "Die Einstellung „Anwesenheitsprotokoll“ steht wieder auf dem Standard.",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        getByRole("switch", { name: "Anwesenheitsprotokoll" }),
+      ).toHaveAttribute("aria-checked", "false");
+    },
+  );
+
   const visibilityKey = "operations.operational_overview_scope";
   const attendanceKey = "operations.attendance_edit_scope";
 

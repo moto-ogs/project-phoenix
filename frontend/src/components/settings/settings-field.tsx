@@ -452,6 +452,10 @@ export function SettingsField({
   const historyDeletionRef = useRef<HTMLDivElement | null>(null);
   const historyDeletionErrors = useApiFormError(historyDeletionRef);
   const deletesRoomHistory = setting.key === "gdpr.attendance_log_enabled";
+  // Only a reset that switches a running protocol off deletes room visits
+  // (#7218). A stored „aus“ already deleted them when it was switched off.
+  const resetDeletesRoomHistory =
+    deletesRoomHistory && setting.default === false && localValue === true;
   // A shorter retention window waits here for the operator's confirmation
   // (ADR 0048): the next nightly run deletes everything older for good.
   const [pendingShortening, setPendingShortening] = useState<{
@@ -1087,7 +1091,7 @@ export function SettingsField({
 
   /** Destructive defaults follow the same confirmation as an explicit save. */
   const handleReset = useCallback(async () => {
-    if (deletesRoomHistory && setting.default === false) {
+    if (resetDeletesRoomHistory) {
       historyDeletionErrors.clear();
       setHistoryDeletion("reset");
       return;
@@ -1114,10 +1118,10 @@ export function SettingsField({
   }, [
     audience,
     confirmTextReset,
-    deletesRoomHistory,
     historyDeletionErrors,
     localValue,
     performReset,
+    resetDeletesRoomHistory,
     setting,
   ]);
 
@@ -1271,7 +1275,7 @@ export function SettingsField({
             tooltip={
               restoresTraegerValue
                 ? "Übernimmt wieder den Wert, den Ihr Träger vorgibt."
-                : (deletesRoomHistory && setting.default === false) ||
+                : resetDeletesRoomHistory ||
                     shortenedRetentionDays(
                       setting,
                       setting.default,
