@@ -4336,6 +4336,8 @@ export const leadStaffPoolTopic = function leadStaffPoolTopic(): HelpTopic {
       "moto speichert keinen Grund und keine Gruppe zu einer Blockung.",
       "Nach der ersten Blockung steht die Person in Ihrem Dienstplan. Planen Sie dort ihre Schicht ein.",
       "Die Person meldet sich bei Ihrer Schule nur in den geblockten Zeiten an, 30 Minuten vorher bis 30 Minuten danach. Sie sieht ihren Dienstplan und stempelt, mehr nicht.",
+      "Am Tag nach Ihrer letzten Blockung endet die Beschäftigung an Ihrer Schule. Blocken Sie die Person wieder, ist sie wieder bei Ihnen beschäftigt.",
+      "Geben Sie der Person an Ihrer Schule eine eigene Rolle, bleibt sie auch nach der letzten Blockung beschäftigt.",
     ],
     differences: [
       "Eine graue Blockung nennt eine andere Schule. Zu dieser Zeit ist die Person dort.",
@@ -14979,6 +14981,7 @@ export const traegerStaffPoolTopic =
         "Jedes Anzeigen und jeder Download der Woche steht im Zugriffsprotokoll jeder betroffenen Schule.",
         "Blockt eine Schule die Person zum ersten Mal, wird die Schule ein Einsatzort in der Akte. Die Schule plant sie dann im Dienstplan ein.",
         "An dieser Schule meldet sich die Person nur in den geblockten Zeiten an. Heben Sie eine Blockung auf, endet auch dieser Zugang.",
+        "Am Tag nach der letzten Blockung einer Schule endet die Beschäftigung dort. In der Akte steht der Einsatzort dann als `Beendet`. Die nächste Blockung beschäftigt die Person dort wieder.",
         "Die Person braucht dafür ein Konto bei moto. Hat sie keins, laden Sie sie an einer Schule ein.",
       ],
       differences: [

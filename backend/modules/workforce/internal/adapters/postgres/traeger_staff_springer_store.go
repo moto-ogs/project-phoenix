@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // The employment the first block of a Springer creates (#7173, ADR 0251),
@@ -68,6 +69,82 @@ func (s *TraegerStaffStore) LinkPoolEmployment(ctx context.Context, recordID, st
 	}
 	if err != nil {
 		return fmt.Errorf("workforce postgres: link pool employment: %w", err)
+	}
+	return nil
+}
+
+// The end of a Springer's employment after the last block at the school
+// (#7197, ADR 0252).
+
+type springerExitRow struct {
+	RecordID       int64         `bun:"staff_record_id"`
+	StaffID        int64         `bun:"staff_id"`
+	LastDay        calendar.Date `bun:"last_day"`
+	ActorAccountID *int64        `bun:"actor_account_id"`
+	ActorStaffID   *int64        `bun:"actor_staff_id"`
+}
+
+func (r springerExitRow) toExit(schoolID int64) workforce.SpringerExit {
+	exit := workforce.SpringerExit{TenantID: schoolID, RecordID: r.RecordID, StaffID: r.StaffID, LastBlockDay: r.LastDay}
+	if r.ActorAccountID != nil && r.ActorStaffID != nil {
+		exit.ActorAccountID, exit.ActorStaffID = *r.ActorAccountID, *r.ActorStaffID
+	}
+	return exit
+}
+
+// DueSpringerExits lists the pool's live employments at the school whose
+// last block lies before today.
+func (s *TraegerStaffStore) DueSpringerExits(ctx context.Context, today calendar.Date) ([]workforce.SpringerExit, error) {
+	return s.springerExits(ctx, today, nil)
+}
+
+// LockSpringerExit locks the record and reads its exit at the school again.
+func (s *TraegerStaffStore) LockSpringerExit(ctx context.Context, recordID int64, today calendar.Date) (workforce.SpringerExit, bool, error) {
+	if recordID <= 0 {
+		return workforce.SpringerExit{}, false, errors.New("workforce postgres: the record of a Springer exit is required")
+	}
+	exits, err := s.springerExits(ctx, today, &recordID)
+	if err != nil || len(exits) == 0 {
+		return workforce.SpringerExit{}, false, err
+	}
+	return exits[0], true, nil
+}
+
+func (s *TraegerStaffStore) springerExits(ctx context.Context, today calendar.Date, recordID *int64) ([]workforce.SpringerExit, error) {
+	if today == "" {
+		return nil, errors.New("workforce postgres: the day of the Springer exits is required")
+	}
+	db, schoolID, err := schoolStaffDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var rows []springerExitRow
+	if err := db.NewRaw(`SELECT staff_record_id, staff_id, last_day, actor_account_id, actor_staff_id
+		FROM workforce.pool_due_exits(?, ?)`, today, recordID).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("workforce postgres: due springer exits: %w", err)
+	}
+	exits := make([]workforce.SpringerExit, 0, len(rows))
+	for _, row := range rows {
+		exits = append(exits, row.toExit(schoolID))
+	}
+	return exits, nil
+}
+
+// RecordSpringerExit writes the end into the record's trail.
+func (s *TraegerStaffStore) RecordSpringerExit(ctx context.Context, exit workforce.SpringerExit) error {
+	if exit.RecordID <= 0 || exit.ActorAccountID <= 0 {
+		return errors.New("workforce postgres: record and actor of a Springer exit are required")
+	}
+	db, _, err := schoolStaffDB(ctx)
+	if err != nil {
+		return err
+	}
+	var written bool
+	if err := db.NewRaw(`SELECT workforce.pool_ended(?, ?)`, exit.RecordID, exit.ActorAccountID).Scan(ctx, &written); err != nil {
+		return fmt.Errorf("workforce postgres: record springer exit: %w", err)
+	}
+	if !written {
+		return workforce.ErrPoolSpringerNotFound
 	}
 	return nil
 }

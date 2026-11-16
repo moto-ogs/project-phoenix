@@ -45,4 +45,11 @@ type SpringerAccess interface {
 	// EndSpringerWindow deletes the window of a lifted block; a block
 	// without a window is no error.
 	EndSpringerWindow(ctx context.Context, blockID int64) error
+	// PruneSpringerWindows deletes the windows that have ended from every
+	// mapping at the school (#7197).
+	PruneSpringerWindows(ctx context.Context) error
+	// HoldsOnlySpringerAccess reports whether the account's roles at the
+	// school are the system role springer, besides guardian at most: the
+	// school gave it no role of its own (#7197, ADR 0252).
+	HoldsOnlySpringerAccess(ctx context.Context, accountID int64) (bool, error)
 }
