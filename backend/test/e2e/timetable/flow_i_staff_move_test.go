@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/assert"
@@ -21,9 +22,11 @@ import (
 func TestFlowI_StaffPoolAndAtomicMove(t *testing.T) {
 	t.Parallel()
 
-	s := setupTimetableScenarioModule(t)
+	// The scenario decides on a school Monday; the blocks lie a week later.
+	today := calendar.NewDate(2030, 8, 26)
+	s := setupTimetableScenarioModule(t, func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) })
 
-	date := calendar.TodayDate().AddDays(7)
+	date := today.AddDays(7)
 	room := testpkg.CreateTestRoom(t, s.db, "Flow-I-Raum")
 	mover := testpkg.CreateTestStaff(t, s.db, "Ina", "Umzieherin")
 	free := testpkg.CreateTestStaff(t, s.db, "Frido", "Verfuegbar")

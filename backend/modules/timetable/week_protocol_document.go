@@ -83,9 +83,9 @@ func (p WeekProtocol) ShownDays() []WeekProtocolDay {
 // WeekProtocolDocument prints a closed protocol: one section per day with
 // the attendance, the missing children, the blocks, the staff notices and
 // the day's note, then the note for the week. Its date is the closing
-// instant.
-func WeekProtocolDocument(protocol WeekProtocol) WeekProtocolReportDocument {
-	generated := time.Now()
+// instant, now for a protocol without one.
+func WeekProtocolDocument(protocol WeekProtocol, now time.Time) WeekProtocolReportDocument {
+	generated := now
 	if protocol.ClosedAt != nil {
 		generated = *protocol.ClosedAt
 	}

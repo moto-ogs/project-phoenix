@@ -49,7 +49,7 @@ func (t *TraegerStaff) AbsenceAccounts(ctx context.Context, actor workforce.Trae
 		return workforce.TraegerAbsenceAccounts{}, err
 	}
 	names := schoolNames(schools)
-	today := calendar.TodayDate().String()
+	today := t.today().String()
 	result := workforce.TraegerAbsenceAccounts{Year: year, Accounts: make([]workforce.TraegerAbsenceAccount, 0, len(pool.types))}
 	for _, value := range pool.types {
 		account, err := pool.account(value, year, today)
@@ -221,7 +221,7 @@ func (t *TraegerStaff) SetAbsenceAllowance(ctx context.Context, actor workforce.
 		if len(pool.types) == 0 {
 			return errNoAbsenceAllowance
 		}
-		previous, err := pool.checkClaim(input)
+		previous, err := pool.checkClaim(input, t.today())
 		if err != nil {
 			return err
 		}
@@ -233,9 +233,9 @@ func (t *TraegerStaff) SetAbsenceAllowance(ctx context.Context, actor workforce.
 // checkClaim keeps the Kontingent from going negative: taken and requested
 // days at every school must fit the new claim, also those of the following
 // year that use this year's rest. It returns the previous individual days.
-func (p recordPool) checkClaim(input workforce.SetTraegerAbsenceAllowance) (*float64, error) {
+func (p recordPool) checkClaim(input workforce.SetTraegerAbsenceAllowance, day calendar.Date) (*float64, error) {
 	claim := p.claims[input.AbsenceTypeID]
-	today := calendar.TodayDate().String()
+	today := day.String()
 	before, err := p.ledger(input.AbsenceTypeID, input.Year, input.Year+1, today, nil)
 	if err != nil {
 		return nil, err

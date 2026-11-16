@@ -152,7 +152,7 @@ func NewTimetableTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 		Instances: r.ActivityInstance.Reads, InstanceStaff: r.InstanceStaff, InstanceStudents: r.InstanceStudent,
 		Exceptions: r.ActivityException, Schedules: r.ActivitySchedule, Staff: owners.NewTimetableStaff(members.Staff), CalendarPeriods: r.CalendarPeriod,
 		ArrivalExceptions: r.StudentArrivalException, Sessions: presence.ActiveGroup, Shifts: r.StaffShift,
-		Presence: owners.NewLoggedStudentPresence(db, logger), Logger: logger,
+		Presence: owners.NewLoggedStudentPresence(db, logger), Logger: logger, Now: now,
 	}, arrival)
 	if err != nil {
 		return TimetableTestModule{}, nil, nil, err
@@ -180,7 +180,7 @@ func NewTimetableTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 	if err != nil {
 		return TimetableTestModule{}, nil, nil, err
 	}
-	templateDeps, err := TimetableTemplateDependencies(rows, arrivalTimetable.NewPlanningTrackAdministration(r.Timetable, db.Pool()),
+	templateDeps, err := TimetableTemplateDependencies(rows, arrivalTimetable.NewPlanningTrackAdministration(r.Timetable, db.Pool(), now),
 		materialization, instance.SeriesDeviations(), offerings, nil, recurrenceLock, hub, logger, today)
 	if err != nil {
 		return TimetableTestModule{}, nil, nil, err

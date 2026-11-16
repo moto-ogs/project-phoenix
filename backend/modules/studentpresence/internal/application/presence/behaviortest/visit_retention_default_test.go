@@ -227,7 +227,7 @@ func TestCleanupExpiredVisits_RefusesWithoutUsableTenantWindow(t *testing.T) {
 		{name: "missing settings", setting: nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			svc := activeService.NewCleanupService(presence, nil, nil, tc.setting)
+			svc := activeService.NewCleanupService(presence, nil, nil, tc.setting, time.Now)
 			result, err := svc.CleanupExpiredVisits(testpkg.Ctx(t))
 			require.Error(t, err)
 			if tc.cause != nil {

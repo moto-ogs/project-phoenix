@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"slices"
 
-	"time"
-
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -294,7 +292,7 @@ func (s *workSessionService) buildDayExportSessionResponses(ctx context.Context,
 		}
 	}
 
-	now := time.Now()
+	now := s.now()
 	responses := make([]*SessionResponse, len(sessions))
 	for i, session := range sessions {
 		breaks := breaksBySession[session.ID]

@@ -155,7 +155,7 @@ func (s *workSessionService) applySessionUpdate(ctx context.Context, editorStaff
 		session:   session,
 		sessionID: session.ID,
 		staffID:   editorStaffID,
-		now:       time.Now(),
+		now:       s.now(),
 		notes:     updates.Notes,
 	}
 
@@ -257,7 +257,7 @@ func (s *workSessionService) CreateSessionAsAdmin(ctx context.Context, editorSta
 	}
 	applyWorkSessionToRecord(session, stored)
 
-	edits := adminCreateAuditEdits(session.ID, targetStaffID, editorStaffID, date, req, tenant.FromContext(ctx))
+	edits := adminCreateAuditEdits(session.ID, targetStaffID, editorStaffID, date, req, tenant.FromContext(ctx), s.now())
 	if err := s.auditRepo.CreateBatch(ctx, edits); err != nil {
 		return nil, fmt.Errorf("failed to create audit entries: %w", err)
 	}
@@ -316,8 +316,7 @@ func checkInWithinSessionDay(day calendar.Date, checkIn time.Time) error {
 // adminCreateAuditEdits builds the audit trail of an admin Nachtrag: one
 // entry per field so the EditHistoryAccordion can render the create as a
 // normal change list with empty "Vorher" values.
-func adminCreateAuditEdits(sessionID, targetStaffID, editorStaffID int64, date calendar.Date, req AdminCreateSessionRequest, tenantID int64) []*WorkSessionEdit {
-	now := time.Now()
+func adminCreateAuditEdits(sessionID, targetStaffID, editorStaffID int64, date calendar.Date, req AdminCreateSessionRequest, tenantID int64, now time.Time) []*WorkSessionEdit {
 	notesPtr := req.Notes
 	strPtr := func(s string) *string { return &s }
 	baseEdit := func(field string, newVal string) *WorkSessionEdit {

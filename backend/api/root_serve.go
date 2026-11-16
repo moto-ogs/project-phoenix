@@ -205,7 +205,7 @@ func composeServeRoot(
 		func() (err error) { groups, err = owners.BuildServeSchoolStructure(db); return },
 		func() (err error) { rooms, err = owners.BuildServeRooms(db); return },
 		func() (err error) { membership, err = owners.ComposeSchoolMembership(db); return },
-		func() error { bookings = owners.NewEnrollmentBookings(); return nil },
+		func() error { bookings = owners.NewEnrollmentBookings(env.Now); return nil },
 		func() (err error) {
 			settings, tracker, err = buildServeAnalyticsSettings(db, unit, env, organizations, hub, bookings, tracker)
 			return
@@ -214,7 +214,7 @@ func composeServeRoot(
 			calendar, err = owners.BuildSchoolCalendarRecords(db, owners.ObserveSchoolCalendar, settings.Service)
 			return
 		},
-		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, membership, calendar); return },
+		func() (err error) { workTime, err = owners.BuildServeWorkforce(db, env, membership, calendar); return },
 		func() error {
 			people, peopleIdentity = owners.BuildPeopleRows(db, env.Observe.IdentityAccess, groups, rooms, membership, workTime)
 			return nil
@@ -233,18 +233,18 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			timetableOwner, err = owners.BuildServeTimetable(db, persons, rooms, membership)
+			timetableOwner, err = owners.BuildServeTimetable(db, persons, rooms, membership, env.Now)
 			return
 		},
 		func() error {
-			timetableRepos = owners.NewTimetableRepositories(db, timetableOwner, persons, groups, rooms, calendar, membership, workTime)
+			timetableRepos = owners.NewTimetableRepositories(db, timetableOwner, persons, groups, rooms, calendar, membership, workTime, env.Now)
 			return nil
 		},
 		func() (err error) {
 			carePlan, err = owners.ComposeCarePlan(db, persons, owners.CarePlanStatusSlots(timetableRepos.InstanceStudent), env.Now)
 			return
 		},
-		func() (err error) { appointments, err = owners.BuildServeAppointments(db); return },
+		func() (err error) { appointments, err = owners.BuildServeAppointments(db, env.Now); return },
 		func() (err error) {
 			operatorAuditLog = owners.NewOperatorAuditLog(db)
 			communication, err = buildCommunicationModule(db, env, organizations, persons, operatorAuditLog)
@@ -267,7 +267,7 @@ func composeServeRoot(
 		func() error {
 			presence = owners.BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
 			facilitiesRooms = buildFacilitiesRooms(presence.Presence, rooms, timetableOwner, membership, persons)
-			substitutions = owners.NewGroupSubstitutionRepository(structure.Groups, membership, workTime)
+			substitutions = owners.NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today)
 			supervisions = owners.NewGroupSupervisionRecords(presence.SessionRecords, groups)
 			return nil
 		},
@@ -292,7 +292,7 @@ func composeServeRoot(
 		},
 		func() (err error) {
 			mailIdentity = owners.TenantMailIdentity(organizations, settings.Service, env)
-			portalReads = owners.NewParentPortalReads(db, persons, peopleIdentity, enrollmentCompose.New(), organizations)
+			portalReads = owners.NewParentPortalReads(db, persons, peopleIdentity, env.Now, organizations)
 			identity, caller, err = owners.BuildIdentityAccess(db, unit, env, tokens, organizations, persons, membership, settings.Service,
 				audit, operatorAuditLog, mailSender, mailDispatcher, mailFrom, delivery.Runtime, mailIdentity, delivery.Enqueuer(), people, portalReads.ParentEnrollmentRequest,
 				structure.Groups, staffGroups, arrivalTimetable.NewCallerActivityGroups(timetableRepos.Timetable),
@@ -300,7 +300,7 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			messaging = owners.NewParentMessagingRepositories(db, groups, membership, peopleIdentity, enrollmentCompose.New(), nil, organizations)
+			messaging = owners.NewParentMessagingRepositories(db, groups, membership, peopleIdentity, enrollmentCompose.NewClocked(env.Now), nil, organizations)
 			consent, err = communicationCompose.NewNotificationConsent(communicationCompose.NotificationConsentConfig{
 				DB: db.Pool(), Observe: env.Observe.Communication,
 			})
@@ -349,7 +349,7 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			activities, err = owners.BuildActivities(timetableRows, timetableOwner, presence.SessionRecords, people)
+			activities, err = owners.BuildActivities(timetableRows, timetableOwner, presence.SessionRecords, people, env.Today)
 			yard = buildFacilitiesYard(env, facilitiesRooms, activities)
 			return
 		},
@@ -427,7 +427,7 @@ func composeServeRoot(
 		},
 		func() (err error) {
 			parent, err = owners.BuildParentPortal(db, env, hub, settings.Service, people, portalReads, messaging, presence, carePlanRows,
-				carePlan, persons, mealPlan, schedules, requests, services, emitter, notifications, identity, enrollment, notices, announcements, audit, organizations, owners.NewParentContractNotices(settings.Traeger, owners.DeliveryModuleOf(delivery), owners.NewCareContractSchoolHolidays(settings.Service, calendar)), careContractCompose.NewInboxSigning(careContractSignaturePorts(organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL)), owners.NewCareContractSchoolHolidays(settings.Service, calendar), owners.NewParentSEPAMandates(settings.Traeger, env.BankData, env.Today))
+				carePlan, persons, mealPlan, schedules, requests, services, emitter, notifications, identity, enrollment, notices, announcements, audit, organizations, owners.NewParentContractNotices(settings.Traeger, owners.DeliveryModuleOf(delivery), owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Now), careContractCompose.NewInboxSigning(careContractSignaturePorts(organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL), env.Now), owners.NewCareContractSchoolHolidays(settings.Service, calendar), owners.NewParentSEPAMandates(settings.Traeger, env.BankData, env.Today))
 			return
 		},
 		func() (err error) {
@@ -487,7 +487,7 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			facilities, err = owners.BuildFacilitiesModule(db, owners.ObserveFacilities, timetableRows.RecurrenceLock, presence.Presence, requests.CareOfferings, groups, devices)
+			facilities, err = owners.BuildFacilitiesModule(db, owners.ObserveFacilities, timetableRows.RecurrenceLock, presence.Presence, requests.CareOfferings, groups, devices, env.Today)
 			return
 		},
 		func() (err error) {
@@ -499,7 +499,7 @@ func composeServeRoot(
 			guardianProfiles = peopleCompose.NewGuardianProfileLoader(people.GuardianProfiles, db.Pool(), env.Logger.With("service", "guardian-profile-loader"))
 			birthdays, err = buildBirthdayEntry(db, membership, BirthdayRepositories{Students: people.Students, Staff: people.Staff, Persons: people.Persons},
 				settings.Service, env.Logger.With("service", "birthdays"), nil)
-			dataImports = newServeImports(audit, identity, groups, rooms, persons, carePlan, presence, organizations, membership, workTime, workforce, newImportCohorts(offerings.Bookings, timetableRows.CohortRosters))
+			dataImports = newServeImports(audit, identity, groups, rooms, persons, carePlan, presence, organizations, membership, workTime, workforce, newImportCohorts(offerings.Bookings, timetableRows.CohortRosters), env.Now)
 			databaseStats = newDatabaseStats(people.Repositories, structure.Groups, facilities, timetableRepos, identity, devices, env.Logger)
 			return err
 		},
@@ -533,32 +533,32 @@ func composeServeRoot(
 			return mountStudentRoutes(tenant, db, logger, deviceAuth, studentPresence, persons, services, membership, caller, reviewPolicy,
 				settings.Service, hub, carePlan, carePlanRows.Companions, schedules, requests, planning, emitter, activities,
 				lifecycle, reports, structureViews, organizations, presence.StatusDays, notifications.AbsenceNotifier, studentDeletion,
-				groupLive, enrollmentCompose.PublicDecisions(decisions), active, owners.NewCareResumption(carePlanRows.LifecycleOwners.Students, carePlan, carePlanRows.LifecycleOwners.ChangeTrail, nil, logger.With("service", "care_lifecycle")).Resume, persons.StudentNoteTeam, newStudentNoteTeamReach(people.Staff, notifications), timetableRows.CohortRosters, studentAnswers)
+				groupLive, enrollmentCompose.PublicDecisions(decisions), active, owners.NewCareResumption(carePlanRows.LifecycleOwners.Students, carePlan, carePlanRows.LifecycleOwners.ChangeTrail, nil, logger.With("service", "care_lifecycle")).Resume, persons.StudentNoteTeam, newStudentNoteTeamReach(people.Staff, notifications), timetableRows.CohortRosters, studentAnswers, env.Now)
 		},
 		func() error {
 			return mountPresenceRoutes(tenant, db, logger, config.SentryPyrePortalDSN, deviceAuth, studentPresence, active, facilities,
 				timetableOwner, timetableRepos, days, persons, services.Users, caller, settings.Service, hub, emitter, groupLive,
 				dashboard, yard, iot, activities, structureViews.Education, schedules.Pickups, workforce.TimeTracking, facilitiesRooms,
-				feedback, organizations, identity)
+				feedback, organizations, identity, env.Now)
 		},
 		func() error {
 			return errors.Join(mountStaffRoutes(router, tenant, db, logger, membership, workTime, workTime, workTime, services.Users, staffAdmin, workforce, shifts,
-				structureViews.Education, structureViews.Substitution, persons, settings.Service, hub, identity, caller, calendarAdmin), mountTraegerStaffRoutes(router, tenant, staffAdmin, workforce.TimeTracking.TraegerMonths, organizations, persons, membership, audit.Persistence.DataAccessLog, shifts.TraegerSites(workforce.StaffShifts), workforce.TimeTracking.TraegerExports, settings.Traeger, identity))
+				structureViews.Education, structureViews.Substitution, persons, settings.Service, hub, identity, caller, calendarAdmin), mountTraegerStaffRoutes(router, tenant, staffAdmin, workforce.TimeTracking.TraegerMonths, organizations, persons, membership, audit.Persistence.DataAccessLog, shifts.TraegerSites(workforce.StaffShifts), workforce.TimeTracking.TraegerExports, settings.Traeger, identity, env.Today))
 		},
 		func() error {
 			return mountSchoolPortalRoutes(router, tenant, db, logger, limiters, studentPresence, timetableOwner, calendarAdmin,
 				materialization, lifecycle, planning, timetableRows.PlanningTracks, services.Users, schedules, caller, settings.Service,
-				careOfferings, planExport, chat, persons, notifications, deliveryDevices, classDay, identity, calendarApp, announcements, workTime, people.Staff)
+				careOfferings, planExport, chat, persons, notifications, deliveryDevices, classDay, identity, calendarApp, announcements, workTime, people.Staff, env.Now)
 		},
 		func() error {
 			enrollmentResource := newEnrollmentResource(logger, settings.Service, config.Turnstile, careOfferings, flows, phases,
-				enrollmentCompose.PublicDecisions(decisions), notices.Deletions, guardianProfiles, organizations, renderer, persons, carePlan)
+				enrollmentCompose.PublicDecisions(decisions), notices.Deletions, guardianProfiles, organizations, renderer, persons, carePlan, env.Now)
 			weekProtocolSeed := developmentWeekProtocolEvenings(env.Config.AppEnv, db, logger, settings.Service, persons, services, reports, schedules, carePlan, timetableRepos)
 			mountSchoolRoutes(tenant, db, logger, facilities, facilitiesRooms, settings.Service, caller, active, services.Users,
 				structureViews.Education, renderer, activities, timetableOwner, iot, settingsWrites, organizations, people.Students, carePlan, audit.Persistence.DataAccessLog,
-				membership, classListEntries, databaseStats, dataImports, persons, gradeTransition, enrollmentResource, env.Config.AppEnv, weekProtocolSeed, env.HealthData, owners.NewHolidayHostCalendar(settings.Service, calendar))
+				membership, classListEntries, databaseStats, dataImports, persons, gradeTransition, enrollmentResource, env.Config.AppEnv, weekProtocolSeed, env.HealthData, owners.NewHolidayHostCalendar(settings.Service, calendar), env.Now)
 			mountPeopleRoutes(tenant, db, logger, reports, renderer, persons, services.Guardian, identity, caller, feedback, mealPlan,
-				birthdays, emergency, settings.Service, GuardianEmailDelivery{Outcomes: delivery.Runtime.EmailOutcomes, Suppressions: delivery.Runtime.EmailReconciliation}, audit.Persistence.DataAccessLog)
+				birthdays, emergency, settings.Service, GuardianEmailDelivery{Outcomes: delivery.Runtime.EmailOutcomes, Suppressions: delivery.Runtime.EmailReconciliation}, audit.Persistence.DataAccessLog, env.Now)
 			mountCalendarRoutes(router, tenant, logger, calendarApp)
 			return errors.Join(mountMealBillingMonths(tenant, mealPlan, calendar, presence.Presence, settings.Service), mountCommunicationRoutes(tenant, logger, chat, announcements, reminders, deliveryDevices, communication),
 				mountDeliveryRoutes(router, tenant, logger, fileStore, parent, hub, caller, identity))
@@ -571,8 +571,8 @@ func composeServeRoot(
 				return err
 			}
 			mountPortalRoutes(router, limiters, newAccountResource(db, identity, organizations, services.CaregiverCapability, settings.Service),
-				operator, newParentResource(logger, identity, parent, calendarApp, flows, guardianProfiles, organizations, deliveryDevices, notifications, delivery.Runtime.Module, env.HealthData, settings.Traeger))
-			return errors.Join(mountTraegerRoutes(router, tenant, limiters, identity, organizations, persons, membership, TraegerAudit{Trail: audit.Persistence.AccessTrail, Log: audit.Persistence.DataAccessLog}, settings.Traeger, settings.Service, presence.Presence, delivery.Runtime.Module, owners.HolidayClosureMail{Delivery: delivery.Runtime.Module, TraegerMails: delivery.Runtime.TraegerMails}, delivery.Runtime.EmailOutcomes, config.Turnstile, env.HealthData, env.BankData, reports.Statistics, requests.OfferingChanges, owners.NewCareContractSchoolHolidays(settings.Service, calendar), owners.NewHolidaySchoolCalendar(settings.Service, calendar, organizations), calendar, owners.NewTraegerCalendarSchools(organizations, settings.Service), phases, offerings.Catalog, timetableRows.RecurrenceLock.LockRecurrenceWrites, env.Today, env.Links.ParentsURL, logger), mountTraegerDocumentRoutes(router, tenant, db, organizations, audit.Persistence.DataAccessLog, audit.Command, delivery.Runtime.Module))
+				operator, newParentResource(logger, identity, parent, calendarApp, flows, guardianProfiles, organizations, deliveryDevices, notifications, delivery.Runtime.Module, env.HealthData, settings.Traeger, env.Now))
+			return errors.Join(mountTraegerRoutes(router, tenant, limiters, identity, organizations, persons, membership, TraegerAudit{Trail: audit.Persistence.AccessTrail, Log: audit.Persistence.DataAccessLog}, settings.Traeger, settings.Service, presence.Presence, delivery.Runtime.Module, owners.HolidayClosureMail{Delivery: delivery.Runtime.Module, TraegerMails: delivery.Runtime.TraegerMails}, delivery.Runtime.EmailOutcomes, config.Turnstile, env.HealthData, env.BankData, reports.Statistics, requests.OfferingChanges, owners.NewCareContractSchoolHolidays(settings.Service, calendar), owners.NewHolidaySchoolCalendar(settings.Service, calendar, organizations), calendar, owners.NewTraegerCalendarSchools(organizations, settings.Service), phases, offerings.Catalog, timetableRows.RecurrenceLock.LockRecurrenceWrites, env.Today, env.Now, env.Links.ParentsURL, logger), mountTraegerDocumentRoutes(router, tenant, db, organizations, audit.Persistence.DataAccessLog, audit.Command, delivery.Runtime.Module))
 		},
 	)
 	if err != nil {
@@ -588,7 +588,7 @@ func composeServeRoot(
 	worker, err := owners.NewWorker(db, env.Logger, tracer, hub, settings.Service, audit.Command, audit.Persistence.DataAccessLog, deviceFleet, carePlan, persons, people,
 		organizations, identity, facilities, timetableRepos, workTime, staffAdmin, workforce, active, reports, lifecycle, days,
 		materialization, schedules, requests.Documents, services, persons.Owner, studentAudit, notices, flows, studentDeletion, feedback, calendarApp,
-		notifications, deliveryDevices.PWAUsage, chat.StaffMessaging, outbox, reminders, fileStore, announcements, mealPlan, analyticsSchoolNames(tracker), PlannedStaffExitsJob(db, hub, env.Logger), WeekProtocolDayLog, env.HealthData, owners.CareContractRemindersJob(db.UnitOfWork(), organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, env.Links.ParentsURL), CareContractConclusionJob(env.Logger)(organizations, settings, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, audit.Persistence.DataAccessLog, owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL), owners.HolidayClosureNotificationsJob(db.UnitOfWork(), owners.NewHolidaySchoolCalendar(settings.Service, calendar, organizations), calendar, organizations, owners.HolidayClosureMail{Delivery: delivery.Runtime.Module, TraegerMails: delivery.Runtime.TraegerMails}, env.Logger))
+		notifications, deliveryDevices.PWAUsage, chat.StaffMessaging, outbox, reminders, fileStore, announcements, mealPlan, analyticsSchoolNames(tracker), PlannedStaffExitsJob(db, hub, env.Logger), WeekProtocolDayLog, env.HealthData, owners.CareContractRemindersJob(db.UnitOfWork(), organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, env.Links.ParentsURL, env.Now), CareContractConclusionJob(env.Logger, env.Now)(organizations, settings, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, audit.Persistence.DataAccessLog, owners.NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL), owners.HolidayClosureNotificationsJob(db.UnitOfWork(), owners.NewHolidaySchoolCalendar(settings.Service, calendar, organizations), calendar, organizations, owners.HolidayClosureMail{Delivery: delivery.Runtime.Module, TraegerMails: delivery.Runtime.TraegerMails}, env.Logger, env.Today), env.Now)
 	if err != nil {
 		return nil, nil, err
 	}

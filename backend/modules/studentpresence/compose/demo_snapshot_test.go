@@ -15,10 +15,10 @@ func TestLatestDemoVisitsReadsOnlyTodayAndYesterdayAttendance(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}})
+	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}, Now: presenceClock})
 	require.NoError(t, err)
 	device := testpkg.CreateTestDevice(t, db, "demo-snapshot-web")
-	today := testpkg.TodayDate()
+	today := presenceToday
 	students := []struct {
 		studentID int64
 		date      string
@@ -31,7 +31,7 @@ func TestLatestDemoVisitsReadsOnlyTodayAndYesterdayAttendance(t *testing.T) {
 		_, err := module.RecordAttendance(ctx, studentpresence.Attendance{
 			StudentID:   input.studentID,
 			Date:        input.date,
-			CheckInTime: time.Now(),
+			CheckInTime: presenceClock(),
 			DeviceID:    device.ID,
 		})
 		require.NoError(t, err)
@@ -52,16 +52,16 @@ func TestLatestDemoVisitsExcludesClosedRoomVisits(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}})
+	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}, Now: presenceClock})
 	require.NoError(t, err)
 	student := testpkg.CreateTestStudent(t, db, "Demo", "Closed visit", "3a")
 	activity := testpkg.CreateTestActivityGroup(t, db, "Demo closed visit")
 	room := testpkg.CreateTestRoom(t, db, "Demo closed visit")
 	group := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
-	closedAt := time.Now().Add(-time.Minute)
+	closedAt := presenceClock().Add(-time.Minute)
 	testpkg.CreateTestVisit(t, db, student.ID, group.ID, closedAt.Add(-time.Hour), &closedAt)
 
-	today := testpkg.TodayDate()
+	today := presenceToday
 	visits, err := module.LatestDemoVisits(ctx, 0, today.AddDays(-1).String(), today.String())
 	require.NoError(t, err)
 	for _, visit := range visits {

@@ -21,6 +21,7 @@ var _ workforce.TraegerStaffContracts = (*TraegerStaff)(nil)
 // contractKindLabels names the kinds in the trail.
 var contractKindLabels = map[string]string{
 	domain.ContractKindFullTime: "Vollzeit", domain.ContractKindPartTime: "Teilzeit", domain.ContractKindMinijob: "Minijob",
+	domain.ContractKindUebungsleiter: "Übungsleiter", domain.ContractKindEhrenamt: "Ehrenamt",
 }
 
 // CreateContract adds a contract with the first Soll of each Einsatzort.

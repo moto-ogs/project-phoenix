@@ -6,6 +6,8 @@ package timetablehttp_test
 // eigenen Feed über die Routen des Staff-Portals.
 
 import (
+	"time"
+
 	"context"
 	"encoding/json"
 	"fmt"
@@ -68,12 +70,12 @@ func newNoticeFeedFixture(t *testing.T) *noticeFeedFixture {
 	testpkg.SetTestTenantSetting(t, db, tenantID, "notifications.active_window_end", `"06:00"`)
 	service := compose.NewStaffNotices(compose.StaffNoticeDependencies{
 		DB: db, Publications: publications, Logger: slog.Default(),
-		CurrentDate: func() calendar.Date { return noticeFeedToday },
+		Now: func() time.Time { return noticeFeedToday.BerlinMidnight().Add(10 * time.Hour) },
 	})
 	consent := api.NewNotificationConsentTestStore(database)
 	return &noticeFeedFixture{
 		db: db, tenantID: tenantID,
-		notices: timetablehttp.NewStaffNoticeResource(service, noticeAccountID).Router(api.ProtectedTenantRoutes),
+		notices: timetablehttp.NewStaffNoticeResource(service, noticeAccountID, func() calendar.Date { return noticeFeedToday }).Router(api.ProtectedTenantRoutes),
 		feed:    module.NotificationPreferenceRouterForTests(),
 		consent: func(accountID int64, enabled bool) {
 			ctx := testpkg.Ctx(t)

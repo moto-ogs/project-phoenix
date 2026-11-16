@@ -16,7 +16,7 @@ func (rs *Resource) getOwnAbsenceAllowances(w http.ResponseWriter, r *http.Reque
 		common.RenderError(w, r, common.ErrorUnauthorized(err))
 		return
 	}
-	year, err := parseYearParam(r)
+	year, err := parseYearParam(r, rs.today())
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

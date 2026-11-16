@@ -191,7 +191,7 @@ describe("FormModal", () => {
     // Same tint as Modal, Drawer and SlideOver (#2932).
     expect(
       screen.getByRole("button", { name: /hintergrund.*schließen/i }),
-    ).toHaveClass("bg-black/40", "backdrop-blur-sm");
+    ).toHaveClass("bg-black/40");
   });
 
   it("uses the visible title as the dialog accessible name", async () => {

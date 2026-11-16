@@ -5,6 +5,7 @@ package api
 import (
 	"context"
 	"slices"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -23,7 +24,7 @@ import (
 // request-review projection binds in the server. Offering-change suites
 // assert the queue a staff member sees for the requests they submit.
 func NewOfferingReviewTestQuery(db transactionruntime.Database, today func() calendar.Date) (careplan.OfferingReviewQuery, error) {
-	auditCommand, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	auditCommand, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 )
@@ -28,7 +27,7 @@ func (r *Store) SetChildClassSwitch(ctx context.Context, requestChildID int64, c
 	}
 	res, err := db.NewUpdate().TableExpr("enrollment.request_children").
 		Set("class_switch_from = ?", from).Set("class_switch_to = ?", to).Set("class_switch_on = ?", on).
-		Set("updated_at = ?", time.Now()).Where("tenant_id = ? AND id = ?", tenantID, requestChildID).Exec(ctx)
+		Set("updated_at = ?", r.currentTime()).Where("tenant_id = ? AND id = ?", tenantID, requestChildID).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update request child class switch: %w", err)
 	}

@@ -24,7 +24,7 @@ import (
 func TestEnrollmentSchemaReadQueryBudgets(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
-	owner := enrollmentCompose.New()
+	owner := enrollmentCompose.NewClocked(nil)
 	account := testpkg.CreateTestAccount(t, db, "schema-budget")
 	service := enrollmentCompose.NewFormSchemas(owner, nil, nil)
 	resource := &enrollmentHTTP.Resource{FormSchemaService: service}

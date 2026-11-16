@@ -52,10 +52,7 @@ type absenceReports struct {
 }
 
 func newAbsenceReports(deps ClassDayDependencies) absenceReports {
-	today := calendar.TodayDate
-	if now := deps.Now; now != nil {
-		today = func() calendar.Date { return calendar.DateFromTime(now()) }
-	}
+	today := calendar.CalendarDateClock(deps.clock())
 	return absenceReports{
 		statusDays: deps.ReportStatusDays, log: deps.ReportLog, notifier: deps.UnreportedNotifier,
 		reads: deps.StatusDays, morning: deps.Store, rosters: deps.Rosters, today: today,

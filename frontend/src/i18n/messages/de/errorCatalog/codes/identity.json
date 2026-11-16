@@ -60,5 +60,6 @@
   "guardian_email_address_blocked": "Die Einladung wurde nicht gesendet, weil an diese Person keine Mails gehen. Den Grund und den nächsten Schritt sehen Sie bei der Person.",
   "invitation_mail_delayed": "Die letzte Einladung ist noch unterwegs. Bitte warten Sie, sonst kommt sie doppelt an.",
   "mail_blocked_at_provider": "Diese Adresse ist gesperrt. Eine neue Mail hilft nicht. Der moto-Support muss das klären.",
-  "mail_block_unreadable": "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuchen Sie es später noch einmal."
+  "mail_block_unreadable": "Ob diese Adresse gesperrt ist, lässt sich gerade nicht prüfen. Bitte versuchen Sie es später noch einmal.",
+  "logout_not_revoked": "Sie sind auf diesem Gerät abgemeldet. moto konnte Ihre Anmeldung aber nicht ganz beenden. Sie endet später von selbst. Haben Sie ein fremdes Gerät benutzt? Dann ändern Sie bitte Ihr Passwort."
 }

@@ -116,7 +116,7 @@ func NewStudentHTTPTestModule(db transactionruntime.Database, unit tenant.UnitOf
 // photoBroadcaster (the graph's realtime hub when nil) and photoUnlinker
 // (no file cleanup when nil).
 func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, feedbackCounter studentdeletioncompose.Feedback, photoBroadcaster owners.PhotoBroadcaster, photoUnlinker peoplePorts.PhotoUnlinker, clocks ...func() time.Time) (StudentTestModule, ActiveTestModule, StudentTestPeople, auditModels.Command, enrollmentOwner.Decisions, grouplive.Query, error) {
-	auditCommand, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	auditCommand, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}

@@ -24,7 +24,7 @@ func TestValidateStaffMasterFields(t *testing.T) {
 		Gender: "Weiblich", EmploymentType: "Teilzeit", WeeklyHours: "19,5",
 		EntryDate: "01.08.2023", ContractEndDate: "31.07.2022", Birthday: "12.05.1988",
 	}
-	errs := validateStaffMasterFields(&row)
+	errs := validateStaffMasterFields(&row, studentImportTestNow)
 
 	assert.Equal(t, ports.GenderFemale, row.Gender)
 	assert.Equal(t, ports.EmploymentTypePartTime, row.EmploymentType)
@@ -36,7 +36,7 @@ func TestValidateStaffMasterFields(t *testing.T) {
 
 	bad := importModels.StaffImportRow{Gender: "x", EmploymentType: "Aushilfe", WeeklyHours: "90", Phone: "abc"}
 	codes := map[string]bool{}
-	for _, e := range validateStaffMasterFields(&bad) {
+	for _, e := range validateStaffMasterFields(&bad, studentImportTestNow) {
 		codes[e.Code] = true
 	}
 	assert.True(t, codes["invalid_gender"])

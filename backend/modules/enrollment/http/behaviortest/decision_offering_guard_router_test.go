@@ -139,11 +139,13 @@ func setupOfferingGuardRouterTest(
 	}
 	guardianAccess, err := identityaccessCompose.New(identityaccessCompose.Dependencies{DB: db, Observe: func(identityaccessCompose.Observation) {}})
 	require.NoError(t, err)
-	studentEnrollment, err := owners.NewPeopleDirectory(testpkg.MustDatabase(db))
+	// The People Directory and the bookings decide on offeringGuardDay too.
+	studentEnrollment, err := owners.NewPeopleDirectory(testpkg.MustDatabase(db), func() time.Time { return offeringGuardDay.BerlinMidnight() })
 	require.NoError(t, err)
 	bookings := newBookingMaterialization(t, db,
 		api.WithBookingCatalog(newCareOfferingCatalog(t, db).Catalog),
 		api.WithBookingSettings(offeringGuardSettings(offeringsEnabled)),
+		api.WithBookingToday(func() calendar.Date { return offeringGuardDay }),
 	).Bookings
 	decision := newOfferingGuardDecisionService(repos, reposCare, reposTimetable, offeringsEnabled, children, guardianAccess, studentEnrollment, bookings)
 	resource := enrollmentAPI.NewResource(
@@ -154,13 +156,17 @@ func setupOfferingGuardRouterTest(
 	return offeringGuardHarness{testpkg.TenantRuntimeMiddleware(t, db)(resource.Router(api.TenantSessionChain)), request.ID, child.ID, token, repos, ctx}
 }
 
+// offeringGuardDay is the school day the decision flow checks the offering
+// links on, a Wednesday (#7104); the phase and the links lie around it.
+var offeringGuardDay = calendar.NewDate(2026, time.November, 18)
+
 func createOfferingGuardPhase(t *testing.T, repos api.EnrollmentTestRepositories, ctx context.Context, mode string) *enrollmentNative.Phase {
 	t.Helper()
 	phase := &enrollmentNative.Phase{
 		Name:                      "Angebotspruefung " + t.Name(),
 		Kind:                      enrollmentNative.PhaseKindSchoolYear,
-		ServiceStartDate:          enrollmentNative.Date(calendar.TodayDate().AddDays(-30)),
-		ServiceEndDate:            enrollmentNative.Date(calendar.TodayDate().AddDays(300)),
+		ServiceStartDate:          enrollmentNative.Date(offeringGuardDay.AddDays(-30)),
+		ServiceEndDate:            enrollmentNative.Date(offeringGuardDay.AddDays(300)),
 		CareOverflowMode:          enrollmentNative.PhaseCareOverflowWaitlist,
 		CareOfferingSelectionMode: mode,
 		IsActive:                  true,
@@ -235,7 +241,7 @@ func attachOfferingGuardLink(t *testing.T, repos api.EnrollmentTestRepositories,
 		require.NoError(t, api.NewEnrollmentBookingFixture().InsertRequestChildOffering(ctx, link))
 		link = createLink("Spätbetreuung", false)
 	}
-	today := calendar.TodayDate()
+	today := offeringGuardDay
 	if fixture == expiredOffering {
 		link.ValidFrom, link.ValidUntil = datePointers(today.AddDays(-10), today)
 	}
@@ -277,7 +283,7 @@ func datePointers(from, until calendar.Date) (*enrollmentNative.Date, *enrollmen
 }
 
 func newOfferingGuardDecisionService(repos api.EnrollmentTestRepositories, reposCare owners.TimetableCarePlanRows, reposTimetable owners.TimetableTestRepositories, offeringsEnabled bool, children TestDecisionChildren, guardianAccess TestDecisionGuardianAccess, studentEnrollment owners.EnrollmentDecisionPeople, bookings TestDecisionBookings) enrollmentAPI.DecisionService {
-	return enrollmentAPI.NewDecisionService(enrollmentCompose.PublicDecisions(newOfferingGuardDecisions(repos, reposCare, reposTimetable, offeringsEnabled, children, guardianAccess, studentEnrollment, bookings, nil)))
+	return enrollmentAPI.NewDecisionService(enrollmentCompose.PublicDecisions(newOfferingGuardDecisions(repos, reposCare, reposTimetable, offeringsEnabled, children, guardianAccess, studentEnrollment, bookings, func() calendar.Date { return offeringGuardDay })))
 }
 
 // newOfferingGuardDecisions composes the decision flow the guard suites

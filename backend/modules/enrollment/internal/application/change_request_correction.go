@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
 
@@ -109,7 +108,7 @@ func (s *ChangeRequests) recordAdminCorrection(ctx context.Context, req *enrollm
 	if err != nil {
 		return nil, err
 	}
-	now := time.Now()
+	now := s.deps.Now()
 	row := &ChangeRequest{
 		RequestID: req.ID, RequestChildID: &child.ID, Origin: enrollmentNative.ChangeRequestOriginAdmin,
 		Status: enrollmentNative.ChangeRequestStatusApproved, AdminDecisionNote: &reason,
@@ -133,7 +132,7 @@ func (s *ChangeRequests) rejectOpenChangeRequestsForAdminCorrection(ctx context.
 		return nil
 	}
 	note := "Die Schule hat die Daten direkt korrigiert. Diese Änderungsanfrage ist damit erledigt. Grund: " + reason
-	now := time.Now()
+	now := s.deps.Now()
 	for _, row := range rows {
 		if err := s.deps.Requests.MarkChangeRequestReviewed(ctx, row.ID, enrollmentNative.ChangeRequestStatusRejected, &note, actorAccountID, now); err != nil {
 			return fmt.Errorf("admin data correction: reject open change request %d: %w", row.ID, err)

@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	devicefleetCompose "github.com/moto-ogs/project-phoenix/modules/devicefleet/compose"
 	enrollmentCapability "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
@@ -48,16 +49,17 @@ func NewOperatorAuditLog(db transactionruntime.Database) OperatorAuditEntries {
 // NewParentPortalReads builds Care Plan's guardian-portal repositories over
 // the owners they read through: people answers the student, guardian and
 // person reads; identity owns the accounts, their school memberships and
-// role classes; enrollment owns the phases and applications; schools names
-// the schools.
+// role classes; Enrollment, bound to the root clock now (ADR 0265), owns the
+// phases and applications, so the phase discovery checks the window on the
+// clock the intake checks a submission on; schools names the schools.
 func NewParentPortalReads(
 	db transactionruntime.Database, people peopledirectory.Capability, identity identityaccess.Owner,
-	enrollment enrollmentCapability.Owner, schools organizationtenancy.Query,
+	now func() time.Time, schools organizationtenancy.Query,
 ) carePlanCompose.ParentPortalRepositories {
 	if schools == nil {
 		panic("parent portal repositories: organization tenancy query is required")
 	}
-	return ComposeParentPortalReads(db, people, identity, enrollment).WithSchools(ParentPortalSchools{Schools: schools})
+	return ComposeParentPortalReads(db, people, identity, enrollmentCompose.NewClocked(now)).WithSchools(ParentPortalSchools{Schools: schools})
 }
 
 // NewParentMessagingRepositories builds Communication's parent-portal and

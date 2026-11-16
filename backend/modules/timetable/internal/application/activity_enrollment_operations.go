@@ -41,7 +41,7 @@ func (s *ActivityService) EnrollStudent(ctx context.Context, groupID, studentID 
 	enrollment := &activityContract.StudentEnrollment{
 		StudentID:       studentID,
 		ActivityGroupID: groupID,
-		ValidFrom:       activityContract.Date(calendar.TodayDate()),
+		ValidFrom:       activityContract.Date(s.today()),
 	}
 	if err := createLegacyStudentEnrollment(ctx, s.timetable, enrollment); err != nil {
 		return &activityContract.ActivityError{Op: "enroll student", Err: err}
@@ -116,7 +116,7 @@ func (s *ActivityService) UpdateGroupEnrollments(ctx context.Context, groupID in
 	// child's existing row is deliberately kept (see `preserved` below), so
 	// re-submitting a roster that still carries them must not fail — but a
 	// caller must not be able to ADD one either (#405 review).
-	if err := rejectAlumniFrom(locked, added); err != nil {
+	if err := rejectAlumniFrom(locked, added, s.today()); err != nil {
 		return &activityContract.ActivityError{Op: "update group enrollments", Err: err}
 	}
 
@@ -209,14 +209,13 @@ func (s *ActivityService) rejectAlumni(ctx context.Context, studentIDs []int64) 
 	if err != nil {
 		return err
 	}
-	return rejectAlumniFrom(locked, studentIDs)
+	return rejectAlumniFrom(locked, studentIDs, s.today())
 }
 
 // rejectAlumniFrom applies the alumni refusal to statuses already read under
 // their row locks by lockStudentStatuses. IDs with no entry are left to the
 // foreign key, which is where a non-existent student has always been rejected.
-func rejectAlumniFrom(locked map[int64]*timetable.OperationStudent, studentIDs []int64) error {
-	today := calendar.TodayDate()
+func rejectAlumniFrom(locked map[int64]*timetable.OperationStudent, studentIDs []int64, today calendar.Date) error {
 	for _, studentID := range studentIDs {
 		student := locked[studentID]
 		if student == nil {
@@ -327,7 +326,7 @@ func (s *ActivityService) careEnded(ctx context.Context, studentID int64) (bool,
 	if err != nil || student == nil {
 		return false, err
 	}
-	return student.CareEndedOn(calendar.TodayDate()), nil
+	return student.CareEndedOn(s.today()), nil
 }
 
 func (s *ActivityService) loadStudentForGate(ctx context.Context, studentID int64) (*timetable.OperationStudent, error) {
@@ -387,7 +386,7 @@ func (s *ActivityService) addNewEnrollmentsInTx(ctx context.Context, txService a
 			enrollment := &activityContract.StudentEnrollment{
 				StudentID:       studentID,
 				ActivityGroupID: groupID,
-				ValidFrom:       activityContract.Date(calendar.TodayDate()),
+				ValidFrom:       activityContract.Date(txActivities.today()),
 			}
 			if err := createLegacyStudentEnrollment(ctx, txActivities.timetable, enrollment); err != nil {
 				return &activityContract.ActivityError{Op: "create enrollment", Err: err}
@@ -432,7 +431,7 @@ func (s *ActivityService) GetEnrolledStudents(ctx context.Context, groupID int64
 		// A departed child leaves the AG roster (#2487). Their booking was
 		// capped at their last care day; this keeps the roster read agreeing
 		// with the date-aware ones.
-		if student.CareEndedOn(calendar.TodayDate()) {
+		if student.CareEndedOn(s.today()) {
 			continue
 		}
 		student.Person = &timetable.Person{

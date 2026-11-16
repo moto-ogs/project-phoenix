@@ -35,7 +35,7 @@ func (rs *Resource) listCombinedGroups(w http.ResponseWriter, r *http.Request) {
 	// Build response
 	responses := make([]CombinedGroupResponse, 0, len(groups))
 	for _, group := range groups {
-		responses = append(responses, newPresenceCombinationResponse(group))
+		responses = append(responses, newPresenceCombinationResponse(group, rs.now()))
 	}
 
 	common.Respond(w, r, http.StatusOK, responses, "Combined groups retrieved successfully")
@@ -53,7 +53,7 @@ func (rs *Resource) getActiveCombinedGroups(w http.ResponseWriter, r *http.Reque
 	// Build response
 	responses := make([]CombinedGroupResponse, 0, len(groups))
 	for _, group := range groups {
-		responses = append(responses, newPresenceCombinationResponse(group))
+		responses = append(responses, newPresenceCombinationResponse(group, rs.now()))
 	}
 
 	common.Respond(w, r, http.StatusOK, responses, "Active combined groups retrieved successfully")
@@ -76,7 +76,7 @@ func (rs *Resource) getCombinedGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Prepare response
-	response := newPresenceCombinationResponse(group)
+	response := newPresenceCombinationResponse(group, rs.now())
 
 	common.Respond(w, r, http.StatusOK, response, "Combined group retrieved successfully")
 }
@@ -131,13 +131,13 @@ func (rs *Resource) createCombinedGroup(w http.ResponseWriter, r *http.Request) 
 	combination, groups, err := rs.presenceCombinationGroups(r.Context(), created.ID)
 	if err != nil {
 		// Still return success but with the basic group info
-		response := newPresenceCombinationResponse(created)
+		response := newPresenceCombinationResponse(created, rs.now())
 		common.Respond(w, r, http.StatusCreated, response, "Combined group created successfully")
 		return
 	}
 
 	// Return the combined group with all details
-	response := newCombinationWithGroupsResponse(combination, groups)
+	response := newCombinationWithGroupsResponse(combination, groups, rs.now())
 	common.Respond(w, r, http.StatusCreated, response, "Combined group created successfully")
 }
 
@@ -179,13 +179,13 @@ func (rs *Resource) updateCombinedGroup(w http.ResponseWriter, r *http.Request) 
 	updatedGroup, err := rs.presenceCombination(r.Context(), id)
 	if err != nil {
 		// Still return success but with the basic group info
-		response := newPresenceCombinationResponse(revised)
+		response := newPresenceCombinationResponse(revised, rs.now())
 		common.Respond(w, r, http.StatusOK, response, "Combined group updated successfully")
 		return
 	}
 
 	// Return the updated combined group with all details
-	response := newPresenceCombinationResponse(updatedGroup)
+	response := newPresenceCombinationResponse(updatedGroup, rs.now())
 	common.Respond(w, r, http.StatusOK, response, "Combined group updated successfully")
 }
 
@@ -230,6 +230,6 @@ func (rs *Resource) endCombinedGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the updated combined group
-	response := newPresenceCombinationResponse(updatedGroup)
+	response := newPresenceCombinationResponse(updatedGroup, rs.now())
 	common.Respond(w, r, http.StatusOK, response, "Combined group ended successfully")
 }

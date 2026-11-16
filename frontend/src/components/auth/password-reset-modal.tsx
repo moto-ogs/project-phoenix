@@ -1,17 +1,25 @@
 "use client";
 
 import React, {
-  useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
 } from "react";
-import { Modal } from "~/components/ui/modal";
+import {
+  EnvelopeSimpleIcon,
+  HourglassMediumIcon,
+  PaperPlaneTiltIcon,
+} from "@phosphor-icons/react";
+import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import { SpinnerIcon } from "~/components/ui/icons";
+import { IconTile } from "~/components/ui/icon-tile";
 import { Input } from "~/components/ui/input";
+import { InsetPanel } from "~/components/ui/inset-panel";
+import { Modal } from "~/components/ui/modal";
+import { ModalCancelButton } from "~/components/ui/modal-frame";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { requestPasswordReset } from "~/lib/auth-api";
@@ -19,14 +27,17 @@ import type { PasswordResetPortal } from "~/lib/portal-paths";
 import { looksLikeEmail } from "~/lib/email-format";
 import { errorStatus } from "~/lib/expected-failure";
 import { createLogger } from "~/lib/logger";
+import {
+  normalizeResetAddress,
+  readResetWaits,
+  rememberResetWait,
+  resetWaitUntil,
+} from "./password-reset-wait";
 
 const logger = createLogger({ component: "PasswordReset" });
 
-/**
- * The end of the wait after too many requests. Storage is per origin, and
- * every portal has its own host, so one key serves them all.
- */
-const RATE_LIMIT_STORAGE_KEY = "passwordResetRateLimitUntil";
+/** The backend's window, for a refusal that names no Retry-After. */
+const FALLBACK_WAIT_SECONDS = 3600;
 
 interface PasswordResetModalProps {
   readonly portal: PasswordResetPortal;
@@ -50,73 +61,44 @@ export interface PasswordResetModalCopy {
   readonly submit: string;
   readonly submitting: string;
   readonly successTitle: string;
+  /**
+   * Says the link comes only if the address has an account: the answer is
+   * the same for every address (#7213), so the dialog never claims a mail.
+   */
   readonly successMessage: string;
   readonly successHint: string;
+  /** Back to the form with the address, to correct a typo. */
+  readonly changeAddress: string;
   readonly close: string;
   /**
    * `{object}` of the catalog text, feminine or neuter with article ("das
-   * Senden des Links"), and the wait shown next to the button after too
-   * many requests.
+   * Senden des Links").
    */
   readonly errorObject: string;
+  /** The wait for this address after too many requests, `mm:ss`. */
   readonly rateLimitWait: (countdown: string) => string;
 }
 
 export const DEFAULT_PASSWORD_RESET_MODAL_COPY: PasswordResetModalCopy = {
   title: "Passwort zurücksetzen",
   description:
-    "Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.",
+    "Wir schicken Ihnen einen Link. Damit legen Sie ein neues Passwort fest.",
   emailLabel: "E-Mail-Adresse",
   invalidEmail: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
   cancel: "Abbrechen",
   submit: "Link senden",
-  submitting: "Wird gesendet...",
-  successTitle: "E-Mail versendet!",
+  submitting: "Wird gesendet …",
+  successTitle: "Bitte prüfen Sie Ihr Postfach",
   successMessage:
-    "Wir haben Ihnen eine E-Mail mit einem Link zum Zurücksetzen Ihres Passworts gesendet.",
+    "Wenn es zu dieser Adresse ein Konto gibt, bekommen Sie gleich eine E-Mail mit dem Link.",
   successHint:
-    "Bitte überprüfen Sie Ihren Posteingang und folgen Sie den Anweisungen in der E-Mail.",
+    "Keine E-Mail da? Sehen Sie auch im Spam-Ordner nach. Stimmt die Adresse nicht, ändern Sie sie.",
+  changeAddress: "Adresse ändern",
   close: "Schließen",
   errorObject: "das Senden des Links",
   rateLimitWait: (countdown) =>
-    `Einen neuen Link können Sie in ${countdown} anfordern.`,
+    `Für diese Adresse wurde schon mehrmals ein Link angefordert. Einen neuen Link können Sie in ${countdown} anfordern.`,
 };
-
-const EmailIcon = ({ className }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="48"
-    height="48"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <rect x="2" y="4" width="20" height="16" rx="2" />
-    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-  </svg>
-);
-
-const SuccessCheckIcon = ({ className }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="48"
-    height="48"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-    <polyline points="22 4 12 14.01 9 11.01" />
-  </svg>
-);
 
 const formatCountdown = (totalSeconds: number): string => {
   const minutes = Math.floor(totalSeconds / 60);
@@ -131,7 +113,9 @@ export function PasswordResetModal({
   copy = DEFAULT_PASSWORD_RESET_MODAL_COPY,
   initialEmail = "",
 }: PasswordResetModalProps) {
+  const formId = useId();
   const formRef = useRef<HTMLFormElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
   const errorPath = useApiFormError(formRef);
   const [email, setEmail] = useState(isOpen ? initialEmail.trim() : "");
   // The dialog stays mounted while closed: each opening takes the login
@@ -142,77 +126,61 @@ export function PasswordResetModal({
     if (isOpen) setEmail(initialEmail.trim());
   }
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [rateLimitUntil, setRateLimitUntil] = useState<number | null>(null);
-  const [secondsRemaining, setSecondsRemaining] = useState(0);
+  // The address the link went to; set, the dialog shows the answer.
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [waits, setWaits] = useState<Record<string, number>>({});
+  const [now, setNow] = useState(() => Date.now());
+  // Read once when the wait starts; the ticking warning stays silent.
+  const [waitAnnouncement, setWaitAnnouncement] = useState("");
   const latestSubmitRef = useRef<() => void>(() => undefined);
   const clearPathError = errorPath.clear;
 
+  // Storage is read after mount: the login pages render on the server too.
   useEffect(() => {
-    const stored = globalThis.localStorage.getItem(RATE_LIMIT_STORAGE_KEY);
-    if (!stored) return;
-
-    const timestamp = Number(stored);
-    if (!Number.isNaN(timestamp) && timestamp > Date.now()) {
-      setRateLimitUntil(timestamp);
-    } else if (!Number.isNaN(timestamp)) {
-      globalThis.localStorage.removeItem(RATE_LIMIT_STORAGE_KEY);
-    }
+    setWaits(readResetWaits(Date.now()));
   }, []);
 
+  const waitUntil = resetWaitUntil(waits, email, now);
+  const waitText =
+    waitUntil === null
+      ? null
+      : copy.rateLimitWait(
+          formatCountdown(Math.max(1, Math.ceil((waitUntil - now) / 1000))),
+        );
+
   useEffect(() => {
-    if (!rateLimitUntil) {
-      setSecondsRemaining(0);
-      return;
-    }
-
-    const updateCountdown = () => {
-      const now = Date.now();
-      if (rateLimitUntil <= now) {
-        setRateLimitUntil(null);
-        setSecondsRemaining(0);
-        globalThis.localStorage.removeItem(RATE_LIMIT_STORAGE_KEY);
-        clearPathError();
-      } else {
-        // The catalog text stays in the alert; the countdown runs next to
-        // the button.
-        setSecondsRemaining(Math.ceil((rateLimitUntil - now) / 1000));
-      }
-    };
-
-    updateCountdown();
-    const intervalId = globalThis.setInterval(updateCountdown, 1000);
+    if (waitUntil === null) return;
+    const intervalId = globalThis.setInterval(() => setNow(Date.now()), 1000);
     return () => globalThis.clearInterval(intervalId);
-  }, [rateLimitUntil, clearPathError]);
+  }, [waitUntil]);
 
-  const rateLimitActive =
-    rateLimitUntil !== null && rateLimitUntil > Date.now();
-
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     clearPathError();
-    setIsSuccess(false);
+    setSentTo(null);
     setIsLoading(false);
     onClose();
-  }, [onClose, clearPathError]);
-
-  const startRateLimit = (retryAfterSeconds: number | undefined) => {
-    const retrySeconds =
-      retryAfterSeconds && retryAfterSeconds > 0 ? retryAfterSeconds : 3600;
-    const retryUntil = Date.now() + retrySeconds * 1000;
-    setRateLimitUntil(retryUntil);
-    setSecondsRemaining(retrySeconds);
-    // This is a numeric rate-limit expiry, not an authentication token.
-    globalThis.localStorage.setItem(
-      RATE_LIMIT_STORAGE_KEY,
-      retryUntil.toString(),
-    );
   };
 
-  const errorObject = copy.errorObject;
+  const startWait = (
+    address: string,
+    retryAfterSeconds: number | undefined,
+  ) => {
+    const current = Date.now();
+    const seconds =
+      retryAfterSeconds && retryAfterSeconds > 0
+        ? retryAfterSeconds
+        : FALLBACK_WAIT_SECONDS;
+    setNow(current);
+    setWaitAnnouncement(copy.rateLimitWait(formatCountdown(seconds)));
+    setWaits((previous) =>
+      rememberResetWait(previous, address, current + seconds * 1000, current),
+    );
+  };
 
   const submit = async () => {
     const path = errorPath;
     path.clear();
+    setWaitAnnouncement("");
     const address = email.trim();
     if (!looksLikeEmail(address)) {
       path.invalid(copy.invalidEmail, { email: copy.invalidEmail });
@@ -221,7 +189,7 @@ export function PasswordResetModal({
     setIsLoading(true);
     try {
       await requestPasswordReset(portal, address);
-      setIsSuccess(true);
+      setSentTo(address);
     } catch (err) {
       if (
         err instanceof ApiError &&
@@ -230,8 +198,9 @@ export function PasswordResetModal({
         logger.warn("password_reset_rate_limited", {
           error: "rate_limit_exceeded",
         });
-        startRateLimit(err.retryAfterSeconds);
-        void path.show(err, { object: errorObject });
+        // No failure of the dialog: the address waits, and the warning
+        // under the field says how long (#7213).
+        startWait(address, err.retryAfterSeconds);
       } else {
         const status = errorStatus(err);
         const failure = {
@@ -245,7 +214,7 @@ export function PasswordResetModal({
           logger.error("password_reset_failed", failure);
         }
         void path.show(err, {
-          object: errorObject,
+          object: copy.errorObject,
           retry: () => latestSubmitRef.current(),
         });
       }
@@ -263,102 +232,149 @@ export function PasswordResetModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // The button is disabled while the wait runs.
-    if (!rateLimitActive) await submit();
+    // The button is disabled while the address waits.
+    if (waitUntil === null) await submit();
   };
+
+  const changeAddress = () => {
+    setSentTo(null);
+    // The form mounts with this render; focus the field once it is there.
+    globalThis.requestAnimationFrame(() => emailRef.current?.select());
+  };
+
+  if (sentTo !== null) {
+    return (
+      <Modal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title={copy.successTitle}
+        titleLevel={2}
+        icon={
+          <IconTile
+            size="section"
+            tone="green"
+            icon={<PaperPlaneTiltIcon weight="duotone" aria-hidden />}
+          />
+        }
+        size="sm"
+        mobileSheet
+        sheetFooter="row"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={changeAddress}
+            >
+              {copy.changeAddress}
+            </Button>
+            <Button type="button" size="md" onClick={handleClose}>
+              {copy.close}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-700">{copy.successMessage}</p>
+          <InsetPanel framed padding="sm" className="flex items-center gap-3">
+            <EnvelopeSimpleIcon
+              className="size-5 shrink-0 text-gray-500"
+              aria-hidden
+            />
+            <span className="min-w-0 text-sm font-medium break-all text-gray-900">
+              {normalizeResetAddress(sentTo)}
+            </span>
+          </InsetPanel>
+          <p className="text-sm text-gray-500">{copy.successHint}</p>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title=""
-      ariaLabel={isSuccess ? copy.successTitle : copy.title}
-      footer={undefined}
+      title={copy.title}
+      titleLevel={2}
+      description={copy.description}
+      icon={
+        <IconTile
+          size="section"
+          tone="neutral"
+          icon={<EnvelopeSimpleIcon aria-hidden />}
+        />
+      }
+      size="sm"
+      mobileSheet
+      sheetFooter="row"
+      initialFocusRef={emailRef}
+      busy={isLoading}
+      footer={
+        <>
+          <ModalCancelButton onClick={handleClose} disabled={isLoading}>
+            {copy.cancel}
+          </ModalCancelButton>
+          <Button
+            type="submit"
+            form={formId}
+            size="md"
+            isLoading={isLoading}
+            loadingText={copy.submitting}
+            disabled={waitText !== null}
+            disabledReason={waitText ?? undefined}
+          >
+            {copy.submit}
+          </Button>
+        </>
+      }
     >
-      <div className="text-center">
-        {isSuccess ? (
-          <>
-            <SuccessCheckIcon className="text-moto-green-strong mx-auto mb-4 h-12 w-12" />
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-              {copy.successTitle}
-            </h1>
-            <p className="mt-4 text-gray-600">{copy.successMessage}</p>
-            <p className="mt-2 text-sm text-gray-500">{copy.successHint}</p>
-            <div className="mt-6">
-              <Button type="button" size="md" onClick={handleClose}>
-                {copy.close}
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <EmailIcon className="mx-auto mb-4 h-12 w-12 text-gray-700" />
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
-              {copy.title}
-            </h1>
-            <p className="mt-4 text-gray-600">{copy.description}</p>
-
-            <form
-              ref={formRef}
-              onSubmit={handleSubmit}
-              noValidate
-              className="mt-6 space-y-4"
-            >
-              <FormErrorAlert message={errorPath.error} />
-              {rateLimitActive ? (
-                <p className="text-sm text-gray-600" role="status">
-                  {copy.rateLimitWait(
-                    formatCountdown(Math.max(secondsRemaining, 0)),
-                  )}
-                </p>
-              ) : null}
-
-              <div className="text-left">
-                <Input
-                  controlSize="touch"
-                  id="reset-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full"
-                  label={copy.emailLabel}
-                  disabled={isLoading}
-                  error={errorPath.fieldError("email")}
-                />
-              </div>
-
-              <div className="flex justify-center gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="md"
-                  onClick={handleClose}
-                  disabled={isLoading}
-                >
-                  {copy.cancel}
-                </Button>
-                <Button
-                  type="submit"
-                  size="md"
-                  disabled={isLoading || rateLimitActive}
-                >
-                  {isLoading ? (
-                    <>
-                      <SpinnerIcon className="mr-2 -ml-1 h-4 w-4" />
-                      <span>{copy.submitting}</span>
-                    </>
-                  ) : (
-                    <span>{copy.submit}</span>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </>
+      <form
+        id={formId}
+        ref={formRef}
+        onSubmit={handleSubmit}
+        noValidate
+        className="space-y-4"
+      >
+        <FormErrorAlert message={errorPath.error} />
+        <Input
+          ref={emailRef}
+          controlSize="touch"
+          id="reset-email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          spellCheck={false}
+          required
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            // A wait that ran out while no countdown ticked ends here.
+            setNow(Date.now());
+            // The announcement belonged to the address just replaced.
+            setWaitAnnouncement("");
+          }}
+          className="w-full"
+          label={copy.emailLabel}
+          disabled={isLoading}
+          error={errorPath.fieldError("email")}
+        />
+        {waitText === null ? null : (
+          <Alert
+            type="warning"
+            // The countdown changes every second; a live region would read
+            // it out every second. The status below announces it once.
+            announce="off"
+            icon={<HourglassMediumIcon weight="duotone" aria-hidden />}
+            message={<span className="tabular-nums">{waitText}</span>}
+          />
         )}
-      </div>
+        <p className="sr-only" role="status">
+          {waitAnnouncement}
+        </p>
+      </form>
     </Modal>
   );
 }

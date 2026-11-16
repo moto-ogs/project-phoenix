@@ -42,8 +42,10 @@ const (
 			(organization_id, holiday_period_id, holiday_registration_id, claimed_at, filename, content_type, size_bytes, content)
 		VALUES (?, ?, ?, statement_timestamp(), ?, ?, ?, ?)
 		RETURNING id`
+	// deleteUnclaimedHolidayProofsQuery ages the proofs on the clock that
+	// stamps and claims them, the database's (ADR 0239).
 	deleteUnclaimedHolidayProofsQuery = `DELETE FROM enrollment.holiday_registration_proofs
-		WHERE holiday_registration_id IS NULL AND created_at < ?`
+		WHERE holiday_registration_id IS NULL AND created_at < statement_timestamp() - (? * INTERVAL '1 second')`
 )
 
 // InsertHolidayProof stores an unclaimed proof of the period.
@@ -140,9 +142,9 @@ func (s *HolidayRegistrationStore) ReadHolidayProof(ctx context.Context, organiz
 }
 
 // DeleteUnclaimedHolidayProofs deletes, across every Träger, the proofs no
-// registration claimed that were uploaded before createdBefore. Only the
+// registration claimed that are older than lifetime. Only the
 // administrative transaction of the hourly cleanup may delete across Träger.
-func (s *HolidayRegistrationStore) DeleteUnclaimedHolidayProofs(ctx context.Context, createdBefore time.Time) (int, error) {
+func (s *HolidayRegistrationStore) DeleteUnclaimedHolidayProofs(ctx context.Context, lifetime time.Duration) (int, error) {
 	if !tenant.IsAdminTx(ctx) {
 		return 0, errors.New("enrollment postgres: the holiday proof retention requires the administrative transaction")
 	}
@@ -150,7 +152,7 @@ func (s *HolidayRegistrationStore) DeleteUnclaimedHolidayProofs(ctx context.Cont
 	if err != nil {
 		return 0, err
 	}
-	deleted, err := affectedRows(db.NewRaw(deleteUnclaimedHolidayProofsQuery, createdBefore).Exec(ctx))
+	deleted, err := affectedRows(db.NewRaw(deleteUnclaimedHolidayProofsQuery, int64(lifetime/time.Second)).Exec(ctx))
 	if err != nil {
 		return 0, fmt.Errorf("enrollment postgres: delete unclaimed holiday proofs: %w", err)
 	}

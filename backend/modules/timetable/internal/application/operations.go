@@ -45,10 +45,11 @@ func NewOperations(deps ports.OperationDependencies, caller ports.OperationCalle
 }
 
 func (s *operations) now() time.Time {
-	if s.deps.Now != nil {
-		return s.deps.Now()
+	now := s.deps.Now
+	if now == nil {
+		now = time.Now
 	}
-	return time.Now()
+	return now()
 }
 
 func (s *operations) today() calendar.Date {

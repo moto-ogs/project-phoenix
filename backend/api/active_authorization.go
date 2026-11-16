@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth"
 
@@ -25,11 +26,12 @@ func activeAuthorization() presenceAPI.Authorization {
 	}
 }
 
-func activeRequestRuntime() presenceAPI.RequestRuntime {
+func activeRequestRuntime(now func() time.Time) presenceAPI.RequestRuntime {
 	return presenceAPI.RequestRuntime{
 		WithStaff:    deviceauth.WithAttendanceStaff,
 		TenantID:     devicescanCompose.AttendanceTenantID,
 		MarkRollback: devicescanCompose.MarkAttendanceRollback,
+		Now:          now,
 	}
 }
 

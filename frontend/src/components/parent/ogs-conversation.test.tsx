@@ -20,6 +20,8 @@ vi.mock("~/lib/parent-api", async (importOriginal) => ({
   getChildConversation: mockGetConversation,
   postChildMessage: mockPostMessage,
   getChildToday: vi.fn(),
+  // Side-load of the child's other conversations; none in these tests.
+  listChildThreads: vi.fn(async () => []),
 }));
 
 // The send overlay (#5011) is bound to the signed-in session's scope.

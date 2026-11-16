@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -230,6 +231,37 @@ func TestPasswordResetRateLimitDoesNotRevealAccountExistence(t *testing.T) {
 	var windows int
 	require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM auth.password_reset_rate_limits WHERE email IN (?, ?)`, unknown, ineligible).Scan(ctx, &windows))
 	require.Zero(t, windows, "no plaintext address is retained by the limiter")
+}
+
+// A failure past the account lookup happens only for an existing account.
+// It must answer like an unknown address (#7213): an error would tell the
+// caller that the address has an account.
+func TestPasswordResetFailureForAnAccountAnswersLikeAnUnknownAddress(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	resets := newResetCapability(t, db,
+		api.WithAuthTestMailer(testpkg.NewCapturingMailer()),
+		api.WithAuthTestTransactionalOutbox(failingResetOutbox{}))
+	ctx := testpkg.Ctx(t)
+	known := resetAccount(t, db, "reset-outbox-failure")
+
+	link, err := resets.InitiatePasswordReset(ctx, "reset-outbox-unknown@test.local", identityaccess.PasswordResetScopeStaff)
+	require.NoError(t, err)
+	require.Nil(t, link)
+	link, err = resets.InitiatePasswordReset(ctx, known, identityaccess.PasswordResetScopeStaff)
+	require.NoError(t, err, "a failing mail outbox answers like an unknown address")
+	require.Nil(t, link)
+
+	var issued int
+	require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM auth.password_reset_tokens t
+		JOIN auth.accounts a ON a.id = t.account_id WHERE a.email = ?`, known).Scan(ctx, &issued))
+	require.Zero(t, issued, "the link rolls back with the failed mail")
+}
+
+type failingResetOutbox struct{}
+
+func (failingResetOutbox) EnqueueTransactionalMail(context.Context, owners.DurableMail) error {
+	return errors.New("outbox unavailable")
 }
 
 // Cleanup removes spent links and stale windows and keeps what is still in

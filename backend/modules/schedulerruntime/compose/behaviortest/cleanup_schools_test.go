@@ -25,6 +25,11 @@ type cleanupSchool struct {
 	id, expired, retained, windowed int64
 }
 
+// cleanupSeedNow is the instant the seeded visits are dated against: the
+// night of the clock the cleanup tests run on, which the visit retention
+// reads too.
+var cleanupSeedNow = time.Date(2026, time.October, 14, 2, 0, 0, 0, calendar.Berlin)
+
 func seedCleanupSchool(t *testing.T, db *bun.DB, inactive, deleted bool, retentionDays int) cleanupSchool {
 	t.Helper()
 	id, _ := testpkg.CreateTestTenant(t, db)
@@ -33,8 +38,9 @@ func seedCleanupSchool(t *testing.T, db *bun.DB, inactive, deleted bool, retenti
 	insertVisit := func(daysAgo int) int64 {
 		var visitID int64
 		require.NoError(t, db.NewRaw(`INSERT INTO active.visits (tenant_id, student_id, active_group_id, entry_time, exit_time, created_at)
-			VALUES (?, ?, ?, CURRENT_TIMESTAMP - make_interval(days => ?, hours => 1),
-			CURRENT_TIMESTAMP - make_interval(days => ?), CURRENT_TIMESTAMP - make_interval(days => ?)) RETURNING id`, id, student.ID, group.ID, daysAgo, daysAgo, daysAgo).
+			VALUES (?, ?, ?, ?::timestamptz - make_interval(days => ?, hours => 1),
+			?::timestamptz - make_interval(days => ?), ?::timestamptz - make_interval(days => ?)) RETURNING id`,
+			id, student.ID, group.ID, cleanupSeedNow, daysAgo, cleanupSeedNow, daysAgo, cleanupSeedNow, daysAgo).
 			Scan(context.Background(), &visitID))
 		return visitID
 	}

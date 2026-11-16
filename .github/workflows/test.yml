@@ -629,6 +629,15 @@ jobs:
     # them in the background, and they come up while checkout, Go and the
     # build run.
     env:
+      # seedsmoke: Argon2id with the cheap profile of the backend tests
+      # (userpass/seedsmoke_params.go). One school seed hashes and verifies
+      # passwords some 150 times; with the production profile that was 41 of
+      # the server's 67 CPU seconds, and two schools side by side took
+      # 91-139 s against 70-82 s locally on four cores (#7195). The seed
+      # durations printed below are therefore no longer what a visitor of
+      # the demo waits for. backend-build-cache.yml builds with the same
+      # flags (scripts/seed-smoke-build.test.mjs).
+      GOFLAGS: -tags=testhooks,seedsmoke -trimpath
       DB_MAX_OPEN_CONNS: "40"
       DB_MAX_IDLE_CONNS: "40"
       DB_CONN_MAX_LIFETIME: 30m

@@ -452,12 +452,11 @@ func (s *TraegerStaffStore) ReleaseMirror(ctx context.Context, staffID int64, fr
 // employment from the day from on with rows: later versions go, the version
 // running over from ends there, and the employment leaves its work-time
 // template, so a template change no longer rewrites the Soll.
-func (s *TraegerStaffStore) MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule) error {
+func (s *TraegerStaffStore) MirrorStaffSchedule(ctx context.Context, staffID int64, from calendar.Date, rows []domain.StaffWorkSchedule, now time.Time) error {
 	db, schoolID, err := schoolStaffDB(ctx)
 	if err != nil {
 		return err
 	}
-	now := time.Now()
 	if _, err := db.ExecContext(ctx, `DELETE FROM `+tableStaffWorkSchedules+` WHERE tenant_id = ? AND staff_id = ? AND valid_from >= ?`,
 		schoolID, staffID, from); err != nil {
 		return fmt.Errorf("workforce postgres: drop mirrored schedule versions: %w", err)

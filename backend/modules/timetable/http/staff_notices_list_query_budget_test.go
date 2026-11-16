@@ -58,7 +58,7 @@ func newNoticeBudgetFixture(t *testing.T) noticeBudgetFixture {
 	reader := testpkg.CreateTestAccount(t, db, "notice-budget-reader@example.test")
 	other := testpkg.CreateTestAccount(t, db, "notice-budget-other@example.test")
 	service := newStaffNoticeService(t, db)
-	resource := timetablehttp.NewStaffNoticeResource(service, noticeAccountID)
+	resource := timetablehttp.NewStaffNoticeResource(service, noticeAccountID, calendar.TodayDate)
 	router := chi.NewRouter()
 	// ExecuteRequestForTest selects the correct clone; this middleware selects
 	// its private pool, keeping database/sql channels inside this bubble.
@@ -183,7 +183,7 @@ func TestStaffNoticeListRouteQueryBudgets(t *testing.T) {
 						i := len(notices)
 						notice := f.create(t, f.ctx, i, noticeBudgetInput(i))
 						if i%2 == 0 {
-							repo := compose.NewStaffNoticeRepository(f.db)
+							repo := compose.NewStaffNoticeRepository(f.db, nil)
 							for _, accountID := range []int64{f.reader, f.other} {
 								require.NoError(t, repo.Acknowledge(f.ctx, notice.ID, accountID))
 							}

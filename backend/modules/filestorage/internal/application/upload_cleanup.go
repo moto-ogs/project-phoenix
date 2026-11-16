@@ -16,6 +16,8 @@ type UploadCleanup struct {
 	prefix string
 	store  uploadCleanupStore
 	tx     ports.Transaction
+	// now dates the queued intents; the sweep compares with the same clock.
+	now func() time.Time
 }
 
 type uploadCleanupStore interface {
@@ -23,11 +25,14 @@ type uploadCleanupStore interface {
 	QueueAll(context.Context, int64, []string, time.Time) (domain.OperationStats, error)
 }
 
-func NewUploadCleanup(store uploadCleanupStore, tx ports.Transaction, kind string) *UploadCleanup {
+func NewUploadCleanup(store uploadCleanupStore, tx ports.Transaction, kind string, now func() time.Time) *UploadCleanup {
 	if kind != "student-photos" && kind != "enrollment-legal-documents" {
 		panic("unsupported upload cleanup namespace")
 	}
-	return &UploadCleanup{store: store, tx: tx, kind: kind, prefix: "/uploads/" + kind + "/"}
+	if now == nil {
+		panic("upload cleanup: clock is required")
+	}
+	return &UploadCleanup{store: store, tx: tx, kind: kind, prefix: "/uploads/" + kind + "/", now: now}
 }
 
 func (c *UploadCleanup) Queue(ctx context.Context, url string) error {
@@ -44,7 +49,7 @@ func (c *UploadCleanup) Queue(ctx context.Context, url string) error {
 		return fmt.Errorf("legal document cleanup requires the owning tenant")
 	}
 	return c.tx.RunWrite(ctx, func(txCtx context.Context) error {
-		_, err := c.store.Queue(txCtx, c.tx.TenantID(txCtx), name, time.Now())
+		_, err := c.store.Queue(txCtx, c.tx.TenantID(txCtx), name, c.now())
 		return err
 	})
 }
@@ -71,7 +76,7 @@ func (c *UploadCleanup) QueueAll(ctx context.Context, urls []string) error {
 	if len(names) == 0 {
 		return nil
 	}
-	_, err := c.store.QueueAll(ctx, c.tx.TenantID(ctx), names, time.Now())
+	_, err := c.store.QueueAll(ctx, c.tx.TenantID(ctx), names, c.now())
 	return err
 }
 

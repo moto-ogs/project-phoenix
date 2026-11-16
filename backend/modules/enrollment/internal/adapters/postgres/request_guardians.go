@@ -105,7 +105,7 @@ func (r *Store) StampRequestGuardianProfile(ctx context.Context, id, profileID i
 	if err != nil {
 		return err
 	}
-	res, err := db.NewUpdate().Model((*requestGuardianRow)(nil)).Set("guardian_profile_id = ?", profileID).Set("updated_at = ?", time.Now()).Where("request_guardian.tenant_id = ?", tenantID).Where("request_guardian.id = ?", id).Exec(ctx)
+	res, err := db.NewUpdate().Model((*requestGuardianRow)(nil)).Set("guardian_profile_id = ?", profileID).Set("updated_at = ?", r.currentTime()).Where("request_guardian.tenant_id = ?", tenantID).Where("request_guardian.id = ?", id).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to stamp resolved guardian profile: %w", err)
 	}

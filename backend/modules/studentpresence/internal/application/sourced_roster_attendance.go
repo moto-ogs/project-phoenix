@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"slices"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
@@ -80,12 +79,12 @@ func (s *Service) applySourcedRosterAttendance(ctx context.Context, ids []int64,
 		return stats, err
 	}
 	statusRows, partialRows := sourcedAttendanceChanges(participants, statuses, exceptions)
-	statusStats, err := s.store.ApplyStatusDayAbsences(ctx, statusRows, time.Now().UTC())
+	statusStats, err := s.store.ApplyStatusDayAbsences(ctx, statusRows, s.now().UTC())
 	addStats(&stats, statusStats)
 	if err != nil {
 		return stats, err
 	}
-	partialStats, err := s.store.ApplyPartialAbsences(ctx, partialRows, time.Now().UTC())
+	partialStats, err := s.store.ApplyPartialAbsences(ctx, partialRows, s.now().UTC())
 	addStats(&stats, partialStats)
 	return stats, err
 }

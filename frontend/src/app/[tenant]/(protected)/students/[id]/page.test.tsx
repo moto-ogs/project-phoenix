@@ -529,6 +529,37 @@ vi.mock("~/lib/student-notes-api", async (importOriginal) => {
   return actual;
 });
 
+// The child has no holiday-week registration and no recorded care times.
+vi.mock("~/lib/holiday-host-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/holiday-host-api")>()),
+  fetchHolidayStudentRegistrations: vi.fn(async () => []),
+  fetchHolidayStudentHealth: vi.fn(async () => []),
+}));
+
+vi.mock("~/lib/care-times", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/care-times")>()),
+  fetchStudentCareTimes: vi.fn(
+    async (studentId: string, from: string, to: string) => ({
+      student_id: studentId,
+      from,
+      to,
+      data_from: from,
+      tolerance_minutes: 0,
+      summary: {
+        overrun_count: 0,
+        overrun_days: 0,
+        unbooked_days: 0,
+        absent_days: 0,
+        extra_minutes: 0,
+        planned_minutes: 0,
+        actual_minutes: 0,
+        deviation_minutes: 0,
+      },
+      days: [],
+    }),
+  ),
+}));
+
 // Mock pickup schedule API
 vi.mock("~/lib/pickup-schedule-api", () => ({
   fetchStudentPickupData: vi.fn().mockResolvedValue({
