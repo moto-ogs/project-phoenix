@@ -403,6 +403,51 @@ async function ruleHits(
   };
 }
 
+describe.concurrent("ui-kit/no-costly-motion", () => {
+  it("reports blur, transition-all, size transitions and inline keyframes, also in the kit", async () => {
+    const { count, output } = await ruleHits(
+      `
+      function Probe({ open }: { open: boolean }) {
+        return <>
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className={\`sticky top-0 md:backdrop-blur-md \${open ? "a" : "b"}\`} />
+          <div className="rounded-lg ring-1 transition-all" />
+          <div className="motion-safe:transition-[left,width] duration-150" />
+          <div style={{ backdropFilter: "blur(20px)" }} />
+          <div style={{ transition: "height 200ms ease" }} />
+          <style>{\`@keyframes grow { from { width: 0 } }\`}</style>
+        </>;
+      }
+      void Probe;
+    `,
+      "no-costly-motion",
+      "src/components/ui/probe.tsx",
+    );
+
+    expect(count, output).toBe(7);
+  });
+
+  it("accepts compositor motion and the grid-rows reveal", async () => {
+    const { count, output } = await ruleHits(
+      `
+      function Probe() {
+        return <>
+          <div className="transition-opacity duration-200 opacity-0" />
+          <div className="transition transition-colors transition-transform" />
+          <div className="transition-[opacity,transform] transition-[background-color,box-shadow]" />
+          <div className="grid transition-[grid-template-rows] duration-200" />
+          <div style={{ backdropFilter: "none", transition: "opacity 200ms" }} />
+        </>;
+      }
+      void Probe;
+    `,
+      "no-costly-motion",
+    );
+
+    expect(count, output).toBe(0);
+  });
+});
+
 describe.concurrent("ui-kit/no-hand-rolled-icon-tile", () => {
   it("reports grey and tinted icon tiles, also across className branches", async () => {
     const { count, output } = await ruleHits(
@@ -2873,13 +2918,12 @@ describe.concurrent(
       expect(result.output).toContain(RULE);
     });
 
-    it("accepts a hint box, a brand surface and a tooltip on a div", async () => {
+    it("accepts a hint box and a tooltip on a div", async () => {
       const result = await lintSource(
         `export const Probe = () => (
         <>
           <div className="rounded-md bg-gray-50 px-3 py-2 text-xs text-gray-600">Hinweis in ganzer Breite</div>
           <div className="w-fit rounded-md bg-gray-50 px-3 py-2 text-xs text-gray-600">Kurzer Hinweis</div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/85 px-3 py-1.5 text-xs shadow-sm backdrop-blur-sm">Für Schulen</div>
           <div role="tooltip" className="inline-block rounded-md bg-gray-900 px-2 py-1 text-xs text-white">Hilfe</div>
         </>
       );`,
