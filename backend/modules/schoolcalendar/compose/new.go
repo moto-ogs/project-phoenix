@@ -50,8 +50,7 @@ func NewRecords(dependencies RecordsDependencies) (schoolcalendar.Days, error) {
 	if dependencies.DB == nil || dependencies.Observe == nil || dependencies.FederalState == nil || dependencies.ClosingDayReads == nil {
 		return nil, errors.New("school calendar compose: all dependencies are required")
 	}
-	// The records serve no period administration, so its gate and guard
-	// are never asked.
+	// The records serve no period administration: gate and guard are never asked.
 	return application.New(postgres.New(postgres.NewCompositionDatabase(), dependencies.ClosingDayReads), ports.Observer(dependencies.Observe), application.Administration{Transaction: writeTransaction, Today: application.BerlinDay(time.Now), FederalState: dependencies.FederalState}, application.LocalCalendar{}), nil
 }
 
