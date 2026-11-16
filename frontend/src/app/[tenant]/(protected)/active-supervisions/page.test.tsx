@@ -313,7 +313,7 @@ import { useNFCEnabled } from "~/lib/tenant-context";
 import MeinRaumPage from "./page";
 import { useSupervisionDashboard } from "~/components/active-supervisions/use-supervision-dashboard";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
-import { TEST_CLOCK_TODAY } from "~/test/clock";
+import { TEST_CLOCK_INSTANT, TEST_CLOCK_TODAY } from "~/test/clock";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -5905,18 +5905,31 @@ describe("overview caller and foreign sessions (#5035)", () => {
     cleanup();
   });
 
+  // Berlin wall-clock "HH:MM:SS" `minutes` after the test clock; the
+  // offsets used stay within the test day at 00:30 and 23:30.
+  function berlinClockTime(minutes: number): string {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Berlin",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).format(new Date(TEST_CLOCK_INSTANT.getTime() + minutes * 60_000));
+  }
+
   it("refetches the limited planned list when a block ends", async () => {
     vi.useFakeTimers();
     // Five blocks fill the backend limit. The sixth can only appear after
-    // a refetch frees the slot of the first block, which ends at 12:01.
+    // a refetch frees the slot of the first block, which ends one minute
+    // after the test clock.
     const plannedNow: PlannedTimetableInstance[] = Array.from(
       { length: 5 },
       (_, index) => ({
         id: String(index + 1),
         title: `Block ${index + 1}`,
         date: TEST_CLOCK_TODAY,
-        startTime: "11:50:00",
-        endTime: index === 0 ? "12:01:00" : "13:00:00",
+        startTime: berlinClockTime(-10),
+        endTime: index === 0 ? berlinClockTime(1) : berlinClockTime(20),
         roomId: "r1",
         roomName: "Atelier",
         status: "planned",

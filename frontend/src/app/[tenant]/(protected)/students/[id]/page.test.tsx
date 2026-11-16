@@ -19,7 +19,11 @@ import { useSession } from "next-auth/react";
 import { getDayData as getArrivalDayData } from "~/lib/arrival-schedule-helpers";
 import { getDayData as getPickupDayData } from "~/lib/pickup-schedule-helpers";
 import { useWeekendFollowsFriday } from "~/lib/tenant-context";
-import { setTestClock } from "~/test/clock";
+import {
+  setTestClock,
+  TEST_CLOCK_INSTANT,
+  TEST_CLOCK_TODAY,
+} from "~/test/clock";
 import { fetchStudentPickupData } from "~/lib/pickup-schedule-api";
 
 const { mockSWRMutate, mockScopedMutate, MockStudentStatusDayConflictError } =
@@ -2387,14 +2391,14 @@ describe("StudentDetailPage", () => {
           {
             id: "7",
             student_id: "1",
-            date: "2026-09-09",
+            date: TEST_CLOCK_TODAY,
             status: "excused",
             label: "Entschuldigt",
-            reported_at: "2026-09-09T06:30:00Z",
+            reported_at: TEST_CLOCK_INSTANT.toISOString(),
             cleared_at: null,
             source: "parent",
-            created_at: "2026-09-09T06:30:00Z",
-            updated_at: "2026-09-09T06:30:00Z",
+            created_at: TEST_CLOCK_INSTANT.toISOString(),
+            updated_at: TEST_CLOCK_INSTANT.toISOString(),
           },
         ]);
         renderExcusedToday();

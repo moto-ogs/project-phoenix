@@ -9,6 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { WorkTimeModel } from "~/lib/staff-api";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 
 import { WorkTimeModelPeopleTab } from "./work-time-model-people-tab";
 
@@ -55,6 +56,18 @@ vi.mock("~/lib/swr", () => ({
   useTenantMutate: () => swr.tenantMutate,
   useInvalidateMatching: () => swr.invalidate,
 }));
+
+// Der vorgeschlagene frühere Beginn: der Monatserste vor dem Testtag, am
+// Monatsersten selbst der des Vormonats.
+const [testYear = 0, testMonth = 1, testDay = 1] =
+  TEST_CLOCK_TODAY.split("-").map(Number);
+const earlierMonth = testDay === 1 ? testMonth - 1 : testMonth;
+const earlierYear = earlierMonth === 0 ? testYear - 1 : testYear;
+const earlierMonthPadded = String(
+  earlierMonth === 0 ? 12 : earlierMonth,
+).padStart(2, "0");
+const EARLIER_START = `${earlierYear}-${earlierMonthPadded}-01`;
+const EARLIER_START_LABEL = `01.${earlierMonthPadded}.${earlierYear}`;
 
 function model(extra: Partial<WorkTimeModel> = {}): WorkTimeModel {
   return {
@@ -122,7 +135,7 @@ beforeEach(() => {
   workTimeModelService.assign.mockResolvedValue({
     assignedStaffIds: ["2", "3"],
     unchangedStaffIds: [],
-    validFrom: "2026-09-09",
+    validFrom: TEST_CLOCK_TODAY,
   });
 });
 
@@ -221,7 +234,7 @@ describe("Reiter „Personen“ einer Vorlage (#6921)", () => {
     expect(order[0]).toContain("Clara Sommer");
     expect(order.slice(1).join()).toContain("Ben Krüger");
     expect(screen.getByTestId("assign-summary")).toHaveTextContent(
-      "1 Person · ab dem 01.09.2026",
+      `1 Person · ab dem ${EARLIER_START_LABEL}`,
     );
     const submit = within(dialog).getByRole("button", {
       name: "1 Person zuordnen",
@@ -239,7 +252,7 @@ describe("Reiter „Personen“ einer Vorlage (#6921)", () => {
       expect(workTimeModelService.assign).toHaveBeenCalledWith(
         "7",
         ["3"],
-        "2026-09-01",
+        EARLIER_START,
       ),
     );
   });

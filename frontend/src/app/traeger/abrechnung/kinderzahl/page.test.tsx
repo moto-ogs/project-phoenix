@@ -5,6 +5,7 @@ import type {
   FamilyChildren,
   FamilyChildrenSet,
 } from "~/lib/traeger-family-children-api";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 import TraegerKinderzahlPage from "./page";
 
 const { fetchFamilyChildren, confirmFamilyChildren } = vi.hoisted(() => ({
@@ -119,7 +120,8 @@ describe("TraegerKinderzahlPage", () => {
       expect(confirmFamilyChildren).toHaveBeenCalledWith({
         contractId: "31",
         children: 3,
-        validFrom: "2026-09-01",
+        // Die bestätigte Zahl gilt ab dem Ersten des laufenden Monats.
+        validFrom: `${TEST_CLOCK_TODAY.slice(0, 8)}01`,
         validUntil: null,
       }),
     );

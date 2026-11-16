@@ -3,8 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { Survey, SurveyToAnswer } from "~/lib/surveys-api";
+import { testClockDay } from "~/test/clock";
 
 import SurveysPage from "./page";
+
+// The open surveys close three weeks after the test day. The mock factory
+// below reads it only when the page loads the form.
+const CLOSES_AT = `${testClockDay(21)}T16:00:00Z`;
 
 const state = vi.hoisted(() => ({
   canManage: false,
@@ -64,7 +69,7 @@ vi.mock("~/lib/surveys-api", async (importOriginal) => ({
         title: "Teamklima",
         intro: "Wie geht es Ihnen im Team?",
         anonymous: true,
-        closes_at: "2026-09-30T16:00:00Z",
+        closes_at: CLOSES_AT,
         questions: [
           {
             id: "q1",
@@ -85,7 +90,7 @@ const openSurvey: SurveyToAnswer = {
   title: "Teamklima",
   intro: "Wie geht es Ihnen im Team?",
   anonymous: true,
-  closes_at: "2026-09-30T16:00:00Z",
+  closes_at: CLOSES_AT,
   participated: false,
 };
 
@@ -97,7 +102,7 @@ const managed: Survey = {
   anonymous: true,
   send_email: false,
   status: "open",
-  closes_at: "2026-09-30T16:00:00Z",
+  closes_at: CLOSES_AT,
   published_at: "2026-09-01T08:00:00Z",
   created_at: "2026-08-30T08:00:00Z",
   updated_at: "2026-09-01T08:00:00Z",

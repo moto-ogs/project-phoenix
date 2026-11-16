@@ -1,5 +1,5 @@
 import { act } from "@testing-library/react";
-import { setTestClock } from "~/test/clock";
+import { setTestClock, TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 import { schoolDateCases, setSchoolDateClock } from "~/test/school-date-cases";
 import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
 restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
@@ -550,10 +550,10 @@ describe("StudentRoomHistoryPage", () => {
     expect(screen.getByRole("dialog")).toContainElement(
       screen.getByText(message),
     );
-    // 30 sichtbare Tage bis heute (Testuhr 09.09.2026), im gewählten Format.
+    // 30 sichtbare Tage bis heute (Testtag), im gewählten Format.
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining(
-        "/api/students/42/attendance-history/export?format=pdf&from=2026-08-11&to=2026-09-09",
+        `/api/students/42/attendance-history/export?format=pdf&from=${testClockDay(-29)}&to=${TEST_CLOCK_TODAY}`,
       ),
       undefined,
     );

@@ -59,6 +59,7 @@ vi.mock("~/components/ui/date-picker", () => ({
 }));
 
 import { CareContractChangeCard } from "./care-contract-change-card";
+import { testClockDay } from "~/test/clock";
 
 const pending: ContractChanges = {
   decidable: true,
@@ -196,7 +197,13 @@ describe("CareContractChangeCard (#5979)", () => {
   });
 
   it("approves from the confirmed day and reads the contract again", async () => {
-    mocks.fetchContractChanges.mockResolvedValue(pending);
+    // The parents wish a day that is still ahead.
+    const wishedDay = testClockDay(26);
+    const future: ContractChanges = {
+      ...pending,
+      pending: [{ ...pending.pending[0]!, effectiveFrom: wishedDay }],
+    };
+    mocks.fetchContractChanges.mockResolvedValue(future);
     const answered: ContractChanges = { ...pending, pending: [] };
     mocks.decideContractChange.mockResolvedValue(answered);
     const onDecided = vi.fn();
@@ -204,7 +211,7 @@ describe("CareContractChangeCard (#5979)", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Freigeben" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByLabelText(/Gilt ab/)).toHaveValue("2026-10-05");
+    expect(within(dialog).getByLabelText(/Gilt ab/)).toHaveValue(wishedDay);
     await waitFor(() =>
       expect(
         within(dialog).getByRole("button", { name: "Freigeben" }),
@@ -216,7 +223,7 @@ describe("CareContractChangeCard (#5979)", () => {
       expect(mocks.decideContractChange).toHaveBeenCalledWith("25", "41", {
         approve: true,
         reason: "",
-        effectiveFrom: "2026-10-05",
+        effectiveFrom: wishedDay,
         expectedVersion: "v-41",
       }),
     );

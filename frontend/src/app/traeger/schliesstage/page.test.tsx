@@ -15,6 +15,7 @@ import {
 } from "~/test/helpers/viewport";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { setTestClock } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import type {
   HolidayClosureImpact,
@@ -234,6 +235,8 @@ describe("TraegerClosingDaysPage (#4702)", () => {
   });
 
   it("shows the closing days, the year overview and each school's federal state read only", async () => {
+    // Der Kalender-Fixture liegt im Jahr 2026; die Übersicht zeigt das laufende Jahr.
+    setTestClock("2026-09-09T12:00:00+02:00");
     render(<TraegerClosingDaysPage />);
 
     const table = await screen.findByRole("table");

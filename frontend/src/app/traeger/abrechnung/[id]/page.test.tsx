@@ -10,6 +10,7 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import type { BillingRunDetail } from "~/lib/traeger-billing-api";
 import { catalogText } from "~/test/error-catalog-text";
+import { testClockDay } from "~/test/clock";
 
 const { api } = vi.hoisted(() => ({
   api: {
@@ -634,9 +635,12 @@ describe("TraegerBillingRunPage", () => {
   };
 
   it("creates the letters of a released run once", async () => {
+    // The form proposes payment two weeks after today.
+    const dueOn = testClockDay(14);
+    const [dueYear, dueMonth, dueDay] = dueOn.split("-");
     api.fetchBillingRun.mockResolvedValue(RELEASED);
     api.createBillingLetters.mockResolvedValue({
-      paymentDueOn: "2026-09-23",
+      paymentDueOn: dueOn,
       notes: "Hausschuhe mitbringen.",
       emergencyContacts: [{ name: "OGS Am Lindenhof", phone: "0170 1" }],
       createdAt: "2026-09-09T10:00:00Z",
@@ -680,12 +684,14 @@ describe("TraegerBillingRunPage", () => {
 
     await waitFor(() =>
       expect(api.createBillingLetters).toHaveBeenCalledWith("9", {
-        paymentDueOn: "2026-09-23",
+        paymentDueOn: dueOn,
         notes: "Hausschuhe mitbringen.",
         emergencyContacts: [{ name: "OGS Am Lindenhof", phone: "0170 1" }],
       }),
     );
-    expect(await screen.findByText("23.09.2026")).toBeInTheDocument();
+    expect(
+      await screen.findByText(`${dueDay}.${dueMonth}.${dueYear}`),
+    ).toBeInTheDocument();
     expect(screen.getByText("OGS Am Lindenhof: 0170 1")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Schreiben erstellen" }),

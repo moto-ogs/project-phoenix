@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AbsenceType } from "~/lib/absence-type-api";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { setTestClock } from "~/test/clock";
 import { suppressConsole } from "~/test/helpers/console";
 
 vi.mock("~/components/ui/date-picker", async () =>
@@ -176,6 +177,9 @@ describe("AbsenceBookingModal", () => {
   suppressConsole("error");
 
   beforeEach(() => {
+    // Konten, Buchungstage und Jahreswechsel sind fest auf September 2026
+    // gerechnet (Mittwoch, 09.09.2026).
+    setTestClock("2026-09-09T12:00:00+02:00");
     vi.clearAllMocks();
     mocks.getVacationQuota.mockImplementation((_id: string, year: number) =>
       Promise.resolve(vacationQuota(year, 12)),

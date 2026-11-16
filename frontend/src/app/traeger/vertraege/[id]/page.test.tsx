@@ -669,6 +669,8 @@ describe("TraegerVertragPage", () => {
   });
 
   it("shows the versions of an active contract and from when a change applies", async () => {
+    // Die Änderung ab 01.03.2027 muss noch bevorstehen.
+    setTestClock("2026-09-09T12:00:00+02:00");
     const first = DRAFT.version.services;
     api.fetchCareContract.mockResolvedValue({
       ...DRAFT,
@@ -743,6 +745,8 @@ describe("TraegerVertragPage", () => {
   });
 
   it("announces no change for a contract that only starts later", async () => {
+    // Der Vertrag ab 01.08.2027 muss noch bevorstehen.
+    setTestClock("2026-09-09T12:00:00+02:00");
     api.fetchCareContract.mockResolvedValue({
       ...DRAFT,
       status: "aktiv",
@@ -769,6 +773,8 @@ describe("TraegerVertragPage", () => {
   });
 
   it("lists a change that goes in front of a planned version by its date", async () => {
+    // Beide Änderungen ab Februar und März 2027 müssen noch bevorstehen.
+    setTestClock("2026-09-09T12:00:00+02:00");
     const monday = DRAFT.version.services.slice(0, 2);
     const late = { ...monday[1]!, endsAt: "16:30" };
     const version = (

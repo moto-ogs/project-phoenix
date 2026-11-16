@@ -9,6 +9,8 @@ import {
 import { createRef } from "react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { testClockDay } from "~/test/clock";
+
 // The offering suggestion waits 400 ms after the last change before it asks
 // (#5104). Fake timers for the whole file let that debounce pass without real
 // time: Testing Library detects them through `jest` and advances the clock in
@@ -740,10 +742,13 @@ describe("StepPersonalKinder — Vorschau pro Wochentag (#5103)", () => {
 });
 
 describe("StepPersonalKinder — Vorschlag „Angebot übernehmen“ (#5104)", () => {
+  // The new Regeltermin starts after today, so the preview compares from its
+  // first day.
+  const firstDay = testClockDay(5);
   const classForm = (
     overrides: Partial<ReturnType<typeof emptyForm>> = {},
   ) => ({
-    ...emptyForm("2026-09-14", "4"),
+    ...emptyForm(firstDay, "4"),
     listKind: "edge_hours" as const,
     targetGroupType: "klasse" as const,
     targetSchoolClasses: ["1b"],
@@ -788,7 +793,7 @@ describe("StepPersonalKinder — Vorschlag „Angebot übernehmen“ (#5104)", (
   it("takes over the offering with the Klassenfilter and previews against the old list", async () => {
     getOfferingSuggestion.mockReset().mockResolvedValue(randstunde);
     getDraftOfferingPreview.mockReset().mockResolvedValue({
-      from: "2026-09-14",
+      from: firstDay,
       weekdays: [
         {
           weekday: 1,
@@ -833,7 +838,7 @@ describe("StepPersonalKinder — Vorschlag „Angebot übernehmen“ (#5104)", (
       "4",
       { offeringIds: ["7"], gradeLevels: [], schoolClasses: ["1b"] },
       { 1: ["11", "12", "13"], 3: ["11", "12", "13"] },
-      "2026-09-14",
+      firstDay,
       { type: "care", listKind: "edge_hours" },
     );
     expect(screen.queryByText(suggestionLine)).not.toBeInTheDocument();

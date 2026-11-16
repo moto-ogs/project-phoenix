@@ -37,6 +37,7 @@ vi.mock("~/lib/traeger-url", () => ({
 }));
 
 import { parseISODate, toISODate } from "~/lib/date-helpers";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 vi.mock("~/components/ui/date-picker", () => ({
   DatePicker: ({
     id,
@@ -344,7 +345,8 @@ describe("CareContractNoticeCard (#4682)", () => {
       expect(mocks.recordContractNotice).toHaveBeenCalledWith("25", {
         kind: "widerruf",
         terminationKind: "ordentlich",
-        receivedOn: "2026-09-09",
+        // Eingang ist heute, nach der Widerrufsfrist.
+        receivedOn: TEST_CLOCK_TODAY,
         dispatchedOn: "2026-09-01",
       }),
     );

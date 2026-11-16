@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { setTestClock } from "~/test/clock";
 
 // Exercise the real translation context supplied by the school auth guard.
 vi.unmock("next-intl");
@@ -100,7 +101,7 @@ function render(ui: ReactElement) {
   });
 }
 
-// Die Testuhr steht auf Mittwoch, 09.09.2026; alles liegt in dieser Woche.
+// Die Tests stellen die Uhr auf Mittwoch, 09.09.2026; alles liegt in dieser Woche.
 function calendar(
   overrides: Partial<SchoolCalendarResponse> = {},
 ): SchoolCalendarResponse {
@@ -170,6 +171,8 @@ function openCreate() {
 
 describe("SchoolCalendarPage", () => {
   beforeEach(() => {
+    // Die Termine liegen fest in der Woche ab Montag, 07.09.2026.
+    setTestClock("2026-09-09T12:00:00+02:00");
     vi.clearAllMocks();
     mockCalendar(calendar());
     mockCreateSchoolAppointment.mockResolvedValue({});

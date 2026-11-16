@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
-import { setTestClock } from "~/test/clock";
+import { setTestClock, TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 import { StaffExportButton } from "./staff-export-button";
 
 const exportStaffTimeTracking = vi.hoisted(() => vi.fn());
@@ -12,6 +12,11 @@ const exportStaffTimeTracking = vi.hoisted(() => vi.fn());
 vi.mock("~/lib/time-tracking-export-api", () => ({ exportStaffTimeTracking }));
 // Der Export-Dialog ist ein SlideOver; Vaul rendert in jsdom nichts.
 vi.mock("vaul", () => import("~/test/mocks/vaul"));
+
+// Standardzeitraum: die letzten 30 Tage bis heute. Der Jahresbeginn 2026
+// liegt an jedem Testtag davor, kürzt also nicht.
+const DEFAULT_FROM = testClockDay(-29);
+const deDate = (iso: string) => iso.split("-").reverse().join(".");
 
 function renderButton(yearStart = new Date(2026, 0, 1)) {
   render(
@@ -43,11 +48,11 @@ describe("StaffExportButton", () => {
     fireEvent.click(screen.getByRole("button", { name: "Herunterladen" }));
 
     await waitFor(() => expect(exportStaffTimeTracking).toHaveBeenCalled());
-    // Default: die letzten 30 Tage bis heute (Testuhr 09.09.2026).
+    // Default: die letzten 30 Tage bis heute.
     expect(exportStaffTimeTracking).toHaveBeenCalledWith(
       "7",
-      "2026-08-11",
-      "2026-09-09",
+      DEFAULT_FROM,
+      TEST_CLOCK_TODAY,
       "xlsx",
     );
     // Der Dialog schließt, sobald die Datei da ist.
@@ -71,7 +76,9 @@ describe("StaffExportButton", () => {
     fireEvent.click(screen.getByRole("button", { name: "Letzte 7 Tage" }));
 
     expect(
-      screen.getByText("Arbeitszeiten vom 03.09.2026 bis 09.09.2026."),
+      screen.getByText(
+        `Arbeitszeiten vom ${deDate(testClockDay(-6))} bis ${deDate(TEST_CLOCK_TODAY)}.`,
+      ),
     ).toBeInTheDocument();
 
     rerender(view());
@@ -83,8 +90,8 @@ describe("StaffExportButton", () => {
     await waitFor(() =>
       expect(exportStaffTimeTracking).toHaveBeenCalledWith(
         "7",
-        "2026-09-03",
-        "2026-09-09",
+        testClockDay(-6),
+        TEST_CLOCK_TODAY,
         "pdf",
       ),
     );
@@ -118,8 +125,8 @@ describe("StaffExportButton", () => {
     await waitFor(() =>
       expect(exportStaffTimeTracking).toHaveBeenCalledWith(
         "7",
-        "2026-08-11",
-        "2026-09-09",
+        DEFAULT_FROM,
+        TEST_CLOCK_TODAY,
         "pdf",
         target,
       ),

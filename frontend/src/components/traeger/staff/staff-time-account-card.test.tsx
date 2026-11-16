@@ -15,6 +15,14 @@ const api = vi.hoisted(() => ({
 vi.mock("~/lib/traeger-time-account-api", () => api);
 
 import { StaffTimeAccountCard } from "./staff-time-account-card";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
+
+/** The month before the test day: the card opens on it. */
+const [todayYear = 0, todayMonth = 1] = TEST_CLOCK_TODAY.split("-").map(Number);
+const LAST_MONTH =
+  todayMonth === 1
+    ? { year: todayYear - 1, month: 12 }
+    : { year: todayYear, month: todayMonth - 1 };
 
 const minutes = {
   targetMinutes: 600,
@@ -55,8 +63,8 @@ function account(
     actualMinutes: 1080,
     balanceMinutes: -120,
     closingBalanceMinutes: -120,
-    year: 2026,
-    month: 8,
+    year: LAST_MONTH.year,
+    month: LAST_MONTH.month,
     state: "open",
     ended: true,
     schools: [school("OGS Nord"), school("OGS Süd")],
@@ -89,9 +97,13 @@ describe("StaffTimeAccountCard", () => {
     api.closeTraegerTimeAccountMonth.mockResolvedValue(closed);
     renderCard();
 
-    // The test clock stands on 9 September 2026: the card opens on August.
+    // The card opens on the month before the test day.
     expect(await screen.findByText("Saldo des Monats")).toBeInTheDocument();
-    expect(api.fetchTraegerTimeAccount).toHaveBeenCalledWith("5", 2026, 8);
+    expect(api.fetchTraegerTimeAccount).toHaveBeenCalledWith(
+      "5",
+      LAST_MONTH.year,
+      LAST_MONTH.month,
+    );
     expect(screen.getAllByText("−2h").length).toBeGreaterThan(0);
     expect(screen.getAllByText("OGS Süd").length).toBeGreaterThan(0);
 
@@ -105,8 +117,8 @@ describe("StaffTimeAccountCard", () => {
     );
     await vi.waitFor(() =>
       expect(api.closeTraegerTimeAccountMonth).toHaveBeenCalledWith("5", {
-        year: 2026,
-        month: 8,
+        year: LAST_MONTH.year,
+        month: LAST_MONTH.month,
         reason: "Lohnabrechnung August",
       }),
     );

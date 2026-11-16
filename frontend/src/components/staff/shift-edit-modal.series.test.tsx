@@ -142,6 +142,9 @@ const seriesRule = {
 };
 
 beforeEach(() => {
+  // Periods, shifts and the picked end date are a fixed school year around
+  // Wednesday 2026-09-09; edits apply from today on.
+  setTestClock("2026-09-09T12:00:00+02:00");
   vi.clearAllMocks();
   mockDatePickerValue.value = new Date(2026, 11, 31);
   listPeriods.mockResolvedValue([halbjahr]);

@@ -12,6 +12,7 @@ import { StudentCareTimesSection } from "./care-times-section";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import type { CareTimeDay, StudentCareTimes } from "~/lib/care-times";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 
 function render(ui: ReactElement) {
@@ -86,7 +87,11 @@ describe("Soll und Ist je Kind (#4774)", () => {
     rerender(<StudentCareTimesSection studentId="7" active />);
 
     await waitFor(() =>
-      expect(mockFetch).toHaveBeenCalledWith("7", "2026-09-01", "2026-09-09"),
+      expect(mockFetch).toHaveBeenCalledWith(
+        "7",
+        `${TEST_CLOCK_TODAY.slice(0, 8)}01`,
+        TEST_CLOCK_TODAY,
+      ),
     );
   });
 
