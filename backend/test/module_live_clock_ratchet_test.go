@@ -50,10 +50,21 @@ import (
 // Re-measured 2026-11-15 for #7104: not counting stopwatch starts and the
 // owner slices lowered the sum from 1,646 to 665 calls; Care Plan (139 to 1)
 // and Parent Billing (7 to 0) take their clocks from their compositions.
+// Workforce (62 to 0, ADR 0264) reads the clock of its composition too.
+// Student Presence (86), Presence Projection (15) and Class Day (14) follow
+// with ADR 0262 (115 to 0).
 var moduleLiveClockBudget = map[string]int{
 	"modules/carecontract": 3,
 	// PickupBaselineQueries.HasBookedOfferingPickupForWeekday: the public
 	// PickupBaselineReader method names no day.
+	"modules/careplan":      1,
+	"modules/communication": 15,
+	"modules/delivery":      44,
+	"modules/devicefleet":   12,
+	"modules/devicescan":    6,
+	// records.GeneratedAtLabel: the public formatting function prints the
+	// moment of rendering for a zero creation time, and the renderer is also
+	// built bare (&RendererService{}), so it holds no clock to pass.
 	"modules/documentrendering":            1,
 	"modules/enrollment":                   63,
 	"modules/facilities":                   2,
