@@ -65,12 +65,8 @@ export function CareRunStartModal({
   onStarted: (run: CareRun) => void;
 }>) {
   const [month, setMonth] = useState(initialMonth);
-  // The choice belongs to the list it was made in: a new list (another
-  // month, a fresh answer, the dialog opened again) chooses every free school.
-  const [choice, setChoice] = useState<{
-    readonly from: readonly CareRunSchool[];
-    readonly ids: string[];
-  } | null>(null);
+  // A draft belongs to this opening and month, not to a response's array.
+  const [choices, setChoices] = useState<Record<string, string[]>>({});
   const [invoiceDate, setInvoiceDate] = useState("");
   const save = useFormModalPending(isOpen);
   const saving = save.pending;
@@ -82,7 +78,7 @@ export function CareRunStartModal({
     if (!isOpen) return;
     setMonth(initialMonth);
     setInvoiceDate("");
-    setChoice(null);
+    setChoices({});
     clearErrors();
   }, [isOpen, initialMonth, clearErrors]);
 
@@ -91,19 +87,27 @@ export function CareRunStartModal({
     () => fetchCareRunSchools(month),
     "die Liste der Schulen",
   );
-  const selected =
-    schools && choice?.from === schools
-      ? choice.ids
-      : freeSchools(schools ?? []);
+  const free = schools ? freeSchools(schools) : [];
+  const selected = (choices[month] ?? free).filter((id) => free.includes(id));
+  useEffect(() => {
+    if (!schools) return;
+    const available = freeSchools(schools);
+    setChoices((current) => {
+      const previous = current[month];
+      const next =
+        previous?.filter((id) => available.includes(id)) ?? available;
+      if (previous && next.length === previous.length) return current;
+      return { ...current, [month]: next };
+    });
+  }, [month, schools]);
   const setSelected = (next: string[] | ((current: string[]) => string[])) => {
     if (!schools) return;
-    setChoice({
-      from: schools,
-      ids: typeof next === "function" ? next(selected) : next,
-    });
+    setChoices((current) => ({
+      ...current,
+      [month]: typeof next === "function" ? next(selected) : next,
+    }));
   };
 
-  const free = schools ? freeSchools(schools) : [];
   // The open runs that already bill this month's schools, for the way there.
   const openRunIds = [
     ...new Set(

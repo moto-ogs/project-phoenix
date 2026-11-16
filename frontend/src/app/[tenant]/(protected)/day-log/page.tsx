@@ -65,6 +65,7 @@ import {
   filenameFromDisposition,
   openBlobForPrint,
 } from "~/lib/file-download";
+import { isAccessRefusal } from "~/lib/access-refusal";
 import { createLogger } from "~/lib/logger";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useSWRAuth } from "~/lib/swr";
@@ -310,7 +311,10 @@ export default function DayLogPage() {
     keepPreviousData: false,
     onError: (error) => {
       discard(error, {
-        codes: ["students.day_log_disabled", "students.day_log_no_groups"],
+        codes:
+          error instanceof ApiError && isAccessRefusal(error) && error.code
+            ? [error.code]
+            : ["students.day_log_disabled", "students.day_log_no_groups"],
         matches: (candidate) => candidate === key,
         refusedKey: key,
       });

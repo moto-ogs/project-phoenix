@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render as renderUi,
   screen,
@@ -7,6 +8,7 @@ import {
 import type { ReactElement, ReactNode } from "react";
 import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { ApiError } from "~/lib/api-error";
 import { setTestClock } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
@@ -932,4 +934,50 @@ describe("ShiftEditModal error display", () => {
     );
     expect(splitSeries).not.toHaveBeenCalled();
   });
+});
+
+it("waits for a fresh series rule on reopening and saves its shortened end", async () => {
+  setTestClock("2026-09-01T10:00:00Z");
+  getSeries.mockResolvedValue({ ...seriesRule, validUntil: "2027-01-01" });
+  splitSeries.mockResolvedValue({
+    seriesId: "6",
+    created: 1,
+    skippedDates: [],
+  });
+  const props = {
+    mode: "edit" as const,
+    staffId: "7",
+    staffName: "Ada Lovelace",
+    date: "2026-09-07",
+    shift: seriesShift,
+    shiftTypes: [],
+    onClose: vi.fn(),
+    onSaved: vi.fn(),
+  };
+  const view = render(<ShiftEditModal {...props} isOpen />);
+  await openSeriesEditor();
+  view.rerender(<ShiftEditModal {...props} isOpen={false} />);
+  const fresh = deferred<typeof seriesRule>();
+  getSeries.mockReturnValue(fresh.promise);
+  view.rerender(<ShiftEditModal {...props} isOpen />);
+  expect(
+    screen.getByRole("button", { name: "Serie bearbeiten" }),
+  ).toBeDisabled();
+  await act(async () => fresh.reject(new ApiError("offline", 503)));
+  expect(
+    await screen.findByText(catalogText("general.unavailable", "die Serie")),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Serie bearbeiten" }),
+  ).toBeDisabled();
+  getSeries.mockResolvedValue({ ...seriesRule, validUntil: "2026-09-15" });
+  fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+  await openSeriesEditor();
+  fireEvent.click(screen.getByRole("button", { name: "Serie speichern" }));
+  await waitFor(() =>
+    expect(splitSeries).toHaveBeenCalledWith(
+      "5",
+      expect.objectContaining({ validUntil: "2026-09-15" }),
+    ),
+  );
 });

@@ -9,7 +9,7 @@ import type {
   OfferingPreview,
   OfferingSelection,
 } from "~/lib/roster-deviation";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR } from "~/lib/swr";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 
@@ -26,7 +26,7 @@ function usePreviewLoad(
   load: () => Promise<OfferingPreview>,
   logFields: Record<string, unknown>,
 ) {
-  const { data, error, isLoading, mutate } = useSWRAuth(key, load, {
+  const { data, error, isLoading, mutate } = useFreshSWR(key, load, {
     keepPreviousData: false,
     onError: (err) =>
       logger.error("offering_preview_failed", {

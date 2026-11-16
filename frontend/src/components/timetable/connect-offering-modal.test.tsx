@@ -8,6 +8,8 @@ import {
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { deferred } from "~/test/helpers/form-modal-pending";
+import { catalogText } from "~/test/error-catalog-text";
 import { ApiError } from "~/lib/api-error";
 import { SWRConfig } from "~/lib/swr/testing";
 import { duplicateIds } from "~/test/helpers/duplicate-ids";
@@ -382,4 +384,48 @@ describe("ConnectOfferingModal (#5103)", () => {
       ),
     );
   });
+});
+
+it("requires a fresh successful preview before connecting on reopening", async () => {
+  mockPreview.mockReset().mockResolvedValue(preview);
+  mockConnect.mockReset().mockResolvedValue(undefined);
+  const props = {
+    templateName: "RDST 1b",
+    deviation,
+    onClose: vi.fn(),
+    onConnected: vi.fn(),
+  };
+  const view = render(<ConnectOfferingModal {...props} isOpen />, {
+    wrapper: SWRTestCache,
+  });
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Verbinden" })).toBeEnabled(),
+  );
+  view.rerender(<ConnectOfferingModal {...props} isOpen={false} />);
+  const fresh = deferred<OfferingPreview>();
+  mockPreview.mockReturnValue(fresh.promise);
+  view.rerender(<ConnectOfferingModal {...props} isOpen />);
+  expect(screen.getByRole("button", { name: "Verbinden" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Verbinden" }));
+  expect(mockConnect).not.toHaveBeenCalled();
+  await act(async () => fresh.reject(new ApiError("offline", 503)));
+  expect(
+    await screen.findByText(
+      catalogText("general.unavailable", "die Vorschau der Kinderliste"),
+    ),
+  ).toBeVisible();
+  expect(screen.getByRole("button", { name: "Verbinden" })).toBeDisabled();
+  mockPreview.mockResolvedValue({ ...preview, from: "2026-10-29" });
+  fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Verbinden" })).toBeEnabled(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Verbinden" }));
+  await waitFor(() =>
+    expect(mockConnect).toHaveBeenCalledWith(
+      "9",
+      { offeringIds: ["3"], gradeLevels: [], schoolClasses: ["1b"] },
+      "2026-10-29",
+    ),
+  );
 });

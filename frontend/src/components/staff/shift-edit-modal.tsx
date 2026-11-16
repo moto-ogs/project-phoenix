@@ -35,7 +35,7 @@ import {
 import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR, useSWRAuth } from "~/lib/swr";
 import { databaseKeys } from "~/lib/swr/portal-keys";
 import { staffTimeKeys } from "~/lib/swr/staff-keys";
 import {
@@ -342,7 +342,7 @@ export function ShiftEditModal({
   // state the rhythm up front — "Diese Schicht ist Teil einer Serie" alone
   // does not tell the planner what the series actually does.
   const seriesId = shift?.seriesId ?? null;
-  const seriesRuleResource = useSWRAuth(
+  const seriesRuleResource = useFreshSWR(
     isOpen && mode === "edit" && seriesId !== null
       ? staffTimeKeys.shiftSeries(seriesId)
       : null,
