@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
@@ -112,12 +113,12 @@ func NewTraegerClosingDays(schools traegercalendar.Schools, notices traegercalen
 	return application.NewTraegerClosingDays(postgres.NewTraegerClosingDayStore(), schools, notices)
 }
 
-// NewHolidayClosureEvents composes the notices of ADR 0196 over the caller's school or Träger transaction.
-func NewHolidayClosureEvents() *postgres.HolidayClosureEventStore {
-	return postgres.NewHolidayClosureEventStore(postgres.NewCompositionDatabase(), nil)
+// NewHolidayClosureEvents composes the notices of ADR 0196 over the caller's school or Träger transaction; today is the root's day clock.
+func NewHolidayClosureEvents(today func() calendar.Date) *postgres.HolidayClosureEventStore {
+	return postgres.NewHolidayClosureEventStore(postgres.NewCompositionDatabase(), today)
 }
 
-// NewHolidayClosureCalendar composes revision-guarded no-care days over the narrow read channel.
-func NewHolidayClosureCalendar(holidays ports.HolidayClosureHolidays) schoolcalendar.HolidayClosureCareCalendar {
-	return application.NewHolidayClosureCalendar(NewHolidayClosureEvents(), holidays)
+// NewHolidayClosureCalendar composes revision-guarded no-care days over the narrow read channel; today is the root's day clock.
+func NewHolidayClosureCalendar(holidays ports.HolidayClosureHolidays, today func() calendar.Date) schoolcalendar.HolidayClosureCareCalendar {
+	return application.NewHolidayClosureCalendar(NewHolidayClosureEvents(today), holidays)
 }

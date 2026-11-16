@@ -38,9 +38,9 @@ func TestDataReturnReleasesARealExport(t *testing.T) {
 	require.NoError(t, exporter.Export(context.Background(), organizationtenancy.TenantExportOptions{SchoolID: school, OperatorID: 42, Output: out, Uploads: t.TempDir()}))
 
 	store := t.TempDir()
-	release, err := compose.NewDataReturnRelease(db, dataReturnCrypto(), store)
+	release, err := compose.NewDataReturnRelease(db, dataReturnCrypto(), store, time.Now)
 	require.NoError(t, err)
-	retrieval, err := compose.NewDataReturn(db, dataReturnCrypto(), store, nil)
+	retrieval, err := compose.NewDataReturn(db, dataReturnCrypto(), store, time.Now, nil)
 	require.NoError(t, err)
 	issued, err := release.Release(t.Context(), organizationtenancy.DataReturnReleaseRequest{Package: out, SchoolID: school, OperatorID: operator.ID,
 		KeepUntil: time.Now().Add(40 * 24 * time.Hour), DataReturnRecipient: organizationtenancy.DataReturnRecipient{

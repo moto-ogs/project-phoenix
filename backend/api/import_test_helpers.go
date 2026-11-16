@@ -79,9 +79,13 @@ func NewImportTestRuntime(db transactionruntime.Database, options ImportTestOpti
 }
 
 func importTestRuntime(command auditModels.Command, observations *[]importModels.ImportObservation, options ImportTestOptions) importPorts.ImportRuntime {
+	clock := options.Clock
+	if clock == nil {
+		clock = time.Now
+	}
 	runtime := newImportRuntime(command, func(observation importModels.ImportObservation) {
 		*observations = append(*observations, observation)
-	}, options.Clock)
+	}, clock)
 	runtime.BatchStatementLimit = options.BatchStatementLimit
 	switch {
 	case options.RowPathOnly:

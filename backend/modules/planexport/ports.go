@@ -256,6 +256,6 @@ type Dependencies struct {
 	// export never reaches it.
 	Filter   InstanceFilter
 	Renderer Renderer
-	// Now is the clock of the sheet's creation time; nil is the real one.
+	// Now is the clock of the sheet's creation time. Required.
 	Now func() time.Time
 }

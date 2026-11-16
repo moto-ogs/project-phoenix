@@ -33,6 +33,7 @@ package testutil
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet/deviceauth"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet/devicetest"
@@ -62,6 +63,7 @@ func NewDeviceAuthenticators(
 		Schools:      schools,
 		SchoolErrors: devicetest.SchoolErrors(),
 		Settings:     settings,
+		Now:          time.Now,
 	})
 }
 

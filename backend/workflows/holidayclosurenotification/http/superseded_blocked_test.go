@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -23,7 +24,7 @@ func TestReplacementConfirmationResolvesBlockedPredecessor(t *testing.T) {
 			account := testpkg.CreateTestAccount(t, w.db, "closure.approval@example.org")
 			day := w.createClosingDay(t, "2030-07-08", "2030-07-08")
 			first := w.schoolNotices(t)[0]
-			events := schoolCalendarCompose.NewHolidayClosureEvents()
+			events := schoolCalendarCompose.NewHolidayClosureEvents(calendar.TodayDate)
 			require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
 				_, err := events.ConfirmHolidayClosureNotice(ctx, first.ID, first.Revision,
 					schoolcalendar.HolidayClosureActor{Channel: "school", AccountID: account.ID, ImpactToken: first.Token})

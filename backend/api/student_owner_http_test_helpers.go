@@ -122,7 +122,7 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 			StudentAuditService: peopleServices.PeopleDirectory,
 			StudentPhotos:       peopleServices.PeopleDirectory,
 			Uploads:             nativeUploads.UploadFiles{},
-			UserContextService:  caller,
+			UserContextService:  caller, Now: clock,
 		},
 		careStudentsHTTP.ResourceConfig{
 			ArrivalScheduleService: live.ArrivalSchedule,

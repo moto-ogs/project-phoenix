@@ -391,7 +391,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 			}
 			return admin || (scope == configModels.OverviewScopeAllStaff && hasStaff), nil
 		},
-		Now: now,
+		Now: clockOrNow(clocks),
 	})
 	substitutionService := SubstitutionEntries{Groups: groupSubstitutions, Schedule: scheduleSubstitution}
 	studentStatusDayService := presenceservice.NewStatusDays(

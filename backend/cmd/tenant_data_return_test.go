@@ -65,7 +65,7 @@ func TestTenantReturnCLIKeepsSecretsOffStdout(t *testing.T) {
 	})
 	store := t.TempDir()
 	open := func(context.Context) (organizationtenancy.DataReturnRelease, func(), error) {
-		release, err := organizationCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), store)
+		release, err := organizationCompose.NewDataReturnRelease(db, owners.NewDataReturnCrypto(), store, time.Now)
 		return release, func() {}, err
 	}
 	run := func(args ...string) (string, error) {
@@ -116,7 +116,7 @@ func TestTenantReturnCLIKeepsSecretsOffStdout(t *testing.T) {
 	_, err = run(releaseArgs(filepath.Join(secrets, "release.json"))...)
 	require.ErrorContains(t, err, "exists")
 
-	retrieval, err := organizationCompose.NewDataReturn(db, owners.NewDataReturnCrypto(), store, nil)
+	retrieval, err := organizationCompose.NewDataReturn(db, owners.NewDataReturnCrypto(), store, time.Now, nil)
 	require.NoError(t, err)
 	opens := func(token string) bool {
 		_, err := retrieval.Package(t.Context(), token)

@@ -11,6 +11,9 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
+// planExportTestClock is the fixed instant the test sheets are created at.
+func planExportTestClock() time.Time { return time.Date(2026, time.November, 2, 9, 0, 0, 0, time.UTC) }
+
 // Pure unit tests against in-memory port records: the IDs below are struct
 // field values, never database rows. The renderer is captured so the tests
 // assert what lands on the page, which is the thing that can silently go
@@ -122,7 +125,7 @@ func ptr[T any](v T) *T { return &v }
 // touches.
 func newDienstplanService(overview *StaffScheduleOverview, types []*ShiftType) (Service, *captureRenderer) {
 	renderer := &captureRenderer{}
-	return NewService(Dependencies{
+	return NewService(Dependencies{Now: planExportTestClock,
 		Overview:   stubOverview{overview: overview},
 		ShiftTypes: stubShiftTypes{types: types},
 		Renderer:   renderer,
@@ -283,7 +286,7 @@ func newBetreuungsplanService(
 	counts map[int64]int,
 ) (Service, *captureRenderer) {
 	renderer := &captureRenderer{}
-	service := NewService(Dependencies{
+	service := NewService(Dependencies{Now: planExportTestClock,
 		Instances:     stubInstances{instances: instances},
 		InstanceStaff: stubInstanceStaff{rows: staffRows},
 		Students:      stubStudentCounts{counts: counts},

@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -27,7 +28,7 @@ func TestPastClosingDayChangeResolvesItsWaitingCommand(t *testing.T) {
 			w := newClosureWorldIn(t, "Träger vergangener Schließtag "+mode, db)
 			day := w.createClosingDay(t, "2030-07-08", "2030-07-08")
 			first := w.schoolNotices(t)[0]
-			events := schoolCalendarCompose.NewHolidayClosureEvents()
+			events := schoolCalendarCompose.NewHolidayClosureEvents(calendar.TodayDate)
 			require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
 				_, err := events.ConfirmHolidayClosureNotice(ctx, first.ID, first.Revision, schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: first.Token})
 				return err
