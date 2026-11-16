@@ -72,7 +72,7 @@ func keyDateCountsTable(counts traegerview.KeyDateCounts, schoolName string) com
 		Title: "Stichtagszahlen", Filters: []string{common.ListSchoolLabel(schoolName)},
 		Columns: []common.ListColumn{
 			{ID: "month", Label: "Monat"}, {ID: "key_date", Label: "Stichtag"}, {ID: "school", Label: "Schule"},
-			{ID: "city", Label: "Ort"}, {ID: "children", Label: "Aktive Kinder"}, {ID: "terminals", Label: "Aktive Geräte"},
+			{ID: "city", Label: "Ort"}, {ID: "children", Label: "Aktive Kinder", Numeric: true}, {ID: "terminals", Label: "Aktive Geräte", Numeric: true},
 			{ID: "recorded", Label: "Festgehalten am"},
 		},
 		Rows: rows, Filename: "stichtagszahlen",

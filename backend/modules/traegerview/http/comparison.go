@@ -148,7 +148,7 @@ const (
 func comparisonTable(comparison traegerview.SchoolComparison, metrics []string) common.ListTable {
 	columns := []common.ListColumn{{ID: "school", Label: "Schule"}, {ID: "city", Label: "Ort"}}
 	for _, key := range metrics {
-		columns = append(columns, common.ListColumn{ID: key, Label: comparisonColumns[key].head})
+		columns = append(columns, common.ListColumn{ID: key, Label: comparisonColumns[key].head, Numeric: true})
 	}
 	row := func(name, city string, values traegerview.ComparisonValues) []string {
 		line := []string{name, city}

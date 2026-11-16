@@ -137,9 +137,9 @@ const (
 // utilizationColumns are the columns of the utilization export.
 var utilizationColumns = []common.ListColumn{
 	{ID: "day", Label: "Datum"}, {ID: "school", Label: "Schule"}, {ID: "city", Label: "Ort"}, {ID: "kind", Label: "Art"},
-	{ID: "name", Label: "Name"}, {ID: "places", Label: "Plätze"}, {ID: "booked", Label: "Kinder gebucht"},
-	{ID: "booked_places", Label: "Plätze belegt"}, {ID: "present", Label: "Kinder anwesend"},
-	{ID: "room_children", Label: "Kinder im Raum"}, {ID: "room_peak", Label: "Höchstens gleichzeitig"},
+	{ID: "name", Label: "Name"}, {ID: "places", Label: "Plätze", Numeric: true}, {ID: "booked", Label: "Kinder gebucht", Numeric: true},
+	{ID: "booked_places", Label: "Plätze belegt", Numeric: true}, {ID: "present", Label: "Kinder anwesend", Numeric: true},
+	{ID: "room_children", Label: "Kinder im Raum", Numeric: true}, {ID: "room_peak", Label: "Höchstens gleichzeitig", Numeric: true},
 }
 
 // utilizationTable is one row per day and school, offering or room. A

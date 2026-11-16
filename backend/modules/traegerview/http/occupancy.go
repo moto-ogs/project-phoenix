@@ -102,7 +102,7 @@ func occupancyTable(occupancy traegerview.Occupancy, schoolName string) common.L
 		Filters: []string{common.ListSchoolLabel(schoolName)},
 		Columns: []common.ListColumn{
 			{ID: "day", Label: "Datum", SpreadsheetOnly: true}, {ID: "school", Label: "Schule"}, {ID: "city", Label: "Ort"},
-			{ID: "kind", Label: "Art"}, {ID: "name", Label: "Name"}, {ID: "children", Label: "Kinder"}, {ID: "places", Label: "Plätze"},
+			{ID: "kind", Label: "Art"}, {ID: "name", Label: "Name"}, {ID: "children", Label: "Kinder", Numeric: true}, {ID: "places", Label: "Plätze", Numeric: true},
 		},
 		Rows: rows, Filename: "belegung-" + occupancy.Day.String(),
 	}
