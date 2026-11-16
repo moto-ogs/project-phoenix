@@ -1,19 +1,20 @@
 ---
-status: superseded in part by ADR 0084, ADR 0171, ADR 0183 and ADR 0188
+status: accepted
 ---
 
 # Gespeicherte Daten risikobasiert ohne Feldverschlüsselung schützen
 
-> **Teilweise abgelöst** seit November 2026: Gesundheits- und Bankdaten
-> liegen feldverschlüsselt in der Datenbank (AES-256-GCM mit Security
-> Runtimes Feld-Cipher, an Spalte, Mandant und Zeile gebunden). Für diese
-> Daten gilt der Satz „keine Feld-/Dateiverschlüsselung in der Anwendung“
-> nicht mehr:
+> **Teilweise abgelöst** seit November 2026: Gesundheitsangaben der
+> Kinderakte und der Ferienanmeldung sowie Bankdaten von Eltern, Personal und
+> SEPA-Zahlern liegen feldverschlüsselt in der Datenbank (AES-256-GCM mit
+> Security Runtimes Feld-Cipher, an Spalte und Schule oder Träger gebunden).
+> Für diese Daten gilt der Satz „keine Feld-/Dateiverschlüsselung in der
+> Anwendung“ nicht mehr:
 >
 > - Gesundheitsangaben der Ferienanmeldung und des Feriengasts (#4722,
 >   Migration `1.15.725`, Ring `HEALTH_DATA_KEYS`):
 >   [ADR 0084, Nachtrag 2026-11-01](0084-traeger-portal-liest-ueber-eine-projektion-und-schreibt-in-der-schule.md#nachtrag-2026-11-01-recht-gesundheitsangaben-sehen-4722).
-> - Gesundheitsfeld der Kinder (#5472, Migration `1.15.730`):
+> - Gesundheitsfeld der Kinderakte (#5472, Migration `1.15.730`):
 >   `users.student_care_profiles.health_info` ist durch das versiegelte
 >   `health_data` ersetzt, Ring `HEALTH_DATA_KEYS`. Dafür gibt es keine eigene ADR.
 > - Bankdaten der SEPA-Mandate und -Lastschriften:
@@ -23,13 +24,17 @@ status: superseded in part by ADR 0084, ADR 0171, ADR 0183 and ADR 0188
 > - IBAN, Kontoinhaber, Steuer-ID und SV-Nummer von Eltern und Personal (#6332,
 >   Migrationen `1.15.836`/`1.15.837`, Klartextspalten mit `1.15.900` entfernt):
 >   [ADR 0188](0188-bankdaten-von-eltern-und-personal-liegen-versiegelt-im-bankring.md).
+>   Der Personalstamm des Trägers (#4705) legt dieselben Werte von Anfang an
+>   versiegelt mit dem Bankring an, ohne eigene ADR-Entscheidung dazu.
 >
 > ADR 0171, 0183 und 0188 tragen noch `status: proposed`; ihr Code liegt auf
-> `development`. Weiter gilt diese Entscheidung für Datei-Uploads (ohne
-> Anwendungsverschlüsselung), für die übrigen Personal-, Eltern- und
-> Kinderdaten sowie für Datenträger-, Sicherungs-, Diagnose- und
-> Protokollmaßnahmen. Die Abwägung unten bleibt gültig: Der Anwendungsprozess
-> erhält die Schlüsselringe als Umgebungsvariablen und kann jeden Wert öffnen.
+> `development`. Weiter gilt diese Entscheidung für Datei-Uploads, auch
+> solche in Datenbankzeilen, für Gesundheitsantworten in Anmeldeanträgen
+> (`enrollment.request_children.custom_data`), für Konten der Träger, für die
+> übrigen Personal-, Eltern- und Kinderdaten sowie für Datenträger-,
+> Sicherungs-, Diagnose- und Protokollmaßnahmen. Die
+> Abwägung unten bleibt gültig: Der Anwendungsprozess erhält die
+> Schlüsselringe als Umgebungsvariablen und kann jeden Wert öffnen.
 > Aktueller Stand je Bestand:
 > [Schutz gespeicherter Daten](../reference/schutz-gespeicherter-daten.md).
 
