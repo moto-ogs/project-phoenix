@@ -74,8 +74,8 @@ func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWo
 	)
 	steps = append(steps, protocolRetentionSteps(command, settingsCompose.NewAuditRetention(), exportTransferCompose.NewJournalRetention())...)
 	steps = append(steps, cleanupJobRetentionSteps(
-		filestorageCompose.NewCleanupRetention(), workforceCompose.NewCleanupRetention(),
-		carePlanCompose.NewCleanupRetention(), enrollmentCompose.NewClocked(time.Now),
+		filestorageCompose.NewCleanupRetention(), workforceCompose.NewCleanupRetention(time.Now),
+		carePlanCompose.NewCleanupRetention(time.Now), enrollmentCompose.NewClocked(time.Now),
 	)...)
 	announcements, err := newRetentionTestAnnouncements(db, settings.Settings)
 	if err != nil {

@@ -19,8 +19,8 @@ import (
 const reopenWindow = 5 * time.Minute
 
 // reopenDeadline is when a completed block stops being reopenable: five
-// minutes after the completion, or the block's planned end when that is
-// later. A block ended by mistake before its planned end can be reopened
+// minutes after the completion on the owner's clock, or the block's planned
+// end when that is later. A block ended by mistake before its planned end can be reopened
 // until it would have ended anyway (#5676). A spontaneous block has no real
 // planned end, so it keeps the five minutes.
 func reopenDeadline(instance *scheduleModel.ActivityInstance, completedAt time.Time) time.Time {
@@ -87,7 +87,10 @@ func (s *InstanceLifecycleService) complete(ctx context.Context, instanceID int6
 	if err := s.lockCompletionState(ctx, instance); err != nil {
 		return nil, err
 	}
-	if err := s.snapshotCompletion(ctx, instance); err != nil {
+	// The owner's clock dates what Reopen reads on it again: the reopen
+	// window, the children that left school since, the spontaneous end.
+	now := s.now()
+	if err := s.snapshotCompletion(ctx, instance, now); err != nil {
 		return nil, err
 	}
 	if err := s.stampRemainingAbsent(ctx, instance); err != nil {
@@ -96,15 +99,18 @@ func (s *InstanceLifecycleService) complete(ctx context.Context, instanceID int6
 	if err := s.deps.ActiveService.EndActivitySession(ctx, *instance.ActiveGroupID); err != nil {
 		return nil, &ports.ScheduleError{Op: "complete instance: end active.group", Err: err}
 	}
+	// completed_at is the database's transaction timestamp: Reopen orders it
+	// against the updated_at of supervisor and attendance rows, which the
+	// database stamps (ADR 0281).
 	completedAt, err := s.deps.RecoveryRepo.CompletionTimestamp(ctx)
 	if err != nil {
 		return nil, &ports.ScheduleError{Op: "complete instance: read transaction timestamp", Err: err}
 	}
-	instance.MarkCompleted(completedAt, reopenDeadline(instance, completedAt), timetable.LifecycleActor(ctx))
+	instance.MarkCompleted(completedAt, reopenDeadline(instance, now), timetable.LifecycleActor(ctx))
 	if err := s.updateLifecycleColumns(ctx, instance, "status", "completed_at", "completed_by", "reopen_until", "completion_snapshot"); err != nil {
 		return nil, &ports.ScheduleError{Op: "complete instance: update", Err: err}
 	}
-	if end, ok := SpontaneousCompletionEnd(instance, completedAt); ok {
+	if end, ok := SpontaneousCompletionEnd(instance, now); ok {
 		instance.EndTime = end
 		if err := s.updateLifecycleColumns(ctx, instance, "end_time"); err != nil {
 			return nil, &ports.ScheduleError{Op: "complete instance: record spontaneous end", Err: err}
@@ -173,7 +179,7 @@ func (s *InstanceLifecycleService) lockCompletionState(ctx context.Context, inst
 // snapshotCompletion records the open visits, the open supervisors and the
 // attendance rows on the block before the session ends. A confirmed roster
 // (WithCompletionConfirmation) must match the children still checked in.
-func (s *InstanceLifecycleService) snapshotCompletion(ctx context.Context, instance *scheduleModel.ActivityInstance) error {
+func (s *InstanceLifecycleService) snapshotCompletion(ctx context.Context, instance *scheduleModel.ActivityInstance, now time.Time) error {
 	activeGroupID := *instance.ActiveGroupID
 	visitsBefore, err := s.deps.Presence.ListVisits(ctx, studentpresence.VisitFilter{ActiveGroupIDs: []int64{activeGroupID}})
 	if err != nil {
@@ -187,7 +193,7 @@ func (s *InstanceLifecycleService) snapshotCompletion(ctx context.Context, insta
 	if err != nil {
 		return &ports.ScheduleError{Op: "complete instance: snapshot attendance", Err: err}
 	}
-	snapshot := scheduleModel.ActivityCompletionSnapshot{ActiveGroupID: activeGroupID}
+	snapshot := scheduleModel.ActivityCompletionSnapshot{ActiveGroupID: activeGroupID, OwnerCompletedAt: &now}
 	openStudentIDs := make([]int64, 0, len(visitsBefore))
 	for _, visit := range visitsBefore {
 		if visit.ExitTime == nil {

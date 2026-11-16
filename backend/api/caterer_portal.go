@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -24,7 +25,9 @@ import (
 
 // CatererScopeMiddleware accepts caterer-portal tokens only and binds no
 // school (ADR 0077).
-var CatererScopeMiddleware = sessiontoken.PortalGate(tenant.ClaimScope{}, tokenprimitives.CatererClaims)
+func CatererScopeMiddleware(next http.Handler) http.Handler {
+	return sessiontoken.PortalGate(tenant.ClaimScope{}, tokenprimitives.CatererClaims)(next)
+}
 
 // catererIdentity is what the caterer portal needs of Identity & Access: the
 // caterer flows and the password reset.

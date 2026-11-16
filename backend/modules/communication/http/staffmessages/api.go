@@ -238,13 +238,18 @@ func (rs *Resource) listInbox(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, out, "Inbox retrieved")
 }
 
+// unreadCountResponse is the answer of the unread counter.
+type unreadCountResponse struct {
+	UnreadCount int `json:"unread_count"`
+}
+
 func (rs *Resource) unreadCount(w http.ResponseWriter, r *http.Request) {
 	count, err := rs.Service.CountUnreadStaffMessages(r.Context())
 	if err != nil {
 		renderStaffMessagingError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, map[string]int{"unread_count": count}, "Unread count retrieved")
+	common.Respond(w, r, http.StatusOK, unreadCountResponse{UnreadCount: count}, "Unread count retrieved")
 }
 
 func (rs *Resource) listRecipients(w http.ResponseWriter, r *http.Request) {

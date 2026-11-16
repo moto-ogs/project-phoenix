@@ -17,8 +17,12 @@ import (
 // it, so a registration may name a portal only when the route runs behind
 // that portal's middleware.
 var portalScopeMiddleware = map[common.PortalScope]string{
-	common.PortalTenant: "api.TenantScopeMiddleware",
-	common.PortalParent: "api.ParentScopeMiddleware",
+	common.PortalTenant:   "api.TenantScopeMiddleware",
+	common.PortalParent:   "api.ParentScopeMiddleware",
+	common.PortalSchool:   "api.SchoolScopeMiddleware",
+	common.PortalTraeger:  "api.TraegerScopeMiddleware",
+	common.PortalCaterer:  "api.CatererScopeMiddleware",
+	common.PortalOperator: "modules/identityaccess/inbound/operator.RequiresOperatorScope",
 }
 
 // The middleware goldens are the reviewed chain of every route;

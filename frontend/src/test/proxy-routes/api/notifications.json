@@ -5,9 +5,6 @@
   "api/notifications/feed/read-all": [
     "POST tenant /api/notifications/feed/read-all"
   ],
-  "api/notifications/feed/unread-count": [
-    "GET tenant /api/notifications/feed/unread-count"
-  ],
   "api/notifications/push/public-key": [
     "GET tenant /api/notifications/push/public-key"
   ]

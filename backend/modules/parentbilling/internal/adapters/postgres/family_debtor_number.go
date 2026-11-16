@@ -174,8 +174,9 @@ func (s *Store) SetFamilyDebtorNumber(ctx context.Context, organizationID, accou
 // Träger (parent_billing.lock_beleg_retention). The count per Träger goes
 // into the deletion log (BelegFamilyDebtorNumber); audit.data_deletions
 // belongs to a school and cannot hold it. Then it deletes the trail entries
-// without a contract whose row is gone and which are as old, and the
-// numbers of children under the same rule (#7007).
+// without a contract whose row is gone and which are as old on the database
+// clock that stamped them (trailCutoffSQL), and the numbers of children
+// under the same rule (#7007).
 func (s *Store) DeleteExpiredFamilies(ctx context.Context, today calendar.Date) (int, error) {
 	db, err := adminDB(ctx)
 	if err != nil {
@@ -217,9 +218,10 @@ func (s *Store) DeleteExpiredFamilies(ctx context.Context, today calendar.Date) 
 		return 0, fmt.Errorf("parent billing postgres: delete expired family debtor numbers: %w", err)
 	}
 	result, err := db.NewRaw(`DELETE FROM parent_billing.family_billing_events AS event
-		WHERE event.care_contract_id IS NULL AND event.occurred_at < ?0::date
+		WHERE event.care_contract_id IS NULL AND event.occurred_at < `+trailCutoffSQL+`
 			AND NOT EXISTS (SELECT 1 FROM parent_billing.family_billing AS family
-				WHERE family.organization_id = event.organization_id AND family.id = event.family_billing_id)`, cutoff).Exec(ctx)
+				WHERE family.organization_id = event.organization_id AND family.id = event.family_billing_id)`,
+		parentbilling.FamilyDebtorNumberRetentionYears).Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("parent billing postgres: delete the expired trail of family debtor numbers: %w", err)
 	}
@@ -233,6 +235,12 @@ func (s *Store) DeleteExpiredFamilies(ctx context.Context, today calendar.Date) 
 	}
 	return families + int(events) + children, nil
 }
+
+// trailCutoffSQL is 1 January, Berlin, of the year the bound number of years
+// before the database's. The database stamps the trail entries (occurred_at
+// DEFAULT CURRENT_TIMESTAMP), so its clock dates them too (ADR 0281); the
+// numbers themselves go on the day the retention is given.
+const trailCutoffSQL = `(make_date(EXTRACT(YEAR FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Berlin'))::int - ?, 1, 1)::timestamp AT TIME ZONE 'Europe/Berlin')`
 
 func familiesOfRows(rows []familyBillingRow) []parentbilling.FamilyBilling {
 	families := make([]parentbilling.FamilyBilling, len(rows))

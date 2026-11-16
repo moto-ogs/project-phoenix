@@ -151,7 +151,10 @@ func (rs *Resource) acceptInvitation(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("password is required")))
 		return
 	}
-	err := rs.portal.AcceptInvitation(r.Context(), schoolID, token, identityaccess.CatererRegistration{Password: request.Password, ConfirmPassword: request.ConfirmPassword})
+	err := rs.portal.AcceptInvitation(r.Context(), schoolID, token, identityaccess.CatererRegistration{
+		Password: request.Password, ConfirmPassword: request.ConfirmPassword,
+		IPAddress: common.GetClientIPString(r), UserAgent: r.UserAgent(),
+	})
 	if err != nil {
 		renderFailure(w, r, err)
 		return

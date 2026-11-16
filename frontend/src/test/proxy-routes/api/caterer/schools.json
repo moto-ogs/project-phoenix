@@ -1,7 +1,4 @@
 {
-  "api/caterer/schools": [
-    "GET caterer /caterer/schools"
-  ],
   "api/caterer/schools/[schoolId]/orders": [
     "GET caterer /caterer/schools/schoolId%2F1/orders"
   ],

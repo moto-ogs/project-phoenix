@@ -57,6 +57,7 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "createDeleteWithBodyHandler",
     "createTenantJsonProxy",
     "createOptionalTenantJsonProxy",
+    "catalogProxy",
     "proxyFile",
     "proxyUpload",
     "tenant.route",
@@ -74,6 +75,7 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "createOperatorPutHandler",
     "createOperatorDeleteHandler",
     "createOperatorJsonProxy",
+    "catalogProxy",
     "operator.proxyFile",
   ],
   "~/lib/parent/route-wrapper.server": [
@@ -93,6 +95,7 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     ...PORTAL_PROXIES,
     "proxyDelete",
     "createSchoolDeleteHandler",
+    "catalogProxy",
     "school.route",
     // The portal's JSON pass-through, which the tenant, operator and caterer
     // wrappers export under their own names (#6955).
@@ -104,6 +107,7 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "proxyGet",
     "proxyPost",
     "createCatererJsonProxy",
+    "catalogProxy",
     "caterer.proxyFile",
   ],
   "~/lib/traeger/route-wrapper.server": [
@@ -113,6 +117,7 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "proxyUpload",
     // The builder under proxyDelete, for a removal that answers its result.
     "traeger.del",
+    "catalogProxy",
     "traeger.jsonProxy",
   ],
   "~/lib/backend-proxy-route.server": ["createPublicJsonProxy"],

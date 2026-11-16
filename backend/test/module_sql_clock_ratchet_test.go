@@ -45,11 +45,14 @@ var moduleSQLClockBudget = map[string]int{
 	"modules/appointments": 15,
 	"modules/auditlog":     24,
 	"modules/carecontract": 2,
-	"modules/careplan":     71,
+	// Includes the finished student document cleanups: their database function
+	// guards the cutoff with the database clock (1.15.606).
+	"modules/careplan": 70,
 	// Includes the message retention of ADR 0277: the database stamps and
-	// orders messages, so their retention compares on its clock too.
-	"modules/communication":  42,
-	"modules/delivery":       6,
+	// orders messages, so their retention compares on its clock too. And the
+	// draft retention of the surveys (ADR 0281): the update trigger of
+	// users.surveys stamps a draft's last change.
+	"modules/communication":  41,
 	"modules/devicefleet":    6,
 	"modules/enrollment":     75,
 	"modules/exporttransfer": 10,
@@ -59,19 +62,24 @@ var moduleSQLClockBudget = map[string]int{
 	"modules/mealplan":       4,
 	// Includes the data return of ADR 0274: the database clock is the security
 	// boundary of the release functions.
-	"modules/organizationtenancy":        24,
-	"modules/parentannouncementaudience": 3,
-	"modules/parentbilling":              79,
-	"modules/peopledirectory":            43,
-	"modules/schedulerruntime":           11,
-	"modules/schoolcalendar":             36,
-	"modules/schoolmembership":           28,
-	"modules/schoolstructure":            13,
-	"modules/settings":                   26,
-	"modules/staffannouncementaudience":  2,
-	"modules/studentpresence":            31,
-	"modules/timetable":                  51,
-	"modules/workforce":                  103,
+	"modules/organizationtenancy": 24,
+	// Includes the age of the debtor number trails (ADR 0281): the database
+	// stamps their entries by column default.
+	"modules/parentbilling":             79,
+	"modules/peopledirectory":           43,
+	"modules/schedulerruntime":          11,
+	"modules/schoolcalendar":            36,
+	"modules/schoolmembership":          28,
+	"modules/schoolstructure":           13,
+	"modules/settings":                  26,
+	"modules/staffannouncementaudience": 2,
+	"modules/studentpresence":           31,
+	// Includes CompletionTimestamp (ADR 0281): completed_at is ordered against
+	// the updated_at of rows the database stamps.
+	"modules/timetable": 51,
+	// Includes the finished staff document cleanups: their database function
+	// guards the cutoff with the database clock (1.15.606).
+	"modules/workforce": 102,
 }
 
 var sqlClockRead = regexp.MustCompile(`(?i)\b(?:now|clock_timestamp|statement_timestamp|transaction_timestamp)\s*\(\s*\)|\b(?:current_timestamp|current_date|current_time|localtimestamp|localtime)\b`)
