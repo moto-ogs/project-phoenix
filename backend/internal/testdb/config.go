@@ -2,9 +2,7 @@ package testdb
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"encoding/base64"
 	"fmt"
 	"net"
 	"net/url"
@@ -78,11 +76,6 @@ func NewConfig(dsn string) (*Config, error) {
 // lifecycle only: application configuration and direct go test invocations
 // must still provide their configured DSN.
 func NewEphemeralLocalConfig() (*Config, error) {
-	passwordBytes := make([]byte, 24)
-	if _, err := rand.Read(passwordBytes); err != nil {
-		return nil, fmt.Errorf("generate test database password: %w", err)
-	}
-
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, fmt.Errorf("reserve test database port: %w", err)
@@ -91,10 +84,13 @@ func NewEphemeralLocalConfig() (*Config, error) {
 	if err := listener.Close(); err != nil {
 		return nil, fmt.Errorf("release test database port: %w", err)
 	}
+	// The server is disposable and bound to loopback on this unique port; the
+	// port-derived credential only keeps unrelated local clients out.
+	password := fmt.Sprintf("phoenix-test-%d", port)
 
 	dsn := (&url.URL{
 		Scheme:   "postgres",
-		User:     url.UserPassword("postgres", base64.RawURLEncoding.EncodeToString(passwordBytes)),
+		User:     url.UserPassword("postgres", password),
 		Host:     net.JoinHostPort("127.0.0.1", fmt.Sprintf("%d", port)),
 		Path:     "/phoenix_test",
 		RawQuery: "sslmode=disable",

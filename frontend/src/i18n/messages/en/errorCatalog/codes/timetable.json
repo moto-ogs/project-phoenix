@@ -81,6 +81,7 @@
   "planning_track_name_taken": "{object} could not be changed. Please check its current status.",
   "planning_track_not_found": "{object} could not be changed. Please check its current status.",
   "presence_would_overstaff": "{object} could not be changed. Please check its current status.",
+  "reinstate_ended": "{object} could not be changed. Please check its current status.",
   "reopen_attendance_changed": "{object} could not be changed. Please check its current status.",
   "reopen_staff_busy": "{object} could not be changed. Please check its current status.",
   "reopen_student_active": "{object} could not be changed. Please check its current status.",

@@ -13,8 +13,9 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// timetableStaffCancellationNotices binds Timetable's notice about a
-// cancelled block (#7148) to Delivery's notification feed: every planned
+// timetableStaffCancellationNotices binds Timetable's notices about a
+// cancelled block (#7148) and its reinstatement (#7151) to Delivery's
+// notification feed: every planned
 // person gets a feed entry, and a push follows for whoever did not switch the
 // type off while the block lies within the push window Timetable decided.
 type timetableStaffCancellationNotices struct {
@@ -34,6 +35,20 @@ func NewTimetableStaffCancellationNotices(notifications DeliveryNotifications) t
 }
 
 func (n timetableStaffCancellationNotices) NotifyInstanceCancelled(ctx context.Context, notice timetablePorts.StaffCancellationNotice) error {
+	title, body, link := staffCancellationCopy(notice, "Termin abgesagt", "fällt aus")
+	return n.notify(ctx, deliveryContract.NotificationInstanceCancelled, notice, title, body, link)
+}
+
+// NotifyInstanceReinstated tells the planned staff that a cancellation was
+// taken back (#7151). The push follows the person's switch for
+// cancellations: who does not want to hear of a cancellation on the phone
+// does not hear of its reinstatement there either.
+func (n timetableStaffCancellationNotices) NotifyInstanceReinstated(ctx context.Context, notice timetablePorts.StaffCancellationNotice) error {
+	title, body, link := staffCancellationCopy(notice, "Termin findet doch statt", "findet doch statt")
+	return n.notify(ctx, deliveryContract.NotificationInstanceReinstated, notice, title, body, link)
+}
+
+func (n timetableStaffCancellationNotices) notify(ctx context.Context, notificationType string, notice timetablePorts.StaffCancellationNotice, title, body, link string) error {
 	if len(notice.AccountIDs) == 0 {
 		return nil
 	}
@@ -44,12 +59,11 @@ func (n timetableStaffCancellationNotices) NotifyInstanceCancelled(ctx context.C
 			return fmt.Errorf("staff cancellation notice: filter recipients: %w", err)
 		}
 	}
-	title, body, link := staffCancellationCopy(notice)
 	err := n.notifier.Notify(ctx, deliveryCompose.NotificationEvent{
-		Type: deliveryContract.NotificationInstanceCancelled,
-		// A block is cancelled once; the moment keeps a later cancellation
-		// after a reinstatement a notice of its own.
-		IdempotencyKey: fmt.Sprintf("instance_cancelled:%d:%d", notice.InstanceID, n.now().UnixNano()),
+		Type: notificationType,
+		// A block is cancelled and reinstated again and again; the moment
+		// keeps each change a notice of its own.
+		IdempotencyKey: fmt.Sprintf("%s:%d:%d", notificationType, notice.InstanceID, n.now().UnixNano()),
 		RelatedType:    "activity_instance", RelatedID: notice.InstanceID,
 		Title: title, Body: body, DeepLink: link,
 		Audience: deliveryCompose.NotificationAudience{
@@ -70,18 +84,19 @@ func (n timetableStaffCancellationNotices) NotifyInstanceCancelled(ctx context.C
 var staffCancellationWeekdays = [...]string{"So.", "Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa."}
 
 // staffCancellationCopy is the display-safe text of the notice: the block's
-// name and when it was planned, never a child. The link leads to the
-// person's own Dienstplan on that day.
-func staffCancellationCopy(notice timetablePorts.StaffCancellationNotice) (title, body, link string) {
+// name, when it was planned and what happens to it, never a child. The link
+// leads to the person's own Dienstplan on that day.
+func staffCancellationCopy(notice timetablePorts.StaffCancellationNotice, title, outcome string) (string, string, string) {
 	name := strings.TrimSpace(notice.Title)
 	when := staffCancellationWeekdays[notice.Date.Weekday()] + " " + notice.Date.Format("02.01.")
+	var body string
 	if notice.StartTime.IsZero() {
-		body = fmt.Sprintf("„%s“ am %s fällt aus.", name, when)
+		body = fmt.Sprintf("„%s“ am %s %s.", name, when, outcome)
 	} else {
-		body = fmt.Sprintf("„%s“ am %s um %s Uhr fällt aus.", name, when, notice.StartTime.Format("15:04"))
+		body = fmt.Sprintf("„%s“ am %s um %s Uhr %s.", name, when, notice.StartTime.Format("15:04"), outcome)
 	}
 	if name == "" {
 		body = strings.Replace(body, "„“", "Ein Termin", 1)
 	}
-	return "Termin abgesagt", body, "/mein-dienstplan?d=" + notice.Date.String()
+	return title, body, "/mein-dienstplan?d=" + notice.Date.String()
 }

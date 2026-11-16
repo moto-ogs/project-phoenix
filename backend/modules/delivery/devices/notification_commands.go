@@ -1,6 +1,10 @@
 package devices
 
-import "context"
+import (
+	"context"
+
+	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
+)
 
 // NotificationAudience retains every authorization and portal selector.
 type NotificationAudience struct {
@@ -27,18 +31,9 @@ type NotificationEvent struct {
 	SchoolDeepLink string
 	Data           map[string]string
 	Portal         string
-	// Feed also writes the event into the notification feed of its audience
-	// (#7148, #7140); nil leaves the feed untouched.
-	Feed *NotificationFeed
-}
-
-// NotificationFeed asks the router for a feed entry next to the push: the
-// recipients a push may reach, and the entry's own text when it may say more
-// than the lock-screen push. Empty text takes the event's.
-type NotificationFeed struct {
-	PushAccountIDs []int64
-	Title          string
-	Body           string
+	// Feed also writes the event into the notification feed (#7137); see
+	// contract.NotificationFeedDelivery. A feed type requires it.
+	Feed *contract.NotificationFeedDelivery
 }
 
 // NotificationCommands dispatches through the same bound Delivery router.

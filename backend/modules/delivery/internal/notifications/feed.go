@@ -45,7 +45,7 @@ func (r *router) windowAndFeed(ctx context.Context, event *Event) (bool, error) 
 		if err != nil {
 			return false, err
 		}
-		if !within && event.Feed == nil {
+		if !within && (event.Feed == nil || event.Feed.HoldOutsideWindow) {
 			return false, ErrOutsideActiveWindow
 		}
 		pushAllowed = within
@@ -78,7 +78,7 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 	}
 	now := r.now()
 	content, recipients := feedEntryOf(*event)
-	write, err := r.store.PublishFeedEntries(ctx, event.Audience.TenantID, content, recipients, now, now.Add(-domain.FeedBundleWindow))
+	write, err := r.store.PublishFeedEntries(ctx, event.Audience.TenantID, content, feedBundleTypes(def), recipients, now, now.Add(-domain.FeedBundleWindow))
 	if err != nil {
 		return false, fmt.Errorf("write notification feed: %w", err)
 	}
@@ -91,7 +91,7 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 // staff accounts, or the guardian accounts with the children (#7140).
 func feedEntryOf(event Event) (domain.FeedEntryContent, []int64) {
 	content := domain.FeedEntryContent{
-		Type: event.Type, Title: event.Title, Body: event.Body, DeepLink: event.DeepLink,
+		Type: event.Type, Title: event.Title, Body: event.Body, DeepLink: feedDeepLink(event),
 		RelatedType: event.RelatedType, RelatedID: event.RelatedID,
 	}
 	if event.Feed.Title != "" {
@@ -112,11 +112,7 @@ func feedEntryOf(event Event) (domain.FeedEntryContent, []int64) {
 func narrowToPush(event *Event, write domain.FeedWrite, pushAllowed bool) {
 	var push []int64
 	if pushAllowed {
-		for _, accountID := range write.Created {
-			if slices.Contains(event.Feed.PushAccountIDs, accountID) {
-				push = append(push, accountID)
-			}
-		}
+		push = feedPushRecipients(write.Created, event.Feed.PushAccountIDs)
 	}
 	if event.Audience.Scope == ScopeGuardian {
 		event.Audience.GuardianAccountID, event.Audience.GuardianAccountIDs = 0, push
@@ -126,30 +122,40 @@ func narrowToPush(event *Event, write domain.FeedWrite, pushAllowed bool) {
 	event.feedOnly = len(push) == 0
 }
 
+// feedBundleTypes are the types whose unread entry about the same object a
+// publication of def updates within the bundle window: def itself, the type
+// it takes back, and the types that take it back (#7151). A reinstatement
+// shortly after a cancellation, while the cancellation is unread, updates
+// that entry instead of adding a second one; so does a renewed cancellation.
+func feedBundleTypes(def TypeDefinition) []string {
+	types := []string{def.Key}
+	if def.Reverses != "" {
+		types = append(types, def.Reverses)
+	}
+	typeMu.RLock()
+	defer typeMu.RUnlock()
+	for key, other := range typeRegistry {
+		if other.Reverses == def.Key {
+			types = append(types, key)
+		}
+	}
+	slices.Sort(types)
+	return slices.Compact(types)
+}
+
 // feedType checks the shape a feed event needs: a staff audience with a
 // staff type, or a guardian audience with a parent type about named children
 // (#7140), an app-relative deep link and the object it is about.
 func feedType(event Event) (TypeDefinition, error) {
 	def, known := GetType(event.Type)
-	switch event.Audience.Scope {
-	case ScopeStaff:
-		if !known || def.Portal != PortalStaff {
-			return TypeDefinition{}, fmt.Errorf("%w: %s", ErrUnknownNotificationType, event.Type)
-		}
-	case ScopeGuardian:
-		if !known || def.Portal != PortalParent {
-			return TypeDefinition{}, fmt.Errorf("%w: %s", ErrUnknownNotificationType, event.Type)
-		}
-		// A guardian reads an entry only through the children it is about;
-		// without them nobody could ever read it.
-		if len(event.Audience.StudentIDs) == 0 {
-			return TypeDefinition{}, errors.New("guardian notification feed requires the children the entry is about")
-		}
-	default:
-		return TypeDefinition{}, fmt.Errorf("notification feed requires the staff or guardian scope, got %q", event.Audience.Scope)
+	if err := validateFeedAudience(event, def, known); err != nil {
+		return TypeDefinition{}, err
 	}
-	if event.DeepLink == "" {
+	if event.DeepLink == "" && event.Feed.DeepLink == "" {
 		return TypeDefinition{}, errors.New("notification feed requires a deep link")
+	}
+	if !appRelative(event.Feed.DeepLink) {
+		return TypeDefinition{}, errors.New("feed deep link must be an app-relative path")
 	}
 	if event.RelatedType == "" || event.RelatedID <= 0 {
 		return TypeDefinition{}, errors.New("notification feed requires the object it is about")
@@ -158,6 +164,27 @@ func feedType(event Event) (TypeDefinition, error) {
 		return TypeDefinition{}, errors.New("notification feed text needs a title")
 	}
 	return def, nil
+}
+
+func validateFeedAudience(event Event, def TypeDefinition, known bool) error {
+	switch event.Audience.Scope {
+	case ScopeStaff:
+		if !known || !def.Feed || def.Portal != PortalStaff {
+			return fmt.Errorf("%w: %s", ErrUnknownNotificationType, event.Type)
+		}
+	case ScopeGuardian:
+		if !known || !def.Feed || def.Portal != PortalParent {
+			return fmt.Errorf("%w: %s", ErrUnknownNotificationType, event.Type)
+		}
+		// A guardian reads an entry only through the children it is about;
+		// without them nobody could ever read it.
+		if len(event.Audience.StudentIDs) == 0 {
+			return errors.New("guardian notification feed requires the children the entry is about")
+		}
+	default:
+		return fmt.Errorf("notification feed requires the staff or guardian scope, got %q", event.Audience.Scope)
+	}
+	return nil
 }
 
 // The lengths platform.notification_feed_entries allows.
@@ -174,4 +201,46 @@ func clipFeedText(text string, limit int) string {
 		return text
 	}
 	return strings.TrimSpace(string(runes[:limit-1])) + "…"
+}
+
+// requireFeedDelivery holds a type and its delivery path together (#7137):
+// an event of a feed type needs its feed recipients, and an event of any
+// other type must not ask for the feed. It keeps a producer from pushing a
+// feed type past the feed, and a message type out of the bell.
+func requireFeedDelivery(event Event) error {
+	def, known := GetType(event.Type)
+	writesFeed := known && def.Feed
+	switch {
+	case writesFeed && event.Feed == nil:
+		return fmt.Errorf("notification type %s writes the feed and needs its feed recipients", event.Type)
+	case !writesFeed && event.Feed != nil:
+		return fmt.Errorf("notification type %s does not write the feed", event.Type)
+	}
+	return nil
+}
+
+// appRelative reports whether an optional link stays inside the app.
+func appRelative(link string) bool {
+	return link == "" || (strings.HasPrefix(link, "/") && !strings.HasPrefix(link, "//") && !strings.Contains(link, `\`))
+}
+
+// feedDeepLink is the link of the feed entry: the feed's own where the push
+// opens the app without one.
+func feedDeepLink(event Event) string {
+	if event.Feed.DeepLink != "" {
+		return event.Feed.DeepLink
+	}
+	return event.DeepLink
+}
+
+// feedPushRecipients keeps the accounts that got a new entry and may get a
+// push; an updated entry pushes no second time.
+func feedPushRecipients(created, allowed []int64) []int64 {
+	var push []int64
+	for _, accountID := range created {
+		if slices.Contains(allowed, accountID) {
+			push = append(push, accountID)
+		}
+	}
+	return push
 }

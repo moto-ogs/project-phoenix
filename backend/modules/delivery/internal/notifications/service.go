@@ -290,6 +290,9 @@ func (r *router) Notify(ctx context.Context, event Event) error {
 	if err := validate(event); err != nil {
 		return err
 	}
+	if err := requireFeedDelivery(event); err != nil {
+		return err
+	}
 	if event.Priority == "" {
 		event.Priority = PriorityNormal
 	}

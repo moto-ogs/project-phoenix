@@ -12,20 +12,40 @@ import (
 // Timetable produces it; Delivery registers the type.
 const NotificationInstanceCancelled = "instance_cancelled"
 
+// NotificationInstanceReinstated is the notification type of a cancellation
+// taken back (#7151): the block takes place after all. It reaches the same
+// people as the cancellation, follows the cancellation's school switch,
+// personal switch and 14-day push window, so it pushes whenever the
+// cancellation pushed.
+const NotificationInstanceReinstated = "instance_reinstated"
+
 // NotificationFeedDelivery asks the notification router to write an event
-// into the notification feed of every account of its audience: the staff
-// accounts of a staff event (#7148), or the guardian accounts of a guardian
-// event about the children of Audience.StudentIDs (#7140). PushAccountIDs are
-// the recipients the producer lets a push reach; a push follows only for an
-// entry that is new, never for an update of a bundled unread entry.
+// into the notification feed of every account of its audience: staff accounts
+// of a staff event (#7148), or guardian accounts of a guardian event about
+// the children of Audience.StudentIDs (#7140). PushAccountIDs are the
+// recipients the producer lets a push reach; a push follows only for a new
+// entry, never for an update of a bundled unread entry.
 //
-// Title and Body are the text of the entry when it may say more than the
-// push: a guardian reads the entry only after login, while the push shows on
-// the lock screen and stays free of child data. Empty takes the event's.
+// DeepLink replaces the event's link in the feed entry. It serves a push
+// that opens the app without a link, while a feed entry always leads
+// somewhere (#7137).
+//
+// HoldOutsideWindow is for a producer that repeats a held-back notice on its
+// next run, such as the planned exits and the Nachweis reminders (#7137):
+// outside the school's notification window nothing is written and the
+// router answers ErrOutsideNotificationWindow, so feed entry and push arrive
+// together on the repeat. Without it the feed entry is written at once and
+// the push is left out.
+//
+// Title and Body are the entry's text when it may say more than the push: a
+// guardian reads it only after login, while the lock-screen push stays free
+// of child data. Empty values use the event's display-safe text.
 type NotificationFeedDelivery struct {
-	PushAccountIDs []int64
-	Title          string
-	Body           string
+	PushAccountIDs    []int64
+	DeepLink          string
+	HoldOutsideWindow bool
+	Title             string
+	Body              string
 }
 
 // NotificationFeed serves an account its own notification feed in the

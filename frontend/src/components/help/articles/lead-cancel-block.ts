@@ -5,6 +5,7 @@ import { HELP_TOPICS } from "~/lib/help-topics";
  * Einen einzelnen Termin im Betreuungsplan absagen (#2601, #3731). Ob die
  * Eltern Bescheid bekommen, entscheidet die absagende Person im Dialog; es
  * gibt dafür keine Schuleinstellungen mehr. Beschriftungen live geprüft.
+ * Bis zum Ende des Termins lässt sich die Absage zurücknehmen (#7151).
  */
 export function leadCancelBlockTopic(): HelpTopic {
   return {
@@ -30,6 +31,7 @@ export function leadCancelBlockTopic(): HelpTopic {
     notes: [
       "Der interne Grund der Absage geht nicht an die Eltern. Sie sehen nur Ihren Text.",
       "Ohne Haken bekommen die Eltern keine Nachricht.",
+      "Bis zum Ende des Termins können Sie die Absage zurücknehmen: Termin wählen, dann `Absage zurücknehmen`. Das eingeplante Personal bekommt einen Hinweis „Termin findet doch statt“. Die Eltern bekommen keine Nachricht. Informieren Sie sie bei Bedarf selbst.",
     ],
     differences: [
       "Fehlt der Haken? Dann sind für diesen Termin keine Kinder eingetragen, oder der Termin liegt in der Vergangenheit.",
