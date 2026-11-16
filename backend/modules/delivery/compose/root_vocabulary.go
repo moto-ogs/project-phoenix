@@ -99,6 +99,9 @@ var (
 	// ParentAppointmentCopy is the localized title and body of a parent
 	// appointment notice.
 	ParentAppointmentCopy = notifications.ParentAppointmentCopy
+	// ParentRoomChangedCopy is the localized lock-screen copy of a room
+	// change for the families (#7141).
+	ParentRoomChangedCopy = notifications.ParentRoomChangedCopy
 	// MotoLogoURL and SchoolLogoURL brand the tenant mail.
 	MotoLogoURL   = emailbranding.MotoLogoURL
 	SchoolLogoURL = emailbranding.SchoolLogoURL

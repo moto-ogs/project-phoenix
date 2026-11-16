@@ -130,3 +130,37 @@ func TestStaffNoticePublishedFollowsTheRight(t *testing.T) {
 	assert.Equal(t, notifications.PortalStaff, def.Portal)
 	assert.False(t, def.SchoolPortal, "the feed of moto schule follows with #7139")
 }
+
+// TestRoomChangeNoticesFollowTheRight pins the room change notices (#7141):
+// the staff types follow the right every staff role holds and reach moto
+// schule like the cancellation; a move for today or tomorrow pushes by
+// default, a later move only for whoever switches it on. The parent types
+// are about the family's own children and follow the same split.
+func TestRoomChangeNoticesFollowTheRight(t *testing.T) {
+	t.Parallel()
+	for key, defaultOn := range map[string]bool{
+		notifications.TypeInstanceRoomChanged:      true,
+		notifications.TypeInstanceRoomChangedLater: false,
+	} {
+		def, ok := notifications.GetType(key)
+		require.True(t, ok, key)
+		assert.Equal(t, permissions.ActivitiesRead, def.Permission, key)
+		assert.Equal(t, defaultOn, def.DefaultOn, key)
+		assert.Equal(t, notifications.PortalStaff, def.Portal, key)
+		assert.True(t, def.SchoolPortal && def.SchoolPortalWithoutPermission, key)
+		assert.True(t, def.Feed, key)
+		assert.Equal(t, "notifications.instance_room_changed_enabled", def.TenantGate, key)
+	}
+	for key, defaultOn := range map[string]bool{
+		notifications.TypeParentRoomChanged:      true,
+		notifications.TypeParentRoomChangedLater: false,
+	} {
+		def, ok := notifications.GetType(key)
+		require.True(t, ok, key)
+		assert.Empty(t, def.Permission, key)
+		assert.Equal(t, defaultOn, def.DefaultOn, key)
+		assert.Equal(t, notifications.PortalParent, def.Portal, key)
+		assert.True(t, def.Feed, key)
+		assert.Equal(t, "notifications.instance_room_changed_enabled", def.TenantGate, key)
+	}
+}

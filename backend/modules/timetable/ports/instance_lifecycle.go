@@ -104,7 +104,10 @@ type InstanceLifecycleDependencies struct {
 	GuardianNotices    GuardianNotices
 	// StaffNotices tells the planned staff about a cancellation (#7148);
 	// nil tells nobody.
-	StaffNotices        StaffCancellationNotices
+	StaffNotices StaffCancellationNotices
+	// RoomNotices tells the staff and the families of a block that it moved
+	// to another room (#7141); nil tells nobody.
+	RoomNotices         InstanceRoomChangeNotices
 	Broadcaster         LifecycleBroadcaster
 	Settings            LifecycleSettings
 	Materialization     timetable.MaterializationCapability

@@ -456,7 +456,7 @@ func (s *preferenceService) GetForParent(ctx context.Context, accountID int64) (
 
 	err := s.forEachGuardianTenant(ctx, accountID, func(tenantCtx context.Context, _ int64) error {
 		tenantCount++
-		if err := s.countParentConsents(tenantCtx, accountID, enabledTenantCount); err != nil {
+		if err := s.countParentConsents(tenantCtx, accountID, defs, enabledTenantCount); err != nil {
 			return err
 		}
 		// Any school allowing dispatch is enough for the card to stop saying
@@ -519,7 +519,9 @@ func (s *preferenceService) DisableAllForParent(ctx context.Context, accountID i
 		if err := s.consent.DisableConsent(tenantCtx, accountID, typeKeysForPortal(PortalParent)); err != nil {
 			return fmt.Errorf("disable notification preferences for tenant %d: %w", tenantID, err)
 		}
-		return nil
+		// A default-on type without a stored decision stays on unless the
+		// "off" is stored (#7141).
+		return s.declineDefaultOnTypes(tenantCtx, accountID, PortalParent)
 	})
 }
 
@@ -639,14 +641,17 @@ func (s *preferenceService) countAvailableTypes(ctx context.Context, defs []Type
 	return nil
 }
 
-func (s *preferenceService) countParentConsents(tenantCtx context.Context, accountID int64, enabledTenantCount map[string]int) error {
+// countParentConsents counts the school as enabled for every type the
+// guardian switched on there, and for a default-on type nobody decided there
+// (#7141): delivery reads that as on, so the switch must too.
+func (s *preferenceService) countParentConsents(tenantCtx context.Context, accountID int64, defs []TypeDefinition, enabledTenantCount map[string]int) error {
 	stored, err := s.consent.StoredConsent(tenantCtx, accountID)
 	if err != nil {
 		return fmt.Errorf("load notification preferences: %w", err)
 	}
-	for notificationType, enabled := range stored {
-		if enabled {
-			enabledTenantCount[notificationType]++
+	for _, def := range defs {
+		if storedOrDefault(stored, def) {
+			enabledTenantCount[def.Key]++
 		}
 	}
 	return nil

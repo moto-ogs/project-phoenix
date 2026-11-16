@@ -141,4 +141,16 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 		Category:        "benachrichtigungen",
 		SortOrder:       8,
 	},
+	{
+		Key:             config.KeyNotificationsInstanceRoomChangedEnabled,
+		Label:           "Hinweis bei Raumänderung",
+		Description:     "Findet ein Termin oder Angebot in einem anderen Raum statt, bekommen das eingeplante Personal und die Eltern der Kinder einen Hinweis in moto. Ob dazu eine Mitteilung aufs Handy kommt, entscheidet jede Person selbst.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "benachrichtigungen",
+		SortOrder:       9,
+	},
 }
