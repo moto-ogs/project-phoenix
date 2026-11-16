@@ -411,8 +411,9 @@ func (p *Projection) HistoricalDeclarationFeed(ctx context.Context, accountID in
 		return nil, err
 	}
 	var rows []feedRow
+	now := p.now()
 	if err := db.NewRaw(historicalDeclarationFeedSQL,
-		historyJSON, accountID, p.links.AllSchoolsGuardianLinkRows(db), accountID,
+		historyJSON, now, now, accountID, p.links.AllSchoolsGuardianLinkRows(db), accountID,
 		feedScopeList(scope.TenantIDs), feedScopeList(scope.SystemOnlyTenantIDs),
 	).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("list historical parent declaration feed: %w", err)

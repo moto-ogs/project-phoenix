@@ -152,3 +152,49 @@ func TestRetentionDatesRealtimeNotificationsOnTheModuleClock(t *testing.T) {
 	runRetention()
 	assert.Zero(t, remaining(), "a notification past its lifetime goes")
 }
+
+// The nightly retention dates a delivery log without a mail on the module's
+// clock, which stamped it (#7295): with that clock on another day than the
+// database's, a fresh log stays and one past the window goes.
+func TestRetentionDatesEmailDeliveryLogsOnTheModuleClock(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.WithTenantRuntime(t, context.Background(), db)
+	school := testpkg.Tenant(t)
+	now := time.Date(2099, time.March, 10, 9, 30, 0, 0, time.UTC)
+	clock := func() time.Time { return now }
+	store := postgresadapter.New(postgresadapter.RequireTenantDatabase, postgresadapter.RequireAdminDatabase, clock)
+	retention := deliveryCompose.NewRetention(clock)
+	relatedType := "announcement"
+	require.NoError(t, tenant.WithTenantTx(ctx, db, school, func(txCtx context.Context, _ bun.Tx) error {
+		return store.ReplaceEmailDeliveries(txCtx, school, relatedType, school, []domain.EmailDelivery{{Reachability: "no_email"}})
+	}))
+	var stamps struct {
+		CreatedAt time.Time `bun:"created_at"`
+		UpdatedAt time.Time `bun:"updated_at"`
+	}
+	remaining := func() int {
+		var count int
+		require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM platform.delivery_email_deliveries
+			WHERE tenant_id = ? AND related_entity_type = ? AND related_entity_id = ?`, school, relatedType, school).
+			Scan(context.Background(), &count))
+		return count
+	}
+	runRetention := func() {
+		require.NoError(t, tenant.WithTenantTx(ctx, db, school, func(txCtx context.Context, _ bun.Tx) error {
+			_, _, err := retention.DeleteExpiredDeliveries(txCtx)
+			return err
+		}))
+	}
+	require.NoError(t, db.NewRaw(`SELECT created_at, updated_at FROM platform.delivery_email_deliveries
+		WHERE tenant_id = ? AND related_entity_type = ? AND related_entity_id = ?`, school, relatedType, school).
+		Scan(context.Background(), &stamps))
+	assert.True(t, now.Equal(stamps.CreatedAt), "created_at %s, want the module clock %s", stamps.CreatedAt, now)
+	assert.True(t, now.Equal(stamps.UpdatedAt), "updated_at %s, want the module clock %s", stamps.UpdatedAt, now)
+
+	runRetention()
+	assert.Equal(t, 1, remaining(), "a log inside the window stays")
+	now = now.Add(domain.RetentionWindow + time.Minute)
+	runRetention()
+	assert.Zero(t, remaining(), "a log past the window goes")
+}

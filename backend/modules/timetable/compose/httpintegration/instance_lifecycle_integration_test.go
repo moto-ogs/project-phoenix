@@ -492,19 +492,35 @@ func TestInstance_Complete_HappyPath(t *testing.T) {
 	require.NotNil(t, group.EndTime, "active.group should have been ended")
 }
 
-func TestInstance_Complete_BasesReopenWindowOnCompletionTimestamp(t *testing.T) {
+// The reopen window runs on the owner's clock, which Reopen reads again
+// (#7295): with that clock on another day than the database's, a block
+// completed after its planned end can be reopened for five minutes and no
+// longer.
+func TestInstance_ReopenWindowRunsOnTheOwnerClock(t *testing.T) {
 	t.Parallel()
 
-	s := buildLifecycle(t)
-	ai := seedInstance(t, s, true, false)
+	day := calendar.NewDate(2099, 6, 15)
+	now := time.Date(2099, 6, 15, 16, 0, 0, 0, calendar.Berlin)
+	s := buildLifecycle(t, func() time.Time { return now })
+	ai := seedInstanceOn(t, s, day, true, false)
 	_, err := s.svc.Start(s.ctx, ai.ID, 0)
 	require.NoError(t, err)
 
 	completed, err := s.svc.Complete(s.ctx, ai.ID)
 	require.NoError(t, err)
-	require.NotNil(t, completed.CompletedAt)
 	require.NotNil(t, completed.ReopenUntil)
-	assert.Equal(t, completed.CompletedAt.Add(5*time.Minute), *completed.ReopenUntil)
+	assert.True(t, now.Add(5*time.Minute).Equal(*completed.ReopenUntil), "reopen_until %s, want five minutes after %s", completed.ReopenUntil, now)
+
+	now = now.Add(4 * time.Minute)
+	_, err = s.svc.Reopen(s.ctx, ai.ID, 0, true)
+	require.NoError(t, err, "inside the window on the owner's clock")
+
+	completed, err = s.svc.Complete(s.ctx, ai.ID)
+	require.NoError(t, err)
+	assert.True(t, now.Add(5*time.Minute).Equal(*completed.ReopenUntil))
+	now = now.Add(6 * time.Minute)
+	_, err = s.svc.Reopen(s.ctx, ai.ID, 0, true)
+	require.ErrorIs(t, err, timetable.ErrInvalidInstanceTransition, "past the window on the owner's clock")
 }
 
 // TestInstance_Complete_EarlyCompletionReopensUntilPlannedEnd covers #5676:
@@ -542,6 +558,34 @@ func TestInstance_Reopen_RefusesChildThatLeftSchool(t *testing.T) {
 	_, err = s.svc.Complete(s.ctx, ai.ID)
 	require.NoError(t, err)
 	testpkg.CheckOutTestAttendanceByStaff(t, s.db, s.student1, calendar.Date(ai.Date).String(), time.Now().Add(time.Second), s.staffID)
+
+	_, err = s.svc.Reopen(s.ctx, ai.ID, 0, true)
+	require.ErrorIs(t, err, timetable.ErrTimetableOperationConflict)
+	coded, ok := timetable.AsCoded(err)
+	require.True(t, ok)
+	assert.Equal(t, timetable.CodeReopenStudentLeft, coded.Code)
+}
+
+// A checkout carries the owners' clock, so Reopen orders it against the
+// completion on that clock (#7295): with the clock behind the database's, a
+// child that left school after the completion still blocks the reopen.
+func TestInstance_Reopen_OrdersLeavingSchoolOnTheOwnerClock(t *testing.T) {
+	t.Parallel()
+
+	day := calendar.NewDate(2020, 6, 15)
+	now := time.Date(2020, 6, 15, 14, 30, 0, 0, calendar.Berlin)
+	s := buildLifecycle(t, func() time.Time { return now })
+	ai := seedInstanceOn(t, s, day, true, true)
+	started, err := s.svc.Start(s.ctx, ai.ID, 0)
+	require.NoError(t, err)
+	checkIn := now.Add(-10 * time.Minute)
+	device := testpkg.CreateTestDevice(t, s.db, "reopen-left-school-clock")
+	testpkg.CreateTestAttendanceForDate(t, s.db, s.student1, s.staffID, device.ID, day, checkIn, nil)
+	testpkg.CreateTestVisit(t, s.db, s.student1, started.ActiveGroupID, checkIn, nil)
+
+	_, err = s.svc.Complete(s.ctx, ai.ID)
+	require.NoError(t, err)
+	testpkg.CheckOutTestAttendanceByStaff(t, s.db, s.student1, day.String(), now.Add(time.Second), s.staffID)
 
 	_, err = s.svc.Reopen(s.ctx, ai.ID, 0, true)
 	require.ErrorIs(t, err, timetable.ErrTimetableOperationConflict)

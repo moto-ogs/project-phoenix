@@ -50,11 +50,11 @@ func (s *Store) WithClock(now func() time.Time) *Store {
 	return &clocked
 }
 
-// stamp is the instant a schedule version write carries; only a store
-// composed WithClock writes schedule versions.
+// stamp is the instant a schedule version write carries and the cleanup
+// retention counts from; only a store composed WithClock does either.
 func (s *Store) stamp() time.Time {
 	if s.now == nil {
-		panic("workforce postgres: a schedule version write needs the store composed WithClock")
+		panic("workforce postgres: a schedule version write or cleanup retention needs the store composed WithClock")
 	}
 	return s.now()
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // DeleteFinishedStaffDocumentFileCleanups goes through the database function
@@ -24,13 +26,17 @@ func (s *Store) DeleteFinishedStaffDocumentFileCleanups(ctx context.Context, win
 	return int(deleted), nil
 }
 
+// DeleteCompletedOffboardingCleanups deletes the jobs completed before the
+// window, counted in Berlin calendar days on the store's clock, which stamps
+// completed_at (#7295, ADR 0281).
 func (s *Store) DeleteCompletedOffboardingCleanups(ctx context.Context, window time.Duration) (int, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
 		return 0, err
 	}
 	result, err := db.NewRaw(`DELETE FROM users.staff_offboarding_cleanup
-		WHERE tenant_id = ? AND completed_at IS NOT NULL AND completed_at < statement_timestamp() - (? * INTERVAL '1 day')`, scope.TenantID, window.Hours()/24).Exec(ctx)
+		WHERE tenant_id = ? AND completed_at IS NOT NULL AND completed_at < ?`, scope.TenantID,
+		s.stamp().In(calendar.Berlin).AddDate(0, 0, -int(window.Hours()/24))).Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("workforce postgres: delete completed offboarding cleanups: %w", err)
 	}

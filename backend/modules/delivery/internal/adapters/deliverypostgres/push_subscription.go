@@ -47,7 +47,6 @@ func (r *PushSubscriptionRepository) RegisterSubscription(ctx context.Context, s
 		Set("auth = EXCLUDED.auth").
 		Set("user_agent = EXCLUDED.user_agent").
 		Set("token_family_id = EXCLUDED.token_family_id").
-		Set("updated_at = NOW()").
 		Exec(ctx)
 	if err != nil {
 		return &databaseError{Op: "upsert push subscription", Err: translateNotFound(err)}
@@ -468,8 +467,8 @@ func (r *PushSubscriptionRepository) FindForGuardians(ctx context.Context, guard
 
 type pushSubscription struct {
 	ID            int64     `bun:"id,pk,autoincrement"`
-	CreatedAt     time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
-	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
+	CreatedAt     time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 	TenantID      int64     `bun:"tenant_id,notnull"`
 	AccountID     int64     `bun:"account_id,notnull"`
 	Portal        string    `bun:"portal,notnull"`

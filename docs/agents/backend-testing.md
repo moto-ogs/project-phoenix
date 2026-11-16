@@ -140,6 +140,14 @@ the private server only Go moves, and tests that compare with `now()` or
 stay real. A test red at a moved day gets the cause fixed (an injected clock,
 fixed dates), never a skip.
 
+Each time column has one clock ([ADR 0281](../adr/0281-jede-zeitspalte-hat-eine-uhr-trigger-und-spaltenvorgaben-bleiben.md)).
+A column the owner stamps follows the injected clock: pin it and write the
+fixture on it. A column the database stamps (an `update_modified_column()`
+trigger, a column default) is dated on the database clock: age its rows with
+an `UPDATE` relative to `now()`, inside a transaction with
+`SET LOCAL session_replication_role = replica` when a trigger would
+overwrite the value.
+
 ## Credential fixtures
 
 Use `testpkg.NewTestPassword()` for a valid password in authentication,
