@@ -44,7 +44,7 @@ function failure(cause: ApiResponseError): ContractResult<never> {
 }
 
 /** Checks a payload against a contract decoder. */
-export function decodeContract<T>(
+function decodeContract<T>(
   route: string,
   schema: z.ZodType<T>,
   payload: unknown,
