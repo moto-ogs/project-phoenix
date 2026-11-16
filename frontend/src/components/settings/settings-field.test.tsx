@@ -99,6 +99,11 @@ describe("SettingsField", () => {
           onReset={onReset}
         />,
       );
+      // Anker: A reset that switches the protocol off warns before the
+      // click; the stored-off case (#7218) asserts this warning's absence.
+      expect(
+        getByRole("button", { name: "Zurücksetzen" }),
+      ).toHaveAccessibleDescription(/Daten gelöscht/);
       const trigger = () =>
         fireEvent.click(
           action === "switch"
@@ -244,8 +249,9 @@ describe("SettingsField", () => {
           onReset={onReset}
         />,
       );
+      // Anker: The reset button is there; nothing is on, so nothing is
+      // deleted and its tooltip must not warn.
       const reset = getByRole("button", { name: "Zurücksetzen" });
-      // Nothing is on, so nothing is deleted: the tooltip must not warn.
       expect(reset).not.toHaveAccessibleDescription(/Daten gelöscht/);
       fireEvent.click(reset);
       expect(queryByRole("dialog")).toBeNull();
