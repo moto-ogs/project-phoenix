@@ -1059,3 +1059,29 @@ html[data-chat-page-lock] body {
     animation: moto-nav-progress-static 0s linear 150ms forwards;
   }
 }
+
+/* Unbestimmter Fortschritt (ProgressBar indeterminate): ein Abschnitt
+   gleitet durch die Spur. Nur transform, damit der Kompositor ihn zeichnet;
+   bei reduzierter Bewegung steht der Balken ruhig und voll. */
+.moto-progress-indeterminate {
+  animation: moto-progress-indeterminate 1.6s cubic-bezier(0.65, 0, 0.35, 1)
+    infinite;
+  will-change: transform;
+}
+
+@keyframes moto-progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moto-progress-indeterminate {
+    width: 100%;
+    animation: none;
+    transform: none;
+  }
+}

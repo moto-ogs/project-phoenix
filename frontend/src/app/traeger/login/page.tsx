@@ -17,6 +17,7 @@ import {
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { AuthShell, MotoBrand } from "~/components/auth/auth-shell";
+import { AuthProgress } from "~/components/auth/auth-progress";
 import { LOGIN_REFUSALS } from "~/components/auth/credential-error";
 import { MFAChallengeForm } from "~/components/auth/mfa-challenge-form";
 import { MFAEnrollmentScreen } from "~/components/auth/mfa-enrollment-screen";
@@ -29,7 +30,6 @@ import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
-import { Loading } from "~/components/ui/loading";
 import { Radio } from "~/components/ui/radio";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { hasSessionAccess } from "~/lib/session-access";
@@ -201,8 +201,16 @@ function LoginForm() {
 
   if (status === "loading") {
     return (
-      <AuthShell {...SHELL_COPY} variant="tenant" brand={<MotoBrand />}>
-        <Loading message="Sitzung wird überprüft …" />
+      <AuthShell
+        title={SHELL_COPY.title}
+        variant="tenant"
+        brand={<MotoBrand />}
+      >
+        <AuthProgress
+          state="checking"
+          title="Einen Moment bitte"
+          description="moto prüft, ob Sie schon angemeldet sind."
+        />
       </AuthShell>
     );
   }
@@ -369,8 +377,16 @@ export default function TraegerLoginPage() {
   return (
     <Suspense
       fallback={
-        <AuthShell {...SHELL_COPY} variant="tenant" brand={<MotoBrand />}>
-          <Loading message="Laden …" />
+        <AuthShell
+          title={SHELL_COPY.title}
+          variant="tenant"
+          brand={<MotoBrand />}
+        >
+          <AuthProgress
+            state="checking"
+            title="Einen Moment bitte"
+            description="moto prüft, ob Sie schon angemeldet sind."
+          />
         </AuthShell>
       }
     >

@@ -20,15 +20,17 @@ import { loginImageSrc } from "~/lib/tenant-api";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { parentsPortalLoginUrl } from "~/lib/parent-url";
 import { schoolPortalLoginUrl } from "~/lib/school-url";
-import { isSchoolPortalHandoffPath } from "~/lib/redirect-utils";
+import {
+  getSmartRedirectPath,
+  isSchoolPortalHandoffPath,
+} from "~/lib/redirect-utils";
 import { hasSessionAccess } from "~/lib/session-access";
 import { useLoginSessionCheck } from "~/lib/login-session-notice";
 import type { MFAStep } from "~/lib/sign-in-answer";
 import { login as loginApi } from "~/lib/mfa-api";
 import { loginWithPasskey } from "~/lib/passkey-api";
 import { createLogger } from "~/lib/logger";
-import { Loading } from "~/components/ui/loading";
-import { SpinnerIcon } from "~/components/ui/icons";
+import { AuthProgress } from "~/components/auth/auth-progress";
 
 const logger = createLogger({ component: "TenantLoginPage" });
 
@@ -124,6 +126,11 @@ export default function HomePage() {
 
   const isSmartRedirecting =
     awaitingRedirect && status === "authenticated" && hasSessionAccess(session);
+  // A teacher-only account continues in moto schule, everyone else on the
+  // start page of this school; the screen names the right one.
+  const opensSchoolPortal =
+    isSmartRedirecting &&
+    isSchoolPortalHandoffPath(getSmartRedirectPath(session));
 
   // The BFF has already set the httpOnly session cookie. Read only the
   // browser-safe session to update the provider before SmartRedirect runs.
@@ -231,7 +238,12 @@ export default function HomePage() {
   return (
     <AuthShell
       title={loginTitle}
-      subtitle="Melden Sie sich mit Ihrem Konto an."
+      // Während moto prüft oder weiterleitet, gibt es nichts einzugeben.
+      subtitle={
+        isSmartRedirecting || isCheckingAuth
+          ? undefined
+          : "Melden Sie sich mit Ihrem Konto an."
+      }
       variant="tenant"
       showMotoAttribution={hasTenantLoginLogo}
       brand={
@@ -251,17 +263,28 @@ export default function HomePage() {
       }
     >
       {isSmartRedirecting ? (
-        <div className="flex flex-col items-center gap-4 py-12 text-center">
-          <SpinnerIcon className="h-6 w-6 text-gray-600" />
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-gray-900">
-              Sie sind bereits angemeldet.
-            </p>
-            <p className="text-sm text-gray-500">moto öffnet Ihre OGS...</p>
-          </div>
-        </div>
+        <AuthProgress
+          state="redirecting"
+          title={
+            // The session check is still up only when the account already
+            // had a session as the page opened; after a sign-in here it has
+            // long answered and shown the form.
+            isCheckingAuth
+              ? "Sie sind schon angemeldet"
+              : "Anmeldung erfolgreich"
+          }
+          description={
+            opensSchoolPortal
+              ? "moto öffnet jetzt moto schule …"
+              : "moto öffnet jetzt Ihre Startseite …"
+          }
+        />
       ) : isCheckingAuth ? (
-        <Loading message="Sitzung wird überprüft …" />
+        <AuthProgress
+          state="checking"
+          title="Einen Moment bitte"
+          description="moto prüft, ob Sie schon angemeldet sind."
+        />
       ) : mfaStep ? (
         <MFAChallengeForm
           scope="tenant"

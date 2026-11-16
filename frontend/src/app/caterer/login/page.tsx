@@ -8,6 +8,7 @@
 
 import { useState } from "react";
 import { AuthShell, MotoBrand } from "~/components/auth/auth-shell";
+import { AuthProgress } from "~/components/auth/auth-progress";
 import { MFAChallengeForm } from "~/components/auth/mfa-challenge-form";
 import {
   PasswordLoginForm,
@@ -19,7 +20,6 @@ import type { MFAStep } from "~/lib/sign-in-answer";
 import { createLogger } from "~/lib/logger";
 import { loginWithPasskey } from "~/lib/passkey-api";
 import { portalPasswordLogin } from "~/lib/portal-password-login";
-import { Loading } from "~/components/ui/loading";
 
 const logger = createLogger({ component: "CatererLoginPage" });
 
@@ -68,7 +68,13 @@ export default function CatererLoginPage() {
   };
 
   return (
-    <AuthShell {...SHELL_COPY} variant="tenant" brand={<MotoBrand />}>
+    <AuthShell
+      {...SHELL_COPY}
+      // Während moto prüft, gibt es nichts einzugeben.
+      subtitle={isCheckingAuth && !mfaStep ? undefined : SHELL_COPY.subtitle}
+      variant="tenant"
+      brand={<MotoBrand />}
+    >
       {mfaStep ? (
         <MFAChallengeForm
           scope="caterer"
@@ -80,7 +86,11 @@ export default function CatererLoginPage() {
           onCancel={() => setMfaStep(null)}
         />
       ) : isCheckingAuth ? (
-        <Loading message="Sitzung wird überprüft …" />
+        <AuthProgress
+          state="checking"
+          title="Einen Moment bitte"
+          description="moto prüft, ob Sie schon angemeldet sind."
+        />
       ) : (
         <PasswordLoginForm
           portal="caterer"

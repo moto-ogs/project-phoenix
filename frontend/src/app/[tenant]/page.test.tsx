@@ -301,9 +301,15 @@ describe("HomePage (Login)", () => {
 
     render(<HomePage />);
 
-    // Anker: die Ladeanzeige steht statt des Formulars.
-    expect(screen.getByTestId("loading")).toBeInTheDocument();
+    // Anker: die Prüfanzeige steht statt des Formulars.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "moto prüft, ob Sie schon angemeldet sind.",
+    );
     expect(screen.queryByTestId("input-email")).not.toBeInTheDocument();
+    // Während moto prüft, fordert die Karte zu nichts auf.
+    expect(
+      screen.queryByText("Melden Sie sich mit Ihrem Konto an."),
+    ).not.toBeInTheDocument();
   });
 
   it("posts login credentials then reads the token-free session", async () => {
@@ -815,12 +821,67 @@ describe("HomePage (Login)", () => {
     await waitFor(() => {
       expect(screen.getByTestId("smart-redirect")).toBeInTheDocument();
     });
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("Sie sind schon angemeldet");
+    expect(status).toHaveTextContent("moto öffnet jetzt Ihre Startseite …");
     expect(
-      screen.getByText("Sie sind bereits angemeldet."),
-    ).toBeInTheDocument();
-    expect(screen.getByText("moto öffnet Ihre OGS...")).toBeInTheDocument();
+      screen.getByRole("progressbar", {
+        name: "moto öffnet jetzt Ihre Startseite …",
+      }),
+    ).not.toHaveAttribute("aria-valuenow");
+    expect(
+      screen.queryByText("Melden Sie sich mit Ihrem Konto an."),
+    ).not.toBeInTheDocument();
     expect(screen.queryByTestId("input-email")).not.toBeInTheDocument();
     expect(screen.queryByTestId("input-password")).not.toBeInTheDocument();
+  });
+
+  it("names moto schule as the target of a Lehrkraft-only session", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: {
+        user: { id: "1", roles: ["lehrkraft"] },
+        expires: new Date(Date.now() + 3600000).toISOString(),
+      },
+      status: "authenticated",
+      update: mockUpdateSession,
+    });
+
+    render(<HomePage />);
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "moto öffnet jetzt moto schule …",
+    );
+  });
+
+  it("confirms a sign-in made here instead of calling it an old session", async () => {
+    const signedIn = {
+      data: browserSession,
+      status: "authenticated" as const,
+      update: mockUpdateSession,
+    };
+    mockUpdateSession.mockImplementationOnce(async () => {
+      vi.mocked(useSession).mockReturnValue(signedIn);
+      return browserSession;
+    });
+
+    render(<HomePage />);
+
+    await act(async () => {
+      fireEvent.change(await screen.findByTestId("input-email"), {
+        target: { value: "test@example.com" },
+      });
+      fireEvent.change(screen.getByTestId("input-password"), {
+        target: { value: "password123" },
+      });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /anmelden/i }));
+    });
+
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent("Anmeldung erfolgreich");
+    expect(status).not.toHaveTextContent("schon angemeldet");
+    expect(screen.getByTestId("smart-redirect")).toBeInTheDocument();
   });
 
   it("keeps the enrollment success screen until Continue even if the provider notices the new cookie", async () => {
