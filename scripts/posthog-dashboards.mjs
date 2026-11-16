@@ -640,7 +640,7 @@ export function dashboards({ projectId, routes = readRouteTemplates(), browserEv
   return [
     {
       name: 'Nutzungsanalyse: Nutzung je Standort',
-      description: `Start hier. Wie viele Schulen moto nutzen, an welchen Tagen und wofür, je Schule (Schul-ID und Name), in echten Schulen (deployment = moto-app.de). Als aktiv zählen Seitenaufrufe, Kernaktionen und Kiosk-Buchungen. ${WORKDAYS_NOTE} Ferien und Schließtage kennt PostHog nicht, sie sind nicht abgezogen. Ein- und Auschecken wird erst seit dem 25.09.2026 erfasst. Das Elternportal kennt keine Schule und fehlt hier; es hat ein eigenes Dashboard.`,
+      description: `Start hier. Wie viele Schulen moto nutzen, an welchen Tagen und wofür, je Schule (Schul-ID und Name), in echten Schulen (deployment = moto-app.de). Als aktiv zählen Seitenaufrufe, Kernaktionen und Kiosk-Buchungen, nicht aber, was der Caterer der Schule speichert. ${WORKDAYS_NOTE} Ferien und Schließtage kennt PostHog nicht, sie sind nicht abgezogen. Ein- und Auschecken wird erst seit dem 25.09.2026 erfasst. Das Elternportal kennt keine Schule und fehlt hier; es hat ein eigenes Dashboard.`,
       insights: [
         {
           name: 'Aktive Schulen pro Woche',

@@ -217,11 +217,16 @@ test('the caterer never makes its school look active, and its idempotent writes 
   let checked = 0;
   for (const insight of school.flatMap((d) => d.insights)) {
     const query = JSON.stringify(insight.query);
-    // ACTIVE_USE, a scan of the schools' events (schoolDays, schoolFeatureEvents),
-    // or a feature area of a school (featureExpression with school_id).
-    if (!/event != 'login_failed'|as Schule\b|school_id[^"]*'Sonstiges'/.test(query)) continue;
-    checked++;
-    assert.ok(query.includes(notCaterer), `${insight.name}: a caterer action is no use by the school`);
+    // A scan of the schools' events (schoolDays, schoolFeatureEvents) or a
+    // school's feature area filters its rows with SCHOOL_EVENT itself; ACTIVE_USE
+    // in a column would not keep caterer rows out of the scan.
+    if (/as Schule\b|school_id[^"]*'Sonstiges'/.test(query)) {
+      checked++;
+      assert.ok(query.includes(`isNotNull(properties.school_id) and ${notCaterer}`), `${insight.name}: the school scan leaves out the caterer`);
+    } else if (/event != 'login_failed'/.test(query)) {
+      checked++;
+      assert.ok(query.includes(notCaterer), `${insight.name}: a caterer action is no use by the school`);
+    }
   }
   assert.ok(checked >= 10, `${checked} school activity insights`);
   const tiles = definitions.find((d) => d.name === 'Nutzungsanalyse: Caterer-Portal').insights;
