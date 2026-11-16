@@ -3,6 +3,8 @@
 import { CONTROL_HEIGHT_CLASS, iconOnlyMarker } from "../control-geometry";
 import { Z_LAYER } from "../overlay-styles";
 import {
+  Fragment,
+  isValidElement,
   useEffect,
   useId,
   useRef,
@@ -443,10 +445,9 @@ export function OverflowMenu({
   // A trigger with visible content is named by it (WCAG 2.5.3, #7112). A
   // given name that does not already contain a plain-text label follows it
   // as hidden text instead of replacing it.
-  const textContent =
-    typeof triggerContent === "string" ? triggerContent : null;
+  const textContent = plainText(triggerContent);
   const labelKeepsText =
-    textContent !== null &&
+    textContent !== "" &&
     ariaLabel
       .toLocaleLowerCase("de-DE")
       .includes(textContent.toLocaleLowerCase("de-DE"));
@@ -746,4 +747,23 @@ export function OverflowMenu({
         : null}
     </div>
   );
+}
+
+/**
+ * The text a trigger shows, from strings and the children of its elements;
+ * empty when a component draws it (a name from a hook).
+ */
+function plainText(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node).trim();
+  }
+  if (Array.isArray(node)) {
+    return node.map(plainText).filter(Boolean).join(" ");
+  }
+  if (isValidElement<{ children?: ReactNode }>(node)) {
+    return typeof node.type === "string" || node.type === Fragment
+      ? plainText(node.props.children)
+      : "";
+  }
+  return "";
 }

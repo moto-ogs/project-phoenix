@@ -200,7 +200,8 @@ export function DateRangePicker({
         >
           {formatRangeLabel(value)}
         </span>
-        {resolvedFieldLabel ? (
+        {/* Without a range the trigger already says „Zeitraum wählen“. */}
+        {resolvedFieldLabel && value?.from ? (
           <span className="sr-only">{`, ${resolvedFieldLabel}`}</span>
         ) : null}
         <svg

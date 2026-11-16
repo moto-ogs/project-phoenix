@@ -597,7 +597,8 @@ function CalendarListEvent({
             size="md"
             onClick={toggle}
             tooltip={t("openEventTooltip")}
-            aria-label={`${event.title}, ${eventTime(event, t("allDay"))}`}
+            // Named by what the row shows: time, title, child (WCAG 2.5.3,
+            // #7112).
             aria-expanded={open}
             aria-controls={open ? panelId : undefined}
             className="h-auto min-h-11 w-full justify-start rounded-none px-3 py-2 text-left font-normal hover:bg-gray-50 lg:min-h-10"
@@ -872,7 +873,6 @@ function MonthEventButton({
           size="compact"
           onClick={toggle}
           tooltip={t("openEventTooltip")}
-          aria-label={`${event.title}, ${eventTime(event, t("allDay"))}${accessibleStatus}`}
           aria-expanded={open}
           aria-controls={open ? panelId : undefined}
           data-rsvp-state={pending ? "pending" : undefined}
@@ -884,6 +884,9 @@ function MonthEventButton({
           }}
         >
           <span className="line-clamp-2">{event.title}</span>
+          {/* The title leads the name; time and state follow hidden (WCAG
+              2.5.3, #7112). */}
+          <span className="sr-only">{`, ${eventTime(event, t("allDay"))}${accessibleStatus}`}</span>
         </Button>
       )}
     />

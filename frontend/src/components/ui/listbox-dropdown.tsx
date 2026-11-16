@@ -1109,13 +1109,21 @@ export function ListboxDropdown<K extends string>({
           renderTrigger({ selectedLabel, open })
         ) : (
           <>
-            <span id={triggerContentId} className="contents">
+            {!isCombobox && ariaLabelledBy ? (
+              <span id={triggerContentId} className="contents">
+                <ListboxTriggerContent
+                  label={selectedLabel}
+                  placeholderShown={selectedOption === undefined}
+                  open={open}
+                />
+              </span>
+            ) : (
               <ListboxTriggerContent
                 label={selectedLabel}
                 placeholderShown={selectedOption === undefined}
                 open={open}
               />
-            </span>
+            )}
             {!isCombobox && ariaLabel ? (
               <span className="sr-only">{`, ${ariaLabel}`}</span>
             ) : null}
