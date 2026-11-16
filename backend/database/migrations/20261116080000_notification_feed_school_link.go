@@ -30,7 +30,7 @@ func init() {
 const notificationFeedSchoolLinkUpSQL = `
 		ALTER TABLE platform.notification_feed_entries
 			ADD COLUMN school_deep_link TEXT
-				CHECK (school_deep_link ~ '^/[^/\\]' AND char_length(school_deep_link) <= 500);
+				CHECK (school_deep_link ~ '^/($|[^/\\].*)' AND school_deep_link !~ '\\' AND char_length(school_deep_link) <= 500);
 		COMMENT ON COLUMN platform.notification_feed_entries.school_deep_link IS
 			'Link des Eintrags in moto schule (#7139); NULL: Startseite des Schulportals.';
 		GRANT UPDATE (school_deep_link) ON platform.notification_feed_entries TO phoenix_tenant;

@@ -147,7 +147,11 @@ func (c *sseChannel) Deliver(ctx context.Context, event Event) error {
 func (c *sseChannel) deliverToStaff(ctx context.Context, event Event, sseEvent realtime.Event, stored domain.RealtimeNotification) error {
 	if len(event.feedChanged) > 0 {
 		if err := c.signalFeed(event.Audience.TenantID, event.feedChanged); err != nil {
-			return err
+			c.getLogger().Warn("notification feed invalidation failed",
+				"tenant_id", event.Audience.TenantID,
+				"account_count", len(event.feedChanged),
+				"error", err,
+			)
 		}
 	}
 	if event.feedOnly {

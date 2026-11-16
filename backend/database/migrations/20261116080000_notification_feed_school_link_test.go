@@ -34,6 +34,9 @@ func TestNotificationFeedSchoolLinkMigrationRoundTrip(t *testing.T) {
 			testpkg.Tenant(t), account.ID, link)
 		return err
 	}
+	require.NoError(t, insert("/"), "the application accepts the portal root")
 	require.NoError(t, insert("/school/aufsichten"))
 	assert.Error(t, insert("//example.org"), "a link that leaves the app")
+	assert.Error(t, insert("/\\evil"), "a backslash could make the path leave the app")
+	assert.Error(t, insert("/school/\\evil"), "a backslash anywhere could make the path leave the app")
 }

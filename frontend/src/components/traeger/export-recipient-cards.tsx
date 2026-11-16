@@ -127,9 +127,9 @@ export function ExportRecipientFormCard({
   const { success } = useToast();
 
   useEffect(() => {
+    const previousDraft = draftOf(previousRecipient.current);
+    previousRecipient.current = recipient;
     setDraft((current) => {
-      const previousDraft = draftOf(previousRecipient.current);
-      previousRecipient.current = recipient;
       return JSON.stringify(current) === JSON.stringify(previousDraft)
         ? draftOf(recipient)
         : current;
