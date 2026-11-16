@@ -81,7 +81,7 @@ describe("DrawerContent", () => {
     expect(screen.getByText("Drawer content")).toBeInTheDocument();
   });
 
-  it("dims the obscured page without blurring it", () => {
+  it("dims the page and carries the shared delayed blur", () => {
     render(
       <DrawerContent>
         <div>Drawer content</div>
@@ -89,7 +89,7 @@ describe("DrawerContent", () => {
     );
 
     const overlay = screen.getByTestId("drawer-overlay");
-    expect(overlay).toHaveClass("bg-black/40");
+    expect(overlay).toHaveClass("bg-black/40", "moto-overlay-blur");
     expect(overlay.className).not.toMatch(/backdrop-blur/);
   });
 

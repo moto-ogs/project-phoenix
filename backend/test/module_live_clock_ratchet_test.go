@@ -118,7 +118,7 @@ var moduleLiveClockBudget = map[string]int{
 // Same budget semantics as moduleLiveClockBudget; shrink-only.
 //
 // Seed: measured 2026-11-16 on development 77542c3af3, after the nine owner
-// slices of #7104 (111 references in 28 owners, ADR 0271); a mismatch prints
+// slices of #7104 (111 references in 28 owners, ADR 0272); a mismatch prints
 // the measured values.
 var moduleLiveClockValueBudget = map[string]int{
 	"modules/carecontract":         1,
