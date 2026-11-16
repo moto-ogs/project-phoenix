@@ -339,7 +339,7 @@ var moduleLegacyFileBudgets = map[string]int{
 // guardian profile clock of its retained test suites),
 // modules/schoolcalendar/compose (+7: the notices' day clock and the
 // root's clock of the Records) and modules/schoolsearchview/compose (+1).
-const moduleComposeBudgetTotal = 13651
+const moduleComposeBudgetTotal = 13648
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first

@@ -97,7 +97,7 @@ func workerRetentionOf(
 	)...)
 	steps = append(steps, cleanupJobRetentionSteps(
 		filestorageCompose.NewCleanupRetention(), workforceCompose.NewCleanupRetention(),
-		carePlanCompose.NewCleanupRetention(now), enrollmentCompose.NewClocked(now),
+		carePlanCompose.NewCleanupRetention(), enrollmentCompose.NewClocked(now),
 	)...)
 	contentSteps, err := newSchoolContentRetentionSteps(db, settings, announcementRetention, homework)
 	if err != nil {

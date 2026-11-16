@@ -33,7 +33,7 @@ func (s *Store) DeleteFinishedWithdrawalCompletions(ctx context.Context, window 
 		return 0, err
 	}
 	result, err := db.NewRaw(`DELETE FROM users.care_withdrawal_completions
-		WHERE tenant_id = ? AND state <> ? AND resolved_at < ?`, tenantID, withdrawalStatePending, s.currentTime().Add(-window)).Exec(ctx)
+		WHERE tenant_id = ? AND state <> ? AND resolved_at < statement_timestamp() - (? * INTERVAL '1 day')`, tenantID, withdrawalStatePending, window.Hours()/24).Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("care plan postgres: delete finished withdrawal completions: %w", err)
 	}
