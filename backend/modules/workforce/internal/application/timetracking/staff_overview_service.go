@@ -150,6 +150,12 @@ type StaffOverviewService interface {
 	// GetMonthExportRows builds the cross-staff payroll rows (#1417 2b) over
 	// the same prefetch + month math as the overview. month == 0 = whole year.
 	GetMonthExportRows(ctx context.Context, year, month int) ([]MonthExportRow, error)
+	// TraegerPayrollMonths computes the month of the given employments for
+	// the Träger's payroll file (#4712), over the same prefetch.
+	TraegerPayrollMonths(ctx context.Context, staffIDs []int64, year, month int) ([]workforce.TraegerPayrollMonth, error)
+	// traegerTimeStaff keeps the employments the Träger's time export reads:
+	// offboarded ones stay, external caregivers record no time (#3823).
+	traegerTimeStaff(ctx context.Context, staffIDs []int64) ([]int64, error)
 	// TargetCoverage counts the staff without a Soll in a month for the
 	// payroll completeness check (#6890). It speaks the public contract
 	// directly, so the capability promotes it instead of copying it.

@@ -116,7 +116,8 @@ export interface StaffChange {
 }
 
 /** Die Art eines Arbeitsvertrags (#4706). */
-export type StaffContractKind = "part_time" | "full_time" | "minijob";
+export type StaffContractKind =
+  "part_time" | "full_time" | "minijob" | "uebungsleiter" | "ehrenamt";
 
 /** Ein Soll ab einem Tag, Montag bis Freitag in Minuten. */
 interface StaffContractSoll {

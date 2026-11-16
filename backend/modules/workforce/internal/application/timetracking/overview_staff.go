@@ -20,6 +20,10 @@ type OverviewStaff struct {
 }
 
 // OverviewStaffQuery selects the tenant's non-offboarded staff for reports.
+// FindOverviewStaff resolves the given employments, offboarded ones
+// included: a month that is billed after the person left still has to
+// reach the payroll file (#4712).
 type OverviewStaffQuery interface {
 	ListOverviewStaff(context.Context) ([]OverviewStaff, error)
+	FindOverviewStaff(ctx context.Context, ids []int64) ([]OverviewStaff, error)
 }

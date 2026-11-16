@@ -112,6 +112,8 @@ const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/personal/[id]": "Einzelansicht",
   "/personal/abwesenheitsarten": "Einstellungen",
   "/personal/import": "Import",
+  "/personal/lohnexport":
+    "Lohnexport mit eigenen Dateien (DATEV-Lohndatei, Zeitexport)",
   "/reset-password": "Anmeldung",
   "/schulen/[id]": "Einzelansicht",
   "/vertraege/[id]": "Einzelansicht",

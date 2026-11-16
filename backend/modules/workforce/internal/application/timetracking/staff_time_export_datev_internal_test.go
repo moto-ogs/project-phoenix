@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,6 +50,14 @@ func (s datevOverviewStub) TargetCoverage(context.Context, int, int) (*workforce
 
 func (s datevOverviewStub) GetMonthExportRows(context.Context, int, int) ([]MonthExportRow, error) {
 	return s.rows, nil
+}
+
+func (s datevOverviewStub) TraegerPayrollMonths(context.Context, []int64, int, int) ([]workforce.TraegerPayrollMonth, error) {
+	return nil, nil
+}
+
+func (s datevOverviewStub) traegerTimeStaff(_ context.Context, staffIDs []int64) ([]int64, error) {
+	return staffIDs, nil
 }
 
 type payrollConfigurationStub struct{ configuration PayrollExportConfiguration }
@@ -160,7 +169,7 @@ func TestDatevPreflight_UsesTheRuleSetOfTheRequestedRows(t *testing.T) {
 func TestEncodeDatevANSI(t *testing.T) {
 	t.Parallel()
 
-	out := encodeDatevANSI("Bäcker-Größe;1\n")
+	out := domain.EncodeDatevANSI("Bäcker-Größe;1\n")
 
 	// Windows-1252: ä = 0xE4, ö = 0xF6 — a UTF-8 pass-through would leak
 	// two-byte sequences and the payroll import would garble the umlauts.
@@ -170,7 +179,7 @@ func TestEncodeDatevANSI(t *testing.T) {
 
 	// Characters outside CP1252 are substitution-encoded, never dropped and
 	// never a hard failure for the whole file.
-	sub := encodeDatevANSI("€ und ☃")
+	sub := domain.EncodeDatevANSI("€ und ☃")
 	assert.Equal(t, byte(0x80), sub[0], "the euro sign IS part of CP1252")
 	assert.NotContains(t, string(sub), "☃")
 }

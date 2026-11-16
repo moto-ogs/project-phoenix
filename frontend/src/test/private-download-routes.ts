@@ -132,6 +132,8 @@ export const PRIVATE_DOWNLOAD_ROUTES = [
   ["traeger/schools/occupancy/export", "GET"],
   ["traeger/schools/comparison/export", "GET"],
   ["traeger/schools/utilization/export", "GET"],
+  ["traeger/staff-exports/payroll/export", "GET"],
+  ["traeger/staff-exports/times/export", "GET"],
   ["traeger/staff-planning/export", "GET"],
   ["traeger/staff-proofs/export", "GET"],
   ["traeger/staff-records/export", "GET"],

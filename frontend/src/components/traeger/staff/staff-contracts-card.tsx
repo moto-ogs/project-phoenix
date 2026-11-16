@@ -300,8 +300,7 @@ function ContractPanel({
             },
             {
               label: ended ? "Vertrag ändern" : "Art oder Ende ändern",
-              description:
-                "Teilzeit, Vollzeit oder Minijob und der letzte Tag.",
+              description: "Die Art des Vertrags und der letzte Tag.",
               icon: <CalendarPlusIcon className="size-4" aria-hidden="true" />,
               onClick: () => onOpen({ kind: "terms", contract }),
             },

@@ -25,6 +25,7 @@ import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 import { helpConcept } from "~/lib/concepts/help";
 import { holidayWeeksConcept } from "~/lib/concepts/holidayWeeks";
 import { parentsConcept } from "~/lib/concepts/parents";
+import { payrollConcept } from "~/lib/concepts/payroll";
 import { peopleConcept } from "~/lib/concepts/people";
 import { reportsConcept } from "~/lib/concepts/reports";
 import { schoolComparisonConcept } from "~/lib/concepts/schoolComparison";
@@ -265,6 +266,15 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         label: "Abwesenheitsarten",
         shortLabel: "Abwesenheit",
         concept: timeTrackingConcept,
+        right: STAFF_RIGHT,
+      },
+      {
+        // Die DATEV-Lohndatei und der Zeitexport über alle Schulen (#4712).
+        key: "lohnexport",
+        href: "/traeger/personal/lohnexport",
+        label: "Lohnexport",
+        shortLabel: "Lohn",
+        concept: payrollConcept,
         right: STAFF_RIGHT,
       },
     ],

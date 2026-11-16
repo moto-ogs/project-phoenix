@@ -39,11 +39,42 @@ func (q monthCloseStaffQuery) ListMonthCloseStaff(ctx context.Context) ([]workfo
 	return staff, nil
 }
 
-type overviewStaffQuery struct{ source staffListRecords }
+type overviewStaffRecords interface {
+	staffListRecords
+	staffNameRecords
+}
 
-// OverviewStaff lists the staff members the time-account overview shows.
-func OverviewStaff(source staffListRecords) workforceCompose.OverviewStaffQuery {
+type overviewStaffQuery struct{ source overviewStaffRecords }
+
+// OverviewStaff lists the staff members the time-account overview shows and
+// resolves employments by id, offboarded ones included.
+func OverviewStaff(source overviewStaffRecords) workforceCompose.OverviewStaffQuery {
 	return overviewStaffQuery{source: source}
+}
+
+// FindOverviewStaff resolves the employments the Träger's payroll file
+// books; offboarded memberships stay resolvable (FindWithPersonByIDs).
+func (q overviewStaffQuery) FindOverviewStaff(ctx context.Context, ids []int64) ([]workforceCompose.OverviewStaff, error) {
+	rows, err := q.source.FindWithPersonByIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	staff := make([]workforceCompose.OverviewStaff, 0, len(rows))
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		member := workforceCompose.OverviewStaff{
+			ID: row.ID, EmploymentType: row.EmploymentType, PersonnelNumber: row.PersonnelNumber,
+			WorkTimeModelID: row.WorkTimeModelID, RotationAnchorDate: row.RotationAnchorDate, ExternalCaregiver: row.IsExternalCaregiver,
+		}
+		if row.Person != nil {
+			member.FirstName = row.Person.FirstName
+			member.LastName = row.Person.LastName
+		}
+		staff = append(staff, member)
+	}
+	return staff, nil
 }
 
 func (q overviewStaffQuery) ListOverviewStaff(ctx context.Context) ([]workforceCompose.OverviewStaff, error) {
