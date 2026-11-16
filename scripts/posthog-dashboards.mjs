@@ -950,11 +950,11 @@ order by Woche desc`),
       insights: [
         {
           name: 'Caterer-Portal: Was tun Caterer?',
-          description: 'Letzte 30 Tage. Erfolgreiche Speichervorgänge im Caterer-Portal je Aktion, etwa Bestellung bestätigt, gezählt als Schultage: dieselbe Aktion für eine Schule am selben Tag zählt einmal.',
+          description: 'Letzte 30 Tage. Erfolgreiche Speichervorgänge im Caterer-Portal je Aktion, etwa Bestellung bestätigt, gezählt als Tage je Schule, auch am Wochenende: dieselbe Aktion für eine Schule am selben Tag zählt einmal.',
           ...hogql('production', (where) => `
 select
   event as Aktion,
-  ${SCHOOL_DAYS} as Schultage,
+  ${SCHOOL_DAYS} as ${quoted('Tage je Schule')},
   uniq(toString(properties.school_id)) as Schulen
 from events
 where ${where}
@@ -962,7 +962,7 @@ where ${where}
   and ${coreAction}
   and timestamp > now() - interval 30 day
 group by Aktion
-order by Schultage desc`, 'ActionsTable', undefined, { everyDay: true }),
+order by ${quoted('Tage je Schule')} desc`, 'ActionsTable', undefined, { everyDay: true }),
         },
         {
           name: 'Caterer-Portal: Tage mit bestätigter Bestellung je Schule (30 Tage)',
@@ -987,12 +987,10 @@ order by ${quoted('Tage mit Bestätigung')} desc, Schule`, 'ActionsTable', undef
         },
         {
           name: 'Caterer-Portal: Tage mit bestätigter Bestellung pro Woche',
-          description: 'Je Schule die Tage einer Woche, an denen ihr Caterer mindestens eine Bestellung bestätigt hat.',
+          description: 'Alle Schulen zusammen: Tage je Schule einer Woche, an denen ihr Caterer mindestens eine Bestellung bestätigt hat. Zwei Schulen mit je fünf Tagen ergeben 10. Die Aufteilung je Schule zeigt die Tabelle darüber.',
           ...trends('production', {
-            series: [series('meal_order_confirmed', 'Tage mit Bestätigung', { math: 'hogql', math_hogql: SCHOOL_DAYS })],
+            series: [series('meal_order_confirmed', 'Tage je Schule mit Bestätigung', { math: 'hogql', math_hogql: SCHOOL_DAYS })],
             dateFrom: '-180d',
-            breakdown: SCHOOL_BREAKDOWN,
-            breakdownType: 'hogql',
             display: 'ActionsBar',
             everyDay: true,
           }),

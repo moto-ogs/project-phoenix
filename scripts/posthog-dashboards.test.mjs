@@ -199,7 +199,7 @@ test('the caterer portal counts its core actions per school, since its browser s
   const tiles = definitions.find((d) => d.name === 'Nutzungsanalyse: Caterer-Portal').insights;
   const actions = tiles.find((insight) => insight.name === 'Caterer-Portal: Was tun Caterer?');
   assert.match(actions.query.source.query, /properties\.surface = 'caterer'/);
-  assert.match(actions.query.source.query, /uniq\(concat\(toString\(properties\.school_id\), toString\(toDate\(timestamp\)\)\)\) as Schultage/);
+  assert.match(actions.query.source.query, /uniq\(concat\(toString\(properties\.school_id\), toString\(toDate\(timestamp\)\)\)\) as `Tage je Schule`/);
   const queries = JSON.stringify(tiles.map((insight) => insight.query));
   assert.ok(tiles.every((insight) => !/Seite|klicken/.test(insight.name)), 'the caterer portal has no page views');
   for (const event of ['caterer_invited', 'caterer_invite_accepted', 'caterer_supply_ended', 'meal_order_confirmed']) {
@@ -249,6 +249,8 @@ test('the caterer never makes its school look active, and its idempotent writes 
   assert.doesNotMatch(perSchool, /count\(\)/, 'repeated confirmations count once per day');
   assert.match(perSchool, /\ngroup by Schule\n/, 'two schools of the same name stay apart');
   assert.match(perSchool, /properties\.surface = 'caterer'/);
+  // Only the table, keyed by school ID, splits by school; a name breakdown would merge namesakes.
+  assert.ok(tiles.every((insight) => insight.query.source.breakdownFilter === undefined), 'no caterer chart breaks down by school name');
   for (const insight of tiles.filter((tile) => tile.query.kind === 'InsightVizNode')) {
     for (const step of insight.query.source.series) {
       assert.equal(step.math_hogql, 'uniq(concat(toString(properties.school_id), toString(toDate(timestamp))))', `${insight.name} ${step.event}`);

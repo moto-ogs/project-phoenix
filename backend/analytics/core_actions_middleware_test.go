@@ -109,6 +109,8 @@ func newCoreActionRouter(tracker Tracker, requestActor *Actor) http.Handler {
 			switch ended := r.URL.Query().Get("ended"); ended {
 			case "missing":
 				_, _ = w.Write([]byte(`{"status":"success","data":{"created":true}}`))
+			case "top":
+				_, _ = w.Write([]byte(`{"ended":true}`))
 			default:
 				_, _ = w.Write([]byte(`{"status":"success","data":{"ended":` + ended + `}}`))
 			}
@@ -212,10 +214,12 @@ func TestCoreActionMiddlewareCountsOnlyAnEndThatEndedSomething(t *testing.T) {
 	serve(router, http.MethodDelete, "/api/meal-caterer/supply?ended=true", ``, nil)
 	serve(router, http.MethodDelete, "/api/meal-caterer/supply?ended=false", ``, nil)
 	serve(router, http.MethodDelete, "/api/meal-caterer/supply?ended=missing", ``, nil)
+	serve(router, http.MethodDelete, "/api/meal-caterer/supply?ended=top", ``, nil)
 
 	events := tracker.captured()
-	require.Len(t, events, 1, "a repeated end and a response without ended count nothing")
+	require.Len(t, events, 2, "a repeated end and a response without ended count nothing; a flat ended counts")
 	assert.Equal(t, "caterer_supply_ended", events[0].event)
+	assert.Equal(t, "caterer_supply_ended", events[1].event)
 }
 
 // chi reports a mounted collection root as /api/groups/ whether or not the
