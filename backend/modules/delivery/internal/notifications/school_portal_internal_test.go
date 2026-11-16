@@ -28,7 +28,7 @@ func TestSchoolPortalCatalogue(t *testing.T) {
 	for _, def := range TypesForPortal(PortalSchool) {
 		keys = append(keys, def.Key)
 	}
-	assert.Equal(t, []string{TypeSchoolClassAbsenceReported, TypeSchoolUnreportedAbsence, TypeStaffMessage, TypeInstanceCancelled, TypeSchoolParentConferenceBooking}, keys)
+	assert.Equal(t, []string{TypeSchoolClassAbsenceReported, TypeSchoolUnreportedAbsence, TypeStaffMessage, TypeInstanceCancelled, TypeSchoolParentConferenceBooking, TypeSchoolClosingDayChanged}, keys)
 
 	staffMessage, _ := GetType(TypeStaffMessage)
 	pickup, _ := GetType(TypePickupUpcoming)
@@ -50,6 +50,9 @@ func TestSchoolPortalCatalogue(t *testing.T) {
 	assert.False(t, OfferedInPortal(reinstated, PortalSchool), "a reinstatement follows the cancellation's switch instead of becoming another choice")
 	assert.True(t, reinstated.SchoolPortal)
 	assert.Empty(t, PermissionInPortal(reinstated, PortalSchool))
+	closingDay, _ := GetType(TypeSchoolClosingDayChanged)
+	assert.True(t, OfferedInPortal(closingDay, PortalSchool), "every Lehrkraft hears of a closing day in moto schule (#7144)")
+	assert.Empty(t, PermissionInPortal(closingDay, PortalSchool))
 }
 
 func TestFeedTypesIncludeReinstatementsInTheSchoolPortal(t *testing.T) {

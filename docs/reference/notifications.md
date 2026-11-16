@@ -296,6 +296,26 @@ push is off by default (`FilterOptedIn`); the school switch is
 `/tagesinformationen?hinweis=<id>` opens the notice through
 `GET /api/staff-notices/{id}`, also before it applies.
 
+A planned, changed or cancelled closing day of the school
+(`school_closing_day_changed` and `parent_school_closing_day_changed`, #7144)
+reaches the whole school. School Calendar notifies in the write transaction
+of the closing day through `schoolcalendar.ClosingDayNotices`; the root
+binding reads the audience from Delivery's `SchoolAudience`, which applies
+`platform.delivery_realtime_recipients`: every active account with a role of
+the OGS portal or of moto schule, and every active guardian with
+`parent_portal.access` for a child of the school. The account of the request
+is left out. A guardian entry carries those children, so the guardian feed
+re-checks the access on every read. Feed and push while a day of the change
+lies within 14 days, feed only later, nothing when every day lies in the
+past or only the reason changed. The push is on by default for staff,
+Lehrkräfte and families (`FilterNotOptedOut`; parent types may be
+default-on since #7144). One school switch,
+`notifications.school_closing_day_enabled`, stops feed and push for both
+types. Links: `/calendar` (OGS portal), `/school/kalender` (moto schule),
+`/calendar?date=<first day>` (parents portal). Träger-planned closing days
+and a separate „geänderte Öffnungszeit“ are not covered: the Träger writes
+in its own transaction across schools, and moto has no opening-hours record.
+
 #### Parents portal (#7140)
 
 A guardian-scoped event with `Feed` and `Audience.StudentIDs` writes one

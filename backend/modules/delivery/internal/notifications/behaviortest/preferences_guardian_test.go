@@ -63,8 +63,13 @@ func TestGuardianPreferencesAcrossSchools(t *testing.T) {
 		assert.True(t, overview.TenantEnabled, "the family's school has dispatch on")
 
 		for _, state := range overview.Types {
-			assert.False(t, state.Enabled, "consent starts empty for every type, not just this one")
+			def, ok := notifications.GetType(state.Key)
+			require.True(t, ok)
+			// Only a default-on type, the closing day (#7144), reads as on
+			// without a row.
+			assert.Equal(t, def.DefaultOn, state.Enabled, "consent starts empty for every type but the default-on ones: %s", state.Key)
 		}
+		assert.True(t, parentTypeState(t, overview, notifications.TypeParentSchoolClosingDayChanged).Enabled)
 	})
 
 	t.Run("a decision is stored per school and reads back", func(t *testing.T) {
@@ -125,6 +130,8 @@ func TestGuardianPreferencesAcrossSchools(t *testing.T) {
 		overview, err := svc.GetForParent(ctx, chain.AccountID)
 		require.NoError(t, err)
 		assert.False(t, parentTypeState(t, overview, notifications.TypeParentAnnouncement).Enabled)
+		assert.False(t, parentTypeState(t, overview, notifications.TypeParentSchoolClosingDayChanged).Enabled,
+			"a default-on type is switched off by an explicit no")
 
 		var count int
 		require.NoError(t, db.NewSelect().
@@ -132,7 +139,7 @@ func TestGuardianPreferencesAcrossSchools(t *testing.T) {
 			ColumnExpr("count(*)").
 			Where("account_id = ?", chain.AccountID).
 			Scan(ctx, &count))
-		assert.Equal(t, 2, count, "the opt-out is recorded once per active school, not deleted")
+		assert.Equal(t, 4, count, "the opt-out of the stored and of the default-on type is recorded once per active school, not deleted")
 
 		tenantCtx := testpkg.TenantContext(chain.TenantID)
 		optedIn, err := testpkg.TenantQuery2(t, tenantCtx, db, svc.FilterOptedIn, notifications.TypeParentAnnouncement, []int64{chain.AccountID})

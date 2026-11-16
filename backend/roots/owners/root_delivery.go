@@ -53,6 +53,9 @@ type DeliveryNotifications struct {
 	// GuardianFeed serves a guardian account its feed across the schools of
 	// the family in the parents portal (#7140).
 	GuardianFeed deliveryContract.GuardianNotificationFeed
+	// SchoolAudience names the accounts and families a notice to the whole
+	// school reaches (#7144).
+	SchoolAudience deliveryContract.SchoolAudience
 }
 
 // BuildDeliveryNotifications binds the notification router over the realtime
@@ -113,6 +116,10 @@ func BuildDeliveryNotifications(
 	if !ok {
 		return DeliveryNotifications{}, fmt.Errorf("staff recipients do not name the staff responsible for a child")
 	}
+	schoolAudience, ok := notifier.(deliveryContract.SchoolAudience)
+	if !ok {
+		return DeliveryNotifications{}, fmt.Errorf("notification router does not name the audience of the whole school")
+	}
 	return DeliveryNotifications{
 		UnreportedAbsences: unreported,
 		Notifier:           notifier,
@@ -123,6 +130,7 @@ func BuildDeliveryNotifications(
 		ResponsibleStaff: responsible,
 		Feed:             feed,
 		GuardianFeed:     guardianFeed,
+		SchoolAudience:   schoolAudience,
 	}, nil
 }
 

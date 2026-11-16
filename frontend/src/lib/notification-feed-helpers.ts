@@ -73,6 +73,8 @@ export function mapNotificationFeedPage(
 export const NOTIFICATION_FEED_ANALYTICS_TYPES = [
   "instance_cancelled",
   "parent_care_cancelled",
+  "school_closing_day_changed",
+  "parent_school_closing_day_changed",
   "staffing_changed",
   "group_staffing_changed",
   "team_member_absent",

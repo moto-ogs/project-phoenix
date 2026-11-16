@@ -7381,7 +7381,7 @@ export const parentNewsTopic = function parentNewsTopic(): HelpTopic {
  *
  * Die `Hinweise` (#7140) stehen ohne Einstellung in moto: am Computer hinter
  * der Glocke oben rechts, auf dem Telefon unter `Mehr`. Erster Hinweis ist
- * die Absage einer Betreuung des Kindes.
+ * die Absage einer Betreuung des Kindes, dazu kommen die Schließtage (#7144).
  */
 export const parentNotificationsTopic =
   function parentNotificationsTopic(): HelpTopic {
@@ -7408,6 +7408,7 @@ export const parentNotificationsTopic =
         "moto meldet sich ab jetzt bei den gewählten Themen. Auch wenn die App geschlossen ist.",
       notes: [
         "Jeder Hinweis steht auch in moto unter `Hinweise`, zum Beispiel wenn eine Betreuung Ihres Kindes ausfällt. Dafür müssen Sie nichts einschalten.",
+        "Trägt die OGS einen Schließtag ein, ändert oder löscht ihn, steht das ebenfalls unter `Hinweise`. Das Thema `Schließtage` ist von Anfang an eingeschaltet. Eine Mitteilung aufs Handy kommt nur, wenn der Tag in den nächsten 14 Tagen liegt.",
         "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder `Alle als gelesen markieren` wählen.",
         "Auf dem Sperrbildschirm steht nie der Name Ihres Kindes. Was genau los ist, lesen Sie nach der Anmeldung in moto.",
         "Die Themen stehen unter `Kinder`, `Mitteilungen` und `Termine`.",
@@ -8619,8 +8620,8 @@ export const staffNoticesTopic = function staffNoticesTopic(): HelpTopic {
  * Die Glocke oben rechts im Staff-Portal (#7148): oben `Erinnerungen`, darunter
  * `Hinweise` (der Benachrichtigungs-Feed). Hinweise kommen zur Absage eines
  * Termins, zu Vertretungen, Änderungen im Dienstplan, neuen Hinweisen der
- * Leitung, zum Ausfall im Team und zu weiteren Mitteilungs-Arten außer
- * Nachrichten (#7136, #7137, #7138, #7143).
+ * Leitung, zum Ausfall im Team, zu Schließtagen und zu weiteren
+ * Mitteilungs-Arten außer Nachrichten (#7136, #7137, #7138, #7143, #7144).
  */
 export const staffNotificationsTopic =
   function staffNotificationsTopic(): HelpTopic {
@@ -8649,6 +8650,7 @@ export const staffNotificationsTopic =
         "Wurde Ihnen eine Gruppe übergeben, sehen Sie unter `Ausfall im Team`, wer in dieser Gruppe nicht da ist. Der Hinweis öffnet `Heute` an dem Tag.",
         "Wer die Änderung selbst einträgt, bekommt keinen Hinweis.",
         "Schreibt die Leitung unter `Hinweise der Leitung` etwas Neues für die Betreuung, steht es hier als `Neuer Hinweis der Leitung`. Ein Klick darauf öffnet die Seite `Hinweise der Leitung` mit diesem Text, auch wenn er erst später gilt.",
+        "Trägt die Leitung einen Schließtag ein, ändert oder löscht ihn, bekommen alle im Team einen Hinweis. Ein Klick darauf öffnet den `Kalender`.",
         "Auch diese Arten kommen als Hinweis: `Geänderte Abholzeit`, `Krankmeldung eines Kindes`, `Notizen für das Team` und `Umfragen der Einrichtung`.",
         "Die Leitung bekommt außerdem `Austritte aus dem Team` und `Ablaufende Nachweise im Team`. Für Ihre eigenen Nachweise gibt es `Eigene Nachweise`.",
         "Nachrichten stehen nicht in der Glocke. Neue Nachrichten zählt moto bei `Nachrichten` und `Team-Chat`.",
@@ -8656,7 +8658,7 @@ export const staffNotificationsTopic =
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Was Sie auf dem Handy gelesen haben, ist auch am Tablet gelesen.",
         "Weiter unten in der Liste lädt moto ältere Hinweise nach. Sie können auch `Weitere laden` wählen.",
-        "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Bei Absagen und Änderungen im Dienstplan passiert das nur von heute bis in 14 Tagen.",
+        "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Bei Absagen, Schließtagen und Änderungen im Dienstplan passiert das nur von heute bis in 14 Tagen.",
         "Die Mitteilung aufs Handy stellen Sie in Ihrem `Profil` unter `Benachrichtigungen` für jede Art ein. Schalten Sie sie aus, kommt der Hinweis in der Glocke trotzdem.",
         "Zu neuen Hinweisen der Leitung kommt keine Mitteilung aufs Handy. Sie können sie im `Profil` unter `Benachrichtigungen` bei `Hinweise der Leitung` einschalten. Dann kommt sie, wenn der Hinweis schon gilt oder in den nächsten 14 Tagen beginnt.",
         "Die Einstellung für `Absage eines Termins` gilt auch, wenn die Absage zurückgenommen wird.",
@@ -8670,6 +8672,7 @@ export const staffNotificationsTopic =
       troubleshootingDetails: [
         "Es kommt kein Hinweis zu einer Absage? Ihre Schule kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder einen Hinweis noch eine Mitteilung aufs Handy. Fragen Sie Ihre Leitung.",
         "Es kommt kein Hinweis zu einer Vertretung? Ihre Schule kann `Hinweis bei Vertretung und Dienstplanänderung` ausschalten. Fragen Sie Ihre Leitung.",
+        "Es kommt kein Hinweis zu einem Schließtag? Ihre Schule kann `Benachrichtigung bei Schließtagen` ausschalten. Fragen Sie Ihre Leitung.",
         "Es kommt kein Hinweis zu neuen Hinweisen der Leitung? Ihre Schule kann `Benachrichtigung bei neuem Hinweis der Leitung` ausschalten. Fragen Sie Ihre Leitung.",
         "Die Seite `Hinweise der Leitung` zeigt `Diesen Hinweis gibt es nicht mehr.`? Dann hat die Leitung ihn gelöscht oder abgeschaltet.",
         "Es kommt kein Hinweis zu einer Krankmeldung? Ihre Schule kann `Hinweis bei Krankmeldung` ausschalten. Manche Schulen melden sie auch nur Personen, die gerade im Dienst sind. Fragen Sie Ihre Leitung.",
@@ -10358,7 +10361,8 @@ export const teacherNoticesTopic = function teacherNoticesTopic(): HelpTopic {
 
 /**
  * Die Glocke oben rechts in moto schule (#7139): die `Hinweise` der Lehrkraft,
- * zuerst die Absage eines Termins, für den sie eingeplant ist.
+ * zuerst die Absage eines Termins, für den sie eingeplant ist, dazu die
+ * Schließtage der Schule (#7144).
  */
 export const teacherNotificationFeedTopic =
   function teacherNotificationFeedTopic(): HelpTopic {
@@ -10382,11 +10386,12 @@ export const teacherNotificationFeedTopic =
       notes: [
         "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis.",
         "Nimmt die Leitung die Absage zurück, steht dort `Termin findet doch statt`.",
+        "Trägt die OGS einen Schließtag ein, ändert oder löscht ihn, sehen Sie es hier. Ein Klick darauf öffnet den `Kalender`.",
         "`Meine Aufsichten` zeigt den heutigen Tag. Liegt der Termin später, steht der Tag im Hinweis.",
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Was Sie auf dem Handy gelesen haben, ist auch am Computer gelesen.",
-        "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Das passiert nur bei Absagen von heute bis in 14 Tagen.",
-        "Die Mitteilung aufs Handy schalten Sie unter `Einstellungen` bei `Absage eines Termins` aus. Der Hinweis in der Glocke kommt dann trotzdem.",
+        "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Das passiert nur bei Absagen und Schließtagen von heute bis in 14 Tagen.",
+        "Die Mitteilung aufs Handy schalten Sie unter `Einstellungen` bei `Absage eines Termins` oder `Schließtage` aus. Der Hinweis in der Glocke kommt dann trotzdem.",
         "Die Einstellung gilt auch, wenn eine Absage zurückgenommen wird.",
       ],
       differences: [
@@ -10395,6 +10400,7 @@ export const teacherNotificationFeedTopic =
       ],
       troubleshootingDetails: [
         "Es kommt kein Hinweis zu einer Absage? Die OGS-Leitung kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder Hinweis noch Mitteilung aufs Handy. Fragen Sie dort nach.",
+        "Es kommt kein Hinweis zu einem Schließtag? Die OGS-Leitung kann `Benachrichtigung bei Schließtagen` ausschalten. Fragen Sie dort nach.",
       ],
       related: [HELP_TOPICS.teacherSettings, HELP_TOPICS.teacherSupervision],
     };

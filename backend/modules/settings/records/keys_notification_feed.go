@@ -15,3 +15,8 @@ const KeyNotificationsStaffingChangedEnabled = "notifications.staffing_changed_e
 // notice about a new Hinweis der Leitung (#7143): neither feed entry nor push
 // is written then.
 const KeyNotificationsStaffNoticePublishedEnabled = "notifications.staff_notice_published_enabled"
+
+// KeyNotificationsSchoolClosingDayEnabled lets a school switch off the notice
+// about a planned, changed or cancelled closing day (#7144): neither feed
+// entry nor push is written then, for the team nor for the families.
+const KeyNotificationsSchoolClosingDayEnabled = "notifications.school_closing_day_enabled"

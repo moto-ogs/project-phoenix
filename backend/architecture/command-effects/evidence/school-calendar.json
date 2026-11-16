@@ -1457,6 +1457,38 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged",
+      "binding_digest": "654a1651e784aa0c2c5c80f92985b0ae",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/contract.SchoolAudience.SchoolAudience",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged",
+      "binding_digest": "512a76107afc4a8e5639d67fab0d2656",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged",
+      "binding_digest": "55071d9f9d1e668e53cafa00f9b201e8",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolCalendarClosingDayNotices.NotifyClosingDayChanged",
+      "binding_digest": "a72a18d8efc91ff9da9fa722313653e5",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayNotices.NotifyClosingDayChanged",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.ClaimsFromCtx",
+      "target_owner": "identity-access"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolclosingdaysview/internal/adapters/postgres.Reader.ListCareCalendarRanges",
       "binding_digest": "077ca096949c5d98ad6a2f6236a5536a",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.ClosingDayReads.ListCareCalendarRanges",

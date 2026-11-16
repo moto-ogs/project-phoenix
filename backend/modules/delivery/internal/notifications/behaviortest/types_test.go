@@ -31,7 +31,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 
 	t.Run("staff catalogue is grouped and ordered", func(t *testing.T) {
 		defs := notifications.TypesForPortal(notifications.PortalStaff)
-		require.Len(t, defs, 20)
+		require.Len(t, defs, 21)
 
 		keys := make([]string, len(defs))
 		for i, def := range defs {
@@ -55,6 +55,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 			notifications.TypeStaffQualificationOwnExpiry,
 			notifications.TypeStaffNoticePublished,
 			notifications.TypeInstanceCancelled,
+			notifications.TypeSchoolClosingDayChanged,
 			notifications.TypeStaffingChanged,
 			notifications.TypeGroupStaffingChanged,
 			notifications.TypeTeamMemberAbsent,
@@ -63,7 +64,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 
 	t.Run("parent catalogue is separate", func(t *testing.T) {
 		defs := notifications.TypesForPortal(notifications.PortalParent)
-		require.Len(t, defs, 7)
+		require.Len(t, defs, 8)
 
 		keys := make([]string, len(defs))
 		for i, def := range defs {
@@ -77,6 +78,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 			notifications.TypeParentAppointment,
 			notifications.TypeParentAppointmentReminder,
 			notifications.TypeParentCareCancelled,
+			notifications.TypeParentSchoolClosingDayChanged,
 		}, keys, "order is fixed by group then SortOrder, not by registration order")
 
 		// A staff type must never surface in the parent portal and vice versa:

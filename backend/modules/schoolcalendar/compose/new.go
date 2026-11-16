@@ -69,6 +69,9 @@ type AdministrationDependencies struct {
 	// Today names the current calendar day in YYYY-MM-DD. Nil means the
 	// Berlin calendar day, the school's day.
 	Today func() string
+	// ClosingDayNotices tells the school about a planned, changed or
+	// cancelled closing day (#7144); nil tells nobody.
+	ClosingDayNotices schoolcalendar.ClosingDayNotices
 }
 
 // NewAdministration adds the period administration to the Records: the whole School Calendar, which the period editor drives.
@@ -83,7 +86,7 @@ func NewAdministration(records schoolcalendar.Days, dependencies AdministrationD
 	}
 	service, err := application.WithAdministration(records, application.Administration{
 		Transaction: writeTransaction, RecurrenceGate: dependencies.RecurrenceGate,
-		CareOfferingGuard: dependencies.CareOfferingGuard, Today: today,
+		CareOfferingGuard: dependencies.CareOfferingGuard, Today: today, ClosingDayNotices: dependencies.ClosingDayNotices,
 	}, dependencies.Observe)
 	return service, err
 }

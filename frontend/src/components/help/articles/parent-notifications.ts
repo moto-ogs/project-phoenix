@@ -9,7 +9,7 @@ import { HELP_TOPICS } from "~/lib/help-topics";
  *
  * Die `Hinweise` (#7140) stehen ohne Einstellung in moto: am Computer hinter
  * der Glocke oben rechts, auf dem Telefon unter `Mehr`. Erster Hinweis ist
- * die Absage einer Betreuung des Kindes.
+ * die Absage einer Betreuung des Kindes, dazu kommen die Schließtage (#7144).
  */
 export function parentNotificationsTopic(): HelpTopic {
   return {
@@ -35,6 +35,7 @@ export function parentNotificationsTopic(): HelpTopic {
       "moto meldet sich ab jetzt bei den gewählten Themen. Auch wenn die App geschlossen ist.",
     notes: [
       "Jeder Hinweis steht auch in moto unter `Hinweise`, zum Beispiel wenn eine Betreuung Ihres Kindes ausfällt. Dafür müssen Sie nichts einschalten.",
+      "Trägt die OGS einen Schließtag ein, ändert oder löscht ihn, steht das ebenfalls unter `Hinweise`. Das Thema `Schließtage` ist von Anfang an eingeschaltet. Eine Mitteilung aufs Handy kommt nur, wenn der Tag in den nächsten 14 Tagen liegt.",
       "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder `Alle als gelesen markieren` wählen.",
       "Auf dem Sperrbildschirm steht nie der Name Ihres Kindes. Was genau los ist, lesen Sie nach der Anmeldung in moto.",
       "Die Themen stehen unter `Kinder`, `Mitteilungen` und `Termine`.",

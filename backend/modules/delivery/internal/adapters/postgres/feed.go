@@ -317,3 +317,40 @@ func (s *Store) MarkAllGuardianFeedEntriesRead(ctx context.Context, accountID in
 	}
 	return tenants, nil
 }
+
+// schoolAudienceSQL names the audience of a notice to the whole school
+// (#7144) in one statement: the active members with a role of the OGS portal
+// or of moto schule, and the active guardian members with the children they
+// hold parent_portal.access for. It reads the projection the feed readers,
+// Web Push and SSE check on delivery, so it names nobody who could not read
+// the entry. An account that is staff and guardian at once is both.
+const schoolAudienceSQL = `SELECT reader.account_id,
+		(reader.has_staff_role OR reader.has_school_role) AS staff,
+		CASE WHEN reader.has_guardian_role THEN reader.guardian_student_ids ELSE '{}'::bigint[] END AS student_ids
+	FROM platform.delivery_realtime_recipients AS reader
+	WHERE reader.tenant_id = ? AND reader.active
+		AND (reader.has_staff_role OR reader.has_school_role
+			OR (reader.has_guardian_role AND cardinality(reader.guardian_student_ids) > 0))
+	ORDER BY reader.account_id`
+
+type schoolAudienceRow struct {
+	AccountID  int64   `bun:"account_id"`
+	Staff      bool    `bun:"staff"`
+	StudentIDs []int64 `bun:"student_ids,array"`
+}
+
+func (s *Store) SchoolAudience(ctx context.Context, tenantID int64) ([]domain.SchoolAudienceMember, error) {
+	db, err := s.tenantDB(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	var rows []schoolAudienceRow
+	if err := db.NewRaw(schoolAudienceSQL, tenantID).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("delivery postgres: school audience: %w", err)
+	}
+	members := make([]domain.SchoolAudienceMember, 0, len(rows))
+	for _, row := range rows {
+		members = append(members, domain.SchoolAudienceMember{AccountID: row.AccountID, Staff: row.Staff, StudentIDs: row.StudentIDs})
+	}
+	return members, nil
+}

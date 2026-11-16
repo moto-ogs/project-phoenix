@@ -3,7 +3,8 @@ import { HELP_TOPICS } from "~/lib/help-topics";
 
 /**
  * Die Glocke oben rechts in moto schule (#7139): die `Hinweise` der Lehrkraft,
- * zuerst die Absage eines Termins, für den sie eingeplant ist.
+ * zuerst die Absage eines Termins, für den sie eingeplant ist, dazu die
+ * Schließtage der Schule (#7144).
  */
 export function teacherNotificationFeedTopic(): HelpTopic {
   return {
@@ -26,11 +27,12 @@ export function teacherNotificationFeedTopic(): HelpTopic {
     notes: [
       "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis.",
       "Nimmt die Leitung die Absage zurück, steht dort `Termin findet doch statt`.",
+      "Trägt die OGS einen Schließtag ein, ändert oder löscht ihn, sehen Sie es hier. Ein Klick darauf öffnet den `Kalender`.",
       "`Meine Aufsichten` zeigt den heutigen Tag. Liegt der Termin später, steht der Tag im Hinweis.",
       "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
       "Was Sie auf dem Handy gelesen haben, ist auch am Computer gelesen.",
-      "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Das passiert nur bei Absagen von heute bis in 14 Tagen.",
-      "Die Mitteilung aufs Handy schalten Sie unter `Einstellungen` bei `Absage eines Termins` aus. Der Hinweis in der Glocke kommt dann trotzdem.",
+      "Zusätzlich kann moto Ihnen eine Mitteilung aufs Handy schicken. Das passiert nur bei Absagen und Schließtagen von heute bis in 14 Tagen.",
+      "Die Mitteilung aufs Handy schalten Sie unter `Einstellungen` bei `Absage eines Termins` oder `Schließtage` aus. Der Hinweis in der Glocke kommt dann trotzdem.",
       "Die Einstellung gilt auch, wenn eine Absage zurückgenommen wird.",
     ],
     differences: [
@@ -39,6 +41,7 @@ export function teacherNotificationFeedTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Es kommt kein Hinweis zu einer Absage? Die OGS-Leitung kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder Hinweis noch Mitteilung aufs Handy. Fragen Sie dort nach.",
+      "Es kommt kein Hinweis zu einem Schließtag? Die OGS-Leitung kann `Benachrichtigung bei Schließtagen` ausschalten. Fragen Sie dort nach.",
     ],
     related: [HELP_TOPICS.teacherSettings, HELP_TOPICS.teacherSupervision],
   };

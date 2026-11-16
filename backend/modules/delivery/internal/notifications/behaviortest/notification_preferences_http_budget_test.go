@@ -415,6 +415,14 @@ var notificationBudgetCatalogues = map[string]string{
     "group": "termine",
     "enabled": false,
     "available": true
+  },
+  {
+    "key": "school_closing_day_changed",
+    "label": "Schließtage",
+    "description": "Wenn ein Schließtag eingetragen, geändert oder gelöscht wird. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Schließtagen in den nächsten 14 Tagen.",
+    "group": "termine",
+    "enabled": true,
+    "available": true
   }
 ]`,
 	"parent": `[
@@ -472,6 +480,14 @@ var notificationBudgetCatalogues = map[string]string{
     "description": "Wenn die OGS einen Betreuungstermin Ihres Kindes absagt.",
     "group": "termine",
     "enabled": false,
+    "available": true
+  },
+  {
+    "key": "parent_school_closing_day_changed",
+    "label": "Schließtage",
+    "description": "Wenn die Schule einen Schließtag einträgt, ändert oder löscht. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Schließtagen in den nächsten 14 Tagen.",
+    "group": "termine",
+    "enabled": true,
     "available": true
   }
 ]`,
