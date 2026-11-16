@@ -27,8 +27,12 @@ type service struct {
 	logger *slog.Logger
 }
 
-// NewService creates the plan export service over the bound ports.
+// NewService creates the plan export service over the bound ports. A nil
+// Now prints the real time as the sheet's creation time.
 func NewService(deps Dependencies, logger *slog.Logger) Service {
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
 	return &service{deps: deps, logger: logger}
 }
 
@@ -137,7 +141,7 @@ func (s *service) document(
 	return listexport.Document{
 		Title:       title,
 		Subtitle:    rangeSubtitle(weeks),
-		GeneratedAt: time.Now(),
+		GeneratedAt: s.deps.Now(),
 		Filters:     documentFilters(params, legend),
 		Columns:     columnsFor(rowLabel, weeks),
 		Rows:        rows,

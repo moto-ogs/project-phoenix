@@ -87,7 +87,7 @@ export function useOpenTraegerSchool() {
     try {
       await endTraegerSession();
     } catch (err) {
-      // A failed revocation keeps the session; the person may try again.
+      // Without an answer the session stays; the person may try again.
       void openErrors.show(err, { object: "die Abmeldung" });
       throw err;
     }

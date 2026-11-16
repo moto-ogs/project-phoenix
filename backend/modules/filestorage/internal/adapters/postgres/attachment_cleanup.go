@@ -29,15 +29,19 @@ func (r attachmentCleanupRow) intent() domain.CleanupIntent {
 }
 
 // AttachmentCleanupStore implements ports.CleanupStore over
-// documents.announcement_attachment_cleanup.
-type AttachmentCleanupStore struct{ database Database }
+// documents.announcement_attachment_cleanup. now is the clock of the
+// eligibility (retry_after) and of the settle stamps.
+type AttachmentCleanupStore struct {
+	database Database
+	now      func() time.Time
+}
 
 // NewAttachmentCleanupStore wires the attachment intent store.
-func NewAttachmentCleanupStore(database Database) *AttachmentCleanupStore {
-	if database == nil {
-		panic("file storage postgres: database runtime is required")
+func NewAttachmentCleanupStore(database Database, now func() time.Time) *AttachmentCleanupStore {
+	if database == nil || now == nil {
+		panic("file storage postgres: database runtime and clock are required")
 	}
-	return &AttachmentCleanupStore{database: database}
+	return &AttachmentCleanupStore{database: database, now: now}
 }
 
 // Queue durably records the intent to remove an object before it is written.
@@ -61,7 +65,7 @@ func (s *AttachmentCleanupStore) Queue(ctx context.Context, ownerID int64, store
 		Set("retry_after = EXCLUDED.retry_after").
 		Set("owner_id = EXCLUDED.owner_id").
 		Exec(ctx)
-	stats := measure(started, 1)
+	stats := measure(time.Since(started), 1)
 	if err != nil {
 		return stats, fmt.Errorf("file storage postgres: queue attachment cleanup: %w", err)
 	}
@@ -83,13 +87,13 @@ func (s *AttachmentCleanupStore) ListQueued(ctx context.Context) ([]domain.Clean
 	err = db.NewSelect().Model(&rows).
 		ModelTableExpr(`documents.announcement_attachment_cleanup AS "intent"`).
 		Where(`"intent".tenant_id = ?`, tenantID).
-		Where(`"intent".retry_after <= ?`, time.Now()).
+		Where(`"intent".retry_after <= ?`, s.now()).
 		Where(`"intent".cleaned_at IS NULL`).
 		OrderExpr(`"intent".id ASC`).
 		Limit(domain.CleanupBatchSize).
 		For("UPDATE SKIP LOCKED").
 		Scan(ctx)
-	stats := measure(started, int64(len(rows)))
+	stats := measure(time.Since(started), int64(len(rows)))
 	if err != nil {
 		return nil, stats, fmt.Errorf("file storage postgres: list queued attachment cleanups: %w", err)
 	}
@@ -102,19 +106,19 @@ func (s *AttachmentCleanupStore) ListQueued(ctx context.Context) ([]domain.Clean
 
 func (s *AttachmentCleanupStore) MarkComplete(ctx context.Context, intentID int64) (domain.OperationStats, error) {
 	return s.settle(ctx, "mark attachment cleanup complete", func(query *bun.UpdateQuery) *bun.UpdateQuery {
-		return query.Set(`cleaned_at = ?`, time.Now()).Where(`"intent".id = ?`, intentID)
+		return query.Set(`cleaned_at = ?`, s.now()).Where(`"intent".id = ?`, intentID)
 	})
 }
 
 func (s *AttachmentCleanupStore) MarkCompleteByFilename(ctx context.Context, storedName string) (domain.OperationStats, error) {
 	return s.settle(ctx, "mark attachment cleanup complete by filename", func(query *bun.UpdateQuery) *bun.UpdateQuery {
-		return query.Set(`cleaned_at = ?`, time.Now()).Where(`"intent".filename_stored = ?`, storedName)
+		return query.Set(`cleaned_at = ?`, s.now()).Where(`"intent".filename_stored = ?`, storedName)
 	})
 }
 
 func (s *AttachmentCleanupStore) ActivateByFilename(ctx context.Context, storedName string) (domain.OperationStats, error) {
 	return s.settle(ctx, "activate attachment cleanup", func(query *bun.UpdateQuery) *bun.UpdateQuery {
-		return query.Set(`retry_after = ?`, time.Now()).Where(`"intent".filename_stored = ?`, storedName)
+		return query.Set(`retry_after = ?`, s.now()).Where(`"intent".filename_stored = ?`, storedName)
 	})
 }
 
@@ -129,7 +133,7 @@ func (s *AttachmentCleanupStore) settle(ctx context.Context, operation string, n
 		Where(`"intent".cleaned_at IS NULL`)
 	started := time.Now()
 	result, err := query.Exec(ctx)
-	stats := measure(started, 0)
+	stats := measure(time.Since(started), 0)
 	if err != nil {
 		return stats, fmt.Errorf("file storage postgres: %s: %w", operation, err)
 	}

@@ -45,7 +45,6 @@ var calendarFixtureShiftedLiveDateDebt = map[string]int{
 	"modules/auditlog/internal/adapters/auditpostgres/auth_event_repository_test.go":                         1,
 	"modules/auditlog/internal/adapters/auditpostgres/data_deletion_repository_test.go":                      1,
 	"modules/communication/internal/staffannouncements/surveys_anonymity_test.go":                            3,
-	"modules/dataimport/internal/application/importservice/student_import_config_test.go":                    4,
 	"modules/delivery/internal/adapters/postgres/email_delivery_events_test.go":                              2,
 	"modules/devicefleet/compose/httpadapter/compose_unregistered_tag_scan_runtime_test.go":                  5,
 	"modules/devicefleet/compose/httpadapter/compose_unregistered_tag_scan_test.go":                          7,

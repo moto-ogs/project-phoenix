@@ -210,8 +210,9 @@ func TestTraegerOccupancyCountsTheRosterByGroupAndCareForm(t *testing.T) {
 // assertTraegerListFormats checks that an export of the Träger-Portal answers
 // PDF and Excel with the file name of the list, and refuses a format it does
 // not know (#4718).
-func assertTraegerListFormats(t *testing.T, router http.Handler, token, path, filename string) {
+func assertTraegerListFormats(t *testing.T, router http.Handler, token, path, filename string) []byte {
 	t.Helper()
+	var spreadsheet []byte
 	separator := "?"
 	if strings.Contains(path, "?") {
 		separator = "&"
@@ -226,9 +227,13 @@ func assertTraegerListFormats(t *testing.T, router http.Handler, token, path, fi
 		assert.Contains(t, rec.Header().Get("Content-Disposition"), filename+"."+format, format)
 		assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"), format)
 		assert.NotEmpty(t, rec.Body.Bytes(), format)
+		if format == "xlsx" {
+			spreadsheet = rec.Body.Bytes()
+		}
 	}
 	unknown := traegerOccupancyRequest(t, router, path+separator+"format=docx", token, nil)
 	assert.Equal(t, http.StatusBadRequest, unknown.Code, "an unknown format: "+unknown.Body.String())
+	return spreadsheet
 }
 
 // #5977: an offering of a running phase shows up without a booking, with 0

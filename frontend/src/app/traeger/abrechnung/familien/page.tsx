@@ -43,6 +43,7 @@ import {
 } from "~/components/traeger/child-debtor-numbers-modal";
 import { FamilyDebtorNumberModal } from "~/components/traeger/family-debtor-number-modal";
 import { useDebtorNumberSettings } from "~/components/traeger/use-debtor-number-format";
+import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
@@ -65,6 +66,7 @@ import {
   fetchFamilyChildren,
   withFamilyChildren,
 } from "~/lib/traeger-billing-families-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerBillingFamiliesPage" });
@@ -580,6 +582,19 @@ export default function TraegerBillingFamiliesPage() {
         ) : null
       }
       statsLoading={!families && !pageLoad.error}
+      actions={
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerList("/api/traeger/billing-families/export", format)
+          }
+          scope="Alle Familien, ohne Suche und Filter"
+          ariaLabel="Familien herunterladen"
+          tooltip="Zeigt die Formate für alle Familien, ohne Suche und Filter. Jeder Download wird protokolliert."
+          fallbackName="familien"
+          errorObject="die Liste der Familien"
+          unavailable={!families || families.length === 0}
+        />
+      }
       search={{
         value: search,
         onChange: setSearch,

@@ -2,6 +2,7 @@ DELETE /traeger/staff-records/{id} -> basis
 DELETE /traeger/staff-records/{id}/contracts/{contractId} -> basis
 DELETE /traeger/staff-records/{id}/contracts/{contractId}/holiday-weeks/{schoolId}/{weekStart} -> basis
 GET /traeger/staff-records/ -> basis
+GET /traeger/staff-records/export -> basis
 GET /traeger/staff-records/{id} -> basis
 GET /traeger/staff-records/{id}/absence-accounts -> basis
 GET /traeger/staff-records/{id}/financial -> basis

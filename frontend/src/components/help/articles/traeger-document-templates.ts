@@ -33,6 +33,16 @@ export function traegerDocumentTemplatesTopic(): HelpTopic {
         ],
       },
       {
+        title: "Liste herunterladen",
+        description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+        steps: [
+          "Wählen Sie unten in der Navigation `Einstellungen`.",
+          "Wählen Sie `Briefkopf und Vorlagen` und dann `Vorlagen`.",
+          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Die Datei zeigt für jedes Dokument, ob es die Standardvorlage oder eine eigene Vorlage nutzt.",
+        ],
+      },
+      {
         title: "Frühere Fassung zurückholen",
         steps: [
           "Suchen Sie unten bei `Versionen` die Fassung.",

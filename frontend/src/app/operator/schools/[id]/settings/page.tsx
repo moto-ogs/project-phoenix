@@ -12,7 +12,10 @@ import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { createLogger } from "~/lib/logger";
 import { formatDate } from "~/lib/date-helpers";
-import type { SettingsSchema } from "~/lib/settings-api";
+import {
+  applyOptimisticSchemaUpdate,
+  type SettingsSchema,
+} from "~/lib/settings-api";
 import {
   fetchOperatorSettingsSchema,
   setOperatorSettingValue,
@@ -170,6 +173,11 @@ function OperatorSchoolSettingsPageContent({ params }: PageProps) {
     async (key: string, value: unknown): Promise<void> => {
       await setOperatorSettingValue(schoolId, key, value);
       logger.info("operator_setting_saved", { school_id: schoolId, key });
+      // The saved value shows at once, as on the school page: a stale field
+      // would offer „Zurücksetzen“ for a value just saved (#7218).
+      setSchema((current) =>
+        current ? applyOptimisticSchemaUpdate(current, key, value) : current,
+      );
       void refreshSchema();
     },
     [schoolId, refreshSchema],

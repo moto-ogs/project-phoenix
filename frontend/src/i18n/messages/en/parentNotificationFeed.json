@@ -1,0 +1,21 @@
+{
+  "bell": "Notices",
+  "bellCount": "Notices ({count})",
+  "badge": "{count} new notices",
+  "bellTooltip": "Shows notices from the school about your children.",
+  "description": "Notices from the school about your children, for example when care is cancelled.",
+  "close": "Close",
+  "closeTooltip": "Closes the notices.",
+  "section": "For your children",
+  "markAllRead": "Mark all as read",
+  "markAllReadTooltip": "Marks all notices as read right away.",
+  "markAllReadErrorObject": "marking as read",
+  "loadErrorObject": "the notices",
+  "loading": "Loading notices.",
+  "emptyTitle": "No notices.",
+  "emptyDescription": "You will see here, for example, when your child's care is cancelled.",
+  "unread": "New",
+  "loadMore": "Load more",
+  "loadingMore": "Loading more notices.",
+  "loadMoreTooltip": "Shows older notices."
+}

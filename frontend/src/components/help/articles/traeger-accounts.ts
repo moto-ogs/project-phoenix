@@ -47,6 +47,16 @@ export function traegerAccountsTopic(): HelpTopic {
         ],
       },
       {
+        title: "Liste herunterladen",
+        description: "Zum Drucken, zum Ablegen oder für eine Tabelle.",
+        steps: [
+          "Wählen Sie unten in der Navigation `Einstellungen`.",
+          "Wählen Sie `Mitglieder und Rollen`.",
+          "Wählen Sie oben `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Personen und offenen Einladungen.",
+          "Den Verlauf laden Sie mit `Herunterladen` beim `Verlauf` herunter.",
+        ],
+      },
+      {
         title: "Person entfernen",
         steps: [
           "Wählen Sie unten in der Navigation `Einstellungen`.",

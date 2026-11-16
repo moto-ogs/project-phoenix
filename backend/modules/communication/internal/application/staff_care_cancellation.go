@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/modules/communication"
 )
 
 // Cancellation notice (#2601).
@@ -126,13 +129,71 @@ func (s *service) PublishCareCancellation(ctx context.Context, in CareCancellati
 		slog.Int("student_count", len(studentIDs)),
 		slog.Int("recipient_count", len(recipients)),
 	)
-	if err := s.notifyAnnouncementGuardians(ctx, a); err != nil {
+	if err := s.notifyCareCancellation(ctx, a, studentIDs); err != nil {
 		return nil, fmt.Errorf("announcement: cancellation notice push: %w", err)
 	}
 	if err := s.enqueueAnnouncementEmails(ctx, a); err != nil {
 		return nil, fmt.Errorf("announcement: cancellation notice e-mails: %w", err)
 	}
 	return &CareCancellationResult{Announcement: a, RecipientCount: len(recipients)}, nil
+}
+
+// notifyCareCancellation sends the one notice of a cancellation to the
+// families (#7140): the push every announcement gets, and with it an entry in
+// the notification feed of every reached guardian, so the bell of the parents
+// portal shows it too. There is no second message. The entry is about the
+// booked children: a guardian reads it only while holding parent_portal.access
+// for one of them, and the push and its in-app hint re-check the same. The
+// push keeps its lock-screen copy without child data; the entry carries what
+// the person cancelling wrote, which the guardian reads only after login. The
+// family's own switch decides only the push.
+func (s *service) notifyCareCancellation(ctx context.Context, a *StaffParentAnnouncement, studentIDs []int64) error {
+	if s.notifier == nil {
+		return nil
+	}
+	shape := publishPushShape(a)
+	accountIDs, localeByAccount, err := s.resolveAnnouncementPushAudience(ctx, a)
+	if err != nil || len(accountIDs) == 0 {
+		return err
+	}
+	push, err := s.filterAnnouncementPushAudience(ctx, a.ID, shape.notificationType, accountIDs)
+	if err != nil {
+		return err
+	}
+	priority := PriorityNormal
+	if a.Priority == StaffParentAnnouncementPriorityImportant {
+		priority = PriorityHigh
+	}
+	locales, groups := localeGroups(accountIDs, localeByAccount)
+	for _, locale := range locales {
+		title, body := s.deliveryPolicy.ParentAnnouncementCopy(locale, shape.copyKind)
+		recipients := groups[locale]
+		err := s.notifier.Notify(ctx, NotificationEvent{
+			Type:           shape.notificationType,
+			IdempotencyKey: fmt.Sprintf("%s:%s", shape.idempotencyKey, locale),
+			RelatedType:    shape.relatedType, RelatedID: a.ID,
+			Title: title, Body: body, DeepLink: shape.deepLink, Priority: priority,
+			Audience: NotificationAudience{
+				TenantID: a.GetTenantID(), Scope: ScopeGuardian,
+				GuardianAccountIDs: recipients, StudentIDs: studentIDs,
+			},
+			Feed: &communication.NotificationFeed{
+				PushAccountIDs: slices.DeleteFunc(slices.Clone(recipients), func(id int64) bool { return !slices.Contains(push, id) }),
+				Title:          a.Title, Body: a.Body,
+			},
+		}.Public())
+		if s.deliveryPolicy.IsNotificationsDisabled(err) {
+			s.logger.Info("care cancellation notice suppressed by tenant notification gate",
+				slog.Int64("announcement_id", a.ID),
+				slog.Int("recipient_count", len(accountIDs)),
+			)
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("notify guardian audience: %w", err)
+		}
+	}
+	return nil
 }
 
 // ValidateCareCancellationText applies the text contract shared by the

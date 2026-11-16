@@ -18,6 +18,10 @@ import { formatEuro } from "~/components/traeger/contribution-format";
 import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
 import { LetterSendCell } from "~/components/traeger/letter-send-cell";
 import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
+import {
   LetterSendState,
   lettersToSend,
 } from "~/components/traeger/letter-send-state";
@@ -42,6 +46,7 @@ import {
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { downloadBlob } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import {
   type CareNoticeLetterSummary,
   type CareNoticeLetters,
@@ -430,6 +435,24 @@ export default function TraegerCareNoticeDeliveryPage() {
         ) : null
       }
       statsLoading={!run && !pageLoad.error}
+      actions={
+        run && released ? (
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList(
+                `/api/traeger/care-notice-runs/${run.id}/letters/export`,
+                format,
+              )
+            }
+            scope={traegerExportScope()}
+            ariaLabel="Versandliste herunterladen"
+            tooltip="Zeigt die Formate für alle Bescheide des Versands. Jeder Download wird protokolliert."
+            fallbackName={`bescheid-versand-${run.year}`}
+            errorObject="die Versandliste"
+            unavailable={!letters || letters.notices.length === 0}
+          />
+        ) : undefined
+      }
       error={pageLoad.error}
       loading={!pageLoad.error && !run}
       overlays={

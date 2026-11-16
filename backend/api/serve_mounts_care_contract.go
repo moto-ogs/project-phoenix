@@ -73,7 +73,7 @@ func NewCareContractHTTP(organizations HolidayOrganizations, settings TraegerBra
 	contractPorts, intakePorts := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL)
 	paper := careContractCompose.NewPaperSignatures(contractPorts, careContractSignaturePorts(organizations, settings, delivery, outcomes, holidays, parentsURL))
 	return careContractHTTP.NewResource(careContractCompose.NewContracts(contractPorts), careContractCompose.NewIntake(intakePorts), paper,
-		common.RequiresPermission(identityaccess.TraegerRightContractsManage), careContractListRenderer(NewSimpleListRenderer()))
+		common.RequiresPermission(identityaccess.TraegerRightContractsManage), traegerListRenderer(NewSimpleListRenderer()))
 }
 
 // NewCareContractConclusion builds the Worker's conclusion at the

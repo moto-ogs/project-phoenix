@@ -49,7 +49,7 @@ function renderSidebar(
   return render(
     <NextIntlClientProvider locale="de" messages={deMessages}>
       <ParentSidebar
-        badges={{ messages: 0, news: 0 }}
+        badges={{ messages: 0, news: 0, notifications: 0 }}
         gates={{ news: true, mealPlan: true }}
         childCount={2}
         {...overrides}
@@ -247,7 +247,9 @@ describe("ParentSidebar", () => {
   });
 
   it("shows the unread messages count next to Nachrichten", () => {
-    const { container } = renderSidebar({ badges: { messages: 7, news: 0 } });
+    const { container } = renderSidebar({
+      badges: { messages: 7, news: 0, notifications: 0 },
+    });
 
     expect(
       container.querySelector('[data-parent-nav-item="messages"]'),

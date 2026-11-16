@@ -517,6 +517,8 @@ interface ConfirmationModalProps {
   readonly onClose: () => void;
   readonly onConfirm: () => void;
   readonly title: string;
+  /** Leading icon in the header, left of the title (e.g. an `IconTile`). */
+  readonly icon?: React.ReactNode;
   readonly children: React.ReactNode;
   readonly confirmText?: string;
   readonly cancelText?: string;
@@ -578,6 +580,7 @@ export function ConfirmationModal({
   onClose,
   onConfirm,
   title,
+  icon,
   children,
   confirmText = "Bestätigen",
   cancelText,
@@ -636,6 +639,7 @@ export function ConfirmationModal({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
+      icon={icon}
       footer={modalFooter}
       isDismissDisabled={dismissLocked}
       busy={isConfirmLoading}

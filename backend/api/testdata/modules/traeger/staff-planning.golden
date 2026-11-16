@@ -1,5 +1,6 @@
 DELETE /traeger/staff-planning/records/{id}/schools/{schoolId}/shifts/{shiftId} -> basis
 GET /traeger/staff-planning/ -> basis
+GET /traeger/staff-planning/export -> basis
 GET /traeger/staff-planning/future-shifts -> basis
 POST /traeger/staff-planning/records/{id}/shifts -> basis
 PUT /traeger/staff-planning/records/{id}/shifts/{shiftId} -> basis

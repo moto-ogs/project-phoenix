@@ -69,9 +69,7 @@ type Service struct {
 // New wires the service. Every persistence, identity and runtime dependency
 // is required so a missing production binding fails at startup.
 func New(deps Dependencies) *Service {
-	if deps.Now == nil {
-		deps.Now = time.Now
-	}
+	deps.Now = Clock(deps.Now)
 	if deps.Folders == nil || deps.Files == nil || deps.FileCleanups == nil ||
 		deps.Attachments == nil || deps.AttachmentCleanups == nil ||
 		deps.FileObjects == nil || deps.AttachmentObjects == nil ||
@@ -84,6 +82,14 @@ func New(deps Dependencies) *Service {
 }
 
 var _ filestorage.Capability = (*Service)(nil)
+
+// Clock is now, or the real clock where a composition leaves it unset.
+func Clock(now func() time.Time) func() time.Time {
+	if now == nil {
+		return time.Now
+	}
+	return now
+}
 
 // actor resolves the public actor: managers hold files:manage.
 func (s *Service) actor(value filestorage.Actor) domain.Actor {

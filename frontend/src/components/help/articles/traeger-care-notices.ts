@@ -74,6 +74,16 @@ export function traegerCareNoticesTopic(): HelpTopic {
           "Stellen Sie die Bescheide aus. Von da an gilt für diese Monate der Änderungsbescheid.",
         ],
       },
+      {
+        title: "Listen herunterladen",
+        description:
+          "Die Jahresläufe, die Bescheide eines Laufs und den Versand laden Sie als Datei herunter.",
+        steps: [
+          "Wählen Sie `Abrechnungsläufe` und dann den Reiter `Jahresbescheide`. Für die Bescheide öffnen Sie einen Jahreslauf, für den Versand dort `An Familien senden`.",
+          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Die Bescheide und der Versand enthalten personenbezogene Daten. Jeder Download wird protokolliert.",
+        ],
+      },
     ],
     result:
       "Jede Familie hat ihren Bescheid mit den Raten bis Dezember. Für diese Monate berechnet der Monatslauf keine Betreuung erneut. Er zählt die Kinder unter `Schon abgerechnet`.",

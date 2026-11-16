@@ -20,7 +20,12 @@ import {
   useOpenTraegerSchool,
 } from "~/components/traeger/use-open-traeger-school";
 import { TraegerCodeStepModal } from "~/components/traeger/traeger-code-step-modal";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import {
   TRAEGER_HANDOFF_OPEN,
   TRAEGER_HANDOFF_OPEN_HINT,
@@ -135,6 +140,18 @@ export default function TraegerSchoolsPage() {
       }
       statsLoading={loading}
       error={schoolsError}
+      actions={
+        <TraegerListExportMenu
+          download={(format) =>
+            downloadTraegerList("/api/traeger/schools/export", format)
+          }
+          scope={traegerExportScope()}
+          ariaLabel="Schulen herunterladen"
+          fallbackName="schulen"
+          errorObject="die Liste der Schulen"
+          unavailable={schools.length === 0}
+        />
+      }
     >
       {!canOpen && (
         <Alert

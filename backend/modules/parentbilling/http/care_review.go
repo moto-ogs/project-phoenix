@@ -146,7 +146,7 @@ func (rs *CareBillingResource) respondReview(w http.ResponseWriter, r *http.Requ
 	common.Respond(w, r, http.StatusOK, detail, message)
 }
 
-// reviewExport answers GET …/review-export?format=xlsx|csv with the review
+// reviewExport answers GET …/review-export?format=pdf|xlsx|csv with the review
 // list of a calculated run. A failed record of the download rolls back and
 // sends no file.
 func (rs *CareBillingResource) reviewExport(w http.ResponseWriter, r *http.Request) {
