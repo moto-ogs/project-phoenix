@@ -246,8 +246,10 @@ test('the caterer never makes its school look active, and its idempotent writes 
   // events no caterer sends (kiosk bookings, a login with a school).
   const fixedSurface = /properties\.surface = '(ogs|parents|school)'/;
   const attendance = "event in ('student_checked_in', 'student_checked_out')";
+  // featureExpression() names every portal itself; only a filter outside it binds the query.
+  const features = JSON.stringify(featureExpression()).slice(1, -1);
   for (const insight of school.flatMap((d) => d.insights)) {
-    const query = JSON.stringify(insight.query);
+    const query = JSON.stringify(insight.query).replaceAll(features, '');
     if (!query.includes('school_id') || query.includes(notCaterer) || fixedSurface.test(query)) continue;
     const source = insight.query.source;
     assert.equal(source.kind, 'TrendsQuery', `${insight.name}: reads school_id without leaving out the caterer`);
