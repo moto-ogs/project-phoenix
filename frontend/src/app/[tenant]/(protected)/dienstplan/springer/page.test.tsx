@@ -2,11 +2,14 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import { MODULE_KEYS } from "~/lib/modules";
 import type { PoolSpringer, PoolWeek } from "~/lib/staff-pool-api";
 import type { TenantInfo } from "~/lib/tenant-api";
 import { useBookedModules, useTenantSafe } from "~/lib/tenant-context";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchSchoolPoolWeek: vi.fn(),
@@ -19,7 +22,10 @@ vi.mock("~/lib/staff-pool-api", async (importOriginal) => ({
   ...api,
 }));
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: null, status: "unauthenticated" }),
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1", token: "test-token" } },
+  }),
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -80,7 +86,9 @@ const TENANT = { tenantId: 1, slug: "demo" } as TenantInfo;
 function renderPage() {
   return render(
     <ToastProvider>
-      <StaffPoolPage />
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <StaffPoolPage />
+      </SWRConfig>
     </ToastProvider>,
   );
 }

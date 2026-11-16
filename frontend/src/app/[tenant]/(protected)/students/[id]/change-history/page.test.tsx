@@ -1,7 +1,44 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 import StudentChangeHistoryPage from "./page";
+
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1", token: "test-token" } },
+  }),
+}));
+
+// The child's detail also reads the account's own groups; none here.
+vi.mock("~/lib/usercontext-api", () => ({
+  userContextService: {
+    getMyEducationalGroups: () => Promise.resolve([]),
+    getMySupervisedGroups: () => Promise.resolve([]),
+  },
+}));
+
+// Real SWR with a fresh cache per render.
+function SWRTestCache({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: SWRTestCache });
+}
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "1" }),

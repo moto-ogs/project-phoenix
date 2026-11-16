@@ -1,10 +1,12 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   CareInvoice,
   CareRunDetail,
 } from "~/lib/traeger-care-billing-api";
+
+vi.unmock("swr");
 
 // The review of a calculated monthly run (#5916): excluded invoices leave
 // the school cards for their own card with reason and the way back, the
@@ -104,9 +106,9 @@ const RUN: CareRunDetail = {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerCareRunPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

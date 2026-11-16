@@ -15,10 +15,7 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ApiError } from "~/lib/api-error";
 import * as api from "~/lib/parent-api";
 import { ChildMasterDataView } from "./child-master-data";
-import {
-  ChildRequestsProvider,
-  SharedParentFeaturesProvider,
-} from "./child-requests-context";
+import { SharedParentFeaturesProvider } from "./child-requests-context";
 import { ChildPage } from "./child/child-page";
 import { ParentMessagesPage } from "./messages/parent-messages-page";
 import { ParentRealtimeBridge } from "./parent-realtime-bridge";
@@ -174,9 +171,7 @@ it("keeps an unsaved master-data field after a feature background failure", asyn
   } as unknown as api.ChildMasterData);
   mount(
     <SharedParentFeaturesProvider linkedChildren={[child]}>
-      <ChildRequestsProvider>
-        <ChildMasterDataView studentId="42" childName="Felix" />
-      </ChildRequestsProvider>
+      <ChildMasterDataView studentId="42" childName="Felix" />
     </SharedParentFeaturesProvider>,
   );
   const field = await screen.findByDisplayValue("Allergie");

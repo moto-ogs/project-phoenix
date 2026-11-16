@@ -1,7 +1,13 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createElement, type ReactNode } from "react";
+
+import { SWRConfig } from "~/lib/swr/testing";
+
 import { useStudentEnrollmentExtraFields } from "./use-student-enrollment-extra-fields";
+
+vi.unmock("swr");
 
 const { fetchStudentEnrollmentExtraFieldsMock, loggerWarnMock } = vi.hoisted(
   () => ({
@@ -15,8 +21,28 @@ vi.mock("~/lib/student-api", () => ({
 }));
 
 vi.mock("~/lib/logger", () => ({
-  createLogger: () => ({ warn: loggerWarnMock }),
+  createLogger: () => ({
+    warn: loggerWarnMock,
+    error: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  }),
 }));
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1", token: "test-token" } },
+  }),
+}));
+
+function wrapper({ children }: Readonly<{ children: ReactNode }>) {
+  return createElement(
+    SWRConfig,
+    { value: { provider: () => new Map(), errorRetryCount: 0 } },
+    children,
+  );
+}
 
 const groups = [
   {
@@ -53,8 +79,9 @@ describe("useStudentEnrollmentExtraFields", () => {
   it("loads enrollment extra field groups for full-access students", async () => {
     fetchStudentEnrollmentExtraFieldsMock.mockResolvedValueOnce(groups);
 
-    const { result } = renderHook(() =>
-      useStudentEnrollmentExtraFields("123", true),
+    const { result } = renderHook(
+      () => useStudentEnrollmentExtraFields("123", true),
+      { wrapper },
     );
 
     expect(result.current.loading).toBe(true);
@@ -67,8 +94,9 @@ describe("useStudentEnrollmentExtraFields", () => {
   });
 
   it("clears state and skips loading without full access", async () => {
-    const { result } = renderHook(() =>
-      useStudentEnrollmentExtraFields("123", false),
+    const { result } = renderHook(
+      () => useStudentEnrollmentExtraFields("123", false),
+      { wrapper },
     );
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -83,8 +111,9 @@ describe("useStudentEnrollmentExtraFields", () => {
       new Error("server unavailable"),
     );
 
-    const { result } = renderHook(() =>
-      useStudentEnrollmentExtraFields("123", true),
+    const { result } = renderHook(
+      () => useStudentEnrollmentExtraFields("123", true),
+      { wrapper },
     );
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -104,8 +133,9 @@ describe("useStudentEnrollmentExtraFields", () => {
     const failure = new Error("server unavailable");
     fetchStudentEnrollmentExtraFieldsMock.mockRejectedValueOnce(failure);
 
-    const { result } = renderHook(() =>
-      useStudentEnrollmentExtraFields("123", true),
+    const { result } = renderHook(
+      () => useStudentEnrollmentExtraFields("123", true),
+      { wrapper },
     );
 
     await waitFor(() => expect(result.current.error).toBe(failure));
@@ -126,7 +156,7 @@ describe("useStudentEnrollmentExtraFields", () => {
 
     const { result, rerender } = renderHook(
       ({ studentId }) => useStudentEnrollmentExtraFields(studentId, true),
-      { initialProps: { studentId: "123" } },
+      { initialProps: { studentId: "123" }, wrapper },
     );
 
     await waitFor(() => expect(result.current.groups).toEqual(groups));
@@ -141,8 +171,9 @@ describe("useStudentEnrollmentExtraFields", () => {
     const request = deferred<typeof groups>();
     fetchStudentEnrollmentExtraFieldsMock.mockReturnValueOnce(request.promise);
 
-    const { unmount } = renderHook(() =>
-      useStudentEnrollmentExtraFields("123", true),
+    const { unmount } = renderHook(
+      () => useStudentEnrollmentExtraFields("123", true),
+      { wrapper },
     );
 
     unmount();
@@ -156,8 +187,9 @@ describe("useStudentEnrollmentExtraFields", () => {
     const request = deferred<typeof groups>();
     fetchStudentEnrollmentExtraFieldsMock.mockReturnValueOnce(request.promise);
 
-    const { unmount } = renderHook(() =>
-      useStudentEnrollmentExtraFields("123", true),
+    const { unmount } = renderHook(
+      () => useStudentEnrollmentExtraFields("123", true),
+      { wrapper },
     );
 
     unmount();

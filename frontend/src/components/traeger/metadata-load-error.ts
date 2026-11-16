@@ -3,8 +3,8 @@ import { errorAlertActions } from "~/components/ui/form-error-alert";
 import { isRefusal } from "./use-traeger-confirmed-resource";
 
 /** A metadata refresh must not unmount a loaded form, except on a refusal. */
-export function metadataLoadError(
-  error: FormErrorDetail | null,
+export function metadataLoadError<E extends FormErrorDetail>(
+  error: E | null,
   hasData: boolean,
   ...failures: unknown[]
 ) {

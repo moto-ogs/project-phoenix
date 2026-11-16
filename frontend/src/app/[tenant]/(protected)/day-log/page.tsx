@@ -36,7 +36,7 @@ import {
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
-import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import {
   apiErrorFromResponse,
   ApiError,
@@ -50,7 +50,6 @@ import {
   dayLogSourceLabel,
   fetchDayLog,
   type DayLogGroup,
-  type DayLogResponse,
   type DayLogStatus,
   type DayLogStudent,
 } from "~/lib/day-log-api";
@@ -67,6 +66,9 @@ import {
   openBlobForPrint,
 } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 
@@ -297,15 +299,26 @@ export default function DayLogPage() {
   const now = useMinuteClock();
   const todayISO = berlinTodayISO(now);
   const [dateISO, setDateISO] = useState<string>(() => berlinTodayISO());
-  const [data, setData] = useState<DayLogResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [state, setState] = useState<DayLogState | null>(null);
+  const {
+    data,
+    error: loadFailure,
+    mutate,
+  } = useSWRAuth(
+    tenantStudentKeys.dayLog(dateISO),
+    () => fetchDayLog(dateISO),
+    { keepPreviousData: false },
+  );
+  const loading = !data && !loadFailure;
+  const state: DayLogState | null =
+    !data && loadFailure ? dayLogState(loadFailure) : null;
   // Ladefehler stehen im Gerüst, mit Wiederholen (#2517).
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
-  const [reloadKey, setReloadKey] = useState(0);
+  const load = useSwrResourceLoadError(
+    [{ data, error: state ? undefined : loadFailure }],
+    "die Tagesauswertung",
+    () => mutate(),
+  );
   // Bis der Katalogtext da ist, bleibt das Skelett stehen.
-  const [failed, setFailed] = useState(false);
+  const failed = load.failure !== undefined;
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const [exporting, setExporting] = useState<string | null>(null);
   // Export und Drucken sind Aktionen ohne Formular: Fehler als Toast.
@@ -318,42 +331,6 @@ export default function DayLogPage() {
   useEffect(() => {
     setDateISO((selected) => (selected === todayISO ? selected : todayISO));
   }, [todayISO]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setState(null);
-    setFailed(false);
-    clearLoadError();
-    fetchDayLog(dateISO)
-      .then((response) => {
-        if (!cancelled) setData(response);
-      })
-      .catch((error: unknown) => {
-        if (cancelled) return;
-        setData(null);
-        const pageState = dayLogState(error);
-        if (pageState) {
-          setState(pageState);
-          return;
-        }
-        logger.error("day_log_fetch_failed", {
-          date: dateISO,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        setFailed(true);
-        void showLoadError(error, {
-          object: "die Tagesauswertung",
-          retry: () => setReloadKey((key) => key + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [dateISO, reloadKey, showLoadError, clearLoadError]);
 
   const openGroup = useMemo(
     () => data?.groups.find((group) => group.group_id === openGroupId) ?? null,
@@ -512,7 +489,9 @@ export default function DayLogPage() {
       empty={
         state !== null
           ? STATE_EMPTY[state]
-          : load.error === null && data !== null && data.groups.length === 0
+          : load.error === null &&
+              data !== undefined &&
+              data.groups.length === 0
             ? {
                 title: "Keine Gruppe für diesen Tag",
                 description:

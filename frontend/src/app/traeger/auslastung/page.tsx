@@ -8,7 +8,7 @@
 // „Verträge verwalten“ und erst auf Anforderung. Der Export enthält dieselben
 // Zahlen je Tag als CSV.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import type { DateRange } from "react-day-picker";
@@ -29,6 +29,8 @@ import { StatCard } from "~/components/ui/stat-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { UTILIZATION_CHART_COLORS } from "~/components/traeger/utilization-chart";
 import { UtilizationChildrenSection } from "~/components/traeger/utilization-children";
+import { FreshPerTraeger } from "~/components/traeger/fresh-per-traeger";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import {
   daysBetween,
   defaultGranularity,
@@ -57,7 +59,6 @@ import {
   TraegerListExportMenu,
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { childrenConcept } from "~/lib/concepts/children";
@@ -65,17 +66,14 @@ import { roomsConcept } from "~/lib/concepts/rooms";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { createLogger } from "~/lib/logger";
+import { traegerReportKeys } from "~/lib/swr/traeger-report-keys";
 import {
   downloadTraegerUtilization,
   fetchTraegerUtilization,
   type SchoolUtilization,
-  type TraegerUtilization,
   UTILIZATION_NAMES_RIGHT,
   type UtilizationWindow,
 } from "~/lib/traeger-utilization-api";
-
-const logger = createLogger({ component: "TraegerUtilizationPage" });
 
 const UtilizationChart = dynamic(
   () =>
@@ -234,9 +232,16 @@ interface Selection {
 }
 
 export default function TraegerUtilizationPage() {
-  const { data: session, status } = useSession();
+  return (
+    <FreshPerTraeger>
+      <TraegerUtilizationContent />
+    </FreshPerTraeger>
+  );
+}
+
+function TraegerUtilizationContent() {
+  const { data: session } = useSession();
   const canSeeNames = hasPermission(session ?? null, UTILIZATION_NAMES_RIGHT);
-  const orgId = session?.user?.orgId;
   const today = useBerlinToday();
   const presets = useMemo(() => utilizationPresets(today), [today]);
   const defaultWindow = presets[DEFAULT_PRESET]?.window ?? {
@@ -251,12 +256,6 @@ export default function TraegerUtilizationPage() {
   const [schoolId, setSchoolId] = useState(ALL_SCHOOLS);
   const [selectedOffering, setSelectedOffering] = useState<string | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
-  const [utilization, setUtilization] = useState<TraegerUtilization | null>(
-    null,
-  );
-  const request = useRef(0);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
 
   const changeWindow = useCallback((next: UtilizationWindow) => {
     let { from } = next;
@@ -267,41 +266,15 @@ export default function TraegerUtilizationPage() {
     setGranularity(defaultGranularity(windowLength({ from, to: next.to })));
   }, []);
 
-  const load = useCallback(async () => {
-    if (orgId === undefined) return;
-    const current = ++request.current;
-    setUtilization(null);
-    try {
-      const result = await fetchTraegerUtilization(period);
-      if (current !== request.current) return;
-      setUtilization(result);
-      clearLoadError();
-    } catch (err) {
-      if (current !== request.current) return;
-      logger.error("traeger_utilization_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Auslastung",
-        retry: () => void load(),
-      });
-    }
-  }, [period, orgId, clearLoadError, showLoadError]);
-
-  // A switch of the Träger drops what the previous one showed.
-  const shownOrgId = useRef(orgId);
-  useEffect(() => {
-    if (shownOrgId.current === orgId) return;
-    shownOrgId.current = orgId;
-    request.current++;
-    setUtilization(null);
-    setSchoolId(ALL_SCHOOLS);
-  }, [orgId]);
-
-  useEffect(() => {
-    if (status === "loading") return;
-    void load();
-  }, [load, status]);
+  const {
+    data: utilization,
+    loading,
+    error: loadError,
+  } = useTraegerResource(
+    traegerReportKeys.utilization(period.from, period.to),
+    () => fetchTraegerUtilization(period),
+    "die Auslastung",
+  );
 
   const allSchools = useMemo(() => utilization?.schools ?? [], [utilization]);
   const schools = useMemo(
@@ -320,7 +293,6 @@ export default function TraegerUtilizationPage() {
   const offeringTable = useMemo(() => offeringRows(schools), [schools]);
   const roomTable = useMemo(() => roomRows(schools), [schools]);
   const columns = useMemo(() => schoolColumns(period.from), [period.from]);
-  const loading = utilization === null && !pageLoad.error;
   const selectedSchool =
     schoolId === ALL_SCHOOLS
       ? null
@@ -471,7 +443,7 @@ export default function TraegerUtilizationPage() {
         ) : null
       }
       statsLoading={loading}
-      error={pageLoad.error}
+      error={loadError}
       empty={
         utilization && allSchools.length === 0
           ? {

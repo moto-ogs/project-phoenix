@@ -2,13 +2,35 @@ import { getStartDateForTimeRange } from "~/lib/date-helpers";
 import { schoolDateCases, setSchoolDateClock } from "~/test/school-date-cases";
 import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
 restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  render as rtlRender,
+  screen,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { SWRConfig } from "~/lib/swr/testing";
 import StudentFeedbackHistoryPage from "./page";
 import { ApiError } from "~/lib/api-error";
 import { fetchStudent } from "~/lib/student-api";
 import { fetchStudentFeedback } from "~/lib/feedback-api";
 import { catalogText } from "~/test/error-catalog-text";
+
+vi.unmock("swr");
+
+// Real SWR with a fresh cache per render.
+function SWRTestCache({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: SWRTestCache });
+}
 
 const mockPush = vi.fn();
 
@@ -28,6 +50,7 @@ vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
     data: {
       user: {
+        id: "1",
         token: "test-token",
       },
     },
@@ -85,6 +108,14 @@ vi.mock("~/lib/student-api", () => ({
     group_id: "g3",
     current_location: "Anwesend",
   }),
+}));
+
+// The child's detail also reads the account's own groups; none here.
+vi.mock("~/lib/usercontext-api", () => ({
+  userContextService: {
+    getMyEducationalGroups: () => Promise.resolve([]),
+    getMySupervisedGroups: () => Promise.resolve([]),
+  },
 }));
 
 vi.mock("~/lib/feedback-api", () => ({

@@ -13,13 +13,15 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { CareRun } from "~/lib/traeger-care-billing-api";
 import {
   deferred,
   expectDialogUnlocked,
   expectSaveLocksDialog,
 } from "~/test/helpers/form-modal-pending";
+
+vi.unmock("swr");
 
 const { api, review, mockPush } = vi.hoisted(() => ({
   api: {
@@ -67,9 +69,9 @@ const RUN: CareRun = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerMonatsbeitraegePage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

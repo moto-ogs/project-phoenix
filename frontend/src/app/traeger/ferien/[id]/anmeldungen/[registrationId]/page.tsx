@@ -12,7 +12,7 @@
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { HolidayContributionCard } from "~/components/traeger/holiday-contribution-card";
 import {
   answeredQuestions,
@@ -46,7 +46,7 @@ import {
 import { RequestMailStatus } from "~/components/enrollment/request-mail-status";
 import { useHolidayPeriodBillingHref } from "~/components/traeger/use-holiday-period-billing-href";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
-import { isRefusal } from "~/components/traeger/use-traeger-confirmed-resource";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { metadataLoadError } from "~/components/traeger/metadata-load-error";
 import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
 import {
@@ -79,6 +79,7 @@ import { formatBerlinDate, formatChatDateTime } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   fetchHolidayContribution,
   fetchHolidayFamilyDebtorNumber,
@@ -89,10 +90,8 @@ import {
   fetchHolidayConfirmationSettings,
   fetchHolidayRegistration,
   fetchHolidayRegistrationHealth,
-  type HolidayConfirmationSettings,
   type HolidayRegistrationContact,
   type HolidayRegistrationDetail,
-  type HolidayRegistrationHealthDetail,
   TRAEGER_HEALTH_RIGHT,
   withHolidayHealthAnswers,
 } from "~/lib/traeger-holiday-registrations-api";
@@ -184,9 +183,6 @@ export default function TraegerHolidayRegistrationPage() {
     session,
     TRAEGER_BILLING_RIGHT,
   );
-  const [health, setHealth] = useState<HolidayRegistrationHealthDetail | null>(
-    null,
-  );
   const {
     data: period,
     loadError: periodError,
@@ -194,28 +190,75 @@ export default function TraegerHolidayRegistrationPage() {
   } = useTraegerHolidayPeriod(periodId);
   // The way to the invoice of this period (#5688), for the billing right only.
   const billingHref = useHolidayPeriodBillingHref(period);
-  const [registration, setRegistration] =
-    useState<HolidayRegistrationDetail | null>(null);
-  const [contribution, setContribution] = useState<HolidayContribution | null>(
-    null,
+  const ids = periodId && registrationId;
+  const registrationReader = useTraegerResource(
+    ids ? traegerKeys.holidayRegistration(periodId, registrationId) : null,
+    () => fetchHolidayRegistration(periodId, registrationId),
+    "die Anmeldung",
+  );
+  const contributionReader = useTraegerResource(
+    ids ? traegerKeys.holidayContribution(periodId, registrationId) : null,
+    () => fetchHolidayContribution(periodId, registrationId),
+    "die Anmeldung",
+  );
+  const healthReader = useTraegerResource(
+    ids && canSeeHealth
+      ? traegerKeys.holidayRegistrationHealth(periodId, registrationId)
+      : null,
+    () => fetchHolidayRegistrationHealth(periodId, registrationId),
+    "die Anmeldung",
   );
   // Whether the Träger asks for the debtor number (#5621).
-  const [confirmation, setConfirmation] =
-    useState<HolidayConfirmationSettings | null>(null);
+  const confirmationReader = useTraegerResource(
+    traegerKeys.holidayConfirmationSettings(),
+    fetchHolidayConfirmationSettings,
+    "die Anmeldung",
+  );
   // The number the family already has at the Träger, proposed at the
   // confirmation (#6692), and with a number per child each child's (#7007).
-  const [familyDebtorNumbers, setFamilyDebtorNumbers] =
-    useState<HolidayFamilyDebtorNumbers>(NO_FAMILY_DEBTOR_NUMBERS);
-  // The exemption the confirmation applies; it starts with the parents'
-  // statement and the preview follows it.
-  const [exemption, setExemption] = useState(false);
-  // The cost bearer that pays instead of the family (#5627); null otherwise.
-  const [costBearerId, setCostBearerId] = useState<string | null>(null);
+  const familyReader = useTraegerResource(
+    ids
+      ? traegerKeys.holidayFamilyDebtorNumber(periodId, registrationId)
+      : null,
+    () => fetchHolidayFamilyDebtorNumber(periodId, registrationId),
+    "die Anmeldung",
+  );
+  const readers = [
+    registrationReader,
+    contributionReader,
+    healthReader,
+    confirmationReader,
+    familyReader,
+  ];
+  // The page shows the registration once every part of it is there.
+  const complete =
+    registrationReader.data !== null &&
+    contributionReader.data !== null &&
+    (!canSeeHealth || healthReader.data !== null) &&
+    confirmationReader.data !== null &&
+    familyReader.data !== null;
+  const registration = complete ? registrationReader.data : null;
+  const health = canSeeHealth ? healthReader.data : null;
+  const confirmation = confirmationReader.data;
+  const familyDebtorNumbers = familyReader.data ?? NO_FAMILY_DEBTOR_NUMBERS;
+  const readersError = readers.find((reader) => reader.error)?.error ?? null;
+  // The exemption the confirmation applies and the cost bearer that pays
+  // instead of the family (#5627); `null` follows the parents' statement
+  // and the contribution the page read.
+  const [choice, setChoice] = useState<{
+    readonly exemption: boolean;
+    readonly costBearerId: string | null;
+  } | null>(null);
+  const exemption =
+    choice?.exemption ?? registrationReader.data?.benefitsDeclared ?? false;
+  const costBearerId = choice?.costBearerId ?? null;
+  // The contribution computed for the choice; `null` shows the one read.
+  const [preview, setPreview] = useState<HolidayContribution | null>(null);
+  const contribution = preview ?? contributionReader.data;
   // While the preview is computed again, the confirmation waits for it: it
   // must freeze the amount the card shows.
   const [previewPending, setPreviewPending] = useState(false);
   const latestContribution = useRef(0);
-  const latestRegistration = useRef(0);
   // The card in its edit state: "guardians", "contacts", "answers" or
   // "child:<id>"; one at a time.
   const [editing, setEditing] = useState<string | null>(null);
@@ -224,78 +267,74 @@ export default function TraegerHolidayRegistrationPage() {
     error: schoolsError,
     fetchError: schoolsFailure,
   } = useTraegerSchools();
-  const registrationLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = registrationLoad;
+  const previewLoad = useApiLoadError();
+  const { show: showLoadError } = previewLoad;
 
-  // Reads the registration and rejects on failure: after a write the card
-  // shows that as a load error; the first load shows it as the page error.
+  const { reload: reloadRegistration } = registrationReader;
+  const { reload: reloadContribution } = contributionReader;
+  const { reload: reloadHealth } = healthReader;
+  const { reload: reloadConfirmation } = confirmationReader;
+  const { reload: reloadFamily } = familyReader;
+  const reloadAll = useCallback(() => {
+    reloadRegistration();
+    reloadContribution();
+    reloadHealth();
+    reloadConfirmation();
+    reloadFamily();
+  }, [
+    reloadRegistration,
+    reloadContribution,
+    reloadHealth,
+    reloadConfirmation,
+    reloadFamily,
+  ]);
+
+  // Reads the registration with all its parts and rejects on failure: after
+  // a write the page shows that as a load error above the registration. The
+  // parts change together, so they show only when every read succeeded.
+  const { mutate: mutateRegistration } = registrationReader;
+  const { mutate: mutateContribution } = contributionReader;
+  const { mutate: mutateHealth } = healthReader;
+  const { mutate: mutateConfirmation } = confirmationReader;
+  const { mutate: mutateFamily } = familyReader;
   const fetchRegistration = useCallback(async () => {
-    const request = ++latestRegistration.current;
-    const refusedRead = (error: unknown): never => {
-      if (request === latestRegistration.current && isRefusal(error)) {
-        latestContribution.current++;
-        setRegistration(null);
-        setHealth(null);
-        setContribution(null);
-        setConfirmation(null);
-        setFamilyDebtorNumbers(NO_FAMILY_DEBTOR_NUMBERS);
-        setEditing(null);
-      }
-      throw error;
-    };
-    try {
-      const [
-        loadedRegistration,
-        loadedContribution,
-        loadedHealth,
-        loadedConfirmation,
-        loadedFamilyDebtorNumber,
-      ] = await Promise.all([
-        fetchHolidayRegistration(periodId, registrationId).catch(refusedRead),
-        fetchHolidayContribution(periodId, registrationId).catch(refusedRead),
-        canSeeHealth
-          ? fetchHolidayRegistrationHealth(periodId, registrationId).catch(
-              refusedRead,
-            )
-          : Promise.resolve(null),
-        fetchHolidayConfirmationSettings().catch(refusedRead),
-        fetchHolidayFamilyDebtorNumber(periodId, registrationId).catch(
-          refusedRead,
-        ),
-      ]);
-      if (request !== latestRegistration.current) return;
-      latestContribution.current++;
-      setConfirmation(loadedConfirmation);
-      setFamilyDebtorNumbers(loadedFamilyDebtorNumber);
-      setRegistration(loadedRegistration);
-      setHealth(loadedHealth);
-      setContribution(loadedContribution);
-      setExemption(loadedRegistration.benefitsDeclared);
-      setCostBearerId(null);
-      clearLoadError();
-    } catch (error) {
-      if (request !== latestRegistration.current) return;
-      throw error;
-    }
-  }, [periodId, registrationId, canSeeHealth, clearLoadError]);
-
-  const load = useCallback(async () => {
-    try {
-      await fetchRegistration();
-    } catch (err) {
-      logger.error("traeger_holiday_registration_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Anmeldung",
-        retry: () => void load(),
-      });
-    }
-  }, [fetchRegistration, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+    const [
+      loadedRegistration,
+      loadedContribution,
+      loadedHealth,
+      loadedConfirmation,
+      loadedFamilyDebtorNumber,
+    ] = await Promise.all([
+      fetchHolidayRegistration(periodId, registrationId),
+      fetchHolidayContribution(periodId, registrationId),
+      canSeeHealth
+        ? fetchHolidayRegistrationHealth(periodId, registrationId)
+        : Promise.resolve(null),
+      fetchHolidayConfirmationSettings(),
+      fetchHolidayFamilyDebtorNumber(periodId, registrationId),
+    ]);
+    const fresh = { revalidate: false } as const;
+    latestContribution.current++;
+    setPreviewPending(false);
+    setPreview(null);
+    setChoice(null);
+    await Promise.all([
+      mutateRegistration(loadedRegistration, fresh),
+      mutateContribution(loadedContribution, fresh),
+      loadedHealth ? mutateHealth(loadedHealth, fresh) : undefined,
+      mutateConfirmation(loadedConfirmation, fresh),
+      mutateFamily(loadedFamilyDebtorNumber, fresh),
+    ]);
+  }, [
+    periodId,
+    registrationId,
+    canSeeHealth,
+    mutateRegistration,
+    mutateContribution,
+    mutateHealth,
+    mutateConfirmation,
+    mutateFamily,
+  ]);
 
   // A change of the bookings or of the exemption changes what a confirmation
   // would freeze, so the contribution is read again; only the newest answer
@@ -312,7 +351,7 @@ export default function TraegerHolidayRegistrationPage() {
           withCostBearer ?? undefined,
         );
         if (request === latestContribution.current) {
-          setContribution(next);
+          setPreview(next);
           setPreviewPending(false);
         }
       } catch (err) {
@@ -323,19 +362,19 @@ export default function TraegerHolidayRegistrationPage() {
         });
         await showLoadError(err, {
           object: "der Ferienbeitrag",
-          retry: () => void load(),
+          retry: reloadAll,
         });
       }
     },
-    [load, periodId, registrationId, showLoadError],
+    [reloadAll, periodId, registrationId, showLoadError],
   );
 
   const changed = useCallback(
     (next: HolidayRegistrationDetail) => {
-      setRegistration(next);
+      void mutateRegistration(next, { revalidate: false });
       void refreshContribution(exemption, costBearerId);
     },
-    [exemption, costBearerId, refreshContribution],
+    [exemption, costBearerId, mutateRegistration, refreshContribution],
   );
 
   const saved = useCallback(
@@ -378,7 +417,7 @@ export default function TraegerHolidayRegistrationPage() {
 
   const changeExemption = useCallback(
     (next: boolean) => {
-      setExemption(next);
+      setChoice({ exemption: next, costBearerId: null });
       void refreshContribution(next, null);
     },
     [refreshContribution],
@@ -386,16 +425,16 @@ export default function TraegerHolidayRegistrationPage() {
 
   const changeCostBearer = useCallback(
     (next: string | null) => {
-      setCostBearerId(next);
+      setChoice({ exemption, costBearerId: next });
       if (next) void refreshContribution(false, next);
     },
-    [refreshContribution],
+    [exemption, refreshContribution],
   );
 
   // Confirmed data stays after transient failures; refusals remove it
   // (#6652).
   const loadError =
-    (registration ? null : (afterWrite.error ?? registrationLoad.error)) ??
+    (registration ? null : (afterWrite.error ?? readersError)) ??
     metadataLoadError(
       periodError ?? schoolsError,
       Boolean(registration && period && schools),
@@ -495,7 +534,7 @@ export default function TraegerHolidayRegistrationPage() {
     >
       {registration && view && period && schools ? (
         <>
-          <LoadErrorAlert error={registrationLoad.error} />
+          <LoadErrorAlert error={previewLoad.error ?? readersError} />
           <LoadErrorAlert error={afterWrite.error} className="mb-4" />
           {deletionNotice ? (
             <Alert type="info" message={deletionNotice} />
@@ -598,7 +637,9 @@ export default function TraegerHolidayRegistrationPage() {
           <HolidayRegistrationProofCard
             periodId={periodId}
             registration={registration}
-            onUploaded={setRegistration}
+            onUploaded={(next) =>
+              void mutateRegistration(next, { revalidate: false })
+            }
           />
           {contribution &&
           (registration.status !== "cancelled" || contribution.frozen) ? (

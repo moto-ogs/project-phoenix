@@ -9,7 +9,7 @@
 // das Backend ab.
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { DocumentTemplateInvoiceFields } from "~/components/traeger/document-template-invoice-fields";
 import { DocumentTemplatePlaceholdersCard } from "~/components/traeger/document-template-placeholders-card";
@@ -17,6 +17,7 @@ import { DocumentTemplatePreviewBody } from "~/components/traeger/document-templ
 import { DocumentTemplateVersionsCard } from "~/components/traeger/document-template-versions-card";
 import { TraegerLetterheadPreview } from "~/components/traeger/traeger-letterhead-preview";
 import { useTraegerSettingsSchema } from "~/components/traeger/use-traeger-resources";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { EditActions } from "~/components/ui/edit-actions";
@@ -28,26 +29,19 @@ import { Input } from "~/components/ui/input";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { Textarea } from "~/components/ui/textarea";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { formatDate } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import type { ResolvedSetting } from "~/lib/settings-api";
-import {
-  fetchTraegerMasterData,
-  type TraegerMasterData,
-  traegerLogoSrc,
-} from "~/lib/traeger-api";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
+import { fetchTraegerMasterData, traegerLogoSrc } from "~/lib/traeger-api";
 import { TRAEGER_BRANDING_TAB } from "~/lib/traeger-branding";
 import {
   DOCUMENT_TEMPLATE_KIND_LABELS,
   DOCUMENT_TEMPLATE_KIND_USE,
-  type DocumentTemplateDetail,
   type DocumentTemplateKind,
   type DocumentTemplatePlaceholder,
   type DocumentTemplatePreview,
@@ -68,12 +62,6 @@ const logger = createLogger({ component: "TraegerVorlagePage" });
 
 /** Das Träger-Recht, das Vorlagen ändert (ADR 0084 Abschnitt 4). */
 const SETTINGS_RIGHT = "traeger_settings:manage";
-
-interface PageData {
-  readonly detail: DocumentTemplateDetail;
-  readonly masterData: TraegerMasterData;
-  readonly preview: DocumentTemplatePreview;
-}
 
 export default function TraegerVorlagePage() {
   const params = useParams<{ kind: string }>();
@@ -101,9 +89,13 @@ function TemplateEditorPage({
 }: Readonly<{ kind: DocumentTemplateKind }>) {
   const { data: session } = useSession();
   const canEdit = hasPermission(session ?? null, SETTINGS_RIGHT);
-  const [data, setData] = useState<PageData | null>(null);
-  const [draft, setDraft] = useState<DocumentTemplateText | null>(null);
-  const [previewed, setPreviewed] = useState<DocumentTemplateText | null>(null);
+  // Edits of the saved text; `null` follows the saved text.
+  const [edited, setEdited] = useState<DocumentTemplateText | null>(null);
+  // The preview of a draft; `null` shows the preview of the saved text.
+  const [draftPreview, setDraftPreview] = useState<{
+    readonly text: DocumentTemplateText;
+    readonly preview: DocumentTemplatePreview;
+  } | null>(null);
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   // A save or reload makes every older draft preview obsolete.
@@ -113,8 +105,31 @@ function TemplateEditorPage({
     isLoading: schemaLoading,
     loadError: schemaError,
   } = useTraegerSettingsSchema();
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
+  const template = useTraegerResource(
+    traegerKeys.documentTemplate(kind),
+    () => fetchDocumentTemplate(kind),
+    "die Vorlage",
+  );
+  const master = useTraegerResource(
+    traegerKeys.masterData(),
+    fetchTraegerMasterData,
+    "die Vorlage",
+  );
+  const savedVersion = template.data?.current ?? null;
+  const current = savedVersion ? templateTextOf(savedVersion) : null;
+  // The preview of the previous version stays until the new one is there.
+  const savedPreview = useTraegerResource(
+    savedVersion && current
+      ? traegerKeys.documentTemplatePreview(kind, savedVersion.version)
+      : null,
+    () =>
+      current
+        ? previewDocumentTemplate(kind, current)
+        : Promise.reject(new Error("no saved template")),
+    "die Vorlage",
+    { keepPreviousData: true },
+  );
+  const invalidateFamily = useInvalidateFamily();
   const formRef = useRef<HTMLFormElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   // Die letzte Schreibmarke im Brieftext. Ein Klick auf einen Platzhalter
@@ -123,49 +138,29 @@ function TemplateEditorPage({
   const formErrors = useApiFormError(formRef);
   const { success } = useToast();
 
-  // Liest die Vorlage und setzt sie; weist bei einem Fehler ab. Das
-  // Nachladen nach dem Speichern nutzt sie direkt, damit ein Fehler dabei
-  // den gespeicherten Stand stehen lässt (#6652).
+  // Liest die Vorlage und weist bei einem Fehler ab. Das Nachladen nach dem
+  // Speichern nutzt sie direkt, damit ein Fehler dabei den gespeicherten
+  // Stand stehen lässt (#6652).
+  const { mutate: mutateTemplate } = template;
   const readTemplate = useCallback(async () => {
-    const [detail, masterData] = await Promise.all([
-      fetchDocumentTemplate(kind),
-      fetchTraegerMasterData(),
-    ]);
-    const current = templateTextOf(detail.current);
-    const preview = await previewDocumentTemplate(kind, current);
-    setData({ detail, masterData, preview });
-    // Ein Wiederholen aktualisiert den gespeicherten Stand und die Vorschau,
-    // erhält aber auch Entwürfe, die erst während des Abrufs entstehen.
-    setDraft((before) => before ?? current);
-    setPreviewed(current);
-  }, [kind]);
-
-  const load = useCallback(async () => {
-    previewRequest.current++;
-    setPreviewing(false);
-    try {
-      await readTemplate();
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_document_template_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Vorlage",
-        retry: () => void load(),
-      });
-    }
-  }, [readTemplate, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+    await mutateTemplate(fetchDocumentTemplate(kind), { revalidate: false });
+  }, [kind, mutateTemplate]);
   // Nachladen nach dem Speichern: ein Fehler dabei ist ein Ladefehler über
   // der Vorlage, kein gescheitertes Speichern (#6652).
   const afterSave = useRefreshAfterWrite(
     "die Anzeige der Vorlage",
     readTemplate,
   );
+
+  const error =
+    template.error ?? master.error ?? savedPreview.error ?? schemaError;
+  const draft = edited ?? current;
+  const previewed = draftPreview?.text ?? current;
+  const preview = draftPreview?.preview ?? savedPreview.data;
+  const data =
+    template.data && master.data && preview
+      ? { detail: template.data, masterData: master.data, preview }
+      : null;
 
   const showPreview = async () => {
     if (!draft || !data || saving || previewing) return;
@@ -176,8 +171,7 @@ function TemplateEditorPage({
     try {
       const preview = await previewDocumentTemplate(kind, shown);
       if (request !== previewRequest.current) return;
-      setData((before) => (before ? { ...before, preview } : before));
-      setPreviewed(shown);
+      setDraftPreview({ text: shown, preview });
     } catch (err) {
       if (request !== previewRequest.current) return;
       logger.warn("traeger_document_template_preview_failed", {
@@ -207,11 +201,12 @@ function TemplateEditorPage({
       setSaving(false);
       return;
     }
-    setDraft((current) =>
-      current && sameTemplateText(current, submitted)
+    setEdited((before) =>
+      before && sameTemplateText(before, submitted)
         ? templateTextOf(saved)
-        : current,
+        : before,
     );
+    void invalidateFamily(traegerKeys.documentTemplatesFamily);
     success(
       `Die Vorlage ist gespeichert. Neue Schreiben nutzen Version ${saved.version}.`,
     );
@@ -220,17 +215,15 @@ function TemplateEditorPage({
     // Scheitert das Nachladen, gilt trotzdem die gespeicherte Version;
     // sonst böte die Seite ein zweites Speichern an (#6652).
     if (!reloaded) {
-      setData((before) =>
-        before
-          ? { ...before, detail: { ...before.detail, current: saved } }
-          : before,
+      await mutateTemplate(
+        (before) => (before ? { ...before, current: saved } : before),
+        { revalidate: false },
       );
     }
+    setDraftPreview(null);
     setSaving(false);
   };
 
-  const error = pageLoad.error ?? schemaError;
-  const current = data ? templateTextOf(data.detail.current) : null;
   const changed =
     draft !== null && current !== null && !sameTemplateText(draft, current);
   const previewStale =
@@ -247,7 +240,11 @@ function TemplateEditorPage({
   const set = (
     part: "subject" | "salutation" | "body" | "closing" | "legalRemedy",
     value: string,
-  ) => setDraft((before) => (before ? { ...before, [part]: value } : before));
+  ) =>
+    setEdited((before) => {
+      const base = before ?? current;
+      return base ? { ...base, [part]: value } : base;
+    });
   const rememberCaret = (field: HTMLTextAreaElement) => {
     caret.current = { start: field.selectionStart, end: field.selectionEnd };
   };
@@ -336,7 +333,7 @@ function TemplateEditorPage({
                       tooltip="Setzt den Standardtext ins Formular, gespeichert wird erst mit „Speichern“."
                       disabled={saving}
                       onClick={() => {
-                        setDraft(templateTextOf(standard));
+                        setEdited(templateTextOf(standard));
                         formErrors.clear();
                       }}
                     >
@@ -435,11 +432,12 @@ function TemplateEditorPage({
                     <DocumentTemplateInvoiceFields
                       layout={invoiceLayoutOf(draft)}
                       onChange={(layout) =>
-                        setDraft((before) =>
-                          before
-                            ? templateTextOf({ ...before, invoice: layout })
-                            : before,
-                        )
+                        setEdited((before) => {
+                          const base = before ?? current;
+                          return base
+                            ? templateTextOf({ ...base, invoice: layout })
+                            : base;
+                        })
                       }
                       disabled={!canEdit || saving}
                       error={formErrors.fieldError("invoice")}
@@ -469,7 +467,7 @@ function TemplateEditorPage({
                     {canEdit && changed ? (
                       <EditActions
                         onCancel={() => {
-                          if (current) setDraft(current);
+                          setEdited(null);
                           formErrors.clear();
                         }}
                         saving={saving}
@@ -531,7 +529,7 @@ function TemplateEditorPage({
                 canEdit={canEdit}
                 disabled={saving}
                 onLoad={(version) => {
-                  setDraft(templateTextOf(version));
+                  setEdited(templateTextOf(version));
                   formErrors.clear();
                   formRef.current?.scrollIntoView?.({
                     behavior: "smooth",

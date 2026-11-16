@@ -43,6 +43,7 @@ import {
 } from "~/components/traeger/child-debtor-numbers-modal";
 import { FamilyDebtorNumberModal } from "~/components/traeger/family-debtor-number-modal";
 import { useDebtorNumberSettings } from "~/components/traeger/use-debtor-number-format";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -59,7 +60,8 @@ import { ListSkeleton } from "~/components/ui/page-skeletons";
 import { Button } from "~/components/ui/button";
 import { useApiLoadError } from "~/contexts/ToastContext";
 import { parentsConcept } from "~/lib/concepts/parents";
-import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import {
   type BillingFamily,
   fetchBillingFamilies,
@@ -68,8 +70,6 @@ import {
 } from "~/lib/traeger-billing-families-api";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerBillingFamiliesPage" });
 
 type OpenFilter = "" | "offen" | "ausgeglichen";
 
@@ -424,7 +424,6 @@ function matchesOpenFilter(family: BillingFamily, filter: OpenFilter) {
 
 export default function TraegerBillingFamiliesPage() {
   const router = useRouter();
-  const [families, setFamilies] = useState<BillingFamily[] | null>(null);
   const [search, setSearch] = useState("");
   const [openFilter, setOpenFilter] = useState<OpenFilter>("");
   const [numberFilter, setNumberFilter] = useState<NumberFilter>("");
@@ -436,8 +435,8 @@ export default function TraegerBillingFamiliesPage() {
   } = useDebtorNumberSettings();
   const format = settings?.format;
   const scope = settings?.scope;
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
+  const settingsLoad = useApiLoadError();
+  const { show: showLoadError } = settingsLoad;
 
   // Without the scope the page cannot tell which numbers apply (#7007).
   useEffect(() => {
@@ -448,30 +447,32 @@ export default function TraegerBillingFamiliesPage() {
     });
   }, [reloadSettings, settingsError, showLoadError]);
 
-  const load = useCallback(async () => {
-    if (!scope) return;
-    try {
-      // With a number per child the children come with a read of their own.
-      const [listed, children] = await Promise.all([
-        fetchBillingFamilies(),
-        scope === "child" ? fetchFamilyChildren() : null,
-      ]);
-      setFamilies(children ? withFamilyChildren(listed, children) : listed);
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_billing_families_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Liste der Familien",
-        retry: () => void load(),
-      });
-    }
-  }, [clearLoadError, scope, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // Without the scope the list waits: it cannot tell which numbers apply.
+  const listed = useTraegerResource(
+    scope ? traegerBillingKeys.families() : null,
+    fetchBillingFamilies,
+    "die Liste der Familien",
+  );
+  // With a number per child the children come with a read of their own.
+  const children = useTraegerResource(
+    scope === "child" ? traegerBillingKeys.familyChildren() : null,
+    fetchFamilyChildren,
+    "die Liste der Familien",
+  );
+  const families = useMemo(() => {
+    if (!scope || !listed.data) return null;
+    if (scope !== "child") return listed.data;
+    return children.data
+      ? withFamilyChildren(listed.data, children.data)
+      : null;
+  }, [scope, listed.data, children.data]);
+  const loadError = listed.error ?? children.error ?? settingsLoad.error;
+  const invalidate = useInvalidateFamily();
+  // A changed number shows in the list and on the family's page.
+  const reload = useCallback(
+    () => invalidate(traegerBillingKeys.familiesFamily),
+    [invalidate],
+  );
 
   const open = useCallback(
     (family: BillingFamily) => router.push(familyHref(family)),
@@ -581,7 +582,7 @@ export default function TraegerBillingFamiliesPage() {
           />
         ) : null
       }
-      statsLoading={!families && !pageLoad.error}
+      statsLoading={!families && !loadError}
       actions={
         <TraegerListExportMenu
           download={(format) =>
@@ -606,10 +607,10 @@ export default function TraegerBillingFamiliesPage() {
         setOpenFilter("");
         setNumberFilter("");
       }}
-      error={pageLoad.error}
+      error={loadError}
       // A list loads in the shape of its rows.
       loading={
-        !pageLoad.error && !families ? (
+        !loadError && !families ? (
           <ListSkeleton rows={6} avatar={false} />
         ) : (
           false
@@ -621,13 +622,13 @@ export default function TraegerBillingFamiliesPage() {
             family={changing && !perChild(changing) ? changing : null}
             format={format}
             onClose={() => setChanging(null)}
-            onSaved={load}
+            onSaved={reload}
           />
           <ChildDebtorNumbersModal
             family={changing && perChild(changing) ? changing : null}
             format={format}
             onClose={() => setChanging(null)}
-            onSaved={load}
+            onSaved={reload}
           />
         </>
       }

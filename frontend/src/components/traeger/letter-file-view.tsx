@@ -7,81 +7,46 @@
 // angemeldeten Endpunkt wie der Download und steht deshalb im Protokoll.
 
 import { Download, ExternalLink } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import { ActionHint } from "~/components/ui/action-hint";
 import { Button, buttonClassName } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { PdfPreview, useObjectUrl } from "~/components/ui/pdf-preview";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { downloadBlob } from "~/lib/file-download";
-import { createLogger } from "~/lib/logger";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import type { BillingFile } from "~/lib/traeger-billing-api";
+import { useTraegerResource } from "./use-traeger-resource";
 
 const OPEN_TAB_HINT = "Öffnet das Schreiben als PDF in einem neuen Tab.";
 const LOAD_FAILED_REASON =
   "Das Schreiben ließ sich nicht laden. Bitte laden Sie es erneut.";
-
-const logger = createLogger({ component: "LetterFileView" });
 
 export function LetterFileView({
   fileKey,
   load,
   title,
 }: Readonly<{
-  /** Names the file; a new key loads it again. */
+  /** Names the file across runs and kinds; a new key loads it again. */
   fileKey: string;
   load: () => Promise<BillingFile>;
   /** „Rechnung FE-2026-0001“: names the frame and both buttons. */
   title: string;
 }>) {
-  // The file is kept with the key it belongs to: while the next one loads,
-  // the frame never shows the previous one under the new heading.
-  const [loaded, setLoaded] = useState<{
-    key: string;
-    file: BillingFile;
-  } | null>(null);
-  const [attempt, setAttempt] = useState(0);
-  const {
-    error,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  const file = loaded?.key === fileKey ? loaded.file : null;
-  const url = useObjectUrl(file?.blob ?? null);
-
   // `load` belongs to the key: a new function for the same key loads
-  // nothing, so callers may pass it inline.
-  const loadRef = useRef(load);
-  useEffect(() => {
-    loadRef.current = load;
-  }, [load]);
-
-  useEffect(() => {
-    let current = true;
-    clearLoadError();
-    loadRef.current().then(
-      (next) => {
-        if (!current) return;
-        // The frame and the tab show the file as a PDF whatever type the
-        // response named, so nothing else ever renders on this origin.
-        const blob = new Blob([next.blob], { type: "application/pdf" });
-        setLoaded({ key: fileKey, file: { blob, filename: next.filename } });
-      },
-      (err: unknown) => {
-        if (!current) return;
-        logger.error("traeger_letter_file_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showLoadError(err, {
-          object: "das Schreiben",
-          retry: () => setAttempt((count) => count + 1),
-        });
-      },
-    );
-    return () => {
-      current = false;
-    };
-  }, [fileKey, attempt, clearLoadError, showLoadError]);
+  // nothing, so callers may pass it inline. The frame and the tab show the
+  // file as a PDF whatever type the response named, so nothing else ever
+  // renders on this origin.
+  const { data: file, error } = useTraegerResource(
+    fileKey ? traegerBillingRunKeys.letterFile(fileKey) : null,
+    async () => {
+      const next = await load();
+      return {
+        blob: new Blob([next.blob], { type: "application/pdf" }),
+        filename: next.filename,
+      };
+    },
+    "das Schreiben",
+  );
+  const url = useObjectUrl(file?.blob ?? null);
 
   return (
     <div className="space-y-4">

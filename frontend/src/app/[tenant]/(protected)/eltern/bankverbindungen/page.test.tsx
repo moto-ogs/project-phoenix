@@ -1,20 +1,37 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  render,
+  act,
+  render as rtlRender,
   screen,
   waitFor,
   fireEvent,
   within,
 } from "@testing-library/react";
 
+import type { ReactNode } from "react";
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import type { PaymentOverviewRow } from "~/lib/guardian-payment-api";
+import { releaseFakeTimers } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import {
   DESKTOP_WIDTH,
   PHONE_WIDTH,
   setViewportWidth,
 } from "~/test/helpers/viewport";
+
+vi.unmock("swr");
+
+function render(ui: ReactNode) {
+  const cache = new Map();
+  return rtlRender(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <SWRConfig value={{ provider: () => cache, errorRetryCount: 0 }}>
+        {children}
+      </SWRConfig>
+    ),
+  });
+}
 
 const mockFetchOverview = vi.fn();
 const mockExport = vi.fn();
@@ -27,7 +44,7 @@ let mockPermissions: string[] = ["guardians:financial"];
 let mockSessionStatus: "authenticated" | "loading" = "authenticated";
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { permissions: mockPermissions } },
+    data: { user: { id: "1", permissions: mockPermissions } },
     status: mockSessionStatus,
   }),
 }));
@@ -296,10 +313,15 @@ describe("BankverbindungenPage", () => {
         new ApiError("down", 503, { code: "general.unavailable" }),
       );
 
+    // The session switch below refetches once the shared reader's
+    // deduplication window has passed.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     const { rerender } = render(<BankverbindungenPage />);
     await waitFor(() =>
       expect(table().getByText("Mia Schneider")).toBeInTheDocument(),
     );
+    await act(() => vi.advanceTimersByTimeAsync(5_000));
+    releaseFakeTimers();
 
     mockSessionStatus = "loading";
     rerender(<BankverbindungenPage />);

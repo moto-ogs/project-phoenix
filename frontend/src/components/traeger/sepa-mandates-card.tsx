@@ -8,7 +8,7 @@
 // jede andere bekommt 403, und die Karte bleibt weg.
 
 import { Eye, Undo2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -20,11 +20,7 @@ import NavigationLink from "~/components/ui/navigation-link";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import {
   berlinTodayISO,
@@ -34,9 +30,11 @@ import {
 } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   type SepaMandate,
-  type SepaMandateEvent,
   fetchSepaMandateHistory,
   fetchSepaMandates,
   revokeSepaMandate,
@@ -53,6 +51,7 @@ import {
   mandateState,
   nextDebitLabel,
 } from "./sepa-format";
+import { useTraegerResource } from "./use-traeger-resource";
 
 const logger = createLogger({ component: "SepaMandatesCard" });
 
@@ -61,39 +60,20 @@ const logger = createLogger({ component: "SepaMandatesCard" });
  * „Abrechnung“ gets 403: then `forbidden` is set and nothing is shown.
  */
 export function useSepaMandates(enabled: boolean, contractId?: string) {
-  const [mandates, setMandates] = useState<SepaMandate[] | null>(null);
-  const [forbidden, setForbidden] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-
-  const load = useCallback(async () => {
-    if (!enabled) return;
-    try {
-      setMandates(await fetchSepaMandates(contractId));
-      setForbidden(false);
-      clearLoadError();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 403) {
-        // Mandates belong to the right „Abrechnung“; other roles do not
-        // see the card at all.
-        setForbidden(true);
-        return;
-      }
-      logger.error("sepa_mandates_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Liste der Mandate",
-        retry: () => void load(),
-      });
-    }
-  }, [enabled, contractId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  return { mandates, forbidden, error: pageLoad.error, load };
+  const { data, error, failure, reload } = useTraegerResource(
+    enabled ? traegerBillingRunKeys.sepaMandates(contractId) : null,
+    () => fetchSepaMandates(contractId),
+    "die Liste der Mandate",
+  );
+  // Mandates belong to the right „Abrechnung“; other roles do not see the
+  // card at all.
+  const forbidden = failure instanceof ApiError && failure.status === 403;
+  return {
+    mandates: data,
+    forbidden,
+    error: forbidden ? null : error,
+    load: reload,
+  };
 }
 
 function RevokeModal({
@@ -168,48 +148,25 @@ function HistoryModal({
   mandate,
   onClose,
 }: Readonly<{ mandate: SepaMandate | null; onClose: () => void }>) {
-  const [events, setEvents] = useState<SepaMandateEvent[] | null>(null);
-  const [emails, setEmails] = useState<ReadonlyMap<string, string>>(new Map());
-  const { show } = useApiErrorDisplay();
-
-  useEffect(() => {
-    if (!mandate) return;
-    // A trail that arrives after the dialog moved on to another mandate
-    // belongs to that one; it is dropped.
-    let current = true;
-    setEvents(null);
-    fetchSepaMandateHistory(mandate.id)
-      .then((loaded) => {
-        if (current) setEvents(loaded);
-      })
-      .catch((err: unknown) => {
-        logger.error("sepa_mandate_history_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!current) return;
-        setEvents([]);
-        void show(err, { object: "die Liste der Änderungen" });
-      });
-    // The people of the Träger-Büro name the accounts; a role that may not
-    // read them sees the account number instead.
-    fetchTraegerBuero()
-      .then((buero) => {
-        if (!current) return;
-        setEmails(
-          new Map(
-            buero.members.map((member) => [member.accountId, member.email]),
-          ),
-        );
-      })
-      .catch((err: unknown) => {
-        logger.warn("sepa_mandate_history_people_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-    return () => {
-      current = false;
-    };
-  }, [mandate, show]);
+  const { data: events, error } = useTraegerResource(
+    mandate ? traegerBillingRunKeys.sepaMandateHistory(mandate.id) : null,
+    () => fetchSepaMandateHistory(mandate?.id ?? ""),
+    "die Liste der Änderungen",
+  );
+  // The people of the Träger-Büro name the accounts; a role that may not
+  // read them sees the account number instead, without an error.
+  const { data: buero } = useTraegerResource(
+    mandate ? traegerKeys.buero() : null,
+    fetchTraegerBuero,
+    "die Personen des Träger-Büros",
+  );
+  const emails = useMemo(
+    () =>
+      new Map<string, string>(
+        buero?.members.map((member) => [member.accountId, member.email]) ?? [],
+      ),
+    [buero],
+  );
 
   return (
     <Modal
@@ -219,7 +176,9 @@ function HistoryModal({
       description="Wer das Mandat wann angesehen oder geändert hat, ohne Kontodaten."
       size="md"
     >
-      {events === null ? (
+      {error ? (
+        <LoadErrorAlert error={error} actionLayout="responsive" />
+      ) : events === null ? (
         <p className="text-sm text-gray-600">Wird geladen …</p>
       ) : events.length === 0 ? (
         <p className="text-sm text-gray-600">Noch keine Einträge.</p>
@@ -436,6 +395,7 @@ export function SepaMandatesCard({
   onChanged?: () => void;
 }>) {
   const own = useSepaMandates(given === undefined, contractId);
+  const invalidateFamily = useInvalidateFamily();
   const mandates = given ?? own.mandates;
   const today = useBerlinToday();
   const [creating, setCreating] = useState(false);
@@ -444,8 +404,9 @@ export function SepaMandatesCard({
 
   if (own.forbidden) return null;
 
+  // Every list of mandates, their trail and their collections change.
   const changed = () => {
-    void own.load();
+    void invalidateFamily(traegerBillingRunKeys.sepaMandatesFamily);
     onChanged?.();
   };
   const inForce = mandates?.find((mandate) => !mandate.revokedOn);

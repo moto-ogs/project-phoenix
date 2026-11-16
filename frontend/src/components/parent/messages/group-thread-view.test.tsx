@@ -12,17 +12,14 @@ import { ApiError } from "~/lib/api-error";
 import {
   getChildFeatures,
   getGroupThread,
+  listMyChildren,
   postChildMessage,
 } from "~/lib/parent-api";
 import { catalogText } from "~/test/error-catalog-text";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { ParentGroupThreadView } from "./group-thread-view";
 
-vi.mock("next-auth/react", () => ({
-  useSession: () => ({
-    data: { user: { id: "1", scope: "parents" }, expires: "2099-01-01" },
-    status: "authenticated",
-  }),
-}));
+vi.unmock("swr");
 
 vi.mock("~/lib/parent-url", () => ({
   parentPath: (path: string) => path,
@@ -32,12 +29,14 @@ vi.mock("~/lib/parent-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-api")>()),
   getGroupThread: vi.fn(),
   getChildFeatures: vi.fn(),
+  listMyChildren: vi.fn(),
   postChildMessage: vi.fn(),
 }));
 
 const mockedThread = vi.mocked(getGroupThread);
 const mockedFeatures = vi.mocked(getChildFeatures);
 const mockedPost = vi.mocked(postChildMessage);
+const mockedChildren = vi.mocked(listMyChildren);
 
 const felix = { student_id: "42", first_name: "Felix", last_name: "Schneider" };
 const mia = { student_id: "43", first_name: "Mia", last_name: "Schneider" };
@@ -73,17 +72,26 @@ function features(notesEnabled: boolean) {
   >;
 }
 
+function linked(child: typeof felix) {
+  return { ...child, tenant_id: "7" } as unknown as Awaited<
+    ReturnType<typeof listMyChildren>
+  >[number];
+}
+
 function renderView() {
   return render(
-    <NextIntlClientProvider locale="de" messages={deMessages}>
-      <ParentGroupThreadView groupThreadId="9" />
-    </NextIntlClientProvider>,
+    <ParentResourceTestProvider>
+      <NextIntlClientProvider locale="de" messages={deMessages}>
+        <ParentGroupThreadView groupThreadId="9" />
+      </NextIntlClientProvider>
+    </ParentResourceTestProvider>,
   );
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockedFeatures.mockResolvedValue(features(true));
+  mockedChildren.mockResolvedValue([linked(felix), linked(mia)]);
 });
 
 describe("ParentGroupThreadView (#4784)", () => {

@@ -5,11 +5,31 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
+import { SWRConfig } from "~/lib/swr/testing";
 import { duplicateIds } from "~/test/helpers/duplicate-ids";
 import type { OfferingPreview, RosterDeviation } from "~/lib/roster-deviation";
+
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    status: "authenticated",
+    data: { user: { id: "1", token: "test-token" } },
+  }),
+}));
+
+/** Real SWR with a fresh cache per render (the preview reads through it). */
+function SWRTestCache({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {children}
+    </SWRConfig>
+  );
+}
 
 const { mockPreview, mockConnect, mockToastSuccess, mockOfferingSources } =
   vi.hoisted(() => ({
@@ -91,6 +111,7 @@ describe("ConnectOfferingModal (#5103)", () => {
         onClose={onClose}
         onConnected={onConnected}
       />,
+      { wrapper: SWRTestCache },
     );
 
     expect(mockPreview).toHaveBeenCalledWith("9", {
@@ -144,6 +165,7 @@ describe("ConnectOfferingModal (#5103)", () => {
         onClose={vi.fn()}
         onConnected={onConnected}
       />,
+      { wrapper: SWRTestCache },
     );
     await screen.findByText("Mittwoch");
 
@@ -173,6 +195,7 @@ describe("ConnectOfferingModal (#5103)", () => {
         onClose={onClose}
         onConnected={vi.fn()}
       />,
+      { wrapper: SWRTestCache },
     );
     const add = await screen.findByRole("button", {
       name: "Angebot dazunehmen",
@@ -217,6 +240,7 @@ describe("ConnectOfferingModal (#5103)", () => {
         onClose={vi.fn()}
         onConnected={vi.fn()}
       />,
+      { wrapper: SWRTestCache },
     );
 
     expect(
@@ -265,6 +289,7 @@ describe("ConnectOfferingModal (#5103)", () => {
         onClose={vi.fn()}
         onConnected={vi.fn()}
       />,
+      { wrapper: SWRTestCache },
     );
 
     // Anker: the offering field is rendered, named by its label.
@@ -314,6 +339,7 @@ describe("ConnectOfferingModal (#5103)", () => {
         onClose={vi.fn()}
         onConnected={vi.fn()}
       />,
+      { wrapper: SWRTestCache },
     );
 
     expect(mockPreview).toHaveBeenCalledWith("9", {

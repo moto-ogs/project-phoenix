@@ -9,7 +9,7 @@ import {
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import {
   contractChangeReview,
   type ContractChangeRequest,
@@ -17,7 +17,7 @@ import {
 } from "~/lib/care-contract-changes";
 
 function render(ui: React.ReactElement) {
-  return renderPlain(ui, { wrapper: ToastProvider });
+  return renderPlain(ui, { wrapper: TraegerResourceTestProvider });
 }
 
 const mocks = vi.hoisted(() => ({
@@ -25,9 +25,13 @@ const mocks = vi.hoisted(() => ({
   decideContractChange: vi.fn(),
 }));
 
+vi.unmock("swr");
 vi.mock("next-auth/react", () => ({
+  SessionProvider: ({ children }: { children: React.ReactNode }) => children,
   useSession: () => ({
-    data: { user: { permissions: ["admin:*"] } },
+    data: {
+      user: { id: "A", scope: "org", orgId: 7, permissions: ["admin:*"] },
+    },
     status: "authenticated",
   }),
 }));

@@ -1,12 +1,14 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   CareInvoice,
   CareLetterMailing,
   CareLetters,
   CareRunDetail,
 } from "~/lib/traeger-care-billing-api";
+
+vi.unmock("swr");
 
 const { api } = vi.hoisted(() => ({
   api: {
@@ -85,9 +87,9 @@ function letters(overrides: Partial<CareLetters> = {}): CareLetters {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerCareRunPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

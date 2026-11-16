@@ -16,7 +16,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import {
@@ -77,15 +76,10 @@ import {
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { billingConcept } from "~/lib/concepts/billing";
 import { TenantPage } from "~/components/ui/tenant-page";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { downloadBlob } from "~/lib/file-download";
-import { ApiError } from "~/lib/api-error";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import {
   SIBLING_HINT_LABELS,
@@ -95,6 +89,8 @@ import {
 } from "~/lib/holiday-sibling-hints";
 import { createLogger } from "~/lib/logger";
 import { useTraegerHolidayPeriod } from "~/components/traeger/use-traeger-resources";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   downloadHolidayRegistrationPdfs,
   downloadHolidayRegistrations,
@@ -466,8 +462,6 @@ export default function TraegerHolidayRegistrationsPage() {
     error: periodFailure,
   } = useTraegerHolidayPeriod(periodId);
   const billingHref = useHolidayPeriodBillingHref(period);
-  const [list, setList] = useState<HolidayRegistrationList | null>(null);
-  const [groups, setGroups] = useState<readonly HolidaySiblingGroup[]>([]);
   // The registrations the Träger-Büro picked to merge as siblings (#5628)
   // or to confirm together (#6674).
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -483,41 +477,24 @@ export default function TraegerHolidayRegistrationsPage() {
   // above decide what is loaded.
   const [search, setSearch] = useState("");
   const [wish, setWish] = useState<HolidayWishFilter>("");
-  const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<string | null>(null);
   const { data: session } = useSession();
   const canSeeHealth = hasPermission(session, TRAEGER_HEALTH_RIGHT);
-  // Each new filter starts a new list; an answer for an older one is dropped.
-  const generation = useRef(0);
   const {
     schools,
     error: schoolsError,
     fetchError: schoolsFailure,
   } = useTraegerSchools();
-  const listLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = listLoad;
   const { show: showActionError } = useApiErrorDisplay();
   // Whether the Träger asks for the debtor number (#5621); the column shows
-  // only then.
-  const [debtorNumberColumn, setDebtorNumberColumn] = useState(false);
-
-  useEffect(() => {
-    let current = true;
-    fetchHolidayConfirmationSettings()
-      .then((settings) => {
-        if (current) setDebtorNumberColumn(settings.debtorNumberRequired);
-      })
-      .catch((err: unknown) => {
-        // The list stays complete without the column; the detail of each
-        // registration still names its number.
-        logger.warn("traeger_holiday_confirmation_settings_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
-    return () => {
-      current = false;
-    };
-  }, []);
+  // only then. Silent on purpose: the list stays complete without the
+  // column; the detail of each registration still names its number.
+  const debtorNumberColumn =
+    useTraegerResource(
+      traegerKeys.holidayConfirmationSettings(),
+      fetchHolidayConfirmationSettings,
+      "die Einstellungen der Bestätigung",
+    ).data?.debtorNumberRequired ?? false;
 
   const filter = useMemo<HolidayRegistrationFilter>(
     () => ({
@@ -531,80 +508,72 @@ export default function TraegerHolidayRegistrationsPage() {
     [status, school, weekId, timeModel, wish],
   );
 
-  // Reads the list for generation `current` and sets it; rejects on a
-  // failure. An answer for an older generation is dropped.
-  const readRegistrations = useCallback(
-    async (current: number) => {
-      const discardRefusal = (error: unknown): never => {
-        if (
-          current === generation.current &&
-          error instanceof ApiError &&
-          (error.status === 401 || error.status === 403)
-        ) {
-          setList(null);
-          setGroups([]);
-          setSelected(new Set());
-        }
-        throw error;
-      };
-      const [loaded, loadedGroups] = await Promise.all([
-        fetchHolidayRegistrations(periodId, filter).catch(discardRefusal),
-        fetchHolidaySiblingGroups(periodId).catch(discardRefusal),
-      ]);
-      if (current !== generation.current) return;
-      setList(loaded);
-      setGroups(loadedGroups);
-      // Only registrations the list shows stay selected: none is merged
-      // unseen.
+  // The rows of the former filter stay, locked, until the new ones are
+  // there; each answer names the filter it answers.
+  const listKey = periodId
+    ? traegerKeys.holidayRegistrations(periodId, filter)
+    : null;
+  const readList = useCallback(
+    async () => ({
+      key: listKey,
+      list: await fetchHolidayRegistrations(periodId, filter),
+    }),
+    [listKey, periodId, filter],
+  );
+  const listReader = useTraegerResource(
+    listKey,
+    readList,
+    "die Liste der Anmeldungen",
+    { keepPreviousData: true },
+  );
+  const groupsReader = useTraegerResource(
+    periodId ? traegerKeys.holidaySiblingGroups(periodId) : null,
+    () => fetchHolidaySiblingGroups(periodId),
+    "die Liste der Anmeldungen",
+  );
+  const list = listReader.data?.list ?? null;
+  // Only registrations the list shows stay selected: none is merged unseen.
+  const [prunedFor, setPrunedFor] = useState(list);
+  if (prunedFor !== list) {
+    setPrunedFor(list);
+    if (list) {
       const shown = new Set(
-        loaded.registrations.map((registration) => registration.id),
+        list.registrations.map((registration) => registration.id),
       );
       setSelected((selection) => {
         const kept = [...selection].filter((id) => shown.has(id));
         return kept.length === selection.size ? selection : new Set(kept);
       });
-    },
-    [periodId, filter],
-  );
-
-  const load = useCallback(async () => {
-    const current = ++generation.current;
-    setLoading(true);
-    try {
-      await readRegistrations(current);
-      if (current !== generation.current) return;
-      clearLoadError();
-    } catch (err) {
-      if (current !== generation.current) return;
-      logger.error("traeger_holiday_registrations_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Liste der Anmeldungen",
-        retry: () => void load(),
-      });
-    } finally {
-      if (current === generation.current) setLoading(false);
     }
-  }, [readRegistrations, clearLoadError, showLoadError]);
+  }
+  const groups: readonly HolidaySiblingGroup[] = groupsReader.data ?? [];
+  // After a failed reload of a merge the rows shown stay usable (#6652).
+  const [staleShown, setStaleShown] = useState<string | null>(null);
+  const loading =
+    listKey !== null &&
+    !listReader.error &&
+    ((listReader.data?.key !== listKey && staleShown !== listKey) ||
+      groupsReader.loading);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
+  const { mutate: mutateList } = listReader;
+  const { mutate: mutateGroups } = groupsReader;
   // Reload after a merge: a failure there is a load error above the
-  // confirmed rows, not a failed merge (#6652). The rows stay; a reload that
-  // a newer filter overtook fails silently, the newer load answers for it.
+  // confirmed rows, not a failed merge (#6652). The rows stay.
   const afterMerge = useRefreshAfterWrite(
     "die Anzeige der Ferienanmeldungen",
     async () => {
-      const current = ++generation.current;
       try {
-        await readRegistrations(current);
+        // Started as mutations, so a list read before them no longer
+        // answers (SWR drops it).
+        await Promise.all([
+          mutateList(readList(), { revalidate: false }),
+          mutateGroups(fetchHolidaySiblingGroups(periodId), {
+            revalidate: false,
+          }),
+        ]);
       } catch (err) {
-        if (current === generation.current) throw err;
-      } finally {
-        if (current === generation.current) setLoading(false);
+        setStaleShown(listKey);
+        throw err;
       }
     },
   );
@@ -731,7 +700,8 @@ export default function TraegerHolidayRegistrationsPage() {
     setBulkPlan(null);
     if (!changed) return;
     setSelected(new Set());
-    void load();
+    listReader.reload();
+    groupsReader.reload();
   };
   const siblings: SiblingView = {
     groupOf: siblingGroupOf(groups),
@@ -765,7 +735,8 @@ export default function TraegerHolidayRegistrationsPage() {
   );
   const duplicates = duplicateCount(list);
   const loadError =
-    listLoad.error ??
+    listReader.error ??
+    groupsReader.error ??
     (!list ? afterMerge.error : null) ??
     metadataLoadError(
       periodError ?? schoolsError,

@@ -12,6 +12,7 @@ import type React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import GuardiansPanel from "./guardians-panel";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { catalogText } from "~/test/error-catalog-text";
@@ -24,9 +25,19 @@ import { reloadDocument } from "~/lib/reload-document";
 
 // The shared error path reports row actions through the toast provider
 // (#2518).
-function render(ui: React.ReactElement) {
-  return renderPlain(ui, { wrapper: ToastProvider });
+function Providers({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <ParentResourceTestProvider>
+      <ToastProvider>{children}</ToastProvider>
+    </ParentResourceTestProvider>
+  );
 }
+
+function render(ui: React.ReactElement) {
+  return renderPlain(ui, { wrapper: Providers });
+}
+
+vi.unmock("swr");
 
 const mocks = vi.hoisted(() => ({
   listChildGuardians: vi.fn(),

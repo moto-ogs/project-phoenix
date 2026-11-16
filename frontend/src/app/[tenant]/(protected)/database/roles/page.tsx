@@ -29,20 +29,19 @@ import { hasPermission, isAdmin } from "~/lib/auth-utils";
 import { RolesMasterDetail } from "@/components/roles/roles-master-detail";
 import { DatabaseFormModal } from "~/components/database/database-form-modal";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { useDeleteConfirmation } from "~/hooks/useDeleteConfirmation";
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { ApiError } from "~/lib/api-error";
-import { createLogger } from "~/lib/logger";
+import { useSWRAuth } from "~/lib/swr";
+import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { rolesConcept } from "~/lib/concepts/roles";
 
-const logger = createLogger({ component: "DatabaseRolesPage" });
+const NO_ROLES: Role[] = [];
 
 export default function RolesPage() {
   return (
@@ -61,18 +60,7 @@ function RolesPageContent() {
   const selectedId = searchParams.get("role");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [accessRefused, setAccessRefused] = useState(false);
-  const latestRoleRequest = useRef(0);
-  const removedRoleIds = useRef(new Set<string>());
-  const clearSelectionRef = useRef<() => void>(() => undefined);
-  // Ladefehler im Gerüst, Schreibfehler im jeweiligen Dialog (#2517).
-  const rolesLoad = useApiLoadError();
-  const { show: showRolesLoadError, clear: clearRolesLoadError } = rolesLoad;
-  const detailLoad = useApiLoadError();
-  const { show: showDetailLoadError, clear: clearDetailLoadError } = detailLoad;
-  const [detailReload, setDetailReload] = useState(0);
+  // Schreibfehler im jeweiligen Dialog (#2517).
   const createErrors = useApiFormError();
   const deleteErrors = useApiFormError();
   const latestDeleteRef = useRef<() => void>(() => undefined);
@@ -83,10 +71,6 @@ function RolesPageContent() {
     if (showCreateModal) clearCreateErrors();
   }, [showCreateModal, clearCreateErrors]);
   const [deletePending, setDeletePending] = useState(false);
-  const [selectedRoleDetail, setSelectedRoleDetail] = useState<Role | null>(
-    null,
-  );
-  const [detailLoading, setDetailLoading] = useState(false);
 
   const {
     showConfirmModal: showDeleteConfirmModal,
@@ -109,68 +93,42 @@ function RolesPageContent() {
 
   const service = useMemo(() => createCrudService(rolesConfig), []);
 
-  // Rejects on failure: after a write the caller shows it as the reload of a
-  // saved change and keeps the confirmed list (#6652).
   const readRoles = useCallback(async () => {
-    const request = ++latestRoleRequest.current;
-    try {
-      const data = await service.getList({ page: 1, pageSize: 500 });
-      if (request !== latestRoleRequest.current) return;
-      const arr = Array.isArray(data.data) ? data.data : [];
-      // Eltern vergibt die Einladung zur Eltern-App, nicht diese Seite (#4574).
-      setRoles(
-        arr.filter(
-          (role) =>
-            !isHiddenSystemRole(role) && !removedRoleIds.current.has(role.id),
-        ),
-      );
-      setAccessRefused(false);
-      setLoading(false);
-      clearRolesLoadError();
-    } catch (error) {
-      if (request !== latestRoleRequest.current) return;
-      if (
-        error instanceof ApiError &&
-        (error.status === 401 || error.status === 403)
-      ) {
-        setAccessRefused(true);
-        setRoles([]);
-        setSelectedRoleDetail(null);
-        setShowCreateModal(false);
-        clearSelectionRef.current();
-        setLoading(false);
-      }
-      throw error;
-    }
-  }, [service, clearRolesLoadError]);
-
-  const fetchRoles = useCallback(async () => {
-    const request = latestRoleRequest.current + 1;
-    try {
-      setLoading(true);
-      await readRoles();
-    } catch (err) {
-      if (request !== latestRoleRequest.current) return;
-      logger.error("failed to fetch roles", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      setRoles([]);
-      // Bis der Katalogtext da ist, bleibt das Skelett stehen.
-      await showRolesLoadError(err, {
-        object: "die Liste der Rollen",
-        retry: () => void fetchRoles(),
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [readRoles, showRolesLoadError]);
-
-  useEffect(() => {
-    void fetchRoles();
-  }, [fetchRoles]);
+    const data = await service.getList({ page: 1, pageSize: 500 });
+    return Array.isArray(data.data) ? data.data : [];
+  }, [service]);
+  const {
+    data: allRoles,
+    error: rolesError,
+    mutate: mutateRoles,
+  } = useSWRAuth(tenantAdminKeys.roles(), readRoles);
+  const accessRefused =
+    rolesError instanceof ApiError &&
+    (rolesError.status === 401 || rolesError.status === 403);
+  // Eltern vergibt die Einladung zur Eltern-App, nicht diese Seite (#4574).
+  const roles = useMemo(
+    () =>
+      accessRefused
+        ? NO_ROLES
+        : (allRoles ?? NO_ROLES).filter((role) => !isHiddenSystemRole(role)),
+    [accessRefused, allRoles],
+  );
+  // Ladefehler im Gerüst; bis der Katalogtext da ist, bleibt das Skelett
+  // stehen.
+  const rolesLoad = useSwrResourceLoadError(
+    [{ data: allRoles, error: rolesError }],
+    "die Liste der Rollen",
+    () => mutateRoles(),
+  );
+  const loading =
+    (!allRoles && !rolesError) ||
+    (rolesLoad.failure !== undefined && rolesLoad.error === null);
+  // A write's reload stands above the list as a load error (#6652).
   const rolesAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Rollen",
-    readRoles,
+    async () => {
+      await mutateRoles(readRoles(), { revalidate: false });
+    },
   );
   const refreshRoles = rolesAfterWrite.refresh;
 
@@ -230,10 +188,23 @@ function RolesPageContent() {
   );
   const selectedRoleId = selectedRoleSummary?.id;
 
-  const selectedRole =
-    selectedRoleDetail?.id === selectedRoleId
-      ? selectedRoleDetail
-      : selectedRoleSummary;
+  const {
+    data: selectedRoleDetail,
+    error: detailError,
+    mutate: reloadDetail,
+  } = useSWRAuth(
+    selectedRoleId ? tenantAdminKeys.role(selectedRoleId) : null,
+    () => service.getOne(selectedRoleId!),
+    { keepPreviousData: false },
+  );
+  const detailLoad = useSwrResourceLoadError(
+    [{ data: selectedRoleDetail, error: detailError }],
+    "die Rolle",
+    () => reloadDetail(),
+  );
+  const detailLoading =
+    selectedRoleId !== undefined && !selectedRoleDetail && !detailError;
+  const selectedRole = selectedRoleDetail ?? selectedRoleSummary;
 
   const handleSelectRole = useCallback(
     (id: string | null) => {
@@ -242,60 +213,26 @@ function RolesPageContent() {
     [updateUrlParams],
   );
 
+  // A refused list ends the roles on screen, their details and open dialogs.
+  const discardRefused = useDiscardRefusedEntity();
   useLayoutEffect(() => {
-    clearSelectionRef.current = () => {
-      handleDeleteCancel();
-      handleSelectRole(null);
-    };
-  });
-
-  useEffect(() => {
-    if (!selectedRoleId) {
-      setSelectedRoleDetail(null);
-      setDetailLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setDetailLoading(true);
-    clearDetailLoadError();
-
-    void service
-      .getOne(selectedRoleId)
-      .then((fresh) => {
-        if (!cancelled) {
-          setSelectedRoleDetail(fresh);
-        }
-      })
-      .catch((fetchError: unknown) => {
-        logger.error("failed to fetch role detail", {
-          role_id: selectedRoleId,
-          error:
-            fetchError instanceof Error
-              ? fetchError.message
-              : String(fetchError),
-        });
-        if (cancelled) return;
-        void showDetailLoadError(fetchError, {
-          object: "die Rolle",
-          retry: () => setDetailReload((value) => value + 1),
-        });
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setDetailLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    if (!accessRefused) return;
+    discardRefused(rolesError, {
+      codes: [rolesError.code ?? "general.permission"],
+      matches: (key) =>
+        key === tenantAdminKeys.roles() ||
+        key.startsWith(tenantAdminKeys.roleFamily),
+    });
+    setShowCreateModal(false);
+    handleDeleteCancel();
+    if (selectedId) handleSelectRole(null);
   }, [
-    selectedRoleId,
-    service,
-    detailReload,
-    clearDetailLoadError,
-    showDetailLoadError,
+    accessRefused,
+    selectedId,
+    rolesError,
+    discardRefused,
+    handleDeleteCancel,
+    handleSelectRole,
   ]);
 
   // Nach dem Speichern der Berechtigungen im Reiter (#3116): die Zahl in der
@@ -303,9 +240,9 @@ function RolesPageContent() {
   // selbst an; das Speichern ist da bereits gelungen.
   const handlePermissionsSaved = useCallback(async () => {
     if (!selectedRole) return;
-    setDetailReload((value) => value + 1);
+    void reloadDetail();
     await refreshRoles();
-  }, [refreshRoles, selectedRole]);
+  }, [refreshRoles, reloadDetail, selectedRole]);
 
   const handleCreateRole = useCallback(
     async (data: Partial<Role>) => {
@@ -330,10 +267,10 @@ function RolesPageContent() {
         `Die Rolle „${getRoleDisplayName(data.name ?? selectedRole.name)}“ ist gespeichert.`,
       );
       // Liste und Detail neu laden.
-      setDetailReload((value) => value + 1);
+      void reloadDetail();
       await refreshRoles();
     },
-    [selectedRole, service, refreshRoles, toastSuccess],
+    [selectedRole, service, refreshRoles, reloadDetail, toastSuccess],
   );
 
   const handleDeleteRole = useCallback(async () => {
@@ -354,20 +291,21 @@ function RolesPageContent() {
       setDeletePending(false);
     }
     if (!deleted) return;
-    removedRoleIds.current.add(selectedRole.id);
-    setRoles((current) =>
-      current.filter((role) => role.id !== selectedRole.id),
+    const removedId = selectedRole.id;
+    await mutateRoles(
+      (current) => current?.filter((role) => role.id !== removedId),
+      { revalidate: false },
     );
     toastSuccess(
       `Die Rolle „${getRoleDisplayName(selectedRole.name)}“ ist gelöscht.`,
     );
     handleDeleteCancel();
-    setSelectedRoleDetail(null);
     handleSelectRole(null);
     await refreshRoles();
   }, [
     selectedRole,
     service,
+    mutateRoles,
     toastSuccess,
     handleDeleteCancel,
     handleSelectRole,

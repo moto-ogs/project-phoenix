@@ -6,7 +6,7 @@
 // Lesebestätigung, dasselbe Einverständnis mit Unterschrift. Die Liste zeigt
 // nur die eigenen Briefe; die OGS liest sie in ihrer Übersicht mit.
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -156,7 +156,8 @@ export default function SchoolParentLettersPage() {
   const submitting = save.pending;
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
-  const latestSubmitRef = useRef<() => void>(() => undefined);
+  // A retry submits the form again, so it sends the current draft.
+  const letterFormRef = useRef<HTMLFormElement>(null);
 
   // The preview of a letter (#4813) shows a child of the chosen class.
   const previewClass = draft.kind === "letter" ? draft.schoolClass : "";
@@ -225,15 +226,11 @@ export default function SchoolParentLettersPage() {
         if (!op.isCurrent()) return;
         await formErrors.show(err, {
           object: "das Senden des Elternbriefs",
-          retry: () => latestSubmitRef.current(),
+          retry: () => letterFormRef.current?.requestSubmit(),
         });
       }
     });
   };
-  useLayoutEffect(() => {
-    latestSubmitRef.current = () => void submit();
-  });
-
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void submit();
@@ -279,6 +276,7 @@ export default function SchoolParentLettersPage() {
               <SlideOverTitle>Neuer Elternbrief</SlideOverTitle>
             </SlideOverHeader>
             <form
+              ref={letterFormRef}
               className="flex min-h-0 flex-1 flex-col"
               onSubmit={handleSubmit}
               noValidate

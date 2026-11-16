@@ -7,7 +7,7 @@
 // davon nur den Stand, damit sie diesen Code nicht lädt.
 
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   BillingCorrectionModal,
   type BillingCorrectionTarget,
@@ -27,25 +27,24 @@ import { careLetterKey } from "~/components/traeger/care-run-invoices";
 import { CareRunLetterInvoices } from "~/components/traeger/care-run-letter-invoices";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { HolidayHeadFacts } from "~/components/traeger/holiday-period-head";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { downloadBlob } from "~/lib/file-download";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import {
+  REFRESH_WHILE_QUEUED_MS,
+  traegerBillingRunKeys,
+} from "~/lib/swr/traeger-billing-run-keys";
+import {
   type CareLetterMailing,
   type CareLetterSeries,
-  type CareLetters,
-  type CareRunDetail,
   downloadCareLetter,
   fetchCareLetters,
   fetchCareRun,
@@ -58,9 +57,6 @@ import {
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerCareRunLettersPage" });
-
-// While a mail waits, the page looks again after this many milliseconds.
-const REFRESH_WHILE_QUEUED_MS = 15_000;
 
 /** The success toast of „An alle senden“. */
 function seriesMessage(series: CareLetterSeries): string {
@@ -88,15 +84,18 @@ export default function TraegerCareRunLettersPage() {
   const params = useParams<{ id: string }>();
   const runId = params?.id ?? "";
   const runPath = traegerPath(`/traeger/abrechnung/monatsbeitraege/${runId}`);
-  const [run, setRun] = useState<CareRunDetail | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
+  const {
+    data: run,
+    loading,
+    error: loadError,
+  } = useTraegerResource(
+    runId ? traegerBillingRunKeys.careRun(runId) : null,
+    () => fetchCareRun(runId),
+    "der Monatslauf",
+  );
   const actionErrors = useApiErrorDisplay();
   const { success } = useToast();
   const router = useRouter();
-  const [letters, setLetters] = useState<CareLetters | null>(null);
-  const lettersLoad = useApiLoadError();
-  const { show: showLettersError, clear: clearLettersError } = lettersLoad;
   const [sendingAll, setSendingAll] = useState(false);
   const [sendingKey, setSendingKey] = useState<string | null>(null);
   const [printing, setPrinting] = useState<"all" | "without_email" | null>(
@@ -110,79 +109,35 @@ export default function TraegerCareRunLettersPage() {
   );
   const [reissuing, setReissuing] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      setRun(await fetchCareRun(runId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_care_run_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "der Monatslauf",
-        retry: () => void load(),
-      });
-    }
-  }, [runId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   const released = run?.status === "released";
-  const lettersRequest = useRef(0);
-  const fetchLetters = useCallback(async () => {
-    const request = ++lettersRequest.current;
-    try {
-      const result = await fetchCareLetters(runId);
-      if (request !== lettersRequest.current) return;
-      setLetters(result);
-      clearLettersError();
-      return result;
-    } catch (error) {
-      if (request !== lettersRequest.current) return;
-      if (
-        error instanceof ApiError &&
-        (error.status === 401 || error.status === 403)
-      ) {
-        setLetters(null);
-        setShownLetter(null);
-        setCancelling(null);
-      }
-      throw error;
-    }
-  }, [runId, clearLettersError]);
-  const loadLetters = useCallback(async () => {
-    try {
-      await fetchLetters();
-    } catch (err) {
-      logger.error("traeger_care_letters_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLettersError(err, {
-        object: "die Liste der Schreiben",
-        retry: () => void loadLetters(),
-      });
-    }
-  }, [fetchLetters, showLettersError]);
-
-  useEffect(() => {
-    if (released) void loadLetters();
-  }, [released, loadLetters]);
+  // A mail on its way: look again until it is sent or failed.
+  const {
+    data: letters,
+    error: lettersError,
+    mutate: mutateLetters,
+    reload: loadLetters,
+  } = useTraegerResource(
+    released ? traegerBillingRunKeys.careLetters(runId) : null,
+    () => fetchCareLetters(runId),
+    "die Liste der Schreiben",
+    {
+      refreshInterval: (latest) =>
+        (latest?.summary.queued ?? 0) > 0 ? REFRESH_WHILE_QUEUED_MS : 0,
+    },
+  );
+  // Letter and cancellation belong to the list: without it (refused), both
+  // close.
+  const openLetter = letters ? shownLetter : null;
+  const openCancel = letters ? cancelling : null;
+  // A fresh list that rejects on failure, for the steps that need it.
+  const fetchLetters = () =>
+    mutateLetters(fetchCareLetters(runId), { revalidate: false });
   // Nach dem Drucken laden die Schreiben nach; ein Fehler dabei ist ein
   // Ladefehler, kein Fehler des Druckens (#6652).
   const printAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Schreiben",
     fetchLetters,
   );
-
-  // A mail on its way: look again until it is sent or failed.
-  const waiting = (letters?.summary.queued ?? 0) > 0;
-  useEffect(() => {
-    if (!waiting) return;
-    const timer = setTimeout(() => void loadLetters(), REFRESH_WHILE_QUEUED_MS);
-    return () => clearTimeout(timer);
-  }, [waiting, letters, loadLetters]);
 
   const sendAll = async () => {
     setSendingAll(true);
@@ -195,7 +150,7 @@ export default function TraegerCareRunLettersPage() {
       void actionErrors.show(err, { object: "das Senden der Schreiben" });
     } finally {
       setSendingAll(false);
-      void loadLetters();
+      loadLetters();
     }
   };
 
@@ -213,7 +168,7 @@ export default function TraegerCareRunLettersPage() {
       void actionErrors.show(err, { object: "das Schreiben" });
     } finally {
       setSendingKey(null);
-      void loadLetters();
+      loadLetters();
     }
   };
 
@@ -330,23 +285,21 @@ export default function TraegerCareRunLettersPage() {
           </HolidayHeadFacts>
         ) : null
       }
-      statsLoading={!run && !pageLoad.error}
-      error={pageLoad.error}
-      loading={!pageLoad.error && !run}
+      statsLoading={loading}
+      error={loadError}
+      loading={loading}
       overlays={
         run && released ? (
           <>
             <CareLetterPanel
-              letter={shownLetter}
+              letter={openLetter}
               title={
-                shownLetter
-                  ? `${shownLetter.kind === "cancellation" ? "Storno" : "Rechnung"} ${shownLetter.number}`
+                openLetter
+                  ? `${openLetter.kind === "cancellation" ? "Storno" : "Rechnung"} ${openLetter.number}`
                   : ""
               }
               fileKey={
-                shownLetter
-                  ? `${shownLetter.kind}-${shownLetter.invoiceId}`
-                  : ""
+                openLetter ? `${openLetter.kind}-${openLetter.invoiceId}` : ""
               }
               load={(letter) =>
                 downloadCareLetter(run.id, letter.invoiceId, letter.kind)
@@ -355,11 +308,11 @@ export default function TraegerCareRunLettersPage() {
             />
             <BillingCorrectionModal
               runId={run.id}
-              target={cancelling}
+              target={openCancel}
               onClose={() => setCancelling(null)}
               onCareCancelled={(next) => {
                 setCancelling(null);
-                setLetters(next);
+                void mutateLetters(next, { revalidate: false });
               }}
             />
           </>
@@ -378,10 +331,12 @@ export default function TraegerCareRunLettersPage() {
             runId={run.id}
             payments={run.invoices.map((invoice) => invoice.payment)}
             letters={letters}
-            loadError={lettersLoad.error ?? printAfterWrite.error}
+            loadError={lettersError ?? printAfterWrite.error}
             sendingAll={sendingAll}
             printing={printing}
-            onCreated={setLetters}
+            onCreated={(next) =>
+              void mutateLetters(next, { revalidate: false })
+            }
             onSendAll={sendAll}
             onPrint={(withoutEmailOnly) => void print(withoutEmailOnly)}
           />

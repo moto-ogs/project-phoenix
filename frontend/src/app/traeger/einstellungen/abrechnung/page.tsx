@@ -7,7 +7,7 @@
 // Zahlung und Rechnungen je Leistung (#4689) und die Lastschrift mit
 // Gläubiger-ID (#4695) gehören zum Recht „Abrechnung“.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { BillingTermsCard } from "~/components/traeger/billing-terms-card";
 import { ContributionRulesCard } from "~/components/traeger/contribution-rules-card";
@@ -18,12 +18,12 @@ import { SepaCreditorCard } from "~/components/traeger/sepa-creditor-card";
 import { TraegerBankAccountsCard } from "~/components/traeger/traeger-bank-accounts-card";
 import { useTraegerMasterData } from "~/components/traeger/use-traeger-master-data";
 import { useTraegerSettingsSchema } from "~/components/traeger/use-traeger-resources";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
-import { createLogger } from "~/lib/logger";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   fetchCareNumberRange,
   fetchHolidayNumberRange,
@@ -40,8 +40,6 @@ import {
   fetchCostBearers,
 } from "~/lib/traeger-contributions-api";
 import { type SepaCreditor, fetchSepaCreditor } from "~/lib/traeger-sepa-api";
-
-const logger = createLogger({ component: "TraegerAbrechnungsvorgabenPage" });
 
 const BILLING_RIGHT = "traeger_billing:manage";
 
@@ -62,74 +60,109 @@ interface BillingDefaults {
   readonly creditor: SepaCreditor;
 }
 
+const BILLING_OBJECT = "die Übersicht der Abrechnungsvorgaben";
+
+/** Only read with the right „Abrechnung“; without it nothing shows. */
 function useBillingDefaults(enabled: boolean) {
-  const [data, setData] = useState<BillingDefaults | null>(null);
-  const [failure, setFailure] = useState<unknown>();
-  const enabledRef = useRef(enabled);
-  const loadGeneration = useRef(0);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
+  const rules = useTraegerResource(
+    enabled ? traegerKeys.contributionRules() : null,
+    fetchContributionRules,
+    BILLING_OBJECT,
+  );
+  const bearers = useTraegerResource(
+    enabled ? traegerKeys.costBearers() : null,
+    fetchCostBearers,
+    BILLING_OBJECT,
+  );
+  const numberRange = useTraegerResource(
+    enabled ? traegerKeys.holidayNumberRange() : null,
+    fetchHolidayNumberRange,
+    BILLING_OBJECT,
+  );
+  const careNumberRange = useTraegerResource(
+    enabled ? traegerKeys.careNumberRange() : null,
+    fetchCareNumberRange,
+    BILLING_OBJECT,
+  );
+  const terms = useTraegerResource(
+    enabled ? traegerKeys.billingTerms() : null,
+    fetchBillingTerms,
+    BILLING_OBJECT,
+  );
+  const creditor = useTraegerResource(
+    enabled ? traegerKeys.sepaCreditor() : null,
+    fetchSepaCreditor,
+    BILLING_OBJECT,
+  );
+  const readers = [
+    rules,
+    bearers,
+    numberRange,
+    careNumberRange,
+    terms,
+    creditor,
+  ];
 
+  const mutateRules = rules.mutate;
+  const mutateBearers = bearers.mutate;
+  const mutateNumberRange = numberRange.mutate;
+  const mutateCareNumberRange = careNumberRange.mutate;
+  const mutateTerms = terms.mutate;
+  const mutateCreditor = creditor.mutate;
+  /** Reads every default again after a write; rejects with a failure. */
   const read = useCallback(async () => {
-    if (!enabledRef.current) return;
-    const generation = ++loadGeneration.current;
-    try {
-      const [rules, bearers, numberRange, careNumberRange, terms, creditor] =
-        await Promise.all([
-          fetchContributionRules(),
-          fetchCostBearers(),
-          fetchHolidayNumberRange(),
-          fetchCareNumberRange(),
-          fetchBillingTerms(),
-          fetchSepaCreditor(),
-        ]);
-      if (!enabledRef.current || generation !== loadGeneration.current) return;
-      setData({
-        rules,
-        bearers,
-        numberRange,
-        careNumberRange,
-        terms,
-        creditor,
-      });
-      setFailure(undefined);
-      clearLoadError();
-    } catch (err) {
-      if (!enabledRef.current || generation !== loadGeneration.current) return;
-      setFailure(err);
-      throw err;
-    }
-  }, [clearLoadError]);
+    if (!enabled) return;
+    // The defaults show together: none changes unless every read succeeded.
+    const [rules, bearers, numberRange, careNumberRange, terms, creditor] =
+      await Promise.all([
+        fetchContributionRules(),
+        fetchCostBearers(),
+        fetchHolidayNumberRange(),
+        fetchCareNumberRange(),
+        fetchBillingTerms(),
+        fetchSepaCreditor(),
+      ]);
+    const fresh = { revalidate: false } as const;
+    await Promise.all([
+      mutateRules(rules, fresh),
+      mutateBearers(bearers, fresh),
+      mutateNumberRange(numberRange, fresh),
+      mutateCareNumberRange(careNumberRange, fresh),
+      mutateTerms(terms, fresh),
+      mutateCreditor(creditor, fresh),
+    ]);
+  }, [
+    enabled,
+    mutateRules,
+    mutateBearers,
+    mutateNumberRange,
+    mutateCareNumberRange,
+    mutateTerms,
+    mutateCreditor,
+  ]);
 
-  const load = useCallback(async () => {
-    try {
-      await read();
-    } catch (err) {
-      logger.error("traeger_billing_defaults_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Übersicht der Abrechnungsvorgaben",
-        retry: () => void load(),
-      });
-    }
-  }, [read, showLoadError]);
-
-  useEffect(() => {
-    enabledRef.current = enabled;
-    if (enabled) {
-      void load();
-      return;
-    }
-    // A permission update can arrive after the data did. Invalidate both the
-    // cache and requests already in flight before rendering the restricted view.
-    loadGeneration.current++;
-    setData(null);
-    setFailure(undefined);
-    clearLoadError();
-  }, [enabled, load, clearLoadError]);
-
-  return { data, failure, error: pageLoad.error, load, read };
+  const data: BillingDefaults | null =
+    rules.data &&
+    bearers.data &&
+    numberRange.data &&
+    careNumberRange.data &&
+    terms.data &&
+    creditor.data
+      ? {
+          rules: rules.data,
+          bearers: bearers.data,
+          numberRange: numberRange.data,
+          careNumberRange: careNumberRange.data,
+          terms: terms.data,
+          creditor: creditor.data,
+        }
+      : null;
+  return {
+    data,
+    failure: readers.find((reader) => reader.failure)?.failure,
+    error: readers.find((reader) => reader.error)?.error ?? null,
+    read,
+  };
 }
 
 export default function TraegerAbrechnungsvorgabenPage() {

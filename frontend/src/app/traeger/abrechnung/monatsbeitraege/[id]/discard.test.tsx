@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { CareRunDetail } from "~/lib/traeger-care-billing-api";
+
+vi.unmock("swr");
 
 const { api } = vi.hoisted(() => ({
   api: {
@@ -62,9 +64,9 @@ function run(overrides: Partial<CareRunDetail> = {}): CareRunDetail {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerCareRunPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

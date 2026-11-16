@@ -6,7 +6,6 @@ import { ShellIntlProvider } from "~/components/dashboard/shell-intl-provider";
 import { Loading } from "~/components/ui/loading";
 import { TraegerShell } from "~/components/traeger/traeger-shell";
 import {
-  TraegerOwnNamePublisher,
   useTraegerOwnName,
   type TraegerMembershipKey,
 } from "~/components/traeger/traeger-own-name";
@@ -101,18 +100,16 @@ function TraegerPortal({
       organizationName={organization?.name}
       memberName={ownName.name}
     >
-      <TraegerOwnNamePublisher publish={ownName.publish}>
-        <BreadcrumbProvider>
-          <ShellIntlProvider>
-            <TraegerShell
-              testSystem={organization?.testSystem === true}
-              federalStates={organization?.federalStates}
-            >
-              {children}
-            </TraegerShell>
-          </ShellIntlProvider>
-        </BreadcrumbProvider>
-      </TraegerOwnNamePublisher>
+      <BreadcrumbProvider>
+        <ShellIntlProvider>
+          <TraegerShell
+            testSystem={organization?.testSystem === true}
+            federalStates={organization?.federalStates}
+          >
+            {children}
+          </TraegerShell>
+        </ShellIntlProvider>
+      </BreadcrumbProvider>
     </TraegerShellProvider>
   );
 }

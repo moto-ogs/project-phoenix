@@ -95,7 +95,21 @@ default unless they already opted in. Do not carry a previous child, thread or
 audience into a newly selected key.
 
 The pure `*-keys.ts` modules keep API clients out of always-mounted invalidators.
-`portal-keys.ts` contains the smaller portal resource families. There is no
+`portal-keys.ts` contains the smaller portal resource families; the Träger
+portal has one module per area (`traeger-keys`, `traeger-billing-keys`,
+`traeger-billing-run-keys`, `traeger-contract-keys`, `traeger-staff-keys`,
+`traeger-report-keys`).
+
+## No load in an effect
+
+A read that an effect starts and stores with `useState` is gone at the next
+page switch, shares nothing and repeats its own stale-answer and retry code.
+`swr/no-effect-load` fails every new one; `scripts/swr-effect-load-baseline.json`
+lists the remaining files and only shrinks. Read through `useSWRAuth` with a
+factory key instead. Träger pages and cards use `useTraegerResource`
+(`components/traeger/use-traeger-resource.ts`): Träger session gate, refusal
+rules and load error in one return shape. A read the access log records on a
+person's explicit click (`utilization-children.tsx`) stays a click handler. There is no
 runtime registry. Direct package imports outside this boundary and new free
 hook keys fail oxlint; both legacy baselines are shrink-only. A free key is
 anything at a `useSWRAuth` or `useImmutableSWR` call that is

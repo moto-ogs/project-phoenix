@@ -1,12 +1,14 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   CareAmendment,
   CareInvoice,
   CareRunDetail,
 } from "~/lib/traeger-care-billing-api";
+
+vi.unmock("swr");
 
 // The page of one invoice in the review of a monthly run (#6197): it shows
 // the invoice as the release issues it with every change, the history with
@@ -192,9 +194,9 @@ function run(change: Partial<CareRunDetail> = {}): CareRunDetail {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerCareInvoiceAmendPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

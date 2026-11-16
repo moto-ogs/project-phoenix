@@ -18,7 +18,6 @@ import { releaseFakeTimers } from "~/test/clock";
 import { useChildCare } from "./child-care";
 import { useChildMasterData } from "./child-master-data";
 import {
-  ChildRequestsProvider,
   SharedParentFeaturesProvider,
   useSharedParentFeatures,
 } from "./child-requests-context";
@@ -37,7 +36,7 @@ function wrapper({ children: content }: Readonly<{ children: ReactNode }>) {
   return (
     <ParentResourceTestProvider>
       <SharedParentFeaturesProvider linkedChildren={children}>
-        <ChildRequestsProvider>{content}</ChildRequestsProvider>
+        {content}
       </SharedParentFeaturesProvider>
     </ParentResourceTestProvider>
   );

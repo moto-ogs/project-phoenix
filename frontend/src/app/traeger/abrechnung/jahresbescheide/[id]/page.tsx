@@ -8,7 +8,7 @@
 
 import { ArchiveX, Inbox } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   NOTICE_KIND_LABELS,
   NOTICE_KIND_TONES,
@@ -27,6 +27,7 @@ import {
   TraegerListExportMenu,
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -37,13 +38,12 @@ import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import {
   type CareNotice,
   type CareNoticeRunDetail,
@@ -145,40 +145,33 @@ export default function TraegerCareNoticeRunPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const runId = params.id;
-  const [run, setRun] = useState<CareNoticeRunDetail | null>(null);
+  const {
+    data: run,
+    loading,
+    error: loadError,
+    mutate,
+    reload,
+  } = useTraegerResource(
+    traegerBillingRunKeys.noticeRun(runId),
+    () => fetchCareNoticeRun(runId),
+    "der Jahreslauf",
+  );
+  const invalidateFamily = useInvalidateFamily();
   const [confirming, setConfirming] = useState(false);
   const [releasing, setReleasing] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [discarding, setDiscarding] = useState(false);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
   const releaseErrors = useApiErrorDisplay();
   const { success } = useToast();
-
-  const load = useCallback(async () => {
-    try {
-      setRun(await fetchCareNoticeRun(runId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_care_notice_run_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "der Jahreslauf",
-        retry: () => void load(),
-      });
-    }
-  }, [runId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const release = async () => {
     if (!run) return;
     setReleasing(true);
     try {
-      setRun(await releaseCareNoticeRun(run));
+      await mutate(await releaseCareNoticeRun(run), { revalidate: false });
+      void invalidateFamily(traegerBillingRunKeys.noticeRuns());
+      // The exports list the notices of the released run.
+      void invalidateFamily(traegerBillingKeys.exportRuns());
       setConfirming(false);
       success(
         run.previewCount === 0
@@ -191,7 +184,7 @@ export default function TraegerCareNoticeRunPage() {
       });
       setConfirming(false);
       void releaseErrors.show(err, { object: "der Jahreslauf" });
-      void load();
+      reload();
     } finally {
       setReleasing(false);
     }
@@ -201,7 +194,8 @@ export default function TraegerCareNoticeRunPage() {
     if (!run) return;
     setDiscarding(true);
     try {
-      setRun(await discardCareNoticeRun(run.id));
+      await mutate(await discardCareNoticeRun(run.id), { revalidate: false });
+      void invalidateFamily(traegerBillingRunKeys.noticeRuns());
       setConfirmingDiscard(false);
       success(
         `Der Lauf ist verworfen. Für ${run.year} können Sie einen neuen Jahreslauf starten.`,
@@ -212,7 +206,7 @@ export default function TraegerCareNoticeRunPage() {
       });
       setConfirmingDiscard(false);
       void releaseErrors.show(err, { object: "der Jahreslauf" });
-      void load();
+      reload();
     } finally {
       setDiscarding(false);
     }
@@ -270,7 +264,7 @@ export default function TraegerCareNoticeRunPage() {
           </HolidayHeadFacts>
         ) : null
       }
-      statsLoading={!run && !pageLoad.error}
+      statsLoading={loading}
       actions={
         <>
           {run ? (
@@ -345,8 +339,8 @@ export default function TraegerCareNoticeRunPage() {
           ) : null}
         </>
       }
-      error={pageLoad.error}
-      loading={!pageLoad.error && !run}
+      error={loadError}
+      loading={loading}
       overlays={
         run && empty ? (
           <ConfirmationModal

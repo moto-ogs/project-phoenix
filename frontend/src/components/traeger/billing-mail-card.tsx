@@ -6,19 +6,19 @@
 // ankam, lässt sich erneut senden. Alle Schreiben lassen sich in einer Datei
 // drucken, für Familien ohne E-Mail.
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Loading } from "~/components/ui/loading";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import {
-  useApiErrorDisplay,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { downloadBlob } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
+import {
+  REFRESH_WHILE_QUEUED_MS,
+  traegerBillingRunKeys,
+} from "~/lib/swr/traeger-billing-run-keys";
 import {
   fetchLetterMailings,
   type LetterMailing,
@@ -33,11 +33,9 @@ import {
   mailBadge,
   mailStatusDetail,
 } from "./billing-mail-status";
+import { useTraegerResource } from "./use-traeger-resource";
 
 const logger = createLogger({ component: "BillingMailCard" });
-
-// While a mail waits, the card looks again after this many milliseconds.
-const REFRESH_WHILE_QUEUED_MS = 15_000;
 
 function seriesMessage(series: LetterSeries): string {
   const parts: string[] = [];
@@ -61,40 +59,27 @@ function seriesMessage(series: LetterSeries): string {
 }
 
 export function BillingMailCard({ runId }: Readonly<{ runId: string }>) {
-  const [mailings, setMailings] = useState<LetterMailing[] | null>(null);
+  // While a mail waits, the card looks again until it is sent or failed.
+  const {
+    data: mailings,
+    error: loadError,
+    reload: refresh,
+  } = useTraegerResource(
+    traegerBillingRunKeys.letterMailings(runId),
+    () => fetchLetterMailings(runId),
+    "der Versand per Mail",
+    {
+      refreshInterval: (latest) =>
+        latest?.some((mailing) => mailing.status === "queued")
+          ? REFRESH_WHILE_QUEUED_MS
+          : 0,
+    },
+  );
   const [sendingAll, setSendingAll] = useState(false);
   const [sendingOne, setSendingOne] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
   const actionErrors = useApiErrorDisplay();
   const { success } = useToast();
-
-  const refresh = useCallback(async () => {
-    try {
-      setMailings(await fetchLetterMailings(runId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_letter_mailings_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "der Versand per Mail",
-        retry: () => void refresh(),
-      });
-    }
-  }, [runId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  const waiting = mailings?.some((mailing) => mailing.status === "queued");
-  useEffect(() => {
-    if (!waiting) return;
-    const timer = setTimeout(() => void refresh(), REFRESH_WHILE_QUEUED_MS);
-    return () => clearTimeout(timer);
-  }, [waiting, mailings, refresh]);
 
   const sendAll = async () => {
     setSendingAll(true);
@@ -107,7 +92,7 @@ export function BillingMailCard({ runId }: Readonly<{ runId: string }>) {
       void actionErrors.show(err, { object: "die Mails" });
     } finally {
       setSendingAll(false);
-      void refresh();
+      refresh();
     }
   };
 
@@ -125,7 +110,7 @@ export function BillingMailCard({ runId }: Readonly<{ runId: string }>) {
       void actionErrors.show(err, { object: "die Mail" });
     } finally {
       setSendingOne(null);
-      void refresh();
+      refresh();
     }
   };
 
@@ -178,8 +163,8 @@ export function BillingMailCard({ runId }: Readonly<{ runId: string }>) {
         </div>
       }
     >
-      {load.error ? (
-        <LoadErrorAlert error={load.error} />
+      {loadError ? (
+        <LoadErrorAlert error={loadError} />
       ) : mailings ? (
         <div className="space-y-3">
           <p className="text-sm text-gray-700">

@@ -19,7 +19,10 @@ import {
 } from "~/components/ui/form-error-alert";
 import { Modal } from "~/components/ui/modal";
 import { useSharingOptions } from "~/components/parent/sharing-options-context";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   getRequestSharing,
   setRequestSharing,
@@ -113,74 +116,43 @@ function useSharingState(
   studentId: string,
   requestType: ParentRequestShareType,
   requestId: string,
-  refreshCount: number,
-  reload: () => void,
 ) {
   const t = useCareTermTranslations("parentRequestSharing");
-  const [state, setState] = useState<RequestSharingState | null>(null);
+  const resource = useSWRAuth(
+    enabled
+      ? parentKeys.requestSharing(studentId, requestType, requestId)
+      : null,
+    () => getRequestSharing(studentId, requestType, requestId),
+    { keepPreviousData: false },
+  );
+  const { data, mutate, isValidating } = resource;
+  const { error: loadError } = useSwrResourceLoadError(
+    [resource],
+    t("errorObjectRecipients"),
+    () => mutate(),
+  );
+  // The selection is a draft of the dialog, reset by every new answer.
   const [selected, setSelected] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  // The retry runs the latest reload, not the one of the failed attempt.
-  const reloadRef = useRef(reload);
-  useLayoutEffect(() => {
-    reloadRef.current = reload;
-  });
-  useEffect(() => {
-    if (!enabled) return;
-    let active = true;
-    if (refreshCount > 0) {
-      setState(null);
-      setSelected([]);
-    }
-    setLoading(true);
-    clearLoadError();
-    void (async () => {
-      try {
-        const next = await getRequestSharing(studentId, requestType, requestId);
-        if (active) applySharingState(next, setState, setSelected);
-      } catch (err) {
-        if (active) {
-          void showLoadError(err, {
-            object: t("errorObjectRecipients"),
-            retry: () => reloadRef.current(),
-          });
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [
-    clearLoadError,
-    enabled,
-    refreshCount,
-    requestId,
-    requestType,
-    showLoadError,
-    studentId,
-    t,
-  ]);
-  return { state, setState, selected, setSelected, loading, loadError };
+  const [draftSource, setDraftSource] = useState(data);
+  if (draftSource !== data) {
+    setDraftSource(data);
+    setSelected(selectedRecipients(data));
+  }
+  return {
+    state: data ?? null,
+    mutate,
+    selected,
+    setSelected,
+    loading: enabled && !data && !resource.error,
+    reloading: isValidating,
+    loadError,
+  };
 }
 
-function applySharingState(
-  next: RequestSharingState,
-  setState: (state: RequestSharingState) => void,
-  setSelected: (ids: string[]) => void,
-) {
-  setState(next);
-  setSelected(
-    next.recipients
-      .filter((recipient) => recipient.selected)
-      .map((recipient) => recipient.guardian_profile_id),
-  );
+function selectedRecipients(state: RequestSharingState | undefined): string[] {
+  return (state?.recipients ?? [])
+    .filter((recipient) => recipient.selected)
+    .map((recipient) => recipient.guardian_profile_id);
 }
 
 function useSharingSave({
@@ -299,31 +271,19 @@ function useRequestSharingControl(props: RequestSharingControlProps) {
   const { studentId, requestType, requestId, isSelf } = props;
   const t = useCareTermTranslations("parentRequestSharing");
   const [open, setOpen] = useState(false);
-  const [refreshCount, setRefreshCount] = useState(0);
-  const reload = useCallback(
-    () => setRefreshCount((current) => current + 1),
-    [],
-  );
-  const sharing = useSharingState(
-    isSelf,
-    studentId,
-    requestType,
-    requestId,
-    refreshCount,
-    reload,
-  );
+  const sharing = useSharingState(isSelf, studentId, requestType, requestId);
   const {
     error: saveError,
     show: showSaveError,
     clear: clearSaveError,
   } = useApiFormError();
-  const { setState } = sharing;
+  const { mutate } = sharing;
   const saved = useCallback(
     (next: RequestSharingState) => {
-      setState(next);
+      void mutate(next, { revalidate: false });
       setOpen(false);
     },
-    [setState],
+    [mutate],
   );
   // The retry sends the selection the dialog shows at that moment.
   const saveRef = useRef<() => Promise<void>>(async () => undefined);
@@ -354,7 +314,8 @@ function useRequestSharingControl(props: RequestSharingControlProps) {
     );
   const show = () => {
     clearSaveError();
-    reload();
+    // Familienschutz may have changed since the list loaded.
+    void mutate();
     setOpen(true);
   };
   return { open, setOpen, sharing, save, saving, saveError, toggle, show };
@@ -390,7 +351,7 @@ function SharingDialog({
       footer={footer}
     >
       <div className="space-y-4">
-        {sharing.loading ? (
+        {sharing.reloading ? (
           <p
             aria-busy="true"
             className="flex items-center gap-2 text-sm text-gray-500"

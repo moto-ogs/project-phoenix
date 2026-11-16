@@ -1,11 +1,13 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   FamilyChildren,
   FamilyChildrenSet,
 } from "~/lib/traeger-family-children-api";
 import TraegerKinderzahlPage from "./page";
+
+vi.unmock("swr");
 
 const { fetchFamilyChildren, confirmFamilyChildren } = vi.hoisted(() => ({
   fetchFamilyChildren: vi.fn(),
@@ -81,9 +83,9 @@ const data: FamilyChildrenSet = {
 function renderPage(set: FamilyChildrenSet = data) {
   fetchFamilyChildren.mockResolvedValue(set);
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerKinderzahlPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

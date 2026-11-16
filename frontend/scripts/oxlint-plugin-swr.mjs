@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { posix } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // #5002: direct SWR package references bypass the shared hooks/configuration.
 // Snapshot only today's files, including tests and type imports. Counts may
@@ -124,8 +125,19 @@ const PUBLIC_MODULES = new Set(
     "scope-boundary",
     "course-waitlist-keys",
     "portal-keys",
+    "traeger-keys",
+    "traeger-billing-keys",
+    "traeger-billing-run-keys",
+    "traeger-contract-keys",
+    "traeger-staff-keys",
+    "traeger-report-keys",
+    "operator-keys",
+    "tenant-student-keys",
+    "tenant-admin-keys",
+    "tenant-daily-keys",
     "shell-keys",
     "parent-keys",
+    "parent-inbox-keys",
     "rooms-keys",
     "groups-keys",
     "staff-keys",
@@ -345,7 +357,15 @@ const noCacheAccess = {
 const keyBaseline = JSON.parse(
   readFileSync(new URL("./swr-key-baseline.json", import.meta.url), "utf8"),
 );
-const KEYED_HOOKS = new Set(["useSWRAuth", "useImmutableSWR"]);
+const KEYED_HOOKS = new Set([
+  "useSWRAuth",
+  "useImmutableSWR",
+  "useTraegerResource",
+]);
+// Portal readers that hand their caller's key on; the caller's key is checked.
+const KEY_FORWARDERS = new Set([
+  "src/components/traeger/use-traeger-resource.ts",
+]);
 
 function rootIdentifier(node) {
   let current = node;
@@ -397,7 +417,11 @@ const noFreeKey = {
   create(context) {
     const paths = filePaths(context);
     const file = fileKey(context);
-    if (file.startsWith("src/lib/swr/") || /\.test\.[jt]sx?$/.test(file))
+    if (
+      file.startsWith("src/lib/swr/") ||
+      KEY_FORWARDERS.has(file) ||
+      /\.test\.[jt]sx?$/.test(file)
+    )
       return {};
     const expected = keyBaseline[file] ?? 0;
     const factories = new Set();
@@ -491,6 +515,180 @@ const noFreeKey = {
   },
 };
 
+// Reads belong in the shared cache (#4986, Welle 2): a load started by an
+// effect that fills component state is lost on the next page switch, has no
+// scope lock and repeats its own stale-answer and retry handling. Counted per
+// file as effects that reach asynchronous work and a state setter; the
+// baseline is shrink-only. Sessionless pages and DOM work (fonts, images,
+// clipboard) that match keep their baseline entry or an oxlint-disable line
+// with the reason.
+const effectLoadBaseline = JSON.parse(
+  readFileSync(
+    new URL("./swr-effect-load-baseline.json", import.meta.url),
+    "utf8",
+  ),
+);
+for (const file of Object.keys(effectLoadBaseline)) {
+  if (!existsSync(new URL(`../${file}`, import.meta.url))) {
+    throw new Error(
+      `Shrink scripts/swr-effect-load-baseline.json: remove deleted file ${file}.`,
+    );
+  }
+}
+const REPOSITORY_ROOT = fileURLToPath(new URL("../", import.meta.url));
+function inRepository(context) {
+  return String(context.physicalFilename ?? context.filename ?? "")
+    .replaceAll("\\", "/")
+    .startsWith(REPOSITORY_ROOT);
+}
+const EFFECT_HOOKS = new Set(["useEffect", "useLayoutEffect"]);
+const FUNCTION_TYPES = new Set([
+  "ArrowFunctionExpression",
+  "FunctionExpression",
+  "FunctionDeclaration",
+]);
+
+function calleeName(node) {
+  if (node?.type === "Identifier") return node.name;
+  if (node?.type === "MemberExpression" && !node.computed)
+    return node.property?.name;
+  return null;
+}
+
+/**
+ * Visits what runs when `node` runs. A function that is only stored or
+ * returned (a ref keeping the latest handler, a cleanup) does not run with
+ * it; one that is called or handed to a call (`.then(cb)`, an IIFE) does.
+ */
+function walkExecuted(node, visit, runs = true) {
+  if (!node || typeof node.type !== "string") return;
+  if (FUNCTION_TYPES.has(node.type) && !runs) return;
+  visit(node);
+  const isCall = node.type === "CallExpression";
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "parent") continue;
+    const handed = isCall && (key === "callee" || key === "arguments");
+    for (const child of Array.isArray(value) ? value : [value])
+      if (child && typeof child === "object")
+        walkExecuted(
+          child,
+          visit,
+          FUNCTION_TYPES.has(child.type) ? handed : true,
+        );
+  }
+}
+
+const noEffectLoad = {
+  meta: {
+    type: "problem",
+    schema: [],
+    messages: {
+      load: "Load data through useSWRAuth with a key factory of ~/lib/swr, not in an effect that fills state: the answer is not shared between pages. scripts/swr-effect-load-baseline.json is shrink-only.",
+      stale:
+        "Shrink scripts/swr-effect-load-baseline.json for {{file}}: {{actual}} effect loads remain (baseline: {{expected}}). Remove the entry when none remain.",
+    },
+  },
+  create(context) {
+    const file = fileKey(context);
+    if (
+      file.startsWith("src/lib/swr/") ||
+      /\.(test|spec|stories)\.[jt]sx?$/.test(file) ||
+      file.startsWith("src/test/")
+    )
+      return {};
+    const expected = effectLoadBaseline[file] ?? 0;
+    const setters = new Set();
+    const functions = new Map();
+    const effects = [];
+
+    function remember(name, init) {
+      let fn = init;
+      if (
+        fn?.type === "CallExpression" &&
+        calleeName(fn.callee) === "useCallback"
+      )
+        fn = fn.arguments[0];
+      if (!FUNCTION_TYPES.has(fn?.type)) return;
+      const known = functions.get(name) ?? [];
+      known.push(fn);
+      functions.set(name, known);
+    }
+
+    return {
+      VariableDeclarator(node) {
+        const { id, init } = node;
+        if (
+          id.type === "ArrayPattern" &&
+          init?.type === "CallExpression" &&
+          calleeName(init.callee) === "useState" &&
+          id.elements[1]?.type === "Identifier"
+        )
+          setters.add(id.elements[1].name);
+        if (id.type === "Identifier") remember(id.name, init);
+      },
+      FunctionDeclaration(node) {
+        if (node.id) remember(node.id.name, node);
+      },
+      CallExpression(node) {
+        if (
+          EFFECT_HOOKS.has(calleeName(node.callee)) &&
+          FUNCTION_TYPES.has(node.arguments[0]?.type)
+        )
+          effects.push(node);
+      },
+      "Program:exit"(program) {
+        // Asynchronous work and a state setter anywhere the effect reaches:
+        // its own body and the component's functions it calls or passes on.
+        function loads(effect) {
+          const seen = new Set();
+          const queue = [effect.arguments[0]];
+          let asynchronous = false;
+          let setsState = false;
+          while (queue.length > 0) {
+            const fn = queue.pop();
+            if (seen.has(fn)) continue;
+            seen.add(fn);
+            const visit = (node) => {
+              if (node.type === "AwaitExpression") asynchronous = true;
+              if (node.type !== "CallExpression") return;
+              if (
+                node.callee.type === "MemberExpression" &&
+                calleeName(node.callee) === "then"
+              )
+                asynchronous = true;
+              // Called or handed on (`.then(setRows)`, `run(load)`).
+              for (const used of [node.callee, ...node.arguments]) {
+                if (used.type !== "Identifier") continue;
+                if (setters.has(used.name)) setsState = true;
+                for (const next of functions.get(used.name) ?? [])
+                  queue.push(next);
+              }
+            };
+            // `() => () => cleanup()`: the returned function does not run.
+            walkExecuted(fn.body, visit, !FUNCTION_TYPES.has(fn.body.type));
+          }
+          return asynchronous && setsState;
+        }
+        let actual = 0;
+        for (const effect of effects) {
+          if (!loads(effect)) continue;
+          actual += 1;
+          if (actual > expected)
+            context.report({ node: effect, messageId: "load" });
+        }
+        // Only the checked-in file can make its entry stale, not a lint
+        // probe another rule's test writes under the same relative path.
+        if (actual < expected && inRepository(context))
+          context.report({
+            node: program,
+            messageId: "stale",
+            data: { file, actual, expected },
+          });
+      },
+    };
+  },
+};
+
 // #5007: test support (src/test/**, *.test.* and *.spec.* modules,
 // ~/lib/swr/testing) re-exports SWR's provider and other doubles.
 // Production code reaches it by no path; the target is resolved like every
@@ -547,6 +745,7 @@ export default {
   rules: {
     "no-direct-import": noDirectImport,
     "no-free-key": noFreeKey,
+    "no-effect-load": noEffectLoad,
     "no-cache-access": noCacheAccess,
     "no-test-support-import": noTestSupportImport,
   },

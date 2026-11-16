@@ -1,6 +1,19 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: {
+      user: { id: "account-1", scope: "platform" },
+      expires: "2099-01-01",
+    },
+    status: "authenticated",
+  }),
+}));
 
 const { service } = vi.hoisted(() => ({
   service: { getState: vi.fn(), grant: vi.fn(), withdraw: vi.fn() },
@@ -14,9 +27,11 @@ import { TraegerStaffReleaseSection } from "./traeger-staff-release-section";
 
 function renderSection() {
   return render(
-    <ToastProvider>
-      <TraegerStaffReleaseSection organizationId="7" />
-    </ToastProvider>,
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>
+        <TraegerStaffReleaseSection organizationId="7" />
+      </ToastProvider>
+    </SWRConfig>,
   );
 }
 

@@ -1,12 +1,14 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   StaffLinkPreview,
   StaffOverview,
   StaffRecordDetail,
 } from "~/lib/traeger-staff-api";
 import { DESKTOP_WIDTH, setViewportWidth } from "~/test/helpers/viewport";
+
+vi.unmock("swr");
 
 const { api, mockPush } = vi.hoisted(() => ({
   api: {
@@ -105,9 +107,9 @@ const RECORD = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerStaffRecordsPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

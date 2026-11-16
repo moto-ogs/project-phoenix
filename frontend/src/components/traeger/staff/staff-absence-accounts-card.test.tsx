@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { TraegerAbsenceAccount } from "~/lib/traeger-absence-api";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchTraegerAbsenceAccounts: vi.fn(),
@@ -50,9 +52,9 @@ const ACCOUNT: TraegerAbsenceAccount = {
 
 function renderCard() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <StaffAbsenceAccountsCard recordId="5" />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

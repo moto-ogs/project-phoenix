@@ -1,10 +1,12 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { SepaMandate } from "~/lib/traeger-sepa-api";
 import { traegerRequest } from "~/lib/traeger-api";
 import { SepaMandatesCard } from "./sepa-mandates-card";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchSepaMandates: vi.fn(),
@@ -46,9 +48,9 @@ const MANDATE: SepaMandate = {
 
 function renderCard() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <SepaMandatesCard contractId="42" holder="Eva Beispiel" />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

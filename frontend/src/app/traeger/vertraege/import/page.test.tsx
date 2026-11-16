@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type {
   ContractImportResult,
@@ -18,7 +18,13 @@ vi.mock("~/lib/traeger-care-contract-import-api", async (original) => ({
   ...(await original<object>()),
   ...api,
 }));
-vi.mock("next-auth/react", () => ({ useSession: () => ({ data: null }) }));
+vi.unmock("swr");
+vi.mock("next-auth/react", () => ({
+  SessionProvider: ({ children }: { children: ReactNode }) => children,
+  useSession: () => ({
+    data: { user: { id: "A", scope: "org", orgId: 7 } },
+  }),
+}));
 vi.mock("~/lib/auth-utils", () => ({ hasPermission: () => true }));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 vi.mock("~/lib/traeger-api", () => ({
@@ -122,9 +128,9 @@ function preview(
 async function choose(result = preview()) {
   api.previewContractImport.mockResolvedValueOnce(result);
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerContractImportPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
   fireEvent.change(screen.getByLabelText("Datei wählen"), {
     target: {

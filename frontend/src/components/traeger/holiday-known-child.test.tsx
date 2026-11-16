@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import {
   HOLIDAY_PERIOD,
   HOLIDAY_REGISTRATION,
@@ -20,6 +21,7 @@ import {
 } from "./holiday-known-child";
 import { schoolNames } from "./holiday-registration-format";
 
+vi.unmock("swr");
 const { mockFetchKnown } = vi.hoisted(() => ({ mockFetchKnown: vi.fn() }));
 vi.mock("~/lib/traeger-holiday-registrations-api", () => ({
   fetchHolidayKnownChildren: mockFetchKnown,
@@ -153,6 +155,7 @@ describe("known-child comparison inputs", () => {
       const { result, rerender } = renderHook(
         ({ children }) => useHolidayKnownChildren("5", "7", children),
         {
+          wrapper: TraegerResourceTestProvider,
           initialProps: {
             children: knownChildrenKey(HOLIDAY_REGISTRATION.children),
           },
@@ -187,7 +190,10 @@ describe("known-child comparison inputs", () => {
     mockFetchKnown.mockResolvedValueOnce(current);
     const { result, rerender } = renderHook(
       ({ registrationId }) => useHolidayKnownChildren("5", registrationId),
-      { initialProps: { registrationId: "7" } },
+      {
+        wrapper: TraegerResourceTestProvider,
+        initialProps: { registrationId: "7" },
+      },
     );
     rerender({ registrationId: "8" });
     await waitFor(() => expect(result.current).toEqual(current));

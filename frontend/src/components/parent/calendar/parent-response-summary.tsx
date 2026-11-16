@@ -1,34 +1,25 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
 import { EyeSlashIcon } from "@phosphor-icons/react/ssr";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionLabel } from "~/components/ui/section-label";
 import { Skeleton } from "~/components/ui/skeleton";
 import { StatCard } from "~/components/ui/stat-card";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
-import { createLogger } from "~/lib/logger";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   getParentAppointmentOverview,
   type CalendarEvent,
-  type CalendarResponseCounts,
 } from "~/lib/personal-calendar-api";
-
-const logger = createLogger({ component: "ParentResponseSummary" });
 
 /**
  * Wie viele Eingeladene zu- und abgesagt haben, wenn die OGS die Übersicht
  * für alle Eingeladenen freigibt. Eltern sehen nur die Zahlen, nie Namen
  * oder Antworten anderer Eltern (#6846). Bei einer Reihe zählen die
  * Antworten für den geöffneten Termin (#6987). Die Zahlen laden beim Öffnen
- * der Details und nach der eigenen Antwort neu.
+ * der Details und nach der eigenen Antwort neu (der Kalender erneuert sie).
  */
 export function ParentResponseSummary({
   event,
@@ -41,42 +32,19 @@ export function ParentResponseSummary({
       ? event.appointment_id
       : undefined;
   const occurrenceDate = event.recurring ? event.occurrence_date : undefined;
-  const ownAnswer = event.response_status;
-  const [counts, setCounts] = useState<CalendarResponseCounts | null>(null);
-  const { error, show, clear } = useApiLoadError();
-  const seqRef = useRef(0);
-
-  const load = useCallback(async () => {
-    if (!appointmentId) return;
-    const seq = ++seqRef.current;
-    clear();
-    try {
-      const overview = await getParentAppointmentOverview(
-        appointmentId,
-        occurrenceDate,
-      );
-      if (seq === seqRef.current) setCounts(overview.counts);
-    } catch (err) {
-      if (seq !== seqRef.current) return;
-      logger.warn("parent_calendar_overview_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void show(err, {
-        object: t("errorObjectOverview"),
-        retry: () => void loadRef.current(),
-      });
-    }
-  }, [appointmentId, occurrenceDate, clear, show, t]);
-  // The retry runs the latest load, not the one of the failed attempt.
-  const loadRef = useRef(load);
-  useLayoutEffect(() => {
-    loadRef.current = load;
-  });
-
-  useEffect(() => {
-    void load();
-    // The own answer changes the counts, so it reloads them.
-  }, [load, ownAnswer]);
+  const overview = useSWRAuth(
+    appointmentId
+      ? parentKeys.appointmentOverview(appointmentId, occurrenceDate)
+      : null,
+    () => getParentAppointmentOverview(appointmentId ?? "", occurrenceDate),
+    { keepPreviousData: false },
+  );
+  const counts = overview.data?.counts;
+  const { error } = useSwrResourceLoadError(
+    [overview],
+    t("errorObjectOverview"),
+    () => overview.mutate(),
+  );
 
   if (!appointmentId) return null;
 

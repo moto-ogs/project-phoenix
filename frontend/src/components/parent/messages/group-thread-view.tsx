@@ -13,6 +13,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -32,11 +33,17 @@ import {
   ParentPageHeader,
   ParentPageSkeleton,
 } from "~/components/parent/parent-page";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { useApiFormError } from "~/contexts/ToastContext";
+import {
+  PARENT_RESOURCE_OPTIONS,
+  useParentChildren,
+  useParentFeatures,
+} from "~/lib/hooks/use-parent-resources";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSWRAuth } from "~/lib/swr";
+import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import {
   type GroupThreadChild,
-  type GroupThreadView as GroupThreadData,
-  getChildFeatures,
   getGroupThread,
   postChildMessage,
 } from "~/lib/parent-api";
@@ -71,7 +78,13 @@ function childName(child: GroupThreadChild): string {
 export function ParentGroupThreadView({
   groupThreadId,
 }: Readonly<{ groupThreadId: string }>) {
-  const [thread, setThread] = useState<GroupThreadData | null>(null);
+  const threadResource = useSWRAuth(
+    parentInboxKeys.groupThread(groupThreadId),
+    () => getGroupThread(groupThreadId),
+    // Opening the thread marks it read: the sidebar badge refetches.
+    { ...PARENT_RESOURCE_OPTIONS, onSuccess: nudgeUnreadBadge },
+  );
+  const thread = threadResource.data ?? null;
   // Eine Gruppennachricht kommt von einer Schule: ihre Texte nennen die
   // Betreuung so, wie diese Schule sie nennt (#6082).
   const { termOfSchool } = useParentCareTerms();
@@ -79,18 +92,37 @@ export function ParentGroupThreadView({
   const t = useCareTermTranslations("parentGroupThreads", threadTerm);
   const tm = useCareTermTranslations("parentMessages", threadTerm);
   const locale = useLocale();
-  const [loading, setLoading] = useState(true);
-  // Children of the thread the guardian may write for (notes.write).
-  const [writable, setWritable] = useState<GroupThreadChild[] | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  // The composer follows the 1:1 chat's rule: only children whose
+  // relationship grants writing (child features notes_enabled). A child
+  // whose features do not load stays out of the picker: offering it would
+  // end in a refused answer.
+  const linked = useParentChildren();
+  const features = useParentFeatures(linked.data);
+  const featuresPending =
+    (!linked.data && !linked.error) ||
+    (linked.data !== undefined && !features.data && !features.error);
+  const writable = useMemo(
+    () =>
+      !thread || featuresPending
+        ? null
+        : thread.children.filter(
+            (child) => features.data?.[child.student_id]?.notes_enabled,
+          ),
+    [thread, featuresPending, features.data],
+  );
+  const [chosen, setSelected] = useState<string | null>(null);
+  const selected =
+    chosen && writable?.some((child) => child.student_id === chosen)
+      ? chosen
+      : (writable?.[0]?.student_id ?? null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sentFor, setSentFor] = useState<string | null>(null);
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
+  const { error: loadError } = useSwrResourceLoadError(
+    [threadResource],
+    t("errorObjectThread"),
+    () => threadResource.mutate(),
+  );
   const {
     error: sendError,
     show: showSendError,
@@ -102,66 +134,6 @@ export function ParentGroupThreadView({
     return () => {
       mountedRef.current = false;
     };
-  }, []);
-
-  const load = useCallback(async () => {
-    try {
-      const view = await getGroupThread(groupThreadId);
-      if (!mountedRef.current) return;
-      setThread(view);
-      clearLoadError();
-      nudgeUnreadBadge();
-      // The composer follows the 1:1 chat's rule: only children whose
-      // relationship grants writing (child features notes_enabled).
-      const features = await Promise.all(
-        view.children.map((child) =>
-          getChildFeatures(child.student_id).then(
-            (value) => value.notes_enabled,
-            (err: unknown) => {
-              // A child whose features do not load is left out of the
-              // picker: offering it would end in a refused answer.
-              logger.warn("group_thread_child_features_failed", {
-                error: err instanceof Error ? err.message : String(err),
-              });
-              return false;
-            },
-          ),
-        ),
-      );
-      if (!mountedRef.current) return;
-      const allowed = view.children.filter((_, index) => features[index]);
-      setWritable(allowed);
-      setSelected((current) =>
-        current && allowed.some((child) => child.student_id === current)
-          ? current
-          : (allowed[0]?.student_id ?? null),
-      );
-    } catch (err) {
-      logger.warn("group_thread_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      if (mountedRef.current) {
-        void showLoadError(err, {
-          object: t("errorObjectThread"),
-          retry: () => void loadRef.current(),
-        });
-      }
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, [groupThreadId, clearLoadError, showLoadError, t]);
-  const loadRef = useRef(load);
-  useLayoutEffect(() => {
-    loadRef.current = load;
-  });
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-  useEffect(() => {
-    const refresh = () => void loadRef.current();
-    window.addEventListener("focus", refresh);
-    return () => window.removeEventListener("focus", refresh);
   }, []);
 
   const attachmentLabels = useParentAttachmentLabels();
@@ -229,7 +201,7 @@ export function ParentGroupThreadView({
     sendRef.current = handleSend;
   });
 
-  if (loading) return <ParentPageSkeleton rows={2} />;
+  if (!thread && !threadResource.error) return <ParentPageSkeleton rows={2} />;
 
   if (!thread) {
     return (

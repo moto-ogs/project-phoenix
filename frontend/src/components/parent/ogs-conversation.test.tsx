@@ -1,13 +1,18 @@
 import {
   act,
   fireEvent,
-  render,
+  render as baseRender,
   screen,
   waitFor,
 } from "@testing-library/react";
 import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
 import { ApiError } from "~/lib/api-error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type React from "react";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+const render = ((ui: React.ReactElement) =>
+  baseRender(ui, { wrapper: ParentResourceTestProvider })) as typeof baseRender;
 import { catalogText } from "~/test/error-catalog-text";
 
 const { mockGetConversation, mockPostMessage } = vi.hoisted(() => ({
@@ -20,15 +25,12 @@ vi.mock("~/lib/parent-api", async (importOriginal) => ({
   getChildConversation: mockGetConversation,
   postChildMessage: mockPostMessage,
   getChildToday: vi.fn(),
+  listChildThreads: vi.fn(() => Promise.resolve([])),
+  listMyChildren: vi.fn(() => Promise.resolve([])),
 }));
 
-// The send overlay (#5011) is bound to the signed-in session's scope.
-vi.mock("next-auth/react", () => ({
-  useSession: () => ({
-    data: { user: { id: "1", scope: "parents" }, expires: "2099-01-01" },
-    status: "authenticated",
-  }),
-}));
+// The send overlay (#5011) and the readers are bound to the session's scope.
+vi.unmock("swr");
 
 vi.mock("~/lib/parent-url", () => ({
   parentPath: (path: string) => path,
@@ -128,7 +130,7 @@ describe("OgsConversation errors", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/not allowed/)).not.toBeInTheDocument();
-    expect(field).toHaveValue("Hallo OGS");
+    expect(await screen.findByLabelText("Nachricht")).toHaveValue("Hallo OGS");
   });
 });
 

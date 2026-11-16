@@ -1,9 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { LetterMailing } from "~/lib/traeger-billing-api";
 import { catalogText } from "~/test/error-catalog-text";
+
+vi.unmock("swr");
 
 const { api } = vi.hoisted(() => ({
   api: {
@@ -60,9 +62,9 @@ const FAMILIES: LetterMailing[] = [
 
 function renderCard() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <BillingMailCard runId="9" />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

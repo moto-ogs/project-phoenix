@@ -7,6 +7,9 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
@@ -87,9 +90,13 @@ const granted: SepaMandateView = {
 };
 
 function renderView() {
-  return render(<ParentSepaMandateView organizationId="4" contractId="75" />, {
-    wrapper: ToastProvider,
-  });
+  return render(
+    <ParentResourceTestProvider>
+      <ToastProvider>
+        <ParentSepaMandateView organizationId="4" contractId="75" />
+      </ToastProvider>
+    </ParentResourceTestProvider>,
+  );
 }
 
 async function fillAccount() {

@@ -5,20 +5,22 @@
 // einem offenen Lauf des Monats ist, lässt sich nicht wählen; die Zeile
 // nennt den Lauf. Ohne Rechnungsdatum gilt der Tag der Freigabe.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { CheckboxCard } from "~/components/ui/checkbox-card";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { EditActions } from "~/components/ui/edit-actions";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { FormFieldset } from "~/components/ui/form-fieldset";
 import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Loading } from "~/components/ui/loading";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { traegerPath } from "~/lib/traeger-url";
 import { createLogger } from "~/lib/logger";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
+import { traegerPath } from "~/lib/traeger-url";
 import type {
   CareRun,
   CareRunStartInput,
@@ -29,6 +31,7 @@ import {
 } from "~/lib/traeger-care-review-api";
 import { formatMonth } from "./care-billing-format";
 import { invoiceDateBounds } from "./care-review-format";
+import { useTraegerResource } from "./use-traeger-resource";
 
 const logger = createLogger({ component: "CareRunStartModal" });
 
@@ -62,50 +65,43 @@ export function CareRunStartModal({
   onStarted: (run: CareRun) => void;
 }>) {
   const [month, setMonth] = useState(initialMonth);
-  const [schools, setSchools] = useState<CareRunSchool[] | null>(null);
-  const [selected, setSelected] = useState<string[]>([]);
+  // The choice belongs to the list it was made in: a new list (another
+  // month, a fresh answer, the dialog opened again) chooses every free school.
+  const [choice, setChoice] = useState<{
+    readonly from: readonly CareRunSchool[];
+    readonly ids: string[];
+  } | null>(null);
   const [invoiceDate, setInvoiceDate] = useState("");
   const save = useFormModalPending(isOpen);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
-  const { clear: clearErrors, show: showFormError } = formErrors;
+  const { clear: clearErrors } = formErrors;
 
   useEffect(() => {
     if (!isOpen) return;
     setMonth(initialMonth);
     setInvoiceDate("");
+    setChoice(null);
     clearErrors();
   }, [isOpen, initialMonth, clearErrors]);
 
-  const loadSchools = useCallback(
-    async (forMonth: string, signal: { cancelled: boolean }) => {
-      setSchools(null);
-      try {
-        const list = await fetchCareRunSchools(forMonth);
-        if (signal.cancelled) return;
-        setSchools(list);
-        setSelected(freeSchools(list));
-      } catch (err) {
-        if (signal.cancelled) return;
-        logger.error("care_run_schools_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        setSchools([]);
-        void showFormError(err, { object: "die Liste der Schulen" });
-      }
-    },
-    [showFormError],
+  const { data: schools, error: schoolsError } = useTraegerResource(
+    isOpen && month ? traegerBillingRunKeys.careRunSchools(month) : null,
+    () => fetchCareRunSchools(month),
+    "die Liste der Schulen",
   );
-
-  useEffect(() => {
-    if (!isOpen || !month) return;
-    const signal = { cancelled: false };
-    void loadSchools(month, signal);
-    return () => {
-      signal.cancelled = true;
-    };
-  }, [isOpen, month, loadSchools]);
+  const selected =
+    schools && choice?.from === schools
+      ? choice.ids
+      : freeSchools(schools ?? []);
+  const setSelected = (next: string[] | ((current: string[]) => string[])) => {
+    if (!schools) return;
+    setChoice({
+      from: schools,
+      ids: typeof next === "function" ? next(selected) : next,
+    });
+  };
 
   const free = schools ? freeSchools(schools) : [];
   // The open runs that already bill this month's schools, for the way there.
@@ -251,7 +247,9 @@ export function CareRunStartModal({
             error={formErrors.fieldError("school_ids")}
             hint="Jede Schule ist in einem Monat nur in einem offenen Lauf."
           >
-            {schools === null ? (
+            {schoolsError ? (
+              <LoadErrorAlert error={schoolsError} actionLayout="responsive" />
+            ) : schools === null ? (
               <Loading />
             ) : (
               <div className="space-y-2">

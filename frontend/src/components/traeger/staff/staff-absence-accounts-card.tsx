@@ -6,15 +6,10 @@
 // eigenen Wert gilt der Standard der Art. Jedes Laden steht im
 // Zugriffsprotokoll jeder Schule der Person.
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { AllowanceCard } from "~/components/staff/allowance-card";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ButtonLink } from "~/components/ui/button";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -26,16 +21,14 @@ import { NumberStepper } from "~/components/ui/number-stepper";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import { SectionCard } from "~/components/ui/section-card";
 import { SegmentedControl } from "~/components/ui/segmented-control";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDayCount } from "~/lib/absence-helpers";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { formatDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   fetchTraegerAbsenceAccounts,
   setTraegerAbsenceAllowance,
@@ -246,39 +239,13 @@ export function StaffAbsenceAccountsCard({
   const today = useBerlinToday();
   const thisYear = Number(today.slice(0, 4));
   const [year, setYear] = useState(thisYear);
-  const [accounts, setAccounts] = useState<
-    readonly TraegerAbsenceAccount[] | null
-  >(null);
+  const { data: accounts, error } = useTraegerResource(
+    traegerStaffKeys.absenceAccounts(recordId, year),
+    () => fetchTraegerAbsenceAccounts(recordId, year),
+    "die Kontingente",
+  );
   const [editing, setEditing] = useState<string | null>(null);
-  const load = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = load;
-
-  // Wechselt das Jahr während einer Anfrage, gewinnt die jüngste Anfrage.
-  const latestRequest = useRef(0);
-  const reload = useCallback(async () => {
-    const request = ++latestRequest.current;
-    try {
-      const loaded = await fetchTraegerAbsenceAccounts(recordId, year);
-      if (request !== latestRequest.current) return;
-      setAccounts(loaded);
-      clearLoadError();
-    } catch (err) {
-      if (request !== latestRequest.current) return;
-      logger.error("traeger_absence_accounts_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Kontingente",
-        retry: () => void reload(),
-      });
-    }
-  }, [recordId, year, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    setAccounts(null);
-    setEditing(null);
-    void reload();
-  }, [reload]);
+  const invalidateFamily = useInvalidateFamily();
 
   return (
     <SectionCard
@@ -289,17 +256,20 @@ export function StaffAbsenceAccountsCard({
         <SegmentedControl
           ariaLabel="Jahr der Kontingente"
           value={String(year)}
-          onChange={(next) => setYear(Number(next))}
+          onChange={(next) => {
+            setEditing(null);
+            setYear(Number(next));
+          }}
           items={[thisYear, thisYear + 1].map((value) => ({
             value: String(value),
             label: String(value),
           }))}
         />
       }
-      loading={accounts === null && !load.error}
+      loading={accounts === null && !error}
     >
-      {load.error ? (
-        <LoadErrorAlert error={load.error} actionLayout="responsive" />
+      {error ? (
+        <LoadErrorAlert error={error} actionLayout="responsive" />
       ) : accounts && accounts.length === 0 ? (
         <EmptyState
           variant="compact"
@@ -345,7 +315,11 @@ export function StaffAbsenceAccountsCard({
                     onCancel={() => setEditing(null)}
                     onSaved={async () => {
                       setEditing(null);
-                      await reload();
+                      // Der Anspruch eines Jahres ändert den Rest im
+                      // Folgejahr.
+                      await invalidateFamily(
+                        traegerStaffKeys.absenceAccountsFamily,
+                      );
                     }}
                   />
                 ) : undefined

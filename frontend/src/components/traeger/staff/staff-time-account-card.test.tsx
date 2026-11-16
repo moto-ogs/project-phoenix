@@ -1,10 +1,12 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   TraegerTimeAccount,
   TraegerTimeAccountSchool,
 } from "~/lib/traeger-time-account-api";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchTraegerTimeAccount: vi.fn(),
@@ -66,9 +68,9 @@ function account(
 
 function renderCard() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <StaffTimeAccountCard recordId="5" />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

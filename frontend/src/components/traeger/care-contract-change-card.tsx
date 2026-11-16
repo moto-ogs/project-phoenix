@@ -7,7 +7,7 @@
 
 import { ArrowLeftRight } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
@@ -21,7 +21,6 @@ import {
 } from "~/lib/roster-impact";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import {
   contractChangeReview,
   type ContractChangeOutcome,
@@ -30,9 +29,8 @@ import {
 } from "~/lib/care-contract-changes";
 import { fetchContractChanges } from "~/lib/care-contract-changes-api";
 import { formatBerlinDate, formatDate } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
-
-const logger = createLogger({ component: "CareContractChangeCard" });
+import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
+import { useTraegerResource } from "./use-traeger-resource";
 
 // The decision form carries the date picker; it loads when the office
 // opens it, so the contract page stays as light as before.
@@ -44,10 +42,9 @@ const DecideChangeModal = dynamic(
   { ssr: false },
 );
 
-/** What the card shows, with the contract it was read for. */
-interface CardState {
+/** What a decision or a conflict left on the card, with its contract. */
+interface CardNote {
   readonly contractId: string;
-  readonly changes: ContractChanges | null;
   readonly impact: RosterImpact | null;
   readonly refreshed: boolean;
 }
@@ -60,59 +57,32 @@ export function CareContractChangeCard({
   /** The contract page reads again: the next version follows the decision. */
   onDecided: () => void;
 }>) {
-  // Everything the card shows belongs to the contract it was read for: a
-  // late answer for the previous contract never shows on the next one.
-  const [state, setState] = useState<CardState | null>(null);
+  const {
+    data: changes,
+    error,
+    mutate,
+  } = useTraegerResource(
+    traegerContractKeys.changes(contractId),
+    () => fetchContractChanges(contractId),
+    "der Änderungswunsch",
+  );
+  // A note belongs to the contract it was made for, never to the next one.
+  const [note, setNote] = useState<CardNote | null>(null);
   const [deciding, setDeciding] = useState<{
     contractId: string;
     request: ContractChangeRequest;
     approve: boolean;
   } | null>(null);
-  const latestContract = useRef(contractId);
-  const { error, show, clear } = useApiLoadError();
-  const current = state?.contractId === contractId ? state : null;
-  const changes = current?.changes ?? null;
+  const current = note?.contractId === contractId ? note : null;
   const impact = current?.impact ?? null;
   const refreshed = current?.refreshed ?? false;
 
-  useEffect(() => {
-    latestContract.current = contractId;
-  }, [contractId]);
-
-  const load = useCallback(async () => {
-    const readFor = contractId;
-    try {
-      const next = await fetchContractChanges(readFor);
-      if (latestContract.current !== readFor) return;
-      setState((previous) => ({
-        contractId: readFor,
-        changes: next,
-        impact: previous?.contractId === readFor ? previous.impact : null,
-        refreshed: previous?.contractId === readFor && previous.refreshed,
-      }));
-      clear();
-    } catch (err) {
-      // A failure for a contract the page left shows nothing.
-      if (latestContract.current !== readFor) return;
-      logger.error("traeger_care_contract_changes_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await show(err, {
-        object: "der Änderungswunsch",
-        retry: () => void load(),
-      });
-    }
-  }, [contractId, clear, show]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   const onConflict = useCallback(() => {
     setDeciding(null);
-    setState({ contractId, changes: null, impact: null, refreshed: true });
-    void load();
-  }, [contractId, load]);
+    setNote({ contractId, impact: null, refreshed: true });
+    // The stale request goes at once: no decision on it until the new one is read.
+    void mutate(undefined);
+  }, [contractId, mutate]);
   const request = changes?.pending[0] ?? null;
 
   return (
@@ -195,9 +165,9 @@ export function CareContractChangeCard({
           reasonRequired={changes?.reasonRequired ?? true}
           onConflict={onConflict}
           onDecided={(next: ContractChanges) => {
-            setState({
+            void mutate(next, { revalidate: false });
+            setNote({
               contractId,
-              changes: next,
               impact: next.rosterImpact ?? null,
               refreshed: false,
             });

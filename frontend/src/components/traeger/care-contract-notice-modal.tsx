@@ -4,7 +4,7 @@
 // Träger-Büro eine Erklärung einträgt, die per Mail oder Brief kam. Die Karte
 // „Vertrag beenden“ lädt es erst beim Öffnen.
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
@@ -21,11 +21,7 @@ import { ConfirmationModal } from "~/components/ui/modal";
 import { Radio } from "~/components/ui/radio";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { Textarea } from "~/components/ui/textarea";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import type {
   ContractNoticeOptions,
   NoticeKind,
@@ -44,9 +40,11 @@ import {
   toISODate,
 } from "~/lib/date-helpers";
 import { ApiError } from "~/lib/api-error";
+import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
 import { traegerPath } from "~/lib/traeger-url";
 import { createLogger } from "~/lib/logger";
 import { TERMINATION_KIND_LABELS } from "./care-contract-format";
+import { useTraegerResource } from "./use-traeger-resource";
 
 /** The settings area with the texts of the contract mails. */
 const CONTRACT_SETTINGS_PATH = "/traeger/einstellungen?bereich=vertraege";
@@ -94,53 +92,19 @@ export function RecordNoticeModal({
   const form = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(form);
   const { success } = useToast();
-  const [datedOptions, setDatedOptions] = useState<{
-    receivedOn: string;
-    options: ContractNoticeOptions;
-  } | null>(null);
-  const [retry, setRetry] = useState(0);
-  const {
-    error: optionsError,
-    show: showOptionsError,
-    clear: clearOptionsError,
-  } = useApiLoadError();
-  const choices =
-    datedOptions?.receivedOn === receivedOn ? datedOptions.options : null;
+  const { data: choices, error: optionsError } = useTraegerResource(
+    isOpen ? traegerContractKeys.noticeOn(contractId, receivedOn) : null,
+    () => fetchContractNoticeOptions(contractId, receivedOn),
+    "die Kündigung",
+  );
   const withdrawalOpen = choices?.withdrawalUntil != null;
-
-  useEffect(() => {
-    if (!isOpen) return;
-    let current = true;
-    setDatedOptions(null);
-    clearOptionsError();
-    void fetchContractNoticeOptions(contractId, receivedOn)
-      .then((next) => {
-        if (!current) return;
-        setDatedOptions({ receivedOn, options: next });
-        if (!next.withdrawalUntil) setKind("kuendigung");
-        if (!next.specialEndsOn) setTerminationKind("ordentlich");
-      })
-      .catch(async (err: unknown) => {
-        if (!current) return;
-        logger.error("traeger_care_contract_notice_options_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        await showOptionsError(err, {
-          object: "die Kündigung",
-          retry: () => setRetry((value) => value + 1),
-        });
-      });
-    return () => {
-      current = false;
-    };
-  }, [
-    isOpen,
-    contractId,
-    receivedOn,
-    retry,
-    clearOptionsError,
-    showOptionsError,
-  ]);
+  // A choice the dates of this receipt no longer allow falls back.
+  const [checked, setChecked] = useState<ContractNoticeOptions | null>(null);
+  if (choices && choices !== checked) {
+    setChecked(choices);
+    if (!choices.withdrawalUntil) setKind("kuendigung");
+    if (!choices.specialEndsOn) setTerminationKind("ordentlich");
+  }
 
   const extraordinary =
     kind === "kuendigung" && terminationKind === "ausserordentlich";

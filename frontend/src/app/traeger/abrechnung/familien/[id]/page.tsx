@@ -8,7 +8,6 @@
 // Storno, Gutschrift und Schreiben liegen. Nur zum Lesen.
 
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
 import { BillingAmountCards } from "~/components/traeger/billing-amount-cards";
 import {
   INVOICE_STATUS_LABELS,
@@ -25,28 +24,25 @@ import { BILLING_DOCUMENT_KIND_LABELS } from "~/components/traeger/billing-forma
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { formatDateRange } from "~/components/traeger/holiday-period-format";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
 import { EmptyState } from "~/components/ui/empty-state";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { parentsConcept } from "~/lib/concepts/parents";
 import { billingConcept } from "~/lib/concepts/billing";
 import { documentsConcept } from "~/lib/concepts/documents";
 import { formatDate } from "~/lib/date-helpers";
-import { createLogger } from "~/lib/logger";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import {
-  type BillingFamilyDetail,
   type BillingFamilyDocument,
   fetchBillingFamily,
 } from "~/lib/traeger-billing-families-api";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
-
-const logger = createLogger({ component: "TraegerBillingFamilyPage" });
 
 /** The line under a Storno or Gutschrift: its invoice and its reason. */
 function referenceText(document: BillingFamilyDocument): string {
@@ -188,28 +184,15 @@ export default function TraegerBillingFamilyPage() {
   const params = useParams<{ id: string }>();
   const familyId = params?.id ?? "";
   const router = useRouter();
-  const [family, setFamily] = useState<BillingFamilyDetail | null>(null);
-  const pageLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
-
-  const load = useCallback(async () => {
-    try {
-      setFamily(await fetchBillingFamily(familyId));
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_billing_family_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Familie",
-        retry: () => void load(),
-      });
-    }
-  }, [familyId, clearLoadError, showLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const {
+    data: family,
+    loading,
+    error,
+  } = useTraegerResource(
+    familyId ? traegerBillingKeys.family(familyId) : null,
+    () => fetchBillingFamily(familyId),
+    "die Familie",
+  );
 
   // An invoice stays valid until a Storno cancels it; a credit only lowers it.
   const validInvoices = (family?.documents ?? []).filter(
@@ -249,9 +232,9 @@ export default function TraegerBillingFamilyPage() {
           />
         ) : null
       }
-      statsLoading={!family && !pageLoad.error}
-      error={pageLoad.error}
-      loading={!pageLoad.error && !family}
+      statsLoading={loading}
+      error={error}
+      loading={loading}
     >
       {family ? (
         <>

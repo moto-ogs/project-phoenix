@@ -10,12 +10,14 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import { ErrorContactProvider } from "~/lib/error-contact";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 
+vi.unmock("swr");
 vi.mock("~/lib/traeger-list-export", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/traeger-list-export")>()),
   downloadTraegerList: vi.fn(),
@@ -35,7 +37,14 @@ vi.mock("~/lib/traeger-api", () => api);
 vi.mock("next-auth/react", () => ({
   signOut: vi.fn(),
   useSession: () => ({
-    data: { user: { email: "leitung@traeger.example" } },
+    data: {
+      user: {
+        id: "1",
+        scope: "org",
+        orgId: 7,
+        email: "leitung@traeger.example",
+      },
+    },
     status: "authenticated",
   }),
 }));
@@ -98,9 +107,11 @@ const HISTORY = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
-      <TraegerAccountsPage />
-    </ToastProvider>,
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      <ToastProvider>
+        <TraegerAccountsPage />
+      </ToastProvider>
+    </SWRConfig>,
   );
 }
 
@@ -510,11 +521,13 @@ describe("TraegerAccountsPage", () => {
   it("sends the billing role to the Leitung of the Träger-Büro", async () => {
     api.fetchTraegerBuero.mockRejectedValue(new ApiError("Forbidden", 403));
     render(
-      <ErrorContactProvider contact="traeger">
-        <ToastProvider>
-          <TraegerAccountsPage />
-        </ToastProvider>
-      </ErrorContactProvider>,
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <ErrorContactProvider contact="traeger">
+          <ToastProvider>
+            <TraegerAccountsPage />
+          </ToastProvider>
+        </ErrorContactProvider>
+      </SWRConfig>,
     );
 
     expect(

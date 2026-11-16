@@ -1,9 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { ExportRun } from "~/lib/traeger-finance-exports-api";
 import TraegerFinanceExportsPage from "./page";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchExportRuns: vi.fn(),
@@ -65,9 +67,9 @@ beforeEach(() => {
 
 it("downloads the Sollstellung of a run and reads the protocol again", async () => {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerFinanceExportsPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
   expect(
     (await screen.findAllByText("Noch nicht exportiert")).length,
@@ -104,9 +106,9 @@ it("opens older runs page by page and keeps them after a download", async () => 
       : { items: [older], total: 2, notExported: 2, nextOffset: null },
   );
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerFinanceExportsPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
   expect(
     await screen.findByText("Sie sehen 1 von 2 Läufen."),
@@ -181,9 +183,9 @@ it("offers older files of the protocol", async () => {
         },
   );
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerFinanceExportsPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
   expect(
     await screen.findByText("Sie sehen 1 von 2 Dateien."),
@@ -197,9 +199,9 @@ it("offers older files of the protocol", async () => {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerFinanceExportsPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

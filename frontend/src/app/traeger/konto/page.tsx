@@ -5,21 +5,19 @@
 // Exportprotokoll und der Verlauf jeder Rechnung statt einer E-Mail-Adresse.
 // Passwort und Code gehören zum moto-Konto und haben hier keine Karte.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { DataField, DataGrid } from "~/components/ui/detail-modal-components";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { TrustedDevicesSection } from "~/components/settings/trusted-devices-section";
 import { SectionCard } from "~/components/ui/section-card";
-import { usePublishTraegerOwnProfile } from "~/components/traeger/traeger-own-name";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TenantPage } from "~/components/ui/tenant-page";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   changeTraegerProfileName,
   fetchTraegerProfile,
@@ -116,48 +114,21 @@ function NameCard({
 }
 
 export default function TraegerAccountPage() {
-  const [profile, setProfile] = useState<TraegerProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const profileLoad = useApiLoadError();
-  const { show: showLoadError, clear: clearLoadError } = profileLoad;
-  // The header shows the same name as this page (#6870).
-  const publishToHeader = usePublishTraegerOwnProfile();
-  const showProfile = useCallback(
-    (next: TraegerProfile) => {
-      setProfile(next);
-      publishToHeader(next);
-    },
-    [publishToHeader],
+  // The header reads the same profile and shows the saved name (#6870).
+  const {
+    data: profile,
+    loading,
+    error,
+    mutate,
+  } = useTraegerResource(
+    traegerKeys.profile(),
+    fetchTraegerProfile,
+    "Ihr Konto",
   );
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      showProfile(await fetchTraegerProfile());
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_profile_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "Ihr Konto",
-        retry: () => void load(),
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [clearLoadError, showLoadError, showProfile]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const invalidateFamily = useInvalidateFamily();
 
   return (
-    <TenantPage
-      title="Konto"
-      loading={loading && !profile}
-      error={profile ? null : profileLoad.error}
-    >
+    <TenantPage title="Konto" loading={loading} error={error}>
       {profile ? (
         <>
           <SectionCard
@@ -170,7 +141,14 @@ export default function TraegerAccountPage() {
               </DataField>
             </DataGrid>
           </SectionCard>
-          <NameCard name={profile.name} onSaved={showProfile} />
+          <NameCard
+            name={profile.name}
+            onSaved={(saved) => {
+              void mutate(saved, { revalidate: false });
+              // „Mitglieder und Rollen“ lists the name too (#4693).
+              void invalidateFamily(traegerKeys.buero());
+            }}
+          />
           <TrustedDevicesSection scope="traeger" />
         </>
       ) : null}

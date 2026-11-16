@@ -15,6 +15,13 @@ import {
   updateMasterDataRequest,
 } from "~/lib/parent-api";
 import { RequestEditModal } from "./request-edit-modal";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
+
+function renderParent(ui: Parameters<typeof render>[0]) {
+  return render(ui, { wrapper: ParentResourceTestProvider });
+}
 
 vi.mock("~/lib/parent-api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/lib/parent-api")>();
@@ -64,7 +71,7 @@ describe("RequestEditModal", () => {
 
   // Eine offene Anfrage wird geändert, nicht zurückgezogen (#2267).
   it("offers editing and never a withdrawal", async () => {
-    render(
+    renderParent(
       <RequestEditModal
         studentId="1"
         request={{
@@ -90,7 +97,7 @@ describe("RequestEditModal", () => {
   it("sends the changed request with the version it was loaded at", async () => {
     const onSaved = vi.fn();
     const onClose = vi.fn();
-    render(
+    renderParent(
       <RequestEditModal
         studentId="1"
         request={{
@@ -130,7 +137,7 @@ describe("RequestEditModal", () => {
       status: "pending",
       created_at: "2026-08-20T08:00:00Z",
     });
-    render(
+    renderParent(
       <RequestEditModal
         studentId="1"
         request={{
@@ -162,7 +169,7 @@ describe("RequestEditModal", () => {
   // dann leer raus, das Backend prüft sie nicht.
   it("still saves when the history cannot be loaded", async () => {
     events.mockRejectedValue(new Error("offline"));
-    render(
+    renderParent(
       <RequestEditModal
         studentId="1"
         request={{
@@ -197,7 +204,7 @@ describe("RequestEditModal", () => {
         code: "students.change_request_stale",
       }),
     );
-    render(
+    renderParent(
       <RequestEditModal
         studentId="1"
         request={{
@@ -225,7 +232,7 @@ describe("RequestEditModal", () => {
   });
 
   it("checks an empty value before sending and marks the field", async () => {
-    render(
+    renderParent(
       <RequestEditModal
         studentId="1"
         request={{

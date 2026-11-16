@@ -47,7 +47,61 @@ export const parentKeys = {
     `parent-features-${relationships(children)}-${day}`,
   today: (children: readonly Child[], day: string) =>
     `parent-today-${relationships(children)}-${day}`,
-  calendar: (day: string) => `parent-calendar-${day}-90`,
+  /** Appointments from `day` over `days` days; the start page reads 90. */
+  calendar: (day: string, days = 90) => `parent-calendar-${day}-${days}`,
+  calendarFamily: "parent-calendar-",
+  /** Response counts of one invitation, per date of a series (#6846, #6987). */
+  appointmentOverviewFamily: "parent-appointment-overview-",
+  appointmentOverview: (appointmentId: string, occurrenceDate?: string) =>
+    `parent-appointment-overview-${encodeURIComponent(appointmentId)}-${occurrenceDate ?? ""}`,
+  /**
+   * The child's care state that `parent-conversation-refresh` (a staff
+   * decision, a parent write) refreshes. Absences, requests and plan are
+   * resolved against the Berlin `day`, so a tab open across midnight reads
+   * them again (#1725).
+   */
+  sickDays: (studentId: string, day: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-status-sick-days-${day}`,
+  excusedRequests: (studentId: string, day: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-status-excused-requests-${day}`,
+  careExceptions: (studentId: string, day: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-status-care-exceptions-${day}`,
+  pickupChangeRequests: (studentId: string, day: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-status-pickup-change-requests-${day}`,
+  careSchedule: (studentId: string, day: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-status-care-schedule-${day}`,
+  careOfferings: (studentId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-status-care-offerings`,
+  masterData: (studentId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-master-data`,
+  /** The offerings a change request can choose, as of `date` (today when absent). */
+  offeringCatalog: (studentId: string, date?: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-offering-catalog-${date ?? ""}`,
+  guardians: (studentId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-guardians`,
+  relatedAccounts: (studentId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-related-accounts`,
+  pickupPermissionRequests: (studentId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-pickup-permission-requests`,
+  /** The declaration text for one set of signature inputs (#4780). */
+  pickupSignatureStatement: (studentId: string, input: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-pickup-signature-statement-${encodeURIComponent(input)}`,
+  consents: (studentId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-consents`,
+  courses: (studentId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-courses`,
+  conferences: (studentId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-conferences`,
+  /** The guardians a new request of this child may be shared with. */
+  sharingOptions: (studentId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-sharing-options`,
+  requestSharing: (studentId: string, requestType: string, requestId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-request-sharing-${encodeURIComponent(requestType)}-${encodeURIComponent(requestId)}`,
+  /** The change history of one request; its last entry is the version. */
+  requestEventsFamily: (studentId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-request-events-`,
+  requestEvents: (studentId: string, requestType: string, requestId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-request-events-${encodeURIComponent(requestType)}-${encodeURIComponent(requestId)}`,
   messages: () => "parent-messages",
   groupThreads: () => "parent-group-threads",
   announcements: () => "parent-announcements",

@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setTestClock } from "~/test/clock";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
@@ -27,6 +27,7 @@ const { api, mockPush } = vi.hoisted(() => ({
   mockPush: vi.fn(),
 }));
 
+vi.unmock("swr");
 vi.mock("~/lib/traeger-care-contracts-api", () => api);
 // The SEPA mandate card of the family (#4695) answers 403 without the right
 // „Abrechnung“; these tests cover the contract and keep it empty.
@@ -139,9 +140,9 @@ const DRAFT: CareContractDetail = {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerVertragPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -218,13 +219,13 @@ describe("TraegerVertragPage", () => {
   it("does not allow paper signing dates before 2000", async () => {
     setTestClock("2000-01-02T12:00:00+01:00");
     render(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <PaperSignatureModal
           contract={DRAFT}
           onClose={vi.fn()}
           onSaved={vi.fn()}
         />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
     fireEvent.click(screen.getByLabelText("Unterschrieben am"));
     const previousMonth = await screen.findByRole("button", {
@@ -248,13 +249,13 @@ describe("TraegerVertragPage", () => {
       }),
     );
     render(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <PaperSignatureModal
           contract={DRAFT}
           onClose={vi.fn()}
           onSaved={vi.fn()}
         />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
     fireEvent.change(screen.getByLabelText("PDF wählen"), {
       target: {

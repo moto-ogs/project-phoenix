@@ -19,6 +19,13 @@ import {
   RequestSharingControl,
   RequestSharingSelector,
 } from "./request-sharing-control";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+vi.unmock("swr");
+
+function renderParent(ui: Parameters<typeof render>[0]) {
+  return render(ui, { wrapper: ParentResourceTestProvider });
+}
 
 vi.mock("~/lib/parent-api", () => ({
   getRequestSharing: vi.fn(),
@@ -31,7 +38,7 @@ const setSharing = vi.mocked(setRequestSharing);
 const getOptions = vi.mocked(getRequestSharingOptions);
 
 function renderControl(isSelf = true) {
-  return render(
+  return renderParent(
     <ModalProvider>
       <RequestSharingControl
         studentId="42"
@@ -150,7 +157,7 @@ describe("RequestSharingControl", () => {
       new ApiError("diag", 503, { code: "general.unavailable" }),
     );
     const onChange = vi.fn();
-    render(
+    renderParent(
       <RequestSharingSelector
         studentId="42"
         selected={["7"]}
@@ -171,7 +178,7 @@ describe("RequestSharingControl", () => {
     getOptions.mockRejectedValueOnce(
       new ApiError("diag", 503, { code: "general.unavailable" }),
     );
-    render(
+    renderParent(
       <RequestSharingSelector
         studentId="42"
         selected={[]}
@@ -223,7 +230,7 @@ describe("RequestSharingControl", () => {
   });
 
   it("shows named recipients before a request is submitted", async () => {
-    render(
+    renderParent(
       <RequestSharingSelector
         studentId="42"
         selected={[]}
@@ -246,7 +253,7 @@ describe("RequestSharingControl", () => {
   // (scripts/product-screenshots/capture.ts).
   it("marks the recipient loading line as busy", () => {
     getOptions.mockReturnValue(new Promise(() => undefined));
-    render(
+    renderParent(
       <RequestSharingSelector
         studentId="42"
         selected={[]}

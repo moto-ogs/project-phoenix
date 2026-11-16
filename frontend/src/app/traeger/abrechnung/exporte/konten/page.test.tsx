@@ -6,10 +6,12 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { BookingAccounts } from "~/lib/traeger-finance-exports-api";
 import TraegerBookingAccountsPage from "./page";
+
+vi.unmock("swr");
 
 const api = vi.hoisted(() => ({
   fetchBookingAccounts: vi.fn(),
@@ -53,9 +55,9 @@ const PAGE: BookingAccounts = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerBookingAccountsPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

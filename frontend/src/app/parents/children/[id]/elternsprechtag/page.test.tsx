@@ -15,8 +15,10 @@ import {
 import type { Child, ChildFeatures } from "~/lib/parent-api";
 import type { ParentConferenceOffer } from "~/lib/parent-conferences";
 import { catalogText } from "~/test/error-catalog-text";
+import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import ParentConferencePage from "./page";
 
+vi.unmock("swr");
 vi.mock("~/lib/parent-api", () => ({
   listMyChildren: vi.fn(),
   getChildFeatures: vi.fn(),
@@ -42,13 +44,15 @@ const offer: ParentConferenceOffer = {
 async function renderPage() {
   await act(async () => {
     render(
-      <NextIntlClientProvider locale="de" messages={deMessages}>
-        <ToastProvider>
-          <Suspense fallback={null}>
-            <ParentConferencePage params={Promise.resolve({ id: "42" })} />
-          </Suspense>
-        </ToastProvider>
-      </NextIntlClientProvider>,
+      <ParentResourceTestProvider>
+        <NextIntlClientProvider locale="de" messages={deMessages}>
+          <ToastProvider>
+            <Suspense fallback={null}>
+              <ParentConferencePage params={Promise.resolve({ id: "42" })} />
+            </Suspense>
+          </ToastProvider>
+        </NextIntlClientProvider>
+      </ParentResourceTestProvider>,
     );
   });
 }

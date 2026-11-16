@@ -1,5 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SWRConfig } from "~/lib/swr/testing";
+
+vi.unmock("swr");
 
 const mocks = vi.hoisted(() => ({
   markAllAdminRequestsRead: vi.fn(),
@@ -34,7 +38,23 @@ vi.mock("~/contexts/ToastContext", () => ({
   useApiErrorDisplay: () => ({ show: mocks.showActionError }),
 }));
 
-import Page from "./page";
+import AdminEnrollmentsPage from "./page";
+
+function Page() {
+  return (
+    <SessionProvider
+      session={{
+        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        expires: "2099-01-01",
+      }}
+      refetchOnWindowFocus={false}
+    >
+      <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+        <AdminEnrollmentsPage />
+      </SWRConfig>
+    </SessionProvider>
+  );
+}
 
 describe("AdminEnrollmentsPage (#3778)", () => {
   beforeEach(() => {

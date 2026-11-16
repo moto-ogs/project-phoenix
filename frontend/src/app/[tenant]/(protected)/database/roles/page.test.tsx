@@ -1,8 +1,14 @@
 import "@testing-library/jest-dom/vitest";
 import type { TenantPageSearchRowProps } from "~/components/ui/tenant-page-search-row";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { useState, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SWRConfig } from "~/lib/swr/testing";
 import RolesPage from "./page";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
@@ -11,6 +17,16 @@ import {
   expectPageReloadedAfterRefusal,
   resetPageReloads,
 } from "~/test/helpers/refused-refresh";
+
+vi.unmock("swr");
+
+function render(ui: ReactNode) {
+  return rtlRender(
+    <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+      {ui}
+    </SWRConfig>,
+  );
+}
 
 /** Text of a FormErrorInput, as the shared kit components render it. */
 function errorText(error: unknown): string | null {

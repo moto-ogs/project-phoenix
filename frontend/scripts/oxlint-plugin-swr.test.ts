@@ -303,6 +303,7 @@ describe.concurrent("swr/no-direct-import", () => {
         JSON.stringify({ "src/deleted.ts": 1 }),
       );
       writeFileSync(join(scripts, "swr-key-baseline.json"), "{}");
+      writeFileSync(join(scripts, "swr-effect-load-baseline.json"), "{}");
       const config = join(directory, "config.json");
       writeFileSync(
         config,
@@ -407,4 +408,72 @@ describe.concurrent("swr/no-test-support-import", () => {
       expect(result.output).not.toContain("swr(no-test-support-import)");
     },
   );
+});
+
+describe.concurrent("swr/no-effect-load", () => {
+  const RULE = "swr(no-effect-load)";
+  const HEAD =
+    'import { useCallback, useEffect, useRef, useState } from "react"; import { fetchRows } from "~/lib/rows-api";';
+
+  it.each([
+    [
+      "an awaited load through a callback",
+      "const [rows, setRows] = useState([]); const load = useCallback(async () => { setRows(await fetchRows()); }, []); useEffect(() => { void load(); }, [load]); return rows;",
+    ],
+    [
+      "a promise chain inside the effect",
+      "const [rows, setRows] = useState([]); useEffect(() => { let active = true; fetchRows().then((next) => { if (active) setRows(next); }); return () => { active = false; }; }, []); return rows;",
+    ],
+    [
+      "a load two functions away",
+      "const [rows, setRows] = useState([]); async function read() { setRows(await fetchRows()); } const load = () => read(); useEffect(() => { void load(); }, []); return rows;",
+    ],
+  ])("rejects %s", async (_name, body) => {
+    const result = await lintSource(
+      `${HEAD} export function useProbe() { ${body} }`,
+    );
+    expect(result.status, result.output).toBe(1);
+    expect(result.output).toContain(RULE);
+  });
+
+  it.each([
+    [
+      "a write in an event handler",
+      "const [rows, setRows] = useState([]); const save = async () => { setRows(await fetchRows()); }; return { rows, save };",
+    ],
+    [
+      "an effect that only derives state",
+      "const [open, setOpen] = useState(false); useEffect(() => { setOpen(true); }, []); return open;",
+    ],
+    [
+      "an effect that only keeps the latest handler for a retry",
+      "const [rows, setRows] = useState([]); const save = async () => { setRows(await fetchRows()); }; const latest = useRef(save); useEffect(() => { latest.current = () => void save(); }); return { rows, latest };",
+    ],
+    [
+      "a cleanup that is returned, not run",
+      "const [rows, setRows] = useState([]); const save = async () => { setRows(await fetchRows()); }; useEffect(() => () => { void save(); }, []); return rows;",
+    ],
+    [
+      "an effect that revalidates without state",
+      "useEffect(() => { void fetchRows().then(() => undefined); }, []); return null;",
+    ],
+  ])("accepts %s", async (_name, body) => {
+    const result = await lintSource(
+      `${HEAD} export function useProbe() { ${body} }`,
+    );
+    expect(result.output).not.toContain(RULE);
+  });
+
+  it("leaves tests and the cache module alone", async () => {
+    const source = `${HEAD} export function useProbe() { const [rows, setRows] = useState([]); useEffect(() => { void fetchRows().then(setRows); }, []); return rows; }`;
+    const production = await lintSource(source);
+    expect(production.output).toContain(RULE);
+    for (const file of [
+      "src/components/probe.test.tsx",
+      "src/lib/swr/probe.ts",
+    ]) {
+      const result = await lintSource(source, file);
+      expect(result.output).not.toContain(RULE);
+    }
+  });
 });

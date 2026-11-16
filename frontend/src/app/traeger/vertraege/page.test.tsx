@@ -6,9 +6,10 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
@@ -29,12 +30,16 @@ const { api, mockPush } = vi.hoisted(() => ({
   mockPush: vi.fn(),
 }));
 
+vi.unmock("swr");
 vi.mock("~/lib/traeger-care-contracts-api", () => api);
 vi.mock("next-auth/react", () => ({
+  SessionProvider: ({ children }: { children: ReactNode }) => children,
   useSession: () => ({
     data: {
       user: {
         id: "A",
+        scope: "org",
+        orgId: 7,
         permissions: ["traeger_contracts:manage", "traeger_overview:read"],
       },
     },
@@ -120,9 +125,9 @@ const CANDIDATE: ContractCandidate = {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerVertraegePage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

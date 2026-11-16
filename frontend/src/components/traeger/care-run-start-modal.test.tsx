@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
+
+vi.unmock("swr");
 
 // The start of a monthly run (#5916): every free school is chosen, a
 // school in an open run of the month cannot be chosen, and the start sends
@@ -20,7 +22,7 @@ const MONTHS = [{ value: "2026-10-01", label: "Oktober 2026" }];
 
 function renderModal(onStart = vi.fn().mockResolvedValue(undefined)) {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <CareRunStartModal
         isOpen
         months={MONTHS}
@@ -29,7 +31,7 @@ function renderModal(onStart = vi.fn().mockResolvedValue(undefined)) {
         onStart={onStart}
         onStarted={vi.fn()}
       />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
   return onStart;
 }

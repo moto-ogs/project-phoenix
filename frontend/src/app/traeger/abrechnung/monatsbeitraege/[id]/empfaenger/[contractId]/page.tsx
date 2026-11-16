@@ -7,7 +7,7 @@
 
 import { SepaMandateStatusCard } from "~/components/traeger/sepa-mandate-status-card";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useMemo } from "react";
 import {
   findFamilyBilling,
   runDueDatesText,
@@ -15,78 +15,61 @@ import {
 import { formatMonth } from "~/components/traeger/care-billing-format";
 import { FamilyBillingForm } from "~/components/traeger/family-billing-form";
 import { useDebtorNumberFormat } from "~/components/traeger/use-debtor-number-format";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
-import { useApiLoadError } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
-import { createLogger } from "~/lib/logger";
-import {
-  type FamilyBilling,
-  fetchFamilyBillings,
-} from "~/lib/traeger-billing-terms-api";
-import {
-  type CareInvoice,
-  type CareRunDetail,
-  fetchCareRun,
-} from "~/lib/traeger-care-billing-api";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
+import { fetchFamilyBillings } from "~/lib/traeger-billing-terms-api";
+import { fetchCareRun } from "~/lib/traeger-care-billing-api";
 import { traegerPath } from "~/lib/traeger-url";
-
-const logger = createLogger({ component: "TraegerFamilyBillingPage" });
-
-interface Loaded {
-  readonly run: CareRunDetail;
-  readonly invoice: CareInvoice;
-  readonly existing: FamilyBilling | null;
-}
 
 export default function TraegerFamilyBillingPage() {
   const params = useParams<{ id: string; contractId: string }>();
   const router = useRouter();
   const runId = params?.id ?? "";
   const contractId = params?.contractId ?? "";
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
-  const pageLoad = useApiLoadError();
   const debtorNumberFormat = useDebtorNumberFormat();
-  const { show: showLoadError, clear: clearLoadError } = pageLoad;
+  const invalidateFamily = useInvalidateFamily();
   const runHref = traegerPath(`/traeger/abrechnung/monatsbeitraege/${runId}`);
-
-  const load = useCallback(async () => {
-    try {
-      const [run, families] = await Promise.all([
-        fetchCareRun(runId),
-        fetchFamilyBillings(),
-      ]);
-      const invoice = run.invoices.find(
-        (entry) => entry.contractId === contractId,
-      );
-      if (!invoice) {
-        throw new ApiError("Die Rechnung gehört nicht zu diesem Lauf.", 404);
-      }
-      setLoaded({
-        run,
-        invoice,
-        existing: findFamilyBilling(families, {
-          contractId,
-          familyEmail: invoice.familyEmail,
-          recipientEmail: invoice.recipient.email,
-          recipientKind: invoice.recipient.kind,
-        }),
-      });
-      clearLoadError();
-    } catch (err) {
-      logger.error("traeger_family_billing_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showLoadError(err, {
-        object: "die Angabe zu Empfänger und Zahlung",
-        retry: () => void load(),
-      });
-    }
-  }, [runId, contractId, showLoadError, clearLoadError]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const object = "die Angabe zu Empfänger und Zahlung";
+  const runRead = useTraegerResource(
+    runId ? traegerBillingRunKeys.careRun(runId) : null,
+    () => fetchCareRun(runId),
+    object,
+  );
+  const familiesRead = useTraegerResource(
+    traegerBillingRunKeys.familyBillings(),
+    fetchFamilyBillings,
+    object,
+  );
+  const run = runRead.data;
+  const invoice =
+    run?.invoices.find((entry) => entry.contractId === contractId) ?? null;
+  const missing = useMemo(
+    () =>
+      run && !invoice
+        ? new ApiError("Die Rechnung gehört nicht zu diesem Lauf.", 404)
+        : null,
+    [run, invoice],
+  );
+  const missingError = useSwrLoadError(missing, object, runRead.reload);
+  const loadError = runRead.error ?? familiesRead.error ?? missingError;
+  const loaded =
+    run && invoice && familiesRead.data
+      ? {
+          run,
+          invoice,
+          existing: findFamilyBilling(familiesRead.data, {
+            contractId,
+            familyEmail: invoice.familyEmail,
+            recipientEmail: invoice.recipient.email,
+            recipientKind: invoice.recipient.kind,
+          }),
+        }
+      : null;
 
   const childName = loaded
     ? `${loaded.invoice.childFirstName} ${loaded.invoice.childLastName}`.trim()
@@ -107,9 +90,9 @@ export default function TraegerFamilyBillingPage() {
           <span>Monatsbeitrag {formatMonth(loaded.run.billingMonth)}</span>
         ) : null
       }
-      statsLoading={!loaded && !pageLoad.error}
-      error={pageLoad.error}
-      loading={!pageLoad.error && !loaded}
+      statsLoading={!loaded && !loadError}
+      error={loadError}
+      loading={!loadError && !loaded}
     >
       {loaded ? (
         <SectionCard title="Empfänger und Zahlung">
@@ -127,7 +110,12 @@ export default function TraegerFamilyBillingPage() {
             existing={loaded.existing}
             runDueText={runDueDatesText(loaded.run.dueDates ?? [])}
             onCancel={() => router.push(runHref)}
-            onSaved={() => router.push(runHref)}
+            onSaved={() => {
+              // The run names the recipient of each invoice.
+              void invalidateFamily(traegerBillingRunKeys.familyBillings());
+              void invalidateFamily(traegerBillingRunKeys.careRun(runId));
+              router.push(runHref);
+            }}
           />
         </SectionCard>
       ) : null}

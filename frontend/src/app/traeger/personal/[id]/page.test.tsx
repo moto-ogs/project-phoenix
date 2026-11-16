@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { StaffRecordDetail } from "~/lib/traeger-staff-api";
+
+vi.unmock("swr");
 
 const { api, mockPush } = vi.hoisted(() => ({
   api: {
@@ -129,9 +131,9 @@ const CONTRACT = {
 
 function renderPage() {
   return render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerStaffRecordPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 

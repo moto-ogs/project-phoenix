@@ -1,10 +1,17 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "~/contexts/ToastContext";
+import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { getAccessibleTextColor } from "~/lib/kit-palette";
 import type { OverrunEvaluation } from "~/lib/traeger-care-time-overruns-api";
 
+vi.unmock("swr");
 const { api, mockUseSession, clock } = vi.hoisted(() => ({
   clock: { today: "2026-09-09" },
   api: {
@@ -20,7 +27,10 @@ vi.mock("~/lib/traeger-care-time-overruns-api", async (importOriginal) => ({
   >()),
   ...api,
 }));
-vi.mock("next-auth/react", () => ({ useSession: () => mockUseSession() }));
+vi.mock("next-auth/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-auth/react")>()),
+  useSession: () => mockUseSession(),
+}));
 vi.mock("~/lib/hooks/use-berlin-today", () => ({
   useBerlinToday: () => clock.today,
 }));
@@ -80,9 +90,9 @@ function session(permissions: string[], orgId = 7) {
 
 function renderPage() {
   render(
-    <ToastProvider>
+    <TraegerResourceTestProvider>
       <TraegerZeitvergleichPage />
-    </ToastProvider>,
+    </TraegerResourceTestProvider>,
   );
 }
 
@@ -359,9 +369,9 @@ describe("Länger als gebucht", () => {
     api.fetchOverrunSummary.mockResolvedValue(EVALUATION);
     clock.today = "2026-09-30";
     const { rerender } = render(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <TraegerZeitvergleichPage />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
     await waitFor(() =>
       expect(api.fetchOverrunSummary).toHaveBeenLastCalledWith({
@@ -373,9 +383,9 @@ describe("Länger als gebucht", () => {
 
     clock.today = "2026-10-01";
     rerender(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <TraegerZeitvergleichPage />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
     await waitFor(() =>
       expect(api.fetchOverrunSummary).toHaveBeenLastCalledWith({
@@ -448,9 +458,9 @@ describe("Länger als gebucht", () => {
         new Promise<OverrunEvaluation>((resolve) => (answerOther = resolve)),
     );
     const { rerender } = render(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <TraegerZeitvergleichPage />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
     expect(
       (await screen.findAllByText("OGS Am Lindenhof")).length,
@@ -458,9 +468,9 @@ describe("Länger als gebucht", () => {
 
     mockUseSession.mockReturnValue(session(["traeger_reports:read"], 8));
     rerender(
-      <ToastProvider>
+      <TraegerResourceTestProvider>
         <TraegerZeitvergleichPage />
-      </ToastProvider>,
+      </TraegerResourceTestProvider>,
     );
     await waitFor(() =>
       expect(api.fetchOverrunSummary).toHaveBeenCalledTimes(2),
@@ -481,5 +491,38 @@ describe("Länger als gebucht", () => {
       (await screen.findAllByText("OGS Anderer Träger")).length,
     ).toBeGreaterThan(0);
     expect(screen.queryByText("OGS Am Lindenhof")).not.toBeInTheDocument();
+  });
+
+  it("forgets the school chosen under the previous Träger", async () => {
+    mockUseSession.mockReturnValue(session(["traeger_reports:read"], 7));
+    api.fetchOverrunSummary.mockResolvedValue(EVALUATION);
+    const { rerender } = render(
+      <TraegerResourceTestProvider>
+        <TraegerZeitvergleichPage />
+      </TraegerResourceTestProvider>,
+    );
+    fireEvent.click(await screen.findByRole("combobox", { name: "Schule" }));
+    fireEvent.click(await screen.findByRole("option", { name: "OGS Süd" }));
+    await waitFor(() =>
+      expect(api.fetchOverrunSummary).toHaveBeenLastCalledWith({
+        from: "2026-09-01",
+        to: "2026-09-09",
+        schoolId: "4",
+      }),
+    );
+    const before = api.fetchOverrunSummary.mock.calls.length;
+
+    mockUseSession.mockReturnValue(session(["traeger_reports:read"], 8));
+    rerender(
+      <TraegerResourceTestProvider>
+        <TraegerZeitvergleichPage />
+      </TraegerResourceTestProvider>,
+    );
+    await waitFor(() =>
+      expect(api.fetchOverrunSummary.mock.calls.length).toBeGreaterThan(before),
+    );
+    expect(api.fetchOverrunSummary.mock.calls.slice(before)).toEqual([
+      [{ from: "2026-09-01", to: "2026-09-09", schoolId: undefined }],
+    ]);
   });
 });

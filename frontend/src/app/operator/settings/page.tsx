@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useCallback, useRef } from "react";
+import { Suspense, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Pencil } from "lucide-react";
 import { Avatar } from "~/components/ui/avatar";
@@ -17,14 +17,13 @@ import { Input } from "~/components/ui/input";
 import { PasswordChangeModal } from "~/components/auth/password-change-modal";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { SectionCard } from "~/components/ui/section-card";
-import {
-  useApiFormError,
-  useApiLoadError,
-  useToast,
-} from "~/contexts/ToastContext";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { apiErrorFromResponse } from "~/lib/api-error";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { sessionFetch } from "~/lib/session-cache";
+import { useSWRAuth } from "~/lib/swr";
+import { operatorKeys } from "~/lib/swr/operator-keys";
 import { TrustedDevicesSection } from "~/components/settings/trusted-devices-section";
 import { PasskeySettingsSection } from "~/components/settings/passkey-settings-section";
 
@@ -34,6 +33,20 @@ interface OperatorProfile {
   id: number;
   email: string;
   display_name: string;
+}
+
+async function fetchOperatorProfile(): Promise<OperatorProfile | null> {
+  const response = await sessionFetch("/api/operator/profile", {
+    method: "GET",
+  });
+  if (!response.ok) {
+    throw await apiErrorFromResponse(
+      response,
+      `Operator profile load failed (${response.status})`,
+    );
+  }
+  const data = (await response.json()) as { data?: OperatorProfile };
+  return data.data ?? null;
 }
 
 function isEmail(value: string | null | undefined): value is string {
@@ -58,15 +71,22 @@ function OperatorSettingsContent() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    displayName: "",
-    email: "",
-  });
-  const [profileData, setProfileData] = useState<OperatorProfile | null>(null);
-  const profileLoad = useApiLoadError();
-  const { show: showProfileLoadError, clear: clearProfileLoadError } =
-    profileLoad;
-  const [profileReload, setProfileReload] = useState(0);
+  const [draftDisplayName, setDraftDisplayName] = useState("");
+  const {
+    data: profileData,
+    error: profileError,
+    mutate: mutateProfile,
+  } = useSWRAuth(operatorKeys.profile(), fetchOperatorProfile);
+  const profileLoad = useSwrResourceLoadError(
+    [{ data: profileData, error: profileError }],
+    "das Profil",
+    () => mutateProfile(),
+  );
+  // Without the profile the session stands in. The profile form must not
+  // show token subjects like "operator:2" as an email address.
+  const displayName = profileData?.display_name ?? sessionName;
+  const email =
+    profileData?.email ?? (isEmail(sessionEmail) ? sessionEmail : "");
   const profileFormRef = useRef<HTMLDivElement>(null);
   const profileErrors = useApiFormError(profileFormRef);
   const { show: showProfileError, clear: clearProfileError } = profileErrors;
@@ -93,83 +113,6 @@ function OperatorSettingsContent() {
     setShowPasswordModal(false);
   }, []);
 
-  useEffect(() => {
-    if (status !== "authenticated") {
-      return;
-    }
-
-    let ignore = false;
-    const sessionFallback = {
-      displayName: sessionName,
-      email: isEmail(sessionEmail) ? sessionEmail : "",
-    };
-
-    setFormData(sessionFallback);
-
-    const loadProfile = async () => {
-      try {
-        const response = await sessionFetch("/api/operator/profile", {
-          method: "GET",
-        });
-        if (!response.ok) {
-          throw await apiErrorFromResponse(
-            response,
-            `Operator profile load failed (${response.status})`,
-          );
-        }
-
-        const data = (await response.json()) as { data?: OperatorProfile };
-        const profile = data.data;
-        if (!profile || ignore) return;
-
-        clearProfileLoadError();
-        setProfileData(profile);
-        setFormData({
-          displayName: profile.display_name,
-          email: profile.email,
-        });
-      } catch (err) {
-        if (ignore) return;
-        // Keep the safe session fallback. The profile form should not surface
-        // token subjects like "operator:2" as an email address.
-        logger.warn("operator_profile_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showProfileLoadError(err, {
-          object: "das Profil",
-          retry: () => setProfileReload((count) => count + 1),
-        });
-      }
-    };
-
-    void loadProfile();
-
-    return () => {
-      ignore = true;
-    };
-  }, [
-    status,
-    sessionName,
-    sessionEmail,
-    profileReload,
-    showProfileLoadError,
-    clearProfileLoadError,
-  ]);
-
-  const resetFormFromProfile = useCallback(() => {
-    if (profileData) {
-      setFormData({
-        displayName: profileData.display_name,
-        email: profileData.email,
-      });
-    } else if (status === "authenticated") {
-      setFormData({
-        displayName: sessionName,
-        email: isEmail(sessionEmail) ? sessionEmail : "",
-      });
-    }
-  }, [profileData, status, sessionName, sessionEmail]);
-
   const handleSaveProfile = async () => {
     setIsSaving(true);
     clearProfileError();
@@ -177,7 +120,7 @@ function OperatorSettingsContent() {
       const response = await sessionFetch("/api/operator/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ display_name: formData.displayName }),
+        body: JSON.stringify({ display_name: draftDisplayName }),
       });
 
       if (!response.ok) {
@@ -189,17 +132,14 @@ function OperatorSettingsContent() {
 
       const data = (await response.json()) as { data?: OperatorProfile };
       const updatedProfile = data.data;
-      const nextDisplayName =
-        updatedProfile?.display_name ?? formData.displayName;
-      const nextEmail = updatedProfile?.email ?? formData.email;
+      const nextDisplayName = updatedProfile?.display_name ?? draftDisplayName;
+      const nextEmail = updatedProfile?.email ?? email;
 
       if (updatedProfile) {
-        setProfileData(updatedProfile);
+        await mutateProfile(updatedProfile, { revalidate: false });
+      } else {
+        void mutateProfile();
       }
-      setFormData({
-        displayName: nextDisplayName,
-        email: nextEmail,
-      });
 
       await updateSession({ name: nextDisplayName, email: nextEmail });
 
@@ -274,7 +214,9 @@ function OperatorSettingsContent() {
   return (
     <TenantPage
       title="Profil"
-      leading={<Avatar name={formData.displayName} size="lg" />}
+      leading={
+        <Avatar name={isEditing ? draftDisplayName : displayName} size="lg" />
+      }
       overlays={
         <>
           {showPasswordModal && (
@@ -376,7 +318,10 @@ function OperatorSettingsContent() {
               type="button"
               variant="ghost"
               size="compact"
-              onClick={() => setIsEditing(true)}
+              onClick={() => {
+                setDraftDisplayName(displayName);
+                setIsEditing(true);
+              }}
             >
               <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
               Bearbeiten
@@ -393,17 +338,14 @@ function OperatorSettingsContent() {
               name="display_name"
               error={profileErrors.fieldError("display_name")}
               type="text"
-              value={formData.displayName}
-              onChange={(e) =>
-                setFormData({ ...formData, displayName: e.target.value })
-              }
+              value={draftDisplayName}
+              onChange={(e) => setDraftDisplayName(e.target.value)}
               maxLength={255}
             />
             <EditActions
               onCancel={() => {
                 setIsEditing(false);
                 clearProfileError();
-                resetFormFromProfile();
               }}
               onSave={() => void handleSaveProfile()}
               saving={isSaving}
@@ -412,7 +354,7 @@ function OperatorSettingsContent() {
         ) : (
           <DataGrid>
             <DataField label="Anzeigename" fullWidth>
-              {formData.displayName || "–"}
+              {displayName || "–"}
             </DataField>
           </DataGrid>
         )}
@@ -434,7 +376,7 @@ function OperatorSettingsContent() {
       >
         <DataGrid>
           <DataField label="E-Mail" fullWidth>
-            {formData.email || "–"}
+            {email || "–"}
           </DataField>
         </DataGrid>
       </SectionCard>
