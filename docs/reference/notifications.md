@@ -222,7 +222,8 @@ caller's transaction. Rules, all applied by the router:
 - moto schule (#7139) mounts the same routes under `/school/notifications/feed`.
   It reads the same entries of the account, narrowed to the types its
   catalogue offers (`OfferedInPortal`: school-only types and staff types with
-  `SchoolPortal`); read state is shared between both portals. Its link is
+  `SchoolPortal`) plus a reversal that replaces such an entry; read state is
+  shared between both portals. Its link is
   `school_deep_link` (the event's `SchoolDeepLink`, written for types the
   school portal shows), else `/school`. A type with
   `SchoolPortalWithoutPermission` is offered there without its `Permission`:

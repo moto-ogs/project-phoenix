@@ -277,9 +277,16 @@ func OfferedInPortal(def TypeDefinition, portal string) bool {
 		return false
 	}
 	if portal == PortalSchool {
-		return def.Portal == PortalSchool || (def.Portal == PortalStaff && def.SchoolPortal)
+		return typeDeliversToSchoolPortal(def)
 	}
 	return def.Portal == portal
+}
+
+// typeDeliversToSchoolPortal reports whether a type reaches moto schule. A
+// reversal is not offered as a separate preference, but it follows its
+// cancellation into the school portal's feed and devices.
+func typeDeliversToSchoolPortal(def TypeDefinition) bool {
+	return def.Portal == PortalSchool || (def.Portal == PortalStaff && def.SchoolPortal)
 }
 
 // requireSchoolPortalWaiver panics when a type waives a Permission in the
@@ -324,8 +331,8 @@ func TypesForPortal(portal string) []TypeDefinition {
 }
 
 // FeedTypesForPortal returns the types a portal renders in its notification
-// feed. A staff-only reversal is not a preference a person can set, but it
-// still replaces the preceding entry in the staff feed (#7151).
+// feed. A reversal is not a preference a person can set, but it replaces a
+// cancellation in every portal that receives that cancellation (#7151).
 func FeedTypesForPortal(portal string) []TypeDefinition {
 	return typesForPortal(portal, true)
 }
@@ -335,7 +342,8 @@ func typesForPortal(portal string, includeStaffReversals bool) []TypeDefinition 
 	defs := make([]TypeDefinition, 0, len(typeRegistry))
 	for _, def := range typeRegistry {
 		if OfferedInPortal(def, portal) ||
-			(includeStaffReversals && portal == PortalStaff && def.Portal == PortalStaff && def.Reverses != "") {
+			(includeStaffReversals && def.Portal == PortalStaff && def.Reverses != "" &&
+				(portal == PortalStaff || (portal == PortalSchool && typeDeliversToSchoolPortal(def)))) {
 			defs = append(defs, def)
 		}
 	}
@@ -381,23 +389,25 @@ func registerStaffAppointmentTypes() {
 		Permission:  permissionActivitiesRead,
 		DefaultOn:   true,
 		// A Lehrkraft planned for a block in moto schule (#2527) hears
-		// about its cancellation there too (#7139).
+		// about its cancellation and reinstatement there too (#7139).
 		SchoolPortal:                  true,
 		SchoolPortalWithoutPermission: true,
 		Feed:                          true,
 	})
 	RegisterType(TypeDefinition{
-		Key:         TypeInstanceReinstated,
-		Label:       "Absage zurückgenommen",
-		Description: "Wenn eine Absage zurückgenommen wird und der Termin doch stattfindet. Folgt dem Schalter für Absagen.",
-		Group:       GroupAppointments,
-		Portal:      PortalStaff,
-		TenantGate:  settingInstanceCancelledEnabled,
-		SortOrder:   2,
-		Permission:  permissionActivitiesRead,
-		DefaultOn:   true,
-		Reverses:    TypeInstanceCancelled,
-		Feed:        true,
+		Key:                           TypeInstanceReinstated,
+		Label:                         "Absage zurückgenommen",
+		Description:                   "Wenn eine Absage zurückgenommen wird und der Termin doch stattfindet. Folgt dem Schalter für Absagen.",
+		Group:                         GroupAppointments,
+		Portal:                        PortalStaff,
+		TenantGate:                    settingInstanceCancelledEnabled,
+		SortOrder:                     2,
+		Permission:                    permissionActivitiesRead,
+		DefaultOn:                     true,
+		Reverses:                      TypeInstanceCancelled,
+		SchoolPortal:                  true,
+		SchoolPortalWithoutPermission: true,
+		Feed:                          true,
 	})
 }
 

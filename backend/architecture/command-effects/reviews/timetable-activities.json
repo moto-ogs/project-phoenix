@@ -41909,7 +41909,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffCancellationNotices.NotifyInstanceReinstated",
-      "reason": "Platform protocol participation (durable): timetable-activities reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.timetableStaffCancellationNotices.NotifyInstanceReinstated (#7151). The notification feed entries and the push outbox entries join the reinstatement's unit; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (durable): timetable-activities reaches modules/delivery/internal/notifications.Notifier.Notify (delivery-platform) through roots/owners.timetableStaffCancellationNotices.NotifyInstanceReinstated (#7151; #7139 sends the school link too, so moto schule replaces the cancellation with the reinstatement). The notification feed entries and the push outbox entries join the reinstatement's unit; transaction, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.Notifier.Notify",
       "target_owner": "delivery-platform"
@@ -41919,7 +41919,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffCancellationNotices.NotifyInstanceReinstated",
-      "reason": "Read-only target: timetable-activities reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.timetableStaffCancellationNotices.NotifyInstanceReinstated (#7151). No persistent, lock or scope effect.",
+      "reason": "Read-only target: timetable-activities reaches modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut (delivery-platform) through roots/owners.timetableStaffCancellationNotices.NotifyInstanceReinstated (#7151; #7139 also carries the school link). No persistent, lock or scope effect.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
       "target_owner": "delivery-platform"

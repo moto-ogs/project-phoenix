@@ -46,9 +46,13 @@ func TestSchoolPortalCatalogue(t *testing.T) {
 	assert.True(t, OfferedInPortal(cancelled, PortalSchool), "a planned Lehrkraft hears of a cancelled block in moto schule (#7139)")
 	assert.Empty(t, PermissionInPortal(cancelled, PortalSchool), "offered there without the OGS right a Lehrkraft does not hold")
 	assert.Equal(t, cancelled.Permission, PermissionInPortal(cancelled, PortalStaff))
+	reinstated, _ := GetType(TypeInstanceReinstated)
+	assert.False(t, OfferedInPortal(reinstated, PortalSchool), "a reinstatement follows the cancellation's switch instead of becoming another choice")
+	assert.True(t, reinstated.SchoolPortal)
+	assert.Empty(t, PermissionInPortal(reinstated, PortalSchool))
 }
 
-func TestFeedTypesKeepStaffReinstatementsOutOfSchool(t *testing.T) {
+func TestFeedTypesIncludeReinstatementsInTheSchoolPortal(t *testing.T) {
 	t.Parallel()
 
 	staffKeys := make([]string, 0)
@@ -61,7 +65,7 @@ func TestFeedTypesKeepStaffReinstatementsOutOfSchool(t *testing.T) {
 	}
 
 	assert.Contains(t, staffKeys, TypeInstanceReinstated)
-	assert.NotContains(t, schoolKeys, TypeInstanceReinstated)
+	assert.Contains(t, schoolKeys, TypeInstanceReinstated)
 }
 
 // A school registration rebinds the browser endpoint: the school a Lehrkraft

@@ -67,10 +67,10 @@ func (f *feedReader) requireFeedCaller(tenantID, accountID int64, portal string)
 }
 
 // feedView is what a portal shows of the feed (#7139): moto schule shows the
-// staff types marked SchoolPortal and its own. Staff also sees a staff-only
-// reversal, which is not offered as a preference but replaces a cancellation
-// in its feed (#7151). An entry of another type stays in the table and reaches
-// only the portal that renders it.
+// staff types marked SchoolPortal and its own. A reversal follows its
+// cancellation into each portal's feed, but is not offered as a preference
+// (#7151). An entry of another type stays in the table and reaches only the
+// portal that renders it.
 func feedView(portal string) (domain.FeedView, error) {
 	if portal != PortalStaff && portal != PortalSchool {
 		return domain.FeedView{}, fmt.Errorf("notification feed: unknown portal %q", portal)
