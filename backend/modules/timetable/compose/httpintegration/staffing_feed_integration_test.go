@@ -40,7 +40,7 @@ func newStaffingFixture(t *testing.T) *staffingFixture {
 	notifier, err := api.NewDeliveryTestFeedNotifier(database, testpkg.TenantRuntime(t, f.s.db), settings.Settings, module)
 	require.NoError(t, err)
 	notices := owners.NewTimetableStaffNotices(owners.DeliveryNotifications{Notifier: notifier, Preferences: module.NotificationPreferences},
-		owners.MustNewSchoolMembership(database), owners.MustNewUnobservedTimetable(database))
+		owners.MustNewSchoolMembership(database), owners.MustNewUnobservedTimetable(database), owners.MustNewWorkforce(database))
 	require.NotNil(t, notices.Staffing.Notices)
 
 	repos, err := api.NewTimetableTestRepositories(database)
@@ -111,6 +111,15 @@ func (f *staffingFixture) bulk(t *testing.T, in timetable.BulkSubstitutionInput)
 	return testpkg.TenantCommand0(t, f.s.ctx, f.s.db, func(ctx context.Context) error {
 		_, err := f.deviations.ApplyBulkSubstitution(ctx, in)
 		return err
+	})
+}
+
+// sickNotice runs the staffing-notice half of a Krankmeldung cascade inside
+// the same tenant transaction as the cascade itself.
+func (f *staffingFixture) sickNotice(t *testing.T, in timetable.SickAbsenceNotice) error {
+	t.Helper()
+	return testpkg.TenantCommand0(t, f.s.ctx, f.s.db, func(ctx context.Context) error {
+		return f.deviations.NoticeSickAbsence(ctx, in)
 	})
 }
 

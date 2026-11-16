@@ -628,7 +628,8 @@ describe("getParentHelpTopicForPath", () => {
     // 107 seit #6954: Mit der Suche finden.
     // 108 seit #7148: Hinweise und Erinnerungen in der Glocke.
     // 109 seit #4813: Elternbrief mit den Angaben jedes Kindes.
-    expect(leadTopics).toHaveLength(109);
+    // 110 seit #4709: Springer des Trägers blocken.
+    expect(leadTopics).toHaveLength(110);
     expect(
       leadTopics.every(
         (topic) =>
@@ -784,6 +785,7 @@ describe("getParentHelpTopicForPath", () => {
       HELP_TOPICS.traegerAbsenceTypes,
       HELP_TOPICS.traegerStaffContracts,
       HELP_TOPICS.traegerStaffPlanning,
+      HELP_TOPICS.traegerStaffPool,
       HELP_TOPICS.traegerStaffTimeAccount,
       HELP_TOPICS.traegerPayrollExport,
       HELP_TOPICS.traegerSharedDocuments,

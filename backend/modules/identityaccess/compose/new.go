@@ -106,7 +106,7 @@ func New(dependencies Dependencies) (identityaccess.Owner, error) {
 	return application.Engine{
 		CalendarFeeds:   application.NewCalendarFeeds(application.NewStaffCalendarFeeds(service, store), application.NewParentCalendarFeeds(service, store)),
 		AccountProfiles: application.NewAccountProfiles(service, store), GuardianSchools: application.NewGuardianSchools(service, store),
-		Service: service, OperatorMFARecords: operatorMFARecords, OperatorTokens: tokens, RFIDCards: application.NewRFIDCards(service, store),
+		Service: service, OperatorMFARecords: operatorMFARecords, OperatorTokens: tokens, RFIDCards: application.NewRFIDCards(service, store), SpringerAccess: application.NewSpringerAccess(postgres.NewRoleStore(store), store, lifecycle, runtime, attach),
 		AccountRoleQueries:    application.NewAccountRoleQueries(service, store, postgres.NewRoleStore(store)),
 		AccountAuthentication: auth, OperatorAuthentication: operatorAuth, OperatorAccountAccess: accountAccess, AccountLifecycle: lifecycle, RoleAdministration: roles,
 		PasswordReset: resets, SchoolInvitation: invitations, AccountProvisioning: provisioning, AccountAdministration: administration, OperatorProvisioning: operatorProvisioning,

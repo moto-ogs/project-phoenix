@@ -16,6 +16,7 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 import { Input } from "~/components/ui/input";
 import { Radio } from "~/components/ui/radio";
 import { SectionLabel } from "~/components/ui/section-label";
+import { SwitchRow } from "~/components/ui/switch";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
@@ -309,6 +310,24 @@ type DialogProps = Readonly<{
   onSaved: (record: StaffRecordDetail) => void;
 }>;
 
+/**
+ * Das Merkmal „Vertretungspool“ (#4709): die Person ist Springer, und jede
+ * Schule des Trägers kann sie blocken.
+ */
+function PoolSwitch({
+  checked,
+  onChange,
+}: Readonly<{ checked: boolean; onChange: (pool: boolean) => void }>) {
+  return (
+    <SwitchRow
+      label="Vertretungspool"
+      description="Die Person springt an allen Ihren Schulen ein. Jede Schule sieht sie und kann sie blocken."
+      checked={checked}
+      onCheckedChange={onChange}
+    />
+  );
+}
+
 /** Arbeitsvertrag anlegen: Art, Laufzeit und das erste Soll je Schule. */
 export function CreateContractDialog({
   record,
@@ -318,6 +337,7 @@ export function CreateContractDialog({
   const [kind, setKind] = useState<StaffContractKind>("part_time");
   const [startsOn, setStartsOn] = useState("");
   const [endsOn, setEndsOn] = useState("");
+  const [pool, setPool] = useState(false);
   const [sites, setSites] = useState<readonly SiteDraft[]>(() =>
     record.employments
       .filter((employment) => employment.active)
@@ -359,6 +379,7 @@ export function CreateContractDialog({
           kind,
           startsOn,
           endsOn: endsOn || null,
+          pool,
           sites: inputs,
         }),
       "Der Arbeitsvertrag ist angelegt. Die Schulen rechnen mit dem neuen Soll.",
@@ -413,6 +434,7 @@ export function CreateContractDialog({
           error={errors.fieldError("sites")}
           onChange={setSites}
         />
+        <PoolSwitch checked={pool} onChange={setPool} />
         <InsetPanel padding="sm">
           <p className="text-sm text-gray-600">
             Die Schulen rechnen ab dem laufenden Monat mit diesem Soll.
@@ -703,6 +725,7 @@ export function ContractTermsDialog({
 }: DialogProps & Readonly<{ contract: StaffContract }>) {
   const [kind, setKind] = useState<StaffContractKind>(contract.kind);
   const [endsOn, setEndsOn] = useState(contract.endsOn ?? "");
+  const [pool, setPool] = useState(contract.pool);
   const earliest = changeableFrom(contract.sites);
   const { save, errors, run } = useContractSave(true, "den Arbeitsvertrag");
 
@@ -718,6 +741,7 @@ export function ContractTermsDialog({
         updateStaffContract(record.id, contract.id, {
           kind,
           endsOn: endsOn || null,
+          pool,
         }),
       "Der Arbeitsvertrag ist gespeichert.",
       onSaved,
@@ -739,7 +763,7 @@ export function ContractTermsDialog({
           onCancel={onClose}
           onSave={submit}
           saveLabel="Speichern"
-          saveTooltip="Speichert Art und Ende. Nach dem letzten Tag zählt kein Soll mehr."
+          saveTooltip="Speichert Art, Ende und Vertretungspool. Nach dem letzten Tag zählt kein Soll mehr."
         />
       }
     >
@@ -763,6 +787,7 @@ export function ContractTermsDialog({
           Nach dem letzten Tag zählt an den Schulen kein Soll mehr. Ferienwochen
           danach fallen weg.
         </p>
+        <PoolSwitch checked={pool} onChange={setPool} />
       </div>
     </FormModal>
   );

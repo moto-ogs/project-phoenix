@@ -39,6 +39,11 @@ const CodeWorkforcePayrollWageTypeInUse = "workforce.payroll_wage_type_in_use"
 const CodeWorkforcePayrollWageTypeNameTaken = "workforce.payroll_wage_type_name_taken"
 const CodeWorkforcePersonnelNumberInvalid = "workforce.personnel_number_invalid"
 const CodeWorkforcePersonnelNumberTaken = "workforce.personnel_number_taken"
+const CodeWorkforcePoolBlockInvalid = "workforce.pool_block_invalid"
+const CodeWorkforcePoolBlockNotFound = "workforce.pool_block_not_found"
+const CodeWorkforcePoolBlockTaken = "workforce.pool_block_taken"
+const CodeWorkforcePoolSpringerBusy = "workforce.pool_springer_busy"
+const CodeWorkforcePoolSpringerNotFound = "workforce.pool_springer_not_found"
 const CodeWorkforceQualificationTypeNameTaken = "workforce.qualification_type_name_taken"
 const CodeWorkforceQualificationTypeNotFound = "workforce.qualification_type_not_found"
 const CodeWorkforceRebookingBeforeVacationOpening = "workforce.rebooking_before_vacation_opening"
@@ -162,6 +167,11 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforcePayrollWageTypeNameTaken, "business_rejection"},
 	{CodeWorkforcePersonnelNumberInvalid, "input"},
 	{CodeWorkforcePersonnelNumberTaken, "business_rejection"},
+	{CodeWorkforcePoolBlockInvalid, "input"},
+	{CodeWorkforcePoolBlockNotFound, "input"},
+	{CodeWorkforcePoolBlockTaken, "business_rejection"},
+	{CodeWorkforcePoolSpringerBusy, "business_rejection"},
+	{CodeWorkforcePoolSpringerNotFound, "input"},
 	{CodeWorkforceQualificationTypeNameTaken, "business_rejection"},
 	{CodeWorkforceQualificationTypeNotFound, "business_rejection"},
 	{CodeWorkforceRebookingBeforeVacationOpening, "business_rejection"},

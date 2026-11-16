@@ -343,6 +343,8 @@ type TraegerStaffAccess struct {
 	// RecordID the record a record view read, 0 for the overview.
 	StaffIDs []int64
 	RecordID int64
+	// RecordIDs names the records a pool view showed (#4709).
+	RecordIDs []int64
 }
 
 // TraegerStaffAccessLog writes an access entry in the caller's tenant
@@ -376,6 +378,8 @@ type TraegerStaffPorts struct {
 	// Months is the school's month of an employment for the Stundenkonto
 	// (#4711).
 	Months TraegerStaffMonths
+	// Springers employs a Springer at the school that blocks them (#7173).
+	Springers SpringerEmployments
 	// Exports are the school's months and days for the payroll file and the
 	// time export, Payroll the Träger's payroll values (#4712); nil outside
 	// the exports.

@@ -7,7 +7,8 @@ const KeyNotificationsInstanceCancelledEnabled = "notifications.instance_cancell
 
 // KeyNotificationsStaffingChangedEnabled lets a school switch off the notices
 // about substitutions and other staffing changes (#7136): neither feed entry
-// nor push is written then, for the people concerned and the group's teachers.
+// nor push is written then, for the people concerned, the group's teachers
+// and the rest of the group's team (#7138).
 const KeyNotificationsStaffingChangedEnabled = "notifications.staffing_changed_enabled"
 
 // KeyNotificationsStaffNoticePublishedEnabled lets a school switch off the

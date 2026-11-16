@@ -135,6 +135,7 @@ export const PRIVATE_DOWNLOAD_ROUTES = [
   ["traeger/staff-exports/payroll/export", "GET"],
   ["traeger/staff-exports/times/export", "GET"],
   ["traeger/staff-planning/export", "GET"],
+  ["traeger/staff-pool/export", "GET"],
   ["traeger/staff-proofs/export", "GET"],
   ["traeger/staff-records/export", "GET"],
   ["week-protocols/[protocolId]/pdf", "GET"],

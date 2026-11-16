@@ -123,7 +123,7 @@ func (s *AccountAuthentication) requireSchoolMintMFAPolicy(ctx context.Context, 
 }
 
 func (s *AccountAuthentication) firstSchoolPortalTenant(adminCtx context.Context, accountID int64) (hasPortalRole bool, firstPortalTenantID int64, err error) {
-	tenantIDs, _, listErr := s.store.ListActiveTenantIDs(adminCtx, accountID)
+	tenantIDs, _, listErr := s.store.ListAdmittedTenantIDs(adminCtx, accountID)
 	if listErr != nil {
 		return hasPortalRole, firstPortalTenantID, listErr
 	}
@@ -157,7 +157,7 @@ func (s *AccountAuthentication) firstSchoolPortalTenant(adminCtx context.Context
 // school-portal role. School lookup failures only surface when no school
 // qualifies, so one unreadable mapping does not mask a later valid school.
 func (s *AccountAuthentication) schoolPortalTenants(adminCtx context.Context, accountID int64) ([]int64, error) {
-	tenantIDs, _, listErr := s.store.ListActiveTenantIDs(adminCtx, accountID)
+	tenantIDs, _, listErr := s.store.ListAdmittedTenantIDs(adminCtx, accountID)
 	if listErr != nil {
 		return nil, listErr
 	}

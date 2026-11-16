@@ -136,32 +136,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Fetch only the checked-out revision here. The next step expands
-          # its history and comparison refs without downloading every branch
-          # and tag. Only the architecture suite needs historical blobs.
+          # Only the checked-out revision; the next step adds the history and
+          # the files of the comparison commits.
           fetch-depth: 1
-          # The architecture suite reads historical source blobs; a partial
-          # clone would fetch them one by one. Whether it is selected is known
-          # only after the history below arrived, so every job but the other
-          # race shards fetches blobs. That fetch runs beside the setup steps.
-          filter: ${{ inputs.backend-race && matrix.shard != 1 && 'blob:none' || '' }}
 
-      # Runs in the background while Node, Go and the build cache are set up
-      # (28 s of 383 s in series, #6784); "Finish fetching" below waits for it.
-      # None of the steps in between reads git.
+      # Runs in the background while Node, Go and the build cache are set up;
+      # "Finish fetching" below waits for it. None of the steps in between
+      # reads git. With every blob of the history the fetch outlasted those
+      # steps by 7-16 s (#7195).
       - name: Start fetching backend comparison history
         env:
           BASE_REF: ${{ inputs.base_ref }}
         run: |
-          refs=("$(git rev-parse HEAD)" "+refs/heads/development:refs/remotes/origin/development")
-          if [ -n "$BASE_REF" ] && [ "$BASE_REF" != development ]; then
-            refs+=("+refs/heads/$BASE_REF:refs/remotes/origin/$BASE_REF")
-          fi
-          # Full ancestry keeps merge-base intact for the architecture
-          # comparisons. Unrelated refs and tags are not test inputs.
           (
             set +e
-            git fetch --no-tags --unshallow origin "${refs[@]}"
+            scripts/fetch-comparison-history.sh "$BASE_REF"
             echo "$?" > "$RUNNER_TEMP/history-status"
           ) > "$RUNNER_TEMP/history.log" 2>&1 < /dev/null &
 
@@ -230,6 +219,7 @@ jobs:
           scripts/test-changed_test.sh
           scripts/go-test-link-cache_test.sh
           scripts/go-cache-sweep_test.sh
+          scripts/fetch-comparison-history_test.sh
 
       - name: Verify snapshot roles match migrations
         if: matrix.shard == 0

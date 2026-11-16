@@ -367,7 +367,7 @@ func composeServeRoot(
 		},
 		func() (err error) {
 			lifecycle, err = owners.BuildTimetableLifecycle(db, env, hub, timetableRows, days, people, careRows, presence, supervisions,
-				owners.WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, owners.NewTimetableSickReports(workTime), owners.NewTimetableStaffNotices(notifications, membership, timetableOwner))
+				owners.WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, owners.NewTimetableSickReports(workTime), owners.NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime))
 			return
 		},
 		func() (err error) {
@@ -543,7 +543,7 @@ func composeServeRoot(
 		},
 		func() error {
 			return errors.Join(mountStaffRoutes(router, tenant, db, logger, membership, workTime, workTime, workTime, services.Users, staffAdmin, workforce, shifts,
-				structureViews.Education, structureViews.Substitution, persons, settings.Service, hub, identity, caller, calendarAdmin), mountTraegerStaffRoutes(router, staffAdmin, workforce.TimeTracking.TraegerMonths, organizations, persons, membership, audit.Persistence.DataAccessLog, shifts.TraegerSites(workforce.StaffShifts), workforce.TimeTracking.TraegerExports, settings.Traeger))
+				structureViews.Education, structureViews.Substitution, persons, settings.Service, hub, identity, caller, calendarAdmin), mountTraegerStaffRoutes(router, tenant, staffAdmin, workforce.TimeTracking.TraegerMonths, organizations, persons, membership, audit.Persistence.DataAccessLog, shifts.TraegerSites(workforce.StaffShifts), workforce.TimeTracking.TraegerExports, settings.Traeger, identity))
 		},
 		func() error {
 			return mountSchoolPortalRoutes(router, tenant, db, logger, limiters, studentPresence, timetableOwner, calendarAdmin,

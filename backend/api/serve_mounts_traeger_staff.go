@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
@@ -22,15 +23,22 @@ import (
 // mountTraegerStaffRoutes serves the Personalstamm of ADR 0089 (#4705) at
 // /traeger/staff-records, its Nachweise (#4707) at /traeger/staff-proofs and
 // the Abwesenheitsarten of the Träger (#4710) at /traeger/absence-types and
-// the Einsatzplanung (#4708) at /traeger/staff-planning behind the Träger
+// the Einsatzplanung (#4708) at /traeger/staff-planning and the
+// Vertretungspool (#4709) at /traeger/staff-pool (the school's side at
+// /api/staff-pool) behind the Träger
 // right „Personal“, over the personnel record staffAdmin the root built for
 // the schools and the Dienstplan of the schools.
-func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, months workforce.TraegerStaffMonths, organizations HolidayOrganizations,
+func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.StaffAdmin, months workforce.TraegerStaffMonths, organizations HolidayOrganizations,
 	persons TraegerPersons, membership TraegerStaff, accessLog owners.DataAccessAppender, sites workforce.TraegerShiftSites,
 	exports workforce.TraegerStaffExportSchool, settings TraegerBrandingSettings,
+	identity identityaccess.Owner,
 ) error {
 	if staffAdmin == nil || months == nil || exports == nil || settings == nil {
 		return errors.New("traeger staff records: the personnel record, the school months and exports and the settings are required")
+	}
+	springers, err := springerAccessOf(identity)
+	if err != nil {
+		return err
 	}
 	collaborators := workforce.TraegerStaffPorts{
 		Schools:     traegerStaffSchools{organizations: organizations},
@@ -41,6 +49,8 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 		// The import log names colleagues like the export protocol (#4693).
 		Names:  parentBillingActorNames{names: owners.NewTraegerMemberNames()},
 		Months: months,
+		// The first block employs a Springer at the school (#7173).
+		Springers: traegerSpringerEmployments{access: springers},
 		// The payroll file and the time export (#4712).
 		Exports: exports,
 		Payroll: traegerPayrollSettings{settings: settings},
@@ -79,6 +89,21 @@ func mountTraegerStaffRoutes(root chi.Router, staffAdmin *workforce.StaffAdmin, 
 		return errors.New("traeger staff records: the Personalstamm serves no exports")
 	}
 	root.Mount("/traeger/staff-exports", traegerstaff.NewExportsResource(staffExports, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
+	return mountTraegerStaffPool(root, tenant, records, requireStaff)
+}
+
+// mountTraegerStaffPool mounts the Vertretungspool over the same records
+// (#4709): the Träger's view and, under /api with the right that plans
+// shifts, the school's.
+func mountTraegerStaffPool(root, tenant chi.Router, records workforce.TraegerStaffRecords, requireStaff common.Middleware) error {
+	pool, ok := records.(workforce.TraegerStaffPool)
+	schoolPool, schoolOK := records.(workforce.SchoolStaffPool)
+	if !ok || !schoolOK {
+		return errors.New("traeger staff records: the Personalstamm serves no Vertretungspool")
+	}
+	root.Mount("/traeger/staff-pool", traegerstaff.NewTraegerPoolResource(pool, requireStaff, traegerStaffListRenderer(NewSimpleListRenderer())).TraegerRouter(ProtectedTraegerRoutes))
+	tenant.Mount("/staff-pool", traegerstaff.NewSchoolPoolResource(schoolPool,
+		common.RequiresPermission(permissions.TimeTrackingManage)).Router(ProtectedTenantRoutes))
 	return nil
 }
 
@@ -199,12 +224,43 @@ func (l traegerStaffAccessLog) RecordTraegerStaffAccess(ctx context.Context, acc
 		resource = auditModels.ResourceTypeTraegerStaffFinancial
 	}
 	now := time.Now()
+	metadata := map[string]any{
+		"channel": "traeger_portal", "organization_id": access.OrganizationID, "view": access.View, "rows": access.Rows,
+		"staff_ids": access.StaffIDs, "staff_record_id": access.RecordID,
+	}
+	if len(access.RecordIDs) > 0 {
+		metadata["staff_record_ids"] = access.RecordIDs
+	}
 	return l.log.Create(ctx, &auditModels.DataAccessLog{
 		ActorAccountID: access.AccountID, ActorRole: traegerAccessActorRole, ResourceType: resource,
-		RangeStart: now, RangeEnd: now,
-		Metadata: map[string]any{
-			"channel": "traeger_portal", "organization_id": access.OrganizationID, "view": access.View, "rows": access.Rows,
-			"staff_ids": access.StaffIDs, "staff_record_id": access.RecordID,
-		},
+		RangeStart: now, RangeEnd: now, Metadata: metadata,
 	})
+}
+
+// traegerSpringerEmployments employs a Springer at the blocking school
+// through Identity & Access, in the school's tenant transaction (ADR 0251).
+type traegerSpringerEmployments struct {
+	access identityaccess.SpringerAccess
+}
+
+func (e traegerSpringerEmployments) EmploySpringer(ctx context.Context, request workforce.SpringerEmploymentRequest) (int64, error) {
+	employment, err := e.access.GrantSpringerWindow(ctx, identityaccess.SpringerWindow{
+		AccountID: request.AccountID, FirstName: request.FirstName, LastName: request.LastName,
+		BlockID: request.BlockID, StartsAt: request.StartsAt, EndsAt: request.EndsAt,
+	})
+	return employment.StaffID, err
+}
+
+func (e traegerSpringerEmployments) EndSpringerAccess(ctx context.Context, blockID int64) error {
+	return e.access.EndSpringerWindow(ctx, blockID)
+}
+
+// springerAccessOf reads the Springer access, a capability of its own beside
+// the Identity & Access facade (ADR 0251), like the pool beside the records.
+func springerAccessOf(identity identityaccess.Owner) (identityaccess.SpringerAccess, error) {
+	springers, ok := identity.(identityaccess.SpringerAccess)
+	if !ok {
+		return nil, errors.New("traeger staff records: Identity & Access serves no Springer access")
+	}
+	return springers, nil
 }

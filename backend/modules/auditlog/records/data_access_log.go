@@ -227,6 +227,11 @@ const (
 	// (#4705): written at every Einsatzort of the record before a value
 	// leaves. Metadata as for ResourceTypeTraegerStaffRecords.
 	ResourceTypeTraegerStaffFinancial = "traeger_staff_financial"
+	// ResourceTypeTraegerStaffPool records a school reading the Springer
+	// of its Träger in the Vertretungspool (#4709, ADR 0089 section 9):
+	// name, status of the Nachweise and blocked times. StudentID is NULL;
+	// metadata carries the staff_record_ids and the row count.
+	ResourceTypeTraegerStaffPool = "traeger_staff_pool"
 )
 
 // DataAccessLog is an append-only record of a staff member viewing sensitive

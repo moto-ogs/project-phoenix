@@ -291,8 +291,8 @@ export const FEATURES = Object.freeze([
   },
   {
     name: 'Personal und Dienstplan',
-    pages: { ogs: ['/staff/**', '/dienstplan', '/mein-dienstplan', '/payroll', '/invitations'] },
-    events: ['staff_invited', 'user_invited'],
+    pages: { ogs: ['/staff/**', '/dienstplan', '/dienstplan/springer', '/mein-dienstplan', '/payroll', '/invitations'] },
+    events: ['staff_invited', 'user_invited', 'springer_blocked'],
   },
   { name: 'Zeiterfassung', pages: { ogs: ['/time-tracking'] } },
   { name: 'Vertretung', pages: { ogs: ['/substitutions', '/vertretung', '/vertretungsplan'] }, events: ['substitution_assigned', 'substitution_ended'] },

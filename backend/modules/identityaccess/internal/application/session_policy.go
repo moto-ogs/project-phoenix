@@ -61,13 +61,8 @@ func (r factReads) school(ctx context.Context, s *AccountAuthentication, schoolI
 }
 
 func (r factReads) mapping(ctx context.Context, s *AccountAuthentication, accountID, tenantID int64) (bool, error) {
-	var mapped bool
-	var err error
-	if r.locked {
-		mapped, _, err = s.store.LockActiveTenantMappingShared(ctx, accountID, tenantID)
-	} else {
-		mapped, _, err = s.store.HasActiveAccountTenant(ctx, accountID, tenantID)
-	}
+	// A Springer's mapping admits only while a window is open (ADR 0251).
+	mapped, _, err := s.store.AdmittedTenantMapping(ctx, accountID, tenantID, r.locked)
 	return mapped, err
 }
 
@@ -253,7 +248,7 @@ var sessionPolicies = map[domain.SessionKind]sessionPolicy{
 				// Parent tokens name no school. Resolve the successor's
 				// school under the account lock before locking it (#6305).
 				var err error
-				b.tenantID, _, err = s.resolveAccountTenantDefaultInTransaction(ctx, b.accountID)
+				b.tenantID, _, err = s.firstLiveTenant(ctx, b.accountID, s.store.ListActiveTenantIDs)
 				if err != nil {
 					return heldFacts{}, err
 				}

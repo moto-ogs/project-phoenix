@@ -1,0 +1,3 @@
+DELETE /api/staff-pool/blocks/{id}
+GET /api/staff-pool/
+POST /api/staff-pool/blocks
