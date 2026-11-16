@@ -95,12 +95,19 @@ func (c *sseChannel) signalFeed(tenantID int64, accountIDs []int64) error {
 // content: the portal reloads the feed, whose read checks the children.
 func (c *sseChannel) signalGuardianFeed(tenantID int64, accountIDs []int64) error {
 	event := realtime.NewEvent(realtime.EventNotificationFeedChanged, "", realtime.EventData{})
+	return c.broadcastToGuardians(tenantID, accountIDs, event)
+}
+
+// broadcastToGuardians attempts every guardian independently. A stale or
+// unavailable session for one guardian must not suppress delivery to the rest.
+func (c *sseChannel) broadcastToGuardians(tenantID int64, accountIDs []int64, event realtime.Event) error {
+	var errs []error
 	for _, accountID := range accountIDs {
 		if err := c.broadcaster.BroadcastToGuardian(tenantID, accountID, event); err != nil {
-			return err
+			errs = append(errs, err)
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func (c *sseChannel) getLogger() *slog.Logger {
@@ -183,7 +190,11 @@ func (c *sseChannel) deliverToGuardians(ctx context.Context, event Event, sseEve
 	audience := event.Audience
 	if len(event.feedChanged) > 0 {
 		if err := c.signalGuardianFeed(audience.TenantID, event.feedChanged); err != nil {
-			return err
+			c.getLogger().Warn("guardian notification feed invalidation failed",
+				"tenant_id", audience.TenantID,
+				"account_count", len(event.feedChanged),
+				"error", err,
+			)
 		}
 	}
 	if event.feedOnly {
@@ -195,12 +206,7 @@ func (c *sseChannel) deliverToGuardians(ctx context.Context, event Event, sseEve
 	}
 	stored.Scope, stored.AccountIDs = domain.RealtimeScopeGuardian, recipients
 	sseEvent = c.relayable(ctx, sseEvent, stored, audience.StudentIDs)
-	for _, accountID := range recipients {
-		if err := c.broadcaster.BroadcastToGuardian(audience.TenantID, accountID, sseEvent); err != nil {
-			return err
-		}
-	}
-	return nil
+	return c.broadcastToGuardians(audience.TenantID, recipients, sseEvent)
 }
 
 func deliversToOpenSchoolPortal(event Event) bool {
