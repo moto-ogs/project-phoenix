@@ -82,7 +82,9 @@ const preview: Preview = {
     if (typeof parameters.textCollisions === "string") return;
     const body = canvasElement.ownerDocument.body;
     const found = findTextCollisions(body);
-    // Im Storybook-Test zusätzlich bei Telefonbreite (`vitest.setup.ts`).
+    // Die erste Prüfung läuft in der Breite, die addon-vitest jeder Story
+    // gibt (1200 × 900, oder ihr eigener Viewport). Im Storybook-Test
+    // zusätzlich bei Telefonbreite (`vitest.setup.ts`).
     const setViewport = (
       globalThis as {
         __motoSetViewport?: (w: number, h: number) => Promise<void>;
