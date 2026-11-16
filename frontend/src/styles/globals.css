@@ -1061,20 +1061,22 @@ html[data-chat-page-lock] body {
 }
 
 /* Unbestimmter Fortschritt (ProgressBar indeterminate): ein Abschnitt
-   gleitet durch die Spur. Nur transform, damit der Kompositor ihn zeichnet;
+   gleitet hin und her durch die Spur. Nur transform, damit der Kompositor ihn zeichnet;
    bei reduzierter Bewegung steht der Balken ruhig und voll. */
 .moto-progress-indeterminate {
-  animation: moto-progress-indeterminate 1.6s cubic-bezier(0.65, 0, 0.35, 1)
-    infinite;
+  animation: moto-progress-indeterminate 1.2s cubic-bezier(0.65, 0, 0.35, 1)
+    infinite alternate;
   will-change: transform;
 }
 
 @keyframes moto-progress-indeterminate {
+  /* Der Abschnitt (40 % der Spur) ragt an beiden Enden noch hinein: die
+     Spur wirkt nie leer, auch nicht im langsamen Teil der Kurve. */
   0% {
-    transform: translateX(-100%);
+    transform: translateX(-60%);
   }
   100% {
-    transform: translateX(250%);
+    transform: translateX(210%);
   }
 }
 
