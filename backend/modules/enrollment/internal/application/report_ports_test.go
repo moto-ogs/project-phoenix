@@ -358,3 +358,17 @@ func reportChildInput(r *enrollmentNative.RequestChild) *enrollmentNative.Reques
 		CustomData: r.CustomData.Clone(),
 	}
 }
+
+// idRecordingClassCareParticipation keeps every candidate and records them.
+type idRecordingClassCareParticipation struct{ ids []int64 }
+
+func (f *idRecordingClassCareParticipation) ResolveListParticipation(
+	_ context.Context, studentIDs []int64, _, _ calendar.Date, _ bool,
+) (*careplan.CareParticipationResolution, error) {
+	f.ids = append(f.ids, studentIDs...)
+	participating := make(map[int64]bool, len(studentIDs))
+	for _, id := range studentIDs {
+		participating[id] = true
+	}
+	return &careplan.CareParticipationResolution{CandidateIDs: studentIDs, ParticipatingIDs: participating}, nil
+}

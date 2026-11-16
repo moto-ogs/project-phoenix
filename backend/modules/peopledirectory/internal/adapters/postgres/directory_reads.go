@@ -151,6 +151,7 @@ func (s *studentDirectoryReads) ListNamesByClass(ctx context.Context, schoolClas
 	rows := []directory.StudentName{}
 	query := withStudentTenant(s.studentRows(db, scope).
 		ColumnExpr(`"student".id AS student_id, "person".first_name, "person".last_name`).
+		ColumnExpr(`("student".without_care_place AND "student".status <> ?) AS school_member_only`, directory.StudentStatusAlumnus).
 		Join(`JOIN users.persons AS "person" ON "person".tenant_id = "student".tenant_id AND "person".id = "student".person_id`).
 		Where(`LOWER(TRIM("student".school_class)) = ?`, strings.ToLower(strings.TrimSpace(schoolClass))).
 		Where(`"person".deleted_at IS NULL`), scope).

@@ -21,17 +21,25 @@ type DayRoster struct {
 type DayRosterRow struct {
 	StudentID int64
 	// SchoolClass is the row's class; the school-wide roster groups by it.
-	SchoolClass    string
-	FirstName      string
-	LastName       string
-	ListEntry      bool
-	ListEntryID    int64
-	GroupName      string
-	Registered     bool
-	OfferingsByDay map[string][]string
-	ArrivalByDay   map[string]string
-	PickupByDay    map[string]string
+	SchoolClass string
+	FirstName   string
+	LastName    string
+	ListEntry   bool
+	ListEntryID int64
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (#4803): a student with its own ID, so status days, class trips and
+	// the morning mark reach it, but no OGS care, departure or handover.
+	WithoutCarePlace bool
+	GroupName        string
+	Registered       bool
+	OfferingsByDay   map[string][]string
+	ArrivalByDay     map[string]string
+	PickupByDay      map[string]string
 }
+
+// NoCare reports a row without OGS care: a class-list-only entry (#2382)
+// or a child without an OGS place (#4803).
+func (r DayRosterRow) NoCare() bool { return r.ListEntry || r.WithoutCarePlace }
 
 // DayRosterStudent is one loaded student of the class with the departure
 // modes its live plan allows on the day's weekday.

@@ -54,6 +54,11 @@ type RosterStudent struct {
 	AllowedDepartureModes  DepartureModes
 	DepartureDays          DepartureDays
 	DepartureCompanionNote *string
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (#4803); Alumnus a graduate. Such a child joins the class roster as a
+	// "Keine Betreuung" row instead of passing the care participation.
+	WithoutCarePlace bool
+	Alumnus          bool
 }
 
 // RosterPerson is a student's name.

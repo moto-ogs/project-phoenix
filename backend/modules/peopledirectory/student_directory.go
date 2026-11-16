@@ -55,6 +55,10 @@ type StudentRecord struct {
 	// is known (School Membership, #6073). Not on the wire.
 	CarePausedAfter string `json:"-"`
 	CareResumedFrom string `json:"-"`
+	// WithoutCarePlace marks a child of the class without an OGS place
+	// (School Membership, #4803): a normal student record that never takes
+	// part in OGS care.
+	WithoutCarePlace bool `json:"without_care_place"`
 
 	AddressStreet     *string `json:"address_street,omitempty"`
 	AddressCity       *string `json:"address_city,omitempty"`
@@ -92,10 +96,13 @@ func (r StudentRecord) CareEndedOn(day calendar.Date) bool {
 	return r.EnrolledUntil != "" && day.After(calendar.Date(r.EnrolledUntil))
 }
 
+// HasCarePlace reports whether the child has a place in the OGS (#4803).
+func (r StudentRecord) HasCarePlace() bool { return !r.WithoutCarePlace }
+
 // PickupEligibleOn reports a child a pickup plan applies to on day: not
-// graduated and still in care.
+// graduated, still in care and with an OGS place (#4803).
 func (r StudentRecord) PickupEligibleOn(day calendar.Date) bool {
-	return !r.IsAlumnus() && !r.CareEndedOn(day)
+	return !r.IsAlumnus() && !r.CareEndedOn(day) && r.HasCarePlace()
 }
 
 // StudentClassRecords is the class read HasActiveClass runs over.
@@ -103,15 +110,15 @@ type StudentClassRecords interface {
 	ListStudentRecordsByClass(context.Context, []string, StudentScope) ([]StudentRecord, error)
 }
 
-// HasActiveClass reports whether class still has an enrolled child whose care
-// has not ended by today.
+// HasActiveClass reports whether class still has an enrolled child in OGS
+// care: its care has not ended by today and it has an OGS place (#4803).
 func HasActiveClass(ctx context.Context, students StudentClassRecords, class string, today calendar.Date) (bool, error) {
 	rows, err := students.ListStudentRecordsByClass(ctx, []string{class}, StudentScopeEnrolled)
 	if err != nil {
 		return false, err
 	}
 	for _, row := range rows {
-		if !row.CareEndedOn(today) {
+		if !row.CareEndedOn(today) && row.HasCarePlace() {
 			return true, nil
 		}
 	}

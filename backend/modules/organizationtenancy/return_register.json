@@ -37568,6 +37568,12 @@
           "type": "date",
           "udt": "date",
           "nullable": true
+        },
+        {
+          "name": "without_care_place",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [

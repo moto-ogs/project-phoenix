@@ -185,6 +185,7 @@ func (a absenceList) children(ctx context.Context, schoolClass string, from, unt
 	if err != nil {
 		return nil, nil, fmt.Errorf("absence list: participation: %w", err)
 	}
+	participation = withSchoolMembersOnly(participation, children, participationFrom, participationUntil)
 	kept := make([]classday.AbsenceListChild, 0, len(children))
 	for _, child := range children {
 		for day := participationFrom; !day.After(participationUntil); day = day.AddDays(1) {
@@ -200,6 +201,27 @@ func (a absenceList) children(ctx context.Context, schoolClass string, from, unt
 		return collation.CompareGermanNames(a.LastName, a.FirstName, b.LastName, b.FirstName) < 0
 	})
 	return children, participation, nil
+}
+
+// withSchoolMembersOnly counts a child without an OGS place (#4803) on
+// every requested day: it never takes part in OGS care, yet it belongs to
+// the class and its absences go into the Klassenbuch.
+func withSchoolMembersOnly(participation map[calendar.Date]map[int64]bool, children []classday.AbsenceListChild, from, until calendar.Date) map[calendar.Date]map[int64]bool {
+	if participation == nil {
+		participation = map[calendar.Date]map[int64]bool{}
+	}
+	for _, child := range children {
+		if !child.SchoolMemberOnly {
+			continue
+		}
+		for day := from; !day.After(until); day = day.AddDays(1) {
+			if participation[day] == nil {
+				participation[day] = map[int64]bool{}
+			}
+			participation[day][child.StudentID] = true
+		}
+	}
+	return participation
 }
 
 // count applies the retained window and each child's dated participation.

@@ -58,6 +58,10 @@ type StudentName struct {
 	StudentID int64  `json:"student_id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
+	// SchoolMemberOnly is set by the class read for a child without an OGS
+	// place (#4803) that has not graduated: a child of the class every day,
+	// whatever the care participation says. Not on the wire.
+	SchoolMemberOnly bool `json:"-"`
 }
 
 func (s Student) IsAlumnus() bool { return s.Status == StudentStatusAlumnus }

@@ -7,6 +7,7 @@ import (
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
+	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 )
 
@@ -65,6 +66,7 @@ func (b enrollmentRosterStudents) ListClassRoster(ctx context.Context, schoolCla
 			ID: student.ID, PersonID: student.PersonID, SchoolClass: student.SchoolClass, GroupID: student.GroupID,
 			AllowedDepartureModes: student.AllowedDepartureModes, DepartureDays: student.DepartureDays,
 			DepartureCompanionNote: student.DepartureCompanionNote,
+			WithoutCarePlace:       student.WithoutCarePlace, Alumnus: student.Status == peopleValues.StudentStatusAlumnus,
 		})
 	}
 	return out, nil
