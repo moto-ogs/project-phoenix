@@ -75,7 +75,6 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/schoolmembership":             2,
 	"modules/schoolstructure":              3,
 	"modules/settings":                     3,
-	"modules/timetable":                    45,
 	"workflows/catererportal":              2,
 	"workflows/holidayclosurenotification": 1,
 	"workflows/parentportal":               19,

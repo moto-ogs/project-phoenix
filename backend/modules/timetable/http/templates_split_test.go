@@ -177,14 +177,14 @@ func TestTemplateSplitHandler_HappyPath(t *testing.T) {
 	mat := &mockMaterializationService{
 		result: &timetableModule.MaterializationResult{InstancesCreated: 5},
 	}
-	s := buildTemplateModule(t, mat)
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
 	defer s.cleanupFn()
 	s.res.Templates = splitTemplateAdministration(s, mat, acceptCareOfferingSeries)
 	router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
 
 	created := createSourceTemplate(t, router, s, "Tpl-Split-Quelle")
 
-	effective := calendar.TodayDate().AddDays(7)
+	effective := fixedTemplateToday.AddDays(7)
 	body := splitBody(s, "Tpl-Split-Nachfolger", effective)
 	body["materialize_from"] = effective.String()
 	body["materialize_to"] = effective.AddDays(6).String()
@@ -210,14 +210,14 @@ func TestTemplateSplitHandler_RejectsOverlongNotes(t *testing.T) {
 	t.Parallel()
 
 	mat := &mockMaterializationService{result: &timetableModule.MaterializationResult{}}
-	s := buildTemplateModule(t, mat)
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
 	defer s.cleanupFn()
 	s.res.Templates = splitTemplateAdministration(s, mat, acceptCareOfferingSeries)
 	router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
 
 	created := createSourceTemplate(t, router, s, "Tpl-Split-LongNote-Quelle")
 
-	effective := calendar.TodayDate().AddDays(7)
+	effective := fixedTemplateToday.AddDays(7)
 	body := splitBody(s, "Tpl-Split-LongNote", effective)
 	body["notes"] = strings.Repeat("x", 2001)
 
@@ -230,7 +230,7 @@ func TestTemplateSplitHandler_RejectsOverlongNotes(t *testing.T) {
 func TestTemplateUpdateHandler_EnforcesTenantGradeLevelMax(t *testing.T) {
 	t.Parallel()
 
-	s := buildTemplateModule(t, nil)
+	s := buildTemplateModule(t, nil, fixedTemplateClock)
 	defer s.cleanupFn()
 	router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
 
@@ -296,7 +296,7 @@ func TestTemplateSplitHandler_EnforcesTenantGradeLevelMax(t *testing.T) {
 	t.Parallel()
 
 	t.Run("allows an unchanged legacy above-cap Jahrgang", func(t *testing.T) {
-		s := buildTemplateModule(t, nil)
+		s := buildTemplateModule(t, nil, fixedTemplateClock)
 		defer s.cleanupFn()
 		s.res.Templates = splitTemplateAdministration(s, &mockMaterializationService{result: &timetableModule.MaterializationResult{}}, acceptCareOfferingSeries)
 		router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
@@ -310,7 +310,7 @@ func TestTemplateSplitHandler_EnforcesTenantGradeLevelMax(t *testing.T) {
 			timetableModule.GroupTargetInput{TargetGroupType: timetableModule.TargetGroupTypeGrade, TargetGradeLevel: &gradeSix},
 		)
 		s.res.SettingsService = templateGradeSettings(4, nil)
-		body := splitBody(s, "Tpl-GradeCap-Split-Legacy-Successor", calendar.TodayDate().AddDays(7))
+		body := splitBody(s, "Tpl-GradeCap-Split-Legacy-Successor", fixedTemplateToday.AddDays(7))
 		body["target_group_type"] = timetableModule.TargetGroupTypeGrade
 		body["target_grade_level"] = 5
 
@@ -328,7 +328,7 @@ func TestTemplateSplitHandler_EnforcesTenantGradeLevelMax(t *testing.T) {
 	})
 
 	t.Run("rejects a changed above-cap Jahrgang before capping the source", func(t *testing.T) {
-		s := buildTemplateModule(t, nil)
+		s := buildTemplateModule(t, nil, fixedTemplateClock)
 		defer s.cleanupFn()
 		s.res.Templates = splitTemplateAdministration(s, &mockMaterializationService{result: &timetableModule.MaterializationResult{}}, acceptCareOfferingSeries)
 		router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
@@ -336,7 +336,7 @@ func TestTemplateSplitHandler_EnforcesTenantGradeLevelMax(t *testing.T) {
 		s.res.SettingsService = templateGradeSettings(13, nil)
 		created := createJahrgangSourceTemplate(t, router, s, "Tpl-GradeCap-Split-Rejected", 5)
 		s.res.SettingsService = templateGradeSettings(4, nil)
-		body := splitBody(s, "Tpl-GradeCap-Split-Rejected-Successor", calendar.TodayDate().AddDays(7))
+		body := splitBody(s, "Tpl-GradeCap-Split-Rejected-Successor", fixedTemplateToday.AddDays(7))
 		body["target_group_type"] = timetableModule.TargetGroupTypeGrade
 		body["target_grade_level"] = 6
 		body["targets"] = []map[string]any{
@@ -355,7 +355,7 @@ func TestTemplateSplitHandler_EnforcesTenantGradeLevelMax(t *testing.T) {
 	})
 
 	t.Run("settings failure returns 500 without mutating the source", func(t *testing.T) {
-		s := buildTemplateModule(t, nil)
+		s := buildTemplateModule(t, nil, fixedTemplateClock)
 		defer s.cleanupFn()
 		s.res.Templates = splitTemplateAdministration(s, &mockMaterializationService{result: &timetableModule.MaterializationResult{}}, acceptCareOfferingSeries)
 		router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
@@ -363,7 +363,7 @@ func TestTemplateSplitHandler_EnforcesTenantGradeLevelMax(t *testing.T) {
 		s.res.SettingsService = templateGradeSettings(13, nil)
 		created := createJahrgangSourceTemplate(t, router, s, "Tpl-GradeCap-Split-Settings", 5)
 		s.res.SettingsService = templateGradeSettings(0, errors.New("settings unavailable"))
-		body := splitBody(s, "Tpl-GradeCap-Split-Settings-Successor", calendar.TodayDate().AddDays(7))
+		body := splitBody(s, "Tpl-GradeCap-Split-Settings-Successor", fixedTemplateToday.AddDays(7))
 		body["target_group_type"] = timetableModule.TargetGroupTypeGrade
 		body["target_grade_level"] = 5
 
@@ -383,7 +383,7 @@ func TestTemplateSplitHandler_IncompatibleCareLinkRollsBackOn400(t *testing.T) {
 	t.Parallel()
 
 	mat := &mockMaterializationService{result: &timetableModule.MaterializationResult{}}
-	s := buildTemplateModule(t, mat)
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
 	defer s.cleanupFn()
 	s.res.Templates = splitTemplateAdministration(s, mat, func(context.Context, int64) error {
 		return fmt.Errorf("%w: linked care offering would become invalid", RootCompositions.ErrCareOfferingInvalid)
@@ -393,7 +393,7 @@ func TestTemplateSplitHandler_IncompatibleCareLinkRollsBackOn400(t *testing.T) {
 
 	w := doTemplateJSON(t, router, http.MethodPost,
 		fmt.Sprintf("/templates/%d/split", created.TemplateID),
-		splitBody(s, "Tpl-Split-Rollback-Nachfolger", calendar.TodayDate().AddDays(7)))
+		splitBody(s, "Tpl-Split-Rollback-Nachfolger", fixedTemplateToday.AddDays(7)))
 	require.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
 	assert.Contains(t, w.Body.String(), `"code":"timetable.template_care_offering_conflict"`)
 	assert.Contains(t, w.Body.String(), "die Änderung ist nicht möglich")
@@ -432,7 +432,7 @@ func TestTemplateSplitHandler_CareValidatorInfrastructureFailureReturnsGeneric50
 	t.Parallel()
 
 	mat := &mockMaterializationService{result: &timetableModule.MaterializationResult{}}
-	s := buildTemplateModule(t, mat)
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
 	defer s.cleanupFn()
 	s.res.Templates = splitTemplateAdministration(s, mat, func(context.Context, int64) error {
 		return errors.New("synthetic database details")
@@ -442,7 +442,7 @@ func TestTemplateSplitHandler_CareValidatorInfrastructureFailureReturnsGeneric50
 
 	w := doTemplateJSON(t, router, http.MethodPost,
 		fmt.Sprintf("/templates/%d/split", created.TemplateID),
-		splitBody(s, "Tpl-Split-Infra-Nachfolger", calendar.TodayDate().AddDays(7)))
+		splitBody(s, "Tpl-Split-Infra-Nachfolger", fixedTemplateToday.AddDays(7)))
 	require.Equal(t, http.StatusInternalServerError, w.Code, "body=%s", w.Body.String())
 	assert.NotContains(t, w.Body.String(), "synthetic database details")
 
@@ -461,7 +461,7 @@ func TestTemplateUpdateHandler_IncompatibleCareLinkRollsBackOn400(t *testing.T) 
 	t.Parallel()
 
 	mat := &mockMaterializationService{result: &timetableModule.MaterializationResult{}}
-	s := buildTemplateModule(t, mat)
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
 	defer s.cleanupFn()
 	router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
 	created := createSourceTemplate(t, router, s, "Tpl-Update-Rollback-Quelle")
@@ -610,7 +610,7 @@ func TestTemplateUpdateHandler_RejectsInconsistentValidityEnvelopeWithoutMutatio
 	t.Parallel()
 
 	mat := &mockMaterializationService{result: &timetableModule.MaterializationResult{}}
-	s := buildTemplateModule(t, mat)
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
 	defer s.cleanupFn()
 	router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
 
@@ -648,7 +648,7 @@ func TestTemplateSplitHandler_BadEffectiveDate(t *testing.T) {
 	t.Parallel()
 
 	mat := &mockMaterializationService{result: &timetableModule.MaterializationResult{}}
-	s := buildTemplateModule(t, mat)
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
 	defer s.cleanupFn()
 	s.res.Templates = splitTemplateAdministration(s, mat, acceptCareOfferingSeries)
 	router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
@@ -656,7 +656,7 @@ func TestTemplateSplitHandler_BadEffectiveDate(t *testing.T) {
 	created := createSourceTemplate(t, router, s, "Tpl-Split-DatumQuelle")
 
 	t.Run("malformed date", func(t *testing.T) {
-		body := splitBody(s, "Tpl-Split-Datum", calendar.TodayDate())
+		body := splitBody(s, "Tpl-Split-Datum", fixedTemplateToday)
 		body["effective_date"] = "12.07.2026"
 		w := doTemplateJSON(t, router, http.MethodPost,
 			fmt.Sprintf("/templates/%d/split", created.TemplateID), body)
@@ -664,7 +664,7 @@ func TestTemplateSplitHandler_BadEffectiveDate(t *testing.T) {
 	})
 
 	t.Run("missing date", func(t *testing.T) {
-		body := splitBody(s, "Tpl-Split-Datum", calendar.TodayDate())
+		body := splitBody(s, "Tpl-Split-Datum", fixedTemplateToday)
 		delete(body, "effective_date")
 		w := doTemplateJSON(t, router, http.MethodPost,
 			fmt.Sprintf("/templates/%d/split", created.TemplateID), body)
@@ -672,7 +672,7 @@ func TestTemplateSplitHandler_BadEffectiveDate(t *testing.T) {
 	})
 
 	t.Run("past date", func(t *testing.T) {
-		body := splitBody(s, "Tpl-Split-Datum", calendar.TodayDate().AddDays(-1))
+		body := splitBody(s, "Tpl-Split-Datum", fixedTemplateToday.AddDays(-1))
 		w := doTemplateJSON(t, router, http.MethodPost,
 			fmt.Sprintf("/templates/%d/split", created.TemplateID), body)
 		assert.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
@@ -683,12 +683,12 @@ func TestTemplateSplitHandler_UnknownTemplate(t *testing.T) {
 	t.Parallel()
 
 	mat := &mockMaterializationService{result: &timetableModule.MaterializationResult{}}
-	s := buildTemplateModule(t, mat)
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
 	defer s.cleanupFn()
 	s.res.Templates = splitTemplateAdministration(s, mat, acceptCareOfferingSeries)
 	router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
 
-	body := splitBody(s, "Tpl-Split-Unbekannt", calendar.TodayDate().AddDays(7))
+	body := splitBody(s, "Tpl-Split-Unbekannt", fixedTemplateToday.AddDays(7))
 	w := doTemplateJSON(t, router, http.MethodPost, "/templates/999999999/split", body)
 	assert.Equal(t, http.StatusNotFound, w.Code, "body=%s", w.Body.String())
 }
@@ -697,7 +697,7 @@ func TestTemplateSplitHandler_ForbiddenForReadOnly(t *testing.T) {
 	t.Parallel()
 
 	mat := &mockMaterializationService{result: &timetableModule.MaterializationResult{}}
-	s := buildTemplateModule(t, mat)
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
 	defer s.cleanupFn()
 	s.res.Templates = splitTemplateAdministration(s, mat, acceptCareOfferingSeries)
 
@@ -705,7 +705,7 @@ func TestTemplateSplitHandler_ForbiddenForReadOnly(t *testing.T) {
 	created := createSourceTemplate(t, adminRouter, s, "Tpl-Split-NurLesen")
 
 	readOnlyRouter := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesRead})
-	body := splitBody(s, "Tpl-Split-NurLesenNeu", calendar.TodayDate().AddDays(7))
+	body := splitBody(s, "Tpl-Split-NurLesenNeu", fixedTemplateToday.AddDays(7))
 	w := doTemplateJSON(t, readOnlyRouter, http.MethodPost,
 		fmt.Sprintf("/templates/%d/split", created.TemplateID), body)
 	assert.Equal(t, http.StatusForbidden, w.Code, "body=%s", w.Body.String())
@@ -737,13 +737,13 @@ func TestTemplateEndHandler_RemovesTemplateFromActiveCRUD(t *testing.T) {
 	t.Parallel()
 
 	mat := &mockMaterializationService{result: &timetableModule.MaterializationResult{}}
-	s := buildTemplateModule(t, mat)
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
 	defer s.cleanupFn()
 	s.res.Templates = splitTemplateAdministration(s, mat, acceptCareOfferingSeries)
 	router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
 
 	created := createSourceTemplate(t, router, s, "Tpl-End-Hidden")
-	effective := calendar.TodayDate().AddDays(7)
+	effective := fixedTemplateToday.AddDays(7)
 
 	w := doTemplateJSON(t, router, http.MethodPost,
 		fmt.Sprintf("/templates/%d/end", created.TemplateID), endBody(effective))
@@ -771,7 +771,7 @@ func TestTemplateEndHandler_BadEffectiveDate(t *testing.T) {
 	t.Parallel()
 
 	mat := &mockMaterializationService{result: &timetableModule.MaterializationResult{}}
-	s := buildTemplateModule(t, mat)
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
 	defer s.cleanupFn()
 	s.res.Templates = splitTemplateAdministration(s, mat, acceptCareOfferingSeries)
 	router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
@@ -794,7 +794,7 @@ func TestTemplateEndHandler_BadEffectiveDate(t *testing.T) {
 	t.Run("past date", func(t *testing.T) {
 		w := doTemplateJSON(t, router, http.MethodPost,
 			fmt.Sprintf("/templates/%d/end", created.TemplateID),
-			endBody(calendar.TodayDate().AddDays(-1)))
+			endBody(fixedTemplateToday.AddDays(-1)))
 		assert.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
 	})
 }
@@ -803,13 +803,13 @@ func TestTemplateEndHandler_UnknownTemplate(t *testing.T) {
 	t.Parallel()
 
 	mat := &mockMaterializationService{result: &timetableModule.MaterializationResult{}}
-	s := buildTemplateModule(t, mat)
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
 	defer s.cleanupFn()
 	s.res.Templates = splitTemplateAdministration(s, mat, acceptCareOfferingSeries)
 	router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
 
 	w := doTemplateJSON(t, router, http.MethodPost, "/templates/999999999/end",
-		endBody(calendar.TodayDate().AddDays(7)))
+		endBody(fixedTemplateToday.AddDays(7)))
 	assert.Equal(t, http.StatusNotFound, w.Code, "body=%s", w.Body.String())
 }
 
@@ -817,7 +817,7 @@ func TestTemplateEndHandler_ForbiddenForReadOnly(t *testing.T) {
 	t.Parallel()
 
 	mat := &mockMaterializationService{result: &timetableModule.MaterializationResult{}}
-	s := buildTemplateModule(t, mat)
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
 	defer s.cleanupFn()
 	s.res.Templates = splitTemplateAdministration(s, mat, acceptCareOfferingSeries)
 
@@ -827,7 +827,7 @@ func TestTemplateEndHandler_ForbiddenForReadOnly(t *testing.T) {
 	readOnlyRouter := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesRead})
 	w := doTemplateJSON(t, readOnlyRouter, http.MethodPost,
 		fmt.Sprintf("/templates/%d/end", created.TemplateID),
-		endBody(calendar.TodayDate().AddDays(7)))
+		endBody(fixedTemplateToday.AddDays(7)))
 	assert.Equal(t, http.StatusForbidden, w.Code, "body=%s", w.Body.String())
 }
 

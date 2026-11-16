@@ -334,9 +334,12 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			persons, err = BuildPeopleDirectory(db, ObservePeopleDirectory, photoRuntime, GuardianDirectoryProvider(db, guardian))
 			return
 		},
-		func() (err error) { timetableOwner, err = BuildServeTimetable(db, persons, rooms, membership); return },
+		func() (err error) {
+			timetableOwner, err = BuildServeTimetable(db, persons, rooms, membership, env.Now)
+			return
+		},
 		func() error {
-			timetableRepos = NewTimetableRepositories(db, timetableOwner, persons, groups, rooms, calendar, membership, workTime)
+			timetableRepos = NewTimetableRepositories(db, timetableOwner, persons, groups, rooms, calendar, membership, workTime, env.Now)
 			return nil
 		},
 		func() (err error) {
@@ -439,7 +442,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			activities, err = BuildActivities(timetableRows, timetableOwner, presence.SessionRecords, people)
+			activities, err = BuildActivities(timetableRows, timetableOwner, presence.SessionRecords, people, env.Today)
 			return
 		},
 		func() (err error) {
@@ -536,7 +539,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			facilities, err = BuildFacilitiesModule(db, ObserveFacilities, timetableRows.RecurrenceLock, presence.Presence, requests.CareOfferings, groups, devices)
+			facilities, err = BuildFacilitiesModule(db, ObserveFacilities, timetableRows.RecurrenceLock, presence.Presence, requests.CareOfferings, groups, devices, env.Today)
 			return
 		},
 		func() (err error) {

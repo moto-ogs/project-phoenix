@@ -104,7 +104,7 @@ type ShiftTypeTestModule struct {
 // with (#6845) and the Timetable side it runs over.
 func NewShiftTypeTestModule(db transactionruntime.Database) (workforce.ShiftTypeAdministration, workforce.ShiftPlanReferenceQuery, ShiftTypeTestModule, error) {
 	repos := NewShiftTypeTestRepositories(db, owners.MustNewMembershipTestRepositories(db))
-	linker, err := timetableCompose.NewService(repos.Timetable, nil, timetablePorts.RepositoryDirectories{}, nil, nil, nil)
+	linker, err := timetableCompose.NewService(repos.Timetable, nil, timetablePorts.RepositoryDirectories{}, nil, nil, nil, nil)
 	if err != nil {
 		return nil, nil, ShiftTypeTestModule{}, err
 	}

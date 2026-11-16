@@ -320,7 +320,9 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0264: the clock field of the time-tracking cleanup in
 // modules/workforce/compose (+2).
 // ADR 0253: the Springer exits constructor of modules/workforce/compose (+6).
-const moduleComposeBudgetTotal = 13561
+// ADR 0263: the clock imports of modules/timetable/compose and the clock of
+// its repository composition (+6).
+const moduleComposeBudgetTotal = 13567
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -493,7 +495,9 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0128: the student template days constructor (+5), by
 	// ADR 0144: the vacation hint constructor (+6) and by ADR 0224: the cohort
 	// rosters constructor (+5).
-	"modules/timetable/compose":                     1150,
+	// ADR 0263: the clock imports of the Timetable compositions and the clock
+	// of the repository composition (+6).
+	"modules/timetable/compose":                     1156,
 	"modules/timetableblockdisplay/compose":         9,
 	"modules/timetableenrollmentprovenance/compose": 10,
 	"modules/timetableprojection/compose":           7,

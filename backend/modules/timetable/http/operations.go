@@ -104,7 +104,7 @@ func (rs *Resource) operationsPlannedNow(w http.ResponseWriter, r *http.Request)
 		date = parsed
 	}
 	accountID, isAdmin := operationActor(r.Context())
-	result, err := rs.OperationsService.PlannedNow(r.Context(), accountID, isAdmin, date, calendar.Now(), opts)
+	result, err := rs.OperationsService.PlannedNow(r.Context(), accountID, isAdmin, date, rs.Now().In(calendar.Berlin), opts)
 	if err != nil {
 		rs.renderOperationsError(w, r, err)
 		return

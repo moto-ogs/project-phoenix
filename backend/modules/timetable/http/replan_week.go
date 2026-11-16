@@ -8,7 +8,6 @@ package timetablehttp
 import (
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -67,7 +66,7 @@ func (rs *Resource) replanWeek(w http.ResponseWriter, r *http.Request) {
 	// The shared window helper enforces the same validation as /materialize:
 	// ≤ 56 days, from ≤ to, both-or-neither. Keep the rule in one place.
 	bodyForWindow := &materializeRequest{FromDate: req.FromDate, ToDate: req.ToDate}
-	from, to, err := resolveMaterializationWindow(bodyForWindow, time.Now())
+	from, to, err := resolveMaterializationWindow(bodyForWindow, rs.Now())
 	if err != nil {
 		common.RenderError(w, r, codedInvalid(err))
 		return

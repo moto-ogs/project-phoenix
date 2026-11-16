@@ -34,7 +34,8 @@ func NewStudentPresence(db transactionruntime.Database, observe func(presenceCom
 	if err != nil {
 		return nil, err
 	}
-	capability, err := NewUnobservedTimetable(db, students, rooms)
+	// The roster reads name their own day; the owner's clock decides nothing here.
+	capability, err := NewUnobservedTimetable(db, students, rooms, time.Now)
 	if err != nil {
 		return nil, err
 	}
