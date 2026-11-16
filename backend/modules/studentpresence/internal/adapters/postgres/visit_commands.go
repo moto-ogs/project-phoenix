@@ -42,8 +42,9 @@ func (s *Store) TransferOpenVisits(ctx context.Context, from, to int64) (ports.S
 		return ports.Stats{Queries: 1}, err
 	}
 	started := time.Now()
+	// The table's update trigger owns updated_at (ADR 0262).
 	result, err := db.NewUpdate().Table("active.visits").
-		Set("active_group_id = ?", to).Set("updated_at = ?", s.now()).
+		Set("active_group_id = ?", to).
 		Where("tenant_id = ?", tenantID).Where("active_group_id = ?", from).
 		Where("exit_time IS NULL").Where("id IN (?)", bun.List(visitWriteIDs(visits))).Exec(ctx)
 	stats := ports.Stats{Queries: 2, StatementDuration: time.Since(started)}

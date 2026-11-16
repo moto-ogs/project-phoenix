@@ -25,6 +25,12 @@ import (
 // NewSchedulerCleanupTestDependencies binds the same directory, settings,
 // presence cleanup, ledger and tenant runtime as the Worker, without unrelated jobs.
 func NewSchedulerCleanupTestDependencies(db transactionruntime.Database, unit tenant.UnitOfWork, now func() time.Time) (schedulerPorts.WorkerDependencies, error) {
+	// One clock for the whole composition (ADR 0262): the retention selection
+	// in Presence and the deletion in the cleanup read the same instant. A
+	// test without one runs on the wall clock.
+	if now == nil {
+		now = time.Now
+	}
 	settings, err := NewSettingsTestModule(db, unit)
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
@@ -37,7 +43,7 @@ func NewSchedulerCleanupTestDependencies(db transactionruntime.Database, unit te
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
 	}
-	presence, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: func(presenceCompose.Observation) {}})
+	presence, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: func(presenceCompose.Observation) {}, Now: now})
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
 	}
@@ -57,13 +63,8 @@ func NewSchedulerCleanupTestDependencies(db transactionruntime.Database, unit te
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
 	}
-	// The cleanup requires a clock; a test without one runs on the wall clock.
-	cleanupNow := now
-	if cleanupNow == nil {
-		cleanupNow = time.Now
-	}
 	cleanup := presenceservice.NewPresenceCleanup(presence, supervisors, NewDeletionAudit(audit.DataDeletion),
-		settingsCompose.PresenceSettings(settings.Settings), cleanupNow)
+		settingsCompose.PresenceSettings(settings.Settings), now)
 	return schedulerPorts.WorkerDependencies{
 		Logger: slog.New(slog.DiscardHandler), Now: now,
 		SchoolRepo: schedulerTenantDirectory{schools: schools}, Settings: resolver,

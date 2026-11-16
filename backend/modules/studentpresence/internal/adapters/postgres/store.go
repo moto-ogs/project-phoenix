@@ -15,6 +15,8 @@ type Database func(context.Context) (bun.IDB, int64, error)
 
 // Store is the owner's persistence. now is the composition's clock
 // (ADR 0239): the created_at and updated_at stamps the store writes read it.
+// On tables whose update trigger sets updated_at, an UPDATE leaves it to the
+// trigger (ADR 0262).
 type Store struct {
 	database Database
 	now      func() time.Time

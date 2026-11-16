@@ -36,8 +36,14 @@ Zwei Entscheidungen lasen dabei zwei Uhren:
 
 1. **Student Presence** liest die Uhr aus `Dependencies.Now`. Der Store
    (`postgres.New`) und der Dienst bekommen dieselbe Uhr; der Store schreibt
-   `created_at` und `updated_at` daraus. Die Wurzel reicht `env.Now` an den
-   Presence-Owner (`BuildPresenceOwner`). Die Aufbewahrung
+   `created_at` und `updated_at` daraus, auch die Einwilligungen, deren
+   `chk_expires_at_future` `expires_at` mit `created_at` vergleicht. Tabellen,
+   deren Update-Trigger `updated_at` setzt, behalten es auf der Uhr der
+   Datenbank: der Store setzt es beim UPDATE nicht aus seiner Uhr, eine Methode
+   gibt den gespeicherten Wert zurück, und keine Entscheidung vergleicht es mit
+   der Uhr; einen Stempel, den ein Vertrag verlangt (`SetSupervisionEnd`,
+   `CloseStaleAttendance`), überschreibt der Trigger. Die Wurzel reicht
+   `env.Now` an den Presence-Owner (`BuildPresenceOwner`). Die Aufbewahrung
    (`NewPresenceCleanup`) nimmt statt einer Tagesuhr die Instant-Uhr: Stichtag,
    Löschstempel und Laufzeiten lesen sie. Der Aktiv-Adapter bekommt die Uhr
    über `RequestRuntime.Now`, die Wurzel setzt `env.Now`.

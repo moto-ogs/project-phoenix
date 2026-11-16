@@ -39,11 +39,12 @@ func (s *Store) ReviseSupervision(ctx context.Context, input ports.GroupSupervis
 	}
 	started := time.Now()
 	var result ports.GroupSupervision
+	// The table's update trigger owns updated_at (ADR 0262); RETURNING reads the stored value.
 	err = db.NewRaw(`UPDATE active.group_supervisors
- SET group_id = ?, staff_id = ?, role = ?, start_date = ?, end_date = ?, updated_at = ?
+ SET group_id = ?, staff_id = ?, role = ?, start_date = ?, end_date = ?
  WHERE tenant_id = ? AND id = ?
  RETURNING id, tenant_id, group_id, staff_id, role, start_date, end_date, created_at, updated_at`,
-		input.GroupID, input.StaffID, input.Role, input.StartDate, input.EndDate, s.now(), tenantID, input.ID).Scan(ctx, &result)
+		input.GroupID, input.StaffID, input.Role, input.StartDate, input.EndDate, tenantID, input.ID).Scan(ctx, &result)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

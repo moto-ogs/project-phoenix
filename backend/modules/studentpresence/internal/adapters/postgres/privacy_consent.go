@@ -63,14 +63,18 @@ func (s *Store) RecordPrivacyConsent(ctx context.Context, value *studentpresence
 	if err != nil {
 		return ports.Stats{}, err
 	}
+	// created_at reads the store's clock (ADR 0262): chk_expires_at_future
+	// compares expires_at with it, so both sides read one clock.
+	stamp := s.now()
 	row := privacyConsentRow{
 		TenantID: tenantID, StudentID: value.StudentID, PolicyVersion: value.PolicyVersion, Accepted: value.Accepted,
 		AcceptedAt: value.AcceptedAt, ExpiresAt: value.ExpiresAt, DurationDays: value.DurationDays,
 		RenewalRequired: value.RenewalRequired, DataRetentionDays: value.DataRetentionDays, Details: value.Details,
+		CreatedAt: stamp, UpdatedAt: stamp,
 	}
 	started := time.Now()
 	err = db.NewInsert().Model(&row).ModelTableExpr(`users.privacy_consents`).
-		Column("tenant_id", "student_id", "policy_version", "accepted", "accepted_at", "expires_at", "duration_days", "renewal_required", "data_retention_days", "details").
+		Column("tenant_id", "student_id", "policy_version", "accepted", "accepted_at", "expires_at", "duration_days", "renewal_required", "data_retention_days", "details", "created_at", "updated_at").
 		Returning("id, created_at, updated_at").Scan(ctx)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {
@@ -92,17 +96,19 @@ func (s *Store) RecordPrivacyConsents(ctx context.Context, values []studentprese
 	if err != nil {
 		return ports.Stats{}, err
 	}
+	stamp := s.now()
 	rows := make([]privacyConsentRow, len(values))
 	for i, value := range values {
 		rows[i] = privacyConsentRow{
 			TenantID: tenantID, StudentID: value.StudentID, PolicyVersion: value.PolicyVersion, Accepted: value.Accepted,
 			AcceptedAt: value.AcceptedAt, ExpiresAt: value.ExpiresAt, DurationDays: value.DurationDays,
 			RenewalRequired: value.RenewalRequired, DataRetentionDays: value.DataRetentionDays, Details: value.Details,
+			CreatedAt: stamp, UpdatedAt: stamp,
 		}
 	}
 	started := time.Now()
 	_, err = db.NewInsert().Model(&rows).ModelTableExpr(`users.privacy_consents`).
-		Column("tenant_id", "student_id", "policy_version", "accepted", "accepted_at", "expires_at", "duration_days", "renewal_required", "data_retention_days", "details").
+		Column("tenant_id", "student_id", "policy_version", "accepted", "accepted_at", "expires_at", "duration_days", "renewal_required", "data_retention_days", "details", "created_at", "updated_at").
 		Returning("NULL").Exec(ctx)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {
@@ -120,12 +126,13 @@ func (s *Store) RevisePrivacyConsent(ctx context.Context, value *studentpresence
 	row := privacyConsentRow{ID: value.ID, StudentID: value.StudentID, TenantID: tenantID,
 		PolicyVersion: value.PolicyVersion, Accepted: value.Accepted, AcceptedAt: value.AcceptedAt,
 		ExpiresAt: value.ExpiresAt, DurationDays: value.DurationDays, RenewalRequired: value.RenewalRequired,
-		DataRetentionDays: value.DataRetentionDays, Details: value.Details, UpdatedAt: s.now()}
+		DataRetentionDays: value.DataRetentionDays, Details: value.Details}
 	started := time.Now()
+	// The table's update trigger owns updated_at (ADR 0262); the stored value is returned.
 	err = db.NewUpdate().Model(&row).ModelTableExpr("users.privacy_consents AS privacy_consent").
-		Column("policy_version", "accepted", "accepted_at", "expires_at", "duration_days", "renewal_required", "data_retention_days", "details", "updated_at").
+		Column("policy_version", "accepted", "accepted_at", "expires_at", "duration_days", "renewal_required", "data_retention_days", "details").
 		Where("privacy_consent.id = ?", row.ID).Where("privacy_consent.student_id = ?", row.StudentID).Where("privacy_consent.tenant_id = ?", tenantID).
-		Returning("created_at").Scan(ctx)
+		Returning("created_at, updated_at").Scan(ctx)
 	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
 	if err != nil {
 		return stats, fmt.Errorf("revise privacy consent: %w", err)
