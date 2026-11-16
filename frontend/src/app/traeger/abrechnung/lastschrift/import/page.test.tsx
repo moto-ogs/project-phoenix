@@ -233,7 +233,6 @@ describe("SEPA import approval", () => {
   // focus on them; the heading of the new step takes it now.
   it("focuses the heading of each new step", async () => {
     await choose();
-    // The step moves the focus in an effect after its render: wait for it.
     await waitFor(() =>
       expect(
         screen.getByRole("heading", { name: "Prüfen und übernehmen" }),
@@ -242,25 +241,31 @@ describe("SEPA import approval", () => {
 
     api.applySepaImport.mockResolvedValue({ ...preview, applied: true });
     fireEvent.click(importButton()!);
-    expect(
-      await screen.findByRole("heading", { name: /übernommen$/ }),
-    ).toHaveFocus();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: /übernommen$/ }),
+      ).toHaveFocus(),
+    );
 
     fireEvent.click(
       screen.getByRole("button", { name: "Weitere Datei laden" }),
     );
-    expect(
-      await screen.findByRole("heading", { name: "Datei wählen" }),
-    ).toHaveFocus();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Datei wählen" }),
+      ).toHaveFocus(),
+    );
   });
 
   // Mapping the last missing column shows the preview under the person's
   // hand: the focus stays in the select they just used (WCAG 3.2.2).
   it("keeps the focus in the mapping when the preview appears", async () => {
     await choose({ ...preview, unmapped: ["iban"] });
-    expect(
-      screen.getByRole("heading", { name: "Spalten zuordnen" }),
-    ).toHaveFocus();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Spalten zuordnen" }),
+      ).toHaveFocus(),
+    );
     api.previewSepaImport.mockResolvedValueOnce(preview);
     const iban = screen.getByRole("combobox", { name: "IBAN" });
     iban.focus();
