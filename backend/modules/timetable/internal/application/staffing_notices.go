@@ -32,9 +32,15 @@ type staffingChange struct {
 	kind         string
 	subjectID    int64
 	substituteID int64
-	instanceID   int64
-	date         calendar.Date
-	start        time.Time
+	// teamAbsenceID ties the absence and its return to the same Krankmeldung.
+	// Manual deviations have no durable absence object and leave it zero.
+	teamAbsenceID int64
+	instanceID    int64
+	date          calendar.Date
+	start         time.Time
+	// knownAbsent marks a substitution of a person who was already absent:
+	// no new absence for the team.
+	knownAbsent bool
 }
 
 // staffingStoryKey groups the changes of one person and kind.
@@ -92,9 +98,13 @@ func substitutionChanges(ops []deviationSubOp) []staffingChange {
 	for _, op := range ops {
 		switch op.write.Action {
 		case timetable.SubstituteActionSubstituted:
-			changes = append(changes, changeOf(ports.StaffingChangeSubstituted, op.write.OrigRow.StaffID, op.subID, op.write.Instance))
+			change := changeOf(ports.StaffingChangeSubstituted, op.write.OrigRow.StaffID, op.subID, op.write.Instance)
+			change.knownAbsent = op.wasAbsent
+			changes = append(changes, change)
 		case timetable.SubstituteActionAlreadyOnInstance:
-			changes = append(changes, changeOf(ports.StaffingChangeAbsent, op.write.OrigRow.StaffID, 0, op.write.Instance))
+			change := changeOf(ports.StaffingChangeAbsent, op.write.OrigRow.StaffID, 0, op.write.Instance)
+			change.knownAbsent = op.wasAbsent
+			changes = append(changes, change)
 		}
 	}
 	return changes
@@ -110,14 +120,17 @@ func (s *staffDeviations) NoticeSickAbsence(ctx context.Context, in timetable.Si
 	}
 	changes := make([]staffingChange, 0, len(in.Blocks))
 	for _, block := range in.Blocks {
-		changes = append(changes, staffingChange{kind: kind, subjectID: in.StaffID, instanceID: block.InstanceID, date: block.Date})
+		changes = append(changes, staffingChange{
+			kind: kind, subjectID: in.StaffID, teamAbsenceID: in.AbsenceID, instanceID: block.InstanceID, date: block.Date,
+		})
 	}
 	return s.noticeStaffingChanges(ctx, staffingOperation{changes: changes, actor: in.ActorAccountID})
 }
 
-// noticeStaffingChanges hands one notice per story to Delivery. It reads the
-// blocks' groups, their teachers and every named person in three batched
-// reads, whatever the operation's size.
+// noticeStaffingChanges hands one notice per story to Delivery, then one per
+// absence or return to the rest of the groups' team (#7138). It reads the
+// blocks' groups, their teachers and handovers and every named person in
+// four batched reads, whatever the operation's size.
 func (s *staffDeviations) noticeStaffingChanges(ctx context.Context, op staffingOperation) error {
 	deps := s.deps.StaffingNotices
 	if deps.Notices == nil {
@@ -125,43 +138,61 @@ func (s *staffDeviations) noticeStaffingChanges(ctx context.Context, op staffing
 	}
 	today := calendar.DateFromTime(s.now())
 	op.changes = slices.DeleteFunc(op.changes, func(change staffingChange) bool { return change.date.Before(today) })
+	sortStaffingChanges(op.changes)
 	stories := staffingStories(op.changes)
 	if len(stories) == 0 {
 		return nil
 	}
-	teachersByBlock, err := s.blockTeachers(ctx, op.changes)
+	team, err := s.blockTeams(ctx, op.changes)
 	if err != nil {
-		return &ports.ScheduleError{Op: "staffing notice: group teachers", Err: err}
+		return &ports.ScheduleError{Op: "staffing notice: group teams", Err: err}
 	}
-	staff, err := s.deps.Staff.FindWithPersonByIDs(ctx, staffingStaffIDs(stories, teachersByBlock))
+	staff, err := s.deps.Staff.FindWithPersonByIDs(ctx, staffingStaffIDs(stories, team))
 	if err != nil {
 		return &ports.ScheduleError{Op: "staffing notice: staff", Err: err}
 	}
+	reached := map[teamStoryKey]map[int64]bool{}
 	for _, story := range stories {
-		notice := s.staffingNotice(story, op, today, teachersByBlock, staff)
-		// Delivery updates unread entries with the same related object. A story
-		// must therefore have its own object: a teacher affected by two changes
-		// in one save needs both entries and both push attempts.
+		notice := s.staffingNotice(story, op, today, team.teachers, staff)
+		markReached(reached, story, notice)
+		if err := notifyStaffingStory(ctx, deps.Notices, notice); err != nil {
+			return err
+		}
+	}
+	return s.noticeTeams(ctx, op, today, team, staff, reached)
+}
+
+// notifyStaffingStory hands one story's notice to Delivery. Delivery updates
+// unread entries with the same related object, so a notice without an object
+// gets one of its own: a teacher affected by two changes in one save needs
+// both entries and both push attempts.
+func notifyStaffingStory(ctx context.Context, notices ports.StaffingNotices, notice ports.StaffingNotice) error {
+	if notice.ObjectType == "" {
 		notice.ObjectType, notice.ObjectID = staffingObjectStory, rand.Int64N(math.MaxInt64)+1
-		if len(notice.SubjectAccountIDs)+len(notice.SubstituteAccountIDs)+len(notice.TeacherAccountIDs) == 0 {
-			continue
-		}
-		if err := deps.Notices.NotifyStaffingChanged(ctx, notice); err != nil {
-			return &ports.ScheduleError{Op: "staffing notice", Err: err}
-		}
+	}
+	if len(notice.SubjectAccountIDs)+len(notice.SubstituteAccountIDs)+len(notice.TeacherAccountIDs)+len(notice.TeamAccountIDs) == 0 {
+		return nil
+	}
+	if err := notices.NotifyStaffingChanged(ctx, notice); err != nil {
+		return &ports.ScheduleError{Op: "staffing notice", Err: err}
 	}
 	return nil
 }
 
-// staffingStories groups the changes by person and kind, in the order of
-// their first block.
-func staffingStories(changes []staffingChange) []staffingStory {
+// sortStaffingChanges orders the changes by day and start, so every story
+// starts with its first block.
+func sortStaffingChanges(changes []staffingChange) {
 	slices.SortStableFunc(changes, func(a, b staffingChange) int {
 		if c := a.date.Compare(b.date); c != 0 {
 			return c
 		}
 		return a.start.Compare(b.start)
 	})
+}
+
+// staffingStories groups the sorted changes by person and kind, in the
+// order of their first block.
+func staffingStories(changes []staffingChange) []staffingStory {
 	index := map[staffingStoryKey]int{}
 	var stories []staffingStory
 	for _, change := range changes {
@@ -177,45 +208,8 @@ func staffingStories(changes []staffingChange) []staffingStory {
 	return stories
 }
 
-// blockTeachers maps each block to the staff ids of its groups' teachers.
-func (s *staffDeviations) blockTeachers(ctx context.Context, changes []staffingChange) (map[int64][]int64, error) {
-	deps := s.deps.StaffingNotices
-	instanceIDs := make([]int64, 0, len(changes))
-	for _, change := range changes {
-		if !slices.Contains(instanceIDs, change.instanceID) {
-			instanceIDs = append(instanceIDs, change.instanceID)
-		}
-	}
-	groupsByBlock, err := deps.Groups.BlockEducationGroups(ctx, instanceIDs)
-	if err != nil {
-		return nil, err
-	}
-	var groupIDs []int64
-	for _, groups := range groupsByBlock {
-		for _, groupID := range groups {
-			if !slices.Contains(groupIDs, groupID) {
-				groupIDs = append(groupIDs, groupID)
-			}
-		}
-	}
-	if len(groupIDs) == 0 {
-		return map[int64][]int64{}, nil
-	}
-	teachersByGroup, err := deps.Teachers.GroupTeacherStaffIDs(ctx, groupIDs)
-	if err != nil {
-		return nil, err
-	}
-	result := make(map[int64][]int64, len(groupsByBlock))
-	for instanceID, groups := range groupsByBlock {
-		for _, groupID := range groups {
-			result[instanceID] = append(result[instanceID], teachersByGroup[groupID]...)
-		}
-	}
-	return result, nil
-}
-
 // staffingStaffIDs lists every person a notice names or reaches.
-func staffingStaffIDs(stories []staffingStory, teachersByBlock map[int64][]int64) []int64 {
+func staffingStaffIDs(stories []staffingStory, team blockTeam) []int64 {
 	ids := map[int64]struct{}{}
 	for _, story := range stories {
 		ids[story.key.subjectID] = struct{}{}
@@ -223,9 +217,11 @@ func staffingStaffIDs(stories []staffingStory, teachersByBlock map[int64][]int64
 			ids[story.key.substituteID] = struct{}{}
 		}
 	}
-	for _, teachers := range teachersByBlock {
-		for _, id := range teachers {
-			ids[id] = struct{}{}
+	for _, byBlock := range []map[int64][]int64{team.teachers, team.handovers} {
+		for _, members := range byBlock {
+			for _, id := range members {
+				ids[id] = struct{}{}
+			}
 		}
 	}
 	out := make([]int64, 0, len(ids))

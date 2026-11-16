@@ -138,7 +138,7 @@ func newStaffingNoticeSickReports(t *testing.T, env planSyncEnv, now func() time
 	require.NoError(t, err)
 	membership := owners.MustNewSchoolMembership(database)
 	notices := owners.NewTimetableStaffNotices(owners.DeliveryNotifications{Notifier: notifier, Preferences: module.NotificationPreferences},
-		membership, owners.MustNewUnobservedTimetable(database))
+		membership, owners.MustNewUnobservedTimetable(database), owners.MustNewWorkforce(database))
 	members := owners.MustNewMembershipTestRepositories(database)
 	hub := testpkg.NewRecordingBroadcaster()
 	deps, err := owners.TimetableStaffDeviationDependencies(env.repos.OwnerRows(), owners.NewTimetableStaff(members.Staff),
