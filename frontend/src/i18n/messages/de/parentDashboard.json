@@ -58,5 +58,7 @@
   "newsPollSaveTooltip": "Sendet Ihre Antwort sofort an die Schule.",
   "newsPollSaveDisabledReason": "Wählen Sie zuerst eine Antwort oder ändern Sie Ihre Auswahl.",
   "newsReadAndConfirmTooltip": "Bestätigt der Schule sofort, dass Sie den Elternbrief gelesen haben.",
-  "newsCloseUnsavedTooltip": "Schließt die Umfrage, Ihre neue Auswahl geht verloren."
+  "newsCloseUnsavedTooltip": "Schließt die Umfrage, Ihre neue Auswahl geht verloren.",
+  "newsLetterChildChoice": "Brief für welches Kind?",
+  "newsLetterPerChild": "Jedes Ihrer Kinder hat einen eigenen Brief."
 }

@@ -466,7 +466,7 @@ export function Modal({
           {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling body without focusable content must be reachable by keyboard (axe scrollable-region-focusable); it is a labelled region only while it scrolls */}
           <div
             ref={bodyRef}
-            className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-400"
+            className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-600"
             {...SCROLL_AREA_PROPS}
             tabIndex={bodyScrolls ? 0 : undefined}
             role={bodyScrolls ? "region" : undefined}

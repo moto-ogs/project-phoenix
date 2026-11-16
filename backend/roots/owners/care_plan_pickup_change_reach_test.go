@@ -56,7 +56,9 @@ func TestPickupChangeReachUsesTheSharedStaffPush(t *testing.T) {
 	}
 	require.NoError(t, reach.NotifyPickupChanged(ctx, push))
 	assert.Equal(t, deliveryContract.NotificationStudentPickupChanged, sent.Type)
-	assert.Equal(t, []int64{12}, sent.Audience.StaffAccountIDs)
+	assert.Equal(t, []int64{11, 12}, sent.Audience.StaffAccountIDs, "the feed reaches everyone responsible (#7137)")
+	require.NotNil(t, sent.Feed)
+	assert.Equal(t, []int64{12}, sent.Feed.PushAccountIDs)
 	assert.Equal(t, tenant.FromContext(ctx), sent.Audience.TenantID)
 	assert.Equal(t, "/students/77", sent.DeepLink)
 	assert.Equal(t, "care_schedule_request", sent.RelatedType)

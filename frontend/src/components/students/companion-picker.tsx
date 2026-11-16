@@ -372,7 +372,7 @@ export function CompanionPicker({
         <InsetPanel tone="white">
           <div className="relative mb-2">
             <Search
-              className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+              className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500"
               aria-hidden
             />
             <Input

@@ -160,7 +160,7 @@ export function AccountsTable({
               ))}
             </span>
           ) : (
-            <span className="text-gray-400">–</span>
+            <span className="text-gray-500">–</span>
           ),
         sortValue: (row) => row.roleName.toLowerCase(),
       },
@@ -210,7 +210,7 @@ export function AccountsTable({
             row.status !== "invited" &&
             onManageTenantAccess != null;
           if (!canManageCaregiver && !canManageMFA && !canManageTenantAccess) {
-            return <span className="text-xs text-gray-400">–</span>;
+            return <span className="text-xs text-gray-500">–</span>;
           }
           return (
             <div className="flex flex-wrap justify-end gap-2">

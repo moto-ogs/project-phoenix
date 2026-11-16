@@ -23,6 +23,7 @@ import { useOnVisible } from "~/lib/hooks/use-on-visible";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { isSafeAppRelativePath } from "~/lib/notification-deep-link";
 import { NOTIFICATION_FEED_ANALYTICS_TYPES } from "~/lib/notification-feed-helpers";
+import { useNotificationFeedPortal } from "~/lib/notification-feed-portal";
 import { useTenantRouter } from "~/lib/tenant-router";
 
 const ANALYTICS_TYPES: ReadonlySet<string> = new Set(
@@ -43,6 +44,7 @@ export function NotificationFeedSection({
   onNavigate: () => void;
 }>) {
   const router = useTenantRouter();
+  const { resolveLink } = useNotificationFeedPortal();
   const feed = useNotificationFeed(onUnreadCount);
   const { show: showActionError } = useApiErrorDisplay();
   const loadError = useSwrLoadError(feed.error, "die Hinweise", feed.retry);
@@ -71,9 +73,9 @@ export function NotificationFeedSection({
       // ist trotzdem gelesen.
       if (!link || !isSafeAppRelativePath(link)) return;
       onNavigate();
-      router.push(link);
+      router.push(resolveLink(link));
     },
-    [feed, onNavigate, router, schoolId],
+    [feed, onNavigate, resolveLink, router, schoolId],
   );
 
   const markAllRead = useCallback(async () => {

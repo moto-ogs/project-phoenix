@@ -4,7 +4,10 @@ import { useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { CLASS_DAY_REFRESH_EVENT } from "~/components/class-day/use-class-day-refresh";
 import { useSSE } from "~/lib/hooks/use-sse";
-import { dispatchPhoenixNotification } from "~/lib/notification-events";
+import {
+  dispatchPhoenixNotification,
+  NOTIFICATION_FEED_REFRESH_EVENT,
+} from "~/lib/notification-events";
 import { schoolTeamChatDeepLink } from "~/lib/school-team-chat-links";
 import { schoolPath } from "~/lib/school-url";
 import type { SSEEvent } from "~/lib/sse-types";
@@ -30,6 +33,10 @@ import type { SSEEvent } from "~/lib/sse-types";
  * dem Team") geht an den app-weiten NotificationBridge-Toast; sein Deep-Link
  * ist für das OGS-Portal geschrieben und wird vorher auf den Posteingang des
  * Schul-Hosts umgebogen.
+ *
+ * Auf `notification_feed_changed` (#7139) löst sie dasselbe Fenster-Ereignis
+ * aus wie die OGS-Verbindung: die Glocke lädt Zähler und Hinweise neu, etwa
+ * nach einem neuen Eintrag oder einem Gelesen-Status von einem anderen Gerät.
  *
  * Die Verbindung hängt an der angemeldeten Sitzung (Schule und Konto): der
  * Server ordnet den Stream dem Konto des mitgeschickten Zugangs zu, und die
@@ -67,6 +74,10 @@ export function SchoolRealtimeBridge() {
     }
     if (event.type === "class_day_changed") {
       window.dispatchEvent(new CustomEvent(CLASS_DAY_REFRESH_EVENT));
+      return;
+    }
+    if (event.type === "notification_feed_changed") {
+      window.dispatchEvent(new CustomEvent(NOTIFICATION_FEED_REFRESH_EVENT));
       return;
     }
     if (event.type !== "staff_message") return;

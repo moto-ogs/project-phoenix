@@ -42,6 +42,64 @@ export const NARROW_BOARD_COLUMNS = 2;
 export const BOARD_GRID_CLASSES =
   "relative grid grid-cols-2 gap-4 sm:auto-rows-[7rem] xl:grid-cols-4";
 
+/**
+ * Rasterzeile der Leseansicht ab `sm`: 7rem Karte plus 1rem Abstand. Der
+ * Abstand steckt als Innenabstand in der Zelle statt als `row-gap` im
+ * Raster, damit eine Zeile, die nur eine leere Karte belegt, ganz
+ * verschwinden kann und keinen doppelten Abstand hinterlässt.
+ */
+const READ_ROW = "8rem";
+
+/**
+ * Das Raster der Leseansicht. Dieselben Zellen wie beim Anpassen, aber die
+ * Zeilen sind `auto`: jede Karte mit Inhalt bringt ihre feste Höhe selbst mit
+ * (`READ_CELL_CLASSES`) und hält die Zeilen damit auf dem 7rem-Raster. Nur
+ * eine Karte, die nichts zu zeigen hat, gibt ihre Höhe frei. Welche Zeilen
+ * die Person frei gelassen hat, sagen `--board-rows-*` (`boardRowVariables`).
+ */
+export const READ_GRID_CLASSES =
+  "relative grid grid-cols-2 gap-4 sm:-mb-4 sm:auto-rows-auto sm:gap-y-0 sm:[grid-template-rows:var(--board-rows-2,none)] xl:grid-cols-4 xl:[grid-template-rows:var(--board-rows-4,none)]";
+
+/**
+ * Höhe einer Zelle der Leseansicht ab `sm`: so viele Rasterzeilen, wie der
+ * Baustein belegt. Zeigt die Karte nur ihren Leertext (`HomeCardEmpty`),
+ * gilt die Höhe nicht: die Zelle ist dann so hoch wie ihr Text, oder so hoch
+ * wie die Nachbarn, die ihre Zeilen offen halten. Ein Browser ohne `:has()`
+ * behält die feste Höhe.
+ */
+export const READ_CELL_CLASSES =
+  "sm:h-[calc(var(--cell-rows)*8rem)] sm:pb-4 sm:has-[[data-home-card-empty]]:h-auto";
+
+/** Die Höhe eines Bausteins in Rasterzeilen, wie READ_CELL_CLASSES sie liest. */
+export function cellRowsVariable(rows: number): Record<string, string> {
+  return { "--cell-rows": String(rows) };
+}
+
+/**
+ * Die Zeilen eines Rasters der Leseansicht als `grid-template-rows`.
+ *
+ * Eine Zeile, in der ein Baustein liegt, ist `auto`. Eine Zeile, die die
+ * Person frei gelassen hat, behält ihre volle Höhe: Lücken sind erlaubt und
+ * bleiben, wie sie gebaut wurden. Ohne freie Zeile braucht es keine Vorlage.
+ */
+export function boardRowVariables(
+  cells: Iterable<HomeBoardCell>,
+  columns: number,
+): Record<string, string> {
+  const occupied = new Set<number>();
+  for (const cell of cells) {
+    for (let offset = 0; offset < cell.rowSpan; offset++) {
+      occupied.add(cell.rowStart + offset);
+    }
+  }
+  const rowCount = Math.max(0, ...occupied);
+  if (occupied.size === rowCount) return {};
+  const rows = Array.from({ length: rowCount }, (_, index) =>
+    occupied.has(index + 1) ? "auto" : READ_ROW,
+  );
+  return { [`--board-rows-${columns}`]: rows.join(" ") };
+}
+
 /** Die Zelle eines Rasters als die Variablen, die CELL_CLASSES liest. */
 export function cellVariables(
   cell: HomeBoardCell | null,

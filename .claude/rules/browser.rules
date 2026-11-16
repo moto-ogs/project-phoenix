@@ -1,0 +1,63 @@
+# Codex execpolicy (Starlark), loaded through the .codex/rules symlink; Claude
+# Code reads only the Markdown rules here. Chrome and Chromium cannot start in
+# Codex's macOS sandbox (openai/codex#21292): Seatbelt denies WindowServer,
+# LaunchServices and Chrome's Mach rendezvous, and the browser aborts at start.
+# These browser commands therefore run outside the sandbox without a prompt.
+# A command with a redirect, substitution or env assignment is not split and
+# matches no rule; frontend/scripts/secure-chrome.ts then stops it with a hint.
+# Check: codex execpolicy check --pretty --rules .claude/rules/browser.rules -- <command>
+
+BROWSER_SCRIPTS = [
+    "test:e2e",
+    "test:layout",
+    "test:network",
+    "test:tenant-switch",
+    "test:screenshots",
+    "test:storybook",
+    "generate:guides",
+    "generate:screenshots",
+    "audit:a11y",
+    "perf:trace",
+    "perf:nav",
+    "perf:render",
+    "kit-pixel",
+]
+
+prefix_rule(
+    pattern = ["pnpm", BROWSER_SCRIPTS],
+    decision = "allow",
+    justification = "Browser suites cannot start Chrome inside Codex's macOS sandbox.",
+    match = ["pnpm test:layout", "pnpm kit-pixel baseline --ref HEAD"],
+    not_match = ["pnpm install", "pnpm test", "pnpm run check"],
+)
+
+prefix_rule(
+    pattern = ["pnpm", "run", BROWSER_SCRIPTS],
+    decision = "allow",
+    justification = "Browser suites cannot start Chrome inside Codex's macOS sandbox.",
+    match = ["pnpm run test:e2e", "pnpm run test:storybook"],
+    not_match = ["pnpm run lint", "pnpm run publish:screenshots"],
+)
+
+prefix_rule(
+    pattern = ["pnpm", "exec", "playwright", "test"],
+    decision = "allow",
+    justification = "Playwright cannot start Chrome inside Codex's macOS sandbox.",
+    match = ["pnpm exec playwright test -c playwright.layout.config.ts"],
+    not_match = ["pnpm exec playwright install chrome"],
+)
+
+prefix_rule(
+    pattern = ["scripts/dev-native.sh", "frontend", "pnpm", "exec", "playwright", "test"],
+    decision = "allow",
+    justification = "Playwright cannot start Chrome inside Codex's macOS sandbox.",
+    match = ["scripts/dev-native.sh frontend pnpm exec playwright test e2e/onboarding-tours.spec.ts"],
+    not_match = ["scripts/dev-native.sh frontend pnpm install"],
+)
+
+prefix_rule(
+    pattern = ["agent-browser"],
+    decision = "allow",
+    justification = "agent-browser drives Chrome, which cannot start inside Codex's macOS sandbox.",
+    match = ["agent-browser --session s open http://localhost:3000"],
+)

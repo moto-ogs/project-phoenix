@@ -310,7 +310,7 @@ export function ParentTargetPicker({
                     <span className="max-w-48 truncate">
                       {t.ref_id ? (studentNames[t.ref_id] ?? "Kind") : "Kind"}
                     </span>
-                    <span aria-hidden className="text-gray-400">
+                    <span aria-hidden className="text-gray-500">
                       ×
                     </span>
                   </Button>
@@ -348,7 +348,7 @@ export function ParentTargetPicker({
                       >
                         <span className="truncate">{student.name}</span>
                         {student.school_class && (
-                          <span className="ml-2 shrink-0 text-xs text-gray-400">
+                          <span className="ml-2 shrink-0 text-xs text-gray-500">
                             {student.school_class}
                           </span>
                         )}

@@ -13,6 +13,8 @@ import (
 func TestNotificationFeedMigrationRoundTrip(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
+	// The letter copies (#4813) follow the notification feed at the head; they go first.
+	require.NoError(t, parentLetterCopiesDown(t.Context(), db))
 	ctx := t.Context()
 	exists := func() bool {
 		var found bool

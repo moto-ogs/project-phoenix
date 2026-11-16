@@ -167,7 +167,7 @@ export function OverflowMenu({
         ? "size-6 pointer-coarse:size-11"
         : `aspect-square ${CONTROL_HEIGHT_CLASS.dense}`;
   const triggerColorClass =
-    triggerSize === "sm" ? "text-gray-400" : "text-gray-600";
+    triggerSize === "sm" ? "text-gray-500" : "text-gray-600";
   const iconSizeClass = triggerSize === "sm" ? "size-4" : "size-5";
   const [isOpen, setIsOpen] = useState(false);
   // The menu renders in a portal on <body> with fixed positioning so it can

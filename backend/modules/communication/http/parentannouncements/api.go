@@ -28,11 +28,17 @@ type Resource struct {
 	// Classes answers the class reach and sender name of the class-letter
 	// routes in moto schule (#4800); without it they refuse to write.
 	Classes ClassLetterCaller
+	// Letters lays out the printed letters of a dispatch (#4813);
+	// ParentLetters previews and prints them.
+	Letters       LetterPrinter
+	ParentLetters announcementService.ParentLetterCapability
 }
 
 // NewResource wires the staff announcement resource.
 func NewResource(service announcementService.ParentAnnouncementCapability, reports ReportRenderer) *Resource {
-	return &Resource{Service: service, Reports: reports}
+	// Announcements composed without letters answer their routes with 500.
+	letters, _ := announcementService.ParentLettersOf(service)
+	return &Resource{Service: service, Reports: reports, ParentLetters: letters}
 }
 
 // Router returns the chi router scoped to /parent-announcements.
@@ -55,6 +61,10 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		read := r.With(announce, withTx, rs.requireReadableAnnouncement)
 		r.With(announce, withTx).Get("/", rs.list)
 		r.With(announce, withTx).Post("/", rs.create)
+		// Serienbriefe (#4813): the placeholders, a letter filled for one
+		// child before it is sent, and every letter of a dispatch to print.
+		r.With(announce).Get("/letter-placeholders", rs.letterPlaceholders)
+		r.With(announce, withTx).Post("/letter-preview", rs.letterPreview)
 		r.With(announce, withTx).Get("/{announcementId}", rs.get)
 		r.With(announce, withTx).Put("/{announcementId}", rs.update)
 		r.With(announce, withTx).Delete("/{announcementId}", rs.delete)
@@ -70,6 +80,7 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		// Elternbrief (#2384): the recipient matrix — e-mail and moto status per
 		// person, plus which children the letter is already fulfilled for.
 		read.Get("/{announcementId}/letter-status", rs.letterStatus)
+		read.Get("/{announcementId}/letters-pdf", rs.lettersPDF)
 		r.With(announce, withTx).Post("/{announcementId}/resend-failed", rs.resendFailed)
 		// Scheduled reminder (#3162): the one post-publish edit. Distinct from
 		// POST /remind above, which is the manual nudge to whoever still owes
@@ -734,7 +745,15 @@ func parseAnnouncementID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 
 // renderAnnouncementError maps service sentinels to HTTP status codes.
 func renderAnnouncementError(w http.ResponseWriter, r *http.Request, err error) {
+	var placeholders *announcementService.ParentLetterPlaceholderError
 	switch {
+	case errors.As(err, &placeholders) && placeholders.LetterOnly:
+		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeCommunicationLetterPlaceholderLetterOnly))
+	case errors.As(err, &placeholders):
+		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeCommunicationLetterPlaceholderUnknown,
+			map[string]any{"placeholders": strings.Join(placeholders.Names, ", ")}))
+	case errors.Is(err, announcementService.ErrParentLetterNotPrintable):
+		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeCommunicationLetterPrintNotLetter))
 	case errors.Is(err, announcementService.ErrParentAnnouncementNotFound):
 		common.RenderError(w, r, common.ErrorNotFound(err))
 	case errors.Is(err, announcementService.ErrParentNewsDisabled):

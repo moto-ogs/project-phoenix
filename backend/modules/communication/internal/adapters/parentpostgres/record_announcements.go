@@ -329,7 +329,7 @@ func (r *announcementRepository) ResolveDeliveryRecipients(ctx context.Context, 
 		rows = append(rows, &communication.PortalAnnouncementDeliveryRecipient{
 			GuardianProfileID: value.GuardianProfileID, AccountID: value.AccountID, FirstName: value.FirstName,
 			LastName: value.LastName, Email: value.Email, HasPortalAccess: value.HasPortalAccess,
-			PortalLocale: value.PortalLocale,
+			PortalLocale: value.PortalLocale, StudentIDs: value.StudentIDs,
 		})
 	}
 	return rows, nil
@@ -388,6 +388,9 @@ func (r *announcementRepository) ListFeedForAccount(ctx context.Context, account
 			SenderName: value.SenderName, SenderSchoolClass: value.SenderSchoolClass,
 			ReadAt: value.ReadAt, AcknowledgedAt: value.AcknowledgedAt, Ended: value.Ended,
 		})
+	}
+	if err := r.attachLetterCopies(ctx, accountID, rows); err != nil {
+		return nil, err
 	}
 	return rows, nil
 }

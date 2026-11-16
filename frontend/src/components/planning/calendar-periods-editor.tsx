@@ -209,7 +209,7 @@ export function CalendarPeriodsEditor({
               {usage}
             </span>
           ) : (
-            <span className="text-sm text-gray-400">Nicht verwendet</span>
+            <span className="text-sm text-gray-500">Nicht verwendet</span>
           );
         },
       },

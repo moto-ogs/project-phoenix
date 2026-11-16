@@ -2,7 +2,7 @@
   "sites": [
     {
       "build": "production",
-      "evidence": "func (rs *Resource) SchoolRouter() chi.Router {\n\tr := chi.NewRouter()\n\tr.Use(render.SetContentType(render.ContentTypeJSON))\n\tr.Use(withPortal(PortalSchool))\n\trs.Runtime.ProtectedSchool(r, rs.registerRoutes)\n\treturn r\n}",
+      "evidence": "func (rs *Resource) SchoolRouter() chi.Router {\n\tr := chi.NewRouter()\n\tr.Use(render.SetContentType(render.ContentTypeJSON))\n\tr.Use(withPortal(PortalSchool))\n\trs.Runtime.ProtectedSchool(r, func(r chi.Router, withTx Middleware) {\n\t\trs.registerRoutes(r, withTx)\n\t\trs.registerFeedRoutes(r, withTx)\n\t})\n\treturn r\n}",
       "form": "unclassified-evidence",
       "id": "modules/delivery/http/notifications/Resource.SchoolRouter",
       "owner": "modules/delivery"

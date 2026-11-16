@@ -184,7 +184,7 @@ mechanical: **no row means off**.
 |---|---|---|
 | SSE / in-app | active | `realtime.Broadcaster` → SSE event `notification` → toast |
 | Web Push | active (#2003/#2657) | leased `platform.push_outbox` → `webpush-go` (VAPID) → browser push service → service worker notification |
-| Feed | active (#7148, staff portal) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
+| Feed | active (#7148 staff portal, #7139 moto schule) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
 | E-Mail | future | wrap `email.Mailer` + audience→address resolution as a `Channel` |
 
 E-mail is still not a `Channel`: features that mail enqueue through the same
@@ -216,10 +216,21 @@ caller's transaction. Rules, all applied by the router:
 - Reading: `GET /api/notifications/feed/` (pages, `next_cursor`,
   `unread_count`), `GET /feed/unread-count`, `POST /feed/{id}/read`,
   `POST /feed/read-all`, all in the request's tenant transaction. The reader
-  must still be an active staff member of the school
-  (`platform.delivery_realtime_recipients`).
-- `notification_feed_changed` reaches every staff session of the account for
-  a new or updated entry (after the commit) and for a read-state change. The
+  must still be an active member of the school with a role of the portal
+  (`platform.delivery_realtime_recipients`: `has_staff_role` in the staff
+  portal, `has_school_role` in moto schule).
+- moto schule (#7139) mounts the same routes under `/school/notifications/feed`.
+  It reads the same entries of the account, narrowed to the types its
+  catalogue offers (`OfferedInPortal`: school-only types and staff types with
+  `SchoolPortal`) plus a reversal that replaces such an entry; read state is
+  shared between both portals. Its link is
+  `school_deep_link` (the event's `SchoolDeepLink`, written for types the
+  school portal shows), else `/school`. A type with
+  `SchoolPortalWithoutPermission` is offered there without its `Permission`:
+  a Lehrkraft holds no OGS right but can be planned for a block.
+- `notification_feed_changed` reaches every session of the account in the
+  staff portal and in moto schule for a new or updated entry (after the
+  commit) and for a read-state change. The
   latter is sent once the change is written, possibly just before the commit;
   clients reload with a delay and reconcile by polling.
 - Retention: 30 days after the last update (nightly `delivery_retention`); the
@@ -229,7 +240,40 @@ The first producer is Timetable's cancellation of a single block
 (`instance_cancelled`): the block's staff rows without absent people and
 without the person who cancelled; feed and push from today up to 14 days
 ahead, feed only later, nothing for the past. A bulk cancellation of a
-period writes no entries per block.
+period writes no entries per block. In moto schule the entry links to
+`/school/aufsichten`, and the push reaches the account's school devices by
+the Web Push rules of that portal.
+
+Staffing changes (#7136) come from every write of the Timetable staffing:
+the single Vertretungsplan save, the Sammel-Vertretung, and the plan cascade
+of an absence (sick report, its reconciliation and the Dienstplan-Abgleich
+`SyncAbsencePlan`). Each story is one notice per person and kind
+(substituted, absent, present again, substitute removed), whatever the number
+of days. `staffing_changed` reaches the substitute and the absent person and
+links to their own Dienstplan; `group_staffing_changed` reaches the teachers
+assigned to the OGS groups of the affected blocks (`education.group_teacher`,
+groups as the Betreuungsplan's group filter names them) and links to
+`/vertretung?d=…&block=…`. The person who made the change gets nothing; the
+text names no reason. Both types sit under the heading
+„Dienstplan und Vertretung“ (`dienstplan`), push by default and share the
+school switch `notifications.staffing_changed_enabled`. Bundling object: the
+story itself (`staffing_story`, a random id per story), so an independently
+visible change never overwrites another unread entry in the same operation; the
+staffing rows do not record which substitution a later removal undoes, so a
+removal is an entry of its own. Withdrawing or shortening an absence tells the
+same people that the person is there again.
+
+A new Hinweis der Leitung (`staff_notice_published`, #7143) reaches the
+readers of the Tagesinformationen in the OGS portal: the school's staff whose
+account holds `users:read`, without the person who saved it. It is written
+when a saved notice newly reaches them: created active, switched on again or
+its audience widened to include them; never for another edit. A notice only for the Lehrkräfte of moto schule writes no
+entries until the school portal has its feed (#7139). Feed and push while the
+notice starts within 14 days, feed only later, nothing once it has ended. The
+push is off by default (`FilterOptedIn`); the school switch is
+`notifications.staff_notice_published_enabled`. The link
+`/tagesinformationen?hinweis=<id>` opens the notice through
+`GET /api/staff-notices/{id}`, also before it applies.
 
 ### Web Push (#2003)
 

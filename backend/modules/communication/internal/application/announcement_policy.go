@@ -23,7 +23,7 @@ const (
 )
 const (
 	ParentAnnouncementDeliveryStandard = "standard"
-	ParentAnnouncementDeliveryLetter   = "letter"
+	ParentAnnouncementDeliveryLetter   = communication.ParentLetterDeliveryMode
 )
 const (
 	EmailAudiencePortalOnly  = "portal_only"

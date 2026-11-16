@@ -122,9 +122,22 @@ vi.mock("~/lib/analytics", () => ({
   trackTenantEvent: (...args: unknown[]) => mockTrack(...args),
 }));
 
+// moto schule (#7139): the session names the school; on the school host
+// schoolPath drops the /school prefix.
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: { user: { tenantId: "5", id: "11" } },
+    status: "authenticated",
+  }),
+}));
+vi.mock("~/lib/school-url", () => ({
+  schoolPath: (path: string) => path.replace(/^\/school/, "") || "/",
+}));
+
+import { SchoolNotificationFeedProvider } from "~/components/school/shell/school-notification-feed";
 import { NotificationsSheet } from "./notifications-panel";
 import { closeNotificationsSheet } from "./notifications-sheet-state";
-import { RemindersBell } from "./reminders-bell";
+import { NotificationFeedBell, RemindersBell } from "./reminders-bell";
 
 function reminder(over: Partial<Reminder> = {}): Reminder {
   return {
@@ -215,14 +228,15 @@ beforeEach(() => {
     tenantSlug: "test-tenant",
     tenant: { tenantId: 7 },
   } as unknown as ReturnType<typeof useTenantSafe>);
-  api.fetchNotificationFeed.mockImplementation((cursor?: string | null) =>
-    Promise.resolve(
-      state.feedPages.get(cursor ?? "") ?? {
-        entries: [],
-        nextCursor: null,
-        unreadCount: 0,
-      },
-    ),
+  api.fetchNotificationFeed.mockImplementation(
+    (_base: string, cursor?: string | null) =>
+      Promise.resolve(
+        state.feedPages.get(cursor ?? "") ?? {
+          entries: [],
+          nextCursor: null,
+          unreadCount: 0,
+        },
+      ),
   );
   api.fetchNotificationFeedUnreadCount.mockImplementation(() =>
     Promise.resolve(state.unreadCount),
@@ -460,7 +474,10 @@ describe("RemindersBell — Hinweise", () => {
       await screen.findByRole("button", { name: /Termin abgesagt/ }),
     );
 
-    expect(api.markNotificationFeedEntryRead).toHaveBeenCalledWith("41");
+    expect(api.markNotificationFeedEntryRead).toHaveBeenCalledWith(
+      "/api/notifications/feed",
+      "41",
+    );
     expect(mockPush).toHaveBeenCalledWith("/mein-dienstplan?d=2026-11-20");
     expect(bell).toHaveAttribute("aria-expanded", "false");
     expect(
@@ -486,7 +503,10 @@ describe("RemindersBell — Hinweise", () => {
       await screen.findByRole("button", { name: /Fremder Link/ }),
     );
 
-    expect(api.markNotificationFeedEntryRead).toHaveBeenCalledWith("42");
+    expect(api.markNotificationFeedEntryRead).toHaveBeenCalledWith(
+      "/api/notifications/feed",
+      "42",
+    );
     expect(mockPush).not.toHaveBeenCalled();
     expect(bell).toHaveAttribute("aria-expanded", "true");
   });
@@ -564,7 +584,10 @@ describe("RemindersBell — Hinweise", () => {
     fireEvent.click(screen.getByRole("button", { name: "Weitere laden" }));
 
     expect(await screen.findByText("Seite zwei")).toBeInTheDocument();
-    expect(api.fetchNotificationFeed).toHaveBeenCalledWith("c2");
+    expect(api.fetchNotificationFeed).toHaveBeenCalledWith(
+      "/api/notifications/feed",
+      "c2",
+    );
     expect(
       screen.queryByRole("button", { name: "Weitere laden" }),
     ).not.toBeInTheDocument();
@@ -641,5 +664,150 @@ describe("RemindersBell — Telefon", () => {
         hidden: true,
       }),
     ).toHaveAttribute("aria-expanded", "false");
+  });
+});
+
+const SCHOOL_FEED = "/api/school/notifications/feed";
+
+function renderSchoolBell() {
+  // The school shell renders the bell in its header and the phone sheet once,
+  // both under the school's feed context.
+  return render(
+    <SchoolNotificationFeedProvider>
+      <NotificationFeedBell />
+      <NotificationsSheet feedOnly />
+    </SchoolNotificationFeedProvider>,
+    {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ToastProvider>{children}</ToastProvider>
+      ),
+    },
+  );
+}
+
+describe("NotificationFeedBell — moto schule", () => {
+  beforeEach(() => {
+    // moto schule has no tenant context; the session names the school.
+    vi.mocked(useTenantSafe).mockReturnValue(
+      null as unknown as ReturnType<typeof useTenantSafe>,
+    );
+    setReminders({ enabled: true, count: 3, reminders: [reminder()] });
+  });
+
+  it("counts only the Hinweise, caps at 9+ and reads the school route", async () => {
+    setUnread(12);
+    renderSchoolBell();
+
+    expect(await screen.findByText("9+")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Benachrichtigungen (12)" }),
+    ).toBeInTheDocument();
+    expect(api.fetchNotificationFeedUnreadCount).toHaveBeenCalledWith(
+      SCHOOL_FEED,
+    );
+    expect(mockUseReminders).not.toHaveBeenCalled();
+  });
+
+  it("shows the Hinweise without Erinnerungen", async () => {
+    setUnread(1);
+    setFeed([entry({ title: "Termin abgesagt" })]);
+    renderSchoolBell();
+    await openBell("Benachrichtigungen (1)");
+
+    const feed = await screen.findByRole("region", { name: "Hinweise" });
+    expect(within(feed).getByText("Termin abgesagt")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Erinnerungen" }),
+    ).not.toBeInTheDocument();
+    expect(api.fetchNotificationFeed).toHaveBeenCalledWith(SCHOOL_FEED);
+    await waitFor(() =>
+      expect(mockTrack).toHaveBeenCalledWith("notification_bell_opened", "5"),
+    );
+  });
+
+  it("a click marks the entry read in moto schule and opens its page there", async () => {
+    setUnread(1);
+    setFeed([
+      entry({
+        id: "41",
+        title: "Termin abgesagt",
+        deepLink: "/school/aufsichten",
+      }),
+    ]);
+    renderSchoolBell();
+    const bell = await openBell("Benachrichtigungen (1)");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Termin abgesagt/ }),
+    );
+
+    expect(api.markNotificationFeedEntryRead).toHaveBeenCalledWith(
+      SCHOOL_FEED,
+      "41",
+    );
+    expect(mockPush).toHaveBeenCalledWith("/aufsichten");
+    expect(bell).toHaveAttribute("aria-expanded", "false");
+    expect(mockTrack).toHaveBeenCalledWith(
+      "notification_feed_entry_clicked",
+      "5",
+      { notification_type: "instance_cancelled" },
+    );
+  });
+
+  it("marks all as read through the school route", async () => {
+    setUnread(2);
+    setFeed([entry({ title: "Erster" }), entry({ title: "Zweiter" })]);
+    renderSchoolBell();
+    await openBell("Benachrichtigungen (2)");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Alle als gelesen markieren" }),
+    );
+
+    await waitFor(() =>
+      expect(api.markAllNotificationFeedRead).toHaveBeenCalledWith(SCHOOL_FEED),
+    );
+    await waitFor(() =>
+      expect(mockTrack).toHaveBeenCalledWith("notification_feed_all_read", "5"),
+    );
+  });
+
+  it("updates live when the feed changes", async () => {
+    setUnread(1);
+    setFeed([entry({ title: "Erster Hinweis" })]);
+    renderSchoolBell();
+    await openBell("Benachrichtigungen (1)");
+    expect(await screen.findByText("Erster Hinweis")).toBeInTheDocument();
+
+    setUnread(2);
+    setFeed([
+      entry({ title: "Neuer Hinweis", updatedAt: "2026-09-09T09:30:00Z" }),
+      entry({ title: "Erster Hinweis" }),
+    ]);
+    act(() => {
+      window.dispatchEvent(new CustomEvent("notification-feed-refresh"));
+    });
+
+    expect(await screen.findByText("Neuer Hinweis")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Benachrichtigungen (2)" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens the full-screen sheet with the Hinweise only on a phone", async () => {
+    state.phone = true;
+    setUnread(1);
+    setFeed([entry({ title: "Termin abgesagt" })]);
+    renderSchoolBell();
+    await openBell("Benachrichtigungen (1)");
+
+    const sheet = await screen.findByTestId("notification-sheet");
+    expect(
+      await within(sheet).findByText("Termin abgesagt"),
+    ).toBeInTheDocument();
+    expect(within(sheet).getByText("Hinweise für Sie.")).toBeInTheDocument();
+    expect(
+      within(sheet).queryByRole("region", { name: "Erinnerungen" }),
+    ).not.toBeInTheDocument();
   });
 });

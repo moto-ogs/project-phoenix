@@ -114,7 +114,7 @@ export function ListRowLink({
 }: ListRowLinkProps) {
   const stacked = overline != null || meta != null;
   const rowClass = cn(
-    "group flex w-full items-center gap-3 text-left transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-400",
+    "group flex w-full items-center gap-3 text-left transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gray-600",
     framed ? "rounded-2xl p-4" : "px-4 py-3",
     accent && "border-l-4",
     disabled && "cursor-not-allowed opacity-60",
@@ -125,17 +125,21 @@ export function ListRowLink({
     <span className="flex shrink-0 items-center gap-2">{badge}</span>
   ) : null;
 
+  // Nebentext: auf dem grünen Grund der Auswahl reicht gray-500 nicht für
+  // 4,5:1 (#7110), dort eine Stufe dunkler.
+  const mutedTone = selected ? "text-gray-600" : "text-gray-500";
+  const subtitleTone = unread ? "text-gray-700" : mutedTone;
   const text = stacked ? (
     <span className={cn("min-w-0 flex-1 space-y-0.5", contentClassName)}>
       <span className="flex min-w-0 items-center justify-between gap-2">
-        <span className="min-w-0 truncate text-xs font-medium text-gray-500">
+        <span className={cn("min-w-0 truncate text-xs font-medium", mutedTone)}>
           {overline}
         </span>
         {meta != null ? (
           <span
             className={cn(
               "shrink-0 text-xs tabular-nums",
-              unread ? "text-moto-blue font-semibold" : "text-gray-500",
+              unread ? "text-moto-blue-strong font-semibold" : mutedTone,
             )}
           >
             {metaLabel ? (
@@ -165,7 +169,7 @@ export function ListRowLink({
           className={cn(
             "block min-w-0 text-sm",
             wrapSubtitle ? "break-words whitespace-normal" : "truncate",
-            unread ? "text-gray-700" : "text-gray-500",
+            subtitleTone,
           )}
         >
           {subtitle}
@@ -184,13 +188,7 @@ export function ListRowLink({
         {title}
       </span>
       {subtitle ? (
-        <span
-          className={cn(
-            "block text-xs",
-            unread ? "text-gray-700" : "text-gray-500",
-            framed && "mt-1",
-          )}
-        >
+        <span className={cn("block text-xs", subtitleTone, framed && "mt-1")}>
           {subtitle}
         </span>
       ) : null}
@@ -202,7 +200,7 @@ export function ListRowLink({
       className={cn(
         "shrink-0",
         stacked ? "h-5 w-5" : "h-4 w-4",
-        selected ? "text-moto-green" : "text-gray-400",
+        selected ? "text-moto-green" : "text-gray-500",
         framed && "group-hover:text-gray-700",
       )}
       aria-hidden="true"

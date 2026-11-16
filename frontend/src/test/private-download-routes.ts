@@ -27,6 +27,7 @@ export const PRIVATE_DOWNLOAD_ROUTES = [
   ["messages/attachments/[attachmentId]/download", "GET"],
   ["operator/billing/key-date-counts/export", "GET"],
   ["parent-announcements/[announcementId]/declaration-export", "GET"],
+  ["parent-announcements/[announcementId]/letters-pdf", "GET"],
   ["parent/calendar/appointments/[appointmentId]/ics", "GET"],
   [
     "parent/me/children/[studentId]/pickup-requests/[requestId]/proof/pdf",
@@ -49,6 +50,7 @@ export const PRIVATE_DOWNLOAD_ROUTES = [
   ["rooms/export", "POST"],
   ["school/class-day/absence-list/export", "GET"],
   ["school/parent-letters/[announcementId]/declaration-export", "GET"],
+  ["school/parent-letters/[announcementId]/letters-pdf", "GET"],
   ["school/staff-messages/attachments/[attachmentId]/download", "GET"],
   ["staff-messages/attachments/[attachmentId]/download", "GET"],
   ["staff-shifts/export", "POST"],

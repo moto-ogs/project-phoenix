@@ -144,7 +144,7 @@ function AbsenceNoteModal({
           placeholder={placeholder}
           error={formErrors.fieldError("decision_note")}
         />
-        <p className="text-right text-xs text-gray-400">{note.length}/500</p>
+        <p className="text-right text-xs text-gray-500">{note.length}/500</p>
       </div>
     </Modal>
   );

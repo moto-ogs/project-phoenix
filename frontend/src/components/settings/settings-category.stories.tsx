@@ -79,8 +79,6 @@ export const NoVisibleItems: Story = {
 
 /** Operator audience flips the "auch von {other side} änderbar" hint copy. */
 export const OperatorAudience: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: {
     audience: "operator",
   },

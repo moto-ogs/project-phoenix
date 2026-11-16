@@ -81,6 +81,7 @@
   "planning_track_name_taken": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "planning_track_not_found": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "presence_would_overstaff": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "reinstate_ended": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "reopen_attendance_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "reopen_staff_busy": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "reopen_student_active": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",

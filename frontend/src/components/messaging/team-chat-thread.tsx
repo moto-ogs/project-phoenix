@@ -524,7 +524,7 @@ export function TeamChatThread({
     statsLoading: showSkeleton,
     state,
     empty: {
-      icon: <MessagesSquare size={48} className="text-gray-400" />,
+      icon: <MessagesSquare size={48} className="text-gray-500" />,
       title: DISABLED_TITLE,
       description: DISABLED_DESCRIPTION,
     },

@@ -281,7 +281,9 @@ func (p *Projection) LetterChildStatuses(ctx context.Context, schoolID, announce
 // NO portal-access filter, so the recipient matrix can show "kein
 // Portalzugang" instead of silently omitting the person. has_portal_access is
 // aggregated across the reached children: access on any addressed child
-// makes the guardian reachable in moto.
+// makes the guardian reachable in moto. student_ids are only the children
+// whose relationship carries parent_portal.access (#4813): a personalised
+// letter in the mail names no child the guardian may not see.
 const deliveryRecipientsSQL = `
 			SELECT gp.id AS guardian_profile_id,
 				gp.account_id,
@@ -298,20 +300,23 @@ const deliveryRecipientsSQL = `
 							AND act.tenant_id = gp.tenant_id
 							AND act.status = 'active'
 					)
-				) AS has_portal_access` + reachedStudentsBound + `
+				) AS has_portal_access,
+				COALESCE(array_agg(DISTINCT s.id ORDER BY s.id)
+					FILTER (WHERE sg.permissions @> '{"parent_portal.access": true}'::jsonb), '{}') AS student_ids` + reachedStudentsBound + `
 			JOIN (?) sg ON sg.student_id = s.id
 			JOIN users.guardian_profiles gp ON gp.id = sg.guardian_profile_id AND gp.tenant_id = ?
 			GROUP BY gp.id, gp.account_id, gp.first_name, gp.last_name, gp.email, gp.portal_locale
 			ORDER BY LOWER(COALESCE(gp.last_name, '')), LOWER(COALESCE(gp.first_name, '')), gp.id`
 
 type deliveryRecipientRow struct {
-	GuardianProfileID int64  `bun:"guardian_profile_id"`
-	AccountID         *int64 `bun:"account_id"`
-	FirstName         string `bun:"first_name"`
-	LastName          string `bun:"last_name"`
-	Email             string `bun:"email"`
-	HasPortalAccess   bool   `bun:"has_portal_access"`
-	PortalLocale      string `bun:"portal_locale"`
+	GuardianProfileID int64   `bun:"guardian_profile_id"`
+	AccountID         *int64  `bun:"account_id"`
+	FirstName         string  `bun:"first_name"`
+	LastName          string  `bun:"last_name"`
+	Email             string  `bun:"email"`
+	HasPortalAccess   bool    `bun:"has_portal_access"`
+	PortalLocale      string  `bun:"portal_locale"`
+	StudentIDs        []int64 `bun:"student_ids,array"`
 }
 
 // ResolveDeliveryRecipients returns every guardian linked to a child the
@@ -334,6 +339,7 @@ func (p *Projection) ResolveDeliveryRecipients(ctx context.Context, schoolID, an
 		recipients = append(recipients, &contract.ParentAnnouncementDeliveryRecipient{
 			GuardianProfileID: row.GuardianProfileID, AccountID: row.AccountID, FirstName: row.FirstName,
 			LastName: row.LastName, Email: row.Email, HasPortalAccess: row.HasPortalAccess, PortalLocale: row.PortalLocale,
+			StudentIDs: row.StudentIDs,
 		})
 	}
 	return recipients, nil

@@ -30,5 +30,11 @@
   ],
   "api/school/parent-letters/[announcementId]/unpublish": [
     "POST school /school/parent-letters/announcementId%2F1/unpublish"
+  ],
+  "api/school/parent-letters/letter-placeholders": [
+    "GET school /school/parent-letters/letter-placeholders"
+  ],
+  "api/school/parent-letters/letter-preview": [
+    "POST school /school/parent-letters/letter-preview"
   ]
 }

@@ -107,7 +107,7 @@ export function GuardianDeleteModal({
               // Backend message — count-aware (singular vs. multiple children).
               <Alert type="warning" message={fullDeleteWarning} />
             ) : isWarningLoading ? (
-              <p className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-500">
+              <p className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-600">
                 <SpinnerIcon className="h-4 w-4" />
                 Betroffene Kinder werden geprüft…
               </p>

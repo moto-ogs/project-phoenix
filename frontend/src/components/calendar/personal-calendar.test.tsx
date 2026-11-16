@@ -243,6 +243,26 @@ describe("PersonalCalendar", () => {
     expect(screen.queryAllByText("Betreuung")).toHaveLength(betreuungBefore);
   });
 
+  it("names the kind of an entry in the grid as text, not only as colour (#7114)", () => {
+    const duty: CalendarEvent = {
+      ...shift,
+      id: "timetable:10",
+      source: "timetable",
+      activity_type: "duty",
+      title: "Busaufsicht",
+      start_time: "16:00",
+      end_time: "16:30",
+    };
+    render(
+      <PersonalCalendar events={[duty]} weekStart={new Date(2026, 0, 5)} />,
+    );
+
+    const chip = screen
+      .getAllByRole("button")
+      .find((button) => button.textContent?.startsWith("Busaufsicht"));
+    expect(chip).toHaveTextContent("Dienst");
+  });
+
   it("renders appointment and timetable events with RSVP actions", () => {
     const onRespond = vi.fn();
     render(

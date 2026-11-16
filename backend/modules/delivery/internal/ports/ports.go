@@ -83,22 +83,26 @@ type RetentionStore interface {
 // FeedStore keeps the notification feed of the accounts of a school
 // (#7148). Every statement runs on the school's tenant transaction, so
 // row-level security binds it to that school, and is scoped to one account
-// except the publication, which writes one entry per recipient.
+// except the publication, which writes one entry per recipient. Reads and
+// read-state changes keep to the types and the reader role of a portal's
+// view (#7139).
 type FeedStore interface {
 	// PublishFeedEntries updates the recipients' unread entry of the same
-	// type and object last updated at or after bundleSince, and adds an entry
-	// for every other recipient.
-	PublishFeedEntries(ctx context.Context, tenantID int64, content domain.FeedEntryContent, accountIDs []int64, now, bundleSince time.Time) (domain.FeedWrite, error)
+	// object last updated at or after bundleSince whose type is one of
+	// bundleTypes, giving it the content's type, and adds an entry for every
+	// other recipient. bundleTypes holds the content's type and the types it
+	// takes back or that take it back (#7151).
+	PublishFeedEntries(ctx context.Context, tenantID int64, content domain.FeedEntryContent, bundleTypes []string, accountIDs []int64, now, bundleSince time.Time) (domain.FeedWrite, error)
 	// ListFeedEntries returns up to limit entries of the account after the
 	// cursor, newest update first; a nil cursor starts at the newest.
-	ListFeedEntries(ctx context.Context, tenantID, accountID int64, after *domain.FeedCursor, limit int) ([]domain.FeedEntry, error)
-	CountUnreadFeedEntries(ctx context.Context, tenantID, accountID int64) (int, error)
+	ListFeedEntries(ctx context.Context, tenantID, accountID int64, view domain.FeedView, after *domain.FeedCursor, limit int) ([]domain.FeedEntry, error)
+	CountUnreadFeedEntries(ctx context.Context, tenantID, accountID int64, view domain.FeedView) (int, error)
 	// MarkFeedEntryRead marks one entry of the account read; found is false
 	// for an entry of another account or school. An entry read before stays
 	// as it is.
-	MarkFeedEntryRead(ctx context.Context, tenantID, accountID, entryID int64, now time.Time) (found bool, err error)
+	MarkFeedEntryRead(ctx context.Context, tenantID, accountID int64, view domain.FeedView, entryID int64, now time.Time) (found bool, err error)
 	// MarkAllFeedEntriesRead marks every unread entry of the account read.
-	MarkAllFeedEntriesRead(ctx context.Context, tenantID, accountID int64, now time.Time) (int, error)
+	MarkAllFeedEntriesRead(ctx context.Context, tenantID, accountID int64, view domain.FeedView, now time.Time) (int, error)
 }
 
 // RealtimeNotificationStore keeps the in-app notifications other API

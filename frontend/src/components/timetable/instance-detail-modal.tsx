@@ -57,7 +57,6 @@ import { OriginChip } from "~/components/ui/planning/origin-chip";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { SectionLabel } from "~/components/ui/section-label";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
-import { LOCATION_COLORS } from "~/lib/location-helper";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import {
   useAttendanceWebEnabled,
@@ -74,6 +73,7 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import {
   canCompleteInstance,
+  canReinstateInstance,
   completeAvailableClock,
 } from "~/lib/timetable-lifecycle";
 import { useSWRAuth } from "~/lib/swr";
@@ -118,7 +118,8 @@ import { supervisionConcept } from "~/lib/concepts/supervision";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
-export type LifecycleAction = "start" | "complete" | "cancel" | "reopen";
+export type LifecycleAction =
+  "start" | "complete" | "cancel" | "reopen" | "reinstate";
 
 /** Extras a lifecycle action can carry; today only the cancel notice (#2601). */
 export interface LifecycleActionOptions {
@@ -126,7 +127,7 @@ export interface LifecycleActionOptions {
 }
 
 // Löschen läuft über ConfirmDeleteModal (#3110), nicht über diese Liste.
-type PendingConfirmAction = "complete" | "cancel" | "reopen";
+type PendingConfirmAction = "complete" | "cancel" | "reopen" | "reinstate";
 
 const CONFIRM_DIALOGS: Record<
   PendingConfirmAction,
@@ -147,7 +148,7 @@ const CONFIRM_DIALOGS: Record<
   },
   cancel: {
     title: "Termin absagen?",
-    body: "Der Termin wird im Plan als abgesagt markiert. Das kann nicht rückgängig gemacht werden.",
+    body: "Der Termin wird im Plan als abgesagt markiert. Bis zum Ende des Termins können Sie die Absage zurücknehmen.",
     confirmText: "Absagen",
   },
   reopen: {
@@ -156,6 +157,15 @@ const CONFIRM_DIALOGS: Record<
     confirmText: "Wieder öffnen",
     confirmTooltip:
       "Öffnet den Termin wieder, Aufsicht und Anwesenheiten kommen zurück.",
+  },
+  // #7151: Eltern hörten von der Absage vielleicht per Nachricht; von der
+  // Rücknahme nicht. Das steht deshalb in der Rückfrage.
+  reinstate: {
+    title: "Absage zurücknehmen?",
+    body: "Der Termin findet wieder statt. Das eingeplante Personal bekommt einen Hinweis in moto. Eltern bekommen keine Nachricht.",
+    confirmText: "Zurücknehmen",
+    confirmTooltip:
+      "Plant den Termin wieder ein, das Personal bekommt einen Hinweis.",
   },
 };
 
@@ -1027,6 +1037,23 @@ export function InstanceDetailModal({
               <CircleX className="h-4 w-4" />
               Diese Aktivität wurde abgesagt.
             </span>
+            {canManage && canReinstateInstance(instance, now) && (
+              <Button
+                variant="outline"
+                size="md"
+                type="button"
+                onClick={() => setPendingConfirm("reinstate")}
+                isLoading={pendingAction === "reinstate"}
+                loadingText="Nehme zurück …"
+                disabled={pendingAction !== null}
+                tooltip="Plant den Termin wieder ein, moto fragt vorher nach."
+              >
+                <span className="inline-flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4" />
+                  Absage zurücknehmen
+                </span>
+              </Button>
+            )}
             {onDeleteCancelled && (
               <Button
                 variant="outline_danger"
@@ -1048,7 +1075,7 @@ export function InstanceDetailModal({
         )}
       </div>
       {editDeferred && (
-        <div className="flex items-center justify-end gap-2 text-xs text-gray-400">
+        <div className="flex items-center justify-end gap-2 text-xs text-gray-500">
           <Pencil className="h-3.5 w-3.5" />
           <span>Bearbeiten kommt im nächsten Update</span>
         </div>
@@ -1304,7 +1331,7 @@ export function InstanceDetailModal({
           <div className="space-y-3">
             <p className="text-sm leading-relaxed text-gray-600">
               {pendingConfirm === "cancel" && instance?.status === "active"
-                ? "Die laufende Betreuung wird gestoppt und der Termin als abgesagt markiert. Das kann nicht rückgängig gemacht werden."
+                ? "Die laufende Betreuung wird gestoppt und der Termin als abgesagt markiert. Bis zum Ende des Termins können Sie die Absage zurücknehmen."
                 : CONFIRM_DIALOGS[pendingConfirm].body}
             </p>
             {pendingConfirm === "cancel" && (
@@ -1458,10 +1485,7 @@ function StudentGroup({
                   : ""}
                 {student.note ? ` • ${student.note}` : ""}
                 {student.earlyPickupTime ? (
-                  <span
-                    className="font-semibold"
-                    style={{ color: LOCATION_COLORS.WARNING }}
-                  >
+                  <span className="text-moto-amber-strong font-semibold">
                     {` • Abholung ${student.earlyPickupTime} Uhr`}
                   </span>
                 ) : null}
@@ -1735,7 +1759,7 @@ interface RowProps {
 function Row({ icon, label, children }: RowProps) {
   return (
     <InsetPanel tone="white" className="flex items-start gap-3 text-sm">
-      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center text-gray-400">
+      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center text-gray-500">
         {icon}
       </span>
       <div className="flex min-w-0 flex-1 flex-col">

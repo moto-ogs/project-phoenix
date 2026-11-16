@@ -88,6 +88,8 @@ func TestPickupChangeReachesOnlyTheChildsTeam(t *testing.T) {
 // TestInstanceCancelledNoticeFollowsTheRight pins the right the cancellation
 // notice (#7148) restates: every staff role holds it, so the switch is offered
 // to everyone who can be planned for a block, and the push is on by default.
+// moto schule offers it to every account there (#7139): a Lehrkraft can be
+// planned for a block without holding the OGS right.
 func TestInstanceCancelledNoticeFollowsTheRight(t *testing.T) {
 	t.Parallel()
 	def, ok := notifications.GetType(notifications.TypeInstanceCancelled)
@@ -96,5 +98,35 @@ func TestInstanceCancelledNoticeFollowsTheRight(t *testing.T) {
 	assert.True(t, def.DefaultOn)
 	assert.Equal(t, notifications.PortalStaff, def.Portal)
 	assert.Equal(t, notifications.GroupAppointments, def.Group)
-	assert.False(t, def.SchoolPortal, "the feed of moto schule follows later")
+	assert.True(t, def.SchoolPortal, "moto schule shows the cancellation (#7139)")
+	assert.True(t, def.SchoolPortalWithoutPermission)
+}
+
+// TestStaffingNoticesFollowTheRight pins the substitution notices (#7136) to
+// their own heading and the right every staff role holds; both push by
+// default.
+func TestStaffingNoticesFollowTheRight(t *testing.T) {
+	t.Parallel()
+	for _, key := range []string{notifications.TypeStaffingChanged, notifications.TypeGroupStaffingChanged} {
+		def, ok := notifications.GetType(key)
+		require.True(t, ok, key)
+		assert.Equal(t, permissions.ActivitiesRead, def.Permission, key)
+		assert.True(t, def.DefaultOn, key)
+		assert.Equal(t, notifications.PortalStaff, def.Portal, key)
+		assert.Equal(t, notifications.GroupStaffing, def.Group, key)
+		assert.Equal(t, "notifications.staffing_changed_enabled", def.TenantGate, key)
+	}
+}
+
+// TestStaffNoticePublishedFollowsTheRight pins the right the notice about a
+// Hinweis der Leitung (#7143) restates: the readers of the Tagesinformationen
+// in the OGS portal hold users:read, and the push is off by default.
+func TestStaffNoticePublishedFollowsTheRight(t *testing.T) {
+	t.Parallel()
+	def, ok := notifications.GetType(notifications.TypeStaffNoticePublished)
+	require.True(t, ok)
+	assert.Equal(t, permissions.UsersRead, def.Permission)
+	assert.False(t, def.DefaultOn, "the push of a Hinweis der Leitung is off by default")
+	assert.Equal(t, notifications.PortalStaff, def.Portal)
+	assert.False(t, def.SchoolPortal, "the feed of moto schule follows with #7139")
 }

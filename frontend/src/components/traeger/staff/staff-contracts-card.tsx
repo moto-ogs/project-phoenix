@@ -93,24 +93,22 @@ function sollColumns(): DataTableColumn<SollRow>[] {
         <span className="font-medium text-gray-900">{row.site.schoolName}</span>
       ),
     },
-    ...CONTRACT_WEEKDAYS.map(
-      (day, index): DataTableColumn<SollRow> => ({
-        key: `day-${index}`,
-        header: day.short,
-        align: "right",
-        stacked: "hidden",
-        render: (row) => {
-          const minutes = row.minutes?.[index] ?? 0;
-          return (
-            <span
-              className={`tabular-nums ${minutes > 0 ? "text-gray-900" : "text-gray-300"}`}
-            >
-              {minutes > 0 ? hoursLabel(minutes).replace(" Std.", "") : "–"}
-            </span>
-          );
-        },
-      }),
-    ),
+    ...CONTRACT_WEEKDAYS.map((day, index): DataTableColumn<SollRow> => ({
+      key: `day-${index}`,
+      header: day.short,
+      align: "right",
+      stacked: "hidden",
+      render: (row) => {
+        const minutes = row.minutes?.[index] ?? 0;
+        return (
+          <span
+            className={`tabular-nums ${minutes > 0 ? "text-gray-900" : "text-gray-500"}`}
+          >
+            {minutes > 0 ? hoursLabel(minutes).replace(" Std.", "") : "–"}
+          </span>
+        );
+      },
+    })),
     {
       key: "week",
       header: "Woche",
@@ -289,7 +287,8 @@ function ContractPanel({
           items={[
             {
               label: "Soll ändern",
-              description: "Neue Stunden ab einem Tag, für eine oder mehrere Schulen.",
+              description:
+                "Neue Stunden ab einem Tag, für eine oder mehrere Schulen.",
               icon: <PencilSimpleIcon className="size-4" aria-hidden="true" />,
               onClick: () => onOpen({ kind: "soll", contract }),
             },
@@ -301,13 +300,15 @@ function ContractPanel({
             },
             {
               label: ended ? "Vertrag ändern" : "Art oder Ende ändern",
-              description: "Teilzeit, Vollzeit oder Minijob und der letzte Tag.",
+              description:
+                "Teilzeit, Vollzeit oder Minijob und der letzte Tag.",
               icon: <CalendarPlusIcon className="size-4" aria-hidden="true" />,
               onClick: () => onOpen({ kind: "terms", contract }),
             },
             {
               label: "Vertrag löschen",
-              description: "Nur für einen Vertrag, der noch nicht zählt. moto fragt vorher nach.",
+              description:
+                "Nur für einen Vertrag, der noch nicht zählt. moto fragt vorher nach.",
               icon: <TrashIcon className="size-4" aria-hidden="true" />,
               destructive: true,
               onClick: () => onOpen({ kind: "delete", contract }),
@@ -388,7 +389,8 @@ export function StaffContractsCard({
         error: errorMessage(err),
       });
       await deleteErrors.show(err, {
-        object: dialog.kind === "delete" ? "den Arbeitsvertrag" : "die Ferienwoche",
+        object:
+          dialog.kind === "delete" ? "den Arbeitsvertrag" : "die Ferienwoche",
       });
     } finally {
       setDeleting(false);
@@ -476,7 +478,9 @@ export function StaffContractsCard({
         }}
         onConfirm={() => void confirmDelete()}
         title={
-          dialog?.kind === "deleteWeek" ? "Ferienwoche löschen?" : "Vertrag löschen?"
+          dialog?.kind === "deleteWeek"
+            ? "Ferienwoche löschen?"
+            : "Vertrag löschen?"
         }
         description={
           dialog?.kind === "deleteWeek" ? (
@@ -487,8 +491,8 @@ export function StaffContractsCard({
             </p>
           ) : (
             <p>
-              Der Vertrag wird mit seinem Soll gelöscht. Die Schulen behalten das
-              zuletzt eingetragene Soll und pflegen es wieder selbst.
+              Der Vertrag wird mit seinem Soll gelöscht. Die Schulen behalten
+              das zuletzt eingetragene Soll und pflegen es wieder selbst.
             </p>
           )
         }

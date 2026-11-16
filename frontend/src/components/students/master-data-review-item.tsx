@@ -201,10 +201,10 @@ export function MasterDataReviewItem({
         {/* Field name lives in the collapsed summary; the expanded panel
             shows only the value change. */}
         <div className="flex flex-wrap items-baseline gap-2 text-sm">
-          <span className="text-gray-400 line-through">
+          <span className="text-gray-500 line-through">
             {formatValue(row.field_key, row.old_value, EMPTY_VALUE)}
           </span>
-          <span className="text-gray-400" aria-hidden="true">
+          <span className="text-gray-500" aria-hidden="true">
             →
           </span>
           <span className="font-medium text-gray-900">

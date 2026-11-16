@@ -345,12 +345,16 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
         onChanged={refreshStundenkonto}
       />
 
-      {/* B — Zwei Charts side-by-side */}
+      {/* B — Zwei Charts side-by-side. Beide Karten sind so hoch wie die
+          höhere: fehlt einer das Diagramm, füllt ihr Platzhalter die Fläche,
+          statt oben zu kleben. */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {/* B1 — Tagesvergleich Ist/Soll */}
         <SectionCard
           title="Tagesvergleich Ist / Soll"
           headingLevel={3}
+          className="flex flex-col"
+          bodyClassName="compact:mt-3 mt-4 flex flex-1 flex-col"
           action={
             <DateRangePicker
               value={clampedDailyRange}
@@ -364,6 +368,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
           {!hasTimeTrendData || dailyTrendData.length < 2 ? (
             <EmptyState
               variant="dashed"
+              className="flex-1 justify-center"
               title={
                 hasTimeTrendData
                   ? "Noch zu wenige Werktage erfasst — sobald ein zweiter Tag dazukommt, erscheint der Vergleich."
@@ -379,6 +384,8 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
         <SectionCard
           title="Saldo-Verlauf"
           headingLevel={3}
+          className="flex flex-col"
+          bodyClassName="compact:mt-3 mt-4 flex flex-1 flex-col"
           action={
             <DateRangePicker
               value={clampedSaldoRange}
@@ -392,6 +399,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
           {!hasBalanceTrendData || weeklyTrendData.length < 2 ? (
             <EmptyState
               variant="dashed"
+              className="flex-1 justify-center"
               title={
                 hasBalanceTrendData
                   ? "Noch zu wenige Wochen für einen Verlauf — sobald eine zweite Woche dazukommt, erscheint der Saldo."
@@ -435,7 +443,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
                 return (
                   <div
                     key={point.key}
-                    className={`flex items-center justify-between gap-3 text-sm ${point.value === 0 ? "opacity-40" : ""}`}
+                    className="flex items-center justify-between gap-3 text-sm"
                   >
                     <span className="flex items-center gap-2 text-gray-700">
                       <StatusDot color={point.color} size="lg" decorative />
@@ -443,7 +451,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
                     </span>
                     <span className="text-gray-500 tabular-nums">
                       {point.value} {point.value === 1 ? "Tag" : "Tage"}
-                      <span className="ml-2 text-gray-400">
+                      <span className="ml-2 text-gray-500">
                         ({percentage}%)
                       </span>
                     </span>

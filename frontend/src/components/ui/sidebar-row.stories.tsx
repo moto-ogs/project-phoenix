@@ -115,8 +115,6 @@ export const Button: Story = {
 };
 
 export const Placeholder: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   render: (args) => (
     <SidebarRowPlaceholder
       icon={args.icon}

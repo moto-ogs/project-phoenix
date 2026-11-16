@@ -418,7 +418,7 @@ export function NewMessageModal({
                           <StatusBadge label="primär" tone="green" compact />
                         )}
                         {save.pending && openingId === g.account_id && (
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-gray-500">
                             Öffnen...
                           </span>
                         )}

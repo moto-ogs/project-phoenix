@@ -68,7 +68,7 @@ export const DAY_PICKER_CLASSNAMES = {
   selected:
     "[&>button]:bg-gray-900 [&>button]:text-white [&>button:hover]:bg-gray-800",
   today: "font-bold text-moto-blue-strong",
-  outside: "text-gray-300",
+  outside: "text-gray-500",
   disabled: "text-gray-300 cursor-not-allowed",
 } as const;
 

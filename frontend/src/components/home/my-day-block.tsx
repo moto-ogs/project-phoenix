@@ -4,7 +4,6 @@ import { ChevronRight } from "lucide-react";
 import { Fragment, type ReactNode } from "react";
 
 import { Button } from "~/components/ui/button";
-import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ListRow } from "~/components/ui/list-row";
 import Link from "~/components/ui/navigation-link";
@@ -13,7 +12,11 @@ import { SkeletonRows } from "~/components/ui/skeleton";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { BlockState } from "~/components/home/day-flow-block";
 import { blockStaffNames } from "~/components/timetable/block-row-parts";
-import { HomeCard, HomeCardIcon } from "~/components/home/home-card";
+import {
+  HomeCard,
+  HomeCardEmpty,
+  HomeCardIcon,
+} from "~/components/home/home-card";
 import {
   dayPlanLinkTooltip,
   HomeCardLink,
@@ -143,8 +146,7 @@ export function MyDayBlock() {
         }
         if (mine.length === 0) {
           return (
-            <EmptyState
-              className="py-4"
+            <HomeCardEmpty
               title="Heute sind Sie für keinen Block eingeteilt"
               description="Ihre Einsätze aus dem Betreuungsplan erscheinen hier, mit Raum, Kindern und dem Starten-Knopf."
             />
@@ -226,8 +228,10 @@ function BlockRow({
   const cancelled = block.status === "cancelled";
   const startable =
     block.status === "planned" && canStartPlannedInstance(block, new Date());
-  // Vorbei ist vorbei: gedimmt, damit das Laufende und Kommende von selbst
-  // hervortritt — wie im Tagesplan.
+  // Vorbei ist vorbei: ausgegraut über Schrift in gray-500 statt Deckkraft
+  // (WCAG 1.4.3, #7110), damit das Laufende und Kommende von selbst
+  // hervortritt — wie im Tagesplan; die Metazeile nennt den Zustand
+  // zusätzlich in Worten.
   // Ein Dienst (#3822) wird nie gestartet und hat keine Kinder.
   const isDuty = block.isDuty === true;
   const ended =
@@ -258,10 +262,14 @@ function BlockRow({
   const meta: ReactNode[] = [
     block.status === "completed" ? "Beendet" : null,
     missed ? "Nicht gestartet" : null,
+    // Ein Dienst wird nie gestartet: „Beendet" und „Nicht gestartet"
+    // passen nicht, er ist schlicht vorbei.
+    ended && isDuty ? "Vorbei" : null,
     room ? (
       <Fragment key="room">
         <MotoConceptIcon
           concept={roomsConcept}
+          tone={over ? "neutral" : undefined}
           size={14}
           className="mr-1 inline-block align-[-2px]"
         />
@@ -274,6 +282,7 @@ function BlockRow({
       <Fragment key="staff">
         <MotoConceptIcon
           concept={staffConcept}
+          tone={over ? "neutral" : undefined}
           size={14}
           className="mr-1 inline-block align-[-2px]"
         />
@@ -291,7 +300,6 @@ function BlockRow({
       )}
       <ListRow
         density="compact"
-        className={over ? "opacity-60" : undefined}
         trailing={
           <>
             {startable ? (
@@ -312,7 +320,7 @@ function BlockRow({
             )}
             {running && block.activeGroupId && (
               <ChevronRight
-                className="h-4 w-4 text-gray-400"
+                className="h-4 w-4 text-gray-500"
                 aria-hidden="true"
               />
             )}
@@ -325,7 +333,9 @@ function BlockRow({
           className="flex min-w-0 flex-1 items-center gap-3"
         >
           <span className="w-14 shrink-0 sm:w-16">
-            <span className="block text-sm font-semibold text-gray-900 tabular-nums">
+            <span
+              className={`block text-sm font-semibold tabular-nums ${over ? "text-gray-500" : "text-gray-900"}`}
+            >
               {block.startTime}
             </span>
             <span className="block text-xs text-gray-500 tabular-nums">
@@ -334,7 +344,7 @@ function BlockRow({
           </span>
           <span className="min-w-0 flex-1">
             <span
-              className={`block truncate text-sm text-gray-900 ${running ? "font-semibold" : "font-medium"}`}
+              className={`block truncate text-sm ${over ? "text-gray-500" : "text-gray-900"} ${running ? "font-semibold" : "font-medium"}`}
             >
               {block.title}
               {block.isSubstitute && (

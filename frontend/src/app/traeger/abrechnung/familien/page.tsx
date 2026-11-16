@@ -150,7 +150,7 @@ function DebtorCell({
             {number}
           </span>
         ) : (
-          <span className="block text-sm text-gray-400">–</span>
+          <span className="block text-sm text-gray-500">–</span>
         )}
         <span
           data-row-control
@@ -226,7 +226,7 @@ function ChildDebtorCell({
                   {child.debtorNumber}
                 </span>
               ) : (
-                <span className="shrink-0 text-gray-400">–</span>
+                <span className="shrink-0 text-gray-500">–</span>
               )}
             </span>
           ))}

@@ -117,8 +117,8 @@ type notificationFeed struct {
 	deliveryContract.NotificationFeed
 }
 
-func (f notificationFeed) Page(ctx context.Context, tenantID, accountID int64, cursor string, limit int) (notificationsHTTP.FeedPage, error) {
-	page, err := f.NotificationFeed.Page(ctx, tenantID, accountID, cursor, limit)
+func (f notificationFeed) Page(ctx context.Context, tenantID, accountID int64, portal, cursor string, limit int) (notificationsHTTP.FeedPage, error) {
+	page, err := f.NotificationFeed.Page(ctx, tenantID, accountID, portal, cursor, limit)
 	if err != nil {
 		return notificationsHTTP.FeedPage{}, err
 	}

@@ -27,6 +27,9 @@ type AnnouncementFeedItem struct {
 	Options                 []*ParentAnnouncementOption  `json:"options,omitempty"`
 	Children                []*AnnouncementPollChild     `json:"children,omitempty"`
 	Declaration             *AnnouncementFeedDeclaration `json:"-"`
+	// Letters are the letters of the guardian's own children of a
+	// personalised Elternbrief (#4813), one per child.
+	Letters []AnnouncementLetter `json:"-"`
 	// Survey is set for the carrier of a parent survey (#4781).
 	Survey *SurveySummary `json:"-"`
 	Poll   bool           `json:"-"`
@@ -98,4 +101,13 @@ type ParentAnnouncementTarget struct {
 	TargetRefID    *int64    `json:"target_ref_id,omitempty"`
 	TargetRefText  *string   `json:"target_ref_text,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+// AnnouncementLetter is the letter one of the guardian's children got
+// (#4813), with the values of that child filled in.
+type AnnouncementLetter struct {
+	StudentID int64
+	FirstName string
+	LastName  string
+	Body      string
 }

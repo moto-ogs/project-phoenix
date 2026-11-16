@@ -77,8 +77,7 @@ func (rs *Resource) Router() chi.Router {
 		// has no such type.
 		r.With(withTx).Get("/email-subscriptions/{type}", rs.getEmailSubscription)
 		r.With(withTx).Put("/email-subscriptions/{type}", rs.setEmailSubscription)
-		// The notification feed (#7148) belongs to the staff portal; the
-		// school portal gets its own in a later step.
+		// The notification feed (#7148); moto schule mounts it as well.
 		rs.registerFeedRoutes(r, withTx)
 	})
 
@@ -94,7 +93,12 @@ func (rs *Resource) SchoolRouter() chi.Router {
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 	r.Use(withPortal(PortalSchool))
 
-	rs.Runtime.ProtectedSchool(r, rs.registerRoutes)
+	rs.Runtime.ProtectedSchool(r, func(r chi.Router, withTx Middleware) {
+		rs.registerRoutes(r, withTx)
+		// The feed of moto schule (#7139): the same entries of the account,
+		// narrowed to the types the school portal offers.
+		rs.registerFeedRoutes(r, withTx)
+	})
 
 	return r
 }

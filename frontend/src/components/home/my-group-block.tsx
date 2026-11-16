@@ -1,12 +1,16 @@
 "use client";
 
-import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ListRow } from "~/components/ui/list-row";
 import { Skeleton, SkeletonRows } from "~/components/ui/skeleton";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
-import { HomeCard, HomeCardIcon } from "~/components/home/home-card";
+import { EmptyState } from "~/components/ui/empty-state";
+import {
+  HomeCard,
+  HomeCardEmpty,
+  HomeCardIcon,
+} from "~/components/home/home-card";
 import {
   HomeCardLink,
   HomeMoreRow,
@@ -123,8 +127,7 @@ export function MyGroupBlock() {
         }
         if (!group) {
           return (
-            <EmptyState
-              className="py-4"
+            <HomeCardEmpty
               title="Ihnen ist heute keine Gruppe zugeteilt"
               description="Sobald Sie eine Gruppe betreuen, steht ihr Stand hier."
             />
@@ -138,6 +141,8 @@ export function MyGroupBlock() {
               </p>
             )}
             {rows.length === 0 ? (
+              // Kein Leertext der Karte: darüber steht der Stand der Gruppe,
+              // die Karte behält deshalb ihre Rasterhöhe.
               <EmptyState
                 className="py-3"
                 title="Alle da, keine Abholung mehr heute"

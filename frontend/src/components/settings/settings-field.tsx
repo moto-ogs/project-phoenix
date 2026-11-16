@@ -1211,7 +1211,7 @@ export function SettingsField({
           <p className="mt-0.5 text-sm text-gray-500">{originNote}</p>
         )}
         {setting.access_policy === "shared" && audience === "operator" && (
-          <p className="mt-0.5 text-xs text-gray-400 italic">
+          <p className="mt-0.5 text-xs text-gray-500 italic">
             Kann auch vom Schul-Admin geändert werden.
           </p>
         )}

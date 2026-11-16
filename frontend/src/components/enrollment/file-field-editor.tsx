@@ -205,7 +205,7 @@ export function FilePreviewInput({ field }: Readonly<{ field: FormField }>) {
       padding="compact"
       className="mt-3 flex items-center gap-2 text-xs text-gray-500"
     >
-      <FileUp className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+      <FileUp className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
       <span className="min-w-0">
         {types || "Keine Dateiart gewählt"} · höchstens {options.max_size_mb} MB
         {options.multiple ? ` · bis zu ${MAX_FILES_PER_FIELD} Dateien` : ""}

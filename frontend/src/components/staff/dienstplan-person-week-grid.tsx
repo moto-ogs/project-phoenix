@@ -774,13 +774,13 @@ function ShiftBlock({
                   ? "Serie, für diese Woche angepasst"
                   : "Teil einer Serie"
               }
-              className={shift.detached ? "text-moto-amber" : "text-gray-400"}
+              className={shift.detached ? "text-moto-amber" : "text-gray-500"}
             />
           ) : undefined
         }
         footer={
           !isShort && shift.breakMinutes > 0 && duration >= 75 ? (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-600">
               Pause {shift.breakMinutes} min
             </span>
           ) : undefined

@@ -117,14 +117,14 @@ export function MonthPlannerGrid({
               {...(!onInstanceClick
                 ? { type: "button" as const, onClick: () => onDayClick(iso) }
                 : {})}
-              className={`relative min-h-[112px] border-r border-b border-gray-100 p-2 text-left transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none focus-visible:ring-inset ${backgroundClass} ${outsideMonth ? "text-gray-400" : ""}`}
+              className={`relative min-h-[112px] border-r border-b border-gray-100 p-2 text-left transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none focus-visible:ring-inset ${backgroundClass} ${outsideMonth ? "text-gray-500" : ""}`}
             >
               {onInstanceClick && (
                 <button
                   type="button"
                   onClick={() => onDayClick(iso)}
                   aria-label={`${getGermanWeekdayShort(day)} ${day.getDate()}.${day.getMonth() + 1}.${day.getFullYear()}`}
-                  className="absolute inset-0 z-0 rounded focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none focus-visible:ring-inset"
+                  className="absolute inset-0 z-0 rounded focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none focus-visible:ring-inset"
                 />
               )}
 
@@ -174,7 +174,7 @@ export function MonthPlannerGrid({
                   closingReason === undefined &&
                   care === undefined &&
                   !planningDisabled && (
-                    <div className="mt-5 flex items-center gap-1 text-xs text-gray-400">
+                    <div className="mt-5 flex items-center gap-1 text-xs text-gray-500">
                       <MotoConceptIcon concept={calendarConcept} size={14} />
                       Leer
                     </div>
@@ -197,7 +197,7 @@ export function MonthPlannerGrid({
                             : {})}
                           className={`pointer-events-auto flex max-w-full min-w-0 items-center gap-1.5 rounded-lg border border-l-[3px] bg-white px-1.5 py-1 text-xs shadow-sm ${
                             isCancelled
-                              ? "border-moto-red border-dashed text-gray-400 line-through"
+                              ? "border-moto-red border-dashed text-gray-500 line-through"
                               : "border-gray-200 text-gray-700"
                           }`}
                           style={{

@@ -50,6 +50,9 @@ var (
 	// ErrInstanceMoved: a concurrent edit moved the block to another day
 	// while the transition waited on the day lock (#1840).
 	ErrInstanceMoved = errors.New("instance was moved concurrently")
+	// ErrInstanceReinstateEnded: a cancellation is taken back only while the
+	// block has not ended yet (#7151).
+	ErrInstanceReinstateEnded = errors.New("cancelled instance has already ended")
 
 	ErrInstanceStartTooEarly       = errors.New("activity instance cannot be started yet")
 	ErrInstanceStartExpired        = errors.New("activity instance can no longer be started")
@@ -312,6 +315,14 @@ type InstanceLifecycleCapability interface {
 	InstanceLifecycle
 	InstancePlanning
 	InstanceStaffing
+}
+
+// InstanceReinstatement takes back the cancellation of one block (#7151):
+// cancelled → planned while the block is not deleted and has not ended. It
+// runs in the caller's tenant transaction; actorAccountID
+// stamps the Änderungsprotokoll and is left out of the staff notice.
+type InstanceReinstatement interface {
+	Reinstate(ctx context.Context, instanceID int64, actorAccountID *int64) (*LifecycleInstance, error)
 }
 
 // InstanceSeriesConversion changes a one-off occurrence into a recurring

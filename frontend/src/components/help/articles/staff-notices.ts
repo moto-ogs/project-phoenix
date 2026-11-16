@@ -30,10 +30,13 @@ export function staffNoticesTopic(): HelpTopic {
       "Wählen Sie unter `Wochentage` die Tage aus, an denen der Hinweis erscheint.",
       "Wählen Sie `Speichern`.",
     ],
-    result: "Der Hinweis steht sofort unter `Heute` für die gewählte Gruppe.",
+    result:
+      "Der Hinweis steht an seinen Tagen unter `Heute` für die gewählte Gruppe. Bei `Alle` und `Nur Betreuung` steht er außerdem sofort bei den Benachrichtigungen der Betreuung.",
     notes: [
       "Mit `Kenntnisnahme verlangen` sehen Sie später, wer den Hinweis bestätigt hat.",
       "`Nur Lehrkräfte` erreicht die Lehrkräfte in moto schule. Unter `Für wen` steht das auch im Fenster.",
+      "Sie selbst bekommen zu Ihrem eigenen Hinweis keine Benachrichtigung. Ein Hinweis, der schon vorbei ist, auch nicht.",
+      "Speichern Sie einen Hinweis ohne Haken bei `Aktiv`, kommt die Benachrichtigung erst, wenn Sie den Haken setzen.",
     ],
     differences: [
       "Ein wichtiger Hinweis trägt `Wichtig`, ein abgeschalteter `Abgeschaltet`.",

@@ -414,7 +414,7 @@ export function TransitStudentsSection({
             type="button"
             onClick={() => setCollapsibleExpanded((current) => !current)}
             aria-expanded={isExpanded}
-            className="group flex w-full min-w-0 items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:outline-none"
+            className="group flex w-full min-w-0 items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none"
           >
             <ConceptIconTile
               concept={transitConcept}
@@ -431,7 +431,7 @@ export function TransitStudentsSection({
               </span>
             </span>
             <ChevronDown
-              className={`h-4 w-4 shrink-0 text-gray-400 transition-transform group-hover:text-gray-600 ${
+              className={`h-4 w-4 shrink-0 text-gray-500 transition-transform group-hover:text-gray-600 ${
                 isExpanded ? "rotate-180" : ""
               }`}
               aria-hidden="true"

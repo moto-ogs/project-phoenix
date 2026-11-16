@@ -256,7 +256,7 @@ function RoomPlanBlockRow({ instance }: { readonly instance: RoomPlanBlock }) {
       data-testid={`room-plan-block-${instance.id}`}
     >
       <span
-        className={`w-28 shrink-0 tabular-nums ${cancelled ? "text-gray-400 line-through" : "font-medium text-gray-900"}`}
+        className={`w-28 shrink-0 tabular-nums ${cancelled ? "text-gray-500 line-through" : "font-medium text-gray-900"}`}
       >
         {instance.startTime}–{instance.endTime}
       </span>

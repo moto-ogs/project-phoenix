@@ -292,7 +292,7 @@ function OperatorDevicesPageContent() {
               {selectedSchool.name}
             </h3>
             {selectedSchool.organization && (
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-500">
                 {selectedSchool.organization.name}
               </span>
             )}

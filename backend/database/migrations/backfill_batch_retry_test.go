@@ -355,7 +355,7 @@ func newBatch(t *testing.T, super *bun.DB, d backfillDriver, newConnection bool)
 	} else {
 		pool, faults = testpkg.NewStatementFaultPool(t)
 	}
-	warmBatchConnections(t, pool)
+	warmBatchConnections(t, pool, newConnection)
 	tenantID, _ := testpkg.CreateTestTenant(t, super)
 	d.seed(t, super, tenantID)
 	return pool, faults, tenantID
@@ -364,14 +364,32 @@ func newBatch(t *testing.T, super *bun.DB, d backfillDriver, newConnection bool)
 // warmBatchConnections opens both connections before fault injection. Cold
 // connection setup must not consume the sampler's one-second acquire budget
 // and abort a case before its intended failure site is reached.
-func warmBatchConnections(t *testing.T, pool *bun.DB) {
+func warmBatchConnections(t *testing.T, pool *bun.DB, reserveReplacement bool) {
 	t.Helper()
 	batch, err := pool.DB.Conn(t.Context())
 	require.NoError(t, err)
 	defer func() { require.NoError(t, batch.Close()) }()
 	monitor, err := pool.DB.Conn(t.Context())
 	require.NoError(t, err)
-	require.NoError(t, monitor.Close())
+	defer func() { require.NoError(t, monitor.Close()) }()
+
+	if !reserveReplacement {
+		return
+	}
+
+	replacement, err := pool.DB.Conn(t.Context())
+	require.NoError(t, err)
+	require.NoError(t, replacement.Close())
+}
+
+func TestWarmBatchConnectionsKeepsSpareForDiscardedConnection(t *testing.T) {
+	t.Parallel()
+	testpkg.SetupIsolatedTestDB(t)
+	pool, _ := testpkg.NewStatementFaultPool(t)
+
+	warmBatchConnections(t, pool, true)
+
+	require.Equal(t, 3, pool.DB.Stats().Idle)
 }
 
 // expectedDecision is the decision on the direct result of a failed step.

@@ -2459,7 +2459,7 @@ export default function SlotListsPage() {
                 <div key={section.title}>
                   <h3 className="mb-2 text-sm font-semibold text-gray-700">
                     {section.title}{" "}
-                    <span className="font-normal text-gray-400">
+                    <span className="font-normal text-gray-500">
                       ({section.rows.length})
                     </span>
                   </h3>

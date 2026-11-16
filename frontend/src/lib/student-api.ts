@@ -137,6 +137,17 @@ export async function fetchSchoolClasses(): Promise<string[]> {
   return bffJson<string[]>("/api/students/school-classes");
 }
 
+/** Names for a complete local child selector, including subsequent pages. */
+export async function fetchAllStudentNames(): Promise<Student[]> {
+  const first = await fetchStudents({ page: 1, pageSize: 500, view: "names" });
+  const rest = await Promise.all(
+    Array.from({ length: first.pagination.total_pages - 1 }, (_, i) =>
+      fetchStudents({ page: i + 2, pageSize: 500, view: "names" }),
+    ),
+  );
+  return [first, ...rest].flatMap((page) => page.students);
+}
+
 /** One child with access flags, feature flags and privacy consent. */
 export async function fetchStudent(id: string): Promise<Student> {
   return bffJson<Student>(`/api/students/${encodeURIComponent(id)}`);

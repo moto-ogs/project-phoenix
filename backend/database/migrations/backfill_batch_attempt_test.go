@@ -29,7 +29,7 @@ func init() {
 func checkPanicRollsBack(t *testing.T, super *bun.DB) {
 	t.Parallel()
 	pool, _ := testpkg.NewStatementFaultPool(t)
-	warmBatchConnections(t, pool)
+	warmBatchConnections(t, pool, false)
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 	started := time.Now()
@@ -55,7 +55,7 @@ func checkSamplerStopsOnce(t *testing.T, _ *bun.DB) {
 	t.Parallel()
 	for _, failing := range []bool{false, true} {
 		pool, faults := testpkg.NewStatementFaultPool(t)
-		warmBatchConnections(t, pool)
+		warmBatchConnections(t, pool, false)
 		hooks := batchAttemptHooks{}
 		if failing {
 			faults.Arm(testpkg.FaultNone, nil)
@@ -85,7 +85,7 @@ func checkSamplerStopsOnce(t *testing.T, _ *bun.DB) {
 func checkSamplerFailureRacingStop(t *testing.T, _ *bun.DB) {
 	t.Parallel()
 	pool, faults := testpkg.NewStatementFaultPool(t)
-	warmBatchConnections(t, pool)
+	warmBatchConnections(t, pool, false)
 	faults.Arm(testpkg.FaultNone, nil)
 	faults.AlsoFailStatementWhenCancelled(monitorSamplePrefix, testpkg.InjectedFailure("bad_conn"))
 	// The deadline bounds the held sample should stop never cancel it.

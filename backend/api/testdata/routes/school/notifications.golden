@@ -1,7 +1,11 @@
 DELETE /school/notifications/preferences/
 DELETE /school/notifications/push/subscriptions
+GET /school/notifications/feed/
+GET /school/notifications/feed/unread-count
 GET /school/notifications/preferences/
 GET /school/notifications/push/public-key
+POST /school/notifications/feed/read-all
+POST /school/notifications/feed/{id}/read
 POST /school/notifications/push/subscriptions
 POST /school/notifications/test
 PUT /school/notifications/preferences/{type}

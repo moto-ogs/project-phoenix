@@ -181,8 +181,6 @@ export const QuietFilters: Story = { args: quietFilterArgs };
 
 /** Wie `QuietFilters`, mit geöffneter Filterfläche. */
 export const QuietFiltersOpened: Story = {
-  // axe meldet hier noch color-contrast; Behebung in #7110.
-  parameters: { a11y: { test: "todo" } },
   args: quietFilterArgs,
   play: async ({ canvasElement }) => {
     const visibleFilterButton = within(canvasElement)

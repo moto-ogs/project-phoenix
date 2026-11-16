@@ -410,7 +410,7 @@ function ActivitiesPageContent() {
                     {activity.name}
                   </h3>
                   <p className="mt-1 truncate text-sm text-gray-500">
-                    <span className="text-gray-400">Erstellt von:</span>{" "}
+                    <span className="text-gray-500">Erstellt von:</span>{" "}
                     {formatSupervisorList(activity.supervisors)}
                   </p>
                 </div>

@@ -24,7 +24,7 @@ export function ActivitiesPanel({ running, upcoming }: ActivitiesPanelProps) {
       </div>
 
       {running.length === 0 && upcoming.length === 0 ? (
-        <p className="py-8 text-center text-2xl text-gray-400">
+        <p className="py-8 text-center text-2xl text-gray-500">
           Gerade keine Aktivitäten.
         </p>
       ) : (
@@ -55,7 +55,7 @@ export function ActivitiesPanel({ running, upcoming }: ActivitiesPanelProps) {
                   <p className="text-2xl font-bold text-gray-900 tabular-nums">
                     {activity.participants}
                     {activity.max_capacity != null && (
-                      <span className="text-lg font-medium text-gray-400">
+                      <span className="text-lg font-medium text-gray-500">
                         {" "}
                         / {activity.max_capacity}
                       </span>

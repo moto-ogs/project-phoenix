@@ -558,7 +558,7 @@ export function WeeklyCalendarGrid({
                 {hours.slice(0, -1).map((hour) => (
                   <div
                     key={hour}
-                    className="flex items-start justify-end px-1 pt-1 text-xs font-medium text-gray-400 sm:px-2"
+                    className="flex items-start justify-end px-1 pt-1 text-xs font-medium text-gray-500 sm:px-2"
                     style={{ height: `${hourHeightPx}px` }}
                   >
                     {String(hour).padStart(2, "0")}:00
@@ -658,7 +658,7 @@ export function WeeklyCalendarGrid({
                           tabIndex={-1}
                           onClick={() => onSlotClick(iso, hour)}
                           aria-label={`Neuen Termin anlegen: ${formatDayHeader(day)}, ${String(hour).padStart(2, "0")}:00 Uhr`}
-                          className="group absolute inset-x-0 flex items-center justify-center p-0.5 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none focus-visible:ring-inset"
+                          className="group absolute inset-x-0 flex items-center justify-center p-0.5 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none focus-visible:ring-inset"
                           style={{
                             top: `${(hour - renderStartHour) * hourHeightPx}px`,
                             height: `${hourHeightPx}px`,

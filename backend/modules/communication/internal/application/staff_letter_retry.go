@@ -53,6 +53,10 @@ func (s *service) ResendFailedEmails(ctx context.Context, id int64) (int, error)
 	resent := 0
 	layout := letterMailLayout{schoolName: schoolName, logoURL: logoURL, motoLogoURL: motoLogoURL, portalURL: portalURL, kicker: kicker, intro: intro, body: body}
 
+	if layout.childrenByAddress, layout.letters, err = s.resendLetterBodies(ctx, a); err != nil {
+		return 0, err
+	}
+
 	byAddress := NewMailReceiptIndex()
 	portalAccessByAddress := deliveryPortalAccess(rows)
 	for _, row := range rows {
@@ -73,6 +77,14 @@ func (s *service) ResendFailedEmails(ctx context.Context, id int64) (int, error)
 
 type letterMailLayout struct {
 	schoolName, logoURL, motoLogoURL, portalURL, kicker, intro, body string
+	// letters and childrenByAddress write each address the letters of its own
+	// children (#4813); without letters every mail carries body.
+	letters           letterMailBodies
+	childrenByAddress map[string][]int64
+}
+
+func (l letterMailLayout) bodyFor(address string) string {
+	return l.letters.bodyFor(l.childrenByAddress[address], l.body)
 }
 
 func (s *service) enqueueLetterRecipient(ctx context.Context, a *StaffParentAnnouncement, r *letterRecipient, layout letterMailLayout, address, recipientPortalURL string, portalAccess bool, spec mailSpec, hasAttachment bool) (*communication.MailEnqueued, error) {
@@ -89,7 +101,7 @@ func (s *service) enqueueLetterRecipient(ctx context.Context, a *StaffParentAnno
 			emailPayloadMotoLogoURL: JSONString(layout.motoLogoURL),
 			emailPayloadKicker:      JSONString(layout.kicker),
 			emailPayloadIntro:       JSONString(layout.intro),
-			emailPayloadBody:        JSONString(layout.body),
+			emailPayloadBody:        JSONString(layout.bodyFor(address)),
 			emailPayloadAckRequired: JSONBool(spec.ackRequired && portalAccess),
 			// Only for recipients who can actually reach the portal: a hint
 			// pointing somewhere the reader cannot go is worse than none.
@@ -115,7 +127,7 @@ func (s *service) enqueueLetterRetry(ctx context.Context, a *StaffParentAnnounce
 			emailPayloadMotoLogoURL: JSONString(layout.motoLogoURL),
 			emailPayloadKicker:      JSONString(layout.kicker),
 			emailPayloadIntro:       JSONString(layout.intro),
-			emailPayloadBody:        JSONString(layout.body),
+			emailPayloadBody:        JSONString(layout.bodyFor(address)),
 			emailPayloadAckRequired: JSONBool(a.RequiresAcknowledgement && portalAccess),
 		},
 		RelatedEntityType: relatedEntityTypeAnnouncement,
@@ -209,4 +221,23 @@ func (s *service) resendableAnnouncement(ctx context.Context, id int64) (*StaffP
 		return nil, ErrNotPublished
 	}
 	return a, nil
+}
+
+// resendLetterBodies reads, for a personalised letter (#4813), the frozen
+// letters and which children each address belongs to now, so a resent mail
+// carries the same letters as the first one. Nil for every other mail.
+func (s *service) resendLetterBodies(ctx context.Context, a *StaffParentAnnouncement) (map[string][]int64, letterMailBodies, error) {
+	bodies, err := s.personalLetterBodies(ctx, a)
+	if err != nil || bodies == nil {
+		return nil, nil, err
+	}
+	resolved, err := s.repo.ResolveDeliveryRecipients(ctx, a.GetTenantID(), a.ID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("announcement: resolve recipients for resend: %w", err)
+	}
+	recipients := make([]*letterRecipient, 0, len(resolved))
+	for _, r := range resolved {
+		recipients = append(recipients, &letterRecipient{src: r})
+	}
+	return addressChildren(recipients), bodies, nil
 }

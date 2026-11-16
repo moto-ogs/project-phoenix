@@ -468,6 +468,8 @@ AS $function$
     UNION ALL
     SELECT 1 FROM users.parent_announcement_declaration_versions AS r WHERE r.tenant_id = p_school_id
     UNION ALL
+    SELECT 1 FROM users.parent_announcement_letter_copies AS r WHERE r.tenant_id = p_school_id
+    UNION ALL
     SELECT 1 FROM users.parent_announcement_options AS r WHERE r.tenant_id = p_school_id
     UNION ALL
     SELECT 1 FROM users.parent_announcement_reads AS r WHERE r.tenant_id = p_school_id
