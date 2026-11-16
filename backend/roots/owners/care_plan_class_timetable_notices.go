@@ -15,7 +15,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
-	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
@@ -80,6 +79,8 @@ type classTimetableMembership interface {
 // ClassTimetableNoticeSources are the owners the notices name the people of
 // a class through.
 type ClassTimetableNoticeSources struct {
+	// Actor names the acting account of the request, who hears nothing.
+	Actor      func(context.Context) (int64, string)
 	Audience   classTimetableAudience
 	Students   classTimetableStudents
 	Staff      classTimetableStaffAccounts
@@ -153,7 +154,12 @@ func (n classTimetableNotices) people(ctx context.Context, class string) (classT
 			people.staff = append(people.staff, accountID)
 		}
 	}
-	actor := sessiontoken.ActorAccountIDFromCtx(ctx)
+	var actor *int64
+	if n.sources.Actor != nil {
+		if accountID, _ := n.sources.Actor(ctx); accountID > 0 {
+			actor = &accountID
+		}
+	}
 	people.staff = classTimetableAccounts(people.staff, actor)
 	people.guardians = classTimetableAccounts(people.guardians, actor)
 	slices.Sort(people.studentIDs)
@@ -332,8 +338,8 @@ func classTimetableRelatedID(class string) int64 {
 // CarePlanClassTimetableNotices binds the notices over the root's owners:
 // the parent audience projection, People Directory's students and staff
 // accounts and School Membership's teaching assignments.
-func CarePlanClassTimetableNotices(db transactionruntime.Database, notifications DeliveryNotifications, people PeopleRows, membership classTimetableMembership) careplan.ClassTimetableNotices {
+func CarePlanClassTimetableNotices(db transactionruntime.Database, notifications DeliveryNotifications, people PeopleRows, membership classTimetableMembership, actor func(context.Context) (int64, string)) careplan.ClassTimetableNotices {
 	return NewCarePlanClassTimetableNotices(notifications, ClassTimetableNoticeSources{
-		Audience: NewParentGroupAudience(db), Students: people.Students, Staff: people.Staff, Membership: membership,
+		Actor: actor, Audience: NewParentGroupAudience(db), Students: people.Students, Staff: people.Staff, Membership: membership,
 	})
 }

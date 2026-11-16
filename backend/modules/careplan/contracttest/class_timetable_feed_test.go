@@ -67,7 +67,7 @@ func newClassFeedFixture(t *testing.T) *classFeedFixture {
 	notices := owners.NewCarePlanClassTimetableNotices(
 		owners.DeliveryNotifications{Notifier: notifier, Preferences: module.NotificationPreferences},
 		owners.ClassTimetableNoticeSources{
-			Audience: owners.NewParentGroupAudience(database), Students: members.Student, Staff: members.Staff,
+			Actor: testpkg.RequestAuditActor, Audience: owners.NewParentGroupAudience(database), Students: members.Student, Staff: members.Staff,
 			Membership: owners.MustNewSchoolMembership(database),
 		})
 	require.NotNil(t, notices)
