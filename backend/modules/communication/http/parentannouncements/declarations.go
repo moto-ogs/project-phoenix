@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	announcementService "github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -225,7 +226,18 @@ func (rs *Resource) declarationExport(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("format must be csv or pdf")))
 		return
 	}
-	status, err := rs.Service.ParentDeclarationStatus(r.Context(), id)
+	// student_id narrows the proof to one child (#4814); every download is
+	// written to the data access log.
+	studentID, ok := proofStudent(w, r)
+	if !ok {
+		return
+	}
+	if rs.StudentRecords == nil {
+		common.RenderError(w, r, common.ErrorInternalServer(errStudentRecordsMissing))
+		return
+	}
+	claims := sessiontoken.ClaimsFromCtx(r.Context())
+	status, err := rs.StudentRecords.ParentDeclarationProof(r.Context(), int64(claims.ID), id, studentID)
 	if err != nil {
 		renderAnnouncementError(w, r, err)
 		return
@@ -240,6 +252,7 @@ func (rs *Resource) declarationExport(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("render declaration export", err))
 		return
 	}
+	file.Filename = childProofFilename(file.Filename, status, studentID)
 	w.Header().Set("Content-Type", file.ContentType)
 	w.Header().Set("Content-Disposition", textnorm.ContentDisposition("attachment", file.Filename))
 	w.Header().Set("Content-Length", strconv.Itoa(len(file.Data)))

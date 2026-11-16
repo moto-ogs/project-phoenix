@@ -26,6 +26,7 @@ type StaffAnnouncementSource interface {
 	communication.StaffAnnouncementRecords
 	communication.AnnouncementRecipientRecords
 	communication.ParentLetterCopyRecords
+	communication.StudentParentRecordRecords
 }
 
 func AnnouncementPollResultsFromAnnouncementRecord(v *communication.PortalAnnouncementPollResults) *AnnouncementPollResults {

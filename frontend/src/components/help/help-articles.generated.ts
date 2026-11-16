@@ -4703,7 +4703,7 @@ export const manageStudentTopic = function manageStudentTopic(): HelpTopic {
           "`Betreuungszeiten`: der Wochenplan und einzelne Ausnahmen.",
           "`Betreuungsplan`: die geplante Betreuung Woche für Woche.",
           "`Nachrichten`: die Unterhaltungen mit den Bezugspersonen.",
-          "`Dokumente`: hochgeladene Dateien zu diesem Kind.",
+          "`Dokumente`: hochgeladene Dateien zu diesem Kind. Unter `Aus moto` stehen die Elternbriefe und Einverständnisse des Kindes.",
           "`Änderungsprotokoll`: wer wann was geändert hat.",
           "`Historie`: die vergangenen Betreuungstage.",
         ],
@@ -4724,6 +4724,7 @@ export const manageStudentTopic = function manageStudentTopic(): HelpTopic {
     differences: [
       "Sie sehen weniger Reiter? Dann haben Sie nur eingeschränkten Zugriff auf dieses Kind.",
       "Der Reiter `Anmeldungen` erscheint nur, wenn die Anmeldung über moto läuft.",
+      "`Aus moto` fehlt unter `Dokumente`? Den Bereich sehen nur Personen mit Zugriff auf `Mitteilungen`. Die Schule muss außerdem die Eltern-App nutzen.",
     ],
     troubleshootingDetails: [
       "Fehlt `Bearbeiten`? Dann fehlen Ihnen die Schreibrechte für dieses Kind.",
@@ -6180,6 +6181,7 @@ export const parentDeclarationTopic =
         "Mit `Passwort vor dem Antworten abfragen` geben Eltern vor jeder Antwort ihr Passwort ein.",
         "`Offene erinnern` schickt eine Erinnerung an alle, die noch nicht geantwortet haben.",
         "Unter `Herunterladen` lädt `Bericht als PDF` den Stand und alle Antworten als PDF herunter. `Verlauf als CSV` enthält dieselben Antworten als Tabelle.",
+        "Den Stand für ein einzelnes Kind sehen Sie beim Kind unter `Dokumente` im Bereich `Aus moto`. `Nachweis als PDF` lädt dort den Nachweis nur für dieses Kind herunter.",
         "Das ist eine einfache Erklärung per Knopfdruck. Verlangt ein Gesetz eine Erklärung auf Papier, reicht sie nicht aus.",
       ],
       differences: [
@@ -6997,6 +6999,7 @@ export const parentLetterTopic = function parentLetterTopic(): HelpTopic {
       "Unter `Empfänger` steht bei jeder Mail, was aus ihr geworden ist. Steht dort `Adresse prüfen`, korrigieren Sie die Adresse beim Kind unter `Erziehungsberechtigte`.",
       "Unter `Wer erhält die E-Mail?` wählen Sie `Nur mit Portalzugang` oder `Alle Bezugspersonen`.",
       "Die Eltern bestätigen den Brief. Eine Bestätigung pro Kind genügt.",
+      "Ob ein Kind den Brief bestätigt hat, sehen Sie auch beim Kind unter `Dokumente` im Bereich `Aus moto`.",
       "Der Kasten im Fenster zählt auf, was beim Veröffentlichen automatisch passiert.",
       "Brief nur an bestimmte Kinder, zum Beispiel ohne Fotoeinwilligung? Filtern Sie unter `Alle Kinder` die Liste. Wählen Sie oben rechts im Menü `Elternbrief schreiben`. Der Brief öffnet sich mit genau diesen Kindern als Empfänger.",
       "Die Kinder werden beim Öffnen übernommen. Ändern Sie danach den Filter, bleibt der Brief bei denselben Kindern.",
