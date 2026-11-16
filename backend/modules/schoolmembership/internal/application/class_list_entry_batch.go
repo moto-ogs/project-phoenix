@@ -60,3 +60,29 @@ func (s *Service) MatchClassListEntries(ctx context.Context, keys []schoolmember
 	})
 	return result, err
 }
+
+// RemoveClassListEntries deletes the entries in one statement, all or none
+// (#4803): the conversion has already moved their morning marks.
+func (s *Service) RemoveClassListEntries(ctx context.Context, ids []int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	unique := make(map[int64]bool, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
+			return invalid("class list entry IDs must be positive")
+		}
+		unique[id] = true
+	}
+	return s.runWrite(ctx, "remove_class_list_entries", func(txCtx context.Context, stats *domain.OperationStats) error {
+		deleted, deleteStats, err := s.store.DeleteClassListEntries(txCtx, ids)
+		stats.Add(deleteStats)
+		if err != nil {
+			return err
+		}
+		if deleted != int64(len(unique)) {
+			return schoolmembership.ErrClassListEntryNotFound
+		}
+		return nil
+	})
+}

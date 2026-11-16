@@ -272,3 +272,28 @@ type RelationshipResolver interface {
 
 // GuardianPortDecorator binds a recording or failing owner port in tests.
 type GuardianPortDecorator func(GuardianDirectory) GuardianDirectory
+
+// ClassListEntryRemoval is School Membership's batch delete of class-list
+// entries (#4803); the conversion appends the change trail itself.
+type ClassListEntryRemoval interface {
+	RemoveClassListEntries(context.Context, []int64) error
+}
+
+// ClassListMarkTransfer is Student Presence's move of the morning marks of
+// class-list entries onto the students they became (#4803).
+type ClassListMarkTransfer interface {
+	TransferClassListEntryMarks(context.Context, []ClassListEntryMarkMove) error
+}
+
+// ClassListConversionDeps are the owner commands the conversion of a
+// school's class-list entries into children without an OGS place runs
+// through (#4803, ADR 0282). Students is the student import whose batch
+// creation the conversion reuses.
+type ClassListConversionDeps struct {
+	Membership ClassListMembership
+	Removal    ClassListEntryRemoval
+	Marks      ClassListMarkTransfer
+	Persons    PersonDirectory
+	Students   StudentDirectory
+	Audit      AuditCommand
+}

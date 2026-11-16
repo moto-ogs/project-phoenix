@@ -95,6 +95,11 @@ type StudentRequest struct {
 	// endpoints (PUT /students/{id}/{arrival,pickup}-schedules).
 	ArrivalSchedules []ArrivalScheduleRequestItem `json:"arrival_schedules,omitempty"`
 	PickupSchedules  []PickupScheduleRequest      `json:"pickup_schedules,omitempty"`
+
+	// WithoutCarePlace creates a child of the class without an OGS place
+	// (#4803, ADR 0282): no group, no arrival or pickup times. Only a school
+	// whose switch is on accepts it.
+	WithoutCarePlace bool `json:"without_care_place,omitempty"`
 }
 
 // UpdateStudentRequest represents a student update request
@@ -286,6 +291,9 @@ func (req *StudentRequest) Bind(_ *http.Request) error {
 	}
 	if err := validatePickupScheduleItems(req.PickupSchedules); err != nil {
 		return err
+	}
+	if req.WithoutCarePlace && (req.GroupID != nil || len(req.ArrivalSchedules) > 0 || len(req.PickupSchedules) > 0) {
+		return ErrWithoutCarePlaceCareData
 	}
 	if err := req.normalizeDayFields(); err != nil {
 		return err

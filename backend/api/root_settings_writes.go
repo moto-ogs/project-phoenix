@@ -4,7 +4,11 @@ import (
 	"context"
 	"errors"
 
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+
+	importModels "github.com/moto-ogs/project-phoenix/modules/dataimport"
 
 	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
 
@@ -30,9 +34,12 @@ type SettingsWrites struct {
 func buildSettingsWrites(
 	env owners.RootEnvironment, settings owners.SettingsOwner, payroll settingsCompose.PayrollStatusGetter, yard FacilitiesYard,
 	authority careplan.BookingAuthority, photos StudentPhotoFeatureToggle, visits studentpresence.PresenceCleanup, hub *realtime.Hub,
+	classList importModels.ClassListConverter,
 ) (SettingsWrites, error) {
 	schulhof, wc := facilitiesCompose.SettingHandlers(yard.Schulhof, yard.WC)
+	withoutCarePlace := classListConversionSideEffects(settings.Service, classList)
 	registry, err := settingsCompose.NewSideEffects(env.Observe.SettingsSideEffectFailure,
+		withoutCarePlace[0], withoutCarePlace[1],
 		settingsCompose.SettingSideEffect{Key: configModels.KeyCheckoutSchulhofEnabled, Handle: schulhof},
 		settingsCompose.SettingSideEffect{Key: configModels.KeyCheckoutWCEnabled, Handle: wc},
 		careWithdrawalSettingSideEffect(authority),
@@ -72,4 +79,38 @@ func attendanceLogSettingSideEffect(visits studentpresence.PresenceCleanup) sett
 		}
 		return nil, visits.ApplyAttendanceLogSetting(ctx, enabled)
 	}}
+}
+
+// classListConversionSideEffects convert the school's class-list entries
+// into children without an OGS place (#4803, ADR 0282) once the school keeps
+// such children: its switch and the module Unterricht am Vormittag both on,
+// whichever of the two the moto team sets last. It runs in the settings
+// write's transaction, so a failed conversion keeps the switch where it was.
+// Switching off converts nothing back.
+func classListConversionSideEffects(settings interface {
+	ResolveBool(context.Context, string) (bool, error)
+}, classList importModels.ClassListConverter) [2]settingsCompose.SettingSideEffect {
+	convertWhenOn := func(other string) func(context.Context, int64, any) (func(), error) {
+		return func(ctx context.Context, _ int64, value any) (func(), error) {
+			on, ok := value.(bool)
+			if !ok || !on {
+				return nil, nil
+			}
+			otherOn, err := settings.ResolveBool(ctx, other)
+			if err != nil || !otherOn {
+				return nil, err
+			}
+			// The trail names the moto team member who switched the school on.
+			actor := int64(sessiontoken.ClaimsFromCtx(ctx).ID)
+			if actor <= 0 {
+				return nil, errors.New("class list conversion: the switch has no acting account")
+			}
+			_, err = classList.ConvertClassListEntries(ctx, &actor)
+			return nil, err
+		}
+	}
+	return [2]settingsCompose.SettingSideEffect{
+		{Key: configModels.KeyChildrenWithoutCarePlace, Handle: convertWhenOn(configModels.KeyModuleUnterrichtVormittag)},
+		{Key: configModels.KeyModuleUnterrichtVormittag, Handle: convertWhenOn(configModels.KeyChildrenWithoutCarePlace)},
+	}
 }

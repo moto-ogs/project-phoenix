@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	settingsFacts "github.com/moto-ogs/project-phoenix/modules/settings"
+
 	"github.com/go-chi/chi/v5"
 	peopleRouteValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
@@ -72,6 +74,29 @@ var classListEntryRefusals = []struct {
 	{schoolMembershipModule.ErrClassListEntryStudentExists, apiCommon.CodeStudentsClassListEntryStudentExists},
 	{schoolMembershipModule.ErrClassListEntryStudentNotFound, apiCommon.CodeStudentsClassListEntryStudentNotFound},
 	{schoolMembershipModule.ErrClassListEntryAssignMismatch, apiCommon.CodeStudentsClassListEntryAssignMismatch},
+	{schoolMembershipModule.ErrClassListEntriesReplaced, apiCommon.CodeStudentsClassListEntriesReplaced},
+}
+
+// classListEntriesWhileChildrenKept refuses a new class-list entry while the
+// school keeps children without an OGS place as student records (#4803,
+// ADR 0282): its switch converted the entries, and such a child is now
+// created as a student. Every other command passes through.
+type classListEntriesWhileChildrenKept struct {
+	schoolMembershipModule.ClassListEntries
+	settings interface {
+		ResolveBool(context.Context, string) (bool, error)
+	}
+}
+
+func (c classListEntriesWhileChildrenKept) AddClassListEntry(ctx context.Context, in schoolMembershipModule.AddClassListEntry) (schoolMembershipModule.ClassListEntry, error) {
+	kept, err := settingsFacts.ChildrenWithoutCarePlaceOn(func(key string) (bool, error) { return c.settings.ResolveBool(ctx, key) })
+	if err != nil {
+		return schoolMembershipModule.ClassListEntry{}, err
+	}
+	if kept {
+		return schoolMembershipModule.ClassListEntry{}, schoolMembershipModule.ErrClassListEntriesReplaced
+	}
+	return c.ClassListEntries.AddClassListEntry(ctx, in)
 }
 
 func classListEntryRefusalCode(err error) string {

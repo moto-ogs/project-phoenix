@@ -1,0 +1,67 @@
+package careplanhttp_test
+
+import (
+	"encoding/json"
+	"net/http"
+	"testing"
+
+	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/settings"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// TestCreateStudentWithoutCarePlace creates a child of the class without an
+// OGS place (#4803, ADR 0282) only while the school keeps such children: its
+// switch and Unterricht am Vormittag on. Such a child gets no group.
+func TestCreateStudentWithoutCarePlace(t *testing.T) {
+	t.Parallel()
+	testpkg.OwnTenant(t)
+	tc := setupStudentsRoute(t)
+	ctx := testpkg.Ctx(t)
+	body := func(extra map[string]any) map[string]any {
+		values := map[string]any{"first_name": "Ohne", "last_name": "Platz", "school_class": "2a", "without_care_place": true}
+		for key, value := range extra {
+			values[key] = value
+		}
+		return values
+	}
+	post := func(values map[string]any) (int, string) {
+		req := testutil.NewAuthenticatedRequest(t, "POST", "/", values)
+		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
+		var problem struct {
+			Code string `json:"code"`
+		}
+		_ = json.Unmarshal(rr.Body.Bytes(), &problem)
+		return rr.Code, problem.Code
+	}
+
+	status, code := post(body(nil))
+	assert.Equal(t, http.StatusConflict, status, "the switch is off by default")
+	assert.Equal(t, "students.without_care_place_off", code)
+
+	require.NoError(t, tc.settings().SetValue(ctx, settings.KeyChildrenWithoutCarePlace, true, nil, nil))
+	group := testpkg.CreateTestEducationGroup(t, tc.db, "Gruppe ohne Platz")
+	status, code = post(body(map[string]any{"group_id": group.ID}))
+	assert.Equal(t, http.StatusBadRequest, status)
+	assert.Equal(t, "students.without_care_place_group", code)
+
+	unterricht, ok := settings.LookupModule(settings.ModuleUnterrichtVormittag)
+	require.True(t, ok)
+	require.NoError(t, tc.settings().SetValue(ctx, unterricht.SettingKey, false, nil, nil))
+	status, code = post(body(nil))
+	assert.Equal(t, http.StatusConflict, status, "without the module the switch has no effect")
+	assert.Equal(t, "students.without_care_place_off", code)
+	require.NoError(t, tc.settings().SetValue(ctx, unterricht.SettingKey, true, nil, nil))
+
+	req := testutil.NewAuthenticatedRequest(t, "POST", "/", body(nil))
+	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
+	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
+	var created createStudentResponse
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &created))
+	var withoutPlace bool
+	require.NoError(t, tc.db.NewRaw(`SELECT without_care_place FROM users.student_school_memberships
+		WHERE tenant_id = ? AND student_profile_id = ? AND deleted_at IS NULL`, testpkg.Tenant(t), created.Data.ID).Scan(ctx, &withoutPlace))
+	assert.True(t, withoutPlace)
+}

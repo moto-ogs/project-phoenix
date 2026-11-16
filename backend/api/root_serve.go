@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	importModels "github.com/moto-ogs/project-phoenix/modules/dataimport"
+
 	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
 
 	birthdaysAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/birthdays"
@@ -180,6 +182,7 @@ func composeServeRoot(
 		dashboard        supervisiondashboard.Query
 		planning         TimetablePlanning
 		settingsWrites   SettingsWrites
+		classList        importModels.ClassListConverter
 		studentDeletion  *studentdeletion.Workflow
 		facilities       facilitiesModule.Capability
 		calendarAdmin    schoolcalendar.Calendar
@@ -479,7 +482,12 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			settingsWrites, err = buildSettingsWrites(env, settings, payroll, yard, schedules.Lifecycle, services.StudentPhotos, owners.BuildPresenceCleanup(env, presence, audit, settings.Service), hub)
+			classList, err = newClassListConversion(audit, identity, groups, rooms, persons, carePlan, presence, membership, env.Now)
+			if err != nil {
+				return err
+			}
+			settingsWrites, err = buildSettingsWrites(env, settings, payroll, yard, schedules.Lifecycle, services.StudentPhotos,
+				owners.BuildPresenceCleanup(env, presence, audit, settings.Service), hub, classList)
 			return
 		},
 		func() (err error) {
@@ -501,6 +509,7 @@ func composeServeRoot(
 			birthdays, err = buildBirthdayEntry(db, membership, BirthdayRepositories{Students: people.Students, Staff: people.Staff, Persons: people.Persons},
 				settings.Service, env.Logger.With("service", "birthdays"), env.Now)
 			dataImports = newServeImports(audit, identity, groups, rooms, persons, carePlan, presence, organizations, membership, workTime, workforce, newImportCohorts(offerings.Bookings, timetableRows.CohortRosters), env.Now)
+			dataImports.ClassListConversion = classList
 			databaseStats = newDatabaseStats(people.Repositories, structure.Groups, facilities, timetableRepos, identity, devices, env.Logger)
 			return err
 		},

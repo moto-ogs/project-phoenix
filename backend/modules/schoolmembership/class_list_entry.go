@@ -29,6 +29,9 @@ var (
 	// but does not carry the entry's name and class — resolving the entry
 	// into it would delete one child's row in favor of a different child.
 	ErrClassListEntryAssignMismatch = errors.New("das ausgewählte Kind stimmt nicht mit dem Eintrag überein: Name und Klasse müssen übereinstimmen")
+	// ErrClassListEntriesReplaced: the school keeps children without an OGS
+	// place as student records (#4803, ADR 0282), so it adds no new entry.
+	ErrClassListEntriesReplaced = errors.New("this school keeps children without an OGS place as students; it adds no class list entry")
 )
 
 // ClassListEntry is one class-list-only child. SchoolClass keeps the display
@@ -186,6 +189,7 @@ func ClassifyClassListEntryFailure(err error) ClassListEntryFailure {
 		errors.Is(err, ErrClassListEntryStudentExists),
 		errors.Is(err, ErrClassListEntryStudentNotFound),
 		errors.Is(err, ErrClassListEntryAssignMismatch),
+		errors.Is(err, ErrClassListEntriesReplaced),
 		errors.Is(err, ErrInvalidMembership):
 		return ClassListEntryFailureInvalidRequest
 	default:
@@ -207,4 +211,10 @@ type ClassListEntryBatches interface {
 	// ListClassListEntries returns for its first name, last name and class,
 	// in the same order. All three fields are required.
 	MatchClassListEntries(context.Context, []ClassListEntryFields) ([][]ClassListEntry, error)
+	// RemoveClassListEntries deletes every given entry or none, in one
+	// statement; an unknown ID fails the whole call with
+	// ErrClassListEntryNotFound. The caller appends the change trail, as the
+	// import does for created entries. It serves the conversion of the
+	// entries into children without an OGS place (#4803).
+	RemoveClassListEntries(context.Context, []int64) error
 }

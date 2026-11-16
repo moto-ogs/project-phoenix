@@ -125,3 +125,28 @@ func classListEntryKeyColumns(fields []schoolmembership.ClassListEntryFields) (f
 	}
 	return firsts, lasts, classes
 }
+
+// DeleteClassListEntries deletes the tenant's entries with the given IDs in
+// one statement (#4803).
+func (s *Store) DeleteClassListEntries(ctx context.Context, ids []int64) (int64, domain.OperationStats, error) {
+	db, scope, err := s.database(ctx)
+	if err != nil {
+		return 0, domain.OperationStats{}, err
+	}
+	query := withTenant(db.NewDelete().Model((*classListEntryRow)(nil)).
+		ModelTableExpr(`users.class_list_entries AS "class_list_entry"`).
+		Where(`"class_list_entry".id = ANY(?)`, pgdialect.Array(ids)), "class_list_entry", scope)
+	stats := domain.OperationStats{Queries: 1}
+	started := time.Now()
+	result, err := query.Exec(ctx)
+	stats.StatementDuration = time.Since(started)
+	if err != nil {
+		return 0, stats, fmt.Errorf("school membership postgres: delete class list entries: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return 0, stats, fmt.Errorf("school membership postgres: delete class list entries: count rows: %w", err)
+	}
+	stats.Rows = rows
+	return rows, stats, nil
+}

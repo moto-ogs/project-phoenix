@@ -1,7 +1,11 @@
 package api
 
 import (
+	"context"
+	"errors"
 	"time"
+
+	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
 
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
 	"github.com/moto-ogs/project-phoenix/modules/auditlog/consents"
@@ -41,6 +45,28 @@ type imports struct {
 	Staff          importModels.RowImporter[importModels.StaffImportRow]
 	ClassList      importModels.RowImporter[importModels.ClassListEntryImportRow]
 	OpeningBalance importModels.OpeningBalanceImportFactory
+	// ClassListConversion turns imported class-list entries into children
+	// without an OGS place while the school keeps such children (#4803).
+	ClassListConversion importModels.ClassListConverter
+}
+
+// classListImportConversion runs the conversion after a class-list import
+// when the school keeps children without an OGS place; otherwise the entries
+// stay as imported.
+func classListImportConversion(converter importModels.ClassListConverter, settings interface {
+	ResolveBool(context.Context, string) (bool, error)
+}) func(context.Context, int64) error {
+	if converter == nil {
+		return nil
+	}
+	return func(ctx context.Context, accountID int64) error {
+		kept, err := settingsModule.ChildrenWithoutCarePlaceOn(func(key string) (bool, error) { return settings.ResolveBool(ctx, key) })
+		if err != nil || !kept {
+			return err
+		}
+		_, err = converter.ConvertClassListEntries(ctx, &accountID)
+		return err
+	}
 }
 
 // The Data Import (#2708) commits student, staff and class-list rows through
@@ -69,35 +95,47 @@ func newStudentImport(
 	carePlan careplan.Capability, presence studentpresence.Capability, consentHistory consents.ConsentTransitions,
 	today func() timezone.Date, cohorts importCohorts,
 ) importModels.RowImporter[importModels.StudentImportRow] {
+	return dataImportRetained.NewImportService(dataImportRetained.NewStudentImportConfig(
+		newStudentImportDeps(runtime, identity, groups, rooms, persons, personBatches, guardians, carePlan, presence, consentHistory, today, cohorts),
+	), runtime)
+}
+
+// newStudentImportDeps binds the student import's owner commands; the
+// conversion of class-list entries (#4803) reuses them for its batch
+// creation.
+func newStudentImportDeps(
+	runtime importPorts.ImportRuntime, identity importIdentity, groups schoolstructure.GroupListing, rooms facilities.Query,
+	persons peopledirectory.Capability, personBatches importPorts.PersonBatches, guardians importPorts.GuardianDirectory,
+	carePlan careplan.Capability, presence studentpresence.Capability, consentHistory consents.ConsentTransitions,
+	today func() timezone.Date, cohorts importCohorts,
+) importPorts.StudentImportDeps {
 	references := owners.NewReferences(groups, rooms)
 	resolver := dataImportRetained.NewRelationshipResolver(references.Groups, references.Rooms)
-	return dataImportRetained.NewImportService(dataImportRetained.NewStudentImportConfig(
-		importPorts.StudentImportDeps{
-			Transactions:    runtime.Transactions,
-			Persons:         persons,
-			PersonBatches:   personBatches,
-			Students:        persons,
-			Guardians:       guardians,
-			Schedules:       carePlan,
-			PrivacyConsents: presence,
-			FindRFIDCard:    identity.FindRFIDCard,
-			Resolver:        resolver,
-			ConsentHistory:  consentHistory,
-			// The leaf batch slices stay outside the owners' capabilities
-			// (#5552); without them every chunk takes the row path.
-			PrivacyConsentBatches: privacyConsentBatches(presence),
-			GuardianBatches:       guardianBatches(persons),
-			EnrollmentBatches:     enrollmentBatches(persons),
-			Now:                   runtime.Now,
-			Today:                 today,
-			ConsentHistoryBatches: consentHistoryBatches(consentHistory),
-			// The owner's Kontingentzahl rule, so the preview counts what
-			// the membership write will count (#3571).
-			CountsTowardChildQuota: ImportChildQuotaRule(),
-			LockCohortWrites:       cohorts.Lock,
-			FollowCohortChanges:    cohorts.Follow,
-		},
-	), runtime)
+	return importPorts.StudentImportDeps{
+		Transactions:    runtime.Transactions,
+		Persons:         persons,
+		PersonBatches:   personBatches,
+		Students:        persons,
+		Guardians:       guardians,
+		Schedules:       carePlan,
+		PrivacyConsents: presence,
+		FindRFIDCard:    identity.FindRFIDCard,
+		Resolver:        resolver,
+		ConsentHistory:  consentHistory,
+		// The leaf batch slices stay outside the owners' capabilities
+		// (#5552); without them every chunk takes the row path.
+		PrivacyConsentBatches: privacyConsentBatches(presence),
+		GuardianBatches:       guardianBatches(persons),
+		EnrollmentBatches:     enrollmentBatches(persons),
+		Now:                   runtime.Now,
+		Today:                 today,
+		ConsentHistoryBatches: consentHistoryBatches(consentHistory),
+		// The owner's Kontingentzahl rule, so the preview counts what
+		// the membership write will count (#3571).
+		CountsTowardChildQuota: ImportChildQuotaRule(),
+		LockCohortWrites:       cohorts.Lock,
+		FollowCohortChanges:    cohorts.Follow,
+	}
 }
 
 // ImportChildQuotaRule binds the same membership rule to import configurations.
@@ -263,4 +301,46 @@ func newServeImports(
 			StaffAbsenceService:  workforce.TimeTracking.VacationTakeovers,
 		}, membership, persons, workTime),
 	}
+}
+
+// newClassListConversion composes the conversion of a school's class-list
+// entries into children without an OGS place (#4803, ADR 0282). It reuses
+// the student import's batch creation and binds the two leaf commands that
+// stay outside the owners' capabilities: School Membership's batch delete
+// and Student Presence's mark transfer. A missing slice is a composition
+// error.
+func newClassListConversion(
+	audit owners.AuditOwner, identity identityaccess.Owner, groups schoolstructure.GroupListing, rooms facilities.Query,
+	persons peopledirectory.Capability, carePlan careplan.Capability, presence owners.PresenceOwner,
+	membership schoolmembership.Capability, now func() time.Time,
+) (importModels.ClassListConverter, error) {
+	return composeClassListConversion(newImportRuntime(audit.Command, observeDataImport, now), audit.Command, identity,
+		groups, rooms, persons, carePlan, presence.Presence, membership)
+}
+
+// composeClassListConversion is newClassListConversion over an import
+// runtime of the caller's, so a suite composes the same conversion.
+func composeClassListConversion(
+	runtime importPorts.ImportRuntime, audit auditModels.Command, identity importIdentity, groups schoolstructure.GroupListing,
+	rooms facilities.Query, persons peopledirectory.Capability, carePlan careplan.Capability, presence studentpresence.Capability,
+	membership schoolmembership.Capability,
+) (importModels.ClassListConverter, error) {
+	removal, ok := membership.(importPorts.ClassListEntryRemoval)
+	if !ok {
+		return nil, errors.New("class list conversion: school membership has no batch delete of class list entries")
+	}
+	marks, ok := presence.(importPorts.ClassListMarkTransfer)
+	if !ok {
+		return nil, errors.New("class list conversion: student presence has no transfer of morning marks")
+	}
+	students := newStudentImportDeps(
+		runtime, identity, groups, rooms, persons, personBatches(persons), persons, carePlan, presence,
+		// The conversion only creates, so the cohort follow-up of updates does
+		// not apply.
+		auditCompose.NewConsentRecorder(audit), nil, importCohorts{},
+	)
+	return dataImportRetained.NewClassListConversion(importPorts.ClassListConversionDeps{
+		Membership: membership, Removal: removal, Marks: marks,
+		Persons: persons, Students: persons, Audit: audit,
+	}, students), nil
 }

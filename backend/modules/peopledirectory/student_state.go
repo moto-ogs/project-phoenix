@@ -237,6 +237,8 @@ func (s *StudentState) DirectoryRecord() StudentRecord {
 		EnrolledFrom:  RenderCalendarDate(s.EnrolledFrom),
 		EnrolledUntil: RenderCalendarDate(s.EnrolledUntil),
 
+		WithoutCarePlace: s.WithoutCarePlace,
+
 		AddressStreet:     s.AddressStreet,
 		AddressCity:       s.AddressCity,
 		AddressPostalCode: s.AddressPostalCode,

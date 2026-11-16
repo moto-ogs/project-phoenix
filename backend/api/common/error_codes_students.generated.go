@@ -39,6 +39,7 @@ const CodeStudentsChangeRequestStale = "students.change_request_stale"
 const CodeStudentsCheckinCareEnded = "students.checkin_care_ended"
 const CodeStudentsCheckoutNoteTooLong = "students.checkout_note_too_long"
 const CodeStudentsChildQuotaReached = "students.child_quota_reached"
+const CodeStudentsClassListEntriesReplaced = "students.class_list_entries_replaced"
 const CodeStudentsClassListEntryAssignMismatch = "students.class_list_entry_assign_mismatch"
 const CodeStudentsClassListEntryDuplicate = "students.class_list_entry_duplicate"
 const CodeStudentsClassListEntryStudentExists = "students.class_list_entry_student_exists"
@@ -96,6 +97,8 @@ const CodeStudentsStaffValueInvalid = "students.staff_value_invalid"
 const CodeStudentsStaffValueUnsupported = "students.staff_value_unsupported"
 const CodeStudentsStatusDayConflict = "students.status_day_conflict"
 const CodeStudentsStatusDayOccupied = "students.status_day_occupied"
+const CodeStudentsWithoutCarePlaceGroup = "students.without_care_place_group"
+const CodeStudentsWithoutCarePlaceOff = "students.without_care_place_off"
 
 var errorCodeClassesStudents = []errorCodeClass{
 	{CodeStudentsAbsenceReadRequired, "permission"},
@@ -136,6 +139,7 @@ var errorCodeClassesStudents = []errorCodeClass{
 	{CodeStudentsCheckinCareEnded, "business_rejection"},
 	{CodeStudentsCheckoutNoteTooLong, "input"},
 	{CodeStudentsChildQuotaReached, "business_rejection"},
+	{CodeStudentsClassListEntriesReplaced, "business_rejection"},
 	{CodeStudentsClassListEntryAssignMismatch, "business_rejection"},
 	{CodeStudentsClassListEntryDuplicate, "business_rejection"},
 	{CodeStudentsClassListEntryStudentExists, "business_rejection"},
@@ -193,6 +197,8 @@ var errorCodeClassesStudents = []errorCodeClass{
 	{CodeStudentsStaffValueUnsupported, "input"},
 	{CodeStudentsStatusDayConflict, "business_rejection"},
 	{CodeStudentsStatusDayOccupied, "business_rejection"},
+	{CodeStudentsWithoutCarePlaceGroup, "input"},
+	{CodeStudentsWithoutCarePlaceOff, "business_rejection"},
 }
 
 func init() {

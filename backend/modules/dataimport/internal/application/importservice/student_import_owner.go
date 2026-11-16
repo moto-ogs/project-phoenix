@@ -207,6 +207,8 @@ func enrollmentInputFromRow(personID int64, row importModels.StudentImportRow) (
 		SchoolClass:   strings.TrimSpace(row.SchoolClass),
 		EnrolledFrom:  calendarDateString(enrolledFrom),
 		EnrolledUntil: calendarDateString(parseOptionalImportCalendarDate(row.EnrolledUntil)),
+
+		WithoutCarePlace: row.WithoutCarePlace,
 	}
 	departure, err := importDeparturePatch(ports.AllowedDepartureModesFromDeparture(departurePlanFromImportRow(row)), boundedNotePtr(row.DepartureCompanionNote))
 	if err != nil {

@@ -30,6 +30,9 @@ type ImportTestModule struct {
 	StaffImport          importModels.RowImporter[importModels.StaffImportRow]
 	ClassListImport      importModels.RowImporter[importModels.ClassListEntryImportRow]
 	OpeningBalanceImport importModels.OpeningBalanceImportFactory
+	// ClassListConversion turns the class-list entries into children without
+	// an OGS place (#4803), over the same owners.
+	ClassListConversion importModels.ClassListConverter
 	// Observations collects the per-run counters the production observer
 	// receives, so tests can assert the runtime evidence contract.
 	Observations *[]importModels.ImportObservation
@@ -197,10 +200,15 @@ func NewImportTestModuleWithOwners(db transactionruntime.Database, unit tenant.U
 			StaffAbsenceService:  workforce.TimeTracking.VacationTakeovers,
 		}, membership, persons, workTime),
 	}
+	conversion, err := composeClassListConversion(runtime, command, rfid, groups, rooms, persons, students.CarePlan,
+		NewStudentPresenceForTests(db), membership)
+	if err != nil {
+		return ImportTestModule{}, nil, nil, err
+	}
 	return ImportTestModule{
 		Import: dataImports.Student, StaffImport: dataImports.Staff, ClassListImport: dataImports.ClassList,
-		OpeningBalanceImport: dataImports.OpeningBalance,
-		Observations:         observations,
+		OpeningBalanceImport: dataImports.OpeningBalance, ClassListConversion: conversion,
+		Observations: observations,
 	}, persons, membership, nil
 }
 

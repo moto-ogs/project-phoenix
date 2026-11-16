@@ -1,6 +1,7 @@
 package importapi
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -86,6 +87,14 @@ func (rs *Resource) runClassListImport(w http.ResponseWriter, r *http.Request, d
 	if dryRun {
 		rs.runtime.Success(w, r, http.StatusOK, result, "Import-Vorschau erfolgreich")
 		return
+	}
+	if rs.classListConversion != nil && result.CreatedCount > 0 {
+		if err := rs.runtime.WithinTenant(r.Context(), func(ctx context.Context) error {
+			return rs.classListConversion(ctx, accountID)
+		}); err != nil {
+			rs.runtime.Failure(w, r, Failure{Status: http.StatusInternalServerError, Cause: fmt.Errorf("convert imported class list entries: %w", err)})
+			return
+		}
 	}
 
 	slog.Default().Info("Class list entry import completed",

@@ -789,6 +789,13 @@ const (
 	KeyModuleElternbeitraege     = "module.elternbeitraege"
 )
 
+// KeyChildrenWithoutCarePlace switches on children of a class without an
+// OGS place as student records of their own (#4803, ADR 0282). The moto team
+// sets it per school (AccessOperatorManaged); it defaults to off and takes
+// effect only while the module Unterricht am Vormittag is booked. Switching
+// it on converts the school's class list entries.
+const KeyChildrenWithoutCarePlace = "operations.children_without_care_place"
+
 // Branding of the Träger (#4653, ADR 0086 sections 1 and 4): the colour and
 // the texts every document of the Träger prints. Only the Träger sets them
 // (LevelTraeger); its schools see them read-only. Logo, contact person and

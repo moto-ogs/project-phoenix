@@ -579,6 +579,24 @@
       "class": "business_rejection",
       "parameters": [],
       "legacy": "students.person_has_active_profile"
+    },
+    {
+      "code": "students.without_care_place_off",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "students.without_care_place_off"
+    },
+    {
+      "code": "students.without_care_place_group",
+      "class": "input",
+      "parameters": [],
+      "legacy": "students.without_care_place_group"
+    },
+    {
+      "code": "students.class_list_entries_replaced",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "students.class_list_entries_replaced"
     }
   ]
 }

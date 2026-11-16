@@ -61,4 +61,9 @@ type Dependencies struct {
 	ClassList dataimport.RowImporter[dataimport.ClassListEntryImportRow]
 	Files     dataimport.FileDecoder
 	Runtime   Runtime
+	// ClassListConversion turns the school's class-list entries into
+	// children without an OGS place when the school keeps such children
+	// (#4803, ADR 0282); it runs after a committed class-list import, in a
+	// tenant transaction of its own. Nil leaves the entries as imported.
+	ClassListConversion func(ctx context.Context, accountID int64) error
 }

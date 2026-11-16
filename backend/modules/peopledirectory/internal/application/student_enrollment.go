@@ -83,7 +83,8 @@ func (s *StudentService) CreateEnrollment(ctx context.Context, input domain.Enro
 		if err != nil {
 			return err
 		}
-		record := domain.StudentRecord{ID: result.ID, PersonID: result.PersonID, SchoolClass: result.SchoolClass, Status: result.Status, EnrolledFrom: result.EnrolledFrom, EnrolledUntil: result.EnrolledUntil}
+		record := domain.StudentRecord{ID: result.ID, PersonID: result.PersonID, SchoolClass: result.SchoolClass, Status: result.Status, EnrolledFrom: result.EnrolledFrom, EnrolledUntil: result.EnrolledUntil,
+			WithoutCarePlace: input.WithoutCarePlace}
 		if input.InitialProfile != nil {
 			domain.ApplyEnrollmentPatch(&record, *input.InitialProfile)
 		}
@@ -120,6 +121,11 @@ func (s *StudentService) RenewEnrollment(ctx context.Context, id int64, input do
 		}
 		record.SchoolClass, record.Status = input.SchoolClass, input.Status
 		record.EnrolledFrom, record.EnrolledUntil = input.EnrolledFrom, input.EnrolledUntil
+		// A renewal is an enrollment for OGS care (approval, rollover,
+		// import): a child without an OGS place gets its place with it
+		// (#4803, ADR 0282) and from then on counts for the child quota,
+		// which School Membership checks on this write.
+		record.WithoutCarePlace = false
 		_, err = s.owners.Renew(txCtx, record)
 		return err
 	})
