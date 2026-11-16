@@ -209,7 +209,7 @@ func seedHolidayRegistrationEntries(rt *Runtime, auth AuthRef) (int, error) {
 // header on a local host in a development or demo environment); a refused
 // registration returns none.
 func seedHolidayGuestAskingForAccount(rt *Runtime, token string, base map[string]any) (string, error) {
-	guardian := map[string]any{"first_name": "Jana", "last_name": "Gastfamilie", "email": seedHolidayGuestFamilyEmail, "phone": "0151 0000006"}
+	guardian := map[string]any{"first_name": "Jana", "last_name": "Gastfamilie", "email": seedHolidayGuestEmail(rt), "phone": "0151 0000006"}
 	registration := seedHolidayGuestRegistration(base, guardian, "Ole")
 	registration["parent_account_requested"] = true
 	raw, refused, err := seedHolidayPublicSubmit(rt, token, registration, "198.51.100.211", map[string]string{seedTokenHeader: "true"})
@@ -254,7 +254,7 @@ func seedHolidayParentSetup(ctx context.Context, rt *Runtime, setupURL string) (
 	if _, err := rt.Client.PostPublic(path, map[string]any{"password": password, "confirm_password": password}); err != nil {
 		return AccountCredentials{}, fmt.Errorf("set up the parent account at the Träger: %w", err)
 	}
-	auth, err := rt.Adapter.LoginParent(ctx, seedHolidayGuestFamilyEmail, password)
+	auth, err := rt.Adapter.LoginParent(ctx, seedHolidayGuestEmail(rt), password)
 	if err != nil {
 		return AccountCredentials{}, fmt.Errorf("sign in the parent account at the Träger: %w", err)
 	}
@@ -266,7 +266,18 @@ func seedHolidayParentSetup(ctx context.Context, rt *Runtime, setupURL string) (
 		return AccountCredentials{}, errors.New("the sign-in at the Träger claimed no holiday registration of the guest family")
 	}
 	fmt.Printf("  Eltern-App: the guest family set up its account at the Träger and sees %d holiday registration(s)\n", entries)
-	return AccountCredentials{Key: seedHolidayParentAccountKey, Email: seedHolidayGuestFamilyEmail, Password: password, Name: "Jana Gastfamilie"}, nil
+	return AccountCredentials{Key: seedHolidayParentAccountKey, Email: seedHolidayGuestEmail(rt), Password: password, Name: "Jana Gastfamilie"}, nil
+}
+
+// seedHolidayGuestEmail is the guest family's address. A demo school's seed
+// moves it into the school's own demo domain like every account it creates:
+// each demo order's Träger is its own (ADR 0271), and one account across them
+// would join the Träger of different visitors.
+func seedHolidayGuestEmail(rt *Runtime) string {
+	if rt == nil || rt.FixedSeeder == nil {
+		return seedHolidayGuestFamilyEmail
+	}
+	return scopedEmail(seedHolidayGuestFamilyEmail, rt.FixedSeeder.accountScope)
 }
 
 // seedHolidayWithParentProof adds the first seeded parent's proof from the

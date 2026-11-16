@@ -205,9 +205,12 @@ func (d *DemoAccess) Redeem(ctx context.Context, token string, role domain.DemoR
 		return domain.DemoEntry{}, err
 	}
 	var accessToken, refreshToken string
-	if role == domain.DemoRoleParent {
+	switch role {
+	case domain.DemoRoleParent:
 		accessToken, refreshToken, err = d.sessions.IssueDemoParentTokens(ctx, entry.ParentAccountID, ipAddress, userAgent)
-	} else {
+	case domain.DemoRoleTraeger:
+		accessToken, refreshToken, err = d.sessions.IssueDemoTraegerTokens(ctx, entry.AccountID, entry.TraegerID, ipAddress, userAgent)
+	default:
 		accessToken, refreshToken, err = d.sessions.IssueDemoTokens(ctx, entry.AccountID, entry.TenantID, ipAddress, userAgent)
 	}
 	if err != nil {
@@ -216,6 +219,7 @@ func (d *DemoAccess) Redeem(ctx context.Context, token string, role domain.DemoR
 	return domain.DemoEntry{
 		AccessToken: accessToken, RefreshToken: refreshToken,
 		AccessID: access.ID, Role: role, Source: access.Source, FixedRole: entry.Shared,
+		Traeger: entry.TraegerID != 0,
 	}, nil
 }
 
@@ -274,7 +278,10 @@ func (d *DemoAccess) Reset(ctx context.Context, token, clientIP string) (domain.
 // which stays held until commit (#6305). A failed school has no sessions to
 // end.
 func (d *DemoAccess) replaceSchool(ctx context.Context, access domain.DemoAccess, entry domain.DemoSchoolEntry) error {
-	if entry.TenantID != 0 {
+	// With a Träger of its own (ADR 0271) the order's retirement ends the
+	// sessions of the Träger and of all its schools itself, before it hides
+	// them (auth.revoke_organization_sessions).
+	if entry.TenantID != 0 && entry.TraegerID == 0 {
 		if _, err := d.sessions.RevokeTokensByTenantID(ctx, entry.TenantID); err != nil {
 			return fmt.Errorf("end the sessions of the hidden demo school: %w", err)
 		}
@@ -300,6 +307,15 @@ func signedInParent(entry domain.DemoSchoolEntry, role domain.DemoRole) int64 {
 // all functions; no role keeps the account as it is. The parent role needs
 // the school's visitor parent and changes no staff role.
 func (d *DemoAccess) assumeRole(ctx context.Context, entry domain.DemoSchoolEntry, role domain.DemoRole) (domain.DemoRole, error) {
+	// The Träger-Büro is the same account at the school's own Demo-Träger
+	// (ADR 0271); it changes no school role. A school under the shared
+	// Demo-Träger has none to enter.
+	if role == domain.DemoRoleTraeger {
+		if entry.TraegerID == 0 {
+			return "", domain.ErrDemoAccessInvalid
+		}
+		return role, nil
+	}
 	if entry.Shared {
 		return domain.DemoRoleAll, nil
 	}
@@ -435,6 +451,7 @@ func (p DemoSchoolsPort) DemoSchoolEntry(ctx context.Context, slug string) (doma
 	entry, err := p.DemoSchools.DemoSchoolEntry(ctx, slug)
 	return domain.DemoSchoolEntry{
 		Exists: entry.Exists, Status: entry.Status, TenantID: entry.SchoolID, AccountID: entry.AccountID, ParentAccountID: entry.ParentAccountID,
+		TraegerID: entry.TraegerID,
 	}, err
 }
 
@@ -483,6 +500,7 @@ func (e DemoAccessEngine) RedeemDemoAccess(ctx context.Context, token, role, ipA
 	return identityaccess.DemoEntry{
 		AccessToken: entry.AccessToken, RefreshToken: entry.RefreshToken,
 		AccessID: entry.AccessID, Role: string(entry.Role), Source: entry.Source, FixedRole: entry.FixedRole,
+		Traeger: entry.Traeger,
 	}, nil
 }
 
