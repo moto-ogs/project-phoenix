@@ -41,6 +41,7 @@ import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { ConfirmationModal } from "~/components/ui/modal";
 import {
   SlideOver,
+  SlideOverBody,
   SlideOverContent,
   SlideOverFooter,
   SlideOverHeader,
@@ -1099,7 +1100,7 @@ export function InstanceDetailModal({
           <SlideOverHeader>
             <SlideOverTitle>{instance.title}</SlideOverTitle>
           </SlideOverHeader>
-          <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
+          <SlideOverBody className="space-y-5">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <InstanceStatusBadge status={instance.status} />
@@ -1295,7 +1296,7 @@ export function InstanceDetailModal({
                 )}
               </>
             )}
-          </div>
+          </SlideOverBody>
           <SlideOverFooter>{footer}</SlideOverFooter>
         </SlideOverContent>
       </SlideOver>
@@ -1744,7 +1745,7 @@ interface SectionProps {
 function Section({ title, children }: SectionProps) {
   return (
     <div className="space-y-2">
-      <SectionLabel as="h4">{title}</SectionLabel>
+      <SectionLabel as="h3">{title}</SectionLabel>
       <div className="space-y-1.5">{children}</div>
     </div>
   );

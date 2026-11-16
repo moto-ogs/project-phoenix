@@ -260,7 +260,7 @@ export function PoolWeekGrid({
           title={`${timeRange}, geblockt von ${block.schoolName}`}
           interactive
           onClick={() => onOpenBlock(springer, block)}
-          aria-label={`${timeRange}, geblockt von ${block.schoolName}. Blockung aufheben`}
+          details="Blockung aufheben"
         />
       );
     }
@@ -288,7 +288,7 @@ export function PoolWeekGrid({
           title={`${timeRange}, von Ihrer Schule geblockt`}
           interactive
           onClick={() => onOpenBlock(springer, block)}
-          aria-label={`${timeRange}, von Ihrer Schule geblockt. Blockung aufheben`}
+          details="von Ihrer Schule geblockt. Blockung aufheben"
         />
       );
     }

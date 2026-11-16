@@ -545,9 +545,11 @@ function RosterPreviewRow({
             <span
               className="bg-moto-amber/20 text-moto-amber-strong inline-flex h-7 w-7 items-center justify-center rounded-full"
               title={warningLabel}
-              aria-label={`${warnings.length} Planungs-Hinweis`}
             >
               <CircleAlert className="h-4 w-4" aria-hidden="true" />
+              {/* Der Hinweis selbst, nicht nur seine Zahl: ein title erreicht
+                  weder Tastatur noch Vorleseprogramm (#7112). */}
+              <span className="sr-only">{warningLabel}</span>
             </span>
           ) : null}
           <StatusColorBadge

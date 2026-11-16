@@ -167,18 +167,43 @@ function PortalNavIcon({
 
 function BottomNavItemContent({
   label,
+  shortLabel,
   active,
   badge,
   labelClassName,
   ...iconProps
 }: Pick<
   PortalBottomNavItemProps,
-  "label" | "active" | "badge" | "labelClassName"
+  "label" | "shortLabel" | "active" | "badge" | "labelClassName"
 > &
   PortalNavIconProps) {
+  // The field is named by its content, not by aria-label: the visible word
+  // leads the name and the counter on the icon stays part of it (WCAG 2.5.3,
+  // #7112). The name comes first in the DOM; `order-first` draws the icon
+  // with its counter before it, as before.
+  const shown = shortLabel ?? label;
+  const name = accessibleBottomNavName(label, shortLabel, active);
   return (
     <>
-      <span className="relative inline-flex">
+      {!active ? (
+        <span className="sr-only">{label}</span>
+      ) : shown === label ? (
+        <span className={labelClassName}>{label}</span>
+      ) : name === label ? (
+        // The short word is part of the full name: read the full name only.
+        <>
+          <span className={labelClassName} aria-hidden="true">
+            {shown}
+          </span>
+          <span className="sr-only">{label}</span>
+        </>
+      ) : (
+        <>
+          <span className={labelClassName}>{shown}</span>
+          <span className="sr-only">{name.slice(shown.length)}</span>
+        </>
+      )}
+      <span className="relative order-first inline-flex">
         <PortalNavIcon
           {...iconProps}
           active={active}
@@ -186,7 +211,6 @@ function BottomNavItemContent({
         />
         {badge}
       </span>
-      {active ? <span className={labelClassName}>{label}</span> : null}
     </>
   );
 }
@@ -283,7 +307,7 @@ type PortalNavLinkProps = Omit<
 
 /**
  * Ein Feld der `PortalBottomNav`: nur das aktive Ziel trägt seinen Namen,
- * die übrigen ihr Icon und den Namen als aria-label.
+ * die übrigen ihr Icon; der Name steht als Text im Feld (#7112).
  */
 export function PortalBottomNavLink({
   label,
@@ -307,7 +331,6 @@ export function PortalBottomNavLink({
         data-active={active ? "true" : "false"}
         aria-current={active ? "page" : undefined}
         {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-        aria-label={accessibleBottomNavName(label, shortLabel, active)}
         className={bottomNavItemClassName({
           active,
           paddingClassName,
@@ -316,7 +339,8 @@ export function PortalBottomNavLink({
       >
         <BottomNavItemContent
           {...({ concept, iconConcept, icon } as PortalNavIconProps)}
-          label={shortLabel ?? label}
+          label={label}
+          shortLabel={shortLabel}
           active={active}
           badge={badge}
           labelClassName={labelClassName}
@@ -356,7 +380,6 @@ export function PortalBottomNavButton({
         {...buttonProps}
         type="button"
         data-active={active ? "true" : "false"}
-        aria-label={accessibleBottomNavName(label, shortLabel, active)}
         className={`${bottomNavItemClassName({
           active,
           paddingClassName,
@@ -365,7 +388,8 @@ export function PortalBottomNavButton({
       >
         <BottomNavItemContent
           {...({ concept, iconConcept, icon } as PortalNavIconProps)}
-          label={shortLabel ?? label}
+          label={label}
+          shortLabel={shortLabel}
           active={active}
           badge={badge}
           labelClassName={labelClassName}

@@ -43,12 +43,34 @@ export function NotificationBadge({
 }>) {
   if (count <= 0) return null;
 
+  const shown = count > max ? `${max}+` : String(count);
+  const surface = `${TONE_CLASSES[tone]} ${SIZE_CLASSES[size]} inline-flex items-center justify-center rounded-full font-bold ${className ?? ""}`;
+  // A span without a role may not carry aria-label, and a name that replaces
+  // the visible number breaks WCAG 2.5.3 on the link around it (#7112). The
+  // number stays readable text; the rest of the sentence is visually hidden.
+  if (!ariaLabel) {
+    return (
+      <span className={surface} aria-hidden="true">
+        {shown}
+      </span>
+    );
+  }
+  const rest = ariaLabel.startsWith(shown)
+    ? ariaLabel.slice(shown.length)
+    : null;
   return (
-    <span
-      className={`${TONE_CLASSES[tone]} ${SIZE_CLASSES[size]} inline-flex items-center justify-center rounded-full font-bold ${className ?? ""}`}
-      aria-label={ariaLabel}
-    >
-      {count > max ? `${max}+` : count}
+    <span className={surface}>
+      {rest === null ? (
+        <>
+          <span aria-hidden="true">{shown}</span>
+          <span className="sr-only">{` ${ariaLabel}`}</span>
+        </>
+      ) : (
+        <>
+          {shown}
+          <span className="sr-only">{rest}</span>
+        </>
+      )}
     </span>
   );
 }

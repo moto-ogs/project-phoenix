@@ -362,8 +362,6 @@ export const SymbolActionsWithTourAndPreload: Story = {
  * Umschalter und Knopf: alle auf der Bedienhöhe der Kopfkarte (#6579).
  */
 export const ControlsInSearchSlot: Story = {
-  // axe meldet hier noch label-content-name-mismatch; Behebung in #7112.
-  parameters: { a11y: { test: "todo" } },
   args: {
     title: "Planung",
     searchSlot: (

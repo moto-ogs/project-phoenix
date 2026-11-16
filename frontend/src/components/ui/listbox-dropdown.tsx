@@ -91,7 +91,7 @@ export function ListboxTriggerContent({
           // On the red tint of an invalid trigger gray-500 falls just below
           // 4.5:1; the placeholder darkens there only.
           placeholderShown
-            ? "text-gray-500 [[aria-invalid=true]_&]:text-gray-600"
+            ? "text-gray-500 [[data-invalid]_&]:text-gray-600"
             : "text-gray-900",
         )}
       >
@@ -174,7 +174,14 @@ interface ListboxDropdownProps<K extends string> {
    */
   readonly selectedValues?: readonly K[];
   readonly id?: string;
+  /**
+   * Name of the field. A `combobox` trigger takes it as its name. A `button`
+   * trigger names itself by its visible text (WCAG 2.5.3, #7112): the default
+   * content adds this name after the value as visually hidden text, and a
+   * `renderTrigger` must show (or visually hide) it in its own content.
+   */
   readonly ariaLabel?: string;
+  /** Like `ariaLabel`; a `button` trigger reads its value first, then this. */
   readonly ariaLabelledBy?: string;
   /**
    * Name of the option list when the trigger names itself by its value (a
@@ -403,6 +410,8 @@ export function ListboxDropdown<K extends string>({
   const menuZIndex = menuZIndexProp ?? menuLayer;
   const generatedListboxId = useId();
   const listboxId = id ? `${id}-listbox` : generatedListboxId;
+  const triggerContentId = `${listboxId}-value`;
+  const isCombobox = triggerRole === "combobox";
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   // The outermost portaled node: the option list itself, or the panel wrapping
@@ -1065,12 +1074,24 @@ export function ListboxDropdown<K extends string>({
             ? `${listboxId}-option-${focusIndex}`
             : undefined
         }
-        aria-label={ariaLabel}
-        aria-labelledby={ariaLabelledBy}
+        // A combobox takes the field's name and announces its value apart.
+        // A button is named by its content, so the visible value leads the
+        // name instead of being replaced by the label (WCAG 2.5.3, #7112).
+        aria-label={isCombobox ? ariaLabel : undefined}
+        aria-labelledby={
+          isCombobox
+            ? ariaLabelledBy
+            : ariaLabelledBy && !renderTrigger
+              ? `${triggerContentId} ${ariaLabelledBy}`
+              : undefined
+        }
         aria-describedby={ariaDescribedBy}
-        aria-required={required || undefined}
-        aria-invalid={invalid || undefined}
-        role={triggerRole === "combobox" ? "combobox" : undefined}
+        // aria-required / aria-invalid are not allowed on a button (axe
+        // aria-allowed-attr); its error reaches it through aria-describedby.
+        aria-required={(isCombobox && required) || undefined}
+        aria-invalid={(isCombobox && invalid) || undefined}
+        data-invalid={invalid || undefined}
+        role={isCombobox ? "combobox" : undefined}
         disabled={disabled}
         className={
           unstyledTrigger
@@ -1087,11 +1108,18 @@ export function ListboxDropdown<K extends string>({
         {renderTrigger ? (
           renderTrigger({ selectedLabel, open })
         ) : (
-          <ListboxTriggerContent
-            label={selectedLabel}
-            placeholderShown={selectedOption === undefined}
-            open={open}
-          />
+          <>
+            <span id={triggerContentId} className="contents">
+              <ListboxTriggerContent
+                label={selectedLabel}
+                placeholderShown={selectedOption === undefined}
+                open={open}
+              />
+            </span>
+            {!isCombobox && ariaLabel ? (
+              <span className="sr-only">{`, ${ariaLabel}`}</span>
+            ) : null}
+          </>
         )}
       </button>
       {open && portalContainer

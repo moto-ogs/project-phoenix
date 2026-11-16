@@ -221,7 +221,7 @@ export function TemplateCard({
           })}
         </div>
 
-        <dl className="space-y-1.5 text-xs text-gray-600">
+        <div className="space-y-1.5 text-xs text-gray-600">
           <div className="flex items-center gap-2">
             <MotoConceptIcon concept={careTimesConcept} size={14} />
             <span className="tabular-nums">
@@ -283,7 +283,7 @@ export function TemplateCard({
               />
             </div>
           )}
-        </dl>
+        </div>
 
         {!template.roomId && template.type !== "duty" && (
           <p className="flex items-center gap-1.5 text-xs text-gray-600">

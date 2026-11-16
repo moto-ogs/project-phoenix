@@ -63,13 +63,14 @@ export function LogoutModal({ isOpen, onClose }: LogoutModalProps) {
       isOpen={isOpen}
       onClose={isLoggingOut ? () => undefined : onClose}
       title=""
+      ariaLabel="Abmelden"
       footer={undefined}
     >
       <div className="py-4 text-center">
         <LogOutIcon className="mx-auto mb-4 h-12 w-12 text-gray-700" />
-        <h1 className="mt-4 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
+        <h2 className="mt-4 text-3xl font-bold tracking-tight text-gray-800 sm:text-4xl">
           Abmelden
-        </h1>
+        </h2>
         <p className="mt-4 text-gray-600">
           Möchten Sie sich wirklich von Ihrem Konto abmelden?
         </p>
