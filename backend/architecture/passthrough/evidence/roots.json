@@ -1031,7 +1031,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (f notificationFeed) Page(ctx context.Context, tenantID, accountID int64, cursor string, limit int) (notificationsHTTP.FeedPage, error) {\n\tpage, err := f.NotificationFeed.Page(ctx, tenantID, accountID, cursor, limit)\n\tif err != nil {\n\t\treturn notificationsHTTP.FeedPage{}, err\n\t}\n\tout := notificationsHTTP.FeedPage{NextCursor: page.NextCursor, UnreadCount: page.UnreadCount, Entries: make([]notificationsHTTP.FeedEntry, len(page.Entries))}\n\tfor i, entry := range page.Entries {\n\t\tout.Entries[i] = notificationsHTTP.FeedEntry(entry)\n\t}\n\treturn out, nil\n}",
+      "evidence": "func (f notificationFeed) Page(ctx context.Context, tenantID, accountID int64, portal, cursor string, limit int) (notificationsHTTP.FeedPage, error) {\n\tpage, err := f.NotificationFeed.Page(ctx, tenantID, accountID, portal, cursor, limit)\n\tif err != nil {\n\t\treturn notificationsHTTP.FeedPage{}, err\n\t}\n\tout := notificationsHTTP.FeedPage{NextCursor: page.NextCursor, UnreadCount: page.UnreadCount, Entries: make([]notificationsHTTP.FeedEntry, len(page.Entries))}\n\tfor i, entry := range page.Entries {\n\t\tout.Entries[i] = notificationsHTTP.FeedEntry(entry)\n\t}\n\treturn out, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/notificationFeed.Page",
       "owner": "roots"

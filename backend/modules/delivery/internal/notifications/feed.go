@@ -92,7 +92,8 @@ func (r *router) publishFeed(ctx context.Context, event *Event, pushAllowed bool
 func feedEntryOf(event Event) (domain.FeedEntryContent, []int64) {
 	content := domain.FeedEntryContent{
 		Type: event.Type, Title: event.Title, Body: event.Body, DeepLink: feedDeepLink(event),
-		RelatedType: event.RelatedType, RelatedID: event.RelatedID,
+		SchoolDeepLink: feedSchoolDeepLink(event),
+		RelatedType:    event.RelatedType, RelatedID: event.RelatedID,
 	}
 	if event.Feed.Title != "" {
 		// A producer's own text, such as what the person cancelling wrote to
@@ -120,6 +121,15 @@ func narrowToPush(event *Event, write domain.FeedWrite, pushAllowed bool) {
 		event.Audience.StaffAccountIDs = push
 	}
 	event.feedOnly = len(push) == 0
+}
+
+// feedSchoolDeepLink is the link an entry keeps for moto schule (#7139): the
+// event's school link for a type the school portal shows, none otherwise.
+func feedSchoolDeepLink(event Event) string {
+	if !deliversToSchoolPortal(event) {
+		return ""
+	}
+	return event.SchoolDeepLink
 }
 
 // feedBundleTypes are the types whose unread entry about the same object a

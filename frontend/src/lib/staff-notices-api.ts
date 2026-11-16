@@ -179,6 +179,21 @@ export const fetchTodaysNotices = tenantReadApi.fetchTodaysNotices;
 /** Kenntnisnahme im OGS-Portal. */
 export const acknowledgeStaffNotice = tenantReadApi.acknowledgeStaffNotice;
 
+/**
+ * Ein einzelner Hinweis, auf den ein Eintrag in der Glocke zeigt (#7143),
+ * auch wenn er heute nicht gilt. Ein gelöschter oder ausgeschalteter Hinweis
+ * antwortet mit 404.
+ */
+export async function fetchStaffNotice(id: string): Promise<StaffNotice> {
+  const data = await request<StaffNotice>(
+    `${BASE}/${encodeURIComponent(id)}`,
+    undefined,
+    "Der Hinweis konnte nicht geladen werden",
+  );
+  if (!data) throw missingData("Der Hinweis konnte nicht geladen werden");
+  return data;
+}
+
 /** Alle Hinweise des Mandanten — Leitungssicht, auch abgeschaltete. */
 export async function fetchStaffNotices(): Promise<StaffNotice[]> {
   const data = await request<StaffNotice[]>(

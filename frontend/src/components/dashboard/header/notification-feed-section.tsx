@@ -7,8 +7,8 @@
 import { useCallback } from "react";
 
 import { trackTenantEvent } from "~/lib/analytics";
-import { STAFF_NOTIFICATION_FEED } from "~/lib/hooks/use-notification-feed";
 import { NOTIFICATION_FEED_ANALYTICS_TYPES } from "~/lib/notification-feed-helpers";
+import { useNotificationFeedPortal } from "~/lib/notification-feed-portal";
 import { useTenantRouter } from "~/lib/tenant-router";
 
 import {
@@ -50,12 +50,13 @@ export function NotificationFeedSection({
   onNavigate: () => void;
 }>) {
   const router = useTenantRouter();
+  const { resolveLink } = useNotificationFeedPortal();
   const navigate = useCallback(
     (link: string) => {
       onNavigate();
-      router.push(link);
+      router.push(resolveLink(link));
     },
-    [onNavigate, router],
+    [onNavigate, resolveLink, router],
   );
   const entryClicked = useCallback(
     (type: string) => {
@@ -73,7 +74,6 @@ export function NotificationFeedSection({
   }, [schoolId]);
   return (
     <NotificationFeedList
-      source={STAFF_NOTIFICATION_FEED}
       copy={STAFF_COPY}
       unreadCount={unreadCount}
       onUnreadCount={onUnreadCount}

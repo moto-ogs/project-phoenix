@@ -103,6 +103,11 @@ if [ "${#affected[@]}" -gt 0 ]; then
       [ "$status" -eq 0 ]; then
       status=1
     fi
+    if [ -n "${TEST_DB_DSN:-}" ] &&
+      ! (cd "$repo_root/backend" && go run ./internal/testdb/cmd/bootstrap --stop-ephemeral) &&
+      [ "$status" -eq 0 ]; then
+      status=1
+    fi
     [ -n "${PHX_TEST_RUN_LOCK:-}" ] && rm -f "$PHX_TEST_RUN_LOCK"
     rm -f "$backend_go_log"
     if ! cleanup_go_test_workspace && [ "$status" -eq 0 ]; then status=1; fi

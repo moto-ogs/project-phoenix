@@ -311,13 +311,15 @@ Never prune or remove another worktree's networks or volumes to make setup succe
 For **tests only**, no app setup or sibling is needed: the repository test
 wrappers resolve `TEST_DB_DSN` from the private process environment or root
 `.env`. When neither exists (for example, a detached pipeline worktree), they
-create a credentialed loopback test server with a random port and keep its DSN
-only in the wrapper process. Direct `go test` still needs an explicit DSN.
-Do not write a test DSN into tracked files or print it. The test lifecycle uses the tracked
+create a temporary credentialed loopback test server on a random port and
+keep its DSN only in the wrapper process. This fallback starts no Compose
+project or bridge network and removes its marked server when the wrapper exits.
+Direct `go test` still needs an explicit DSN. Do not write a test DSN into
+tracked files or print it. For a configured DSN, the lifecycle uses the tracked
 `docker-compose.example.yml` and derives its project and port from that DSN;
-it does not need a copied `.env` or `docker-compose.yml`. Starting a new test
-server still needs Docker address space. Use only a test server, never the app
-database; servers on the same port are shared, not owned by one worktree.
+it does not need a copied `.env` or `docker-compose.yml`. Use only a test
+server, never the app database; servers on the same port are shared, not owned
+by one worktree.
 
 #### Local env and Compose drift
 

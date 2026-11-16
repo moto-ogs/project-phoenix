@@ -429,7 +429,7 @@ func deliversToSchoolPortal(event Event) bool {
 		return event.Portal == PortalSchool
 	}
 	def, ok := GetType(event.Type)
-	return ok && OfferedInPortal(def, PortalSchool)
+	return ok && typeDeliversToSchoolPortal(def)
 }
 
 func (c *webPushChannel) sendAllSynchronously(ctx context.Context, event Event, payload []byte, subs []*deliveryModels.PushSubscription) error {

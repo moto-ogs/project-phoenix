@@ -5,6 +5,8 @@
 // the bell marks nothing as read; a Hinweis is read by its click or „Alle als
 // gelesen markieren". Below `sm` the bell opens the shared full-screen sheet
 // (`NotificationsSheet`, rendered once by the bottom nav) instead of a popover.
+// moto schule (#7139) mounts `NotificationFeedBell`: the same bell with the
+// feed only, under the portal context of its school routes.
 
 "use client";
 
@@ -37,16 +39,52 @@ const NotificationsPanelContent = dynamic(
   { ssr: false },
 );
 
+const NotificationFeedPanelContent = dynamic(
+  () =>
+    import("./notifications-panel").then(
+      (module) => module.NotificationFeedPanelContent,
+    ),
+  { ssr: false },
+);
+
 export function RemindersBell() {
   const { count, enabled } = useReminders();
   const { unreadCount } = useNotificationFeedUnread();
+  return (
+    <NotificationsBell
+      badgeCount={unreadCount + (enabled ? count : 0)}
+      tooltip="Zeigt Erinnerungen und Hinweise, ohne die Seite zu verlassen."
+      feedOnly={false}
+    />
+  );
+}
+
+/**
+ * Die Glocke von moto schule (#7139): nur die Hinweise, denn Erinnerungen der
+ * Aufsicht gibt es dort nicht. Der Feed kommt über den Portal-Kontext aus der
+ * Route des Schulportals.
+ */
+export function NotificationFeedBell() {
+  const { unreadCount } = useNotificationFeedUnread();
+  return (
+    <NotificationsBell
+      badgeCount={unreadCount}
+      tooltip="Zeigt Ihre Hinweise, ohne die Seite zu verlassen."
+      feedOnly
+    />
+  );
+}
+
+function NotificationsBell({
+  badgeCount,
+  tooltip,
+  feedOnly,
+}: Readonly<{ badgeCount: number; tooltip: string; feedOnly: boolean }>) {
   const isPhone = useMediaQuery(BELOW_SM);
   const schoolId = useAnalyticsSchoolId();
   const [isOpen, setIsOpen] = useState(false);
   const sheetOpen = useNotificationsSheetOpen();
   const openSheet = useOpenNotificationsSheet();
-
-  const badgeCount = unreadCount + (enabled ? count : 0);
 
   const changeOpen = useCallback(
     (next: boolean) => {
@@ -84,7 +122,7 @@ export function RemindersBell() {
       aria-expanded={expanded}
       aria-haspopup="dialog"
       aria-controls={expanded ? panelId : undefined}
-      tooltip="Zeigt Erinnerungen und Hinweise, ohne die Seite zu verlassen."
+      tooltip={tooltip}
       className="relative"
     >
       <Bell className="h-5 w-5" />
@@ -116,7 +154,13 @@ export function RemindersBell() {
         renderTrigger({ ref, toggle, panelId, expanded: isOpen })
       }
     >
-      {() => <NotificationsPanelContent onNavigate={close} />}
+      {() =>
+        feedOnly ? (
+          <NotificationFeedPanelContent onNavigate={close} />
+        ) : (
+          <NotificationsPanelContent onNavigate={close} />
+        )
+      }
     </AnchoredPopover>
   );
 }

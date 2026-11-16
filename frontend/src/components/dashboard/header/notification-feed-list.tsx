@@ -50,7 +50,7 @@ export function NotificationFeedList({
   onEntryClicked,
   onAllRead,
 }: Readonly<{
-  source: NotificationFeedSource;
+  source?: NotificationFeedSource;
   copy: NotificationFeedCopy;
   /** Sprache der Zeitangabe; ohne Angabe Deutsch. */
   locale?: string;

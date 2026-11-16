@@ -101,22 +101,19 @@ func TestParsePostgresDSNRejectsInvalidInput(t *testing.T) {
 	}
 }
 
-func TestNewEphemeralLocalConfigUsesRandomLoopbackEndpoint(t *testing.T) {
-	first, err := NewEphemeralLocalConfig()
-	require.NoError(t, err)
-	second, err := NewEphemeralLocalConfig()
+func TestNewEphemeralLocalConfigUsesDockerAssignedLoopbackPort(t *testing.T) {
+	cfg, err := newEphemeralLocalConfig("6543", "generated-password")
 	require.NoError(t, err)
 
-	assert.NotEqual(t, first.TemplateDSN(), second.TemplateDSN())
-	parsed, err := url.Parse(first.TemplateDSN())
+	parsed, err := url.Parse(cfg.TemplateDSN())
 	require.NoError(t, err)
 	assert.Equal(t, "postgres", parsed.Scheme)
 	assert.Equal(t, "127.0.0.1", parsed.Hostname())
-	assert.NotEmpty(t, parsed.Port())
+	assert.Equal(t, "6543", parsed.Port())
 	assert.Equal(t, "postgres", parsed.User.Username())
 	password, ok := parsed.User.Password()
 	assert.True(t, ok)
-	assert.NotEmpty(t, password)
+	assert.Equal(t, "generated-password", password)
 	assert.Equal(t, "/phoenix_test", parsed.Path)
 	assert.Equal(t, "disable", parsed.Query().Get("sslmode"))
 }
@@ -228,6 +225,40 @@ func TestTestContainerCommandUsesDSNConnectionSettings(t *testing.T) {
 	assert.Equal(t, "pa'ss", environment["POSTGRES_PASSWORD"])
 	assert.Contains(t, cmd.Args, "project-phoenix-testdb-6543")
 	assert.NotContains(t, strings.Join(cmd.Args, " "), "pa'ss", "the password must not be exposed in process arguments")
+}
+
+func TestEphemeralTestContainerCommandPublishesOnlyLoopback(t *testing.T) {
+	t.Parallel()
+
+	cmd, err := ephemeralTestContainerCommand(context.Background(), "generated-password", []string{"POSTGRES_PASSWORD=stale-password"})
+	require.NoError(t, err)
+	assert.Equal(t, "docker", filepath.Base(cmd.Path))
+	assert.Equal(t, []string{
+		"docker", "run", "-d", "--rm",
+		"--label", ephemeralTestContainerLabel + "=1",
+		"--tmpfs", "/var/lib/postgresql/data:size=2560m",
+		"--publish", "127.0.0.1::5432",
+		"-e", "POSTGRES_PASSWORD",
+		"-e", "POSTGRES_DB=phoenix_test",
+		ephemeralTestContainerImage,
+		"postgres",
+		"-c", "fsync=off",
+		"-c", "synchronous_commit=off",
+		"-c", "full_page_writes=off",
+		"-c", "shared_buffers=32MB",
+		"-c", "wal_level=minimal",
+		"-c", "max_wal_senders=0",
+		"-c", "max_wal_size=256MB",
+		"-c", "max_connections=300",
+	}, cmd.Args)
+
+	environment := make(map[string]string, len(cmd.Env))
+	for _, entry := range cmd.Env {
+		key, value, ok := strings.Cut(entry, "=")
+		require.True(t, ok)
+		environment[key] = value
+	}
+	assert.Equal(t, "generated-password", environment["POSTGRES_PASSWORD"])
 }
 
 func TestComposeProjectSeparatesConfiguredPorts(t *testing.T) {

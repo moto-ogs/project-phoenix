@@ -26897,6 +26897,12 @@
           "nullable": true
         },
         {
+          "name": "school_deep_link",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
+        },
+        {
           "name": "student_ids",
           "type": "ARRAY",
           "udt": "_int8",

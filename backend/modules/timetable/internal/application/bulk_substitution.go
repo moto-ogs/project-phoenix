@@ -269,6 +269,15 @@ func (s *staffDeviations) executeBulkPlans(ctx context.Context, actor *int64, pl
 		result.AppliedWrites += len(day.Affected)
 		result.Days = append(result.Days, day)
 	}
+	// One notice per person and kind for the whole Sammel-Vertretung, not
+	// one per day (#7136).
+	var changes []staffingChange
+	for _, plan := range plans {
+		changes = append(append(changes, absenceChanges(plan.absencePlan)...), substitutionChanges(plan.subPlan)...)
+	}
+	if err := s.noticeStaffingChanges(ctx, staffingOperation{changes: changes, actor: actor}); err != nil {
+		return nil, timetable.DeviationInternal("staffing notice failed", err)
+	}
 	return result, nil
 }
 

@@ -95,6 +95,9 @@ type StaffDeviationDependencies struct {
 	ActivityUpdates ActivityUpdateAnnouncer
 	Locks           TransactionLocks
 	SickReports     SickReportReader // nil: a substitute is never sick (#6292)
+	// StaffingNotices tells the people concerned and the group's teachers
+	// about each staffing change (#7136); its zero value tells nobody.
+	StaffingNotices StaffingNoticeDependencies
 	Logger          *slog.Logger
 	Now             func() time.Time
 }

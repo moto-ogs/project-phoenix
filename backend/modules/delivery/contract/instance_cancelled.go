@@ -49,12 +49,15 @@ type NotificationFeedDelivery struct {
 }
 
 // NotificationFeed serves an account its own notification feed in the
-// school of the request's tenant transaction (#7148).
+// school of the request's tenant transaction (#7148). The portal is the one
+// the session belongs to, "staff" or "school" (#7139): it shows the types the
+// catalogue offers there, with their link in that portal, and only while the
+// account holds a role of that portal. An unknown portal is an error.
 type NotificationFeed interface {
-	Page(ctx context.Context, tenantID, accountID int64, cursor string, limit int) (NotificationFeedPage, error)
-	UnreadCount(ctx context.Context, tenantID, accountID int64) (int, error)
-	MarkRead(ctx context.Context, tenantID, accountID, entryID int64) (int, error)
-	MarkAllRead(ctx context.Context, tenantID, accountID int64) (int, error)
+	Page(ctx context.Context, tenantID, accountID int64, portal, cursor string, limit int) (NotificationFeedPage, error)
+	UnreadCount(ctx context.Context, tenantID, accountID int64, portal string) (int, error)
+	MarkRead(ctx context.Context, tenantID, accountID int64, portal string, entryID int64) (int, error)
+	MarkAllRead(ctx context.Context, tenantID, accountID int64, portal string) (int, error)
 }
 
 // GuardianNotificationFeed serves a guardian account its notification feed
@@ -78,7 +81,8 @@ type NotificationFeedPage struct {
 	UnreadCount int
 }
 
-// NotificationFeedEntry is one entry as the owner of the feed reads it.
+// NotificationFeedEntry is one entry as the owner of the feed reads it;
+// DeepLink is the link in the portal it was read in.
 type NotificationFeedEntry struct {
 	ID        int64
 	Type      string

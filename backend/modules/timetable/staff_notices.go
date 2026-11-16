@@ -111,8 +111,13 @@ type StaffNotices interface {
 	// unbekannte Leserart erhält nichts.
 	StaffNoticesOn(ctx context.Context, accountID int64, date string, reader string) ([]StaffNoticeView, error)
 	FindStaffNotice(ctx context.Context, id int64) (StaffNotice, error)
+	// StaffNoticeFor gibt einer Person einen einzelnen Hinweis, auf den ihr
+	// Benachrichtigungs-Feed zeigt (#7143), mit der eigenen Kenntnisnahme. Ein
+	// abgeschalteter Hinweis oder einer, der diese Leserart nicht erreicht,
+	// ist ErrStaffNoticeNotFound.
+	StaffNoticeFor(ctx context.Context, accountID, id int64, reader string) (StaffNoticeView, error)
 	CreateStaffNotice(ctx context.Context, createdBy int64, in StaffNoticeInput) (StaffNotice, error)
-	UpdateStaffNotice(ctx context.Context, id int64, in StaffNoticeInput) (StaffNotice, error)
+	UpdateStaffNotice(ctx context.Context, id, updatedBy int64, in StaffNoticeInput) (StaffNotice, error)
 	DeleteStaffNotice(ctx context.Context, id int64) error
 	// AcknowledgeStaffNotice nimmt die Kenntnisnahme einer Person entgegen.
 	// Sie gilt nur für Hinweise, die diese Leserart heute überhaupt erreichen.

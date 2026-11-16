@@ -55,17 +55,35 @@ func (f *feedReader) getLogger() *slog.Logger {
 	return f.logger
 }
 
-func (f *feedReader) requireFeedCaller(tenantID, accountID int64) error {
+// requireFeedCaller checks the caller and returns the view of its portal.
+func (f *feedReader) requireFeedCaller(tenantID, accountID int64, portal string) (domain.FeedView, error) {
 	if f == nil || f.store == nil || f.now == nil {
-		return errors.New("notification feed is not configured")
+		return domain.FeedView{}, errors.New("notification feed is not configured")
 	}
 	if tenantID <= 0 || accountID <= 0 {
-		return errors.New("notification feed: school and account are required")
+		return domain.FeedView{}, errors.New("notification feed: school and account are required")
 	}
-	return nil
+	return feedView(portal)
 }
 
-func (f *feedReader) Page(ctx context.Context, tenantID, accountID int64, cursor string, limit int) (FeedPage, error) {
+// feedView is what a portal shows of the feed (#7139): moto schule shows the
+// staff types marked SchoolPortal and its own. A reversal follows its
+// cancellation into each portal's feed, but is not offered as a preference
+// (#7151). An entry of another type stays in the table and reaches only the
+// portal that renders it.
+func feedView(portal string) (domain.FeedView, error) {
+	if portal != PortalStaff && portal != PortalSchool {
+		return domain.FeedView{}, fmt.Errorf("notification feed: unknown portal %q", portal)
+	}
+	defs := FeedTypesForPortal(portal)
+	view := domain.FeedView{School: portal == PortalSchool, Types: make([]string, 0, len(defs))}
+	for _, def := range defs {
+		view.Types = append(view.Types, def.Key)
+	}
+	return view, nil
+}
+
+func (f *feedReader) Page(ctx context.Context, tenantID, accountID int64, portal, cursor string, limit int) (FeedPage, error) {
 	if limit <= 0 {
 		limit = FeedDefaultPageSize
 	}
@@ -73,46 +91,71 @@ func (f *feedReader) Page(ctx context.Context, tenantID, accountID int64, cursor
 	if err != nil {
 		return FeedPage{}, err
 	}
-	return f.read(ctx, tenantID, accountID, after, min(limit, FeedMaxPageSize))
+	return f.read(ctx, tenantID, accountID, portal, after, min(limit, FeedMaxPageSize))
 }
 
 // UnreadCount is the read of a page without entries.
-func (f *feedReader) UnreadCount(ctx context.Context, tenantID, accountID int64) (int, error) {
-	page, err := f.read(ctx, tenantID, accountID, nil, 0)
+func (f *feedReader) UnreadCount(ctx context.Context, tenantID, accountID int64, portal string) (int, error) {
+	page, err := f.read(ctx, tenantID, accountID, portal, nil, 0)
 	return page.UnreadCount, err
 }
 
 // read loads the unread count and up to limit entries after the cursor; a
 // limit of 0 loads the count only.
-func (f *feedReader) read(ctx context.Context, tenantID, accountID int64, after *domain.FeedCursor, limit int) (FeedPage, error) {
-	if err := f.requireFeedCaller(tenantID, accountID); err != nil {
-		return FeedPage{}, err
-	}
-	var page FeedPage
-	var err error
-	if page.UnreadCount, err = f.store.CountUnreadFeedEntries(ctx, tenantID, accountID); err != nil || limit == 0 {
-		return page, err
-	}
-	entries, err := f.store.ListFeedEntries(ctx, tenantID, accountID, after, limit+1)
+func (f *feedReader) read(ctx context.Context, tenantID, accountID int64, portal string, after *domain.FeedCursor, limit int) (FeedPage, error) {
+	view, err := f.requireFeedCaller(tenantID, accountID, portal)
 	if err != nil {
 		return FeedPage{}, err
 	}
-	page.Entries, page.NextCursor = feedPageEntries(entries, limit)
+	var page FeedPage
+	if page.UnreadCount, err = f.store.CountUnreadFeedEntries(ctx, tenantID, accountID, view); err != nil || limit == 0 {
+		return page, err
+	}
+	entries, err := f.store.ListFeedEntries(ctx, tenantID, accountID, view, after, limit+1)
+	if err != nil {
+		return FeedPage{}, err
+	}
+	if len(entries) > limit {
+		last := entries[limit-1]
+		page.NextCursor = encodeFeedCursor(domain.FeedCursor{UpdatedAt: last.UpdatedAt, ID: last.ID})
+		entries = entries[:limit]
+	}
+	page.Entries = make([]FeedEntry, 0, len(entries))
+	for _, entry := range entries {
+		page.Entries = append(page.Entries, FeedEntry{
+			ID: entry.ID, Type: entry.Type, Title: entry.Title, Body: entry.Body, DeepLink: feedEntryLink(entry.FeedEntryContent, view),
+			CreatedAt: entry.CreatedAt, UpdatedAt: entry.UpdatedAt, ReadAt: entry.ReadAt,
+		})
+	}
 	return page, nil
 }
 
-func (f *feedReader) MarkRead(ctx context.Context, tenantID, accountID, entryID int64) (int, error) {
-	if err := f.requireFeedCaller(tenantID, accountID); err != nil {
+// feedEntryLink is the entry's link in the portal of the view. In moto
+// schule an entry without a place there opens the portal root, as its push
+// does (schoolPushPayload).
+func feedEntryLink(entry domain.FeedEntryContent, view domain.FeedView) string {
+	if !view.School {
+		return entry.DeepLink
+	}
+	if entry.SchoolDeepLink == "" {
+		return "/school"
+	}
+	return entry.SchoolDeepLink
+}
+
+func (f *feedReader) MarkRead(ctx context.Context, tenantID, accountID int64, portal string, entryID int64) (int, error) {
+	view, err := f.requireFeedCaller(tenantID, accountID, portal)
+	if err != nil {
 		return 0, err
 	}
-	found, err := f.store.MarkFeedEntryRead(ctx, tenantID, accountID, entryID, f.now())
+	found, err := f.store.MarkFeedEntryRead(ctx, tenantID, accountID, view, entryID, f.now())
 	if err != nil {
 		return 0, err
 	}
 	if !found {
 		return 0, ErrFeedEntryNotFound
 	}
-	count, err := f.store.CountUnreadFeedEntries(ctx, tenantID, accountID)
+	count, err := f.store.CountUnreadFeedEntries(ctx, tenantID, accountID, view)
 	if err != nil {
 		return 0, err
 	}
@@ -120,14 +163,15 @@ func (f *feedReader) MarkRead(ctx context.Context, tenantID, accountID, entryID 
 	return count, nil
 }
 
-func (f *feedReader) MarkAllRead(ctx context.Context, tenantID, accountID int64) (int, error) {
-	if err := f.requireFeedCaller(tenantID, accountID); err != nil {
+func (f *feedReader) MarkAllRead(ctx context.Context, tenantID, accountID int64, portal string) (int, error) {
+	view, err := f.requireFeedCaller(tenantID, accountID, portal)
+	if err != nil {
 		return 0, err
 	}
-	if _, err := f.store.MarkAllFeedEntriesRead(ctx, tenantID, accountID, f.now()); err != nil {
+	if _, err := f.store.MarkAllFeedEntriesRead(ctx, tenantID, accountID, view, f.now()); err != nil {
 		return 0, err
 	}
-	count, err := f.store.CountUnreadFeedEntries(ctx, tenantID, accountID)
+	count, err := f.store.CountUnreadFeedEntries(ctx, tenantID, accountID, view)
 	if err != nil {
 		return 0, err
 	}

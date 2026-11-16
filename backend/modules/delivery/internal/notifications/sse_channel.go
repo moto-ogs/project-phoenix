@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -76,10 +77,17 @@ func NewSSEChannel(broadcaster realtime.Broadcaster, opts ...SSEChannelOption) C
 
 func (c *sseChannel) Name() string { return "sse" }
 
-// signalFeed tells the accounts' open staff sessions that their feed changed
-// (#7148). The signal carries no content; the sessions reload the feed.
+// signalFeed tells the accounts' open sessions in the staff portal and in
+// moto schule that their feed changed (#7148, #7139). The signal carries no
+// content; each session reloads the feed of its own portal, so a session
+// whose portal does not show the changed entry only reloads the same state.
+// A failed broadcast to one portal does not keep the other from its signal.
 func (c *sseChannel) signalFeed(tenantID int64, accountIDs []int64) error {
-	return c.broadcaster.BroadcastToStaffAccounts(tenantID, accountIDs, realtime.NewEvent(realtime.EventNotificationFeedChanged, "", realtime.EventData{}))
+	event := realtime.NewEvent(realtime.EventNotificationFeedChanged, "", realtime.EventData{})
+	return errors.Join(
+		c.broadcaster.BroadcastToStaffAccounts(tenantID, accountIDs, event),
+		c.broadcaster.BroadcastToSchoolAccounts(tenantID, accountIDs, event),
+	)
 }
 
 // signalGuardianFeed tells the accounts' open sessions of the parents portal
@@ -141,7 +149,11 @@ func (c *sseChannel) Deliver(ctx context.Context, event Event) error {
 func (c *sseChannel) deliverToStaff(ctx context.Context, event Event, sseEvent realtime.Event, stored domain.RealtimeNotification) error {
 	if len(event.feedChanged) > 0 {
 		if err := c.signalFeed(event.Audience.TenantID, event.feedChanged); err != nil {
-			return err
+			c.getLogger().Warn("notification feed invalidation failed",
+				"tenant_id", event.Audience.TenantID,
+				"account_count", len(event.feedChanged),
+				"error", err,
+			)
 		}
 	}
 	if event.feedOnly {

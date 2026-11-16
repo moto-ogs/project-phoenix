@@ -263,6 +263,10 @@ export const schoolPortalKeys = {
   parentConferences: () => "school-parent-conferences",
   absenceList: (schoolClass: string, from = "", to = "") =>
     `school-absence-list-${schoolClass}-${from}-${to}`,
+  // Der Feed der Glocke (#7139): dieselben Einträge wie im Staff-Portal,
+  // eigene Route und eigene Schlüssel.
+  notificationFeedFirstPage: () => "school-notification-feed-first-page",
+  notificationFeedUnread: () => "school-notification-feed-unread",
 } as const;
 
 export const weekProtocolKeys = {

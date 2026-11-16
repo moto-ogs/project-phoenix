@@ -24,6 +24,7 @@ export function teacherSettingsTopic(): HelpTopic {
       "Die Schulverwaltung bekommt diesen Hinweis für alle Klassen der Schule.",
       "`Fehlt ohne Meldung`: nur für die Schulverwaltung. moto meldet sich, wenn eine Lehrkraft ein Kind als fehlend einträgt und keine Meldung da ist. Im Hinweis steht nur die Zahl der Kinder. Diese Benachrichtigung ist von Anfang an eingeschaltet.",
       "`Nachrichten von Kolleginnen und Kollegen`: neue Nachrichten im Team-Chat der OGS.",
+      "`Absage eines Termins`: moto meldet sich, wenn ein Termin ausfällt, bei dem Sie eingeplant sind. Das gilt für Absagen von heute bis in 14 Tagen. Diese Benachrichtigung ist von Anfang an eingeschaltet. Den Hinweis in der Glocke bekommen Sie auch, wenn Sie sie ausschalten.",
       "Benachrichtigungen kommen erst an, wenn moto schule auf dem Startbildschirm liegt.",
       "Im Bereich `Vertraute Geräte` stehen die Geräte, die Sie sich beim Anmelden gemerkt haben. Öffnen Sie das Menü am Gerät und wählen Sie `Entfernen`. Dort fragt moto beim nächsten Anmelden wieder nach dem Code.",
     ],
@@ -34,6 +35,7 @@ export function teacherSettingsTopic(): HelpTopic {
       "Es kommt nichts an? Prüfen Sie, ob Sie moto auf dem Gerät erlaubt haben, Benachrichtigungen zu senden.",
     ],
     related: [
+      HELP_TOPICS.teacherNotificationFeed,
       HELP_TOPICS.teacherMessages,
       HELP_TOPICS.teacherNotices,
       HELP_TOPICS.teacherLogin,

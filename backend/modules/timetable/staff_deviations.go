@@ -315,6 +315,24 @@ type SickAbsenceClear struct {
 	ActorAccountID *int64
 }
 
+// SickAbsenceNotice tells about the blocks one pass of an absence's plan
+// cascade marked absent, or with Returned restored after the absence was
+// withdrawn or shortened (#7136): one notice for the pass, whatever the
+// number of days. The absence's type and reason never reach the notice.
+type SickAbsenceNotice struct {
+	AbsenceID      int64
+	StaffID        int64
+	Blocks         []SickAbsenceNoticeBlock
+	Returned       bool
+	ActorAccountID *int64
+}
+
+// SickAbsenceNoticeBlock is one block the cascade marked the person absent on.
+type SickAbsenceNoticeBlock struct {
+	InstanceID int64
+	Date       calendar.Date
+}
+
 // SubstituteConflictProbe asks for the time-overlap advisories of one staff
 // member covering Targets on Date. TargetIDs are every block the save placed
 // the person on, including already-covered ones the advisory must not flag.
@@ -348,6 +366,10 @@ type StaffDeviations interface {
 	// stamped, then clears the block's "deliberately unstaffed"
 	// acknowledgement when the block is fully staffed again.
 	ClearSickAbsence(ctx context.Context, in SickAbsenceClear, touched TouchedActivities) error
+	// NoticeSickAbsence tells the person and the teachers of the affected
+	// groups about the blocks one absence's cascade marked absent, in the
+	// caller's transaction (#7136).
+	NoticeSickAbsence(ctx context.Context, in SickAbsenceNotice) error
 	// QueueActivityUpdates announces every touched running block after the
 	// surrounding tenant transaction commits. A rollback announces nothing.
 	QueueActivityUpdates(ctx context.Context, touched TouchedActivities)

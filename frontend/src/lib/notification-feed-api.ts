@@ -1,7 +1,7 @@
-// Client des Benachrichtigungs-Feeds (#7148, #7140). Die Routen unter
-// /api/notifications/feed (Staff-Portal) und /api/parent/me/notifications/feed
-// (Elternportal) reichen an das Backend weiter; der Wrapper antwortet mit
-// { success, message, data }. Beide Portale lesen dieselbe Form.
+// Client des Benachrichtigungs-Feeds. Die Routen der Staff-Glocke, von moto
+// schule (#7139) und des Elternportals (#7140) reichen an das Backend weiter;
+// der Wrapper antwortet mit { success, message, data }. `apiBase` wählt die
+// Staff- oder Schulroute; das Elternportal hält seinen eigenen Client.
 
 import { authFetch } from "./api-helpers";
 import {
@@ -69,16 +69,52 @@ function notificationFeedApi(basePath: string): NotificationFeedApi {
   };
 }
 
-/** Der Feed des Kontos in der Schule der Sitzung (Staff-Portal, #7148). */
-const staffNotificationFeedApi = notificationFeedApi("/api/notifications/feed");
-
 /** Der Feed des Elternkontos über alle Schulen der Familie (#7140). */
 export const parentNotificationFeedApi = notificationFeedApi(
   "/api/parent/me/notifications/feed",
 );
+export async function fetchNotificationFeed(
+  apiBase: string,
+  cursor?: string | null,
+): Promise<NotificationFeedPage> {
+  const query = new URLSearchParams({
+    limit: String(NOTIFICATION_FEED_PAGE_SIZE),
+  });
+  if (cursor) query.set("cursor", cursor);
+  const response = await authFetch<ProxyResponse<NotificationFeedPageWire>>(
+    `${apiBase}?${query.toString()}`,
+  );
+  return mapNotificationFeedPage(response.data);
+}
 
-export const fetchNotificationFeed = staffNotificationFeedApi.fetchPage;
-export const fetchNotificationFeedUnreadCount =
-  staffNotificationFeedApi.fetchUnreadCount;
-export const markNotificationFeedEntryRead = staffNotificationFeedApi.markRead;
-export const markAllNotificationFeedRead = staffNotificationFeedApi.markAllRead;
+export async function fetchNotificationFeedUnreadCount(
+  apiBase: string,
+): Promise<number> {
+  const response = await authFetch<ProxyResponse<UnreadCountWire>>(
+    `${apiBase}/unread-count`,
+  );
+  return response.data.unread_count;
+}
+
+/** Markiert einen Eintrag als gelesen; liefert den neuen Zähler. */
+export async function markNotificationFeedEntryRead(
+  apiBase: string,
+  id: string,
+): Promise<number> {
+  const response = await authFetch<ProxyResponse<UnreadCountWire>>(
+    `${apiBase}/${encodeURIComponent(id)}/read`,
+    { method: "POST" },
+  );
+  return response.data.unread_count;
+}
+
+/** Markiert alle Einträge als gelesen; liefert den neuen Zähler. */
+export async function markAllNotificationFeedRead(
+  apiBase: string,
+): Promise<number> {
+  const response = await authFetch<ProxyResponse<UnreadCountWire>>(
+    `${apiBase}/read-all`,
+    { method: "POST" },
+  );
+  return response.data.unread_count;
+}

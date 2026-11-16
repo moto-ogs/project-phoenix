@@ -10,12 +10,16 @@ const FeedBundleWindow = 10 * time.Minute
 // FeedEntryContent is what a producer writes into a feed entry: the finished,
 // display-safe text and app-relative link, and the object the entry is about.
 type FeedEntryContent struct {
-	Type        string
-	Title       string
-	Body        string
-	DeepLink    string
-	RelatedType string
-	RelatedID   int64
+	Type     string
+	Title    string
+	Body     string
+	DeepLink string
+	// SchoolDeepLink is the same destination in moto schule (#7139); empty
+	// for a type the school portal does not show, or one that has no place
+	// there.
+	SchoolDeepLink string
+	RelatedType    string
+	RelatedID      int64
 	// StudentIDs are the children an entry of a guardian is about (#7140).
 	// The guardian reads it only while holding parent_portal.access for at
 	// least one of them. A staff entry names no child.
@@ -45,4 +49,13 @@ type FeedCursor struct {
 type FeedWrite struct {
 	Created []int64
 	Updated []int64
+}
+
+// FeedView is the portal an account reads its feed in (#7139): the types that
+// portal shows and the role that admits the reader. The staff portal admits a
+// member with a staff role, moto schule one with a school-portal role, as Web
+// Push and SSE do for each portal.
+type FeedView struct {
+	Types  []string
+	School bool
 }

@@ -28,7 +28,7 @@ func TestSchoolPortalCatalogue(t *testing.T) {
 	for _, def := range TypesForPortal(PortalSchool) {
 		keys = append(keys, def.Key)
 	}
-	assert.Equal(t, []string{TypeSchoolClassAbsenceReported, TypeSchoolUnreportedAbsence, TypeStaffMessage, TypeSchoolParentConferenceBooking}, keys)
+	assert.Equal(t, []string{TypeSchoolClassAbsenceReported, TypeSchoolUnreportedAbsence, TypeStaffMessage, TypeInstanceCancelled, TypeSchoolParentConferenceBooking}, keys)
 
 	staffMessage, _ := GetType(TypeStaffMessage)
 	pickup, _ := GetType(TypePickupUpcoming)
@@ -42,6 +42,30 @@ func TestSchoolPortalCatalogue(t *testing.T) {
 	assert.True(t, OfferedInPortal(conferenceBooking, PortalSchool))
 	assert.False(t, OfferedInPortal(conferenceBooking, PortalStaff), "the Elternsprechtag notice exists only in moto schule (#4801)")
 	assert.Equal(t, "Krankmeldungen meiner Klassen", classAbsence.Label)
+	cancelled, _ := GetType(TypeInstanceCancelled)
+	assert.True(t, OfferedInPortal(cancelled, PortalSchool), "a planned Lehrkraft hears of a cancelled block in moto schule (#7139)")
+	assert.Empty(t, PermissionInPortal(cancelled, PortalSchool), "offered there without the OGS right a Lehrkraft does not hold")
+	assert.Equal(t, cancelled.Permission, PermissionInPortal(cancelled, PortalStaff))
+	reinstated, _ := GetType(TypeInstanceReinstated)
+	assert.False(t, OfferedInPortal(reinstated, PortalSchool), "a reinstatement follows the cancellation's switch instead of becoming another choice")
+	assert.True(t, reinstated.SchoolPortal)
+	assert.Empty(t, PermissionInPortal(reinstated, PortalSchool))
+}
+
+func TestFeedTypesIncludeReinstatementsInTheSchoolPortal(t *testing.T) {
+	t.Parallel()
+
+	staffKeys := make([]string, 0)
+	for _, def := range FeedTypesForPortal(PortalStaff) {
+		staffKeys = append(staffKeys, def.Key)
+	}
+	schoolKeys := make([]string, 0)
+	for _, def := range FeedTypesForPortal(PortalSchool) {
+		schoolKeys = append(schoolKeys, def.Key)
+	}
+
+	assert.Contains(t, staffKeys, TypeInstanceReinstated)
+	assert.Contains(t, schoolKeys, TypeInstanceReinstated)
 }
 
 // A school registration rebinds the browser endpoint: the school a Lehrkraft

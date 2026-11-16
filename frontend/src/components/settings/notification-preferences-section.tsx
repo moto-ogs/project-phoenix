@@ -45,6 +45,7 @@ const GROUP_LABELS: Record<string, string> = {
   kinder: "Kinder",
   mitteilungen: "Mitteilungen",
   termine: "Termine",
+  dienstplan: "Dienstplan und Vertretung",
 };
 
 const PARENT_GROUPS = new Set(["kinder", "mitteilungen", "termine"]);
