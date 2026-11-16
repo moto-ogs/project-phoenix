@@ -22,6 +22,13 @@
       "external_test_role": "module-behavior-test"
     },
     {
+      "path": "modules/documentrendering/internal/domain/qrmatrix",
+      "owner": "document-rendering",
+      "role": "domain",
+      "internal_test_role": "module-internal-test",
+      "external_test_role": "module-behavior-test"
+    },
+    {
       "path": "modules/planexport",
       "owner": "document-rendering",
       "role": "public",
