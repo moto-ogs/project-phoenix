@@ -15226,6 +15226,17 @@
     },
     {
       "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "reason": "Platform protocol participation (mutation): people-directory reaches modules/auditlog/records.StudentConsentChangeRepository.CreateAll (audit-platform) through roots/owners.StudentPhotoRuntime.RecordPhotoConsentsEnded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.CreateAll",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ApplyEnrollmentProfile",
       "classification": "platform",
       "effect": "scope",
@@ -16812,6 +16823,17 @@
     },
     {
       "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "reason": "Platform protocol participation (mutation): people-directory reaches modules/auditlog/records.StudentConsentChangeRepository.CreateAll (audit-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.RecordPhotoConsentsEnded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.CreateAll",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ExcusedRequestStudentRows.FindByIDForUpdate",
       "classification": "platform",
       "effect": "scope",
@@ -17681,6 +17703,17 @@
       "reason": "Platform protocol participation (mutation): people-directory reaches modules/auditlog/records.StudentConsentChangeRepository.Create (audit-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.RecordPhotoConsent. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "reason": "Platform protocol participation (mutation): people-directory reaches modules/auditlog/records.StudentConsentChangeRepository.CreateAll (audit-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.RecordPhotoConsentsEnded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.CreateAll",
       "target_owner": "audit-platform"
     },
     {

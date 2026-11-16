@@ -10657,6 +10657,14 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "binding_digest": "b516e614cc4370f54f20fc987f964bd8",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.CreateAll",
+      "target_owner": "audit-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ApplyEnrollmentProfile",
       "binding_digest": "5cc6ed4c84056953c8cff47eed7ebc16",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/enrollment.Commands.ApplyEnrollmentProfile",
@@ -11833,6 +11841,14 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "binding_digest": "b516e614cc4370f54f20fc987f964bd8",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.CreateAll",
+      "target_owner": "audit-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ExcusedRequestStudentRows.FindByIDForUpdate",
       "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentRowLockUpdate.FindByIDForUpdate",
@@ -12470,6 +12486,14 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.RecordPhotoConsent",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "binding_digest": "b516e614cc4370f54f20fc987f964bd8",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.RecordPhotoConsentsEnded",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.CreateAll",
       "target_owner": "audit-platform"
     },
     {

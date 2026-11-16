@@ -173,14 +173,7 @@ func (s *StudentPhotoService) PurgePhotos(ctx context.Context) (result []string,
 			return err
 		}
 		var endedConsents []int64
-		for _, photo := range cleared {
-			if url := photo.StoredPhoto(); url != "" {
-				result = append(result, url)
-			}
-			if photo.PhotoConsentGivenAt != nil {
-				endedConsents = append(endedConsents, photo.StudentID)
-			}
-		}
+		result, endedConsents = splitPurgedPhotos(cleared)
 		for _, url := range result {
 			if err := s.runtime.QueueUnlinkStoredPhoto(txCtx, url); err != nil {
 				return err
@@ -192,6 +185,20 @@ func (s *StudentPhotoService) PurgePhotos(ctx context.Context) (result []string,
 		return nil, err
 	}
 	return result, nil
+}
+
+// splitPurgedPhotos names the files the purge detached and the children
+// whose consent it ended.
+func splitPurgedPhotos(cleared []domain.StudentPhoto) (urls []string, endedConsents []int64) {
+	for _, photo := range cleared {
+		if url := photo.StoredPhoto(); url != "" {
+			urls = append(urls, url)
+		}
+		if photo.PhotoConsentGivenAt != nil {
+			endedConsents = append(endedConsents, photo.StudentID)
+		}
+	}
+	return urls, endedConsents
 }
 
 // recordConsentsEnded appends the withdrawal of every consent the purge

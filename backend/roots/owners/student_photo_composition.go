@@ -30,9 +30,6 @@ type StudentPhotoConsentRecorder interface {
 		actorAccountID *int64,
 		changedAt time.Time,
 	) error
-	// RecordPhotoConsentsWithdrawn appends one photo withdrawal per child in
-	// one write.
-	RecordPhotoConsentsWithdrawn(ctx context.Context, studentIDs []int64, source string, actorAccountID *int64, changedAt time.Time) error
 }
 
 type StudentPhotoRuntime struct {
@@ -42,6 +39,9 @@ type StudentPhotoRuntime struct {
 	Broadcaster  PhotoBroadcaster
 	Unlinker     peoplePorts.PhotoUnlinker
 	Consents     StudentPhotoConsentRecorder
+	// ConsentTrail writes the withdrawals a feature switch-off ends in one
+	// statement (#7208).
+	ConsentTrail StudentConsentAppender
 	Logger       *slog.Logger
 	Actor        func(context.Context) int64
 }
@@ -127,8 +127,9 @@ func (r StudentPhotoRuntime) RecordPhotoConsent(
 		ctx, beforeRow, afterRow, auditModels.StudentConsentSourceTenantPortal, actorAccountID, changedAt)
 }
 
-// RecordPhotoConsentsEnded records the photo consents the feature switch-off
-// ended. The switch is made in the tenant portal's settings.
+// RecordPhotoConsentsEnded appends one photo withdrawal per child whose
+// consent the feature switch-off ended, all in one statement (#7208). The
+// switch is made in the tenant portal's settings.
 func (r StudentPhotoRuntime) RecordPhotoConsentsEnded(
 	ctx context.Context,
 	studentIDs []int64,
@@ -138,11 +139,24 @@ func (r StudentPhotoRuntime) RecordPhotoConsentsEnded(
 	if len(studentIDs) == 0 {
 		return nil
 	}
-	if r.Consents == nil {
+	if r.ConsentTrail == nil {
 		return errors.New("student photo runtime: consent trail is not wired")
 	}
-	return r.Consents.RecordPhotoConsentsWithdrawn(
-		ctx, studentIDs, auditModels.StudentConsentSourceTenantPortal, actorAccountID, changedAt)
+	entries := make([]*auditModels.StudentConsentChange, 0, len(studentIDs))
+	for _, studentID := range studentIDs {
+		if studentID <= 0 {
+			return errors.New("student photo runtime: persisted student is required")
+		}
+		entries = append(entries, &auditModels.StudentConsentChange{
+			Model:          auditModels.Model{CreatedAt: changedAt, UpdatedAt: changedAt},
+			StudentID:      studentID,
+			ConsentKey:     peopleModule.StudentConsentPhoto,
+			Action:         auditModels.StudentConsentWithdrawn,
+			Source:         auditModels.StudentConsentSourceTenantPortal,
+			ActorAccountID: actorAccountID,
+		})
+	}
+	return r.ConsentTrail.CreateAll(ctx, entries)
 }
 
 // StudentPhotos adapts the owner capability to the retained contract the
