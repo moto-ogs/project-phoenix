@@ -19,11 +19,11 @@ func TestAttendanceRetentionRequiresTheCleanupTransaction(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}})
+	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}, Now: presenceClock})
 	require.NoError(t, err)
 	student := testpkg.CreateTestStudent(t, db, "Frist", "Anwesenheit", "2a")
 	device := testpkg.CreateTestDevice(t, db, "attendance-retention-tx")
-	day := testpkg.TodayDate().AddDays(-400)
+	day := presenceToday.AddDays(-400)
 	row, err := module.RecordAttendance(ctx, studentpresence.Attendance{StudentID: student.ID, DeviceID: device.ID, Date: day.String(), CheckInTime: day.BerlinMidnight().Add(8 * time.Hour)})
 	require.NoError(t, err)
 

@@ -68,7 +68,7 @@ func BuildPresenceReports(
 // BuildPresenceCleanup binds the retention command used by jobs and setting writes.
 func BuildPresenceCleanup(env RootEnvironment, presence PresenceOwner, audit AuditOwner, settings settingsCompose.SettingsService) studentpresence.PresenceCleanup {
 	_, supervisors := presenceCompose.SessionRepositories(presence.SessionRecords)
-	return presenceservice.NewPresenceCleanup(presence.Presence, supervisors, NewDeletionAudit(audit.Persistence.DataDeletion), settingsCompose.PresenceSettings(settings), env.Today)
+	return presenceservice.NewPresenceCleanup(presence.Presence, supervisors, NewDeletionAudit(audit.Persistence.DataDeletion), settingsCompose.PresenceSettings(settings), env.Now)
 }
 
 // BuildCalendarApp binds the staff and parent personal calendars over the

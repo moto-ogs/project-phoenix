@@ -34,6 +34,7 @@ type dayReports struct {
 	morning           morningAttendance
 	homework          homework
 	handover          classHandover
+	now               func() time.Time
 }
 
 func newDayReports(deps ClassDayDependencies) *dayReports {
@@ -42,6 +43,7 @@ func newDayReports(deps ClassDayDependencies) *dayReports {
 		classExceptions: deps.ClassArrivalExceptions, companions: deps.Companions,
 		students: deps.Students, emergencyContacts: deps.EmergencyContacts,
 		accessLog: deps.AccessLog, morning: newMorningAttendance(deps), homework: newHomework(deps), handover: newClassHandover(deps),
+		now: deps.clock(),
 	}
 }
 
@@ -274,14 +276,14 @@ func (s *dayReports) recordClassDayViewAudit(ctx context.Context, report *classd
 	}
 	const errPrefix = "class day view audit"
 	date := calendar.Date(report.Date)
-	seen, err := s.accessLog.ClassDayViewSeenSince(ctx, actorAccountID, report.SchoolClass, date.String(), calendar.TodayDate().BerlinMidnight())
+	seen, err := s.accessLog.ClassDayViewSeenSince(ctx, actorAccountID, report.SchoolClass, date.String(), calendar.DateFromTime(s.now()).BerlinMidnight())
 	if err != nil {
 		return fmt.Errorf("class day view audit dedupe: %w", err)
 	}
 	if seen {
 		return nil
 	}
-	entry, err := newAccessRecord(errPrefix, actorAccountID, actorRole, date.BerlinMidnight(), date.EndOfDay(), time.Now())
+	entry, err := newAccessRecord(errPrefix, actorAccountID, actorRole, date.BerlinMidnight(), date.EndOfDay(), s.now())
 	if err != nil {
 		return err
 	}

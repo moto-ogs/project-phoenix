@@ -986,15 +986,20 @@ func TestActiveService_MoveStudentsToActiveGroupAuthorized_RejectsPushIntoTarget
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
-	service := setupActiveService(t, db)
+	// The service's day is a fixed Monday; both assignments are dated
+	// against it, not against the wall clock.
+	moveDay := calendar.NewDate(2026, 11, 2)
+	service := setupActiveService(t, db, func() time.Time { return moveDay.BerlinMidnight().Add(10 * time.Hour) })
 	ctx := testpkg.Ctx(t)
 	fx := newMoveAuthFixture(t, db, "future-supervision")
 
 	// The caller supervises the source room. The target's assignment begins
 	// tomorrow, so it cannot make the target room safe for a push today.
-	testpkg.CreateTestGroupSupervisor(t, db, fx.staff, fx.sourceGroup.ID, "supervisor")
+	sourceSupervision := testpkg.CreateTestGroupSupervisor(t, db, fx.staff, fx.sourceGroup.ID, "supervisor")
+	sourceSupervision.StartDate = moveDay
+	require.NoError(t, service.UpdateGroupSupervisor(ctx, supervisorOf(sourceSupervision)))
 	targetSupervision := testpkg.CreateTestGroupSupervisor(t, db, fx.colleague, fx.targetGroup.ID, "supervisor")
-	targetSupervision.StartDate = calendar.TodayDate().AddDays(1)
+	targetSupervision.StartDate = moveDay.AddDays(1)
 	require.NoError(t, service.UpdateGroupSupervisor(ctx, supervisorOf(targetSupervision)))
 
 	result, err := service.MoveStudentsToActiveGroupAuthorized(ctx, []int64{fx.studentID}, fx.targetGroup.ID, activeSvc.StudentMoveAuthorization{StaffID: fx.staff})

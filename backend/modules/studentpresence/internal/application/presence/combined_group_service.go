@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -77,7 +76,7 @@ func (s *service) EndCombinedGroup(ctx context.Context, id int64) error {
 		return &ActiveError{Op: "EndCombinedGroup", Err: fmt.Errorf("failed to verify combined group: database error during find by id: %w", err)}
 	}
 
-	if err := s.SchoolPresence.EndCombination(ctx, id, time.Now()); err != nil {
+	if err := s.SchoolPresence.EndCombination(ctx, id, s.now()); err != nil {
 		return &ActiveError{Op: "EndCombinedGroup", Err: fmt.Errorf("end combination failed: %w", err)}
 	}
 	return nil

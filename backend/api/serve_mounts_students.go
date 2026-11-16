@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
@@ -188,7 +189,7 @@ func mountStudentRoutes(
 	statusDays studentpresence.StatusDays, absences deliveryCompose.AbsenceNotifier, deletion *studentdeletion.Workflow,
 	groupLive grouplive.Query, decisions enrollmentOwner.Decisions, active studentpresence.Presence, resumption careStudentsHTTP.CareResumption,
 	noteTeam peopledirectory.StudentNoteTeamNotices, noteTeamReach studentsAPI.StudentNoteTeamReach, cohorts timetableModule.CohortRosters,
-	answers enrollmentOwner.StudentAnswers,
+	answers enrollmentOwner.StudentAnswers, now func() time.Time,
 ) error {
 	// A direct school_class edit must resync Jahrgang-filtered offering-sourced
 	// Regeltermine like a grade transition does (#2147 review round 10); Care
@@ -271,7 +272,7 @@ func mountStudentRoutes(
 			StudentConsents:         services.StudentConsents,
 			StudentHistoryService:   reports.StudentHistory,
 			StudentStatusDayService: statusDays,
-			UserContextService:      caller,
+			UserContextService:      caller, Now: now,
 		},
 		presenceStudentsHTTP.ResourceConfig{
 			AbsenceNotifier:    studentAbsenceNotifier{notifier: absences},
@@ -284,7 +285,7 @@ func mountStudentRoutes(
 			PrivacyConsents:         presence,
 			SettingsService:         settings,
 			StudentStatusDayService: statusDays,
-			UserContextService:      caller,
+			UserContextService:      caller, Now: now,
 		},
 		deleteStudentsHTTP.ResourceConfig{
 			CareLifecycleService: schedules.Lifecycle,

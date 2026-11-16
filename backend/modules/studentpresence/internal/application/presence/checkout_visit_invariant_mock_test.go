@@ -138,12 +138,14 @@ func TestEndOpenVisitForStudent_NextDayVisitIsLeftAlone(t *testing.T) {
 	// attendance; a room visit the student started AFTER that day belongs to
 	// the new day's session and must stay open (review #2372).
 	endCalled := false
+	day := calendar.NewDate(2026, 11, 2)
+	entry := day.BerlinMidnight().Add(9 * time.Hour)
 	svc := &service{ServiceDependencies: ServiceDependencies{PrincipalReader: testAttendancePrincipal, SchoolPresence: &mockVisitRepository{
 		getCurrentByStudentIDFunc: func(context.Context, int64) (*studentpresence.Visit, error) {
 			return &studentpresence.Visit{
 				ID:        4715,
 				StudentID: 4711,
-				EntryTime: time.Now(),
+				EntryTime: entry,
 			}, nil
 		},
 		endVisitFunc: func(context.Context, int64) error {
@@ -153,7 +155,7 @@ func TestEndOpenVisitForStudent_NextDayVisitIsLeftAlone(t *testing.T) {
 	}},
 	}
 
-	result, err := svc.endOpenVisitForStudent(context.Background(), 4711, calendar.TodayDate().AddDays(-1), time.Now())
+	result, err := svc.endOpenVisitForStudent(context.Background(), 4711, day.AddDays(-1), entry.Add(time.Second))
 
 	require.NoError(t, err)
 	assert.Nil(t, result, "a newer-day visit reports as nothing-to-end, not as an ended row")

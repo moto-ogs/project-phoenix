@@ -23,8 +23,9 @@ import (
 // NewStudentPresence composes the Student Presence owner with its attendance
 // rules bound to an unobserved Timetable owner over the same database. Every
 // root composes its presence module through it so every attendance rule sees
-// the same planned roster.
-func NewStudentPresence(db transactionruntime.Database, observe func(presenceCompose.Observation)) (studentpresence.Owner, error) {
+// the same planned roster. The optional clock is the owner's Now (ADR 0239);
+// without one it reads the wall clock.
+func NewStudentPresence(db transactionruntime.Database, observe func(presenceCompose.Observation), clocks ...func() time.Time) (studentpresence.Owner, error) {
 	pool := db.Pool()
 	// The roster reads and the care-day row lock are People Directory reads;
 	// they need none of the owner's write owners or audit seams.
@@ -50,15 +51,19 @@ func NewStudentPresence(db transactionruntime.Database, observe func(presenceCom
 		return nil, err
 	}
 	rules := NewPresenceRulesDependencies(capability, queries, locks)
-	return presenceCompose.New(presenceCompose.Dependencies{
+	deps := presenceCompose.Dependencies{
 		DB: pool, Observe: observe, Roster: rules.Roster, CarePlan: rules.CarePlan, CareDays: rules.CareDays,
-	})
+	}
+	if len(clocks) > 0 {
+		deps.Now = clocks[0]
+	}
+	return presenceCompose.New(deps)
 }
 
 // NewUnloggedStudentPresence composes the Student Presence owner that logs
 // only its failed operations.
-func NewUnloggedStudentPresence(db transactionruntime.Database) studentpresence.Owner {
-	module, err := NewStudentPresence(db, presenceCompose.FailureLogger())
+func NewUnloggedStudentPresence(db transactionruntime.Database, clocks ...func() time.Time) studentpresence.Owner {
+	module, err := NewStudentPresence(db, presenceCompose.FailureLogger(), clocks...)
 	if err != nil {
 		panic(err)
 	}
@@ -67,8 +72,8 @@ func NewUnloggedStudentPresence(db transactionruntime.Database) studentpresence.
 
 // NewLoggedStudentPresence composes the Student Presence owner with its
 // operations logged at debug level.
-func NewLoggedStudentPresence(db transactionruntime.Database, logger *slog.Logger) studentpresence.Owner {
-	module, err := NewStudentPresence(db, presenceCompose.DebugLogger(logger))
+func NewLoggedStudentPresence(db transactionruntime.Database, logger *slog.Logger, clocks ...func() time.Time) studentpresence.Owner {
+	module, err := NewStudentPresence(db, presenceCompose.DebugLogger(logger), clocks...)
 	if err != nil {
 		panic(err)
 	}

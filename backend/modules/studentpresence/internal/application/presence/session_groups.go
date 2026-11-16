@@ -3,7 +3,6 @@ package presence
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
@@ -213,7 +212,7 @@ func (s *service) EnsureOpenRoomSession(ctx context.Context, roomID, activityID 
 			session = existing
 			return nil
 		}
-		now := time.Now()
+		now := s.now()
 		created := &ports.ActiveGroup{StartTime: now, LastActivity: now, GroupID: &activityID, RoomID: roomID}
 		created.SetTenantID(tenant.FromContext(txCtx))
 		if err := s.GroupRepo.Create(txCtx, created); err != nil {

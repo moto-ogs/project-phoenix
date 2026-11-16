@@ -146,7 +146,7 @@ func TestAbsenceListQueryBudget(t *testing.T) {
 	now := today.BerlinMidnight().Add(9 * time.Hour)
 	module, err := rootAPI.NewClassDayTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db), func() time.Time { return now })
 	require.NoError(t, err)
-	router := classdayhttp.NewResource(module.ClassDay, nil).SchoolRouter(rootAPI.ProtectedSchoolRoutes)
+	router := classdayhttp.NewResource(module.ClassDay, nil, module.Today).SchoolRouter(rootAPI.ProtectedSchoolRoutes)
 
 	_, account := testpkg.CreateTestStaffWithAccount(t, db, "Schul", fmt.Sprintf("Verwaltung-%d", time.Now().UnixNano()))
 	claims := sessiontoken.AppClaims{ID: int(account.ID), Sub: account.Email, Roles: []string{"schulverwaltung"}, TenantID: testpkg.Tenant(t), Scope: tenant.ScopeSchool}

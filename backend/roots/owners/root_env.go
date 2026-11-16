@@ -17,8 +17,8 @@ import (
 type RootEnvironment struct {
 	Logger *slog.Logger
 	Config ServiceConfig
-	// Now is the clock of the services; nil uses the real one. Today is its
-	// calendar day.
+	// Now is the clock of the services; the root sets the real one when no
+	// test clock is given. Today is its calendar day.
 	Now     func() time.Time
 	Today   func() timezone.Date
 	Links   ServiceLinks

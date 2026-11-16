@@ -146,7 +146,7 @@ func primarySupervisorIDs(supervisorIDs map[int64]bool, currentSupervisors []*po
 
 // endAllCurrentSupervisors ends the current primary supervisors by setting end_date.
 func (s *service) endAllCurrentSupervisors(ctx context.Context, supervisors []*ports.GroupSupervisor) error {
-	today := calendar.TodayDate()
+	today := s.todayDate()
 	for _, supervisor := range supervisors {
 		if supervisor.Role != "supervisor" {
 			continue
@@ -161,7 +161,7 @@ func (s *service) endAllCurrentSupervisors(ctx context.Context, supervisors []*p
 
 // upsertSupervisors creates new supervisors or reactivates existing ones
 func (s *service) upsertSupervisors(ctx context.Context, activeGroupID int64, uniqueSupervisors map[int64]bool, currentSupervisors []*ports.GroupSupervisor) error {
-	now := time.Now()
+	now := s.now()
 
 	for supervisorID := range uniqueSupervisors {
 		existingSuper := s.findExistingSupervisor(currentSupervisors, supervisorID)
