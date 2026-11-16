@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -204,6 +205,33 @@ func TestFinanceExportsOfAReleasedRun(t *testing.T) {
 		rec = exportGet(t, f, "/files?offset="+offset)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, offset)
 	}
+
+	// #4718: the runs and the whole protocol as files, not one page; the
+	// protocol names no person.
+	lines := billingListCSV(t, f.traeger, f.office.token, financeExportsPath+"/runs/export")
+	require.Len(t, lines, 2, "the header and the run")
+	assert.Equal(t, "Lauf;Ausgestellt am;Rechnungen;Summe (Euro);Letzte Sollstellung;DATEV-Datei;Dateien", lines[0])
+	lines = billingListCSV(t, f.traeger, f.office.token, financeExportsPath+"/files/export")
+	require.Len(t, lines, 4, "the header and every file of the protocol")
+	assert.Equal(t, "Nr.;Datei;Lauf;Art;Rechnungen;Summe (Euro);Heruntergeladen", lines[0])
+	assert.Contains(t, strings.Join(lines, "\n"), ";Sollstellung;")
+	assert.Greater(t, len(billingListCSV(t, f.traeger, f.office.token,
+		fmt.Sprintf("%s/files/export?run_kind=care-runs&run_id=%d", financeExportsPath, run))), 1, "the files of the run")
+	assertTraegerListFormats(t, f.traeger, f.office.token, financeExportsPath+"/runs/export", "exportlaeufe")
+	assertTraegerListFormats(t, f.traeger, f.office.token, financeExportsPath+"/files/export", "exportprotokoll")
+	for _, endpoint := range []string{"runs", "files"} {
+		rec = exportGet(t, f, "/"+endpoint+"/export?format=xlsx")
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		total := strconv.FormatFloat(float64(files[0].TotalCents)/100, 'f', -1, 64)
+		numbers := map[string]string{"C7": "1", "D7": total, "G7": "3"}
+		if endpoint == "files" {
+			numbers = map[string]string{"E7": "1", "F7": total}
+		}
+		assertTraegerListNumbers(t, rec.Body.Bytes(), numbers)
+	}
+
+	rec = exportGet(t, f, "/files/export?run_kind=unbekannt&run_id=1")
+	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 }
 
 // Only the right "Finanz-Export" reads and downloads the exports; the
@@ -219,7 +247,7 @@ func TestFinanceExportsRightsAndTraeger(t *testing.T) {
 	require.NoError(t, f.db.NewRaw(`SELECT id FROM parent_billing.care_invoices WHERE run_id = ?`, run).Scan(context.Background(), &invoice))
 
 	leadership := newTraegerOffice(t, f.db, f.traeger, "Träger Sollstellung Leitung", identityaccess.TraegerRoleLeadership)
-	for _, path := range []string{"/settings", "/runs", "/files", fmt.Sprintf("/runs/care-runs/%d/sollstellung", run),
+	for _, path := range []string{"/settings", "/runs", "/files", "/runs/export", "/files/export", fmt.Sprintf("/runs/care-runs/%d/sollstellung", run),
 		fmt.Sprintf("/invoice-history/care-invoices/%d", invoice)} {
 		rec := exportGet(t, careBillingFixture{db: f.db, traeger: f.traeger, office: leadership}, path)
 		assert.Equal(t, http.StatusForbidden, rec.Code, path)
@@ -231,6 +259,8 @@ func TestFinanceExportsRightsAndTraeger(t *testing.T) {
 	rec = exportGet(t, other, fmt.Sprintf("/invoice-history/care-invoices/%d", invoice))
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	assert.Empty(t, exportRuns(t, other))
+	assert.Len(t, billingListCSV(t, other.traeger, other.office.token, financeExportsPath+"/runs/export"), 1, "the file of another Träger holds no run")
+	assert.Len(t, billingListCSV(t, other.traeger, other.office.token, financeExportsPath+"/files/export"), 1, "and no file")
 	var files int
 	require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM parent_billing.export_files WHERE organization_id IN (?, ?)`,
 		f.office.organization, other.office.organization).Scan(context.Background(), &files))

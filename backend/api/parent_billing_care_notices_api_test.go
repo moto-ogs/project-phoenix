@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -206,6 +207,26 @@ func TestCareNoticeRunIssuesTheYearAndNoMonthlyRunBillsItAgain(t *testing.T) {
 		WHERE run_id = ? AND action IN ('read', 'letter') AND details->'contract_ids' @> to_jsonb(?::bigint)`, run.ID, contract).
 		Scan(ctx, &reads))
 	assert.Equal(t, 3, reads, "every read and the letter name the contract in the trail")
+
+	// #4718: the runs and the notices of a run as files. The notices are read
+	// like the page and stand in the trail with their contract.
+	lines := billingListCSV(t, f.traeger, f.office.token, careNoticeRunsPath+"/export")
+	require.Len(t, lines, 3, "the header and both runs")
+	assert.Equal(t, "Zeitraum;Status;Schulen;Bescheide;Summe (Euro);Abgeschlossen am", lines[0])
+	assert.Contains(t, strings.Join(lines, "\n"), ";Ausgestellt;2 Schulen;1 Bescheid;310,00;")
+	assert.Contains(t, strings.Join(lines, "\n"), ";Abgeschlossen;")
+	lines = billingListCSV(t, f.traeger, f.office.token, careNoticeRunPath(run.ID, "/export"))
+	require.Len(t, lines, 2, "the header and the notice")
+	assert.Equal(t, "Nachname;Vorname;Schule;Art;Bescheid-Nr.;Zeitraum;Raten;Gesamtbetrag (Euro);Zu-/Abgang (Euro)", lines[0])
+	assert.Contains(t, lines[1], ";Bescheid;"+issued.Number+";")
+	spreadsheet := assertTraegerListFormats(t, f.traeger, f.office.token, careNoticeRunsPath+"/export", "jahresbescheide")
+	assertTraegerListNumbers(t, spreadsheet, map[string]string{"E7": "0", "E8": "310"})
+	spreadsheet = assertTraegerListFormats(t, f.traeger, f.office.token, careNoticeRunPath(run.ID, "/export"), "jahresbescheide-2030")
+	assertTraegerListNumbers(t, spreadsheet, map[string]string{"H7": "310"})
+	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.care_notice_run_events
+		WHERE run_id = ? AND action IN ('read', 'letter') AND details->'contract_ids' @> to_jsonb(?::bigint)`, run.ID, contract).
+		Scan(ctx, &reads))
+	assert.Equal(t, 6, reads, "every download of the notices names the contract in the trail")
 }
 
 // A month a monthly invoice already bills is not assessed again.
@@ -266,6 +287,8 @@ func TestCareNoticeChangeAmendsTheIssuedNotice(t *testing.T) {
 	released := f.releaseNoticeRun(t, preview)
 	require.Len(t, released.Notices, 1)
 	assert.Equal(t, "MB-2030-0002", released.Notices[0].Number)
+	spreadsheet := assertTraegerListFormats(t, f.traeger, f.office.token, careNoticeRunPath(released.ID, "/export"), "jahresbescheide-2030")
+	assertTraegerListNumbers(t, spreadsheet, map[string]string{"H7": "219", "I7": "-91"})
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careNoticeRunPath(released.ID, ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code)
 

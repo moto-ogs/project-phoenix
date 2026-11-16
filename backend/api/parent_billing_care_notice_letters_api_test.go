@@ -136,6 +136,15 @@ func TestCareNoticeOriginalStaysByteIdenticalAfterEveryLaterChange(t *testing.T)
 		Scan(context.Background(), &stored))
 	assert.Equal(t, stored, original, "the download is the stored PDF")
 
+	// #4718: the mail list as a file, read like the page.
+	lines := billingListCSV(t, f.traeger, f.office.token, careNoticeRunPath(run.ID, "/letters/export"))
+	require.Len(t, lines, 2, "the header and the notice")
+	assert.Equal(t, "Nachname;Vorname;Schule;Art;Bescheid-Nr.;Empfänger;E-Mail;Gesamtbetrag (Euro);Original;An die Familie;Gesendet am", lines[0])
+	assert.Contains(t, lines[1], ";Gespeichert;Nicht gesendet;–")
+	spreadsheet := assertTraegerListFormats(t, f.traeger, f.office.token, careNoticeRunPath(run.ID, "/letters/export"),
+		"bescheid-versand-"+strconv.FormatInt(run.ID, 10))
+	assertTraegerListNumbers(t, spreadsheet, map[string]string{"H7": "310"})
+
 	// Letterhead, template, address, contract and bank account change afterwards.
 	rec = traegerJSON(t, f.traeger, administration.token, http.MethodPut, "/traeger/settings/values/"+configModels.KeyBrandingLetterheadText,
 		map[string]any{"value": "Neuer Träger e.V.\nNeue Straße 1\n75175 Pforzheim"})
@@ -374,6 +383,7 @@ func TestCareNoticeLettersNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 	routes := []struct{ method, path string }{
 		{http.MethodGet, "/letters"}, {http.MethodPost, "/letters"}, {http.MethodGet, "/letters/print"},
 		{http.MethodPost, "/letters/mail"}, {http.MethodGet, notice + "/pdf"}, {http.MethodPost, notice + "/mail"},
+		{http.MethodGet, "/export"}, {http.MethodGet, "/letters/export"},
 	}
 	stranger := newTraegerOffice(t, f.db, f.traeger, "Träger Bescheid Fremd", identityaccess.TraegerRoleBilling)
 	for _, route := range routes {
@@ -383,9 +393,12 @@ func TestCareNoticeLettersNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, rec.Code, "%s %s of another Träger: %s", route.method, route.path, rec.Body.String())
 	}
 	assert.False(t, noticeLetters(t, f, run.ID).Notices[0].HasLetter, "nothing changed through the refused routes")
+	rec := traegerJSON(t, f.traeger, administration.token, http.MethodGet, careNoticeRunsPath+"/export", nil)
+	assert.Equal(t, http.StatusForbidden, rec.Code, "the file of the runs without the right: %s", rec.Body.String())
+	assert.Len(t, billingListCSV(t, f.traeger, stranger.token, careNoticeRunsPath+"/export"), 1, "the file of another Träger holds no run")
 
 	open := f.startNoticeRun(t, "2030-10-01", "")
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(open.ID, "/letters"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(open.ID, "/letters"), nil)
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.billing_run_not_released")
 }

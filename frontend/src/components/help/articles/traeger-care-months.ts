@@ -63,7 +63,8 @@ export function traegerCareMonthsTopic(): HelpTopic {
         description:
           "Sie können eine Rechnung aus diesem Lauf nehmen. Sie kommt im nächsten Lauf dieses Monats wieder. Hat ein Kind eine Rechnung für die Betreuung und eine eigene `Mensa-Rechnung`, schließen Sie jede für sich aus.",
         steps: [
-          "Wählen Sie bei `Monatslauf` den Knopf `Prüfliste` und dann `Excel` oder `CSV`. Die Liste hat je Position eine Zeile. Rechnungsnummern stehen noch nicht darin.",
+          "Wählen Sie bei `Monatslauf` den Knopf `Prüfliste` und dann `PDF`, `Excel` oder `CSV`. Die Liste hat je Position eine Zeile. Rechnungsnummern stehen noch nicht darin.",
+          "Nach der Freigabe heißt der Knopf bei `Monatslauf` `Herunterladen`. Die Datei enthält alle Rechnungen des Laufs mit ihren Nummern.",
           "Stimmt eine Rechnung noch nicht, wählen Sie in ihrer Zeile das Menü mit den drei Punkten und dann `Ausschließen`.",
           "Prüfen Sie im Fenster, welche Rechnung Sie ausschließen. Dort steht zum Beispiel `Mensa-Rechnung` und darunter, ob die Betreuungsrechnung des Kindes im Lauf bleibt. Steht die Mensa auf der Rechnung der Betreuung, wird sie mit ausgeschlossen.",
           "Schreiben Sie bei `Grund`, warum, zum Beispiel „Kündigung wird noch geprüft“. Wählen Sie `Ausschließen`.",
@@ -150,6 +151,13 @@ export function traegerCareMonthsTopic(): HelpTopic {
           "Wurde die Rechnung weder gesendet noch zum Drucken heruntergeladen, bekommt die Familie kein Storno. Sie sieht nichts davon.",
           "Wählen Sie in der Meldung über den Rechnungen `Neu ausstellen`. Ein passender Prüflauf öffnet sich, sonst ein neuer Lauf. Ein neuer Lauf enthält nur Schulen mit noch offenen Stornos. Geben Sie ihn frei und senden Sie das neue Schreiben. Verteilen sich die Stornos auf mehrere Prüfläufe, wiederholen Sie `Neu ausstellen`. Sind alle Rechnungen neu ausgestellt, verschwindet die Meldung im alten Lauf.",
           "Die neue Rechnung übernimmt die Änderungen der stornierten Rechnung, zum Beispiel einen geänderten Betrag oder Empfänger. Im Verlauf steht dann `Übernommen aus` mit der alten Nummer. Passt eine Änderung nicht mehr, nehmen Sie sie dort zurück.",
+        ],
+      },
+      {
+        title: "Liste der Monatsläufe herunterladen",
+        steps: [
+          "Wählen Sie `Abrechnungsläufe` und dann den Reiter `Monatsbeiträge`.",
+          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Monatsläufe.",
         ],
       },
     ],

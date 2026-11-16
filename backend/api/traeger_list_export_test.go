@@ -3,15 +3,55 @@ package api
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/csv"
 	"encoding/xml"
-
+	"net/http/httptest"
+	"strings"
 	"testing"
 
-	traegerViewHTTP "github.com/moto-ogs/project-phoenix/modules/traegerview/http"
-
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestTruncatedTraegerListCSV(t *testing.T) {
+	t.Parallel()
+	table := common.ListTable{
+		Title: "Exportprotokoll", Filename: "exportprotokoll", Filters: []string{"Alle Schulen"},
+		Columns: []common.ListColumn{{ID: "number", Label: "Nr."}},
+		Rows:    [][]string{{"3"}, {"2"}},
+	}
+	common.MarkListTruncated(&table, 2)
+	for _, format := range []string{"pdf", "xlsx"} {
+		_, err := traegerListRenderer(func(doc SimpleListDocument, _, _ string) (SimpleListFile, error) {
+			assert.Equal(t, []string{"Alle Schulen", "Gekürzt: nur die neuesten 2 Einträge"}, doc.Filters)
+			if format == "pdf" {
+				assert.Equal(t, []SimpleListColumn{{ID: "number", Label: "Nr."}}, doc.Columns)
+				assert.Equal(t, [][]string{{"3"}, {"2"}}, doc.Rows)
+			} else {
+				assert.Equal(t, []SimpleListColumn{{ID: "number", Label: "Nr."}, {ID: "truncation_note", Label: "Hinweis"}}, doc.Columns)
+				assert.Equal(t, table.Rows, doc.Rows)
+			}
+			return SimpleListFile{}, nil
+		})(table, format)
+		require.NoError(t, err)
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/export", nil)
+	format, err := common.ParseListFormat(req)
+	require.NoError(t, err)
+	common.WriteList(rec, req, traegerListRenderer(NewSimpleListRenderer()), format, table)
+	require.Equal(t, 200, rec.Code)
+	reader := csv.NewReader(strings.NewReader(strings.TrimPrefix(rec.Body.String(), "\xEF\xBB\xBF")))
+	reader.Comma = ';'
+	rows, err := reader.ReadAll()
+	require.NoError(t, err, "CSV keeps a header and equally sized data rows")
+	assert.Equal(t, [][]string{
+		{"Nr.", "Hinweis"},
+		{"3", "Gekürzt: nur die neuesten 2 Einträge"},
+		{"2", "Gekürzt: nur die neuesten 2 Einträge"},
+	}, rows)
+}
 
 // The PDF of a Träger list names the values of the whole list once in its
 // head, so it leaves out the columns that repeat them on every row; Excel
@@ -51,9 +91,9 @@ func TestTraegerListPDFLeavesOutSpreadsheetOnlyColumns(t *testing.T) {
 
 func TestTraegerListExcelNumericColumns(t *testing.T) {
 	t.Parallel()
-	file, err := traegerViewListRenderer(NewSimpleListRenderer())(traegerViewHTTP.ListTable{
+	file, err := traegerListRenderer(NewSimpleListRenderer())(common.ListTable{
 		Title: "Auswertung", Filename: "auswertung",
-		Columns: []traegerViewHTTP.ListColumn{
+		Columns: []common.ListColumn{
 			{ID: "id", Label: "ID"}, {ID: "name", Label: "Name"},
 			{ID: "count", Label: "Kinder", Numeric: true}, {ID: "average", Label: "Schnitt", Numeric: true},
 		},
@@ -90,4 +130,30 @@ func TestTraegerListExcelNumericColumns(t *testing.T) {
 	}
 	assert.Empty(t, numbers, "all numeric cells must exist")
 	assert.Empty(t, texts, "all text cells must exist")
+}
+
+// Assert stored values and cell types, since SUM ignores text cells.
+func assertTraegerListNumbers(t *testing.T, data []byte, numbers map[string]string) {
+	t.Helper()
+	archive, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	require.NoError(t, err)
+	sheet, err := archive.Open("xl/worksheets/sheet2.xml")
+	require.NoError(t, err)
+	defer func() { require.NoError(t, sheet.Close()) }()
+	var worksheet struct {
+		Cells []struct {
+			Reference string `xml:"r,attr"`
+			Type      string `xml:"t,attr"`
+			Value     string `xml:"v"`
+		} `xml:"sheetData>row>c"`
+	}
+	require.NoError(t, xml.NewDecoder(sheet).Decode(&worksheet))
+	for _, cell := range worksheet.Cells {
+		if value, ok := numbers[cell.Reference]; ok {
+			assert.Empty(t, cell.Type, "numeric cell: %s", cell.Reference)
+			assert.Equal(t, value, cell.Value, cell.Reference)
+			delete(numbers, cell.Reference)
+		}
+	}
+	assert.Empty(t, numbers, "all numeric cells must exist")
 }
