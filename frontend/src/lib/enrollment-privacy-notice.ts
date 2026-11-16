@@ -7,8 +7,16 @@ export const ENROLLMENT_PRIVACY_NOTICE_TEXT_KEY = "enrollment.legal_dsgvo_text";
 export const ENROLLMENT_NOTIFICATION_EMAILS_KEY =
   "enrollment.notification_emails";
 
-/** The settings link that opens the privacy notice of the enrollment form. */
-export const ENROLLMENT_PRIVACY_NOTICE_SETTINGS_PATH = `/settings?tab=enrollment&highlight=${ENROLLMENT_PRIVACY_NOTICE_TEXT_KEY}`;
+/**
+ * The settings link that opens the privacy notice of the enrollment form. It
+ * highlights the switch, not the text: the text field stays hidden while the
+ * switch is off, and switching it on asks for the text.
+ */
+export const ENROLLMENT_PRIVACY_NOTICE_SETTINGS_PATH = `/settings?tab=enrollment&highlight=${ENROLLMENT_PRIVACY_NOTICE_SWITCH_KEY}`;
+
+/** Names who may write the notice, for people who may not. */
+export const ENROLLMENT_PRIVACY_NOTICE_WHO_ACTS =
+  "Eintragen kann sie eine Person mit dem Recht „Alle Einstellungen der Schule ändern“.";
 
 export interface EnrollmentPrivacyNoticeState {
   readonly enrollmentEnabled: boolean;

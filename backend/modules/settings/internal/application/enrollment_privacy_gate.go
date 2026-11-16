@@ -21,10 +21,14 @@ import (
 // therefore not blocked; the settings screen keeps warning the school while
 // enrollment runs without one.
 //
-// No advisory lock is taken: the notice writes cannot take one (ADR 0086 §3),
-// so a lock here would order nothing. Flushing the request cache is the
-// freshness barrier the Lock* helpers otherwise provide, so the check reads
-// committed values rather than memoized pre-write ones.
+// No advisory lock is taken, deliberately against the Lock* rule of
+// settings-system.md: the notice keys may be written by the Träger in its own
+// transaction (ADR 0086 §3), so no school lock could order those writes. The
+// check therefore cannot keep a concurrent removal of the notice out; such a
+// race ends in the state the warning already covers (enrollment on, notice
+// gone), never in an invariant the rest of the system relies on. Flushing the
+// request cache only keeps this read from replaying values memoized earlier
+// in the same request; it is no barrier against uncommitted writers.
 func (s *settingsService) validateEnrollmentPrivacyNotice(ctx context.Context, key string, value any) error {
 	enabled, ok := value.(bool)
 	if !ok || !enabled {

@@ -48,6 +48,7 @@ import {
 } from "~/lib/traeger-payment-text";
 import { textTooLong } from "~/lib/text-length";
 import { Switch } from "~/components/ui/switch";
+import { ENROLLMENT_ENABLED_KEY } from "~/lib/enrollment-privacy-notice";
 import { NumberField } from "./fields/number-field";
 import { SettingsTimeField } from "./fields/time-field";
 import { DateField } from "./fields/date-field";
@@ -822,7 +823,7 @@ export function SettingsField({
         return;
       }
       if (
-        setting.key === "enrollment.enabled" &&
+        setting.key === ENROLLMENT_ENABLED_KEY &&
         value === true &&
         onEnrollmentEnable
       ) {

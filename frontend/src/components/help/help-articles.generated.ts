@@ -2963,7 +2963,7 @@ export const enrollmentSetupTopic = function enrollmentSetupTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Beim Einschalten steht `Zuerst die Datenschutzinformation eintragen`? Dann fehlt der Text oder sein Schalter ist aus. Wählen Sie `Zur Datenschutzinformation`. Den Text darf nur eintragen, wer alle Einstellungen der Schule ändern darf.",
-      "Oben steht `Datenschutzinformation fehlt`? Ihre Online-Anmeldung läuft schon, aber Eltern sehen keine Datenschutzinformation. Das Formular bleibt erreichbar. Tragen Sie die Datenschutzinformation ein. Dann verschwindet der Hinweis.",
+      "Oben steht `Datenschutzinformation fehlt`? Ihre Online-Anmeldung läuft schon, aber Eltern sehen keine Datenschutzinformation. Das Formular bleibt erreichbar. Schalten Sie unter „Rechtstexte“ die Datenschutzinformation ein und tragen Sie den Text ein. Dann verschwindet der Hinweis.",
       "Beim Beenden nennt moto Kinder, deren Betreuung nicht beendet werden kann? Wählen Sie unter diesen Kindern `Aus Auswahl nehmen`. Danach können Sie die Betreuung der übrigen Kinder erneut prüfen und beenden.",
       "Der Überblick sagt `Noch keine Anmeldephase`? Dann legen Sie zuerst eine Phase an.",
       "Auf `Betreuungsangebote` steht `Erst eine Anmeldephase anlegen`? Dann fehlt die Phase noch. Angebote gibt es nur innerhalb einer Phase.",

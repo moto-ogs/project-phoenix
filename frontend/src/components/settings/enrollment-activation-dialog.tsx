@@ -11,6 +11,7 @@ import {
   ENROLLMENT_ENABLED_KEY,
   ENROLLMENT_NOTIFICATION_EMAILS_KEY,
   ENROLLMENT_PRIVACY_NOTICE_SETTINGS_PATH,
+  ENROLLMENT_PRIVACY_NOTICE_WHO_ACTS,
 } from "~/lib/enrollment-privacy-notice";
 import { createLogger } from "~/lib/logger";
 import { fetchSchoolContactEmail } from "~/lib/settings-api";
@@ -69,13 +70,15 @@ function MissingNoticeStep({ onClose }: Readonly<{ onClose: () => void }>) {
       confirmText="Zur Datenschutzinformation"
       confirmTooltip="Öffnet die Datenschutzinformation unter „Rechtstexte“."
       isConfirmDisabled={!canWriteNotice}
-      confirmDisabledReason="Eintragen kann sie eine Person mit dem Recht „Alle Einstellungen der Schule ändern“."
+      confirmDisabledReason={ENROLLMENT_PRIVACY_NOTICE_WHO_ACTS}
       cancelText="Abbrechen"
     >
       <p className="text-sm text-gray-600">
         Eltern müssen bei der Anmeldung eine Datenschutzinformation lesen. Sie
-        fehlt noch. Tragen Sie sie unter „Rechtstexte“ ein und schalten Sie sie
-        an. Danach können Sie die Online-Anmeldung einschalten.
+        fehlt noch.{" "}
+        {canWriteNotice
+          ? "Schalten Sie unter „Rechtstexte“ die Datenschutzinformation ein und tragen Sie den Text ein. Danach können Sie die Online-Anmeldung einschalten."
+          : ENROLLMENT_PRIVACY_NOTICE_WHO_ACTS}
       </p>
     </ConfirmationModal>
   );
@@ -121,11 +124,13 @@ function RecipientsStep({
     errors.clear();
     setSaving(true);
     try {
+      // Switch on first: when the server refuses (the notice went missing
+      // meanwhile), no recipient change is left behind half saved.
+      await onSave(ENROLLMENT_ENABLED_KEY, true);
       const next = recipients.trim();
       if (next !== currentRecipients.trim()) {
         await onSave(ENROLLMENT_NOTIFICATION_EMAILS_KEY, next);
       }
-      await onSave(ENROLLMENT_ENABLED_KEY, true);
       toastSuccess("Die Online-Anmeldung ist eingeschaltet.");
       onClose();
     } catch (error) {

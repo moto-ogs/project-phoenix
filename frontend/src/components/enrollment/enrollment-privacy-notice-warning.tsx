@@ -6,6 +6,7 @@ import { ButtonLink } from "~/components/ui/button";
 import { hasPermission } from "~/lib/auth-utils";
 import {
   ENROLLMENT_PRIVACY_NOTICE_SETTINGS_PATH,
+  ENROLLMENT_PRIVACY_NOTICE_WHO_ACTS,
   type EnrollmentPrivacyNoticeState,
 } from "~/lib/enrollment-privacy-notice";
 import { useTenantAwarePath } from "~/lib/tenant-path";
@@ -33,8 +34,8 @@ export function EnrollmentPrivacyNoticeWarning({
       title="Datenschutzinformation fehlt"
       message={
         canWriteNotice
-          ? "Die Online-Anmeldung ist eingeschaltet. Eltern sehen dort aber keine Datenschutzinformation. Bitte tragen Sie sie ein und schalten Sie sie an."
-          : "Die Online-Anmeldung ist eingeschaltet. Eltern sehen dort aber keine Datenschutzinformation. Eintragen kann sie eine Person mit dem Recht „Alle Einstellungen der Schule ändern“."
+          ? "Die Online-Anmeldung ist eingeschaltet. Eltern sehen dort aber keine Datenschutzinformation. Schalten Sie unter „Rechtstexte“ die Datenschutzinformation ein und tragen Sie den Text ein."
+          : `Die Online-Anmeldung ist eingeschaltet. Eltern sehen dort aber keine Datenschutzinformation. ${ENROLLMENT_PRIVACY_NOTICE_WHO_ACTS}`
       }
       action={
         canWriteNotice ? (

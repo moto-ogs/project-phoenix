@@ -9,5 +9,5 @@
   "attendance_retention_below_visible": "Das Team sieht die Anwesenheit {visible_days} Tage zurück. Die Aufbewahrung muss mindestens so lang sein.",
   "module_requires": "{module} braucht das Modul {required}. Bitte buchen Sie zuerst {required}.",
   "module_required_by": "{module} kann nicht abbestellt werden, solange {dependents} gebucht ist. Bitte bestellen Sie zuerst {dependents} ab.",
-  "enrollment_privacy_notice_missing": "Die Online-Anmeldung braucht eine Datenschutzinformation. Tragen Sie sie unter „Rechtstexte“ ein und schalten Sie sie ein. Danach können Sie die Anmeldung einschalten."
+  "enrollment_privacy_notice_missing": "Die Online-Anmeldung braucht eine Datenschutzinformation. Schalten Sie unter „Rechtstexte“ die Datenschutzinformation ein und tragen Sie den Text ein. Danach können Sie die Online-Anmeldung einschalten."
 }

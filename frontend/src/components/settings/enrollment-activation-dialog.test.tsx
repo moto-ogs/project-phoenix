@@ -72,7 +72,7 @@ describe("EnrollmentActivationDialog (#7176)", () => {
     );
 
     expect(mocks.push).toHaveBeenCalledExactlyOnceWith(
-      "/settings?tab=enrollment&highlight=enrollment.legal_dsgvo_text",
+      "/settings?tab=enrollment&highlight=enrollment.legal_dsgvo_enabled",
     );
     expect(onClose).toHaveBeenCalled();
     expect(onSave).not.toHaveBeenCalled();
@@ -85,6 +85,11 @@ describe("EnrollmentActivationDialog (#7176)", () => {
     expect(
       screen.getByRole("button", { name: "Zur Datenschutzinformation" }),
     ).toHaveAttribute("aria-disabled", "true");
+    expect(
+      screen.getByRole("dialog", {
+        name: "Zuerst die Datenschutzinformation eintragen",
+      }),
+    ).toHaveTextContent(/Eintragen kann sie eine Person mit dem Recht/);
   });
 
   it("prefills the school's contact address and saves it before switching on", async () => {
@@ -96,8 +101,8 @@ describe("EnrollmentActivationDialog (#7176)", () => {
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(onSave.mock.calls).toEqual([
-      ["enrollment.notification_emails", "kontakt@schule.example"],
       ["enrollment.enabled", true],
+      ["enrollment.notification_emails", "kontakt@schule.example"],
     ]);
   });
 
@@ -114,8 +119,8 @@ describe("EnrollmentActivationDialog (#7176)", () => {
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(onSave.mock.calls).toEqual([
-      ["enrollment.notification_emails", ""],
       ["enrollment.enabled", true],
+      ["enrollment.notification_emails", ""],
     ]);
   });
 
@@ -140,6 +145,7 @@ describe("EnrollmentActivationDialog (#7176)", () => {
       ),
     ).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
+    expect(onSave).toHaveBeenCalledExactlyOnceWith("enrollment.enabled", true);
   });
 });
 

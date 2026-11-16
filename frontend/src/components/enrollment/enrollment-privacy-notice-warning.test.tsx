@@ -40,7 +40,7 @@ describe("EnrollmentPrivacyNoticeWarning", () => {
       screen.getByRole("link", { name: "Zur Datenschutzinformation" }),
     ).toHaveAttribute(
       "href",
-      "/demo/settings?tab=enrollment&highlight=enrollment.legal_dsgvo_text",
+      "/demo/settings?tab=enrollment&highlight=enrollment.legal_dsgvo_enabled",
     );
     expect(screen.queryByRole("button", { name: /schließen/i })).toBeNull();
   });

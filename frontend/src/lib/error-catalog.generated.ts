@@ -1287,7 +1287,7 @@ export const ERROR_CATALOG = {
       "settings.booking_authority_blocked":
         "Der Buchungsmodus wurde nicht aktiviert: Für mindestens ein betreutes Kind ist kein Betreuungstag gebucht. Bitte prüfen Sie die Auswirkungen erneut.",
       "settings.enrollment_privacy_notice_missing":
-        "Die Online-Anmeldung braucht eine Datenschutzinformation. Tragen Sie sie unter „Rechtstexte“ ein und schalten Sie sie ein. Danach können Sie die Anmeldung einschalten.",
+        "Die Online-Anmeldung braucht eine Datenschutzinformation. Schalten Sie unter „Rechtstexte“ die Datenschutzinformation ein und tragen Sie den Text ein. Danach können Sie die Online-Anmeldung einschalten.",
       "settings.invalid_value":
         "Der Wert für {object} ist nicht erlaubt. Bitte prüfen Sie die Eingabe.",
       "settings.managed_by_upload":
