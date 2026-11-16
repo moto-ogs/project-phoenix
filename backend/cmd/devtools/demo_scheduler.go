@@ -279,6 +279,9 @@ func (s *demoScheduler) seedAndTick(ctx context.Context, order DemoSchoolOrder) 
 			// The broken attempt keeps its school and accounts; move both aside.
 			ReplaceAbandoned: order.Attempts > 1,
 			DeferHistory:     true,
+			// Every order has a Träger of its own (ADR 0271). A repeated
+			// attempt finds it again and adds its school beside the abandoned one.
+			TraegerSlug: demoTraegerSlug(order.Slug), OwnTraeger: true,
 		}
 		var err error
 		if deferred, err = provisionDemoSchool(ctx, s.schools, s.adapter, options); err != nil {
@@ -299,6 +302,16 @@ func (s *demoScheduler) seedAndTick(ctx context.Context, order DemoSchoolOrder) 
 		return nil, err
 	}
 	return deferred, s.schools.FinishDemoSchoolOrder(ctx, order.Slug, school.visitorID, school.visitorParentID)
+}
+
+// demoTraegerSlug is the slug of the order's own Demo-Träger (ADR 0271). It
+// derives from the order alone, so every attempt seeds the same Träger.
+func demoTraegerSlug(slug string) string {
+	traeger := "traeger-" + slug
+	if len(traeger) > 63 {
+		traeger = traeger[:63]
+	}
+	return traeger
 }
 
 // demoAccountScope is what the school's account emails and usernames carry.

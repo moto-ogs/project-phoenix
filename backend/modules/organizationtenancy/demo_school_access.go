@@ -39,6 +39,9 @@ type DemoSchoolEntry struct {
 	SchoolID        int64
 	AccountID       int64
 	ParentAccountID int64
+	// TraegerID is the school's own Demo-Träger (ADR 0271), whose Träger-Büro
+	// the visitor may enter; zero for a school under the shared Demo-Träger.
+	TraegerID int64
 }
 
 // DemoSchoolAccess runs a visitor's demo school: one school ordered per
@@ -122,6 +125,11 @@ func (d DemoSchoolAccess) DemoSchoolEntry(ctx context.Context, slug string) (Dem
 	entry := DemoSchoolEntry{Exists: true, Status: DemoSchoolReady, SchoolID: school.ID}
 	if progress != nil {
 		entry.AccountID, entry.ParentAccountID = progress.VisitorAccountID, progress.VisitorParentAccountID
+		// Only a Träger of the order's own, never the shared one: its school
+		// must still belong to it.
+		if progress.TraegerID != 0 && progress.TraegerID == school.OrganizationID {
+			entry.TraegerID = progress.TraegerID
+		}
 	}
 	return entry, nil
 }

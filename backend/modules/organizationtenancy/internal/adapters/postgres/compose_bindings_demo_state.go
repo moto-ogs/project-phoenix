@@ -24,6 +24,12 @@ func (e DemoStateEngine) RememberDemoSchool(ctx context.Context, name string, st
 func (e DemoStateEngine) UpdateDemoSchool(ctx context.Context, name string, state organizationtenancy.DemoSchoolState) error {
 	return e.Store.Update(ctx, name, DemoState{TenantID: state.SchoolID, SeedJSON: string(state.SeedJSON), VisitorAccountID: state.VisitorAccountID, VisitorParentAccountID: state.VisitorParentAccountID})
 }
+func (e DemoStateEngine) RecordDemoTraeger(ctx context.Context, name string, traegerID int64) error {
+	return e.Store.RecordTraeger(ctx, name, traegerID)
+}
+func (e DemoStateEngine) RecordDemoSchool(ctx context.Context, name string, schoolID int64) error {
+	return e.Store.RecordSchool(ctx, name, schoolID)
+}
 func (e DemoStateEngine) WithDemoLease(ctx context.Context, name string, run func(context.Context) error) error {
 	acquired, err := e.Store.WithLease(ctx, name, run)
 	if err != nil {
