@@ -63,7 +63,11 @@ import { useBusyFocus } from "./hooks/useBusyFocus";
 import { useSheetAboveKeyboard } from "./hooks/useSheetAboveKeyboard";
 import type { FormModalPending } from "./use-form-modal-pending";
 import type { FormErrorInput } from "./form-error";
-import { OVERLAY_BACKDROP_TINT_CLASS, Z_LAYER } from "./overlay-styles";
+import {
+  OVERLAY_BACKDROP_BLUR_CLASS,
+  OVERLAY_BACKDROP_TINT_CLASS,
+  Z_LAYER,
+} from "./overlay-styles";
 import { isInsideModal, SHEET_SCOPE_PROPS, useOverlay } from "./overlay-stack";
 
 /**
@@ -228,6 +232,8 @@ const SlideOverOverlay = React.forwardRef<
     className={cn(
       `fixed inset-0 ${Z_LAYER.sheetBackdrop}`,
       OVERLAY_BACKDROP_TINT_CLASS,
+      // vaul slides for 500 ms; the blur waits for it.
+      `${OVERLAY_BACKDROP_BLUR_CLASS} [--moto-overlay-blur-delay:500ms]`,
       className,
     )}
     {...props}

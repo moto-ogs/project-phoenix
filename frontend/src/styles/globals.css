@@ -990,6 +990,33 @@ html[data-chat-page-lock] body {
   animation: fadeInUp 300ms ease-out forwards;
 }
 
+/* Der Weichzeichner hinter Dialogen, Seitenleisten und Schubladen
+   (`OVERLAY_BACKDROP_BLUR_CLASS`). Er setzt erst ein, wenn das Fenster
+   gelandet ist, und fällt beim Schließen sofort weg: Solange das Fenster
+   gleitet, müsste der Browser die ganze Seite in jedem Bild neu weichzeichnen
+   (#7252). Eine Animation statt eines Übergangs, weil sie auch beim ersten
+   Bild läuft: die Schubladen erscheinen schon mit `data-state="open"`. */
+.moto-overlay-blur[data-state="open"] {
+  /* `forwards`, nicht `both`: in der Wartezeit muss der Wert `none` sein.
+     Schon `blur(0px)` legt die teure Ebene an. */
+  animation: moto-overlay-blur 0s linear
+    var(--moto-overlay-blur-delay, var(--moto-modal-enter, 200ms)) forwards;
+}
+
+@keyframes moto-overlay-blur {
+  to {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+/* Glas für kleine, ruhende Flächen (Chips der Anmeldeseite): wenig Fläche,
+   nichts darunter bewegt sich. Nie auf Leisten über scrollendem Inhalt. */
+.moto-glass {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
 /* A short bar that fills once, before a redirect (invitation accepted). It
    slides in from the left; a growing width would cost a layout per frame. */
 @keyframes progressFill {
