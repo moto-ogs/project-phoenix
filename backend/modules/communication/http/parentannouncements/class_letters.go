@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -45,6 +44,9 @@ func (rs *Resource) SchoolRouter(protectedSchoolRoutes func(chi.Router, func(chi
 		write := common.RequiresPermission(permissions.ClassDayParentLetterWrite)
 		r.With(write, withTx).Get("/", rs.listClassLetters)
 		r.With(write, withTx).Post("/", rs.createClassLetter)
+		r.With(write).Get("/letter-placeholders", rs.letterPlaceholders)
+		// The preview shows only children of a class in the caller's reach.
+		r.With(write, withTx).Post("/letter-preview", rs.classLetterPreview)
 
 		// Reading, withdrawing and deleting the own letter needs no class
 		// reach: the letter stays the author's after the class moved on.
@@ -55,6 +57,7 @@ func (rs *Resource) SchoolRouter(protectedSchoolRoutes func(chi.Router, func(chi
 		own.Get("/{announcementId}/stats", rs.stats)
 		own.Get("/{announcementId}/recipients", rs.recipients)
 		own.Get("/{announcementId}/letter-status", rs.letterStatus)
+		own.Get("/{announcementId}/letters-pdf", rs.lettersPDF)
 		own.Get("/{announcementId}/declaration-status", rs.declarationStatus)
 		own.Get("/{announcementId}/declaration-export", rs.declarationExport)
 
@@ -130,9 +133,8 @@ func (rs *Resource) reachedClass(ctx context.Context, class string) (string, err
 	if err != nil {
 		return "", err
 	}
-	wanted := strings.TrimSpace(class)
 	for _, reached := range classes {
-		if strings.EqualFold(strings.TrimSpace(reached), wanted) {
+		if announcementService.SameSchoolClass(class, reached) {
 			return reached, nil
 		}
 	}
@@ -198,4 +200,22 @@ func renderClassLetterError(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 	common.RenderError(w, r, renderer)
+}
+
+// classLetterPreview fills a letter for one child of a class the caller
+// reaches (#4813); any other child of the school is not found.
+func (rs *Resource) classLetterPreview(w http.ResponseWriter, r *http.Request) {
+	if rs.Classes == nil {
+		renderClassLetterError(w, r, errClassLetterCaller)
+		return
+	}
+	classes, err := rs.Classes.MySchoolClasses(r.Context())
+	if err != nil {
+		renderClassLetterError(w, r, err)
+		return
+	}
+	if classes == nil {
+		classes = []string{} // no class in reach: no child to preview
+	}
+	rs.respondLetterPreview(w, r, classes)
 }

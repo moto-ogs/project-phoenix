@@ -26,5 +26,8 @@
   "staff_group_members_required": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "staff_group_too_large": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "parent_messaging_disabled": "Okul veli mesajlaşmasını kapattı. Bu şu anda mümkün değil.",
-  "message_send_conflict": "Bu mesaj daha önce farklı bilgilerle gönderildi. Lütfen sohbeti yenileyin."
+  "message_send_conflict": "Bu mesaj daha önce farklı bilgilerle gönderildi. Lütfen sohbeti yenileyin.",
+  "letter_placeholder_letter_only": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "letter_placeholder_unknown": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "letter_print_not_letter": "{object} değiştirilemedi. Güncel durumu kontrol edin."
 }

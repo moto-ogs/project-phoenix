@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	communicationCompose "github.com/moto-ogs/project-phoenix/modules/communication/composition"
 	announcement "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/devices"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/objects"
@@ -91,7 +92,7 @@ func newLocalePushFixtureFor(t *testing.T, locales []string, perLocale int, sche
 	require.NoError(t, err)
 	service, err := owners.BuildParentAnnouncements(owners.RootEnvironment{Logger: slog.Default(), Links: owners.ServiceLinks{ParentsURL: "http://localhost"}},
 		settings.Settings, delivery.EmailOutbox, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes,
-		owners.DeliveryNotifications{Notifier: notifier}, repos.MessagingRepositories, files)
+		owners.DeliveryNotifications{Notifier: notifier}, repos.MessagingRepositories, files, communicationCompose.ParentLetterPorts{})
 	require.NoError(t, err)
 
 	_, viewer := testpkg.CreateTestStaffWithAccount(t, db, "Teacher", "Locale")

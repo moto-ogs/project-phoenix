@@ -26,5 +26,8 @@
   "staff_group_members_required": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "staff_group_too_large": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "parent_messaging_disabled": "Школа вимкнула повідомлення для батьків. Зараз це неможливо.",
-  "message_send_conflict": "Це повідомлення вже надіслано з іншими даними. Оновіть чат."
+  "message_send_conflict": "Це повідомлення вже надіслано з іншими даними. Оновіть чат.",
+  "letter_placeholder_letter_only": "Не вдалося зберегти: {object}. Перевірте введені дані.",
+  "letter_placeholder_unknown": "Не вдалося зберегти: {object}. Перевірте введені дані.",
+  "letter_print_not_letter": "Не вдалося змінити: {object}. Перевірте поточний стан."
 }

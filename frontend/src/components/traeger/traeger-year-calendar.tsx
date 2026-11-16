@@ -7,7 +7,9 @@
  * Trägers zu haben. Der Kit hat Datumsauswahlen, aber keine Jahresansicht,
  * die nur liest; deshalb gibt es diese Komponente. Sie ist reine Anzeige:
  * kein Tag ist anklickbar, der Tooltip und der vorgelesene Text nennen,
- * was an dem Tag ist.
+ * was an dem Tag ist. Feiertag und Schließtag unterscheiden sich nicht nur
+ * in der Farbe, sondern auch in der Form (#7114, WCAG 1.4.1): ein Feiertag
+ * ist ein Kreis, ein Schließtag ein umrandetes Quadrat, wie in der Legende.
  */
 
 import { useMemo } from "react";
@@ -91,7 +93,7 @@ export function TraegerYearCalendar({
             key: "closing",
             label: "Schließtag des Trägers",
             color: LOCATION_COLORS.SCHOOLYARD,
-            variant: "dot",
+            variant: "square",
           },
         ]}
       />
@@ -129,14 +131,16 @@ export function TraegerYearCalendar({
                     aria-label={label}
                     aria-hidden={label ? undefined : true}
                     role={label ? "img" : undefined}
+                    data-mark={mark?.kind}
                     className={cn(
-                      "flex h-7 items-center justify-center rounded-md text-xs tabular-nums",
+                      "mx-auto flex size-7 items-center justify-center text-xs tabular-nums",
+                      !mark && "rounded-md",
                       !mark && day.weekend && "bg-gray-50 text-gray-500",
                       !mark && !day.weekend && "text-gray-700",
                       mark?.kind === "holiday" &&
-                        "bg-moto-blue-soft text-moto-blue-strong font-semibold",
+                        "bg-moto-blue-soft text-moto-blue-strong rounded-full font-semibold",
                       mark?.kind === "closing" &&
-                        "bg-moto-orange-soft text-moto-orange-strong font-semibold",
+                        "bg-moto-orange-soft text-moto-orange-strong border-moto-orange rounded-sm border-2 font-semibold",
                       day.iso === todayISO && "ring-1 ring-gray-900",
                     )}
                   >

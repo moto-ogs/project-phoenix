@@ -23,7 +23,7 @@ func (f staffPushRouterFunc) Notify(ctx context.Context, event deliveryCompose.N
 	return f(ctx, event)
 }
 
-func TestStaffPushDropsDeclinesAndKeepsTheRest(t *testing.T) {
+func TestStaffPushDropsDeclinesFromThePushOnly(t *testing.T) {
 	t.Parallel()
 	var sent deliveryCompose.NotificationEvent
 	notifier := StaffPushNotifier{
@@ -38,7 +38,9 @@ func TestStaffPushDropsDeclinesAndKeepsTheRest(t *testing.T) {
 	}
 	push := StaffPush{TenantID: 7, Type: "staff_kind", IdempotencyKey: "k", Title: "T", AccountIDs: []int64{1, 2, 3}}
 	require.NoError(t, notifier.Notify(t.Context(), push))
-	assert.Equal(t, []int64{2, 3}, sent.Audience.StaffAccountIDs)
+	assert.Equal(t, []int64{1, 2, 3}, sent.Audience.StaffAccountIDs, "the feed reaches everyone (#7137)")
+	require.NotNil(t, sent.Feed)
+	assert.Equal(t, []int64{2, 3}, sent.Feed.PushAccountIDs, "the push drops the decline")
 	assert.Equal(t, push.TenantID, sent.Audience.TenantID)
 	assert.Equal(t, deliveryCompose.NotificationAudienceScope("staff"), sent.Audience.Scope)
 }

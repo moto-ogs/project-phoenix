@@ -17,7 +17,7 @@ type Letter struct {
 	// AccentColor is the sender's colour as #RRGGBB. Empty or unusable uses
 	// the renderer's ink.
 	AccentColor string
-	// Logo is a PNG or JPEG image; nil prints none.
+	// Logo is a PNG, JPEG or WebP image; nil prints none.
 	Logo []byte
 	// Sender is the letterhead, one line each. The first line is the
 	// sender's name and the return line of the address field.
@@ -35,6 +35,10 @@ type Letter struct {
 	Closing []string
 	// Footer is printed at the foot of every page, one line each.
 	Footer []string
+	// OnePage sets the body in smaller type, down to 8 points, until the
+	// letter fits on one page, as each child's letter of a dispatch must
+	// (#4813). A longer body continues on the next page in normal type.
+	OnePage bool
 }
 
 // LetterFact is a label with its value. Bold prints the line in the

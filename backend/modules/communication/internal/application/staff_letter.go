@@ -204,7 +204,15 @@ func (s *service) applyEmailOptOuts(ctx context.Context, a *StaffParentAnnouncem
 // as "versendet", because that one mail informed both. Hence the address-keyed
 // dedupe with a shared outbox id rather than a per-person send.
 func (s *service) queueLetterMails(ctx context.Context, a *StaffParentAnnouncement, recipients []*letterRecipient) error {
-	_, err := s.queueLetterMailsAs(ctx, a, recipients, publishLetterMailSpec(a))
+	spec := publishLetterMailSpec(a)
+	// A personalised letter (#4813) mails each address the letters of its
+	// own children; every other mail carries the one text.
+	letters, err := s.personalLetterBodies(ctx, a)
+	if err != nil {
+		return err
+	}
+	spec.letters = letters
+	_, err = s.queueLetterMailsAs(ctx, a, recipients, spec)
 	return err
 }
 
@@ -239,6 +247,7 @@ func (s *service) queueLetterMailsAs(ctx context.Context, a *StaffParentAnnounce
 		return 0, err
 	}
 	hasAttachment := s.hasAttachments(ctx, a.ID)
+	layout.letters, layout.childrenByAddress = spec.letters, addressChildren(recipients)
 
 	byAddress := make(map[string]*int64, len(recipients))
 	portalAccessByAddress := letterRecipientPortalAccess(recipients, a)

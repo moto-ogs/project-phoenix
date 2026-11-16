@@ -1,12 +1,12 @@
 "use client";
 
 import { EmptyState } from "~/components/ui/empty-state";
-import { InsetPanel } from "~/components/ui/inset-panel";
+import { PasswordRequirements } from "~/components/auth/password-requirements";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 // eslint-disable-next-line no-restricted-imports -- redirects target tenant root, not a tenant route helper
 import { useRouter } from "next/navigation";
 import { PORTAL_ROUTES } from "~/lib/portal-paths";
-import { Check, Circle } from "lucide-react";
+import { Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { FieldLabel } from "~/components/ui/field-label";
 import { Input } from "~/components/ui/input";
@@ -269,39 +269,13 @@ export function GuardianInvitationAcceptForm({ token, invitation }: Props) {
         />
       </div>
 
-      <InsetPanel framed>
-        <p className="text-xs font-medium text-gray-700">
-          {t("requirementsTitle")}
-        </p>
-        <div className="mt-3 grid gap-1.5 sm:grid-cols-2 sm:gap-2">
-          {requirementStatus.map((requirement) => (
-            <div
-              key={requirement.label}
-              className="flex items-center gap-2 text-sm"
-            >
-              <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                  requirement.met
-                    ? "border-moto-green bg-moto-green/10 text-moto-green-strong"
-                    : "border-gray-300 bg-white text-gray-500"
-                }`}
-                aria-hidden="true"
-              >
-                {requirement.met ? (
-                  <Check className="h-3.5 w-3.5" />
-                ) : (
-                  <Circle className="h-3.5 w-3.5" />
-                )}
-              </span>
-              <span
-                className={requirement.met ? "text-gray-700" : "text-gray-500"}
-              >
-                {requirement.label}
-              </span>
-            </div>
-          ))}
-        </div>
-      </InsetPanel>
+      <PasswordRequirements
+        size="md"
+        title={t("requirementsTitle")}
+        metLabel={t("requirementMet")}
+        unmetLabel={t("requirementUnmet")}
+        requirements={requirementStatus}
+      />
 
       <Button
         type="submit"

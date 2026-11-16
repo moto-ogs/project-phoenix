@@ -41,6 +41,12 @@ type projectionFeedAudienceReads interface {
 	Stats(ctx context.Context, schoolID, announcementID int64) (*parentaudience.ParentAnnouncementStats, error)
 }
 
+// projectionLetterChildren reads which own children's letters an account may
+// read (#4813); the projection answers in the shape Communication's port asks.
+type projectionLetterChildren interface {
+	PermittedLetterChildren(ctx context.Context, accountID int64, announcementIDs []int64) (map[int64][]int64, error)
+}
+
 type projectionPollAudienceReads interface {
 	AnswerableChildren(ctx context.Context, accountID int64, announcementIDs []int64) ([]*parentaudience.ParentAnnouncementPollChild, error)
 	AccountMayAnswerForStudent(ctx context.Context, schoolID, announcementID, accountID, studentID int64) (bool, error)
@@ -51,6 +57,7 @@ type projectionPollAudienceReads interface {
 }
 
 type communicationAnnouncementAudience struct {
+	projectionLetterChildren
 	source projectionAnnouncementAudienceReads
 }
 
@@ -192,6 +199,7 @@ func (r communicationAnnouncementAudience) Stats(ctx context.Context, schoolID, 
 	rows, err := r.source.Stats(ctx, schoolID, announcementID)
 	return (*communication.PortalAnnouncementStats)(rows), err
 }
+
 func (r communicationAnnouncementAudience) AnswerableChildren(ctx context.Context, accountID int64, announcementIDs []int64) ([]*communication.PortalAnnouncementPollChild, error) {
 	rows, err := r.source.AnswerableChildren(ctx, accountID, announcementIDs)
 	return mapProjectionRows(rows, func(row *parentaudience.ParentAnnouncementPollChild) *communication.PortalAnnouncementPollChild {

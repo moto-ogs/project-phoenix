@@ -1,7 +1,7 @@
 "use client";
 
 import { SectionLabel } from "~/components/ui/section-label";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { Hammer, Quote, ShieldCheck, UsersRound } from "lucide-react";
 import { cn } from "~/lib/utils";
@@ -300,16 +300,9 @@ function AuthTestimonialPanel({
         : motoTestimonialPanelCopy)
     );
   }, [testimonialPanelCopy, variant]);
+  // Kein automatischer Wechsel (#7114, WCAG 2.2.2): wer liest, bestimmt
+  // selbst, wann der nächste Bericht kommt.
   const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => {
-    if (items.testimonials.length <= 1) return;
-    const interval = window.setInterval(() => {
-      setActiveIndex((current) => (current + 1) % items.testimonials.length);
-    }, 11000);
-
-    return () => window.clearInterval(interval);
-  }, [items.testimonials.length]);
 
   if (items.testimonials.length === 0) {
     return null;
@@ -349,7 +342,10 @@ function AuthTestimonialPanel({
           ))}
         </div>
 
-        <div className="mt-7 flex items-center justify-center gap-2">
+        {/* Jeder Punkt hat eine Trefferfläche von mindestens 24 × 24 px
+            (WCAG 2.5.8): der Rand um den Strich gehört zum Knopf, die Farbe
+            füllt nur die Inhaltsfläche (`bg-clip-content`). */}
+        <div className="mt-7 flex items-center justify-center">
           {items.testimonials.map((item, index) => (
             <button
               key={`${item.author}-${item.metric}`}
@@ -361,7 +357,7 @@ function AuthTestimonialPanel({
               )}
               onClick={() => setActiveIndex(index)}
               className={cn(
-                "h-2.5 rounded-full transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                "box-content h-2.5 rounded-full bg-clip-content p-[7px] transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:ring-2 focus-visible:ring-gray-950 focus-visible:outline-none motion-reduce:transition-none",
                 index === activeIndex
                   ? "w-8 bg-gray-950"
                   : "w-2.5 bg-gray-300 hover:bg-gray-400",

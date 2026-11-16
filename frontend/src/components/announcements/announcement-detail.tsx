@@ -28,6 +28,9 @@ import {
   type SegmentedControlItem,
 } from "~/components/ui/segmented-control";
 import { LetterStatusPanel } from "~/components/announcements/letter-status-panel";
+import { LetterPrintButton } from "~/components/announcements/letter-print-button";
+import { LetterTemplateText } from "~/components/announcements/letter-template-text";
+import { hasLetterPlaceholders } from "~/lib/parent-letter-placeholders";
 import { DeclarationStatusPanel } from "~/components/announcements/declaration-status-panel";
 import type { Group } from "~/lib/api";
 import type { Activity } from "~/lib/activity-helpers";
@@ -590,6 +593,7 @@ export function AnnouncementDetail({
   const isPublished = announcement.status !== "draft";
   const poll = isPoll(announcement);
   const letter = isLetter(announcement);
+  const personalLetter = letter && hasLetterPlaceholders(announcement.body);
   const declaration = isDeclaration(announcement);
   const chips = targetChips(announcement.targets, groups, activities);
   const sender = classLetterSenderLine(announcement);
@@ -611,10 +615,22 @@ export function AnnouncementDetail({
                 : "Mitteilung"
         }
         icon={poll ? ListChecks : declaration ? FileCheck : Megaphone}
+        action={
+          letter && isPublished ? (
+            <LetterPrintButton
+              announcementId={announcement.id}
+              apiBase={apiBase}
+            />
+          ) : undefined
+        }
       >
-        <p className="text-sm leading-6 whitespace-pre-line text-gray-800">
-          <LinkifiedText text={announcement.body} />
-        </p>
+        {personalLetter ? (
+          <LetterTemplateText text={announcement.body} apiBase={apiBase} />
+        ) : (
+          <p className="text-sm leading-6 whitespace-pre-line text-gray-800">
+            <LinkifiedText text={announcement.body} />
+          </p>
+        )}
 
         {announcement.link_url && (
           <a

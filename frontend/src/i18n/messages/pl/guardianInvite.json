@@ -18,6 +18,8 @@
   "showPassword": "Pokaż hasło",
   "hidePassword": "Ukryj hasło",
   "requirementsTitle": "Wymagania dotyczące hasła",
+  "requirementMet": "spełnione",
+  "requirementUnmet": "jeszcze niespełnione",
   "submitting": "Przyjmowanie...",
   "submit": "Przyjmij zaproszenie",
   "passwordRules": {

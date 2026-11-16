@@ -27,6 +27,14 @@ type NotificationEvent struct {
 	SchoolDeepLink string
 	Data           map[string]string
 	Portal         string
+	// Feed also writes the event into the staff notification feed (#7137).
+	Feed *NotificationFeed
+}
+
+// NotificationFeed hands Delivery the feed side of a staff notice: the
+// audience gets a feed entry, PushAccountIDs a push as well (#7137).
+type NotificationFeed struct {
+	PushAccountIDs []int64
 }
 
 // Notification protocol vocabulary is independent of dispatch policy.

@@ -58,9 +58,12 @@ export const HEAD_CONTROL_HEIGHT_SELF = "h-10 max-sm:h-11";
  * ein `div` ist, wird `inline-flex`, damit die Text-Grundlinie keinen Abstand
  * unter den Knopf legt. Ein Menü hinter einem Textknopf („Herunterladen ⌄“)
  * steht in einer Hülle: Die Zeile ist voll, also füllt sein Knopf sie auch.
+ * Ein Symbolknopf in einer solchen Hülle (Pfeile der Tagesnavigation)
+ * behält sein Maß; voll gezogen schob er die Seite bei 320 px über den Rand
+ * (#7114, WCAG 1.4.10).
  */
 export const HEAD_ACTIONS_LAYOUT =
-  "[&>div[data-icon-only]]:inline-flex max-sm:contents max-sm:[&>*:not([data-icon-only])]:order-last max-sm:[&>*:not([data-icon-only])]:basis-full max-sm:[&>div:not([data-icon-only])>button]:w-full";
+  "[&>div[data-icon-only]]:inline-flex max-sm:contents max-sm:[&>*:not([data-icon-only])]:order-last max-sm:[&>*:not([data-icon-only])]:basis-full max-sm:[&>div:not([data-icon-only])>button:not([data-icon-only])]:w-full";
 
 // --- Marker -------------------------------------------------------------------
 

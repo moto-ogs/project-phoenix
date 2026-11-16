@@ -379,6 +379,8 @@ function NewAccountForm({
       />
       <PasswordRequirements
         title={tPassword("requirementsTitle")}
+        metLabel={tPassword("requirementMet")}
+        unmetLabel={tPassword("requirementUnmet")}
         requirements={requirements}
       />
       <Button

@@ -283,6 +283,12 @@ export const ERROR_CATALOG = {
         "Niemand in dieser Gruppe hat Eltern mit Zugang zu moto. Die Nachricht wurde nicht verschickt.",
       "communication.leadership_messages_unavailable":
         "Nachrichten nur an die Leitung sind hier zurzeit nicht möglich. Bitte schreiben Sie an das ganze OGS-Team.",
+      "communication.letter_placeholder_letter_only":
+        "Platzhalter gehen nur im Text eines Elternbriefs. Bitte nehmen Sie sie aus dem Betreff oder wählen Sie „Elternbrief“.",
+      "communication.letter_placeholder_unknown":
+        "Diese Platzhalter kennt moto nicht: {placeholders}. Bitte nehmen Sie nur Platzhalter aus der Liste.",
+      "communication.letter_print_not_letter":
+        "Nur ein veröffentlichter Elternbrief lässt sich drucken.",
       "communication.message_send_conflict":
         "Die Nachricht wurde bereits anders gesendet. Bitte laden Sie den Chat neu.",
       "communication.notifications_disabled":
@@ -2317,6 +2323,12 @@ export const ERROR_CATALOG = {
         "No child in this group has parents with access to moto. The message was not sent.",
       "communication.leadership_messages_unavailable":
         "Messages to the leadership only are not possible here right now. Please write to the whole OGS team.",
+      "communication.letter_placeholder_letter_only":
+        "Placeholders only work in the text of a parent letter. Please remove them from the subject or choose “Parent letter”.",
+      "communication.letter_placeholder_unknown":
+        "moto does not know these placeholders: {placeholders}. Please use only placeholders from the list.",
+      "communication.letter_print_not_letter":
+        "Only a published parent letter can be printed.",
       "communication.message_send_conflict":
         "This message was already sent differently. Please reload the chat.",
       "communication.parent_messaging_disabled":

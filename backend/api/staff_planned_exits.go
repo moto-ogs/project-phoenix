@@ -75,10 +75,11 @@ func PlannedStaffExitsJob(db transactionruntime.Database, hub *realtime.Hub, log
 	}
 }
 
-// staffExitNotifier tells the Leitung, the holders of users:delete who did
-// not switch the notice off, about a planned exit. The push lands on a lock
-// screen, so it names no person; the link opens the profile. A notice the
-// school's settings hold back now is reported unsent and repeated later.
+// staffExitNotifier tells the Leitung, the holders of users:delete, about a
+// planned exit: each gets a feed entry, and a push unless they switched the
+// notice off (#7137). The push lands on a lock screen, so it names no
+// person; the link opens the profile. A notice the school's settings hold
+// back now is reported unsent and repeated later, feed entry included.
 func staffExitNotifier(notifications owners.DeliveryNotifications, staff owners.StaffPermissionHolders, logger *slog.Logger) func(context.Context, staffoffboarding.ExitNotice) (bool, error) {
 	return func(ctx context.Context, notice staffoffboarding.ExitNotice) (bool, error) {
 		holders, err := staff.ListStaffWithPermission(ctx, permissions.UsersDelete)
@@ -89,14 +90,11 @@ func staffExitNotifier(notifications owners.DeliveryNotifications, staff owners.
 		if len(candidates) == 0 {
 			return true, nil
 		}
-		recipients, err := notifications.Preferences.FilterNotOptedOut(ctx, deliveryContract.NotificationStaffPlannedExit, candidates)
+		push, err := notifications.Preferences.FilterNotOptedOut(ctx, deliveryContract.NotificationStaffPlannedExit, candidates)
 		if err != nil {
 			return false, fmt.Errorf("filter staff exit recipients: %w", err)
 		}
-		if len(recipients) == 0 {
-			return true, nil
-		}
-		err = notifications.Notifier.Notify(ctx, staffExitEvent(notice, recipients))
+		err = notifications.Notifier.Notify(ctx, staffExitEvent(notice, candidates, push))
 		if errors.Is(err, deliveryCompose.ErrNotificationsDisabled) || errors.Is(err, deliveryCompose.ErrOutsideNotificationWindow) {
 			logger.Debug("planned staff exit notice held back",
 				"staff_id", notice.StaffID,
@@ -165,7 +163,7 @@ func isolatePlannedExit(ctx context.Context, fn func(context.Context) error) (fa
 	return failed, nil
 }
 
-func staffExitEvent(notice staffoffboarding.ExitNotice, recipients []int64) deliveryCompose.NotificationEvent {
+func staffExitEvent(notice staffoffboarding.ExitNotice, recipients, push []int64) deliveryCompose.NotificationEvent {
 	return deliveryCompose.NotificationEvent{
 		Type:           deliveryContract.NotificationStaffPlannedExit,
 		IdempotencyKey: notice.IdempotencyKey,
@@ -179,6 +177,7 @@ func staffExitEvent(notice staffoffboarding.ExitNotice, recipients []int64) deli
 			Scope:           deliveryCompose.NotificationAudienceScope("staff"),
 			StaffAccountIDs: recipients,
 		},
+		Feed: &deliveryContract.NotificationFeedDelivery{PushAccountIDs: push, HoldOutsideWindow: true},
 	}
 }
 

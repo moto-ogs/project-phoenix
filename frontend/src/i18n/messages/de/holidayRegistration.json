@@ -88,6 +88,11 @@
   "declarationText": "Mit Ihrem Namen geben Sie die Erklärungen oben ab.",
   "translationNote": "Übersetzung, es gilt der deutsche Text:",
   "captchaMissing": "Die Sicherheitsprüfung fehlt. Bitte laden Sie die Seite neu.",
+  "captchaHelp": {
+    "hint": "Die Sicherheitsprüfung lädt nicht oder bleibt stehen?",
+    "restart": "Prüfung neu starten",
+    "restartTooltip": "Lädt die Prüfung neu, Ihre Angaben bleiben erhalten."
+  },
   "toSummary": "Weiter zur Zusammenfassung",
   "checkFields": "Bitte prüfen Sie die markierten Felder.",
   "summaryTitle": "Bitte prüfen Sie Ihre Angaben",

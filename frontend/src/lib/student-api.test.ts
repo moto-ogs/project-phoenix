@@ -20,6 +20,7 @@ import {
   fetchStudentEnrollmentExtraFields,
   fetchStudentPrivacyConsent,
   fetchStudents,
+  fetchAllStudentNames,
   updateStudent,
   uploadStudentPhoto,
 } from "./student-api";
@@ -65,6 +66,60 @@ beforeEach(() => {
 });
 
 describe("fetchStudents", () => {
+  it("loads every names page for a complete child selection", async () => {
+    const first = buildStudent({ id: "1", name: "Lina Muster" });
+    const last = buildStudent({ id: "501", name: "Zoe Weber" });
+    mockSessionFetch
+      .mockResolvedValueOnce(
+        ok({
+          data: [first],
+          pagination: {
+            ...page,
+            page_size: 500,
+            total_pages: 2,
+            total_records: 501,
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        ok({
+          data: [last],
+          pagination: {
+            ...page,
+            current_page: 2,
+            page_size: 500,
+            total_pages: 2,
+            total_records: 501,
+          },
+        }),
+      );
+
+    await expect(fetchAllStudentNames()).resolves.toEqual([first, last]);
+    expect(mockSessionFetch).toHaveBeenCalledTimes(2);
+    for (const [index, expectedPage] of [
+      [0, "1"],
+      [1, "2"],
+    ] as const) {
+      const params = new URL(calledUrl(index), "http://localhost").searchParams;
+      expect(Object.fromEntries(params)).toEqual({
+        page: expectedPage,
+        page_size: "500",
+        view: "names",
+      });
+    }
+  });
+
+  it("reports a later names-page failure instead of returning a partial selection", async () => {
+    mockSessionFetch
+      .mockResolvedValueOnce(
+        ok({ data: [buildStudent()], pagination: { ...page, total_pages: 2 } }),
+      )
+      .mockResolvedValueOnce(
+        problem(503, { status: 503, code: "general.unavailable" }),
+      );
+    await expect(fetchAllStudentNames()).rejects.toBeInstanceOf(ApiError);
+  });
+
   it("answers the mapped students and the page of the route", async () => {
     const student = buildStudent({ id: "1", name: "Max Mustermann" });
     mockSessionFetch.mockResolvedValueOnce(

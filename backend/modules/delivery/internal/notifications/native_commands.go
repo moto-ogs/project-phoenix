@@ -68,5 +68,6 @@ func notificationEventFromPublic(event devices.NotificationEvent) Event {
 		SchoolDeepLink: event.SchoolDeepLink,
 		Data:           event.Data,
 		Portal:         event.Portal,
+		Feed:           event.Feed,
 	}
 }
