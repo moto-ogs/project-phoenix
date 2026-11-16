@@ -76,6 +76,10 @@ func NewConfig(dsn string) (*Config, error) {
 // application configuration and direct go test invocations must still provide
 // their configured DSN.
 func NewEphemeralLocalConfig() (*Config, error) {
+	password, err := ephemeralDatabasePassword()
+	if err != nil {
+		return nil, err
+	}
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, fmt.Errorf("reserve test database port: %w", err)
@@ -87,12 +91,30 @@ func NewEphemeralLocalConfig() (*Config, error) {
 
 	dsn := (&url.URL{
 		Scheme:   "postgres",
-		User:     url.UserPassword("postgres", "test"),
+		User:     url.UserPassword("postgres", password),
 		Host:     net.JoinHostPort("127.0.0.1", fmt.Sprintf("%d", port)),
 		Path:     "/phoenix_test",
 		RawQuery: "sslmode=disable",
 	}).String()
 	return NewConfig(dsn)
+}
+
+// ephemeralDatabasePassword uses the operating system's private temporary-file
+// name generation so a detached test run never needs a configured credential.
+func ephemeralDatabasePassword() (string, error) {
+	file, err := os.CreateTemp("", "phoenix-testdb-password-")
+	if err != nil {
+		return "", fmt.Errorf("create test database password: %w", err)
+	}
+	name := filepath.Base(file.Name())
+	if err := file.Close(); err != nil {
+		_ = os.Remove(file.Name())
+		return "", fmt.Errorf("close test database password file: %w", err)
+	}
+	if err := os.Remove(file.Name()); err != nil {
+		return "", fmt.Errorf("remove test database password file: %w", err)
+	}
+	return name, nil
 }
 
 // BaseTemplateName returns the database name from TEST_DB_DSN (e.g.

@@ -79,6 +79,9 @@ case "$*" in
     echo resolve-dsn >>"$TEST_CHANGED_CALL_LOG"
     echo postgres://postgres:fixture@127.0.0.1:15432/phoenix_test?sslmode=disable
     ;;
+  'run ./internal/testdb/cmd/bootstrap --stop-ephemeral '*)
+    echo stop-ephemeral >>"$TEST_CHANGED_CALL_LOG"
+    ;;
   'run ./internal/testdb/cmd/bootstrap')
     echo bootstrap >>"$TEST_CHANGED_CALL_LOG"
     if [ "${PHX_FIXTURE_BOOTSTRAP_STATUS:-0}" -ne 0 ]; then
@@ -304,7 +307,7 @@ while read -r os cpus ram workers; do
     fi
     expected=$'resolve-dsn\nbootstrap\n'"$(go_test_call "$wrapper" "$workers" ./probe)"
     if [ "$wrapper" = test-changed.sh ]; then expected+=$'\n'"$frontend_calls"; fi
-    assert_calls "$expected"$'\nsweep'
+    assert_calls "$expected"$'\nsweep\nstop-ephemeral'
   done
 done <<'EOF'
 Darwin 32 8 1
@@ -351,17 +354,17 @@ PHX_FIXTURE_PACKAGES=example.test/project/nested/test run_wrapper test-changed.s
 grep -q '^source:' "$call_log"
 
 run_wrapper test-backend.sh 0
-assert_calls $'resolve-dsn\nbootstrap\n'"$(go_test_call test-backend.sh 2 ./...)"$'\nsweep'
+assert_calls $'resolve-dsn\nbootstrap\n'"$(go_test_call test-backend.sh 2 ./...)"$'\nsweep\nstop-ephemeral'
 
 # A forced rebuild and a GOFLAGS-owned tool adapter retain native semantics.
 run_wrapper test-backend.sh 0 -a ./probe
-assert_calls $'resolve-dsn\nbootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' -a ./probe\nsweep'
+assert_calls $'resolve-dsn\nbootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' -a ./probe\nsweep\nstop-ephemeral'
 GOFLAGS='-toolexec=caller-tool' run_wrapper test-backend.sh 0 ./probe
-assert_calls $'resolve-dsn\nbootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' ./probe\nsweep'
+assert_calls $'resolve-dsn\nbootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' ./probe\nsweep\nstop-ephemeral'
 run_wrapper test-backend.sh 0 -toolexec caller-tool ./probe
-assert_calls $'resolve-dsn\nbootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' -toolexec caller-tool ./probe\nsweep'
+assert_calls $'resolve-dsn\nbootstrap\ntest:phoenix_test_template_regression:test -p 2 -parallel 8 -tags=testhooks '"$full_runtime_options"$' -toolexec caller-tool ./probe\nsweep\nstop-ephemeral'
 GOGC=123 run_wrapper test-backend.sh 0 ./probe
-expected=$'resolve-dsn\nbootstrap\n'"$(go_test_call test-backend.sh 2 ./probe)"$'\nsweep'
+expected=$'resolve-dsn\nbootstrap\n'"$(go_test_call test-backend.sh 2 ./probe)"$'\nsweep\nstop-ephemeral'
 assert_calls "$expected"
 
 # Defaults precede explicit CLI flags so users retain their existing override.
@@ -370,7 +373,7 @@ for gotestsum_status in 0 1; do
   run_wrapper test-backend.sh 0 -p 3 ./probe
   expected=$'resolve-dsn\nbootstrap\n'
   if [ "$gotestsum_status" -eq 0 ]; then expected+=$'gotestsum\n'; fi
-  expected+="$(go_test_call test-backend.sh 2 -p 3 ./probe)"$'\nsweep'
+  expected+="$(go_test_call test-backend.sh 2 -p 3 ./probe)"$'\nsweep\nstop-ephemeral'
   assert_calls "$expected"
 done
 unset PHX_FIXTURE_GOTESTSUM_STATUS
@@ -383,12 +386,12 @@ for wrapper in test-backend.sh test-changed.sh; do
 
   export PHX_FIXTURE_BOOTSTRAP_STATUS=5
   run_wrapper "$wrapper" 5 "${args[@]}"
-  assert_calls $'resolve-dsn\nbootstrap\nsweep'
+  assert_calls $'resolve-dsn\nbootstrap\nsweep\nstop-ephemeral'
   unset PHX_FIXTURE_BOOTSTRAP_STATUS
 
   export PHX_FIXTURE_TEST_STATUS=7 PHX_FIXTURE_SWEEP_STATUS=9
   run_wrapper "$wrapper" 7 "${args[@]}"
-  assert_calls $'resolve-dsn\nbootstrap\n'"$(go_test_call "$wrapper" 2 ./probe)"$'\nsweep'
+  assert_calls $'resolve-dsn\nbootstrap\n'"$(go_test_call "$wrapper" 2 ./probe)"$'\nsweep\nstop-ephemeral'
   if [ "$wrapper" = test-changed.sh ]; then
     grep -q 'go test failure summary' "$output_log"
     grep -q '^FAIL github.com/moto-ogs/project-phoenix/probe$' "$output_log"
@@ -408,7 +411,7 @@ for wrapper in test-backend.sh test-changed.sh; do
   run_wrapper "$wrapper" 1 "${args[@]}"
   expected=$'resolve-dsn\nbootstrap\n'"$(go_test_call "$wrapper" 2 ./probe)"
   if [ "$wrapper" = test-changed.sh ]; then expected+=$'\n'"$frontend_calls"; fi
-  assert_calls "$expected"$'\nsweep'
+  assert_calls "$expected"$'\nsweep\nstop-ephemeral'
   unset PHX_FIXTURE_SWEEP_STATUS
 done
 
@@ -469,7 +472,7 @@ for no_backend in 0 1; do
       if [ "$selection" = changed ] && [[ "$failure" = success || "$failure" = vitest ]]; then
         expected_calls+=$'\n'"$guard_call"
       fi
-      if [ "$no_backend" -eq 0 ]; then expected_calls+=$'\nsweep'; fi
+      if [ "$no_backend" -eq 0 ]; then expected_calls+=$'\nsweep\nstop-ephemeral'; fi
       assert_calls "$expected_calls"
       [ ! -e "$fixture/.git/phx-test-run.lock" ]
     done

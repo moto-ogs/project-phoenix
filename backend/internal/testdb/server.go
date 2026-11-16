@@ -198,6 +198,10 @@ func pingServer(ctx context.Context, cfg *Config) error {
 const composeProjectPrefix = "project-phoenix-testdb"
 const legacyComposeProject = "project-phoenix"
 
+const ephemeralTestContainerImage = "postgres:17.12-alpine3.24@sha256:34261f594522cf41dfcb76aefd42b9d201098b0e6b23c9c68733f169e4218b6f"
+const ephemeralTestContainerLabel = "de.moto.testdb.ephemeral"
+const ephemeralTestContainerPortLabel = "de.moto.testdb.port"
+
 func composeProjectFor(cfg *Config) string {
 	port := cfg.templateURL.Port()
 	if port == "" {
@@ -214,6 +218,94 @@ func startTestContainer(ctx context.Context, cfg *Config) error {
 	startCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
 	return startTestContainerWithRunner(startCtx, cfg, runDockerCommand, runTestContainerUp)
+}
+
+// StartEphemeralLocalServer starts the detached-wrapper fallback without a
+// Compose project. Host networking exposes only the random loopback port from
+// cfg and avoids allocating a Docker bridge network on shared machines.
+func StartEphemeralLocalServer(ctx context.Context, cfg *Config) error {
+	return ensureServerWithDependencies(ctx, cfg,
+		func(ctx context.Context) error { return startEphemeralTestContainer(ctx, cfg) },
+		pingServer,
+		isPostgresAuthenticationFailure,
+	)
+}
+
+func startEphemeralTestContainer(ctx context.Context, cfg *Config) error {
+	startCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	cmd, err := ephemeralTestContainerCommand(startCtx, cfg, os.Environ())
+	if err != nil {
+		return err
+	}
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("docker run ephemeral postgres-test: %w\n%s", err, out)
+	}
+	return nil
+}
+
+func ephemeralTestContainerCommand(ctx context.Context, cfg *Config, environment []string) (*exec.Cmd, error) {
+	username := cfg.templateURL.User.Username()
+	password, hasPassword := cfg.templateURL.User.Password()
+	if username != "postgres" || !hasPassword || password == "" {
+		return nil, fmt.Errorf("ephemeral test database startup requires the postgres user with a password")
+	}
+	if host := cfg.templateURL.Hostname(); !isLoopbackHost(host) {
+		return nil, fmt.Errorf("ephemeral test database startup is limited to a loopback TEST_DB_DSN host, got %q", host)
+	}
+	port := cfg.templateURL.Port()
+	if port == "" {
+		return nil, fmt.Errorf("ephemeral test database startup requires a loopback port")
+	}
+
+	args := []string{
+		"run", "-d", "--rm",
+		"--network", "host",
+		"--label", ephemeralTestContainerLabel + "=1",
+		"--label", ephemeralTestContainerPortLabel + "=" + port,
+		"--tmpfs", "/var/lib/postgresql/data:size=2560m",
+		"-e", "POSTGRES_PASSWORD",
+		"-e", "POSTGRES_DB=phoenix_test",
+		ephemeralTestContainerImage,
+		"postgres", "-p", port,
+		"-c", "listen_addresses=127.0.0.1",
+		"-c", "fsync=off",
+		"-c", "synchronous_commit=off",
+		"-c", "full_page_writes=off",
+		"-c", "shared_buffers=32MB",
+		"-c", "wal_level=minimal",
+		"-c", "max_wal_senders=0",
+		"-c", "max_wal_size=256MB",
+		"-c", "max_connections=300",
+	}
+	cmd := exec.CommandContext(ctx, "docker", args...)
+	cmd.Env = replaceCommandEnvironment(environment, "POSTGRES_PASSWORD", password)
+	return cmd, nil
+}
+
+// StopEphemeralLocalServer removes only a fallback container for cfg's port.
+// Configured servers carry no ephemeral label and are never touched.
+func StopEphemeralLocalServer(ctx context.Context, cfg *Config) error {
+	port := cfg.templateURL.Port()
+	if port == "" {
+		return nil
+	}
+	list := exec.CommandContext(ctx, "docker", "container", "ls", "--quiet",
+		"--filter", "label="+ephemeralTestContainerLabel+"=1",
+		"--filter", "label="+ephemeralTestContainerPortLabel+"="+port)
+	out, err := list.Output()
+	if err != nil {
+		return fmt.Errorf("find ephemeral postgres-test container: %w", err)
+	}
+	ids := strings.Fields(string(out))
+	if len(ids) == 0 {
+		return nil
+	}
+	args := append([]string{"container", "rm", "--force"}, ids...)
+	if out, err := exec.CommandContext(ctx, "docker", args...).CombinedOutput(); err != nil {
+		return fmt.Errorf("remove ephemeral postgres-test container: %w\n%s", err, out)
+	}
+	return nil
 }
 
 type testContainerStarter func(context.Context, *Config, string) error

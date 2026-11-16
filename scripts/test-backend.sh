@@ -31,6 +31,11 @@ sweep() {
   if ! go run ./internal/testdb/cmd/sweep && [ "$status" -eq 0 ]; then
     status=1
   fi
+  if [ -n "${TEST_DB_DSN:-}" ] &&
+    ! go run ./internal/testdb/cmd/bootstrap --stop-ephemeral "$TEST_DB_DSN" &&
+    [ "$status" -eq 0 ]; then
+    status=1
+  fi
   [ -n "${PHX_TEST_RUN_LOCK:-}" ] && rm -f "$PHX_TEST_RUN_LOCK"
   if ! cleanup_go_test_workspace && [ "$status" -eq 0 ]; then status=1; fi
   return "$status"

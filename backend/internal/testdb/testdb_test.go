@@ -230,6 +230,45 @@ func TestTestContainerCommandUsesDSNConnectionSettings(t *testing.T) {
 	assert.NotContains(t, strings.Join(cmd.Args, " "), "pa'ss", "the password must not be exposed in process arguments")
 }
 
+func TestEphemeralTestContainerCommandAvoidsComposeNetworks(t *testing.T) {
+	t.Parallel()
+
+	cfg, err := NewConfig("postgres://postgres:generated-password@127.0.0.1:6543/phoenix_test?sslmode=disable")
+	require.NoError(t, err)
+
+	cmd, err := ephemeralTestContainerCommand(context.Background(), cfg, []string{"POSTGRES_PASSWORD=stale-password"})
+	require.NoError(t, err)
+	assert.Equal(t, "docker", filepath.Base(cmd.Path))
+	assert.Equal(t, []string{
+		"docker", "run", "-d", "--rm",
+		"--network", "host",
+		"--label", ephemeralTestContainerLabel + "=1",
+		"--label", ephemeralTestContainerPortLabel + "=6543",
+		"--tmpfs", "/var/lib/postgresql/data:size=2560m",
+		"-e", "POSTGRES_PASSWORD",
+		"-e", "POSTGRES_DB=phoenix_test",
+		ephemeralTestContainerImage,
+		"postgres", "-p", "6543",
+		"-c", "listen_addresses=127.0.0.1",
+		"-c", "fsync=off",
+		"-c", "synchronous_commit=off",
+		"-c", "full_page_writes=off",
+		"-c", "shared_buffers=32MB",
+		"-c", "wal_level=minimal",
+		"-c", "max_wal_senders=0",
+		"-c", "max_wal_size=256MB",
+		"-c", "max_connections=300",
+	}, cmd.Args)
+
+	environment := make(map[string]string, len(cmd.Env))
+	for _, entry := range cmd.Env {
+		key, value, ok := strings.Cut(entry, "=")
+		require.True(t, ok)
+		environment[key] = value
+	}
+	assert.Equal(t, "generated-password", environment["POSTGRES_PASSWORD"])
+}
+
 func TestComposeProjectSeparatesConfiguredPorts(t *testing.T) {
 	t.Parallel()
 
