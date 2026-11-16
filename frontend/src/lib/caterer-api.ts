@@ -5,17 +5,12 @@
 
 import { authFetch } from "./api-helpers";
 import { apiErrorFromResponse, transportFetch } from "./api-error";
+import type { SchoolsResponse } from "./contract/caterer-schools.generated";
 import { downloadBlob, filenameFromDisposition } from "./file-download";
 
 interface ProxyResponse<T> {
   success: boolean;
   data: T;
-}
-
-/** Wire shape of GET /caterer/schools. */
-export interface BackendCatererSchools {
-  caterer_name: string;
-  schools: { id: string; name: string }[];
 }
 
 interface BackendChild {
@@ -147,12 +142,12 @@ function mapCatererOrders(data: BackendCatererOrders): CatererOrders {
 }
 
 export async function fetchCatererSchools(): Promise<CatererSchools> {
-  const response = await authFetch<ProxyResponse<BackendCatererSchools>>(
+  const response = await authFetch<ProxyResponse<SchoolsResponse>>(
     "/api/caterer/schools",
   );
   return {
     catererName: response.data.caterer_name,
-    schools: response.data.schools,
+    schools: response.data.schools ?? [],
   };
 }
 

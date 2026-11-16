@@ -47,7 +47,7 @@ func NewBillingResource(service organizationtenancy.BillingReport, logger *slog.
 
 type billingKeyDayResponse struct {
 	KeyDay      int       `json:"key_day"`
-	NextKeyDate string    `json:"next_key_date"`
+	NextKeyDate string    `json:"next_key_date" contract:"date"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 

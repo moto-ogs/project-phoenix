@@ -340,11 +340,22 @@ or write a `Backend*` interface for a registered route.
 #### Portal proxy (#2352)
 
 A registered route without behavior of its own in the BFF needs no route
-file. `app/api/parent/[...path]/route.ts` is the guardians' portal proxy,
-built by `catalogProxy` (`lib/parent/route-wrapper.server.ts`,
-`lib/contract/catalog-proxy.server.ts`):
+file. Each portal has one proxy, a catch-all route built by the `catalogProxy`
+of its route wrapper (`lib/contract/catalog-proxy.server.ts`):
 
-- Its allowlist is `portalRoutes.parent` in the generated
+| Portal | Proxy route under `app/api/` | BFF path → backend | `portalRoutes` key |
+|---|---|---|---|
+| Staff (tenant) | `[...path]` | `/api/x` → `/api/x` | `tenant` |
+| Parents | `parent/[...path]` | `/api/parent/x` → `/parent/x` | `parent` |
+| moto schule | `school/[...path]` | `/api/school/x` → `/school/x` | `school` |
+| Träger | `traeger/[...path]` | `/api/traeger/x` → `/traeger/x` | `org` |
+| Caterer | `caterer/[...path]` | `/api/caterer/x` → `/caterer/x` | `caterer` |
+| Operator | `operator/[...path]` | `/api/operator/x` → `/operator/x` | `platform` |
+
+The key is the scope claim of the portal's session token
+(`common.PortalScope`).
+
+- The allowlist is `portalRoutes.<key>` in the generated
   `lib/contract/portals.generated.ts`: the routes whose registration names
   the portal. A path outside it is a 404 before the session is read and
   before any backend call.
@@ -352,20 +363,29 @@ built by `catalogProxy` (`lib/parent/route-wrapper.server.ts`,
   encoded again, and the answer is checked against the route's decoder.
   Session, the single 401 renewal, body limit, `Idempotency-Key` and the
   response envelope come from the portal's handlers (`makePortalHandlers`).
+- The BFF path must equal the backend path below the portal's prefix. A
+  route whose BFF path differs (`/api/operator/provisioning/schools` for
+  `/operator/schools`) moves its callers to the backend's path first.
 - Next prefers an existing route file over the proxy. Keep a file only for
   what is specific to the browser: portal policy, session handling, files,
   uploads, login/MFA, the SSE pipe, or an aggregation without a Go view.
 - To move a pure proxy route: register its Go route for the portal,
   regenerate, delete the route file and its row in
-  `src/test/proxy-routes/**`. `TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal`
+  `src/test/proxy-routes/**`. A file is deleted only when every method it
+  exports is registered. `TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal`
   (`backend/api`) fails when the route does not run behind that portal's
   scope middleware.
-- The other five portals have no proxy yet; a route with response variants
-  (`GET /api/students/`) is not served by a proxy.
+- A route file with a dynamic segment wins over the proxy too:
+  `billing-families/[id]` answers `billing-families/debtor-number-format`.
+  Such a registered route keeps a literal route file that hands the request
+  to `catalogProxy` (see that Träger route);
+  `app/api/catalog-route-selection.test.ts` fails when one is missing.
+- Not served by a proxy: a route with response variants
+  (`GET /api/students/`). Not registrable yet: one Go type used by two
+  resources, which is why the notification feed of moto schule keeps its
+  route files while the staff portal's unread counter is registered.
 
-Registered today: `GET /api/students/`, `GET /api/students/{id}`,
-`POST /api/students/`, `PUT /api/students/{id}` (portal `tenant`) and
-`GET /parent/me/enrollable-schools` (portal `parent`).
+The registered routes are the entries of `portals.generated.ts`.
 
 ### Auth Token Flow
 

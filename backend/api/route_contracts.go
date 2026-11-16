@@ -7,7 +7,12 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/contract"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
+	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
+	notificationsHTTP "github.com/moto-ogs/project-phoenix/modules/delivery/http/notifications"
+	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
+	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 )
 
@@ -24,6 +29,11 @@ func ContractDocument() (contract.Document, error) {
 		// (studentHTTPResources binds it), so its type is named here.
 		{"/api/students", careStudentsHTTP.StudentWriteContracts(projectionStudentsHTTP.StudentResponse{})},
 		{"/parent", parentAPI.MeRouteContracts()},
+		{"/api/notifications", notificationFeedRouteContracts()},
+		{"/school/staff-messages", staffMessagingAPI.SchoolRouteContracts()},
+		{"/operator/billing", provisioningOperatorAPI.BillingRouteContracts()},
+		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
+		{"/caterer", catererPortalHTTP.RouteContracts()},
 	}
 	catalog, err := RouteCatalog()
 	if err != nil {
@@ -55,6 +65,21 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[careStudentsHTTP.CompanionEntry]():       contract.ReadsLaxIDs,
 	}
 	return contract.Build(registrations, options)
+}
+
+// notificationFeedRouteContracts registers the notification feed of the
+// staff portal, with patterns relative to the /api/notifications mount.
+// Delivery's http role may not import the contract types, so it hands over
+// the response type only. moto schule mounts the same routes; its
+// registration waits for contract types shared between resources.
+func notificationFeedRouteContracts() []common.RouteContract {
+	return []common.RouteContract{
+		{
+			Method: "GET", Pattern: "/feed/unread-count",
+			Portals:  []common.PortalScope{common.PortalTenant},
+			Response: notificationsHTTP.FeedUnreadCountContract(),
+		},
+	}
 }
 
 func contractRegistration(prefix string, route common.RouteContract) contract.Registration {

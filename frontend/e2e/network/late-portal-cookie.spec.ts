@@ -352,3 +352,57 @@ test("Eltern: the catalog proxy serves only registered routes", async ({
   expect(await readStatus(page, portal.read)).toBe(200);
   await context.close();
 });
+
+// The other portals' proxies: a registered route asks for the portal's
+// session and answers decoded, and a path the contract does not name for
+// the portal (here another portal's route under this prefix) does not exist.
+const catalogReads = {
+  Schule: {
+    registered: "/api/school/staff-messages/unread-count",
+    unregistered: "/api/school/billing/key-day",
+    data: { unread_count: 2 },
+  },
+  Betreiber: {
+    registered: "/api/operator/billing/key-day",
+    unregistered: "/api/operator/staff-messages/unread-count",
+    data: {
+      key_day: 15,
+      next_key_date: "2026-12-15",
+      updated_at: "2026-11-01T08:00:00Z",
+    },
+  },
+  Caterer: {
+    registered: "/api/caterer/schools",
+    unregistered: "/api/caterer/billing/key-day",
+    data: { caterer_name: "Fixture-Küche", schools: [] },
+  },
+} as const;
+
+for (const portal of portals.slice(1)) {
+  const { registered, unregistered, data } =
+    catalogReads[portal.name as keyof typeof catalogReads];
+  test(`${portal.name}: the catalog proxy serves only registered routes`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext();
+    await isolate(context);
+    const page = await context.newPage();
+    await page.goto(`${portal.origin}${portal.basePath}/providers`);
+    expect(await readStatus(page, registered)).toBe(401);
+    expect(await readStatus(page, unregistered)).toBe(404);
+
+    await signIn(page, portal);
+    const answer = await page.evaluate(async (target) => {
+      const response = await fetch(target);
+      return {
+        status: response.status,
+        body: (await response.json()) as { data?: unknown },
+      };
+    }, registered);
+    expect(answer.status).toBe(200);
+    // Exactly the contract's fields: the fixture's extra one is dropped.
+    expect(answer.body.data).toEqual(data);
+    expect(await readStatus(page, unregistered)).toBe(404);
+    await context.close();
+  });
+}
