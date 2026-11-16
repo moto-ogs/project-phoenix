@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -86,8 +88,11 @@ func inSchool(t *testing.T, unit tenant.UnitOfWork, schoolID int64, fn func(cont
 func TestTraegerAbsenceTypesShareOneKontingentOverAllSchools(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	router, portal, _, unit, office := newTraegerStaffFixture(t, db)
-	module, _, err := NewAbsenceTypeTestModule(testpkg.NewDatabase(t, db))
+	// The Kontingent of 2027 is read from a day before that year: a year
+	// that is over keeps no remaining days.
+	now := func() time.Time { return time.Date(2026, time.November, 18, 12, 0, 0, 0, calendar.Berlin) }
+	router, portal, _, unit, office := newTraegerStaffFixtureAt(t, db, now)
+	module, _, err := NewAbsenceTypeTestModule(testpkg.NewDatabase(t, db), now)
 	require.NoError(t, err)
 	school := module.Administration
 	north, south := office.schools[0], office.schools[1]
