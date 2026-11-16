@@ -6,6 +6,7 @@ name: Backend build cache
 # compiled the whole backend inside its test step (#6784: 574 s cold against
 # 314 s warm on blacksmith-8vcpu). Pull requests only restore; this job is
 # the one writer, so the repository's 10 GB cache holds development's layer.
+# The same job writes the migrated DB snapshot those jobs restore (#7195).
 #
 # The key must match "Restore backend build cache" in test.yml for shard 0
 # without the race detector, and the environment must match the test job's

@@ -89,15 +89,12 @@ export function median(values) {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-// recentFrom: start of the days that decide, as an ISO timestamp.
-export function summarize(measured, { listed, sampled, recentFrom = null }) {
+// slices: the window's days (windowSlices). The last recentDays of them
+// decide; a window no longer than that has no recent part of its own.
+export function summarize(measured, { listed, sampled, slices = [], recentDays = RECENT_DAYS }) {
   const backend = measured.filter(run => run.backendSeconds !== null);
-  const recent = recentFrom === null ? [] : backend.filter(run => run.createdAt >= recentFrom);
-  const days = new Map();
-  for (const run of backend) {
-    const day = run.createdAt?.slice(0, 10) ?? 'unbekannt';
-    days.set(day, [...(days.get(day) ?? []), run]);
-  }
+  const within = ({ from, to }) => backend.filter(run => run.createdAt >= from && run.createdAt <= to);
+  const recent = slices.length > recentDays ? slices.slice(-recentDays).flatMap(within) : [];
   const lastJobs = new Map();
   for (const run of measured) lastJobs.set(run.lastJob, (lastJobs.get(run.lastJob) ?? 0) + 1);
   return {
@@ -107,12 +104,15 @@ export function summarize(measured, { listed, sampled, recentFrom = null }) {
     backend: { runs: backend.length, median: median(backend.map(run => run.seconds)) },
     backendJob: { median: median(backend.map(run => run.backendSeconds)) },
     recent: { runs: recent.length, median: median(recent.map(run => run.seconds)) },
-    days: [...days].sort(([a], [b]) => a.localeCompare(b)).map(([day, runs]) => ({
-      day,
-      runs: runs.length,
-      median: median(runs.map(run => run.seconds)),
-      backendJob: median(runs.map(run => run.backendSeconds)),
-    })),
+    days: slices.map(slice => {
+      const runs = within(slice);
+      return {
+        from: slice.from,
+        runs: runs.length,
+        median: median(runs.map(run => run.seconds)),
+        backendJob: median(runs.map(run => run.backendSeconds)),
+      };
+    }),
     lastJobs: [...lastJobs].sort(([a, x], [b, y]) => y - x || a.localeCompare(b)).slice(0, 3),
     slowest: [...measured].sort((a, b) => b.seconds - a.seconds).slice(0, 5),
   };
@@ -153,14 +153,14 @@ export function renderReport(stats, decision, { repo, from, to, threshold = THRE
     '|---|---:|---:|',
     `| Alle Läufe | ${stats.all.runs} | ${fmt(stats.all.median)} |`,
     `| Läufe mit Backend-Tests | ${stats.backend.runs} | ${fmt(stats.backend.median)} |`,
-    `| Läufe mit Backend-Tests, letzte ${recentDays} Tage | ${stats.recent.runs} | ${fmt(stats.recent.median)} |`,
+    ...(stats.days.length > recentDays ? [`| Läufe mit Backend-Tests, letzte ${recentDays} Tage | ${stats.recent.runs} | ${fmt(stats.recent.median)} |`] : []),
     `| Job \`Test / Backend tests\` | ${stats.backend.runs} | ${fmt(stats.backendJob.median)} |`,
     '',
-    'Läufe mit Backend-Tests je Tag (UTC). Ein Sprung zwischen zwei Tagen zeigt, wann sich etwas geändert hat:',
+    'Läufe mit Backend-Tests je 24 Stunden (UTC). Ein Sprung zwischen zwei Zeilen zeigt, wann sich etwas geändert hat:',
     '',
-    '| Tag | Läufe | Median | Job `Test / Backend tests` |',
+    '| 24 Stunden ab | Läufe | Median | Job `Test / Backend tests` |',
     '|---|---:|---:|---:|',
-    ...stats.days.map(day => `| ${cell(day.day)} | ${day.runs} | ${fmt(day.median)} | ${fmt(day.backendJob)} |`),
+    ...stats.days.map(day => `| ${cell(day.from.slice(0, 16).replace('T', ' '))} | ${day.runs} | ${fmt(day.median)} | ${fmt(day.backendJob)} |`),
     '',
     'Zuletzt fertig vor `ci-gate`:',
     '',
@@ -178,7 +178,7 @@ export function renderReport(stats, decision, { repo, from, to, threshold = THRE
 export function issueBody(report) {
   return [
     'Der wöchentliche Laufzeit-Wächter (`.github/workflows/ci-runtime-watch.yml`) hat das Laufzeitziel gerissen.',
-    'Suche in der Tagestabelle den Tag des Sprungs und dort die Pakete und Jobs, die gewachsen sind (Job-Summary „Backend package time budgets“ und „CPU seconds“), und mache sie günstiger in der Reihenfolge der Regel.',
+    'Suche in der Tagestabelle den Sprung und dort die Pakete und Jobs, die gewachsen sind (Job-Summary „Backend package time budgets“ und „CPU seconds“), und mache sie günstiger in der Reihenfolge der Regel.',
     'Der Wächter schließt dieses Issue nicht; schließe es, wenn die Ursache behoben ist.',
     '',
     report,
@@ -225,8 +225,7 @@ export async function main(env, api, args) {
     const row = measureRun(run, jobs);
     if (row) measured.push(row);
   }
-  const recentFrom = slices[Math.max(0, slices.length - RECENT_DAYS)].from;
-  const stats = summarize(measured, { listed: listed.length, sampled: sampled.length, recentFrom });
+  const stats = summarize(measured, { listed: listed.length, sampled: sampled.length, slices });
   const decision = decide(stats);
   const report = renderReport(stats, decision, { repo, from: slices[0].from, to: slices.at(-1).to });
   console.log(report);

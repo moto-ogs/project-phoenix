@@ -74,9 +74,10 @@ test('decide needs enough backend runs and compares their median with the thresh
   assert.equal(decide(stats(rows(MIN_RUNS, 296))), 'over');
 });
 
+const week = windowSlices(new Date('2026-11-16T04:23:00Z'), 7);
+
 test('the recent days decide once they hold enough runs', () => {
-  const recentFrom = '2026-11-13T04:23:00Z';
-  const stats = runs => summarize(runs, { listed: runs.length, sampled: runs.length, recentFrom });
+  const stats = runs => summarize(runs, { listed: runs.length, sampled: runs.length, slices: week });
   const old = (count, seconds) => rows(count, seconds, true, '2026-11-10T08:00:00Z');
   const fresh = (count, seconds) => rows(count, seconds, true, '2026-11-14T08:00:00Z');
   // #7195: four slow days, repaired since. The week is over, the cause is gone.
@@ -95,22 +96,33 @@ test('the recent days decide once they hold enough runs', () => {
 test('summarize reports the recent days and one row per day', () => {
   const stats = summarize(
     [...rows(3, 600, true, '2026-11-10T08:00:00Z'), ...rows(1, 100, false, '2026-11-10T09:00:00Z'), ...rows(2, 260, true, '2026-11-14T08:00:00Z')],
-    { listed: 6, sampled: 6, recentFrom: '2026-11-13T04:23:00Z' },
+    { listed: 6, sampled: 6, slices: week },
   );
   assert.deepEqual(stats.recent, { runs: 2, median: 260.5 });
-  assert.deepEqual(stats.days, [
-    { day: '2026-11-10', runs: 3, median: 601, backendJob: 570 },
-    { day: '2026-11-14', runs: 2, median: 260.5, backendJob: 230 },
-  ]);
+  assert.equal(stats.days.length, 7);
+  assert.deepEqual(stats.days[1], { from: '2026-11-10T04:23:00Z', runs: 3, median: 601, backendJob: 570 });
+  assert.deepEqual(stats.days[5], { from: '2026-11-14T04:23:00Z', runs: 2, median: 260.5, backendJob: 230 });
+  assert.deepEqual(stats.days[6], { from: '2026-11-15T04:23:00Z', runs: 0, median: null, backendJob: null });
+});
+
+test('a window no longer than the recent days is judged as a whole', () => {
+  const slices = windowSlices(new Date('2026-11-16T04:23:00Z'), RECENT_DAYS);
+  const runs = rows(MIN_RUNS, 400, true, '2026-11-14T08:00:00Z');
+  const stats = summarize(runs, { listed: runs.length, sampled: runs.length, slices });
+  assert.deepEqual(stats.recent, { runs: 0, median: null });
+  assert.equal(decide(stats), 'over');
+  const report = renderReport(stats, decide(stats), { repo: 'o/r', from: slices[0].from, to: slices.at(-1).to });
+  assert.doesNotMatch(report, /letzten? 3 Tage/);
 });
 
 test('the report says which runs decided and lists the days', () => {
   const runs = [...rows(40, 600, true, '2026-11-10T08:00:00Z'), ...rows(12, 320, true, '2026-11-14T08:00:00Z')];
-  const stats = summarize(runs, { listed: 52, sampled: 52, recentFrom: '2026-11-13T04:23:00Z' });
+  const stats = summarize(runs, { listed: 52, sampled: 52, slices: week });
   const report = renderReport(stats, decide(stats), { repo: 'o/r', from: '2026-11-09T04:23:00Z', to: '2026-11-16T04:22:59Z' });
   assert.match(report, new RegExp(`\\*\\*Über dem Ziel:\\*\\* Der Median der Läufe mit Backend-Tests der letzten ${RECENT_DAYS} Tage liegt bei 326 s, die Obergrenze ist 300 s\\. Im ganzen Zeitraum sind es 614 s\\.`));
   assert.match(report, /\| Läufe mit Backend-Tests, letzte 3 Tage \| 12 \| 326 s \|/);
-  assert.match(report, /\| 2026-11-10 \| 40 \| 620 s \| 570 s \|\n\| 2026-11-14 \| 12 \| 326 s \| 290 s \|/);
+  assert.match(report, /\| 2026-11-10 04:23 \| 40 \| 620 s \| 570 s \|/);
+  assert.match(report, /\| 2026-11-13 04:23 \| 0 \| – \| – \|\n\| 2026-11-14 04:23 \| 12 \| 326 s \| 290 s \|/);
 });
 
 test('summarize reports both medians, the backend job and the most frequent last jobs', () => {
