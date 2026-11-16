@@ -2281,6 +2281,22 @@
       "target_owner": "student-presence"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.AcceptCatererInvitation",
+      "binding_digest": "9ee77074247ace930eb9d786d2c9ee3a",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererAccessEngine.AcceptCatererInvitation",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithTenantTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.AcceptCatererInvitation",
+      "binding_digest": "96cf39341a0bd1c84b0143d931a3fdd1",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererAccessEngine.AcceptCatererInvitation",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.CatererSchools",
       "binding_digest": "96cf39341a0bd1c84b0143d931a3fdd1",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererAccessEngine.CatererSchools",
@@ -16761,6 +16777,14 @@
       "target_owner": "school-membership"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CatererInvitationDelivery.CancelCatererInvitation",
+      "binding_digest": "a6b231cf376b9ff063648fd29572efcf",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CatererInvitationDelivery.CancelCatererInvitation",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.CancelPendingByRelatedEntity",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CatererInvitationDelivery.CatererInvitationMailStates",
       "binding_digest": "538faee7ee41da59f11ede13ef42a7ab",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CatererInvitationDelivery.CatererInvitationMailStates",
@@ -19743,6 +19767,14 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListSupervisedLiveGroups",
       "target_owner": "student-presence"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.catererInvitationDelivery.CancelCatererInvitation",
+      "binding_digest": "a6b231cf376b9ff063648fd29572efcf",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CatererInvitationDelivery.CancelCatererInvitation",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.CancelPendingByRelatedEntity",
+      "target_owner": "delivery-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.catererInvitationDelivery.CatererInvitationMailStates",

@@ -283,7 +283,7 @@ const modulePassthroughApplicationSegment = "/internal/application/"
 // Lowered by #7104: People Directory's student rosters and guardian retention
 // read the day of the owner's clock instead of forwarding (-2); Device Fleet's
 // room move leaves updated_at to the database trigger (-1, ADR 0268).
-const modulePassthroughOwnerBudgetTotal = 1396
+const modulePassthroughOwnerBudgetTotal = 1395
 
 // modulePassthroughOwnerBudgets is the register: module directory →
 // pass-throughs measured in its application layer and its compositions
@@ -319,7 +319,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	"modules/filestorage":    6,
 	// Raised by ADR 0077: the caterer flows. Lowered by #7081: one name for
 	// the operator's resend of a code.
-	"modules/identityaccess": 206,
+	"modules/identityaccess": 205,
 	"modules/mealplan":       1,
 	// Raised by ADR 0112: the Träger logo read of the Träger-Portal.
 	// Raised by ADR 0172: the document contact read without an account (+1).

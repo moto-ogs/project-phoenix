@@ -23,9 +23,10 @@ const (
 	catererPayloadExpiryDays  = "expiry_days"
 )
 
-// CatererMailOutbox queues the invitation and stops the unsent mail of a
-// revoked one, both in the school's transaction.
-type CatererMailOutbox interface {
+// IdentityMailOutbox is the outbox the Identity & Access mails use: it also
+// stops the unsent mails of one entity in the caller's tenant transaction,
+// as for a revoked caterer invitation (#4496).
+type IdentityMailOutbox interface {
 	MailResultOutbox
 	CancelPendingByRelatedEntity(ctx context.Context, relatedType string, relatedID int64, reason string) (int64, error)
 }
@@ -34,7 +35,7 @@ type CatererMailOutbox interface {
 // the outbox (ADR 0077) and reads what became of those mails (#5960). The
 // link points at the caterer portal; the school never sees it. A revoked
 // invitation's unsent mail is stopped in the same outbox (#4496).
-func CatererInvitationDelivery(schools schoolFinder, outbox CatererMailOutbox, outcomes deliveryRuntime.EmailOutcomes, catererURL string, now func() time.Time) (identityPorts.CatererInvitationDelivery, error) {
+func CatererInvitationDelivery(schools schoolFinder, outbox IdentityMailOutbox, outcomes deliveryRuntime.EmailOutcomes, catererURL string, now func() time.Time) (identityPorts.CatererInvitationDelivery, error) {
 	if schools == nil || outbox == nil || outcomes == nil {
 		return nil, errors.New("identity access composition: the caterer invitation needs the school directory, the e-mail outbox and the mail outcomes")
 	}
@@ -46,7 +47,7 @@ func CatererInvitationDelivery(schools schoolFinder, outbox CatererMailOutbox, o
 
 type catererInvitationDelivery struct {
 	schools    schoolFinder
-	outbox     CatererMailOutbox
+	outbox     IdentityMailOutbox
 	outcomes   deliveryRuntime.EmailOutcomes
 	catererURL string
 	// now counts the days the mail states (nil at composition: the real clock).

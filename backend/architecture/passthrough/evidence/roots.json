@@ -5077,6 +5077,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (d catererInvitationDelivery) CancelCatererInvitation(ctx context.Context, invitationID int64) error {\n\t_, err := d.outbox.CancelPendingByRelatedEntity(ctx, identityaccess.MailRelatedCatererInvitation, invitationID, \"caterer invitation revoked\")\n\treturn err\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/catererInvitationDelivery.CancelCatererInvitation",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (s classArrivalExceptionRecords) Delete(ctx context.Context, class string, date timezone.Date) (bool, error) {\n\treturn s.records.DeleteClassArrivalException(ctx, class, date.String())\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/classArrivalExceptionRecords.Delete",
