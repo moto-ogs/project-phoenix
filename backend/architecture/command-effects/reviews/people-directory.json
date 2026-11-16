@@ -15175,7 +15175,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7208: the binding reads the request memo unless the caller asks for the committed value.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
       "target_owner": "settings-platform"
@@ -15185,9 +15185,29 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx (settings-platform) through roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7208: the binding reads the request memo unless the caller asks for the committed value.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.SettingsService.ResolveBoolForTenantInTx (settings-platform) through roots/owners.StudentPhotoRuntime.PhotoFeatureEnabled. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
       "target_owner": "settings-platform"
     },
     {
@@ -16772,7 +16792,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7208: the binding reads the request memo unless the caller asks for the committed value.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
       "target_owner": "settings-platform"
@@ -16782,9 +16802,29 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx (settings-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7208: the binding reads the request memo unless the caller asks for the committed value.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.SettingsService.ResolveBoolForTenantInTx (settings-platform) through modules/peopledirectory/compose.StudentPhotoRuntime.PhotoFeatureEnabled. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
       "target_owner": "settings-platform"
     },
     {
@@ -17656,7 +17696,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7208: the binding reads the request memo unless the caller asks for the committed value.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
       "target_owner": "settings-platform"
@@ -17666,9 +17706,29 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.PhotoFeatureEnabled",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx (settings-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7208: the binding reads the request memo unless the caller asks for the committed value.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.StudentPhotoRuntime.PhotoFeatureEnabled",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.SettingsService.ResolveBoolForTenantInTx (settings-platform) through modules/peopledirectory/internal/application.StudentPhotoRuntime.PhotoFeatureEnabled. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
       "target_owner": "settings-platform"
     },
     {
@@ -19003,6 +19063,36 @@
       "reason": "Read-only newly exposed target: people-directory reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through modules/settings/records.SettingsService.ResolveBool. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PhotoSettings.ResolveBoolForTenantInTx",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx (settings-platform) through modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PhotoSettings.ResolveBoolForTenantInTx",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx (settings-platform) through modules/settings/records.SettingsService.ResolveBoolForTenantInTx. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PhotoSettings.ResolveBoolForTenantInTx",
+      "reason": "Read-only target: people-directory reaches modules/settings/records.SettingsService.ResolveBoolForTenantInTx (settings-platform) through modules/settings/records.SettingsService.ResolveBoolForTenantInTx. It reads the committed photo setting on the caller's transaction under the photo lock, past the request memo (#7208); no persistent, lock or scope effect (ADR 0098).",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBoolForTenantInTx",
       "target_owner": "settings-platform"
     },
     {

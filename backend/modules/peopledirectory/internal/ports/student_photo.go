@@ -44,7 +44,9 @@ type StudentPhotoStore interface {
 // child-data route.
 type StudentPhotoRuntime interface {
 	// PhotoFeatureEnabled resolves the tenant's student-photo setting.
-	PhotoFeatureEnabled(ctx context.Context) (bool, error)
+	// committed reads it as committed now, on the caller's transaction, past
+	// any request-scoped memo; checks under the photo lock need it (#7208).
+	PhotoFeatureEnabled(ctx context.Context, committed bool) (bool, error)
 	// ActingAccountID identifies the account a granted consent is recorded
 	// for; 0 when the caller is not an authenticated account.
 	ActingAccountID(ctx context.Context) int64

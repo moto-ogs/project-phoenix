@@ -52,9 +52,16 @@ type PhotoBroadcaster interface {
 	BroadcastToTenant(tenantID int64, event realtime.Event) error
 }
 
-func (r StudentPhotoRuntime) PhotoFeatureEnabled(ctx context.Context) (bool, error) {
+// PhotoFeatureEnabled resolves the school's photo switch. committed reads it
+// on the caller's transaction, past the request-scoped memo: a check under
+// the photo lock must see a switch-off that committed after this request
+// first read the setting (#7208).
+func (r StudentPhotoRuntime) PhotoFeatureEnabled(ctx context.Context, committed bool) (bool, error) {
 	if r.Settings == nil {
 		return false, nil
+	}
+	if committed {
+		return r.Settings.ResolveBoolForTenantInTx(ctx, tenant.FromContext(ctx), configModel.KeyStudentPhotosEnabled)
 	}
 	return r.Settings.ResolveBool(ctx, configModel.KeyStudentPhotosEnabled)
 }

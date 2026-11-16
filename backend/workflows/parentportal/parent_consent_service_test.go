@@ -14,7 +14,6 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/api"
-	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -67,6 +66,9 @@ func (s *photoSettings) HasTenantOverride(context.Context, string) (bool, error)
 	return true, nil
 }
 func (s *photoSettings) ResolveString(context.Context, string) (string, error) { return "", nil }
+func (s *photoSettings) ResolveBoolForTenantInTx(context.Context, int64, string) (bool, error) {
+	return !s.off.Load(), nil
+}
 
 // buildConsentServiceWith lets a test adjust the portal's dependencies
 // before they are composed.
@@ -85,7 +87,7 @@ func buildConsentServiceWithPhotos(t *testing.T, adjust func(*parentportalcompos
 	unlinker := &consentRecordingUnlinker{}
 	photos := consentPhotoUnlinker{unlinker: unlinker}
 	switches := &photoSettings{}
-	people, err := owners.NewPeopleDirectoryWithObserver(testpkg.MustDatabase(db), func(peopleCompose.Observation) {}, nil, owners.StudentPhotoRuntime{Settings: switches})
+	people, err := owners.NewPeopleDirectoryWithObserver(testpkg.MustDatabase(db), owners.ObservePeopleDirectory, nil, owners.StudentPhotoRuntime{Settings: switches})
 	require.NoError(t, err)
 	deps := parentportalcompose.Dependencies{
 		Memberships:         parentMemberships(t, db),

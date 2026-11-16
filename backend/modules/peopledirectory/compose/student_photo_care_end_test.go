@@ -26,8 +26,10 @@ type careEndPhotoRuntime struct {
 	consents   int
 }
 
-func (r *careEndPhotoRuntime) PhotoFeatureEnabled(context.Context) (bool, error) { return true, nil }
-func (r *careEndPhotoRuntime) ActingAccountID(context.Context) int64             { return 0 }
+func (r *careEndPhotoRuntime) PhotoFeatureEnabled(context.Context, bool) (bool, error) {
+	return true, nil
+}
+func (r *careEndPhotoRuntime) ActingAccountID(context.Context) int64 { return 0 }
 func (r *careEndPhotoRuntime) QueueUnlinkStoredPhoto(_ context.Context, url string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

@@ -232,7 +232,9 @@ func (s *StudentPhotoService) ApplyPhotoConsent(
 	updated, transition := domain.ApplyPhotoConsent(
 		requestedConsent, current, s.now(), s.runtime.ActingAccountID(ctx))
 	if transition.GrantedNow {
-		if err := s.requireFeatureEnabled(ctx); err != nil {
+		// The caller holds the photo lock (student update), so the check
+		// reads the committed setting, not the request's memo.
+		if err := s.requireFeatureEnabledNow(ctx); err != nil {
 			return current, err
 		}
 	}
@@ -307,10 +309,14 @@ func (s *StudentPhotoService) readPhoto(
 }
 
 func (s *StudentPhotoService) requireFeatureEnabled(ctx context.Context) error {
+	return s.requirePhotoFeature(ctx, false)
+}
+
+func (s *StudentPhotoService) requirePhotoFeature(ctx context.Context, committed bool) error {
 	if s.runtime == nil {
 		return domain.ErrPhotoFeatureDisabled
 	}
-	enabled, err := s.runtime.PhotoFeatureEnabled(ctx)
+	enabled, err := s.runtime.PhotoFeatureEnabled(ctx, committed)
 	if err != nil {
 		return fmt.Errorf("photo feature lookup failed: %w", err)
 	}
@@ -318,6 +324,14 @@ func (s *StudentPhotoService) requireFeatureEnabled(ctx context.Context) error {
 		return domain.ErrPhotoFeatureDisabled
 	}
 	return nil
+}
+
+// requireFeatureEnabledNow is requireFeatureEnabled for a check under the
+// photo lock: it reads the committed setting on the caller's transaction, so
+// a switch-off that committed after this request first read the setting is
+// seen (#7208).
+func (s *StudentPhotoService) requireFeatureEnabledNow(ctx context.Context) error {
+	return s.requirePhotoFeature(ctx, true)
 }
 
 func (s *StudentPhotoService) recordConsent(
@@ -412,7 +426,7 @@ func (s *StudentPhotoService) lockPhotoCommitFeature(txCtx context.Context, stat
 	if err != nil {
 		return err
 	}
-	if err := s.requireFeatureEnabled(txCtx); err != nil {
+	if err := s.requireFeatureEnabledNow(txCtx); err != nil {
 		return domain.ErrPhotoFeatureDisabledMid
 	}
 

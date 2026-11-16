@@ -10,7 +10,9 @@ import (
 
 type DisabledStudentPhotos struct{}
 
-func (DisabledStudentPhotos) PhotoFeatureEnabled(context.Context) (bool, error)       { return false, nil }
+func (DisabledStudentPhotos) PhotoFeatureEnabled(context.Context, bool) (bool, error) {
+	return false, nil
+}
 func (DisabledStudentPhotos) ActingAccountID(context.Context) int64                   { return 0 }
 func (DisabledStudentPhotos) QueueUnlinkStoredPhoto(context.Context, string) error    { return nil }
 func (DisabledStudentPhotos) QueueUnlinkStoredPhotos(context.Context, []string) error { return nil }
@@ -35,7 +37,7 @@ func StudentPhotoPort(runtime StudentPhotoRuntime) internalports.StudentPhotoRun
 }
 
 type StudentPhotoRuntime interface {
-	PhotoFeatureEnabled(ctx context.Context) (bool, error)
+	PhotoFeatureEnabled(ctx context.Context, committed bool) (bool, error)
 	ActingAccountID(ctx context.Context) int64
 	QueueUnlinkStoredPhoto(context.Context, string) error
 	QueueUnlinkStoredPhotos(context.Context, []string) error

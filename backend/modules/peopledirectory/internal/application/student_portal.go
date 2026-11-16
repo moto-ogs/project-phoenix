@@ -48,7 +48,7 @@ func (s *StudentPhotoService) requirePortalGrantAllowed(ctx context.Context, sta
 	if !acquired {
 		return domain.ErrPhotoFeatureDisabledMid
 	}
-	if err := s.requireFeatureEnabled(ctx); err != nil {
+	if err := s.requireFeatureEnabledNow(ctx); err != nil {
 		return domain.ErrPhotoFeatureDisabledMid
 	}
 	return nil

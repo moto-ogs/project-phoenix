@@ -16,16 +16,22 @@ import (
 // enabledPhotoRuntime is the smallest runtime the purge needs: the feature is
 // on unless a test switches it off, and the consents the purge ended are kept.
 type enabledPhotoRuntime struct {
-	unlinked      []string
-	switchedOff   bool
+	unlinked    []string
+	switchedOff bool
+	// staleOn is a request memo that still reads "on" after a switch-off
+	// committed: only the in-transaction read sees switchedOff.
+	staleOn       bool
 	actor         int64
 	endedConsents []int64
 }
 
 func (r *enabledPhotoRuntime) QueueUnlinkStoredPhoto(context.Context, string) error { return nil }
 
-func (r *enabledPhotoRuntime) PhotoFeatureEnabled(context.Context) (bool, error) {
-	return !r.switchedOff, nil
+func (r *enabledPhotoRuntime) PhotoFeatureEnabled(_ context.Context, committed bool) (bool, error) {
+	if committed {
+		return !r.switchedOff, nil
+	}
+	return r.staleOn || !r.switchedOff, nil
 }
 func (r *enabledPhotoRuntime) ActingAccountID(context.Context) int64 { return r.actor }
 func (r *enabledPhotoRuntime) UnlinkStoredPhoto(storedURL string) {
@@ -273,4 +279,33 @@ func TestApplyStudentPhotoConsentGrantsOnlyWhileTheFeatureIsOn(t *testing.T) {
 	granted, err := module.ApplyStudentPhotoConsent(ctx, withoutConsent, &grant)
 	require.NoError(t, err)
 	assert.NotNil(t, granted.PhotoConsentGivenAt)
+}
+
+// TestPhotoWritesUnderTheLockReadTheCommittedSwitch pins the freshness of
+// the checks under the photo lock (#7208): a request that read "on" before a
+// switch-off committed must not grant a consent or attach a photo after it.
+// The stale memo is the request-scoped settings cache.
+func TestPhotoWritesUnderTheLockReadTheCommittedSwitch(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module, runtime := buildPhotoModule(t, db)
+	ctx := testpkg.Ctx(t)
+	runtime.actor = testpkg.CreateTestAccount(t, db, "photo-stale-7208@example.test").ID
+	student := testpkg.CreateTestStudent(t, db, "Stale", "Switch", "1a")
+	runtime.switchedOff, runtime.staleOn = true, true
+
+	err := module.CommitStudentPhoto(ctx, student.ID, "/uploads/student-photos/stale.jpg", true)
+	require.ErrorIs(t, err, peopledirectory.ErrPhotoFeatureDisabledMid, "the upload")
+	assert.Nil(t, studentPhotoPath(t, db, student.ID))
+
+	grantedAt := time.Date(2026, time.September, 1, 9, 0, 0, 0, time.UTC)
+	err = module.SetStudentPhotoConsent(ctx, peopledirectory.StudentPhotoState{
+		StudentID: student.ID, PhotoConsentGivenAt: &grantedAt, PhotoConsentGivenBy: &runtime.actor,
+	})
+	require.ErrorIs(t, err, peopledirectory.ErrPhotoFeatureDisabledMid, "the parents' grant")
+
+	grant := true
+	_, err = module.ApplyStudentPhotoConsent(ctx, peopledirectory.StudentPhotoState{StudentID: student.ID}, &grant)
+	require.ErrorIs(t, err, peopledirectory.ErrPhotoFeatureDisabled, "the staff grant")
+	assert.Nil(t, studentPhotoConsent(t, db, student.ID))
 }
