@@ -31,7 +31,7 @@ type childDebtorNumberRow struct {
 	DebtorNumber       string         `bun:"debtor_number"`
 	LastUsedOn         calendar.Date  `bun:"last_used_on,type:date"`
 	UpdatedByAccountID *int64         `bun:"updated_by_account_id"`
-	UpdatedAt          time.Time      `bun:"updated_at,nullzero,default:current_timestamp"`
+	UpdatedAt          time.Time      `bun:"updated_at,nullzero"`
 }
 
 func (r childDebtorNumberRow) number() parentbilling.ChildDebtorNumber {
@@ -204,7 +204,8 @@ func (s *Store) InsertChildDebtorNumberEvents(ctx context.Context, organizationI
 // numbers of children whose period ended under the same rule as a family
 // without a contract (#6692, #7007), logs their count per Träger as
 // family_debtor_number, and then deletes the trail entries whose number is
-// gone and which are as old. The caller holds the Träger.
+// gone and which are as old on the database clock that stamped them
+// (trailCutoffSQL). The caller holds the Träger.
 func deleteExpiredChildNumbers(ctx context.Context, db bun.IDB, cutoff, today calendar.Date) (int, error) {
 	var children int
 	if err := db.NewRaw(`WITH removed AS (
@@ -231,9 +232,10 @@ func deleteExpiredChildNumbers(ctx context.Context, db bun.IDB, cutoff, today ca
 		return 0, fmt.Errorf("parent billing postgres: delete expired debtor numbers of children: %w", err)
 	}
 	result, err := db.NewRaw(`DELETE FROM parent_billing.child_debtor_number_events AS event
-		WHERE event.occurred_at < ?0::date
+		WHERE event.occurred_at < `+trailCutoffSQL+`
 			AND NOT EXISTS (SELECT 1 FROM parent_billing.child_debtor_numbers AS child
-				WHERE child.organization_id = event.organization_id AND child.id = event.child_debtor_number_id)`, cutoff).Exec(ctx)
+				WHERE child.organization_id = event.organization_id AND child.id = event.child_debtor_number_id)`,
+		parentbilling.FamilyDebtorNumberRetentionYears).Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("parent billing postgres: delete the expired trail of children's debtor numbers: %w", err)
 	}

@@ -18,10 +18,10 @@ func NewRetiredStaffRecords() workforce.RetiredStaffRecords {
 }
 
 // NewCleanupRetention composes the staff cleanup-job retention of the nightly
-// cleanup (#4046). It runs on the tenant transaction of the school in
-// context and needs no object store.
-func NewCleanupRetention() workforce.CleanupRetention {
-	return application.NewCleanupRetention(postgres.New(postgres.RetentionDatabase))
+// cleanup (#4046) on now, the root's clock. It runs on the tenant transaction
+// of the school in context and needs no object store.
+func NewCleanupRetention(now func() time.Time) workforce.CleanupRetention {
+	return application.NewCleanupRetention(postgres.New(postgres.RetentionDatabase).WithClock(now))
 }
 
 // SickNoteRetentionWindow resolves the staff sick note retention window of

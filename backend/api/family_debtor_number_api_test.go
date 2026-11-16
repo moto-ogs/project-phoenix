@@ -21,6 +21,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -318,16 +319,28 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 
 	_, err = f.db.ExecContext(ctx, `UPDATE parent_billing.beleg_retention_suspensions SET lifted_at = now() WHERE id = ?`, suspension)
 	require.NoError(t, err)
-	// The trail entries carry the database's write time (DEFAULT
-	// CURRENT_TIMESTAMP), the retention runs on the fixed days above. They
-	// are dated to the winter period the test stands for, so their age does
-	// not depend on the day the test runs: written in 2028 or later they
-	// would outlive the cutoff of 2031 (#7104).
-	_, err = f.db.ExecContext(ctx, `UPDATE parent_billing.family_billing_events SET occurred_at = ? WHERE organization_id = ?`,
-		calendar.NewDate(2026, time.November, 18).BerlinMidnight().Add(12*time.Hour), f.office.organization)
-	require.NoError(t, err)
 	retain(calendar.NewDate(2031, time.January, 3))
 	assert.Equal(t, "-", f.familyNumber(t, "eva.muster@example.org"), "then the family without a document goes")
+	// The database stamps the trail entries (DEFAULT CURRENT_TIMESTAMP), so
+	// its clock dates them too (#7295, ADR 0281): written today, they outlive
+	// a retention whose day lies years ahead, and go once they are as old on
+	// the database clock.
+	trailEntries := func() (family, children int) {
+		require.NoError(t, f.db.NewRaw(`SELECT
+				(SELECT count(*) FROM parent_billing.family_billing_events WHERE organization_id = ?0 AND care_contract_id IS NULL),
+				(SELECT count(*) FROM parent_billing.child_debtor_number_events WHERE organization_id = ?0)`, f.office.organization).
+			Scan(ctx, &family, &children))
+		return family, children
+	}
+	familyTrail, childTrail := trailEntries()
+	assert.Positive(t, familyTrail, "a trail entry written today is not yet as old as the retention asks")
+	assert.Positive(t, childTrail, "nor is the trail of the children's numbers")
+	for _, table := range []string{"family_billing_events", "child_debtor_number_events"} {
+		_, err = f.db.ExecContext(ctx, `UPDATE parent_billing.`+table+` SET occurred_at = occurred_at - make_interval(years => ?)
+			WHERE organization_id = ?`, parentbilling.FamilyDebtorNumberRetentionYears+1, f.office.organization)
+		require.NoError(t, err)
+	}
+	retain(calendar.NewDate(2031, time.January, 3))
 	var logged []struct {
 		Type    string `bun:"beleg_type"`
 		On      string `bun:"deleted_on"`
@@ -346,10 +359,9 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.child_debtor_numbers
 		WHERE organization_id = ?`, f.office.organization).Scan(ctx, &children))
 	assert.Zero(t, children, "the children's identities follow the same retention")
-	var trail int
-	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.family_billing_events
-		WHERE organization_id = ? AND care_contract_id IS NULL`, f.office.organization).Scan(ctx, &trail))
-	assert.Zero(t, trail, "and its trail with it")
+	familyTrail, childTrail = trailEntries()
+	assert.Zero(t, familyTrail, "and its trail with it")
+	assert.Zero(t, childTrail, "and the trail of the children's numbers")
 }
 
 // A confirmation without a number tells the family nothing (#6692, data

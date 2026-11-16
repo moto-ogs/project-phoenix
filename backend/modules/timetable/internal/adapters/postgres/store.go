@@ -53,7 +53,8 @@ func (s *Store) currentTime() time.Time {
 }
 
 // CompletionTimestamp returns PostgreSQL's stable timestamp for the current
-// transaction, which is also the clock used by update triggers.
+// transaction, which is also the clock used by update triggers. It only
+// orders a completion against rows the database stamps (ADR 0281).
 func (s *Store) CompletionTimestamp(ctx context.Context) (time.Time, error) {
 	db, _, err := s.database(ctx)
 	if err != nil {
