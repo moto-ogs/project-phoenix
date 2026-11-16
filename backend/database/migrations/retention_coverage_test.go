@@ -384,6 +384,7 @@ var tableRetentions = map[string]tableRetention{
 	"platform.cleanup_runs":                                 notPersonal("ledger of last successful cleanup per school and job"),
 	"platform.demo_school_file_erasures":                    notPersonal("demo process marker (#5544): school ID, time and object counts per upload namespace, and since #5559 the time and row counts per table of the database erasure; no file name, no value, no person"),
 	"platform.demo_school_origins":                          notPersonal("demo provenance (#5544): school ID and time a demo order named the school; no person"),
+	"platform.demo_traeger_origins":                         notPersonal("demo provenance (#6193, ADR 0271): Träger ID, the time a demo order created it for itself and the time and row counts of its erasure; no person"),
 	"platform.demo_school_states":                           own("demo process only: hourly demoExpiry -> RetireDemoSchools -> RetireMany -> SQL platform.erase_closed_demo_visitors (closed order without demo access; also replaces the visitor's name in the hidden demo schools)"),
 	"platform.email_delivery":                               own("nightly retention step delivery_retention, DeleteExpiredDeliveries (30 days after its mail ended, else after created_at)"),
 	"platform.email_delivery_events":                        own("nightly retention step delivery_retention, DeleteExpiredDeliveries (with the mail, 30 days after it ended; system and Träger mail through RunOnce's DeleteExpiredSystemEmails by cascade)"),

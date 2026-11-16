@@ -152,7 +152,8 @@ func BuildStudentPhotoRuntime(db transactionruntime.Database, env RootEnvironmen
 	return StudentPhotoRuntime{
 		Cleanup: cleanup.Queue, CleanupBatch: cleanup.QueueAll,
 		Settings: settings, Broadcaster: hub, Unlinker: unlinker,
-		Consents: studentConsentTrail{trail: audit.Persistence.StudentConsentChange},
-		Logger:   env.Logger.With("service", "student-photo"), Actor: actor,
+		Consents:     studentConsentTrail{trail: audit.Persistence.StudentConsentChange},
+		ConsentTrail: audit.Persistence.StudentConsentChange,
+		Logger:       env.Logger.With("service", "student-photo"), Actor: actor,
 	}
 }

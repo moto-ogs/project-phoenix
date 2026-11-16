@@ -86,6 +86,7 @@ describe("ParentDemoEntryPage", () => {
       accessId: "4711",
       role: "parent",
       src: "messe",
+      traeger: false,
       schoolName: "OGS Beispiel",
       pending: "demo_entered",
     });

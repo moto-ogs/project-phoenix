@@ -83,7 +83,7 @@ func (e DemoOrderEngine) DemoSchoolProgress(ctx context.Context, slug string) (*
 	}
 	return &organizationtenancy.DemoSchoolProgress{
 		Status: progress.Status, SchoolID: progress.TenantID, VisitorAccountID: progress.VisitorAccountID,
-		VisitorParentAccountID: progress.VisitorParentAccountID,
+		VisitorParentAccountID: progress.VisitorParentAccountID, TraegerID: progress.TraegerID,
 	}, nil
 }
 func (e DemoOrderEngine) MarkDemoSchoolUsed(ctx context.Context, slug string, usedAt time.Time) error {

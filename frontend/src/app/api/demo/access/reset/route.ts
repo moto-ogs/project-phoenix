@@ -9,7 +9,7 @@ import { withPrivateNoStore } from "~/lib/private-no-store";
 
 const logger = createLogger({ component: "DemoResetRoute" });
 
-const DEMO_ROLES = new Set(["caregiver", "lead", "parent", "all"]);
+const DEMO_ROLES = new Set(["caregiver", "lead", "parent", "traeger", "all"]);
 
 // Starts the visitor's demo over (#3470). The banner sends only the role it
 // is in; the token comes from the cookie the entry left. The backend orders
