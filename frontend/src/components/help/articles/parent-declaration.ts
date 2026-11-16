@@ -42,6 +42,7 @@ export function parentDeclarationTopic(): HelpTopic {
       "Mit `Passwort vor dem Antworten abfragen` geben Eltern vor jeder Antwort ihr Passwort ein.",
       "`Offene erinnern` schickt eine Erinnerung an alle, die noch nicht geantwortet haben.",
       "Unter `Herunterladen` lädt `Bericht als PDF` den Stand und alle Antworten als PDF herunter. `Verlauf als CSV` enthält dieselben Antworten als Tabelle.",
+      "Den Stand für ein einzelnes Kind sehen Sie beim Kind unter `Dokumente` im Bereich `Aus moto`. `Nachweis als PDF` lädt dort den Nachweis nur für dieses Kind herunter.",
       "Das ist eine einfache Erklärung per Knopfdruck. Verlangt ein Gesetz eine Erklärung auf Papier, reicht sie nicht aus.",
     ],
     differences: [

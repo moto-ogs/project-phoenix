@@ -12,6 +12,12 @@ type projectionAnnouncementAudienceReads interface {
 	projectionDeliveryAudienceReads
 	projectionFeedAudienceReads
 	projectionPollAudienceReads
+	projectionStudentAudienceReads
+}
+
+// projectionStudentAudienceReads reads what reached one child (#4814).
+type projectionStudentAudienceReads interface {
+	StudentAnnouncements(ctx context.Context, schoolID, studentID int64, history []parentaudience.DeclarationHistoryLink) ([]*parentaudience.StudentAnnouncement, error)
 }
 
 type projectionDeclarationAudienceReads interface {
@@ -96,6 +102,12 @@ func (r communicationAnnouncementAudience) DeclarationChildren(ctx context.Conte
 	rows, err := r.source.DeclarationChildren(ctx, schoolID, announcementID, projectionDeclarationHistory(history))
 	return mapProjectionRows(rows, func(row *parentaudience.DeclarationChild) *communication.PortalDeclarationChild {
 		return (*communication.PortalDeclarationChild)(row)
+	}), err
+}
+func (r communicationAnnouncementAudience) StudentAnnouncements(ctx context.Context, schoolID, studentID int64, history []*communication.PortalDeclarationSubmission) ([]*communication.PortalStudentAnnouncement, error) {
+	rows, err := r.source.StudentAnnouncements(ctx, schoolID, studentID, projectionDeclarationHistory(history))
+	return mapProjectionRows(rows, func(row *parentaudience.StudentAnnouncement) *communication.PortalStudentAnnouncement {
+		return (*communication.PortalStudentAnnouncement)(row)
 	}), err
 }
 func (r communicationAnnouncementAudience) DeclarationSigners(ctx context.Context, schoolID int64, studentIDs []int64) ([]*communication.PortalDeclarationSigner, error) {

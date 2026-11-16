@@ -57,7 +57,16 @@ const (
 	// child's values when a letter naming each child is published (#4813).
 	// StudentID stays NULL; metadata carries announcement_id and child_count.
 	ResourceTypeParentLetterPublish = "parent_letter_publish"
-	ResourceTypeGuardianEmailLift   = "guardian_email_lift"
+	// ResourceTypeStudentParentRecords records opening the letters and
+	// declarations of one child in its Dokumente tab (#4814). StudentID
+	// names the child.
+	ResourceTypeStudentParentRecords = "student_parent_records"
+	// ResourceTypeParentDeclarationProof records the download of a
+	// declaration's proof (#4814). StudentID names the child when the proof
+	// holds only that child; metadata carries announcement_id and
+	// child_count.
+	ResourceTypeParentDeclarationProof = "parent_declaration_proof"
+	ResourceTypeGuardianEmailLift      = "guardian_email_lift"
 	// ResourceTypeGuardianFinancialView records serving the MASKED bank
 	// details of one guardian (#2608). StudentID stays NULL; metadata carries
 	// guardian_profile_id.

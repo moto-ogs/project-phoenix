@@ -57,7 +57,7 @@ func NewParentAnnouncementsWithAttachments(cfg ParentAnnouncementConfig, attachm
 		Repo: records.NewRepository(cfg.Repo), Settings: cfg.Settings, Outbox: cfg.Outbox, PushOutbox: cfg.PushOutbox, Notifier: deliveryPorts.NewNotificationSender(cfg.Notifier),
 		Series: cfg.Series, Preferences: cfg.Preferences, Deliveries: deliveries,
 		ParentsURL: cfg.ParentsURL, Logger: cfg.Logger, Fingerprints: cfg.Fingerprints, Signatures: cfg.Signatures, Attachments: attachments, Now: cfg.Now,
-		Letters: cfg.Letters.Bind(cfg.Repo, cfg.Now),
+		Letters: cfg.Letters.Bind(cfg.Repo, cfg.Now), StudentRecords: cfg.Repo,
 	}, runtime, policy)), cfg.Repo, cfg.SurveyStaff)
 }
 
