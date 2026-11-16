@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 )
@@ -15,8 +16,8 @@ type PlanningTrackAdministration struct {
 	configured bool
 }
 
-func NewPlanningTrackAdministration(tracks timetable.PlanningTrackCapability, execute func(context.Context, int64, func(context.Context) error) error, tenantID func(context.Context) int64, configured bool) *PlanningTrackAdministration {
-	return &PlanningTrackAdministration{PlanningTrackViews: NewPlanningTrackViews(tracks), tracks: tracks, execute: execute, tenantID: tenantID, configured: configured}
+func NewPlanningTrackAdministration(tracks timetable.PlanningTrackCapability, execute func(context.Context, int64, func(context.Context) error) error, tenantID func(context.Context) int64, configured bool, now func() time.Time) *PlanningTrackAdministration {
+	return &PlanningTrackAdministration{PlanningTrackViews: NewPlanningTrackViews(tracks, now), tracks: tracks, execute: execute, tenantID: tenantID, configured: configured}
 }
 
 func (a *PlanningTrackAdministration) OrderPlanningTracks(ctx context.Context, ids []int64) error {

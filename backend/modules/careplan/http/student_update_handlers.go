@@ -521,6 +521,10 @@ func (rs *Resource) updateStudentTxErrorRenderer(err error) render.Renderer {
 		return common.ErrorForbidden(errors.New("insufficient permissions to update this student's data"))
 	case errors.Is(err, errStudentNotFoundUnderLock):
 		return common.ErrorNotFound(errors.New("student not found"))
+	// A photo consent can only be granted while the school has child photos
+	// switched on (#7208); the withdrawal path is not gated.
+	case errors.Is(err, peopleModule.ErrPhotoFeatureDisabled):
+		return common.ErrorForbiddenWithCode(errors.New("child photos are switched off for this school"), common.CodeStudentsPhotosDisabled)
 	case rs.IsPartialAbsenceConflict(err):
 		return common.ErrorConflictWithCode(err, common.CodeStudentsPartialAbsenceConflict)
 	// The merged plan (request modes applied onto the stored row) can violate

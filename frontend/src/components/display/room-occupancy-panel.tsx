@@ -87,9 +87,9 @@ export function RoomOccupancyPanel({ rooms, totals }: RoomOccupancyPanelProps) {
                 {hasCapacity && (
                   <div className="mt-3 h-3 overflow-hidden rounded-full bg-gray-100">
                     <div
-                      className="h-full rounded-full transition-all duration-700"
+                      className="h-full w-full rounded-full transition-transform duration-700 motion-reduce:transition-none"
                       style={{
-                        width: `${Math.round(ratio * 100)}%`,
+                        transform: `translateX(${Math.round(ratio * 100) - 100}%)`,
                         backgroundColor: color,
                       }}
                     />

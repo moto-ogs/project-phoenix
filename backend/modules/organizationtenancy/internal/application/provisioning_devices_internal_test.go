@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The online checks compare against time.Since, so last-seen values sit far
-// from the window edges.
+// The online checks compare against the harness clock (fixedTime), so
+// last-seen values sit far from the window edges.
 func seenAgo(d time.Duration) *time.Time {
-	seen := time.Now().Add(-d)
+	seen := fixedTime.Add(-d)
 	return &seen
 }
 
@@ -767,6 +767,46 @@ func TestProvisioningDeleteDevice(t *testing.T) {
 			tc.check(t, err)
 			assert.Empty(t, h.devices.deleted)
 			assert.Empty(t, h.audit.entries)
+		})
+	}
+}
+
+// TestProvisioningDeviceOnlineFollowsTheInjectedClock pins the clock years
+// away from the real day: the operator listing and the transfer preflight
+// judge last_seen against the clock that stamps it, not the wall clock.
+func TestProvisioningDeviceOnlineFollowsTheInjectedClock(t *testing.T) {
+	t.Parallel()
+	for name, clock := range map[string]time.Time{
+		"clock in the past":   time.Date(2020, time.January, 6, 9, 0, 0, 0, time.UTC),
+		"clock in the future": time.Date(2035, time.June, 4, 9, 0, 0, 0, time.UTC),
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			h := newHarness(t)
+			h.svc.now = func() time.Time { return clock }
+			seedDeviceSchools(h)
+			recent, stale := clock.Add(-time.Minute), clock.Add(-10*time.Minute)
+			online := terminal(200, 10, "ONLINE")
+			online.LastSeen = &recent
+			offline := terminal(201, 10, "OFFLINE")
+			offline.LastSeen = &stale
+			h.devices.add(online)
+			h.devices.add(offline)
+
+			devices, err := h.svc.ListAllDevices(context.Background())
+			require.NoError(t, err)
+			onlineByID := map[string]bool{}
+			for _, device := range devices {
+				onlineByID[device.DeviceID] = device.IsOnline
+			}
+			assert.Equal(t, map[string]bool{"ONLINE": true, "OFFLINE": false}, onlineByID)
+
+			status, err := h.svc.GetDeviceTransferStatus(context.Background(), 200)
+			require.NoError(t, err)
+			assert.True(t, status.IsOnline, "seen a minute before the injected clock")
+			status, err = h.svc.GetDeviceTransferStatus(context.Background(), 201)
+			require.NoError(t, err)
+			assert.False(t, status.IsOnline, "seen ten minutes before the injected clock")
 		})
 	}
 }

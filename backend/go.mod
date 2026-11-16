@@ -6,6 +6,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/agnivade/levenshtein v1.2.2
+	github.com/boombuler/barcode v1.1.0
 	github.com/getsentry/sentry-go v0.50.0
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/go-chi/cors v1.2.2
@@ -16,6 +17,7 @@ require (
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/k3a/html2text v1.5.1
 	github.com/lestrrat-go/jwx/v3 v3.4.0
+	github.com/makiuchi-d/gozxing v0.1.1
 	github.com/pkg/sftp v1.13.12
 	github.com/prometheus/client_golang v1.25.0
 	github.com/samber/slog-chi v1.19.1
@@ -125,6 +127,7 @@ require (
 	golang.org/x/sys v0.50.0 // indirect
 	golang.org/x/telemetry v0.0.0-20261009151841-97e8ea77aa2a // indirect
 	golang.org/x/term v0.48.0 // indirect
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gotest.tools/gotestsum v1.13.0 // indirect
 	k8s.io/klog/v2 v2.90.1 // indirect

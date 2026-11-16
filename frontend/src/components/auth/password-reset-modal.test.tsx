@@ -2,8 +2,10 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ApiError } from "~/lib/api-error";
+import { setTestClock } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 import { PasswordResetModal } from "./password-reset-modal";
+import { readResetWaits, rememberResetWait } from "./password-reset-wait";
 
 function ResetModal(
   props: Omit<ComponentProps<typeof PasswordResetModal>, "portal">,
@@ -22,19 +24,28 @@ function rateLimited(retryAfterSeconds: number): ApiError {
 vi.mock("~/components/ui/modal", () => ({
   Modal: ({
     isOpen,
+    title,
+    description,
     children,
+    footer,
     onClose,
   }: {
     isOpen: boolean;
+    title: string;
+    description?: React.ReactNode;
     children: React.ReactNode;
+    footer?: React.ReactNode;
     onClose: () => void;
   }) => {
     return isOpen ? (
       <div data-testid="modal">
+        <h2>{title}</h2>
+        {description ? <p>{description}</p> : null}
         <button type="button" onClick={onClose}>
           Close Modal
         </button>
         {children}
+        {footer}
       </div>
     ) : null;
   },
@@ -126,26 +137,47 @@ describe("PasswordResetModal", () => {
     expect(screen.getByLabelText(/E-Mail-Adresse/i)).toBeInTheDocument();
   });
 
-  it("displays success state after successful submission", async () => {
+  it("answers neutrally and names the address after a request", async () => {
     render(<ResetModal isOpen={true} onClose={mockOnClose} />);
 
-    const emailInput = screen.getByTestId("input-reset-email");
-    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-
-    const submitButton = screen.getByRole("button", { name: /Link senden/i });
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/E-Mail versendet!/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId("input-reset-email"), {
+      target: { value: " Test@Example.com " },
     });
+    fireEvent.click(screen.getByRole("button", { name: /Link senden/i }));
+
     expect(
-      screen.getByText(/Wir haben Ihnen eine E-Mail/i),
+      await screen.findByRole("heading", {
+        name: "Bitte prüfen Sie Ihr Postfach",
+      }),
     ).toBeInTheDocument();
+    // The answer is the same for every address (#7213): no claim of a mail.
     expect(
-      screen.getByText(/Bitte überprüfen Sie Ihren Posteingang/i),
+      screen.getByText(/Wenn es zu dieser Adresse ein Konto gibt/),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/E-Mail versendet/)).not.toBeInTheDocument();
+    expect(screen.getByText("test@example.com")).toBeInTheDocument();
+    expect(screen.getByText(/Spam-Ordner/)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Schließen/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("goes back to the form with the address to correct it", async () => {
+    render(<ResetModal isOpen={true} onClose={mockOnClose} />);
+
+    fireEvent.change(screen.getByTestId("input-reset-email"), {
+      target: { value: "tippfehler@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Link senden/i }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Adresse ändern" }),
+    );
+
+    expect(screen.getByTestId("input-reset-email")).toHaveValue(
+      "tippfehler@example.com",
+    );
+    expect(
+      screen.getByRole("heading", { name: "Passwort zurücksetzen" }),
     ).toBeInTheDocument();
   });
 
@@ -232,74 +264,139 @@ describe("PasswordResetModal", () => {
     );
   });
 
-  it("handles rate limit errors with countdown", async () => {
+  it("shows the wait for the refused address as a warning", async () => {
     mockRequestPasswordReset.mockRejectedValue(rateLimited(60));
 
     render(<ResetModal isOpen={true} onClose={mockOnClose} />);
 
-    const emailInput = screen.getByTestId("input-reset-email");
-    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-
-    const submitButton = screen.getByRole("button", { name: /Link senden/i });
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(
-        screen.getByText(/Sie haben zu oft einen Link angefordert/i),
-      ).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId("input-reset-email"), {
+      target: { value: "test@example.com" },
     });
+    fireEvent.click(screen.getByRole("button", { name: /Link senden/i }));
+
+    expect(await screen.findByTestId("alert-warning")).toHaveTextContent(
+      "Für diese Adresse wurde schon mehrmals ein Link angefordert. Einen neuen Link können Sie in 01:00 anfordern.",
+    );
+    // A wait is no failure of the dialog: no error alert.
+    expect(screen.queryByTestId("alert-error")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(/01:00/);
     expect(
-      screen.getByText(/Einen neuen Link können Sie in 01:00 anfordern/i),
-    ).toBeInTheDocument();
-    expect(submitButton).toBeDisabled();
+      screen.getByRole("button", { name: /Link senden/i }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("persists rate limit to localStorage", async () => {
+  it("blocks only the address the wait was reported for", async () => {
+    mockRequestPasswordReset.mockRejectedValueOnce(rateLimited(60));
+
+    render(<ResetModal isOpen={true} onClose={mockOnClose} />);
+
+    const input = screen.getByTestId("input-reset-email");
+    fireEvent.change(input, { target: { value: "tippfehler@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /Link senden/i }));
+    expect(await screen.findByTestId("alert-warning")).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "richtig@example.com" } });
+    expect(screen.queryByTestId("alert-warning")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+    fireEvent.click(screen.getByRole("button", { name: /Link senden/i }));
+    expect(
+      await screen.findByRole("heading", {
+        name: "Bitte prüfen Sie Ihr Postfach",
+      }),
+    ).toBeInTheDocument();
+    expect(mockRequestPasswordReset).toHaveBeenLastCalledWith(
+      "tenant",
+      "richtig@example.com",
+    );
+
+    // The same address in another spelling waits as well.
+    fireEvent.click(screen.getByRole("button", { name: "Adresse ändern" }));
+    fireEvent.change(screen.getByTestId("input-reset-email"), {
+      target: { value: "Tippfehler@Example.com" },
+    });
+    expect(screen.getByTestId("alert-warning")).toBeInTheDocument();
+  });
+
+  it("stores the wait without the address", async () => {
     mockRequestPasswordReset.mockRejectedValue(rateLimited(60));
 
     render(<ResetModal isOpen={true} onClose={mockOnClose} />);
 
-    const emailInput = screen.getByTestId("input-reset-email");
-    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-
-    const submitButton = screen.getByRole("button", { name: /Link senden/i });
-    fireEvent.click(submitButton);
+    fireEvent.change(screen.getByTestId("input-reset-email"), {
+      target: { value: "test@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Link senden/i }));
 
     await waitFor(() => {
-      const stored = localStorageMock.getItem("passwordResetRateLimitUntil");
-      expect(stored).toBeTruthy();
+      expect(localStorageMock.getItem("passwordResetWaits")).toBeTruthy();
     });
+    const stored = localStorageMock.getItem("passwordResetWaits") ?? "";
+    expect(stored).not.toContain("test");
+    expect(stored).not.toContain("example");
+    expect(Object.values(JSON.parse(stored) as object)).toEqual([
+      Date.now() + 60_000,
+    ]);
   });
 
-  it("restores rate limit from localStorage", () => {
-    const futureTimestamp = Date.now() + 60000;
-    localStorageMock.setItem(
-      "passwordResetRateLimitUntil",
-      futureTimestamp.toString(),
+  it("restores the wait of the address from localStorage", () => {
+    rememberResetWait({}, "test@example.com", Date.now() + 60_000, Date.now());
+
+    render(
+      <ResetModal
+        isOpen={true}
+        onClose={mockOnClose}
+        initialEmail="test@example.com"
+      />,
     );
 
-    render(<ResetModal isOpen={true} onClose={mockOnClose} />);
-
+    expect(screen.getByTestId("alert-warning")).toHaveTextContent(/in 01:00/);
     expect(
-      screen.getByText(/Einen neuen Link können Sie in/i),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Link senden/i })).toBeDisabled();
+      screen.getByRole("button", { name: /Link senden/i }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("clears expired rate limit from localStorage", () => {
-    const pastTimestamp = Date.now() - 1000;
-    localStorageMock.setItem(
-      "passwordResetRateLimitUntil",
-      pastTimestamp.toString(),
+  it("frees an address whose wait ran out while the dialog was open", () => {
+    const start = Date.now();
+    rememberResetWait({}, "test@example.com", start + 1000, start);
+    render(
+      <ResetModal
+        isOpen={true}
+        onClose={mockOnClose}
+        initialEmail="other@example.com"
+      />,
     );
 
-    render(<ResetModal isOpen={true} onClose={mockOnClose} />);
+    setTestClock(new Date(start + 2000));
+    fireEvent.change(screen.getByTestId("input-reset-email"), {
+      target: { value: "test@example.com" },
+    });
 
-    // Anker: das Formular steht da und der Knopf ist wieder frei.
+    // Anker: der Knopf ist frei, obwohl kein Countdown lief.
     expect(screen.getByRole("button", { name: /Link senden/i })).toBeEnabled();
-    expect(
-      screen.queryByText(/Einen neuen Link können Sie in/i),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("alert-warning")).not.toBeInTheDocument();
+  });
+
+  it("drops expired waits and the old address-less wait", () => {
+    rememberResetWait({}, "test@example.com", Date.now() + 1000, Date.now());
+    localStorageMock.setItem(
+      "passwordResetRateLimitUntil",
+      String(Date.now() + 60_000),
+    );
+    // One second later the stored wait has run out.
+    expect(readResetWaits(Date.now() + 1000)).toEqual({});
+
+    render(
+      <ResetModal
+        isOpen={true}
+        onClose={mockOnClose}
+        initialEmail="test@example.com"
+      />,
+    );
+
+    // Anker: das Formular steht da und der Knopf ist frei.
+    expect(screen.getByRole("button", { name: /Link senden/i })).toBeEnabled();
+    expect(screen.queryByTestId("alert-warning")).not.toBeInTheDocument();
     expect(localStorageMock.getItem("passwordResetRateLimitUntil")).toBeNull();
+    expect(localStorageMock.getItem("passwordResetWaits")).toBeNull();
   });
 });

@@ -86,7 +86,7 @@ func TestUnregisteredTagScanRuntime(t *testing.T) {
 		}
 	}
 	abort := errors.New("injected failure after authoritative scan write")
-	cutoff := time.Now().Add(-devicefleet.UnregisteredTagScanRetentionDays * 24 * time.Hour)
+	cutoff := scanRetentionDay.Add(-devicefleet.UnregisteredTagScanRetentionDays * 24 * time.Hour)
 	for iteration := range 35 {
 		measuring = iteration >= 5
 		input := devicefleet.RecordUnregisteredTagScan{TagUID: "RUNTIME-SCAN", DeviceID: &device.ID, ScannedAt: cutoff.Add(-24 * time.Hour)}

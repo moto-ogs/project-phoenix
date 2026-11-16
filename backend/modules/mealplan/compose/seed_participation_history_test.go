@@ -3,6 +3,7 @@ package compose_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	mealcompose "github.com/moto-ogs/project-phoenix/modules/mealplan/compose"
@@ -11,6 +12,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// mealHistoryTestNow is the fixed instant the history counts its past days
+// from (ADR 0239): a school Monday after the seeded September days.
+var mealHistoryTestNow = time.Date(2026, time.November, 2, 9, 30, 0, 0, time.UTC)
+
+func mealHistoryTestClock() time.Time { return mealHistoryTestNow }
 
 func TestSeedParticipationHistoryPreservesDecisionsAndTenant(t *testing.T) {
 	t.Parallel()
@@ -30,7 +37,7 @@ func TestSeedParticipationHistoryPreservesDecisionsAndTenant(t *testing.T) {
 	_, err = db.ExecContext(ctx, `INSERT INTO schedule.meal_participation_overrides
  (tenant_id,student_id,date,participating,changed_by_account_id) VALUES (?,?,?,false,?)`, school, student.ID, day.AddDays(1), account.ID)
 	require.NoError(t, err)
-	history := mealcompose.NewParticipationHistory()
+	history := mealcompose.NewParticipationHistory(mealHistoryTestClock)
 	days := []mealplan.PastMealDay{{StudentID: student.ID, Date: day}, {StudentID: student.ID, Date: day.AddDays(1)}, {StudentID: other.ID, Date: day}}
 	for range 2 {
 		require.NoError(t, testpkg.WithinAdminContext(t, ctx, db, func(adminCtx context.Context) error {
@@ -57,7 +64,7 @@ func TestSeedParticipationHistoryRejectsInvalidDaysAtomically(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
 	student := testpkg.CreateTestStudent(t, db, "Invalid", "Meal", "1a")
-	history := mealcompose.NewParticipationHistory()
+	history := mealcompose.NewParticipationHistory(mealHistoryTestClock)
 	require.Error(t, history.RecordParticipationHistory(ctx, []mealplan.PastMealDay{{StudentID: student.ID, Date: calendar.NewDate(2026, 9, 7)}, {StudentID: student.ID, Date: calendar.NewDate(2099, 9, 7)}}))
 	count, err := db.NewSelect().TableExpr("schedule.meal_participation_overrides").Where("tenant_id=?", testpkg.Tenant(t)).Count(ctx)
 	require.NoError(t, err)

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 )
@@ -50,9 +49,8 @@ func buildOccupancyExportDocument(report *studentpresence.StatisticsReport) Expo
 // occupancyExportFrame is the title and the column grid.
 func occupancyExportFrame(report *studentpresence.StatisticsReport, singleDay bool) ExportDocument {
 	doc := ExportDocument{
-		Title:       "Belegung nach Uhrzeit",
-		GeneratedAt: time.Now(),
-		Footer:      exportConfidentialityNote,
+		Title:  "Belegung nach Uhrzeit",
+		Footer: exportConfidentialityNote,
 	}
 	if singleDay {
 		doc.Subtitle = "Kinder je halbe Stunde am " + report.From.Format("02.01.2006")

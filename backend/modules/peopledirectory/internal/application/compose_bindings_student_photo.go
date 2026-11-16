@@ -10,13 +10,19 @@ import (
 
 type DisabledStudentPhotos struct{}
 
-func (DisabledStudentPhotos) PhotoFeatureEnabled(context.Context) (bool, error)       { return false, nil }
+func (DisabledStudentPhotos) PhotoFeatureEnabled(context.Context, bool) (bool, error) {
+	return false, nil
+}
 func (DisabledStudentPhotos) ActingAccountID(context.Context) int64                   { return 0 }
 func (DisabledStudentPhotos) QueueUnlinkStoredPhoto(context.Context, string) error    { return nil }
 func (DisabledStudentPhotos) QueueUnlinkStoredPhotos(context.Context, []string) error { return nil }
 func (DisabledStudentPhotos) UnlinkStoredPhoto(string)                                {}
 func (DisabledStudentPhotos) BroadcastPhotoChange(int64, int64, string)               {}
 func (DisabledStudentPhotos) RecordPhotoConsent(context.Context, internalports.StudentPhotoConsentSnapshot, internalports.StudentPhotoConsentSnapshot, *int64, time.Time) error {
+	return ErrStudentPhotoRuntimeUnbound
+}
+
+func (DisabledStudentPhotos) RecordPhotoConsentsEnded(context.Context, []int64, *int64, time.Time) error {
 	return ErrStudentPhotoRuntimeUnbound
 }
 
@@ -31,7 +37,7 @@ func StudentPhotoPort(runtime StudentPhotoRuntime) internalports.StudentPhotoRun
 }
 
 type StudentPhotoRuntime interface {
-	PhotoFeatureEnabled(ctx context.Context) (bool, error)
+	PhotoFeatureEnabled(ctx context.Context, committed bool) (bool, error)
 	ActingAccountID(ctx context.Context) int64
 	QueueUnlinkStoredPhoto(context.Context, string) error
 	QueueUnlinkStoredPhotos(context.Context, []string) error
@@ -43,4 +49,5 @@ type StudentPhotoRuntime interface {
 		actorAccountID *int64,
 		changedAt time.Time,
 	) error
+	RecordPhotoConsentsEnded(ctx context.Context, studentIDs []int64, actorAccountID *int64, changedAt time.Time) error
 }

@@ -33,7 +33,7 @@ func (rs *Resource) listPhaseExpiryWarnings(w http.ResponseWriter, r *http.Reque
 	var warnings []*capability.PhaseExpiryWarning
 	err := rs.runInTenantTx(r, func(ctx context.Context) error {
 		var listErr error
-		warnings, listErr = rs.PhaseExpiryService.ListWarnings(ctx, calendar.TodayDate())
+		warnings, listErr = rs.PhaseExpiryService.ListWarnings(ctx, calendar.DateFromTime(rs.now()))
 		return listErr
 	})
 	if err != nil {

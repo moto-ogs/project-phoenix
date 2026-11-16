@@ -49,7 +49,7 @@ type feedPerson struct {
 
 func newFeedFixture(t *testing.T) *feedFixture {
 	t.Helper()
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, func() time.Time { return feedNow })
 	database := testpkg.NewDatabase(t, s.db)
 	unit := testpkg.TenantRuntime(t, s.db)
 	module, err := api.NewDeliveryTestModule(database, unit)

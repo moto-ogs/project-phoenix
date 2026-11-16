@@ -710,7 +710,8 @@ func TestReattachAndScanDoNotDeadlock(t *testing.T) {
 	testpkg.LinkDeviceToActiveGroup(t, db, ended.ID, device.ID)
 	scanned := openVisit(t, ctx, module, db, ended.ID, "Scanned")
 	openVisit(t, ctx, module, db, ended.ID, "TakenOver")
-	_, err := db.NewRaw("UPDATE active.groups SET end_time = NOW() - INTERVAL '5 minutes' WHERE id = ?", ended.ID).Exec(ctx)
+	// Ended on the module's clock, which also decides what is recent.
+	_, err := db.NewRaw("UPDATE active.groups SET end_time = ? WHERE id = ?", time.Now().Add(-5*time.Minute), ended.ID).Exec(ctx)
 	require.NoError(t, err)
 
 	reattach := startTx(t, ctx, db)

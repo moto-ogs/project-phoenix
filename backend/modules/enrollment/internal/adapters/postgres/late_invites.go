@@ -60,7 +60,7 @@ func (r *Store) InsertLateInvite(ctx context.Context, invite *enrollment.LateInv
 	}
 	row := lateInviteStorage(invite)
 	row.TenantID = tenantID
-	now := time.Now()
+	now := r.currentTime()
 	if row.CreatedAt.IsZero() {
 		row.CreatedAt = now
 	}

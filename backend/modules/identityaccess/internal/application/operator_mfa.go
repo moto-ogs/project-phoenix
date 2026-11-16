@@ -26,7 +26,7 @@ func NewOperatorMFA(service *Service, store ports.OperatorMFAStore) *OperatorMFA
 	if service == nil || store == nil {
 		panic("identity access application: operator mfa requires the service and its store")
 	}
-	return &OperatorMFA{service: service, store: store, now: time.Now}
+	return &OperatorMFA{service: service, store: store, now: service.now}
 }
 
 func (m *OperatorMFA) run(ctx context.Context, operation string, fn func(context.Context, *domain.OperationStats) error) error {

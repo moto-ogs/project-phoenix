@@ -26,4 +26,10 @@ type DemoSchoolDatabaseStore interface {
 	// failure carries only its SQLSTATE, never a message that could hold a
 	// personal value.
 	EraseDemoSchoolDatabase(ctx context.Context, schoolID int64) (status, errorCode string, err error)
+	// DueDemoTraegers lists at most limit Demo-Träger in random order whose
+	// last school is erased (ADR 0271).
+	DueDemoTraegers(ctx context.Context, limit int) ([]int64, error)
+	// EraseDemoTraeger erases one Demo-Träger when it is still due, with the
+	// same statuses as a school.
+	EraseDemoTraeger(ctx context.Context, organizationID int64) (status, errorCode string, err error)
 }

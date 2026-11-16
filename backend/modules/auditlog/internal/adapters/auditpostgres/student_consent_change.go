@@ -2,6 +2,7 @@ package audit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
@@ -18,7 +19,28 @@ func NewStudentConsentChangeRepository(runtime Runtime) auditModels.StudentConse
 }
 
 func (r *studentConsentChangeRepository) Create(ctx context.Context, entry *auditModels.StudentConsentChange) error {
-	return NewAppender(r.runtime).Append(ctx, entry)
+	return NewAppender(r.runtime, nil).Append(ctx, entry)
+}
+
+// CreateAll appends every entry in one statement, all or nothing.
+func (r *studentConsentChangeRepository) CreateAll(ctx context.Context, entries []*auditModels.StudentConsentChange) error {
+	events, err := studentConsentChangeEvents(entries)
+	if err != nil || len(events) == 0 {
+		return err
+	}
+	return NewAppender(r.runtime, nil).AppendAll(ctx, events)
+}
+
+// studentConsentChangeEvents rejects a nil entry before any row is written.
+func studentConsentChangeEvents(entries []*auditModels.StudentConsentChange) ([]any, error) {
+	events := make([]any, 0, len(entries))
+	for _, entry := range entries {
+		if entry == nil {
+			return nil, errors.New("student consent change cannot be nil")
+		}
+		events = append(events, entry)
+	}
+	return events, nil
 }
 
 // ListByStudentID is a custom ordered audit projection; the generic repository

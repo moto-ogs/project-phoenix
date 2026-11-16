@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,7 +43,7 @@ func TestTraegerEmailStatusesOfStaysWithTheTraeger(t *testing.T) {
 	mail(other, "holiday_registration_received", "holiday_registration", 41, "other:41")
 	mail(other, "holiday_closure_notice", "holiday_registration", 99, "closure:family")
 
-	raw := postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase)
+	raw := postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase, time.Now)
 	read := func(ctx context.Context, layer string) {
 		rows, err := raw.TraegerEmailStatusesOf(ctx, own, "holiday_registration", []int64{41}, []string{"closure:family"})
 		require.NoError(t, err)

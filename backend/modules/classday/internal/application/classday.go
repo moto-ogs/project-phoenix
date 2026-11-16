@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/modules/classday/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // ClassDayDependencies wires the school-portal capability of the projection.
@@ -75,6 +76,9 @@ func NewClassDay(deps ClassDayDependencies) classday.ClassDay {
 	if deps.Caller == nil || deps.Rosters == nil {
 		panic("classday application.NewClassDay: Caller and Rosters dependencies are required")
 	}
+	if deps.Today == nil {
+		deps.Today = calendar.CalendarDateClock(deps.clock())
+	}
 	hints := dayHints{store: deps.DayHints, scope: deps.HintScope, rosters: deps.Rosters, today: deps.Today, announcer: deps.Announcer}
 	// A stored morning mark wakes the class views and tells the
 	// Schulverwaltung about children missing without a report (#4791).
@@ -93,7 +97,7 @@ func NewClassDay(deps ClassDayDependencies) classday.ClassDay {
 		},
 		classTrips: classTrips{
 			rosters: deps.Rosters, writeScope: deps.TripScope, statusDays: deps.TripStatusDays,
-			arrivals: deps.StudentArrivals, announcer: deps.Announcer,
+			arrivals: deps.StudentArrivals, announcer: deps.Announcer, today: morning.today,
 		},
 		dayHints:          hints,
 		morningAttendance: morning,
@@ -101,7 +105,7 @@ func NewClassDay(deps ClassDayDependencies) classday.ClassDay {
 		classHandover:     newClassHandover(deps),
 		sharedNotes:       newSharedNotes(deps),
 		absenceReports:    absence,
-		absenceList:       absenceList{deps: deps.AbsenceList, today: morning.today},
+		absenceList:       absenceList{deps: deps.AbsenceList, today: morning.today, now: deps.clock()},
 	}
 }
 

@@ -30,6 +30,7 @@ func (s *staffOverviewService) buildPrefetch(
 		from: from, to: through.lastDay(),
 		staff:    staffByID,
 		settings: memo,
+		now:      clockOrWall(s.nowFunc), today: dayOrWall(s.todayFunc, s.nowFunc),
 	}
 	if err := s.prefetchSessionRows(ctx, prefetch, staffIDs); err != nil {
 		return nil, err

@@ -42,6 +42,7 @@ func newUnregisteredTagScanService(t *testing.T, repo *fakeUnregisteredTagScanRe
 			id, _ := ctx.Value(testTenantKey{}).(int64)
 			return id
 		},
+		Now: auditTestClock,
 	})
 	require.NoError(t, err)
 	return service
@@ -67,6 +68,7 @@ func TestUnregisteredTagScanRecordTrimsAndStampsTenant(t *testing.T) {
 	require.Equal(t, int64(99), repo.created.TenantID)
 	require.Equal(t, &deviceID, repo.created.DeviceID)
 	require.False(t, repo.created.ScannedAt.IsZero())
+	require.True(t, auditTestNow.Equal(repo.created.ScannedAt), "the scan carries the instant of the service clock")
 }
 
 func TestUnregisteredTagScanRecordRequiresTenant(t *testing.T) {
@@ -113,11 +115,11 @@ func TestUnregisteredTagScanDeleteOlderThanUsesDefaultRetention(t *testing.T) {
 
 	repo := &fakeUnregisteredTagScanRepo{deleteResult: 3}
 	service := newUnregisteredTagScanService(t, repo)
-	before := time.Now().In(calendar.Berlin).AddDate(0, 0, -UnregisteredTagScanRetentionDays)
+	before := auditTestNow.In(calendar.Berlin).AddDate(0, 0, -UnregisteredTagScanRetentionDays)
 
 	deleted, err := service.DeleteOlderThan(context.Background(), 0)
 
-	after := time.Now().In(calendar.Berlin).AddDate(0, 0, -UnregisteredTagScanRetentionDays)
+	after := auditTestNow.In(calendar.Berlin).AddDate(0, 0, -UnregisteredTagScanRetentionDays)
 	require.NoError(t, err)
 	require.Equal(t, 3, deleted)
 	require.False(t, repo.deleteCutoff.Before(before))
@@ -130,11 +132,11 @@ func TestUnregisteredTagScanDeleteOlderThanUsesCustomDaysAndPropagatesError(t *t
 	wantErr := errors.New("delete failed")
 	repo := &fakeUnregisteredTagScanRepo{deleteErr: wantErr}
 	service := newUnregisteredTagScanService(t, repo)
-	before := time.Now().In(calendar.Berlin).AddDate(0, 0, -7)
+	before := auditTestNow.In(calendar.Berlin).AddDate(0, 0, -7)
 
 	deleted, err := service.DeleteOlderThan(context.Background(), 7)
 
-	after := time.Now().In(calendar.Berlin).AddDate(0, 0, -7)
+	after := auditTestNow.In(calendar.Berlin).AddDate(0, 0, -7)
 	require.ErrorIs(t, err, wantErr)
 	require.Zero(t, deleted)
 	require.False(t, repo.deleteCutoff.Before(before))
@@ -149,11 +151,11 @@ func TestUnregisteredTagScanDeleteExpiredStaysInsideTheDatabaseWindow(t *testing
 	// The database evaluates the 90 days in UTC: 90 times 24 hours, also
 	// across a clock change in Berlin.
 	window := UnregisteredTagScanRetentionDays*24*time.Hour + auditModels.RetentionClockMargin
-	before := time.Now().Add(-window)
+	before := auditTestNow.Add(-window)
 
 	deleted, days, err := service.DeleteExpired(context.Background())
 
-	after := time.Now().Add(-window)
+	after := auditTestNow.Add(-window)
 	require.NoError(t, err)
 	require.Equal(t, 2, deleted)
 	require.Equal(t, 90, days, "unregistered tag scans keep the fixed 90-day retention")

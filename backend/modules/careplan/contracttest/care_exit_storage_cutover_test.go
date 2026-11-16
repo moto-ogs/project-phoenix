@@ -33,7 +33,7 @@ type careExitOfferingSchool struct {
 func TestCareExitOfferingLinksTenantScopeRollbackAndRestore(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := api.NewEnrollmentBookingProjection(api.NewEnrollmentBookings(), api.UngatedEnrollmentPhaseBounds())
+	module := api.NewEnrollmentBookingProjection(api.NewEnrollmentBookings(nil), api.UngatedEnrollmentPhaseBounds())
 	const restoreDay = enrollmentTest.Date("2031-01-01")
 	bookings := carePlanCompose.NewOfferingBookings()
 	const validUntil = enrollmentTest.Date("2031-02-01")

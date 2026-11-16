@@ -39,6 +39,9 @@ type StudentPhotoRuntime struct {
 	Broadcaster  PhotoBroadcaster
 	Unlinker     peoplePorts.PhotoUnlinker
 	Consents     StudentPhotoConsentRecorder
+	// ConsentTrail writes the withdrawals a feature switch-off ends in one
+	// statement (#7208).
+	ConsentTrail StudentConsentAppender
 	Logger       *slog.Logger
 	Actor        func(context.Context) int64
 }
@@ -49,9 +52,16 @@ type PhotoBroadcaster interface {
 	BroadcastToTenant(tenantID int64, event realtime.Event) error
 }
 
-func (r StudentPhotoRuntime) PhotoFeatureEnabled(ctx context.Context) (bool, error) {
+// PhotoFeatureEnabled resolves the school's photo switch. committed reads it
+// on the caller's transaction, past the request-scoped memo: a check under
+// the photo lock must see a switch-off that committed after this request
+// first read the setting (#7208).
+func (r StudentPhotoRuntime) PhotoFeatureEnabled(ctx context.Context, committed bool) (bool, error) {
 	if r.Settings == nil {
 		return false, nil
+	}
+	if committed {
+		return r.Settings.ResolveBoolForTenantInTx(ctx, tenant.FromContext(ctx), configModel.KeyStudentPhotosEnabled)
 	}
 	return r.Settings.ResolveBool(ctx, configModel.KeyStudentPhotosEnabled)
 }
@@ -122,6 +132,38 @@ func (r StudentPhotoRuntime) RecordPhotoConsent(
 	afterRow.ID = after.StudentID
 	return r.Consents.RecordTransitions(
 		ctx, beforeRow, afterRow, auditModels.StudentConsentSourceTenantPortal, actorAccountID, changedAt)
+}
+
+// RecordPhotoConsentsEnded appends one photo withdrawal per child whose
+// consent the feature switch-off ended, all in one statement (#7208). The
+// switch is made in the tenant portal's settings.
+func (r StudentPhotoRuntime) RecordPhotoConsentsEnded(
+	ctx context.Context,
+	studentIDs []int64,
+	actorAccountID *int64,
+	changedAt time.Time,
+) error {
+	if len(studentIDs) == 0 {
+		return nil
+	}
+	if r.ConsentTrail == nil {
+		return errors.New("student photo runtime: consent trail is not wired")
+	}
+	entries := make([]*auditModels.StudentConsentChange, 0, len(studentIDs))
+	for _, studentID := range studentIDs {
+		if studentID <= 0 {
+			return errors.New("student photo runtime: persisted student is required")
+		}
+		entries = append(entries, &auditModels.StudentConsentChange{
+			Model:          auditModels.Model{CreatedAt: changedAt, UpdatedAt: changedAt},
+			StudentID:      studentID,
+			ConsentKey:     peopleModule.StudentConsentPhoto,
+			Action:         auditModels.StudentConsentWithdrawn,
+			Source:         auditModels.StudentConsentSourceTenantPortal,
+			ActorAccountID: actorAccountID,
+		})
+	}
+	return r.ConsentTrail.CreateAll(ctx, entries)
 }
 
 // StudentPhotos adapts the owner capability to the retained contract the

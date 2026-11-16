@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/adapters/postgres"
@@ -91,5 +92,5 @@ func newAccountLifecycle(service *application.Service, auth *application.Account
 
 // NewStaffOffboardingAccountLocks composes only the account lock step.
 func NewStaffOffboardingAccountLocks(db *bun.DB) identityaccess.StaffOffboardingAccountLocks {
-	return application.StaffOffboardingAccountLocks{Accounts: postgres.NewStore(db)}
+	return application.StaffOffboardingAccountLocks{Accounts: postgres.NewStore(db, time.Now)}
 }

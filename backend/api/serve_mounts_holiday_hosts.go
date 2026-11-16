@@ -1,6 +1,8 @@
 package api
 
 import (
+	"time"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -23,9 +25,14 @@ type HolidayHostSchools = owners.HolidayHostSchools
 // choice for the week's holiday guests behind users:create, and the sheet of
 // a holiday guest (#4666, ADR 0120) at /api/holiday-guests behind users:read
 // with the hints „Gast aus …“ of its lists behind students:read (#5630).
-func mountHolidayHostRoutes(tenant chi.Router, schools HolidayHostSchools, people owners.HolidayGuestDirectory, students owners.HolidayOwnChildStudents, care owners.HolidayGuestCarePlan, accessLog owners.DataAccessAppender, healthData enrollmentOwner.HolidayHealthCipher, noCare enrollmentOwner.HolidayHostCalendar) {
-	guests := owners.NewHolidayGuests(people, students, schools, care, accessLog, healthData, nil)
-	tenant.Mount("/holiday-weeks", NewHolidayHostGuestHTTP(NewHolidayHostHTTP(schools, people, accessLog, healthData, noCare, nil), guests).Router(ProtectedTenantRoutes))
+// now is the root clock (ADR 0265): the lists' day and the participant
+// export's generation time.
+func mountHolidayHostRoutes(tenant chi.Router, schools HolidayHostSchools, people owners.HolidayGuestDirectory, students owners.HolidayOwnChildStudents, care owners.HolidayGuestCarePlan, accessLog owners.DataAccessAppender, healthData enrollmentOwner.HolidayHealthCipher, noCare enrollmentOwner.HolidayHostCalendar, now func() time.Time) {
+	today := calendar.CalendarDateClock(now)
+	guests := owners.NewHolidayGuests(people, students, schools, care, accessLog, healthData, today)
+	participants := NewHolidayHostHTTP(schools, people, accessLog, healthData, noCare, today)
+	participants.Now = now
+	tenant.Mount("/holiday-weeks", NewHolidayHostGuestHTTP(participants, guests).Router(ProtectedTenantRoutes))
 	tenant.Mount("/holiday-guests", NewHolidayGuestHTTP(guests).Router(ProtectedTenantRoutes))
 }
 

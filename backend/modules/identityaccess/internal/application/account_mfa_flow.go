@@ -66,13 +66,15 @@ type AccountMFAFlowDependencies struct {
 	// Secret is the trusted-device HMAC key derived from the JWT secret.
 	Secret []byte
 	Logger *slog.Logger
+	// Now is the composition's clock (ADR 0239).
+	Now func() time.Time
 }
 
 // NewAccountMFAFlows composes the flows.
 func NewAccountMFAFlows(deps AccountMFAFlowDependencies) (*AccountMFAFlows, error) {
 	switch {
 	case deps.Records == nil, deps.Settings == nil, deps.Codec == nil, deps.Codes == nil,
-		deps.Mail == nil, deps.Audit == nil, deps.Runtime == nil, deps.PermissionGranted == nil, len(deps.Secret) == 0:
+		deps.Mail == nil, deps.Audit == nil, deps.Runtime == nil, deps.PermissionGranted == nil, len(deps.Secret) == 0, deps.Now == nil:
 		return nil, errors.New("identity access account mfa: all dependencies are required")
 	}
 	logger := deps.Logger
@@ -82,7 +84,7 @@ func NewAccountMFAFlows(deps AccountMFAFlowDependencies) (*AccountMFAFlows, erro
 	return &AccountMFAFlows{
 		permissionGranted: deps.PermissionGranted, records: deps.Records, settings: deps.Settings, codec: deps.Codec, codes: deps.Codes,
 		mail: deps.Mail, resetNotice: deps.ResetNotice, ownership: NewAccountOwnership(deps.Records, deps.Traeger), securityNotice: deps.SecurityNotice, audit: deps.Audit, runtime: deps.Runtime, secret: deps.Secret,
-		logger: logger.With("component", "account-mfa"), now: time.Now,
+		logger: logger.With("component", "account-mfa"), now: deps.Now,
 	}, nil
 }
 

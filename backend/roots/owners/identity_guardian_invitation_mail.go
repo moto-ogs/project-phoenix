@@ -28,6 +28,8 @@ type GuardianInvitationMailerConfig struct {
 	Outbox      MailResultOutbox
 	FrontendURL string
 	Logger      *slog.Logger
+	// Now counts the hours the mail states; nil reads the real clock.
+	Now func() time.Time
 }
 
 // GuardianInvitationMailer queues the two guardian mail variants.
@@ -35,13 +37,18 @@ type GuardianInvitationMailer struct {
 	outbox      MailResultOutbox
 	frontendURL string
 	logger      *slog.Logger
+	now         func() time.Time
 }
 
 func NewGuardianInvitationMailer(cfg GuardianInvitationMailerConfig) GuardianInvitationMailer {
+	if cfg.Now == nil {
+		cfg.Now = time.Now
+	}
 	return GuardianInvitationMailer{
 		outbox:      cfg.Outbox,
 		frontendURL: strings.TrimRight(strings.TrimSpace(cfg.FrontendURL), "/"),
 		logger:      guardianMailLogger(cfg.Logger),
+		now:         cfg.Now,
 	}
 }
 
@@ -58,7 +65,7 @@ func (m GuardianInvitationMailer) EnqueueInvitation(ctx context.Context, invitat
 	}
 	stored, err := m.outbox.EnqueueOutboxWithResult(ctx, deliveryCompose.MailEnqueueRequest{
 		Kind:              identityaccess.MailKindGuardianInvitation,
-		Payload:           guardianInvitationPayload(identityaccess.GuardianInvitationMailOf(identityaccess.GuardianMailRecipient(recipient), m.frontendURL, token, expiresAt, schoolName)),
+		Payload:           guardianInvitationPayload(identityaccess.GuardianInvitationMailOf(identityaccess.GuardianMailRecipient(recipient), m.frontendURL, token, expiresAt, m.now(), schoolName)),
 		RelatedEntityType: identityaccess.MailRelatedGuardianInvitation,
 		RelatedEntityID:   invitationID,
 	})

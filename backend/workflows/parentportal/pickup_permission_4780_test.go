@@ -103,7 +103,7 @@ func buildPickupPermissionService(t *testing.T) pickupPermissionFixture {
 		GuardianPhoneRepo:   owners.NewParentGuardianPhoneReads(reposPeople.GuardianPhoneNumber),
 		GuardianInvites:     &stubInvites{},
 		GuardianInvitations: guardianInvitationReads{db: db},
-		InvalidateInvites:   owners.NewGuardianInvitationInvalidation(testpkg.NewDatabase(t, db)),
+		InvalidateInvites:   owners.NewGuardianInvitationInvalidation(testpkg.NewDatabase(t, db), nil),
 		CareExceptions:      owners.NewParentCareExceptions(repos.CarePlan()),
 		Attendance:          parentAttendance(t, db),
 		CareRequests:        requests,

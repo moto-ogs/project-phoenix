@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"time"
 )
 
 func (r *Store) LinkCreatedStudent(ctx context.Context, requestChildID, studentID int64) error {
@@ -47,7 +46,7 @@ func (r *Store) UpdateMatchedStudent(ctx context.Context, requestChildID int64, 
 		Where(`"request_child".tenant_id = ?`, tenantID).
 		Set("matched_student_id = ?", studentID).
 		Set("matched_by_office = FALSE").
-		Set("updated_at = ?", time.Now()).
+		Set("updated_at = ?", r.currentTime()).
 		Where(`"request_child".id = ?`, requestChildID).
 		Exec(ctx)
 	if err != nil {
@@ -79,7 +78,7 @@ func (r *Store) PinOfficeChosenStudent(ctx context.Context, requestChildID, stud
 		Where(`"request_child".tenant_id = ?`, tenantID).
 		Set("matched_student_id = ?", studentID).
 		Set("matched_by_office = TRUE").
-		Set("updated_at = ?", time.Now()).
+		Set("updated_at = ?", r.currentTime()).
 		Where(`"request_child".id = ?`, requestChildID).
 		Exec(ctx)
 	if err != nil {

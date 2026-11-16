@@ -80,13 +80,19 @@ func TestPasskeyRegistration_RefusedAttestationSpendsTheCeremony(t *testing.T) {
 // code, so a test can drive a flow that redeems one.
 func seedTenantChallenge(t *testing.T, repo mfaRows, accountID, tenantID int64, code string) identityaccess.AccountMFAChallenge {
 	t.Helper()
+	return seedTenantChallengeExpiring(t, repo, accountID, tenantID, code, time.Now().Add(identityaccess.MFAChallengeTTL))
+}
+
+// seedTenantChallengeExpiring seeds the code with the expiry of the owner's clock.
+func seedTenantChallengeExpiring(t *testing.T, repo mfaRows, accountID, tenantID int64, code string, expiresAt time.Time) identityaccess.AccountMFAChallenge {
+	t.Helper()
 	hash := testpkg.HashTestPassword(t, code)
 	challenge := identityaccess.AccountMFAChallenge{
 		AccountID: accountID,
 		TenantID:  tenantID,
 		Scope:     identityaccess.MFAChallengeScopeTenant,
 		CodeHash:  hash,
-		ExpiresAt: time.Now().Add(identityaccess.MFAChallengeTTL),
+		ExpiresAt: expiresAt,
 		IPAddress: net.ParseIP("203.0.113.11"),
 	}
 	stored, err := repo.CreateChallenge(context.Background(), challenge)

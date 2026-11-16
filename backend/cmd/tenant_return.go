@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -59,7 +60,7 @@ func newTraegerTenantExporter(db transactionCompose.Database, sealed organizatio
 		Fingerprints: organizationtenancy.ExportFingerprints{Bytes: securityruntime.Fingerprint, Reader: securityruntime.ReaderFingerprint},
 		Sealed:       sealed, Projected: projected,
 		SEPADebitFiles: traegerSEPADebitFiles{billing: billing},
-		Audit:          audit,
+		Audit:          audit, Now: time.Now,
 	})
 }
 

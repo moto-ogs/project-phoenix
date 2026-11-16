@@ -113,6 +113,7 @@ type adjustmentFreezeReader interface {
 type staffBalanceAdjustmentService struct {
 	runInTx        func(context.Context, func(context.Context) error) error
 	todayFunc      func() calendar.Date
+	nowFunc        func() time.Time
 	adjustmentRepo BalanceAdjustmentRecords
 	monthService   WorkTimeMonthService
 	settings       monthSettingsResolver
@@ -149,10 +150,11 @@ func NewStaffBalanceAdjustmentService(
 }
 
 func (s *staffBalanceAdjustmentService) today() calendar.Date {
-	if s.todayFunc != nil {
-		return s.todayFunc()
-	}
-	return calendar.TodayDate()
+	return dayOrWall(s.todayFunc, s.nowFunc)()
+}
+
+func (s *staffBalanceAdjustmentService) now() time.Time {
+	return clockOrWall(s.nowFunc)()
 }
 
 // rejectPreAccountDate fails a booking dated before the account start: such
@@ -238,7 +240,7 @@ func (s *staffBalanceAdjustmentService) CreateAdjustment(ctx context.Context, st
 		EffectiveDate: req.EffectiveDate,
 		Note:          req.Note,
 		DecidedBy:     decidedBy,
-		DecidedAt:     time.Now(),
+		DecidedAt:     s.now(),
 	}
 	createdAdjustment, err := workforce.StaffBalanceAdjustment{}, adjustment.Validate()
 	if err == nil {
@@ -489,7 +491,7 @@ func (s *staffBalanceAdjustmentService) ResetBalance(ctx context.Context, staffI
 		EffectiveDate: effectiveDate,
 		Note:          note,
 		DecidedBy:     decidedBy,
-		DecidedAt:     time.Now(),
+		DecidedAt:     s.now(),
 	}
 	createdAdjustment, err := workforce.StaffBalanceAdjustment{}, adjustment.Validate()
 	if err == nil {
@@ -611,7 +613,7 @@ func (s *staffBalanceAdjustmentService) CreateOpeningBalance(ctx context.Context
 		EffectiveDate: effectiveDate,
 		Note:          note,
 		DecidedBy:     decidedBy,
-		DecidedAt:     time.Now(),
+		DecidedAt:     s.now(),
 	}
 	createdAdjustment, err := workforce.StaffBalanceAdjustment{}, adjustment.Validate()
 	if err == nil {

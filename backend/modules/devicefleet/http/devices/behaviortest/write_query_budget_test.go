@@ -60,7 +60,7 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 					success(w, r, status, data, message)
 				}
 				router := testutil.NewTenantRouter(db)
-				router.Mount("/", devices.NewResource(devicefleet.NewAdministration(fleet), runtime).Router())
+				router.Mount("/", devices.NewResource(devicefleet.NewAdministration(fleet, time.Now), runtime).Router())
 				var lastID int64
 				for i := 0; i < n; i++ {
 					id := fmt.Sprintf("write-budget-%s-%d-%d", scenario, n, i)

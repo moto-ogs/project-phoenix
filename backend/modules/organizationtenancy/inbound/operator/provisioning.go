@@ -82,6 +82,7 @@ type createSchoolRequest struct {
 	Zip            string `json:"zip,omitempty"`
 	Phone          string `json:"phone,omitempty"`
 	Email          string `json:"email,omitempty"`
+	FederalState   string `json:"federal_state"`
 	Hidden         bool   `json:"hidden,omitempty"`
 }
 
@@ -94,6 +95,7 @@ func (req *createSchoolRequest) Bind(_ *http.Request) error {
 	req.Zip = strings.TrimSpace(req.Zip)
 	req.Phone = strings.TrimSpace(req.Phone)
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	req.FederalState = strings.TrimSpace(req.FederalState)
 	return nil
 }
 
@@ -239,6 +241,7 @@ func (rs *ProvisioningResource) CreateSchool(w http.ResponseWriter, r *http.Requ
 		Zip:            req.Zip,
 		Phone:          req.Phone,
 		Email:          req.Email,
+		FederalState:   req.FederalState,
 		Active:         true,
 		Hidden:         req.Hidden,
 	}

@@ -312,7 +312,7 @@ func newOperatorFixture(t *testing.T) *operatorFixture {
 	t.Helper()
 	store := newFakeStore()
 	runtime := &fakeRuntime{}
-	operators := New(store, store, store, fakeTransaction{}, runtime.TenantID, func(ports.Observation) {})
+	operators := New(store, store, store, fakeTransaction{}, runtime.TenantID, func(ports.Observation) {}, time.Now)
 	mfa := &fakeOperatorMFA{}
 	audit := &fakeOperatorAudit{}
 	credentials := &fakeCredentialCleanup{}

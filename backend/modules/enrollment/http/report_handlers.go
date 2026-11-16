@@ -187,7 +187,7 @@ func (rs *Resource) getCareUsageReport(w http.ResponseWriter, r *http.Request) {
 func exportReport[F, R any](rs *Resource, w http.ResponseWriter, r *http.Request,
 	parse func(*http.Request) (lists.Format, F, error),
 	fetch func(ctx context.Context, filters F, actorAccountID int64, actorRole, format string) (R, error),
-	build func(svc lists.DocumentRenderer, report R, format lists.Format) (lists.File, error),
+	build func(svc lists.DocumentRenderer, report R, format lists.Format, generatedAt time.Time) (lists.File, error),
 ) {
 	if rs.ReportService == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("report service not configured")))
@@ -233,7 +233,7 @@ func exportReport[F, R any](rs *Resource, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	file, err := build(rs.ListExportService, report, format)
+	file, err := build(rs.ListExportService, report, format, rs.now())
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return

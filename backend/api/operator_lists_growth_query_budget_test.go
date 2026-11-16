@@ -130,6 +130,7 @@ func TestOperatorDirectoryListsPositiveGrowthQueryBudget(t *testing.T) {
 			input.Slug = fmt.Sprintf("list-school-%d-%d", school, i)
 			input.Subdomain = input.Slug
 			input.Email = input.Slug + "@example.test"
+			input.FederalState = "DE-NW"
 			created, err := provisioning.CreateSchool(ctx, input, operatorID, provisioningTestClientIP)
 			require.NoError(t, err)
 			schools = append(schools, fmt.Sprint(created.ID))

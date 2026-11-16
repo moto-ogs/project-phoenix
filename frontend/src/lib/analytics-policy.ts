@@ -491,7 +491,7 @@ const CUSTOM_EVENTS: ReadonlySet<string> = new Set([
 
 const SAFE_VALUES: Readonly<Record<string, ReadonlySet<string>>> = {
   role: new Set(ANALYTICS_ROLES),
-  demo_role: new Set(["caregiver", "lead", "parent", "all"]),
+  demo_role: new Set(["caregiver", "lead", "parent", "traeger", "all"]),
   direction: new Set(["up", "down"]),
   reason: new Set(["error", "invalid_credentials"]),
   $device_type: new Set(["Desktop", "Mobile", "Tablet", "Console", "Wearable"]),

@@ -17,7 +17,7 @@ import (
 
 func TestGetOrCreateLastSeenState_CreatesNewState(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	state := debouncer.getOrCreateLastSeenState(int64(1001))
 	require.NotNil(t, state)
@@ -28,7 +28,7 @@ func TestGetOrCreateLastSeenState_CreatesNewState(t *testing.T) {
 
 func TestGetOrCreateLastSeenState_ReturnsSameState(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	state1 := debouncer.getOrCreateLastSeenState(int64(2001))
 	state2 := debouncer.getOrCreateLastSeenState(int64(2001))
@@ -38,7 +38,7 @@ func TestGetOrCreateLastSeenState_ReturnsSameState(t *testing.T) {
 
 func TestGetOrCreateLastSeenState_DifferentDevices(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	stateA := debouncer.getOrCreateLastSeenState(int64(3001))
 	stateB := debouncer.getOrCreateLastSeenState(int64(3002))
@@ -48,7 +48,7 @@ func TestGetOrCreateLastSeenState_DifferentDevices(t *testing.T) {
 
 func TestGetOrCreateLastSeenState_ConcurrentAccess(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	var wg sync.WaitGroup
 	states := make([]*lastSeenDebounceState, 10)
@@ -74,7 +74,7 @@ func TestGetOrCreateLastSeenState_ConcurrentAccess(t *testing.T) {
 
 func TestPersistLastSeen_Success(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	directory := newMockDeviceDirectory()
 	state := &lastSeenDebounceState{}
@@ -88,7 +88,7 @@ func TestPersistLastSeen_Success(t *testing.T) {
 
 func TestPersistLastSeen_Error(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	directory := newMockDeviceDirectory()
 	directory.updateError = errors.New("db connection failed")
@@ -103,7 +103,7 @@ func TestPersistLastSeen_Error(t *testing.T) {
 
 func TestPersistLastSeen_ErrorPreservesQueuedObservation(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	directory := newMockDeviceDirectory()
 	directory.updateError = errors.New("db connection failed")
@@ -130,7 +130,7 @@ func TestPersistLastSeen_ErrorPreservesQueuedObservation(t *testing.T) {
 
 func TestFlushDeferredLastSeen_NoopWhenLatestSeenIsZero(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	directory := newMockDeviceDirectory()
 	state := &lastSeenDebounceState{
@@ -145,7 +145,7 @@ func TestFlushDeferredLastSeen_NoopWhenLatestSeenIsZero(t *testing.T) {
 
 func TestFlushDeferredLastSeen_NoopWhenLatestSeenNotAfterLastPersisted(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	directory := newMockDeviceDirectory()
 	now := time.Now()
@@ -161,7 +161,7 @@ func TestFlushDeferredLastSeen_NoopWhenLatestSeenNotAfterLastPersisted(t *testin
 
 func TestFlushDeferredLastSeen_WritesWhenLatestSeenAfterLastPersisted(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	directory := newMockDeviceDirectory()
 	now := time.Now()
@@ -178,7 +178,7 @@ func TestFlushDeferredLastSeen_WritesWhenLatestSeenAfterLastPersisted(t *testing
 
 func TestFlushDeferredLastSeen_ClearsFlushTimer(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	directory := newMockDeviceDirectory()
 	now := time.Now()
@@ -204,7 +204,7 @@ func TestFlushDeferredLastSeen_ClearsFlushTimer(t *testing.T) {
 
 func TestUpdateDeviceLastSeen_FirstCallWritesImmediately(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	directory := newMockDeviceDirectory()
 	device := &AuthenticatedDevice{ID: 7001, DeviceID: "device-first-write"}
@@ -217,7 +217,7 @@ func TestUpdateDeviceLastSeen_FirstCallWritesImmediately(t *testing.T) {
 
 func TestUpdateDeviceLastSeen_SecondCallWithinWindowSchedulesTimer(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	directory := newMockDeviceDirectory()
 	device := &AuthenticatedDevice{ID: 7002, DeviceID: "device-debounce-timer"}
@@ -250,7 +250,7 @@ func TestUpdateDeviceLastSeen_SecondCallWithinWindowSchedulesTimer(t *testing.T)
 
 func TestUpdateDeviceLastSeen_ConcurrentFirstCallsOnlyWriteOnce(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	directory := newMockDeviceDirectory()
 	directory.updateStarted = make(chan struct{}, 2)
@@ -283,7 +283,7 @@ func TestUpdateDeviceLastSeen_ConcurrentFirstCallsOnlyWriteOnce(t *testing.T) {
 
 func TestUpdateDeviceLastSeen_ErrorDoesNotPreventSubsequentCalls(t *testing.T) {
 	t.Parallel()
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	directory := newMockDeviceDirectory()
 	directory.updateError = errors.New("temporary db error")
@@ -320,7 +320,7 @@ func TestDeferredLastSeenPreservesSchoolRuntimeAfterRequestCancellation(t *testi
 		mockDeviceDirectory: newMockDeviceDirectory(),
 		observe:             func(ctx context.Context) { contexts = append(contexts, ctx) },
 	}
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 	device := &AuthenticatedDevice{ID: 99901, TenantID: 71}
 	debouncer.updateDeviceLastSeen(ctx, directory, device)
 	debouncer.updateDeviceLastSeen(ctx, directory, device)

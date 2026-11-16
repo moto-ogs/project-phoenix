@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // ActivityService implements the activityContract.ActivityService interface
@@ -19,6 +20,8 @@ type ActivityService struct {
 	activeGroupRepo ActivityOccupancy
 	staffRepo       ports.LifecycleStaff
 	studentRepo     ActivityStudents
+	// today dates new enrollments and the care-end gate.
+	today func() calendar.Date
 }
 
 type ActivityOccupancy interface {
@@ -33,8 +36,13 @@ func NewActivityService(
 	activeGroupRepo ActivityOccupancy,
 	staffRepo ports.LifecycleStaff,
 	studentRepo ActivityStudents,
+	today func() calendar.Date,
 ) (*ActivityService, error) {
+	if today == nil {
+		today = calendar.TodayDate
+	}
 	return &ActivityService{
+		today:           today,
 		timetable:       timetableCapability,
 		scheduleRepo:    scheduleRepo,
 		directories:     directories,

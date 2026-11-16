@@ -45,7 +45,15 @@ func (t *TraegerStaff) employSpringer(ctx context.Context, block domain.PoolBloc
 	if err != nil {
 		return err
 	}
-	return t.store.LinkPoolEmployment(ctx, block.RecordID, staffID, actor.AccountID)
+	if err := t.store.LinkPoolEmployment(ctx, block.RecordID, staffID, actor.AccountID); err != nil {
+		return err
+	}
+	// A block after the last one resumes the former employment the pool
+	// created (#7197, ADR 0021): the trail shows it beside its end.
+	if identity.ViaPool && !identity.MembershipLive && identity.MembershipID == staffID {
+		return t.store.RecordPoolResumed(ctx, block.RecordID, actor.AccountID)
+	}
+	return nil
 }
 
 // endSpringerAccess ends the access of a lifted block in the tenant

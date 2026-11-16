@@ -139,7 +139,7 @@ func (t classTrips) validate(in classday.ClassTripWrite) ([]calendar.Date, strin
 	if to.Before(from) || to.After(from.AddDays(classday.ClassTripMaxDays-1)) {
 		return nil, "", classday.ErrClassTripInvalidRange
 	}
-	if from.Before(t.todayDate()) {
+	if from.Before(t.today()) {
 		return nil, "", classday.ErrClassTripPastDate
 	}
 	if in.ReturnTime != nil {
@@ -186,13 +186,6 @@ func (t classTrips) requireClassChildren(ctx context.Context, schoolClass string
 		}
 	}
 	return nil
-}
-
-func (t classTrips) todayDate() calendar.Date {
-	if t.today != nil {
-		return t.today()
-	}
-	return calendar.TodayDate()
 }
 
 // dedupeIDs keeps the first occurrence of every ID in request order.

@@ -271,7 +271,7 @@ func (f voluntaryFactor) checkCurrentPassword(ctx context.Context, accountID int
 		if !found || !account.Active {
 			return domain.ErrAccountNotFound
 		}
-		accepted, err = checkPasswordLogin(txCtx, f.auth.store, f.verifier, f.auth.passwordPolicy, account.ID, account.PasswordHash, password, false)
+		accepted, err = checkPasswordLogin(txCtx, f.auth.store, f.verifier, f.auth.passwordPolicy, account.ID, account.PasswordHash, password, false, f.auth.sessions.now)
 		return err
 	})
 	if err != nil {

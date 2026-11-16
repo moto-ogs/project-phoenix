@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
@@ -183,8 +184,8 @@ type parentContractNotices struct {
 // NewParentContractNotices binds the parents' declarations over the
 // confirmation templates of the Träger and Delivery's outbox.
 func NewParentContractNotices(settings CareContractNoticeSettings, delivery deliveryRuntime.Capability,
-	holidays carecontract.SchoolHolidays) parentportal.ContractNoticesPort {
-	return parentContractNotices{notices: careContractCompose.NewParentNotices(NewCareContractNoticePorts(settings, delivery, nil, holidays))}
+	holidays carecontract.SchoolHolidays, now func() time.Time) parentportal.ContractNoticesPort {
+	return parentContractNotices{notices: careContractCompose.NewParentNotices(NewCareContractNoticePorts(settings, delivery, nil, holidays), now)}
 }
 
 func (n parentContractNotices) ContractNoticeOptions(ctx context.Context, organizationID, contractID int64,

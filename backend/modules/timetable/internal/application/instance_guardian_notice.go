@@ -92,7 +92,7 @@ func (s *InstanceLifecycleService) validateGuardianNotice(ctx context.Context, i
 		return err
 	}
 	// A block that already lies in the past is bookkeeping, not news.
-	if instance.Date.Before(calendar.TodayDate()) {
+	if instance.Date.Before(calendar.DateFromTime(s.now())) {
 		return timetable.WithCode(fmt.Errorf("%w: block is in the past", timetable.ErrGuardianNoticeInvalid),
 			timetable.CodeGuardianNoticePast)
 	}

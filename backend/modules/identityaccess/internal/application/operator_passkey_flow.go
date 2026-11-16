@@ -81,7 +81,7 @@ func NewOperatorPasskeyFlows(operators *Service, deps OperatorPasskeyFlowDepende
 	return &OperatorPasskeyFlows{
 		operators: operators, records: deps.Records, mfa: deps.MFA, sessions: deps.Sessions,
 		runtime: deps.Runtime,
-		rpID:    domain.HostWithoutPort(rpID), rpName: rpName, originHost: originHost, now: time.Now,
+		rpID:    domain.HostWithoutPort(rpID), rpName: rpName, originHost: originHost, now: operators.now,
 	}, nil
 }
 
@@ -176,7 +176,9 @@ func (f *OperatorPasskeyFlows) FinishRegistration(ctx context.Context, request d
 // verifyRegistration consumes the ceremony and verifies the attestation. A
 // refused ceremony is a rejection: the consumption stays committed.
 func (f *OperatorPasskeyFlows) verifyRegistration(ctx context.Context, request domain.OperatorPasskeyRegistrationFinish) (domain.OperatorPasskeyCredential, error) {
-	session, err := f.records.ConsumeSession(ctx, request.SessionID, domain.PasskeySessionPurposeRegistration, f.now())
+	// go-webauthn stamps and validates the ceremony's expiry on the real
+	// clock, so its stored expiry is compared on that clock too (ADR 0261).
+	session, err := f.records.ConsumeSession(ctx, request.SessionID, domain.PasskeySessionPurposeRegistration, time.Now())
 	if err != nil {
 		if errors.Is(err, identityaccess.ErrOperatorPasskeySessionNotFound) {
 			return domain.OperatorPasskeyCredential{}, rejectCeremony(identityaccess.ErrPasskeySessionInvalid)
@@ -290,7 +292,9 @@ type verifiedOperatorPasskeyLogin struct {
 // assertion is a rejection; a failed read is returned as it is, so a store
 // outage does not read as wrong credentials.
 func (f *OperatorPasskeyFlows) verifyLogin(ctx context.Context, request domain.OperatorPasskeyLoginFinish) (verifiedOperatorPasskeyLogin, error) {
-	session, err := f.records.ConsumeSession(ctx, request.SessionID, domain.PasskeySessionPurposeLogin, f.now())
+	// go-webauthn stamps and validates the ceremony's expiry on the real
+	// clock, so its stored expiry is compared on that clock too (ADR 0261).
+	session, err := f.records.ConsumeSession(ctx, request.SessionID, domain.PasskeySessionPurposeLogin, time.Now())
 	if err != nil {
 		if errors.Is(err, identityaccess.ErrOperatorPasskeySessionNotFound) {
 			return verifiedOperatorPasskeyLogin{}, rejectCeremony(identityaccess.ErrPasskeySessionInvalid)

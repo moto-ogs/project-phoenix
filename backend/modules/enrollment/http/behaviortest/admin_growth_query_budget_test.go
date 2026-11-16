@@ -28,7 +28,7 @@ func TestEnrollmentAdminRouteGrowthQueryBudget(t *testing.T) {
 		Requests: env.repos.Enrollment(), Children: env.repos.Enrollment(), Guardians: env.repos.Enrollment(), Phases: env.repos.Enrollment(), Schemas: env.repos.Enrollment(), Offerings: compose.NewCareOfferingRecords(env.reposCare.CarePlan), Adjustments: owners.EnrollmentDecisionAdjustments(audit.EnrollmentOfferingAdjustment),
 	}, f.settings.Settings)
 	f.resource.ReportService = owners.NewEnrollmentReports(owners.EnrollmentReportSources{Owner: env.repos.Enrollment(), Offerings: compose.NewCareOfferingRecords(env.reposCare.CarePlan), Settings: f.settings.Settings})
-	f.resource.UploadList = owners.NewEnrollmentRequestUploads(env.repos.Enrollment(), nil, f.settings.Settings, nil)
+	f.resource.UploadList = owners.NewEnrollmentRequestUploads(env.repos.Enrollment(), nil, f.settings.Settings, nil, nil)
 	router := f.router(t)
 	counter := testpkg.CaptureQueries(t, env.db)
 	// The detail and report grow sibling children in one real submitted request.

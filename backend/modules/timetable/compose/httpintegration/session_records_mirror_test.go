@@ -77,3 +77,59 @@ func TestCreateMirroredSessionInstanceRejectsMissingRoom(t *testing.T) {
 		t.Fatal("missing room must reject before any plan/session write")
 	}
 }
+
+// mirrorClockPlans and mirrorClockPresence serve the recorder as the owner
+// capability and the Student Presence owner NewRepositories composes.
+type mirrorClockPlans struct {
+	timetable.Capability
+	recorder *mirrorCreateRecorder
+}
+
+func (p mirrorClockPlans) CreateActivityInstance(ctx context.Context, input timetable.ActivityInstanceInput) (timetable.ActivityInstance, error) {
+	return p.recorder.CreateActivityInstance(ctx, input)
+}
+
+type mirrorClockPresence struct {
+	studentpresence.Owner
+	recorder *mirrorCreateRecorder
+}
+
+func (p mirrorClockPresence) StartActivitySession(ctx context.Context, start studentpresence.ActivitySessionStart) (studentpresence.ActivitySession, error) {
+	return p.recorder.StartActivitySession(ctx, start)
+}
+
+// mirrorClockReads answers the reload from the recorder: the shallower
+// embedded instance reads win over the unused joined reads.
+type mirrorClockReads struct {
+	timetablePorts.LegacyInstanceReads
+	mirrorUnusedReads
+}
+
+type mirrorUnusedReads struct{ compose.PresenceReads }
+
+// A row created running without its start instant starts its session on the
+// clock the repositories were composed with (ADR 0263), not on the real one.
+func TestRepositoriesStartRunningRowsOnTheirClock(t *testing.T) {
+	t.Parallel()
+	at := time.Date(2030, time.August, 26, 10, 15, 0, 0, calendar.Berlin)
+	recorder := &mirrorCreateRecorder{}
+	repos := compose.NewRepositories(compose.RepositoryDependencies{
+		Timetable: mirrorClockPlans{recorder: recorder}, Presence: mirrorClockPresence{recorder: recorder},
+		Now: func() time.Time { return at },
+	}, mirrorClockReads{LegacyInstanceReads: fixtures.InstanceReadsOf(recorder)})
+	sessionID := int64(77)
+
+	_, err := repos.NativeRecords().CreateMirroredSessionInstance(context.Background(), timetable.ScheduledInstance{
+		Title: "Kiosk-Sitzung", Date: calendar.NewDate(2030, time.August, 26), RoomID: 5, ActiveGroupID: &sessionID,
+		StartTime: time.Date(2000, time.January, 1, 10, 0, 0, 0, time.UTC), EndTime: time.Date(2000, time.January, 1, 11, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("create mirrored session: %v", err)
+	}
+	if recorder.started == nil {
+		t.Fatal("the running row must start its session")
+	}
+	if !recorder.started.StartedAt.Equal(at) {
+		t.Errorf("session started at %v, want the composed clock's %v", recorder.started.StartedAt, at)
+	}
+}

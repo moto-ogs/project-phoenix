@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"time"
 
 	offeringContract "github.com/moto-ogs/project-phoenix/modules/enrollment/offeringcontract"
 
@@ -132,7 +131,7 @@ func (s *Intake) loadDraftPhase(ctx context.Context, draft *editDraft) error {
 	if err != nil {
 		return err
 	}
-	if draft.editMode == enrollmentNative.EditModeChangeRequest && !phase.EnrollmentWindowOpen(time.Now()) {
+	if draft.editMode == enrollmentNative.EditModeChangeRequest && !phase.EnrollmentWindowOpen(s.now()) {
 		return enrollmentNative.ErrEnrollmentWindowClosed
 	}
 	draft.phase = phase

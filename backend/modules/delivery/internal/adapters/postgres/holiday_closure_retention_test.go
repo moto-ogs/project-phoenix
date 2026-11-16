@@ -58,7 +58,7 @@ func TestHolidayClosureRetentionKeepsRecoveryAndAcceptedKeys(t *testing.T) {
   JOIN platform.email_outbox AS mail ON mail.id = event.outbox_id WHERE mail.organization_id = ?`, organization).Scan(ctx, &events))
 	assert.Zero(t, events, "accepted mail's provider events expire with its content")
 
-	raw := postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase)
+	raw := postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase, time.Now)
 	require.NoError(t, testpkg.WithinTraeger(ctx, organization, func(ctx context.Context) error {
 		retried, err := raw.RetryFailedTraegerEmails(ctx, organization, []string{"closure-retention:dead_letter", "closure-retention:sent", "closure-retention:unknown", "closure-retention:suppressed"})
 		require.NoError(t, err)
@@ -73,7 +73,7 @@ func TestRecoverableCancellationKeepsHolidayClosureOrder(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	store, ctx := testStore(t, db)
-	raw := postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase)
+	raw := postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase, time.Now)
 	for _, reason := range []string{deliveryContract.MailHeldByList, deliveryContract.MailHeldByStop, "guardian access revoked"} {
 		t.Run(reason, func(t *testing.T) {
 			testpkg.OwnTenant(t)
@@ -134,7 +134,7 @@ func TestConcurrentTraegerRetryPreservesNewerMailState(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	_, ctx := testStore(t, db)
-	raw := postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase)
+	raw := postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase, time.Now)
 	organization := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{
 		Name: "Concurrent retry", Slug: fmt.Sprintf("concurrent-retry-%d", testpkg.Tenant(t)),
 	}).ID

@@ -62,6 +62,23 @@ school of #3461 stays selectable as the fallback (see below).
    `platform.schools` and leave hidden schools out, so a running ticker
    stops at the next poll. The standing school cannot be restarted.
 
+9. Every order has a Träger of its own (#6193, ADR 0271): `traeger-<slug>`,
+   named like the profile's (`Ganztag Nord e. V.`), the same for every attempt
+   of the order. The seed records it on the order (`traeger_id`) as soon as it
+   exists, adds two neighbour schools (`<slug>-n1` „OGS Am Lindenhof",
+   `<slug>-n2` „OGS Rheinblick": two groups, twelve children, today's web
+   attendance) and records them in `visitor_school_ids`, then runs the Träger
+   steps over all three. The visitor's caregiver joins the Träger-Büro with
+   every role of the office and the visitor's name; the deferred seed links
+   the Träger's staff records without the visitor's employment. The demo role
+   Träger-Büro opens the Träger-Portal on its own host. Expiry, restart and a
+   final failure hide every school of the Träger; the visitor erasure removes
+   the visitor from its office. Once the 90-day database erasure removed the
+   last school of the Träger, the same run erases the Träger
+   (`platform.erase_retired_demo_traeger`, counts on
+   `platform.demo_traeger_origins`). Orders seeded before #6193 stay under the
+   shared `demo-traeger-nord` and offer no Träger-Büro.
+
 An address whose newest unexpired demo access enters a school that did not
 fail gets no second school: after the 10-minute cooldown of #3465 a further
 request stores an access into that same school and mails its link.
@@ -100,7 +117,7 @@ marker and logs its school ID; the run stays due, the next poll retries it
 and the sidecar turns `unhealthy` until it succeeds. The log line
 `demo school files erased` carries the number of schools and files.
 
-Last, the same run erases from the database every hidden demo school whose
+Then the same run erases from the database every hidden demo school whose
 uploads are erased, that was hidden at least 90 days ago and that no order
 names any more (#5559, ADR 0189). It calls
 `platform.erase_retired_demo_school` once per school, at most 10 per run,
@@ -112,6 +129,13 @@ every row and waits for the next run, which does not fail. A school that
 fails keeps every row, the run stays due and the sidecar turns `unhealthy`;
 the log line `demo schools erased from the database` carries the number of
 erased and busy schools.
+
+Last, it erases every Demo-Träger (ADR 0271) whose last school is gone and
+that no order names: `platform.erase_retired_demo_traeger` deletes the Träger
+root, whose Träger tables cascade, and writes the time and row counts onto
+`platform.demo_traeger_origins`. Erased Träger count into the same log line.
+A Träger without a demo origin, the shared `demo-traeger-nord` among them, is
+never erased this way.
 
 Hidden demo schools without a demo origin (orders erased before 1.15.735)
 are left alone by both steps. To remove them, rebuild the demo database and

@@ -184,6 +184,26 @@ func TestUpdateStudent_PhotoConsentWithdrawalWhilePhotosAreOff(t *testing.T) {
 	assert.NotNil(t, trail[0].Actor, "the trail names the staff account that entered it")
 }
 
+// TestUpdateStudent_PhotoConsentGrantWhilePhotosAreOff pins the grant gate of
+// #7208: switching photos off ends every consent, so no new one may be
+// recorded while they stay off. The update is refused with the photos code
+// and leaves the row without a consent.
+func TestUpdateStudent_PhotoConsentGrantWhilePhotosAreOff(t *testing.T) {
+	t.Parallel()
+
+	tc := setupStudentsRoute(t)
+	student := testpkg.CreateTestStudent(t, tc.db, "PhotoOffGrant", "Student", "PO2")
+
+	body := map[string]interface{}{"photo_consent_given": true}
+	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
+
+	require.Equal(t, http.StatusForbidden, rr.Code, "Body: %s", rr.Body.String())
+	assert.Contains(t, rr.Body.String(), common.CodeStudentsPhotosDisabled)
+	assert.False(t, readConsentTimestamp(t, tc, student.ID),
+		"a refused grant must not stamp a consent")
+}
+
 // TestUpdateStudent_PhotoConsentGrant_StampsAuditFields verifies that
 // transitioning a student from no-consent to consent_given=true through
 // the update endpoint stamps photo_consent_given_at and

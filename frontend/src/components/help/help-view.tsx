@@ -324,7 +324,7 @@ function HelpMobileHeader({
   onOpenDrawer: OpenMobileHelpDrawer;
 }>) {
   return (
-    <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 px-3 py-2.5 backdrop-blur-md lg:hidden print:hidden">
+    <header className="sticky top-0 z-40 border-b border-gray-200 bg-white px-3 py-2.5 lg:hidden print:hidden">
       <div className="flex items-center gap-1.5">
         <Button
           type="button"

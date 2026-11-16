@@ -140,7 +140,7 @@ func testCleanupExpiredVisitsIsolatesFailingStudent(t *testing.T, ambient, befor
 	repos := api.NewRetentionCleanupRepositories(testpkg.NewDatabase(t, db), command)
 	injected := errors.New("synthetic audit failure")
 	fault := &studentAuditFault{DeletionAudit: owners.NewDeletionAudit(repos.Deletion), studentID: students[1], err: injected, beforeAppend: beforeAppend}
-	cleanup := activeService.NewCleanupService(presence, sessionSupervisors(repos.Sessions), fault, visitRetentionSetting{days: 30})
+	cleanup := activeService.NewCleanupService(presence, sessionSupervisors(repos.Sessions), fault, visitRetentionSetting{days: 30}, time.Now)
 
 	var result *activeService.CleanupResult
 	if ambient {
@@ -202,7 +202,7 @@ func TestCleanupExpiredVisitsAbortsOnSavepointControlFailure(t *testing.T) {
 				DeletionAudit: owners.NewDeletionAudit(repos.Deletion), studentID: students[1],
 				err: errors.New("synthetic audit failure"), controlAt: controlAt,
 			}
-			cleanup := activeService.NewCleanupService(testSchoolPresence(t, db), nil, fault, visitRetentionSetting{days: 30})
+			cleanup := activeService.NewCleanupService(testSchoolPresence(t, db), nil, fault, visitRetentionSetting{days: 30}, time.Now)
 			err = testpkg.WithTenantTx(t, testpkg.Ctx(t), db, testpkg.Tenant(t), func(ctx context.Context, _ testpkg.Tx) error {
 				result, err := cleanup.CleanupExpiredVisits(ctx)
 				assert.False(t, result.Success)
@@ -233,7 +233,7 @@ func TestDisabledVisitHistoryBatchKeepsDayBoundaryAudit(t *testing.T) {
 			command, err := api.NewCleanupAuditCommand(slog.Default())
 			require.NoError(t, err)
 			deletions := owners.NewDeletionAudit(api.NewRetentionCleanupRepositories(testpkg.NewDatabase(t, db), command).Deletion)
-			cleanup := activeService.NewCleanupService(testSchoolPresence(t, db), nil, deletions, disabledVisitHistory{}, func() calendar.Date { return day })
+			cleanup := activeService.NewCleanupService(testSchoolPresence(t, db), nil, deletions, disabledVisitHistory{}, func() time.Time { return day.BerlinMidnight().Add(12 * time.Hour) })
 			group := testpkg.CreateTestActiveGroupForTenant(t, db, testpkg.Tenant(t))
 			before := day.BerlinMidnight().Add(-time.Microsecond)
 			at := day.BerlinMidnight()

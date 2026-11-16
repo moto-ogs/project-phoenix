@@ -91,6 +91,7 @@ describe("DemoEntryPage", () => {
       accessId: "4711",
       role: "caregiver",
       src: "messe",
+      traeger: false,
       pending: "demo_entered",
     });
   });
@@ -142,6 +143,7 @@ describe("DemoEntryPage", () => {
       expect.stringContaining("Betreuungskraft"),
       expect.stringContaining("OGS-Leitung"),
       expect.stringContaining("Elternteil"),
+      expect.stringContaining("Träger-Büro"),
     ]);
     fireEvent.click(screen.getByRole("button", { name: /OGS-Leitung/ }));
 
@@ -230,6 +232,26 @@ describe("DemoEntryPage", () => {
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(signIn).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
+  // The role card Träger-Büro (#6193) opens the Träger-Portal with the same
+  // link, like the role parent opens the parents app.
+  it("hands the link on to the Träger-Portal when the visitor chooses the Träger-Büro", async () => {
+    vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", "traeger.demo.example");
+    fetchMock.mockReturnValueOnce(json(200, { status: "ready" }));
+
+    open("#token=secret-token");
+
+    expect(await screen.findByText(DEMO_ROLE_CHOICE_TITLE)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Träger-Büro/ }));
+
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith(
+        `${globalThis.location.protocol}//traeger.demo.example/demo#token=secret-token&role=traeger`,
+      ),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     vi.unstubAllEnvs();
   });
 

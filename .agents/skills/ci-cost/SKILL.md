@@ -110,6 +110,16 @@ Proven here (#5700, #5762, #5770) or in pingdotgg/t3code (#14025, #19587,
   EPYC 7763. One school seed takes 52-58 s, 67-69 s or 77-86 s on them, so
   a hosted job spreads by a factor of 1.5 without any change. Compare
   hosted jobs per CPU (`lscpu`), or take at least six.
+- One school seed is serial API calls, so its wall time is the latency of
+  each call, not the runner's cores: 72 s server and 70 s Postgres CPU in
+  82 s on four cores. Argon2id took 41 of the server's 67 CPU s (about 150
+  hashes and checks per seed). The smoke builds with the `seedsmoke` tag and
+  the test profile (#7230): the two "isolation" seeds end after 64-69,
+  85-91 or 114-123 s against 89-97, 110-116 and 139-149 s on the three
+  hosted CPUs. What remains is Postgres, and there planning: 119 s against
+  36 s of execution in two seeds, 51 s of it two parent feed queries at
+  67-75 ms per call (#7231). Profile a Go server without pprof wiring with
+  a temporary `runtime/pprof` file in package main.
 - A seed that looks bimodal may be a query plan, not the runner. Autovacuum
   analyzes a database once a minute; until then the planner took freshly
   filled tables for one row and joined in nested loops (74-107 statements of

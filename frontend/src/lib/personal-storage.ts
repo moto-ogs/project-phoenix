@@ -100,6 +100,9 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   // Steuerwerte ohne Konto. deliberateLogout muss den Logout überleben: die
   // Login-Seite liest daraus, dass er gewollt war.
   "deliberateLogout",
+  // Ebenso der Merker, dass der letzte Logout die Sitzung nur auf diesem
+  // Gerät beendet hat (#7209); die Login-Seite liest ihn einmal.
+  "logoutNotRevoked",
   // „Mit Code neu anmelden“ (#6955) muss den Logout ebenso überleben: Die
   // nächste Träger-Anmeldung in diesem Tab fragt einmal nach dem Code. Nur
   // ein Merker ohne Konto; trifft er die nächste Person, fragt moto auch sie
@@ -107,8 +110,14 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   "moto.traeger.sign-in-with-code",
   "lastSuccessfulRefresh",
   "tagesplan-scroll",
-  // Sperrzeit für die nächste Anfrage „Passwort vergessen“; entsteht vor der
-  // Anmeldung und trägt nur einen Zeitpunkt, weder Konto noch Adresse.
+  // Sperrzeiten für „Passwort vergessen“ je Adresse (#7213); entstehen vor
+  // der Anmeldung. Je Eintrag ein Zeitpunkt unter einem 32-Bit-Hash der
+  // Adresse, kein Konto und keine Adresse im Klartext. Wer eine Adresse
+  // vermutet, kann am Gerät prüfen, ob sie hier angefragt wurde. Die Sperre
+  // läuft höchstens eine Stunde; das nächste Öffnen des Fensters räumt
+  // abgelaufene Einträge weg.
+  "passwordResetWaits",
+  // Die frühere Sperrzeit ohne Adresse; das Fenster räumt sie beim Lesen weg.
   "passwordResetRateLimitUntil",
   // Hinweise auf diesem Gerät und die öffentliche Demo.
   "schulhof-banner-dismissed",

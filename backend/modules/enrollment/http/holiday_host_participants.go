@@ -36,6 +36,9 @@ type HolidayHostResource struct {
 	requireHealth common.Middleware
 	guests        capability.HolidayGuests
 	requireAssign common.Middleware
+	// Now stamps the participant export (ADR 0239). Set as a field after
+	// construction; nil is the real clock.
+	Now func() time.Time
 }
 
 // NewHolidayHostResource builds the routes. requireWeeks is the school
@@ -161,7 +164,7 @@ func (rs *HolidayHostResource) exportParticipants(w http.ResponseWriter, r *http
 		renderHolidayHostError(w, r, err)
 		return
 	}
-	file, err := lists.NewRenderer().Render(holidayParticipantDocument(list, hostSchoolNames(r.Context())), format,
+	file, err := lists.NewRenderer().Render(holidayParticipantDocument(list, hostSchoolNames(r.Context()), readClock(rs.Now)), format,
 		"teilnehmerliste-"+list.Week.StartsOn.String())
 	if err != nil {
 		renderHolidayHostError(w, r, err)
@@ -325,7 +328,7 @@ func hostAnswerColumnID(key string) lists.ColumnID { return lists.ColumnID("answ
 
 // holidayParticipantDocument is the export of a participant list: one row
 // per child, the counts per time model and home school as header lines.
-func holidayParticipantDocument(list capability.HolidayParticipantList, names holidaySchoolNameMap) lists.Document {
+func holidayParticipantDocument(list capability.HolidayParticipantList, names holidaySchoolNameMap, generatedAt time.Time) lists.Document {
 	models := make(map[int64]string, len(list.TimeModels))
 	header := []string{"Woche: " + list.Week.StartsOn.Format("02.01.") + " bis " + list.Week.EndsOn.Format("02.01.2006"),
 		"Kinder: " + strconv.Itoa(len(list.Participants))}
@@ -368,7 +371,7 @@ func holidayParticipantDocument(list capability.HolidayParticipantList, names ho
 		rows[i] = lists.Row{Values: values}
 	}
 	return lists.Document{
-		Title: "Teilnehmerliste", Subtitle: list.Week.PeriodName, GeneratedAt: time.Now(),
+		Title: "Teilnehmerliste", Subtitle: list.Week.PeriodName, GeneratedAt: generatedAt,
 		Filters: header, Columns: holidayParticipantExtraColumns(list), Rows: rows,
 		Footer: "Vertraulich. Enthält personenbezogene Daten.",
 	}

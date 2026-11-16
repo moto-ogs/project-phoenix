@@ -23,7 +23,7 @@ func (w *Worker) DispatchPush(ctx context.Context, tenantID, id int64) error {
 		return errors.New("delivery: targeted push store is not configured")
 	}
 	for {
-		now := time.Now()
+		now := w.now()
 		intent, acquired, err := store.ClaimPush(ctx, tenantID, id, now, now.Add(w.leaseDuration))
 		if err != nil {
 			return err
@@ -53,7 +53,7 @@ func (w *Worker) DispatchPush(ctx context.Context, tenantID, id int64) error {
 }
 
 func (w *Worker) deliverPushOnce(ctx context.Context, intent domain.Intent) error {
-	token, active, err := w.store.StartDelivery(ctx, intent.Transport, intent.ID, leaseToken(intent), synchronousPushLease(ctx, w.leaseDuration))
+	token, active, err := w.store.StartDelivery(ctx, intent.Transport, intent.ID, leaseToken(intent), synchronousPushLease(ctx, w.now(), w.leaseDuration))
 	if err != nil {
 		return err
 	}
@@ -66,21 +66,21 @@ func (w *Worker) deliverPushOnce(ctx context.Context, intent domain.Intent) erro
 	finalizeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), providerTimeout)
 	defer cancel()
 	if errors.Is(sendErr, domain.ErrCancelled) {
-		done, err := w.store.FinalizeCancelled(finalizeCtx, intent.Transport, intent.ID, token, sendErr.Error(), time.Now())
+		done, err := w.store.FinalizeCancelled(finalizeCtx, intent.Transport, intent.ID, token, sendErr.Error(), w.now())
 		if err == nil && !done {
 			err = errors.New("delivery: cancelled push lost its lease")
 		}
 		return errors.Join(sendErr, err)
 	}
 	if errors.Is(sendErr, domain.ErrDeferred) {
-		done, err := w.store.FinalizeDeferred(finalizeCtx, intent.Transport, intent.ID, token, sendErr.Error(), time.Now().Add(retryBackoff[0]))
+		done, err := w.store.FinalizeDeferred(finalizeCtx, intent.Transport, intent.ID, token, sendErr.Error(), w.now().Add(retryBackoff[0]))
 		if err == nil && !done {
 			err = errors.New("delivery: deferred push lost its lease")
 		}
 		return err
 	}
 	if sendErr != nil {
-		result, err := w.store.FinalizeFailure(finalizeCtx, intent.Transport, intent.ID, token, intent.Attempts+1, sendErr.Error(), time.Now(), 1)
+		result, err := w.store.FinalizeFailure(finalizeCtx, intent.Transport, intent.ID, token, intent.Attempts+1, sendErr.Error(), w.now(), 1)
 		if err == nil && !result.Finalized {
 			err = errors.New("delivery: failed push lost its lease")
 		}
@@ -94,7 +94,7 @@ func (w *Worker) finalizeSynchronousPush(finalizeCtx context.Context, intent dom
 	if err != nil {
 		return fmt.Errorf("delivery: encode synchronous push result: %w", err)
 	}
-	done, err := w.store.FinalizeSent(finalizeCtx, intent.Transport, intent.ID, token, encoded, time.Now())
+	done, err := w.store.FinalizeSent(finalizeCtx, intent.Transport, intent.ID, token, encoded, w.now())
 	if err != nil {
 		return err
 	}
@@ -106,10 +106,13 @@ func (w *Worker) finalizeSynchronousPush(finalizeCtx context.Context, intent dom
 
 // The synchronous caller keeps its existing deadline, which may exceed the
 // background provider timeout. Its fence must survive that full operation.
-func synchronousPushLease(ctx context.Context, duration time.Duration) time.Time {
-	expires := time.Now().Add(duration)
-	if deadline, ok := ctx.Deadline(); ok && deadline.Add(providerTimeout).After(expires) {
-		return deadline.Add(providerTimeout)
+// The deadline counts on the worker clock, which the stored lease is compared with.
+func synchronousPushLease(ctx context.Context, now time.Time, duration time.Duration) time.Time {
+	expires := now.Add(duration)
+	if deadline, ok := ctx.Deadline(); ok {
+		if fence := now.Add(time.Until(deadline) + providerTimeout); fence.After(expires) {
+			return fence
+		}
 	}
 	return expires
 }

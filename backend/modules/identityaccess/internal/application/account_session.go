@@ -90,7 +90,7 @@ func (s *Service) ListAccountSessions(ctx context.Context, public ports.AccountS
 		AccountID: public.AccountID, FamilyID: public.FamilyID, Mobile: public.Mobile, Liveness: domain.AccountSessionLiveness(public.Liveness),
 	}
 	err := s.run(ctx, s.tx.RunPlatform, "list_account_sessions", func(txCtx context.Context, stats *domain.OperationStats) error {
-		sessions, queryStats, listErr := s.sessions.ListAccountSessions(txCtx, filter, time.Now())
+		sessions, queryStats, listErr := s.sessions.ListAccountSessions(txCtx, filter, s.now())
 		stats.Add(queryStats)
 		if listErr != nil {
 			return listErr
@@ -107,7 +107,7 @@ func (s *Service) ListAccountSessions(ctx context.Context, public ports.AccountS
 func (s *Service) CountExpiredAccountSessions(ctx context.Context) (int, error) {
 	var result int
 	err := s.run(ctx, s.tx.RunPlatform, "count_expired_account_sessions", func(txCtx context.Context, stats *domain.OperationStats) error {
-		count, queryStats, countErr := s.sessions.CountExpiredAccountSessions(txCtx, time.Now())
+		count, queryStats, countErr := s.sessions.CountExpiredAccountSessions(txCtx, s.now())
 		stats.Add(queryStats)
 		if countErr != nil {
 			return countErr
@@ -124,7 +124,7 @@ func (s *Service) CountExpiredAccountSessions(ctx context.Context) (int, error) 
 func (s *Service) ListInactiveAccountIDsWithLiveSessions(ctx context.Context) ([]int64, error) {
 	var result []int64
 	err := s.run(ctx, s.tx.RunPlatform, "list_inactive_accounts_with_live_sessions", func(txCtx context.Context, stats *domain.OperationStats) error {
-		ids, queryStats, listErr := s.sessions.ListInactiveAccountIDsWithLiveSessions(txCtx, time.Now())
+		ids, queryStats, listErr := s.sessions.ListInactiveAccountIDsWithLiveSessions(txCtx, s.now())
 		stats.Add(queryStats)
 		if listErr != nil {
 			return listErr
@@ -141,7 +141,7 @@ func (s *Service) ListInactiveAccountIDsWithLiveSessions(ctx context.Context) ([
 func (s *Service) HasLiveAccountSessionsCreatedAfter(ctx context.Context, accountID int64, since time.Time) (bool, error) {
 	var result bool
 	err := s.run(ctx, s.tx.RunPlatform, "has_live_account_sessions_created_after", func(txCtx context.Context, stats *domain.OperationStats) error {
-		exists, queryStats, existsErr := s.sessions.HasLiveAccountSessionsCreatedAfter(txCtx, accountID, since, time.Now())
+		exists, queryStats, existsErr := s.sessions.HasLiveAccountSessionsCreatedAfter(txCtx, accountID, since, s.now())
 		stats.Add(queryStats)
 		if existsErr != nil {
 			return existsErr
@@ -241,7 +241,7 @@ func (s *Service) RetireAccountSessionFamily(ctx context.Context, accountID int6
 func (s *Service) EnforceAccountSessionCap(ctx context.Context, accountID int64, portalScope string, keep int, minted int64) ([]ports.AccountSession, error) {
 	var result []domain.AccountSession
 	err := s.run(ctx, s.tx.RunPlatform, "enforce_account_session_cap", func(txCtx context.Context, stats *domain.OperationStats) error {
-		live, listStats, listErr := s.sessions.ListLiveAccountSessionsForCap(txCtx, accountID, domain.CapPortalScopes(portalScope), time.Now())
+		live, listStats, listErr := s.sessions.ListLiveAccountSessionsForCap(txCtx, accountID, domain.CapPortalScopes(portalScope), s.now())
 		stats.Add(listStats)
 		if listErr != nil {
 			return listErr
@@ -421,7 +421,7 @@ func (s *Service) RevokeTenantAccountSessions(ctx context.Context, tenantID int6
 func (s *Service) DeleteExpiredAccountSessions(ctx context.Context) (int, error) {
 	var result int
 	err := s.run(ctx, s.tx.RunPlatform, "delete_expired_account_sessions", func(txCtx context.Context, stats *domain.OperationStats) error {
-		deleted, queryStats, deleteErr := s.sessions.DeleteExpiredAccountSessions(txCtx, time.Now())
+		deleted, queryStats, deleteErr := s.sessions.DeleteExpiredAccountSessions(txCtx, s.now())
 		stats.Add(queryStats)
 		if deleteErr != nil {
 			return deleteErr

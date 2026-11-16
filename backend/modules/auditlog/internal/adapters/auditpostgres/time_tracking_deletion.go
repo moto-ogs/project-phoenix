@@ -22,5 +22,5 @@ func (r *TimeTrackingDeletionRepository) Create(ctx context.Context, event *audi
 	if err := event.Validate(); err != nil {
 		return fmt.Errorf("invalid time tracking deletion audit event: %w", err)
 	}
-	return NewAppender(r.runtime).Append(ctx, event)
+	return NewAppender(r.runtime, nil).Append(ctx, event)
 }

@@ -107,7 +107,7 @@ func (s *Scheduler) runStatusFlagClearTaskPolling(task *ScheduledTask) {
 // checkAndRunStatusFlagClear runs the schools once a boundary has passed that
 // not every school has run for yet.
 func (s *Scheduler) checkAndRunStatusFlagClear(ctx context.Context, task *ScheduledTask) {
-	now := schedulerTime(s.now)
+	now := s.clock()
 	if s.statusFlagPass.Load() >= statusFlagBoundary(now).Unix() {
 		return
 	}

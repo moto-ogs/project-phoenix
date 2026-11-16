@@ -90,9 +90,16 @@ func (f testTraegerFixture) createTestTraeger(t *testing.T, slug string, schools
 	t.Helper()
 	rec := f.call(t, http.MethodPost, "/organizations/test-traeger", map[string]any{
 		"name": "Test-Träger " + slug, "slug": slug, "school_count": schools, "contact_email": "buero@traeger.example",
+		"federal_state": "DE-NI",
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	return decodeSchoolPortalData[createdTestTraeger](t, rec.Body.Bytes())
+	created := decodeSchoolPortalData[createdTestTraeger](t, rec.Body.Bytes())
+	// Every test school gets the Bundesland of the order (#7174).
+	for _, school := range created.Schools {
+		assert.Equal(t, 1, f.count(t, `SELECT count(*) FROM config.setting_values WHERE tenant_id = ? AND setting_key = 'operations.federal_state' AND value = '"DE-NI"'::jsonb`, school.ID),
+			"school %d", school.ID)
+	}
+	return created
 }
 
 type sampleChildrenAnswer struct {
@@ -163,7 +170,7 @@ func TestOperatorTestTraegerRefusesInvalidOrders(t *testing.T) {
 	f := newTestTraegerFixture(t)
 	slug := fmt.Sprintf("test-%d", testpkg.UniqueTestTenantID(t))
 	order := func(changes map[string]any) map[string]any {
-		body := map[string]any{"name": "Test-Träger", "slug": slug, "school_count": 3, "contact_email": "buero@traeger.example"}
+		body := map[string]any{"name": "Test-Träger", "slug": slug, "school_count": 3, "contact_email": "buero@traeger.example", "federal_state": "DE-NI"}
 		for key, value := range changes {
 			body[key] = value
 		}
@@ -172,6 +179,8 @@ func TestOperatorTestTraegerRefusesInvalidOrders(t *testing.T) {
 	for name, body := range map[string]map[string]any{
 		"too many schools":     order(map[string]any{"school_count": 6}),
 		"no contact address":   order(map[string]any{"contact_email": ""}),
+		"no federal state":     order(map[string]any{"federal_state": ""}),
+		"unknown state":        order(map[string]any{"federal_state": "DE-XX"}),
 		"slug too long":        order(map[string]any{"slug": slug + "-mit-einem-sehr-langen-namen-fuer-die-subdomain-der-schulen"}),
 		"no name":              order(map[string]any{"name": " "}),
 		"slug with uppercase!": order(map[string]any{"slug": "Test Träger"}),

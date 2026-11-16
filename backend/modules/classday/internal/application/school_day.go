@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
@@ -220,14 +219,14 @@ func (s *dayReports) recordSchoolDayViewAudit(ctx context.Context, report *class
 	}
 	const errPrefix = "school day view audit"
 	date := calendar.Date(report.Date)
-	seen, err := s.accessLog.SchoolDayViewSeenSince(ctx, actor.AccountID, date.String(), calendar.TodayDate().BerlinMidnight())
+	seen, err := s.accessLog.SchoolDayViewSeenSince(ctx, actor.AccountID, date.String(), calendar.DateFromTime(s.now()).BerlinMidnight())
 	if err != nil {
 		return fmt.Errorf("%s dedupe: %w", errPrefix, err)
 	}
 	if seen {
 		return nil
 	}
-	entry, err := newAccessRecord(errPrefix, actor.AccountID, actor.Roles, date.BerlinMidnight(), date.EndOfDay(), time.Now())
+	entry, err := newAccessRecord(errPrefix, actor.AccountID, actor.Roles, date.BerlinMidnight(), date.EndOfDay(), s.now())
 	if err != nil {
 		return err
 	}

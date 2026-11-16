@@ -14,8 +14,9 @@ import (
 // portal and says how long it is valid.
 func TestCatererInvitationMailNamesTheSchoolInItsLink(t *testing.T) {
 	t.Parallel()
+	now := time.Date(2026, time.November, 16, 9, 0, 0, 0, time.UTC)
 	queued := identityaccess.CatererInvitationMailOf(" kueche@example.com ", "Küche am Markt", "OGS Beispiel",
-		"https://caterer.example/", 42, "abc123", time.Now().Add(14*24*time.Hour))
+		"https://caterer.example/", 42, "abc123", now.Add(14*24*time.Hour), now)
 	assert.Equal(t, "https://caterer.example/einladung/42/abc123", queued.InvitationURL)
 	assert.Equal(t, "kueche@example.com", queued.Recipient)
 	assert.Equal(t, 14, queued.ExpiryDays)

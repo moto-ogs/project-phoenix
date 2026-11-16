@@ -149,7 +149,7 @@ func (rs *Resource) writeStatusDayOverviewAudit(r *http.Request, from, to calend
 		ResourceType:   dataAccessStudentStatusDayOverview,
 		RangeStart:     from.BerlinMidnight(),
 		RangeEnd:       to.EndOfDay(),
-		AccessedAt:     time.Now(),
+		AccessedAt:     rs.Now(),
 	}
 	entry.Scope = &studentpresence.DataAccessScope{GroupIDs: groupIDs}
 

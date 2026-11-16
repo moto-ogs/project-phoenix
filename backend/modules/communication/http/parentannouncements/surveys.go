@@ -24,11 +24,13 @@ import (
 type SurveyResource struct {
 	Service announcementService.SurveyCapability
 	Reports ReportRenderer
+	// now tells an open survey from a closed one and dates the export.
+	now func() time.Time
 }
 
-// NewSurveyResource wires the survey routes.
-func NewSurveyResource(service announcementService.SurveyCapability, reports ReportRenderer) *SurveyResource {
-	return &SurveyResource{Service: service, Reports: reports}
+// NewSurveyResource wires the survey routes over the clock now.
+func NewSurveyResource(service announcementService.SurveyCapability, reports ReportRenderer, now func() time.Time) *SurveyResource {
+	return &SurveyResource{Service: service, Reports: reports, now: now}
 }
 
 // Router returns the chi router scoped to /surveys.
@@ -96,7 +98,7 @@ func (rs *SurveyResource) list(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]surveyResponse, 0, len(surveys))
 	for i := range surveys {
-		out = append(out, toSurveyResponse(&surveys[i]))
+		out = append(out, toSurveyResponse(&surveys[i], rs.now()))
 	}
 	common.Respond(w, r, http.StatusOK, out, "Surveys retrieved")
 }
@@ -167,7 +169,7 @@ func (rs *SurveyResource) respondSurvey(w http.ResponseWriter, r *http.Request, 
 		surveyFailure(w, r, err)
 		return
 	}
-	common.Respond(w, r, status, toSurveyResponse(survey), msg)
+	common.Respond(w, r, status, toSurveyResponse(survey, rs.now()), msg)
 }
 
 func (rs *SurveyResource) remind(w http.ResponseWriter, r *http.Request) {
@@ -212,7 +214,7 @@ func (rs *SurveyResource) export(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("render survey export", errors.New("survey report renderer is not bound")))
 		return
 	}
-	file, err := rs.Reports.RenderReport(surveyReport(results, time.Now()), "umfrage-auswertung")
+	file, err := rs.Reports.RenderReport(surveyReport(results, rs.now()), "umfrage-auswertung")
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("render survey export", err))
 		return

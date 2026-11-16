@@ -79,12 +79,15 @@ const (
 	// DemoRoleParent signs the visitor in to the parents portal as the
 	// school's parent who carries the visitor's name (#3468).
 	DemoRoleParent DemoRole = "parent"
+	// DemoRoleTraeger signs the visitor in to the Träger-Portal as a member of
+	// the school's own Demo-Träger (#6193, ADR 0271).
+	DemoRoleTraeger DemoRole = "traeger"
 )
 
 // ParseDemoRole accepts the empty role, which chooses none.
 func ParseDemoRole(value string) (DemoRole, error) {
 	switch role := DemoRole(strings.TrimSpace(value)); role {
-	case "", DemoRoleCaregiver, DemoRoleLead, DemoRoleAll, DemoRoleParent:
+	case "", DemoRoleCaregiver, DemoRoleLead, DemoRoleAll, DemoRoleParent, DemoRoleTraeger:
 		return role, nil
 	default:
 		return "", ErrDemoAccessInvalid
@@ -134,6 +137,9 @@ type DemoSchoolEntry struct {
 	// Shared marks the administrator every visitor of the standing school
 	// signs in as; no demo role switch may change its role (#3467).
 	Shared bool
+	// TraegerID is the school's own Demo-Träger (ADR 0271); zero for a school
+	// under the shared Demo-Träger, whose Träger-Büro no visitor enters.
+	TraegerID int64
 }
 
 // DemoEntry is a redeemed demo access: the session and what the demo
@@ -149,6 +155,9 @@ type DemoEntry struct {
 	// FixedRole marks the standing school's shared administrator, whose
 	// role no switch changes; the banner then offers none.
 	FixedRole bool
+	// Traeger reports that the school has a Träger of its own, whose
+	// Träger-Büro the demo role Träger-Büro enters (ADR 0271).
+	Traeger bool
 }
 
 // Normalize trims the prospect's fields and validates them. First and last
