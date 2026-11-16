@@ -79,7 +79,7 @@ case "$*" in
     echo resolve-dsn >>"$TEST_CHANGED_CALL_LOG"
     echo postgres://postgres:fixture@127.0.0.1:15432/phoenix_test?sslmode=disable
     ;;
-  'run ./internal/testdb/cmd/bootstrap --stop-ephemeral '*)
+  'run ./internal/testdb/cmd/bootstrap --stop-ephemeral')
     echo stop-ephemeral >>"$TEST_CHANGED_CALL_LOG"
     ;;
   'run ./internal/testdb/cmd/bootstrap')

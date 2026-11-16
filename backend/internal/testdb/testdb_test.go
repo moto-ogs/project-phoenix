@@ -101,22 +101,19 @@ func TestParsePostgresDSNRejectsInvalidInput(t *testing.T) {
 	}
 }
 
-func TestNewEphemeralLocalConfigUsesRandomLoopbackEndpoint(t *testing.T) {
-	first, err := NewEphemeralLocalConfig()
-	require.NoError(t, err)
-	second, err := NewEphemeralLocalConfig()
+func TestNewEphemeralLocalConfigUsesDockerAssignedLoopbackPort(t *testing.T) {
+	cfg, err := newEphemeralLocalConfig("6543", "generated-password")
 	require.NoError(t, err)
 
-	assert.NotEqual(t, first.TemplateDSN(), second.TemplateDSN())
-	parsed, err := url.Parse(first.TemplateDSN())
+	parsed, err := url.Parse(cfg.TemplateDSN())
 	require.NoError(t, err)
 	assert.Equal(t, "postgres", parsed.Scheme)
 	assert.Equal(t, "127.0.0.1", parsed.Hostname())
-	assert.NotEmpty(t, parsed.Port())
+	assert.Equal(t, "6543", parsed.Port())
 	assert.Equal(t, "postgres", parsed.User.Username())
 	password, ok := parsed.User.Password()
 	assert.True(t, ok)
-	assert.NotEmpty(t, password)
+	assert.Equal(t, "generated-password", password)
 	assert.Equal(t, "/phoenix_test", parsed.Path)
 	assert.Equal(t, "disable", parsed.Query().Get("sslmode"))
 }
@@ -230,26 +227,21 @@ func TestTestContainerCommandUsesDSNConnectionSettings(t *testing.T) {
 	assert.NotContains(t, strings.Join(cmd.Args, " "), "pa'ss", "the password must not be exposed in process arguments")
 }
 
-func TestEphemeralTestContainerCommandAvoidsComposeNetworks(t *testing.T) {
+func TestEphemeralTestContainerCommandPublishesOnlyLoopback(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := NewConfig("postgres://postgres:generated-password@127.0.0.1:6543/phoenix_test?sslmode=disable")
-	require.NoError(t, err)
-
-	cmd, err := ephemeralTestContainerCommand(context.Background(), cfg, []string{"POSTGRES_PASSWORD=stale-password"})
+	cmd, err := ephemeralTestContainerCommand(context.Background(), "generated-password", []string{"POSTGRES_PASSWORD=stale-password"})
 	require.NoError(t, err)
 	assert.Equal(t, "docker", filepath.Base(cmd.Path))
 	assert.Equal(t, []string{
 		"docker", "run", "-d", "--rm",
-		"--network", "host",
 		"--label", ephemeralTestContainerLabel + "=1",
-		"--label", ephemeralTestContainerPortLabel + "=6543",
 		"--tmpfs", "/var/lib/postgresql/data:size=2560m",
+		"--publish", "127.0.0.1::5432",
 		"-e", "POSTGRES_PASSWORD",
 		"-e", "POSTGRES_DB=phoenix_test",
 		ephemeralTestContainerImage,
-		"postgres", "-p", "6543",
-		"-c", "listen_addresses=127.0.0.1",
+		"postgres",
 		"-c", "fsync=off",
 		"-c", "synchronous_commit=off",
 		"-c", "full_page_writes=off",

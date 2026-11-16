@@ -71,28 +71,14 @@ func NewConfig(dsn string) (*Config, error) {
 	return &Config{templateURL: parsed}, nil
 }
 
-// NewEphemeralLocalConfig creates a loopback endpoint for a disposable
-// postgres-test server. It is for the wrapper-managed test lifecycle only:
-// application configuration and direct go test invocations must still provide
-// their configured DSN.
-func NewEphemeralLocalConfig() (*Config, error) {
-	password, err := ephemeralDatabasePassword()
-	if err != nil {
-		return nil, err
-	}
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return nil, fmt.Errorf("reserve test database port: %w", err)
-	}
-	port := listener.Addr().(*net.TCPAddr).Port
-	if err := listener.Close(); err != nil {
-		return nil, fmt.Errorf("release test database port: %w", err)
-	}
-
+// newEphemeralLocalConfig creates the configuration after Docker assigned a
+// loopback port to the disposable server. Docker owns port allocation, so no
+// listener is released between selecting and binding a port.
+func newEphemeralLocalConfig(port, password string) (*Config, error) {
 	dsn := (&url.URL{
 		Scheme:   "postgres",
 		User:     url.UserPassword("postgres", password),
-		Host:     net.JoinHostPort("127.0.0.1", fmt.Sprintf("%d", port)),
+		Host:     net.JoinHostPort("127.0.0.1", port),
 		Path:     "/phoenix_test",
 		RawQuery: "sslmode=disable",
 	}).String()

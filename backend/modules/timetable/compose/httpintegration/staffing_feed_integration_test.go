@@ -172,6 +172,51 @@ func TestStaffingFeedOfASingleSave(t *testing.T) {
 	assert.Contains(t, string(body), `"entries":[]`)
 }
 
+func TestStaffingFeedKeepsSeparateStoriesOfOneSave(t *testing.T) {
+	t.Parallel()
+	f := newStaffingFixture(t)
+	group := testpkg.CreateTestEducationGroup(t, f.s.db, "Sonne")
+	actor, firstAbsent, secondAbsent := f.person(t, "Leitung"), f.person(t, "Anna"), f.person(t, "Chris")
+	lead := f.teacher(t, "Lehrkraft", group.ID)
+	day := calendar.NewDate(2030, 6, 11)
+	first := f.groupBlock(t, day, group.ID, firstAbsent)
+	f.groupBlock(t, day, group.ID, secondAbsent)
+
+	err := f.apply(t, first, timetable.ApplyDeviationsInput{
+		Absences:       []timetable.DeviationAbsenceInput{{StaffID: firstAbsent.staffID}, {StaffID: secondAbsent.staffID}},
+		ActorAccountID: &actor.accountID,
+	})
+	require.NoError(t, err)
+
+	entries := f.entries(t, lead)
+	require.Len(t, entries, 2, "each staffing story must remain visible to the same group teacher")
+	assert.ElementsMatch(t, []string{
+		"Anna Feed ist am Di. 11.06. nicht da.",
+		"Chris Feed ist am Di. 11.06. nicht da.",
+	}, []string{entries[0].Body, entries[1].Body})
+	assert.Equal(t, 2, f.typedPushes(t, lead, "group_staffing_changed"), "each independently visible story creates a push attempt")
+}
+
+func TestStaffingFeedTreatsPlannedCoSupervisorAsAnAbsence(t *testing.T) {
+	t.Parallel()
+	f := newStaffingFixture(t)
+	group := testpkg.CreateTestEducationGroup(t, f.s.db, "Sonne")
+	actor, absent, coSupervisor := f.person(t, "Leitung"), f.person(t, "Anna"), f.person(t, "Ben")
+	lead := f.teacher(t, "Lehrkraft", group.ID)
+	day := calendar.NewDate(2030, 6, 11)
+	instanceID := f.groupBlock(t, day, group.ID, absent, coSupervisor)
+
+	err := f.apply(t, instanceID, timetable.ApplyDeviationsInput{
+		Substitutions:  []timetable.DeviationSubstitutionInput{{AbsentStaffID: absent.staffID, SubstituteStaffID: coSupervisor.staffID}},
+		ActorAccountID: &actor.accountID,
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, []feedEntry{{Type: "staffing_changed", Title: "Dienstplan geändert", Body: "Sie sind am Di. 11.06. als nicht da eingetragen.", DeepLink: "/mein-dienstplan?d=2030-06-11"}}, f.entries(t, absent))
+	assert.Empty(t, f.entries(t, coSupervisor), "a planned co-supervisor did not become a substitute")
+	assert.Equal(t, []feedEntry{{Type: "group_staffing_changed", Title: "Ausfall in Ihrer Gruppe", Body: "Anna Feed ist am Di. 11.06. nicht da.", DeepLink: "/vertretung?d=2030-06-11&block=" + int64String(instanceID)}}, f.entries(t, lead))
+}
+
 func TestStaffingFeedOfASammelVertretungIsOneEntry(t *testing.T) {
 	t.Parallel()
 	f := newStaffingFixture(t)

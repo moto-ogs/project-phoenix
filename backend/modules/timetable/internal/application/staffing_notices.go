@@ -21,12 +21,11 @@ import (
 // its own transaction: a multi-day operation is one notice per person and
 // kind, not one per day. The notice never carries an absence's reason.
 
-// staffingObjectOperation is what a staffing notice is about: the one
-// operation that made the change (a save, a Sammel-Vertretung, one pass of an
-// absence's cascade). The staffing rows record no link between a substitution
-// and its later removal, so an operation bundles only its own entries: an
-// unrelated change never overwrites an unread entry about other days.
-const staffingObjectOperation = "staffing_operation"
+// staffingObjectStory is what a staffing notice is about: one person's one
+// kind of change in a write. Days of that story share one entry, while another
+// story in the same write remains independently visible to overlapping
+// recipients.
+const staffingObjectStory = "staffing_story"
 
 // staffingChange is one block of one person's change in an operation.
 type staffingChange struct {
@@ -85,15 +84,18 @@ func absenceChanges(ops []deviationAbsenceOp) []staffingChange {
 	return changes
 }
 
-// substitutionChanges keeps the substitutions that changed something: a block
-// the substitute already covered stays as it was.
+// substitutionChanges keeps the staffing changes that changed something. A
+// planned co-supervisor is not a new substitute: only the original person's
+// absence changes in that case.
 func substitutionChanges(ops []deviationSubOp) []staffingChange {
 	changes := make([]staffingChange, 0, len(ops))
 	for _, op := range ops {
-		if op.write.Action != timetable.SubstituteActionSubstituted && op.write.Action != timetable.SubstituteActionAlreadyOnInstance {
-			continue
+		switch op.write.Action {
+		case timetable.SubstituteActionSubstituted:
+			changes = append(changes, changeOf(ports.StaffingChangeSubstituted, op.write.OrigRow.StaffID, op.subID, op.write.Instance))
+		case timetable.SubstituteActionAlreadyOnInstance:
+			changes = append(changes, changeOf(ports.StaffingChangeAbsent, op.write.OrigRow.StaffID, 0, op.write.Instance))
 		}
-		changes = append(changes, changeOf(ports.StaffingChangeSubstituted, op.write.OrigRow.StaffID, op.subID, op.write.Instance))
 	}
 	return changes
 }
@@ -135,12 +137,12 @@ func (s *staffDeviations) noticeStaffingChanges(ctx context.Context, op staffing
 	if err != nil {
 		return &ports.ScheduleError{Op: "staffing notice: staff", Err: err}
 	}
-	// A random id names the operation: one write, one object. Nothing reads
-	// it back; it only keeps two operations' entries apart.
-	operationID := rand.Int64N(math.MaxInt64) + 1
 	for _, story := range stories {
 		notice := s.staffingNotice(story, op, today, teachersByBlock, staff)
-		notice.ObjectType, notice.ObjectID = staffingObjectOperation, operationID
+		// Delivery updates unread entries with the same related object. A story
+		// must therefore have its own object: a teacher affected by two changes
+		// in one save needs both entries and both push attempts.
+		notice.ObjectType, notice.ObjectID = staffingObjectStory, rand.Int64N(math.MaxInt64)+1
 		if len(notice.SubjectAccountIDs)+len(notice.SubstituteAccountIDs)+len(notice.TeacherAccountIDs) == 0 {
 			continue
 		}

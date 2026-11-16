@@ -39,14 +39,14 @@ func runCommand(args []string) error {
 	switch {
 	case len(args) == 1 && args[0] == "--resolve-dsn":
 		return printResolvedDSN(context.Background())
-	case len(args) == 2 && args[0] == "--stop-ephemeral":
-		return stopEphemeralServer(context.Background(), args[1])
+	case len(args) == 1 && args[0] == "--stop-ephemeral":
+		return stopEphemeralServer(context.Background())
 	case len(args) == 1 && args[0] == "--idle-status":
 		return testdb.IdleStatus(context.Background())
 	case len(args) == 2 && args[0] == "--idle-watch":
 		return watchIdle(args[1])
 	default:
-		return fmt.Errorf("usage: bootstrap [--idle-status|--resolve-dsn|--stop-ephemeral TEST_DB_DSN]")
+		return fmt.Errorf("usage: bootstrap [--idle-status|--resolve-dsn|--stop-ephemeral]")
 	}
 }
 
@@ -59,7 +59,11 @@ func printResolvedDSN(ctx context.Context) error {
 	return nil
 }
 
-func stopEphemeralServer(ctx context.Context, dsn string) error {
+func stopEphemeralServer(ctx context.Context) error {
+	dsn := os.Getenv("TEST_DB_DSN")
+	if dsn == "" {
+		return nil
+	}
 	cfg, err := testdb.NewConfig(dsn)
 	if err != nil {
 		return err
@@ -115,11 +119,8 @@ func resolveDSN(ctx context.Context) (string, error) {
 		return dsn, nil
 	}
 
-	cfg, err := testdb.NewEphemeralLocalConfig()
+	cfg, err := testdb.StartEphemeralLocalServer(ctx)
 	if err != nil {
-		return "", err
-	}
-	if err := testdb.StartEphemeralLocalServer(ctx, cfg); err != nil {
 		return "", err
 	}
 	return cfg.TemplateDSN(), nil

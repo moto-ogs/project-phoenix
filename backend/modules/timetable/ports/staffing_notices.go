@@ -19,15 +19,15 @@ const (
 )
 
 // StaffingNotice tells the people concerned and the teachers of the affected
-// OGS groups about one change of one staffing operation (#7136): a single
-// save, a Sammel-Vertretung or one absence's plan cascade. It never carries
+// OGS groups about one story in a staffing operation (#7136): a single save,
+// a Sammel-Vertretung or one absence's plan cascade. It never carries
 // the reason of an absence. The person who made the change is in none of the
 // account lists. Push is false when the change takes effect more than 14
 // days ahead; such a notice reaches the notification feed only.
 type StaffingNotice struct {
 	Kind string
-	// ObjectType and ObjectID name what the change is about; changes of the
-	// same object within the bundle window update one unread entry.
+	// ObjectType and ObjectID name the independently visible story; changes
+	// of the same object within the bundle window update one unread entry.
 	ObjectType string
 	ObjectID   int64
 	// SubjectName is the absent, present or removed person; SubstituteName

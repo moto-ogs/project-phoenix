@@ -104,7 +104,7 @@ if [ "${#affected[@]}" -gt 0 ]; then
       status=1
     fi
     if [ -n "${TEST_DB_DSN:-}" ] &&
-      ! (cd "$repo_root/backend" && go run ./internal/testdb/cmd/bootstrap --stop-ephemeral "$TEST_DB_DSN") &&
+      ! (cd "$repo_root/backend" && go run ./internal/testdb/cmd/bootstrap --stop-ephemeral) &&
       [ "$status" -eq 0 ]; then
       status=1
     fi
