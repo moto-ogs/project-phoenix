@@ -1,13 +1,10 @@
 package traegerviewhttp
 
 import (
-	"bytes"
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -17,7 +14,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // AccessLogResource serves the access log of the Träger-Portal (#4655):
@@ -25,14 +21,16 @@ import (
 // Every route needs the right „Zugriffsprotokoll lesen“.
 type AccessLogResource struct {
 	overview traegerview.Overview
+	lists    ListRenderer
 }
 
-// NewAccessLogResource builds the resource.
-func NewAccessLogResource(overview traegerview.Overview) *AccessLogResource {
-	if overview == nil {
-		panic("traeger view http: the overview is required")
+// NewAccessLogResource builds the resource. lists renders the export
+// (#4718).
+func NewAccessLogResource(overview traegerview.Overview, lists ListRenderer) *AccessLogResource {
+	if overview == nil || lists == nil {
+		panic("traeger view http: the overview and the list renderer are required")
 	}
-	return &AccessLogResource{overview: overview}
+	return &AccessLogResource{overview: overview, lists: lists}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/access-log inside the
@@ -98,10 +96,15 @@ func (rs *AccessLogResource) people(w http.ResponseWriter, r *http.Request) {
 }
 
 // export answers GET /traeger/access-log/export: every entry of the filter
-// as CSV.
+// as PDF, Excel or CSV (format=, CSV without one).
 func (rs *AccessLogResource) export(w http.ResponseWriter, r *http.Request) {
 	viewer, ok := traegerViewer(w, r)
 	if !ok {
+		return
+	}
+	format, err := listFormat(r)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
 	filter, err := accessLogFilter(r)
@@ -114,16 +117,7 @@ func (rs *AccessLogResource) export(w http.ResponseWriter, r *http.Request) {
 		renderAccessLogError(w, r, err)
 		return
 	}
-	data, err := accessLogCSV(entries)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", textnorm.ContentDisposition("attachment", fmt.Sprintf("zugriffsprotokoll-%s-bis-%s.csv", filter.From, filter.To)))
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(data)
+	writeList(w, r, rs.lists, format, accessLogTable(filter, entries))
 }
 
 func traegerViewer(w http.ResponseWriter, r *http.Request) (traegerview.Viewer, bool) {
@@ -212,31 +206,50 @@ var accessKindLabels = map[string]string{
 	traegerview.AccessKindChange: "Geändert",
 }
 
-// accessLogCSV is the export: semicolon separated, UTF-8 with BOM so German
-// spreadsheet programs open it correctly.
-func accessLogCSV(entries []traegerview.AccessLogEntry) ([]byte, error) {
-	var buf bytes.Buffer
-	buf.WriteString("\xEF\xBB\xBF")
-	writer := csv.NewWriter(&buf)
-	writer.Comma = ';'
-	rows := [][]string{{"Datum", "Uhrzeit", "Schule", "Person", "Art", "Daten"}}
+// accessLogTable is the export: one row per read or change, newest first.
+// The head names the filter; the school and the person come from the
+// entries, which carry the names the list shows.
+func accessLogTable(filter traegerview.AccessLogFilter, entries []traegerview.AccessLogEntry) ListTable {
+	rows := make([][]string, 0, len(entries))
 	for _, entry := range entries {
 		at := entry.OccurredAt.In(berlin)
 		rows = append(rows, []string{
-			at.Format("02.01.2006"), at.Format("15:04:05"), csvSafe(entry.SchoolName), csvSafe(entry.Person),
+			at.Format("02.01.2006"), at.Format("15:04:05"), entry.SchoolName, entry.Person,
 			accessKindLabels[entry.Kind], entry.DataLabel,
 		})
 	}
-	if err := writer.WriteAll(rows); err != nil {
-		return nil, err
+	from, to := filter.From.Format("02.01.2006"), filter.To.Format("02.01.2006")
+	filters := []string{schoolFilterLabel(accessLogSchoolName(filter, entries)), periodLabel(from, to)}
+	if filter.AccountID > 0 && len(entries) > 0 {
+		filters = append(filters, "Person: "+entries[0].Person)
 	}
-	return buf.Bytes(), nil
+	if label, ok := accessKindLabels[filter.Kind]; ok {
+		filters = append(filters, "Art: "+label)
+	}
+	return ListTable{
+		Title: "Zugriffsprotokoll", Subtitle: from + " bis " + to, Filters: filters,
+		Columns: []ListColumn{
+			{ID: "day", Label: "Datum"}, {ID: "time", Label: "Uhrzeit"}, {ID: "school", Label: "Schule"},
+			{ID: "person", Label: "Person"}, {ID: "kind", Label: "Art"}, {ID: "data", Label: "Daten"},
+		},
+		Rows: rows, Footer: personalDataFooter,
+		Filename: fmt.Sprintf("zugriffsprotokoll-%s-bis-%s", filter.From, filter.To),
+	}
 }
 
-// csvSafe keeps a stored name from being read as a spreadsheet formula.
-func csvSafe(value string) string {
-	if value != "" && strings.ContainsRune("=+-@\t\r", rune(value[0])) {
-		return "'" + value
+// accessLogSchoolName names the school of a filter for one school. Without
+// an entry the export names no school: it is empty either way.
+func accessLogSchoolName(filter traegerview.AccessLogFilter, entries []traegerview.AccessLogEntry) string {
+	if filter.SchoolID == 0 {
+		return ""
 	}
-	return value
+	for _, entry := range entries {
+		if entry.SchoolID == filter.SchoolID {
+			return entry.SchoolName
+		}
+	}
+	return "ausgewählte Schule"
 }
+
+// personalDataFooter stands on every page of an export with personal data.
+const personalDataFooter = "Vertraulich. Enthält personenbezogene Daten."

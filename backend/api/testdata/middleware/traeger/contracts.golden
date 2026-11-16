@@ -5,6 +5,7 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /traeger/contracts/
 	GET /traeger/contracts/candidates
 	GET /traeger/contracts/conclusion-modes
+	GET /traeger/contracts/export
 	GET /traeger/contracts/{id}
 	GET /traeger/contracts/{id}/document
 	GET /traeger/contracts/{id}/paper-signature

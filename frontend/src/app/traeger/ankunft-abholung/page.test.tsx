@@ -243,9 +243,28 @@ describe("TraegerArrivalPickupPage", () => {
         "ankunft-und-abholung-2026-08-12-bis-2026-09-08.csv",
       ),
     );
-    expect(mockDownload).toHaveBeenCalledWith({
-      from: "2026-08-12",
-      to: "2026-09-08",
-    });
+    expect(mockDownload).toHaveBeenCalledWith(
+      { from: "2026-08-12", to: "2026-09-08" },
+      "csv",
+      undefined,
+    );
+
+    // #4718: the same menu offers the PDF and Excel of every school.
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Ankunft und Abholung herunterladen",
+      }),
+    );
+    expect(
+      await screen.findByRole("menuitem", { name: "Excel" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("menuitem", { name: "PDF" }));
+    await vi.waitFor(() =>
+      expect(mockDownload).toHaveBeenLastCalledWith(
+        { from: "2026-08-12", to: "2026-09-08" },
+        "pdf",
+        undefined,
+      ),
+    );
   });
 });

@@ -415,7 +415,11 @@ describe("CaregiverCapabilityModal", () => {
         onUpdated={onUpdated}
       />,
     );
-    fireEvent.click(await screen.findByText("Betreuung aktivieren"));
+    const enableButton = await screen.findByRole("button", {
+      name: "Betreuung aktivieren",
+    });
+    await waitFor(() => expect(enableButton).toBeEnabled());
+    fireEvent.click(enableButton);
 
     await waitFor(() => expect(onUpdated).toHaveBeenCalledTimes(1));
     expect(
@@ -611,7 +615,9 @@ describe("CaregiverCapabilityModal", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Betreuung aktivieren")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Betreuung aktivieren" }),
+      ).toBeEnabled();
     });
 
     fireEvent.click(screen.getByText("Betreuung aktivieren"));

@@ -68,20 +68,29 @@ func (c *Contracts) ListContracts(ctx context.Context, reviewer carecontract.Rev
 	if err := checkReviewer(reviewer); err != nil {
 		return carecontract.ContractList{}, err
 	}
+	maxLimit, view := 100, "list"
+	if filter.Export {
+		// The export (#4718) holds the whole filter or nothing.
+		filter.Offset, filter.Limit = 0, carecontract.ContractExportLimit
+		maxLimit, view = carecontract.ContractExportLimit, "export"
+	}
 	var list carecontract.ContractList
 	err := c.runtime.WithinTraeger(ctx, reviewer.OrganizationID, func(txCtx context.Context) error {
 		var err error
-		list, err = c.listContracts(txCtx, reviewer, filter)
+		list, err = c.listContracts(txCtx, reviewer, filter, maxLimit, view)
 		return err
 	})
 	if err != nil {
 		return carecontract.ContractList{}, err
 	}
+	if filter.Export && list.HasMore {
+		return carecontract.ContractList{}, carecontract.InvalidSelection("contracts", "export_too_large")
+	}
 	bySchool := map[int64][]int64{}
 	for _, contract := range list.Contracts {
 		bySchool[contract.SchoolID] = append(bySchool[contract.SchoolID], contract.ID)
 	}
-	if err := c.logSchools(ctx, reviewer, "care_contract_list", bySchool); err != nil {
+	if err := c.logSchools(ctx, reviewer, "care_contract_"+view, bySchool); err != nil {
 		return carecontract.ContractList{}, err
 	}
 	return list, nil
@@ -150,14 +159,16 @@ func (c *Contracts) logSchools(ctx context.Context, reviewer carecontract.Review
 	return nil
 }
 
-func (c *Contracts) listContracts(ctx context.Context, reviewer carecontract.Reviewer, filter carecontract.ContractFilter) (carecontract.ContractList, error) {
+// listContracts reads one page of the filter, at most maxLimit contracts,
+// and writes the read into the Träger trail under view.
+func (c *Contracts) listContracts(ctx context.Context, reviewer carecontract.Reviewer, filter carecontract.ContractFilter, maxLimit int, view string) (carecontract.ContractList, error) {
 	if err := checkReviewer(reviewer); err != nil {
 		return carecontract.ContractList{}, err
 	}
 	if filter.Status != "" && !knownStatus(filter.Status) {
 		return carecontract.ContractList{}, carecontract.InvalidSelection("status", "unknown")
 	}
-	if filter.Offset < 0 || filter.Limit < 0 || filter.Limit > 100 {
+	if filter.Offset < 0 || filter.Limit < 0 || filter.Limit > maxLimit {
 		return carecontract.ContractList{}, carecontract.InvalidSelection("contracts", "invalid_pagination")
 	}
 	if filter.Limit == 0 {
@@ -182,7 +193,7 @@ func (c *Contracts) listContracts(ctx context.Context, reviewer carecontract.Rev
 			ids[i] = contract.ID
 		}
 		if err := trail(ctx, c.store, reviewer.OrganizationID, reviewer.AccountID, 0, 0, ActionRead,
-			map[string]any{"view": "list", "contract_ids": ids}); err != nil {
+			map[string]any{"view": view, "contract_ids": ids}); err != nil {
 			return carecontract.ContractList{}, err
 		}
 	}

@@ -1,8 +1,6 @@
 package traegerviewhttp
 
 import (
-	"bytes"
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,7 +10,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // arrivalPickupTimes answers GET /traeger/schools/arrival-pickup-times: the
@@ -28,23 +25,35 @@ func (rs *Resource) arrivalPickupTimes(w http.ResponseWriter, r *http.Request) {
 }
 
 // arrivalPickupTimesExport answers GET
-// /traeger/schools/arrival-pickup-times/export: the same averages as CSV, one
-// row per school, weekday and half hour, all schools together first.
+// /traeger/schools/arrival-pickup-times/export: the same averages as PDF,
+// Excel or CSV (format=, CSV without one), one row per school, weekday and
+// half hour, all schools together first. With school=ID it holds that
+// school alone; a school of another Träger and an unknown ID answer 404
+// traeger.school_not_found.
 func (rs *Resource) arrivalPickupTimesExport(w http.ResponseWriter, r *http.Request) {
+	format, schoolID, ok := readExportOptions(w, r)
+	if !ok {
+		return
+	}
 	times, ok := rs.readArrivalPickupTimes(w, r)
 	if !ok {
 		return
 	}
-	data, err := arrivalPickupCSV(times)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
+	writeArrivalPickupExport(w, r, rs.lists, format, schoolID, times)
+}
+
+func writeArrivalPickupExport(w http.ResponseWriter, r *http.Request, render ListRenderer, format string, schoolID int64, times traegerview.ArrivalPickupTimes) {
+	if schoolID == 0 {
+		writeList(w, r, render, format, arrivalPickupTable(times, ""))
 		return
 	}
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", textnorm.ContentDisposition("attachment", fmt.Sprintf("ankunft-und-abholung-%s-bis-%s.csv", times.From, times.To)))
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(data)
+	school, found := findSchool(times.Schools, schoolID, func(s traegerview.SchoolArrivalPickupTimes) traegerview.School { return s.School })
+	if !found {
+		renderSchoolNotFound(w, r)
+		return
+	}
+	times.Schools = []traegerview.SchoolArrivalPickupTimes{school}
+	writeList(w, r, render, format, arrivalPickupTable(times, school.Name))
 }
 
 func (rs *Resource) readArrivalPickupTimes(w http.ResponseWriter, r *http.Request) (traegerview.ArrivalPickupTimes, bool) {
@@ -80,33 +89,39 @@ var arrivalPickupWeekdays = [...]string{"", "Montag", "Dienstag", "Mittwoch", "D
 // arrivalPickupAllSchools names the rows of all schools together.
 const arrivalPickupAllSchools = "Alle Schulen"
 
-// arrivalPickupCSV writes one row per school, weekday and half hour: the
+// arrivalPickupTable is one row per school, weekday and half hour: the
 // period, the school and its town, the weekday, the half hour, the average
 // arrivals and pickups of a day and the days they come from. A spreadsheet
-// filters it by school and weekday.
-func arrivalPickupCSV(times traegerview.ArrivalPickupTimes) ([]byte, error) {
-	var buf bytes.Buffer
-	buf.WriteString("\xEF\xBB\xBF")
-	writer := csv.NewWriter(&buf)
-	writer.Comma = ';'
+// filters it by school and weekday. The rows of all schools together come
+// first, unless the export holds one school.
+func arrivalPickupTable(times traegerview.ArrivalPickupTimes, schoolName string) ListTable {
 	from, to := times.From.Format("02.01.2006"), times.To.Format("02.01.2006")
-	rows := [][]string{{"Von", "Bis", "Schule", "Ort", "Wochentag", "Uhrzeit", "Ankunft je Tag", "Abholung je Tag", "Tage"}}
+	var rows [][]string
 	appendHeatmap := func(school, city string, heatmap traegerview.ArrivalPickupHeatmap) {
 		for _, weekday := range heatmap.Weekdays {
 			for _, slot := range weekday.Slots {
-				rows = append(rows, []string{from, to, csvSafe(school), csvSafe(city), arrivalPickupWeekdays[weekday.Weekday],
+				rows = append(rows, []string{from, to, school, city, arrivalPickupWeekdays[weekday.Weekday],
 					slotLabel(slot.StartMinute, times.SlotMinutes), decimal(slot.Arrivals), decimal(slot.Pickups), strconv.Itoa(weekday.Days)})
 			}
 		}
 	}
-	appendHeatmap(arrivalPickupAllSchools, "", times.All)
+	if schoolName == "" {
+		appendHeatmap(arrivalPickupAllSchools, "", times.All)
+	}
 	for _, school := range times.Schools {
 		appendHeatmap(school.Name, school.City, school.ArrivalPickupHeatmap)
 	}
-	if err := writer.WriteAll(rows); err != nil {
-		return nil, err
+	return ListTable{
+		Title: "Ankunft und Abholung", Subtitle: from + " bis " + to,
+		Filters: []string{schoolFilterLabel(schoolName), periodLabel(from, to)},
+		Columns: []ListColumn{
+			{ID: "from", Label: "Von", SpreadsheetOnly: true}, {ID: "to", Label: "Bis", SpreadsheetOnly: true},
+			{ID: "school", Label: "Schule"}, {ID: "city", Label: "Ort"}, {ID: "weekday", Label: "Wochentag"},
+			{ID: "slot", Label: "Uhrzeit"}, {ID: "arrivals", Label: "Ankunft je Tag", Numeric: true}, {ID: "pickups", Label: "Abholung je Tag", Numeric: true},
+			{ID: "days", Label: "Tage", Numeric: true},
+		},
+		Rows: rows, Filename: fmt.Sprintf("ankunft-und-abholung-%s-bis-%s", times.From, times.To),
 	}
-	return buf.Bytes(), nil
 }
 
 // slotLabel is „07:30–08:00“.

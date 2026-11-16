@@ -30,11 +30,11 @@ export function traegerAccessLogTopic(): HelpTopic {
         ],
       },
       {
-        title: "Als CSV herunterladen",
-        description: "Für einen Nachweis, zum Beispiel in einer Tabelle.",
+        title: "Herunterladen",
+        description: "Für einen Nachweis, zum Ablegen oder für eine Tabelle.",
         steps: [
           "Stellen Sie die Filter ein.",
-          "Wählen Sie `Herunterladen` und dann `CSV`.",
+          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
           "moto lädt eine Datei mit allen Einträgen zu den Filtern herunter.",
         ],
       },

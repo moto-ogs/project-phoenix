@@ -3,7 +3,7 @@
 // Ferienanmeldungen eines Zeitraums prüfen (#4663): alle Anmeldungen mit
 // Status, Schule, Woche und Zeitmodell, mit Filtern, Hinweis auf mögliche
 // Doppelanmeldungen, Hinweis auf an einer Schule bekannte Kinder (#6683) und
-// Export als CSV oder Excel. Anmeldungen derselben
+// Export als PDF, Excel oder CSV (#4718). Anmeldungen derselben
 // Familie führt das Büro hier als Geschwister zusammen (#5628); gleiche
 // E-Mail oder gleicher Nachname sind nur ein Hinweis. Ausgewählte
 // Anmeldungen bestätigt das Büro hier auch gesammelt (#6674).
@@ -49,11 +49,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SelectionBar } from "~/components/ui/selection-bar";
 import NavigationLink from "~/components/ui/navigation-link";
-import {
-  ExportMenu,
-  type ExportMenuOption,
-  exportFormatOptions,
-} from "~/components/ui/export-menu";
+import { ExportMenu, type ExportMenuOption } from "~/components/ui/export-menu";
 import type {
   ActiveFilter,
   FilterConfig,
@@ -64,6 +60,7 @@ import {
   useHolidayRegistrationMailProblems,
 } from "~/components/traeger/holiday-registration-mail-problems";
 import { holidayPlacementStatus } from "~/components/traeger/holiday-placement";
+import { TRAEGER_LIST_FORMAT_OPTIONS } from "~/components/traeger/traeger-list-export-menu";
 import { HOLIDAY_PDF_HEALTH_KEY } from "~/components/traeger/use-holiday-registration-pdf";
 import { holidayDeletionNotice } from "~/components/traeger/holiday-registration-retention";
 import { HolidayBulkConfirmModal } from "~/components/traeger/holiday-bulk-confirm-modal";
@@ -112,6 +109,7 @@ import {
   type HolidayRegistrationSummary,
   TRAEGER_HEALTH_RIGHT,
 } from "~/lib/traeger-holiday-registrations-api";
+import type { TraegerListFormat } from "~/lib/traeger-list-export";
 import {
   fetchHolidaySiblingGroups,
   type HolidaySiblingGroup,
@@ -124,15 +122,14 @@ const logger = createLogger({ component: "TraegerHolidayRegistrationsPage" });
 
 type StatusChoice = HolidayRegistrationStatus | "all";
 
-const LIST_FORMATS: readonly ExportMenuOption[] = exportFormatOptions([
-  "xlsx",
-  "csv",
-]);
+/** The key of the ZIP with one PDF per registration (#6691). */
+const HOLIDAY_PDF_ZIP_KEY = "pdf-zip";
 
 /**
- * The entries of the download menu: the list as Excel or CSV, and one PDF
- * per registration in a ZIP (#6691). The health information is its own
- * entry, only for a person who may see it on the screen.
+ * The entries of the download menu: the list as PDF, Excel or CSV like every
+ * list of the portal (#4718), and one PDF per registration in a ZIP (#6691).
+ * The health information is its own entry, only for a person who may see it
+ * on the screen.
  */
 function exportOptions(
   filtered: boolean,
@@ -142,14 +139,20 @@ function exportOptions(
   // bulk confirmation (#6674), not for this.
   const scope = filtered ? "Gefilterte" : "Alle";
   return [
-    ...LIST_FORMATS,
-    { key: "pdf", format: "pdf", label: `${scope} als PDF (ZIP)` },
+    ...TRAEGER_LIST_FORMAT_OPTIONS,
+    {
+      key: HOLIDAY_PDF_ZIP_KEY,
+      format: "pdf",
+      label: `${scope} als PDF (ZIP)`,
+      description: "Eine PDF je Anmeldung, zum Ablegen",
+    },
     ...(canSeeHealth
       ? [
           {
             key: HOLIDAY_PDF_HEALTH_KEY,
             format: "pdf" as const,
             label: `${scope} als PDF mit Gesundheitsangaben (ZIP)`,
+            description: "Eine PDF je Anmeldung, mit Gesundheitsangaben",
           },
         ]
       : []),
@@ -612,7 +615,7 @@ export default function TraegerHolidayRegistrationsPage() {
     setSelected(new Set());
   }, [filter]);
 
-  const exportFile = async (format: "csv" | "xlsx") => {
+  const exportFile = async (format: TraegerListFormat) => {
     setExporting(format);
     try {
       const file = await downloadHolidayRegistrations(periodId, filter, format);
@@ -648,10 +651,17 @@ export default function TraegerHolidayRegistrationsPage() {
   };
 
   const selectExport = (option: ExportMenuOption) => {
-    if (option.format === "csv" || option.format === "xlsx") {
-      void exportFile(option.format);
-    } else if (option.format === "pdf") {
+    if (
+      option.key === HOLIDAY_PDF_ZIP_KEY ||
+      option.key === HOLIDAY_PDF_HEALTH_KEY
+    ) {
       void exportPdfs(option.key, option.key === HOLIDAY_PDF_HEALTH_KEY);
+    } else if (
+      option.format === "pdf" ||
+      option.format === "xlsx" ||
+      option.format === "csv"
+    ) {
+      void exportFile(option.format);
     }
   };
 
@@ -923,6 +933,11 @@ export default function TraegerHolidayRegistrationsPage() {
               the list for the schools and the kitchen. */}
           <ExportMenu
             ariaLabel="Anmeldungen herunterladen"
+            header={
+              activeFilters.length > 0
+                ? "Gefilterte Anmeldungen"
+                : "Alle Anmeldungen"
+            }
             options={exportOptions(activeFilters.length > 0, canSeeHealth)}
             busyKey={exporting}
             unavailable={loading || Boolean(loadError)}

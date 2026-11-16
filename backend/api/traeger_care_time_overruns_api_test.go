@@ -212,6 +212,38 @@ func TestCareTimeOverrunChildrenNeedTheContractRightAndAreLogged(t *testing.T) {
 	require.Len(t, logged, 1, "one entry for the one school that showed a child")
 	assert.Equal(t, "traeger_portal", logged[0].Metadata["channel"])
 	assert.Equal(t, []any{float64(f.child)}, logged[0].Metadata["student_ids"])
+
+	// #4718: both lists export behind the same rights; the export of the
+	// names is logged like the list.
+	const childrenExport = "/traeger/care-time-overruns/children/export?from=2026-06-08&to=2026-06-16"
+	for token, want := range map[string]int{leadership: http.StatusForbidden, f.billing: http.StatusForbidden, f.admin: http.StatusOK} {
+		rec := traegerJSON(t, f.router, token, http.MethodGet, childrenExport, nil)
+		assert.Equal(t, want, rec.Code, rec.Body.String())
+	}
+	rec := traegerJSON(t, f.router, f.admin, http.MethodGet, childrenExport, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, "text/csv; charset=utf-8", rec.Header().Get("Content-Type"))
+	assert.Contains(t, rec.Body.String(), "Nachname;Vorname;Klasse;Schule;Tage länger als gebucht;Tage ohne Buchung;Zusätzliche Zeit\n")
+	assert.Contains(t, rec.Body.String(), ";Sina;", "the child by name")
+	assert.Contains(t, rec.Body.String(), ";9:00 Std.\n", "540 extra minutes")
+	assertTraegerListFormats(t, f.router, f.admin, childrenExport, "laenger-als-gebucht-kinder-2026-06-08-bis-2026-06-16")
+	var exports int
+	require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM audit.data_access_log
+		WHERE actor_account_id = ? AND resource_type = 'care_time_overruns'`, f.adminID).Scan(context.Background(), &exports))
+	assert.Equal(t, 1+4, exports, "the list and every export of the names are in the access log")
+
+	summary := traegerJSON(t, f.router, f.billing, http.MethodGet, "/traeger/care-time-overruns/export?from=2026-06-08&to=2026-06-16", nil)
+	require.Equal(t, http.StatusOK, summary.Code, summary.Body.String())
+	assert.Contains(t, summary.Body.String(), "Schule;Kinder;Tage länger als gebucht;Tage ohne Buchung;Zusätzliche Zeit;Daten ab;Verglichene Tage\n")
+	assert.Contains(t, summary.Body.String(), "Alle Schulen;1;2;1;9:00 Std.;;\n", "the total of every school")
+	assert.NotContains(t, summary.Body.String(), "Sina", "the figures name no child")
+	assertTraegerListFormats(t, f.router, f.billing, "/traeger/care-time-overruns/export?from=2026-06-08&to=2026-06-16", "laenger-als-gebucht-2026-06-08-bis-2026-06-16")
+	single := traegerJSON(t, f.router, f.billing, http.MethodGet, "/traeger/care-time-overruns/export?from=2026-06-08&to=2026-06-16&school_id="+strconv.FormatInt(f.other, 10), nil)
+	require.Equal(t, http.StatusOK, single.Code, single.Body.String())
+	assert.Contains(t, single.Body.String(), "Träger Zeitvergleich OGS Süd;0;0;0;0:00 Std.;")
+	assert.NotContains(t, single.Body.String(), "Alle Schulen", "one school has no total")
+	rec = traegerJSON(t, f.router, leadership, http.MethodGet, "/traeger/care-time-overruns/export?from=2026-06-08&to=2026-06-16", nil)
+	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 }
 
 func TestCareTimeOverrunsStayWithTheirTraeger(t *testing.T) {

@@ -291,6 +291,10 @@ func TestTraegerAccessLogExportsCSVAndLogsTheExport(t *testing.T) {
 	}, rows, "only the Träger's school, in Berlin time")
 	assert.Equal(t, 1, traegerAccessReads(t, f.db, f.first, f.member, "traeger_access_log_export"))
 	assert.Equal(t, 0, traegerAccessReads(t, f.db, f.foreignSchool, f.member, "traeger_access_log_export"))
+
+	// #4718: PDF and Excel hold the same entries, and each export is logged.
+	assertTraegerListFormats(t, f.router, f.token, "/traeger/access-log/export?"+accessLogWindow(nil).Encode(), "zugriffsprotokoll-2026-10-20-bis-2026-10-20")
+	assert.Equal(t, 3, traegerAccessReads(t, f.db, f.first, f.member, "traeger_access_log_export"), "the PDF and the Excel export are logged like the CSV")
 }
 
 func TestTraegerAccessLogQueryBudgetIsFlat(t *testing.T) {
