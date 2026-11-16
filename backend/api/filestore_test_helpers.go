@@ -4,6 +4,7 @@ package api
 
 import (
 	"log/slog"
+	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
@@ -39,6 +40,7 @@ func NewFileStoreTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 	command, err := auditCompose.NewCommand(
 		owners.NewTestAuditStore(db),
 		func(auditCompose.AppendObservation) {},
+		time.Now,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -61,7 +63,7 @@ func NewFileStoreTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 		return nil, nil, err
 	}
 	announcements, err := communicationCompose.NewParentAnnouncementsWithAttachments(communicationCompose.ParentAnnouncementConfig{
-		Repo: parentStore.NewParentAnnouncementRepository(db.Pool(), owners.NewParentAnnouncementAudience(db, owners.ParentAnnouncementApplicants(enrollmentAudience.New()))), Settings: settingsValues.NewParentAnnouncementValues(settings.Settings), Logger: slog.Default(),
+		Repo: parentStore.NewParentAnnouncementRepository(db.Pool(), owners.NewParentAnnouncementAudience(db, owners.ParentAnnouncementApplicants(enrollmentAudience.NewClocked(nil))), nil), Settings: settingsValues.NewParentAnnouncementValues(settings.Settings), Logger: slog.Default(),
 		Fingerprints: owners.SecurityFingerprints{},
 	}, purger, owners.CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	if err != nil {

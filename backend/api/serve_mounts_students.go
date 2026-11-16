@@ -159,7 +159,7 @@ func requestReviewDependencies(
 	return requestreviewcompose.ProjectionDependencies{
 		Queues:   requestreviewcompose.Queues{DirectCorrections: corrections, MasterData: masterQueue, CareSchedule: careQueue, Offering: offeringQueue, Excused: excusedQueue},
 		Students: reviewStudents, FamilyProtection: reviewbindings.NewFamilyProtection(persons), Access: reviewAccess,
-		Submitters: reviewbindings.NewSubmitterDirectory(persons),
+		Submitters: reviewbindings.NewSubmitterDirectory(persons), Today: func() requestreview.Date { return requestreview.Date(carePlanToday()) },
 	}, careReviews, nil
 }
 
@@ -272,7 +272,7 @@ func mountStudentRoutes(
 			StudentConsents:         services.StudentConsents,
 			StudentHistoryService:   reports.StudentHistory,
 			StudentStatusDayService: statusDays,
-			UserContextService:      caller,
+			UserContextService:      caller, Now: now,
 		},
 		presenceStudentsHTTP.ResourceConfig{
 			AbsenceNotifier:    studentAbsenceNotifier{notifier: absences},
@@ -285,7 +285,7 @@ func mountStudentRoutes(
 			PrivacyConsents:         presence,
 			SettingsService:         settings,
 			StudentStatusDayService: statusDays,
-			UserContextService:      caller,
+			UserContextService:      caller, Now: now,
 		},
 		deleteStudentsHTTP.ResourceConfig{
 			CareLifecycleService: schedules.Lifecycle,
@@ -303,7 +303,7 @@ func mountStudentRoutes(
 	tenant.Mount("/students", students.Router(ProtectedTenantRoutesWith(
 		groupLiveHTTP.NewResource(groupLive).Register,
 		careStudents.Register, projectionStudents.Register, presenceStudents.Register, deletionStudents.Register, requestStudents.Register,
-		(&enrollmentAPI.StudentResource{EnrollmentDecision: decisions, EnrollmentFormSchema: newEnrollmentFormSchemas(settings, logger), StudentReadAccess: students.StudentReadAccess, Logger: logger.With("handler", "students")}).Register,
+		(&enrollmentAPI.StudentResource{EnrollmentDecision: decisions, EnrollmentFormSchema: newEnrollmentFormSchemas(settings, logger, time.Now), StudentReadAccess: students.StudentReadAccess, Logger: logger.With("handler", "students")}).Register,
 	)))
 	return nil
 }
@@ -316,10 +316,10 @@ func newEnrollmentResource(
 	flows owners.EnrollmentFlows, phases enrollmentOwner.PhaseAdministration, decisions enrollmentOwner.Decisions,
 	deletions enrollmentOwner.EnrollmentDeletions,
 	guardianProfiles *peopleCompose.GuardianProfileLoader, organizations organizationtenancy.Query,
-	renderer *lists.RendererService, persons peopledirectory.Capability, carePlan carePlanModule.Capability,
+	renderer *lists.RendererService, persons peopledirectory.Capability, carePlan carePlanModule.Capability, now func() time.Time,
 ) *enrollmentAPI.Resource {
 	resource := enrollmentAPI.NewResource(
-		newEnrollmentFormSchemas(settings, logger),
+		newEnrollmentFormSchemas(settings, logger, now),
 		enrollmentAPI.NewCareOfferingCatalog(NewEnrollmentCareOfferingValues(careOfferings)),
 		enrollmentAPI.NewRequestService(flows.Intake),
 		newEnrollmentCaptcha(settings, turnstile, logger),
@@ -334,13 +334,13 @@ func newEnrollmentResource(
 		nativeUploads.UploadFiles{},
 		enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation,
 			SavepointRollback: func(err error) bool { return errors.Is(err, tenant.ErrSavepointRollback) }},
-		owners.NewEnrollmentBookings(),
+		owners.NewEnrollmentBookings(now),
 	)
-	resource.ListExportService = renderer
-	resource.Uploads = enrollmentUploadUnits{intake: flows.Intake, records: owners.NewEnrollmentBookings(), reads: flows.Uploads}
+	resource.ListExportService, resource.Now = renderer, now
+	resource.Uploads = enrollmentUploadUnits{intake: flows.Intake, records: owners.NewEnrollmentBookings(now), reads: flows.Uploads}
 	resource.UploadList = flows.Uploads
 	resource.FamilyChildren = flows.Intake
 	resource.UploadFiles = NewEnrollmentUploadStorage(logger.With("handler", "enrollment-uploads"))
-	resource.PhaseExpiryService = newEnrollmentPhaseExpiry(persons, carePlan)
+	resource.PhaseExpiryService = newEnrollmentPhaseExpiry(persons, carePlan, now)
 	return resource
 }

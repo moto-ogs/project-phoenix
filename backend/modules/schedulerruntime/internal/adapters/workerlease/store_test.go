@@ -202,20 +202,40 @@ func TestReacquireByTheSameHolderStartsANewTerm(t *testing.T) {
 	assert.False(t, ok)
 }
 
+// confirmShortTerm acquires a term of 500 ms and confirms it inside an open
+// job transaction, so the term can expire while the confirmed commit is
+// pending. A loaded database can stall longer than the term between the two
+// statements (#7216); that attempt confirms nothing, so a new term starts.
+func confirmShortTerm(t *testing.T, store *Store, db *bun.DB) (Term, bun.Tx) {
+	t.Helper()
+	ctx := context.Background()
+	const attempts = 5
+	for attempt := 1; ; attempt++ {
+		tx, err := db.BeginTx(ctx, nil)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = tx.Rollback() })
+		_, err = tx.ExecContext(ctx, "SET LOCAL ROLE phoenix_tenant")
+		require.NoError(t, err)
+
+		term, acquired, err := store.Acquire(ctx, leaseName, "worker-a", 500*time.Millisecond)
+		require.NoError(t, err)
+		require.True(t, acquired)
+		err = store.Assert(testpkg.ContextWithTransaction(ctx, tx), term, 0)
+		if err == nil {
+			return term, tx
+		}
+		require.ErrorIs(t, err, ErrNotHeld, "the job confirms its term as its last statement")
+		require.False(t, databaseNow(t, db).Before(term.Until), "a running term was refused")
+		require.Less(t, attempt, attempts, "every term expired before its confirmation")
+		require.NoError(t, tx.Rollback())
+	}
+}
+
 func TestTakeoverWaitsForACommitThePredecessorAlreadyConfirmed(t *testing.T) {
 	t.Parallel()
 	store, db := leaseStore(t)
 	ctx := context.Background()
-	first, acquired, err := store.Acquire(ctx, leaseName, "worker-a", 500*time.Millisecond)
-	require.NoError(t, err)
-	require.True(t, acquired)
-
-	tx, err := db.BeginTx(ctx, nil)
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = tx.Rollback() })
-	_, err = tx.ExecContext(ctx, "SET LOCAL ROLE phoenix_tenant")
-	require.NoError(t, err)
-	require.NoError(t, store.Assert(testpkg.ContextWithTransaction(ctx, tx), first, 0), "the job confirms its term as its last statement")
+	first, tx := confirmShortTerm(t, store, db)
 
 	require.Eventually(t, func() bool {
 		return !databaseNow(t, db).Before(first.Until)

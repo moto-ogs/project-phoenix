@@ -43,7 +43,7 @@ func TestWorkerAnalyticsNormalizesDemoEnvironment(t *testing.T) {
 				Observe: RootObservers{SettingsLookup: func(string, string, string, time.Duration) {}},
 			}
 			values, tracker, err := buildWorkerAnalyticsSettings(database, testpkg.TenantRuntime(t, db), env,
-				organizations, nil, NewEnrollmentBookings(), workerAnalyticsProbe{}, bind)
+				organizations, nil, NewEnrollmentBookings(nil), workerAnalyticsProbe{}, bind)
 			require.NoError(t, err)
 			require.NotNil(t, values.Service)
 			require.NotNil(t, tracker)

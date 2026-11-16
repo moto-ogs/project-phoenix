@@ -24,7 +24,7 @@ const meta = {
     ),
   ],
   args: {
-    badges: { messages: 3, news: 2 },
+    badges: { messages: 3, news: 2, notifications: 0 },
     gates: { news: true, mealPlan: true },
     childCount: 2,
   },

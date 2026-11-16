@@ -315,12 +315,24 @@ var moduleLegacyFileBudgets = map[string]int{
 // ADR 0248: Communication's parent-letter child reader constructor (+6).
 // ADR 0246: the report templates of modules/organizationtenancy/compose (+5)
 // and the export adapter of modules/traegerview/compose (+1).
+// ADR 0269: the clocks of modules/auditlog/compose (+7),
+// modules/mealplan/compose (+2) and modules/schoolcalendar/compose (+4).
+// ADR 0264: the clock field of the time-tracking cleanup in
+// modules/workforce/compose (+2).
+// ADR 0253: the Springer exits constructor of modules/workforce/compose (+6).
+// ADR 0263: the clock imports of modules/timetable/compose and the clock of
+// its repository composition (+6).
+// ADR 0265: the clock fields of modules/enrollment/compose (+7: the owner's
+// write clock NewClocked, Now of the phases and the deletion module, and
+// their time imports).
+// ADR 0267: the clock fields of modules/communication/composition (+7) and
+// modules/delivery/compose (+8).
 // ADR 0268: the clock fields, their imports and nil defaults of
 // modules/devicefleet/compose (+6), modules/organizationtenancy/compose (+10),
 // modules/peopledirectory/compose (+6), modules/schoolmembership/compose (+5),
 // modules/schoolstructure/compose (+8) and modules/settings/compose (+3)
 // add exactly 38 LOC.
-const moduleComposeBudgetTotal = 13578
+const moduleComposeBudgetTotal = 13627
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -338,12 +350,15 @@ const moduleComposeBudgetTotal = 13578
 // ADR 0231 raised modules/enrollment/compose for the registration answers and
 // added modules/schoolsearchview/compose for the school search.
 // ADR 0240 raised modules/careplan/compose for the clock fields (+8).
+// ADR 0264 raised modules/workforce/compose for the cleanup clock (+2).
+// ADR 0265 raised modules/enrollment/compose for the clock fields (+7).
 // ADR 0268 raised six compositions for their clock fields (+38).
 var moduleComposeBudgets = map[string]int{
 	"modules/appointments/compose": 45,
 	// ADR 0103: the signature ledger constructor, construction only.
 	// ADR 0155: the signature ledger at the Träger (+8).
-	"modules/auditlog/compose": 197,
+	// ADR 0269: the Audit clock of the persistence and the command (+7).
+	"modules/auditlog/compose": 204,
 	// Raised by ADR 0128: the manual plans port of the booking materialization (+1).
 	// ADR 0151: the school figure constructor (+13).
 	// ADR 0153: the contract offerings constructor (+9).
@@ -361,11 +376,13 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0073: the parent announcement retention.
 	// ADR 0212: the message attachments (+25).
 	// ADR 0248: the parent-letter child reader constructor (+6).
-	"modules/communication/composition":  380,
+	// ADR 0267: +7, the clock fields.
+	"modules/communication/composition":  387,
 	"modules/dataimport/compose":         85,
 	"modules/dataimport/compose/imports": 29,
 	// ADR 0145: +40 LOC for transport lifecycle, -8 LOC for the retired local wrapper.
-	"modules/delivery/compose": 393,
+	// ADR 0267: +8, the clock fields.
+	"modules/delivery/compose": 401,
 	// ADR 0268: the clock of the administration and the IoT service (+6).
 	"modules/devicefleet/compose":                   209,
 	"modules/devicefleet/compose/repositoryadapter": 10,
@@ -392,7 +409,8 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0215: NewTraegerPhases (+4) and NewOfferingSelectionReferences (+4),
 	// less shortened comments and a merged file (-6).
 	// ADR 0231: the registration answers constructor (+5).
-	"modules/enrollment/compose": 639,
+	// ADR 0265: +7, the clock fields of the owner, its phases and deletions.
+	"modules/enrollment/compose": 646,
 	// ADR 0218: the Träger scope and the recipient rekey (+33).
 	"modules/exporttransfer/compose": 182,
 	// ADR 0241: the rooms of the utilization (+13).
@@ -405,7 +423,8 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0106: the Träger-Büro account management (+24).
 	// Raised by ADR 0187: the operator directory of the Träger export CLI (+11).
 	"modules/identityaccess/compose": 1372, // raised by ADR 0077
-	"modules/mealplan/compose":       102,  // raised by ADR 0078 and ADR 0168
+	// ADR 0269: the clock of the participation history (+2).
+	"modules/mealplan/compose": 104, // raised by ADR 0078 and ADR 0168
 	// ADR 0097: the isolated tenant return constructor, no retained logic moved.
 	// Raised by ADR 0112: the Träger master data constructor (+13).
 	// Raised by ADR 0148: the demo school file erasure constructor (+10).
@@ -464,7 +483,8 @@ var moduleComposeBudgets = map[string]int{
 	"modules/schedulerruntime/compose":   45,
 	// Raised by ADR 0142: the Elternsprechtag constructor (+7) and by
 	// ADR 0144: the school vacation constructor (+11).
-	"modules/schoolcalendar/compose":        158,
+	// ADR 0269: the default day of the real clock (+4).
+	"modules/schoolcalendar/compose":        162,
 	"modules/schoolcalendar/portal/compose": 112,
 	// Raised by ADR 0076: the restricted administrative repair constructor.
 	// ADR 0151: the school figure constructor (+6).
@@ -496,7 +516,9 @@ var moduleComposeBudgets = map[string]int{
 	// Raised by ADR 0128: the student template days constructor (+5), by
 	// ADR 0144: the vacation hint constructor (+6) and by ADR 0224: the cohort
 	// rosters constructor (+5).
-	"modules/timetable/compose":                     1150,
+	// ADR 0263: the clock imports of the Timetable compositions and the clock
+	// of the repository composition (+6).
+	"modules/timetable/compose":                     1156,
 	"modules/timetableblockdisplay/compose":         9,
 	"modules/timetableenrollmentprovenance/compose": 10,
 	"modules/timetableprojection/compose":           7,
@@ -508,7 +530,9 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0188: the bank cipher dependency and backfill/rekey constructor (+7).
 	// ADR 0197: the export opener of the sealed staff bank and tax data (+5).
 	// ADR 0242: the working-time check and the Einsatzplanung sites (+11).
-	"modules/workforce/compose":       928,
+	// ADR 0264: the clock field of the time-tracking cleanup (+2).
+	// ADR 0253: the Springer exits after the last block (+6).
+	"modules/workforce/compose":       936,
 	"workflows/catererportal/compose": 37, // added by ADR 0077
 	// Raised by ADR 0224: the class follow-up port (+2).
 	"workflows/gradetransition/compose": 51,

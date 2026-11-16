@@ -15,8 +15,10 @@ const retentionDaysExpr = "COALESCE(cw.data_retention_days, ?)"
 
 // expiredVisitsQuery selects the tenant's completed visits past their child's
 // window. Children without an accepted consent fall back to defaultDays, so no
-// child's visits are kept forever (#3835).
-func expiredVisitsQuery(db bun.IDB, tenantID int64, policy studentpresence.VisitRetentionPolicy) *bun.SelectQuery {
+// child's visits are kept forever (#3835). The window ends at now, the
+// store's clock: the deletion computes its cutoffs from the same clock, so a
+// listed child's visits are the ones it deletes.
+func expiredVisitsQuery(db bun.IDB, tenantID int64, policy studentpresence.VisitRetentionPolicy, now time.Time) *bun.SelectQuery {
 	if policy.CompletedBefore != nil {
 		return db.NewSelect().TableExpr("active.visits AS v").
 			Where("v.tenant_id = ?", tenantID).Where("v.exit_time < ?", *policy.CompletedBefore)
@@ -27,7 +29,7 @@ func expiredVisitsQuery(db bun.IDB, tenantID int64, policy studentpresence.Visit
 	return db.NewSelect().TableExpr("active.visits AS v").
 		Join("LEFT JOIN (?) AS cw ON cw.student_id = v.student_id", acceptedWindows).
 		Where("v.tenant_id = ?", tenantID).Where("v.exit_time IS NOT NULL").
-		Where("v.created_at < NOW() - make_interval(days => "+retentionDaysExpr+")", policy.DefaultDays)
+		Where("v.created_at < ?::timestamptz - make_interval(days => "+retentionDaysExpr+")", now, policy.DefaultDays)
 }
 
 func (s *Store) ListVisitRetentionCounts(ctx context.Context, policy studentpresence.VisitRetentionPolicy) ([]studentpresence.VisitRetentionCount, ports.Stats, error) {
@@ -39,7 +41,7 @@ func (s *Store) ListVisitRetentionCounts(ctx context.Context, policy studentpres
 	started := time.Now()
 	// cw (consent windows) holds one row per student, so grouping by its
 	// window keeps one row per student.
-	query := expiredVisitsQuery(db, tenantID, policy).ColumnExpr("v.student_id, COUNT(*) AS visit_count").GroupExpr("v.student_id")
+	query := expiredVisitsQuery(db, tenantID, policy, s.now()).ColumnExpr("v.student_id, COUNT(*) AS visit_count").GroupExpr("v.student_id")
 	if policy.CompletedBefore == nil {
 		query = query.ColumnExpr(retentionDaysExpr+" AS retention_days", policy.DefaultDays).GroupExpr("cw.data_retention_days")
 	} else {
@@ -60,7 +62,7 @@ func (s *Store) CountExpiredVisits(ctx context.Context, policy studentpresence.V
 		return 0, ports.Stats{}, err
 	}
 	started := time.Now()
-	count, err := expiredVisitsQuery(db, tenantID, policy).Count(ctx)
+	count, err := expiredVisitsQuery(db, tenantID, policy, s.now()).Count(ctx)
 	return int64(count), ports.Stats{Queries: 1, Rows: 1, StatementDuration: time.Since(started)}, err
 }
 
@@ -71,7 +73,7 @@ func (s *Store) OldestExpiredVisitDate(ctx context.Context, policy studentpresen
 	}
 	var oldest *time.Time
 	started := time.Now()
-	err = expiredVisitsQuery(db, tenantID, policy).ColumnExpr("MIN(v.created_at)").Scan(ctx, &oldest)
+	err = expiredVisitsQuery(db, tenantID, policy, s.now()).ColumnExpr("MIN(v.created_at)").Scan(ctx, &oldest)
 	return oldest, ports.Stats{Queries: 1, Rows: 1, StatementDuration: time.Since(started)}, err
 }
 
@@ -82,7 +84,7 @@ func (s *Store) ListExpiredVisitMonths(ctx context.Context, policy studentpresen
 	}
 	rows := []visitMonthCountRow{}
 	started := time.Now()
-	err = expiredVisitsQuery(db, tenantID, policy).ColumnExpr("TO_CHAR(v.created_at, 'YYYY-MM') AS month, COUNT(*) AS count").
+	err = expiredVisitsQuery(db, tenantID, policy, s.now()).ColumnExpr("TO_CHAR(v.created_at, 'YYYY-MM') AS month, COUNT(*) AS count").
 		GroupExpr("TO_CHAR(v.created_at, 'YYYY-MM')").Scan(ctx, &rows)
 	stats := ports.Stats{Queries: 1, Rows: int64(len(rows)), StatementDuration: time.Since(started)}
 	result := make([]studentpresence.VisitMonthCount, 0, len(rows))

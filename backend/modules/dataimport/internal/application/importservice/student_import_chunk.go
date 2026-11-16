@@ -92,7 +92,7 @@ func (c *StudentImportConfig) RefusesChunk(context.Context, []importModels.Stude
 func (c *StudentImportConfig) CreateChunk(ctx context.Context, rows []importModels.StudentImportRow, bounded ports.BatchStatement) error {
 	inputs := make([]ports.CreatePerson, len(rows))
 	for i, row := range rows {
-		inputs[i] = personInputFromRow(row)
+		inputs[i] = personInputFromRow(row, c.now())
 	}
 	var persons []ports.Person
 	var prepared []*preparedEnrollment

@@ -34,8 +34,9 @@ function logoutToken(
  * tab, or an expired access token), so the session is renewed once
  * (`renewSession`, for the token kind the portal's logout takes) and the
  * logout repeated with its token: a refused renewal answers 401; an
- * undecided one 503, and the browser keeps the session and offers the
- * logout again.
+ * undecided one 503. The browser ends the session on the device for every
+ * answer but success and 401, and the login page says the server may still
+ * hold it (#7209).
  */
 export function createLogoutRoute(
   session: Pick<PortalAuth, "portal" | "auth" | "uncachedAuth" | "withAuth">,

@@ -40,8 +40,8 @@ func BuildPresenceOwner(
 	people PeopleRows, structure StructureRows,
 ) PresenceOwner {
 	return PresenceOwner{
-		Presence:                  NewLoggedStudentPresence(db, logger),
-		UnloggedPresence:          NewUnloggedStudentPresence(db),
+		Presence:                  NewLoggedStudentPresence(db, logger, now),
+		UnloggedPresence:          NewUnloggedStudentPresence(db, now),
 		SessionRecords:            NewSessionRecords(db, now, devices, rooms, timetableOwner, membership, persons),
 		AttendanceStaff:           NewAttendanceStaffDirectory(people.Staff),
 		AttendanceEducationGroups: NewAttendanceEducationGroups(structure.Groups, people.Students),

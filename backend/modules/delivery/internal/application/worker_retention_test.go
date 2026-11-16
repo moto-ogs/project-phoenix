@@ -33,7 +33,7 @@ func TestWorkerRunOnceTriggersThirtyDayRetention(t *testing.T) {
 	t.Parallel()
 	synctest.Test(t, func(t *testing.T) {
 		store := &retentionWorkerStore{}
-		worker := NewWorker(store, &workerProvider{}, func(domain.Observation) {})
+		worker := NewWorker(store, &workerProvider{}, func(domain.Observation) {}, time.Now)
 		now := time.Now()
 
 		_, err := worker.RunOnce(context.Background(), 25, 6)

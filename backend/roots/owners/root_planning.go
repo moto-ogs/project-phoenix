@@ -1,6 +1,8 @@
 package owners
 
 import (
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"context"
 
 	realtime "github.com/moto-ogs/project-phoenix/realtime"
@@ -20,12 +22,13 @@ import (
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 )
 
-// BuildActivities binds the activities service of the Timetable owner.
-func BuildActivities(owner TimetableOwner, timetableOwner timetable.Capability, sessions presenceCompose.SessionRecords, people PeopleRows) (activityContract.ActivityService, error) {
+// BuildActivities binds the activities service of the Timetable owner;
+// today dates its enrollments.
+func BuildActivities(owner TimetableOwner, timetableOwner timetable.Capability, sessions presenceCompose.SessionRecords, people PeopleRows, today func() timezone.Date) (activityContract.ActivityService, error) {
 	repos := owner.Repositories
 	return arrivalTimetable.NewService(
 		timetableOwner, repos.ActivitySchedule, repos.Directories,
-		sessions, NewTimetableStaff(people.Staff), NewTimetableRosterStudents(people.Students),
+		sessions, NewTimetableStaff(people.Staff), NewTimetableRosterStudents(people.Students), today,
 	)
 }
 

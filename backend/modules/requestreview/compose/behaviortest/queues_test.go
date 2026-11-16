@@ -435,6 +435,7 @@ func TestRequestReviewEnforcesRLS(t *testing.T) {
 				CareSchedule: nativeCareQueue(careReviews, reviewToday), Offering: nativeOfferingQueue(offeringReviews, reviewToday), Excused: nativeExcusedQueue(svc.ExcusedRequests, reviewToday)},
 			Access: queueTestAccess{}, Students: reviewStudents, FamilyProtection: svc.FamilyProtection,
 			Submitters: reviewbindings.NewSubmitterDirectory(svc.PeopleDirectory),
+			Today:      func() requestreview.Date { return requestreview.Date(reviewToday()) },
 		})
 		require.NoError(t, err)
 

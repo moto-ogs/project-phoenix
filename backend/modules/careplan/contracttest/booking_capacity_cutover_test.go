@@ -18,7 +18,7 @@ func TestBookingCapacityCutoverPreservesBoundariesAndTenantIsolation(t *testing.
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	bookings := carePlanTest.NewOfferingBookings()
-	projection := api.NewEnrollmentBookings()
+	projection := api.NewEnrollmentBookings(nil)
 	type school struct {
 		ctx                               context.Context
 		phaseID, offeringID, firstChildID int64

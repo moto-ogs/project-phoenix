@@ -75,7 +75,7 @@ func mountPresenceRoutes(
 	if err != nil {
 		return err
 	}
-	activeResource := presenceAPI.NewResource(operations, activePeople{source: NewAttendanceRoutePeople(users)}, teacherGroupIDs(education), activeStaffAccess{source: peopleCompose.NewAttendanceRouteStaff(caller)}, settings, ProtectedTenantRoutesWith(supervisionDashboardHTTP.NewResource(dashboard).Register), logger.With("handler", "active"), presence, activeRequestRuntime(), activeAuthorization(), settingsFacts.NewDisplaySettings(settings))
+	activeResource := presenceAPI.NewResource(operations, activePeople{source: NewAttendanceRoutePeople(users)}, teacherGroupIDs(education), activeStaffAccess{source: peopleCompose.NewAttendanceRouteStaff(caller)}, settings, ProtectedTenantRoutesWith(supervisionDashboardHTTP.NewResource(dashboard).Register), logger.With("handler", "active"), presence, activeRequestRuntime(now), activeAuthorization(), settingsFacts.NewDisplaySettings(settings))
 	sessionEnd, err := newSessionEnd(presence, timetableOwner, days.Bridge, persons, facilities, hub, emitter, logger)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func mountPresenceRoutes(
 	}
 	move := &openRoomMoveHTTP.Resource{
 		OpenRoomMove: openRoomMove, Authorize: activeResource.BulkStudentMoveAuthorization, CheckInActor: activeResource.CheckInMoveActor,
-		MarkRollback: activeRequestRuntime().MarkRollback, RenderPresenceError: presenceAPI.ErrorRenderer,
+		MarkRollback: activeRequestRuntime(now).MarkRollback, RenderPresenceError: presenceAPI.ErrorRenderer,
 		WebAttendance: settingsFacts.NewDisplaySettings(settings).WebAttendanceEnabledReader(),
 	}
 	yardResource := supervisionDashboardHTTP.NewSchulhofResource(newSupervisionYard(yard.Schulhof), func(ctx context.Context) (int64, bool, error) {

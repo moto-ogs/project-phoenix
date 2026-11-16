@@ -46,7 +46,7 @@ func TestSurveyPositiveGrowthQueryBudget(t *testing.T) {
 	_, viewer := testpkg.CreateTestStaffWithAccount(t, db, "Survey", "Viewer")
 	testpkg.EnsureAccountTenant(t, db, viewer.ID, testpkg.Tenant(t))
 	token := testutil.MintTestJWT(t, sessiontoken.AppClaims{ID: int(viewer.ID), Sub: viewer.Email, Roles: []string{"user"}, Permissions: []string{"surveys:manage"}, TenantID: testpkg.Tenant(t)})
-	router := announcement.NewSurveyResource(surveys, owners.NewRecordReports()).Router(api.ProtectedTenantRoutes)
+	router := announcement.NewSurveyResource(surveys, owners.NewRecordReports(), time.Now).Router(api.ProtectedTenantRoutes)
 	counter := testpkg.CaptureQueriesForContext(t, db)
 	counter.Stop()
 	var lastSurvey *communication.Survey

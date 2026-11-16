@@ -67,6 +67,8 @@ type WeekProtocolResourceConfig struct {
 	// optional and supplied only by the development root.
 	Seed        func(context.Context) error
 	IsLocalSeed func(*http.Request) bool
+	// Now dates the access log entries; nil is the real clock.
+	Now func() time.Time
 }
 
 // WeekProtocolResource is the HTTP resource of the weekly protocols.
@@ -82,6 +84,9 @@ func NewWeekProtocolResource(cfg WeekProtocolResourceConfig) *WeekProtocolResour
 	}
 	if cfg.Logger == nil {
 		cfg.Logger = slog.Default()
+	}
+	if cfg.Now == nil {
+		cfg.Now = time.Now
 	}
 	return &WeekProtocolResource{cfg: cfg}
 }
@@ -334,7 +339,7 @@ func (rs *WeekProtocolResource) recordAccess(ctx context.Context, protocol timet
 	}
 	return rs.cfg.AccessLog.RecordWeekProtocolAccess(ctx, WeekProtocolAccess{
 		ActorAccountID: int64(claims.ID), ActorRole: role, ProtocolID: protocol.ID,
-		GroupID: protocol.GroupID, WeekStart: protocol.WeekStart, At: time.Now(),
+		GroupID: protocol.GroupID, WeekStart: protocol.WeekStart, At: rs.cfg.Now(),
 	})
 }
 

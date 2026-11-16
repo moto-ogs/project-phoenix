@@ -29,13 +29,16 @@ type Worker struct {
 	provider      ports.Provider
 	observe       ports.Observer
 	leaseDuration time.Duration
+	// now dates claims, leases, fences and retries; the store compares the
+	// leases with the instants it passes, so every decision reads this clock.
+	now func() time.Time
 }
 
-func NewWorker(store ports.Store, provider ports.Provider, observe ports.Observer) *Worker {
-	if store == nil || provider == nil || observe == nil {
-		panic("delivery worker: store, provider, and observer are required")
+func NewWorker(store ports.Store, provider ports.Provider, observe ports.Observer, now func() time.Time) *Worker {
+	if store == nil || provider == nil || observe == nil || now == nil {
+		panic("delivery worker: store, provider, observer, and clock are required")
 	}
-	return &Worker{store: store, provider: provider, observe: observe, leaseDuration: defaultLeaseDuration}
+	return &Worker{store: store, provider: provider, observe: observe, leaseDuration: defaultLeaseDuration, now: now}
 }
 
 func (w *Worker) RunOnce(ctx context.Context, batchSize, maxAttempts int) (stats deliveryContract.WorkerStats, err error) {
@@ -46,7 +49,7 @@ func (w *Worker) RunOnce(ctx context.Context, batchSize, maxAttempts int) (stats
 	if retention, ok := w.store.(interface {
 		DeleteExpiredSystemEmails(context.Context, time.Time, int) (int, error)
 	}); ok && batchSize > 0 {
-		count, err := retention.DeleteExpiredSystemEmails(ctx, time.Now().Add(-domain.RetentionWindow), batchSize)
+		count, err := retention.DeleteExpiredSystemEmails(ctx, w.now().Add(-domain.RetentionWindow), batchSize)
 		w.observe(domain.Observation{Operation: "system_email_retention", Count: count, Err: err})
 		if err != nil {
 			return stats, err
@@ -60,7 +63,7 @@ func (w *Worker) RunOnce(ctx context.Context, batchSize, maxAttempts int) (stats
 	if pushLimit > 0 {
 		err = w.runTransport(ctx, domain.TransportPush, pushLimit, maxAttempts, &stats)
 	}
-	age, ageErr := w.store.OldestPendingAge(ctx, time.Now())
+	age, ageErr := w.store.OldestPendingAge(ctx, w.now())
 	w.observe(domain.Observation{Operation: "oldest_pending_age", Duration: age, Count: 1, Err: ageErr})
 	if err == nil && ageErr != nil {
 		err = ageErr
@@ -69,7 +72,7 @@ func (w *Worker) RunOnce(ctx context.Context, batchSize, maxAttempts int) (stats
 }
 
 func (w *Worker) runTransport(ctx context.Context, transport domain.Transport, limit, maxAttempts int, stats *deliveryContract.WorkerStats) error {
-	now := time.Now()
+	now := w.now()
 	unknown, err := w.store.DeadLetterExpiredDispatches(ctx, transport, now)
 	if err != nil {
 		w.observe(domain.Observation{Operation: "dispatch_outcome_unknown", Transport: string(transport), Err: err})
@@ -114,7 +117,7 @@ func (w *Worker) process(ctx context.Context, intent domain.Intent, maxAttempts 
 		maxAttempts = policy.MaxAttempts
 	}
 	started := time.Now()
-	dispatchToken, active, err := w.store.StartDelivery(ctx, intent.Transport, intent.ID, leaseToken(intent), time.Now().Add(w.leaseDuration))
+	dispatchToken, active, err := w.store.StartDelivery(ctx, intent.Transport, intent.ID, leaseToken(intent), w.now().Add(w.leaseDuration))
 	if err != nil {
 		w.observe(domain.Observation{Operation: "lease_fence_error", Transport: string(intent.Transport), Template: intent.Template, Count: 1, Err: err})
 		return
@@ -150,7 +153,7 @@ func (w *Worker) process(ctx context.Context, intent domain.Intent, maxAttempts 
 		w.finalizeFailure(ctx, intent, dispatchToken, fmt.Errorf("encode provider result: %w", err), maxAttempts, stats)
 		return
 	}
-	finalized, err := w.store.FinalizeSent(ctx, intent.Transport, intent.ID, dispatchToken, encoded, time.Now())
+	finalized, err := w.store.FinalizeSent(ctx, intent.Transport, intent.ID, dispatchToken, encoded, w.now())
 	if err != nil {
 		w.observe(domain.Observation{Operation: "finalize_error", Transport: string(intent.Transport), Template: intent.Template, Count: 1, Err: err})
 		return
@@ -180,7 +183,7 @@ func (w *Worker) heldBackBySuppression(ctx context.Context, intent domain.Intent
 }
 
 func (w *Worker) finalizeCancelled(ctx context.Context, intent domain.Intent, token string, reason error, stats *deliveryContract.WorkerStats) {
-	finalized, err := w.store.FinalizeCancelled(ctx, intent.Transport, intent.ID, token, reason.Error(), time.Now())
+	finalized, err := w.store.FinalizeCancelled(ctx, intent.Transport, intent.ID, token, reason.Error(), w.now())
 	if err != nil {
 		w.observe(domain.Observation{Operation: "finalize_error", Transport: string(intent.Transport), Template: intent.Template, Count: 1, Err: err})
 		return
@@ -197,9 +200,9 @@ func (w *Worker) finalizeCancelled(ctx context.Context, intent domain.Intent, to
 func (w *Worker) finalizeDeferred(ctx context.Context, intent domain.Intent, token string, reason error, stats *deliveryContract.WorkerStats) {
 	delay := retryBackoff[0]
 	if errors.Is(reason, domain.ErrThrottled) {
-		delay = throttleDelay(time.Since(intent.CreatedAt))
+		delay = throttleDelay(w.now().Sub(intent.CreatedAt))
 	}
-	finalized, err := w.store.FinalizeDeferred(ctx, intent.Transport, intent.ID, token, reason.Error(), time.Now().Add(delay))
+	finalized, err := w.store.FinalizeDeferred(ctx, intent.Transport, intent.ID, token, reason.Error(), w.now().Add(delay))
 	if err != nil {
 		w.observe(domain.Observation{Operation: "finalize_error", Transport: string(intent.Transport), Template: intent.Template, Count: 1, Err: err})
 		return
@@ -227,7 +230,7 @@ func (w *Worker) finalizeFailure(ctx context.Context, intent domain.Intent, toke
 		index := min(attempts-1, len(policy.Backoff)-1)
 		delay = policy.Backoff[index]
 	}
-	nextAttempt := time.Now().Add(delay)
+	nextAttempt := w.now().Add(delay)
 	result, err := w.store.FinalizeFailure(ctx, intent.Transport, intent.ID, token, attempts, sendErr.Error(), nextAttempt, maxAttempts)
 	if err != nil {
 		w.observe(domain.Observation{Operation: "finalize_error", Transport: string(intent.Transport), Template: intent.Template, Count: 1, Err: err})

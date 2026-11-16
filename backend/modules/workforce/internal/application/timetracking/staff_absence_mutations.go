@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 
@@ -38,7 +37,7 @@ func (s *staffAbsenceService) UpdateAbsence(ctx context.Context, staffID int64, 
 		return nil, err
 	}
 
-	absence.UpdatedAt = time.Now()
+	absence.UpdatedAt = s.now()
 
 	if err := absence.Validate(); err != nil {
 		return nil, &workforce.TimeTrackingError{Kind: workforce.ErrAbsenceInvalid, Cause: fmt.Errorf("invalid absence data: %w", err)}

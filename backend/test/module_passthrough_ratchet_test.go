@@ -283,7 +283,7 @@ const modulePassthroughApplicationSegment = "/internal/application/"
 // Lowered by #7104: People Directory's student rosters and guardian retention
 // read the day of the owner's clock instead of forwarding (-2); Device Fleet's
 // room move leaves updated_at to the database trigger (-1, ADR 0268).
-const modulePassthroughOwnerBudgetTotal = 1397
+const modulePassthroughOwnerBudgetTotal = 1396
 
 // modulePassthroughOwnerBudgets is the register: module directory →
 // pass-throughs measured in its application layer and its compositions
@@ -312,7 +312,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0105: the holiday period reads of the Träger-Portal; by
 	// ADR 0110: the retention of the public holiday registrations; by
 	// ADR 0116: the weeks the hosting school sees.
-	"modules/enrollment":     26,
+	"modules/enrollment":     25,
 	"modules/exporttransfer": 1,
 	"modules/facilities":     13,
 	"modules/feedback":       2,

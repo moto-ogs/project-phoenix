@@ -21,11 +21,12 @@ func (s *Store) ListCombinedGroups(ctx context.Context, filter studentpresence.C
 	if filter.ID != nil {
 		q = q.Where("id = ?", *filter.ID)
 	}
+	// The end times come from the store's clock, so "active" reads it too.
 	if filter.Active != nil {
 		if *filter.Active {
-			q = q.Where("(end_time IS NULL OR end_time > NOW())")
+			q = q.Where("(end_time IS NULL OR end_time > ?)", s.now())
 		} else {
-			q = q.Where("end_time IS NOT NULL AND end_time <= NOW()")
+			q = q.Where("end_time IS NOT NULL AND end_time <= ?", s.now())
 		}
 	}
 	if filter.Limit > 0 {

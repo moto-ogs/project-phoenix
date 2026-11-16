@@ -66,7 +66,7 @@ func setupMorningAttendanceFixture(t *testing.T, today string) *morningAttendanc
 	hub := realtime.NewHub(nil)
 	module, err := rootAPI.NewClassDayTestModuleWithRealtime(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db), hub, func() time.Time { return now })
 	require.NoError(t, err)
-	router := classdayhttp.NewResource(module.ClassDay, nil).SchoolRouter(rootAPI.ProtectedSchoolRoutes)
+	router := classdayhttp.NewResource(module.ClassDay, nil, module.Today).SchoolRouter(rootAPI.ProtectedSchoolRoutes)
 	tenantID := testpkg.Tenant(t)
 
 	suffix := time.Now().UnixNano()

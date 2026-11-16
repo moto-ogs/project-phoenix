@@ -1,0 +1,7 @@
+{
+  "scenario": "parent.me.notifications.feed",
+  "max": 5,
+  "exact": true,
+  "description": "Parent-scope GET /parent/me/notifications/feed/ through real Delivery (#7140). N=0/3/8 readable feed entries of the guardian and one entry of another family; one page read and one unread count, each with the check of the children's parent_portal.access across the family's schools, in Delivery's own administrative transaction. Includes BEGIN/COMMIT; excludes outer live-session verification.",
+  "route": "GET /parent/me/notifications/feed/"
+}

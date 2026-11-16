@@ -1353,6 +1353,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (f parentNotificationFeed) Page(ctx context.Context, accountID int64, cursor string, limit int) (parentAPI.FeedPage, error) {\n\tpage, err := f.GuardianNotificationFeed.Page(ctx, accountID, cursor, limit)\n\tif err != nil {\n\t\treturn parentAPI.FeedPage{}, err\n\t}\n\tout := parentAPI.FeedPage{NextCursor: page.NextCursor, UnreadCount: page.UnreadCount, Entries: make([]parentAPI.FeedEntry, len(page.Entries))}\n\tfor i, entry := range page.Entries {\n\t\tout.Entries[i] = parentAPI.FeedEntry(entry)\n\t}\n\treturn out, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/parentNotificationFeed.Page",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (s parentPreferences) DisableAllForParent(ctx context.Context, accountID int64) error {\n\treturn s.source.DisableAllForParent(ctx, accountID)\n}",
       "form": "forward-debt",
       "id": "api/parentPreferences.DisableAllForParent",
@@ -1776,6 +1783,20 @@
       "evidence": "func (g traegerGroupNames) GroupsByTenant(ctx context.Context, schools []int64) (map[int64][]traegerview.NamedGroup, error) {\n\tgroups, err := g.groups.GroupsByTenant(ctx, schools)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64][]traegerview.NamedGroup, len(groups))\n\tfor school, named := range groups {\n\t\tfor _, group := range named {\n\t\t\tresult[school] = append(result[school], traegerview.NamedGroup{ID: group.ID, Name: group.Name})\n\t\t}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerGroupNames.GroupsByTenant",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (h traegerHireEmployments) CreateSchoolEmployment(ctx context.Context, employment workforce.TraegerSchoolEmploymentInput) (int64, error) {\n\tcreated, err := h.staff.CreateStaff(ctx, schoolmembership.CreateStaff{StaffFields: schoolmembership.StaffFields{PersonID: employment.PersonID, EmploymentType: employment.EmploymentType}})\n\treturn created.ID, err\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerHireEmployments.CreateSchoolEmployment",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (h traegerHirePersons) CreateSchoolPerson(ctx context.Context, person workforce.TraegerSchoolPersonInput) (int64, error) {\n\tcreated, err := h.persons.CreatePerson(ctx, peopledirectory.CreatePerson{FirstName: person.FirstName, LastName: person.LastName, Birthday: person.Birthday})\n\treturn created.ID, err\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerHirePersons.CreateSchoolPerson",
       "owner": "roots"
     },
     {
@@ -7541,7 +7562,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (c schedulerPresenceCleanup) CleanupExpiredVisits(ctx context.Context) (*schedulerPorts.ExpiredVisitCleanup, error) {\n\tresult, err := c.presence.CleanupExpiredVisits(ctx)\n\tif result == nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026schedulerPorts.ExpiredVisitCleanup{StudentsProcessed: result.StudentsProcessed, RecordsDeleted: result.RecordsDeleted, Success: result.Success}, err\n}",
+      "evidence": "func (c schedulerPresenceCleanup) CleanupExpiredVisits(ctx context.Context) (*schedulerPorts.ExpiredVisitCleanup, error) {\n\tresult, err := c.presence.CleanupExpiredVisits(ctx)\n\tif result == nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026schedulerPorts.ExpiredVisitCleanup{StudentsProcessed: result.StudentsProcessed, RecordsDeleted: result.RecordsDeleted, StudentsFailed: len(result.Errors), Success: result.Success}, err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/schedulerPresenceCleanup.CleanupExpiredVisits",
       "owner": "roots"
@@ -7555,7 +7576,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (c schedulerPresenceCleanup) CleanupStaleSupervisors(ctx context.Context) (*schedulerPorts.StaleSupervisorCleanup, error) {\n\tresult, err := c.presence.CleanupStaleSupervisors(ctx)\n\tif result == nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026schedulerPorts.StaleSupervisorCleanup{RecordsClosed: result.RecordsClosed, Success: result.Success}, err\n}",
+      "evidence": "func (c schedulerPresenceCleanup) CleanupStaleSupervisors(ctx context.Context) (*schedulerPorts.StaleSupervisorCleanup, error) {\n\tresult, err := c.presence.CleanupStaleSupervisors(ctx)\n\tif result == nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026schedulerPorts.StaleSupervisorCleanup{RecordsClosed: result.RecordsClosed, RecordsFailed: len(result.Errors), Success: result.Success}, err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/schedulerPresenceCleanup.CleanupStaleSupervisors",
       "owner": "roots"

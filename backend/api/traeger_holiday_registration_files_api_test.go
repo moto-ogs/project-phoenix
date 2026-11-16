@@ -76,7 +76,7 @@ func TestHolidayRegistrationFilesKeepAnsweredInactiveAndArchivedCriteria(t *test
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	later := decodeSchoolPortalData[receiptBody](t, rec.Body.Bytes())
 
-	_, _, _, records := enrollmentCompose.NewHolidayRegistrationReview(testHealthCipher(), nil, nil, owners.HolidayTestSchoolCalendar{}, nil)
+	_, _, _, records := enrollmentCompose.NewHolidayRegistrationReview(testHealthCipher(), nil, nil, owners.HolidayTestSchoolCalendar{}, nil, nil)
 	reviewer := enrollment.HolidayReviewer{
 		OrganizationID: f.office.organization,
 		AccountID:      testpkg.CreateTestAccount(t, f.db, "holiday-records").ID,
@@ -212,11 +212,11 @@ func holidayFilesRouter(t *testing.T, f reviewFixture, account int64, rights ...
 		AccountID: account, OrganizationID: f.office.organization, Scope: tenant.ScopeOrg, Permissions: rights,
 	})
 	require.NoError(t, err)
-	review, places, allocation, records := enrollmentCompose.NewHolidayRegistrationReview(testHealthCipher(), nil, nil, owners.HolidayTestSchoolCalendar{}, nil)
+	review, places, allocation, records := enrollmentCompose.NewHolidayRegistrationReview(testHealthCipher(), nil, nil, owners.HolidayTestSchoolCalendar{}, nil, nil)
 	_, wishes := enrollmentCompose.NewHolidayWishes(testHealthCipher())
 	resource := enrollmentHTTP.NewHolidayPeriodResource(enrollmentCompose.NewHolidayPeriods(nil, owners.HolidayTestSchoolCalendar{}),
 		review, records, wishes, places, allocation, allocation, unnamedHolidaySchools{},
-		holidayKnownChildren{}, enrollmentCompose.NewHolidayKnownChildTrail(),
+		holidayKnownChildren{}, enrollmentCompose.NewHolidayKnownChildTrail(), traegerListRenderer(NewSimpleListRenderer()),
 		common.RequiresPermission(identityaccess.TraegerRightEnrollmentManage), common.RequiresPermission(identityaccess.TraegerRightHealthRead))
 	router := chi.NewRouter()
 	router.Use(func(next http.Handler) http.Handler {

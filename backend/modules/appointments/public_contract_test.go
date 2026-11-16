@@ -2,6 +2,7 @@ package appointments_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/appointments/compose"
@@ -12,7 +13,7 @@ import (
 func TestPublicAppointmentContractPersistsNormalizedFieldsAndTargets(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}})
+	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}, Now: time.Now})
 	require.NoError(t, err)
 	staff := testpkg.CreateTestStaff(t, db, "Appointment", "Organizer")
 	day := appointments.NewDate(2026, 8, 24)

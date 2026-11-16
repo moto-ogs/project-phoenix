@@ -585,7 +585,7 @@ func (rs *Resource) getOwnVacationQuota(w http.ResponseWriter, r *http.Request) 
 		common.RenderError(w, r, common.ErrorUnauthorized(err))
 		return
 	}
-	year, err := parseYearParam(r)
+	year, err := parseYearParam(r, rs.today())
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -598,10 +598,10 @@ func (rs *Resource) getOwnVacationQuota(w http.ResponseWriter, r *http.Request) 
 	common.Respond(w, r, http.StatusOK, summary, "Vacation quota retrieved")
 }
 
-func parseYearParam(r *http.Request) (int, error) {
+func parseYearParam(r *http.Request, today calendar.Date) (int, error) {
 	yearStr := r.URL.Query().Get("year")
 	if yearStr == "" {
-		return calendar.TodayDate().Year(), nil
+		return today.Year(), nil
 	}
 	year, err := strconv.Atoi(yearStr)
 	if err != nil || year < 2000 || year > 2100 {

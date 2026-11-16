@@ -33,7 +33,7 @@ import (
 func setupSchoolArrivalExceptionRoute(t *testing.T) (*testpkg.DB, *schoolportal.Resource) {
 	t.Helper()
 	db, services, classDayModule, _ := setupSchoolPortalModule(t)
-	classDay := classdayhttp.NewResource(classDayModule.ClassDay, nil)
+	classDay := classdayhttp.NewResource(classDayModule.ClassDay, nil, classDayModule.Today)
 	return db, NewSchoolPortalHTTP(services.SchoolAuth, services.SchoolMFA, common.PasswordResetRoutes{}, classDay, nil, nil, nil, nil, nil)
 }
 

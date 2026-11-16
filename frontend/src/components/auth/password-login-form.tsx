@@ -30,9 +30,13 @@ import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError, unavailableApiError } from "~/lib/api-error";
 import { passkeysConcept } from "~/lib/concepts/passkeys";
 import type { ErrorCode } from "~/lib/error-codes.generated";
+import { errorCodeMessage } from "~/lib/error-presentation";
 import { errorStatus } from "~/lib/expected-failure";
 import { FORGOT_PASSWORD_PARAM } from "~/lib/login-params";
-import { useSessionExpiredNotice } from "~/lib/login-session-notice";
+import {
+  useLogoutNotRevokedNotice,
+  useSessionExpiredNotice,
+} from "~/lib/login-session-notice";
 import { createLogger } from "~/lib/logger";
 import {
   isPasskeyCeremonyIncompleteError,
@@ -69,8 +73,16 @@ export interface PasswordLoginCopy {
    */
   readonly rateLimited: string;
   readonly sessionExpired: string;
+  /**
+   * The last logout ended the session on this device only (#7209). Defaults
+   * to the German catalog text of identity.logout_not_revoked.
+   */
+  readonly logoutNotRevoked?: string;
   readonly reset?: PasswordResetModalCopy;
 }
+
+/** The logout ended the session on this device only (#7209). */
+const LOGOUT_NOT_REVOKED: ErrorCode = "identity.logout_not_revoked";
 
 const DEFAULT_COPY = {
   emailLabel: "E-Mail-Adresse",
@@ -207,6 +219,7 @@ export function PasswordLoginForm({
   const [passkeySupported, setPasskeySupported] = useState(false);
   const [isResetOpen, setIsResetOpen] = useState(false);
   const [sessionExpired, setSessionExpired] = useSessionExpiredNotice();
+  const [logoutNotRevoked, setLogoutNotRevoked] = useLogoutNotRevokedNotice();
   const { formRef, errors, pending, passwordRefused, attempt } =
     useLoginAttempt(portal, copy.rateLimited);
   const latestSubmitRef = useRef<() => void>(() => undefined);
@@ -250,6 +263,7 @@ export function PasswordLoginForm({
       return;
     }
     setSessionExpired(false);
+    setLogoutNotRevoked(false);
     await attempt(
       () => onSubmit({ email, password }),
       LOGIN_REFUSALS,
@@ -261,6 +275,7 @@ export function PasswordLoginForm({
   const passkeyLogin = async () => {
     if (busy || !onPasskey) return;
     setSessionExpired(false);
+    setLogoutNotRevoked(false);
     await attempt(
       onPasskey,
       PASSKEY_LOGIN_REFUSALS,
@@ -314,6 +329,16 @@ export function PasswordLoginForm({
           />
         )}
         {failed ? null : notice}
+        {!failed && logoutNotRevoked ? (
+          <Alert
+            type="warning"
+            message={
+              copy.logoutNotRevoked ??
+              errorCodeMessage(LOGOUT_NOT_REVOKED, "die Abmeldung")
+            }
+            data-testid="logout-not-revoked-notice"
+          />
+        ) : null}
         {!failed && sessionExpired ? (
           <Alert type="info" message={copy.sessionExpired} />
         ) : null}

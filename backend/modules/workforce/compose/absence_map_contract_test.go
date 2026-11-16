@@ -2,6 +2,7 @@ package compose
 
 import (
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -9,6 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// absenceMapDay is the fixed school Tuesday the absence map contract reads.
+var absenceMapDay = calendar.NewDate(2026, time.November, 10)
 
 func TestStaffAbsenceMapContract(t *testing.T) {
 	t.Parallel()
@@ -21,7 +25,7 @@ func TestStaffAbsenceMapContract(t *testing.T) {
 	t.Run("returns absence map for today", func(t *testing.T) {
 		staff1 := testpkg.CreateTestStaff(t, db, "Staff", "One")
 		staff2 := testpkg.CreateTestStaff(t, db, "Staff", "Two")
-		today := calendar.TodayDate()
+		today := absenceMapDay
 
 		absence1 := workforce.StaffAbsence{
 			StaffID:     staff1.ID,
@@ -54,7 +58,7 @@ func TestStaffAbsenceMapContract(t *testing.T) {
 
 	t.Run("prioritizes sick over vacation", func(t *testing.T) {
 		staff3 := testpkg.CreateTestStaff(t, db, "Staff", "Three")
-		today := calendar.TodayDate()
+		today := absenceMapDay
 
 		// Create two overlapping absences for same staff
 		absence1 := workforce.StaffAbsence{
@@ -88,7 +92,7 @@ func TestStaffAbsenceMapContract(t *testing.T) {
 
 	t.Run("uses the requested date", func(t *testing.T) {
 		staff1 := testpkg.CreateTestStaff(t, db, "Staff", "One")
-		requestedDate := calendar.TodayDate().AddDays(30)
+		requestedDate := absenceMapDay.AddDays(30)
 		absence := workforce.StaffAbsence{
 			StaffID:     staff1.ID,
 			AbsenceType: workforce.AbsenceTypeTraining,
@@ -108,7 +112,7 @@ func TestStaffAbsenceMapContract(t *testing.T) {
 
 	t.Run("uses the same ID tie-breaker for type and label maps", func(t *testing.T) {
 		staff1 := testpkg.CreateTestStaff(t, db, "Staff", "Tie Breaker")
-		today := calendar.TodayDate()
+		today := absenceMapDay
 		absenceType, err := repo.CreateStaffAbsenceType(ctx, workforce.StaffAbsenceTypeFields{
 			Name:     "Regenerationstag",
 			BaseType: workforce.AbsenceTypeOther,

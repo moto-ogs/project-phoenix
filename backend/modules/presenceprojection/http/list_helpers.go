@@ -236,8 +236,8 @@ func parseGradeLevelList(raw []string) []int {
 }
 
 // parseStudentListParams extracts query parameters from the request
-func parseStudentListParams(r *http.Request) *studentListParams {
-	today := calendar.TodayDate()
+// as of today, the Resource clock's day.
+func parseStudentListParams(r *http.Request, today calendar.Date) *studentListParams {
 	params := &studentListParams{
 		schoolClasses:   parseMultiValueParam(r.URL.Query()["school_class"]),
 		firstName:       r.URL.Query().Get("first_name"),

@@ -245,7 +245,7 @@ describe("SlideOver", () => {
     });
   });
 
-  it("dims and blurs the page with the shared overlay backdrop", () => {
+  it("dims the page with the shared overlay backdrop, without a blur", () => {
     const { container } = render(
       <SlideOver open>
         <SlideOverContent>Inhalt</SlideOverContent>
@@ -256,7 +256,8 @@ describe("SlideOver", () => {
     expect(overlay).not.toBeNull();
     // Same tint as Modal, FormModal and Drawer — no slate-tinted or lighter
     // backdrop that would dim the page in a different gray (#2932).
-    expect(overlay).toHaveClass("bg-black/40", "backdrop-blur-sm");
+    expect(overlay).toHaveClass("bg-black/40");
+    expect(overlay?.className).not.toMatch(/backdrop-blur/);
     expect(overlay?.className).not.toContain("bg-slate-900");
   });
 

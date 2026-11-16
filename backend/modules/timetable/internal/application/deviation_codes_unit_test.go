@@ -51,7 +51,7 @@ func TestBulkDatesRefusalCodes(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := normalizeBulkDates(tc.dates, clock)
+			_, err := normalizeBulkDates(tc.dates, clock())
 			var de *timetable.DeviationError
 			require.ErrorAs(t, err, &de)
 			assert.Equal(t, http.StatusBadRequest, de.Status)

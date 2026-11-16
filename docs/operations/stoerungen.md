@@ -120,8 +120,9 @@ Produktions-/Staging-Requests und keinen Serverzugriff aus.
    Alarm-ID, Zustellnachweis und verbleibende Lücken geschützt dokumentieren.
    Bei Rücknahme **zuerst** die gesicherte Probe-Konfiguration mit `/health`
    wiederherstellen, Probe-Container neu erstellen und erfolgreiche Proben samt
-   Loki-Zustellung bestätigen. **Erst danach** das Backend auf eine Version
-   ohne `/ready` zurückrollen. Sonst erzeugt `/ready` HTTP 404 und einen
+   Loki-Zustellung bestätigen. **Erst danach** das Backend nach
+   [Release-Backup und Rollback](release-backup-rollback.md#manual-rollback) auf
+   eine Version ohne `/ready` zurückrollen. Sonst erzeugt `/ready` HTTP 404 und einen
    Fehlalarm. Den Zeitraum der Rücknahme festhalten: `/health` erkennt keinen
    DB-Ausfall; diese Erkennung bleibt bis zur erneuten Umstellung offen.
 

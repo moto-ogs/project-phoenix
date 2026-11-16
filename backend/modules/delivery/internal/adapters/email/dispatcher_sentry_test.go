@@ -33,7 +33,7 @@ func dispatchWithRecordingSentry(t *testing.T, mailer *mockMailer, attempts, cal
 	require.NoError(t, err)
 	ctx := sentry.SetHubOnContext(context.Background(), sentry.NewHub(client, sentry.NewScope()))
 
-	dispatcher := NewDispatcher(mailer, slog.New(slog.DiscardHandler))
+	dispatcher := NewDispatcher(mailer, slog.New(slog.DiscardHandler), time.Now)
 	dispatcher.SetDefaults(attempts, []time.Duration{time.Millisecond})
 	tracker := newCallbackTracker()
 	dispatcher.Dispatch(ctx, mailcontract.DeliveryRequest{

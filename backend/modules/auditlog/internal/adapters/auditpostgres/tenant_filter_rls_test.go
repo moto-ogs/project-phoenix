@@ -26,7 +26,7 @@ func TestAuditTenantReadsRejectMissingScopeAndEnforceRLS(t *testing.T) {
 			return err
 		},
 		func() error {
-			_, err := NewDataDeletionRepository(missing).ListRecentRetentionSummaries(context.Background(), now.Add(-time.Hour), 10)
+			_, err := NewDataDeletionRepository(missing, auditTestClock).ListRecentRetentionSummaries(context.Background(), now.Add(-time.Hour), 10)
 			return err
 		},
 		func() error {

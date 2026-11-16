@@ -9,10 +9,15 @@ import (
 	peopleState "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// responseHelperDay is the day the departure tests read on; no child here
+// has a care end.
+var responseHelperDay = calendar.NewDate(2026, 11, 2)
 
 type failedPresenceMode struct {
 	studentpresence.Presence
@@ -101,7 +106,7 @@ func TestPopulatePublicStudentFields_PreservesNonCanonicalPickupStatus(t *testin
 	}
 	resp := StudentResponse{}
 
-	populatePublicStudentFields(&resp, student)
+	populatePublicStudentFields(&resp, student, responseHelperDay)
 
 	assert.Equal(t, status, resp.PickupStatus)
 	assert.Equal(t, departure.DepartureBus, resp.DepartureDays.ModeFor(departure.PickupDayMonday))
@@ -121,7 +126,7 @@ func TestPopulateSnapshotPublicFields_PreservesNonCanonicalPickupStatus(t *testi
 	}
 	resp := StudentResponse{}
 
-	populateSnapshotPublicFields(&resp, student)
+	populateSnapshotPublicFields(&resp, student, responseHelperDay)
 
 	assert.Equal(t, status, resp.PickupStatus)
 	assert.Equal(t, departure.DeparturePickup, resp.DepartureDays.ModeFor(departure.PickupDayWednesday))
@@ -138,7 +143,7 @@ func TestResponsePickupStatus_UsesDerivedStatusForCanonicalStoredText(t *testing
 	}
 	resp := StudentResponse{}
 
-	populatePublicStudentFields(&resp, student)
+	populatePublicStudentFields(&resp, student, responseHelperDay)
 
 	assert.Equal(t, departure.PickupStatusGoesAlone, resp.PickupStatus)
 	assert.False(t, resp.PickupDays.HasAny())
@@ -150,7 +155,7 @@ func TestPopulatePublicStudentFields_LeavesMissingDepartureRuleUnconfigured(t *t
 
 	resp := StudentResponse{}
 
-	populatePublicStudentFields(&resp, &peopleState.StudentState{})
+	populatePublicStudentFields(&resp, &peopleState.StudentState{}, responseHelperDay)
 
 	assert.False(t, resp.DepartureRuleConfigured)
 }
@@ -175,7 +180,7 @@ func TestPopulatePublicStudentFields_BusAndAccompaniedSameDayKeepsAccompanied(t 
 	}
 	resp := StudentResponse{}
 
-	populatePublicStudentFields(&resp, student)
+	populatePublicStudentFields(&resp, student, responseHelperDay)
 
 	assert.Equal(t, departure.PickupStatusAccompanied, resp.PickupStatus,
 		"bus+accompanied on the same day must not be bucketed as a self-goer")
@@ -194,7 +199,7 @@ func TestPopulateSnapshotPublicFields_BusAndAccompaniedSameDayKeepsAccompanied(t
 	}
 	resp := StudentResponse{}
 
-	populateSnapshotPublicFields(&resp, student)
+	populateSnapshotPublicFields(&resp, student, responseHelperDay)
 
 	assert.Equal(t, departure.PickupStatusAccompanied, resp.PickupStatus,
 		"bus+accompanied on the same day must not be bucketed as a self-goer")

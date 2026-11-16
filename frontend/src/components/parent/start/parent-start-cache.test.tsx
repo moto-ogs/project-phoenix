@@ -60,6 +60,7 @@ vi.mock("~/lib/parent-api", async (original) => ({
   listAnnouncements: vi.fn(async () => []),
   listMessageThreads: vi.fn(async () => []),
   listHolidayRegistrationEntries: vi.fn(async () => []),
+  listHolidayOffers: vi.fn(async () => []),
 }));
 vi.mock("~/lib/personal-calendar-api", () => ({
   getParentCalendar: vi.fn(async () => ({ events: [] })),

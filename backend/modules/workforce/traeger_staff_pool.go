@@ -8,7 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The Vertretungspool of the Träger (#4709, ADR 0089 section 9, ADR 0250):
+// The Vertretungspool of the Träger (#4709, ADR 0089 section 9, ADR 0252):
 // an Arbeitsvertrag with the Merkmal „Vertretungspool“ makes its person a
 // Springer every school of the Träger may block for a day and a time. Two
 // live blocks of one Springer never overlap, also when two schools block at
@@ -161,4 +161,34 @@ type SpringerEmployments interface {
 	EmploySpringer(ctx context.Context, request SpringerEmploymentRequest) (staffID int64, err error)
 	// EndSpringerAccess ends the access of a lifted block.
 	EndSpringerAccess(ctx context.Context, blockID int64) error
+}
+
+// SpringerExit is an employment the pool created at the school of the
+// caller's tenant transaction whose last block there is over (#7197, ADR
+// 0253): every block of the school lies before today or was lifted.
+// LastBlockDay is the day of the last block. The exit runs in the name of
+// the most recent blocking Leitung who still works at the school,
+// ActorAccountID with their employment ActorStaffID, else in the name of
+// the Springer's own account and employment.
+type SpringerExit struct {
+	TenantID       int64
+	RecordID       int64
+	StaffID        int64
+	LastBlockDay   calendar.Date
+	ActorAccountID int64
+	ActorStaffID   int64
+}
+
+// SchoolSpringerExits finds the employments of Springer whose last block at
+// the school is over and records their end in the record's trail. Each
+// method joins the caller's tenant transaction of one school.
+type SchoolSpringerExits interface {
+	// DueSpringerExits lists the exits due at the school on today.
+	DueSpringerExits(ctx context.Context, today calendar.Date) ([]SpringerExit, error)
+	// LockSpringerExit locks the record, as a block of it does, and reads
+	// its exit again; due is false when a new block keeps it.
+	LockSpringerExit(ctx context.Context, recordID int64, today calendar.Date) (exit SpringerExit, due bool, err error)
+	// RecordSpringerExit writes the end of the Einsatzort into the
+	// record's trail, in the name of the exit's actor.
+	RecordSpringerExit(ctx context.Context, exit SpringerExit) error
 }

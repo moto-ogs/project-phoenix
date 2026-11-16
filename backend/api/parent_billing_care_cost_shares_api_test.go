@@ -135,6 +135,16 @@ func TestCareCostSharesSplitTheContributionAndStayOnTheIssuedInvoice(t *testing.
 		}
 	}
 
+	// #4718: the invoices of the released run as a file, each with its number.
+	invoices := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, "/invoices/export"), nil)
+	require.Equal(t, http.StatusOK, invoices.Code, invoices.Body.String())
+	assert.True(t, strings.HasPrefix(strings.TrimPrefix(invoices.Body.String(), "\xEF\xBB\xBF"),
+		"Rechnung Nr.;Ausgestellt am;Schule;Nachname;Vorname;Leistung;Empfänger;Debitorennummer;Summe (Euro)\n"), invoices.Body.String())
+	assert.Contains(t, invoices.Body.String(), miaNumber+";")
+	assert.Equal(t, 3, strings.Count(strings.TrimSpace(invoices.Body.String()), "\n")+1, "the header and both invoices")
+	spreadsheet := assertTraegerListFormats(t, f.traeger, f.office.token, careRunPath(run.ID, "/invoices/export"), "rechnungen-monatsbeitrag-"+released.BillingMonth[:7])
+	assertTraegerListNumbers(t, spreadsheet, map[string]string{"I7": "52.5", "I8": "0"})
+
 	// A later change of the share and of the cost bearer's name never
 	// reaches the issued invoice.
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, "/traeger/cost-bearers/"+strconv.FormatInt(youthOffice, 10),
@@ -271,13 +281,18 @@ func TestCareCostSharesNeedTheRightStayWithTheTraegerAndAreRecorded(t *testing.T
 		{http.MethodPut, item, careCostShare(contract, "youth_office", bearer, map[string]any{"share_basis_points": 1})},
 		{http.MethodDelete, item, nil},
 	}
-	for _, request := range requests {
+	for _, request := range append(requests, struct {
+		method, path string
+		body         any
+	}{http.MethodGet, careCostSharesPath + "/export", nil}) {
 		rec := traegerJSON(t, f.traeger, answer.AccessToken, request.method, request.path, request.body)
 		assert.Equal(t, http.StatusForbidden, rec.Code, "%s %s without the right: %s", request.method, request.path, rec.Body.String())
 	}
 
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Kostenträger Grenze Fremd", identityaccess.TraegerRoleBilling)
 	testpkg.OwnTraegerCareContracts(t, f.db, foreign.organization)
+	assert.NotContains(t, strings.Join(billingListCSV(t, f.traeger, foreign.token, careCostSharesPath+"/export"), "\n"), "Jugendamt Grenze",
+		"the file of another Träger holds no share of this one")
 	for _, request := range requests[1:] {
 		rec := traegerJSON(t, f.traeger, foreign.token, request.method, request.path, request.body)
 		assert.Contains(t, []int{http.StatusNotFound, http.StatusBadRequest}, rec.Code,
@@ -313,6 +328,18 @@ func TestCareCostSharesNeedTheRightStayWithTheTraegerAndAreRecorded(t *testing.T
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.care_cost_share_events
 		WHERE care_contract_id = ? AND actor_account_id IS NULL`, contract).Scan(context.Background(), &anonymous))
 	assert.Zero(t, anonymous, "every entry of the trail names the account")
+
+	// #4718: the shares as a file. Each download reads like the page and
+	// stands in the trail of the contract.
+	lines := billingListCSV(t, f.traeger, f.office.token, careCostSharesPath+"/export")
+	assert.Equal(t, "Nachname;Vorname;Schule;Kostenträger;Art;Gilt für;Anteil;Gültig;Aktenzeichen;Geprüft am;Stand", lines[0])
+	assert.Contains(t, strings.Join(lines, "\n"), ";Jugendamt Grenze;Jugendamt;Betreuung;100 %;")
+	assertTraegerListFormats(t, f.traeger, f.office.token, careCostSharesPath+"/export", "kostentraeger-anteile")
+	var reads int
+	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.care_cost_share_events
+		WHERE organization_id = ? AND care_contract_id = ? AND action = 'read'`, f.office.organization, contract).
+		Scan(context.Background(), &reads))
+	assert.Equal(t, 5, reads, "two reads of the page and three downloads")
 }
 
 // A share without an end, with two amounts or with a reference that is too

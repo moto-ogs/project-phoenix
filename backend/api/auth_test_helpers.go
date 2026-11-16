@@ -185,7 +185,7 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 		return AuthTestModule{}, err
 	}
 	logger := slog.Default()
-	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return AuthTestModule{}, err
 	}
@@ -218,7 +218,7 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 		option(&settingsOverrides, &mail)
 	}
 	mailer := mail.mailer
-	dispatcher := deliveryCompose.NewMailDispatcher(mailer, logger)
+	dispatcher := deliveryCompose.NewMailDispatcher(mailer, logger, time.Now)
 	defaultFrom := email.NewEmail(cfg.EmailFromName, cfg.EmailFromAddress)
 	if defaultFrom.Address == "" {
 		defaultFrom = email.NewEmail("moto", "no-reply@moto.local")

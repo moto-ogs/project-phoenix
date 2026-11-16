@@ -23,5 +23,5 @@ func NewRoomReferencesForTest(db transactionruntime.Database) (func(context.Cont
 	if err != nil {
 		return nil, err
 	}
-	return owners.NewRoomReferences(db, owners.NewLoggedStudentPresence(db, slog.Default()), groups, devices)
+	return owners.NewRoomReferences(db, owners.NewLoggedStudentPresence(db, slog.Default()), groups, devices, nil)
 }

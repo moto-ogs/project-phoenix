@@ -148,7 +148,7 @@ func BuildWorkforceStaffAdmin(db transactionruntime.Database, env RootEnvironmen
 // Audit Platform consent trail. None of them needs the directory, so the
 // module receives the runtime at construction.
 func BuildStudentPhotoRuntime(db transactionruntime.Database, env RootEnvironment, settings settingsCompose.SettingsService, hub *realtime.Hub, audit AuditOwner, unlinker peoplePorts.PhotoUnlinker, actor func(context.Context) int64) StudentPhotoRuntime {
-	cleanup := fileStorageCompose.NewUploadCleanup(db.Pool(), "student-photos")
+	cleanup := fileStorageCompose.NewUploadCleanup(db.Pool(), "student-photos", env.Now)
 	return StudentPhotoRuntime{
 		Cleanup: cleanup.Queue, CleanupBatch: cleanup.QueueAll,
 		Settings: settings, Broadcaster: hub, Unlinker: unlinker,

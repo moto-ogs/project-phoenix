@@ -156,7 +156,7 @@ func TestApplyDeviations_ActiveInstance_EndsAndCreatesSupervisor(t *testing.T) {
 	router := devRouter(s.ctx, s.res, s.db)
 	_, date := futureSubDate(1)
 
-	sessions := RootCompositions.SessionRecords(s.db)
+	sessions := RootCompositions.SessionRecords(s.db, s.clock)
 	now := time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
 	ag := &studentpresence.LiveGroup{
 		StartTime:      now,

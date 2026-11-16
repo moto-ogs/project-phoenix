@@ -26,6 +26,10 @@ import (
 // conditions, the block the Betreuungsvertrag reads as proof (#4680).
 const contractConditions = "Vertragsbedingungen für die Betreuung\nLaufzeit:\n  bis zum Ende des Schuljahres"
 
+// consentEditNow is the fixed clock of the intake in these tests, a
+// Wednesday 10:00 in Berlin inside the phase's service year (#7104).
+var consentEditNow = calendar.NewDate(2026, time.November, 18).BerlinMidnight().Add(10 * time.Hour)
+
 // setupContractConsentTest builds one school whose form asks for the
 // school's own, required consent to the contract conditions, with the
 // public intake and the parents' edit behind the real routes.
@@ -64,6 +68,7 @@ func setupContractConsentTest(t *testing.T, tenantID int64) (*signatureEnv, int6
 		Notifications: NewTestNotifications(repos.Enrollment(), notifyModeSettings{settings: settings}, discardingOutbox{}, capabilitySchools{schools: reposSchools.School}),
 		RateLimitRepo: repos.Enrollment(), OutboxEnqueuer: discardingOutbox{}, Settings: settings,
 		FrontendURL: "http://localhost:3000", ParentsURL: "http://parents.localhost:3000", Logger: slog.Default(),
+		Now: func() time.Time { return consentEditNow },
 	}))
 	resource := enrollmentAPI.NewResource(
 		nil, nil, requests, nil, nil, nil, nil, nil, nil,
@@ -112,9 +117,10 @@ func TestContractConsentSurvivesTheParentsEdit(t *testing.T) {
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			childID = editedChild(t, env, submitted.Request.ID)
 
-			// The school accepts the child afterwards, the way a decision leaves it.
+			// The school accepts the child afterwards, the way a decision leaves it:
+			// on the clock the intake stamped the agreement with (#7104).
 			_, err = env.db.ExecContext(ctx, `UPDATE enrollment.request_children
-  SET status = ?, reviewed_at = clock_timestamp() + interval '1 minute' WHERE id = ?`, capability.ChildStatusApproved, childID)
+  SET status = ?, reviewed_at = ? WHERE id = ?`, capability.ChildStatusApproved, consentEditNow.Add(time.Minute), childID)
 			require.NoError(t, err)
 
 			read := enrollmentCompose.NewContractApplications(securityruntime.Fingerprint)
@@ -160,7 +166,8 @@ func TestAcceptedContractApplicationsExcludeOfficeMatches(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, submitted.Children, 2)
-	owner := enrollmentCompose.New()
+	// The school accepts a minute after the intake's agreement (#7104).
+	owner := enrollmentCompose.NewClocked(func() time.Time { return consentEditNow.Add(time.Minute) })
 	_, reviewer := testpkg.CreateTestPersonWithAccount(t, env.db, "Contract", "Reviewer")
 	for i, child := range submitted.Children {
 		student := enrolledChild(t, env.db, child.FirstName, child.LastName, existingChildBirthday)

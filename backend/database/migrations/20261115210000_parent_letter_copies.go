@@ -102,8 +102,6 @@ var parentLetterCopiesErasureLines = map[string]string{
 		"\t\t\t\t\t-- visitor wrote for it (#4813); like the mail, every one goes.\n" +
 		"\t\t\t\t\tDELETE FROM users.parent_announcement_letter_copies\n" +
 		"\t\t\t\t\tWHERE tenant_id = ANY (hidden_schools);\n",
-	"platform.school_erasure_preview(bigint,bigint)": " v_counts := v_counts || jsonb_build_object('users.parent_announcement_letter_copies'," +
-		"(SELECT count(*) FROM users.parent_announcement_letter_copies AS r WHERE r.tenant_id = p_school));\n",
 }
 
 // parentLetterCopiesDown drops the copies and takes them out of the installed

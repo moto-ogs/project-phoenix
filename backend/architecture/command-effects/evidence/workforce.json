@@ -7521,6 +7521,22 @@
       "target_owner": "document-rendering"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerHireEmployments.CreateSchoolEmployment",
+      "binding_digest": "a03a73978545450e1f8cd0a36c6ab53f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerHireEmployments.CreateSchoolEmployment",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Command.CreateStaff",
+      "target_owner": "school-membership"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerHirePersons.CreateSchoolPerson",
+      "binding_digest": "49a6206b837ef6e5d408c90145f83a0b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerHirePersons.CreateSchoolPerson",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Command.CreatePerson",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerPayrollSettings.TraegerPayrollSettings",
       "binding_digest": "8b0e8d69dd98b4945fd5105aaddea4ae",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerPayrollSettingsReader.TraegerPayrollSettings",

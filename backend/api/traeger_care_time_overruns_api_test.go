@@ -122,7 +122,7 @@ func newOverrunFixtureOn(t *testing.T, db *bun.DB) overrunFixture {
 	require.NoError(t, err)
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
-	audit, err := auditCompose.NewTenantPersistence(db)
+	audit, err := auditCompose.NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
 	router := chi.NewRouter()
 	router.Use(func(next http.Handler) http.Handler {
@@ -130,7 +130,7 @@ func newOverrunFixtureOn(t *testing.T, db *bun.DB) overrunFixture {
 			next.ServeHTTP(w, r.WithContext(tenant.WithUnitOfWork(r.Context(), unit)))
 		})
 	})
-	mountCareTimeOverrunRoutes(router, organizations, statistics.Statistics, audit.DataAccessLog)
+	mountCareTimeOverrunRoutes(router, organizations, statistics.Statistics, audit.DataAccessLog, calendar.TodayDate)
 	return overrunFixture{signInRole: signInRole, router: testpkg.SessionVerifier(router), db: db, traeger: traeger, school: school, other: other, child: child,
 		admin: admin, billing: billing, adminID: adminID, foreignJWT: foreign.token}
 }

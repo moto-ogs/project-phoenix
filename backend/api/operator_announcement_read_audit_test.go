@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
@@ -29,7 +30,7 @@ func TestOperatorAuditAnnouncementViews(t *testing.T) {
 	require.NoError(t, module.MarkSeen(ctx, account.ID, announcement.ID))
 	resource := provisioningAPI.NewProvisioningResource(provisioningAPI.ProvisioningConfig{Service: buildOperatorProvisioning(t, db)})
 	router := chi.NewRouter()
-	mountOperatorAnnouncementRoutes(router, operatorannouncements.NewAnnouncementsResource(module), resource)
+	mountOperatorAnnouncementRoutes(router, operatorannouncements.NewAnnouncementsResource(module, time.Now), resource)
 	request := func() *httptest.ResponseRecorder {
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/announcements/%d/views?search=private-filter", announcement.ID), nil)
 		req.RemoteAddr = "198.51.100.45:12345"

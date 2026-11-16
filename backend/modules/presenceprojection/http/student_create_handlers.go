@@ -29,6 +29,7 @@ func (rs *Resource) RespondCreatedStudent(w http.ResponseWriter, r *http.Request
 		Group:         group,
 		HasFullAccess: hasFullAccess,
 		PhotosEnabled: photosEnabled,
+		Today:         rs.todayDate(),
 	}, StudentResponseServices{
 		ActiveService: rs.ActiveService,
 	})

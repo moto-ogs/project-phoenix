@@ -89,7 +89,12 @@ Gerenderte Reihenfolge, fest, nicht verhandelbar:
    drei Filtern sammelt `filterPanel` sie hinter einer Schaltfläche mit
    Zahl (`filterPanel={{ sections }}` gibt der Fläche Überschriften);
    darunter stehen sie in der Zeile. `badge` zeigt eine Zahl, die sich mit
-   der Filterung ändert. Alles das sind Props des Gerüsts — `TenantPage`
+   der Filterung ändert. `primaryAction` trägt eine Aktion oder Wertauswahl,
+   die zur Liste gehört („Alle Kinder / Ohne IBAN“), auf jeder Breite: auf
+   dem Desktop neben der Suche, darunter in einer eigenen Zeile unter ihr,
+   unter sm über die volle Breite (#7132). Hat die Seite unter der
+   Desktop-Breite einen eigenen Auslöser dafür (Kinderseite), setzt sie
+   `primaryActionDesktopOnly`. Alles das sind Props des Gerüsts — `TenantPage`
    ist der einzige Seitenkopf, und keine Seite rendert die Suchzeile
    (`TenantPageSearchRow`) selbst. Auch ein Layout-Adapter reicht nur Daten
    weiter: `DatabasePageLayout` nimmt sie als `searchRow`, `searchSlot`

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -44,8 +45,11 @@ func NewDecisions(deps DecisionDependencies) *Decisions {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
 	if deps.Today == nil {
-		deps.Today = calendar.TodayDate
+		deps.Today = calendar.CalendarDateClock(deps.Now)
 	}
 	deps.ParentsURL = strings.TrimRight(strings.TrimSpace(deps.ParentsURL), "/")
 	d := &Decisions{deps: deps}

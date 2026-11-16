@@ -78,7 +78,7 @@ func NewParentContractSigningForTests(mails *CareContractTestMails) carecontract
 	return careContractCompose.NewInboxSigning(careContractCompose.SignaturePorts{
 		Ledger: NewCareContractSignatures(), Links: CareContractLinks("http://parents.localhost:3000"),
 		Sender: careContractTestSender{}, Post: mails, Runtime: CareContractRuntime{}, Holidays: CareContractTestHolidays{}, Families: NewCareContractFamilyNumbers(),
-	})
+	}, nil)
 }
 
 // RecordCareContractSendForTests stores the signing link of a contract a

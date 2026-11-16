@@ -2,6 +2,7 @@ package compose
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	boundaryBinding "github.com/moto-ogs/project-phoenix/modules/timetable/internal/adapters/postgres"
@@ -10,8 +11,8 @@ import (
 	"github.com/uptrace/bun"
 )
 
-func NewPlanningTrackAdministration(tracks timetable.PlanningTrackCapability, db *bun.DB) timetable.PlanningTrackAdministration {
-	return application.NewPlanningTrackAdministration(tracks, (&planningTrackAdministration{}).OrderPlanningTracks(db), tenant.FromContext, db != nil)
+func NewPlanningTrackAdministration(tracks timetable.PlanningTrackCapability, db *bun.DB, now func() time.Time) timetable.PlanningTrackAdministration {
+	return application.NewPlanningTrackAdministration(tracks, (&planningTrackAdministration{}).OrderPlanningTracks(db), tenant.FromContext, db != nil, now)
 }
 
 type planningTrackAdministration struct{}

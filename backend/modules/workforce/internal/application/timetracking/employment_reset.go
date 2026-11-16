@@ -3,7 +3,6 @@ package timetracking
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -13,13 +12,12 @@ import (
 // month snapshots. It books the old balance on the return day, so no closed
 // historical month is rewritten. Today's activity is outside the cutoff.
 func NewEmploymentTimeReset(deps Dependencies, clearSchedule func(context.Context, int64, string) error) func(context.Context, workforce.EmploymentReset, string) error {
+	deps.Now, deps.Today = deps.clocks()
 	months := NewWorkTimeMonthService(deps.Sessions, deps.Breaks, deps.Absences, deps.StaffSchedules, deps.ScheduleTargets, deps.TargetModels, deps.Shifts, deps.Settings, deps.Logger,
-		WithMonthHolidays(deps.Holidays), WithMonthTargetOverrides(deps.TargetOverrides), WithMonthAdjustments(deps.Adjustments), WithMonthSnapshots(deps.MonthSnapshots))
+		WithMonthHolidays(deps.Holidays), WithMonthTargetOverrides(deps.TargetOverrides), WithMonthAdjustments(deps.Adjustments), WithMonthSnapshots(deps.MonthSnapshots),
+		func(s *workTimeMonthService) { s.nowFunc, s.todayFunc = deps.Now, deps.Today })
 	return func(ctx context.Context, in workforce.EmploymentReset, note string) error {
-		today := calendar.TodayDate()
-		if deps.Today != nil {
-			today = deps.Today()
-		}
+		today := deps.Today()
 		if err := deps.Adjustments.LockStaffBalanceWrites(ctx, in.StaffID); err != nil {
 			return err
 		}
@@ -30,7 +28,7 @@ func NewEmploymentTimeReset(deps Dependencies, clearSchedule func(context.Contex
 		if err != nil {
 			return fmt.Errorf("read balance before resumption: %w", err)
 		}
-		if _, err := deps.Adjustments.CreateStaffBalanceAdjustment(ctx, workforce.StaffBalanceAdjustment{StaffID: in.StaffID, Type: BalanceAdjustmentTypeReset, MinutesDelta: -balance, EffectiveDate: today.String(), Note: note, DecidedBy: in.StaffID, DecidedAt: time.Now()}); err != nil {
+		if _, err := deps.Adjustments.CreateStaffBalanceAdjustment(ctx, workforce.StaffBalanceAdjustment{StaffID: in.StaffID, Type: BalanceAdjustmentTypeReset, MinutesDelta: -balance, EffectiveDate: today.String(), Note: note, DecidedBy: in.StaffID, DecidedAt: deps.Now()}); err != nil {
 			return err
 		}
 		if err := resetEmploymentVacation(ctx, deps, in, today, note); err != nil {
@@ -41,7 +39,7 @@ func NewEmploymentTimeReset(deps Dependencies, clearSchedule func(context.Contex
 }
 
 func resetEmploymentVacation(ctx context.Context, deps Dependencies, in workforce.EmploymentReset, today calendar.Date, note string) error {
-	s := &staffAbsenceService{absenceRepo: deps.Absences, quotaRepo: deps.VacationQuotas, openingRepo: deps.VacationOpenings, deletionRepo: deps.DeletionAudit}
+	s := &staffAbsenceService{absenceRepo: deps.Absences, quotaRepo: deps.VacationQuotas, openingRepo: deps.VacationOpenings, deletionRepo: deps.DeletionAudit, nowFunc: deps.Now, todayFunc: deps.Today}
 	inputs, err := s.loadVacationQuotaInputs(ctx, in.StaffID, today.Year())
 	if err != nil {
 		return err
@@ -62,7 +60,7 @@ func resetEmploymentVacation(ctx context.Context, deps Dependencies, in workforc
 	summary := computeVacationQuotaSummaryThrough(in.StaffID, today.Year(), inputs.entitled, 0, today.AddDays(-1), inputs.absences, nil)
 	// Credit the days from the previous employment instead of deleting its
 	// absences. Later corrections stay visible, just like balance resets.
-	opening := &StaffVacationOpening{StaffID: in.StaffID, Year: today.Year(), EffectiveDate: today, TakenBeforeDays: -summary.TakenDays - summary.ReservedDays, EnteredRemainingDays: inputs.entitled, Note: note, DecidedBy: in.StaffID, DecidedAt: time.Now()}
+	opening := &StaffVacationOpening{StaffID: in.StaffID, Year: today.Year(), EffectiveDate: today, TakenBeforeDays: -summary.TakenDays - summary.ReservedDays, EnteredRemainingDays: inputs.entitled, Note: note, DecidedBy: in.StaffID, DecidedAt: deps.Now()}
 	if err := opening.Validate(); err != nil {
 		return err
 	}

@@ -84,7 +84,7 @@ func (s *RejectedCleanup) settledCutoffs(ctx context.Context) (settledCutoffs, e
 	if withdrawnDays <= 0 || rejectedDays <= 0 {
 		return settledCutoffs{}, fmt.Errorf("invalid enrollment retention days: withdrawn %d, rejected %d", withdrawnDays, rejectedDays)
 	}
-	now := time.Now()
+	now := s.deps.Now()
 	return settledCutoffs{
 		withdrawn:     now.Add(-time.Duration(withdrawnDays) * 24 * time.Hour),
 		rejected:      now.Add(-time.Duration(rejectedDays) * 24 * time.Hour),

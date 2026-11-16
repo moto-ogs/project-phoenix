@@ -174,8 +174,8 @@ func parseArrivalExceptionDate(w http.ResponseWriter, r *http.Request, raw strin
 
 // arrivalExceptionWindow reads the optional from/to query bounds; the
 // default is today plus the next 60 days, like the OGS list.
-func arrivalExceptionWindow(r *http.Request) (calendar.Date, calendar.Date, error) {
-	from := calendar.TodayDate()
+func arrivalExceptionWindow(r *http.Request, today calendar.Date) (calendar.Date, calendar.Date, error) {
+	from := today
 	to := from.AddDays(arrivalExceptionListDays)
 	if raw := strings.TrimSpace(r.URL.Query().Get("from")); raw != "" {
 		parsed, err := calendar.ParseDate(raw)
@@ -203,7 +203,7 @@ func (rs *Resource) getArrivalExceptions(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		return
 	}
-	from, to, err := arrivalExceptionWindow(r)
+	from, to, err := arrivalExceptionWindow(r, rs.today())
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

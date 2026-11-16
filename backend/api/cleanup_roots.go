@@ -32,11 +32,11 @@ func NewCleanupAuditCommand(logger *slog.Logger) (auditModels.Command, error) {
 	if logger == nil {
 		return nil, errors.New("cleanup audit command logger is required")
 	}
-	audits, err := auditCompose.NewHandoffPersistence()
+	audits, err := auditCompose.NewHandoffPersistence(time.Now)
 	if err != nil {
 		return nil, err
 	}
-	command, err := auditCompose.NewObservedCommand(audits.AppendStore, logger.With("component", "audit-command"), func(string, time.Duration, int, error) {})
+	command, err := auditCompose.NewObservedCommand(audits.AppendStore, logger.With("component", "audit-command"), func(string, time.Duration, int, error) {}, time.Now)
 	if err != nil {
 		return nil, err
 	}

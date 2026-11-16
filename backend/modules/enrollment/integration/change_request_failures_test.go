@@ -18,7 +18,7 @@ import (
 func TestChangeRequestTablesAreRowLevelSecured(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := enrollmentCompose.New()
+	owner := enrollmentCompose.NewClocked(nil)
 	var tenants, changeIDs, messageIDs []int64
 	for _, name := range []string{"first", "second"} {
 		t.Run(name, func(t *testing.T) {
@@ -85,7 +85,7 @@ func TestChangeRequestTablesAreRowLevelSecured(t *testing.T) {
 func TestChangeRequestReadsPreserveStoreFailures(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	owner := enrollmentCompose.New()
+	owner := enrollmentCompose.NewClocked(nil)
 	ctx := testpkg.Ctx(t)
 	phase := testpkg.CreateTestEnrollmentPhase(t, db)
 	request := &enrollment.Request{PhaseID: phase.ID, GuardianFirstName: "First", GuardianLastName: "Last", GuardianEmail: "guardian@example.test", StatusToken: "failure-" + t.Name()}

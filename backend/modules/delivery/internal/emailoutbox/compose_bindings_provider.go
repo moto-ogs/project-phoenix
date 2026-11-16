@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
@@ -31,6 +32,9 @@ type MailPushProvider struct {
 	// module is cancelled, never sent; a read failure retries. Nil sends
 	// everything, for a provider that carries Basis mail only.
 	Deliverable func(context.Context, deliveryContract.ClaimedIntent) (bool, error)
+	// Now is the worker's clock, which dates the throttle window of a mail;
+	// nil is the real one.
+	Now func() time.Time
 }
 
 // requireDeliverable cancels an intent of a module the school no longer
@@ -84,7 +88,7 @@ func (p *MailPushProvider) SendEmail(ctx context.Context, intent deliveryContrac
 	if err != nil {
 		return deliveryContract.ProviderResult{}, err
 	}
-	transport := Transport{Mailer: p.Mailer, MailIdentity: p.MailIdentity, Tenants: p.Tenants, Logger: p.Logger}
+	transport := Transport{Mailer: p.Mailer, MailIdentity: p.MailIdentity, Tenants: p.Tenants, Logger: p.Logger, Now: p.Now}
 	receipt, err := transport.Send(ctx, row, renderer, email.NewEmail(intent.EmailRecipient.Name, intent.EmailRecipient.Address))
 	if errors.Is(err, ErrRenderCancelled) {
 		return deliveryContract.ProviderResult{}, fmt.Errorf("%w: %v", deliveryContract.ErrCancelled, err)

@@ -42,7 +42,7 @@ import (
 // the technical remains of #4046. unit is the tenant runtime the settings
 // resolve in.
 func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWork) (*auditCompose.Command, settingsCompose.BatchSettingsService, []schedulerPorts.RetentionStep, error) {
-	command, err := auditCompose.NewCommand(NewTestAuditStore(db), func(auditCompose.AppendObservation) {})
+	command, err := auditCompose.NewCommand(NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -70,12 +70,12 @@ func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWo
 		settings.Settings, fleet, statusDays,
 		communicationCompose.NewParentMessageRetention(db.Pool(), settingsModule.NewParentMessageRetentionValues(settings.Settings)),
 		enrollments, workforceCompose.NewSickNoteRetention(StaffSickNoteRetentionSettings{Settings: settings.Settings}),
-		command, deliveryCompose.NewRetention(),
+		command, deliveryCompose.NewRetention(time.Now),
 	)
 	steps = append(steps, protocolRetentionSteps(command, settingsCompose.NewAuditRetention(), exportTransferCompose.NewJournalRetention())...)
 	steps = append(steps, cleanupJobRetentionSteps(
 		filestorageCompose.NewCleanupRetention(), workforceCompose.NewCleanupRetention(),
-		carePlanCompose.NewCleanupRetention(), enrollmentCompose.New(),
+		carePlanCompose.NewCleanupRetention(), enrollmentCompose.NewClocked(nil),
 	)...)
 	announcements, err := newRetentionTestAnnouncements(db, settings.Settings)
 	if err != nil {
@@ -102,7 +102,7 @@ func newRetentionTestAnnouncements(db transactionruntime.Database, settings sett
 		return nil, err
 	}
 	announcements, err := communicationCompose.NewParentAnnouncementsWithAttachments(communicationCompose.ParentAnnouncementConfig{
-		Repo:     parentStore.NewParentAnnouncementRepository(db.Pool(), NewParentAnnouncementAudience(db, ParentAnnouncementApplicants(enrollmentCompose.New()))),
+		Repo:     parentStore.NewParentAnnouncementRepository(db.Pool(), NewParentAnnouncementAudience(db, ParentAnnouncementApplicants(enrollmentCompose.NewClocked(nil))), nil),
 		Settings: settingsModule.NewParentAnnouncementValues(settings), Logger: slog.Default(), Fingerprints: SecurityFingerprints{},
 	}, purger, CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	if err != nil {
@@ -183,7 +183,7 @@ func NewStudentTestRetention(db transactionruntime.Database, audit *auditCompose
 	if err != nil {
 		return nil, err
 	}
-	owners, err := NewStudentDeletionOwners(db)
+	owners, err := NewStudentDeletionOwners(db, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -54,7 +54,7 @@ func mountTraegerCatalogRoutes(root chi.Router, schoolPhaseAdministration *enrol
 	if err != nil {
 		return err
 	}
-	resource := traegerCatalogHTTP.NewResource(phases, offerings, catalog, common.RequiresPermission(identityaccess.TraegerRightEnrollmentManage))
+	resource := traegerCatalogHTTP.NewResource(phases, offerings, catalog, traegerListRenderer(NewSimpleListRenderer()), common.RequiresPermission(identityaccess.TraegerRightEnrollmentManage))
 	root.Mount("/traeger/catalog", resource.Router(ProtectedTraegerRoutes))
 	return nil
 }
@@ -119,5 +119,5 @@ func newTraegerCatalogBilling(organizations HolidayOrganizations, settings Traeg
 	billing, _ := parentBillingCompose.NewCareBilling(contracts, parentBillingCareSchools{organizations: organizations},
 		parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks), newParentBillingLetterheads(settings), today)
 	_, intakePorts := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL)
-	return billing, careContractCompose.NewIntake(intakePorts)
+	return billing, careContractCompose.NewIntake(intakePorts, today)
 }
