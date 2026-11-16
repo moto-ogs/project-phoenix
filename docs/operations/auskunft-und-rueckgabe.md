@@ -430,10 +430,20 @@ Nur Schlüssel/Beziehungen bleiben im Arbeitsspeicher, Inhalte werden gestreamt.
    Eigene Äußerungen (Verfasser, Absender, Unterzeichner) bleiben Treffer,
    ebenso selbst angelegte Elternbriefe, Gesprächsverläufe, Aushänge und
    Umfragen. Die Ausnahmen stehen in `personActorColumn`.
+   Bei Beschäftigten endet die Suche an Zeilen, die andere an einen solchen
+   eigenen Datensatz hängen und die eine andere Person nennen: Briefkopien
+   und Antworten zu einem Elternbrief, Einladungen zu einem Termin und
+   Buchungen eines Elternsprechtags gehören den Familien, nicht der Fachkraft
+   (#7207). Zeilen ohne Personenbezug (Optionen, Pausen, Ausnahmen) bleiben.
 2. Benötigte Elternzeilen liefern Kontext, begründen aber **keinen** weiteren
    Personenexport. Gemeinsame Erziehungsberechtigte führen deshalb nicht zu
    Geschwisterakten. Ein Beschäftigtenkonto an zwei Schulen führt nicht zum
    Bestand der anderen Schule. Andere Identitätsketten werden nicht verfolgt.
+   Bei Beschäftigten kommen fremde Identitätszeilen gar nicht als Kontext
+   hinzu: Eine eigene Notiz zu einem Kind nennt dessen ID, bringt aber nicht
+   Profil, Adresse oder Foto des Kindes mit. Gesprächsverläufe, an denen die
+   Fachkraft teilnimmt, und die Notiz zu einem an sie gerichteten Hinweis
+   bleiben als `context-not-subject` im Paket und werden redigiert.
 3. Gesprächsinhalte, Versionen/Optionen und Anhänge einer relevanten
    Elternmitteilung sowie Änderungsnachrichten eines relevanten Anmeldeantrags
    sind Kontext. Die begrenzten Regeln stehen in `personContentChild`.
