@@ -28,7 +28,7 @@ export function StickyActionBar({
       <div
         className={cn(
           STICKY_ABOVE_BOTTOM_NAV,
-          `${Z_LAYER.sticky} rounded-2xl border border-gray-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm`,
+          `${Z_LAYER.sticky} rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-lg`,
           summary
             ? "flex items-center justify-between gap-3"
             : "flex flex-col gap-2 sm:flex-row sm:gap-3",

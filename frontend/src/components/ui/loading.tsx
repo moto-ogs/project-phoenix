@@ -25,7 +25,7 @@ export function Loading({
 }: LoadingProps) {
   const containerClasses =
     fullPage && !compact
-      ? `fixed inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm ${Z_LAYER.sheet}`
+      ? `fixed inset-0 flex items-center justify-center bg-white ${Z_LAYER.sheet}`
       : compact
         ? "flex min-h-0 items-center justify-center py-3"
         : "flex min-h-40 items-center justify-center py-8";

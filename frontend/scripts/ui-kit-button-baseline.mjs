@@ -88,7 +88,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/auth/auth-shell.tsx",
-    lines: [350],
+    lines: [352],
     reason: "Auswahlpunkte des Zitat-Karussells (Seitenauswahl), kein Knopf",
   },
   {
