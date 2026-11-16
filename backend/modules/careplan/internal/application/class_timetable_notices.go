@@ -40,18 +40,15 @@ func classTimetablePush(today, day calendar.Date) (string, bool) {
 	}
 }
 
-// notifyClassTimetable hands one change to the notices; without notices
-// nobody is told.
-func (s *arrivalScheduleService) notifyClassTimetable(ctx context.Context, notice careplan.ClassTimetableNotice) error {
-	if s.notices == nil {
-		return nil
-	}
-	push, ok := classTimetablePush(s.today(), notice.Day)
+// notifyClassTimetable hands one change to the notices with its push reach;
+// a change of a day already past tells nobody.
+func notifyClassTimetable(ctx context.Context, notices careplan.ClassTimetableNotices, today calendar.Date, notice careplan.ClassTimetableNotice) error {
+	push, ok := classTimetablePush(today, notice.Day)
 	if !ok {
 		return nil
 	}
 	notice.Push = push
-	if err := s.notices.NotifyClassTimetableChanged(ctx, notice); err != nil {
+	if err := notices.NotifyClassTimetableChanged(ctx, notice); err != nil {
 		return fmt.Errorf("class timetable notice for %s: %w", notice.SchoolClass, err)
 	}
 	return nil
@@ -111,7 +108,7 @@ func (s *arrivalScheduleService) UpsertClassArrivalException(ctx context.Context
 	if len(before) > 0 && before[0] != nil && before[0].ArrivalTime.Format("15:04") == arrival {
 		return row, nil
 	}
-	if err := s.notifyClassTimetable(ctx, careplan.ClassTimetableNotice{
+	if err := notifyClassTimetable(ctx, s.notices, s.today(), careplan.ClassTimetableNotice{
 		Kind: careplan.ClassTimetableDay, SchoolClass: row.SchoolClass, Day: row.Date, ArrivalTime: arrival,
 	}); err != nil {
 		return nil, err
@@ -126,7 +123,11 @@ func (s *arrivalScheduleService) DeleteClassArrivalException(ctx context.Context
 	if err := s.ClassArrivalExceptions.DeleteClassArrivalException(ctx, schoolClass, date); err != nil || s.notices == nil {
 		return err
 	}
-	return s.notifyClassTimetable(ctx, careplan.ClassTimetableNotice{
-		Kind: careplan.ClassTimetableDayRemoved, SchoolClass: strings.TrimSpace(schoolClass), Day: date,
+	push, ok := classTimetablePush(s.today(), date)
+	if !ok {
+		return nil
+	}
+	return s.notices.NotifyClassTimetableChanged(ctx, careplan.ClassTimetableNotice{
+		Kind: careplan.ClassTimetableDayRemoved, SchoolClass: strings.TrimSpace(schoolClass), Day: date, Push: push,
 	})
 }

@@ -91,8 +91,8 @@ func (s *arrivalScheduleService) writeClassArrivalTimes(
 		if upsertErr := s.classes.Upsert(txCtx, row); upsertErr != nil {
 			return fmt.Errorf("upsert class arrival times for %s: %w", schoolClass, upsertErr)
 		}
-		if notice, changed := weeklyClassTimetableNotice(schoolClass, before, normalizedClassTimes(row.ArrivalTimes), s.today()); changed {
-			return s.notifyClassTimetable(txCtx, notice)
+		if notice, changed := weeklyClassTimetableNotice(schoolClass, before, normalizedClassTimes(row.ArrivalTimes), s.today()); changed && s.notices != nil {
+			return notifyClassTimetable(txCtx, s.notices, s.today(), notice)
 		}
 		return nil
 	})
