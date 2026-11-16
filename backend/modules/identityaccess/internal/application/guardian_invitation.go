@@ -54,7 +54,7 @@ func (l *AccountLifecycle) CreateGuardianInvitation(ctx context.Context, request
 			return failed(opGuardianInviteCreate, err)
 		}
 		var insertErr error
-		invitation, insertErr = l.issueGuardianInvitation(txCtx, request, profile, time.Now().Add(expiry))
+		invitation, insertErr = l.issueGuardianInvitation(txCtx, request, profile, l.sessions.now().Add(expiry))
 		return insertErr
 	})
 	if err != nil {
@@ -78,7 +78,7 @@ func (l *AccountLifecycle) issueGuardianInvitation(ctx context.Context, request 
 		ExpiresAt:         expiresAt,
 		ApprovalStatus:    domain.GuardianInvitationApprovalNotRequired,
 	}
-	if err := l.invitations.InvalidateGuardianInvitations(ctx, profile.ID, time.Now(), false); err != nil {
+	if err := l.invitations.InvalidateGuardianInvitations(ctx, profile.ID, l.sessions.now(), false); err != nil {
 		return domain.GuardianInvitation{}, failed(opGuardianInviteCreate, err)
 	}
 	issueGuardianInvitationLink(&draft, profile)
@@ -353,7 +353,7 @@ func (l *AccountLifecycle) grantGuardianAccess(ctx context.Context, invitation d
 	if err := l.guardians.LinkGuardianProfileToAccount(ctx, profile.ID, account.ID); err != nil {
 		return failed(opGuardianInviteAccept, fmt.Errorf("link guardian profile to account: %w", err))
 	}
-	accepted, err := l.invitations.AcceptGuardianInvitation(ctx, invitation.ID, invitation.Token, time.Now())
+	accepted, err := l.invitations.AcceptGuardianInvitation(ctx, invitation.ID, invitation.Token, l.sessions.now())
 	if err != nil {
 		return failed(opGuardianInviteAccept, err)
 	}
@@ -426,7 +426,7 @@ func (l *AccountLifecycle) ResendGuardianInvitation(ctx context.Context, invitat
 		if !found {
 			return failed(opGuardianInviteResend, domain.ErrInvitationNotFound)
 		}
-		if redeemErr := invitation.Redeemable(time.Now()); redeemErr != nil {
+		if redeemErr := invitation.Redeemable(l.sessions.now()); redeemErr != nil {
 			return failed(opGuardianInviteResend, redeemErr)
 		}
 		profile, err := l.resendableGuardianProfile(ctx, invitation)
@@ -495,7 +495,7 @@ func (l *AccountLifecycle) redeemableGuardianInvitation(ctx context.Context, tok
 	if !found {
 		return domain.GuardianInvitation{}, failed(opGuardianInviteFetch, domain.ErrInvitationNotFound)
 	}
-	if err := invitation.Redeemable(time.Now()); err != nil {
+	if err := invitation.Redeemable(l.sessions.now()); err != nil {
 		return domain.GuardianInvitation{}, failed(opGuardianInviteFetch, err)
 	}
 	return invitation, nil

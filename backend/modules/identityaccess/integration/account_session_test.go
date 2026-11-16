@@ -16,9 +16,15 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-func newAccountSessionAccess(t *testing.T, db *bun.DB) ports.AccountSessionAccess {
+// newAccountSessionAccess composes the session records, on now when a test
+// pins the clock (nil: the real one).
+func newAccountSessionAccess(t *testing.T, db *bun.DB, now ...func() time.Time) ports.AccountSessionAccess {
 	t.Helper()
-	module, err := identityCompose.New(identityCompose.Dependencies{DB: db, TenantRuntime: testpkg.TenantRuntime(t, db), Observe: func(identityCompose.Observation) {}})
+	dependencies := identityCompose.Dependencies{DB: db, TenantRuntime: testpkg.TenantRuntime(t, db), Observe: func(identityCompose.Observation) {}}
+	if len(now) > 0 {
+		dependencies.Now = now[0]
+	}
+	module, err := identityCompose.New(dependencies)
 	require.NoError(t, err)
 	return module.(ports.Records)
 }
@@ -248,7 +254,9 @@ func TestAccountSessionCapKeepsPortalGroupsApart(t *testing.T) {
 func TestAccountSessionCapInAdminTransactionSpansSchools(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	access := newAccountSessionAccess(t, db)
+	// The cap counts the sessions live at the composition's clock.
+	now := time.Date(2026, time.November, 16, 9, 0, 0, 0, time.UTC)
+	access := newAccountSessionAccess(t, db, func() time.Time { return now })
 	ctx := testpkg.WithTenantRuntime(t, testpkg.Ctx(t), db)
 	account := testpkg.CreateTestAccount(t, db, "session-cap-admin")
 	otherTenant, _ := testpkg.CreateTestTenant(t, db)
@@ -257,14 +265,14 @@ func TestAccountSessionCapInAdminTransactionSpansSchools(t *testing.T) {
 	var first []ports.AccountSession
 	for i := range 5 {
 		session := newAccountSession(account.ID, "tenant", newFamilyID(), 0)
-		session.Expiry = time.Now().Add(time.Duration(i+1) * time.Hour)
+		session.Expiry = now.Add(time.Duration(i+1) * time.Hour)
 		stored, err := access.CreateAccountSession(ctx, session)
 		require.NoError(t, err)
 		first = append(first, stored)
 	}
 	other := newAccountSession(account.ID, "tenant", newFamilyID(), 0)
 	other.TenantID = otherTenant
-	other.Expiry = time.Now().Add(24 * time.Hour)
+	other.Expiry = now.Add(24 * time.Hour)
 	_, err := access.CreateAccountSession(testpkg.ContextForTenant(ctx, otherTenant), other)
 	require.NoError(t, err)
 

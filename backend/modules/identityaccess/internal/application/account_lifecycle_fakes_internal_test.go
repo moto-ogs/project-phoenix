@@ -928,7 +928,7 @@ func newLifecycleFixture(t *testing.T) *lifecycleFixture {
 	t.Helper()
 	store := newLifecycleStore()
 	runtime := &fakeRuntime{}
-	sessions := New(store, store, store, fakeTransaction{}, runtime.TenantID, func(ports.Observation) {})
+	sessions := New(store, store, store, fakeTransaction{}, runtime.TenantID, func(ports.Observation) {}, time.Now)
 	logger := slog.New(slog.NewTextHandler(testWriter{t}, nil))
 	schools := newFakeSchools()
 	schools.add(lifecycleTenant, lifecycleTenant*10, "lifecycle", true, false)

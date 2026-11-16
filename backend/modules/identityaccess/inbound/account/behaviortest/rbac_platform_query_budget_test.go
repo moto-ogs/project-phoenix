@@ -113,7 +113,7 @@ func TestRBACPlatformCatalogueDenialsQueryBudget(t *testing.T) {
 	}
 	// Production renewal re-mints the same permission-less operator claims.
 	signing := f.module.SessionSigning
-	codec, err := api.NewConfiguredSessionTokens(signing.Secret, signing.AccessExpiry, signing.RefreshExpiry)
+	codec, err := api.NewConfiguredSessionTokens(signing.Secret, signing.AccessExpiry, signing.RefreshExpiry, nil)
 	require.NoError(t, err)
 	refreshClaims, err := codec.ParseRefreshToken(refresh)
 	require.NoError(t, err)

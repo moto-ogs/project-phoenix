@@ -2,6 +2,7 @@ package owners
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
@@ -66,12 +67,12 @@ type TimetableCareRows struct {
 
 // BuildPeopleRows builds the retained People Directory and School
 // Membership rows over the owners and the Identity & Access reads the rows
-// filter through (#4007).
+// filter through (#4007). now is the root's clock (nil: the real one).
 func BuildPeopleRows(
-	db transactionruntime.Database, observeIdentity IdentityAccessObserver, groups schoolstructure.Query, rooms facilitiesModule.Query,
+	db transactionruntime.Database, observeIdentity IdentityAccessObserver, now func() time.Time, groups schoolstructure.Query, rooms facilitiesModule.Query,
 	membership schoolmembership.Capability, workTime workforce.Capability,
 ) (PeopleRows, identityaccess.Owner) {
-	identity := NewPeopleIdentityAccess(db, observeIdentity)
+	identity := newPeopleIdentityAccess(db, observeIdentity, now)
 	personRepository := NewPersonRepository(db)
 	staff, teachers, _, _, _, _ := newMembershipAdapters(db, personRepository, identity, membership, rooms, workTime)
 	return PeopleRows{Repositories: peopleCompose.Repositories{

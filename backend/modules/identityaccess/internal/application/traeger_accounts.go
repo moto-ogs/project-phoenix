@@ -65,12 +65,14 @@ type TraegerAccountsDependencies struct {
 	InAdminUnit func(context.Context) bool
 	Expiry      time.Duration
 	Logger      *slog.Logger
+	// Now is the composition's clock (ADR 0239).
+	Now func() time.Time
 }
 
 // NewTraegerAccounts composes the account management.
 func NewTraegerAccounts(deps TraegerAccountsDependencies) (*TraegerAccounts, error) {
 	if deps.Store == nil || deps.Memberships == nil || deps.Delivery == nil || deps.Audit == nil ||
-		deps.Passwords == nil || deps.Credentials == nil || deps.Unit == nil || deps.InAdminUnit == nil {
+		deps.Passwords == nil || deps.Credentials == nil || deps.Unit == nil || deps.InAdminUnit == nil || deps.Now == nil {
 		return nil, errors.New("identity access: every Träger account dependency is required")
 	}
 	if deps.Expiry <= 0 {
@@ -83,7 +85,7 @@ func NewTraegerAccounts(deps TraegerAccountsDependencies) (*TraegerAccounts, err
 	return &TraegerAccounts{
 		store: deps.Store, memberships: deps.Memberships, delivery: deps.Delivery, audit: deps.Audit,
 		passwords: deps.Passwords, credentials: deps.Credentials, runAdmin: deps.Unit, inAdminUnit: deps.InAdminUnit,
-		expiry: deps.Expiry, now: time.Now, logger: logger.With("flow", "traeger_accounts"),
+		expiry: deps.Expiry, now: deps.Now, logger: logger.With("flow", "traeger_accounts"),
 	}, nil
 }
 

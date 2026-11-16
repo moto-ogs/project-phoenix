@@ -100,9 +100,10 @@ func (s *Store) exec(ctx context.Context, operation string, build func(bun.IDB) 
 	return stats.Rows, stats, nil
 }
 
-// scanOne classifies the outcome of a statement that yields at most one row.
-func scanOne(operation string, started time.Time, err error) (bool, domain.OperationStats, error) {
-	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started)}
+// scanOne classifies the outcome of a statement that yields at most one row;
+// elapsed is the statement's measured duration.
+func scanOne(operation string, elapsed time.Duration, err error) (bool, domain.OperationStats, error) {
+	stats := domain.OperationStats{Queries: 1, StatementDuration: elapsed}
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, stats, nil
 	}
@@ -117,9 +118,12 @@ func (s *Store) InsertOperatorInvitation(ctx context.Context, invitation domain.
 	if err != nil {
 		return domain.OperatorInvitation{}, domain.OperationStats{}, err
 	}
+	// The owner's clock stamps the row: the rate limit compares created_at
+	// with a window it computes on that clock.
+	now := s.now()
 	row := operatorInvitationRow{
 		Email: invitation.Email, TokenHash: domain.HashToken(invitation.Token), ExpiresAt: invitation.ExpiresAt, CreatedBy: invitation.CreatedBy,
-		DisplayName: invitation.DisplayName,
+		DisplayName: invitation.DisplayName, CreatedAt: now, UpdatedAt: now,
 	}
 	started := time.Now()
 	result, err := db.NewInsert().Model(&row).Returning("*").Exec(ctx)
@@ -141,7 +145,7 @@ func (s *Store) FindOperatorInvitation(ctx context.Context, id int64) (domain.Op
 	err = db.NewSelect().Model(&row).
 		Where(`"operator_invitation_token".id = ?`, id).
 		Scan(ctx)
-	found, stats, err := scanOne("find operator invitation", started, err)
+	found, stats, err := scanOne("find operator invitation", time.Since(started), err)
 	return row.toDomain(), found, stats, err
 }
 
@@ -157,7 +161,7 @@ func (s *Store) FindRedeemableOperatorInvitation(ctx context.Context, token stri
 		Where(`"operator_invitation_token".expires_at > ?`, now).
 		Where(`"operator_invitation_token".used_at IS NULL`).
 		Scan(ctx)
-	found, stats, err := scanOne("find redeemable operator invitation", started, err)
+	found, stats, err := scanOne("find redeemable operator invitation", time.Since(started), err)
 	return row.withToken(token), found, stats, err
 }
 
@@ -215,7 +219,7 @@ func (s *Store) RedeemOperatorInvitation(ctx context.Context, token string, now 
 		Where(`"operator_invitation_token".used_at IS NULL`).
 		Returning("*").
 		Scan(ctx)
-	found, stats, err := scanOne("redeem operator invitation", started, err)
+	found, stats, err := scanOne("redeem operator invitation", time.Since(started), err)
 	if found {
 		stats.Rows = 1
 	}
@@ -280,8 +284,12 @@ func (s *Store) InsertOperatorEmailChange(ctx context.Context, change domain.Ope
 	if err != nil {
 		return domain.OperatorEmailChange{}, domain.OperationStats{}, err
 	}
+	// The owner's clock stamps the row: the rate limit and the stale-row
+	// cleanup compare created_at with windows computed on that clock.
+	now := s.now()
 	row := operatorEmailChangeRow{
 		OperatorID: change.OperatorID, NewEmail: change.NewEmail, TokenHash: domain.HashToken(change.Token), Expiry: change.Expiry, Used: change.Used,
+		CreatedAt: now, UpdatedAt: now,
 	}
 	started := time.Now()
 	result, err := db.NewInsert().Model(&row).Returning("*").Exec(ctx)
@@ -328,7 +336,7 @@ func (s *Store) RedeemOperatorEmailChange(ctx context.Context, token string, now
 		Where(`"operator_email_change_token".used = FALSE`).
 		Returning("*").
 		Scan(ctx)
-	found, stats, err := scanOne("redeem operator email change", started, err)
+	found, stats, err := scanOne("redeem operator email change", time.Since(started), err)
 	if found {
 		stats.Rows = 1
 	}

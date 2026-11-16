@@ -21,7 +21,7 @@ import (
 func TestOperatorPasskeyStoreServesActiveCredentialsOnly(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	store := NewStore(db)
+	store := NewStore(db, time.Now)
 	holder, other := testpkg.CreateTestOperator(t, db).ID, testpkg.CreateTestOperator(t, db).ID
 	handle := []byte("handle-" + uuid.Must(uuid.NewV4()).String())
 	credentialID := []byte("credential-" + uuid.Must(uuid.NewV4()).String())
@@ -91,7 +91,7 @@ func TestOperatorPasskeyStoreServesActiveCredentialsOnly(t *testing.T) {
 func TestOperatorPasskeyStoreConsumesACeremonyOnce(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	store := NewStore(db)
+	store := NewStore(db, time.Now)
 	holder := testpkg.CreateTestOperator(t, db).ID
 	session := domain.OperatorPasskeySession{
 		ID: "passkey-" + uuid.Must(uuid.NewV4()).String(), OperatorID: &holder, Purpose: domain.PasskeySessionPurposeRegistration,

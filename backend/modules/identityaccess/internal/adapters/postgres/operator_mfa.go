@@ -159,9 +159,13 @@ func (s *Store) InsertOperatorMFAChallenge(ctx context.Context, challenge domain
 	if err != nil {
 		return domain.OperatorMFAChallenge{}, domain.OperationStats{}, err
 	}
+	// The owner's clock stamps the row: the resend limit counts codes
+	// created since a window computed on that clock.
+	now := s.now()
 	row := operatorMFAChallengeRow{
 		OperatorID: challenge.OperatorID, CodeHash: challenge.CodeHash, ExpiresAt: challenge.ExpiresAt,
 		ConsumedAt: challenge.ConsumedAt, IPAddress: challenge.IPAddress, CredentialGeneration: challenge.CredentialGeneration,
+		CreatedAt: now, UpdatedAt: now,
 	}
 	started := time.Now()
 	result, err := db.NewInsert().Model(&row).Returning("*").Exec(ctx)
