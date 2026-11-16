@@ -270,7 +270,7 @@ const insertHolidayPeriodQuery = `INSERT INTO enrollment.holiday_periods
 	RETURNING id`
 
 // InsertHolidayPeriod adds a draft period with its weeks and time models.
-func (s *HolidayPeriodStore) InsertHolidayPeriod(ctx context.Context, organizationID int64, input enrollment.HolidayPeriodInput) (int64, error) {
+func (s *HolidayPeriodStore) InsertHolidayPeriod(ctx context.Context, organizationID int64, input enrollment.HolidayPeriodInput, effectiveOn calendar.Date) (int64, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return 0, err
@@ -280,7 +280,7 @@ func (s *HolidayPeriodStore) InsertHolidayPeriod(ctx context.Context, organizati
 		input.RegistrationClosesOn, input.Binding, input.Notes, input.AcceptanceMailText, input.HolidayWishRule, input.MaxDaysPerChild, input.AllocationMode).Scan(ctx, &periodID); err != nil {
 		return 0, fmt.Errorf("enrollment postgres: insert holiday period: %w", err)
 	}
-	if err := writeHolidayWeeks(ctx, db, organizationID, periodID, input.Weeks, calendar.TodayDate()); err != nil {
+	if err := writeHolidayWeeks(ctx, db, organizationID, periodID, input.Weeks, effectiveOn); err != nil {
 		return 0, err
 	}
 	return periodID, nil

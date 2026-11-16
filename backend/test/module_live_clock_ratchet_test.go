@@ -54,7 +54,6 @@ import (
 // Student Presence (86), Presence Projection (15) and Class Day (14) follow
 // with ADR 0262 (115 to 0).
 var moduleLiveClockBudget = map[string]int{
-	"modules/carecontract": 3,
 	// PickupBaselineQueries.HasBookedOfferingPickupForWeekday: the public
 	// PickupBaselineReader method names no day.
 	"modules/careplan": 1,
@@ -76,7 +75,6 @@ var moduleLiveClockBudget = map[string]int{
 	// moment of rendering for a zero creation time, and the renderer is also
 	// built bare (&RendererService{}), so it holds no clock to pass.
 	"modules/documentrendering":   1,
-	"modules/enrollment":          63,
 	"modules/facilities":          2,
 	"modules/identityaccess":      83,
 	"modules/organizationtenancy": 7,

@@ -105,7 +105,7 @@ func (s *Intake) planSubmissionCatalog(ctx context.Context, req *SubmitRequest, 
 	if phase.TenantID != req.TenantID {
 		return fmt.Errorf("%w: phase %d not found", enrollmentNative.ErrInvalidSubmission, req.PhaseID)
 	}
-	plan.phase, plan.now = phase, time.Now()
+	plan.phase, plan.now = phase, s.now()
 	if !req.AllowClosedPhase && !phase.EnrollmentWindowOpen(plan.now) {
 		return enrollmentNative.ErrEnrollmentWindowClosed
 	}
@@ -218,7 +218,7 @@ func (s *Intake) planStatusToken(ctx context.Context, plan *submissionPlan) erro
 	if err != nil {
 		return err
 	}
-	plan.statusExpiresAt = time.Now().Add(lifetime)
+	plan.statusExpiresAt = s.now().Add(lifetime)
 	plan.statusURL = enrollmentNative.StatusURL(s.deps.ParentsURL, token)
 	return nil
 }
@@ -355,7 +355,7 @@ func (s *Intake) createSubmittedRequest(ctx context.Context, req *SubmitRequest,
 		id := plan.schema.ID
 		schemaID = &id
 	}
-	snapshotEntry, err := legalBlocksSnapshotEntry(plan.legalBlocks, req.ConsentFlags, formsOf(plan.schema, req.DisplayedFormSchemaID), time.Now(), s.deps.Fingerprint)
+	snapshotEntry, err := legalBlocksSnapshotEntry(plan.legalBlocks, req.ConsentFlags, formsOf(plan.schema, req.DisplayedFormSchemaID), s.now(), s.deps.Fingerprint)
 	if err != nil {
 		return nil, fmt.Errorf("submit: create request: %w", err)
 	}
@@ -370,7 +370,7 @@ func (s *Intake) createSubmittedRequest(ctx context.Context, req *SubmitRequest,
 		GuardianEmail: guardianEmailKey(req.GuardianEmail), GuardianPhone: req.GuardianPhone,
 		ConsentFlags: formValues(req.ConsentFlags), CustomData: formValues(req.CustomData),
 		SubmissionSource: plan.submissionSource, SourceMetadata: formValues(plan.sourceMetadata),
-		StatusToken: plan.statusToken, StatusTokenExpires: &statusExpiresAt, SubmittedAt: time.Now(),
+		StatusToken: plan.statusToken, StatusTokenExpires: &statusExpiresAt, SubmittedAt: s.now(),
 		LegalBlocksSnapshot: []enrollmentNative.LegalBlocksSnapshotEntry{snapshotEntry},
 	}
 	if err := s.deps.Requests.InsertRequest(ctx, request); err != nil {
@@ -380,7 +380,7 @@ func (s *Intake) createSubmittedRequest(ctx context.Context, req *SubmitRequest,
 		return nil, fmt.Errorf("submit: %w", err)
 	}
 	if lateInvite != nil {
-		if err := s.deps.LateInvites.MarkLateInviteUsed(ctx, lateInvite.ID, request.ID, time.Now()); err != nil {
+		if err := s.deps.LateInvites.MarkLateInviteUsed(ctx, lateInvite.ID, request.ID, s.now()); err != nil {
 			return nil, fmt.Errorf("submit: mark late invite used: %w", err)
 		}
 	}

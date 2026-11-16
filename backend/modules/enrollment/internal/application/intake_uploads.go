@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
-	"time"
 
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
 )
@@ -66,7 +65,7 @@ func (s *Intake) uploadField(ctx context.Context, input enrollmentNative.UploadI
 	if strings.TrimSpace(input.StatusToken) != "" {
 		return s.statusUploadField(ctx, input)
 	}
-	phase, err := s.loadEditablePhaseWithLateInvite(ctx, input.PhaseID, time.Now(), input.LateInviteToken, input.EnrolleeAccess)
+	phase, err := s.loadEditablePhaseWithLateInvite(ctx, input.PhaseID, s.now(), input.LateInviteToken, input.EnrolleeAccess)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +246,7 @@ func (s *Intake) resolveFieldAnswer(ctx context.Context, phaseID int64, field *e
 	if len(hashes) == 0 {
 		return stored, nil
 	}
-	fresh, err := s.deps.Uploads.UnclaimedRequestUploads(ctx, phaseID, field.Key, hashes, time.Now().Add(-enrollmentNative.UnclaimedUploadLifetime))
+	fresh, err := s.deps.Uploads.UnclaimedRequestUploads(ctx, phaseID, field.Key, hashes, s.now().Add(-enrollmentNative.UnclaimedUploadLifetime))
 	if err != nil {
 		return nil, fmt.Errorf("load unclaimed uploads: %w", err)
 	}
@@ -266,7 +265,7 @@ func (s *Intake) claimFileUploads(ctx context.Context, claims *fileClaims, reque
 	if claims == nil || len(claims.uploadIDs) == 0 {
 		return nil
 	}
-	if err := s.deps.Uploads.ClaimRequestUploads(ctx, claims.uploadIDs, requestID, time.Now()); err != nil {
+	if err := s.deps.Uploads.ClaimRequestUploads(ctx, claims.uploadIDs, requestID, s.now()); err != nil {
 		return fmt.Errorf("claim uploads: %w", err)
 	}
 	s.logger().Info("enrollment uploads claimed",

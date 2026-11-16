@@ -13,7 +13,9 @@ import (
 // an existing choice. The entire batch participates in the ambient UnitOfWork.
 func (m *Service) RecordSubmittedOfferingChoices(ctx context.Context, childID int64, choices []enrollment.SubmittedOfferingChoice) (err error) {
 	started := time.Now()
-	defer func() { m.observeOfferingStorage("record", "command", started, int64(len(choices)), -1, err) }()
+	defer func() {
+		m.observeOfferingStorage("record", "command", time.Since(started), int64(len(choices)), -1, err)
+	}()
 	if childID <= 0 {
 		return fmt.Errorf("request_child_id is required")
 	}
@@ -41,7 +43,7 @@ func (m *Service) RecordSubmittedOfferingChoices(ctx context.Context, childID in
 func (m *Service) SubmittedOfferingChoices(ctx context.Context, childIDs []int64) (choices []enrollment.SubmittedOfferingChoice, err error) {
 	started := time.Now()
 	defer func() {
-		m.observeOfferingStorage("choices", "query", started, int64(len(childIDs)), int64(len(choices)), err)
+		m.observeOfferingStorage("choices", "query", time.Since(started), int64(len(childIDs)), int64(len(choices)), err)
 	}()
 	if len(childIDs) == 0 {
 		return []enrollment.SubmittedOfferingChoice{}, nil

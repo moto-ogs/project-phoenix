@@ -115,7 +115,7 @@ func build() { _ = NewEnrollmentIntake(EnrollmentIntakeSources{Catalog: records}
 		},
 		"the ungated reader in the production root": {
 			"roots/owners/root_careplan.go": `package owners
-func build() { _ = NewEnrollmentBookingProjection(NewEnrollmentBookings(), UngatedEnrollmentPhaseBounds()) }`,
+func build() { _ = NewEnrollmentBookingProjection(NewEnrollmentBookings(nil), UngatedEnrollmentPhaseBounds()) }`,
 		},
 		"an unlocked phase read in the care exit": {
 			"workflows/careexit/bookings.go": `package careexit

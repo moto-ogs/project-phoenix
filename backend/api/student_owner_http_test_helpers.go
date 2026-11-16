@@ -80,7 +80,7 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, err
 	}
-	deletionOwners, err := owners.NewStudentDeletionOwners(store)
+	deletionOwners, err := owners.NewStudentDeletionOwners(store, nil)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, err
 	}

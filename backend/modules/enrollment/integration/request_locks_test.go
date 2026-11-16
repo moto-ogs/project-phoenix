@@ -14,7 +14,7 @@ import (
 func TestRequestLocksRequireAmbientTransactionAndReleaseOnRollback(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.New()
+	module := enrollmentCompose.NewClocked(nil)
 	phase := testpkg.CreateTestEnrollmentPhase(t, db)
 	ctx := testpkg.Ctx(t)
 	for _, tc := range []struct {

@@ -17,7 +17,7 @@ import (
 func TestSchemaQueriesTenantIsolationAndReadFailure(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module := enrollmentCompose.New()
+	module := enrollmentCompose.NewClocked(nil)
 	account := testpkg.CreateTestAccount(t, db, "schema-query")
 	tenantIDs := make([]int64, 0, 2)
 	schemaIDs := make([]int64, 0, 2)

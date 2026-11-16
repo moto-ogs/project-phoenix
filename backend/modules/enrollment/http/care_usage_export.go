@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -16,11 +17,13 @@ import (
 // buildCareUsageExport dispatches on the requested layout: "compact" renders
 // the class-roster-style table for PDF/DOCX; everything else (including XLSX,
 // which is always tabular) takes the existing detailed path.
-func buildCareUsageExport(svc lists.DocumentRenderer, payload careUsageExportPayload, format lists.Format) (lists.File, error) {
+func buildCareUsageExport(svc lists.DocumentRenderer, payload careUsageExportPayload, format lists.Format, generatedAt time.Time) (lists.File, error) {
 	if payload.layout == careUsageLayoutCompact && format != lists.FormatXLSX {
-		return svc.Render(buildCareUsageCompactTableDocument(payload.report), format, careUsageExportFilename(payload.report)+" kompakt")
+		doc := buildCareUsageCompactTableDocument(payload.report)
+		doc.GeneratedAt = generatedAt
+		return svc.Render(doc, format, careUsageExportFilename(payload.report)+" kompakt")
 	}
-	return buildCareUsageExportFile(svc, payload.report, format)
+	return buildCareUsageExportFile(svc, payload.report, format, generatedAt)
 }
 
 func careUsageExportFilename(report *capability.CareUsageReport) string {
@@ -30,8 +33,8 @@ func careUsageExportFilename(report *capability.CareUsageReport) string {
 	return "Anmelde-Auswertung"
 }
 
-func buildCareUsageExportFile(svc lists.DocumentRenderer, report *capability.CareUsageReport, format lists.Format) (lists.File, error) {
-	return renderEnrollmentExport(svc, format, careUsageExportFilename(report),
+func buildCareUsageExportFile(svc lists.DocumentRenderer, report *capability.CareUsageReport, format lists.Format, generatedAt time.Time) (lists.File, error) {
+	return renderEnrollmentExport(svc, format, careUsageExportFilename(report), generatedAt,
 		func() lists.RecordDocument { return buildCareUsageRecordDocument(report) },
 		func() lists.Document { return buildCareUsageTableDocument(report) },
 	)

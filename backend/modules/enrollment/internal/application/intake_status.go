@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
-	"time"
 
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/contact"
@@ -47,7 +46,7 @@ func (s *Intake) requestByStatusToken(ctx context.Context, token string, lock bo
 	if err != nil {
 		return nil, fmt.Errorf("load request by status token: %w", err)
 	}
-	if req.StatusTokenExpires != nil && time.Now().After(*req.StatusTokenExpires) {
+	if req.StatusTokenExpires != nil && s.now().After(*req.StatusTokenExpires) {
 		return nil, enrollmentNative.ErrRequestNotFound
 	}
 	// A school that cancelled Online-Anmeldung closes every status link: it
@@ -144,7 +143,7 @@ func (s *Intake) editModeForStatus(ctx context.Context, req *enrollmentNative.Re
 		if err != nil {
 			return editModeGateResult(err)
 		}
-		if !phase.EnrollmentWindowOpen(time.Now()) {
+		if !phase.EnrollmentWindowOpen(s.now()) {
 			return enrollmentNative.EditModeNone, nil
 		}
 		return enrollmentNative.EditModeChangeRequest, nil
@@ -377,7 +376,7 @@ func (s *Intake) withdrawInTenant(ctx context.Context, token string, childID int
 	if childID == 0 && !slices.ContainsFunc(children, func(child *enrollmentNative.RequestChild) bool {
 		return child.Status == enrollmentNative.ChildStatusApproved || !child.IsTerminal()
 	}) {
-		withdrawnAt := time.Now()
+		withdrawnAt := s.now()
 		if err := s.deps.Requests.SetRequestWithdrawal(ctx, lockedReq.ID, &withdrawnAt); err != nil {
 			return err
 		}

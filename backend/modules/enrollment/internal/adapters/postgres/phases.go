@@ -18,11 +18,14 @@ func (r *Store) OpenPhaseCandidates(ctx context.Context) ([]*enrollment.Phase, e
 	if err != nil {
 		return nil, err
 	}
+	// The window is checked on the store's clock, the one the intake checks
+	// a submission on (ADR 0239), not on the database's.
+	now := r.currentTime()
 	var rows []*phaseRow
 	err = db.NewSelect().Model(&rows).
 		Where(`"phase".is_active = TRUE`).
-		Where(`("phase".enrollment_open_at IS NULL OR "phase".enrollment_open_at <= NOW())`).
-		Where(`("phase".enrollment_close_at IS NULL OR "phase".enrollment_close_at >= NOW())`).
+		Where(`("phase".enrollment_open_at IS NULL OR "phase".enrollment_open_at <= ?)`, now).
+		Where(`("phase".enrollment_close_at IS NULL OR "phase".enrollment_close_at >= ?)`, now).
 		OrderExpr(`"phase".service_start_date ASC`).Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("parent: list enrollable phases: %w", err)

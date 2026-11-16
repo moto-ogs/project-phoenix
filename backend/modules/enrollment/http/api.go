@@ -4,6 +4,7 @@ package enrollmenthttp
 import (
 	"context"
 	"net/http"
+	"time"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 
@@ -53,6 +54,10 @@ type Resource struct {
 	// status page (#6335). Set as a field after construction; without it the
 	// routes answer 500.
 	FamilyChildren capability.IntakeFamilyChildren
+	// Now is the clock of the public enrollment window, the expiry
+	// warnings and the generation time of the exports and proofs
+	// (ADR 0239). Set as a field after construction; nil is the real clock.
+	Now func() time.Time
 	// transactions is set by NewResource: the route steps then run in the
 	// tenant and administrative transactions of the shared tenant runtime.
 	// The bare Resource a route unit test builds runs runInTenantTx on the
@@ -60,6 +65,17 @@ type Resource struct {
 	transactions         bool
 	legalDocumentRefs    legalDocumentReferenceRepository
 	runInTenantTxForTest func(r *http.Request, fn func(ctx context.Context) error) error
+}
+
+// now reads the resource's clock.
+func (rs *Resource) now() time.Time { return readClock(rs.Now) }
+
+// readClock reads a resource's clock; nil is the real clock (ADR 0239).
+func readClock(now func() time.Time) time.Time {
+	if now == nil {
+		now = time.Now
+	}
+	return now()
 }
 
 // NewResource constructs the enrollment API resource.
