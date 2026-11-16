@@ -2,7 +2,7 @@
 // decoder (ADR 0270). A backend error and an answer that does not match the
 // contract both come back as a typed failure, never as an empty value.
 import type { z } from "zod";
-import { apiGet } from "~/lib/api-helpers.server";
+import { apiGet, apiPost, apiPut } from "~/lib/api-helpers.server";
 import { wireErrorCode } from "~/lib/api-error";
 import {
   ApiResponseError,
@@ -11,6 +11,7 @@ import {
 } from "~/lib/api-response-error.server";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { createLogger } from "~/lib/logger";
+import type { RequestBody } from "./runtime";
 
 const logger = createLogger({ component: "Contract" });
 
@@ -43,7 +44,7 @@ function failure(cause: ApiResponseError): ContractResult<never> {
 }
 
 /** Checks a payload against a contract decoder. */
-export function decodeContract<T>(
+function decodeContract<T>(
   route: string,
   schema: z.ZodType<T>,
   payload: unknown,
@@ -78,4 +79,39 @@ export async function contractGet<T>(
     throw error;
   }
   return decodeContract(route, schema, payload);
+}
+
+/** A generated route entry with a body: `routes["POST /api/students/"]`. */
+interface WriteRoute<B, T> {
+  method: "POST" | "PUT";
+  pattern: string;
+  request: RequestBody<B>;
+  response: z.ZodType<T>;
+}
+
+/**
+ * POST or PUT of a registered route. The entry types the body and decodes
+ * the answer; `endpoint` is the path with its parameters filled in.
+ */
+export async function contractWrite<B, T>(
+  route: WriteRoute<B, T>,
+  endpoint: string,
+  token: string,
+  body: B,
+): Promise<ContractResult<T>> {
+  let payload: unknown;
+  try {
+    payload =
+      route.method === "POST"
+        ? await apiPost<unknown, B>(endpoint, token, body)
+        : await apiPut<unknown, B>(endpoint, token, body);
+  } catch (error) {
+    if (isApiResponseError(error)) return failure(error);
+    throw error;
+  }
+  return decodeContract(
+    `${route.method} ${route.pattern}`,
+    route.response,
+    payload,
+  );
 }

@@ -54,6 +54,11 @@ function keyframeBlocks(css) {
   return blocks;
 }
 
+// The two blurs the kit allows, each written once (frontend-ui-kit.md,
+// Motion): the overlay blur behind dialogs and side panels, and the glass of
+// small resting chips.
+const BLUR_RULE_RE = /^\.moto-(?:overlay-blur|glass)$/;
+
 /** Problems in one stylesheet's text. */
 function motionProblems(css) {
   const text = withoutComments(css);
@@ -67,11 +72,27 @@ function motionProblems(css) {
     }
   }
 
-  for (const [, property, value] of text.matchAll(
-    /(?:^|[;{\s])((?:-webkit-)?backdrop-filter)\s*:\s*([^;}]+)/g,
+  // Innermost rules only: a keyframe step is checked above.
+  const outsideKeyframes = keyframeBlocks(text).reduce(
+    (rest, { body }) => rest.replace(body, ""),
+    text,
+  );
+  for (const [, selector, body] of outsideKeyframes.matchAll(
+    /([^{};]+)\{([^{}]*)\}/g,
   )) {
-    if (value.trim() !== "none") {
-      problems.push(`${property}: ${value.trim()}`);
+    // By hand only unprefixed: lightningcss merges a hand-written pair into
+    // `-webkit-backdrop-filter` alone in the production build, and Chrome
+    // ignores that (staging showed no blur after #7274).
+    if (/(?:^|[;\s])-webkit-backdrop-filter\s*:/.test(body)) {
+      problems.push("-webkit-backdrop-filter by hand");
+    }
+    if (BLUR_RULE_RE.test(selector.trim())) continue;
+    for (const [, property, value] of body.matchAll(
+      /(?:^|[;\s])((?:-webkit-)?backdrop-filter)\s*:\s*([^;}]+)/g,
+    )) {
+      if (value.trim() !== "none") {
+        problems.push(`${property}: ${value.trim()}`);
+      }
     }
   }
 
@@ -119,6 +140,9 @@ test("the check finds each kind of costly motion", () => {
       @keyframes grow { from { width: 0; } to { width: 100%; } }
       @keyframes slide { from { transform: translateX(-100%); opacity: 0 } to { transform: none } }
       .glass { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+      .moto-glass { backdrop-filter: blur(8px); }
+      .moto-overlay-blur { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+      @keyframes other-blur { to { backdrop-filter: blur(8px); } }
       .print { backdrop-filter: none; }
       .a { transition: all 200ms; }
       .b { transition: height 200ms ease, opacity 200ms; }
@@ -129,8 +153,11 @@ test("the check finds each kind of costly motion", () => {
     [
       "@keyframes grow animates width",
       "@keyframes grow animates width",
+      "@keyframes other-blur animates backdrop-filter",
+      "-webkit-backdrop-filter by hand",
       "backdrop-filter: blur(8px)",
       "-webkit-backdrop-filter: blur(8px)",
+      "-webkit-backdrop-filter by hand",
       "transition of all",
       "transition of height",
       "@apply transition-[width]",

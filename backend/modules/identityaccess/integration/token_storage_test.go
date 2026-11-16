@@ -71,12 +71,15 @@ func TestOperatorTokensAreStoredAsHashes(t *testing.T) {
 	operator := testpkg.CreateTestOperator(t, db)
 
 	familyID := newFamilyID()
+	// The sessions live past the wall clock: a parallel test's expiry sweep
+	// (DeleteExpiredOperatorSessions with time.Now) deletes every older one.
+	expiry := time.Now().Add(time.Hour)
 	predecessor, err := module.CreateOperatorSession(ctx, ports.OperatorSession{
-		OperatorID: operator.ID, Token: uuid.Must(uuid.NewV4()).String(), Expiry: operatorTokenTestNow.Add(time.Hour), FamilyID: familyID,
+		OperatorID: operator.ID, Token: uuid.Must(uuid.NewV4()).String(), Expiry: expiry, FamilyID: familyID,
 	})
 	require.NoError(t, err)
 	successor, err := module.CreateOperatorSession(ctx, ports.OperatorSession{
-		OperatorID: operator.ID, Token: uuid.Must(uuid.NewV4()).String(), Expiry: operatorTokenTestNow.Add(time.Hour), FamilyID: familyID, Generation: 1,
+		OperatorID: operator.ID, Token: uuid.Must(uuid.NewV4()).String(), Expiry: expiry, FamilyID: familyID, Generation: 1,
 	})
 	require.NoError(t, err)
 	require.NoError(t, module.MarkOperatorSessionRotated(ctx, predecessor.ID, successor.Token, []byte{1}, operatorTokenTestNow))

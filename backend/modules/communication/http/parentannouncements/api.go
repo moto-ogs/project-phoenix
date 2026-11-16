@@ -32,6 +32,9 @@ type Resource struct {
 	// ParentLetters previews and prints them.
 	Letters       LetterPrinter
 	ParentLetters announcementService.ParentLetterCapability
+	// StudentRecords reads a child's letters and declarations and the proof
+	// of a declaration (#4814).
+	StudentRecords announcementService.StudentParentRecordCapability
 	// now tells a published announcement from an expired one.
 	now func() time.Time
 }
@@ -40,7 +43,8 @@ type Resource struct {
 func NewResource(service announcementService.ParentAnnouncementCapability, reports ReportRenderer, now func() time.Time) *Resource {
 	// Announcements composed without letters answer their routes with 500.
 	letters, _ := announcementService.ParentLettersOf(service)
-	return &Resource{Service: service, Reports: reports, ParentLetters: letters, now: now}
+	students, _ := announcementService.StudentParentRecordsOf(service)
+	return &Resource{Service: service, Reports: reports, ParentLetters: letters, StudentRecords: students, now: now}
 }
 
 // Router returns the chi router scoped to /parent-announcements.
@@ -62,6 +66,8 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		announce := common.RequiresPermission(permissions.AdminWildcard)
 		read := r.With(announce, withTx, rs.requireReadableAnnouncement)
 		r.With(announce, withTx).Get("/", rs.list)
+		// Kinderakte (#4814): the letters and declarations of one child.
+		r.With(announce, withTx).Get("/students/{studentId}", rs.studentRecords)
 		r.With(announce, withTx).Post("/", rs.create)
 		// Serienbriefe (#4813): the placeholders, a letter filled for one
 		// child before it is sent, and every letter of a dispatch to print.

@@ -25,10 +25,19 @@ vi.mock("~/lib/student-documents-api", () => ({
   },
 }));
 
-function renderTab() {
+vi.mock("~/components/students/student-parent-records", () => ({
+  StudentParentRecordsCard: ({ studentId }: { studentId: string }) => (
+    <section aria-label={`Aus moto für ${studentId}`} />
+  ),
+}));
+
+function renderTab(showParentRecords = false) {
   return render(
     <ToastProvider>
-      <StudentDokumenteTab studentId="7" />
+      <StudentDokumenteTab
+        studentId="7"
+        showParentRecords={showParentRecords}
+      />
     </ToastProvider>,
   );
 }
@@ -46,6 +55,20 @@ describe("StudentDokumenteTab", () => {
       documents: [],
       visibleCategories: [{ value: "attest", label: "Attest" }],
     };
+  });
+
+  it("adds „Aus moto“ only for the roles that read the school's letters", () => {
+    const { unmount } = renderTab(true);
+    expect(
+      screen.getByRole("region", { name: "Aus moto für 7" }),
+    ).toBeInTheDocument();
+    unmount();
+
+    renderTab(false);
+    expect(screen.getByText("Dokumente")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Aus moto für 7" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows a failed load in place with a retry", async () => {

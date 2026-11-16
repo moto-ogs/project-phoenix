@@ -151,7 +151,7 @@ func TestCommunication18AnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 			require.NoError(t, err)
 			delivery, err := api.NewDeliveryTestModule(database, testpkg.TenantRuntime(t, db))
 			require.NoError(t, err)
-			service, err := owners.BuildParentAnnouncements(owners.RootEnvironment{Logger: slog.Default(), Links: owners.ServiceLinks{ParentsURL: "http://localhost"}, Now: time.Now}, settings.Settings, delivery.EmailOutbox, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, owners.DeliveryNotifications{Notifier: delivery.Notifications, Preferences: delivery.NotificationPreferences}, repos.MessagingRepositories, files, communicationCompose.ParentLetterPorts{})
+			service, err := owners.BuildParentAnnouncements(owners.RootEnvironment{Logger: slog.Default(), Links: owners.ServiceLinks{ParentsURL: "http://localhost"}, Now: time.Now}, settings.Settings, delivery.EmailOutbox, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, owners.DeliveryNotifications{Notifier: delivery.Notifications, Preferences: delivery.NotificationPreferences}, repos.MessagingRepositories, files, communicationCompose.ParentLetterPorts{Access: &studentAccess{}})
 			require.NoError(t, err)
 			_, viewer := testpkg.CreateTestStaffWithAccount(t, db, "Teacher", "Growth")
 			token := testutil.MintTestJWT(t, sessiontoken.AppClaims{ID: int(viewer.ID), Sub: viewer.Email, TenantID: testpkg.Tenant(t), Roles: []string{"user"}, Permissions: []string{permissions.AdminWildcard}})
@@ -312,7 +312,7 @@ func TestCommunication18AnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 				school     bool
 				row        *communication.ParentAnnouncement
 			}
-			cases := []routeCase{{"list", "/api/parent-announcements/", false, nil}, {"get", fmt.Sprintf("/api/parent-announcements/%d", poll.ID), false, poll}, {"recipients", fmt.Sprintf("/api/parent-announcements/%d/recipients", poll.ID), false, poll}, {"poll_children", fmt.Sprintf("/api/parent-announcements/%d/poll-children", poll.ID), false, poll}, {"poll_results", fmt.Sprintf("/api/parent-announcements/%d/poll-results", poll.ID), false, poll}, {"letter_status", fmt.Sprintf("/api/parent-announcements/%d/letter-status", letter.ID), false, letter}, {"declaration_status", fmt.Sprintf("/api/parent-announcements/%d/declaration-status", declaration.ID), false, declaration}, {"declaration_export", fmt.Sprintf("/api/parent-announcements/%d/declaration-export", declaration.ID), false, declaration}}
+			cases := []routeCase{{"list", "/api/parent-announcements/", false, nil}, {"get", fmt.Sprintf("/api/parent-announcements/%d", poll.ID), false, poll}, {"recipients", fmt.Sprintf("/api/parent-announcements/%d/recipients", poll.ID), false, poll}, {"poll_children", fmt.Sprintf("/api/parent-announcements/%d/poll-children", poll.ID), false, poll}, {"poll_results", fmt.Sprintf("/api/parent-announcements/%d/poll-results", poll.ID), false, poll}, {"letter_status", fmt.Sprintf("/api/parent-announcements/%d/letter-status", letter.ID), false, letter}, {"declaration_status", fmt.Sprintf("/api/parent-announcements/%d/declaration-status", declaration.ID), false, declaration}, {"declaration_export", fmt.Sprintf("/api/parent-announcements/%d/declaration-export", declaration.ID), false, declaration}, {"student_records", fmt.Sprintf("/api/parent-announcements/students/%d", chains[0].StudentID), false, nil}}
 			for _, suffix := range []string{"get", "recipients", "letter_status", "declaration_status", "declaration_export"} {
 				row := letter
 				if strings.HasPrefix(suffix, "declaration") {
@@ -377,16 +377,19 @@ func TestCommunication18AnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 					communication18Equal(t, communication18Declaration(n, chains, versions, submissions), communication18JSON(t, rec.Body.Bytes()))
 				case "declaration_export", "school_declaration_export":
 					communication18CSV(t, rec, n, submissions)
+				case "student_records":
+					communication18Equal(t, communication18StudentRecords(n, chains[0], letter, declaration, submissions[0]), communication18JSON(t, rec.Body.Bytes()))
 				}
 				require.Zero(t, counter.WriteRows())
 				communication18Budget(t, tc.name, n, counter.Measurement(counter.Queries()))
 				unauth := request(tc.path, "")
 				require.Equal(t, 401, unauth.Code, tc.name)
 				denied := request(tc.path, other)
-				if tc.name == "list" {
+				switch tc.name {
+				case "list":
 					require.Equal(t, 200, denied.Code)
 					communication18Equal(t, []any{communication18Announcement(foreignAnnouncement)}, communication18JSON(t, denied.Body.Bytes()))
-				} else {
+				default:
 					require.Equal(t, 404, denied.Code, "%s: %s", tc.name, denied.Body.String())
 				}
 			}
@@ -412,6 +415,20 @@ func communication18Declaration(n int, chains []testpkg.ParentChain, versions []
 	}
 	return map[string]any{"kind": "consent", "signers": "any", "requires_password": false, "requires_signature": false, "deadline": nil, "current_version": vs[0], "versions": vs, "summary": map[string]int{"children_total": n, "agreed": n, "declined": 0, "revoked": 0, "partial": 0, "open": 0, "no_signer": 0, "expired": 0}, "children": children, "submissions": ss, "integrity_ok": true}
 }
+
+// communication18StudentRecords is the Dokumente view of the first child
+// (#4814): the class letter it got, unconfirmed, and the declaration its
+// guardian agreed to on the current version.
+func communication18StudentRecords(n int, chain testpkg.ParentChain, letter, declaration *communication.ParentAnnouncement, sub *communication.PortalDeclarationSubmission) map[string]any {
+	return map[string]any{
+		"letters": []any{map[string]any{"announcement_id": fmt.Sprint(letter.ID), "title": letter.Title, "published_at": letter.PublishedAt,
+			"can_confirm": true, "acknowledged_at": nil, "acknowledged_by": ""}},
+		"declarations": []any{map[string]any{"announcement_id": fmt.Sprint(declaration.ID), "title": declaration.Title, "published_at": declaration.PublishedAt,
+			"deadline": nil, "version_no": n, "state": "agreed", "signers": []any{map[string]any{"account_id": fmt.Sprint(chain.AccountID),
+				"first_name": "Guardian00", "last_name": "Growth", "action": "agreed", "submitted_at": sub.SubmittedAt}}}},
+	}
+}
+
 func communication18CSV(t *testing.T, rec *httptest.ResponseRecorder, n int, subs []*communication.PortalDeclarationSubmission) {
 	t.Helper()
 	require.Equal(t, "text/csv; charset=utf-8", rec.Header().Get("Content-Type"))
@@ -483,6 +500,12 @@ func communication18Budget(t *testing.T, name string, n int, queries querybudget
 			querybudgets.AssertQueryBudget(t, "communication18.declaration_export.n3", queries)
 		} else {
 			querybudgets.AssertQueryBudget(t, "communication18.declaration_export.n8", queries)
+		}
+	case "student_records":
+		if n == 3 {
+			querybudgets.AssertQueryBudget(t, "communication18.student_records.n3", queries)
+		} else {
+			querybudgets.AssertQueryBudget(t, "communication18.student_records.n8", queries)
 		}
 	case "school_get":
 		if n == 3 {

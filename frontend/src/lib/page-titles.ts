@@ -207,6 +207,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/berichte": "Berichte",
     "/berichte/vorlagen/:id": "Berichtsvorlage",
     "/berichte/vorlagen/neu": "Neue Berichtsvorlage",
+    "/demo": "Demo",
     "/dokumente": "Dokumente",
     "/dokumente/:id": "Dokument",
     "/einstellungen": "Allgemeine Einstellungen",

@@ -23,6 +23,9 @@ const TRAEGER_PUBLIC_PAGES = [
   "/reset-password",
   "/traeger/invite",
   "/invite",
+  // Entry of the public demo (#6193): it signs the visitor in itself.
+  "/traeger/demo",
+  "/demo",
 ];
 
 /**

@@ -322,12 +322,12 @@ function AuthTestimonialPanel({
     <aside className="moto-dotted-background moto-dotted-background--split relative z-0 hidden min-h-screen overflow-hidden border-l border-gray-200 px-8 py-10 lg:flex lg:flex-col lg:justify-between xl:px-14">
       <div className="relative z-10 flex items-center justify-between">
         {/* oxlint-disable-next-line ui-kit/no-hand-rolled-pill -- Marken-Chip der Anmeldeseite, kein Status */}
-        <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/85 px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm">
+        <div className="moto-glass inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/85 px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm">
           <UsersRound className="text-moto-green h-4 w-4" aria-hidden="true" />
           {items.badges.audience}
         </div>
         {/* oxlint-disable-next-line ui-kit/no-hand-rolled-pill -- Marken-Chip der Anmeldeseite, kein Status */}
-        <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/85 px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm">
+        <div className="moto-glass inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/85 px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm">
           <ShieldCheck className="text-moto-blue h-4 w-4" aria-hidden="true" />
           {items.badges.hosting}
         </div>

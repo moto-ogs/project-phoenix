@@ -167,7 +167,9 @@ func runStandingDemo(ctx context.Context, schools *DemoRuntime, baseURL, heartbe
 		return err
 	}
 	if saved == nil {
-		options := seedapi.SeedOptions{TenantSlug: standingDemoSlug, SchoolName: "moto Demo-Schule", TraegerSlug: standingDemoTraegerSlug}
+		// The standing school's Träger is its own (#6962), with neighbour
+		// schools like a visitor's (ADR 0271).
+		options := seedapi.SeedOptions{TenantSlug: standingDemoSlug, SchoolName: "moto Demo-Schule", TraegerSlug: standingDemoTraegerSlug, OwnTraeger: true}
 		if _, err := provisionDemoSchool(ctx, schools, adapter, options); err != nil {
 			return err
 		}
@@ -176,11 +178,30 @@ func runStandingDemo(ctx context.Context, schools *DemoRuntime, baseURL, heartbe
 	if err != nil {
 		return err
 	}
+	// Its Träger-Büro opens to every visitor of the standing school (ADR
+	// 0271), also for a school seeded before: its Träger is its own (#6962).
+	if school.traegerID > 0 {
+		if err := schools.schools.RecordDemoTraeger(ctx, standingDemoSlug, school.traegerID); err != nil {
+			return err
+		}
+	}
 	return school.run(ctx, once, true, func() {
 		if err := writeDemoHeartbeat(heartbeat); err != nil {
 			slog.Warn("demo heartbeat not written; the healthcheck will report unhealthy", "error", err)
 		}
 	})
+}
+
+// recordDemoTraeger names the order's own Träger and each neighbour school
+// on the order as soon as the seed created them (ADR 0271), so a seed that
+// fails later still retires and erases them with the order.
+func recordDemoTraeger(options *seedapi.SeedOptions, schools *DemoRuntime, slug string) {
+	options.SaveTraeger = func(ctx context.Context, traegerID int64) error {
+		return schools.schools.RecordDemoTraeger(ctx, slug, traegerID)
+	}
+	options.SaveSchool = func(ctx context.Context, neighbourID int64) error {
+		return schools.schools.RecordDemoSchool(ctx, slug, neighbourID)
+	}
 }
 
 // demoSchool is one seeded demo school with its own client and ticker.
@@ -195,6 +216,8 @@ type demoSchool struct {
 	ticker          *simulate.DemoTicker
 	visitorID       int64
 	visitorParentID int64
+	// traegerID is the school's Träger from the seed state.
+	traegerID int64
 }
 
 func loadDemoSchool(ctx context.Context, schools *DemoRuntime, slug, baseURL string) (*demoSchool, error) {
@@ -246,6 +269,7 @@ func loadDemoSchool(ctx context.Context, schools *DemoRuntime, slug, baseURL str
 	return &demoSchool{
 		slug: slug, schoolID: saved.SchoolID, seedJSON: saved.SeedJSON, state: state, client: client, ticker: ticker,
 		visitorID: seedapi.VisitorAccountID(profile), visitorParentID: visitorParentID,
+		traegerID: profile.Organization.ID,
 	}, nil
 }
 
@@ -320,6 +344,7 @@ func provisionDemoSchool(ctx context.Context, schools *DemoRuntime, adapter seed
 			stateSaved = true
 			return nil
 		}
+		recordDemoTraeger(&options, schools, slug)
 		options.SaveVisitor = func(ctx context.Context, visitorAccountID, visitorParentAccountID int64) error {
 			if schoolID == 0 {
 				return fmt.Errorf("demo visitor was created before its school")
