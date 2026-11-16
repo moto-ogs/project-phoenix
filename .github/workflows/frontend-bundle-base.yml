@@ -1,8 +1,9 @@
 name: Frontend bundle base
 
 # Measures each development commit's frontend bundle once, for "Frontend
-# build" in lint.yml: that job compares a pull request against a cold build of
-# its merge-base, and pull request bases are development commits. A cache
+# build" in lint.yml: that job compares a pull request's synthetic merge
+# against a cold build of the merge's first parent, the base tip it merges
+# into; pull request bases are development commits. A cache
 # saved by a pull request is visible to that pull request only, so on 13.11.2026
 # 30 of 35 runs built their base cold (median 92 s, 76-148 s), and 12 runs
 # built only 8 different commits. development is the default branch: every

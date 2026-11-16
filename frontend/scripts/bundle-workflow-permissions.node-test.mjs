@@ -58,13 +58,8 @@ test("release development -> main prepares no delta reference and never builds t
   );
   assert.equal(expression(identify.env.BASE_REVISION, context), "");
   assert.equal(expression(baseBuild.if, context), false);
-  const selectHead = steps.find(
-    (step) =>
-      step.name === "Select feature PR head for bundle delta measurements",
-  );
-  assert.equal(
-    expression(selectHead.if, context),
-    false,
+  assert.ok(
+    !steps.some((step) => /git (checkout|switch)/.test(step.run ?? "")),
     "release budgets cover the tested merge tree",
   );
   const directory = mkdtempSync(join(tmpdir(), "moto-bundle-release-"));
@@ -93,17 +88,12 @@ test("feature and stacked PRs retain delta checks; nightly has only absolute bud
     (step) =>
       step.run === "node scripts/perf/bundle-measurement.mjs --build-base",
   );
-  const selectHead = steps.find(
-    (step) =>
-      step.name === "Select feature PR head for bundle delta measurements",
-  );
   for (const baseRef of ["development", "feature/stack-base"]) {
     const context = bundleContext("pull_request", baseRef);
     assert.equal(expression(identify.env.BASE_REVISION, context), "599ab1b");
     assert.equal(expression(baseBuild.if, context), true);
-    assert.equal(expression(selectHead.if, context), true);
     assert.equal(
-      expression(selectHead.env.HEAD_REVISION, context),
+      expression(identify.env.HEAD_REVISION, context),
       "feature-head",
     );
   }
@@ -113,52 +103,58 @@ test("feature and stacked PRs retain delta checks; nightly has only absolute bud
     };
     assert.equal(expression(identify.env.BASE_REVISION, context), "");
     assert.equal(expression(baseBuild.if, context), false);
-    assert.equal(expression(selectHead.if, context), false);
   }
 });
 
-test("one regular build of the synthetic merge runs beside the head-only analysis, not before it", () => {
+test("one regular build of the synthetic merge is also the head measurement, against the merge's base parent", () => {
   const jobs = workflow("lint.yml").jobs;
-  const isBuild = (step) => step.run === "pnpm run build";
-  const mergeBuild = jobs["frontend-merge-build"];
-  assert.equal(mergeBuild.steps.filter(isBuild).length, 1);
-  assert.equal(mergeBuild.if, jobs["frontend-build"].if);
-  const mergeCheckout = mergeBuild.steps.find((step) =>
+  // No second Next.js build anywhere: the ratchet's build is the regular one.
+  assert.equal(jobs["frontend-merge-build"], undefined);
+  for (const [name, job] of Object.entries(jobs))
+    assert.ok(
+      !job.steps.some((step) =>
+        /\b(pnpm run build|next build)(?![\w-])/.test(step.run ?? ""),
+      ),
+      name,
+    );
+  const ratchetSource = readFileSync(
+    new URL("./perf/bundle-ratchet.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(ratchetSource, /\["exec", "next", "build", "--analyze"\]/);
+  assert.doesNotMatch(ratchetSource, /experimental-analyze", "--output"/);
+
+  const build = jobs["frontend-build"];
+  const checkout = build.steps.find((step) =>
     step.uses?.startsWith("actions/checkout@"),
   );
   assert.equal(
-    mergeCheckout.with?.ref,
+    checkout.with?.ref,
     undefined,
     "the regular build must retain GitHub's synthetic merge",
   );
+  // The measured tree is the checkout: nothing switches to the PR head.
   assert.ok(
-    mergeBuild.steps.findIndex(isBuild) >
-      mergeBuild.steps.findIndex((step) => step.run?.includes("pnpm install")),
+    !build.steps.some((step) => /git (checkout|switch)/.test(step.run ?? "")),
   );
-  // Both builds see the same public build environment.
-  const buildEnv = mergeBuild.steps.find(isBuild).env;
-  for (const [key, value] of Object.entries(jobs["frontend-build"].env))
-    assert.equal(buildEnv[key], value, key);
-  for (const [name, job] of Object.entries(jobs)) {
-    if (name !== "frontend-merge-build")
-      assert.equal(job.steps.filter(isBuild).length, 0, name);
-  }
-
-  const steps = jobs["frontend-build"].steps;
-  const selectHead = steps.findIndex(
-    (step) =>
-      step.name === "Select feature PR head for bundle delta measurements",
+  const steps = build.steps;
+  const install = steps.findIndex((step) =>
+    step.run?.includes("pnpm install --frozen-lockfile"),
   );
   const identify = steps.findIndex((step) => step.id === "bundle-key");
-  const analyze = steps.findIndex(
+  const ratchet = steps.findIndex(
     (step) => step.run === "pnpm run perf:bundle-ratchet",
   );
-  assert.ok(selectHead >= 0 && selectHead < identify && identify < analyze);
+  assert.ok(install >= 0 && install < identify && identify < ratchet);
+  // The delta reference is the merge's first parent, and only for the merge
+  // of this pull request's head.
+  const identifyRun = steps[identify].run;
   assert.match(
-    steps[selectHead].run,
-    /git checkout --detach "\$HEAD_REVISION"/,
+    identifyRun,
+    /git rev-parse --verify --quiet HEAD\^2\)" != "\$HEAD_REVISION"/,
   );
-  assert.match(steps[selectHead].run, /pnpm install --frozen-lockfile/);
+  assert.match(identifyRun, /merge_parent=\$\(git rev-parse HEAD\^1\)/);
+  assert.match(identifyRun, /exit 1/);
 });
 
 test("a merge-base measurement is restored by its identity before the build and saved only after a cold build", () => {
@@ -243,7 +239,7 @@ test("development's base measurement is built like a pull request's, under the s
   );
   assert.match(
     find(pr.steps, (step) => step.id === "bundle-key").run,
-    /node scripts\/perf\/bundle-measurement\.mjs --prepare-ci "\$merge_base"/,
+    /node scripts\/perf\/bundle-measurement\.mjs --prepare-ci "\$merge_parent"/,
   );
   for (const step of [job.steps[identify], job.steps[build]])
     assert.equal(step["working-directory"], "frontend");
@@ -341,7 +337,11 @@ test("bundle builds need no artifact-read token and do not persist checkout cred
     undefined,
     "the contract tests run on GitHub's synthetic merge",
   );
-  assert.equal(checkout.with["fetch-depth"], 0);
+  assert.equal(
+    checkout.with["fetch-depth"],
+    2,
+    "the synthetic merge and its two parents",
+  );
   assert.ok(
     build.steps.some(
       (step) =>

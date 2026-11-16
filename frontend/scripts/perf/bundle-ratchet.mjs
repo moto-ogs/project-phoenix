@@ -1,5 +1,6 @@
-// `perf:bundle-ratchet` compiles cold, writes a versioned measurement artifact,
-// checks each route's growth against the merge-base measurement (feature PRs)
+// `perf:bundle-ratchet` runs a cold `next build --analyze`, writes a versioned
+// measurement artifact, checks each route's growth against the prepared base
+// measurement (feature PRs: the synthetic merge's first parent in CI)
 // and the few absolute ceilings in bundle-ceilings.json (every run).
 // BUNDLE_GROWTH_APPROVED=true (set by CI from the PR label) turns delta
 // failures into warnings.
@@ -61,21 +62,21 @@ function analyze() {
   if (existsSync(NEXT_CACHE_DIR)) renameSync(NEXT_CACHE_DIR, NEXT_CACHE_PARKED);
   try {
     rmSync(NEXT_DIR, { recursive: true, force: true });
-    const result = spawnSync(
-      "pnpm",
-      ["exec", "next", "experimental-analyze", "--output"],
-      {
-        stdio: "inherit",
-        env: {
-          ...process.env,
-          ...perfServerEnv(),
-          SKIP_ENV_VALIDATION: "true",
-        },
+    // The regular production build plus the analysis data that
+    // `next experimental-analyze --output` writes (same bytes per route on
+    // next 16.4.5), so CI needs no second build for type, route and prerender
+    // checks. The base measurement keeps the analysis-only command.
+    const result = spawnSync("pnpm", ["exec", "next", "build", "--analyze"], {
+      stdio: "inherit",
+      env: {
+        ...process.env,
+        ...perfServerEnv(),
+        SKIP_ENV_VALIDATION: "true",
       },
-    );
+    });
     if (result.status !== 0) {
       throw new Error(
-        `next experimental-analyze ist mit Status ${result.status} beendet.`,
+        `next build --analyze ist mit Status ${result.status} beendet.`,
       );
     }
   } finally {
@@ -89,7 +90,10 @@ function analyze() {
 function summary(rows, failures, warnings, baseStatus, growthApproved) {
   const lines = ["## Bundle-Größen", "", baseStatus, ""];
   if (growthApproved)
-    lines.push(`Zuwachs freigegeben mit Label \`${GROWTH_APPROVAL_LABEL}\`.`, "");
+    lines.push(
+      `Zuwachs freigegeben mit Label \`${GROWTH_APPROVAL_LABEL}\`.`,
+      "",
+    );
   lines.push(
     failures.length === 0
       ? `Alle ${rows.length} gemessenen Routen ohne Verstöße.`
