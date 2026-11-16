@@ -281,19 +281,16 @@ func reminderRecipients(rows []reminderRecipientRow) []*contract.ParentAnnouncem
 // permittedLetterChildrenSQL is "the child was reached by the published
 // letter AND the account is a guardian of exactly that child with parent
 // portal access" (#4813). Only these children's letters reach the account.
-const permittedLetterChildrenSQL = `
-			SELECT DISTINCT a.id AS announcement_id, sg.student_id
+//
+// Bind order: guardian links, account, announcements.
+const permittedLetterChildrenSQL = `WITH ` + accountChildrenCTE + `
+			SELECT DISTINCT a.id AS announcement_id, ac.student_id
 			FROM users.parent_announcements a
-			JOIN users.student_profiles s ON s.tenant_id = a.tenant_id AND s.id = ANY(a.recipient_student_ids)` + studentMembershipJoins + `
+			JOIN account_children ac ON ac.tenant_id = a.tenant_id AND ac.student_id = ANY(a.recipient_student_ids)
+			JOIN users.student_profiles s ON s.id = ac.student_id AND s.tenant_id = a.tenant_id` + studentMembershipJoins + `
 			JOIN users.persons p ON p.id = s.person_id AND p.deleted_at IS NULL AND sm.status <> 'alumnus'
-			JOIN (?) sg ON sg.tenant_id = a.tenant_id AND sg.student_id = s.id
-				AND sg.permissions @> '{"parent_portal.access": true}'::jsonb
-			JOIN users.guardian_profiles gp ON gp.id = sg.guardian_profile_id AND gp.tenant_id = a.tenant_id
-				AND gp.account_id = ?
-			JOIN auth.account_tenants act ON act.account_id = gp.account_id
-				AND act.tenant_id = gp.tenant_id AND act.status = 'active'
 			WHERE a.id IN (?) AND a.delivery_mode = 'letter' AND a.published_at IS NOT NULL
-			ORDER BY a.id, sg.student_id`
+			ORDER BY a.id, ac.student_id`
 
 type permittedLetterChildRow struct {
 	AnnouncementID int64 `bun:"announcement_id"`

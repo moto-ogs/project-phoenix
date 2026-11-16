@@ -26,6 +26,10 @@ import {
 } from "~/components/traeger/care-billing-format";
 import { runSchoolsLabel } from "~/components/traeger/care-review-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -44,6 +48,7 @@ import {
   fetchCareTariffs,
   startCareRun,
 } from "~/lib/traeger-care-billing-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerMonatsbeitraegePage" });
@@ -218,17 +223,32 @@ export default function TraegerMonatsbeitraegePage() {
       statsLoading={!data && !pageLoad.error}
       tabs={billingTabs("monatsbeitraege")}
       actions={
-        <Button
-          type="button"
-          variant="primary"
-          size="md"
-          disabled={!data}
-          tooltip="Öffnet ein Fenster, um einen Monatslauf für Monat und Schulen zu starten."
-          onClick={() => setStarting(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Monatslauf starten
-        </Button>
+        <>
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList(
+                "/api/traeger/care-billing-runs/export",
+                format,
+              )
+            }
+            scope={traegerExportScope()}
+            ariaLabel="Monatsläufe herunterladen"
+            fallbackName="monatsbeitraege"
+            errorObject="die Monatsläufe"
+            unavailable={runs.length === 0}
+          />
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            disabled={!data}
+            tooltip="Öffnet ein Fenster, um einen Monatslauf für Monat und Schulen zu starten."
+            onClick={() => setStarting(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+            Monatslauf starten
+          </Button>
+        </>
       }
       error={pageLoad.error}
       loading={!pageLoad.error && !data}

@@ -8,6 +8,11 @@
  * und Steuerdaten. Personendaten werden nie zwischengespeichert; jede Anfrage
  * steht im Zugriffsprotokoll der Schulen. Backend-IDs werden hier zu Strings.
  */
+import {
+  downloadTraegerList,
+  type TraegerListFile,
+  type TraegerListFormat,
+} from "./traeger-list-export";
 import { traegerRequest } from "~/lib/traeger-api";
 import {
   mapStaffProof,
@@ -50,6 +55,12 @@ interface StaffEmployment {
   readonly staffId: string;
   /** `false`, wenn die Schule die Beschäftigung beendet hat. */
   readonly active: boolean;
+  /**
+   * Die erste Blockung aus dem Vertretungspool hat den Einsatzort angelegt
+   * (#7173). Er endet nach der letzten Blockung der Schule, die nächste
+   * nimmt ihn wieder auf (#7197).
+   */
+  readonly viaPool: boolean;
 }
 
 export interface StaffRecordSummary {
@@ -99,9 +110,20 @@ export interface StaffFinancial {
 type StaffContractChangeField = "contract" | "contract_soll" | "holiday_week";
 
 export interface StaffChange {
-  /** `imported`: angelegt oder ergänzt vom Personal-Import (#4724). */
+  /**
+   * `imported`: angelegt oder ergänzt vom Personal-Import (#4724).
+   * `ended`: der Einsatzort aus dem Vertretungspool endete nach der letzten
+   * Blockung, `resumed`: eine neue Blockung nahm ihn wieder auf (#7197).
+   */
   readonly kind:
-    "linked" | "not_chosen" | "changed" | "added" | "removed" | "imported";
+    | "linked"
+    | "not_chosen"
+    | "changed"
+    | "added"
+    | "removed"
+    | "imported"
+    | "ended"
+    | "resumed";
   /** `record`: die ganze Akte, die der Personal-Import angelegt hat. */
   readonly field:
     StaffRecordField | "school" | "record" | StaffContractChangeField;
@@ -220,6 +242,7 @@ interface BackendEmployment {
   school_name: string;
   staff_id: number;
   active: boolean;
+  via_pool: boolean;
 }
 
 interface BackendSummary {
@@ -330,6 +353,7 @@ function mapSummary(record: BackendSummary): StaffRecordSummary {
       schoolName: employment.school_name,
       staffId: String(employment.staff_id),
       active: employment.active,
+      viaPool: employment.via_pool,
     })),
   };
 }
@@ -445,6 +469,13 @@ const recordPath = (id: string, suffix = "") =>
 
 export async function fetchStaffOverview(): Promise<StaffOverview> {
   return mapStaffOverview(await traegerRequest<BackendOverview>(`${BASE}`));
+}
+
+/** Die Liste der Akten als Datei; der Download steht im Zugriffsprotokoll. */
+export function downloadStaffRecordList(
+  format: TraegerListFormat,
+): Promise<TraegerListFile> {
+  return downloadTraegerList(`${BASE}/export`, format);
 }
 
 export async function fetchStaffRecord(id: string): Promise<StaffRecordDetail> {
@@ -643,4 +674,118 @@ export function staffName(person: {
   readonly lastName: string;
 }): string {
   return `${person.firstName} ${person.lastName}`.trim();
+}
+
+/** „Person einstellen“ (#7206): Person, Arbeitsvertrag und Einsatzorte. */
+export interface StaffHireInput {
+  readonly firstName: string;
+  readonly lastName: string;
+  /** Kalendertag `YYYY-MM-DD`, Pflicht. */
+  readonly birthday: string;
+  readonly email: string;
+  readonly phone: string;
+  readonly personnelNumber: string;
+  readonly kind: StaffContractKind;
+  readonly startsOn: string;
+  readonly endsOn: string | null;
+  readonly sites: readonly {
+    readonly schoolId: string;
+    readonly weekdayMinutes: readonly number[];
+  }[];
+  /** Stellt ein, obwohl es eine Person mit Name und Geburtsdatum schon gibt. */
+  readonly confirmDuplicate: boolean;
+}
+
+/** Wo es eine Person mit demselben Namen und Geburtsdatum schon gibt. */
+export type StaffHireMatch =
+  | { readonly kind: "record"; readonly recordId: string }
+  | { readonly kind: "school"; readonly schoolName: string };
+
+/**
+ * Die Treffer aus der Antwort auf eine angehaltene Einstellung
+ * (`workforce.traeger_staff_hire_duplicate`). Unbekannte Einträge bleiben
+ * draußen.
+ */
+export function staffHireMatches(
+  details: Readonly<Record<string, unknown>> | undefined,
+): StaffHireMatch[] {
+  const raw = Array.isArray(details?.matches) ? details.matches : [];
+  const matches: StaffHireMatch[] = [];
+  for (const entry of raw as unknown[]) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const match = entry as {
+      kind?: unknown;
+      staff_record_id?: unknown;
+      school_name?: unknown;
+    };
+    if (match.kind === "record" && match.staff_record_id != null) {
+      matches.push({ kind: "record", recordId: String(match.staff_record_id) });
+    } else if (
+      match.kind === "school" &&
+      typeof match.school_name === "string"
+    ) {
+      matches.push({ kind: "school", schoolName: match.school_name });
+    }
+  }
+  return matches;
+}
+
+/** Was eine abgebrochene Einstellung schon angelegt hat. */
+export interface StaffHireIncomplete {
+  /** Die Schulen, an denen es die Person jetzt gibt. */
+  readonly schools: readonly string[];
+  /** Die Akte, wenn sie schon gespeichert ist. */
+  readonly recordId: string | null;
+}
+
+/**
+ * Was die Antwort `workforce.traeger_staff_hire_incomplete` nennt: die
+ * Schulen mit der neuen Person und, wenn es sie schon gibt, die Akte.
+ */
+export function staffHireIncomplete(
+  details: Readonly<Record<string, unknown>> | undefined,
+): StaffHireIncomplete {
+  const schools = Array.isArray(details?.schools) ? details.schools : [];
+  const recordId = details?.staff_record_id;
+  return {
+    schools: schools.filter(
+      (school): school is string => typeof school === "string",
+    ),
+    recordId:
+      typeof recordId === "number" || typeof recordId === "string"
+        ? String(recordId)
+        : null,
+  };
+}
+
+/**
+ * Stellt eine neue Person ein: moto legt die Akte und den Arbeitsvertrag an
+ * und an jeder Schule die Person mit ihrer Beschäftigung.
+ */
+export async function hireStaff(
+  input: StaffHireInput,
+): Promise<StaffRecordDetail> {
+  return mapDetail(
+    await traegerRequest<BackendDetail>(`${BASE}/hire`, {
+      method: "POST",
+      body: {
+        first_name: input.firstName,
+        last_name: input.lastName,
+        birthday: input.birthday,
+        email: input.email || null,
+        phone: input.phone || null,
+        personnel_number: input.personnelNumber || null,
+        contract: {
+          kind: input.kind,
+          starts_on: input.startsOn,
+          ends_on: input.endsOn,
+        },
+        sites: input.sites.map((site) => ({
+          school_id: site.schoolId,
+          weekday_minutes: site.weekdayMinutes,
+        })),
+        confirm_duplicate: input.confirmDuplicate,
+      },
+    }),
+  );
 }

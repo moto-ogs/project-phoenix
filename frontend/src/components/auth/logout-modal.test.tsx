@@ -1,212 +1,105 @@
 /**
- * Tests for LogoutModal Component
- * Tests the rendering and logout functionality
+ * LogoutModal: the kit confirmation dialog in front of a portal's logout.
  */
-import { render, screen, fireEvent, act } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { LogoutModal } from "./logout-modal";
 
-// Mock logout function
 const mockLogout = vi.fn();
 
-// Mock shell auth context
 vi.mock("~/lib/shell-auth-context", () => ({
-  useShellAuth: () => ({
-    user: { name: "Test User", email: "test@example.com", roles: [] },
-    profile: { firstName: "Test", lastName: "User" },
-    status: "authenticated",
-    isSessionExpired: false,
-    logout: mockLogout,
-    mode: "teacher",
-    homeUrl: "/dashboard",
-
-    profileUrl: "/profile",
-  }),
+  useShellAuth: () => ({ logout: mockLogout }),
 }));
 
-// Mock Modal component
-vi.mock("~/components/ui/modal", () => ({
-  Modal: ({
-    isOpen,
-    onClose,
-    children,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-    children: React.ReactNode;
-  }) =>
-    isOpen ? (
-      <div data-testid="modal">
-        <button type="button" onClick={onClose} data-testid="modal-close">
-          Close
-        </button>
-        {children}
-      </div>
-    ) : null,
-}));
+function openModal(onClose = vi.fn()) {
+  render(<LogoutModal isOpen={true} onClose={onClose} />);
+  return { dialog: screen.getByRole("dialog"), onClose };
+}
 
 describe("LogoutModal", () => {
-  const mockOnClose = vi.fn();
-
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers({ shouldAdvanceTime: true });
     mockLogout.mockResolvedValue(undefined);
   });
 
-  afterEach(() => {
-    vi.clearAllTimers();
-    vi.useRealTimers();
-  });
-
-  it("renders nothing when closed", () => {
-    const { container } = render(
-      <LogoutModal isOpen={false} onClose={mockOnClose} />,
+  it("shows the dialog only while open", () => {
+    const { rerender } = render(
+      <LogoutModal isOpen={false} onClose={vi.fn()} />,
     );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
-    expect(container).toBeEmptyDOMElement();
+    // Gegenprobe: dieselbe Instanz zeigt den Dialog, sobald sie offen ist.
+    rerender(<LogoutModal isOpen={true} onClose={vi.fn()} />);
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Abmelden");
   });
 
-  it("renders modal when open", () => {
-    render(<LogoutModal isOpen={true} onClose={mockOnClose} />);
+  // #7112: the dialog was nameless and carried its own <h1>.
+  it("is a dialog named by its title, with the question as content", () => {
+    const { dialog } = openModal();
 
-    expect(screen.getByTestId("modal")).toBeInTheDocument();
-  });
-
-  it("displays logout title", () => {
-    render(<LogoutModal isOpen={true} onClose={mockOnClose} />);
-
+    expect(dialog).toHaveAccessibleName("Abmelden");
     expect(
-      screen.getByRole("heading", { name: "Abmelden" }),
-    ).toBeInTheDocument();
-  });
-
-  it("displays confirmation message", () => {
-    render(<LogoutModal isOpen={true} onClose={mockOnClose} />);
-
+      within(dialog).getByRole("heading", { name: "Abmelden" }),
+    ).not.toHaveProperty("tagName", "H1");
     expect(
-      screen.getByText(/Möchten Sie sich wirklich von Ihrem Konto abmelden/),
-    ).toBeInTheDocument();
+      within(dialog).getByText(
+        "Möchten Sie sich wirklich von Ihrem Konto abmelden?",
+      ),
+    ).toBeVisible();
   });
 
-  it("renders logout icon", () => {
-    render(<LogoutModal isOpen={true} onClose={mockOnClose} />);
+  it("closes without logging out on Abbrechen", () => {
+    const { dialog, onClose } = openModal();
 
-    const svg = document.querySelector("svg");
-    expect(svg).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Abbrechen" }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(mockLogout).not.toHaveBeenCalled();
   });
 
-  it("renders logout button", () => {
-    render(<LogoutModal isOpen={true} onClose={mockOnClose} />);
+  it("logs out on Abmelden", async () => {
+    const { dialog } = openModal();
 
-    const logoutButton = screen.getByRole("button", { name: /Abmelden/i });
-    expect(logoutButton).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Abmelden" }));
+
+    await waitFor(() => expect(mockLogout).toHaveBeenCalledTimes(1));
   });
 
-  it("calls signOut when logout button is clicked", async () => {
-    render(<LogoutModal isOpen={true} onClose={mockOnClose} />);
-
-    const logoutButton = screen.getByRole("button", { name: /Abmelden/i });
-    fireEvent.click(logoutButton);
-
-    // Flush all timers and microtasks
-    await act(async () => {
-      await vi.runAllTimersAsync();
-    });
-
-    expect(mockLogout).toHaveBeenCalledTimes(1);
-  });
-
-  it("keeps modal content stable and shows pending button state after logout is triggered", async () => {
-    mockLogout.mockImplementation(
-      () => new Promise((resolve) => setTimeout(resolve, 1000)),
-    );
-
-    render(<LogoutModal isOpen={true} onClose={mockOnClose} />);
-
-    const logoutButton = screen.getByRole("button", { name: /Abmelden/i });
+  it("shows the running logout and cannot be closed meanwhile", async () => {
+    mockLogout.mockReturnValue(new Promise(() => undefined));
+    const { dialog, onClose } = openModal();
 
     await act(async () => {
-      fireEvent.click(logoutButton);
-      // Advance a bit to trigger the loading state
-      await vi.advanceTimersByTimeAsync(100);
+      fireEvent.click(within(dialog).getByRole("button", { name: "Abmelden" }));
     });
 
     expect(
-      screen.getByRole("heading", { name: "Abmelden" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Abmeldung läuft..." }),
+      within(dialog).getByRole("button", { name: /Abmeldung läuft/ }),
     ).toBeDisabled();
-    expect(screen.queryByText("Abmelden...")).not.toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("disables close during logout", async () => {
-    mockLogout.mockImplementation(
-      () => new Promise((resolve) => setTimeout(resolve, 1000)),
-    );
-
-    render(<LogoutModal isOpen={true} onClose={mockOnClose} />);
-
-    const logoutButton = screen.getByRole("button", { name: /Abmelden/i });
-
-    await act(async () => {
-      fireEvent.click(logoutButton);
-      await vi.advanceTimersByTimeAsync(100);
-    });
-
-    const closeButton = screen.getByTestId("modal-close");
-    fireEvent.click(closeButton);
-    expect(mockOnClose).not.toHaveBeenCalled();
-  });
-
-  it("clears deliberateLogout flag on signOut failure", async () => {
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation((_msg: unknown, ..._args: unknown[]) => {
-        // suppress console.error in tests
-      });
+  it("closes and forgets the deliberate logout when the logout fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     sessionStorage.setItem("deliberateLogout", "1");
     mockLogout.mockRejectedValue(new Error("Sign out failed"));
+    const { dialog, onClose } = openModal();
 
-    render(<LogoutModal isOpen={true} onClose={mockOnClose} />);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Abmelden" }));
 
-    const logoutButton = screen.getByRole("button", { name: /Abmelden/i });
-    fireEvent.click(logoutButton);
-
-    await act(async () => {
-      await vi.runAllTimersAsync();
-    });
-
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(sessionStorage.getItem("deliberateLogout")).toBeNull();
-
-    consoleErrorSpy.mockRestore();
-  });
-
-  it("handles signOut errors gracefully", async () => {
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation((_msg: unknown, ..._args: unknown[]) => {
-        // suppress console.error in tests
-      });
-    mockLogout.mockRejectedValue(new Error("Sign out failed"));
-
-    render(<LogoutModal isOpen={true} onClose={mockOnClose} />);
-
-    const logoutButton = screen.getByRole("button", { name: /Abmelden/i });
-    fireEvent.click(logoutButton);
-
-    await act(async () => {
-      await vi.runAllTimersAsync();
-    });
-
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
+    expect(console.error).toHaveBeenCalledWith(
       "failed to sign out",
-      expect.objectContaining({
-        error: "Sign out failed",
-      }),
+      expect.objectContaining({ error: "Sign out failed" }),
     );
-
-    consoleErrorSpy.mockRestore();
   });
 });

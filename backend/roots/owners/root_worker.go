@@ -319,7 +319,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			calendar, err = BuildSchoolCalendarRecords(db, ObserveSchoolCalendar, settings.Service)
 			return
 		},
-		func() (err error) { workTime, err = BuildServeWorkforce(db, membership, calendar); return },
+		func() (err error) { workTime, err = BuildServeWorkforce(db, env, membership, calendar); return },
 		func() error {
 			people, peopleIdentity = BuildPeopleRows(db, env.Observe.IdentityAccess, groups, rooms, membership, workTime)
 			return nil
@@ -346,7 +346,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			carePlan, err = ComposeCarePlan(db, persons, CarePlanStatusSlots(timetableRepos.InstanceStudent), env.Now)
 			return
 		},
-		func() (err error) { appointments, err = BuildServeAppointments(db); return },
+		func() (err error) { appointments, err = BuildServeAppointments(db, env.Now); return },
 		func() error { operatorAuditLog = NewOperatorAuditLog(db); return nil },
 		func() (err error) { mealPlan, err = workerMealPlan(db, settings, people, persons, calendar); return },
 		func() (err error) { feedbackSettings, err = BuildFeedbackSettings(settings.Service); return },
@@ -360,7 +360,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() error {
 			presence = BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
-			substitutions = NewGroupSubstitutionRepository(structure.Groups, membership, workTime)
+			substitutions = NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today)
 			supervisions = NewGroupSupervisionRecords(presence.SessionRecords, groups)
 			return nil
 		},

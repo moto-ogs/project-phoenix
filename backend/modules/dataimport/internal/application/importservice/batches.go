@@ -71,7 +71,7 @@ func (s *ImportService[T]) ImportBatches(ctx context.Context, request importMode
 	if scoped, ok := s.config.(requestScopedConfig[T]); ok {
 		clone := &ImportService[T]{config: scoped.NewRequestScoped(), batchSize: s.batchSize, audit: s.audit, observe: s.observe, fingerprint: s.fingerprint, checkpoints: s.checkpoints, transactions: s.transactions,
 			boundStatements: s.boundStatements, batchLimit: s.batchLimit, connectionLost: s.connectionLost,
-			savepointLost: s.savepointLost}
+			savepointLost: s.savepointLost, now: s.now}
 		if locker, ok := clone.config.(importConfigLocker); ok {
 			locker.ImportLock().Lock()
 			defer locker.ImportLock().Unlock()
@@ -90,14 +90,14 @@ func (s *ImportService[T]) importBatches(ctx context.Context, request importMode
 	if s.checkpoints == nil {
 		return nil, fmt.Errorf("import checkpoint reader not wired")
 	}
+	started := time.Now()
 	run := &batchImportRun[T]{
 		service: s, request: request, audit: audit,
-		result:      &importModels.ImportResult[T]{StartedAt: time.Now(), TotalRows: len(request.Rows)},
+		result:      &importModels.ImportResult[T]{StartedAt: s.now(), TotalRows: len(request.Rows)},
 		observation: importModels.ImportObservation{Entity: s.config.EntityName(), Rows: len(request.Rows), CheckpointLag: len(request.Rows)},
-		started:     time.Now(),
 	}
 	ctx = run.observe(ctx)
-	defer run.emitObservation()
+	defer func() { run.emitObservation(time.Since(started)) }()
 	ctx, err := run.prepare(ctx)
 	if err != nil {
 		return nil, err
@@ -121,7 +121,6 @@ type batchImportRun[T any] struct {
 	result         *importModels.ImportResult[T]
 	validated      *importModels.ImportResult[T]
 	observation    importModels.ImportObservation
-	started        time.Time
 	accepted       []bool
 	order          []int
 	key, orderHash string
@@ -152,8 +151,8 @@ func (r *batchImportRun[T]) observe(ctx context.Context) context.Context {
 	})
 }
 
-func (r *batchImportRun[T]) emitObservation() {
-	r.observation.Duration = time.Since(r.started)
+func (r *batchImportRun[T]) emitObservation(elapsed time.Duration) {
+	r.observation.Duration = elapsed
 	r.observation.Accepted = r.result.CreatedCount + r.result.UpdatedCount
 	r.observation.Rejected = r.result.ErrorCount
 	if r.service.observe != nil {
@@ -244,7 +243,7 @@ func (r *batchImportRun[T]) restoreProgress(receipts []auditModels.ImportCheckpo
 }
 
 func (r *batchImportRun[T]) stopBeforeWrites(ctx context.Context) (*importModels.ImportResult[T], error) {
-	r.validated.StartedAt, r.validated.CompletedAt = r.result.StartedAt, time.Now()
+	r.validated.StartedAt, r.validated.CompletedAt = r.result.StartedAt, r.service.now()
 	r.result = r.validated
 	err := r.service.transactions.WithinCurrent(ctx, func(ctx context.Context) error {
 		return r.service.RecordAuditInTransaction(ctx, r.audit.EntityType, r.audit.Filename, r.result, r.audit.AccountID, false, r.service.transactions.TenantID(ctx))
@@ -272,7 +271,7 @@ func (r *batchImportRun[T]) writeBatches(ctx context.Context) (*importModels.Imp
 				attempt.failed.CreatedCount, attempt.failed.UpdatedCount = 0, 0
 				mergeImportBatch(r.result, attempt.failed)
 			}
-			r.result.CompletedAt = time.Now()
+			r.result.CompletedAt = r.service.now()
 			return r.result, err
 		}
 		r.result, r.position = attempt.committed, attempt.next
@@ -283,7 +282,7 @@ func (r *batchImportRun[T]) writeBatches(ctx context.Context) (*importModels.Imp
 		}
 		r.observation.CheckpointLag = len(r.order) - r.position
 	}
-	r.result.CompletedAt = time.Now()
+	r.result.CompletedAt = r.service.now()
 	r.result.BulkActions = r.service.generateBulkActions(r.result.Errors)
 	return r.result, nil
 }
@@ -342,13 +341,13 @@ func (a *batchImportAttempt[T]) execute(ctx context.Context) (attemptErr error) 
 	}
 	a.next = min(a.run.position+a.run.service.batchSize, len(a.run.order))
 	batch := importValidationSlice(a.run.validated, a.run.request.Rows, a.run.order[a.run.position:a.next])
-	batch.StartedAt = time.Now()
+	batch.StartedAt = a.service().now()
 	a.failed = batch
 	batch, err = a.applyChunk(ctx, batch)
 	if err != nil {
 		return err
 	}
-	batch.CompletedAt = time.Now()
+	batch.CompletedAt = a.service().now()
 	if err := a.appendCheckpoint(ctx, batch); err != nil {
 		return err
 	}
@@ -385,7 +384,7 @@ func (a *batchImportAttempt[T]) applyAcceptedRows(ctx context.Context, service *
 		if err != nil {
 			return err
 		}
-		service = &ImportService[T]{config: prepared, savepointLost: service.savepointLost}
+		service = &ImportService[T]{config: prepared, savepointLost: service.savepointLost, now: service.now}
 	}
 	ctx, finish, err := beginRowWrites(ctx, service.config)
 	if err != nil {
@@ -447,7 +446,7 @@ func (s *ImportService[T]) applyBatchRow(ctx context.Context, request importMode
 		// Match errors are per-row, not write failures. Preview and the
 		// retained importer skip the row; returning here would roll back the
 		// whole unit of work and block resume of an identical upload.
-		recordDuplicateCheckError(result, rowNum, row, err)
+		recordDuplicateCheckError(s, result, rowNum, row, err)
 		return nil
 	}
 	action, skip := s.determineImportAction(request, result, row, rowNum, id)
@@ -458,14 +457,14 @@ func (s *ImportService[T]) applyBatchRow(ctx context.Context, request importMode
 	write := importModels.WithBatchRowWrite(ctx)
 	if action == "create" {
 		if _, err := s.config.Create(write, *row); err != nil {
-			recordCreationError(result, rowNum, row, err)
+			recordCreationError(s, result, rowNum, row, err)
 			return s.writeFailure(err)
 		}
 		result.CreatedCount++
 		return nil
 	}
 	if err := s.config.Update(write, *id, *row); err != nil {
-		recordUpdateError(result, rowNum, row, err)
+		recordUpdateError(s, result, rowNum, row, err)
 		return s.writeFailure(err)
 	}
 	result.UpdatedCount++

@@ -10,7 +10,7 @@ der Spec [#4611](https://github.com/moto-ogs/project-phoenix/issues/4611).
 Sie setzt den Punkt aus
 [ADR 0089](0089-personal-wird-beim-traeger-gefuehrt-und-in-der-schule-eingesetzt.md)
 §9 um, den
-[ADR 0250](0250-vertretungspool-des-traegers-blockt-springer-ueber-eine-ausschlussbedingung.md)
+[ADR 0252](0252-vertretungspool-des-traegers-blockt-springer-ueber-eine-ausschlussbedingung.md)
 verschoben hat:
 
 > Das erste Blocken legt über den Workflow aus §8 Personensatz und
@@ -19,7 +19,7 @@ verschoben hat:
 
 ## Kontext
 
-- Mit ADR 0250 reserviert eine Blockung die Person, mehr nicht. Die
+- Mit ADR 0252 reserviert eine Blockung die Person, mehr nicht. Die
   Personalverwaltung trägt die blockende Schule danach von Hand als
   Einsatzort ein. Erst dann kann die Schule den Springer im Dienstplan
   planen, und erst dann kann er sich dort anmelden und stempeln.
@@ -94,11 +94,11 @@ verschoben hat:
      Heimatschule einen Springer außerhalb seines Fensters für
      schullos und sperrte sein Konto.
 7. **Audit wie ADR 0089 §6.** Jede Ansicht und jede Blockung steht schon
-   im Zugriffsprotokoll der Schule (ADR 0250). Die neue Verknüpfung steht
+   im Zugriffsprotokoll der Schule (ADR 0252). Die neue Verknüpfung steht
    zusätzlich im Verlauf der Akte (`staff_record_changes`, Art `linked`,
    mit der Schule und dem Konto der Leitung).
 8. **Ohne Konto keine Beschäftigung.** Hat keine Beschäftigung der Akte
-   ein Konto, bleibt es bei der Reservierung wie in ADR 0250. Die
+   ein Konto, bleibt es bei der Reservierung wie in ADR 0252. Die
    Personalverwaltung lädt die Person dann ein.
 
    Die Fenster liegen an der Zuordnung, nicht in einer eigenen Tabelle. So
@@ -114,7 +114,8 @@ verschoben hat:
   `workflows/staffoffboarding` und einen täglichen Lauf, der vergangene
   Blockungen findet. Das ist ein eigener Workflow; er folgt in
   [#7197](https://github.com/moto-ogs/project-phoenix/issues/7197). Die nächste Blockung nimmt eine schon frühere
-  Beschäftigung wieder auf (Punkt 1).
+  Beschäftigung wieder auf (Punkt 1). Umgesetzt in
+  [ADR 0253](0253-nach-der-letzten-blockung-endet-die-beschaeftigung-des-springers-ueber-den-austritt.md).
 
 ## Verworfene Optionen
 

@@ -28,6 +28,10 @@ import {
 } from "~/components/traeger/care-billing-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { formatDateRange } from "~/components/traeger/holiday-period-format";
+import {
+  TraegerListExportMenu,
+  traegerExportScope,
+} from "~/components/traeger/traeger-list-export-menu";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -49,6 +53,7 @@ import {
   fetchBillingPeriods,
   fetchBillingRuns,
 } from "~/lib/traeger-billing-api";
+import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerAbrechnungPage" });
@@ -328,23 +333,41 @@ function BillingRunsPage() {
       activeFilters={activeFilters}
       onClearAllFilters={() => setPeriodFilter("")}
       actions={
-        <Button
-          type="button"
-          variant="primary"
-          size="md"
-          disabled={!data || noPeriod}
-          disabledReason={
-            noPeriod
-              ? "Zuerst braucht es einen veröffentlichten Ferienzeitraum."
-              : undefined
-          }
-          tooltip="Öffnet ein Fenster, um einen Lauf für einen Ferienzeitraum zu starten."
-          aria-describedby={noPeriod ? "billing-run-needs-period" : undefined}
-          onClick={() => setStarting(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Lauf starten
-        </Button>
+        <>
+          <TraegerListExportMenu
+            download={(format) =>
+              downloadTraegerList("/api/traeger/billing-runs/export", format, {
+                holiday_period_id: periodFilter,
+              })
+            }
+            scope={
+              periodFilter
+                ? `Nur ${filterName ?? "der gewählte Ferienzeitraum"}`
+                : traegerExportScope()
+            }
+            ariaLabel="Abrechnungsläufe herunterladen"
+            fallbackName="abrechnungslaeufe"
+            errorObject="die Abrechnungsläufe"
+            unavailable={shownRuns.length === 0}
+          />
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            disabled={!data || noPeriod}
+            disabledReason={
+              noPeriod
+                ? "Zuerst braucht es einen veröffentlichten Ferienzeitraum."
+                : undefined
+            }
+            tooltip="Öffnet ein Fenster, um einen Lauf für einen Ferienzeitraum zu starten."
+            aria-describedby={noPeriod ? "billing-run-needs-period" : undefined}
+            onClick={() => setStarting(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+            Lauf starten
+          </Button>
+        </>
       }
       error={pageLoad.error}
       // A list loads in the shape of its rows.

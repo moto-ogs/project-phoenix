@@ -214,6 +214,13 @@ func TestTraegerHolidayPeriodIsPlannedChangedAndPublished(t *testing.T) {
 	require.Len(t, listed, 1)
 	assert.Equal(t, "published", listed[0].Status)
 	assert.Len(t, listed[0].Weeks, 2)
+
+	// The list as a file (#4718).
+	export := traegerJSON(t, router, office.token, http.MethodGet, "/traeger/holiday-periods/export", nil)
+	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
+	assert.Contains(t, export.Body.String(), "Winterferien 2027 (geändert);02.11.2026;04.12.2026;2;04.01.2027;22.01.2027;")
+	assert.Contains(t, export.Body.String(), ";0;Veröffentlicht\n")
+	assertTraegerListFormats(t, router, office.token, "/traeger/holiday-periods/export", "ferienzeitraeume")
 }
 
 func TestTraegerHolidayPeriodAcceptsOnlySchoolsOfTheTraeger(t *testing.T) {
@@ -258,6 +265,9 @@ func TestTraegerHolidayPeriodsStayWithTheirTraeger(t *testing.T) {
 	rec := traegerJSON(t, router, other.token, http.MethodGet, "/traeger/holiday-periods/", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, decodeSchoolPortalData[[]holidayPeriodBody](t, rec.Body.Bytes()), "another Träger sees no period of this one")
+	rec = traegerJSON(t, router, other.token, http.MethodGet, "/traeger/holiday-periods/export", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.NotContains(t, rec.Body.String(), "Winterferien", "another Träger exports no period of this one")
 
 	for _, attempt := range []struct {
 		method, path string
@@ -266,6 +276,7 @@ func TestTraegerHolidayPeriodsStayWithTheirTraeger(t *testing.T) {
 		{http.MethodGet, holidayPeriodPath(created.ID), nil},
 		{http.MethodPut, holidayPeriodPath(created.ID), januaryHolidays(other)},
 		{http.MethodPost, holidayPeriodPath(created.ID) + "/publish", nil},
+		{http.MethodGet, holidayPeriodPath(created.ID) + "/places/export", nil},
 	} {
 		rec := traegerJSON(t, router, other.token, attempt.method, attempt.path, attempt.body)
 		require.Equal(t, http.StatusNotFound, rec.Code, "%s %s: %s", attempt.method, attempt.path, rec.Body.String())
@@ -291,6 +302,8 @@ func TestTraegerHolidayPeriodsNeedTheEnrollmentRight(t *testing.T) {
 		rec := traegerJSON(t, router, token, http.MethodGet, "/traeger/holiday-periods/", nil)
 		assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 		rec = traegerJSON(t, router, token, http.MethodPost, "/traeger/holiday-periods/", januaryHolidays(office))
+		assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+		rec = traegerJSON(t, router, token, http.MethodGet, "/traeger/holiday-periods/export", nil)
 		assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 	}
 }

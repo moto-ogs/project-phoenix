@@ -31,6 +31,9 @@ func newRootEnvironment(cfg owners.ServiceConfig, logger *slog.Logger, clock fun
 	if err != nil {
 		return owners.RootEnvironment{}, err
 	}
+	if clock == nil {
+		clock = time.Now
+	}
 	return owners.RootEnvironment{
 		BankData: bankData,
 		Logger:   logger, Config: cfg, Now: clock, Today: timezone.CalendarDateClock(clock),

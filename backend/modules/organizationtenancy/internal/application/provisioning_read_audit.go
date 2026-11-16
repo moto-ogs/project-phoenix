@@ -31,6 +31,9 @@ func (p *Provisioning) RecordOperatorRead(ctx context.Context, access organizati
 	if access.AnnouncementID > 0 {
 		resourceID = &access.AnnouncementID
 	}
+	if access.TagScanID > 0 {
+		resourceID = &access.TagScanID
+	}
 	if resource == domain.AuditResourceSchool && access.SchoolID > 0 {
 		resourceID = &access.SchoolID
 	}

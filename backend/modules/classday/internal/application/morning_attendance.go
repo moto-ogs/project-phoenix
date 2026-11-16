@@ -27,8 +27,9 @@ type (
 // MorningAttendanceDependencies wire the morning attendance (#4790). Without
 // Store or Scope the report fills in nothing beyond reported absences, the
 // write verdict stays false and the write answers
-// classday.ErrMorningAttendanceNotConfigured. Now is the clock "today" is
-// taken from; nil uses the wall clock.
+// classday.ErrMorningAttendanceNotConfigured. Now is the clock of the whole
+// class day (ADR 0239): "today", the access-log stamps and the export dates
+// read it; nil uses the wall clock.
 type MorningAttendanceDependencies struct {
 	Store MorningAttendance
 	Scope MorningAttendanceScope
@@ -64,11 +65,17 @@ type morningAttendance struct {
 	after func(ctx context.Context, in classday.MorningAttendanceWrite, date calendar.Date, newlyAbsent []int64) error
 }
 
-func newMorningAttendance(deps ClassDayDependencies) morningAttendance {
-	today := calendar.TodayDate
-	if now := deps.Now; now != nil {
-		today = func() calendar.Date { return calendar.DateFromTime(now()) }
+// clock is the composition's Now; a seam a test builds without one reads the
+// wall clock.
+func (d MorningAttendanceDependencies) clock() func() time.Time {
+	if d.Now != nil {
+		return d.Now
 	}
+	return time.Now
+}
+
+func newMorningAttendance(deps ClassDayDependencies) morningAttendance {
+	today := calendar.CalendarDateClock(deps.clock())
 	return morningAttendance{store: deps.Store, scope: deps.Scope, rosters: deps.Rosters, today: today, changed: deps.MorningChanged}
 }
 

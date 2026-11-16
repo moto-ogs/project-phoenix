@@ -110,7 +110,7 @@ These are the modes in the checked-in configuration, not a production audit:
 |-------------|-----------------|
 | Production app and embedded worker | `sslmode=require`; PostgreSQL TLS is enabled, minimum TLS 1.2. No server identity verification is configured in the app DSN. |
 | Staging and demo app | `sslmode=disable`; no database TLS is configured on these paths. |
-| Local development app templates | `sslmode=require`, without server identity verification. The local test DSN uses `sslmode=disable`. |
+| Local development app templates | Root `.env.example` (Docker and `scripts/dev-native.sh`): `sslmode=require`, without server identity verification. `backend/dev.env.example` (direct `go run`): `sslmode=verify-ca` against the local CA, without host-name check. The local test DSN uses `sslmode=disable`. |
 | Migration/preflight and demo-runtime jobs | DSNs come from SOPS; their effective TLS modes cannot be established from the plaintext repository configuration. |
 | Backup and restore in the PostgreSQL container | Local Unix socket, not TCP; TLS does not apply to that socket path. |
 

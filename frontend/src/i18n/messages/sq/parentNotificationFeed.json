@@ -1,0 +1,21 @@
+{
+  "bell": "Lajmërime",
+  "bellCount": "Lajmërime ({count})",
+  "badge": "{count} lajmërime të reja",
+  "bellTooltip": "Tregon lajmërimet e shkollës për fëmijët tuaj.",
+  "description": "Lajmërimet e shkollës për fëmijët tuaj, për shembull kur kujdesi anulohet.",
+  "close": "Mbyll",
+  "closeTooltip": "Mbyll lajmërimet.",
+  "section": "Për fëmijët tuaj",
+  "markAllRead": "Shëno të gjitha si të lexuara",
+  "markAllReadTooltip": "Shënon menjëherë të gjitha lajmërimet si të lexuara.",
+  "markAllReadErrorObject": "shënimi si të lexuara",
+  "loadErrorObject": "lajmërimet",
+  "loading": "Lajmërimet po ngarkohen.",
+  "emptyTitle": "Nuk ka lajmërime.",
+  "emptyDescription": "Këtu shihni për shembull kur kujdesi i fëmijës suaj anulohet.",
+  "unread": "E re",
+  "loadMore": "Ngarko më shumë",
+  "loadingMore": "Lajmërime të tjera po ngarkohen.",
+  "loadMoreTooltip": "Tregon lajmërimet më të vjetra."
+}

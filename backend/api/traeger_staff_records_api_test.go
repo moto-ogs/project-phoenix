@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -66,7 +67,7 @@ func newTraegerStaffFixtureWith(t *testing.T, db *bun.DB, now func() time.Time, 
 		Now: now,
 	})
 	require.NoError(t, err)
-	tenantAudit, err := auditCompose.NewTenantPersistence(db)
+	tenantAudit, err := auditCompose.NewTenantPersistence(db, time.Now)
 	require.NoError(t, err)
 	router := chi.NewRouter()
 	router.Use(func(next http.Handler) http.Handler {
@@ -96,7 +97,7 @@ func newTraegerStaffFixtureWith(t *testing.T, db *bun.DB, now func() time.Time, 
 	identity, err := lifecycleTestModule(testpkg.NewDatabase(t, db), unit, GuardianInvitationTestConfig{})
 	require.NoError(t, err)
 	require.NoError(t, mountTraegerStaffRoutes(router, tenantAPI, admin, workforceModule.TimeTracking.TraegerMonths, organizations, persons, membership, tenantAudit.DataAccessLog, sites,
-		workforceModule.TimeTracking.TraegerExports, settings.Traeger, identity))
+		workforceModule.TimeTracking.TraegerExports, settings.Traeger, identity, workforceModule.TimeTracking.Today))
 	office := newTraegerOffice(t, db, portal, "Träger Personal", identityaccess.TraegerRolePersonnel)
 	return testpkg.SessionVerifier(router), portal, admin, unit, office, schoolRoutes
 }
@@ -152,6 +153,24 @@ func staffAccessEntries(t *testing.T, db *bun.DB, organization int64, resource s
 	require.NoError(t, db.NewRaw(`SELECT tenant_id, COUNT(*) AS n FROM audit.data_access_log
 		WHERE resource_type = ? AND actor_role = 'traeger' AND metadata->>'organization_id' = ? GROUP BY tenant_id`,
 		resource, strconv.FormatInt(organization, 10)).Scan(context.Background(), &rows))
+	entries := map[int64]int{}
+	for _, row := range rows {
+		entries[row.TenantID] = row.N
+	}
+	return entries
+}
+
+// staffAccessViews counts the access log entries of one view of the Träger
+// by school.
+func staffAccessViews(t *testing.T, db *bun.DB, organization int64, view string) map[int64]int {
+	t.Helper()
+	var rows []struct {
+		TenantID int64 `bun:"tenant_id"`
+		N        int   `bun:"n"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT tenant_id, COUNT(*) AS n FROM audit.data_access_log
+		WHERE actor_role = 'traeger' AND metadata->>'organization_id' = ? AND metadata->>'view' = ? GROUP BY tenant_id`,
+		strconv.FormatInt(organization, 10), view).Scan(context.Background(), &rows))
 	entries := map[int64]int{}
 	for _, row := range rows {
 		entries[row.TenantID] = row.N
@@ -394,9 +413,33 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.personnel_number_taken")
 	})
 
+	// #4718: the list as PDF, Excel and CSV, without bank or tax values,
+	// logged as its own view at every school it shows.
+	t.Run("the export lists the records and logs its own view", func(t *testing.T) {
+		before := staffAccessViews(t, db, office.organization, workforce.TraegerStaffViewOverviewExport)
+		rec := traegerJSON(t, router, office.token, http.MethodGet, "/traeger/staff-records/export", nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, "text/csv; charset=utf-8", rec.Header().Get("Content-Type"))
+		body := strings.TrimPrefix(rec.Body.String(), "\xEF\xBB\xBF")
+		lines := strings.Split(strings.TrimSpace(body), "\n")
+		require.Len(t, lines, 3, body)
+		assert.Equal(t, "Nachname;Vorname;Geburtsdatum;Personalnummer;Einsatzorte", strings.TrimSpace(lines[0]))
+		assert.Contains(t, body, "Keller;Jonas;;70002;Träger Personal OGS Süd")
+		assert.Contains(t, body, "Sommer-Berg;Mira;;70005;Träger Personal OGS Nord, Träger Personal OGS Süd")
+		assert.NotContains(t, body, "3000", "no bank value, not even its mask")
+		after := staffAccessViews(t, db, office.organization, workforce.TraegerStaffViewOverviewExport)
+		assert.Equal(t, map[int64]int{north: before[north] + 1, south: before[south] + 1}, after)
+
+		assertTraegerListFormats(t, router, office.token, "/traeger/staff-records/export", "personalakten")
+		logged := staffAccessViews(t, db, office.organization, workforce.TraegerStaffViewOverviewExport)
+		assert.Equal(t, after[north]+2, logged[north], "the PDF and the Excel export are logged like the CSV")
+	})
+
 	t.Run("no role without the right and no other Träger reaches the records", func(t *testing.T) {
 		overviewOnly := newTraegerOffice(t, db, portal, "Träger Übersicht", identityaccess.TraegerRoleReadOnly)
 		rec := traegerJSON(t, router, overviewOnly.token, http.MethodGet, "/traeger/staff-records/", nil)
+		assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+		rec = traegerJSON(t, router, overviewOnly.token, http.MethodGet, "/traeger/staff-records/export", nil)
 		assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 		other := newTraegerOffice(t, db, portal, "Träger Fremd", identityaccess.TraegerRolePersonnel)
 		staffRelease(t, db, other.organization)

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // OwnAbsenceWrites are the staff member's absence writes that may cascade an
@@ -47,6 +48,8 @@ type Resource struct {
 	// absenceMails says whether the approvers got the notice of a waiting
 	// request by mail (#7058); nil leaves the route away.
 	absenceMails workforce.AbsenceMailStatus
+	// today is the day a missing ?year= defaults to.
+	today func() calendar.Date
 }
 
 // Dependencies are the collaborators of the time-tracking resource.
@@ -71,6 +74,8 @@ type Dependencies struct {
 	// AbsenceMails serves the mail status of the own requests (#7058);
 	// optional.
 	AbsenceMails workforce.AbsenceMailStatus
+	// Today is the composition's calendar day (ADR 0239); required.
+	Today func() calendar.Date
 }
 
 // NewResource creates a new time-tracking resource.
@@ -78,8 +83,8 @@ func NewResource(deps Dependencies) *Resource {
 	if deps.StaffShifts != nil && deps.ShiftResponses == nil {
 		panic("time tracking resource: shift responses are required with staff shifts")
 	}
-	if deps.WorkSessions == nil || deps.StaffAbsences == nil || deps.AbsenceWrites == nil || deps.Staff == nil || deps.Allowances == nil || deps.AllowanceResponses == nil || deps.Identity == nil || deps.WithinTenant == nil {
-		panic("time tracking resource: work sessions, absences, absence writes, staff directory, allowances with their responses, identity and tenant runtime are required")
+	if deps.WorkSessions == nil || deps.StaffAbsences == nil || deps.AbsenceWrites == nil || deps.Staff == nil || deps.Allowances == nil || deps.AllowanceResponses == nil || deps.Identity == nil || deps.WithinTenant == nil || deps.Today == nil {
+		panic("time tracking resource: work sessions, absences, absence writes, staff directory, allowances with their responses, identity, tenant runtime and day clock are required")
 	}
 	return &Resource{
 		WorkSessionService:     deps.WorkSessions,
@@ -97,5 +102,6 @@ func NewResource(deps Dependencies) *Resource {
 		withinTenant:           deps.WithinTenant,
 		shiftResponses:         deps.ShiftResponses,
 		absenceMails:           deps.AbsenceMails,
+		today:                  deps.Today,
 	}
 }

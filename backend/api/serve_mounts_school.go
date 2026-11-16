@@ -171,7 +171,7 @@ func mountSchoolPortalRoutes(
 	// The class-day surface reads the class-day projection (#2701): the day
 	// report over Enrollment's day roster and the arrival-exception write
 	// seam (#2970) behind its one public capability.
-	classDayResource := classdayHTTP.NewResource(classDay.ClassDay, logger.With("handler", "class-day"))
+	classDayResource := classdayHTTP.NewResource(classDay.ClassDay, logger.With("handler", "class-day"), classDay.Today)
 	// The calendar of moto schule (#4798): the same calendar service as
 	// /api/calendar, behind calendar:school and the school-portal mantle.
 	schoolCalendar := calendarAPI.NewResource(calendarApp, nil, logger.With("handler", "school-calendar"))

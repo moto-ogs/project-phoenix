@@ -206,6 +206,12 @@ func TestHolidayAllocationByCriteriaWaitsForTheOfficeDecision(t *testing.T) {
 	assert.Equal(t, "parent", pending[0].Criteria[0].Source)
 	require.NotNil(t, board.Weeks[0].Free)
 	assert.Equal(t, 1, *board.Weeks[0].Free)
+	exportPath := holidayPeriodPath(a.period.ID) + "/allocation/export"
+	export := traegerJSON(t, a.traeger, a.office.token, http.MethodGet, exportPath, nil)
+	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
+	assert.Contains(t, export.Body.String(), ";Offen;1;", "the open registrations in the order of the proposal (#4718)")
+	assert.Contains(t, export.Body.String(), ";Platz;;Berufstätig;;")
+	assertTraegerListFormats(t, a.traeger, a.office.token, exportPath, "vergabe-winterferien-2027")
 
 	rec = a.decide(t, decision(pending[1], "placed", ""))
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
@@ -244,6 +250,10 @@ func TestHolidayAllocationByCriteriaWaitsForTheOfficeDecision(t *testing.T) {
 	history := a.detail(t, traegerJSON(t, a.traeger, a.office.token, http.MethodGet, a.registrationPath(early.ID, ""), nil)).History
 	assert.Equal(t, "allocate", history[len(history)-1].Action, "the decision is in the registration's trail")
 	assert.Contains(t, a.auditActions(t), "allocation", "the read of the list is recorded")
+	export = traegerJSON(t, a.traeger, a.office.token, http.MethodGet, exportPath, nil)
+	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
+	assert.Contains(t, export.Body.String(), ";Entschieden;1;", "the decisions of the Büro")
+	assert.Contains(t, export.Body.String(), ";Platz;Warteliste;Berufstätig;Kein Nachweis der Berufstätigkeit;")
 
 	// After the decision the waiting list of #4699 holds: confirmed, then
 	// cancelled, the placed child frees its place for the waiting one.
@@ -368,7 +378,7 @@ func TestHolidayAllocationModeAndRights(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, rec.Code, "a period by arrival has no allocation list")
 
 	readOnly := newTraegerOffice(t, a.db, a.traeger, "Vergabe Lesend", identityaccess.TraegerRoleReadOnly)
-	for _, path := range []string{holidayPeriodPath(a.period.ID) + "/allocation", "/traeger/holiday-periods/criteria"} {
+	for _, path := range []string{holidayPeriodPath(a.period.ID) + "/allocation", holidayPeriodPath(a.period.ID) + "/allocation/export", "/traeger/holiday-periods/criteria"} {
 		assert.Equal(t, http.StatusForbidden, traegerJSON(t, a.traeger, readOnly.token, http.MethodGet, path, nil).Code, path)
 	}
 	foreign := newTraegerOffice(t, a.db, a.traeger, "Vergabe Fremd", identityaccess.TraegerRoleAdministration)

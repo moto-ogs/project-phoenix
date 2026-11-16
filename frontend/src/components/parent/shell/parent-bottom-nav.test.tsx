@@ -11,6 +11,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import deMessages from "~/i18n/messages/de.generated";
 import { useMediaQuery } from "~/lib/hooks/use-media-query";
 import { ParentBottomNav } from "./parent-bottom-nav";
+import {
+  closeNotificationsSheet,
+  isNotificationsSheetOpen,
+} from "~/components/dashboard/header/notifications-sheet-state";
 
 const pathnameMock = vi.fn(() => "/parents");
 const logoutMock = vi.fn();
@@ -47,7 +51,7 @@ function renderNav(
   return render(
     <NextIntlClientProvider locale="de" messages={deMessages}>
       <ParentBottomNav
-        badges={{ messages: 0, news: 0 }}
+        badges={{ messages: 0, news: 0, notifications: 0 }}
         gates={{ news: true, mealPlan: true }}
         childCount={2}
         {...overrides}
@@ -130,7 +134,9 @@ describe("ParentBottomNav", () => {
   });
 
   it("shows the unread messages count on the Nachrichten target", () => {
-    const { container } = renderNav({ badges: { messages: 3, news: 0 } });
+    const { container } = renderNav({
+      badges: { messages: 3, news: 0, notifications: 0 },
+    });
 
     const messages = container.querySelector(
       '[data-parent-nav-item="messages"]',
@@ -139,10 +145,33 @@ describe("ParentBottomNav", () => {
   });
 
   it("adds the unread news count onto Mehr so a notice stays visible", () => {
-    const { container } = renderNav({ badges: { messages: 0, news: 2 } });
+    const { container } = renderNav({
+      badges: { messages: 0, news: 2, notifications: 0 },
+    });
 
     const more = container.querySelector('[data-parent-nav-item="more"]');
     expect(more).toHaveTextContent("2");
+  });
+
+  // Die Glocke auf dem Telefon (#7140): der Zähler steht an „Mehr“ und an
+  // „Hinweise“, und der Eintrag öffnet das Vollbild-Blatt.
+  it("shows unread notices on Mehr and opens their sheet from it", () => {
+    closeNotificationsSheet();
+    const { container } = renderNav({
+      badges: { messages: 0, news: 0, notifications: 3 },
+    });
+    expect(
+      container.querySelector('[data-parent-nav-item="more"]'),
+    ).toHaveTextContent("3");
+
+    fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
+    const notices = screen.getByRole("button", { name: /Hinweise/ });
+    expect(notices).toHaveTextContent("3");
+    expect(isNotificationsSheetOpen()).toBe(false);
+
+    fireEvent.click(notices);
+    expect(isNotificationsSheetOpen()).toBe(true);
+    closeNotificationsSheet();
   });
 
   it("opens the Mehr sheet with the secondary targets", () => {

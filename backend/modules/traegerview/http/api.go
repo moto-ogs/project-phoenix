@@ -20,14 +20,14 @@ import (
 type Resource struct {
 	overview traegerview.Overview
 	reports  traegerview.Reports
-	lists    ListRenderer
+	lists    common.ListRenderer
 }
 
 // NewResource builds the resource. reports answers the heatmap of arrival
 // and pickup times (#4714), the comparison of schools (#4715) and the daily
 // attendance report of Mecklenburg-Vorpommern (#4717); lists renders the
 // exports as PDF, Excel or CSV (#4718).
-func NewResource(overview traegerview.Overview, reports traegerview.Reports, lists ListRenderer) *Resource {
+func NewResource(overview traegerview.Overview, reports traegerview.Reports, lists common.ListRenderer) *Resource {
 	if overview == nil || reports == nil || lists == nil {
 		panic("traeger view http: the overview, the reports and the list renderer are required")
 	}
@@ -43,9 +43,11 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 	protectedTraegerRoutes(r, func(r chi.Router, _ common.Middleware) {
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/", rs.listSchools)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/export", rs.listSchoolsExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/key-date-counts", rs.keyDateCounts)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/key-date-counts/export", rs.keyDateCountsExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/alerts", rs.schoolsAlerts)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/alerts/export", rs.schoolsAlertsExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/occupancy", rs.occupancy)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/occupancy/export", rs.occupancyExport)
 		// The utilization over time is a report (#4713, ADR 0241): the

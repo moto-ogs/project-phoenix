@@ -138,6 +138,44 @@ func TestPasswordLoginLockExpiresAndSuccessfulCredentialsResetAllPortals(t *test
 	}
 }
 
+// Failures spread over a long time must not add up to a lock (#7214): a
+// failure older than the lock duration no longer counts.
+func TestPasswordFailuresDecayAfterTheLockDuration(t *testing.T) {
+	t.Parallel()
+	for _, portal := range []string{"tenant", "operator"} {
+		t.Run(portal, func(t *testing.T) {
+			testpkg.OwnTenant(t)
+			db, id, login, password := passwordLoginFixture(t, portal)
+			invalid := identityaccess.ErrInvalidCredentials
+			table := "auth.accounts"
+			if portal == "operator" {
+				invalid, table = identityaccess.ErrOperatorInvalidCredentials, "platform.operators"
+			}
+			wrong := testpkg.NewTestPassword()
+			for range 4 {
+				require.ErrorIs(t, login(wrong), invalid)
+			}
+			var failedAt time.Time
+			require.NoError(t, db.NewRaw(`SELECT password_failed_at FROM `+table+` WHERE id = ?`, id).Scan(t.Context(), &failedAt))
+			require.WithinDuration(t, time.Now(), failedAt, 5*time.Second)
+			// Age the last failure past the lock duration instead of waiting.
+			_, err := db.NewRaw(`UPDATE `+table+` SET password_failed_at = ? WHERE id = ?`, time.Now().Add(-16*time.Minute), id).Exec(t.Context())
+			require.NoError(t, err)
+			require.ErrorIs(t, login(wrong), invalid)
+			var attempts int
+			require.NoError(t, db.NewRaw(`SELECT password_attempts FROM `+table+` WHERE id = ?`, id).Scan(t.Context(), &attempts))
+			require.Equal(t, 1, attempts, "an aged failure no longer counts")
+			for range 3 {
+				require.ErrorIs(t, login(wrong), invalid)
+			}
+			require.NoError(t, login(password), "eight failures in two bursts do not lock")
+			var cleared *time.Time
+			require.NoError(t, db.NewRaw(`SELECT password_failed_at FROM `+table+` WHERE id = ?`, id).Scan(t.Context(), &cleared))
+			require.Nil(t, cleared, "a success clears the failure time")
+		})
+	}
+}
+
 func TestConcurrentPasswordFailuresCannotLoseAttemptsOrLockOtherIdentities(t *testing.T) {
 	t.Parallel()
 	db, id, login, password := passwordLoginFixture(t, "tenant")

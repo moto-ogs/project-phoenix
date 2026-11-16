@@ -15,16 +15,21 @@ import (
 // changed or who was removed learns it by mail in the unit of the change.
 
 // ListTraegerAccountHistory lists one page of the changes of the Träger of
-// the acting person, newest first, with the address of each acting person.
-func (t *TraegerAccounts) ListTraegerAccountHistory(ctx context.Context, actor identityaccess.TraegerActor, beforeID int64) (identityaccess.TraegerAccountHistory, error) {
+// the acting person, or the whole history for its export, newest first,
+// with the address of each acting person.
+func (t *TraegerAccounts) ListTraegerAccountHistory(ctx context.Context, actor identityaccess.TraegerActor, query identityaccess.TraegerAccountHistoryQuery) (identityaccess.TraegerAccountHistory, error) {
 	result := identityaccess.TraegerAccountHistory{Entries: []identityaccess.TraegerAccountHistoryEntry{}}
+	size := identityaccess.TraegerAccountHistoryPageSize
+	if query.All {
+		size = identityaccess.TraegerAccountHistoryExportLimit
+	}
 	err := t.run(ctx, actor, func(txCtx context.Context, _ traegerUnit) error {
-		changes, err := t.audit.ListTraegerAccountChanges(txCtx, actor.OrganizationID, beforeID, identityaccess.TraegerAccountHistoryPageSize+1)
+		changes, err := t.audit.ListTraegerAccountChanges(txCtx, actor.OrganizationID, query.BeforeID, size+1)
 		if err != nil {
 			return err
 		}
-		if len(changes) > identityaccess.TraegerAccountHistoryPageSize {
-			changes, result.HasMore = changes[:identityaccess.TraegerAccountHistoryPageSize], true
+		if len(changes) > size {
+			changes, result.HasMore = changes[:size], true
 		}
 		emails, err := t.actorEmails(txCtx, actor.OrganizationID, changes)
 		if err != nil {
@@ -32,6 +37,11 @@ func (t *TraegerAccounts) ListTraegerAccountHistory(ctx context.Context, actor i
 		}
 		for _, change := range changes {
 			result.Entries = append(result.Entries, historyEntry(change, emails[change.ActorAccountID]))
+		}
+		if query.All {
+			// The file holds the addresses of the Büro: its download stands
+			// in the ledger like a listing of the members (#4718).
+			return t.record(txCtx, actor, identityaccess.TraegerAccountHistoryExported, nil, nil, nil, nil)
 		}
 		return nil
 	})

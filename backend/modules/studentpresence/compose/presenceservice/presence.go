@@ -4,11 +4,12 @@
 package presenceservice
 
 import (
+	"time"
+
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
@@ -70,11 +71,10 @@ func NewPresence(deps PresenceDependencies, options ...PresenceOption) studentpr
 	return presence.NewPresenceFacade(presence.NewService(deps, options...), deps)
 }
 
-// NewPresenceCleanup builds the data-retention cleanup. settings supplies the
-// visit retention window for children without an accepted consent; the
-// optional clock fixes the calendar day stale records are compared against.
-func NewPresenceCleanup(presenceRetention PresenceRetention, supervisors ports.GroupSupervisorRepository, deletions DeletionAudit, settings VisitRetentionSettings, today ...func() calendar.Date) studentpresence.PresenceCleanup {
-	return presence.NewCleanupService(presenceRetention, supervisors, deletions, settings, today...)
+// NewPresenceCleanup builds the data-retention cleanup over the visit retention window of
+// children without an accepted consent (settings) and the clock now (ADR 0239).
+func NewPresenceCleanup(presenceRetention PresenceRetention, supervisors ports.GroupSupervisorRepository, deletions DeletionAudit, settings VisitRetentionSettings, now func() time.Time) studentpresence.PresenceCleanup {
+	return presence.NewCleanupService(presenceRetention, supervisors, deletions, settings, now)
 }
 
 // The student display and visitor reads the root binds over the People

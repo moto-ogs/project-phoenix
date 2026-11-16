@@ -50,13 +50,15 @@ type pastPresenceScope struct {
 type PresenceHistoryWriter struct {
 	store ports.Store
 	tx    ports.Transaction
+	// now bounds the past: a day from its Berlin day on is refused.
+	now func() time.Time
 }
 
-func NewPresenceHistory(store ports.Store, tx ports.Transaction) *PresenceHistoryWriter {
-	if store == nil || tx == nil {
+func NewPresenceHistory(store ports.Store, tx ports.Transaction, now func() time.Time) *PresenceHistoryWriter {
+	if store == nil || tx == nil || now == nil {
 		panic("student presence: all presence history dependencies are required")
 	}
-	return &PresenceHistoryWriter{store: store, tx: tx}
+	return &PresenceHistoryWriter{store: store, tx: tx, now: now}
 }
 
 // RecordPresenceHistory writes finished care days before today in one
@@ -67,7 +69,7 @@ func (w *PresenceHistoryWriter) RecordPresenceHistory(ctx context.Context, days 
 	if len(days) == 0 {
 		return 0, nil
 	}
-	if err := validatePastPresenceDays(days, calendar.TodayDate()); err != nil {
+	if err := validatePastPresenceDays(days, calendar.DateFromTime(w.now())); err != nil {
 		return 0, err
 	}
 	err := w.tx.Run(ctx, func(txCtx context.Context) error {

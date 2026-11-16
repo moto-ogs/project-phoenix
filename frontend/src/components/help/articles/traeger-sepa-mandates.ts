@@ -80,6 +80,14 @@ export function traegerSepaMandatesTopic(): HelpTopic {
           "Wählen Sie `Widerrufen`.",
         ],
       },
+      {
+        title: "Mandate herunterladen",
+        steps: [
+          "Wählen Sie `Familien und Zahlung` und dann den Reiter `Lastschrift`.",
+          "Wählen Sie `Herunterladen` und dann `PDF`, `Excel` oder `CSV`. Die Datei enthält alle Mandate, auch die widerrufenen.",
+          "Die Datei enthält personenbezogene Daten. Jeder Download wird protokolliert.",
+        ],
+      },
     ],
     result:
       "Im nächsten Monatslauf steht auf jeder Rechnung mit Lastschrift die Vorabankündigung: Betrag, Tag der Abbuchung, Konto (verdeckt), Gläubiger-ID und Mandatsreferenz. Der Betrag ist das, was die Familie zahlt, also ohne den Anteil eines Kostenträgers.",

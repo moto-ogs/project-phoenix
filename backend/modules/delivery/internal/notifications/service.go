@@ -229,6 +229,8 @@ type router struct {
 	// feedReader is the notification feed (#7148): its store and clock, and
 	// the read side the router serves; nil rejects feed events.
 	*feedReader
+	// guardian serves the feed of the parents portal (#7140).
+	guardian *guardianFeed
 }
 
 // DeliveryObserver records one synchronous transport outcome. All arguments
@@ -269,6 +271,9 @@ func NewServiceWithFeed(settings RouterSettings, logger *slog.Logger, observe De
 	for _, channel := range channels {
 		if signal, ok := channel.(feedSignalChannel); ok {
 			service.signal = signal.signalFeed
+		}
+		if sse, ok := channel.(*sseChannel); ok {
+			service.guardian = newGuardianFeed(sse, feed, logger, now)
 		}
 	}
 	return service

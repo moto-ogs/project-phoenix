@@ -128,24 +128,29 @@ func BuildSchoolVacations(settings settingsCompose.SettingsService) (schoolcalen
 	}, "", nil)
 }
 
-// BuildServeWorkforce composes Workforce over School Membership; a
-// Sonderarbeitszeit never sets a target on a statutory holiday.
-func BuildServeWorkforce(db transactionruntime.Database, membership schoolmembership.Capability, calendar schoolcalendar.Days) (workforceCompose.WorkTime, error) {
+// BuildServeWorkforce composes Workforce over School Membership and the
+// root's clock; a Sonderarbeitszeit never sets a target on a statutory holiday.
+func BuildServeWorkforce(db transactionruntime.Database, env RootEnvironment, membership schoolmembership.Capability, calendar schoolcalendar.Days) (workforceCompose.WorkTime, error) {
 	return workforceCompose.New(workforceCompose.Dependencies{
 		LockStaffAssignment: WorkforceStaffAssignmentLock(membership),
 		DB:                  db.Pool(),
 		LiveStaffIDs:        WorkforceLiveStaffIDs(membership),
 		StatutoryHolidays:   calendar.TenantHolidayDates,
+		Now:                 env.Now,
 		Observe: func(observation workforceCompose.Observation) {
 			observability.ObserveWorkforceOperation(observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows, observation.Stats.StatementDuration, workforceModule.ErrorCode(observation.Err), observation.Err)
 		},
 	})
 }
 
-// BuildServeAppointments composes Appointments.
-func BuildServeAppointments(db transactionruntime.Database) (appointmentsModule.Owner, error) {
+// BuildServeAppointments composes Appointments over the clock of the
+// services; a nil clock is the real one (RootEnvironment.Now).
+func BuildServeAppointments(db transactionruntime.Database, now func() time.Time) (appointmentsModule.Owner, error) {
+	if now == nil {
+		now = time.Now
+	}
 	return appointmentsCompose.New(appointmentsCompose.Dependencies{
-		DB: db.Pool(),
+		DB: db.Pool(), Now: now,
 		Observe: func(observation appointmentsCompose.Observation) {
 			observability.ObserveAppointmentsOperation(observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows, observation.Stats.DuplicatePreventionConflicts, observation.Stats.StatementDuration, appointmentsModule.ErrorCode(observation.Err), observation.Err)
 		},

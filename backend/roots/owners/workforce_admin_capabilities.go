@@ -27,6 +27,8 @@ type WorkforceAdminCapabilities struct {
 	// TraegerKeep tells the school which employments its Träger keeps in
 	// its staff records (#4705).
 	TraegerKeep workforceModule.StaffTraegerKeep
+	// Today is the time tracking's calendar day; nil without it.
+	Today func() timezone.Date
 }
 
 // NewWorkforceAdminCapabilities bundles the staff directory and the
@@ -48,6 +50,7 @@ func NewWorkforceAdminCapabilities(people peoplePorts.PersonDirectory, staffAdmi
 		capabilities.Overview = timeTracking.Overview
 		capabilities.AuditLog = timeTracking.AuditLog
 		capabilities.TimeExport = timeTracking.TimeExport
+		capabilities.Today = timeTracking.Today
 	}
 	return capabilities
 }

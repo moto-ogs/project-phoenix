@@ -3452,6 +3452,10 @@ function SearchPageContent() {
             />
           ) : undefined
         }
+        // Unter `xl` hat die Seite eigene Auslöser für den Modus: den
+        // schwebenden Knopf (`md` bis `xl`) und `SchoolCheckinModeMobile`
+        // darunter. In der Suchzeile stünde er dort doppelt (#7132).
+        primaryActionDesktopOnly
         search={{
           value: searchTerm,
           onChange: updateSearchTerm,

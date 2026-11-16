@@ -10,7 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The school's side of the Träger's exports (#4712, ADR 0249): the month of
+// The school's side of the Träger's exports (#4712, ADR 0250): the month of
 // each employment in the values the payroll file books, and its days for the
 // time export. Both run in the school's tenant transaction the Träger opens
 // and reuse the computations of the school's own exports, so the Träger's

@@ -373,6 +373,12 @@
       "class": "unavailable",
       "parameters": [],
       "legacy": "identity.mail_block_unreadable"
+    },
+    {
+      "code": "identity.logout_not_revoked",
+      "class": "unavailable",
+      "parameters": [],
+      "legacy": "identity.logout_not_revoked"
     }
   ]
 }

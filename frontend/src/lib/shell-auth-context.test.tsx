@@ -65,6 +65,8 @@ vi.mock("~/lib/school-url", () => ({
 
 vi.mock("~/lib/session-cache", () => ({
   clearSessionCache: mockClearSessionCache,
+  DELIBERATE_LOGOUT_KEY: "deliberateLogout",
+  LOGOUT_NOT_REVOKED_KEY: "logoutNotRevoked",
 }));
 
 vi.mock("~/lib/staff-preview-api", () => ({
@@ -95,6 +97,7 @@ import {
   useShellAuth,
 } from "./shell-auth-context";
 import { installSessionEndBarrier } from "./session-end-state";
+import { LOGOUT_NOT_REVOKED_KEY } from "./session-cache";
 import { portalAuthPath, portalLoginPath } from "./portal-paths";
 import { sidebarMemoryKey } from "./sidebar-memory";
 import { ApiError } from "./api-error";
@@ -454,27 +457,11 @@ describe("TeacherShellProvider", () => {
   // #5194: only the revoked family ends the session's access tokens, so a
   // failed revocation keeps the session and reaches the caller instead of
   // passing for a logout.
-  it.each([
-    [
-      "an unreachable logout route",
-      () => Promise.reject(new Error("network error")),
-    ],
-    [
-      "a revocation the backend could not run",
-      () =>
-        Promise.resolve(
-          Response.json(
-            {
-              status: 503,
-              detail: "logout could not revoke the session",
-              code: "general.unavailable",
-            },
-            { status: 503 },
-          ),
-        ),
-    ],
-  ])("keeps the session after %s", async (_name, respond) => {
-    vi.stubGlobal("fetch", vi.fn().mockImplementation(respond));
+  it("keeps the session when the logout route is unreachable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("network error")),
+    );
     mockUseSession.mockReturnValue({
       data: { user: { name: "User", email: "user@example.com", roles: [] } },
       status: "authenticated",
@@ -485,6 +472,102 @@ describe("TeacherShellProvider", () => {
     await expect(result.current.logout()).rejects.toThrow();
     expect(mockSignOut).not.toHaveBeenCalled();
     expect(mockClearSessionCache).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(LOGOUT_NOT_REVOKED_KEY)).toBeNull();
+
+    vi.unstubAllGlobals();
+  });
+
+  // #7209: the person walks away believing they are signed out, so a
+  // revocation the server refused still ends the session on this device;
+  // the login page says that it ends at its expiry.
+  it("ends the session on this device when the backend could not revoke it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json(
+          {
+            status: 503,
+            detail: "logout could not revoke the session",
+            code: "identity.logout_not_revoked",
+          },
+          { status: 503 },
+        ),
+      ),
+    );
+    mockUseSession.mockReturnValue({
+      data: { user: { name: "User", email: "user@example.com", roles: [] } },
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(() => useShellAuth(), { wrapper });
+    await result.current.logout();
+
+    expect(mockSignOut).toHaveBeenCalledWith(
+      { callbackUrl: "/" },
+      expect.any(AbortSignal),
+    );
+    expect(mockClearSessionCache).toHaveBeenCalled();
+    expect(mockShowLogoutError).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(LOGOUT_NOT_REVOKED_KEY)).toBe("1");
+
+    vi.unstubAllGlobals();
+    sessionStorage.removeItem(LOGOUT_NOT_REVOKED_KEY);
+  });
+
+  it("claims no ended session when the page leaves during the logout", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { status: 503, detail: "x", code: "identity.logout_not_revoked" },
+            { status: 503 },
+          ),
+        ),
+    );
+    // The page leaves while the cookie deletion runs: the exit is cancelled.
+    mockSignOut.mockImplementationOnce(() => {
+      window.dispatchEvent(new Event("pagehide"));
+      return Promise.reject(new DOMException("aborted", "AbortError"));
+    });
+    mockUseSession.mockReturnValue({
+      data: { user: { name: "User", email: "user@example.com", roles: [] } },
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(() => useShellAuth(), { wrapper });
+    await result.current.logout();
+
+    expect(mockSignOut).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.getItem(LOGOUT_NOT_REVOKED_KEY)).toBeNull();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("claims no ended session when the cookie deletion fails after a refused revocation", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { status: 503, detail: "x", code: "identity.logout_not_revoked" },
+            { status: 503 },
+          ),
+        ),
+    );
+    mockSignOut.mockRejectedValueOnce(new Error("signout failed"));
+    mockUseSession.mockReturnValue({
+      data: { user: { name: "User", email: "user@example.com", roles: [] } },
+      status: "authenticated",
+    });
+
+    const { result } = renderHook(() => useShellAuth(), { wrapper });
+
+    await expect(result.current.logout()).rejects.toThrow();
+    expect(mockShowLogoutError).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.getItem(LOGOUT_NOT_REVOKED_KEY)).toBeNull();
 
     vi.unstubAllGlobals();
   });
@@ -973,8 +1056,9 @@ describe("logout leaves no personal entries behind (#5000)", () => {
 });
 
 // #5194: every portal's logout revokes its own refresh-token family on the
-// server before Auth.js clears the cookie; a failed revocation keeps the
-// session instead of passing for a logout.
+// server before Auth.js clears the cookie. A revocation the server refused
+// still ends the session on this device and marks it for the login page
+// (#7209).
 describe("every portal logout revokes its session family (#5194)", () => {
   const portals = [
     ["OGS", TeacherShellProvider, "/api/auth/logout"],
@@ -1029,33 +1113,50 @@ describe("every portal logout revokes its session family (#5194)", () => {
   );
 
   it.each(portals)(
-    "%s: a failed revocation keeps the session",
-    async (_portal, Provider) => {
+    "%s: a refused revocation still ends the session on this device",
+    async (_portal, Provider, path) => {
+      const order: string[] = [];
       vi.stubGlobal(
         "fetch",
-        vi.fn(async () =>
-          Response.json(
+        vi.fn(async (url: string) => {
+          if (url === path) order.push("revoke");
+          return Response.json(
             {
               status: 503,
               detail: "logout could not revoke the session",
-              code: "general.unavailable",
+              code: "identity.logout_not_revoked",
             },
             { status: 503 },
-          ),
-        ),
+          );
+        }),
       );
-
-      await expect(
-        renderPortal(Provider).result.current.logout(),
-      ).rejects.toThrow();
-      expect(mockSignOut).not.toHaveBeenCalled();
-      // The shell shows the failure once, with a retry (#5126); the modal
-      // only closes.
-      expect(mockShowLogoutError).toHaveBeenCalledTimes(1);
-      expect(mockShowLogoutError).toHaveBeenCalledWith(expect.anything(), {
-        object: "die Abmeldung",
-        retry: expect.any(Function),
+      mockSignOut.mockImplementation(() => {
+        order.push("signOut");
+        return Promise.resolve(undefined);
       });
+
+      await renderPortal(Provider).result.current.logout();
+
+      expect(order).toEqual(["revoke", "signOut"]);
+      expect(mockShowLogoutError).not.toHaveBeenCalled();
+      expect(sessionStorage.getItem(LOGOUT_NOT_REVOKED_KEY)).toBe("1");
+      sessionStorage.removeItem(LOGOUT_NOT_REVOKED_KEY);
+    },
+  );
+
+  it.each(portals)(
+    "%s: a confirmed revocation leaves no marker of an earlier refusal",
+    async (_portal, Provider) => {
+      sessionStorage.setItem(LOGOUT_NOT_REVOKED_KEY, "1");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => new Response(null, { status: 204 })),
+      );
+      mockSignOut.mockResolvedValue(undefined);
+
+      await renderPortal(Provider).result.current.logout();
+
+      expect(sessionStorage.getItem(LOGOUT_NOT_REVOKED_KEY)).toBeNull();
     },
   );
 });
@@ -1174,7 +1275,7 @@ describe("endTraegerSession (#6955)", () => {
     expect(fail).not.toHaveBeenCalled();
   });
 
-  it("keeps the session and its data when the server cannot revoke it", async () => {
+  it("ends the session and its data on this device when the server cannot revoke it (#7209)", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({ status: 500, code: "general.server", detail: "x" }),
@@ -1184,6 +1285,18 @@ describe("endTraegerSession (#6955)", () => {
         },
       ),
     );
+
+    await endTraegerSession();
+
+    expect(fail).not.toHaveBeenCalled();
+    expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
+    expect(localStorage.getItem("supervision-last-session")).toBeNull();
+    expect(sessionStorage.getItem(LOGOUT_NOT_REVOKED_KEY)).toBe("1");
+    sessionStorage.removeItem(LOGOUT_NOT_REVOKED_KEY);
+  });
+
+  it("keeps the session and its data when the logout route is unreachable", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
 
     await expect(endTraegerSession()).rejects.toThrow();
 

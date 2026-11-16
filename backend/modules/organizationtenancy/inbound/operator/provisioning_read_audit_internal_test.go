@@ -62,3 +62,72 @@ func TestOperatorReadAuditPrecedesDisclosure(t *testing.T) {
 		})
 	}
 }
+
+// TestOperatorReadAuditNamesTheAffectedRouteObject pins #7212: the audit in
+// front of a change of one school access or one RFID scan stores that
+// object's ID, and the list routes without it stay valid.
+func TestOperatorReadAuditNamesTheAffectedRouteObject(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, method, pattern, path string
+		view                        organizationtenancy.OperatorReadView
+		want                        organizationtenancy.OperatorReadAccess
+	}{
+		{name: "school access update", method: http.MethodPut, pattern: "/accounts/{accountId}/tenants/{tenantId}", path: "/accounts/84/tenants/42",
+			view: organizationtenancy.ReadAccountTenants, want: organizationtenancy.OperatorReadAccess{AccountID: 84, SchoolID: 42}},
+		{name: "school access revoke", method: http.MethodDelete, pattern: "/accounts/{accountId}/tenants/{tenantId}", path: "/accounts/84/tenants/42",
+			view: organizationtenancy.ReadAccountTenants, want: organizationtenancy.OperatorReadAccess{AccountID: 84, SchoolID: 42}},
+		{name: "school access list", method: http.MethodGet, pattern: "/accounts/{accountId}/tenants", path: "/accounts/84/tenants",
+			view: organizationtenancy.ReadAccountTenants, want: organizationtenancy.OperatorReadAccess{AccountID: 84}},
+		{name: "scan resolve", method: http.MethodPost, pattern: "/unregistered-tag-scans/{id}/resolve", path: "/unregistered-tag-scans/123/resolve",
+			view: organizationtenancy.ReadUnregisteredTagScans, want: organizationtenancy.OperatorReadAccess{TagScanID: 123}},
+		{name: "scan list", method: http.MethodGet, pattern: "/unregistered-tag-scans", path: "/unregistered-tag-scans",
+			view: organizationtenancy.ReadUnregisteredTagScans, want: organizationtenancy.OperatorReadAccess{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			svc := &readAuditService{}
+			resource := NewProvisioningResource(ProvisioningConfig{Service: svc})
+			router := chi.NewRouter()
+			router.MethodFunc(tc.method, tc.pattern, resource.AuditReadAccess(tc.view, func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNoContent)
+			}))
+			req := httptest.NewRequest(tc.method, tc.path, nil)
+			req = req.WithContext(context.WithValue(req.Context(), sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: 7, Scope: "platform"}))
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, req)
+
+			assert.Equal(t, http.StatusNoContent, response.Code)
+			require.Len(t, svc.entries, 1)
+			want := tc.want
+			want.View, want.OperatorID, want.ClientIP = tc.view, 7, svc.entries[0].ClientIP
+			assert.Equal(t, want, svc.entries[0])
+		})
+	}
+}
+
+// TestOperatorReadAuditRejectsAMalformedRouteObject keeps a malformed ID out
+// of the audit and away from the handler.
+func TestOperatorReadAuditRejectsAMalformedRouteObject(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		pattern, path string
+		view          organizationtenancy.OperatorReadView
+	}{
+		{pattern: "/accounts/{accountId}/tenants/{tenantId}", path: "/accounts/84/tenants/x", view: organizationtenancy.ReadAccountTenants},
+		{pattern: "/unregistered-tag-scans/{id}/resolve", path: "/unregistered-tag-scans/x/resolve", view: organizationtenancy.ReadUnregisteredTagScans},
+	} {
+		svc := &readAuditService{}
+		resource := NewProvisioningResource(ProvisioningConfig{Service: svc})
+		router := chi.NewRouter()
+		router.Post(tc.pattern, resource.AuditReadAccess(tc.view, func(http.ResponseWriter, *http.Request) {
+			t.Fatal("handler reached with a malformed ID")
+		}))
+		req := httptest.NewRequest(http.MethodPost, tc.path, nil)
+		req = req.WithContext(context.WithValue(req.Context(), sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: 7, Scope: "platform"}))
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, req)
+		assert.Equal(t, http.StatusBadRequest, response.Code, tc.path)
+		assert.Empty(t, svc.entries, tc.path)
+	}
+}

@@ -31,9 +31,6 @@ func WithStaffShiftToday(today func() calendar.Date) StaffShiftOption {
 }
 
 func (s *staffShiftService) todayDate() calendar.Date {
-	if s.today == nil {
-		return calendar.TodayDate()
-	}
 	return s.today()
 }
 

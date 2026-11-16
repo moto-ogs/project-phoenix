@@ -65,10 +65,6 @@ func (e *WorkSessionEdit) Validate() error {
 		return errors.New("invalid field name")
 	}
 
-	if e.CreatedAt.IsZero() {
-		e.CreatedAt = time.Now()
-	}
-
 	return nil
 }
 

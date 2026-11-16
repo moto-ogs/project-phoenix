@@ -25,13 +25,25 @@ const (
 // administrative cross-school scope.
 type Database func(context.Context) (bun.IDB, TenantScope, error)
 
-type Store struct{ database Database }
+type Store struct {
+	database Database
+	// now stamps the schedule versions the store writes; New binds the wall
+	// clock, WithClock the composition's (ADR 0239).
+	now func() time.Time
+}
 
 func New(database Database) *Store {
 	if database == nil {
 		panic("workforce postgres: database runtime is required")
 	}
-	return &Store{database: database}
+	return &Store{database: database, now: time.Now}
+}
+
+// WithClock returns the store stamping its writes with now.
+func (s *Store) WithClock(now func() time.Time) *Store {
+	clocked := *s
+	clocked.now = now
+	return &clocked
 }
 
 // calendarDate binds the module's YYYY-MM-DD strings to PostgreSQL DATE
@@ -556,7 +568,7 @@ func (s *Store) CloseStaffSchedules(ctx context.Context, staffIDs []int64, until
 	query := db.NewUpdate().
 		TableExpr(tableStaffWorkSchedules).
 		Set("valid_until = GREATEST(?::date, valid_from)", calendarDate(until)).
-		Set("updated_at = ?", time.Now()).
+		Set("updated_at = ?", s.now()).
 		Where("staff_id IN (?)", bun.List(staffIDs)).
 		Where("valid_until IS NULL")
 	query = scopeQuery(scope, query, "tenant_id = ?")
@@ -584,7 +596,7 @@ func (s *Store) InsertStaffSchedules(ctx context.Context, values []domain.StaffW
 	if err != nil {
 		return domain.OperationStats{}, err
 	}
-	now := time.Now()
+	now := s.now()
 	rows := make([]staffWorkScheduleRow, 0, len(values))
 	for _, value := range values {
 		startTime, clockErr := optionalClock(value.StartTime)

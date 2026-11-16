@@ -7,7 +7,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 const visitAccessPolicyName = "student_visit_access"
@@ -90,7 +89,7 @@ func (q visitAccessQuery) StudentGroupID(ctx context.Context, studentID int64) (
 }
 
 func (q visitAccessQuery) SupervisedActiveGroupIDs(ctx context.Context, staffID int64) []int64 {
-	day := calendar.TodayDate().String()
+	day := q.resource.today().String()
 	supervisors, err := q.resource.Presence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{StaffID: &staffID, ActiveOn: &day})
 	if err != nil {
 		return nil

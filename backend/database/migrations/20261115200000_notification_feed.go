@@ -96,7 +96,6 @@ var notificationFeedErasureFunctions = []struct {
 	{"platform.school_erasure_plan()", []string{`  {"name": "` + notificationFeedTable + `","predicate": "r.tenant_id = $1"},` + "\n"}},
 	{"platform.school_erasure_preflight(bigint,bigint)", []string{"    " + notificationFeedTable + ",\n"}},
 	{"platform.school_erasure_delete(bigint)", []string{"   SELECT count(*) INTO v_count FROM " + notificationFeedTable + " AS r WHERE r.tenant_id = p_school_id; DELETE FROM " + notificationFeedTable + " AS r WHERE r.tenant_id = p_school_id; v_counts := v_counts || jsonb_build_object('" + notificationFeedTable + "', v_count);\n"}},
-	{"platform.school_erasure_preview(bigint,bigint)", []string{" v_counts := v_counts || jsonb_build_object('" + notificationFeedTable + "',(SELECT count(*) FROM " + notificationFeedTable + " AS r WHERE r.tenant_id = p_school));\n"}},
 	{"platform.school_erasure_assert_empty(bigint,jsonb)", []string{"    SELECT 1 FROM " + notificationFeedTable + " AS r WHERE r.tenant_id = p_school_id\n    UNION ALL\n"}},
 	{"platform.erase_closed_demo_visitors()", []string{"\t\t\t\t\t-- A feed entry of the school (#7148) can name the visitor in its\n\t\t\t\t\t-- title or text; the school is the visitor's alone, so all of\n\t\t\t\t\t-- them go.\n\t\t\t\t\tDELETE FROM " + notificationFeedTable + "\n\t\t\t\t\tWHERE tenant_id = ANY (hidden_schools);\n"}},
 }
