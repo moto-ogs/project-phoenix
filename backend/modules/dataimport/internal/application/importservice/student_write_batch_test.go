@@ -23,7 +23,7 @@ func TestStudentWriteBatchReadFailureFallsBackWithoutRetainingFailure(t *testing
 	t.Parallel()
 	lookupError := errors.New("batch lookup failed")
 	batchReads, scalarReads := 0, 0
-	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{
+	config := &StudentImportConfig{StudentImportDeps: ports.StudentImportDeps{Now: studentImportTestClock,
 		Transactions: writeMatchTransactions{},
 		Persons: PersonDirectoryFuncs{SearchPersonsFunc: func(_ context.Context, filter ports.PersonFilter) ([]ports.Person, error) {
 			if len(filter.Names) > 0 {

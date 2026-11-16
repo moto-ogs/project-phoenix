@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -166,7 +167,7 @@ func TestRouter(t *testing.T) {
 	})
 
 	t.Run("billing seed route is mounted with the billing report", func(t *testing.T) {
-		billing := provisioningoperator.NewBillingResource(stubBillingReport{}, nil, nil, nil)
+		billing := provisioningoperator.NewBillingResource(stubBillingReport{}, nil, nil, func() time.Time { return time.Date(2026, time.November, 2, 9, 0, 0, 0, time.UTC) })
 		router := operatorRouter(operatorIdentity{sessions: operatorTestSessions(t, nil)},
 			provisioningoperator.ProvisioningConfig{ErasureOrderRecords: stubErasureOrderRecords{}}, billing, nil, nil, nil, authRateLimiters{}, http.NotFoundHandler(), nil, nil)
 

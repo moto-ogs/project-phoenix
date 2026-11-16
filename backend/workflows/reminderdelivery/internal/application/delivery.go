@@ -518,11 +518,8 @@ type preparation struct {
 }
 
 func NewPreparation(deps ports.DeliveryDependencies, runtime ports.CommandRuntime) ports.GuardianPreparation {
-	if deps.Appointments == nil || deps.Audiences == nil || deps.Brand == nil || deps.WhenText == nil || deps.NoDelivery == nil {
+	if deps.Appointments == nil || deps.Audiences == nil || deps.Brand == nil || deps.WhenText == nil || deps.NoDelivery == nil || deps.Now == nil {
 		panic("reminder preparation: required inputs missing")
-	}
-	if deps.Now == nil {
-		deps.Now = time.Now
 	}
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()

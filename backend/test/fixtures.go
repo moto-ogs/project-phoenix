@@ -540,25 +540,7 @@ type (
 // This requires a Staff and ActiveGroup to already exist.
 func CreateTestGroupSupervisor(tb testing.TB, db *bun.DB, staffID, activeGroupID int64, role string) *GroupSupervisorRow {
 	tb.Helper()
-
-	supervisor := &GroupSupervisorRow{
-		StaffID:   staffID,
-		GroupID:   activeGroupID,
-		Role:      role,
-		StartDate: calendar.TodayDate(),
-	}
-	supervisor.TenantID = fixtureTenantID(tb)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err := db.NewInsert().
-		Model(supervisor).
-		ModelTableExpr(`active.group_supervisors`).
-		Scan(ctx)
-	require.NoError(tb, err, "Failed to create test group supervisor")
-
-	return supervisor
+	return CreateTestGroupSupervisorOn(tb, db, staffID, activeGroupID, role, calendar.TodayDate())
 }
 
 // cleanupRoleRecords removes roles and their role-permission/account-role associations.

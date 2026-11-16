@@ -1038,7 +1038,9 @@ func TestStudentDeletionRuntimeEvidence(t *testing.T) {
 	guardian := testpkg.CreateTestGuardianProfile(t, db, "deletion-runtime-guardian@example.com")
 	for iteration := range 35 {
 		student := testpkg.CreateTestStudent(t, db, "Runtime", "Subject", "3a")
-		instance := testpkg.CreateTestActivityInstance(t, db, testpkg.TodayDate().AddDays(1), room.ID, testpkg.ActivityInstanceOpts{})
+		// The deletion removes every assignment whatever its day; a fixed school
+		// day keeps the measured statements independent of the run's date.
+		instance := testpkg.CreateTestActivityInstance(t, db, calendar.NewDate(2026, 9, 15), room.ID, testpkg.ActivityInstanceOpts{})
 		testpkg.CreateTestInstanceStudent(t, db, instance.ID, student.ID, "")
 		testpkg.CreateTestStudentGuardianLink(t, db, student.ID, guardian.ID, "parent")
 		var preview studentdeletion.Preview

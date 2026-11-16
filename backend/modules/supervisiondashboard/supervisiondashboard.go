@@ -45,7 +45,7 @@ type Query interface {
 }
 
 // Dependencies are the consumer-owned ports the projection reads through.
-// Now defaults to time.Now; TeacherHints is optional (without it no hint of
+// Now is the root's clock; TeacherHints is optional (without it no hint of
 // the Lehrkraft is attached); every other field is required.
 type Dependencies struct {
 	Access   Access
@@ -68,7 +68,8 @@ type Dependencies struct {
 
 func (d Dependencies) complete() bool {
 	return d.Access != nil && d.Sessions != nil && d.Yard != nil && d.Groups != nil &&
-		d.Schedule != nil && d.Presence != nil && d.Planning != nil && d.Settings != nil && d.Staff != nil && d.Calendar != nil
+		d.Schedule != nil && d.Presence != nil && d.Planning != nil && d.Settings != nil && d.Staff != nil && d.Calendar != nil &&
+		d.Now != nil
 }
 
 type service struct{ deps Dependencies }
@@ -76,9 +77,6 @@ type service struct{ deps Dependencies }
 // New builds the projection. Missing wiring surfaces as
 // ErrIncompleteDependencies on every call, never as a partial projection.
 func New(deps Dependencies) Query {
-	if deps.Now == nil {
-		deps.Now = time.Now
-	}
 	return &service{deps: deps}
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	config "github.com/moto-ogs/project-phoenix/modules/settings/records"
@@ -19,7 +20,7 @@ func newSlotListDBSettings(t *testing.T, db *bun.DB) config.BatchSettingsService
 	service := settingsCompose.NewSettingsService(
 		settingsCompose.NewSettingValueRepository(testpkg.ConfigRuntime(db)),
 		settingsCompose.NewSettingAuditRepository(testpkg.ConfigRuntime(db)),
-		nil, testpkg.SettingsRuntime(t, db), slog.Default())
+		nil, testpkg.SettingsRuntime(t, db), slog.Default(), time.Now)
 	return service.(config.BatchSettingsService)
 }
 

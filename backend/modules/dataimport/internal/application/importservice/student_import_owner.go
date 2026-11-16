@@ -195,7 +195,7 @@ func (c *StudentImportConfig) todayDate() timezone.Date {
 // now is the instant of the import's clock. Decision tests build the config
 // bare; it then reads the real clock.
 func (c *StudentImportConfig) now() time.Time {
-	return clockOr(c.Now)()
+	return c.Now()
 }
 
 // enrollmentInputFromRow is the enrollment a create row files, without its
