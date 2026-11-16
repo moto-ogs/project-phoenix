@@ -57,8 +57,13 @@ func NewSchedulerCleanupTestDependencies(db transactionruntime.Database, unit te
 	if err != nil {
 		return schedulerPorts.WorkerDependencies{}, err
 	}
+	// The cleanup requires a clock; a test without one runs on the wall clock.
+	cleanupNow := now
+	if cleanupNow == nil {
+		cleanupNow = time.Now
+	}
 	cleanup := presenceservice.NewPresenceCleanup(presence, supervisors, NewDeletionAudit(audit.DataDeletion),
-		settingsCompose.PresenceSettings(settings.Settings), now)
+		settingsCompose.PresenceSettings(settings.Settings), cleanupNow)
 	return schedulerPorts.WorkerDependencies{
 		Logger: slog.New(slog.DiscardHandler), Now: now,
 		SchoolRepo: schedulerTenantDirectory{schools: schools}, Settings: resolver,
