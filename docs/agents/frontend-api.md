@@ -375,6 +375,11 @@ The key is the scope claim of the portal's session token
   exports is registered. `TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal`
   (`backend/api`) fails when the route does not run behind that portal's
   scope middleware.
+- A route file with a dynamic segment wins over the proxy too:
+  `billing-families/[id]` answers `billing-families/debtor-number-format`.
+  Such a registered route keeps a literal route file that hands the request
+  to `catalogProxy` (see that Träger route);
+  `app/api/catalog-route-selection.test.ts` fails when one is missing.
 - Not served by a proxy: a route with response variants
   (`GET /api/students/`). Not registrable yet: one Go type used by two
   resources, which is why the notification feed of moto schule keeps its
