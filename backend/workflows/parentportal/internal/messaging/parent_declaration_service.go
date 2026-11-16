@@ -169,11 +169,11 @@ func revokesOwnConsent(action, ownLatest string) bool {
 // (Art. 7 Abs. 3 DSGVO, #6290). Whether there is a consent to revoke is the
 // declaration policy's decision on the guardian's own history. New agreements
 // and refusals still require the live announcement window.
-func declarationAdmitsAction(a *ParentAnnouncement, action string) bool {
+func declarationAdmitsAction(a *ParentAnnouncement, action string, now time.Time) bool {
 	if a == nil || !a.IsDeclaration() {
 		return false
 	}
-	return action == DeclarationActionRevoked || announcementIsLive(a)
+	return action == DeclarationActionRevoked || announcementIsLive(a, now)
 }
 
 // requireDeclarationOpenFor answers 404 unless the declaration takes this
@@ -184,7 +184,8 @@ func declarationAdmitsAction(a *ParentAnnouncement, action string) bool {
 // the child on the version the request names, which the parent news gate
 // needs: the wording revoked may be an older one (#6303).
 func (s *Service) requireDeclarationOpenFor(ctx context.Context, a *ParentAnnouncement, accountID, studentID, versionID int64, action string) (string, error) {
-	if !declarationAdmitsAction(a, action) {
+	now := s.now()
+	if !declarationAdmitsAction(a, action, now) {
 		return "", ErrAnnouncementNotFound
 	}
 	if action != DeclarationActionRevoked {
@@ -194,7 +195,7 @@ func (s *Service) requireDeclarationOpenFor(ctx context.Context, a *ParentAnnoun
 	if err != nil {
 		return "", err
 	}
-	if !answered && !announcementIsLive(a) {
+	if !answered && !announcementIsLive(a, now) {
 		return "", ErrAnnouncementNotFound
 	}
 	return onVersion, nil
@@ -308,7 +309,7 @@ func (s *Service) writeDeclaration(ctx context.Context, accountID, announcementI
 		mine.VersionNo = version.VersionNo
 		return mine, false, nil
 	}
-	now := time.Now()
+	now := s.now()
 	// An older wording takes no new answer, only the revocation of a consent.
 	if err := checkDeclarationAction(s.Declarations, locked.rules, mayDeclare && locked.current, mine, in.Action, now); err != nil {
 		return nil, false, err
@@ -374,7 +375,7 @@ func (s *Service) lockedDeclarationVersion(ctx context.Context, tenantID, announ
 	if err != nil {
 		return nil, fmt.Errorf("parent: reload declaration: %w", err)
 	}
-	if !declarationAdmitsAction(a, in.Action) {
+	if !declarationAdmitsAction(a, in.Action, s.now()) {
 		return nil, ErrAnnouncementNotFound
 	}
 	latest, err := s.AnnouncementRepo.LatestDeclarationVersion(ctx, tenantID, announcementID)

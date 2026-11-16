@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 
@@ -77,7 +78,7 @@ func (s *stubParentAuthService) resetRuntime() parent.PasswordResetRoutes {
 // change to the handler reaches into them, the nil deref will surface as a
 // test failure, which is the desired guardrail.
 func newTestResource(svc *stubParentAuthService) *parent.Resource {
-	return parent.NewResource(parent.ResourceConfig{Auth: svc.loginRuntime(), Resets: svc.resetRuntime()})
+	return parent.NewResource(parent.ResourceConfig{Now: time.Now, Auth: svc.loginRuntime(), Resets: svc.resetRuntime()})
 }
 
 func postPasswordReset(t *testing.T, rs *parent.Resource, body map[string]string) *httptest.ResponseRecorder {

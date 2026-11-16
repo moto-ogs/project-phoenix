@@ -106,10 +106,13 @@ type Dependencies struct {
 	Emitter               care.ChildEvents
 }
 
-// New composes the guardian portal. messaging resolves children through the
-// child flows and the child flows share requests through messaging, so the
-// resolver reaches the child flows once both exist.
+// New composes the guardian portal on deps.Now (the real clock when unset).
+// Messaging resolves children through the child flows, which share requests
+// through messaging, so the resolver reaches the child flows once both exist.
 func New(deps Dependencies) *parentportal.Portal {
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
 	var childFlows *care.Service
 	messagingFlows := parentportal.NewMessagingFlows(messagingConfig(deps, messaging.NewChildResolver(&childFlows))).MessagingFlows
 	childFlows = parentportal.NewChildFlows(careConfig(deps, bindOwners(deps), messagingFlows))

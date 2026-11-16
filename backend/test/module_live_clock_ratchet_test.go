@@ -98,7 +98,6 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/schedulerruntime":             11,
 	"workflows/catererportal":              2,
 	"workflows/holidayclosurenotification": 1,
-	"workflows/parentportal":               19,
 	"workflows/shiftplansync":              2,
 }
 
@@ -147,7 +146,6 @@ var moduleLiveClockValueBudget = map[string]int{
 	"modules/timetable":            14,
 	"modules/workforce":            8,
 	"workflows/careexit":           2,
-	"workflows/parentportal":       3,
 	"workflows/reminderdelivery":   1,
 }
 

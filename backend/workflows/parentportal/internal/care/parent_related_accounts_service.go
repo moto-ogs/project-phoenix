@@ -191,7 +191,7 @@ func (s *Service) hasOpenInvitationForStudent(ctx context.Context, guardianProfi
 	if err != nil {
 		return false
 	}
-	now := time.Now()
+	now := s.now()
 	for _, inv := range invitations {
 		if inv.StudentID == nil || *inv.StudentID != studentID {
 			continue
