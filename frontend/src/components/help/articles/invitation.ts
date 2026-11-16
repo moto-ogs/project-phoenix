@@ -23,7 +23,7 @@ export function invitationTopic(): HelpTopic {
       "Ergänzen Sie `Vorname` und `Nachname`, falls die Felder leer sind.",
       "Geben Sie unter `Passwort` ein persönliches Passwort ein.",
       "Geben Sie dasselbe Passwort unter `Passwort bestätigen` erneut ein.",
-      "Prüfen Sie, ob alle Passwortanforderungen grün markiert sind.",
+      "Prüfen Sie, ob alle Passwortanforderungen einen Haken haben.",
       "Wählen Sie `Einladung akzeptieren`.",
     ],
     result:

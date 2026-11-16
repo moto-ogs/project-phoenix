@@ -1126,7 +1126,11 @@ function TimeGridEventBlock({
       >
         {event.title}
       </div>
-      <div className="truncate text-xs text-gray-600">{eventTime(event)}</div>
+      {/* Die Art steht als Text neben der Zeit, nicht nur als Farbe der
+          Leiste (#7114, WCAG 1.4.1). */}
+      <div className="truncate text-xs text-gray-600">
+        {eventTime(event)} · {tone.label}
+      </div>
       {event.location ? (
         <div className="flex items-center gap-1 text-xs text-gray-600">
           <MotoConceptIcon
@@ -1223,7 +1227,7 @@ function AgendaRow({
   );
 }
 
-// Schmale einzeilige Pille für die Ganztägig-Zeile im Wochen-/Tagesraster und
+// Schmale Pille für die Ganztägig-Zeile im Wochen-/Tagesraster und
 // für Monatszellen. Mehrtägige Einträge liegen aus Layout-Gründen ebenfalls in
 // dieser Zeile; zeitgebundene Einträge behalten dort aber ihre Zeitangabe.
 // Gesetzliche Feiertage sind nur sichtbar, alle anderen Einträge öffnen das
@@ -1246,24 +1250,33 @@ function EventPill({
       {...(readOnly
         ? {}
         : { type: "button", onClick: () => actions.onSelect?.(event) })}
-      className={`flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left ${
+      className={`flex w-full min-w-0 flex-col gap-0.5 rounded-md px-2 py-1 text-left ${
         readOnly ? "" : "transition-[filter] hover:brightness-95"
       } ${cancelled ? "opacity-70" : ""}`}
       style={{ backgroundColor: tone.bg }}
     >
-      <StatusDot color={tone.bar} size="md" decorative />
-      <span
-        className={`min-w-0 flex-1 truncate text-xs font-medium text-gray-900 ${
-          cancelled ? "line-through" : ""
-        }`}
-      >
-        {event.title}
-      </span>
-      {timeLabel ? (
-        <span className="shrink-0 text-xs text-gray-500 tabular-nums">
-          {timeLabel}
+      <span className="flex w-full min-w-0 items-center gap-1.5">
+        <StatusDot color={tone.bar} size="md" decorative />
+        <span
+          className={`min-w-0 flex-1 truncate text-xs font-medium text-gray-900 ${
+            cancelled ? "line-through" : ""
+          }`}
+        >
+          {event.title}
         </span>
-      ) : null}
+      </span>
+      <span className="flex w-full min-w-0 flex-wrap gap-x-2 text-xs">
+        {/* Die Art nicht nur als Farbe (#7114, WCAG 1.4.1). */}
+        <span className="sr-only min-w-0 break-words text-gray-600 sm:not-sr-only">
+          <span className="sr-only">, </span>
+          {tone.label}
+        </span>
+        {timeLabel ? (
+          <span className="min-w-0 break-words text-gray-500 tabular-nums">
+            {timeLabel}
+          </span>
+        ) : null}
+      </span>
     </EventSurface>
   );
 }

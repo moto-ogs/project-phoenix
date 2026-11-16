@@ -88,6 +88,11 @@
   "declarationText": "With your name you give the declarations above.",
   "translationNote": "Translation, the German text applies:",
   "captchaMissing": "The security check is missing. Please reload the page.",
+  "captchaHelp": {
+    "hint": "Is the security check not loading or stuck?",
+    "restart": "Restart check",
+    "restartTooltip": "Reloads the check, your entries stay."
+  },
   "toSummary": "Continue to summary",
   "checkFields": "Please check the marked fields.",
   "summaryTitle": "Please check your details",
