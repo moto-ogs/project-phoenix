@@ -167,7 +167,7 @@ func newOperatorRouter(
 			traegerValues:          traegerSettings,
 		},
 		communication,
-		tagScanReview.Router(),
+		tagScanReview.Router,
 		limiters,
 		mergeRoutes,
 		newSampleChildrenRoute(provisioning, students),

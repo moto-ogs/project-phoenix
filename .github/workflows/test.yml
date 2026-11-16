@@ -64,7 +64,11 @@ jobs:
     # job took 40-67 s plus 6-15 s for the next runner in 31 pull request
     # runs (12.11.2026). Before the selection the import graph is unknown, so
     # the caller sizes the runner from the changed file list alone.
-    runs-on: ${{ inputs.backend-small-runner && 'blacksmith-4vcpu-ubuntu-2404' || 'blacksmith-8vcpu-ubuntu-2404' }}
+    #
+    # 16 vCPU for every run but the small selections and the race shards: the
+    # job is CPU-bound and sets the wall-clock time, and Blacksmith bills
+    # every size at the same price per vCPU-minute (#7195).
+    runs-on: ${{ inputs.backend-small-runner && 'blacksmith-4vcpu-ubuntu-2404' || inputs.backend-race && 'blacksmith-8vcpu-ubuntu-2404' || 'blacksmith-16vcpu-ubuntu-2404' }}
     # Instrumented builds and tests need more headroom than ordinary runs.
     # Keep the default Actions limit unchanged for non-race callers.
     timeout-minutes: ${{ inputs.backend-race && 60 || 20 }}
@@ -102,13 +106,19 @@ jobs:
           # postgresql.conf, so the roles the migrations and the snapshot
           # restore create get one-iteration verifiers too. Passwords are still
           # checked; pg_hba keeps scram-sha-256 for TCP.
-          POSTGRES_INITDB_ARGS: --set max_connections=300 --set scram_iterations=1
+          #
+          # max_connections=600: twelve package binaries on 16 vCPU, twice the
+          # six the 300 above were sized for.
+          POSTGRES_INITDB_ARGS: --set max_connections=600 --set scram_iterations=1
         ports:
           - 5432:5432
         # Package database drops force checkpoints. These disposable databases
         # need no disk persistence; tmpfs avoids the measured fsync bottleneck.
+        # The size is a ceiling, not a reservation: twelve package binaries
+        # keep twice the clones of six alive (container peak 2.2-2.4 GiB
+        # with six).
         options: >-
-          --tmpfs /var/lib/postgresql/data:rw,size=4g
+          --tmpfs /var/lib/postgresql/data:rw,size=8g
           --health-cmd "pg_isready -U postgres"
           --health-interval 2s
           --health-timeout 5s
@@ -368,10 +378,13 @@ jobs:
           fi
           echo "Running ${#packages[@]} selected Go packages"
 
-          # Six package binaries keep eight vCPUs busy, four the small runner.
+          # Six package binaries keep eight vCPUs busy, four the small
+          # runner, twelve the sixteen vCPUs.
           PACKAGE_WORKERS=6
           if [ "$(nproc)" -lt 8 ]; then
             PACKAGE_WORKERS=4
+          elif [ "$(nproc)" -ge 16 ]; then
+            PACKAGE_WORKERS=12
           fi
           race_flags=()
           measure=()

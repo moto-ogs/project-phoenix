@@ -67,7 +67,8 @@ Datensatz. Die anwaltliche Bestätigung, dass Register und Abrufweg Art. 26 und
 Art. 30 Abs. 2 Data Act genügen (Abschnitt 7), und die menschlichen Nachweise
 unten.
 
-**Produktiv nachzuweisen:** benannte Zuständigkeit, Migration und wirksame
+**Produktiv nachzuweisen:** Benennung der Zuständigkeit im einzelnen Auftrag
+(Standardbesetzung siehe Abschnitt 1), Migration und wirksame
 Berechtigungen, vollständiger DB-/Upload-Bestand, Schreibpause, Probelauf,
 verschlüsselte Übergabe, Empfang und Entfernung der lokalen Kopien. Lokale
 Tests sind kein produktiver Nachweis. Loki, Sentry, PostHog, journald und
@@ -80,9 +81,13 @@ Sicherungen sind nicht Bestandteil dieses PostgreSQL-/Upload-Exports.
    autorisieren; die Rückgabe eines Trägers besteht aus dem Trägerpaket und je
    Schule einem Schulpaket (Abschnitt 3). Keine Auswahl allein anhand einer E-Mail-Adresse oder
    eines Plattform-Tokens. Die HTTP-Middleware wird nicht verwendet.
-2. Vor Beginn eine verantwortliche Person und Vertretung im geschützten
-   Auftrag benennen. Diese organisatorische Zuordnung ist noch offen und
-   darf nicht durch einen CLI-Erfolg ersetzt werden.
+2. Vor Beginn verantwortliche Person, Vertretung und zweite prüfende Person
+   im geschützten Auftrag benennen. Standardbesetzung (3838-g, entschieden am
+   16.11.2026, [#3846](https://github.com/moto-ogs/project-phoenix/issues/3846#issuecomment-6912409509)):
+   zuständig Yannick, Vertretung Conrad, zweite prüfende Person Flo. Weicht
+   die Besetzung ab, die tatsächliche im Auftrag festhalten. Die Benennung im
+   einzelnen Auftrag bleibt Pflicht und darf nicht durch einen CLI-Erfolg
+   ersetzt werden.
 3. Eingang binnen **2 Arbeitstagen** bestätigen, Zusammenstellung binnen
    **10 Arbeitstagen** der Schule bereitstellen. Diese internen Zielwerte
    sind **vorläufig; die organisatorische Bestätigung ist offen (3838-d)**.
@@ -377,7 +382,7 @@ Gesamterfolg erhalten.
    Erziehungsberechtigter oder aller Geschwister. Auftrag und Antwortempfänger
    getrennt prüfen; keine Ausweiskopien in technische Protokolle übernehmen.
 2. Zuständige Person, Vertretung und zweite prüfende Person im geschützten
-   Auftrag benennen. Eingang/Prüfung binnen 2, Bereitstellung an die Schule
+   Auftrag benennen; Standardbesetzung nach Abschnitt 1 Punkt 2. Eingang/Prüfung binnen 2, Bereitstellung an die Schule
    binnen 10 Arbeitstagen gemäß Abschnitt 1 planen. Unklare Berechtigung oder
    drohende Fristüberschreitung sofort an die Schule eskalieren; keine
    eigenmächtige Verlängerung. Der Monat läuft nicht erst ab CLI-Ausführung.
