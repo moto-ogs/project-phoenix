@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { SignOutIcon } from "@phosphor-icons/react";
 import { useShellAuth } from "~/lib/shell-auth-context";
 import { DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
 import { ConfirmationModal } from "~/components/ui/modal";
+import { IconTile } from "~/components/ui/icon-tile";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "LogoutModal" });
@@ -48,6 +50,7 @@ export function LogoutModal({ isOpen, onClose }: LogoutModalProps) {
       onClose={onClose}
       onConfirm={() => void handleConfirmLogout()}
       title="Abmelden"
+      icon={<IconTile icon={<SignOutIcon aria-hidden />} size="sm" />}
       confirmText="Abmelden"
       loadingText="Abmeldung läuft …"
       confirmTooltip="Meldet Sie auf diesem Gerät von moto ab."
