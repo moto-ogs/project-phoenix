@@ -10,7 +10,7 @@ import (
 func (m *Service) ApprovedOfferingChildrenForStudents(ctx context.Context, studentIDs []int64) (rows []enrollment.OfferingChildFacts, err error) {
 	started := time.Now()
 	defer func() {
-		m.observeOfferingStorage("approved_children", "query", started, int64(len(studentIDs)), int64(len(rows)), err)
+		m.observeOfferingStorage("approved_children", "query", time.Since(started), int64(len(studentIDs)), int64(len(rows)), err)
 	}()
 	if len(studentIDs) == 0 {
 		return []enrollment.OfferingChildFacts{}, nil
@@ -24,7 +24,7 @@ func (m *Service) ApprovedOfferingChildrenForStudents(ctx context.Context, stude
 func (m *Service) OfferingChildren(ctx context.Context, childIDs []int64) (rows []enrollment.OfferingChildFacts, err error) {
 	started := time.Now()
 	defer func() {
-		m.observeOfferingStorage("children", "query", started, int64(len(childIDs)), int64(len(rows)), err)
+		m.observeOfferingStorage("children", "query", time.Since(started), int64(len(childIDs)), int64(len(rows)), err)
 	}()
 	if len(childIDs) == 0 {
 		return []enrollment.OfferingChildFacts{}, nil

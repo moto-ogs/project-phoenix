@@ -41,6 +41,8 @@ func ComposedDemoAccess(capability *identityaccess.DemoAccess) DemoAccesses {
 type DemoResource struct {
 	accesses DemoAccesses
 	origins  DemoOrigins
+	// now is the clock the Retry-After header counts down from (ADR 0239).
+	now func() time.Time
 }
 
 // DemoOrigins are the frontend origins of the public demo (#3463). A demo
@@ -52,19 +54,24 @@ type DemoOrigins struct {
 	School  func(schoolSlug string) string
 }
 
-func NewDemoResource(accesses DemoAccesses, origins DemoOrigins) (*DemoResource, error) {
+// NewDemoResource builds the demo routes; now is the root's clock, nil the
+// real one, as RootEnvironment.Now is.
+func NewDemoResource(accesses DemoAccesses, origins DemoOrigins, now func() time.Time) (*DemoResource, error) {
 	if accesses == nil || origins.Waiting == "" || origins.School == nil {
 		return nil, errors.New("demo routes require the capability and the entry origins")
 	}
+	if now == nil {
+		now = time.Now
+	}
 	origins.Waiting = strings.TrimRight(origins.Waiting, "/")
-	return &DemoResource{accesses: accesses, origins: origins}, nil
+	return &DemoResource{accesses: accesses, origins: origins, now: now}, nil
 }
 
 // MountDemoRoutes adds the public demo routes under /demo in the demo
 // environment (APP_ENV=demo), which the root decides. Everywhere else it does
 // nothing and never calls compose: the routes, and the capability behind
 // them, do not exist there.
-func MountDemoRoutes(router chi.Router, demoEnvironment bool, compose func() (DemoAccesses, error), origins DemoOrigins) error {
+func MountDemoRoutes(router chi.Router, demoEnvironment bool, compose func() (DemoAccesses, error), origins DemoOrigins, now func() time.Time) error {
 	if !demoEnvironment {
 		return nil
 	}
@@ -72,7 +79,7 @@ func MountDemoRoutes(router chi.Router, demoEnvironment bool, compose func() (De
 	if err != nil {
 		return err
 	}
-	resource, err := NewDemoResource(accesses, origins)
+	resource, err := NewDemoResource(accesses, origins, now)
 	if err != nil {
 		return err
 	}
@@ -157,6 +164,9 @@ type demoSessionFacts struct {
 	// FixedRole: the standing school's session keeps all functions; the
 	// banner shows its role without a switch.
 	FixedRole bool `json:"fixed_role"`
+	// Traeger: the school has a Träger of its own, so the banner offers the
+	// demo role Träger-Büro (ADR 0271).
+	Traeger bool `json:"traeger"`
 }
 
 // createSession redeems the token. With a demo role it first switches the
@@ -178,7 +188,7 @@ func (rs *DemoResource) createSession(w http.ResponseWriter, r *http.Request) {
 	}
 	render.JSON(w, r, demoSessionResponse{
 		TokenResponse: portalauth.TokenResponse{AccessToken: entry.AccessToken, RefreshToken: entry.RefreshToken},
-		Demo:          demoSessionFacts{AccessID: strconv.FormatInt(entry.AccessID, 10), Role: entry.Role, Source: entry.Source, FixedRole: entry.FixedRole},
+		Demo:          demoSessionFacts{AccessID: strconv.FormatInt(entry.AccessID, 10), Role: entry.Role, Source: entry.Source, FixedRole: entry.FixedRole, Traeger: entry.Traeger},
 	})
 }
 
@@ -225,7 +235,7 @@ var demoAccessErrorRules = []common.ErrorRule{
 func (rs *DemoResource) renderError(w http.ResponseWriter, r *http.Request, err error) {
 	var limited *identityaccess.DemoAccessRateLimitError
 	if errors.As(err, &limited) {
-		w.Header().Set("Retry-After", strconv.Itoa(limited.RetryAfterSeconds(time.Now())))
+		w.Header().Set("Retry-After", strconv.Itoa(limited.RetryAfterSeconds(rs.now())))
 	}
 	// The demo school has not booked Eltern-App (#4895): the parent demo
 	// issues no session.

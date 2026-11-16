@@ -24,9 +24,9 @@ const (
 // NewWorkerLease configures the Worker's leadership over store with the
 // lease timing above. Every call gets a holder ID of its own, so a restarted
 // process never resumes the term of its predecessor. The root binds the
-// store and the evidence.
-func NewWorkerLease(store LeaseStore, evidence LeaseEvidence) (WorkerLease, error) {
-	holder, err := workerHolderID()
+// store, the evidence and the clock that stamps the holder's start time.
+func NewWorkerLease(store LeaseStore, evidence LeaseEvidence, now func() time.Time) (WorkerLease, error) {
+	holder, err := workerHolderID(now)
 	if err != nil {
 		return WorkerLease{}, err
 	}
@@ -48,11 +48,11 @@ var workerHolders atomic.Int64
 // workerHolderID names one Worker: host, process ID, and start time with a
 // sequence number. A restarted process with a reused PID still differs in
 // its start time.
-func workerHolderID() (string, error) {
+func workerHolderID(now func() time.Time) (string, error) {
 	host, err := os.Hostname()
 	if err != nil {
 		return "", fmt.Errorf("worker lease holder: read hostname: %w", err)
 	}
-	started := strconv.FormatInt(time.Now().UnixNano(), 36)
+	started := strconv.FormatInt(now().UnixNano(), 36)
 	return fmt.Sprintf("%s/%d/%s-%d", host, os.Getpid(), started, workerHolders.Add(1)), nil
 }

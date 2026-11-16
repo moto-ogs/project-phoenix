@@ -30,14 +30,14 @@ type SignInDataRetention struct {
 	logger *slog.Logger
 }
 
-func NewSignInDataRetention(store ports.SignInDataRetentionStore, logger *slog.Logger, run func(context.Context, func(context.Context) error) error) *SignInDataRetention {
-	if store == nil {
-		panic("identity access application: sign-in data retention requires its store")
+func NewSignInDataRetention(store ports.SignInDataRetentionStore, logger *slog.Logger, run func(context.Context, func(context.Context) error) error, now func() time.Time) *SignInDataRetention {
+	if store == nil || now == nil {
+		panic("identity access application: sign-in data retention requires its store and clock")
 	}
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &SignInDataRetention{store: store, now: time.Now, logger: logger, run: run}
+	return &SignInDataRetention{store: store, now: now, logger: logger, run: run}
 }
 
 func (r *SignInDataRetention) DeleteExpiredGuardianInvitations(ctx context.Context) (value0 int, err error) {
@@ -123,7 +123,9 @@ func (r *SignInDataRetention) DeleteExpiredPasskeySessions(ctx context.Context) 
 }
 
 func (r *SignInDataRetention) inUnitDeleteExpiredPasskeySessions(ctx context.Context) (int, error) {
-	before := r.now().Add(-SignInChallengeRetention)
+	// go-webauthn stamps and validates the ceremony's expiry on the real
+	// clock, so its stored expiry is compared on that clock too (ADR 0261).
+	before := time.Now().Add(-SignInChallengeRetention)
 	accounts, _, err := r.store.DeleteExpiredAccountPasskeySessions(ctx, before)
 	if err != nil {
 		return 0, failed("delete expired passkey sessions", err)

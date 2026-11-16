@@ -2,6 +2,9 @@ package students
 
 import (
 	slog "log/slog"
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	chi "github.com/go-chi/chi/v5"
 	render "github.com/go-chi/render"
@@ -32,11 +35,22 @@ type ResourceConfig struct {
 	StudentPhotos      StudentPhotoLifecycle
 	Uploads            common.UploadStorage
 	UserContextService CallerContext
+	// Now is the root's clock; a note's day and the activities a note may
+	// refer to are judged against its Berlin day. Nil uses the real one.
+	Now func() time.Time
 }
 
 type Resource struct{ ResourceConfig }
 
-func NewResource(cfg ResourceConfig) *Resource { return &Resource{ResourceConfig: cfg} }
+func NewResource(cfg ResourceConfig) *Resource {
+	if cfg.Now == nil {
+		cfg.Now = time.Now
+	}
+	return &Resource{ResourceConfig: cfg}
+}
+
+// today is the Berlin calendar day of the resource's clock.
+func (rs *Resource) today() calendar.Date { return calendar.DateFromTime(rs.Now()) }
 func (rs *Resource) Router(protected func(chi.Router, func(chi.Router, common.Middleware))) chi.Router {
 	r := chi.NewRouter()
 	r.Use(render.SetContentType(render.ContentTypeJSON))

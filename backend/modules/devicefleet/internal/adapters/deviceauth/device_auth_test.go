@@ -135,7 +135,7 @@ func activeDevice(deviceID string) *AuthenticatedDevice {
 }
 
 func newTestAuthenticator(directory DeviceDirectory, options ...func(*Dependencies)) *Authenticator {
-	deps := Dependencies{Devices: directory, BindTenant: bindTenant, PIN: func(context.Context, int64) (string, error) { return "", nil }}
+	deps := Dependencies{Devices: directory, BindTenant: bindTenant, PIN: func(context.Context, int64) (string, error) { return "", nil }, Now: time.Now}
 	for _, option := range options {
 		option(&deps)
 	}
@@ -269,6 +269,9 @@ func TestNewAuthenticator_RequiresPorts(t *testing.T) {
 
 	assert.Panics(t, func() { NewAuthenticator(Dependencies{BindTenant: bindTenant}) })
 	assert.Panics(t, func() { NewAuthenticator(Dependencies{Devices: newMockDeviceDirectory()}) })
+	assert.Panics(t, func() {
+		NewAuthenticator(Dependencies{Devices: newMockDeviceDirectory(), BindTenant: bindTenant, PIN: func(context.Context, int64) (string, error) { return "", nil }})
+	}, "a fresh debouncer needs the clock")
 	assert.NotPanics(t, func() { newTestAuthenticator(newMockDeviceDirectory()) })
 }
 
@@ -758,7 +761,7 @@ func TestNewAuthenticator_UsesSuppliedDebouncer(t *testing.T) {
 
 	directory := newMockDeviceDirectory()
 	directory.addDevice("key", activeDevice("device"))
-	debouncer := NewLastSeenDebouncer()
+	debouncer := NewLastSeenDebouncer(time.Now)
 
 	first := NewAuthenticator(Dependencies{Devices: directory, BindTenant: bindTenant, PIN: func(context.Context, int64) (string, error) { return "", nil }, LastSeen: debouncer})
 	second := NewAuthenticator(Dependencies{Devices: directory, BindTenant: bindTenant, PIN: func(context.Context, int64) (string, error) { return "", nil }, LastSeen: debouncer})

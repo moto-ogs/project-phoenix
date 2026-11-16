@@ -245,7 +245,7 @@ func (l *AccountLifecycle) bulkInviteCandidates(links []domain.StudentGuardianLi
 }
 
 func (l *AccountLifecycle) openInvitationsByProfile(ctx context.Context, profileIDs []int64) (map[int64][]domain.GuardianInvitation, error) {
-	invitations, err := l.invitations.ListOpenGuardianInvitations(ctx, profileIDs, time.Now())
+	invitations, err := l.invitations.ListOpenGuardianInvitations(ctx, profileIDs, l.sessions.now())
 	if err != nil {
 		return nil, failed(opGuardianBulkInvite, err)
 	}
@@ -405,7 +405,7 @@ func workingBulkInvitations(profile domain.GuardianProfile, open []domain.Guardi
 }
 
 func (l *AccountLifecycle) inviteEligibleBulkGuardian(ctx context.Context, run *bulkInviteRun, candidate bulkInviteCandidate, profile domain.GuardianProfile, email string, open []domain.GuardianInvitation) error {
-	open = workingBulkInvitations(profile, open, time.Now())
+	open = workingBulkInvitations(profile, open, l.sessions.now())
 	if len(open) > 0 && !run.req.ResendOpen {
 		run.result.SkippedOpen++
 		return nil
@@ -460,7 +460,7 @@ func (l *AccountLifecycle) resendOpenInvitation(ctx context.Context, dryRun bool
 			return false, failed(opGuardianBulkInvite, err)
 		}
 		issueGuardianInvitationLink(&invitation, profile)
-		invitation.ExpiresAt = time.Now().Add(expiry)
+		invitation.ExpiresAt = l.sessions.now().Add(expiry)
 		invitation.EmailSentAt = nil
 		invitation.EmailError = nil
 		if err := l.invitations.UpdateGuardianInvitation(ctx, invitation, invitation.ApprovalStatus, readExpiry); err != nil {

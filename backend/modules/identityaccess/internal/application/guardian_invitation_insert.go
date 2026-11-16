@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
 )
@@ -25,7 +24,7 @@ func (l *AccountLifecycle) insertStudentInvitation(ctx context.Context, req doma
 			TenantID:                    tenantID,
 			GuardianProfileID:           profile.ID,
 			CreatedBy:                   req.CreatedBy,
-			ExpiresAt:                   time.Now().Add(expiry),
+			ExpiresAt:                   l.sessions.now().Add(expiry),
 			StudentID:                   &studentID,
 			RequestedByAccountID:        req.RequestedByParentAccountID,
 			ApprovalStatus:              approvalStatus,
@@ -35,7 +34,7 @@ func (l *AccountLifecycle) insertStudentInvitation(ctx context.Context, req doma
 		// A queued approval has no usable mailed link yet. Issuing one does
 		// supersede previous links, but not unrelated approval requests.
 		if approvalStatus != domain.GuardianInvitationApprovalPending {
-			if err := l.invitations.InvalidateGuardianInvitations(txCtx, profile.ID, time.Now(), false); err != nil {
+			if err := l.invitations.InvalidateGuardianInvitations(txCtx, profile.ID, l.sessions.now(), false); err != nil {
 				return failed(opGuardianInviteToStudent, err)
 			}
 		}

@@ -130,7 +130,7 @@ func newOverrunFixtureOn(t *testing.T, db *bun.DB) overrunFixture {
 			next.ServeHTTP(w, r.WithContext(tenant.WithUnitOfWork(r.Context(), unit)))
 		})
 	})
-	mountCareTimeOverrunRoutes(router, organizations, statistics.Statistics, audit.DataAccessLog)
+	mountCareTimeOverrunRoutes(router, organizations, statistics.Statistics, audit.DataAccessLog, calendar.TodayDate)
 	return overrunFixture{signInRole: signInRole, router: testpkg.SessionVerifier(router), db: db, traeger: traeger, school: school, other: other, child: child,
 		admin: admin, billing: billing, adminID: adminID, foreignJWT: foreign.token}
 }

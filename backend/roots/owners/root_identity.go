@@ -92,13 +92,13 @@ func BuildIdentityAccess(
 	// The accept and login links go to the parents portal, never to the
 	// staff frontend.
 	guardianMail, enrollmentClaims, err := GuardianInvitationDependencies(settings, organizations, outbox, deliveryRuntime.EmailOutcomes, guardianEnrollments,
-		links.ParentsURL, authLogger.With("flow", "guardian_invitation"))
+		links.ParentsURL, authLogger.With("flow", "guardian_invitation"), env.Now)
 	if err != nil {
 		return nil, nil, err
 	}
 	// The lifecycle flows (#3225) read the role management of the module
 	// they are composed into.
-	catererMail, err := CatererInvitationDelivery(organizations, outbox, deliveryRuntime.EmailOutcomes, links.CatererURL)
+	catererMail, err := CatererInvitationDelivery(organizations, outbox, deliveryRuntime.EmailOutcomes, links.CatererURL, env.Now)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -116,7 +116,7 @@ func BuildIdentityAccess(
 	// The deliveries record their outcome through the recorder the
 	// composition hands them at construction.
 	module, err := NewIdentityAccessWithSessions(identityaccessCompose.Dependencies{
-		DB: db.Pool(), Observe: requiredIdentityAccessObservation(env.Observe.IdentityAccess), TenantRuntime: unit,
+		DB: db.Pool(), Observe: requiredIdentityAccessObservation(env.Observe.IdentityAccess), TenantRuntime: unit, Now: env.Now,
 		MFA: mfa, Lifecycle: lifecycle, Operators: operators, Demo: demo,
 		Resets: PasswordResetDependencies(&PasswordResetWiring{
 			Dispatcher: mailDispatcher, DefaultFrom: mailFrom, Durable: durable,
@@ -139,7 +139,7 @@ func BuildIdentityAccess(
 	// retained records.
 	usercontextLogger := env.Logger.With("service", "usercontext")
 	caller, err := NewCallerContext(tokens, module, CallerPersons{Rows: people.Persons, People: persons}, membership, staffGroups,
-		people.Students, activityGroups, presence, settings, usercontextLogger)
+		people.Students, activityGroups, presence, settings, usercontextLogger, env.Today)
 	if err != nil {
 		return nil, nil, err
 	}

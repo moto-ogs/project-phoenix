@@ -74,6 +74,9 @@ type Dependencies struct {
 	SchoolErrors SchoolErrors
 	// Settings resolves the tenant device PIN. Required.
 	Settings Settings
+	// Now is the root's clock a device is last seen at; nil uses the real
+	// one.
+	Now func() time.Time
 }
 
 // Authenticators are the composed device middlewares. Both share one
@@ -92,6 +95,10 @@ func New(deps Dependencies) *Authenticators {
 	if deps.Settings == nil {
 		panic("device authentication composition: settings resolver is required")
 	}
+	now := deps.Now
+	if now == nil {
+		now = time.Now
+	}
 	var schools device.SchoolLookup
 	if deps.Schools != nil {
 		schools = schoolLookup{schools: deps.Schools, errors: deps.SchoolErrors}
@@ -101,6 +108,7 @@ func New(deps Dependencies) *Authenticators {
 		Devices:    fleetDirectory{fleet: deps.Devices, schools: schools},
 		BindTenant: bindTenant,
 		PIN:        pinResolver(deps.Settings),
+		Now:        now,
 	})}
 }
 

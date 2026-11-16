@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"fmt"
+	"time"
 
 	snapshotRecords "github.com/moto-ogs/project-phoenix/modules/settings/records"
 
@@ -76,9 +77,10 @@ func (p schedulerSettingsPort) BindSettingsSnapshot(ctx context.Context, snapsho
 
 // schedulerBookingConsistency binds the booking drift audit, which the root
 // builds over the graph's People Directory and Care Plan (ADR 0049). A
-// construction failure fails the Worker's composition.
-func schedulerBookingConsistency(db transactionruntime.Database, persons peopledirectory.Capability, carePlan carePlanModule.Query) (schedulerPorts.BookingConsistencyAudit, error) {
-	bookings, err := NewBookingConsistencyAudit(db, persons, carePlan)
+// construction failure fails the Worker's composition. now is Enrollment's
+// root clock.
+func schedulerBookingConsistency(db transactionruntime.Database, persons peopledirectory.Capability, carePlan carePlanModule.Query, now func() time.Time) (schedulerPorts.BookingConsistencyAudit, error) {
+	bookings, err := NewBookingConsistencyAudit(db, persons, carePlan, now)
 	if err != nil {
 		return nil, fmt.Errorf("compose worker booking consistency audit: %w", err)
 	}

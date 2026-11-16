@@ -12,7 +12,7 @@ import (
 func TestHeartbeatOverdueSuccessfulWriteFlushesImmediately(t *testing.T) {
 	t.Parallel()
 	synctest.Test(t, func(t *testing.T) {
-		debouncer := NewLastSeenDebouncer()
+		debouncer := NewLastSeenDebouncer(time.Now)
 		defer stopHeartbeatTimers(debouncer)
 		started := make(chan struct{})
 		release := make(chan struct{})

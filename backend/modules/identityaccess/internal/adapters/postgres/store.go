@@ -32,13 +32,16 @@ type Scope func(context.Context) TenantScope
 type Store struct {
 	database Database
 	scope    Scope
+	// now is the owner's clock (ADR 0239): write stamps and the expiry
+	// comparisons the statements bind read it.
+	now func() time.Time
 }
 
-func New(database Database, scope Scope) *Store {
-	if database == nil || scope == nil {
-		panic("identity access postgres: database runtime and tenant scope are required")
+func New(database Database, scope Scope, now func() time.Time) *Store {
+	if database == nil || scope == nil || now == nil {
+		panic("identity access postgres: database runtime, tenant scope and clock are required")
 	}
-	return &Store{database: database, scope: scope}
+	return &Store{database: database, scope: scope, now: now}
 }
 
 type accountRow struct {
@@ -241,7 +244,7 @@ func (s *Store) AssignAccountRole(ctx context.Context, accountID, roleID, tenant
 	if err != nil {
 		return false, domain.OperationStats{}, err
 	}
-	now := time.Now()
+	now := s.now()
 	row := accountRoleRow{AccountID: accountID, RoleID: roleID, TenantID: tenantID, CreatedAt: now, UpdatedAt: now}
 	started := time.Now()
 	result, err := db.NewInsert().Model(&row).ModelTableExpr(`auth.account_roles`).

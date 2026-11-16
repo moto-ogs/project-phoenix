@@ -64,7 +64,7 @@ func NewOperatorMFAFlows(operators *Service, deps OperatorMFAFlowDependencies) (
 	return &OperatorMFAFlows{
 		operators: operators, records: deps.Records, codec: deps.Codec, codes: deps.Codes,
 		mail: deps.Mail, audit: deps.Audit, runtime: deps.Runtime, secret: deps.Secret,
-		logger: logger.With("component", "operator-mfa"), now: time.Now,
+		logger: logger.With("component", "operator-mfa"), now: operators.now,
 	}, nil
 }
 

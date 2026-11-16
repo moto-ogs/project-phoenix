@@ -41,8 +41,10 @@ func (f DatabaseFailures) requestEnded(r *http.Request, err error) render.Render
 	ended := r.Context().Err()
 	if ended == nil {
 		// The driver's socket deadline can fire before the context timer's
-		// goroutine runs. The request has expired in either ordering.
-		if deadline, ok := r.Context().Deadline(); ok && !time.Now().Before(deadline) {
+		// goroutine runs. The request has expired in either ordering. The
+		// deadline is an instant of the runtime's own clock, so it is
+		// measured on that clock, never on an injected one (ADR 0239).
+		if deadline, ok := r.Context().Deadline(); ok && time.Until(deadline) <= 0 {
 			ended = context.DeadlineExceeded
 		}
 	}

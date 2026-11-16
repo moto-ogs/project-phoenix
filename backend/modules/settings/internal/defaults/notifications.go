@@ -39,6 +39,18 @@ var notifications_init_zeiterfassung_0Definitions = []config.Definition{
 		Category:        "zeiterfassung",
 		SortOrder:       8,
 	},
+	{
+		Key:             config.KeyNotificationsClassTimetableChangedEnabled,
+		Label:           "Hinweis bei geändertem Stundenplan einer Klasse",
+		Description:     "Ändert sich der Unterrichtsschluss einer Klasse, bekommen die Lehrkräfte der Klasse, die Betreuung ihrer Kinder und die Eltern einen Hinweis in moto. Ob dazu eine Mitteilung aufs Handy kommt, entscheidet jede Person selbst.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "benachrichtigungen",
+		SortOrder:       9,
+	},
 }
 
 var notifications_init_benachrichtigungen_1Definitions = []config.Definition{

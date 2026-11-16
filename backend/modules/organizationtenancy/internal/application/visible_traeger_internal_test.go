@@ -53,7 +53,7 @@ func TestFindVisibleTraegerName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			store := &traegerStore{organization: tt.organization, found: tt.found, schools: tt.schools}
-			module := New(store, ownerTestTransaction{}, func(ports.Observation) {})
+			module := New(store, ownerTestTransaction{}, func(ports.Observation) {}, ownerTestToday)
 
 			got, err := module.FindVisibleTraegerName(context.Background(), 7)
 			if err != nil {
@@ -75,7 +75,7 @@ func TestFindVisibleTraegerName(t *testing.T) {
 func TestFindVisibleTraegerNameRejectsInvalidOrganization(t *testing.T) {
 	t.Parallel()
 
-	module := New(&traegerStore{}, ownerTestTransaction{}, func(ports.Observation) {})
+	module := New(&traegerStore{}, ownerTestTransaction{}, func(ports.Observation) {}, ownerTestToday)
 	if _, err := module.FindVisibleTraegerName(context.Background(), 0); !errors.Is(err, organizationtenancy.ErrInvalidOrganization) {
 		t.Fatalf("FindVisibleTraegerName(0) error = %v, want ErrInvalidOrganization", err)
 	}

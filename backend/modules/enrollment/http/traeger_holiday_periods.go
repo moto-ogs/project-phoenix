@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -36,6 +37,9 @@ type HolidayPeriodResource struct {
 	lists         common.ListRenderer
 	requireManage common.Middleware
 	requireHealth common.Middleware
+	// Now stamps the files and exports of the registrations (ADR 0239). Set
+	// as a field after construction; nil is the real clock.
+	Now func() time.Time
 }
 
 // NewHolidayPeriodResource builds the resource with the review of the

@@ -139,8 +139,12 @@ func TestSeedParentEngagementStepUsesParentFacingFlows(t *testing.T) {
 		"/api/settings/values/guardians.parent_invite_mode",
 		"/parent/me/children/44/related-accounts",
 		"/api/settings/values/guardians.parent_invite_mode",
+		// A new photo consent needs child photos switched on (#7208): on for
+		// the grant, the parent withdraws, back to the default.
+		"/api/settings/values/operations.student_photos_enabled",
 		"/api/students/44",
 		"/parent/me/children/44/consents/photo",
+		"/api/settings/values/operations.student_photos_enabled",
 		"/parent/me/children/44/master-data/guardian_profile/preferred_contact_method",
 		"/parent/me/children/44/master-data",
 		"/parent/me/children/44/master-data/requests",

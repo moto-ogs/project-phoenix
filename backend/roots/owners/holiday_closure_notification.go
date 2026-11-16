@@ -8,7 +8,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
-	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	notification "github.com/moto-ogs/project-phoenix/workflows/holidayclosurenotification"
@@ -38,16 +37,12 @@ func NewHolidayClosureNotifications(closures enrollment.HolidayClosures, schools
 }
 
 // NewHolidayClosureCalendar binds School Calendar's guarded no-care capability
-// to Enrollment's consumer contract and the settings registry default.
+// to Enrollment's consumer contract.
 func NewHolidayClosureCalendar(holidays HolidayClosureHolidays) enrollment.HolidayClosureCalendar {
 	if holidays == nil {
 		panic("holiday closure calendar: School Calendar's holidays are required")
 	}
-	var defaultRegion string
-	if definition := configModels.DefaultRegistry().GetDefinition(configModels.KeyFederalState); definition != nil {
-		defaultRegion, _ = definition.Default.(string)
-	}
-	return holidayClosureCalendar{calendar: schoolCalendarCompose.NewHolidayClosureCalendar(holidays, defaultRegion)}
+	return holidayClosureCalendar{calendar: schoolCalendarCompose.NewHolidayClosureCalendar(holidays)}
 }
 
 type holidayClosureCalendar struct {

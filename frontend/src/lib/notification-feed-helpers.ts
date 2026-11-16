@@ -76,6 +76,8 @@ export const NOTIFICATION_FEED_ANALYTICS_TYPES = [
   "staffing_changed",
   "group_staffing_changed",
   "team_member_absent",
+  "class_timetable_changed",
+  "parent_class_timetable_changed",
   "instance_reinstated",
   "instance_room_changed",
   "instance_room_changed_later",

@@ -52,7 +52,7 @@ func (s *Scheduler) checkAndRunBookingConsistencyAudit(ctx context.Context, task
 	ctx, cancel := s.taskContext(ctx, bookingConsistencyAuditTimeout)
 	defer cancel()
 
-	auditDate := calendar.TodayDate()
+	auditDate := calendar.DateFromTime(s.clock())
 	if err := s.forEachTenant(ctx, "booking-consistency-audit", func(tenantCtx context.Context) error {
 		report, err := s.bookingConsistency(tenantCtx, auditDate)
 		if err != nil {

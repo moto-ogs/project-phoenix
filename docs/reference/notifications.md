@@ -189,7 +189,7 @@ children when that is what the type exists for (`parent_room_changed`,
 |---|---|---|
 | SSE / in-app | active | `realtime.Broadcaster` → SSE event `notification` → toast |
 | Web Push | active (#2003/#2657) | leased `platform.push_outbox` → `webpush-go` (VAPID) → browser push service → service worker notification |
-| Feed | active (#7148 staff portal, #7139 moto schule, #7140 parents portal; room changes #7141) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
+| Feed | active (#7148 staff portal, #7139 moto schule, #7140 parents portal; room changes #7141, class timetable #7142) | `platform.notification_feed_entries` in the producer's transaction → bell in the header; SSE `notification_feed_changed` (no content) |
 | E-Mail | future | wrap `email.Mailer` + audience→address resolution as a `Channel` |
 
 E-mail is still not a `Channel`: features that mail enqueue through the same
@@ -322,6 +322,27 @@ nothing for the past. All four share the school switch
 unread entry. A room changed on the series replans its future blocks and
 tells nobody; a parent type that is on by default reads as on in the
 parents portal until the family switches it off.
+
+A changed Stundenplan of a class (#7142) comes from Care Plan's writes of the
+class's Unterrichtsschluss: a weekly save that changes at least one
+weekday's time (the first day ahead it takes effect on decides the lead
+time), and setting, changing or taking back a class-wide change on one day.
+A save that changes nothing tells nobody. The people of the class are the
+staff assigned to it (`education.class_teachers`), the teachers of the OGS
+groups of its children and the guardians with `parent_portal.access` to a
+child of the class (the parent audience projection's `class` target); the
+account of the request gets nothing. Staff get `class_timetable_changed`
+(link `/tagesplan?d=…`, in moto schule `/school/klasse?klasse=…&tag=…`),
+families `parent_class_timetable_changed` (link `/children`, the lock-screen
+push names no class). Push: today or tomorrow by default
+(`FilterNotOptedOut`), 2 to 14 days ahead only for staff who switched on
+`class_timetable_changed_ahead`, a preference-only type no event carries;
+families push only with their own yes, within 14 days. Later changes reach
+the feed only. Bundling object: the class (`school_class`, a hash of its
+normalized name, since a class has no row), so the many saves of the
+Stundenplanpflege stay one unread entry per class. The text never carries
+the reason of a day's change. All three share the school switch
+`notifications.class_timetable_changed_enabled`.
 
 #### Parents portal (#7140)
 

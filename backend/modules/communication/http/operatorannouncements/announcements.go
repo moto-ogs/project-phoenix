@@ -19,12 +19,15 @@ import (
 // AnnouncementsResource handles operator announcements endpoints
 type AnnouncementsResource struct {
 	announcementService communication.Capability
+	now                 func() time.Time
 }
 
-// NewAnnouncementsResource creates a new announcements resource
-func NewAnnouncementsResource(announcementService communication.Capability) *AnnouncementsResource {
+// NewAnnouncementsResource creates a new announcements resource; now is the
+// clock that tells a published announcement from an expired one.
+func NewAnnouncementsResource(announcementService communication.Capability, now func() time.Time) *AnnouncementsResource {
 	return &AnnouncementsResource{
 		announcementService: announcementService,
+		now:                 now,
 	}
 }
 
@@ -115,7 +118,7 @@ func (rs *AnnouncementsResource) ListAnnouncements(w http.ResponseWriter, r *htt
 
 	responses := make([]AnnouncementResponse, 0, len(announcements))
 	for _, announcement := range announcements {
-		responses = append(responses, newAnnouncementResponse(announcement))
+		responses = append(responses, newAnnouncementResponse(announcement, rs.now()))
 	}
 
 	common.Respond(w, r, http.StatusOK, responses, "Announcements retrieved successfully")
@@ -134,7 +137,7 @@ func (rs *AnnouncementsResource) GetAnnouncement(w http.ResponseWriter, r *http.
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, newAnnouncementResponse(announcement), "Announcement retrieved successfully")
+	common.Respond(w, r, http.StatusOK, newAnnouncementResponse(announcement, rs.now()), "Announcement retrieved successfully")
 }
 
 // CreateAnnouncement handles creating a new announcement
@@ -194,7 +197,7 @@ func (rs *AnnouncementsResource) CreateAnnouncement(w http.ResponseWriter, r *ht
 		return
 	}
 
-	common.Respond(w, r, http.StatusCreated, newAnnouncementResponse(announcement), "Announcement created successfully")
+	common.Respond(w, r, http.StatusCreated, newAnnouncementResponse(announcement, rs.now()), "Announcement created successfully")
 }
 
 // UpdateAnnouncement handles updating an announcement
@@ -254,7 +257,7 @@ func (rs *AnnouncementsResource) UpdateAnnouncement(w http.ResponseWriter, r *ht
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, newAnnouncementResponse(existing), "Announcement updated successfully")
+	common.Respond(w, r, http.StatusOK, newAnnouncementResponse(existing, rs.now()), "Announcement updated successfully")
 }
 
 // DeleteAnnouncement handles deleting an announcement
@@ -322,7 +325,7 @@ func AnnouncementErrorRenderer(err error) render.Renderer {
 }
 
 // newAnnouncementResponse creates an announcement response from an announcement model
-func newAnnouncementResponse(a *communication.Announcement) AnnouncementResponse {
+func newAnnouncementResponse(a *communication.Announcement, now time.Time) AnnouncementResponse {
 	targetRoles := a.TargetRoles
 	if targetRoles == nil {
 		targetRoles = []string{}
@@ -365,7 +368,7 @@ func newAnnouncementResponse(a *communication.Announcement) AnnouncementResponse
 	// Determine status
 	if a.IsDraft() {
 		response.Status = "draft"
-	} else if communication.IsAnnouncementExpired(a, time.Now()) {
+	} else if communication.IsAnnouncementExpired(a, now) {
 		response.Status = "expired"
 	} else {
 		response.Status = "published"

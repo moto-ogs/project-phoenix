@@ -16,7 +16,7 @@ func TestNoticeAttachmentsSurvivePublishingAndVersionReplacement(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
 	actor := testpkg.CreateTestAccount(t, db, "notice-attachments")
-	owner := compose.New()
+	owner := compose.NewClocked(nil)
 	forms := compose.NewFormSchemas(owner, nil, nil)
 	prefix := fmt.Sprintf("%s%d_", enrollment.EnrollmentFormLegalDocumentUploadPrefix, testpkg.Tenant(t))
 	original := []enrollment.FormAttachment{
@@ -62,7 +62,7 @@ func TestNoticeAttachmentsRejectInvalidPublicationWithoutCreatingVersion(t *test
 	db := testpkg.SetupTestDB(t)
 	foreignTenantID := testpkg.Tenant(t)
 	testpkg.EnsureTestTenant(t, db, foreignTenantID)
-	owner := compose.New()
+	owner := compose.NewClocked(nil)
 	forms := compose.NewFormSchemas(owner, nil, nil)
 	for _, scenario := range []struct {
 		name, label, url string
@@ -98,7 +98,7 @@ func TestLegalNoticeAttachmentsRemainProtectedWhenDisabledAndTenantScoped(t *tes
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	owner := compose.New()
+	owner := compose.NewClocked(nil)
 	forms := compose.NewFormSchemas(owner, nil, nil)
 	actor := testpkg.CreateTestAccount(t, db, "legal-notice-attachments")
 	url := fmt.Sprintf("%s%d_legal.pdf", enrollment.EnrollmentFormLegalDocumentPublicPrefix, testpkg.Tenant(t))

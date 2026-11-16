@@ -43,7 +43,7 @@ export type StudentConsent = ConsentRecord;
 
 // Supervisor contact information
 export interface SupervisorContact {
-  id: number;
+  id: string;
   first_name: string;
   last_name: string;
   email?: string;
@@ -216,7 +216,7 @@ export interface Student {
   photo_url?: string;
   photo_consent_given?: boolean;
   photo_consent_given_at?: string;
-  photo_consent_given_by?: number;
+  photo_consent_given_by?: string;
   agb_accepted_at?: string;
   data_processing_accepted_at?: string;
   email_contact_accepted_at?: string;

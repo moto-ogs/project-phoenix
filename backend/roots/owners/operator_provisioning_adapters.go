@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/moto-ogs/project-phoenix/tenant"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
@@ -77,17 +79,17 @@ func NewOperatorProvisioningAdapters(
 		FindActiveByDeviceIDWithNames(ctx context.Context, deviceID int64) (*studentpresence.SessionDetail, error)
 	}, supervisors interface {
 		FindActiveByStaffID(ctx context.Context, staffID int64) ([]*studentpresence.GroupSupervision, error)
-	}, categories OperatorCategoryCreator, auditLog OperatorAuditEntries,
+	}, categories OperatorCategoryCreator, auditLog OperatorAuditEntries, today func() timezone.Date,
 ) (OperatorProvisioningAdapters, error) {
 	if personStudents == nil || devices == nil || persons == nil || membership == nil || personRows == nil ||
 		staffRows == nil || accounts == nil || activeGroups == nil || supervisors == nil ||
-		categories == nil || auditLog == nil {
+		categories == nil || auditLog == nil || today == nil {
 		return OperatorProvisioningAdapters{}, errors.New("operator provisioning adapters: all dependencies are required")
 	}
 	return OperatorProvisioningAdapters{
 		Devices: provisioningDevices{devices: devices},
 		People: provisioningPeople{
-			persons: persons, membership: membership, childQuota: schoolMembershipCompose.NewChildQuotaCounts(),
+			persons: persons, membership: membership, childQuota: schoolMembershipCompose.NewChildQuotaCounts(today),
 			personRows: personRows,
 			staffRows:  staffRows, accounts: accounts, students: personStudents,
 		},

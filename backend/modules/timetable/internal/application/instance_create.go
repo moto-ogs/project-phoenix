@@ -195,7 +195,7 @@ func idempotentCreateResult(existing *scheduleModel.ActivityInstance, fingerprin
 
 func (s *InstanceLifecycleService) insertCreatedInstance(ctx context.Context, inst *scheduleModel.ActivityInstance) (*scheduleModel.ActivityInstance, bool, error) {
 	if inst.IdempotencyKey == nil {
-		if err := createLegacyInstance(ctx, s.deps.InstanceRepo, inst); err != nil {
+		if err := createLegacyInstance(ctx, s.deps.InstanceRepo, inst, s.now); err != nil {
 			return nil, false, &ports.ScheduleError{Op: "create instance: insert", Err: duplicateTemplateInstance(err)}
 		}
 		return inst, true, nil

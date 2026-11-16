@@ -296,6 +296,37 @@ Inspect the domain's existing mapper, such as
 [room response mapping](../../frontend/src/lib/room-helpers.ts), rather than
 copying a generic mapper. Preserve nullability and date-vs-instant semantics.
 
+### Generated contract (ADR 0270)
+
+A backend route that is registered in Go has generated TypeScript types and
+zod decoders in `lib/contract/<resource>.generated.ts`. Never edit these files
+or write a `Backend*` interface for a registered route.
+
+- Register a route in its owner's `http` role (`StudentRouteContracts` in
+  `backend/modules/presenceprojection/http/student_contracts.go` is the
+  example) and add its mount in `backend/api/route_contracts.go`.
+- Regenerate with `scripts/run-go-toolchain.sh go -C backend run . gencontract`.
+  `TestTheCommittedContractIsCurrent` (`backend/cmd`) and the backend quality
+  job fail on a stale file.
+- Read a registered route with `contractGet` (`lib/contract/client.server.ts`).
+  It returns the decoded value or a typed failure with status, registry code
+  and request ID; rethrow `error.cause` so the handler boundary forwards the
+  backend error unchanged. An answer outside the contract is a 502, never an
+  empty value.
+- Identifiers leave the decoder as strings. A registered enum is typed as its
+  known values but decodes any string; narrow it with `knownEnum`.
+- A day is a `calendar.Date`, an instant a `time.Time`. A string field that
+  carries a day or a wall-clock time says so in its tag: `contract:"date"`
+  (`YYYY-MM-DD`) or `contract:"clock"` (`HH:MM`); the decoder then rejects
+  another form. Closed value sets are registered in `Enums`.
+- A new identifier is a `common.ID`, a count an `int`; the generator rejects a
+  bare `int64` and a response shape that depends on a query parameter.
+- Removing or renaming a registered field or route needs one release as
+  deprecated (`DeprecatedFields`, `Deprecated`);
+  `scripts/check-contract-compat.mjs <base>` fails otherwise.
+
+Registered today: `GET /api/students/` and `GET /api/students/{id}`.
+
 ### Auth Token Flow
 
 Login (per portal — see `docs/agents/contracts.md`) returns access + refresh tokens with configured lifetimes; NextAuth stores them in the session; route handlers extract the token and forward it as `Authorization: Bearer`; refresh happens automatically on expiry. MFA can insert a challenge step between credentials and session. Invitation/password-reset token flows live at `app/invite/`, `app/[tenant]/(public)/invite/`, `app/reset-password/`, with API clients in `lib/invitation-api.ts` / `lib/invitation-helpers.ts` — use these instead of hitting backend routes directly.

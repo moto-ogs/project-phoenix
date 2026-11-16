@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain"
 	internalports "github.com/moto-ogs/project-phoenix/modules/timetable/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 type Service struct {
@@ -16,17 +17,19 @@ type Service struct {
 	students             internalports.StudentDirectory
 	rooms                internalports.RoomDirectory
 	sessions             internalports.SessionFacts
+	now                  func() time.Time
 	today                func() string
 	observe              internalports.Observer
 	lockStaffAssignments func(context.Context, []int64) error
 	provenance           internalports.EnrollmentProvenanceStore
 }
 
-func New(store internalports.Store, tx internalports.Transaction, students internalports.StudentDirectory, rooms internalports.RoomDirectory, sessions internalports.SessionFacts, lockStaffAssignments func(context.Context, []int64) error, today func() string, observe internalports.Observer, provenance internalports.EnrollmentProvenanceStore) *Service {
-	if store == nil || tx == nil || students == nil || rooms == nil || sessions == nil || lockStaffAssignments == nil || today == nil || observe == nil || provenance == nil {
+func New(store internalports.Store, tx internalports.Transaction, students internalports.StudentDirectory, rooms internalports.RoomDirectory, sessions internalports.SessionFacts, lockStaffAssignments func(context.Context, []int64) error, now func() time.Time, observe internalports.Observer, provenance internalports.EnrollmentProvenanceStore) *Service {
+	if store == nil || tx == nil || students == nil || rooms == nil || sessions == nil || lockStaffAssignments == nil || now == nil || observe == nil || provenance == nil {
 		panic("timetable application: all dependencies are required")
 	}
-	return &Service{store: store, tx: tx, students: students, rooms: rooms, sessions: sessions, lockStaffAssignments: skipHeldStaffRows(lockStaffAssignments), today: today, observe: observe, provenance: provenance}
+	today := func() string { return calendar.DateFromTime(now()).String() }
+	return &Service{store: store, tx: tx, students: students, rooms: rooms, sessions: sessions, lockStaffAssignments: skipHeldStaffRows(lockStaffAssignments), now: now, today: today, observe: observe, provenance: provenance}
 }
 
 // idSet answers membership questions the session facts port returns as lists.
@@ -627,7 +630,7 @@ func (s *Service) ArchiveCategory(ctx context.Context, id int64) (result timetab
 			result = existing
 			return nil
 		}
-		now := time.Now()
+		now := s.now()
 		return s.setArchivedAt(txCtx, id, &now, stats, &result)
 	})
 	return result, err

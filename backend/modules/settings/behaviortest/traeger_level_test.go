@@ -103,7 +103,8 @@ func TestTraegerValueReachesEverySchoolOfItsTraegerOnly(t *testing.T) {
 
 	newSchool := testpkg.CreateTestSchoolInOrganization(t, f.db, f.traeger, "Neue Schule")
 	assert.False(t, f.resolve(t, newSchool, key), "a new school of the Träger inherits its value")
-	assert.Zero(t, f.count(t, `SELECT COUNT(*) FROM config.setting_values WHERE tenant_id = ?`, newSchool), "nothing is copied into the new school")
+	assert.Zero(t, f.count(t, `SELECT COUNT(*) FROM config.setting_values WHERE tenant_id = ? AND setting_key <> 'operations.federal_state'`, newSchool),
+		"nothing is copied into the new school; it holds only the federal state it got on creation (#7174)")
 
 	batch, err := f.module.Settings.ResolveManyForTenants(f.ctx, []int64{f.first, f.second, newSchool, f.otherSchool}, []string{key})
 	require.NoError(t, err)

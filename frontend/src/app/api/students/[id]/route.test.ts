@@ -41,12 +41,19 @@ const consentPath = "/api/students/123/privacy-consent";
 /** The backend student row of a PUT answer. */
 function updatedRow(overrides: Record<string, unknown> = {}) {
   return {
+    status: "success",
     data: {
       id: 123,
       person_id: 10,
       first_name: "Alice",
       last_name: "Smith",
       school_class: "1a",
+      current_location: "",
+      bus: false,
+      sick: false,
+      excused: false,
+      class_trip: false,
+      has_full_access: false,
       created_at: "2024-01-01T00:00:00Z",
       updated_at: "2024-01-15T10:00:00Z",
       ...overrides,
@@ -57,6 +64,7 @@ function updatedRow(overrides: Record<string, unknown> = {}) {
 /** The detail read: the full row plus the flags the backend always sends. */
 function detailRow(overrides: Record<string, unknown> = {}) {
   return {
+    status: "success",
     data: {
       ...updatedRow().data,
       has_full_access: true,
@@ -259,6 +267,7 @@ describe("PUT /api/students/[id]", () => {
     vi.clearAllMocks();
     mockAuth.mockResolvedValue(defaultSession);
     mockApiGet.mockResolvedValue({
+      status: "success",
       data: { accepted: true, data_retention_days: 25 },
     });
   });
@@ -434,6 +443,45 @@ describe("PUT /api/students/[id]", () => {
     expect(payload.detail).toBe("companions changed since the form was loaded");
   });
 
+  it.each([true, false])(
+    "preserves a decode failure with the saved-consent marker only after a consent write (%s)",
+    async (withConsent) => {
+      mockApiPut.mockImplementation((url: string) =>
+        Promise.resolve(
+          url === studentPath ? updatedRow({ sick: "invalid" }) : {},
+        ),
+      );
+
+      const response = await PUT(
+        createMockRequest(studentPath, {
+          method: "PUT",
+          body: {
+            first_name: "Alice",
+            ...(withConsent
+              ? { privacy_consent_accepted: true, data_retention_days: 25 }
+              : {}),
+          },
+        }),
+        createMockContext({ id: "123" }),
+      );
+
+      expect(mockApiPut.mock.calls.map(([url]) => url)).toEqual(
+        withConsent ? [consentPath, studentPath] : [studentPath],
+      );
+      expect(response.status).toBe(502);
+      const payload = await parseJsonResponse<{
+        status: number;
+        code: string;
+        details?: Record<string, unknown>;
+      }>(response);
+      expect(payload.status).toBe(502);
+      expect(payload.code).toBe("general.unavailable");
+      expect(payload.details?.privacy_consent_saved).toBe(
+        withConsent ? true : undefined,
+      );
+    },
+  );
+
   it("leaves the failure untouched when no consent was written", async () => {
     mockApiPut.mockRejectedValueOnce(
       new ApiResponseError(
@@ -461,6 +509,54 @@ describe("PUT /api/students/[id]", () => {
     }>(response);
     expect(json.code).toBe("general.input");
     expect(json.details?.privacy_consent_saved).toBeUndefined();
+  });
+
+  it("keeps the saved-consent marker on sanitized upstream failures", async () => {
+    mockApiPut.mockImplementation((url: string) =>
+      url === studentPath
+        ? Promise.reject(
+            new ApiResponseError(
+              503,
+              JSON.stringify({
+                type: "about:blank",
+                title: "Service Unavailable",
+                status: 503,
+                detail: "database diagnostics",
+                code: "general.unavailable",
+                details: { host: "db.internal" },
+              }),
+              { retryAfter: "30" },
+            ),
+          )
+        : Promise.resolve({}),
+    );
+
+    const response = await PUT(
+      createMockRequest(studentPath, {
+        method: "PUT",
+        body: {
+          first_name: "Alice",
+          privacy_consent_accepted: true,
+          data_retention_days: 25,
+        },
+      }),
+      createMockContext({ id: "123" }),
+    );
+
+    expect(mockApiPut.mock.calls.map(([url]) => url)).toEqual([
+      consentPath,
+      studentPath,
+    ]);
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Retry-After")).toBe("30");
+    expect(await response.json()).toEqual({
+      type: "about:blank",
+      title: "Service Unavailable",
+      status: 503,
+      detail: "Service Unavailable",
+      code: "general.unavailable",
+      details: { privacy_consent_saved: true },
+    });
   });
 
   // Everything is committed by the time the read-back runs — failing the

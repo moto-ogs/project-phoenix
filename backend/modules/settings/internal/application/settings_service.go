@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	config "github.com/moto-ogs/project-phoenix/modules/settings/records"
 )
@@ -29,6 +30,8 @@ type settingsService struct {
 	// construction (SettingsServiceDependencies) to keep the config package
 	// decoupled from the enrollment domain.
 	classRestrictionGuard func(ctx context.Context) (bool, error)
+	// now stamps the audit entries.
+	now func() time.Time
 	// gradeRestrictionGuard is the same probe for phases restricted to
 	// specific GRADE LEVELS. Separate from classRestrictionGuard because the
 	// two hang off different toggles: a grade restriction only needs
@@ -77,6 +80,8 @@ type SettingsServiceDependencies struct {
 	TraegerValues config.TraegerSettingRepository
 	SchoolTraeger func(context.Context, []int64) (map[int64]int64, error)
 	Registry      *config.Registry
+	// Now is the root's clock the audit entries are stamped with.
+	Now func() time.Time
 }
 
 // NewSettingsServiceWithDependencies builds the settings service with its
@@ -86,7 +91,7 @@ func NewSettingsServiceWithDependencies(dependencies SettingsServiceDependencies
 	if dependencies.Values == nil || dependencies.Audit == nil || dependencies.Schools == nil || dependencies.Runtime == nil ||
 		dependencies.Logger == nil || dependencies.HomeLayouts == nil || dependencies.ObserveLookup == nil ||
 		dependencies.ClassRestrictionGuard == nil || dependencies.GradeRestrictionGuard == nil || dependencies.GradeCapGuard == nil ||
-		dependencies.TraegerValues == nil || dependencies.SchoolTraeger == nil {
+		dependencies.TraegerValues == nil || dependencies.SchoolTraeger == nil || dependencies.Now == nil {
 		return nil, errors.New("settings service: all dependencies are required")
 	}
 	registry := dependencies.Registry
@@ -100,7 +105,7 @@ func NewSettingsServiceWithDependencies(dependencies SettingsServiceDependencies
 		dependencies.Logger, dependencies.HomeLayouts, config.ServiceOptions{
 			ObserveLookup: dependencies.ObserveLookup, ClassRestrictionGuard: dependencies.ClassRestrictionGuard,
 			GradeRestrictionGuard: dependencies.GradeRestrictionGuard, GradeCapGuard: dependencies.GradeCapGuard,
-			TraegerValues: dependencies.TraegerValues, SchoolTraeger: dependencies.SchoolTraeger,
+			TraegerValues: dependencies.TraegerValues, SchoolTraeger: dependencies.SchoolTraeger, Now: dependencies.Now,
 		}, dependencies.Registry), nil
 }
 
@@ -118,6 +123,10 @@ func newSettingsService(
 	if len(registries) > 0 && registries[0] != nil {
 		registry = registries[0]
 	}
+	now := options.Now
+	if now == nil {
+		now = time.Now
+	}
 	return &settingsService{
 		OperatorWritePolicy:   registry,
 		valueRepo:             valueRepo,
@@ -133,6 +142,7 @@ func newSettingsService(
 		classRestrictionGuard: options.ClassRestrictionGuard,
 		gradeRestrictionGuard: options.GradeRestrictionGuard,
 		gradeCapGuard:         options.GradeCapGuard,
+		now:                   now,
 	}
 }
 

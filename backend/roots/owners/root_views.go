@@ -152,13 +152,13 @@ func BuildProvisioning(
 ) (organizationtenancy.OperatorProvisioning, error) {
 	adapters, err := NewOperatorProvisioningAdapters(
 		operatorPersonStudentMembership(db), devices, persons, membership, people.Persons, people.Staff, identity,
-		sessions, supervisions, arrivalTimetable.NewActivityCategorySeeder(owner.Repositories.ActivityCategory), operatorAuditLog,
+		sessions, supervisions, arrivalTimetable.NewActivityCategorySeeder(owner.Repositories.ActivityCategory), operatorAuditLog, env.Today,
 	)
 	if err != nil {
 		return organizationtenancy.OperatorProvisioning{}, fmt.Errorf("compose operator provisioning: %w", fmt.Errorf("compose operator provisioning adapters: %w", err))
 	}
 	provisioning, err := newOperatorProvisioning(organizations, identity, NewOperatorAccountDirectory(identity, persons, membership, organizations),
-		adapters, settings, env.Logger.With("service", "platform"))
+		adapters, settings, env.Logger.With("service", "platform"), env.Now)
 	if err != nil {
 		return organizationtenancy.OperatorProvisioning{}, fmt.Errorf("compose operator provisioning: %w", err)
 	}
@@ -181,7 +181,7 @@ func BuildDeliveryDevices(db transactionruntime.Database, unit rootUnitOfWork, e
 		return DeliveryDevices{}, err
 	}
 	usage, err := deliveryCompose.NewTenantPWAUsageService(unit, db.Pool(), observabilityCompose.NewPWAStandaloneUsageRepository(db.Pool()),
-		pwaUsageCounts{provisioning: provisioning}, identity, settings, env.Logger.With("service", "pwa_usage"))
+		pwaUsageCounts{provisioning: provisioning}, identity, settings, env.Logger.With("service", "pwa_usage"), env.Now)
 	if err != nil {
 		return DeliveryDevices{}, err
 	}

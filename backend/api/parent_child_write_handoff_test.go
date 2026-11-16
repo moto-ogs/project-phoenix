@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -79,6 +81,8 @@ func newWriteRigOn(t *testing.T, db *bun.DB) writeRig {
 	t.Helper()
 	photos := &photoUnlinks{db: db}
 	rig := newChildReadRigOn(t, db, func(deps *portalCompose.Dependencies) { deps.StudentPhotos = photos })
+	// A photo consent can be given while the school has child photos on (#7208).
+	require.NoError(t, rig.settings.SetValue(testpkg.Ctx(t), settingsModule.KeyStudentPhotosEnabled, true, nil, nil))
 	return writeRig{childReadRig: rig, photos: photos}
 }
 
@@ -340,6 +344,16 @@ func TestParentChildWritesAnswerLikeBefore(t *testing.T) {
 		require.Equal(t, "200", answer(t, rec), "a repeated withdrawal changes nothing")
 		require.Equal(t, withdrawn, rig.state(t, f))
 
+		// #7208: while the school has child photos off, giving the consent
+		// again is refused and changes nothing; switched on, it succeeds.
+		require.NoError(t, rig.settings.SetValue(testpkg.Ctx(t), settingsModule.KeyStudentPhotosEnabled, false, nil, nil))
+		require.False(t, rig.photoGrantOffered(t, f), "photos off: the portal offers no new consent")
+		rec, _ = rig.send(t, photoConsent(http.MethodPut, f.StudentID), f.token)
+		require.Equal(t, "409 care.photos_disabled", answer(t, rec))
+		require.Equal(t, withdrawn, rig.state(t, f))
+		require.NoError(t, rig.settings.SetValue(testpkg.Ctx(t), settingsModule.KeyStudentPhotosEnabled, true, nil, nil))
+		require.True(t, rig.photoGrantOffered(t, f), "photos on: the withdrawn consent can be given again")
+
 		rec, _ = rig.send(t, photoConsent(http.MethodPut, f.StudentID), f.token)
 		require.Equal(t, "200", answer(t, rec), rec.Body.String())
 		granted := rig.state(t, f)
@@ -563,3 +577,25 @@ func TestParentChildWritesPersistNothingWhenCancelledUnderTheLock(t *testing.T) 
 // lockStatementPrefix starts the statement that takes the class-writes gate
 // and the child's row lock, the first lock of every route here.
 const lockStatementPrefix = "WITH class_write_gate"
+
+// photoGrantOffered reads the family's consents and reports whether the
+// portal offers to give the photo consent again.
+func (r writeRig) photoGrantOffered(t *testing.T, f childReadFamily) bool {
+	t.Helper()
+	rec := r.serveWrite(t, context.Background(), childWrite{http.MethodGet, fmt.Sprintf("/parent/me/children/%d/consents", f.StudentID), nil}, f.token)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var body struct {
+		Data []struct {
+			Key      string `json:"key"`
+			CanGrant bool   `json:"can_grant"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	for _, consent := range body.Data {
+		if consent.Key == "photo" {
+			return consent.CanGrant
+		}
+	}
+	t.Fatalf("no photo consent in %s", rec.Body.String())
+	return false
+}

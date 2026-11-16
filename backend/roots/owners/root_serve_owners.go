@@ -1,6 +1,8 @@
 package owners
 
 import (
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"context"
 	"errors"
 	"fmt"
@@ -38,9 +40,10 @@ import (
 	"github.com/moto-ogs/project-phoenix/observability"
 )
 
-// BuildServeOrganizations composes Organisation & Tenancy.
-func BuildServeOrganizations(db transactionruntime.Database) (organizationtenancy.Capability, error) {
-	return organizationCompose.New(organizationCompose.Dependencies{DB: db.Pool(), Observe: observeOrganizationTenancy})
+// BuildServeOrganizations composes Organisation & Tenancy on the root's
+// clock.
+func BuildServeOrganizations(db transactionruntime.Database, now func() time.Time) (organizationtenancy.Capability, error) {
+	return organizationCompose.New(organizationCompose.Dependencies{DB: db.Pool(), Observe: observeOrganizationTenancy, Now: now})
 }
 
 // NewTraegerMemberNames composes the names of the Träger memberships
@@ -54,10 +57,10 @@ func observeOrganizationTenancy(observation organizationCompose.Observation) {
 	observability.ObserveOrganizationTenancyOperation(observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows, observation.Stats.StatementDuration, organizationtenancy.ErrorCode(observation.Err), observation.Err)
 }
 
-// BuildServeSchoolStructure composes School Structure.
-func BuildServeSchoolStructure(db transactionruntime.Database) (schoolstructure.Owner, error) {
+// BuildServeSchoolStructure composes School Structure on the root's clock.
+func BuildServeSchoolStructure(db transactionruntime.Database, now func() time.Time) (schoolstructure.Owner, error) {
 	return schoolStructureCompose.New(schoolStructureCompose.Dependencies{
-		DB: db.Pool(),
+		DB: db.Pool(), Now: now,
 		Observe: func(observation schoolStructureCompose.Observation) {
 			observability.ObserveSchoolStructureOperation(observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows, observation.Stats.StatementDuration, schoolstructure.ErrorCode(observation.Err), observation.Err)
 		},
@@ -80,8 +83,8 @@ func BuildServeRooms(db transactionruntime.Database) (facilitiesModule.Catalog, 
 // care-offering catalog for the rooms its offerings need (#4010), and
 // Timetable, School Structure, Device Fleet and Student Presence what else
 // still uses the room (#6845).
-func BuildFacilitiesModule(db transactionruntime.Database, observe func(facilitiesCompose.Observation), lock timetable.RecurrenceWriteLock, sessions studentpresence.Owner, offerings careplan.CareOfferingGuards, groups schoolstructure.GroupListing, devices devicefleet.Capability) (facilitiesModule.Capability, error) {
-	references, err := NewRoomReferences(db, sessions, groups, devices)
+func BuildFacilitiesModule(db transactionruntime.Database, observe func(facilitiesCompose.Observation), lock timetable.RecurrenceWriteLock, sessions studentpresence.Owner, offerings careplan.CareOfferingGuards, groups schoolstructure.GroupListing, devices devicefleet.Capability, today func() timezone.Date) (facilitiesModule.Capability, error) {
+	references, err := NewRoomReferences(db, sessions, groups, devices, today)
 	if err != nil {
 		return nil, err
 	}
@@ -170,12 +173,12 @@ func BuildServeParentConferences(db transactionruntime.Database) schoolcalendar.
 // companion slice and student profiles are constructible from the database
 // alone, so the directory's write path gets them here rather than waiting
 // for the full Care Plan, which needs this directory.
-func BuildPeopleDirectory(db transactionruntime.Database, observe func(peopleCompose.Observation), photos peopleCompose.StudentPhotoRuntime, guardians *peopleCompose.GuardianDirectoryProvider) (*peopleCompose.Directory, error) {
+func BuildPeopleDirectory(db transactionruntime.Database, observe func(peopleCompose.Observation), photos peopleCompose.StudentPhotoRuntime, guardians *peopleCompose.GuardianDirectoryProvider, now func() time.Time) (*peopleCompose.Directory, error) {
 	companions, err := careplanCompose.NewCompanionRecords(db.Pool(), func(careplanCompose.Observation) {})
 	if err != nil {
 		return nil, err
 	}
-	membership, err := NewSchoolMembership(db)
+	membership, err := NewSchoolMembership(db, now)
 	if err != nil {
 		return nil, err
 	}
@@ -189,6 +192,7 @@ func BuildPeopleDirectory(db transactionruntime.Database, observe func(peopleCom
 		Observe:                    observe,
 		StudentPhotos:              photos,
 		GuardianProvider:           guardians,
+		Now:                        now,
 	}, membership, careProfiles, companions, peopleDirectoryAudit(db), newGuardianLinkOwners(db),
 		NewPeopleIdentityAccess(db, nil).FindActiveGuardianMemberships)
 }
@@ -266,15 +270,16 @@ func BuildServeFeedback(db transactionruntime.Database, settings *feedbackCompos
 }
 
 // BuildServeTimetable composes the observed Timetable owner over the People
-// Directory, the room catalog and School Membership.
-func BuildServeTimetable(db transactionruntime.Database, persons peopledirectory.StudentQuery, rooms facilitiesModule.Query, membership schoolmembership.Capability) (timetable.Owner, error) {
+// Directory, the room catalog and School Membership; now is its clock, nil
+// the real one.
+func BuildServeTimetable(db transactionruntime.Database, persons peopledirectory.StudentQuery, rooms facilitiesModule.Query, membership schoolmembership.Capability, now func() time.Time) (timetable.Owner, error) {
 	return newTimetable(db, persons, rooms, membership, func(observation timetableCompose.Observation) {
 		observability.ObserveTimetableActivitiesOperation(
 			observation.Operation, observation.Duration, observation.Stats.Queries, observation.Stats.Rows,
 			observation.Stats.DuplicatePreventionConflicts, observation.Stats.StatementDuration,
 			timetable.ErrorCode(observation.Err), observation.Err,
 		)
-	}, nil)
+	}, now)
 }
 
 // observeTimetableActivities records one Timetable activities operation of

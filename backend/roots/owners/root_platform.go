@@ -90,7 +90,7 @@ func BuildMailTransport(env RootEnvironment) (email.Mailer, email.Dispatcher, em
 		return nil, nil, email.Email{}, deliveryCompose.VAPIDConfig{}, fmt.Errorf("invalid VAPID configuration: %w", err)
 	}
 	return mailer,
-		deliveryCompose.NewMailDispatcher(mailer, logger.With("component", "email"), email.DeliveryObserver(env.Observe.Delivery)),
+		deliveryCompose.NewMailDispatcher(mailer, logger.With("component", "email"), clockOrReal(env.Now), email.DeliveryObserver(env.Observe.Delivery)),
 		email.NewEmail(deliveryModule.SenderOrDefault(cfg.EmailFromName, cfg.EmailFromAddress)), vapid, nil
 }
 
@@ -154,11 +154,12 @@ func BuildSettingsOwner(db transactionruntime.Database, unit rootUnitOfWork, env
 		ClassRestrictionGuard: phases.HasActiveClassRestrictedPhase,
 		GradeRestrictionGuard: phases.HasActiveGradeRestrictedPhase,
 		GradeCapGuard:         phases.MaxActivePhaseGrade,
+		Now:                   env.Now,
 	})
 	if err != nil {
 		return SettingsOwner{}, err
 	}
-	traeger, err := BuildTraegerSettings(db, unit, env.Logger, organizations, hub)
+	traeger, err := BuildTraegerSettings(db, unit, env.Logger, organizations, hub, env.Now)
 	if err != nil {
 		return SettingsOwner{}, err
 	}
@@ -184,8 +185,9 @@ func schoolTraeger(organizations organizationtenancy.SchoolListQuery) func(conte
 
 // BuildTraegerSettings binds the Träger level to the Träger transaction of the
 // root's unit of work, the Träger's schools for the change notice and the
-// Träger rights of Identity & Access (ADR 0086 sections 6 and 8).
-func BuildTraegerSettings(db transactionruntime.Database, unit rootUnitOfWork, logger *slog.Logger, organizations organizationtenancy.TraegerMembershipQuery, hub *realtime.Hub) (*settingsCompose.TraegerSettings, error) {
+// Träger rights of Identity & Access (ADR 0086 sections 6 and 8); now is the
+// root's clock.
+func BuildTraegerSettings(db transactionruntime.Database, unit rootUnitOfWork, logger *slog.Logger, organizations organizationtenancy.TraegerMembershipQuery, hub *realtime.Hub, now func() time.Time) (*settingsCompose.TraegerSettings, error) {
 	notify := SettingsChangedNotifier(hub)
 	if notify == nil {
 		notify = func(context.Context, int64, string) {}
@@ -193,7 +195,7 @@ func BuildTraegerSettings(db transactionruntime.Database, unit rootUnitOfWork, l
 	return settingsCompose.NewTraegerSettings(settingsCompose.TraegerSettingsDependencies{
 		Values:  settingsCompose.NewTraegerSettingRepository(settingsCompose.NewTenantSettingsRuntime(db.Pool(), nil)),
 		Runtime: settingsCompose.NewTenantSettingsRuntime(db.Pool(), &unit),
-		Schools: organizations.ListTraegerSchoolIDs, Notify: notify, Logger: logger, Now: time.Now,
+		Schools: organizations.ListTraegerSchoolIDs, Notify: notify, Logger: logger, Now: now,
 		Rights: map[configModels.TraegerRight]string{
 			configModels.TraegerRightSettings: identityaccess.TraegerRightSettingsManage,
 			configModels.TraegerRightStaff:    identityaccess.TraegerRightStaffManage,
@@ -295,7 +297,7 @@ func BuildDeliveryRuntime(db transactionruntime.Database, env RootEnvironment, g
 	observe := env.Observe.DurableDelivery
 	runtime, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{
 		DB: db.Pool(), People: GuardianDisplayResolver{Query: guardians},
-		EmailProvider: withProviderLogger(env),
+		EmailProvider: withProviderLogger(env), Now: env.Now,
 		Observe: func(observation deliveryContract.Observation) {
 			observe(string(observation.Transport), observation.Template, observation.Operation, observation.Duration, observation.Count, observation.Err)
 		},

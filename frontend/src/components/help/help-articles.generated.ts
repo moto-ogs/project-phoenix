@@ -7414,6 +7414,7 @@ export const parentNotificationsTopic =
         "Jeder Hinweis steht auch in moto unter `Hinweise`, zum Beispiel wenn eine Betreuung Ihres Kindes ausfällt. Dafür müssen Sie nichts einschalten.",
         "Findet ein Termin Ihres Kindes in einem anderen Raum statt, steht das auch unter `Hinweise`. Für heute und morgen bekommen Sie dazu eine Benachrichtigung, solange Sie `Raumänderung heute oder morgen` nicht ausschalten.",
         "Für spätere Tage schalten Sie `Raumänderung an späteren Tagen` selbst ein. Sie gilt bis 14 Tage im Voraus.",
+        "Ändert sich der Unterrichtsschluss in der Klasse Ihres Kindes, steht in moto `Stundenplan geändert`. Eine Mitteilung aufs Handy kommt dazu, wenn Sie `Stundenplan der Klasse` einschalten und die Änderung in den nächsten 14 Tagen gilt.",
         "Ein Hinweis gilt erst als gelesen, wenn Sie ihn wählen oder `Alle als gelesen markieren` wählen.",
         "Auf dem Sperrbildschirm steht nie der Name Ihres Kindes. Was genau los ist, lesen Sie nach der Anmeldung in moto.",
         "Die Themen stehen unter `Kinder`, `Mitteilungen` und `Termine`.",
@@ -8209,9 +8210,10 @@ export const schoolSearchTopic = function schoolSearchTopic(): HelpTopic {
   return {
     id: HELP_TOPICS.schoolSearch,
     title: "Mit der Suche finden",
-    question: "Wie finde ich schnell ein Kind, eine Familie oder eine Seite?",
+    question:
+      "Wie finde ich schnell ein Kind, eine Familie, eine Seite oder eine Einstellung?",
     summary:
-      "Eine Suche findet Kinder, Familien, Team, Räume, Gruppen und Seiten.",
+      "Eine Suche findet Kinder, Familien, Team, Räume, Gruppen, Seiten, Einstellungen und Hilfe.",
     group: "einstieg",
     audience: ["caregiver", "lead"],
     icon: "ListSearch",
@@ -8231,8 +8233,16 @@ export const schoolSearchTopic = function schoolSearchTopic(): HelpTopic {
         steps: [
           "Geben Sie mindestens zwei Zeichen ein.",
           "Sie können einen Namen, eine Klasse, eine Gruppe, eine Telefonnummer oder eine E-Mail-Adresse eingeben.",
-          "Die Treffer stehen nach Art sortiert: `Kinder`, `Sorgeberechtigte und Kontakte`, `Mitarbeitende`, `Räume`, `Gruppen` und `Seiten`.",
+          "Die Treffer stehen nach Art sortiert: `Kinder`, `Sorgeberechtigte und Kontakte`, `Mitarbeitende`, `Räume`, `Gruppen`, `Seiten`, `Einstellungen` und `Hilfe`.",
           "Wählen Sie einen Treffer. Oder wählen Sie ihn mit den Pfeiltasten und drücken Sie Enter.",
+        ],
+      },
+      {
+        title: "Seiten, Einstellungen und Hilfe finden",
+        steps: [
+          "Geben Sie den Namen einer Seite ein, zum Beispiel `Dienstplan`. Die Suche findet auch Seiten in den Bereichen der Seitenleiste, etwa in `Datenverwaltung` oder `Planung`. Unter dem Treffer steht der Bereich.",
+          "Geben Sie den Namen einer Einstellung ein, zum Beispiel `Passwort`. Wählen Sie den Treffer. moto öffnet die Seite mit dieser Einstellung.",
+          "Unter `Hilfe` stehen passende Anleitungen. Sie öffnen sich in einem neuen Tab.",
         ],
       },
       {
@@ -8265,15 +8275,16 @@ export const schoolSearchTopic = function schoolSearchTopic(): HelpTopic {
       },
     ],
     result:
-      "Sie landen direkt beim Kind, bei der Person, im Raum oder auf der Seite.",
+      "Sie landen direkt beim Kind, bei der Person, im Raum, auf der Seite oder bei der Einstellung.",
     differences: [
       "Sie finden nur, was Sie auch ohne Suche sehen dürfen. Telefonnummern, E-Mail-Adressen, Elternnotizen, Einträge aus dem Reiter `Notizen` und Angaben aus der Anmeldung finden nur Konten, die Kontaktdaten sehen dürfen.",
       "Eine Notiz finden Sie nur, wenn Sie sie auch im Reiter `Notizen` sehen. Eine Notiz für das Betreuungsteam findet nur, wer das Kind betreut. Eine Notiz für die Leitung findet nur die Leitung der genannten Gruppe.",
+      "Die Einstellungen der Schule findet nur, wer sie öffnen darf. Die Einstellungen im eigenen Profil findet jede Person.",
       "Ein Gruppen-Treffer öffnet `Alle Kinder` mit den Kindern dieser Gruppe.",
       "Gesundheitsangaben durchsucht die Suche nicht. Öffnen Sie dafür das Kind.",
     ],
     notes: [
-      "Ohne Eingabe zeigt die Suche die Seiten, die Sie öffnen dürfen.",
+      "Ohne Eingabe zeigt die Suche die Hauptseiten, die Sie öffnen dürfen.",
       "Brauchen Sie alle Kinder mit einem Namen? Öffnen Sie `Alle Kinder` und suchen Sie dort.",
     ],
     related: [HELP_TOPICS.studentSearch, HELP_TOPICS.appOverview],
@@ -8349,7 +8360,8 @@ export const settingsGuideTopic = function settingsGuideTopic(): HelpTopic {
           "`Betreuungsplan nutzen`: Zeigt den Betreuungsplan im Menü.",
           "`Benachrichtigungen senden`: Hinweise in moto und auf dem Handy. Was ankommt, wählt jede Person selbst.",
           "`Team-Chat für Mitarbeitende`: Das Team schreibt sich Nachrichten. Eltern sehen davon nichts.",
-          "`Kinderfotos`: Fotos bei den Kindern. Nur mit Einwilligung der Eltern. Beim Ausschalten löscht moto alle Fotos sofort. Sie können sie nicht wiederherstellen.",
+          // #7208: Ausschalten beendet auch jede Foto-Einwilligung.
+          "`Kinderfotos`: Fotos bei den Kindern. Nur mit Einwilligung der Eltern. Beim Ausschalten löscht moto alle Fotos sofort. Auch alle Foto-Einwilligungen enden. Nach dem Wiedereinschalten braucht jedes Foto eine neue Einwilligung.",
           "`Angebote auf der Kinderkarte`: Die Kinderkarten unter `Gruppen` zeigen die Angebote des Tages mit Uhrzeit.",
           "`Automatisch ausstempeln`: moto wartet nach Dienstende die eingestellte Zeit. Dann stempelt es aus. Das gilt nur bei einem geplanten Dienst.",
           "`Wegpackzeit beim Ausstempeln (Minuten)`: Diese Minuten zählt moto bei jedem Ausstempeln dazu, etwa für das Aufräumen. Nicht beim Pausenbeginn und nicht beim automatischen Ausstempeln.",
@@ -8626,8 +8638,9 @@ export const staffNoticesTopic = function staffNoticesTopic(): HelpTopic {
  * Die Glocke oben rechts im Staff-Portal (#7148): oben `Erinnerungen`, darunter
  * `Hinweise` (der Benachrichtigungs-Feed). Hinweise kommen zur Absage eines
  * Termins, zu Vertretungen, Änderungen im Dienstplan, neuen Hinweisen der
- * Leitung, zum Ausfall im Team, zu Raumänderungen und zu weiteren
- * Mitteilungs-Arten außer Nachrichten (#7136, #7137, #7138, #7141, #7143).
+ * Leitung, zum Ausfall im Team, zu Raumänderungen, zum Stundenplan einer
+ * Klasse und zu weiteren Mitteilungs-Arten außer Nachrichten (#7136, #7137,
+ * #7138, #7141, #7142, #7143).
  */
 export const staffNotificationsTopic =
   function staffNotificationsTopic(): HelpTopic {
@@ -8656,10 +8669,12 @@ export const staffNotificationsTopic =
         "Sind Sie einer Gruppe zugeordnet, sehen Sie auch, wer in Ihrer Gruppe fehlt oder vertritt. Der Hinweis öffnet den `Vertretungsplan` an dem Tag. Einen Grund nennt moto nie, auch keine Krankheit.",
         "Wurde Ihnen eine Gruppe übergeben, sehen Sie unter `Ausfall im Team`, wer in dieser Gruppe nicht da ist. Der Hinweis öffnet `Heute` an dem Tag.",
         "Wer die Änderung selbst einträgt, bekommt keinen Hinweis.",
+        "Ändert sich der Unterrichtsschluss einer Klasse, steht hier `Stundenplan geändert`. Das sehen Sie, wenn Sie der Klasse zugeordnet sind oder Kinder der Klasse in Ihrer Gruppe sind. Der Hinweis öffnet `Heute` an dem Tag.",
         "Schreibt die Leitung unter `Hinweise der Leitung` etwas Neues für die Betreuung, steht es hier als `Neuer Hinweis der Leitung`. Ein Klick darauf öffnet die Seite `Hinweise der Leitung` mit diesem Text, auch wenn er erst später gilt.",
         "Auch diese Arten kommen als Hinweis: `Geänderte Abholzeit`, `Krankmeldung eines Kindes`, `Notizen für das Team` und `Umfragen der Einrichtung`.",
         "Die Leitung bekommt außerdem `Austritte aus dem Team` und `Ablaufende Nachweise im Team`. Für Ihre eigenen Nachweise gibt es `Eigene Nachweise`.",
         "Nachrichten stehen nicht in der Glocke. Neue Nachrichten zählt moto bei `Nachrichten` und `Team-Chat`.",
+        "Werden zum Schuljahr viele Zeiten einer Klasse nacheinander eingetragen, bleibt es ein Hinweis pro Klasse.",
         "Ändert sich derselbe Termin kurz danach noch einmal, rückt der Hinweis nach oben. Sie bekommen dann keine zweite Mitteilung aufs Handy.",
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Was Sie auf dem Handy gelesen haben, ist auch am Tablet gelesen.",
@@ -8669,6 +8684,7 @@ export const staffNotificationsTopic =
         "Zu neuen Hinweisen der Leitung kommt keine Mitteilung aufs Handy. Sie können sie im `Profil` unter `Benachrichtigungen` bei `Hinweise der Leitung` einschalten. Dann kommt sie, wenn der Hinweis schon gilt oder in den nächsten 14 Tagen beginnt.",
         "Die Einstellung für `Absage eines Termins` gilt auch, wenn die Absage zurückgenommen wird.",
         "Bei Raumänderungen gibt es zwei Einstellungen. `Raumänderung heute oder morgen` ist eingeschaltet. `Raumänderung an späteren Tagen` schalten Sie selbst ein. Sie gilt bis 14 Tage im Voraus.",
+        "Zum Stundenplan einer Klasse kommt eine Mitteilung aufs Handy, wenn die Änderung heute oder morgen gilt. Für Änderungen in 2 bis 14 Tagen schalten Sie im `Profil` unter `Benachrichtigungen` den Punkt `Stundenplan Ihrer Klassen: spätere Tage` ein.",
       ],
       differences: [
         "Auf dem Handy und auf kleinen Tablets fehlt oben die Glocke. Tippen Sie unten auf `Mehr` und dann auf `Benachrichtigungen`. Die Zahl an `Mehr` zählt neue Hinweise mit.",
@@ -8680,6 +8696,7 @@ export const staffNotificationsTopic =
         "Es kommt kein Hinweis zu einer Absage? Ihre Schule kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder einen Hinweis noch eine Mitteilung aufs Handy. Fragen Sie Ihre Leitung.",
         "Es kommt kein Hinweis zu einer Raumänderung? Ihre Schule kann `Hinweis bei Raumänderung` ausschalten. Fragen Sie Ihre Leitung.",
         "Es kommt kein Hinweis zu einer Vertretung? Ihre Schule kann `Hinweis bei Vertretung und Dienstplanänderung` ausschalten. Fragen Sie Ihre Leitung.",
+        "Es kommt kein Hinweis zum Stundenplan einer Klasse? Ihre Schule kann `Hinweis bei geändertem Stundenplan einer Klasse` ausschalten. Fragen Sie Ihre Leitung.",
         "Es kommt kein Hinweis zu neuen Hinweisen der Leitung? Ihre Schule kann `Benachrichtigung bei neuem Hinweis der Leitung` ausschalten. Fragen Sie Ihre Leitung.",
         "Die Seite `Hinweise der Leitung` zeigt `Diesen Hinweis gibt es nicht mehr.`? Dann hat die Leitung ihn gelöscht oder abgeschaltet.",
         "Es kommt kein Hinweis zu einer Krankmeldung? Ihre Schule kann `Hinweis bei Krankmeldung` ausschalten. Manche Schulen melden sie auch nur Personen, die gerade im Dienst sind. Fragen Sie Ihre Leitung.",
@@ -10368,7 +10385,8 @@ export const teacherNoticesTopic = function teacherNoticesTopic(): HelpTopic {
 
 /**
  * Die Glocke oben rechts in moto schule (#7139): die `Hinweise` der Lehrkraft,
- * zuerst die Absage eines Termins, für den sie eingeplant ist.
+ * zuerst die Absage eines Termins, für den sie eingeplant ist, dazu der
+ * geänderte Stundenplan ihrer Klassen (#7142).
  */
 export const teacherNotificationFeedTopic =
   function teacherNotificationFeedTopic(): HelpTopic {
@@ -10393,6 +10411,7 @@ export const teacherNotificationFeedTopic =
         "Fällt ein Termin aus, bei dem Sie eingeplant sind, sehen Sie es hier. Wer den Termin absagt, bekommt keinen Hinweis.",
         "Nimmt die Leitung die Absage zurück, steht dort `Termin findet doch statt`.",
         "Findet ein Termin, bei dem Sie eingeplant sind, in einem anderen Raum statt, sehen Sie es auch hier. Im Hinweis stehen der neue und der alte Raum.",
+        "Ändert sich der Unterrichtsschluss einer Ihrer Klassen, steht hier `Stundenplan geändert`. Der Hinweis öffnet die Klasse an dem Tag. Werden viele Zeiten einer Klasse nacheinander eingetragen, bleibt es ein Hinweis.",
         "`Meine Aufsichten` zeigt den heutigen Tag. Liegt der Termin später, steht der Tag im Hinweis.",
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Was Sie auf dem Handy gelesen haben, ist auch am Computer gelesen.",
@@ -10400,6 +10419,7 @@ export const teacherNotificationFeedTopic =
         "Die Mitteilung aufs Handy schalten Sie unter `Einstellungen` bei `Absage eines Termins` aus. Der Hinweis in der Glocke kommt dann trotzdem.",
         "Die Einstellung gilt auch, wenn eine Absage zurückgenommen wird.",
         "Bei Raumänderungen gibt es zwei Einstellungen. `Raumänderung heute oder morgen` ist eingeschaltet. `Raumänderung an späteren Tagen` schalten Sie selbst ein. Sie gilt bis 14 Tage im Voraus.",
+        "Zum Stundenplan einer Klasse kommt eine Mitteilung aufs Handy, wenn die Änderung heute oder morgen gilt. Für 2 bis 14 Tage vorher schalten Sie unter `Einstellungen` den Punkt `Stundenplan Ihrer Klassen: spätere Tage` ein.",
       ],
       differences: [
         "Auf dem Handy öffnen sich die Hinweise über den ganzen Bildschirm. Mit dem X schließen Sie sie wieder.",
@@ -10408,6 +10428,7 @@ export const teacherNotificationFeedTopic =
       troubleshootingDetails: [
         "Es kommt kein Hinweis zu einer Raumänderung? Die OGS-Leitung kann `Hinweis bei Raumänderung` ausschalten. Fragen Sie dort nach.",
         "Es kommt kein Hinweis zu einer Absage? Die OGS-Leitung kann `Hinweis bei Absage eines Termins` ausschalten. Dann gibt es weder Hinweis noch Mitteilung aufs Handy. Fragen Sie dort nach.",
+        "Es kommt kein Hinweis zum Stundenplan? Die OGS-Leitung kann `Hinweis bei geändertem Stundenplan einer Klasse` ausschalten. Fragen Sie dort nach.",
       ],
       related: [HELP_TOPICS.teacherSettings, HELP_TOPICS.teacherSupervision],
     };
@@ -11436,6 +11457,9 @@ export const traegerBillingTermsTopic =
       notes: [
         "Die Ferienbetreuung hat immer eine eigene Rechnung. Sie steht nie auf der Rechnung der Betreuung.",
         "Bei `Lastschrift` buchen Sie den Betrag selbst ab. Dafür braucht die Familie ein SEPA-Mandat bei Ihnen, und Sie brauchen eine Gläubiger-ID. Ohne Mandat geht die Rechnung als Überweisung. moto bucht kein Geld ab.",
+        "Bei `Überweisung` steht auf jedem Schreiben eines Abrechnungslaufs ein QR-Code: auf Rechnung, Gebührenbescheid und Bestätigungsschreiben. Die Familie scannt ihn mit der Banking-App. Empfänger, IBAN, Betrag und Verwendungszweck sind dann schon ausgefüllt.",
+        "Der Verwendungszweck im QR-Code ist die Nummer der Rechnung. Hat die Familie eine Debitorennummer, steht sie dahinter. Bei einem Bescheid heißt sie Buchungszeichen.",
+        "Keinen QR-Code haben: Schreiben mit `Lastschrift`, Schreiben mit 0 €, Storno, Gutschrift und Jahresbescheide. Ein Jahresbescheid wird in Raten bezahlt.",
         "Unter `Familien und Zahlung` sehen Sie bei jeder Familie den Zahlungsweg ihrer Rechnungen.",
         "Beim Erstellen der Schreiben stehen die Fälligkeiten bereits fest. Das Feld `Zahlen bis` gilt nur für ältere Rechnungen ohne eigenes Datum.",
         "Welches Datum gilt: zuerst der eigene Zahltag der Familie, dann das Datum des Laufs, sonst das Zahlungsziel der Leistung.",
@@ -11515,7 +11539,7 @@ export const traegerBriefkopfTopic =
         "Die `Vorschau` oben auf der Seite `Briefkopf und Vorlagen` zeigt, wie Kopf und Fuß eines Briefs aussehen.",
       notes: [
         "Ein leeres Feld für Absender oder Fußzeile zeigt ein graues Beispiel. Das Beispiel steht nie im Brief.",
-        "Eine Bankverbindung ist der `Standard`. Sie steht auf allen Briefen und Rechnungen.",
+        "Eine Bankverbindung ist der `Standard`. Sie steht auf allen Briefen und Rechnungen. Auch der QR-Code zum Überweisen nimmt diese Bankverbindung.",
         "Eine andere Bankverbindung machen Sie im Menü der Zeile mit `Als Standard festlegen` zum Standard.",
         "Löschen Sie den Standard, wird die älteste andere Bankverbindung der Standard.",
         "Jedes Ansehen und jede Änderung von Ansprechperson und Bankverbindungen steht im Protokoll des Trägers.",

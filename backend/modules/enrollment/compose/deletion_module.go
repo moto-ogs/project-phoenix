@@ -3,6 +3,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/internal/adapters/postgres"
@@ -30,7 +31,8 @@ type DeletionModuleDependencies struct {
 	Delivery              EnrollmentDeletionDelivery
 	Retention             RetentionSettings
 	Logger                *slog.Logger
-	Today                 func() calendar.Date // the cleanup's school day; nil reads the real Berlin day
+	Now                   func() time.Time     // the audit stamps and the cleanup's cutoffs; nil is the real clock
+	Today                 func() calendar.Date // the cleanup's school day; nil is Now's Berlin day
 }
 
 // DeletionModule is the admin deletion and the retention cleanup over one shared impact preview.
@@ -49,7 +51,7 @@ func NewDeletionModule(deps DeletionModuleDependencies) DeletionModule {
 	})
 	deletions := NewDeletions(DeletionDependencies{
 		Requests: deps.Owner, Children: deps.Owner, Preview: preview, Audit: deps.Audit,
-		Delivery: deps.Delivery, Logger: applicationBindings.WithService(deps.Logger, "enrollment-deletion"),
+		Delivery: deps.Delivery, Logger: applicationBindings.WithService(deps.Logger, "enrollment-deletion"), Now: deps.Now,
 	})
 	// The cleanup audits through the shared preview only with an audit trail bound (not in focused suites).
 	var cleanupPreview *DeletionPreview
@@ -59,7 +61,7 @@ func NewDeletionModule(deps DeletionModuleDependencies) DeletionModule {
 	cleanup := NewRejectedCleanup(RejectedCleanupDependencies{
 		Requests: deps.Owner, Children: deps.Owner, LateInvites: deps.Owner, Delivery: deps.Delivery,
 		Settings: deps.Retention, Preview: cleanupPreview, Audit: deps.Audit,
-		Logger: applicationBindings.WithService(deps.Logger, "enrollment-rejected-cleanup"), Today: deps.Today,
+		Logger: applicationBindings.WithService(deps.Logger, "enrollment-rejected-cleanup"), Now: deps.Now, Today: deps.Today,
 	})
 	return DeletionModule{Preview: preview, Deletions: deletions, Cleanup: cleanup}
 }

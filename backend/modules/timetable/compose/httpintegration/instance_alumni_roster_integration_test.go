@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,12 +37,12 @@ func graduate(t *testing.T, s *lifecycleSetup, studentID int64) {
 func TestInstance_Create_RejectsGraduatedStudent(t *testing.T) {
 	t.Parallel()
 
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 
 	graduate(t, s, s.student1)
 
 	inst, err := s.svc.CreateInstance(s.ctx, timetable.CreateInstanceInput{
-		Date:            calendar.TodayDate().AddDays(7),
+		Date:            lifecycleToday.AddDays(7),
 		StartTime:       time.Date(1, 1, 1, 9, 0, 0, 0, time.UTC),
 		EndTime:         time.Date(1, 1, 1, 10, 0, 0, 0, time.UTC),
 		Title:           "Alumnus must not be planned",
@@ -64,9 +63,9 @@ func TestInstance_Create_RejectsGraduatedStudent(t *testing.T) {
 func TestInstance_UpdatePlanned_RejectsGraduatedStudent(t *testing.T) {
 	t.Parallel()
 
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 
-	date := calendar.TodayDate().AddDays(7)
+	date := lifecycleToday.AddDays(7)
 	inst, err := s.svc.CreateInstance(s.ctx, timetable.CreateInstanceInput{
 		Date:            date,
 		StartTime:       time.Date(1, 1, 1, 9, 0, 0, 0, time.UTC),
@@ -111,9 +110,9 @@ func TestInstance_UpdatePlanned_RejectsGraduatedStudent(t *testing.T) {
 func TestInstance_UpdatePlanned_PastDatedRosterKeepsGraduate(t *testing.T) {
 	t.Parallel()
 
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 
-	past := calendar.TodayDate().AddDays(-14)
+	past := lifecycleToday.AddDays(-14)
 	inst, err := s.svc.CreateInstance(s.ctx, timetable.CreateInstanceInput{
 		Date:            past,
 		StartTime:       time.Date(1, 1, 1, 9, 0, 0, 0, time.UTC),

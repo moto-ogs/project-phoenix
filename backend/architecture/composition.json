@@ -18,6 +18,7 @@
     "phoenix cleanup timetable stats",
     "phoenix cleanup tokens",
     "phoenix cleanup visits",
+    "phoenix gencontract",
     "phoenix gendoc",
     "phoenix migrate",
     "phoenix migrate preflight",

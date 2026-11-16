@@ -14,6 +14,7 @@ import { withPrivateNoStore } from "~/lib/private-no-store";
 import { configuredPortalOfHost } from "~/lib/portal-paths";
 import { tenantPortal } from "~/server/auth";
 import { parentPortal } from "~/server/auth/parent";
+import { traegerPortal } from "~/server/auth/traeger";
 import { sessionMutationOriginError } from "~/server/auth/same-origin";
 import { installLoginSession } from "~/lib/login-route.server";
 import {
@@ -24,21 +25,45 @@ import {
 
 const logger = createLogger({ component: "DemoSessionRoute" });
 
+/** The portals a demo session can be redeemed on, each on its own host. */
+type DemoPortal = "tenant" | "parent" | "traeger";
+
+const DEMO_PORTAL_AUTH = {
+  tenant: tenantPortal,
+  parent: parentPortal,
+  traeger: traegerPortal,
+} as const;
+
+const DEMO_SESSION_ROLES = new Set([
+  "lead",
+  "caregiver",
+  "parent",
+  "traeger",
+  "all",
+]);
+
+/** The portal a demo role's session belongs to (#3468, #6193). */
+function portalOfDemoRole(role: string): DemoPortal {
+  if (role === "parent") return "parent";
+  if (role === "traeger") return "traeger";
+  return "tenant";
+}
+
 async function POSTHandler(request: NextRequest) {
   const originError = sessionMutationOriginError(request);
   if (originError) return originError;
   // Choose the cookie context from the proxy-owned host, never from a role
   // supplied by the browser or returned for a fixed-role demo link.
   const portal = configuredPortalOfHost(new URL(frontendOrigin(request)).host);
-  if (portal !== "tenant" && portal !== "parent") {
+  if (portal !== "tenant" && portal !== "parent" && portal !== "traeger") {
     return problemResponse(403, "Unsupported demo portal", request);
   }
-  const parent = portal === "parent";
-  const session = parent ? parentPortal : tenantPortal;
-  return session.withSessionResponse((req) => redeem(req, parent))(request);
+  return DEMO_PORTAL_AUTH[portal].withSessionResponse((req) =>
+    redeem(req, portal),
+  )(request);
 }
 
-async function redeem(request: NextRequest, parent: boolean) {
+async function redeem(request: NextRequest, portal: DemoPortal) {
   let body: { token?: unknown; role?: unknown } = {};
   try {
     body = (await request.json()) as typeof body;
@@ -62,15 +87,13 @@ async function redeem(request: NextRequest, parent: boolean) {
       throw new Error("Invalid demo session response");
     })) as Record<string, unknown>;
     const demo = payload.demo as Record<string, unknown> | undefined;
-    if (
-      !demo ||
-      !["lead", "caregiver", "parent", "all"].includes(String(demo.role))
-    ) {
+    if (!demo || !DEMO_SESSION_ROLES.has(String(demo.role))) {
       throw new Error("Invalid demo role");
     }
     // The session belongs to the portal of its role, not of this host.
-    const minted = demo.role === "parent" ? parentPortal : tenantPortal;
-    const matchesPortal = (demo.role === "parent") === parent;
+    const mintedPortal = portalOfDemoRole(String(demo.role));
+    const minted = DEMO_PORTAL_AUTH[mintedPortal];
+    const matchesPortal = mintedPortal === portal;
     if (matchesPortal) {
       const failure = await installLoginSession(request, payload, minted);
       if (failure) return failure;
@@ -90,6 +113,7 @@ async function redeem(request: NextRequest, parent: boolean) {
           role: demo.role,
           src: demo.src,
           fixed_role: demo.fixed_role,
+          traeger: demo.traeger === true,
         },
       },
       { status: backend.status },

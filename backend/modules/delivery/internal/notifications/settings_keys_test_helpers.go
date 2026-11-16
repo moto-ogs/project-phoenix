@@ -14,6 +14,7 @@ var RestatedSettingKeys = []string{
 	settingStaffingChangedEnabled,
 	settingStaffNoticePublishedEnabled,
 	settingInstanceRoomChangedEnabled,
+	settingClassTimetableChangedEnabled,
 	settingOnDutyOnly,
 	settingRemindersPickupUpcomingEnabled,
 	settingRemindersPickupOverdueEnabled,

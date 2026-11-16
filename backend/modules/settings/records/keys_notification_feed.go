@@ -21,3 +21,8 @@ const KeyNotificationsStaffNoticePublishedEnabled = "notifications.staff_notice_
 // (#7141): neither feed entry nor push is written then, for the staff of the
 // block and for the families of its children.
 const KeyNotificationsInstanceRoomChangedEnabled = "notifications.instance_room_changed_enabled"
+
+// KeyNotificationsClassTimetableChangedEnabled lets a school switch off the
+// notices about a changed Stundenplan of a class (#7142): neither feed entry
+// nor push is written then, for the staff of the class and its families.
+const KeyNotificationsClassTimetableChangedEnabled = "notifications.class_timetable_changed_enabled"

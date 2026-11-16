@@ -71,7 +71,7 @@ describe("demo access routes", () => {
       Response.json({
         access_token: "access",
         refresh_token: "refresh",
-        demo: { access_id: "4711", role: "lead" },
+        demo: { access_id: "4711", role: "lead", traeger: true },
       }),
     );
 
@@ -94,9 +94,10 @@ describe("demo access routes", () => {
       path: "/api/demo",
       maxAge: 14 * 24 * 60 * 60,
     });
+    // The banner learns whether the school's own Träger-Büro is open (#6193).
     expect(await response.json()).toEqual({
       session_created: true,
-      demo: { access_id: "4711", role: "lead" },
+      demo: { access_id: "4711", role: "lead", traeger: true },
     });
     // Tokens and access IDs must not stay in a shared device's cache (#4999).
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");

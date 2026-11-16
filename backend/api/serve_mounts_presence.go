@@ -43,13 +43,14 @@ import (
 	"github.com/moto-ogs/project-phoenix/workflows/sessionend"
 )
 
-func newDeviceAuthentication(iot devicefleetCompose.IoTService, organizations organizationtenancy.Query, settings settingsCompose.SettingsService, logger *slog.Logger) *deviceauth.Authenticators {
+func newDeviceAuthentication(iot devicefleetCompose.IoTService, organizations organizationtenancy.Query, settings settingsCompose.SettingsService, logger *slog.Logger, now func() time.Time) *deviceauth.Authenticators {
 	return deviceauth.New(deviceauth.Dependencies{
 		Logger:       logger,
 		Devices:      iot.Fleet(),
 		Schools:      deviceSchoolDirectory{schools: organizations},
 		SchoolErrors: devicefleetCompose.NewSchoolReadErrors(),
 		Settings:     settings,
+		Now:          now,
 	})
 }
 
@@ -80,7 +81,7 @@ func mountPresenceRoutes(
 		return err
 	}
 	iotResource, err := newIoTResource(db, logger, errorReportDSN, deviceAuth, presence, openRoomMove, sessionEnd, iot, facilities, active, users,
-		activities, timetableOwner, timetableRepos, education, pickups, settings, timeTracking, rooms, feedback, organizations, hub, invitations)
+		activities, timetableOwner, timetableRepos, education, pickups, settings, timeTracking, rooms, feedback, organizations, hub, invitations, now)
 	if err != nil {
 		return err
 	}
@@ -129,7 +130,7 @@ func newIoTResource(
 	timetableRepos timetableCompose.Repositories, education schoolstructure.GroupManagement, pickups carePlanModule.PickupScheduleService,
 	settings settingsCompose.SettingsService, timeTracking *workforceCompose.TimeTracking, rooms FacilitiesRooms,
 	feedback feedbackModule.Capability, organizations organizationtenancy.Query, hub *realtime.Hub,
-	invitations identityaccess.SchoolInvitations,
+	invitations identityaccess.SchoolInvitations, now func() time.Time,
 ) (*iotAPI.Resource, error) {
 	errorReports, err := NewIoTErrorReportRelay(errorReportDSN)
 	if err != nil {
@@ -149,18 +150,18 @@ func newIoTResource(
 		// move (#3067).
 		OpenRooms: newDeviceOpenRoomMover(openRoomMove),
 		Settings:  newDeviceScanSettings(settings),
-		Logger:    logger.With("service", "device-scan"),
+		Logger:    logger.With("service", "device-scan"), Now: now,
 	})
 	return iotAPI.NewResource(iotAPI.ServiceDependencies{
-		Administration:   NewIoTAdministration(devicefleetCompose.NewAdministration(iot.Fleet())),
-		Runtime:          NewIoTHTTPRuntime(),
+		Administration:   NewIoTAdministration(devicefleetCompose.NewAdministration(iot.Fleet(), now), now),
+		Runtime:          NewIoTHTTPRuntime(now),
 		DeviceScan:       deviceScan,
 		OpenRooms:        deviceScan,
 		StaffClock:       newStaffClockService(users, owners.NewPeopleIdentityAccess(db, observability.ObserveIdentityAccessOperation), timeTracking.TimeClock),
 		Configuration:    devicescanCompose.NewConfiguration(DeviceConfiguration{Settings: settings}, DeviceScanPrincipal),
 		Rooms:            devicescanCompose.NewRoomAvailability(rooms.RoomService, DeviceScanPrincipal),
 		Directory:        devicescanCompose.NewDirectory(NewDeviceScanDirectoryPeople(users, invitations), DeviceActivityCatalog(activities), NewDeviceScanHolidayGuestSchools(nil), logger, DeviceScanPrincipal),
-		TagAssignments:   devicescanCompose.NewTagAssignments(NewDeviceScanPeople(users), logger, DeviceScanPrincipal),
+		TagAssignments:   devicescanCompose.NewTagAssignments(NewDeviceScanPeople(users), logger, DeviceScanPrincipal, now),
 		FeedbackStudents: devicescanCompose.NewFeedbackStudents(NewDeviceScanPeople(users)),
 		FeedbackService:  feedback,
 		FeedbackResponseObserver: func(status int, code string) {
@@ -169,7 +170,7 @@ func newIoTResource(
 		SchoolName:              devicescanCompose.NewSchoolName(schoolName(organizations), DeviceScanPrincipal),
 		ErrorReports:            NewIoTErrorReporter(errorReports),
 		SessionEnd:              bindIoTHostSessionEnd(BindIoTSessionEnd(sessionEnd)),
-		SessionLifecycle:        scanBindings.NewSessionLifecycle(active, presence, scanBindings.NewSupervisionQuery(presence), NewDeviceScanPeople(users), iot, NewKioskSessionMirror(timetableRepos, activities, KioskMirrorPublisher(hub, logger), logger), logger, DeviceScanPrincipal),
+		SessionLifecycle:        scanBindings.NewSessionLifecycle(active, presence, scanBindings.NewSupervisionQuery(presence), NewDeviceScanPeople(users), iot, NewKioskSessionMirror(timetableRepos, activities, KioskMirrorPublisher(hub, logger), logger), logger, DeviceScanPrincipal, now),
 		Logger:                  logger.With("handler", "iot"),
 		DeviceAuthenticator:     gateDeviceAuthentication(deviceAuth.Device()),
 		DeviceOnlyAuthenticator: gateDeviceAuthentication(deviceAuth.DeviceOnly()),

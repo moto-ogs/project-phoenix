@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	offeringContract "github.com/moto-ogs/project-phoenix/modules/enrollment/offeringcontract"
 
@@ -372,7 +371,7 @@ func (s *Intake) replaceRequestPayload(ctx context.Context, editReq *SubmitReque
 	}
 	// Append-only evidence: the edit re-confirms the legal blocks in force
 	// now next to the earlier entries, which keep the pre-edit answers.
-	snapshotEntry, err := legalBlocksSnapshotEntry(plan.legalBlocks, editReq.ConsentFlags, formsOf(plan.schema, editReq.DisplayedFormSchemaID), time.Now(), s.deps.Fingerprint)
+	snapshotEntry, err := legalBlocksSnapshotEntry(plan.legalBlocks, editReq.ConsentFlags, formsOf(plan.schema, editReq.DisplayedFormSchemaID), s.now(), s.deps.Fingerprint)
 	if err != nil {
 		return nil, err
 	}

@@ -19,14 +19,15 @@ func (q *dayRecordingStaffGroups) ListSubstitutedGroups(_ context.Context, staff
 	return nil, nil
 }
 
-// The read names a calendar day in its YYYY-MM-DD form for the staff member;
-// which day the clock yields is calendar.TodayDate's contract.
+// The read names the day of the caller's clock in its YYYY-MM-DD form for
+// the staff member.
 func TestListSubstitutedGroupsTodayAsksForACalendarDay(t *testing.T) {
 	t.Parallel()
 
 	staffID := int64(4082)
 	query := &dayRecordingStaffGroups{}
-	if _, err := schoolstructure.ListSubstitutedGroupsToday(context.Background(), query, staffID); err != nil {
+	if _, err := schoolstructure.ListSubstitutedGroupsToday(context.Background(), query, staffID,
+		func() calendar.Date { return calendar.NewDate(2026, 11, 2) }); err != nil {
 		t.Fatalf("ListSubstitutedGroupsToday() = %v", err)
 	}
 	if query.staffID != staffID {
@@ -34,5 +35,8 @@ func TestListSubstitutedGroupsTodayAsksForACalendarDay(t *testing.T) {
 	}
 	if _, err := calendar.ParseDate(query.day); err != nil {
 		t.Fatalf("asked for day %q, want a calendar date: %v", query.day, err)
+	}
+	if query.day != "2026-11-02" {
+		t.Fatalf("asked for day %q, want the clock's day 2026-11-02", query.day)
 	}
 }

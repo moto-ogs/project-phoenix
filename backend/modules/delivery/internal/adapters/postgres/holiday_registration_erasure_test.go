@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,7 +51,7 @@ func TestHolidayRegistrationErasureTakesEveryMailOfTheRegistration(t *testing.T)
 	// first and goes with any of them.
 	insert("holiday_closure_notice", "bundled", kept, fmt.Sprintf(`{"registration_ids":[%d,%d]}`, kept, erased))
 
-	store := postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase)
+	store := postgres.New(postgres.RequireTenantDatabase, postgres.RequireAdminDatabase, time.Now)
 	var deleted int
 	require.NoError(t, tenant.WithAdminTx(ctx, db, func(ctx context.Context, _ bun.Tx) error {
 		var err error

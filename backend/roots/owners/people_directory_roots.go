@@ -38,8 +38,8 @@ func NewPeopleDirectory(db transactionruntime.Database, clocks ...func() time.Ti
 // MustNewPeopleDirectory is NewPeopleDirectory for composition seams that
 // cannot return an error; composing only fails on missing dependencies, which
 // is a programming error at wiring time.
-func MustNewPeopleDirectory(db transactionruntime.Database) *peopleCompose.Directory {
-	capability, err := NewPeopleDirectory(db)
+func MustNewPeopleDirectory(db transactionruntime.Database, clocks ...func() time.Time) *peopleCompose.Directory {
+	capability, err := NewPeopleDirectory(db, clocks...)
 	if err != nil {
 		panic(fmt.Sprintf("compose people directory: %v", err))
 	}
@@ -77,16 +77,30 @@ func NewPeopleDirectoryWithObserver(
 		Observe:                    observe,
 		StudentPhotos:              photos,
 		GuardianProvider:           guardians,
+		Now:                        firstClock(clocks),
 	}, membership, careProfiles, companions, peopleDirectoryAudit(db), newGuardianLinkOwners(db),
 		NewPeopleIdentityAccess(db, nil).FindActiveGuardianMemberships)
+}
+
+// firstClock is the optional clock of a test graph, nil for the real one.
+func firstClock(clocks []func() time.Time) func() time.Time {
+	if len(clocks) == 0 {
+		return nil
+	}
+	return clocks[0]
 }
 
 // NewPeopleIdentityAccess composes the Identity & Access module the People
 // Directory repositories read accounts and memberships through. A nil
 // observer composes it unobserved, which is what test graphs and CLI roots
-// use.
+// use, on the real clock.
 func NewPeopleIdentityAccess(db transactionruntime.Database, observe IdentityAccessObserver) identityaccess.Owner {
-	module, err := identityCompose.New(identityCompose.Dependencies{DB: db.Pool(), Observe: identityAccessObservation(observe)})
+	return newPeopleIdentityAccess(db, observe, nil)
+}
+
+// newPeopleIdentityAccess composes it on the root's clock (nil: the real one).
+func newPeopleIdentityAccess(db transactionruntime.Database, observe IdentityAccessObserver, now func() time.Time) identityaccess.Owner {
+	module, err := identityCompose.New(identityCompose.Dependencies{DB: db.Pool(), Observe: identityAccessObservation(observe), Now: now})
 	if err != nil {
 		panic(fmt.Sprintf("compose identity access: %v", err))
 	}
@@ -128,11 +142,12 @@ func newGuardianLinkOwners(db transactionruntime.Database) guardianLinkOwners {
 
 // NewGuardianProfileRepository is the guardian profile repository with the
 // Identity & Access active-membership and login-ready-membership queries its
-// portal reachability check joins (#2720, #2721).
-func NewGuardianProfileRepository(db transactionruntime.Database) peoplePorts.GuardianProfileRepository {
+// portal reachability check joins (#2720, #2721). A new profile counts as
+// childless from the optional clock, the real one when none is given.
+func NewGuardianProfileRepository(db transactionruntime.Database, clocks ...func() time.Time) peoplePorts.GuardianProfileRepository {
 	identity := NewPeopleIdentityAccess(db, nil)
 	profiles := peopleCompose.NewGuardianProfileRepository(db.Pool(), StudentDirectoryReader(), guardianLinkView.NewReader(),
-		identity.FindActiveGuardianMemberships, identity.FindLoginReadyGuardianMemberships)
+		identity.FindActiveGuardianMemberships, identity.FindLoginReadyGuardianMemberships, firstClock(clocks))
 	return profiles
 }
 
@@ -159,14 +174,15 @@ func newStudentGuardianRepository(db transactionruntime.Database, memberships ac
 // unobserved People Directory and School Membership, the owners its reads and
 // writes translate to (#3349). The teacher-scoped roster reads resolve their
 // groups through the given membership; the roster and birthday reads name the
-// groups through School Structure.
-func NewStudentRepository(db transactionruntime.Database, membership groupAssignmentLister, groups schoolstructure.Query) peoplePorts.StudentRepository {
-	enrollment, err := NewSchoolMembership(db)
+// groups through School Structure. The rosters list the children of the
+// Berlin day of the optional clock, the real one when none is given.
+func NewStudentRepository(db transactionruntime.Database, membership groupAssignmentLister, groups schoolstructure.Query, clocks ...func() time.Time) peoplePorts.StudentRepository {
+	enrollment, err := NewSchoolMembership(db, clocks...)
 	if err != nil {
 		panic(fmt.Sprintf("student repository: compose membership: %v", err))
 	}
 	return BindStudentRepository(peopleCompose.StudentRepositoryDependencies{
-		DB: db.Pool(), Directory: MustNewPeopleDirectory(db), Enrollment: enrollment,
+		DB: db.Pool(), Directory: MustNewPeopleDirectory(db, clocks...), Enrollment: enrollment,
 	}, membership, groups)
 }
 

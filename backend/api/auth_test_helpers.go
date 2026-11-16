@@ -100,6 +100,9 @@ type authTestSettings struct {
 	mfaCapability        identityaccess.AccountMFA
 	staffCreateErr       error
 	standingDemo         string
+	// identityClock is the Identity & Access clock (ADR 0261); nil reads
+	// the real one.
+	identityClock func() time.Time
 	// demoMaxActiveSchools is the demo capacity; the default leaves room
 	// for every demo school the tests of a package queue.
 	demoMaxActiveSchools int
@@ -123,6 +126,13 @@ func WithDemoMaxActiveSchools(capacity int) AuthTestOption {
 // every access enters the school with this slug instead of its own.
 func WithStandingDemoSchool(slug string) AuthTestOption {
 	return func(settings *authTestSettings, _ *authTestMail) { settings.standingDemo = slug }
+}
+
+// WithAuthTestClock composes Identity & Access and its session token codec on
+// now instead of the real clock, as both read RootEnvironment.Now in the
+// roots (ADR 0261).
+func WithAuthTestClock(now func() time.Time) AuthTestOption {
+	return func(settings *authTestSettings, _ *authTestMail) { settings.identityClock = now }
 }
 
 // WithAuthTestMailer composes the module on the given mailer, so a test can
@@ -218,7 +228,7 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 		option(&settingsOverrides, &mail)
 	}
 	mailer := mail.mailer
-	dispatcher := deliveryCompose.NewMailDispatcher(mailer, logger)
+	dispatcher := deliveryCompose.NewMailDispatcher(mailer, logger, time.Now)
 	defaultFrom := email.NewEmail(cfg.EmailFromName, cfg.EmailFromAddress)
 	if defaultFrom.Address == "" {
 		defaultFrom = email.NewEmail("moto", "no-reply@moto.local")
@@ -229,7 +239,7 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 	catererURL := strings.TrimRight(cfg.CatererURL, "/")
 	resetMinutes := authTestTokenExpiry(cfg.PasswordResetExpiryMinutes, 30, 1440)
 	inviteHours := authTestTokenExpiry(cfg.InvitationTokenExpiryHours, 48, 168)
-	codec, err := NewConfiguredSessionTokens(cfg.JWTSecret, cfg.JWTExpiry, cfg.JWTRefreshExpiry)
+	codec, err := NewConfiguredSessionTokens(cfg.JWTSecret, cfg.JWTExpiry, cfg.JWTRefreshExpiry, settingsOverrides.identityClock)
 	if err != nil {
 		return AuthTestModule{}, err
 	}
@@ -285,11 +295,11 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 	}
 	mfa.Capability = settingsOverrides.mfaCapability
 	guardianMail, enrollmentClaims, err := owners.GuardianInvitationDependencies(settings.Settings, organizations, owners.OutboxEnqueuer{Outbox: deliveryModule.EmailOutbox}, deliveryModule.Runtime.EmailOutcomes,
-		parentPortal.ParentEnrollmentRequest, parentsURL, logger)
+		parentPortal.ParentEnrollmentRequest, parentsURL, logger, nil)
 	if err != nil {
 		return AuthTestModule{}, err
 	}
-	catererMail, err := owners.CatererInvitationDelivery(organizations, owners.OutboxEnqueuer{Outbox: deliveryModule.EmailOutbox}, deliveryModule.Runtime.EmailOutcomes, catererURL)
+	catererMail, err := owners.CatererInvitationDelivery(organizations, owners.OutboxEnqueuer{Outbox: deliveryModule.EmailOutbox}, deliveryModule.Runtime.EmailOutcomes, catererURL, nil)
 	if err != nil {
 		return AuthTestModule{}, err
 	}
@@ -319,7 +329,7 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 		return AuthTestModule{}, err
 	}
 	identityAccess, err = owners.NewIdentityAccessWithSessions(identityaccessCompose.Dependencies{
-		DB: db.Pool(), Observe: func(identityaccessCompose.Observation) {},
+		DB: db.Pool(), Observe: func(identityaccessCompose.Observation) {}, Now: settingsOverrides.identityClock,
 		MFA: mfa, Lifecycle: lifecycle, Operators: operators, Demo: demo, TenantRuntime: unit,
 		Resets: owners.PasswordResetDependencies(&owners.PasswordResetWiring{
 			Dispatcher: dispatcher, DefaultFrom: defaultFrom, Durable: durable,
@@ -354,7 +364,7 @@ func IdentityAccessForTests(cfg IdentityAccessTestConfig, unit tenant.UnitOfWork
 	}
 	codec := cfg.SessionTokens
 	if codec == nil {
-		configured, err := newLegacyTokenAdapter()
+		configured, err := newLegacyTokenAdapter(nil)
 		if err != nil {
 			return nil, err
 		}

@@ -50,7 +50,7 @@ func TestDispatchEmailDoesNotWaitOutTheBackoffOfAMissingTransport(t *testing.T) 
 	store := &targetedEmailWorkerStore{workerStore: workerStore{renewed: true, failureResult: domain.FinalizeResult{Finalized: true}}}
 	store.intent = synchronousEmailIntent(t)
 	provider := &workerProvider{err: mail.ErrDeliveryUnavailable}
-	worker := NewWorker(store, provider, func(domain.Observation) {})
+	worker := NewWorker(store, provider, func(domain.Observation) {}, time.Now)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -70,7 +70,7 @@ func TestDispatchEmailKeepsTheBackoffOfATransportFailure(t *testing.T) {
 	store := &targetedEmailWorkerStore{workerStore: workerStore{renewed: true, failureResult: domain.FinalizeResult{Finalized: true}}}
 	store.intent = synchronousEmailIntent(t)
 	provider := &workerProvider{err: errors.New("smtp: connection refused")}
-	worker := NewWorker(store, provider, func(domain.Observation) {})
+	worker := NewWorker(store, provider, func(domain.Observation) {}, time.Now)
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 

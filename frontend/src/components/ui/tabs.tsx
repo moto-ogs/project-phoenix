@@ -41,7 +41,7 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       className={cn(
         // Base styles
-        "focus-visible:ring-moto-blue inline-flex items-center justify-center gap-1.5 text-sm font-medium whitespace-nowrap ring-offset-white transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
+        "focus-visible:ring-moto-blue inline-flex items-center justify-center gap-1.5 text-sm font-medium whitespace-nowrap ring-offset-white transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
         // Default variant (pill)
         "group-data-[variant=default]/tabs-list:rounded-md group-data-[variant=default]/tabs-list:px-3 group-data-[variant=default]/tabs-list:py-1 group-data-[variant=default]/tabs-list:data-[state=active]:bg-white group-data-[variant=default]/tabs-list:data-[state=active]:text-gray-900 group-data-[variant=default]/tabs-list:data-[state=active]:shadow",
         // Line variant (underline)

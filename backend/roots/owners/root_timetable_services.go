@@ -76,7 +76,7 @@ func BuildTimetableLifecycle(
 		Exceptions: repos.ActivityException, Schedules: repos.ActivitySchedule, Staff: NewTimetableStaff(people.Staff),
 		CalendarPeriods: owner.TemplateRows.CalendarPeriods, ArrivalExceptions: careRows.ArrivalExceptions,
 		Sessions: presence.SessionRecords, Shifts: shifts, Presence: presence.Presence,
-		Logger: env.Logger.With("service", "timetable-conflicts"),
+		Logger: env.Logger.With("service", "timetable-conflicts"), Now: env.Now,
 	}, schedules.ArrivalBaselines)
 	if err != nil {
 		return TimetableLifecycle{}, fmt.Errorf("compose timetable conflict detection: %w", err)

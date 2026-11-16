@@ -137,7 +137,7 @@ func (r *AccountMFARecords) IncrementMFAAttempts(ctx context.Context, accountID 
  mfa_locked_until = CASE WHEN mfa_attempts + 1 >= ? THEN ? ELSE mfa_locked_until END
  WHERE id = ? AND personal_data_erased_at IS NULL
  RETURNING mfa_attempts AS attempts, mfa_locked_until AS locked_until`,
-		threshold, time.Now().Add(duration), accountID).Scan(ctx, &lockout)
+		threshold, r.store.now().Add(duration), accountID).Scan(ctx, &lockout)
 	return lockout, err
 }
 

@@ -17,9 +17,9 @@ type (
 	ImportPorts   = application.ImportPorts
 )
 
-// NewContracts builds the contracts of the Träger-Büro; the reads open own units for each school's access log.
-func NewContracts(ports ContractPorts) carecontract.Contracts {
-	return application.NewContracts(postgres.NewStore(), rendering.NewRenderer(), ports, application.Clock{Now: time.Now}, NewContractVersions())
+// NewContracts builds the contracts of the Träger-Büro; the reads open own units for each school's access log. now is the root's clock (ADR 0239), nil the real one.
+func NewContracts(ports ContractPorts, now func() time.Time) carecontract.Contracts {
+	return application.NewContracts(postgres.NewStore(), rendering.NewRenderer(), ports, application.Clock{Now: now}, NewContractVersions())
 }
 
 // NewContractVersions reads the versions in force and the recipients for the billing (#4681, #4684) in the caller's Träger unit.
@@ -32,26 +32,26 @@ func NewContractChanges(ports carecontract.ChangePorts) carecontract.ContractCha
 	return application.NewContractChanges(postgres.NewStore(), ports)
 }
 
-// NewIntake builds the creation of contracts from the accepted applications and the offerings' templates.
-func NewIntake(ports IntakePorts) carecontract.Intake {
-	return application.NewIntake(postgres.NewStore(), ports, calendar.TodayDate)
+// NewIntake builds the creation of contracts from the accepted applications and the offerings' templates; today is the root's day clock (ADR 0239).
+func NewIntake(ports IntakePorts, today func() calendar.Date) carecontract.Intake {
+	return application.NewIntake(postgres.NewStore(), ports, today)
 }
 
-// NewContractImports builds the import of existing contracts from a file (#4723); it opens its own units.
-func NewContractImports(ports ImportPorts) carecontract.ContractImports {
-	return application.NewContractImports(postgres.NewStore(), ports, calendar.TodayDate)
+// NewContractImports builds the import of existing contracts from a file (#4723); it opens its own units. today: see NewIntake.
+func NewContractImports(ports ImportPorts, today func() calendar.Date) carecontract.ContractImports {
+	return application.NewContractImports(postgres.NewStore(), ports, today)
 }
 
-// NewConclusion builds the conclusion at the acceptance (Weg b, #4680); it opens its own units.
-func NewConclusion(contracts ContractPorts, intake IntakePorts) carecontract.Conclusion {
-	clock := application.Clock{Now: time.Now}
-	return application.NewConclusions(application.NewIntake(postgres.NewStore(), intake, calendar.TodayDate),
+// NewConclusion builds the conclusion at the acceptance (Weg b, #4680); it opens its own units. now: see NewContracts.
+func NewConclusion(contracts ContractPorts, intake IntakePorts, now func() time.Time) carecontract.Conclusion {
+	clock := application.Clock{Now: now}
+	return application.NewConclusions(application.NewIntake(postgres.NewStore(), intake, calendar.CalendarDateClock(now)),
 		application.NewContracts(postgres.NewStore(), rendering.NewRenderer(), contracts, clock, NewContractVersions()), clock)
 }
 
-// NewInbox builds the parents' inbox in the parents portal's Träger unit; h, its school holidays, may be nil where it lists nothing.
-func NewInbox(h carecontract.SchoolHolidays) *application.Inbox {
-	return application.NewInbox(postgres.NewStore(), h)
+// NewInbox builds the parents' inbox in the parents portal's Träger unit; h, its school holidays, may be nil where it lists nothing. now: see NewContracts.
+func NewInbox(h carecontract.SchoolHolidays, now func() time.Time) *application.Inbox {
+	return application.NewInbox(postgres.NewStore(), h, application.Clock{Now: now})
 }
 
 // NewContractMailRenderer renders a contract mail for Delivery's worker.
@@ -65,9 +65,9 @@ func NewContractMailRenderer() carecontract.ContractMailRenderer {
 func NewBookedCare() carecontract.BookedCare { return postgres.NewBookedCare() }
 
 // NewOverrunEvaluations builds the evaluation of overruns over the schools
-// of the Träger (#4683, ADR 0156); it opens its own units.
-func NewOverrunEvaluations(ports OverrunPorts) carecontract.OverrunEvaluations {
-	return application.NewOverruns(application.OverrunPorts(ports), calendar.TodayDate)
+// of the Träger (#4683, ADR 0156); it opens its own units on the day today.
+func NewOverrunEvaluations(ports OverrunPorts, today func() calendar.Date) carecontract.OverrunEvaluations {
+	return application.NewOverruns(application.OverrunPorts(ports), today)
 }
 
 type OverrunPorts struct {

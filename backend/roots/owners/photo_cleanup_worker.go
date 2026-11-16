@@ -21,7 +21,7 @@ import (
 // tenant-scoped cleanup tick, including inactive schools.
 type workerFileCleanup func(context.Context) (int, error)
 
-func newFileStoreCleaner(db transactionruntime.Database, files fileStorage.Capability, logger *slog.Logger) workerFileCleanup {
+func newFileStoreCleaner(db transactionruntime.Database, files fileStorage.Capability, logger *slog.Logger, now func() time.Time) workerFileCleanup {
 	remover := peopledirectory.NewPhotoUnlinker(logger, "public", nativeUploads.UploadFiles{})
 	photos := fileStorageCompose.NewUploadCleanup(db.Pool(), fileStorage.CleanupStudentPhotos, time.Now)
 	legal := fileStorageCompose.NewUploadCleanup(db.Pool(), fileStorage.CleanupEnrollmentLegalDocuments, time.Now)
@@ -33,7 +33,7 @@ func newFileStoreCleaner(db transactionruntime.Database, files fileStorage.Capab
 		}
 		return filesBackend.RemoveUploadContext(ctx, path)
 	}
-	uploads := NewEnrollmentRequestUploads(enrollmentCompose.New(), nil, nil, logger.With("service", "enrollment-upload-cleanup"))
+	uploads := NewEnrollmentRequestUploads(enrollmentCompose.NewClocked(now), nil, nil, logger.With("service", "enrollment-upload-cleanup"), now)
 	removeUpload := func(ctx context.Context, tenantID int64, storedName string) error {
 		backend, err := nativeUploads.PrivateUploadsBackend()
 		if err != nil {

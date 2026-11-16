@@ -39,6 +39,9 @@ type CreateTestTraeger struct {
 	Slug         string
 	SchoolCount  int
 	ContactEmail string
+	// FederalState is the Bundesland of every test school (#7174), the one
+	// of the customer the test system is for.
+	FederalState string
 }
 
 // TestTraeger is the created test Träger with its test schools.
@@ -78,6 +81,10 @@ func NormalizeCreateTestTraeger(input *CreateTestTraeger) error {
 	if address, err := mail.ParseAddress(input.ContactEmail); err != nil || address.Address != input.ContactEmail {
 		return fmt.Errorf("%w: contact email must be a valid address", ErrInvalidOrganization)
 	}
+	input.FederalState = strings.TrimSpace(input.FederalState)
+	if input.FederalState == "" {
+		return fmt.Errorf("%w: federal state is required", ErrInvalidOrganization)
+	}
 	return nil
 }
 
@@ -95,6 +102,7 @@ func TestSchools(organization Organization, input CreateTestTraeger) []CreateSch
 			Active:         true,
 			Hidden:         true,
 			Email:          input.ContactEmail,
+			FederalState:   input.FederalState,
 		})
 	}
 	return schools

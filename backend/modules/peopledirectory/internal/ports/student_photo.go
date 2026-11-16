@@ -18,11 +18,14 @@ type StudentPhotoStore interface {
 	// LockPhotoFeature takes the per-tenant advisory lock that serializes
 	// photo writes against a feature-disable purge.
 	LockPhotoFeature(ctx context.Context) (domain.OperationStats, error)
+	// TryLockPhotoFeature takes the same gate without waiting and reports
+	// whether it did; for callers that already hold a child's row lock.
+	TryLockPhotoFeature(ctx context.Context) (bool, domain.OperationStats, error)
 	// SavePhoto writes the photo slice of one child.
 	SavePhoto(ctx context.Context, photo domain.StudentPhoto) (domain.OperationStats, error)
-	// PurgePhotos clears every stored photo of the tenant and returns the
-	// URLs it detached.
-	PurgePhotos(ctx context.Context) ([]string, domain.OperationStats, error)
+	// PurgePhotos clears every stored photo and photo consent of the tenant
+	// and returns the cleared rows as they were before.
+	PurgePhotos(ctx context.Context) ([]domain.StudentPhoto, domain.OperationStats, error)
 	// ListPhotosPastPurpose names the children whose care is over on today
 	// and whose row still holds photo data, in ascending id order (#6650).
 	ListPhotosPastPurpose(ctx context.Context, today calendar.Date) ([]int64, domain.OperationStats, error)
@@ -41,7 +44,9 @@ type StudentPhotoStore interface {
 // child-data route.
 type StudentPhotoRuntime interface {
 	// PhotoFeatureEnabled resolves the tenant's student-photo setting.
-	PhotoFeatureEnabled(ctx context.Context) (bool, error)
+	// committed reads it as committed now, on the caller's transaction, past
+	// any request-scoped memo; checks under the photo lock need it (#7208).
+	PhotoFeatureEnabled(ctx context.Context, committed bool) (bool, error)
 	// ActingAccountID identifies the account a granted consent is recorded
 	// for; 0 when the caller is not an authenticated account.
 	ActingAccountID(ctx context.Context) int64
@@ -54,6 +59,9 @@ type StudentPhotoRuntime interface {
 	// RecordPhotoConsent appends the Audit Platform trail entry for a
 	// consent that changed with the photo.
 	RecordPhotoConsent(ctx context.Context, before, after StudentPhotoConsentSnapshot, actorAccountID *int64, changedAt time.Time) error
+	// RecordPhotoConsentsEnded appends one withdrawal trail entry per child
+	// whose photo consent ended with the feature, all in one write.
+	RecordPhotoConsentsEnded(ctx context.Context, studentIDs []int64, actorAccountID *int64, changedAt time.Time) error
 }
 
 // StudentPhotoConsentSnapshot is the photo slice of a consent change the

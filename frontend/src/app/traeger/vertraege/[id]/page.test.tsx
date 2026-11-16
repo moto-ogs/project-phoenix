@@ -36,6 +36,38 @@ vi.mock("~/lib/traeger-sepa-api", () => ({
   createSepaMandate: vi.fn(),
   revokeSepaMandate: vi.fn(),
 }));
+// The change requests of the parents (#5979) and the termination (#4682)
+// have their own tests; here no change waits and nobody gave notice.
+vi.mock("~/lib/care-contract-changes-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/care-contract-changes-api")>()),
+  fetchContractChanges: () =>
+    Promise.resolve({
+      decidable: true,
+      pending: [],
+      lastDecision: null,
+      reasonRequired: false,
+      rosterImpact: null,
+    }),
+}));
+vi.mock("~/lib/care-contract-notices-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/care-contract-notices-api")>()),
+  fetchContractNoticeOptions: (contractId: string) =>
+    Promise.resolve({
+      contractId,
+      traegerName: "Träger",
+      status: "aktiv",
+      childName: "Lina Muster",
+      modules: "Frühbetreuung und Offene Ganztagsschule",
+      schoolName: "OGS Am Lindenhof",
+      terms: "mit 1 Monat Frist zum Monatsende",
+      ordinaryEndsOn: "2026-10-31",
+      specialEndsOn: null,
+      withdrawalUntil: null,
+      earlyStart: false,
+      reinterpretedEndsOn: null,
+      notice: null,
+    }),
+}));
 vi.mock("~/components/ui/pdf-preview", () => ({
   PdfPreview: ({ url, title }: { url: string | null; title: string }) => (
     <div data-testid="pdf-preview" data-loaded={url !== null}>

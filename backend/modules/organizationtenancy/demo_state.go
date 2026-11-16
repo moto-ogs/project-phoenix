@@ -27,6 +27,10 @@ type DemoStateEngine interface {
 	ReserveDemoSchool(context.Context, string, int64, int64, int64) error
 	RememberDemoSchool(context.Context, string, DemoSchoolState) error
 	UpdateDemoSchool(context.Context, string, DemoSchoolState) error
+	// RecordDemoTraeger names the order's own Demo-Träger (ADR 0271).
+	RecordDemoTraeger(ctx context.Context, name string, traegerID int64) error
+	// RecordDemoSchool adds a neighbour school of that Träger to the order.
+	RecordDemoSchool(ctx context.Context, name string, schoolID int64) error
 	WithDemoLease(context.Context, string, func(context.Context) error) error
 }
 
@@ -82,6 +86,24 @@ func (d *DemoSchools) RememberDemoSchoolFields(ctx context.Context, name string,
 
 func (d *DemoSchools) UpdateDemoSchoolFields(ctx context.Context, name string, schoolID int64, seedJSON []byte, visitorAccountID, visitorParentAccountID int64) error {
 	return d.UpdateDemoSchool(ctx, name, DemoSchoolState{SchoolID: schoolID, SeedJSON: seedJSON, VisitorAccountID: visitorAccountID, VisitorParentAccountID: visitorParentAccountID})
+}
+
+// RecordDemoTraeger names the order's own Demo-Träger (ADR 0271): every
+// school of it is retired and erased with the order's school.
+func (d *DemoSchools) RecordDemoTraeger(ctx context.Context, name string, traegerID int64) error {
+	if name == "" || traegerID <= 0 {
+		return fmt.Errorf("demo school name and Träger ID are required")
+	}
+	return d.engine.RecordDemoTraeger(ctx, name, traegerID)
+}
+
+// RecordDemoSchool adds a neighbour school of the order's Träger, so its
+// demo origin is recorded for the file and database erasure.
+func (d *DemoSchools) RecordDemoSchool(ctx context.Context, name string, schoolID int64) error {
+	if name == "" || schoolID <= 0 {
+		return fmt.Errorf("demo school name and school ID are required")
+	}
+	return d.engine.RecordDemoSchool(ctx, name, schoolID)
 }
 
 func (d *DemoSchools) WithDemoLease(ctx context.Context, name string, run func(context.Context) error) error {
@@ -158,6 +180,9 @@ type DemoSchoolProgress struct {
 	VisitorAccountID int64
 	// VisitorParentAccountID is the parent carrying the visitor's name (#3468).
 	VisitorParentAccountID int64
+	// TraegerID is the order's own Demo-Träger (ADR 0271), zero under the
+	// shared one.
+	TraegerID int64
 }
 
 type DemoOrderEngine interface {

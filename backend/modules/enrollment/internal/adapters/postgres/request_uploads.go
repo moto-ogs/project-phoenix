@@ -56,6 +56,9 @@ func (r *Store) InsertRequestUpload(ctx context.Context, upload *enrollment.Requ
 	row := requestUploadRow{
 		TenantID: tenantID, PhaseID: upload.PhaseID, FieldKey: upload.FieldKey, TokenHash: &tokenHash,
 		FilenameDisplay: upload.Filename, FilenameStored: upload.StoredName, SizeBytes: upload.SizeBytes, ContentType: upload.ContentType,
+		// The store's clock, the one the claim and the sweep compare with
+		// (ADR 0239), not the database's.
+		CreatedAt: r.currentTime(),
 	}
 	if _, err := db.NewInsert().Model(&row).Returning("id, created_at").Exec(ctx); err != nil {
 		return fmt.Errorf("insert enrollment request upload: %w", err)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	deliveryRuntime "github.com/moto-ogs/project-phoenix/modules/delivery/runtime"
@@ -20,14 +21,14 @@ import (
 // and does not stop the other Träger. After the conclusion the same run
 // brings every active contract in line with an approved change of its
 // booked care (#4681, Conclusion.AmendFromBookings); the count covers both.
-func CareContractConclusionJob(logger *slog.Logger) owners.CareContractConclusionBuilder {
+func CareContractConclusionJob(logger *slog.Logger, now func() time.Time) owners.CareContractConclusionBuilder {
 	return func(organizations organizationtenancy.Capability, settings owners.SettingsOwner,
 		delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog owners.DataAccessAppender,
 		holidays carecontract.SchoolHolidays, parentsURL string) schedulerPorts.CareContractConclusion {
 		if organizations == nil || settings.Traeger == nil || settings.Service == nil || delivery == nil || outcomes == nil || accessLog == nil || holidays == nil {
 			panic("care contract conclusion: organizations, settings, delivery, the mail outcomes, the access log and the school holidays are required")
 		}
-		conclusion := NewCareContractConclusion(organizations, settings.Traeger, settings.Service, delivery, outcomes, accessLog, holidays, parentsURL)
+		conclusion := NewCareContractConclusion(organizations, settings.Traeger, settings.Service, delivery, outcomes, accessLog, holidays, parentsURL, now)
 		return func(ctx context.Context) (int, error) {
 			concluded, concludeErr := concludeEveryTraeger(ctx, organizations, conclusion, logger)
 			amended, amendErr := amendEveryTraeger(ctx, organizations, conclusion, logger)

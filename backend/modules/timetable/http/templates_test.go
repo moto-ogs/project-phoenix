@@ -243,8 +243,11 @@ func firstTemplateClock(clocks []func() time.Time) func() time.Time {
 	return clocks[0]
 }
 
+// fixedTemplateToday is the school day of fixedTemplateClock.
+var fixedTemplateToday = calendar.NewDate(2026, 8, 24)
+
 func fixedTemplateClock() time.Time {
-	return calendar.NewDate(2026, 8, 24).BerlinMidnight().Add(12 * time.Hour)
+	return fixedTemplateToday.BerlinMidnight().Add(12 * time.Hour)
 }
 
 func templateGradeSettings(value int, resolveErr error) *settingsDouble {

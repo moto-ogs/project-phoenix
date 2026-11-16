@@ -78,7 +78,7 @@ func NewPasswordReset(auth *AccountAuthentication, deps PasswordResetDependencie
 	return &PasswordReset{
 		auth: auth, store: deps.Store, logins: deps.Logins, passwords: deps.Passwords, delivery: deps.Delivery,
 		rateLimitSecret: append([]byte(nil), deps.RateLimitSecret...),
-		runtime:         deps.Runtime, expiry: deps.Expiry, rateLimitEnabled: deps.RateLimitEnabled, now: time.Now, logger: logger,
+		runtime:         deps.Runtime, expiry: deps.Expiry, rateLimitEnabled: deps.RateLimitEnabled, now: auth.sessions.now, logger: logger,
 	}, nil
 }
 

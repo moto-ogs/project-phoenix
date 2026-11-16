@@ -799,7 +799,7 @@ export function DatabaseForm<T = Record<string, unknown>>({
           // Combined busy state: parent loading OR local submitting
           const isBusy = isLoading === true || isSubmitting;
           return stickyActions ? (
-            <div className="sticky bottom-0 -mx-4 mt-4 -mb-4 flex gap-2 border-t border-gray-100 bg-white/95 px-4 pt-3 pb-3 backdrop-blur-sm md:-mx-6 md:mt-6 md:-mb-6 md:gap-3 md:px-6 md:pt-4 md:pb-4">
+            <div className="sticky bottom-0 -mx-4 mt-4 -mb-4 flex gap-2 border-t border-gray-100 bg-white px-4 pt-3 pb-3 md:-mx-6 md:mt-6 md:-mb-6 md:gap-3 md:px-6 md:pt-4 md:pb-4">
               <Button
                 type="button"
                 variant="outline"

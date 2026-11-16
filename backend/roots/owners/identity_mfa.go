@@ -157,6 +157,7 @@ func NewMFAMailer(db transactionruntime.Database, runtime *deliveryCompose.Runti
 	provider := &deliveryCompose.MailPushProvider{
 		Registry: deliveryCompose.NewEmailTemplateRegistry(map[string]deliveryCompose.MailRenderer{TransactionalMailKind: TransactionalMailRenderer{Logger: logger}}),
 		Mailer:   transport, Logger: logger, Tenants: deliveryCompose.NewTenantTransactions(db.Pool()),
+		Now: runtime.Now,
 	}
 	worker, err := deliveryCompose.NewWorker(runtime, provider)
 	if err != nil {

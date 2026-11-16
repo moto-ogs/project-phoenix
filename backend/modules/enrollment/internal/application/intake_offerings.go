@@ -22,7 +22,7 @@ import (
 // into intervals, so reading them without a date or at the service start
 // would mix the superseded booking into "the current selection".
 func (s *Intake) currentOfferingSelectionDate(phase *enrollmentNative.Phase) calendar.Date {
-	return offeringSelectionDateOn(phase, calendar.TodayDate())
+	return offeringSelectionDateOn(phase, s.today())
 }
 
 // nativeOfferingCatalog describes enrollment offering rows in the terms of

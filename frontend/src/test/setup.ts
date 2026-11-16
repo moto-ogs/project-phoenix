@@ -2,6 +2,10 @@ import "./setup-jest-dom";
 import type React from "react";
 import { beforeEach, vi } from "vitest";
 
+import { installNetworkGuard } from "./network-guard";
+
+installNetworkGuard();
+
 // Reset the module-level session cache between tests. A static import would
 // bind next-auth/react before the test file's vi.mock registers. Importing here
 // also resolves the current module after a test calls vi.resetModules(). Some

@@ -27,7 +27,7 @@ func setupOwnerPhaseTest(t *testing.T) (*bun.DB, capability.Owner, int64) {
 	db := testpkg.SetupTestDB(t)
 	tenantID := testpkg.Tenant(t)
 	testpkg.EnsureTestTenant(t, db, tenantID)
-	return db, ownerCompose.New(), tenantID
+	return db, ownerCompose.NewClocked(nil), tenantID
 }
 
 // --- Create + Validation -----------------------------------------------
@@ -198,7 +198,7 @@ func TestPhaseRepository_Delete_HappyPath(t *testing.T) {
 	}))
 
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.New().DeletePhase(ctx, phase.ID)
+		return ownerCompose.NewClocked(nil).DeletePhase(ctx, phase.ID)
 	}))
 
 	var got *capability.Phase
@@ -217,7 +217,7 @@ func TestPhaseRepository_Delete_MissingIDErrors(t *testing.T) {
 	db, _, tenantID := setupOwnerPhaseTest(t)
 
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
-		return ownerCompose.New().DeletePhase(ctx, 9_999_999)
+		return ownerCompose.NewClocked(nil).DeletePhase(ctx, 9_999_999)
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
@@ -254,7 +254,7 @@ func TestPhaseRepository_ListByTenant_OrdersByServiceStartDesc(t *testing.T) {
 	var list []*capability.Phase
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.New().Phases(ctx)
+		list, lErr = ownerCompose.NewClocked(nil).Phases(ctx)
 		return lErr
 	}))
 
@@ -318,7 +318,7 @@ func TestPhaseRepository_ListPublicOpen_OnlyReturnsActiveInWindow(t *testing.T) 
 	var list []*capability.Phase
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.New().PublicOpenPhases(ctx, now)
+		list, lErr = ownerCompose.NewClocked(nil).PublicOpenPhases(ctx, now)
 		return lErr
 	}))
 
@@ -348,7 +348,7 @@ func TestPhaseRepository_ListPublicOpen_NullBoundsTreatedAsUnbounded(t *testing.
 	var list []*capability.Phase
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.New().PublicOpenPhases(ctx, now)
+		list, lErr = ownerCompose.NewClocked(nil).PublicOpenPhases(ctx, now)
 		return lErr
 	}))
 
@@ -393,7 +393,7 @@ func TestPhaseRepository_ListWithExpiredRolloverDeadline_OnlyReturnsExpired(t *t
 	var list []*capability.Phase
 	require.NoError(t, runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var lErr error
-		list, lErr = ownerCompose.New().PhasesWithExpiredRolloverDeadline(ctx, asOf)
+		list, lErr = ownerCompose.NewClocked(nil).PhasesWithExpiredRolloverDeadline(ctx, asOf)
 		return lErr
 	}))
 
@@ -416,7 +416,7 @@ func TestPhaseRepository_ExistsByFormSchemaID_TrueWhenReferenced(t *testing.T) {
 	db, repo, tenantID := setupOwnerPhaseTest(t)
 	account := testpkg.CreateTestAccount(t, db, "phase-exists")
 
-	schemaRepo := ownerCompose.New()
+	schemaRepo := ownerCompose.NewClocked(nil)
 	schema := &capability.FormSchema{
 		Name:      uniqueSchemaName("phase-exists"),
 		Version:   1,
@@ -438,7 +438,7 @@ func TestPhaseRepository_ExistsByFormSchemaID_TrueWhenReferenced(t *testing.T) {
 	var count int
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var eErr error
-		count, eErr = ownerCompose.New().CountPhaseSchemaReferences(ctx, []int64{schema.ID})
+		count, eErr = ownerCompose.NewClocked(nil).CountPhaseSchemaReferences(ctx, []int64{schema.ID})
 		return eErr
 	})
 	require.NoError(t, err)
@@ -453,7 +453,7 @@ func TestPhaseRepository_ExistsByFormSchemaID_FalseWhenUnreferenced(t *testing.T
 	var count int
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var eErr error
-		count, eErr = ownerCompose.New().CountPhaseSchemaReferences(ctx, []int64{9_999_999})
+		count, eErr = ownerCompose.NewClocked(nil).CountPhaseSchemaReferences(ctx, []int64{9_999_999})
 		return eErr
 	})
 	require.NoError(t, err)
@@ -489,7 +489,7 @@ func TestPhaseRepository_ExistsByRolloverSourcePhaseID_TrueAfterRollover(t *test
 	var exists bool
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var eErr error
-		exists, eErr = ownerCompose.New().HasRolloverSuccessor(ctx, source.ID)
+		exists, eErr = ownerCompose.NewClocked(nil).HasRolloverSuccessor(ctx, source.ID)
 		return eErr
 	})
 	require.NoError(t, err)
@@ -504,7 +504,7 @@ func TestPhaseRepository_ExistsByRolloverSourcePhaseID_FalseWhenUnreferenced(t *
 	var exists bool
 	err := runInTenantTx(t, db, tenantID, func(ctx context.Context) error {
 		var eErr error
-		exists, eErr = ownerCompose.New().HasRolloverSuccessor(ctx, 9_999_999)
+		exists, eErr = ownerCompose.NewClocked(nil).HasRolloverSuccessor(ctx, 9_999_999)
 		return eErr
 	})
 	require.NoError(t, err)

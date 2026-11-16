@@ -23,6 +23,9 @@ const TRAEGER_PUBLIC_PAGES = [
   "/reset-password",
   "/traeger/invite",
   "/invite",
+  // Entry of the public demo (#6193): it signs the visitor in itself.
+  "/traeger/demo",
+  "/demo",
 ];
 
 /**
@@ -66,7 +69,7 @@ export function TraegerAuthGuard({
   if (status === "loading") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4">
-        <Loading fullPage message="Wird geladen …" />
+        <Loading fullPage message="moto träger wird geöffnet …" />
       </div>
     );
   }

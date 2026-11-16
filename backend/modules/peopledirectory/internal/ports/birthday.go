@@ -3,13 +3,17 @@ package ports
 import (
 	"context"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain"
 )
 
 // BirthdayStore is the read surface of the birthday display over
 // the person, student and staff rows.
 type BirthdayStore interface {
-	StudentBirthdaysOn(ctx context.Context, days []domain.MonthDay) ([]domain.BirthdayEntry, error)
+	// StudentBirthdaysOn lists the children cared for on today whose birthday
+	// falls on one of days.
+	StudentBirthdaysOn(ctx context.Context, days []domain.MonthDay, today calendar.Date) ([]domain.BirthdayEntry, error)
 	StaffBirthdaysOn(ctx context.Context, days []domain.MonthDay) ([]domain.BirthdayEntry, error)
 	StaffBirthdaysForExport(ctx context.Context) ([]domain.BirthdayEntry, error)
 	FindPersonByAccount(ctx context.Context, accountID int64) (personID int64, found bool, err error)

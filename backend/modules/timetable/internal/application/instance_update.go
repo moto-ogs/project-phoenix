@@ -84,7 +84,7 @@ func (s *InstanceLifecycleService) UpdatePlanned(ctx context.Context, instanceID
 // while it waits for another.
 func (s *InstanceLifecycleService) lockEditedRoster(ctx context.Context, instanceID int64, req timetable.UpdateInstanceInput) error {
 	ids := domain.UniquePositiveIDs(req.StaffIDs)
-	if !req.Date.Before(calendar.TodayDate()) {
+	if !req.Date.Before(calendar.DateFromTime(s.now())) {
 		prior, err := staffOfInstance(ctx, s.deps.InstanceStaffRepo, instanceID)
 		if err != nil {
 			return &ports.ScheduleError{Op: "update instance: load existing staff", Err: err}

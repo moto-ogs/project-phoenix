@@ -1,6 +1,8 @@
 package compose
 
 import (
+	"time"
+
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	iot "github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/application/deviceservice"
 )
@@ -11,6 +13,6 @@ type IoTService = iot.Service
 
 // NewIoTService builds the retained device administration service over the
 // Device Fleet capability.
-func NewIoTService(devices devicefleet.Capability) IoTService {
-	return iot.NewService(devices)
+func NewIoTService(devices devicefleet.Capability, now func() time.Time) IoTService {
+	return iot.NewService(devices, now)
 }

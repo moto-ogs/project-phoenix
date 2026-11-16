@@ -455,10 +455,10 @@ func (s *preferenceService) GetForParent(ctx context.Context, accountID int64) (
 	tenantCount := 0
 
 	err := s.forEachGuardianTenant(ctx, accountID, func(tenantCtx context.Context, _ int64) error {
-		// One settings read per school for the dispatch switch and every
-		// type's gate, however many types share or add a gate (#7141).
-		tenantCtx = s.withGateSnapshot(tenantCtx, PortalParent)
 		tenantCount++
+		// One settings read per school for the dispatch switch and every
+		// gate of the parent catalogue, however many types share a gate.
+		tenantCtx = s.withGateSnapshot(tenantCtx, PortalParent)
 		if err := s.countParentConsents(tenantCtx, accountID, defs, enabledTenantCount); err != nil {
 			return err
 		}
