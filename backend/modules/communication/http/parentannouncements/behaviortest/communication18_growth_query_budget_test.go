@@ -293,7 +293,7 @@ func TestCommunication18AnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 				declaration, e = service.GetParentAnnouncement(c, declaration.ID)
 				return e
 			})
-			resource := announcement.NewResource(service, nil)
+			resource := announcement.NewResource(service, nil, time.Now)
 			router := chi.NewRouter()
 			router.Use(testpkg.TenantRuntimeMiddleware(t, db))
 			router.Mount("/api/parent-announcements", resource.Router(api.ProtectedTenantRoutes))

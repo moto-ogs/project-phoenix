@@ -68,7 +68,7 @@ func BuildPresenceReports(
 // BuildPresenceCleanup binds the retention command used by jobs and setting writes.
 func BuildPresenceCleanup(env RootEnvironment, presence PresenceOwner, audit AuditOwner, settings settingsCompose.SettingsService) studentpresence.PresenceCleanup {
 	_, supervisors := presenceCompose.SessionRepositories(presence.SessionRecords)
-	return presenceservice.NewPresenceCleanup(presence.Presence, supervisors, NewDeletionAudit(audit.Persistence.DataDeletion), settingsCompose.PresenceSettings(settings), env.Today)
+	return presenceservice.NewPresenceCleanup(presence.Presence, supervisors, NewDeletionAudit(audit.Persistence.DataDeletion), settingsCompose.PresenceSettings(settings), env.Now)
 }
 
 // BuildCalendarApp binds the staff and parent personal calendars over the
@@ -88,7 +88,7 @@ func BuildCalendarApp(
 		newWorkforceShiftRows(workTime), newWorkforceShiftTypeRows(workTime))
 	cfg = BindCalendarFeedFacts(cfg, organizations, identity, identity, people.Persons)
 	cfg = BindCalendarCaller(cfg, caller)
-	cfg.Appointments, cfg.SchoolDays = appointments, calendar
+	cfg.Appointments, cfg.SchoolDays, cfg.Now = appointments, calendar, env.Now
 	cfg.ParentConferences = BuildServeParentConferences(db)
 	cfg.Runtime, cfg.CalendarRenderer = calendarCompose.NewTenantRuntime(db.Pool()), calendarCompose.NewCalendarRenderer(calendar)
 	cfg.Outbox, cfg.PushOutbox = NewCalendarOutbox(delivery.Outbox), deliveryCompose.NewDurablePushOutbox(delivery.Runtime.Module)
@@ -181,7 +181,7 @@ func BuildDeliveryDevices(db transactionruntime.Database, unit rootUnitOfWork, e
 		return DeliveryDevices{}, err
 	}
 	usage, err := deliveryCompose.NewTenantPWAUsageService(unit, db.Pool(), observabilityCompose.NewPWAStandaloneUsageRepository(db.Pool()),
-		pwaUsageCounts{provisioning: provisioning}, identity, settings, env.Logger.With("service", "pwa_usage"))
+		pwaUsageCounts{provisioning: provisioning}, identity, settings, env.Logger.With("service", "pwa_usage"), env.Now)
 	if err != nil {
 		return DeliveryDevices{}, err
 	}
@@ -201,7 +201,7 @@ func BuildPlanExport(env RootEnvironment, shifts *workforceCompose.ShiftPlanning
 		ActivityGroups: arrivalTimetable.NewTimetableGroupReads(repos.Timetable), PlanningTracks: timetableOwner,
 		ClosingDays: planExportClosingDays{calendar: calendar}, Holidays: planExportHolidays{calendar: calendar},
 		BlockGroups: timetableOwner, EducationGroupNames: owner.EducationGroupNames,
-		Renderer: renderer, Logger: env.Logger.With("service", "plan_export"),
+		Renderer: renderer, Logger: env.Logger.With("service", "plan_export"), Now: env.Now,
 	})
 }
 

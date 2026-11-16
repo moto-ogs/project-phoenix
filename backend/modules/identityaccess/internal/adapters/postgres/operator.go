@@ -19,6 +19,7 @@ import (
 type operatorRow struct {
 	PasswordAttempts     int        `bun:"password_attempts,scanonly"`
 	PasswordLockedUntil  *time.Time `bun:"password_locked_until,scanonly"`
+	PasswordFailedAt     *time.Time `bun:"password_failed_at,scanonly"`
 	CredentialGeneration int64      `bun:"credential_generation,scanonly"`
 	bun.BaseModel        `bun:"table:platform.operators,alias:operator"`
 	ID                   int64      `bun:"id,pk,autoincrement"`

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	importModels "github.com/moto-ogs/project-phoenix/modules/dataimport"
 	"github.com/moto-ogs/project-phoenix/modules/dataimport/ports"
@@ -191,7 +192,7 @@ func (c *StaffImportConfig) Validate(ctx context.Context, row *importModels.Staf
 	if requiresCreateFields {
 		errs = append(errs, c.validateRole(ctx, row)...)
 	}
-	errs = append(errs, validateStaffMasterFields(row)...)
+	errs = append(errs, validateStaffMasterFields(row, clockOr(c.Now)())...)
 
 	return errs
 }
@@ -222,12 +223,12 @@ func trimStaffRow(row *importModels.StaffImportRow) {
 
 // validateStaffMasterFields checks the Stammdaten columns and rewrites them to
 // their canonical spelling (ISO dates, stored enum values).
-func validateStaffMasterFields(row *importModels.StaffImportRow) []importModels.ValidationError {
+func validateStaffMasterFields(row *importModels.StaffImportRow, now time.Time) []importModels.ValidationError {
 	var errs []importModels.ValidationError
 
 	errs = append(errs, normalizeStaffEnums(row)...)
 
-	errs = append(errs, normalizeStaffBirthday(row)...)
+	errs = append(errs, normalizeStaffBirthday(row, now)...)
 
 	errs = append(errs, normalizeStaffEmploymentDates(row)...)
 
@@ -501,10 +502,10 @@ func normalizeStaffDate(value *string, field, label string, errs *[]importModels
 	return &d
 }
 
-func normalizeStaffBirthday(row *importModels.StaffImportRow) []importModels.ValidationError {
+func normalizeStaffBirthday(row *importModels.StaffImportRow, now time.Time) []importModels.ValidationError {
 	var errs []importModels.ValidationError
 	if row.Birthday != "" {
-		if _, err := parseSupportedDate(row.Birthday); err != nil {
+		if _, err := parseSupportedDate(row.Birthday, now); err != nil {
 			message := "Ungültiges Datumsformat für 'Geburtstag'. Bitte verwenden Sie JJJJ-MM-TT, TT.MM.JJJJ oder TT.MM.JJ."
 			if errors.Is(err, errFutureBirthday) {
 				message = "Ungültiges Geburtsdatum. Geburtstage in der Zukunft sind nicht erlaubt."

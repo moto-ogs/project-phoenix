@@ -1787,6 +1787,20 @@
     },
     {
       "build": "production",
+      "evidence": "func (h traegerHireEmployments) CreateSchoolEmployment(ctx context.Context, employment workforce.TraegerSchoolEmploymentInput) (int64, error) {\n\tcreated, err := h.staff.CreateStaff(ctx, schoolmembership.CreateStaff{StaffFields: schoolmembership.StaffFields{PersonID: employment.PersonID, EmploymentType: employment.EmploymentType}})\n\treturn created.ID, err\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerHireEmployments.CreateSchoolEmployment",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (h traegerHirePersons) CreateSchoolPerson(ctx context.Context, person workforce.TraegerSchoolPersonInput) (int64, error) {\n\tcreated, err := h.persons.CreatePerson(ctx, peopledirectory.CreatePerson{FirstName: person.FirstName, LastName: person.LastName, Birthday: person.Birthday})\n\treturn created.ID, err\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerHirePersons.CreateSchoolPerson",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (t traegerHolidayTrail) ListHolidayTrail(ctx context.Context, organizationID int64, query traegerview.HolidayTrailQuery) ([]traegerview.AccessTrailEntry, error) {\n\trows, err := t.trail.ListHolidayAccess(ctx, organizationID, enrollment.HolidayAccessFilter(query))\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tentries := make([]traegerview.AccessTrailEntry, 0, len(rows))\n\tfor _, row := range rows {\n\t\tentries = append(entries, traegerview.AccessTrailEntry{ID: row.ID, OccurredAt: row.OccurredAt, AccountID: row.AccountID, Kind: row.Kind, Data: row.Data})\n\t}\n\treturn entries, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerHolidayTrail.ListHolidayTrail",

@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	activeService "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,7 +62,10 @@ func testRetentionRollback(t *testing.T, stage string) {
 	testpkg.OwnTenant(t)
 	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
-	presence := testSchoolPresence(t, db)
+	// The store and the cleanup read one fixed clock: the expired visit is
+	// dated against it, the open and recent ones lie after it.
+	clock := func() time.Time { return calendar.NewDate(2026, 11, 2).BerlinMidnight().Add(10 * time.Hour) }
+	presence := testSchoolPresence(t, db, clock)
 	command, err := api.NewCleanupAuditCommand(slog.Default())
 	require.NoError(t, err)
 	injected := errors.New("fail after retention write")
@@ -73,10 +77,10 @@ func testRetentionRollback(t *testing.T, stage string) {
 		fault.afterAppend = injected
 	}
 	repos := api.NewRetentionCleanupRepositories(testpkg.NewDatabase(t, db), fault)
-	svc := activeService.NewCleanupService(deleteFault, sessionSupervisors(repos.Sessions), owners.NewDeletionAudit(repos.Deletion), visitRetentionSetting{days: 30})
+	svc := activeService.NewCleanupService(deleteFault, sessionSupervisors(repos.Sessions), owners.NewDeletionAudit(repos.Deletion), visitRetentionSetting{days: 30}, clock)
 	consent := testpkg.CreateTestPrivacyConsent(t, db, "retention-rollback")
 	group := testpkg.CreateTestActiveGroupForTenant(t, db, testpkg.Tenant(t))
-	entry := time.Now().AddDate(0, 0, -45)
+	entry := clock().AddDate(0, 0, -45)
 	exit := entry.Add(time.Hour)
 	visit, err := testpkg.TenantQuery1(t, ctx, db, presence.RecordVisit, studentpresence.Visit{
 		CreatedAt: entry,
@@ -84,8 +88,8 @@ func testRetentionRollback(t *testing.T, stage string) {
 	})
 	require.NoError(t, err)
 
-	open := testpkg.CreateTestVisit(t, db, consent.StudentID, group.ID, time.Now(), nil)
-	recentExit := time.Now()
+	open := testpkg.CreateTestVisit(t, db, consent.StudentID, group.ID, clock(), nil)
+	recentExit := clock()
 	recent := testpkg.CreateTestVisit(t, db, consent.StudentID, group.ID, recentExit.Add(-time.Hour), &recentExit)
 	failed, err := svc.CleanupExpiredVisits(ctx)
 	require.NoError(t, err, "per-student failures are reported in the cleanup result")
@@ -165,7 +169,7 @@ func TestRetentionReportsOwnerReadFailures(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			svc := activeService.NewCleanupService(tc.port, nil, nil, visitRetentionSetting{days: 30})
+			svc := activeService.NewCleanupService(tc.port, nil, nil, visitRetentionSetting{days: 30}, time.Now)
 			if tc.preview {
 				result, err := svc.PreviewCleanup(context.Background())
 				require.ErrorIs(t, err, injected)

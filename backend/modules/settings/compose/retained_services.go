@@ -18,10 +18,8 @@ type (
 	SettingsLookupObserver    = settingsRecords.SettingsLookupObserver
 	SettingsChangedNotifier   = settingsRecords.SettingsChangedNotifier
 	OperatorValueSetHook      = settingsRecords.OperatorValueSetHook
-	TenantOperations          = configSvc.TenantOperations
 	TenantOperationsRuntime   = settingsRecords.TenantOperationsRuntime
 	PayrollStatusGetter       = settingsRecords.PayrollStatusGetter
-	SideEffectRegistry        = sideeffects.Registry
 	SideEffectFailureObserver = settingsRecords.SideEffectFailureObserver
 	// SettingsDependencies are every collaborator of the settings service at
 	// construction (ADR 0059); SettingSideEffect binds one setting key to its
@@ -31,19 +29,21 @@ type (
 	// TraegerSettings is the Träger level of ADR 0086 with its collaborators.
 	TraegerSettings             = configSvc.TraegerSettings
 	TraegerSettingsDependencies = configSvc.TraegerSettingsDependencies
+	// SchoolCreationSettings records a new school's settings in its creation unit (#7174).
+	SchoolCreationSettings = configSvc.SchoolCreationSettings
 )
 
 var (
-	NewSettingsService       = configSvc.NewSettingsService
-	NewHomeLayoutService     = configSvc.NewHomeLayoutService
-	NewTenantOperations      = configSvc.NewTenantOperations
-	NewPayrollStatusService  = configSvc.NewPayrollStatusService
-	NewSFTPExportSettings    = configSvc.NewSFTPExportSettings
-	NewSettings              = configSvc.NewSettingsServiceWithDependencies
-	NewTraegerSettings       = configSvc.NewTraegerSettings
-	NewSideEffects           = sideeffects.NewRegistryWith
-	WithSettingsSnapshot     = settingsRecords.WithSettingsSnapshot
-	WithSettingsRequestCache = settingsRecords.WithSettingsRequestCache
-	ResolveBoolOrDefault     = configSvc.ResolveBoolOrDefault
-	ResolveIntOrDefault      = configSvc.ResolveIntOrDefault
+	NewSettingsService        = configSvc.NewSettingsService
+	NewHomeLayoutService      = configSvc.NewHomeLayoutService
+	NewTenantOperations       = configSvc.NewTenantOperations
+	NewPayrollStatusService   = configSvc.NewPayrollStatusService
+	NewSFTPExportSettings     = configSvc.NewSFTPExportSettings
+	NewSettings               = configSvc.NewSettingsServiceWithDependencies
+	NewTraegerSettings        = configSvc.NewTraegerSettings
+	NewSideEffects            = sideeffects.NewRegistryWith
+	WithSettingsSnapshot      = settingsRecords.WithSettingsSnapshot
+	WithSettingsRequestCache  = settingsRecords.WithSettingsRequestCache
+	ResolveIntOrDefault       = configSvc.ResolveIntOrDefault
+	NewSchoolCreationSettings = configSvc.NewSchoolCreationSettings
 )

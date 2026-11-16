@@ -13,6 +13,7 @@ import (
 
 type visitWritePlan struct {
 	scope             studentpresence.VisitWriteScope
+	recentSince       time.Time // a device's sessions ended after it are recent
 	sources, sessions []int64
 	visits            []studentpresence.Visit
 	rooms             []visitWriteRoom
@@ -35,7 +36,7 @@ func (s *Store) prepareVisitWritePlan(ctx context.Context, scope studentpresence
 	}
 	started := time.Now()
 	defer func() { stats.StatementDuration = time.Since(started) }()
-	plan, err = prepareVisitWritePlan(ctx, db, school, scope, &stats)
+	plan, err = prepareVisitWritePlan(ctx, db, school, scope, s.now().Add(-time.Hour), &stats)
 	if err != nil {
 		return plan, stats, err
 	}
@@ -55,10 +56,10 @@ func visitWriteIDs(visits []studentpresence.Visit) []int64 {
 	return ids
 }
 
-func prepareVisitWritePlan(ctx context.Context, db bun.IDB, school int64, scope studentpresence.VisitWriteScope, stats *ports.Stats) (visitWritePlan, error) {
-	plan := visitWritePlan{scope: scope}
+func prepareVisitWritePlan(ctx context.Context, db bun.IDB, school int64, scope studentpresence.VisitWriteScope, recentSince time.Time, stats *ports.Stats) (visitWritePlan, error) {
+	plan := visitWritePlan{scope: scope, recentSince: recentSince}
 	var err error
-	plan.sources, err = writeSourceGroups(ctx, db, school, scope)
+	plan.sources, err = writeSourceGroups(ctx, db, school, scope, recentSince)
 	stats.Queries++
 	if err != nil {
 		return plan, err
@@ -107,7 +108,7 @@ func (s *Store) lockVisitWriteSessions(ctx context.Context, db bun.IDB, school i
 }
 
 func validateVisitWritePlan(ctx context.Context, db bun.IDB, school int64, plan visitWritePlan, stats *ports.Stats) error {
-	sources, err := writeSourceGroups(ctx, db, school, plan.scope)
+	sources, err := writeSourceGroups(ctx, db, school, plan.scope, plan.recentSince)
 	stats.Queries++
 	if err != nil {
 		return err
@@ -162,16 +163,16 @@ func writeSessionRooms(ctx context.Context, db bun.IDB, school int64, sessions [
 	return rooms, err
 }
 
-func writeSourceGroups(ctx context.Context, db bun.IDB, school int64, scope studentpresence.VisitWriteScope) ([]int64, error) {
+func writeSourceGroups(ctx context.Context, db bun.IDB, school int64, scope studentpresence.VisitWriteScope, recentSince time.Time) ([]int64, error) {
 	roomID := int64(0)
 	if scope.RoomVisits {
 		roomID = scope.RoomID
 	}
 	var ids []int64
 	err := db.NewRaw(`SELECT id FROM active.groups WHERE tenant_id = ? AND (
-  id IN (?) OR (device_id = ? AND (end_time IS NULL OR end_time > NOW() - INTERVAL '1 hour'))
+  id IN (?) OR (device_id = ? AND (end_time IS NULL OR end_time > ?))
   OR (room_id = ? AND end_time IS NULL)) ORDER BY id`,
-		school, bun.List(scope.GroupIDs), scope.DeviceID, roomID).Scan(ctx, &ids)
+		school, bun.List(scope.GroupIDs), scope.DeviceID, recentSince, roomID).Scan(ctx, &ids)
 	return ids, err
 }
 

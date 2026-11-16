@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	appointmentsCompose "github.com/moto-ogs/project-phoenix/modules/appointments/compose"
 	auditCompose "github.com/moto-ogs/project-phoenix/modules/auditlog/compose"
@@ -18,13 +19,14 @@ import (
 // NewStudentDeletionOwners builds the owners the student deletion workflow
 // counts in and deletes through, over db and without observation, as the
 // workflow composition did before (#4004, ADR 0059 point 6), with the
-// ambient-transaction audit command and the Audit owner's deletion records.
-func NewStudentDeletionOwners(db transactionruntime.Database) (studentdeletioncompose.Owners, error) {
+// ambient-transaction audit command and the Audit owner's deletion records;
+// now is Enrollment's root clock (ADR 0265), nil the real one.
+func NewStudentDeletionOwners(db transactionruntime.Database, now func() time.Time) (studentdeletioncompose.Owners, error) {
 	presence, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: func(presenceCompose.Observation) {}})
 	if err != nil {
 		return studentdeletioncompose.Owners{}, err
 	}
-	appointments, err := appointmentsCompose.New(appointmentsCompose.Dependencies{DB: db.Pool(), Observe: func(appointmentsCompose.Observation) {}})
+	appointments, err := appointmentsCompose.New(appointmentsCompose.Dependencies{DB: db.Pool(), Observe: func(appointmentsCompose.Observation) {}, Now: time.Now})
 	if err != nil {
 		return studentdeletioncompose.Owners{}, err
 	}
@@ -40,12 +42,12 @@ func NewStudentDeletionOwners(db transactionruntime.Database) (studentdeletionco
 	if err != nil {
 		return studentdeletioncompose.Owners{}, err
 	}
-	audits, err := auditCompose.NewTenantPersistence(db.Pool())
+	audits, err := auditCompose.NewTenantPersistence(db.Pool(), time.Now)
 	if err != nil {
 		return studentdeletioncompose.Owners{}, err
 	}
 	return studentdeletioncompose.Owners{
-		Structure: structure, Conversations: parentstore.NewStudentConversations(db.Pool()), Enrollment: enrollmentCompose.New(),
+		Structure: structure, Conversations: parentstore.NewStudentConversations(db.Pool()), Enrollment: enrollmentCompose.NewClocked(now),
 		Attendance: presence.CountAttendanceRecords, Visits: presence.CountStudentVisitsForDeletion,
 		Consents: func(ctx context.Context, studentID int64) (int, error) {
 			consents, err := presence.ListPrivacyConsents(ctx, studentID)

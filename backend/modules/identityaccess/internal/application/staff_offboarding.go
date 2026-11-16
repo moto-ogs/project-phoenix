@@ -98,7 +98,11 @@ func (l *AccountLifecycle) staffOffboardingSnapshot(ctx context.Context, account
 	if err != nil {
 		return preview, err
 	}
+	// The Springer role keeps the account: the Träger's pool contract still
+	// runs, and the next block needs an account that signs in (#7197).
+	springer := false
 	for _, role := range roles {
+		springer = springer || (role.TenantID == nil && role.Name == identityaccess.SpringerRoleName)
 		if strings.EqualFold(role.Name, domain.GuardianRoleName) {
 			preview.PreserveGuardian = true
 		} else {
@@ -119,7 +123,7 @@ func (l *AccountLifecycle) staffOffboardingSnapshot(ctx context.Context, account
 	if err != nil {
 		return preview, err
 	}
-	preview.DeactivateAccount = !preview.PreserveGuardian && !retained && len(activeTenants) == 1 && activeTenants[0] == tenantID
+	preview.DeactivateAccount = !preview.PreserveGuardian && !retained && !springer && len(activeTenants) == 1 && activeTenants[0] == tenantID
 	preview.Revision, err = staffOffboardingRevision(accountID, tenantID, account.UpdatedAt, preview, tokenIDs, activeTenants)
 	return preview, err
 }

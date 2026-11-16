@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -753,9 +754,12 @@ func TestOpenProviderMailsAreTheAcceptedOnesWithoutAnOutcome(t *testing.T) {
 	require.NoError(t, err)
 	_, err = store.RecordEmailDeliveryEvent(ctx, eventAt(eventMailToken(t, db, delivered), "ok", domain.EmailDeliveryDelivered, time.Now()))
 	require.NoError(t, err)
-	_, err = db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET sent_at = NOW() - INTERVAL '30 days' WHERE id = ?`, tooOld)
+	// The reconciliation runs on a fixed day (#7104), a Wednesday 10:00 in
+	// Berlin: the mails went out then, the old one 30 days before.
+	now := calendar.NewDate(2026, time.November, 4).BerlinMidnight().Add(10 * time.Hour)
+	_, err = db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET sent_at = CASE WHEN id = ? THEN ?::timestamptz ELSE ? END
+		WHERE tenant_id = ? AND status = 'sent'`, tooOld, now.AddDate(0, 0, -30), now, school)
 	require.NoError(t, err)
-	now := time.Now()
 	require.NoError(t, store.MarkEmailDeliveryChecked(ctx, checked, now))
 
 	query := domain.ProviderMailQuery{SentAfter: now.Add(-28 * 24 * time.Hour), SentBefore: now.Add(time.Minute), CheckedBefore: now.Add(-time.Hour), Limit: 10}

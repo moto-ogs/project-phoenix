@@ -18,7 +18,8 @@ import (
 // table of Document Rendering (enrollmentClassRosterDocument).
 
 // enrollmentExportHead is the page header every enrollment export prints.
-// Both layouts carry the generation time and the confidentiality footer.
+// Both layouts carry the confidentiality footer; the render stamps the
+// generation time.
 type enrollmentExportHead struct {
 	Title    string
 	Subtitle string
@@ -29,40 +30,44 @@ type enrollmentExportHead struct {
 // titled groups.
 func (h enrollmentExportHead) blocks(records []lists.Record, groups []lists.RecordGroup) lists.RecordDocument {
 	return lists.RecordDocument{
-		Title:       h.Title,
-		Subtitle:    h.Subtitle,
-		GeneratedAt: time.Now(),
-		Footer:      exportConfidentialityNote,
-		Filters:     h.Filters,
-		Records:     records,
-		Groups:      groups,
+		Title:    h.Title,
+		Subtitle: h.Subtitle,
+		Footer:   exportConfidentialityNote,
+		Filters:  h.Filters,
+		Records:  records,
+		Groups:   groups,
 	}
 }
 
 // table builds the tabular document (XLSX, and the compact PDF/DOCX).
 func (h enrollmentExportHead) table(cols []lists.Column, rows []lists.Row) lists.Document {
 	return lists.Document{
-		Title:       h.Title,
-		Subtitle:    h.Subtitle,
-		GeneratedAt: time.Now(),
-		Filters:     h.Filters,
-		Columns:     cols,
-		Rows:        rows,
-		Footer:      exportConfidentialityNote,
+		Title:    h.Title,
+		Subtitle: h.Subtitle,
+		Filters:  h.Filters,
+		Columns:  cols,
+		Rows:     rows,
+		Footer:   exportConfidentialityNote,
 	}
 }
 
 // renderEnrollmentExport renders an enrollment export in its detailed form:
-// PDF and DOCX as blocks, XLSX as one table row per child. Only the chosen
+// PDF and DOCX as blocks, XLSX as one table row per child, stamped with
+// generatedAt, the time of the resource's clock (ADR 0239). Only the chosen
 // document is built.
-func renderEnrollmentExport(svc lists.DocumentRenderer, format lists.Format, filename string, blocks func() lists.RecordDocument, table func() lists.Document) (lists.File, error) {
+func renderEnrollmentExport(svc lists.DocumentRenderer, format lists.Format, filename string, generatedAt time.Time, blocks func() lists.RecordDocument, table func() lists.Document) (lists.File, error) {
 	switch format {
-	case lists.FormatDOCX:
-		return svc.RenderRecordsDOCX(blocks(), filename)
-	case lists.FormatPDF:
-		return svc.RenderRecords(blocks(), filename)
+	case lists.FormatDOCX, lists.FormatPDF:
+		doc := blocks()
+		doc.GeneratedAt = generatedAt
+		if format == lists.FormatDOCX {
+			return svc.RenderRecordsDOCX(doc, filename)
+		}
+		return svc.RenderRecords(doc, filename)
 	case lists.FormatXLSX:
-		return svc.Render(table(), lists.FormatXLSX, filename)
+		doc := table()
+		doc.GeneratedAt = generatedAt
+		return svc.Render(doc, lists.FormatXLSX, filename)
 	default:
 		return lists.File{}, fmt.Errorf("unsupported export format %q", format)
 	}

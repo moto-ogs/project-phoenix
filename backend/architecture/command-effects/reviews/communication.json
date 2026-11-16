@@ -911,7 +911,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentThreadRecords.ParentThreadListGuardiansForStudent",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
       "target_owner": "people-directory"
@@ -921,7 +921,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentThreadRecords.ParentThreadListStudentIDsWithMessageableGuardian",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",
       "target_owner": "people-directory"
@@ -1898,7 +1898,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentMessageThreadRepositorySource.ParentThreadListGuardiansForStudent",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication.ParentThreadRecords.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication.ParentThreadRecords.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
       "target_owner": "people-directory"
@@ -1908,7 +1908,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentMessageThreadRepositorySource.ParentThreadListGuardiansForStudent",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
       "target_owner": "people-directory"
@@ -1918,7 +1918,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentMessageThreadRepositorySource.ParentThreadListStudentIDsWithMessageableGuardian",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication.ParentThreadRecords.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication.ParentThreadRecords.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",
       "target_owner": "people-directory"
@@ -1928,7 +1928,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentMessageThreadRepositorySource.ParentThreadListStudentIDsWithMessageableGuardian",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/ports.ParentMessageThreadRepository.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",
       "target_owner": "people-directory"
@@ -4482,7 +4482,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ListGuardiansForStudent",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
       "target_owner": "people-directory"
@@ -4492,7 +4492,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ListStudentIDsWithMessageableGuardian",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",
       "target_owner": "people-directory"
@@ -4502,7 +4502,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ParentThreadListGuardiansForStudent",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ParentThreadListGuardiansForStudent. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
       "target_owner": "people-directory"
@@ -4512,7 +4512,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ParentThreadListStudentIDsWithMessageableGuardian",
-      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: communication reaches modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian (people-directory) through modules/communication/internal/adapters/parentpostgres.threadRepository.ParentThreadListStudentIDsWithMessageableGuardian. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",
       "target_owner": "people-directory"

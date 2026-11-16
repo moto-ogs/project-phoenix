@@ -49,6 +49,8 @@ export function leadStaffPoolTopic(): HelpTopic {
       "moto speichert keinen Grund und keine Gruppe zu einer Blockung.",
       "Nach der ersten Blockung steht die Person in Ihrem Dienstplan. Planen Sie dort ihre Schicht ein.",
       "Die Person meldet sich bei Ihrer Schule nur in den geblockten Zeiten an, 30 Minuten vorher bis 30 Minuten danach. Sie sieht ihren Dienstplan und stempelt, mehr nicht.",
+      "Am Tag nach Ihrer letzten Blockung endet die Beschäftigung an Ihrer Schule. Blocken Sie die Person wieder, ist sie wieder bei Ihnen beschäftigt.",
+      "Geben Sie der Person an Ihrer Schule eine eigene Rolle, bleibt sie auch nach der letzten Blockung beschäftigt.",
     ],
     differences: [
       "Eine graue Blockung nennt eine andere Schule. Zu dieser Zeit ist die Person dort.",

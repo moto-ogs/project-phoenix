@@ -2,6 +2,7 @@ package presence_test
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	presenceAPI "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence"
@@ -26,5 +27,5 @@ func authorizationForTest() presenceAPI.Authorization {
 }
 
 func requestRuntimeForTest(withStaff func(context.Context, int64, int64) context.Context) presenceAPI.RequestRuntime {
-	return presenceAPI.RequestRuntime{WithStaff: withStaff, TenantID: tenant.FromContext, MarkRollback: tenant.MarkRollback}
+	return presenceAPI.RequestRuntime{WithStaff: withStaff, TenantID: tenant.FromContext, MarkRollback: tenant.MarkRollback, Now: time.Now}
 }

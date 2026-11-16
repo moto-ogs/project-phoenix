@@ -173,7 +173,10 @@ func TestIdentityTrustedDevicesGrowthQueryBudget(t *testing.T) {
 	f.resource.MFAService = f.module.MFA
 	want := []map[string]any{}
 	created := time.Date(2026, time.January, 2, 12, 0, 0, 0, time.UTC)
-	expires := time.Now().UTC().Add(24 * time.Hour).Truncate(time.Second)
+	// The request passes the jwtauth verifier, which checks the session's
+	// exp on the jwx clock, so this route cannot run on a pinned clock; the
+	// devices expire at a fixed instant far ahead instead.
+	expires := time.Date(2100, time.January, 1, 12, 0, 0, 0, time.UTC)
 	for _, n := range []int{3, 8} {
 		for len(want) < n {
 			agent := fmt.Sprintf("Budget browser %d", len(want))

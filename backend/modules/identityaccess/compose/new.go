@@ -4,6 +4,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/uptrace/bun"
 
@@ -49,6 +50,8 @@ type Dependencies struct {
 	Demo *identityBindingPorts.DemoDependencies
 	// TenantRuntime binds transactions; a zero value keeps the sessions' own runtime.
 	TenantRuntime tenant.UnitOfWork
+	// Now is the owner's clock (ADR 0239, 0261); nil reads the real one.
+	Now func() time.Time
 }
 
 // New composes Identity & Access. Guardian writes join the caller's transaction
@@ -63,12 +66,13 @@ func New(dependencies Dependencies) (identityaccess.Owner, error) {
 	sessions, attach := application.BindTenantRuntime(dependencies.Sessions, dependencies.TenantRuntime)
 	dependencies.Sessions = sessions
 	runtime := tenantRuntime{attach: attach, runner: tenant.NewTransactionRunner()}
-	store := postgres.NewStore(dependencies.DB)
+	dependencies.Now = clockOrReal(dependencies.Now)
+	store := postgres.NewStore(dependencies.DB, dependencies.Now)
 	runAdmin := newCommandTransactions(attach).RunAdmin
-	service := application.New(store, store, store, newCommandTransactions(attach), tenant.FromContext, application.NewObserver(dependencies.Observe))
+	service := application.New(store, store, store, newCommandTransactions(attach), tenant.FromContext, application.NewObserver(dependencies.Observe), dependencies.Now)
 	operatorMFARecords := application.NewOperatorMFA(service, store)
 	// Compose MFA first: login and passkey ceremonies depend on its gate.
-	flows, err := newMFACore(service, operatorMFARecords, postgres.NewAccountMFARecords(store), dependencies.Sessions, dependencies.MFA, runtime)
+	flows, err := newMFACore(service, operatorMFARecords, postgres.NewAccountMFARecords(store), dependencies.Sessions, dependencies.MFA, runtime, dependencies.Now)
 	if err != nil {
 		return nil, err
 	}
@@ -111,8 +115,8 @@ func New(dependencies Dependencies) (identityaccess.Owner, error) {
 		AccountAuthentication: auth, OperatorAuthentication: operatorAuth, OperatorAccountAccess: accountAccess, AccountLifecycle: lifecycle, RoleAdministration: roles,
 		PasswordReset: resets, SchoolInvitation: invitations, AccountProvisioning: provisioning, AccountAdministration: administration, OperatorProvisioning: operatorProvisioning,
 		OperatorMFAFlows: flows.Operator, OperatorPasskeyFlows: flows.OperatorPasskey, AccountPasskeyFlows: flows.AccountPasskey, AccountMFACapability: application.NewAccountMFACapability(flows.Capability),
-		SignInDataRetention: application.NewSignInDataRetention(store, application.InvitationLogger(dependencies.Invitations), runAdmin), AccountRetention: application.NewAccountRetention(store, attach, runAdmin, dependencies.RemoveErasedAvatarFile, application.InvitationLogger(dependencies.Invitations)),
-		SchoolInvitationMaintenance: application.NewSchoolInvitationMaintenance(store, application.InvitationLogger(dependencies.Invitations), newCommandTransactions(attach).RunPlatform), TraegerAccounts: traegerAccounts, Demo: demoAccess, CatererFlows: caterers, ParentFlows: application.ComposeParentAccess(auth, dependencies.Sessions, flows.Account, runtime),
+		SignInDataRetention: application.NewSignInDataRetention(store, application.InvitationLogger(dependencies.Invitations), runAdmin, dependencies.Now), AccountRetention: application.NewAccountRetention(store, attach, runAdmin, dependencies.RemoveErasedAvatarFile, application.InvitationLogger(dependencies.Invitations)),
+		SchoolInvitationMaintenance: application.NewSchoolInvitationMaintenance(store, application.InvitationLogger(dependencies.Invitations), newCommandTransactions(attach).RunPlatform, dependencies.Now), TraegerAccounts: traegerAccounts, Demo: demoAccess, CatererFlows: caterers, ParentFlows: application.ComposeParentAccess(auth, dependencies.Sessions, flows.Account, runtime),
 	}, nil
 }
 
@@ -128,27 +132,35 @@ func composeBesideEngine(dependencies Dependencies, auth *application.AccountAut
 }
 
 // NewGuardianInvitationReads joins ambient transactions without the full owner.
-func NewGuardianInvitationReads(db *bun.DB) (identityaccess.GuardianInvitationReads, error) {
+func NewGuardianInvitationReads(db *bun.DB, now func() time.Time) (identityaccess.GuardianInvitationReads, error) {
 	if db == nil {
 		return nil, errors.New("identity access compose: the guardian invitation reads need the database")
 	}
-	return application.NewGuardianInvitationReads(postgres.NewStore(db), newCommandTransactions(nil).RunRead), nil
+	return application.NewGuardianInvitationReads(postgres.NewStore(db, clockOrReal(now)), newCommandTransactions(nil).RunRead, clockOrReal(now)), nil
 }
 
-func NewGuardianInvitationInvalidation(db *bun.DB) (identityaccess.GuardianInvitationInvalidation, error) {
+func NewGuardianInvitationInvalidation(db *bun.DB, now func() time.Time) (identityaccess.GuardianInvitationInvalidation, error) {
 	if db == nil {
 		return nil, errors.New("identity access compose: guardian invitation invalidation needs the database")
 	}
-	return application.NewGuardianInvitationInvalidation(postgres.NewStore(db)), nil
+	return application.NewGuardianInvitationInvalidation(postgres.NewStore(db, clockOrReal(now)), clockOrReal(now)), nil
+}
+
+// clockOrReal binds the real clock where the root leaves it nil (ADR 0261).
+func clockOrReal(now func() time.Time) func() time.Time {
+	if now == nil {
+		return time.Now
+	}
+	return now
 }
 
 // NewSchoolMembershipLock binds the parent write guard's membership lock (#6529).
 func NewSchoolMembershipLock(db *bun.DB) identityaccess.SchoolMembershipLock {
-	return application.NewSchoolMembershipLock(postgres.NewStore(db), tenant.FromContext, tenant.TransactionFromContext)
+	return application.NewSchoolMembershipLock(postgres.NewStore(db, time.Now), tenant.FromContext, tenant.TransactionFromContext)
 }
 
 func NewGuardianInvitationAccountLock(db *bun.DB) identityaccess.GuardianInvitationAccountLock {
-	return application.NewGuardianInvitationAccountLock(postgres.NewStore(db), tenant.FromContext, tenant.TransactionFromContext)
+	return application.NewGuardianInvitationAccountLock(postgres.NewStore(db, time.Now), tenant.FromContext, tenant.TransactionFromContext)
 }
 
 func newCommandTransactions(attach func(context.Context) context.Context) application.CommandTransactions {
@@ -175,7 +187,7 @@ func newRegistrationFlows(auth *application.AccountAuthentication, store *postgr
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	invitations, err := newSchoolInvitation(store, roles, lifecycle, dependencies.Sessions, dependencies.Lifecycle, dependencies.Invitations, runtime)
+	invitations, err := newSchoolInvitation(store, roles, lifecycle, dependencies.Sessions, dependencies.Lifecycle, dependencies.Invitations, runtime, dependencies.Now)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -191,7 +203,7 @@ func newRegistrationFlows(auth *application.AccountAuthentication, store *postgr
 // nil without its dependencies. The account management requires Sessions:
 // the login's password check proves an existing account at acceptance.
 func newPortalAccess(dependencies Dependencies, auth *application.AccountAuthentication, store *postgres.Store, runAdmin func(context.Context, func(context.Context) error) error) (*identityaccess.DemoAccess, *application.TraegerAccounts, error) {
-	demoAccess, err := composeDemoAccess(dependencies.DB, auth, dependencies.Demo)
+	demoAccess, err := composeDemoAccess(store, auth, dependencies.Demo, dependencies.DB != nil, dependencies.Now)
 	deps := dependencies.Traeger
 	if err != nil || deps == nil {
 		return demoAccess, nil, err
@@ -201,7 +213,7 @@ func newPortalAccess(dependencies Dependencies, auth *application.AccountAuthent
 	}
 	traegerAccounts, err := application.NewTraegerAccounts(application.TraegerAccountsDependencies{
 		Store: store, Memberships: deps.Memberships, Delivery: deps.Delivery, Audit: deps.Audit, Passwords: deps.Passwords,
-		Credentials: auth.CheckPasswordLogin, Unit: runAdmin, InAdminUnit: auth.InAdminUnit, Expiry: deps.Expiry, Logger: deps.Logger,
+		Credentials: auth.CheckPasswordLogin, Unit: runAdmin, InAdminUnit: auth.InAdminUnit, Expiry: deps.Expiry, Logger: deps.Logger, Now: dependencies.Now,
 	})
 	return demoAccess, traegerAccounts, err
 }
@@ -212,6 +224,6 @@ func NewAccountBatchQuery(db *bun.DB) (identityaccess.AccountBatchQuery, error) 
 	if db == nil {
 		return nil, errors.New("identity access: account batch needs the database")
 	}
-	store := postgres.NewStore(db)
+	store := postgres.NewStore(db, time.Now)
 	return application.NewAccountBatch(store, application.NewObserver(func(Observation) {})), nil
 }

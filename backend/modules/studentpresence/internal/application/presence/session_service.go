@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
@@ -236,7 +235,7 @@ func (s *service) runInSessionTx(ctx context.Context, fn func(context.Context) e
 
 // UpdateSessionActivity updates the last activity timestamp for a session
 func (s *service) UpdateSessionActivity(ctx context.Context, activeGroupID int64) error {
-	err := s.GroupRepo.UpdateLastActivity(ctx, activeGroupID, time.Now())
+	err := s.GroupRepo.UpdateLastActivity(ctx, activeGroupID, s.now())
 	if err == nil {
 		return nil
 	}

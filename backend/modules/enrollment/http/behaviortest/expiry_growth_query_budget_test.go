@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 
@@ -20,9 +21,12 @@ func TestEnrollmentExpiryRouteGrowthQueryBudget(t *testing.T) {
 	env := f.env
 	ctx := testpkg.Ctx(t)
 	f.resource.PhaseExpiryService = NewTestPhaseExpiryWarnings(newPhaseExpiryProjection(t, env.db))
+	// The warnings are read on a fixed Wednesday, the phases end a week
+	// after it (#7104).
+	today := calendar.NewDate(2026, time.November, 18)
+	f.resource.Now = func() time.Time { return today.BerlinMidnight().Add(10 * time.Hour) }
 	router := f.router(t)
 	counter := testpkg.CaptureQueries(t, env.db)
-	today := calendar.TodayDate()
 	end := today.AddDays(7)
 	start := today.AddDays(-100)
 	ids := []string{}

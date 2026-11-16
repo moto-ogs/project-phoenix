@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 
@@ -69,7 +68,7 @@ func (s *staffAbsenceService) requestAbsence(ctx context.Context, staffID int64,
 	if workingDays <= 0 {
 		return nil, workforce.ErrAbsenceNoWorkingDays
 	}
-	now := time.Now()
+	now := s.now()
 	absence := &StaffAbsence{
 		StaffID: staffID, AbsenceType: baseType, AbsenceTypeID: typeID, DateStart: dateStart, DateEnd: dateEnd,
 		HalfDay: req.HalfDay, StartHalfDay: req.HalfDay, EndHalfDay: req.HalfDay, Note: req.Note,
@@ -268,7 +267,7 @@ func (s *staffAbsenceService) mergeOverlappingAbsences(
 	if req.Note != "" && primary.Note == "" {
 		primary.Note = req.Note
 	}
-	primary.UpdatedAt = time.Now()
+	primary.UpdatedAt = s.now()
 
 	updatedAbsence, err := s.absenceRepo.UpdateStaffAbsence(ctx, StaffAbsenceToCapability(primary))
 	err = absenceUpdateError(err)
@@ -468,7 +467,7 @@ func (s *staffAbsenceService) createNewAbsence(
 	dateStart, dateEnd calendar.Date,
 	req CreateAbsenceRequest,
 ) (*StaffAbsenceResponse, error) {
-	now := time.Now()
+	now := s.now()
 	absence := &StaffAbsence{
 		StaffID:       staffID,
 		AbsenceType:   req.AbsenceType,

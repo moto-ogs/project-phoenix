@@ -36,12 +36,13 @@ type sharedNotes struct {
 	caller      ports.Caller
 	students    SheetStudents
 	accessLog   AccessLog
+	now         func() time.Time
 }
 
 func newSharedNotes(deps ClassDayDependencies) sharedNotes {
 	return sharedNotes{
 		notes: deps.SharedNotes, assignments: deps.ClassTeachers, caller: deps.Caller,
-		students: deps.Students, accessLog: deps.AccessLog,
+		students: deps.Students, accessLog: deps.AccessLog, now: deps.clock(),
 	}
 }
 
@@ -124,7 +125,7 @@ func (n sharedNotes) StudentSharedNotes(ctx context.Context, in classday.SharedN
 // child's notes is a disclosure of its own.
 func (n sharedNotes) record(ctx context.Context, view *classday.StudentSharedNotes, actor classday.Actor) error {
 	const errPrefix = "shared notes audit"
-	now := time.Now()
+	now := n.now()
 	entry, err := newAccessRecord(errPrefix, actor.AccountID, actor.Roles, now, now, now)
 	if err != nil {
 		return err

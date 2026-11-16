@@ -47,7 +47,7 @@ func newRetentionSuite(t *testing.T) retentionSuite {
 	require.NoError(t, err)
 	attendance, err := presenceCompose.New(presenceCompose.Dependencies{DB: admin, Observe: func(presenceCompose.Observation) {}})
 	require.NoError(t, err)
-	invitations, err := identityaccessCompose.NewGuardianInvitationReads(admin)
+	invitations, err := identityaccessCompose.NewGuardianInvitationReads(admin, nil)
 	require.NoError(t, err)
 	retention, err := newWorkerRetention(audit, settings, students, staff, steps, attendance, newGuardianRetention(db, invitations))
 	require.NoError(t, err)

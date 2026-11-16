@@ -18,11 +18,11 @@ func TestWorkerLeaseGivesEveryProcessItsOwnHolderOverOneDatabaseLease(t *testing
 	t.Cleanup(func() { require.NoError(t, authDB.Close()) })
 	ctx := context.Background()
 
-	lease, err := newWorkerLease(testpkg.TenantRuntime(t, authDB))
+	lease, err := newWorkerLease(testpkg.TenantRuntime(t, authDB), nil)
 	require.NoError(t, err)
 	assert.Equal(t, workerLeaseName, lease.Name)
 	assert.Equal(t, 3, strings.Count(lease.Holder, "/")+1, "host, process and start time name the holder")
-	other, err := newWorkerLease(testpkg.TenantRuntime(t, authDB))
+	other, err := newWorkerLease(testpkg.TenantRuntime(t, authDB), nil)
 	require.NoError(t, err)
 	assert.NotEqual(t, lease.Holder, other.Holder, "every process holds its own terms")
 

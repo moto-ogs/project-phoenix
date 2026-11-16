@@ -15,9 +15,9 @@ type SignedIdentityTokens interface {
 	identityPorts.InvitationOwnerTokens
 }
 
-func NewSessionTokenCodec(signer application.JWTSigner, accessExpiry, refreshExpiry time.Duration) (SignedIdentityTokens, error) {
+func NewSessionTokenCodec(signer application.JWTSigner, accessExpiry, refreshExpiry time.Duration, now func() time.Time) (SignedIdentityTokens, error) {
 	if signer == nil {
 		return nil, errors.New("session token signer is required")
 	}
-	return application.NewSessionCodec(signer, accessExpiry, refreshExpiry), nil
+	return application.NewSessionCodec(signer, accessExpiry, refreshExpiry, clockOrReal(now)), nil
 }

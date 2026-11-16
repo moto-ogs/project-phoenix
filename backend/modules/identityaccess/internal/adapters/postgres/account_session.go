@@ -12,8 +12,9 @@ import (
 )
 
 // accountSessionRow mirrors auth.tokens. The default tags keep the insert
-// semantics of the retained model: zero timestamps take the database clock
-// and an unset portal scope stores the column default. The token columns
+// semantics of the retained model: an unset portal scope stores the column
+// default. InsertAccountSession stamps zero timestamps with the owner's
+// clock, the clock HasLiveAccountSessionsCreatedAfter compares them with. The token columns
 // hold hex SHA-256 digests only (#4902); the raw value never reaches SQL.
 // A Träger-Portal session stores its Träger and no school, every other
 // session its school and no Träger (chk_tokens_session_owner); the zero value
@@ -236,6 +237,12 @@ func (s *Store) InsertAccountSession(ctx context.Context, session domain.Account
 		return domain.AccountSession{}, domain.OperationStats{}, err
 	}
 	row := accountSessionRowFromDomain(session)
+	if row.CreatedAt.IsZero() {
+		row.CreatedAt = s.now()
+	}
+	if row.UpdatedAt.IsZero() {
+		row.UpdatedAt = row.CreatedAt
+	}
 	started := time.Now()
 	result, err := db.NewInsert().Model(&row).Returning("id, created_at, updated_at").Exec(ctx)
 	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started)}

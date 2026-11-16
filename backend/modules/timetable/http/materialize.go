@@ -79,7 +79,7 @@ func (rs *Resource) materialize(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	from, to, err := resolveMaterializationWindow(req, time.Now())
+	from, to, err := resolveMaterializationWindow(req, rs.Now())
 	if err != nil {
 		common.RenderError(w, r, codedInvalid(err))
 		return

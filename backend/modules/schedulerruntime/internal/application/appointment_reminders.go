@@ -65,7 +65,7 @@ func (s *Scheduler) checkAndRunAppointmentReminders(ctx context.Context, task *S
 		task.mu.Unlock()
 	}()
 
-	now := time.Now()
+	now := s.clock()
 
 	ctx, cancel := s.taskContext(ctx, 5*time.Minute)
 	defer cancel()

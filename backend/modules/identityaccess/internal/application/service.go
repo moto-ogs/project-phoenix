@@ -23,13 +23,18 @@ type Service struct {
 	tx        ports.Transaction
 	tenantOf  func(context.Context) int64
 	observe   ports.Observer
+	// now is the owner's clock (ADR 0239). The flows composed over this
+	// service (account and operator authentication, the account lifecycle)
+	// read it too, so every expiry, lifetime and stamp of one composition
+	// comes from one clock.
+	now func() time.Time
 }
 
-func New(store ports.Store, operators ports.OperatorStore, sessions ports.AccountSessionStore, tx ports.Transaction, tenantOf func(context.Context) int64, observe ports.Observer) *Service {
-	if store == nil || operators == nil || sessions == nil || tx == nil || tenantOf == nil || observe == nil {
+func New(store ports.Store, operators ports.OperatorStore, sessions ports.AccountSessionStore, tx ports.Transaction, tenantOf func(context.Context) int64, observe ports.Observer, now func() time.Time) *Service {
+	if store == nil || operators == nil || sessions == nil || tx == nil || tenantOf == nil || observe == nil || now == nil {
 		panic("identity access application: all dependencies are required")
 	}
-	return &Service{store: store, operators: operators, sessions: sessions, tx: tx, tenantOf: tenantOf, observe: observe}
+	return &Service{store: store, operators: operators, sessions: sessions, tx: tx, tenantOf: tenantOf, observe: observe, now: now}
 }
 
 func (s *Service) FindAccount(ctx context.Context, id int64) (identityaccess.Account, error) {

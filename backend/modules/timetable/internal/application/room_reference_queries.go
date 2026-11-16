@@ -17,13 +17,17 @@ type RoomReferenceRecords interface {
 
 // NewRoomReferenceQueries answers the Facilities room removal's question
 // which Timetable rows still use a room (#6845).
-func NewRoomReferenceQueries(store RoomReferenceRecords, observe func(internalports.Observation)) timetable.RoomReferenceQuery {
-	return roomReferenceQueries{store: store, observe: observe}
+func NewRoomReferenceQueries(store RoomReferenceRecords, observe func(internalports.Observation), today func() calendar.Date) timetable.RoomReferenceQuery {
+	if today == nil {
+		today = calendar.TodayDate
+	}
+	return roomReferenceQueries{store: store, observe: observe, today: today}
 }
 
 type roomReferenceQueries struct {
 	store   RoomReferenceRecords
 	observe func(internalports.Observation)
+	today   func() calendar.Date
 }
 
 func (q roomReferenceQueries) CountRoomReferences(ctx context.Context, roomID int64) (timetable.RoomReferences, error) {
@@ -34,7 +38,7 @@ func (q roomReferenceQueries) CountRoomReferences(ctx context.Context, roomID in
 	started := time.Now()
 	// The room removal asks inside its own tenant transaction; the count
 	// joins it, so it sees the rows the removal's locks hold.
-	result, stats, err := q.store.CountRoomReferences(ctx, roomID, calendar.TodayDate())
+	result, stats, err := q.store.CountRoomReferences(ctx, roomID, q.today())
 	q.observe(internalports.Observation{Operation: "count_room_references", Duration: time.Since(started), Stats: stats, Err: err})
 	if err != nil {
 		return timetable.RoomReferences{}, err

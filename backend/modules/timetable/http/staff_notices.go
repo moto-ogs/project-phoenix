@@ -36,16 +36,18 @@ import (
 type StaffNoticeResource struct {
 	Service   timetable.StaffNotices
 	accountID func(context.Context) int64
+	today     func() calendar.Date
 }
 
 // NewStaffNoticeResource verdrahtet die Ressource. accountID löst das handelnde
 // Konto der Anfrage auf (die Session-Claims); die Wurzel reicht dafür eine
-// Funktion über ihre Identitäts-Middleware herein.
-func NewStaffNoticeResource(service timetable.StaffNotices, accountID func(context.Context) int64) *StaffNoticeResource {
-	if service == nil || accountID == nil {
-		panic("staff notice resource: service and identity are required")
+// Funktion über ihre Identitäts-Middleware herein. today ist der Schultag der
+// heutigen Hinweise, die Wurzel reicht ihre Uhr (ADR 0239).
+func NewStaffNoticeResource(service timetable.StaffNotices, accountID func(context.Context) int64, today func() calendar.Date) *StaffNoticeResource {
+	if service == nil || accountID == nil || today == nil {
+		panic("staff notice resource: service, identity and today are required")
 	}
-	return &StaffNoticeResource{Service: service, accountID: accountID}
+	return &StaffNoticeResource{Service: service, accountID: accountID, today: today}
 }
 
 // Router liefert den Router unter /api/staff-notices: die Sicht der Betreuung
@@ -211,7 +213,7 @@ func toNoticeResponse(view noticeFields, includeAcknowledgedCount bool) noticeRe
 func (rs *StaffNoticeResource) todayFor(reader string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		views, err := rs.Service.StaffNoticesOn(ctx, rs.noticeAccountID(ctx), calendar.TodayDate().String(), reader)
+		views, err := rs.Service.StaffNoticesOn(ctx, rs.noticeAccountID(ctx), rs.today().String(), reader)
 		if err != nil {
 			common.RenderError(w, r, common.ErrorInternalServer(err))
 			return

@@ -86,7 +86,7 @@ func (s *AccountAuthentication) switchMFAProof(ctx context.Context, accountID in
 		}
 		return false, identityaccess.ErrMFAStatusUnavailable
 	}
-	return liveVerifiedHead(domain.AccountSession(source), accountID, scope, time.Now()), nil
+	return liveVerifiedHead(domain.AccountSession(source), accountID, scope, s.sessions.now()), nil
 }
 
 // liveVerifiedHead reports a family head of the account in that portal that

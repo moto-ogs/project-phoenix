@@ -13,7 +13,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -26,7 +25,7 @@ func TestTemplateWritersLockOldAndNewStaffBeforeRows(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			testpkg.SetupIsolatedTestDB(t)
 			mat := &mockMaterializationService{result: &timetable.MaterializationResult{}}
-			s := buildTemplateModule(t, mat)
+			s := buildTemplateModule(t, mat, fixedTemplateClock)
 			require.Less(t, s.staffA, s.staffB)
 			s.res.Templates = splitTemplateAdministration(s, mat, acceptCareOfferingSeries)
 			ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
@@ -41,7 +40,7 @@ func TestTemplateWritersLockOldAndNewStaffBeforeRows(t *testing.T) {
 			w := doTemplateJSON(t, router, http.MethodPost, "/templates", sourceBody)
 			require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 			created := decodeTemplateData[createTemplateResponse](t, w)
-			effective := calendar.TodayDate().AddDays(7)
+			effective := fixedTemplateToday.AddDays(7)
 			if name == "split_occurrence" {
 				inst := testpkg.CreateTestActivityInstance(t, s.db, effective, s.roomID, testpkg.ActivityInstanceOpts{
 					ActivityGroupID: &created.TemplateID, Title: "Old occurrence with removed staff",

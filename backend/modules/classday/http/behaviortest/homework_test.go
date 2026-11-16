@@ -46,7 +46,7 @@ type homeworkFixture struct {
 func setupHomeworkFixture(t *testing.T) *homeworkFixture {
 	t.Helper()
 	db, module := setupClassDayModule(t)
-	router := classdayhttp.NewResource(module.ClassDay, nil).SchoolRouter(rootAPI.ProtectedSchoolRoutes)
+	router := classdayhttp.NewResource(module.ClassDay, nil, module.Today).SchoolRouter(rootAPI.ProtectedSchoolRoutes)
 	tenantID := testpkg.Tenant(t)
 	suffix := time.Now().UnixNano()
 	className := fmt.Sprintf("hw%d", suffix%100000)

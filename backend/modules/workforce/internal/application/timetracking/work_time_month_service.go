@@ -27,10 +27,9 @@ type workTimeMonthService struct {
 	snapshotRepo   monthSnapshotReader
 	logger         *slog.Logger
 
-	// todayFunc is a test hook; production uses timezone.TodayDate.
+	// todayFunc and nowFunc are the clock of the composition (ADR 0239).
 	todayFunc func() calendar.Date
-	// nowFunc is a test hook; production uses time.Now.
-	nowFunc func() time.Time
+	nowFunc   func() time.Time
 }
 
 func NewWorkTimeMonthService(
@@ -63,17 +62,11 @@ func NewWorkTimeMonthService(
 }
 
 func (s *workTimeMonthService) today() calendar.Date {
-	if s.todayFunc != nil {
-		return s.todayFunc()
-	}
-	return calendar.TodayDate()
+	return dayOrWall(s.todayFunc, s.nowFunc)()
 }
 
 func (s *workTimeMonthService) now() time.Time {
-	if s.nowFunc != nil {
-		return s.nowFunc()
-	}
-	return time.Now()
+	return clockOrWall(s.nowFunc)()
 }
 
 // maxDailyTargetRangeDays bounds GetDailyProjection: the table never shows more

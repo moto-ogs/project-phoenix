@@ -6,6 +6,7 @@ import (
 
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // respondUpdatedStudent re-reads the student and writes the 200 response,
@@ -31,6 +32,7 @@ func (rs *Resource) RespondUpdatedStudent(w http.ResponseWriter, r *http.Request
 		Group:         group,
 		HasFullAccess: hasFullAccess,
 		PhotosEnabled: photosEnabled,
+		Today:         calendar.DateFromTime(now),
 	}, StudentResponseServices{
 		ActiveService: rs.ActiveService,
 	})

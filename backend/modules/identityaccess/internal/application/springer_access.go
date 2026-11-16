@@ -138,3 +138,43 @@ func (s *SpringerAccess) EndSpringerWindow(ctx context.Context, blockID int64) e
 	}
 	return s.windows.DeleteAccessWindow(txCtx, tenantID, blockID)
 }
+
+// PruneSpringerWindows deletes the ended windows at the school of the
+// caller's tenant transaction. An ended window admits no one, so this only
+// keeps the mappings small (#7197).
+func (s *SpringerAccess) PruneSpringerWindows(ctx context.Context) error {
+	if s == nil {
+		return errSpringerAccessUnavailable
+	}
+	// The Worker's unit of the school, never one of its own.
+	txCtx := bindRuntime(s.attach, ctx)
+	if !s.runtime.HasTransaction(txCtx) {
+		return errSpringerAccessOutsideUnit
+	}
+	tenantID := s.runtime.TenantID(txCtx)
+	if tenantID <= 0 {
+		return domain.ErrTenantRequired
+	}
+	return s.windows.PruneAccessWindows(txCtx, tenantID)
+}
+
+// HoldsOnlySpringerAccess reports whether the account holds at the school
+// of the caller's tenant transaction no role but springer and guardian:
+// the roles auth.account_tenant_admitted limits to windows (#7197).
+func (s *SpringerAccess) HoldsOnlySpringerAccess(ctx context.Context, accountID int64) (bool, error) {
+	if s == nil {
+		return false, errSpringerAccessUnavailable
+	}
+	if accountID <= 0 {
+		return false, identityaccess.ErrAccountNotFound
+	}
+	txCtx, tenantID, err := s.unit(ctx)
+	if err != nil {
+		return false, err
+	}
+	only, err := s.windows.HoldsOnlySpringerRoles(txCtx, accountID, tenantID, identityaccess.SpringerRoleName)
+	if err != nil {
+		return false, fmt.Errorf("read springer roles: %w", err)
+	}
+	return only, nil
+}

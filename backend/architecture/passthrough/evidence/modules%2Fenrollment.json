@@ -653,13 +653,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Phases) ListPublicOpen(ctx context.Context, now time.Time) ([]*enrollment.Phase, error) {\n\tif now.IsZero() {\n\t\tnow = time.Now()\n\t}\n\treturn s.deps.Records.PublicOpenPhases(ctx, now)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/enrollment/internal/application/Phases.ListPublicOpen",
-      "owner": "modules/enrollment"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Phases) PhaseByID(ctx context.Context, id int64) (*enrollment.Phase, error) {\n\tif id \u003c= 0 {\n\t\treturn nil, enrollment.ErrPhaseNotFound\n\t}\n\tphase, err := s.deps.Records.Phase(ctx, id)\n\tif err != nil {\n\t\tif s.notFound(err) {\n\t\t\treturn nil, enrollment.ErrPhaseNotFound\n\t\t}\n\t\treturn nil, fmt.Errorf(\"get phase %d: %w\", id, err)\n\t}\n\treturn phase, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/enrollment/internal/application/Phases.PhaseByID",

@@ -70,7 +70,14 @@ func TestAuthErrorRenderer_GenericError(t *testing.T) {
 func TestAuthErrorRenderer_MFAStatusUnavailable(t *testing.T) {
 	t.Parallel()
 
-	status, errorText := renderOperatorError(t, operator.AuthErrorRenderer(identityaccess.ErrMFAStatusUnavailable))
-	assert.Equal(t, http.StatusServiceUnavailable, status)
-	assert.Equal(t, "MFA status temporarily unavailable, please retry", errorText)
+	rr := httptest.NewRecorder()
+	require.NoError(t, render.Render(rr, httptest.NewRequest(http.MethodGet, "/", nil), operator.AuthErrorRenderer(identityaccess.ErrMFAStatusUnavailable)))
+	var body struct {
+		Detail string `json:"detail"`
+		Code   string `json:"code"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body), rr.Body.String())
+	assert.Equal(t, http.StatusServiceUnavailable, rr.Code)
+	assert.Equal(t, "MFA status unavailable, please retry", body.Detail)
+	assert.Equal(t, "identity.mfa_status_unavailable", body.Code, "the operator portal shows the catalog text of the code (#7214)")
 }

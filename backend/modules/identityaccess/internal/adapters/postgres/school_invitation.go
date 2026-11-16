@@ -89,7 +89,7 @@ func (s *Store) FindSchoolInvitation(ctx context.Context, id int64) (domain.Scho
 	var row schoolInvitationRow
 	started := time.Now()
 	err = invitationTenantFilter(s.scope(ctx), db.NewSelect().Model(&row).Where(`"invitation_token".id = ?`, id)).Scan(ctx)
-	found, stats, err := scanOne("find school invitation", started, err)
+	found, stats, err := scanOne("find school invitation", time.Since(started), err)
 	return row.toDomain(), found, stats, err
 }
 
@@ -101,7 +101,7 @@ func (s *Store) FindSchoolInvitationByToken(ctx context.Context, token string) (
 	var row schoolInvitationRow
 	started := time.Now()
 	err = invitationTenantFilter(s.scope(ctx), db.NewSelect().Model(&row).Where(`"invitation_token".token = ?`, domain.HashToken(token))).Scan(ctx)
-	found, stats, err := scanOne("find school invitation by token", started, err)
+	found, stats, err := scanOne("find school invitation by token", time.Since(started), err)
 	invitation := row.toDomain()
 	invitation.Token = token
 	return invitation, found, stats, err

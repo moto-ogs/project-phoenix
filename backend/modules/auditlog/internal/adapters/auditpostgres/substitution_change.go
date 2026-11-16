@@ -13,5 +13,5 @@ func NewSubstitutionChangeRepository(runtime Runtime) auditModels.SubstitutionCh
 }
 
 func (r *substitutionChangeRepository) Create(ctx context.Context, change *auditModels.SubstitutionChange) error {
-	return NewAppender(r.runtime).Append(ctx, change)
+	return NewAppender(r.runtime, nil).Append(ctx, change)
 }

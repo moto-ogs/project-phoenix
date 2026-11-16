@@ -449,7 +449,10 @@ func (p *Projection) CountReachableGuardiansForStudents(ctx context.Context, sch
 // feedSQL lists published, active, unexpired announcements the account is
 // targeted by across the given schools, newest-published first, with the
 // account's read/ack state.
-const feedSQL = pendingApplicantsFeedCTE + `
+//
+// Bind order: applicants, guardian links, account, account, news schools,
+// notice-only schools, today, today, today, account, account.
+const feedSQL = pendingApplicantsFeedCTE + `, ` + accountChildrenCTE + `
 			SELECT a.id, a.tenant_id, a.title, a.body, a.priority, a.link_url,
 				a.requires_acknowledgement, a.published_at, a.expires_at,
 				a.response_type, a.response_deadline, a.delivery_mode, a.system_kind,

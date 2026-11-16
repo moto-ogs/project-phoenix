@@ -1,6 +1,10 @@
 package application
 
 import (
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
+	"time"
+
 	"context"
 	"testing"
 
@@ -122,7 +126,7 @@ func newOwnerEdgeServiceWithSessions() (*Service, *ownerEdgeStore, *ownerEdgeSes
 	sessions := &ownerEdgeSessions{}
 	dependency := ownerEdgeDependency{}
 	service := New(store, ownerEdgeTransaction{}, dependency, dependency, sessions,
-		func(context.Context, []int64) error { return nil }, func() string { return "2026-09-01" },
+		func(context.Context, []int64) error { return nil }, func() time.Time { return calendar.NewDate(2026, 9, 1).BerlinMidnight().Add(12 * time.Hour) },
 		func(observation internalports.Observation) {
 			if observation.Err != nil {
 				store.rejections = append(store.rejections, observation.Operation)

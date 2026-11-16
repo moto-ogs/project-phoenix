@@ -8,6 +8,7 @@ import (
 	deliveryPorts "github.com/moto-ogs/project-phoenix/modules/delivery/internal/ports"
 
 	"github.com/moto-ogs/project-phoenix/realtime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,7 +62,7 @@ func TestTenantConstructorsBindTheRuntimeAtConstruction(t *testing.T) {
 	assert.NotNil(t, push.(*webPushChannel).tenantRuntime)
 	assert.NotNil(t, push.(*webPushChannel).outbox)
 
-	absence, err := NewTenantAbsenceNotifier(runtime, stubService{}, stubRecipients{}, db, nil, contract.SchoolClassRecipients{})
+	absence, err := NewTenantAbsenceNotifier(runtime, stubService{}, stubRecipients{}, db, nil, contract.SchoolClassRecipients{}, calendar.CalendarDateClock())
 	require.NoError(t, err)
 	assert.NotNil(t, absence.(*absenceNotifier).tenantRuntime)
 
@@ -89,7 +90,7 @@ func TestTenantConstructorsRejectAMissingDependency(t *testing.T) {
 			return err
 		},
 		"absence": func(runtime tenant.UnitOfWork) error {
-			_, err := NewTenantAbsenceNotifier(runtime, stubService{}, stubRecipients{}, db, nil, contract.SchoolClassRecipients{})
+			_, err := NewTenantAbsenceNotifier(runtime, stubService{}, stubRecipients{}, db, nil, contract.SchoolClassRecipients{}, calendar.CalendarDateClock())
 			return err
 		},
 		"preferences": func(runtime tenant.UnitOfWork) error {
@@ -113,9 +114,9 @@ func TestTenantConstructorsRejectAMissingDependency(t *testing.T) {
 	_, missing["web push database"] = NewTenantDurableWebPushChannel(runtime, nil, stubPushSubscriptions{}, VAPIDConfig{}, stubPushOutbox{}, nil)
 	_, missing["web push repository"] = NewTenantDurableWebPushChannel(runtime, db, nil, VAPIDConfig{}, stubPushOutbox{}, nil)
 	_, missing["web push outbox"] = NewTenantDurableWebPushChannel(runtime, db, stubPushSubscriptions{}, VAPIDConfig{}, nil, nil)
-	_, missing["absence notifier"] = NewTenantAbsenceNotifier(runtime, nil, stubRecipients{}, db, nil, contract.SchoolClassRecipients{})
-	_, missing["absence recipients"] = NewTenantAbsenceNotifier(runtime, stubService{}, nil, db, nil, contract.SchoolClassRecipients{})
-	_, missing["absence database"] = NewTenantAbsenceNotifier(runtime, stubService{}, stubRecipients{}, nil, nil, contract.SchoolClassRecipients{})
+	_, missing["absence notifier"] = NewTenantAbsenceNotifier(runtime, nil, stubRecipients{}, db, nil, contract.SchoolClassRecipients{}, calendar.CalendarDateClock())
+	_, missing["absence recipients"] = NewTenantAbsenceNotifier(runtime, stubService{}, nil, db, nil, contract.SchoolClassRecipients{}, calendar.CalendarDateClock())
+	_, missing["absence database"] = NewTenantAbsenceNotifier(runtime, stubService{}, stubRecipients{}, nil, nil, contract.SchoolClassRecipients{}, calendar.CalendarDateClock())
 	_, missing["preferences consent"] = NewTenantPreferenceService(runtime, nil, stubPrefSettings{}, db, stubGuardianSchool{}, permits)
 	_, missing["preferences settings"] = NewTenantPreferenceService(runtime, stubConsent{}, nil, db, stubGuardianSchool{}, permits)
 	_, missing["preferences database"] = NewTenantPreferenceService(runtime, stubConsent{}, stubPrefSettings{}, nil, stubGuardianSchool{}, permits)

@@ -90,7 +90,14 @@ func TestWorkerPublishFailureStillDeliversLocally(t *testing.T) {
 
 func transportHub(t *testing.T, db *bun.DB, listen bool) *realtime.Hub {
 	t.Helper()
-	hub, closer, err := deliveryCompose.NewPostgresRealtimeHub(db, testpkg.TenantRuntime(t, db), slog.Default(), listen)
+	return transportHubAt(t, db, listen, time.Now)
+}
+
+// transportHubAt builds the hub over a clock: the one its relayed
+// notifications were stamped with.
+func transportHubAt(t *testing.T, db *bun.DB, listen bool, now func() time.Time) *realtime.Hub {
+	t.Helper()
+	hub, closer, err := deliveryCompose.NewPostgresRealtimeHub(db, testpkg.TenantRuntime(t, db), slog.Default(), listen, now)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, closer.Close()) })
 	return hub

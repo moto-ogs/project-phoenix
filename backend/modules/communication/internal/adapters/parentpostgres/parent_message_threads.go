@@ -252,7 +252,6 @@ func (s *ThreadStore) TouchLastMessage(ctx context.Context, threadID int64, at t
 		Set("last_message_id = ?", messageID).
 		Set("last_sender_kind = ?", senderKind).
 		Set("last_message_body = ?", body).
-		Set("updated_at = ?", at).
 		Where(`"parent_message_thread".id = ?`, threadID).
 		Where(`("parent_message_thread".last_message_at IS NULL
 			OR "parent_message_thread".last_message_at < ?

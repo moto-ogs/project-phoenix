@@ -81,7 +81,7 @@ func newDeletionFixture(t *testing.T, db *bun.DB) *deletionFixture {
 	require.NoError(t, err)
 	actor := testpkg.CreateTestAccount(t, db, "student-delete-actor@example.com")
 	feedback := &testpkg.FeedbackEntryCounterMock{}
-	owners, err := rootOwners.NewStudentDeletionOwners(testpkg.NewDatabase(t, db))
+	owners, err := rootOwners.NewStudentDeletionOwners(testpkg.NewDatabase(t, db), nil)
 	require.NoError(t, err)
 	deps, err := rootOwners.Assemble(studentdeletioncompose.Dependencies{
 		DB: db, Owners: owners, Directory: people, CarePlan: repos.CarePlan(), Timetable: timetableOwner, Feedback: feedback,

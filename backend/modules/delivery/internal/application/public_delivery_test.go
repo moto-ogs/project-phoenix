@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"testing"
+	"time"
 
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/domain"
@@ -26,7 +27,7 @@ func TestEnqueuePushRejectsUntrustedEndpoint(t *testing.T) {
 	t.Parallel()
 
 	store := &enqueueRecordingStore{workerStore: &workerStore{}}
-	service := NewService(store, guardianDirectory{}, func(domain.Observation) {})
+	service := NewService(store, guardianDirectory{}, func(domain.Observation) {}, time.Now)
 	tenantID := int64(42)
 	_, err := service.EnqueuePush(context.Background(), deliveryContract.PushIntent{
 		TenantID: tenantID, Template: "appointment", IdempotencyKey: "appointment:1",

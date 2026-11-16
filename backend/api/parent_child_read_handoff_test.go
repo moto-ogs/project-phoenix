@@ -69,7 +69,7 @@ func newChildReadRigOn(t *testing.T, db *bun.DB, with ...func(*portalCompose.Dep
 	module, _, _, _, _, _, err := NewStudentTestModule(database, testpkg.TenantRuntime(t, db), feedback.Feedback, now)
 	require.NoError(t, err)
 	directory := owners.MustNewPeopleDirectory(database)
-	enrollment := owners.BuildEnrollmentRows(owners.NewEnrollmentBookings(), repos.CareExceptions, directory)
+	enrollment := owners.BuildEnrollmentRows(owners.NewEnrollmentBookings(nil), repos.CareExceptions, directory)
 	catalog := enrollmentCompose.NewCareOfferingRecords(repos.CareExceptions)
 	mealSettings, err := owners.BuildMealPlanSettings(settings.Settings)
 	require.NoError(t, err)

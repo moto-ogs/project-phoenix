@@ -10,6 +10,7 @@ import {
   LinkSimpleIcon,
   LockKeyIcon,
   UploadSimpleIcon,
+  UserPlusIcon,
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -319,6 +320,16 @@ export default function TraegerStaffRecordsPage() {
               <UploadSimpleIcon className="h-4 w-4" aria-hidden="true" />
               Personal importieren
             </ButtonLink>
+            <ButtonLink
+              href={traegerPath("/traeger/personal/einstellen")}
+              className="gap-2"
+              variant="primary"
+              size="md"
+              tooltip="Öffnet das Formular für eine neue Person mit Akte, Vertrag und Schulen."
+            >
+              <UserPlusIcon className="h-4 w-4" aria-hidden="true" />
+              Person einstellen
+            </ButtonLink>
           </>
         ) : undefined
       }
@@ -423,7 +434,7 @@ export default function TraegerStaffRecordsPage() {
                   />
                 }
                 title="Noch keine Akte."
-                description="Verknüpfen Sie einen Vorschlag, legen Sie unter „Ohne Akte“ eine Akte an, oder importieren Sie Ihr Personal oben mit „Personal importieren“."
+                description="Stellen Sie oben mit „Person einstellen“ eine neue Person ein. Für Personal, das schon an einer Schule arbeitet: Verknüpfen Sie einen Vorschlag, legen Sie unter „Ohne Akte“ eine Akte an, oder nutzen Sie „Personal importieren“."
               />
             }
           />
@@ -454,7 +465,7 @@ export default function TraegerStaffRecordsPage() {
             emptyState={
               <EmptyState
                 title="Alle Personen haben eine Akte."
-                description="Neues Personal einer Schule erscheint hier."
+                description="Personal, das eine Schule selbst anlegt, erscheint hier."
               />
             }
           />

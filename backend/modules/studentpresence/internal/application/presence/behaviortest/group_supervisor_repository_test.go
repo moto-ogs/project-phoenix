@@ -62,17 +62,23 @@ func createSupervisorTestData(t *testing.T, db *testpkg.DB) *supervisorTestData 
 // CRUD Tests
 // ============================================================================
 
+// supervisorDay is the Monday the supervision repository tests compare
+// days on; supervisorClock pins the repository's "today" to it.
+var supervisorDay = calendar.NewDate(2026, 11, 2)
+
+func supervisorClock() time.Time { return supervisorDay.BerlinMidnight().Add(10 * time.Hour) }
+
 func TestGroupSupervisorRepository_Create(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := sessionSupervisors(api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db)).ActiveGroup)
+	repo := sessionSupervisors(api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db), supervisorClock).ActiveGroup)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("creates group supervisor with valid data", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		today := calendar.TodayDate()
+		today := supervisorDay
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
 			StaffID:   data.Staff1ID,
@@ -88,7 +94,7 @@ func TestGroupSupervisorRepository_Create(t *testing.T) {
 
 	t.Run("creates supervisor with end date", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		today := calendar.TodayDate()
+		today := supervisorDay
 		endDate := today.AddDays(7) // One week
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
@@ -289,7 +295,7 @@ func TestGroupSupervisorRepository_FindActiveByStaffID(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := sessionSupervisors(api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db)).ActiveGroup)
+	repo := sessionSupervisors(api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db), supervisorClock).ActiveGroup)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("finds active supervisions for staff", func(t *testing.T) {
@@ -330,7 +336,7 @@ func TestGroupSupervisorRepository_FindActiveByStaffID(t *testing.T) {
 		futureSupervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
 			StaffID:   data.Staff1ID,
-			StartDate: calendar.TodayDate().AddDays(1),
+			StartDate: supervisorDay.AddDays(1),
 			Role:      "supervisor",
 		}
 		require.NoError(t, repo.Create(ctx, futureSupervisor))
@@ -346,12 +352,12 @@ func TestGroupSupervisorRepository_FindByActiveGroupID(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := sessionSupervisors(api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db)).ActiveGroup)
+	repo := sessionSupervisors(api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db), supervisorClock).ActiveGroup)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("finds all supervisors for active group", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		today := calendar.TodayDate()
+		today := supervisorDay
 		supervisor1 := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
 			StaffID:   data.Staff1ID,
@@ -378,7 +384,7 @@ func TestGroupSupervisorRepository_FindByActiveGroupID(t *testing.T) {
 
 	t.Run("finds only active supervisors when activeOnly is true", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		today := calendar.TodayDate()
+		today := supervisorDay
 		endDate := today.AddDays(-1) // Yesterday (ended)
 
 		activeSupervisor := &ports.GroupSupervisor{
@@ -594,12 +600,12 @@ func TestGroupSupervisorRepository_GetStaffIDsWithSupervisionToday(t *testing.T)
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := sessionSupervisors(api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db)).ActiveGroup)
+	repo := sessionSupervisors(api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db), supervisorClock).ActiveGroup)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("returns staff with supervision starting today", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		today := calendar.TodayDate()
+		today := supervisorDay
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
 			StaffID:   data.Staff1ID,
@@ -616,7 +622,7 @@ func TestGroupSupervisorRepository_GetStaffIDsWithSupervisionToday(t *testing.T)
 
 	t.Run("returns staff with supervision ending today", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		today := calendar.TodayDate()
+		today := supervisorDay
 		yesterday := today.AddDays(-1)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
@@ -635,7 +641,7 @@ func TestGroupSupervisorRepository_GetStaffIDsWithSupervisionToday(t *testing.T)
 
 	t.Run("returns staff with supervision spanning today", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		today := calendar.TodayDate()
+		today := supervisorDay
 		yesterday := today.AddDays(-1)
 		tomorrow := today.AddDays(1)
 		supervisor := &ports.GroupSupervisor{
@@ -655,7 +661,7 @@ func TestGroupSupervisorRepository_GetStaffIDsWithSupervisionToday(t *testing.T)
 
 	t.Run("returns staff with ongoing supervision (no end date)", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		today := calendar.TodayDate()
+		today := supervisorDay
 		yesterday := today.AddDays(-1)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
@@ -674,7 +680,7 @@ func TestGroupSupervisorRepository_GetStaffIDsWithSupervisionToday(t *testing.T)
 
 	t.Run("excludes staff with supervision ended before today", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		today := calendar.TodayDate()
+		today := supervisorDay
 		twoDaysAgo := today.AddDays(-2)
 		yesterday := today.AddDays(-1)
 		supervisor := &ports.GroupSupervisor{
@@ -694,7 +700,7 @@ func TestGroupSupervisorRepository_GetStaffIDsWithSupervisionToday(t *testing.T)
 
 	t.Run("returns distinct staff IDs for multiple supervisions", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		today := calendar.TodayDate()
+		today := supervisorDay
 		// Create multiple supervisions for same staff on same day
 		supervisor1 := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
@@ -838,12 +844,12 @@ func TestGroupSupervisorRepository_EndSupervision_AlreadyEnded(t *testing.T) {
 
 	db := testpkg.SetupTestDB(t)
 
-	repo := sessionSupervisors(api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db)).ActiveGroup)
+	repo := sessionSupervisors(api.NewPresenceSuiteRepositories(testpkg.NewDatabase(t, db), supervisorClock).ActiveGroup)
 	ctx := testpkg.Ctx(t)
 
 	t.Run("ending already ended supervision is no-op", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		today := calendar.TodayDate()
+		today := supervisorDay
 		endDate := today.AddDays(-1)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,

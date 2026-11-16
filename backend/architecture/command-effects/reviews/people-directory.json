@@ -3826,7 +3826,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardianPortalContacts",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -3859,7 +3859,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardianPortalContacts",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Owner.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Owner.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -6720,7 +6720,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.StudentsWithPortalGuardian",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -6753,7 +6753,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.StudentsWithPortalGuardian",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Owner.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Owner.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -6868,7 +6868,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardian",
-      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation).",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
       "target_owner": "identity-access"
@@ -6891,7 +6891,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardian",
-      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation).",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
       "target_owner": "identity-access"
@@ -7413,7 +7413,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianPortalContacts.ListGuardianPortalContacts",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -7568,7 +7568,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianProvider.UpdateGuardian",
-      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation).",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
       "target_owner": "identity-access"
@@ -9534,7 +9534,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListGuardianPortalContacts",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/internal/application.Service.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/internal/application.Service.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -11004,7 +11004,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.StudentsWithPortalGuardian",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/internal/application.Service.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/internal/application.Service.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -11073,7 +11073,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardian",
-      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation).",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
       "target_owner": "identity-access"
@@ -12362,7 +12362,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListGuardianPortalContacts",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -12395,7 +12395,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListGuardianPortalContacts",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Capability.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Capability.ListGuardianPortalContacts. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -13972,7 +13972,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.StudentsWithPortalGuardian",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through *modules/peopledirectory/compose.Directory.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -14005,7 +14005,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.StudentsWithPortalGuardian",
-      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Capability.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory.Capability.StudentsWithPortalGuardian. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -17551,7 +17551,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.GuardianStore.FindPortalMemberships",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory/internal/adapters/postgres.GuardianStore.FindPortalMemberships. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory/internal/adapters/postgres.GuardianStore.FindPortalMemberships. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -17561,7 +17561,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/ports.GuardianStore.ListAccountLinksByStudents",
-      "reason": "Read-only newly exposed target: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory/internal/adapters/postgres.GuardianStore.ListAccountLinksByStudents. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: people-directory reaches modules/identityaccess.Owner.FindActiveGuardianMemberships (identity-access) through modules/peopledirectory/internal/adapters/postgres.GuardianStore.ListAccountLinksByStudents. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindActiveGuardianMemberships",
       "target_owner": "identity-access"
@@ -18540,7 +18540,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.GuardianService.UpdateGuardian",
-      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation).",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
       "target_owner": "identity-access"

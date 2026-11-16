@@ -104,6 +104,6 @@ func NewOperatorDirectory(db *bun.DB) (identityaccess.OperatorDirectory, error) 
 	if db == nil {
 		return nil, errors.New("identity access compose: the operator directory needs the database")
 	}
-	store := postgres.NewStore(db)
-	return application.New(store, store, store, newCommandTransactions(nil), tenant.FromContext, application.NewObserver(func(Observation) {})), nil
+	store := postgres.NewStore(db, time.Now)
+	return application.New(store, store, store, newCommandTransactions(nil), tenant.FromContext, application.NewObserver(func(Observation) {}), time.Now), nil
 }

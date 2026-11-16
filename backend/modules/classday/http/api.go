@@ -43,11 +43,14 @@ type Resource struct {
 	// serves both facades. Without it the routes answer "not configured".
 	AbsenceList classday.AbsenceList
 	logger      *slog.Logger
+	// today is the day a request without ?date= reads (ADR 0239).
+	today func() calendar.Date
 }
 
 // NewResource creates the class-day resource over the projection's
-// school-portal capability. A nil logger falls back to the default logger.
-func NewResource(capability classday.ClassDay, logger *slog.Logger) *Resource {
+// school-portal capability and the composition's day clock. A nil logger
+// falls back to the default logger.
+func NewResource(capability classday.ClassDay, logger *slog.Logger, today func() calendar.Date) *Resource {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -58,6 +61,7 @@ func NewResource(capability classday.ClassDay, logger *slog.Logger) *Resource {
 	absenceList, _ := capability.(classday.AbsenceList)
 	return &Resource{
 		ClassDay: capability, DayHints: hints, SchoolDay: schoolDay, SharedNotes: sharedNotes, AbsenceReports: reports, AbsenceList: absenceList, logger: logger,
+		today: today,
 	}
 }
 
@@ -201,7 +205,7 @@ func (rs *Resource) getClassDay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	date, ok := dateQueryOrToday(w, r)
+	date, ok := rs.dateQueryOrToday(w, r)
 	if !ok {
 		return
 	}
@@ -246,10 +250,10 @@ func (rs *Resource) getClassDay(w http.ResponseWriter, r *http.Request) {
 
 // dateQueryOrToday reads the optional ?date=YYYY-MM-DD, today without it,
 // and renders 400 for a broken date.
-func dateQueryOrToday(w http.ResponseWriter, r *http.Request) (calendar.Date, bool) {
+func (rs *Resource) dateQueryOrToday(w http.ResponseWriter, r *http.Request) (calendar.Date, bool) {
 	raw := strings.TrimSpace(r.URL.Query().Get("date"))
 	if raw == "" {
-		return calendar.TodayDate(), true
+		return rs.today(), true
 	}
 	return parseArrivalExceptionDate(w, r, raw)
 }

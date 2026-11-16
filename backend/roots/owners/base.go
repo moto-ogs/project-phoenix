@@ -26,7 +26,6 @@ import (
 	workforceModule "github.com/moto-ogs/project-phoenix/modules/workforce"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	"github.com/moto-ogs/project-phoenix/observability"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 func NewCleanupTimetable(db transactionruntime.Database) (timetableModule.Capability, error) {
@@ -38,18 +37,18 @@ func NewCleanupTimetable(db transactionruntime.Database) (timetableModule.Capabi
 	if err != nil {
 		return nil, err
 	}
-	return NewUnobservedTimetable(db, students, rooms)
+	return NewUnobservedTimetable(db, students, rooms, time.Now)
 }
 
-// newTimetable composes the Timetable owner; a nil today decides on the
-// Berlin calendar day.
-func newTimetable(db transactionruntime.Database, students peopleModule.StudentQuery, rooms facilitiesModule.Query, membership schoolMembershipModule.Capability, observe func(timetableCompose.Observation), today func() calendar.Date) (timetableModule.Owner, error) {
+// newTimetable composes the Timetable owner over now; nil is the real clock
+// and decides on the Berlin calendar day.
+func newTimetable(db transactionruntime.Database, students peopleModule.StudentQuery, rooms facilitiesModule.Query, membership schoolMembershipModule.Capability, observe func(timetableCompose.Observation), now func() time.Time) (timetableModule.Owner, error) {
 	return timetableCompose.New(timetableCompose.Dependencies{
 		LockStaffAssignments: func(ctx context.Context, staffIDs []int64) error {
 			return schoolMembershipModule.LockStaffAssignments(ctx, membership, staffIDs)
 		},
 		DB: db.Pool(), Students: timetableStudents(students), Rooms: timetableRooms(rooms), Sessions: NewPresenceFacts(db),
-		Observe: observe, Provenance: enrollmentProvenanceView.NewReader(), Today: today,
+		Observe: observe, Provenance: enrollmentProvenanceView.NewReader(), Now: now,
 	})
 }
 
@@ -113,7 +112,7 @@ func composeFeedback(db transactionruntime.Database, settings *feedbackCompose.S
 	return feedbackCompose.New(feedbackCompose.Dependencies{
 		DB:       db.Pool(),
 		Settings: settings,
-		Today:    feedbackModule.Today,
+		Today:    feedbackModule.TodayOf(time.Now),
 		Observe: func(observation feedbackCompose.Observation) {
 			observability.ObserveFeedbackOperation(
 				observation.Operation,

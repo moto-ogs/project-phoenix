@@ -54,7 +54,7 @@ type RosterReconciler struct {
 var _ timetable.RosterMaintenance = (*RosterReconciler)(nil)
 
 // NewRosterReconciler constructs a RosterReconciler. logger may be nil (a
-// package default is used).
+// package default is used); without now it reads the clock of instanceRepo.
 func NewRosterReconciler(
 	instanceRepo ports.InstanceRows,
 	instanceStudentRepo ports.ParticipantRows,
@@ -63,7 +63,7 @@ func NewRosterReconciler(
 	logger *slog.Logger,
 	now ...func() time.Time,
 ) *RosterReconciler {
-	clock := calendar.Now
+	clock := NewClock(instanceRepo.Now)
 	if len(now) > 0 && now[0] != nil {
 		clock = now[0]
 	}

@@ -60,7 +60,7 @@ func TestMap_AnswersInConsumerValuesWithoutForeignRows(t *testing.T) {
 	fix := setupSummariesFixture(t, db)
 	mapped := operatordashboard.Map(newProjection(), consumerRows())
 
-	fresh := time.Now()
+	fresh := operatorDashboardTestNow
 	assignRoleForTenant(t, db, fix.AccountID1, fix.SchoolA1, roleUser)
 	assignRoleForTenant(t, db, fix.AccountID2, fix.SchoolB1, roleUser)
 	recordUsageRow(t, db, fix.SchoolA1, fix.AccountID1, "staff", fresh)
@@ -108,7 +108,7 @@ func TestMap_AnswersInConsumerValuesWithoutForeignRows(t *testing.T) {
 func TestMap_KeepsFailedReadsEmpty(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	mapped := operatordashboard.Map(operatordashboard.New(ambientTransaction, nil), consumerRows())
+	mapped := operatordashboard.Map(operatordashboard.New(ambientTransaction, nil, operatorDashboardTestClock), consumerRows())
 
 	withinAdmin(t, db, func(ctx context.Context) error {
 		counts, err := mapped.Counts(ctx)

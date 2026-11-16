@@ -8,7 +8,11 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
 import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
-import { generateSlug, isValidSlug } from "~/lib/operator/provisioning-helpers";
+import {
+  FEDERAL_STATES,
+  generateSlug,
+  isValidSlug,
+} from "~/lib/operator/provisioning-helpers";
 import { FormField } from "./provisioning-shared";
 
 const logger = createLogger({ component: "CreateTestTraegerModal" });
@@ -36,6 +40,7 @@ export function CreateTestTraegerModal({
   const [slugManual, setSlugManual] = useState(false);
   const [schoolCount, setSchoolCount] = useState<SchoolCount>("3");
   const [contactEmail, setContactEmail] = useState("");
+  const [federalState, setFederalState] = useState("");
   const save = useFormModalPending(isOpen);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
@@ -43,7 +48,10 @@ export function CreateTestTraegerModal({
   const { show: showError, invalid, clear: clearError } = formErrors;
   const { success: toastSuccess, warning: toastWarning } = useToast();
   const complete =
-    name.trim() !== "" && slug.trim() !== "" && contactEmail.trim() !== "";
+    name.trim() !== "" &&
+    slug.trim() !== "" &&
+    contactEmail.trim() !== "" &&
+    federalState !== "";
 
   const reset = useCallback(() => {
     setName("");
@@ -51,6 +59,7 @@ export function CreateTestTraegerModal({
     setSlugManual(false);
     setSchoolCount("3");
     setContactEmail("");
+    setFederalState("");
     clearError();
   }, [clearError]);
 
@@ -80,6 +89,7 @@ export function CreateTestTraegerModal({
             slug: slug.trim(),
             school_count: Number(schoolCount),
             contact_email: contactEmail.trim(),
+            federal_state: federalState,
           });
         } catch (error) {
           logger.error("test_traeger_create_failed", {
@@ -120,6 +130,7 @@ export function CreateTestTraegerModal({
       clearError,
       complete,
       contactEmail,
+      federalState,
       handleClose,
       invalid,
       name,
@@ -206,6 +217,28 @@ export function CreateTestTraegerModal({
           Die Test-Schulen bekommen die Subdomains „{slug.trim() || "slug"}
           -test-1“ und so weiter.
         </p>
+        <FormField
+          label="Bundesland der Test-Schulen"
+          htmlFor="test-traeger-federal-state"
+          required
+          error={formErrors.fieldError("federal_state")}
+        >
+          <CustomSelect
+            id="test-traeger-federal-state"
+            ariaLabel="Bundesland der Test-Schulen"
+            value={federalState}
+            options={[
+              { value: "", label: "Bundesland auswählen..." },
+              ...FEDERAL_STATES,
+            ]}
+            onChange={setFederalState}
+            placeholder="Bundesland auswählen..."
+            required
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            Danach richten sich Feiertage und Schulferien.
+          </p>
+        </FormField>
         <FormField
           label="Anzahl der Test-Schulen"
           htmlFor="test-traeger-school-count"

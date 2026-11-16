@@ -5,14 +5,16 @@ import (
 	"net"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	authAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account"
 )
 
 // mountDemoAccess adds the public demo routes (#3462); they exist under
-// APP_ENV=demo only, and only there the entry origins must resolve.
-func mountDemoAccess(router chi.Router, accesses authAPI.DemoAccesses, appEnv, frontendURL, tenantDomain string) error {
+// APP_ENV=demo only, and only there the entry origins must resolve. now is
+// the root's clock (nil: the real one).
+func mountDemoAccess(router chi.Router, accesses authAPI.DemoAccesses, appEnv, frontendURL, tenantDomain string, now func() time.Time) error {
 	origins, err := demoOrigins(frontendURL, tenantDomain)
 	if err != nil {
 		// Outside the demo environment the origins are never used.
@@ -24,7 +26,7 @@ func mountDemoAccess(router chi.Router, accesses authAPI.DemoAccesses, appEnv, f
 		}
 		return accesses, nil
 	}
-	return authAPI.MountDemoRoutes(router, IsDemoEnvironment(appEnv), compose, origins)
+	return authAPI.MountDemoRoutes(router, IsDemoEnvironment(appEnv), compose, origins, now)
 }
 
 // demoOrigins yields where a prospect waits and where the demo school lives

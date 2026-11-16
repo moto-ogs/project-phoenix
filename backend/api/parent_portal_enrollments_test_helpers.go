@@ -11,5 +11,5 @@ import (
 // an Enrollment owner over the ambient tenant transaction, as the root does,
 // for the Care Plan repository suites.
 func NewParentPortalEnrollments() owners.ParentPortalEnrollments {
-	return owners.ParentPortalEnrollments{Enrollment: enrollmentCompose.New()}
+	return owners.ParentPortalEnrollments{Enrollment: enrollmentCompose.NewClocked(nil)}
 }

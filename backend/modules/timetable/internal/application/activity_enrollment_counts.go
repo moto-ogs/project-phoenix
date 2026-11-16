@@ -6,7 +6,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // GetEnrollmentCounts batches the roster reads, not a raw enrollment COUNT:
@@ -68,7 +67,7 @@ func (s *ActivityService) batchEnrollmentCounts(ctx context.Context, groupIDs []
 	}
 	for _, row := range rows {
 		student := students[row.StudentID]
-		if student != nil && !student.IsAlumnus() && !student.CareEndedOn(calendar.TodayDate()) {
+		if student != nil && !student.IsAlumnus() && !student.CareEndedOn(s.today()) {
 			counts[row.ActivityGroupID]++
 		}
 	}

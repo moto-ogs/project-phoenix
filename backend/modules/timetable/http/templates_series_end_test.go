@@ -19,7 +19,7 @@ import (
 func TestTemplateSeriesEndDateRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	s := buildTemplateModule(t, &mockMaterializationService{})
+	s := buildTemplateModule(t, &mockMaterializationService{}, fixedTemplateClock)
 	defer s.cleanupFn()
 	router := templateRouter(s.ctx, s.res, s.db)
 	period := createTemplateTestPeriod(t, s.db, "Tpl-Serienende")
@@ -83,7 +83,7 @@ type httpResult struct {
 func TestTemplateSeriesEndDateValidation(t *testing.T) {
 	t.Parallel()
 
-	s := buildTemplateModule(t, &mockMaterializationService{})
+	s := buildTemplateModule(t, &mockMaterializationService{}, fixedTemplateClock)
 	defer s.cleanupFn()
 	router := templateRouter(s.ctx, s.res, s.db)
 	period := createTemplateTestPeriod(t, s.db, "Tpl-Serienende-Pruefung")
@@ -108,13 +108,13 @@ func TestTemplateSplitRejectsSeriesEndDate(t *testing.T) {
 	t.Parallel()
 
 	mat := &mockMaterializationService{result: &timetableModule.MaterializationResult{}}
-	s := buildTemplateModule(t, mat)
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
 	defer s.cleanupFn()
 	s.res.Templates = splitTemplateAdministration(s, mat, acceptCareOfferingSeries)
 	router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
 	created := createSourceTemplate(t, router, s, "Tpl-Split-Serienende")
 
-	b := splitBody(s, "Tpl-Split-Serienende-Neu", calendar.TodayDate().AddDays(7))
+	b := splitBody(s, "Tpl-Split-Serienende-Neu", fixedTemplateToday.AddDays(7))
 	b["end_date"] = "2099-01-01"
 	w := doTemplateJSON(t, router, http.MethodPost, fmt.Sprintf("/templates/%d/split", created.TemplateID), b)
 	assert.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())

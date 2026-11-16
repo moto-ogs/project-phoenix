@@ -273,5 +273,8 @@ type DecisionDependencies struct {
 	IsSavepointRollback func(error) bool
 	ParentsURL          string
 	Logger              *slog.Logger
-	Today               func() calendar.Date
+	// Now is the clock of the decision stamps and audits (ADR 0239); nil is
+	// the real clock. Today, nil, is its Berlin day.
+	Now   func() time.Time
+	Today func() calendar.Date
 }
