@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -38,24 +39,9 @@ func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.Staf
 	if staffAdmin == nil || months == nil || exports == nil || settings == nil {
 		return errors.New("traeger staff records: the personnel record, the school months and exports and the settings are required")
 	}
-	springers, err := springerAccessOf(identity)
+	collaborators, err := traegerStaffCollaborators(months, organizations, persons, membership, accessLog, exports, settings, identity)
 	if err != nil {
 		return err
-	}
-	collaborators := workforce.TraegerStaffPorts{
-		Schools:     traegerStaffSchools{organizations: organizations},
-		Employments: traegerSchoolEmployments{staff: membership},
-		Persons:     traegerSchoolPersons{persons: persons},
-		Access:      traegerStaffAccessLog{log: accessLog},
-		Runtime:     traegerDocumentRuntime{},
-		// The import log names colleagues like the export protocol (#4693).
-		Names:  parentBillingActorNames{names: owners.NewTraegerMemberNames()},
-		Months: months,
-		// The first block employs a Springer at the school (#7173).
-		Springers: traegerSpringerEmployments{access: springers},
-		// The payroll file and the time export (#4712).
-		Exports: exports,
-		Payroll: traegerPayrollSettings{settings: settings},
 	}
 	records := staffAdmin.TraegerStaffRecords(collaborators)
 	requireStaff := common.RequiresPermission(identityaccess.TraegerRightStaffManage)
@@ -65,8 +51,12 @@ func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.Staf
 	if !ok {
 		return errors.New("traeger staff records: the Personalstamm serves no Stundenkonto")
 	}
+	hires, ok := records.(workforce.TraegerStaffHires)
+	if !ok {
+		return errors.New("traeger staff records: the Personalstamm hires nobody")
+	}
 	lists := traegerListRenderer(NewSimpleListRenderer())
-	resource := traegerstaff.NewRecordsResource(records, staffAdmin.TraegerStaffContracts(collaborators), absences, timeAccounts, requireStaff, lists, today)
+	resource := traegerstaff.NewRecordsResource(records, staffAdmin.TraegerStaffContracts(collaborators), absences, timeAccounts, hires, requireStaff, lists, today)
 	root.Mount("/traeger/staff-records", resource.TraegerRouter(ProtectedTraegerRoutes))
 	// The Personalstamm serves its Nachweise over the same records (#4707).
 	proofs, ok := records.(workforce.TraegerStaffProofs)
@@ -92,6 +82,40 @@ func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.Staf
 	}
 	root.Mount("/traeger/staff-exports", traegerstaff.NewExportsResource(staffExports, requireStaff).TraegerRouter(ProtectedTraegerRoutes))
 	return mountTraegerStaffPool(root, tenant, records, requireStaff)
+}
+
+// traegerStaffCollaborators binds what the Personalstamm does not own: the
+// schools, their employments and persons, the access log and the two
+// transactions, and the commands that employ a Springer (#7173) and create a
+// hired person at an Einsatzort (#7206).
+func traegerStaffCollaborators(months workforce.TraegerStaffMonths, organizations HolidayOrganizations, persons TraegerPersons, membership TraegerStaff,
+	accessLog owners.DataAccessAppender, exports workforce.TraegerStaffExportSchool, settings TraegerBrandingSettings, identity identityaccess.Owner,
+) (workforce.TraegerStaffPorts, error) {
+	springers, err := springerAccessOf(identity)
+	if err != nil {
+		return workforce.TraegerStaffPorts{}, err
+	}
+	collaborators := workforce.TraegerStaffPorts{
+		Schools:     traegerStaffSchools{organizations: organizations},
+		Employments: traegerSchoolEmployments{staff: membership},
+		Persons:     traegerSchoolPersons{persons: persons},
+		Access:      traegerStaffAccessLog{log: accessLog},
+		Runtime:     traegerDocumentRuntime{},
+		// The import log names colleagues like the export protocol (#4693).
+		Names:  parentBillingActorNames{names: owners.NewTraegerMemberNames()},
+		Months: months,
+		// The first block employs a Springer at the school (#7173).
+		Springers: traegerSpringerEmployments{access: springers},
+		// The payroll file and the time export (#4712).
+		Exports: exports,
+		Payroll: traegerPayrollSettings{settings: settings},
+	}
+	// „Person einstellen“ creates person and employment at each Einsatzort
+	// (#7206).
+	if collaborators.HirePersons, collaborators.HireEmployments, err = schoolHiresOf(persons, membership); err != nil {
+		return workforce.TraegerStaffPorts{}, err
+	}
+	return collaborators, nil
 }
 
 // mountTraegerStaffPool mounts the Vertretungspool over the same records
@@ -265,4 +289,40 @@ func springerAccessOf(identity identityaccess.Owner) (identityaccess.SpringerAcc
 		return nil, errors.New("traeger staff records: Identity & Access serves no Springer access")
 	}
 	return springers, nil
+}
+
+// traegerHirePersons creates the person of a hired person in the school of
+// the tenant transaction (#7206) as a guarded command of the People
+// Directory (ADR 0067). The person gets no account and no tag.
+type traegerHirePersons struct {
+	persons peopledirectory.Command
+}
+
+func (h traegerHirePersons) CreateSchoolPerson(ctx context.Context, person workforce.TraegerSchoolPersonInput) (int64, error) {
+	created, err := h.persons.CreatePerson(ctx, peopledirectory.CreatePerson{FirstName: person.FirstName, LastName: person.LastName, Birthday: person.Birthday})
+	return created.ID, err
+}
+
+// traegerHireEmployments creates the employment of a hired person as a
+// guarded command of School Membership; the school gives the role.
+type traegerHireEmployments struct {
+	staff schoolmembership.Command
+}
+
+func (h traegerHireEmployments) CreateSchoolEmployment(ctx context.Context, employment workforce.TraegerSchoolEmploymentInput) (int64, error) {
+	created, err := h.staff.CreateStaff(ctx, schoolmembership.CreateStaff{StaffFields: schoolmembership.StaffFields{
+		PersonID: employment.PersonID, EmploymentType: employment.EmploymentType,
+	}})
+	return created.ID, err
+}
+
+// schoolHiresOf reads the create commands beside the reads the Personalstamm
+// already takes from the People Directory and School Membership.
+func schoolHiresOf(persons TraegerPersons, membership TraegerStaff) (workforce.TraegerHirePersons, workforce.TraegerHireEmployments, error) {
+	people, peopleOK := persons.(peopledirectory.Command)
+	staff, staffOK := membership.(schoolmembership.Command)
+	if !peopleOK || !staffOK {
+		return nil, nil, errors.New("traeger staff records: the People Directory and School Membership create no hired person")
+	}
+	return traegerHirePersons{persons: people}, traegerHireEmployments{staff: staff}, nil
 }

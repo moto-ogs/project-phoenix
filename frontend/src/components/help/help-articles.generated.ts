@@ -15080,7 +15080,7 @@ export const traegerStaffProofsTopic =
  * `/traeger/personal` (#4705, ADR 0089): eine Personalakte über alle
  * Schulen. Vorschläge prüfen und verknüpfen, Personalnummer und Bank- und
  * Steuerdaten pflegen, Personal aus einer Datei importieren (#4724), eine
- * Akte auflösen. Nur mit der Rolle Personal und
+ * neue Person einstellen (#7206), eine Akte auflösen. Nur mit der Rolle Personal und
  * nach der Freigabe „Personal beim Träger“.
  */
 export const traegerStaffRecordsTopic =
@@ -15118,6 +15118,19 @@ export const traegerStaffRecordsTopic =
             "Öffnen Sie den Reiter `Ohne Akte`.",
             "Wählen Sie die Person.",
             "Prüfen Sie die Werte. Wählen Sie `Akte anlegen`.",
+          ],
+        },
+        {
+          title: "Eine neue Person einstellen",
+          description:
+            "Für eine Person, die noch an keiner Ihrer Schulen arbeitet. moto legt die Akte, den Arbeitsvertrag und an jeder Schule die Person an.",
+          steps: [
+            "Wählen Sie in der Navigation `Personalakten` und oben `Person einstellen`.",
+            "Tragen Sie bei `Person` Vorname, Nachname und Geburtsdatum ein. Personalnummer, E-Mail und Telefon können Sie dazu eintragen. Wählen Sie `Weiter`.",
+            "Wählen Sie bei `Arbeitsvertrag` die Art und den ersten Tag. Wählen Sie `Weiter`.",
+            "Wählen Sie bei `Einsatzorte` jede Schule, an der die Person arbeitet. Tragen Sie die Stunden pro Tag ein. Wählen Sie `Weiter`.",
+            "Prüfen Sie bei `Prüfen` alle Angaben. Wählen Sie `Person einstellen`.",
+            "Die Schule richtet danach Zugang, Transponder und Rolle ein.",
           ],
         },
         {
@@ -15174,6 +15187,7 @@ export const traegerStaffRecordsTopic =
         "Die Akte gilt für alle Schulen der Person. Jede Schule sieht die Personalnummer des Trägers und kann sie nicht mehr ändern. Die Bank- und Steuerdaten ziehen von den Schulen in die Akte. Die Schulen sehen nur noch: „führt der Träger“. Planung, Zeiten und Abwesenheiten bleiben an jeder Schule wie bisher. Vertrag und Soll tragen Sie danach in der Akte ein.",
       notes: [
         "Sie können dieselbe Datei noch einmal laden. Eine neue Personalnummer wird eine neue Akte. Bei einer bekannten Nummer trägt moto nur fehlende IBAN, Steuer-ID oder SV-Nummer ein. Bestehende Werte ändert der Import nie. Führende Nullen zählen nicht: 00123 und 123 sind dieselbe Nummer.",
+        "Eine eingestellte Person hat an der Schule noch keinen Zugang. Die Schule lädt sie ein und gibt ihr eine Rolle. Die E-Mail-Adresse aus dem Formular steht dafür in den Stammdaten der Schule.",
         "Der Import verknüpft keine Akte von selbst mit einer Schule. Das bestätigen Sie unter `Vorschläge`.",
         "moto bewahrt die Datei nicht auf. Im `Verlauf` jeder Akte stehen Dateiname und Zeile. `Bisherige Importe` zeigt, wer wann welche Datei übernommen hat.",
         "Ein Wert, den Sie beim Verknüpfen nicht wählen, bleibt mit seiner Schule im `Verlauf` der Akte.",
@@ -15192,6 +15206,8 @@ export const traegerStaffRecordsTopic =
         "„Die Personalnummer steht mehrmals in der Datei“: Lassen Sie jede Nummer nur einmal stehen und laden Sie die Datei noch einmal.",
         "„Seit der Vorschau hat sich etwas an den Personalakten geändert“: Jemand hat gerade eine Akte geändert. Prüfen Sie die Vorschau und übernehmen Sie noch einmal.",
         "„Diese Personalnummer ist schon vergeben“: Eine andere Akte oder eine andere Person an einer der Schulen hat die Nummer. Ändern Sie zuerst die andere Nummer.",
+        "Nach dem Einstellen steht da „ist nur zum Teil angelegt“: Stellen Sie die Person nicht noch einmal ein. Öffnen Sie `Personalakten` und den Reiter `Ohne Akte`. Legen Sie dort die Akte an und tragen Sie in der Akte den Vertrag ein.",
+        "Beim Einstellen fragt moto `Gibt es diese Person schon?`: Es gibt eine Akte oder eine Person an einer Schule mit demselben Namen und Geburtsdatum. Ist es dieselbe Person, brechen Sie ab und legen Sie die Akte unter `Ohne Akte` an. Sind es zwei Personen, wählen Sie `Trotzdem einstellen`.",
         "„Eine dieser Personen hat schon eine Personalakte“: Laden Sie die Seite neu. Vielleicht hat jemand den Vorschlag gerade verknüpft.",
       ],
       related: [

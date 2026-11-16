@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
@@ -90,6 +91,28 @@ func (s *TraegerStaffStore) InsertSchoolFinancialRow(ctx context.Context, data d
 		VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (staff_id) DO NOTHING`,
 		schoolID, data.StaffID, data.IBANSealed, data.IBANMasked, data.TaxIDSealed, data.SocialSecurityNumberSealed); err != nil {
 		return fmt.Errorf("workforce postgres: restore school bank row: %w", err)
+	}
+	return nil
+}
+
+// InsertSchoolHireData writes the master data row of an employment a hire
+// of the Träger just created at the school (#7206).
+func (s *TraegerStaffStore) InsertSchoolHireData(ctx context.Context, data domain.StaffMasterData) error {
+	db, schoolID, err := schoolStaffDB(ctx)
+	if err != nil {
+		return err
+	}
+	if err := data.Validate(); err != nil {
+		return err
+	}
+	var endsOn *calendar.Date
+	if data.ContractEndDate != "" {
+		endsOn = new(calendar.Date(data.ContractEndDate))
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO users.staff_master_data (tenant_id, staff_id, entry_date, contract_end_date, email, phone)
+		VALUES (?, ?, ?, ?, ?, ?)`,
+		schoolID, data.StaffID, calendar.Date(data.EntryDate), endsOn, data.Email, data.Phone); err != nil {
+		return fmt.Errorf("workforce postgres: insert hired staff master data: %w", err)
 	}
 	return nil
 }

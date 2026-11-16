@@ -13,6 +13,7 @@ import (
 var traegerStaffCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/staff-records/"}:                      notCaptured,
 	{http.MethodPost, "/traeger/staff-records/link-preview"}:          notCaptured,
+	{http.MethodPost, "/traeger/staff-records/hire"}:                  notCaptured,
 	{http.MethodDelete, "/traeger/staff-records/{id}"}:                notCaptured,
 	{http.MethodPut, "/traeger/staff-records/{id}/personnel-number"}:  notCaptured,
 	{http.MethodPost, "/traeger/staff-records/{id}/financial/reveal"}: notCaptured,
