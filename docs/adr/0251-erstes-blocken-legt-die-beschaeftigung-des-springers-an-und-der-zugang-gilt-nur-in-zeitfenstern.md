@@ -10,7 +10,7 @@ der Spec [#4611](https://github.com/moto-ogs/project-phoenix/issues/4611).
 Sie setzt den Punkt aus
 [ADR 0089](0089-personal-wird-beim-traeger-gefuehrt-und-in-der-schule-eingesetzt.md)
 §9 um, den
-[ADR 0248](0248-vertretungspool-des-traegers-blockt-springer-ueber-eine-ausschlussbedingung.md)
+[ADR 0250](0250-vertretungspool-des-traegers-blockt-springer-ueber-eine-ausschlussbedingung.md)
 verschoben hat:
 
 > Das erste Blocken legt über den Workflow aus §8 Personensatz und
@@ -19,7 +19,7 @@ verschoben hat:
 
 ## Kontext
 
-- Mit ADR 0248 reserviert eine Blockung die Person, mehr nicht. Die
+- Mit ADR 0250 reserviert eine Blockung die Person, mehr nicht. Die
   Personalverwaltung trägt die blockende Schule danach von Hand als
   Einsatzort ein. Erst dann kann die Schule den Springer im Dienstplan
   planen, und erst dann kann er sich dort anmelden und stempeln.
@@ -94,11 +94,11 @@ verschoben hat:
      Heimatschule einen Springer außerhalb seines Fensters für
      schullos und sperrte sein Konto.
 7. **Audit wie ADR 0089 §6.** Jede Ansicht und jede Blockung steht schon
-   im Zugriffsprotokoll der Schule (ADR 0248). Die neue Verknüpfung steht
+   im Zugriffsprotokoll der Schule (ADR 0250). Die neue Verknüpfung steht
    zusätzlich im Verlauf der Akte (`staff_record_changes`, Art `linked`,
    mit der Schule und dem Konto der Leitung).
 8. **Ohne Konto keine Beschäftigung.** Hat keine Beschäftigung der Akte
-   ein Konto, bleibt es bei der Reservierung wie in ADR 0248. Die
+   ein Konto, bleibt es bei der Reservierung wie in ADR 0250. Die
    Personalverwaltung lädt die Person dann ein.
 
    Die Fenster liegen an der Zuordnung, nicht in einer eigenen Tabelle. So

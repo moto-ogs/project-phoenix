@@ -8,7 +8,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// The access windows of a Springer (#7173, ADR 0249).
+// The access windows of a Springer (#7173, ADR 0251).
 
 // EnsureSpringerAccountTenant maps the account to the school. A new or an
 // inactive mapping becomes active; an active mapping keeps its activation,

@@ -10,7 +10,7 @@ import (
 
 // The first block of a Springer at a school creates the employment there,
 // and every block opens the Springer's access for its time (#7173, ADR
-// 0089 section 9, ADR 0249). Both run in the tenant transaction of the
+// 0089 section 9, ADR 0251). Both run in the tenant transaction of the
 // blocking school, so a refused step undoes the block with them.
 
 var errSpringerEmploymentsUnbound = errors.New("workforce: the Springer employments are not bound")
@@ -19,7 +19,7 @@ var errSpringerEmploymentsUnbound = errors.New("workforce: the Springer employme
 // access at the school. The identity read locks the record first, so two
 // first blocks of one Springer wait for each other and the second finds the
 // employment of the first. A regular Einsatzort and a Springer without an
-// account get no employment (ADR 0249 points 3 and 8).
+// account get no employment (ADR 0251 points 3 and 8).
 func (t *TraegerStaff) employSpringer(ctx context.Context, block domain.PoolBlock, actor workforce.SchoolPoolActor) error {
 	identity, found, err := t.store.PoolSpringerIdentity(ctx, block.RecordID)
 	if err != nil {

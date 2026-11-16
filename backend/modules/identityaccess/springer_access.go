@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// SpringerRoleName is the platform system role „Springer“ (#7173, ADR 0249):
+// SpringerRoleName is the platform system role „Springer“ (#7173, ADR 0251):
 // base role user, only time_tracking:own. The first block of a Springer at
 // a school assigns it there.
 const SpringerRoleName = "springer"
@@ -34,7 +34,7 @@ type SpringerEmployment struct {
 }
 
 // SpringerAccess gives a Springer access to a school only in the times a
-// school blocked them (ADR 0249). Both commands join the caller's tenant
+// school blocked them (ADR 0251). Both commands join the caller's tenant
 // transaction.
 type SpringerAccess interface {
 	// GrantSpringerWindow creates what is missing at the school: the

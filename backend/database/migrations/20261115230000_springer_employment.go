@@ -17,7 +17,7 @@ const springerRoleName = "springer"
 func init() {
 	MigrationRegistry.Register(&Migration{
 		Version:     springerEmploymentVersion,
-		Description: "Erstes Blocken legt die Beschäftigung des Springers an; Zugang nur in Zeitfenstern (#7173, ADR 0249)",
+		Description: "Erstes Blocken legt die Beschäftigung des Springers an; Zugang nur in Zeitfenstern (#7173, ADR 0251)",
 		DependsOn: []string{
 			traegerStaffPoolVersion, // the blocks the windows come from
 			authTenantRLSVersion,    // the tenant isolation the account mapping already has
@@ -28,7 +28,7 @@ func init() {
 }
 
 // springerEmploymentUpSQL adds what the first block of a Springer creates
-// at the blocking school (#7173, ADR 0249).
+// at the blocking school (#7173, ADR 0251).
 //
 // Identity & Access:
 //   - auth.account_tenants.access_windows holds the windows of the mapping,
@@ -55,7 +55,7 @@ const springerEmploymentUpSQL = `
 ALTER TABLE auth.account_tenants ADD COLUMN access_windows JSONB NOT NULL DEFAULT '{}'::jsonb
 	CONSTRAINT chk_auth_account_tenants_access_windows CHECK (jsonb_typeof(access_windows) = 'object');
 COMMENT ON COLUMN auth.account_tenants.access_windows IS
-	'Open and coming windows of a Springer at the school, keyed by Vertretungspool block id: [starts_at, ends_at] (#7173, ADR 0249).';
+	'Open and coming windows of a Springer at the school, keyed by Vertretungspool block id: [starts_at, ends_at] (#7173, ADR 0251).';
 
 CREATE FUNCTION auth.account_tenant_admitted(p_account_id BIGINT, p_tenant_id BIGINT) RETURNS BOOLEAN
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
@@ -82,7 +82,7 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 ALTER TABLE workforce.staff_record_links ADD COLUMN via_pool BOOLEAN NOT NULL DEFAULT false;
 COMMENT ON COLUMN workforce.staff_record_links.via_pool IS
-	'The first block of a Springer created this Einsatzort (#7173, ADR 0249).';
+	'The first block of a Springer created this Einsatzort (#7173, ADR 0251).';
 
 CREATE FUNCTION workforce.pool_springer_identity(p_staff_record_id BIGINT)
 RETURNS TABLE(account_id BIGINT, first_name TEXT, last_name TEXT, membership_id BIGINT, membership_live BOOLEAN, via_pool BOOLEAN)

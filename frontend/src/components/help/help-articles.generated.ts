@@ -4286,7 +4286,7 @@ export const leadRosterDeviationTopic =
   } satisfies typeof authored_leadRosterDeviationTopic;
 
 /**
- * `/dienstplan/springer` (#4709, ADR 0248): die Springer aus dem
+ * `/dienstplan/springer` (#4709, ADR 0250): die Springer aus dem
  * Vertretungspool des Trägers sehen, blocken und eine eigene Blockung
  * aufheben.
  */
@@ -14671,7 +14671,7 @@ export const traegerStaffPlanningTopic =
   } satisfies typeof authored_traegerStaffPlanningTopic;
 
 /**
- * `/traeger/personal/vertretungspool` (#4709, ADR 0248): wer Springer ist,
+ * `/traeger/personal/vertretungspool` (#4709, ADR 0250): wer Springer ist,
  * jede Blockung der Woche und das Aufheben einer Blockung.
  */
 export const traegerStaffPoolTopic =

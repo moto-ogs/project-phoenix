@@ -2,7 +2,7 @@ import type { HelpTopic } from "../help-types";
 import { HELP_TOPICS } from "~/lib/help-topics";
 
 /**
- * `/dienstplan/springer` (#4709, ADR 0248): die Springer aus dem
+ * `/dienstplan/springer` (#4709, ADR 0250): die Springer aus dem
  * Vertretungspool des Trägers sehen, blocken und eine eigene Blockung
  * aufheben.
  */

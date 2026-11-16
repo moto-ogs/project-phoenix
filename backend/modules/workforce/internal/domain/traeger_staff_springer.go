@@ -6,7 +6,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The employment the first block of a Springer creates (#7173, ADR 0249).
+// The employment the first block of a Springer creates (#7173, ADR 0251).
 
 // PoolAccessMargin opens the access window of a block before its start and
 // closes it after its end, so the Springer clocks in and out at its edges.

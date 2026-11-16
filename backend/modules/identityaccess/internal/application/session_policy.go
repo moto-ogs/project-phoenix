@@ -61,7 +61,7 @@ func (r factReads) school(ctx context.Context, s *AccountAuthentication, schoolI
 }
 
 func (r factReads) mapping(ctx context.Context, s *AccountAuthentication, accountID, tenantID int64) (bool, error) {
-	// A Springer's mapping admits only while a window is open (ADR 0249).
+	// A Springer's mapping admits only while a window is open (ADR 0251).
 	mapped, _, err := s.store.AdmittedTenantMapping(ctx, accountID, tenantID, r.locked)
 	return mapped, err
 }

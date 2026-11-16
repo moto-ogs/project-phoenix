@@ -141,7 +141,7 @@ type AccountSession struct {
 	ReplacementTokenHash *string
 	RecoveryProofHash    []byte
 	// OutsideAccessWindow: the account is only a Springer at the session's
-	// school and no window is open now (ADR 0249). Only the family lookup reads it.
+	// school and no window is open now (ADR 0251). Only the family lookup reads it.
 	OutsideAccessWindow bool
 	CreatedAt           time.Time
 	UpdatedAt           time.Time

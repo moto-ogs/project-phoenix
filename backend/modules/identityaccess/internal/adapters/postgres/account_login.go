@@ -152,7 +152,7 @@ func (s *Store) ListActiveTenantIDs(ctx context.Context, accountID int64) ([]int
 }
 
 // ListAdmittedTenantIDs lists the active schools of the account whose
-// mapping admits it now (ADR 0249).
+// mapping admits it now (ADR 0251).
 func (s *Store) ListAdmittedTenantIDs(ctx context.Context, accountID int64) ([]int64, domain.OperationStats, error) {
 	db, err := s.database(ctx)
 	if err != nil {

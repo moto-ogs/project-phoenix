@@ -51,7 +51,7 @@ export const SYSTEM_ROLE_LABELS: Record<
     description:
       "Betreut eigene Termine: starten, Kinder ein- und auschecken, beenden",
   },
-  // ADR 0249: the first block of the Vertretungspool gives it, never a person.
+  // ADR 0251: the first block of the Vertretungspool gives it, never a person.
   springer: {
     name: "Springer",
     description:
@@ -102,7 +102,7 @@ export const ROLE_TEMPLATES = [
 
 /**
  * Eltern is a system role the parent-app invitation gives (#4574), Springer
- * one the first block of the Vertretungspool gives (ADR 0249). Nobody picks
+ * one the first block of the Vertretungspool gives (ADR 0251). Nobody picks
  * them by hand, so the role management neither lists them nor offers them
  * under „Gilt als“. The accounts and the roles themselves stay as they are.
  */

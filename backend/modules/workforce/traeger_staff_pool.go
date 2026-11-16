@@ -8,7 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The Vertretungspool of the Träger (#4709, ADR 0089 section 9, ADR 0248):
+// The Vertretungspool of the Träger (#4709, ADR 0089 section 9, ADR 0250):
 // an Arbeitsvertrag with the Merkmal „Vertretungspool“ makes its person a
 // Springer every school of the Träger may block for a day and a time. Two
 // live blocks of one Springer never overlap, also when two schools block at
@@ -137,7 +137,7 @@ type TraegerStaffPool interface {
 
 // SpringerEmploymentRequest gives a Springer the employment and the access
 // of one block at the school of the caller's tenant transaction (#7173,
-// ADR 0249). StartsAt and EndsAt bound the access, the block with its
+// ADR 0251). StartsAt and EndsAt bound the access, the block with its
 // margin.
 type SpringerEmploymentRequest struct {
 	AccountID int64

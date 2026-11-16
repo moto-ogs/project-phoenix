@@ -466,7 +466,7 @@ func (s *AccountAuthentication) resolveAccountTenantBySlug(ctx context.Context, 
 
 // resolveAccountTenantDefault picks the first active mapping whose school is
 // alive and active, in mapping order. A Springer's school without an open
-// window is no default (ADR 0249).
+// window is no default (ADR 0251).
 func (s *AccountAuthentication) resolveAccountTenantDefaultInTransaction(ctx context.Context, accountID int64) (int64, int64, error) {
 	return s.firstLiveTenant(ctx, accountID, s.store.ListAdmittedTenantIDs)
 }

@@ -183,7 +183,7 @@ func (l traegerStaffAccessLog) RecordTraegerStaffAccess(ctx context.Context, acc
 }
 
 // traegerSpringerEmployments employs a Springer at the blocking school
-// through Identity & Access, in the school's tenant transaction (ADR 0249).
+// through Identity & Access, in the school's tenant transaction (ADR 0251).
 type traegerSpringerEmployments struct {
 	access identityaccess.SpringerAccess
 }
@@ -201,7 +201,7 @@ func (e traegerSpringerEmployments) EndSpringerAccess(ctx context.Context, block
 }
 
 // springerAccessOf reads the Springer access, a capability of its own beside
-// the Identity & Access facade (ADR 0249), like the pool beside the records.
+// the Identity & Access facade (ADR 0251), like the pool beside the records.
 func springerAccessOf(identity identityaccess.Owner) (identityaccess.SpringerAccess, error) {
 	springers, ok := identity.(identityaccess.SpringerAccess)
 	if !ok {

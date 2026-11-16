@@ -291,7 +291,7 @@ type AccountLoginStore interface {
 	LockActiveTenantMappingShared(ctx context.Context, accountID, tenantID int64) (bool, domain.OperationStats, error)
 	// AdmittedTenantMapping is HasActiveAccountTenant, or with lock
 	// LockActiveTenantMappingShared, that also refuses a Springer
-	// without an open window (#7173, ADR 0249). Sessions rest on it.
+	// without an open window (#7173, ADR 0251). Sessions rest on it.
 	AdmittedTenantMapping(ctx context.Context, accountID, tenantID int64, lock bool) (bool, domain.OperationStats, error)
 	// ListAdmittedTenantIDs is ListActiveTenantIDs without the schools
 	// where the account is only a Springer outside a window; sign-in chooses from it.

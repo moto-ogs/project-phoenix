@@ -42,7 +42,7 @@ type accountSessionRow struct {
 	CreatedAt            time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp"`
 	UpdatedAt            time.Time  `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
 	// OutsideAccessWindow is no column: only the family lookup selects it
-	// (ADR 0249), every other read leaves it false.
+	// (ADR 0251), every other read leaves it false.
 	OutsideAccessWindow bool `bun:"outside_access_window,scanonly"`
 }
 
@@ -125,7 +125,7 @@ func (s *Store) LatestAccountSessionInFamily(ctx context.Context, familyID strin
 		return domain.AccountSession{}, false, domain.OperationStats{}, err
 	}
 	// The head also answers whether its school admits the account now, so
-	// the per-request session check needs no second statement (ADR 0249).
+	// the per-request session check needs no second statement (ADR 0251).
 	var row accountSessionRow
 	query := withTenantFilter(s.scope(ctx), db.NewSelect().Model(&row).
 		ColumnExpr(`"token".*`).

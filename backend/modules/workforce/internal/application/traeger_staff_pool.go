@@ -13,7 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The Vertretungspool (#4709, ADR 0089 section 9, ADR 0248). A school reads
+// The Vertretungspool (#4709, ADR 0089 section 9, ADR 0250). A school reads
 // and blocks in the tenant transaction of its request; the functions behind
 // the store answer only that school. The Träger reads in its own
 // transaction and writes the access entry at each school a listed Springer
@@ -211,7 +211,7 @@ func (t *TraegerStaff) recordPoolAccess(ctx context.Context, actor workforce.Tra
 // LiftTraegerBlock lifts a live block of any school of the Träger; the
 // school then sees it as lifted by the Personalverwaltung. The school's own
 // tenant transaction after the lift committed ends the Springer's access of
-// the block (ADR 0249) and names the lift and the Springer in the access
+// the block (ADR 0251) and names the lift and the Springer in the access
 // log; a failure there fails the request, the lift stays (ADR 0105: no
 // transaction carries both).
 func (t *TraegerStaff) LiftTraegerBlock(ctx context.Context, actor workforce.TraegerStaffActor, blockID int64) error {

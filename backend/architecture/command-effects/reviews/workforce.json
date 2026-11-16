@@ -7888,7 +7888,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.SpringerEmployments.EmploySpringer",
-      "reason": "Guarded leaf command (mutation): workforce reaches identityaccess.SpringerAccess.GrantSpringerWindow (identity-access) through api.traegerSpringerEmployments.EmploySpringer. Participates in the blocking school's tenant unit of the Vertretungspool block (#7173, ADR 0249); the block is the only caller and holds the Springer record and the account lock.",
+      "reason": "Guarded leaf command (mutation): workforce reaches identityaccess.SpringerAccess.GrantSpringerWindow (identity-access) through api.traegerSpringerEmployments.EmploySpringer. Participates in the blocking school's tenant unit of the Vertretungspool block (#7173, ADR 0251); the block is the only caller and holds the Springer record and the account lock.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
       "target_owner": "identity-access"
@@ -7899,7 +7899,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.SpringerEmployments.EndSpringerAccess",
-      "reason": "Guarded leaf command (mutation): workforce reaches identityaccess.SpringerAccess.EndSpringerWindow (identity-access) through api.traegerSpringerEmployments.EndSpringerAccess. Participates in the blocking school's tenant unit of the Vertretungspool block (#7173, ADR 0249); the block is the only caller and holds the Springer record and the account lock.",
+      "reason": "Guarded leaf command (mutation): workforce reaches identityaccess.SpringerAccess.EndSpringerWindow (identity-access) through api.traegerSpringerEmployments.EndSpringerAccess. Participates in the blocking school's tenant unit of the Vertretungspool block (#7173, ADR 0251); the block is the only caller and holds the Springer record and the account lock.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.EndSpringerWindow",
       "target_owner": "identity-access"

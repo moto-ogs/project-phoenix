@@ -6,7 +6,7 @@ import (
 )
 
 // SpringerAccessStore keeps the access windows of a Springer (#7173,
-// ADR 0249) in the caller's tenant transaction.
+// ADR 0251) in the caller's tenant transaction.
 type SpringerAccessStore interface {
 	EnsureSpringerAccountTenant(ctx context.Context, accountID, tenantID int64) error
 	SaveAccessWindow(ctx context.Context, accountID, tenantID, blockID int64, startsAt, endsAt time.Time) error

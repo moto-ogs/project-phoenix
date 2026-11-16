@@ -218,7 +218,7 @@ func (s *AccountAuthentication) traegerSwitchTarget(ctx context.Context, account
 			return lookupErr
 		}
 		// A Springer outside their windows works there through the Träger
-		// (ADR 0249).
+		// (ADR 0251).
 		mapped, _, lookupErr = s.store.AdmittedTenantMapping(txCtx, accountID, school.ID, false)
 		return lookupErr
 	})

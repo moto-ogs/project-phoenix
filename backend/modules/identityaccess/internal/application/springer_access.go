@@ -21,7 +21,7 @@ var (
 )
 
 // SpringerAccess gives a Springer access to a school only in the times a
-// school blocked them (#7173, ADR 0249). Its commands run in the blocking
+// school blocked them (#7173, ADR 0251). Its commands run in the blocking
 // school's tenant transaction, so they commit or roll back with the block.
 type SpringerAccess struct {
 	roles    ports.RoleStore

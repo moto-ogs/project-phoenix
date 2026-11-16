@@ -2,7 +2,7 @@ import type { HelpTopic } from "../help-types";
 import { HELP_TOPICS } from "~/lib/help-topics";
 
 /**
- * `/traeger/personal/vertretungspool` (#4709, ADR 0248): wer Springer ist,
+ * `/traeger/personal/vertretungspool` (#4709, ADR 0250): wer Springer ist,
  * jede Blockung der Woche und das Aufheben einer Blockung.
  */
 export function traegerStaffPoolTopic(): HelpTopic {

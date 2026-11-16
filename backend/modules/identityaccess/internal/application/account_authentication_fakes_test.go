@@ -327,7 +327,7 @@ func (s *fakeStore) ListActiveTenantIDs(_ context.Context, accountID int64) ([]i
 }
 
 // AdmittedTenantMapping admits every active mapping: the fakes know no
-// windows (ADR 0249).
+// windows (ADR 0251).
 func (s *fakeStore) AdmittedTenantMapping(ctx context.Context, accountID, tenantID int64, lock bool) (bool, domain.OperationStats, error) {
 	if lock {
 		return s.LockActiveTenantMappingShared(ctx, accountID, tenantID)

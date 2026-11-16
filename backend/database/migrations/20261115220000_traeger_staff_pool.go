@@ -24,7 +24,7 @@ func init() {
 }
 
 // traegerStaffPoolUpSQL adds the Vertretungspool of ADR 0089 section 9
-// (#4709, ADR 0248).
+// (#4709, ADR 0250).
 //
 //   - workforce.staff_contracts.pool marks a contract of the pool. Its
 //     person is a Springer whom every school of the Träger may block.

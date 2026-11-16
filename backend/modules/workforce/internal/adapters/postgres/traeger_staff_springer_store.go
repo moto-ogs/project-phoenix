@@ -11,7 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 )
 
-// The employment the first block of a Springer creates (#7173, ADR 0249),
+// The employment the first block of a Springer creates (#7173, ADR 0251),
 // through the functions of the migration that answer only the school of the
 // tenant transaction.
 
