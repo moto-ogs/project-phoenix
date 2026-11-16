@@ -25,13 +25,14 @@ func init() {
 // about (#7140). A guardian reads such an entry only while the account still
 // holds parent_portal.access for at least one of them: the reader checks it
 // on every read, so a revoked relationship hides the entries without
-// deleting them. A staff entry names no child. The parents portal reads the
-// feed of an account across its schools, newest update first; the partial
-// index serves that read.
+// deleting them. The full child scope is intentionally unbounded: a
+// cancellation can affect any number of booked children. A staff entry names
+// no child. The parents portal reads the feed of an account across its
+// schools, newest update first; the partial index serves that read.
 const notificationFeedChildrenUpSQL = `
 		ALTER TABLE platform.notification_feed_entries
 			ADD COLUMN student_ids BIGINT[] NOT NULL DEFAULT '{}'
-				CHECK (0 < ALL (student_ids) AND cardinality(student_ids) <= 500);
+				CHECK (0 < ALL (student_ids));
 		CREATE INDEX idx_notification_feed_entries_guardian
 			ON platform.notification_feed_entries (account_id, updated_at DESC, id DESC)
 			WHERE cardinality(student_ids) > 0;
