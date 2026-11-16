@@ -39,11 +39,11 @@ func NewStaffAdmin(dependencies StaffAdminDependencies) (*workforce.StaffAdmin, 
 	if dependencies.DB == nil || dependencies.Subjects == nil || dependencies.Audit == nil || dependencies.Allows == nil || dependencies.BankData == nil {
 		return nil, errors.New("staff admin: database, staff subjects, audit trail, permission matcher and bank data cipher are required")
 	}
-	store := postgres.New(postgres.DatabaseRuntime(dependencies.DB))
 	now := dependencies.Now
 	if now == nil {
 		now = time.Now
 	}
+	store := postgres.New(postgres.DatabaseRuntime(dependencies.DB)).WithClock(now)
 	logger := dependencies.Logger
 	if logger == nil {
 		logger = slog.Default()

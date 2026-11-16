@@ -50,6 +50,7 @@ import (
 // Re-measured 2026-11-15 for #7104: not counting stopwatch starts and the
 // owner slices lowered the sum from 1,646 to 665 calls; Care Plan (139 to 1)
 // and Parent Billing (7 to 0) take their clocks from their compositions.
+// Workforce (62 to 0, ADR 0264) reads the clock of its composition too.
 var moduleLiveClockBudget = map[string]int{
 	"modules/carecontract": 3,
 	// PickupBaselineQueries.HasBookedOfferingPickupForWeekday: the public
@@ -76,7 +77,6 @@ var moduleLiveClockBudget = map[string]int{
 	"modules/settings":                     3,
 	"modules/studentpresence":              86,
 	"modules/timetable":                    45,
-	"modules/workforce":                    62,
 	"workflows/catererportal":              2,
 	"workflows/holidayclosurenotification": 1,
 	"workflows/parentportal":               19,

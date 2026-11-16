@@ -317,7 +317,9 @@ var moduleLegacyFileBudgets = map[string]int{
 // and the export adapter of modules/traegerview/compose (+1).
 // ADR 0269: the clocks of modules/auditlog/compose (+7),
 // modules/mealplan/compose (+2) and modules/schoolcalendar/compose (+4).
-const moduleComposeBudgetTotal = 13553
+// ADR 0264: the clock field of the time-tracking cleanup in
+// modules/workforce/compose (+2).
+const moduleComposeBudgetTotal = 13555
 
 // moduleComposeBudgets maps every owner composition package to its production
 // LOC (ADR 0220 adds 13 to modules/careplan/compose), raised by ADR 0159 for withdrawal and termination (#4682), first
@@ -335,6 +337,7 @@ const moduleComposeBudgetTotal = 13553
 // ADR 0231 raised modules/enrollment/compose for the registration answers and
 // added modules/schoolsearchview/compose for the school search.
 // ADR 0240 raised modules/careplan/compose for the clock fields (+8).
+// ADR 0264 raised modules/workforce/compose for the cleanup clock (+2).
 var moduleComposeBudgets = map[string]int{
 	"modules/appointments/compose": 45,
 	// ADR 0103: the signature ledger constructor, construction only.
@@ -501,7 +504,8 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0188: the bank cipher dependency and backfill/rekey constructor (+7).
 	// ADR 0197: the export opener of the sealed staff bank and tax data (+5).
 	// ADR 0242: the working-time check and the Einsatzplanung sites (+11).
-	"modules/workforce/compose":       928,
+	// ADR 0264: the clock field of the time-tracking cleanup (+2).
+	"modules/workforce/compose":       930,
 	"workflows/catererportal/compose": 37, // added by ADR 0077
 	// Raised by ADR 0224: the class follow-up port (+2).
 	"workflows/gradetransition/compose": 51,

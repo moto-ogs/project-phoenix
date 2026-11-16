@@ -18,6 +18,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // mountTraegerStaffRoutes serves the Personalstamm of ADR 0089 (#4705) at
@@ -27,11 +28,12 @@ import (
 // Vertretungspool (#4709) at /traeger/staff-pool (the school's side at
 // /api/staff-pool) behind the Träger
 // right „Personal“, over the personnel record staffAdmin the root built for
-// the schools and the Dienstplan of the schools.
+// the schools and the Dienstplan of the schools; today is the root's calendar
+// day the Kontingente default their year to.
 func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.StaffAdmin, months workforce.TraegerStaffMonths, organizations HolidayOrganizations,
 	persons TraegerPersons, membership TraegerStaff, accessLog owners.DataAccessAppender, sites workforce.TraegerShiftSites,
 	exports workforce.TraegerStaffExportSchool, settings TraegerBrandingSettings,
-	identity identityaccess.Owner,
+	identity identityaccess.Owner, today func() timezone.Date,
 ) error {
 	if staffAdmin == nil || months == nil || exports == nil || settings == nil {
 		return errors.New("traeger staff records: the personnel record, the school months and exports and the settings are required")
@@ -64,7 +66,7 @@ func mountTraegerStaffRoutes(root, tenant chi.Router, staffAdmin *workforce.Staf
 		return errors.New("traeger staff records: the Personalstamm serves no Stundenkonto")
 	}
 	lists := traegerListRenderer(NewSimpleListRenderer())
-	resource := traegerstaff.NewRecordsResource(records, staffAdmin.TraegerStaffContracts(collaborators), absences, timeAccounts, requireStaff, lists)
+	resource := traegerstaff.NewRecordsResource(records, staffAdmin.TraegerStaffContracts(collaborators), absences, timeAccounts, requireStaff, lists, today)
 	root.Mount("/traeger/staff-records", resource.TraegerRouter(ProtectedTraegerRoutes))
 	// The Personalstamm serves its Nachweise over the same records (#4707).
 	proofs, ok := records.(workforce.TraegerStaffProofs)
