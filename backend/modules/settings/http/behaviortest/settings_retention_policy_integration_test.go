@@ -130,7 +130,7 @@ func TestSettingsSchoolSeesTheFederalStateButCannotWriteIt(t *testing.T) {
 	require.True(t, ok, "the school sees its federal state")
 	assert.Equal(t, false, item["writable"])
 	assert.Equal(t, "operator_managed", item["access_policy"])
-	assert.Equal(t, "DE-NW", item["value"])
+	assert.Equal(t, testpkg.TestSchoolFederalState, item["value"], "the state the school got on creation (#7174)")
 
 	router := ctx.resource.SettingsRouter()
 	put := testutil.NewAuthenticatedRequest(t, "PUT", "/values/operations.federal_state", map[string]any{"value": "DE-BY"}, testutil.WithTestTenant(t))
@@ -138,11 +138,13 @@ func TestSettingsSchoolSeesTheFederalStateButCannotWriteIt(t *testing.T) {
 	reset := testutil.NewAuthenticatedRequest(t, "DELETE", "/values/operations.federal_state", nil, testutil.WithTestTenant(t))
 	testutil.AssertErrorResponse(t, testutil.ExecuteRequest(router, reset), 403)
 
-	count, err := ctx.db.NewSelect().
+	var stored []string
+	err := ctx.db.NewSelect().
 		Table("config.setting_values").
+		ColumnExpr("value #>> '{}'").
 		Where("tenant_id = ?", testpkg.Tenant(t)).
 		Where("setting_key = 'operations.federal_state'").
-		Count(context.Background())
+		Scan(context.Background(), &stored)
 	require.NoError(t, err)
-	assert.Zero(t, count, "a refused write must not store an override")
+	assert.Equal(t, []string{testpkg.TestSchoolFederalState}, stored, "refused writes neither change nor remove the school's state")
 }

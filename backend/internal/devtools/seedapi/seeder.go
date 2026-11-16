@@ -458,6 +458,8 @@ func (s *Seeder) createSeedSchool(organizationID int64, name, slug, subdomain st
 		"subdomain":       subdomain,
 		// Every school needs a contact address for replies from parents (#2872).
 		"email": fmt.Sprintf("kontakt@%s.example.test", subdomain),
+		// Holidays and school vacations follow it; there is no default (#7174).
+		"federal_state": "DE-NW",
 	})
 	if err != nil {
 		return 0, "", fmt.Errorf("create school: %w", err)
