@@ -66,7 +66,7 @@ import {
 import { fetchPrivacyConsentDefaults } from "~/lib/student-api";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { useFreshSWR, useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
   mapBulkPickupScheduleFormToBackend,
@@ -275,7 +275,7 @@ export function StudentCreateModal({
   // The consent fields start at the school's defaults and are only sent when
   // the person changed one: the stored consent then follows the school
   // setting until somebody decides otherwise for this child.
-  const consentDefaults = useSWRAuth(
+  const consentDefaults = useFreshSWR(
     isOpen ? tenantStudentKeys.privacyConsentDefaults() : null,
     fetchPrivacyConsentDefaults,
   );

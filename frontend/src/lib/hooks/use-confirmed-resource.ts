@@ -1,6 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import {
+  refusalFor,
+  subscribeRefusals,
+  markRefused,
+  liftRefusal,
+  liftAllRefusals,
+} from "~/lib/resource-refusals";
 import { ApiError } from "~/lib/api-error";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
@@ -45,34 +52,6 @@ export function isRefusal(failure: unknown): boolean {
  *    Logout and an account switch (resetSWRScope) lift every refusal.
  */
 
-/** Refused keys of this tab, with the refusal: the store of invariant 4. */
-const refusals = new Map<string, unknown>();
-const refusalListeners = new Set<() => void>();
-
-function announceRefusals() {
-  for (const listener of refusalListeners) listener();
-}
-
-function subscribeRefusals(listener: () => void) {
-  refusalListeners.add(listener);
-  return () => refusalListeners.delete(listener);
-}
-
-function markRefused(key: string, error: unknown) {
-  refusals.set(key, error);
-  announceRefusals();
-}
-
-function liftRefusal(key: string) {
-  if (refusals.delete(key)) announceRefusals();
-}
-
-function liftAllRefusals() {
-  if (refusals.size === 0) return;
-  refusals.clear();
-  announceRefusals();
-}
-
 // A refusal belongs to the session that got it.
 onSWRScopeReset(liftAllRefusals);
 
@@ -87,12 +66,14 @@ export interface RefusalGuard {
   };
 }
 
-export function useRefusalGuard(key: string | null): RefusalGuard {
+export function useRefusalGuard(resourceKey: string | null): RefusalGuard {
+  const cacheKey = useSWRCacheKey();
+  const key = resourceKey === null ? null : cacheKey(resourceKey);
   // SWR's own error is cleared by the cache removal and replaced by any later
   // failure, so the refusal lives in the tab-wide store, per key (invariant 4).
   const refusal = useSyncExternalStore(
     subscribeRefusals,
-    () => (key === null ? undefined : refusals.get(key)),
+    () => (key === null ? undefined : refusalFor(key)),
     () => undefined,
   );
   const callbacks = useMemo(
@@ -166,9 +147,7 @@ export function useConfirmedSWR<T>(
   key: string | null,
   fetcher: () => Promise<T>,
 ) {
-  const cacheKey = useSWRCacheKey();
-  const scopedKey = key === null ? null : cacheKey(key);
-  const guard = useRefusalGuard(key === null ? null : scopedKey);
+  const guard = useRefusalGuard(key);
   const response = useSWRAuth(key, fetcher, {
     keepPreviousData: false,
     ...guard.callbacks,

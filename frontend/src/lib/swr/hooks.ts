@@ -33,6 +33,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useSession } from "next-auth/react";
+import { liftRefusal } from "~/lib/resource-refusals";
 import { swrConfig, immutableConfig } from "./config";
 import { isAccessRefusal, noteShownDataRefusal } from "~/lib/access-refusal";
 import {
@@ -100,6 +101,7 @@ function useSWRScope(): {
  *   The live flag is read because a timer or mutation can run before React
  *   commits the disabled keys after an owner-change event.
  */
+type OnSuccess = NonNullable<SWRConfiguration["onSuccess"]>;
 type OnError = NonNullable<SWRConfiguration["onError"]>;
 type Compare = NonNullable<SWRConfiguration["compare"]>;
 type OnErrorRetry = NonNullable<SWRConfiguration["onErrorRetry"]>;
@@ -108,6 +110,12 @@ const generationLockMiddleware: Middleware =
   (useSWRNext) => (key, fetcher, config) => {
     const locked =
       typeof key === "string" && fetcher ? lockFetcher(key, fetcher) : fetcher;
+    const onSuccess: OnSuccess = (data, successKey, current) => {
+      // Every successful read lifts a refusal, even without a resource guard.
+      // Cache writes never come through this callback.
+      liftRefusal(successKey);
+      config.onSuccess?.(data, successKey, current);
+    };
     const onError: OnError = (error, errorKey, current) => {
       if (isDiscardedAnswer(error)) return;
       // SWR keeps the data next to a refusal; useRefreshAfterWrite learns
@@ -158,6 +166,7 @@ const generationLockMiddleware: Middleware =
         if (typeof key === "string") expireIntentPreload(key);
         return isSWRSessionPending() || config.isPaused?.() === true;
       },
+      onSuccess,
       onError,
       onErrorRetry,
     });

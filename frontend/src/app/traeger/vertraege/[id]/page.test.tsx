@@ -179,6 +179,37 @@ function renderPage() {
 }
 
 describe("TraegerVertragPage", () => {
+  it("reads the audited contract and PDF again on a quick reopening", async () => {
+    const page = (open: boolean) => (
+      <TraegerResourceTestProvider>
+        {open && <TraegerVertragPage />}
+      </TraegerResourceTestProvider>
+    );
+    const view = render(page(true));
+    await waitFor(() =>
+      expect(screen.getByTestId("pdf-preview")).toHaveAttribute(
+        "data-loaded",
+        "true",
+      ),
+    );
+    expect(api.fetchCareContract).toHaveBeenCalledTimes(1);
+    expect(api.downloadCareContract).toHaveBeenCalledTimes(1);
+
+    view.rerender(page(false));
+    view.rerender(page(true));
+
+    await waitFor(() => expect(api.fetchCareContract).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(api.downloadCareContract).toHaveBeenCalledTimes(2),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("pdf-preview")).toHaveAttribute(
+        "data-loaded",
+        "true",
+      ),
+    );
+  });
+
   beforeEach(() => {
     for (const fn of Object.values(api)) fn.mockReset();
     mockPush.mockReset();

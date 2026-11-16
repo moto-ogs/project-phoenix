@@ -32,7 +32,7 @@ import {
   plannedVersion,
 } from "~/components/traeger/care-contract-versions";
 import { CareContractSignatureCard } from "~/components/traeger/care-contract-signature-card";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { EmailText } from "~/components/traeger/email-text";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -103,7 +103,7 @@ export default function TraegerVertragPage() {
     mutate,
     reload,
     readCallbacks,
-  } = useTraegerResource(
+  } = useFreshTraegerResource(
     id ? traegerContractKeys.contract(id) : null,
     () => fetchCareContract(id),
     "der Vertrag",
@@ -172,7 +172,7 @@ export default function TraegerVertragPage() {
 
   // The preview follows the stored PDF once the contract is sent. It is
   // optional: the download button offers the PDF and reports its own error.
-  const { data: pdf } = useTraegerResource(
+  const { data: pdf } = useFreshTraegerResource(
     contract
       ? traegerContractKeys.contractPdf(
           id,

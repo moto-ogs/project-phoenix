@@ -1372,6 +1372,46 @@ describe("StudentCreateModal", () => {
       expect(screen.getByLabelText("Einwilligung")).not.toBeChecked();
     });
 
+    it("uses fresh defaults on reopening and submits the fresh counterpart", async () => {
+      const modal = (isOpen: boolean) => (
+        <StudentCreateModal
+          isOpen={isOpen}
+          onClose={mockOnClose}
+          onCreate={mockOnCreate}
+        />
+      );
+      const view = render(modal(true));
+      await waitFor(() =>
+        expect(screen.getByLabelText("Aufbewahrungstage")).toHaveValue(14),
+      );
+      view.rerender(modal(false));
+      let resolveDefaults!: (value: {
+        accepted: boolean;
+        dataRetentionDays: number;
+      }) => void;
+      mockFetchPrivacyConsentDefaults.mockReturnValue(
+        new Promise((resolve) => {
+          resolveDefaults = resolve;
+        }),
+      );
+      view.rerender(modal(true));
+      await waitFor(() =>
+        expect(mockFetchPrivacyConsentDefaults).toHaveBeenCalledTimes(2),
+      );
+      await act(async () =>
+        resolveDefaults({ accepted: true, dataRetentionDays: 30 }),
+      );
+      await waitFor(() =>
+        expect(screen.getByLabelText("Aufbewahrungstage")).toHaveValue(30),
+      );
+      expect(screen.getByLabelText("Einwilligung")).toBeChecked();
+      fireEvent.click(screen.getByLabelText("Einwilligung"));
+      expect(await submit()).toMatchObject({
+        privacy_consent_accepted: false,
+        data_retention_days: 30,
+      });
+    });
+
     it("leaves an untouched consent pair out of the create payload", async () => {
       mockOnCreate.mockResolvedValue(undefined);
       await renderOpen();
