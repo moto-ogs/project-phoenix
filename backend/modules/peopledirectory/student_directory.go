@@ -58,7 +58,7 @@ type StudentRecord struct {
 	// WithoutCarePlace marks a child of the class without an OGS place
 	// (School Membership, #4803): a normal student record that never takes
 	// part in OGS care.
-	WithoutCarePlace bool `json:"without_care_place"`
+	WithoutCarePlace bool `json:"without_care_place,omitempty"`
 
 	AddressStreet     *string `json:"address_street,omitempty"`
 	AddressCity       *string `json:"address_city,omitempty"`

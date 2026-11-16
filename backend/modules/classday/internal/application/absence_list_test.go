@@ -449,7 +449,7 @@ func TestAbsenceListCountsChildrenWithoutCarePlace(t *testing.T) {
 	report, err := a.AbsenceListReport(context.Background(), absenceQuery("2026-09-07", "2026-09-09"))
 	require.NoError(t, err)
 	require.Len(t, report.Children, 1)
-	assert.Equal(t, int64(5), report.Children[0].StudentID)
+	assert.Equal(t, "Ohne", report.Children[0].FirstName)
 	assert.Equal(t, 1, report.Children[0].AbsentDays)
 	assert.Equal(t, 1, report.Children[0].ExcusedDays)
 }

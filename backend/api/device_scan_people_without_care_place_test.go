@@ -26,14 +26,15 @@ func TestKioskRosterLeavesOutChildrenWithoutCarePlace(t *testing.T) {
 	person := func(first string) *peopledirectory.DirectoryPersonSnapshot {
 		return &peopledirectory.DirectoryPersonSnapshot{FirstName: first, LastName: "Kiosk"}
 	}
+	withPlace := &peopledirectory.StudentState{ID: 1, SchoolClass: "1a", Person: person("Mit")}
+	withoutPlace := &peopledirectory.StudentState{ID: 2, SchoolClass: "1a", Person: person("Ohne"), WithoutCarePlace: true}
 	people := DeviceScanPeople{Users: kioskRosterUsers{roster: []peopledirectory.StudentRosterEntry{
-		{Record: &peopledirectory.StudentState{ID: 1, SchoolClass: "1a", Person: person("Mit")}},
-		{Record: &peopledirectory.StudentState{ID: 2, SchoolClass: "1a", Person: person("Ohne"), WithoutCarePlace: true}},
+		{Record: withPlace}, {Record: withoutPlace},
 	}}}
 
 	students, err := people.Students(context.Background(), nil)
 
 	require.NoError(t, err)
 	require.Len(t, students, 1)
-	assert.Equal(t, int64(1), students[0].StudentID)
+	assert.Equal(t, withPlace.ID, students[0].StudentID)
 }

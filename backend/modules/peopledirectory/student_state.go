@@ -67,7 +67,7 @@ type StudentState struct {
 	// WithoutCarePlace marks a child of the class without an OGS place
 	// (School Membership, #4803). It never takes part in OGS care: no
 	// group, rooms, check-in, pickup, meals or OGS counts.
-	WithoutCarePlace bool `json:"without_care_place"`
+	WithoutCarePlace bool `json:"without_care_place,omitempty"`
 
 	PhotoPath           *string    `json:"-"`
 	PhotoConsentGivenAt *time.Time `json:"photo_consent_given_at,omitempty"`
