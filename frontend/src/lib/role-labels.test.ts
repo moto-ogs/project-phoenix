@@ -30,6 +30,7 @@ const EXPECTED: Record<SystemRoleName, string> = {
   guardian: "Eltern",
   guest: "Gast",
   "ag-leitung": "AG-Leitung",
+  springer: "Springer",
 };
 
 describe("role labels", () => {
@@ -85,6 +86,7 @@ describe("role labels", () => {
   it("hides only the system role Eltern from the role management", () => {
     expect(isHiddenSystemRole({ name: "guardian", isSystem: true })).toBe(true);
     expect(isHiddenSystemRole({ name: "Guardian", isSystem: true })).toBe(true);
+    expect(isHiddenSystemRole({ name: "springer", isSystem: true })).toBe(true);
     // A school's own role may carry the same name; it stays listed.
     expect(isHiddenSystemRole({ name: "guardian", isSystem: false })).toBe(
       false,

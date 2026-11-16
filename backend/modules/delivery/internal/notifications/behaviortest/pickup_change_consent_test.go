@@ -102,12 +102,12 @@ func TestInstanceCancelledNoticeFollowsTheRight(t *testing.T) {
 	assert.True(t, def.SchoolPortalWithoutPermission)
 }
 
-// TestStaffingNoticesFollowTheRight pins the substitution notices (#7136) to
-// their own heading and the right every staff role holds; both push by
-// default.
+// TestStaffingNoticesFollowTheRight pins the substitution notices (#7136)
+// and the team's notice of an absence (#7138) to their own heading and the
+// right every staff role holds; all push by default.
 func TestStaffingNoticesFollowTheRight(t *testing.T) {
 	t.Parallel()
-	for _, key := range []string{notifications.TypeStaffingChanged, notifications.TypeGroupStaffingChanged} {
+	for _, key := range []string{notifications.TypeStaffingChanged, notifications.TypeGroupStaffingChanged, notifications.TypeTeamMemberAbsent} {
 		def, ok := notifications.GetType(key)
 		require.True(t, ok, key)
 		assert.Equal(t, permissions.ActivitiesRead, def.Permission, key)

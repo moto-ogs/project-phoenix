@@ -169,7 +169,7 @@ func publicContracts(contracts []domain.TraegerStaffContract, names map[int64]st
 	result := make([]workforce.TraegerStaffContract, 0, len(contracts))
 	for _, contract := range contracts {
 		public := workforce.TraegerStaffContract{
-			ID: contract.ID, Kind: contract.Kind, StartsOn: contract.StartsOn,
+			ID: contract.ID, Kind: contract.Kind, StartsOn: contract.StartsOn, Pool: contract.Pool,
 			Sites: []workforce.TraegerContractSiteDetail{}, HolidayWeeks: make([]workforce.TraegerContractHolidayWeek, 0, len(contract.HolidayWeeks)),
 		}
 		if !contract.EndsOn.IsZero() {

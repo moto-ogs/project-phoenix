@@ -47,8 +47,11 @@ type AccountSession struct {
 	RotatedAt            *time.Time
 	ReplacementTokenHash *string
 	RecoveryProofHash    []byte
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	// OutsideAccessWindow: the account is only a Springer at the session's
+	// school and no window is open now (ADR 0251). Only the family lookup reads it.
+	OutsideAccessWindow bool
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 // Validate normalizes an empty portal scope to unknown and rejects a session

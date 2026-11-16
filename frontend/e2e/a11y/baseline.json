@@ -6,103 +6,53 @@
     "label-content-name-mismatch": "aria-label ersetzt sichtbaren Text (2.5.3), #7112"
   },
   "routes": {
-    "eltern /": {
-      "label-content-name-mismatch": 1
-    },
-    "eltern / @mobil": {
-      "label-content-name-mismatch": 3
-    },
-    "eltern /login": {
-      "label-content-name-mismatch": 1
-    },
-    "eltern /login @mobil": {
-      "label-content-name-mismatch": 1
-    },
-    "eltern /messages @mobil": {
-      "label-content-name-mismatch": 3
-    },
-    "tenant /active-supervisions": {
-      "aria-prohibited-attr": 1,
-      "label-content-name-mismatch": 2
-    },
-    "tenant /active-supervisions @mobil": {
-      "aria-prohibited-attr": 1,
-      "label-content-name-mismatch": 2
-    },
-    "tenant /activities": {
-      "label-content-name-mismatch": 3
-    },
-    "tenant /anmeldung": {
-      "label-content-name-mismatch": 1
-    },
-    "tenant /anmeldung/[phase]": {
-      "label-content-name-mismatch": 1
-    },
-    "tenant /anmeldung/[phase] (leer abgesendet)": {
-      "label-content-name-mismatch": 1
-    },
-    "tenant /betreuungsplan": {
-      "aria-required-parent": 1,
-      "label-content-name-mismatch": 10
-    },
-    "tenant /calendar": {
-      "label-content-name-mismatch": 2
-    },
-    "tenant /calendar @mobil": {
-      "label-content-name-mismatch": 2
-    },
-    "tenant /database/personal": {
-      "label-content-name-mismatch": 1
-    },
-    "tenant /database/students": {
-      "label-content-name-mismatch": 2
-    },
-    "tenant /dienstplan": {
-      "label-content-name-mismatch": 4
-    },
-    "tenant /home": {
-      "label-content-name-mismatch": 3
-    },
-    "tenant /home @mobil": {
-      "label-content-name-mismatch": 3
-    },
-    "tenant /ogs-groups": {
-      "label-content-name-mismatch": 5
-    },
-    "tenant /ogs-groups @mobil": {
-      "label-content-name-mismatch": 5
-    },
-    "tenant /ogs-groups/overview @mobil": {
-      "label-content-name-mismatch": 1
-    },
-    "tenant /rooms": {
-      "label-content-name-mismatch": 3
-    },
-    "tenant /students/[id]": {
-      "label-content-name-mismatch": 2
-    },
-    "tenant /students/[id] @mobil": {
-      "label-content-name-mismatch": 1
-    },
-    "tenant /students/search": {
-      "label-content-name-mismatch": 6
-    },
-    "tenant /students/search @mobil": {
-      "label-content-name-mismatch": 6
-    },
-    "tenant /time-tracking": {
-      "aria-conditional-attr": 1,
-      "label-content-name-mismatch": 2
-    },
-    "tenant /time-tracking @mobil": {
-      "aria-conditional-attr": 1,
-      "label-content-name-mismatch": 2
-    },
-    "tenant /umfragen": {
-      "label-content-name-mismatch": 2
-    },
-    "tenant /vertretung": {
-      "label-content-name-mismatch": 5
-    }
+    "eltern /": ["label-content-name-mismatch"],
+    "eltern / @mobil": ["label-content-name-mismatch"],
+    "eltern /login": ["label-content-name-mismatch"],
+    "eltern /login @mobil": ["label-content-name-mismatch"],
+    "eltern /messages @mobil": ["label-content-name-mismatch"],
+    "tenant /active-supervisions": [
+      "aria-prohibited-attr",
+      "label-content-name-mismatch"
+    ],
+    "tenant /active-supervisions @mobil": [
+      "aria-prohibited-attr",
+      "label-content-name-mismatch"
+    ],
+    "tenant /activities": ["label-content-name-mismatch"],
+    "tenant /anmeldung": ["label-content-name-mismatch"],
+    "tenant /anmeldung/[phase]": ["label-content-name-mismatch"],
+    "tenant /anmeldung/[phase] (leer abgesendet)": [
+      "label-content-name-mismatch"
+    ],
+    "tenant /betreuungsplan": [
+      "aria-required-parent",
+      "label-content-name-mismatch"
+    ],
+    "tenant /calendar": ["label-content-name-mismatch"],
+    "tenant /calendar @mobil": ["label-content-name-mismatch"],
+    "tenant /database/personal": ["label-content-name-mismatch"],
+    "tenant /database/students": ["label-content-name-mismatch"],
+    "tenant /dienstplan": ["label-content-name-mismatch"],
+    "tenant /home": ["label-content-name-mismatch"],
+    "tenant /home @mobil": ["label-content-name-mismatch"],
+    "tenant /ogs-groups": ["label-content-name-mismatch"],
+    "tenant /ogs-groups @mobil": ["label-content-name-mismatch"],
+    "tenant /ogs-groups/overview @mobil": ["label-content-name-mismatch"],
+    "tenant /rooms": ["label-content-name-mismatch"],
+    "tenant /students/[id]": ["label-content-name-mismatch"],
+    "tenant /students/[id] @mobil": ["label-content-name-mismatch"],
+    "tenant /students/search": ["label-content-name-mismatch"],
+    "tenant /students/search @mobil": ["label-content-name-mismatch"],
+    "tenant /time-tracking": [
+      "aria-conditional-attr",
+      "label-content-name-mismatch"
+    ],
+    "tenant /time-tracking @mobil": [
+      "aria-conditional-attr",
+      "label-content-name-mismatch"
+    ],
+    "tenant /umfragen": ["label-content-name-mismatch"],
+    "tenant /vertretung": ["label-content-name-mismatch"]
   }
 }

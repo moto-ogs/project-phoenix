@@ -7883,12 +7883,34 @@
       "target_owner": "timetable-activities"
     },
     {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerSpringerEmployments.EmploySpringer",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.SpringerEmployments.EmploySpringer",
+      "reason": "Guarded leaf command (mutation): workforce reaches identityaccess.SpringerAccess.GrantSpringerWindow (identity-access) through api.traegerSpringerEmployments.EmploySpringer. Participates in the blocking school's tenant unit of the Vertretungspool block (#7173, ADR 0251); the block is the only caller and holds the Springer record and the account lock.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.GrantSpringerWindow",
+      "target_owner": "identity-access"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerSpringerEmployments.EndSpringerAccess",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.SpringerEmployments.EndSpringerAccess",
+      "reason": "Guarded leaf command (mutation): workforce reaches identityaccess.SpringerAccess.EndSpringerWindow (identity-access) through api.traegerSpringerEmployments.EndSpringerAccess. Participates in the blocking school's tenant unit of the Vertretungspool block (#7173, ADR 0251); the block is the only caller and holds the Springer record and the account lock.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SpringerAccess.EndSpringerWindow",
+      "target_owner": "identity-access"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.staffAdminAudit.RecordDataAccess",
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffAdminAudit.RecordDataAccess",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through roots/owners.staffAdminAudit.RecordDataAccess. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through roots/owners.staffAdminAudit.RecordDataAccess. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #4709 the binding also maps a school's read of the Vertretungspool to traeger_staff_pool with the record IDs instead of a staff ID.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
       "target_owner": "audit-platform"
@@ -10521,7 +10543,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffAccessLog.RecordTraegerStaffAccess",
-      "reason": "Platform protocol participation (mutation): workforce reaches *modules/auditlog/compose.Command.Append (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): workforce reaches *modules/auditlog/compose.Command.Append (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #4709 the binding also writes the record IDs a pool view showed (staff_record_ids) into the metadata.",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/auditlog/compose.Command.Append",
       "target_owner": "audit-platform"
@@ -10532,7 +10554,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffAccessLog.RecordTraegerStaffAccess",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.AppendStore.Append (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.AppendStore.Append (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #4709 the binding also writes the record IDs a pool view showed (staff_record_ids) into the metadata.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.AppendStore.Append",
       "target_owner": "audit-platform"
@@ -10543,7 +10565,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffAccessLog.RecordTraegerStaffAccess",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.Command.Append (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.Command.Append (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #4709 the binding also writes the record IDs a pool view showed (staff_record_ids) into the metadata.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.Command.Append",
       "target_owner": "audit-platform"
@@ -10554,7 +10576,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffAccessLog.RecordTraegerStaffAccess",
-      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): workforce reaches modules/auditlog/records.DataAccessLogRepository.Create (audit-platform) through api.traegerStaffAccessLog.RecordTraegerStaffAccess. A read of the Personalverwaltung in the staff records of the Träger lands in the access log of each school whose people it shows, in that school's tenant transaction (ADR 0084 section 7, ADR 0089 section 6). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Since #4709 the binding also writes the record IDs a pool view showed (staff_record_ids) into the metadata.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
       "target_owner": "audit-platform"

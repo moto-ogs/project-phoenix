@@ -333,6 +333,10 @@
       "write_owner": "workforce"
     },
     {
+      "name": "workforce.staff_pool_blocks",
+      "write_owner": "workforce"
+    },
+    {
       "name": "workforce.staff_contracts",
       "write_owner": "workforce"
     },

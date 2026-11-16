@@ -95,9 +95,12 @@ type TraegerStaffContract struct {
 	Kind           string
 	StartsOn       calendar.Date
 	EndsOn         calendar.Date
-	Targets        []ContractTarget
-	HolidayWeeks   []ContractHolidayWeek
-	CreatedAt      time.Time
+	// Pool marks a contract of the Vertretungspool: its person is a
+	// Springer whom any school of the Träger may block (ADR 0089 section 9).
+	Pool         bool
+	Targets      []ContractTarget
+	HolidayWeeks []ContractHolidayWeek
+	CreatedAt    time.Time
 }
 
 // ContractSite is one Einsatzort of a contract: the employment StaffID of

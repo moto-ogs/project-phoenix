@@ -119,5 +119,10 @@
   "traeger_month_closed_by_school": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "traeger_month_later_closed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "traeger_month_not_kept": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "pool_block_invalid": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
+  "pool_block_not_found": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
+  "pool_block_taken": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "pool_springer_not_found": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
+  "pool_springer_busy": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "traeger_payroll_not_ready": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
 }

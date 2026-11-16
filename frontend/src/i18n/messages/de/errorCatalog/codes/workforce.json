@@ -119,5 +119,10 @@
   "traeger_month_closed_by_school": "Die Schule {school} hat diesen Monat selbst abgeschlossen. Nur die Schule kann ihn wieder öffnen.",
   "traeger_month_later_closed": "An der Schule {school} ist {month} schon abgeschlossen. Bitte öffnen Sie zuerst diesen späteren Monat.",
   "traeger_month_not_kept": "In diesem Monat gilt kein Arbeitsvertrag des Trägers. Die Schulen schließen den Monat selbst ab.",
+  "pool_block_invalid": "Bitte wählen Sie einen Tag ab heute. Das Ende muss nach dem Beginn liegen.",
+  "pool_block_not_found": "Diese Blockung gibt es nicht mehr. Bitte laden Sie die Woche neu.",
+  "pool_block_taken": "Diese Person ist zu dieser Zeit schon geblockt. Bitte wählen Sie eine andere Zeit.",
+  "pool_springer_not_found": "Diese Person ist an diesem Tag nicht im Vertretungspool. Bitte laden Sie die Woche neu.",
+  "pool_springer_busy": "Die Person arbeitet zu dieser Zeit an einer anderen Schule. Bitte wählen Sie eine andere Zeit.",
   "traeger_payroll_not_ready": "Die Lohndatei kann noch nicht entstehen. Die Prüfung auf der Seite nennt, was noch fehlt."
 }

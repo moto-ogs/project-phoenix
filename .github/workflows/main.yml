@@ -217,6 +217,8 @@ jobs:
               - 'scripts/backend-source-ratchets.mjs'
               - 'scripts/backend-affected-packages.sh'
               - 'scripts/backend-affected-packages_test.sh'
+              - 'scripts/fetch-comparison-history.sh'
+              - 'scripts/fetch-comparison-history_test.sh'
               - 'scripts/backend-lint-packages.sh'
               - 'scripts/backend-test-matrix.sh'
               - 'scripts/backend-test-matrix_test.sh'
@@ -461,7 +463,7 @@ jobs:
           # runner before that. A changed test file selects only its own
           # package, so test files in at most 15 directories plus ./test stay
           # within the 16 packages four vCPUs are sized for. Every other
-          # change may reach any number of importers and gets eight.
+          # change may reach any number of importers and gets sixteen.
           small=$(jq 'length > 0 and all(.[]; endswith("_test.go")) and
             (map(split("/")[:-1] | join("/")) | unique | length <= 15)' <<< "$CHANGED_FILES")
           echo "small=$small" >> "$GITHUB_OUTPUT"
@@ -507,7 +509,7 @@ jobs:
         if: matrix.suite == 'unit'
         run: |
           node scripts/check-agent-context.mjs
-          node --test scripts/check-migration-versions.test.mjs scripts/student-contract-monitor.test.mjs scripts/check-agent-context.test.mjs scripts/check-test-runners.test.mjs scripts/check-pr-body.test.mjs scripts/db-snapshot-roles.test.mjs scripts/check-caddyfile.test.mjs scripts/seed-smoke-clock.test.mjs scripts/clock-boundaries.test.mjs scripts/clock-early-warning.test.mjs scripts/check-exit-status.test.mjs scripts/dev-bench.test.mjs scripts/test-perf.test.mjs scripts/ci-failures.test.mjs scripts/ci-runtime-watch.test.mjs scripts/check-changed.test.mjs scripts/backend-package-budgets.test.mjs scripts/architecture-build-cache.test.mjs scripts/query-budget-scoreboard.test.mjs scripts/capture-query-budget-routes.test.mjs .github/actions/ci-cost/ci-cost.test.mjs .agents/skills/security-audit/validate-coverage-ledger.test.cjs .agents/skills/security-audit/validate-findings.test.cjs
+          node --test scripts/check-migration-versions.test.mjs scripts/student-contract-monitor.test.mjs scripts/check-agent-context.test.mjs scripts/check-test-runners.test.mjs scripts/check-pr-body.test.mjs scripts/db-snapshot-roles.test.mjs scripts/check-caddyfile.test.mjs scripts/seed-smoke-clock.test.mjs scripts/clock-boundaries.test.mjs scripts/clock-early-warning.test.mjs scripts/check-exit-status.test.mjs scripts/dev-bench.test.mjs scripts/test-perf.test.mjs scripts/ci-failures.test.mjs scripts/ci-runtime-watch.test.mjs scripts/check-changed.test.mjs scripts/backend-package-budgets.test.mjs scripts/architecture-build-cache.test.mjs scripts/db-snapshot-cache.test.mjs scripts/query-budget-scoreboard.test.mjs scripts/capture-query-budget-routes.test.mjs .github/actions/ci-cost/ci-cost.test.mjs .agents/skills/security-audit/validate-coverage-ledger.test.cjs .agents/skills/security-audit/validate-findings.test.cjs
           node scripts/check-caddyfile.mjs deploy/caddy/Caddyfile
           python3 -m unittest scripts/runtime_checkpoint_compare_test.py scripts/runtime_checkpoint_report_test.py scripts/check_runtime_env_test.py scripts/normalize_ci_needs_test.py
 
@@ -578,6 +580,7 @@ jobs:
           scripts/test-changed_test.sh
           scripts/go-test-link-cache_test.sh
           scripts/go-cache-sweep_test.sh
+          scripts/fetch-comparison-history_test.sh
           scripts/fake-clock_test.sh
 
   lint:

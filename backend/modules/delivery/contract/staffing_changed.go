@@ -9,4 +9,8 @@ const (
 	// NotificationGroupStaffingChanged reaches the teachers assigned to the
 	// OGS group of an affected block.
 	NotificationGroupStaffingChanged = "group_staffing_changed"
+	// NotificationTeamMemberAbsent reaches the rest of the team of the
+	// affected OGS groups when a colleague is not there or there again
+	// (#7138): who holds such a group by a Gruppenübergabe on the day.
+	NotificationTeamMemberAbsent = "team_member_absent"
 )
