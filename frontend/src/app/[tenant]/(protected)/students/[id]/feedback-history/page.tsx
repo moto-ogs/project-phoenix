@@ -433,7 +433,6 @@ function StudentFeedbackHistoryPageContent() {
             <div className="mt-4 flex h-3 overflow-hidden rounded-full">
               {positiveFeedbackCount > 0 && (
                 <div
-                  className="transition-[width] duration-300"
                   style={{
                     backgroundColor: feedbackToneColors.positive,
                     width: `${(positiveFeedbackCount / totalFeedback) * 100}%`,
@@ -442,7 +441,6 @@ function StudentFeedbackHistoryPageContent() {
               )}
               {neutralFeedbackCount > 0 && (
                 <div
-                  className="transition-[width] duration-300"
                   style={{
                     backgroundColor: feedbackToneColors.neutral,
                     width: `${(neutralFeedbackCount / totalFeedback) * 100}%`,
@@ -451,7 +449,6 @@ function StudentFeedbackHistoryPageContent() {
               )}
               {negativeFeedbackCount > 0 && (
                 <div
-                  className="transition-[width] duration-300"
                   style={{
                     backgroundColor: feedbackToneColors.negative,
                     width: `${(negativeFeedbackCount / totalFeedback) * 100}%`,
