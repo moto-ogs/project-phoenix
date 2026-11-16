@@ -20,7 +20,7 @@ func attendanceScopeSettings(t *testing.T) configModel.SettingsService {
 	return NewSettingsService(
 		configRepository.NewSettingValueRepository(testpkg.ConfigRuntime(db)),
 		configRepository.NewSettingAuditRepository(testpkg.ConfigRuntime(db)),
-		nil, testpkg.SettingsRuntime(t, db), slog.Default(), configModel.DefaultRegistry(),
+		nil, testpkg.SettingsRuntime(t, db), slog.Default(), settingsTestClock, configModel.DefaultRegistry(),
 	)
 }
 

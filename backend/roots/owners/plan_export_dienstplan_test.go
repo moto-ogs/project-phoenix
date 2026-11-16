@@ -62,7 +62,7 @@ func dienstplanOverview(t *testing.T, db *bun.DB, tx bun.IDB, capability workfor
 // overview binding mirrors the root's (plan_export.go, whose unit tests pin
 // every field) without the reads only the Betreuungsplan needs.
 func dienstplanExport(overview workforce.StaffScheduleOverviewQuery, renderer planexport.Renderer) planexport.Service {
-	return planexport.NewService(planexport.Dependencies{Overview: dienstplanOverviewRecords{query: overview}, Renderer: renderer}, nil)
+	return planexport.NewService(planexport.Dependencies{Now: func() time.Time { return time.Date(2026, time.November, 2, 9, 0, 0, 0, time.UTC) }, Overview: dienstplanOverviewRecords{query: overview}, Renderer: renderer}, nil)
 }
 
 // TestDienstplanExportStaysInsideTheTenant proves the Dienstplan side of the

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	config "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	"github.com/stretchr/testify/assert"
@@ -167,10 +168,18 @@ func (testSettingsRuntime) WithinAdmin(ctx context.Context, fn func(context.Cont
 }
 func (testSettingsRuntime) AcquireLock(context.Context, string, bool) error { return nil }
 
+// settingsTestNow is the instant the tests' audit entries are stamped at.
+var settingsTestNow = time.Date(2026, time.November, 2, 9, 0, 0, 0, time.UTC)
+
+func settingsTestClock() time.Time { return settingsTestNow }
+
 func createService(registry *config.Registry, valueRepo config.SettingValueRepository, auditRepo config.SettingAuditRepository, options ...config.ServiceOptions) config.SettingsService {
 	var chosen config.ServiceOptions
 	if len(options) > 0 {
 		chosen = options[0]
+	}
+	if chosen.Now == nil {
+		chosen.Now = settingsTestClock
 	}
 	return newSettingsService(valueRepo, auditRepo, nil, testSettingsRuntime{}, slog.Default(), nil, chosen, registry)
 }
@@ -2125,7 +2134,7 @@ func createServiceWithSchoolRepo(
 	auditRepo config.SettingAuditRepository,
 	schoolRepo config.SchoolSettingsStore,
 ) config.SettingsService {
-	return NewSettingsService(valueRepo, auditRepo, schoolRepo, testSettingsRuntime{}, slog.Default(), registry)
+	return NewSettingsService(valueRepo, auditRepo, schoolRepo, testSettingsRuntime{}, slog.Default(), settingsTestClock, registry)
 }
 
 func newSchool(id int64, settings string) *mockSchoolSettingsStore {
@@ -2592,5 +2601,6 @@ func serviceOptions(service *settingsService) config.ServiceOptions {
 	return config.ServiceOptions{
 		ObserveLookup: service.observeLookup, ClassRestrictionGuard: service.classRestrictionGuard,
 		GradeRestrictionGuard: service.gradeRestrictionGuard, GradeCapGuard: service.gradeCapGuard,
+		Now: service.now,
 	}
 }

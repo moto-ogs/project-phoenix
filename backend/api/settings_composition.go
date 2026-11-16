@@ -19,9 +19,9 @@ import (
 	settingsHTTP "github.com/moto-ogs/project-phoenix/modules/settings/http"
 )
 
-func newSettingsResource(db transactionruntime.Database, operations settingsHTTP.Operations, homeLayouts settingsHTTP.HomeLayoutOperations, references func(context.Context, string, string) (bool, error)) *settingsHTTP.SettingsResource {
+func newSettingsResource(db transactionruntime.Database, operations settingsHTTP.Operations, homeLayouts settingsHTTP.HomeLayoutOperations, references func(context.Context, string, string) (bool, error), now func() time.Time) *settingsHTTP.SettingsResource {
 	settingsRuntime := settingsHTTP.NewRuntime(settingsHTTP.RuntimeDependencies{
-		DocumentCleanup: fileStorageCompose.NewUploadCleanup(db.Pool(), "enrollment-legal-documents", time.Now).Queue,
+		DocumentCleanup: fileStorageCompose.NewUploadCleanup(db.Pool(), "enrollment-legal-documents", now).Queue,
 		Protected: func(r chi.Router, fn func(chi.Router, settingsHTTP.Middleware)) {
 			ProtectedTenantRoutes(r, fn)
 		},

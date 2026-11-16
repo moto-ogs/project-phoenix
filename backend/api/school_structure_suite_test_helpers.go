@@ -106,6 +106,9 @@ func NewSubstitutionSuiteModule(repos *PeopleRepositorySuiteFactory, db transact
 	if deps.Runtime == nil {
 		deps.Runtime = education.NewLegacyRepositoryRuntime(db.Pool())
 	}
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
 	return education.NewSubstitutionModule(deps)
 }
 

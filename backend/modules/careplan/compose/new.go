@@ -71,3 +71,11 @@ func NewExceptionBatch(observe func(Observation)) careplan.ExceptionBatchCommand
 	}
 	return application.NewExceptionQueryService(postgres.New(postgres.AmbientCarePlanDatabase), observe)
 }
+
+// NewCleanupRetention composes the Care Plan retention of finished records in
+// the nightly cleanup (#4046). It runs on the tenant transaction of the
+// school in context and needs no other owner; now is the root's clock, which
+// stamps the rows it later deletes.
+func NewCleanupRetention(now func() time.Time) careplan.CleanupRetention {
+	return postgres.CleanupRetention{Store: postgres.New(postgres.RetentionDatabase).WithClock(now)}
+}

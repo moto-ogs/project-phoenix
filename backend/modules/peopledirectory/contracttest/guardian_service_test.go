@@ -42,6 +42,14 @@ func setupGuardianService(t *testing.T, db *bun.DB) peoplePorts.GuardianService 
 	return serviceFactoryServices.Guardian
 }
 
+// setupGuardianServiceAt is setupGuardianService with the root's clock pinned
+// to at, for the guardian service and the invitation reads alike.
+func setupGuardianServiceAt(t *testing.T, db *bun.DB, at time.Time) peoplePorts.GuardianService {
+	serviceFactoryServices, _, err := api.NewTestPeopleServices(testpkg.NewDatabase(t, db), slog.Default(), func() time.Time { return at })
+	require.NoError(t, err, "Failed to create service factory")
+	return serviceFactoryServices.Guardian
+}
+
 // =============================================================================
 // CreateGuardian Tests
 // =============================================================================
@@ -2200,7 +2208,12 @@ func TestGetStudentGuardians_NonOpenInvitationsNotPending(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
-	service := setupGuardianService(t, db)
+	// The clock stands years ahead of the real day: an invitation that
+	// expired an hour before it is still open by the real clock, so the
+	// expired case proves the service and the invitation reads judge it by
+	// the root's clock.
+	at := time.Date(2031, time.June, 2, 12, 0, 0, 0, time.UTC)
+	service := setupGuardianServiceAt(t, db, at)
 	ctx := testpkg.Ctx(t)
 	inviter := testpkg.CreateTestAccount(t, db, "inv-states")
 
@@ -2208,8 +2221,8 @@ func TestGetStudentGuardians_NonOpenInvitationsNotPending(t *testing.T) {
 		name   string
 		mutate func(*testpkg.GuardianInvitation)
 	}{
-		{"accepted", func(i *testpkg.GuardianInvitation) { now := time.Now(); i.AcceptedAt = &now }},
-		{"expired", func(i *testpkg.GuardianInvitation) { i.ExpiresAt = time.Now().Add(-time.Hour) }},
+		{"accepted", func(i *testpkg.GuardianInvitation) { accepted := at; i.AcceptedAt = &accepted }},
+		{"expired", func(i *testpkg.GuardianInvitation) { i.ExpiresAt = at.Add(-time.Hour) }},
 		{"rejected", func(i *testpkg.GuardianInvitation) {
 			i.ApprovalStatus = "rejected"
 		}},
@@ -2228,7 +2241,8 @@ func TestGetStudentGuardians_NonOpenInvitationsNotPending(t *testing.T) {
 				Token:             fmt.Sprintf("state-%s-%d", c.name, time.Now().UnixNano()),
 				GuardianProfileID: guardian.ID,
 				CreatedBy:         inviter.ID,
-				ExpiresAt:         time.Now().Add(48 * time.Hour),
+				CreatedAt:         at.Add(-2 * time.Hour),
+				ExpiresAt:         at.Add(48 * time.Hour),
 				ApprovalStatus:    "not_required",
 			}
 			c.mutate(inv)

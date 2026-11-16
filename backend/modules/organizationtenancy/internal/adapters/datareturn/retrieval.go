@@ -31,12 +31,13 @@ type Retrieval struct {
 // 8 MiB is cheap against the transfer itself.
 const recheckEvery = 8 << 20
 
-// NewRetrieval binds the retrieval to the application database and store.
-func NewRetrieval(db bun.IDB, crypto organizationtenancy.DataReturnCrypto, root string, logger *slog.Logger) *Retrieval {
+// NewRetrieval binds the retrieval to the application database, the store
+// and the clock that decides whether a grant is still usable.
+func NewRetrieval(db bun.IDB, crypto organizationtenancy.DataReturnCrypto, root string, now func() time.Time, logger *slog.Logger) *Retrieval {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Retrieval{store: retrievalStore{db: db}, crypto: crypto, root: root, now: time.Now, logger: logger, recheckBytes: recheckEvery}
+	return &Retrieval{store: retrievalStore{db: db}, crypto: crypto, root: root, now: now, logger: logger, recheckBytes: recheckEvery}
 }
 
 // Package answers what the token's package is, without spending a download.

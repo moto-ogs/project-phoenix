@@ -37,7 +37,7 @@ func TestCareContractSchoolHolidaysFollowEachSchoolsFederalState(t *testing.T) {
 
 	settings, err := NewSettingsTestModule(database, unit)
 	require.NoError(t, err)
-	records, err := BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings)
+	records, err := BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings, nil)
 	require.NoError(t, err)
 	holidays := NewCareContractSchoolHolidays(settings.Settings, records)
 	ctx := tenant.WithUnitOfWork(context.Background(), unit)

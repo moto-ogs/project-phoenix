@@ -145,7 +145,14 @@ func TestHolidayRouteServesEveryFederalState(t *testing.T) {
 		Where("tenant_id = ? AND setting_key = 'operations.federal_state'", school).Exec(context.Background())
 	require.NoError(t, err)
 	missing := getHolidays(t, setup, school, "?from=2027-01-01&to=2027-12-31", permissions.SchedulesRead)
-	assert.Equal(t, http.StatusInternalServerError, missing.Code, "no default state: body=%s", missing.Body.String())
+	// No default state (#7174): the school is told what is missing instead
+	// of getting a server error.
+	require.Equal(t, http.StatusConflict, missing.Code, "body=%s", missing.Body.String())
+	var problem struct {
+		Code string `json:"code"`
+	}
+	require.NoError(t, json.Unmarshal(missing.Body.Bytes(), &problem))
+	assert.Equal(t, schoolcalendar.CodeFederalStateMissing, problem.Code)
 }
 
 // The calendar page reads the holidays with calendar:own, the period page

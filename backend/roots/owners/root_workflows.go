@@ -32,6 +32,7 @@ func BuildStudentDeletion(
 		LockCareBookingWrites: owner.RecurrenceLock.LockRecurrenceWrites,
 		UnlinkPhoto:           photos.ScheduleUnlinkAfterCommit,
 		Broadcaster:           hub, Logger: env.Logger.With("workflow", "student_deletion"), Audit: audit.Command,
+		Now: env.Now,
 	}, NewStudentActivityEnrollments())
 	if err != nil {
 		return nil, fmt.Errorf("compose student deletion workflow: %w", err)

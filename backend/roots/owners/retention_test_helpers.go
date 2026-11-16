@@ -75,7 +75,7 @@ func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWo
 	steps = append(steps, protocolRetentionSteps(command, settingsCompose.NewAuditRetention(), exportTransferCompose.NewJournalRetention())...)
 	steps = append(steps, cleanupJobRetentionSteps(
 		filestorageCompose.NewCleanupRetention(), workforceCompose.NewCleanupRetention(),
-		carePlanCompose.NewCleanupRetention(), enrollmentCompose.NewClocked(nil),
+		carePlanCompose.NewCleanupRetention(time.Now), enrollmentCompose.NewClocked(nil),
 	)...)
 	announcements, err := newRetentionTestAnnouncements(db, settings.Settings)
 	if err != nil {
@@ -96,7 +96,7 @@ func NewRetentionTestOwners(db transactionruntime.Database, unit tenant.UnitOfWo
 // so the object store is never reached.
 func newRetentionTestAnnouncements(db transactionruntime.Database, settings settingsCompose.BatchSettingsService) (communication.ParentAnnouncementRetention, error) {
 	purger, err := filestorageCompose.NewAttachmentPurger(filestorageCompose.AttachmentPurgerDependencies{
-		DB: db.Pool(), Objects: unreachableObjects{}, Observe: func(filestorageCompose.Observation) {},
+		DB: db.Pool(), Objects: unreachableObjects{}, Observe: func(filestorageCompose.Observation) {}, Now: time.Now,
 	})
 	if err != nil {
 		return nil, err

@@ -1610,7 +1610,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostCalendar.HostedHolidayNoCareDays",
-      "binding_digest": "ac5adae26ecbb0b139c4d7d8939d4a3a",
+      "binding_digest": "c59fe41086f8521a8baca7ce081de57c",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostCalendar.HostedHolidayNoCareDays",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListHolidays",
@@ -1618,7 +1618,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayHostCalendar.HostedHolidayNoCareDays",
-      "binding_digest": "17f30cb9330e055c0422eeafde4ab25d",
+      "binding_digest": "ec8bdb73b3717d28be1ea8a6f7740687",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostCalendar.HostedHolidayNoCareDays",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ValidHolidayRegion",
@@ -1842,7 +1842,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidaySchoolCalendar.HolidayNoCareDays",
-      "binding_digest": "b30366880a7787ad5079b8def91ba8da",
+      "binding_digest": "5c29aab287faaf3648692641aa6e781c",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidaySchoolCalendar.HolidayNoCareDays",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListHolidays",
@@ -1850,7 +1850,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidaySchoolCalendar.HolidayNoCareDays",
-      "binding_digest": "d5c2f24323a1e9ee0ca90497f2cdc271",
+      "binding_digest": "53f315ec6820741f8c3b4ccf8984f173",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidaySchoolCalendar.HolidayNoCareDays",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ValidHolidayRegion",

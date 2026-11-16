@@ -97,7 +97,7 @@ func workerRetentionOf(
 	)...)
 	steps = append(steps, cleanupJobRetentionSteps(
 		filestorageCompose.NewCleanupRetention(), workforceCompose.NewCleanupRetention(),
-		carePlanCompose.NewCleanupRetention(), enrollmentCompose.NewClocked(now),
+		carePlanCompose.NewCleanupRetention(now), enrollmentCompose.NewClocked(now),
 	)...)
 	contentSteps, err := newSchoolContentRetentionSteps(db, settings, announcementRetention, homework)
 	if err != nil {
@@ -317,7 +317,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			calendar, err = BuildSchoolCalendarRecords(db, ObserveSchoolCalendar, settings.Service)
+			calendar, err = BuildSchoolCalendarRecords(db, ObserveSchoolCalendar, settings.Service, env.Now)
 			return
 		},
 		func() (err error) { workTime, err = BuildServeWorkforce(db, env, membership, calendar); return },

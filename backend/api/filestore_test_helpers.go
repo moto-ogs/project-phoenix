@@ -57,7 +57,7 @@ func NewFileStoreTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 		return nil, nil, err
 	}
 	purger, err := filestorageCompose.NewAttachmentPurger(filestorageCompose.AttachmentPurgerDependencies{
-		DB: db.Pool(), Objects: objects, Observe: func(filestorageCompose.Observation) {},
+		DB: db.Pool(), Objects: objects, Observe: func(filestorageCompose.Observation) {}, Now: time.Now,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -80,6 +80,7 @@ func NewFileStoreTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 		Announcements: announcements,
 		Observe:       func(filestorageCompose.Observation) {},
 		Logger:        slog.Default(),
+		Now:           time.Now,
 	})
 	if err != nil {
 		return nil, nil, err

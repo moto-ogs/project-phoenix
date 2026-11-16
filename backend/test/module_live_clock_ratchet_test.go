@@ -92,11 +92,8 @@ var moduleLiveClockBudget = map[string]int{
 	// timers, and the standby time is measured since the last term.
 	// Scheduler.waitUntilNextMinute: the timer that aligns the minute tick
 	// with the wall clock. A pinned clock would stop both.
-	"modules/schedulerruntime":             11,
-	"workflows/catererportal":              2,
-	"workflows/holidayclosurenotification": 1,
-	"workflows/parentportal":               19,
-	"workflows/shiftplansync":              2,
+	"modules/schedulerruntime": 11,
+	"workflows/parentportal":   19,
 }
 
 // moduleLiveClockValueBudget caps, per owner directory, the references to the
@@ -123,30 +120,16 @@ var moduleLiveClockBudget = map[string]int{
 // pickup baselines read the day of their composition, so its last direct
 // call goes too.
 var moduleLiveClockValueBudget = map[string]int{
-	"modules/carecontract":         1,
-	"modules/classday":             2,
-	"modules/dataimport":           1,
-	"modules/devicefleet":          1,
-	"modules/emergencysnapshot":    1,
-	"modules/enrollment":           24,
-	"modules/filestorage":          1,
-	"modules/identityaccess":       1,
-	"modules/organizationtenancy":  3,
-	"modules/parentbilling":        5,
-	"modules/peopledirectory":      3,
-	"modules/planexport":           1,
-	"modules/presenceprojection":   1,
-	"modules/schoolcalendar":       1,
-	"modules/schoolsearchview":     1,
-	"modules/schoolstructure":      1,
-	"modules/settings":             1,
-	"modules/studentpresence":      5,
-	"modules/supervisiondashboard": 1,
-	"modules/timetable":            14,
-	"modules/workforce":            8,
-	"workflows/careexit":           2,
-	"workflows/parentportal":       3,
-	"workflows/reminderdelivery":   1,
+	"modules/carecontract":       1,
+	"modules/classday":           2,
+	"modules/enrollment":         24,
+	"modules/identityaccess":     1,
+	"modules/parentbilling":      5,
+	"modules/presenceprojection": 1,
+	"modules/studentpresence":    5,
+	"modules/timetable":          14,
+	"modules/workforce":          8,
+	"workflows/parentportal":     3,
 }
 
 const calendarImportPath = "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"

@@ -112,7 +112,7 @@ type substitutionAccess struct {
 
 func NewSubstitutionModule(deps SubstitutionDependencies) SubstitutionModule {
 	if deps.Now == nil {
-		deps.Now = time.Now
+		panic("substitution module: clock is required")
 	}
 	if deps.Runtime == nil {
 		panic("substitution module: runtime is required")

@@ -80,9 +80,13 @@ type importModeAuthorizer interface {
 }
 
 // NewImportService creates an import service bound to its platform
-// collaborators. A zero ports.ImportRuntime is legitimate for decision tests that
-// never record an audit row, read an observation, or execute batches.
+// collaborators. Apart from its clock (runtime.Now), which is required, a
+// zero ports.ImportRuntime is legitimate for decision tests that never
+// record an audit row, read an observation, or execute batches.
 func NewImportService[T any](config ports.ImportConfig[T], runtime ports.ImportRuntime) *ImportService[T] {
+	if runtime.Now == nil {
+		panic("data import: the import service requires the clock")
+	}
 	checkpoints, _ := runtime.Audit.(audit.ImportCheckpointReader)
 	return &ImportService[T]{
 		config:       config,
@@ -97,17 +101,8 @@ func NewImportService[T any](config ports.ImportConfig[T], runtime ports.ImportR
 		batchLimit:      batchLimitOf(runtime),
 		connectionLost:  runtime.ConnectionLost,
 		savepointLost:   runtime.SavepointLost,
-		now:             clockOr(runtime.Now),
+		now:             runtime.Now,
 	}
-}
-
-// clockOr is now, or the real clock where a decision test builds a zero
-// runtime or a bare config.
-func clockOr(now func() time.Time) func() time.Time {
-	if now != nil {
-		return now
-	}
-	return time.Now
 }
 
 func batchLimitOf(runtime ports.ImportRuntime) time.Duration {

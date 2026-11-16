@@ -220,7 +220,7 @@ func mountStudentRoutes(
 		careStudentsHTTP.ResourceConfig{
 			ArrivalScheduleService: schedules.Arrivals,
 			Broadcaster:            hub,
-			CareLifecycleService:   schedules.Lifecycle, CareResumption: resumption, CareExitRestoration: owners.NewCarePlanRestoration(schedules.Lifecycle, requests.CareOfferings, nil),
+			CareLifecycleService:   schedules.Lifecycle, CareResumption: resumption, CareExitRestoration: owners.NewCarePlanRestoration(schedules.Lifecycle, requests.CareOfferings, calendar.CalendarDateClock(now)),
 			CareRequestReviews: careReviews,
 			CareRequestService: requests.CareRequests, FollowCohortChanges: studentCohortChanges(cohorts),
 			CompanionService:        companions,

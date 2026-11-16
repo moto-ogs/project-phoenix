@@ -145,7 +145,7 @@ func (c holidaySchoolCalendar) authorizeHostSchools(ctx context.Context, schoolI
 
 func (c holidaySchoolCalendar) regionHolidays(ctx context.Context, region string, from, to calendar.Date) ([]enrollment.HolidayNoCareDay, error) {
 	if !c.days.ValidHolidayRegion(region) {
-		return nil, fmt.Errorf("%w: unsupported region %q", schoolcalendar.ErrFederalStateUnavailable, region)
+		return nil, fmt.Errorf("%w: unsupported region %q", schoolcalendar.ErrFederalStateMissing, region)
 	}
 	holidays, err := c.days.ListHolidays(ctx, region, from.String(), to.String())
 	if err != nil {

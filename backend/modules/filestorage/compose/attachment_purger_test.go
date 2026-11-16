@@ -69,9 +69,10 @@ func TestNewAttachmentPurgerRequiresEveryDependency(t *testing.T) {
 	observe := func(compose.Observation) {}
 
 	for name, dependencies := range map[string]compose.AttachmentPurgerDependencies{
-		"database": {Objects: objects, Observe: observe},
-		"objects":  {DB: db, Observe: observe},
-		"observer": {DB: db, Objects: objects},
+		"database": {Objects: objects, Observe: observe, Now: time.Now},
+		"objects":  {DB: db, Observe: observe, Now: time.Now},
+		"observer": {DB: db, Objects: objects, Now: time.Now},
+		"clock":    {DB: db, Objects: objects, Observe: observe},
 	} {
 		_, err := compose.NewAttachmentPurger(dependencies)
 		require.EqualError(t, err, "file storage compose: all dependencies are required", name)
@@ -97,7 +98,7 @@ func TestAttachmentPurgerAnswersFromTheAttachmentsAlone(t *testing.T) {
 		testpkg.Tenant(t), announcement.ID, storedName, author.ID).Scan(ctx, &attachmentID))
 
 	var operations []string
-	purger, err := compose.NewAttachmentPurger(compose.AttachmentPurgerDependencies{DB: db, Objects: objects, Observe: func(observation compose.Observation) {
+	purger, err := compose.NewAttachmentPurger(compose.AttachmentPurgerDependencies{DB: db, Objects: objects, Now: time.Now, Observe: func(observation compose.Observation) {
 		operations = append(operations, observation.Operation)
 	}})
 	require.NoError(t, err)

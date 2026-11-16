@@ -326,7 +326,7 @@ func TestNewRendersTheBetreuungsplanOverOwnerRecords(t *testing.T) {
 	block := planExportScheduledBlock(11, planExportMonday, "Mensa", timetable.InstanceStatusPlanned)
 	block.ActivityGroupID = planExportPtr[int64](5)
 	renderer := &planExportCaptureRenderer{}
-	service := newPlanExport(planExportSources{
+	service := newPlanExport(planExportSources{Now: func() time.Time { return time.Date(2026, time.November, 2, 9, 0, 0, 0, time.UTC) },
 		Overview:       &planExportFakeOverview{},
 		ShiftTypes:     planExportFakeShiftTypes{},
 		Instances:      &planExportFakeInstances{instances: []*timetable.ScheduledInstance{block}},
