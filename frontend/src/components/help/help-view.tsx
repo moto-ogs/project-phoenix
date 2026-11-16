@@ -283,7 +283,7 @@ function TopicSearch({
     <div>
       <div className="relative">
         <Search
-          className="pointer-events-none absolute start-3 bottom-3 h-4 w-4 text-gray-400"
+          className="pointer-events-none absolute start-3 bottom-3 h-4 w-4 text-gray-500"
           aria-hidden="true"
         />
         <Input
@@ -564,7 +564,7 @@ function DocumentationArticle({
             </Link>
           </li>
           <li aria-hidden="true">
-            <ChevronRight className="h-4 w-4 text-gray-400" />
+            <ChevronRight className="h-4 w-4 text-gray-500" />
           </li>
           <li>
             <Link
@@ -575,7 +575,7 @@ function DocumentationArticle({
             </Link>
           </li>
           <li aria-hidden="true">
-            <ChevronRight className="h-4 w-4 text-gray-400" />
+            <ChevronRight className="h-4 w-4 text-gray-500" />
           </li>
           <li aria-current="page" className="font-medium text-gray-900">
             {topic.title}
@@ -1065,7 +1065,7 @@ function HelpDocumentationShell({
                     // Schriftgewicht bleibt in jedem Zustand gleich: ein Wechsel
                     // auf font-semibold verbreitert die Glyphen, wodurch
                     // mehrzeilige Titel beim Aktivieren neu umbrechen.
-                    "flex min-h-11 items-center rounded-lg px-3 py-1.5 text-sm leading-6 font-normal focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none lg:block lg:min-h-0",
+                    "flex min-h-11 items-center rounded-lg px-3 py-1.5 text-sm leading-6 font-normal focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none lg:block lg:min-h-0",
                     item.id === topic?.id
                       ? "bg-moto-green-soft text-moto-green-strong"
                       : "text-gray-600 hover:bg-gray-100 hover:text-gray-950",
@@ -1143,7 +1143,7 @@ function HelpDocumentationShell({
         {invalidTopic ? (
           <section className="mx-auto max-w-2xl py-8 text-center sm:py-16">
             <CircleHelp
-              className="mx-auto h-10 w-10 text-gray-400"
+              className="mx-auto h-10 w-10 text-gray-500"
               aria-hidden="true"
             />
             <h1 className="mt-4 text-2xl font-semibold text-gray-950">

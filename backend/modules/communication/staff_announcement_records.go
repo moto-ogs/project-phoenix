@@ -14,6 +14,9 @@ type PortalAnnouncementDeliveryRecipient struct {
 	Email             string
 	HasPortalAccess   bool
 	PortalLocale      string
+	// StudentIDs are the reached children this guardian is linked to
+	// (#4813): a mail names only these children.
+	StudentIDs []int64
 }
 type PortalAnnouncementLetterChildStatus struct {
 	StudentID      int64      `json:"student_id"`

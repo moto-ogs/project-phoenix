@@ -65,3 +65,55 @@ func TestPersonColumnsAreSubjectOrHandling(t *testing.T) {
 	}
 	require.False(t, personActorColumn("documents.files", "size_bytes"))
 }
+
+func TestPersonLetterCopiesStayWithTheirChild(t *testing.T) {
+	t.Parallel()
+	var catalog organizationtenancy.DataLifecycleCatalog
+	data, err := organizationtenancy.DataLifecycleCatalogSource.ReadFile("data_lifecycle_catalog.json")
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(data, &catalog))
+	var register organizationtenancy.ReturnRegister
+	data, err = organizationtenancy.ReturnRegisterSource.ReadFile(organizationtenancy.ReturnRegisterFile)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(data, &register))
+
+	p := &personSelection{
+		rows: make(map[string][]*personNode), byKey: make(map[personKey][]*personNode),
+		dependents: make(map[personKey][]*personNode), handled: make(map[personKey][]*personNode),
+	}
+	fixtures := map[string][]string{
+		"users.student_profiles":     {`{"id":101}`, `{"id":202}`},
+		"users.parent_announcements": {`{"id":303}`},
+		"users.parent_announcement_letter_copies": {
+			`{"id":401,"announcement_id":303,"student_id":101,"body":"Brief für Lina"}`,
+			`{"id":402,"announcement_id":303,"student_id":202,"body":"Brief für Emil"}`,
+		},
+	}
+	var models []organizationtenancy.ExportModelTable
+	for _, table := range register.Tables {
+		if _, ok := fixtures[table.Name]; ok {
+			models = append(models, table.ExportModelTable)
+		}
+	}
+	require.Len(t, models, len(fixtures))
+	columns := personIndexColumns(models, catalog)
+	for _, model := range models {
+		for _, row := range fixtures[model.Name] {
+			var fields map[string]json.RawMessage
+			require.NoError(t, json.Unmarshal([]byte(row), &fields))
+			node := newPersonNode(model.Name, fields, columns[model.Name], personRelationships(model, catalog))
+			p.rows[model.Name] = append(p.rows[model.Name], node)
+			for _, key := range node.keys {
+				p.byKey[key] = append(p.byKey[key], node)
+			}
+			for _, key := range node.links {
+				p.dependents[key] = append(p.dependents[key], node)
+			}
+		}
+	}
+	p.choose(p.rows["users.student_profiles"][0])
+	require.True(t, p.rows["users.parent_announcements"][0].selected, "shared letter remains context")
+	require.True(t, p.rows["users.parent_announcement_letter_copies"][0].selected, "the child's own copy is included")
+	require.False(t, p.rows["users.parent_announcement_letter_copies"][1].selected, "another child's personalised copy is not context")
+	require.False(t, p.rows["users.student_profiles"][1].selected)
+}

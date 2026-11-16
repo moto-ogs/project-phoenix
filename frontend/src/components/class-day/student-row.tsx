@@ -131,7 +131,7 @@ export function StudentRow({
         {notesHref ? (
           <NavigationLink
             href={notesHref}
-            className="text-xs font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none"
+            className="text-xs font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none"
           >
             Beobachtungen der OGS
           </NavigationLink>
@@ -160,7 +160,7 @@ export function StudentRow({
               bis {row.pickup}
             </span>
             {row.pickup_changed && row.pickup_regular ? (
-              <span className="block text-xs text-gray-400 tabular-nums">
+              <span className="block text-xs text-gray-500 tabular-nums">
                 sonst {row.pickup_regular}
               </span>
             ) : null}

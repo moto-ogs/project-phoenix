@@ -2,6 +2,7 @@ package listexport
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"image"
@@ -52,8 +53,8 @@ func traceLetter(t *testing.T, letter listrecords.Letter) (int, []string) {
 	if err != nil {
 		t.Fatalf("newLetterLayout: %v", err)
 	}
-	if err := layout.run(); err != nil {
-		t.Fatalf("run: %v", err)
+	if err := layout.fit(); err != nil {
+		t.Fatalf("fit: %v", err)
 	}
 	return layout.page, layout.trace
 }
@@ -112,6 +113,31 @@ func TestLetterContinuesOnTheNextPage(t *testing.T) {
 	}
 }
 
+// A letter that must fit on one page (#4813) sets a body that runs onto a
+// second page in smaller type; one too long even for that continues.
+func TestOnePageLetterFitsALongBodyOnOnePage(t *testing.T) {
+	t.Parallel()
+
+	letter := sampleLetter()
+	letter.Blocks = []listrecords.LetterBlock{{Text: strings.Repeat("Am Freitag fahren wir mit der Gruppe in den Zoo. Bitte geben Sie Ihrem Kind etwas zu trinken mit. ", 32)}}
+	if pages, _ := traceLetter(t, letter); pages != 2 {
+		t.Fatalf("pages = %d, want 2 in the normal type", pages)
+	}
+	letter.OnePage = true
+	pages, trace := traceLetter(t, letter)
+	if pages != 1 {
+		t.Fatalf("one-page letter: pages = %d, want 1", pages)
+	}
+	if trace[len(trace)-1] != "Ganztag im Quartier e.V." {
+		t.Fatalf("the closing must end the letter, got %q", trace[len(trace)-1])
+	}
+
+	letter.Blocks = append(letter.Blocks, listrecords.LetterBlock{Text: strings.Repeat("Ein langer Hinweis für die Eltern.\n", 70)})
+	if pages, _ := traceLetter(t, letter); pages < 2 {
+		t.Fatalf("too long for one page: pages = %d, want it to continue", pages)
+	}
+}
+
 func TestRenderLetterWritesAPDFWithLogo(t *testing.T) {
 	t.Parallel()
 
@@ -137,7 +163,12 @@ func TestRenderLetterWritesAPDFWithLogo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for name, logo := range map[string][]byte{"png": pngLogo.Bytes(), "jpeg": jpegLogo.Bytes(), "interlaced": interlaced, "small interlaced fallback": smallInterlaced, "16-bit": png16Logo.Bytes()} {
+	// A 1×1 lossless WebP, as a school's login image upload keeps it.
+	webpLogo, err := base64.StdEncoding.DecodeString("UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, logo := range map[string][]byte{"png": pngLogo.Bytes(), "jpeg": jpegLogo.Bytes(), "webp": webpLogo, "interlaced": interlaced, "small interlaced fallback": smallInterlaced, "16-bit": png16Logo.Bytes()} {
 		letter := sampleLetter()
 		letter.Logo = logo
 		_, trace := traceLetter(t, letter)

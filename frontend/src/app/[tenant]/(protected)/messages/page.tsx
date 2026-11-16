@@ -301,7 +301,7 @@ function MessagesInboxContent() {
                     )}
                     <UnreadBadge count={thread.unread_count} />
                     {thread.last_message_at && (
-                      <span className="ml-auto flex-shrink-0 pl-1 text-xs whitespace-nowrap text-gray-400">
+                      <span className="ml-auto flex-shrink-0 pl-1 text-xs whitespace-nowrap text-gray-500">
                         {formatChatDateTime(thread.last_message_at)}
                       </span>
                     )}

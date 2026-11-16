@@ -8,9 +8,10 @@ import (
 )
 
 // StaffCancellationNotice tells the staff planned for a block that it was
-// cancelled (#7148). AccountIDs are the planned staff without the person who
-// cancelled; Push is false for a block more than 14 days ahead, which then
-// reaches the notification feed only.
+// cancelled (#7148) or takes place after all (#7151). AccountIDs are the
+// planned staff without the person who made the change. Push is false for a
+// block more than 14 days ahead, which then reaches the notification feed
+// only.
 type StaffCancellationNotice struct {
 	InstanceID int64
 	Title      string
@@ -23,7 +24,8 @@ type StaffCancellationNotice struct {
 
 // StaffCancellationNotices is the consumer-owned port to Delivery's
 // notification feed. It writes in the caller's transaction, so the notice
-// commits or rolls back with the cancellation.
+// commits or rolls back with the cancellation or its reinstatement.
 type StaffCancellationNotices interface {
 	NotifyInstanceCancelled(ctx context.Context, notice StaffCancellationNotice) error
+	NotifyInstanceReinstated(ctx context.Context, notice StaffCancellationNotice) error
 }

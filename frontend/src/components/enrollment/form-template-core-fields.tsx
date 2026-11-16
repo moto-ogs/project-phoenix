@@ -218,7 +218,7 @@ function CoreFieldRow({
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-medium text-gray-900">{field.label}</p>
-          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">
+          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
             {fieldTypeLabels[field.type]}
           </span>
         </div>

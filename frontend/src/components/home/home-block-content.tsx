@@ -12,12 +12,15 @@ import { OpenRequestsBlock } from "~/components/home/open-requests-block";
 import { RemindersBlock } from "~/components/home/reminders-block";
 import { StaffNoticesBlock } from "~/components/home/staff-notices-block";
 import { StaffTodayBlock } from "~/components/home/staff-today-block";
-import { EmptyState } from "~/components/ui/empty-state";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { ListRow } from "~/components/ui/list-row";
 import { SkeletonRows } from "~/components/ui/skeleton";
-import { HomeCard, HomeCardIcon } from "~/components/home/home-card";
+import {
+  HomeCard,
+  HomeCardEmpty,
+  HomeCardIcon,
+} from "~/components/home/home-card";
 import {
   HomeCardLink,
   HomeMoreRow,
@@ -150,7 +153,7 @@ function RecentActivityCard({ data }: { readonly data: HomeBlockData }) {
       {data.analyticsLoading ? (
         <SkeletonRows />
       ) : !activities || activities.length === 0 ? (
-        <EmptyState className="py-4" title="Keine aktuellen Bewegungen" />
+        <HomeCardEmpty title="Keine aktuellen Bewegungen" />
       ) : (
         <div className="space-y-2">
           {shown.map((activity, idx) => {
@@ -204,7 +207,7 @@ function CurrentActivitiesCard({ data }: { readonly data: HomeBlockData }) {
       {data.analyticsLoading ? (
         <SkeletonRows />
       ) : !activities || activities.length === 0 ? (
-        <EmptyState className="py-4" title="Keine laufenden Aktivitäten" />
+        <HomeCardEmpty title="Keine laufenden Aktivitäten" />
       ) : (
         <div className="space-y-2">
           {shown.map((activity) => (
@@ -278,7 +281,7 @@ function ActiveGroupsCard({ data }: { readonly data: HomeBlockData }) {
       {data.analyticsLoading ? (
         <SkeletonRows />
       ) : !groups || groups.length === 0 ? (
-        <EmptyState className="py-4" title="Es läuft gerade nichts" />
+        <HomeCardEmpty title="Es läuft gerade nichts" />
       ) : (
         <div className="space-y-2">
           {shown.map((group) => (

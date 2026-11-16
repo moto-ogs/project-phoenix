@@ -603,6 +603,9 @@ describe("EnrollmentForm", () => {
     expect(document.querySelector('input[name="captcha_token"]')).toHaveValue(
       "",
     );
+    expect(
+      screen.getByRole("button", { name: "Prüfung neu starten" }),
+    ).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
     expect(submit).toBeEnabled();
     expect(submit).not.toHaveAttribute("aria-disabled");
@@ -746,7 +749,7 @@ describe("EnrollmentForm", () => {
 
     expect(
       await screen.findByText(
-        "Bitte korrigieren Sie die rot markierten Felder.",
+        "Bei einigen Feldern steht ein Hinweis. Bitte korrigieren Sie diese Felder.",
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Bitte Vornamen angeben.")).toHaveLength(2);
@@ -763,7 +766,7 @@ describe("EnrollmentForm", () => {
       );
       expect(
         await screen.findByText(
-          "Bitte korrigieren Sie die rot markierten Felder.",
+          "Bei einigen Feldern steht ein Hinweis. Bitte korrigieren Sie diese Felder.",
         ),
       ).toBeInTheDocument();
       await submitAttemptFinished();

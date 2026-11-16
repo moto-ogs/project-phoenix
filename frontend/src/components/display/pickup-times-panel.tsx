@@ -26,7 +26,7 @@ export function PickupTimesPanel({ buckets }: PickupTimesPanelProps) {
       </div>
 
       {buckets.length === 0 ? (
-        <p className="py-8 text-center text-2xl text-gray-400">
+        <p className="py-8 text-center text-2xl text-gray-500">
           Heute keine weiteren Abholzeiten.
         </p>
       ) : (

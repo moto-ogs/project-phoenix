@@ -5,8 +5,9 @@
 //	POST /instances/{id}/start     planned → active   (creates active.group bridge)
 //	POST /instances/{id}/complete  active  → completed (ends active.group)
 //	POST /instances/{id}/cancel    planned|active → cancelled (ends active.group if active)
+//	POST /instances/{id}/reinstate cancelled → planned while the block has not ended (#7151)
 //
-// All three gated on permissions.SchedulesManage. All three run inside the
+// All of them gated on permissions.SchedulesManage. All three run inside the
 // shared TenantTxMiddleware tx — no per-handler transaction management.
 package timetablehttp
 
@@ -251,6 +252,25 @@ func (rs *Resource) cancelInstance(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, resp, "Instance cancelled")
 }
 
+// reinstateInstance handles POST /instances/{id}/reinstate (#7151).
+func (rs *Resource) reinstateInstance(w http.ResponseWriter, r *http.Request) {
+	id, err := common.ParseID(r)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid instance id")))
+		return
+	}
+	if rs.InstanceReinstatement == nil {
+		common.RenderError(w, r, common.ErrorInternalServer(errors.New("instance reinstatement not wired")))
+		return
+	}
+	instance, err := rs.InstanceReinstatement.Reinstate(r.Context(), id, sessiontoken.ActorAccountIDFromCtx(r.Context()))
+	if err != nil {
+		renderInstanceLifecycleError(w, r, err)
+		return
+	}
+	common.Respond(w, r, http.StatusOK, InstanceStatusResponse{InstanceID: instance.ID, Status: instance.Status}, "Instance reinstated")
+}
+
 // deleteInstance handles DELETE /instances/{id}. Planned and cancelled
 // instances can be deleted; active/completed history stays protected and
 // returns the same 409 contract as lifecycle transitions.
@@ -294,6 +314,10 @@ func staticConflict(message, code string) func(error) render.Renderer {
 var instanceLifecycleErrorRules = []common.ErrorRule{
 	{Target: timetable.ErrInvalidInstanceReference, Render: common.ErrorInvalidRequest},
 	{Target: timetable.ErrGuardianNoticeInvalid, Render: codedOr(common.CodeTimetableGuardianNoticeInvalid)},
+	{
+		Target: timetable.ErrInstanceReinstateEnded,
+		Render: staticConflict("the block has already ended; its cancellation can no longer be taken back", common.CodeTimetableReinstateEnded),
+	},
 	{
 		Target: timetable.ErrInstanceMoved,
 		Render: staticConflict("block was changed concurrently; reopen it and try again", common.CodeTimetableInstanceMoved),

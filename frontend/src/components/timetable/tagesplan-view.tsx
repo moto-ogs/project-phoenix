@@ -207,8 +207,10 @@ function TagesplanRow({
     instance.status === "planned" &&
     (dayIsPast || (isToday && effectiveEndTime <= nowHHMM));
   const missed = ended && !isDuty;
-  // Vorbei ist vorbei: gedimmte Zeilen lassen das Laufende und Kommende von
-  // selbst hervortreten — statt eines Etiketts an jeder Zeile.
+  // Vorbei ist vorbei: grauere Zeilen lassen das Laufende und Kommende von
+  // selbst hervortreten. Abgeblendet wird über die Schriftfarbe statt über
+  // Deckkraft, damit der Text lesbar bleibt (WCAG 1.4.3, #7110); die
+  // Metazeile nennt den Zustand zusätzlich in Worten.
   const over =
     instance.status === "completed" ||
     ended ||
@@ -220,17 +222,29 @@ function TagesplanRow({
   // heraus. Sieht jemand ohnehin nur die eigene Einteilung, wäre jede Zeile
   // hinterlegt und die Farbe sagte nichts mehr.
   const mine = showMine && instance.isAssigned;
+  // Vergangenes ist ausgegraut über eine graue Fläche, graue Kante und graue
+  // Symbole statt über Deckkraft (#7110). Auf gray-100 erreicht erst gray-600
+  // die 4,5:1, deshalb trägt dort aller Text gray-600. Laufendes und
+  // Kommendes auf der Tönung des eigenen Blocks bekommt Nebentext ebenfalls
+  // eine Stufe dunkler.
+  const tinted = mine && !over;
+  const muted = tinted || over ? "text-gray-600" : "text-gray-500";
+  const strong = over ? "text-gray-600" : "text-gray-900";
 
   // Der Raum trägt sein Konzeptsymbol mitten in der Metazeile. Die Symbole
   // sind Schmuck: der Text daneben sagt schon, was gemeint ist.
   const metaParts: ReactNode[] = [
     instance.status === "completed" ? "Beendet" : null,
     missed ? "Nicht gestartet" : null,
+    // Ein Dienst wird nie gestartet: „Beendet" und „Nicht gestartet"
+    // passen nicht, er ist schlicht vorbei.
+    ended && isDuty ? "Vorbei" : null,
     isDuty ? "Dienst" : null,
     room ? (
       <Fragment key="room">
         <MotoConceptIcon
           concept={roomsConcept}
+          tone={over ? "neutral" : undefined}
           size={14}
           className="mr-1 inline-block align-[-2px]"
         />
@@ -242,13 +256,11 @@ function TagesplanRow({
   ].filter(Boolean);
 
   const timeColumn = (
-    <span
-      className={`${parallel ? TIME_PARALLEL_CLASS : TIME_CLASS} ${over ? "opacity-50" : ""}`}
-    >
-      <span className="block text-sm font-semibold text-gray-900 tabular-nums">
+    <span className={parallel ? TIME_PARALLEL_CLASS : TIME_CLASS}>
+      <span className={`block text-sm font-semibold tabular-nums ${strong}`}>
         {instance.startTime}
       </span>
-      <span className="block text-xs text-gray-500 tabular-nums">
+      <span className={`block text-xs tabular-nums ${muted}`}>
         {blockEndLine(instance)}
       </span>
     </span>
@@ -258,7 +270,7 @@ function TagesplanRow({
       {instance.title}
       <OwnBlockHint mine={mine} />
       {instance.planningTrackName ? (
-        <span className="ml-2 text-xs font-normal text-gray-500">
+        <span className={`ml-2 text-xs font-normal ${muted}`}>
           {instance.planningTrackName}
         </span>
       ) : null}
@@ -268,23 +280,26 @@ function TagesplanRow({
     <>
       {cancelled ? (
         <span
-          className="block truncate text-xs font-medium"
-          style={{ color: LOCATION_COLORS.DANGER }}
+          className={`block truncate text-xs font-medium ${
+            over ? "text-moto-red-strong" : ""
+          }`}
+          style={over ? undefined : { color: LOCATION_COLORS.DANGER }}
         >
           {instance.cancelReason
             ? `Fällt aus · ${instance.cancelReason}`
             : "Fällt aus"}
         </span>
       ) : null}
-      <span className="block truncate text-xs text-gray-500">
+      <span className={`block truncate text-xs ${muted}`}>
         {metaParts.flatMap((part, index) =>
           index === 0 ? [part] : [" · ", part],
         )}
       </span>
       {staff && !cancelled ? (
-        <span className="block truncate text-xs text-gray-400">
+        <span className={`block truncate text-xs ${muted}`}>
           <MotoConceptIcon
             concept={staffConcept}
+            tone={over ? "neutral" : undefined}
             size={14}
             className="mr-1 inline-block align-[-2px]"
           />
@@ -297,10 +312,12 @@ function TagesplanRow({
     <>
       {timeColumn}
       <span
-        className={`${parallel ? "w-full min-w-0 @xs:w-auto @xs:flex-1" : "min-w-0 flex-1"} ${over ? "opacity-50" : ""}`}
+        className={
+          parallel ? "w-full min-w-0 @xs:w-auto @xs:flex-1" : "min-w-0 flex-1"
+        }
       >
         <span
-          className={`block truncate text-sm text-gray-900 ${running ? "font-semibold" : "font-medium"}`}
+          className={`block truncate text-sm ${strong} ${running ? "font-semibold" : "font-medium"}`}
         >
           {titleContent}
         </span>
@@ -327,10 +344,11 @@ function TagesplanRow({
     </Button>
   ) : null;
 
-  const edgeStyle = {
-    ...blockRowStyle(instance, mine),
-    ...(over ? { opacity: 0.9 } : {}),
-  };
+  // Vorbei: graue Fläche und helle Kante statt der Blockfarbe, damit eine
+  // vergangene Zeile sich auch von einem laufenden Block ohne Spurfarbe
+  // abhebt (#7110). Vergangene Zeilen sind nie zu öffnen.
+  const edgeStyle = over ? {} : blockRowStyle(instance, tinted);
+  const overSurface = over ? "bg-gray-100 border-l-gray-200" : "";
 
   // In einer schmalen Spalte stehen Zeit, Inhalt und Aktion untereinander;
   // Badge, Chevron und Starten-Knopf rücken zusammen ans Ende.
@@ -340,7 +358,7 @@ function TagesplanRow({
     return (
       <li
         className={`@container border-b border-gray-100 last:border-b-0 ${
-          openable ? "" : "border-l-4"
+          openable ? "" : `border-l-4 ${overSurface}`
         }`}
         style={openable ? placement : { ...edgeStyle, ...placement }}
       >
@@ -352,7 +370,7 @@ function TagesplanRow({
             subtitle={detailLines}
             badge={badge}
             accent={blockEdgeColor(instance)}
-            accentTint={mine && !cancelled}
+            accentTint={tinted && !cancelled}
             contentClassName="w-full @xs:w-auto"
             className="h-full flex-col items-start gap-2 px-3 py-3 @xs:flex-row @xs:items-center @xs:gap-3 @xs:px-4 @xs:py-3.5"
           />
@@ -379,7 +397,7 @@ function TagesplanRow({
           subtitle={detailLines}
           badge={badge}
           accent={blockEdgeColor(instance)}
-          accentTint={mine && !cancelled}
+          accentTint={tinted && !cancelled}
           className="border-b border-gray-100 py-3.5 last:border-b-0"
         />
       </li>
@@ -388,7 +406,7 @@ function TagesplanRow({
 
   return (
     <li
-      className="flex w-full items-center gap-3 border-b border-l-4 border-gray-100 px-4 py-3.5 last:border-b-0"
+      className={`flex w-full items-center gap-3 border-b border-l-4 border-gray-100 px-4 py-3.5 last:border-b-0 ${overSurface}`}
       style={edgeStyle}
     >
       {body}

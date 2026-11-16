@@ -52,7 +52,7 @@ function NotesCell({ row }: Readonly<{ row: ContractImportRow }>) {
   );
   const debtor = contractImportDebtorText(row);
   if (debtor) lines.push(debtor);
-  if (lines.length === 0) return <span className="text-gray-400">–</span>;
+  if (lines.length === 0) return <span className="text-gray-500">–</span>;
   return (
     <ul className="space-y-0.5 text-sm text-gray-700">
       {lines.map((line) => (

@@ -805,7 +805,7 @@ export function SubstitutionSlideOver({
                                   <span
                                     className={`truncate text-sm font-medium ${
                                       inactive
-                                        ? "text-gray-400 line-through"
+                                        ? "text-gray-500 line-through"
                                         : "text-gray-900"
                                     }`}
                                   >

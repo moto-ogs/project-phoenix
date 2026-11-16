@@ -17,6 +17,7 @@ import {
 } from "react";
 import { ApiError } from "~/lib/api-error";
 import { Check, ChevronRight, ExternalLink } from "lucide-react";
+import { SegmentedControl } from "~/components/ui/segmented-control";
 import { useLocale, useTranslations } from "next-intl";
 
 import { Modal } from "~/components/ui/modal";
@@ -858,7 +859,7 @@ export function NewsCard({
         </span>
       </span>
       <ChevronRight
-        className="h-5 w-5 shrink-0 text-gray-400"
+        className="h-5 w-5 shrink-0 text-gray-500"
         aria-hidden="true"
       />
     </ChoiceTile>
@@ -986,6 +987,42 @@ function NewsReminderNote({
   );
 }
 
+/**
+ * The text of a news item. An Elternbrief that names each child (#4813)
+ * shows one letter per own child; with siblings the family switches.
+ */
+function NewsLetterText({
+  item,
+}: Readonly<{ item: ParentAnnouncement }>): React.ReactNode {
+  const t = useTranslations("parentDashboard");
+  const letters = item.letters ?? [];
+  const [chosen, setChosen] = useState(letters[0]?.student_id ?? "");
+  const shown =
+    letters.find((letter) => letter.student_id === chosen) ?? letters[0];
+  return (
+    <>
+      {letters.length > 1 && (
+        <div className="mt-4 space-y-2">
+          <p className="text-sm text-gray-600">{t("newsLetterPerChild")}</p>
+          <SegmentedControl
+            ariaLabel={t("newsLetterChildChoice")}
+            value={shown?.student_id ?? null}
+            onChange={setChosen}
+            wrap
+            items={letters.map((letter) => ({
+              value: letter.student_id,
+              label: letter.first_name,
+            }))}
+          />
+        </div>
+      )}
+      <p className="mt-4 text-base leading-7 whitespace-pre-line text-gray-800">
+        <LinkifiedText text={shown?.body ?? item.body} />
+      </p>
+    </>
+  );
+}
+
 function NewsMessageSection({
   item,
 }: Readonly<{ item: ParentAnnouncement }>): React.ReactNode {
@@ -1016,9 +1053,7 @@ function NewsMessageSection({
         />
       )}
 
-      <p className="mt-4 text-base leading-7 whitespace-pre-line text-gray-800">
-        <LinkifiedText text={item.body} />
-      </p>
+      <NewsLetterText item={item} />
 
       {/* The files of an ended Einverständnis stay in the proof of each
           answer; the message itself no longer serves them. */}

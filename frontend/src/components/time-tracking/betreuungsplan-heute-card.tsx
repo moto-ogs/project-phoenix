@@ -294,7 +294,7 @@ function AssignmentRow({
     <>
       <span
         className={`${dense ? "w-24" : "w-28"} flex-shrink-0 text-sm font-medium tabular-nums ${
-          dimmed ? "text-gray-400 line-through" : "text-gray-900"
+          dimmed ? "text-gray-500 line-through" : "text-gray-900"
         }`}
       >
         {block.startTime}–{block.endTime}
@@ -302,7 +302,7 @@ function AssignmentRow({
       {dense ? (
         <p className="min-w-0 flex-1 truncate text-sm">
           <span
-            className={`font-medium ${dimmed ? "text-gray-400" : "text-gray-900"}`}
+            className={`font-medium ${dimmed ? "text-gray-500" : "text-gray-900"}`}
           >
             {block.title}
           </span>
@@ -314,7 +314,7 @@ function AssignmentRow({
             // Im Feld ist die Spalte schmal: der Titel bricht um, statt
             // abgeschnitten zu werden.
             className={`text-sm font-medium ${tile ? "" : "truncate"} ${
-              dimmed ? "text-gray-400" : "text-gray-900"
+              dimmed ? "text-gray-500" : "text-gray-900"
             }`}
           >
             {block.title}

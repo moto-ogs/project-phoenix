@@ -71,7 +71,7 @@ func TestSchoolNotificationPreferences(t *testing.T) {
 	for _, entry := range overview.Types {
 		keys = append(keys, entry.Key)
 	}
-	assert.Equal(t, []string{"school_class_absence_reported", "staff_message", "school_parent_conference_booking"}, keys)
+	assert.Equal(t, []string{"school_class_absence_reported", "staff_message", "instance_cancelled", "school_parent_conference_booking"}, keys)
 	assert.True(t, schoolPreference(t, overview, "staff_message").Available, "the school switched the chat on")
 	assert.False(t, schoolPreference(t, overview, "staff_message").Enabled, "opt-in: nothing is on until the person decides")
 	// The class sick-note notice (#4792) is offered and starts off as well.
@@ -80,6 +80,10 @@ func TestSchoolNotificationPreferences(t *testing.T) {
 	// The Elternsprechtag booking notice (#4801) is offered and starts off.
 	assert.True(t, schoolPreference(t, overview, "school_parent_conference_booking").Available)
 	assert.False(t, schoolPreference(t, overview, "school_parent_conference_booking").Enabled)
+	// A cancelled block she is planned for (#7139) is offered without the
+	// OGS right and starts on.
+	assert.True(t, schoolPreference(t, overview, "instance_cancelled").Available)
+	assert.True(t, schoolPreference(t, overview, "instance_cancelled").Enabled)
 
 	// Opting in writes the shared (account, type) row ...
 	req = httptest.NewRequest(http.MethodPut, "/notifications/preferences/"+"staff_message",

@@ -62,6 +62,9 @@ func (rs *StaffNoticeResource) Router(protectedTenantRoutes func(chi.Router, fun
 
 		r.With(read, withTx).Get("/today", rs.todayFor(timetable.StaffNoticeAudienceStaff))
 		r.With(read, withTx).Post("/{noticeId}/acknowledge", rs.acknowledgeFor(timetable.StaffNoticeAudienceStaff))
+		// Ein einzelner Hinweis für den Link aus dem Benachrichtigungs-Feed
+		// (#7143): lesen darf ihn, wer die Hinweise liest.
+		r.With(read, withTx).Get("/{noticeId}", rs.oneFor(timetable.StaffNoticeAudienceStaff))
 
 		r.With(write, withTx).Get("/", rs.list)
 		r.With(write, withTx).Post("/", rs.create)
@@ -265,7 +268,7 @@ func (rs *StaffNoticeResource) update(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	notice, err := rs.Service.UpdateStaffNotice(ctx, id, in)
+	notice, err := rs.Service.UpdateStaffNotice(ctx, id, rs.noticeAccountID(ctx), in)
 	if err != nil {
 		renderNoticeServiceError(w, r, err)
 		return
@@ -285,6 +288,25 @@ func (rs *StaffNoticeResource) remove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	render.JSON(w, r, map[string]any{"status": "ok"})
+}
+
+// oneFor liefert den Handler eines einzelnen Hinweises für eine Leserart,
+// das Ziel des Links aus dem Benachrichtigungs-Feed (#7143).
+func (rs *StaffNoticeResource) oneFor(reader string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		id, err := noticeIDFromURL(r)
+		if err != nil {
+			common.RenderError(w, r, common.ErrorInvalidRequest(err))
+			return
+		}
+		view, err := rs.Service.StaffNoticeFor(ctx, rs.noticeAccountID(ctx), id, reader)
+		if err != nil {
+			renderNoticeServiceError(w, r, err)
+			return
+		}
+		render.JSON(w, r, map[string]any{"data": toNoticeResponse(noticeViewFields(view), false)})
+	}
 }
 
 // acknowledgeFor liefert den Kenntnisnahme-Handler für eine Leserart; ein

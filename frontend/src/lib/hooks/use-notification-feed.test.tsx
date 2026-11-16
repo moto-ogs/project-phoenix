@@ -99,8 +99,9 @@ beforeEach(() => {
     user: { id: "account-7", tenantId: 42 },
     expires: "2099-01-01",
   };
-  api.fetchNotificationFeed.mockImplementation((cursor?: string) =>
-    Promise.resolve(cursor ? page("older") : page("first", "c2")),
+  api.fetchNotificationFeed.mockImplementation(
+    (_base: string, cursor?: string) =>
+      Promise.resolve(cursor ? page("older") : page("first", "c2")),
   );
   api.markNotificationFeedEntryRead.mockResolvedValue(0);
   api.markAllNotificationFeedRead.mockResolvedValue(0);
@@ -196,7 +197,10 @@ describe("notification feed reconciliation", () => {
       ]);
       expect(feed.onUnreadCount).toHaveBeenLastCalledWith(2);
       await act(() => feed.result.current.loadMore());
-      expect(api.fetchNotificationFeed).toHaveBeenLastCalledWith("new-cursor");
+      expect(api.fetchNotificationFeed).toHaveBeenLastCalledWith(
+        "/api/notifications/feed",
+        "new-cursor",
+      );
     },
   );
 

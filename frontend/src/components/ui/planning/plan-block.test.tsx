@@ -70,7 +70,7 @@ describe("PlanBlock", () => {
     expect(block).toHaveStyle({ borderLeft: "3px solid #9CA3AF" });
     expect(block.style.backgroundColor).toBe("");
     const label = screen.getByText("Mensa");
-    expect(label).toHaveClass("line-through", "text-gray-400");
+    expect(label).toHaveClass("line-through", "text-gray-600");
   });
 
   it("shows the focus/selection ring when selected", () => {

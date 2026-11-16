@@ -299,8 +299,6 @@ var moduleComplexityAllowlist = map[string]int{
 	// ADR 0087.
 	"internal/devtools/simulate/live.go:runLiveTick": 19,
 	// ADR 0087.
-	"internal/testdb/cmd/bootstrap/main.go:main": 18,
-	// ADR 0087.
 	"internal/testdb/idle_unix.go:HoldServer": 31,
 	// ADR 0087.
 	"internal/testdb/idle_unix.go:IdleStatus": 17,

@@ -51,6 +51,7 @@ vi.mock("~/lib/tenant-path", () => ({
 }));
 vi.mock("~/components/home/home-card", () => ({
   HomeCard: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  HomeCardEmpty: ({ title }: { title: string }) => <p>{title}</p>,
   HomeCardIcon: () => null,
 }));
 vi.mock("~/components/home/home-card-rows", () => ({

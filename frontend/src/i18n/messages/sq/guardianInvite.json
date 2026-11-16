@@ -18,6 +18,8 @@
   "showPassword": "Shfaq fjalëkalimin",
   "hidePassword": "Fshih fjalëkalimin",
   "requirementsTitle": "Kërkesat për fjalëkalimin",
+  "requirementMet": "plotësuar",
+  "requirementUnmet": "ende e paplotësuar",
   "submitting": "Duke pranuar...",
   "submit": "Prano ftesën",
   "passwordRules": {

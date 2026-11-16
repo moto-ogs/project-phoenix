@@ -88,6 +88,12 @@ import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { useTenantSlugSafe } from "~/lib/tenant-context";
 import { ParentTargetPicker } from "~/components/announcements/parent-target-picker";
+import { LetterTemplateInline } from "~/components/announcements/letter-template-text";
+import { hasLetterPlaceholders } from "~/lib/parent-letter-placeholders";
+import {
+  LetterBodyField,
+  type LetterPreviewChildren,
+} from "~/components/announcements/letter-body-field";
 import { WizardStepper } from "~/components/ui/wizard-stepper";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import type { SegmentedControlItem } from "~/components/ui/segmented-control";
@@ -119,13 +125,15 @@ import {
 } from "~/lib/announcement-poll-options";
 import { useSWRAuth } from "~/lib/swr";
 import { type Group } from "~/lib/api";
-import { fetchSchoolClasses } from "~/lib/student-api";
+import { fetchSchoolClasses, fetchAllStudentNames } from "~/lib/student-api";
+import { schoolClassLabel } from "~/lib/school-class-label";
 import { fetchActivities } from "~/lib/activity-api";
 import type { Activity } from "~/lib/activity-helpers";
 import {
   createAnnouncement,
   fetchAnnouncements,
   isClassLetter,
+  isLetter,
   publishAnnouncement,
   updateAnnouncement,
   announcementAttachmentDownloadUrl,
@@ -585,7 +593,11 @@ function ParentAnnouncementsContent() {
               )}
           </div>
           <p className="mt-0.5 line-clamp-1 text-xs text-gray-500">
-            {row.body}
+            {isLetter(row) && hasLetterPlaceholders(row.body) ? (
+              <LetterTemplateInline text={row.body} links={false} />
+            ) : (
+              row.body
+            )}
           </p>
           {isClassLetter(row) && (
             <p className="mt-0.5 line-clamp-1 text-xs text-gray-500">
@@ -910,6 +922,19 @@ const DECLARATION_SIGNER_OPTIONS: ReadonlyArray<{
  * final, explicit choices. Only drafts ever reach this modal (published
  * announcements are immutable).
  */
+// The preview of a letter (#4813) can show any child of the school; it
+// loads their names only.
+const SCHOOL_PREVIEW_CHILDREN: LetterPreviewChildren = {
+  scope: "school",
+  load: async () =>
+    (await fetchAllStudentNames()).map((student) => ({
+      value: student.id,
+      label: student.school_class
+        ? `${student.name} (${schoolClassLabel(student.school_class)})`
+        : student.name,
+    })),
+};
+
 function AnnouncementFormModal({
   announcement,
   initialStudents = NO_PREFILL_STUDENTS,
@@ -1597,18 +1622,30 @@ function AnnouncementFormModal({
                     }
                   />
 
-                  <Textarea
-                    id="announcement-body"
-                    name="body"
-                    label="Text"
-                    error={bodyError ?? undefined}
-                    value={body}
-                    onChange={(e) => setBody(e.target.value)}
-                    rows={5}
-                    maxLength={4000}
-                    placeholder="Inhalt der Mitteilung… Links im Text werden für Eltern klickbar."
-                    className="resize-y px-4 py-3 text-base"
-                  />
+                  {isLetterForm ? (
+                    <LetterBodyField
+                      id="announcement-body"
+                      value={body}
+                      onChange={setBody}
+                      error={bodyError ?? undefined}
+                      previewChildren={SCHOOL_PREVIEW_CHILDREN}
+                      placeholder="Liebe Eltern von {{vorname}}, … Links im Text werden für Eltern klickbar."
+                      className="resize-y px-4 py-3 text-base"
+                    />
+                  ) : (
+                    <Textarea
+                      id="announcement-body"
+                      name="body"
+                      label="Text"
+                      error={bodyError ?? undefined}
+                      value={body}
+                      onChange={(e) => setBody(e.target.value)}
+                      rows={5}
+                      maxLength={4000}
+                      placeholder="Inhalt der Mitteilung… Links im Text werden für Eltern klickbar."
+                      className="resize-y px-4 py-3 text-base"
+                    />
+                  )}
 
                   <Input
                     label="Link (optional)"
@@ -2009,7 +2046,7 @@ function AnnouncementFormModal({
                   <div>
                     <p className="flex items-center gap-2 text-sm font-medium text-gray-800">
                       <Paperclip
-                        className="h-4 w-4 text-gray-400"
+                        className="h-4 w-4 text-gray-500"
                         aria-hidden
                       />
                       Dateien anhängen

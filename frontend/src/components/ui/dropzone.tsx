@@ -179,7 +179,7 @@ export function Dropzone({
         <Upload
           className={cn(
             "h-5 w-5 transition-colors",
-            dragging ? "text-moto-green-strong" : "text-gray-400",
+            dragging ? "text-moto-green-strong" : "text-gray-500",
           )}
           aria-hidden="true"
         />

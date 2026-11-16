@@ -510,7 +510,7 @@ function OperatorsList({
               </div>
               <div className="flex items-center justify-between gap-2 sm:ml-4 sm:block sm:text-right">
                 {op.lastLogin ? (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-500">
                     Letzter Login:{" "}
                     {new Date(op.lastLogin).toLocaleDateString(
                       "de-DE",
@@ -518,7 +518,7 @@ function OperatorsList({
                     )}
                   </p>
                 ) : (
-                  <p className="text-xs text-gray-400">Noch nicht angemeldet</p>
+                  <p className="text-xs text-gray-500">Noch nicht angemeldet</p>
                 )}
                 <div className="flex items-center justify-end gap-2 sm:mt-1">
                   <DataTableStatusBadge active={op.active} />

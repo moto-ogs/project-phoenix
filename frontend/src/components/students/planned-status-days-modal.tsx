@@ -1109,11 +1109,11 @@ export function PlannedStatusDaysModal({
                             type="button"
                             onClick={() => toggleDate(date)}
                             disabled={existingDay !== undefined}
-                            className={`min-h-16 rounded-lg border px-1.5 py-2 text-center text-sm transition-colors focus-visible:outline-2 focus-visible:outline-gray-400 sm:px-2 ${
+                            className={`min-h-16 rounded-lg border px-1.5 py-2 text-center text-sm transition-colors focus-visible:outline-2 focus-visible:outline-gray-600 sm:px-2 ${
                               isSelected
                                 ? "border-gray-900 bg-gray-900 text-white shadow-sm"
                                 : existingDay
-                                  ? "border-gray-100 bg-gray-50 text-gray-400 shadow-sm"
+                                  ? "border-gray-100 bg-gray-50 text-gray-500 shadow-sm"
                                   : "moto-content-surface text-gray-700"
                             } disabled:cursor-not-allowed`}
                             title={

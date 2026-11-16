@@ -64,29 +64,35 @@ func TestSeedParentLetterMarksLetterReadByParent(t *testing.T) {
 	}
 	require.NoError(t, seedParentLetter(rt))
 	// Three earlier notices come first, each read by the first parent, so the
-	// portal lists read mail below the letter. The attachment upload sits
-	// between create and publish on purpose (#2890): a published
-	// announcement is immutable, so an upload after the publish call would be
-	// refused with 409 and the demo letter would ship without its file.
-	// Then the announcement with a scheduled reminder (#3162): created and
-	// published, nothing else — the reminder is a field of the announcement,
-	// not a further call. The draft is created and never published.
+	// portal lists read mail below the letters. The Elternbrief that names
+	// each child (#4813) follows, read too, before the Laternenfest letter, so
+	// that one stays the newest. The attachment upload sits between create and
+	// publish on purpose (#2890): a published announcement is immutable, so an
+	// upload after the publish call would be refused with 409 and the demo
+	// letter would ship without its file. Then the announcement with a
+	// scheduled reminder (#3162): created and published, nothing else — the
+	// reminder is a field of the announcement, not a further call. The draft
+	// is created and never published.
 	assert.Equal(t, []string{
 		"/parent/auth/login",
 		"/api/parent-announcements/", "/api/parent-announcements/71/publish", "/parent/me/news/71/read",
 		"/api/parent-announcements/", "/api/parent-announcements/72/publish", "/parent/me/news/72/read",
 		"/api/parent-announcements/", "/api/parent-announcements/73/publish", "/parent/me/news/73/read",
-		"/api/parent-announcements/", "/api/announcement-attachments/74",
-		"/api/parent-announcements/74/publish", "/parent/me/news/74/read",
-		"/api/parent-announcements/", "/api/parent-announcements/75/publish",
+		"/api/parent-announcements/", "/api/parent-announcements/74/publish", "/parent/me/news/74/read",
+		"/api/parent-announcements/", "/api/announcement-attachments/75",
+		"/api/parent-announcements/75/publish", "/parent/me/news/75/read",
+		"/api/parent-announcements/", "/api/parent-announcements/76/publish",
 		"/api/parent-announcements/",
 	}, paths)
-	require.Len(t, created, 6)
-	assert.Equal(t, seedParentLetterTitle, created[3]["title"])
+	require.Len(t, created, 7)
+	assert.Equal(t, seedPersonalLetterTitle, created[3]["title"])
 	assert.Equal(t, "letter", created[3]["delivery_mode"])
-	assert.Contains(t, created[3]["body"], "Laternenfest")
-	assert.NotContains(t, created[3]["body"], "Elternportal", "the letter is read inside the portal")
-	assert.Equal(t, "Weihnachtsbasteln: Wer hilft mit?", created[5]["title"])
+	assert.Contains(t, created[3]["body"], "{{vorname}}", "the letter names each child")
+	assert.Equal(t, seedParentLetterTitle, created[4]["title"])
+	assert.Equal(t, "letter", created[4]["delivery_mode"])
+	assert.Contains(t, created[4]["body"], "Laternenfest")
+	assert.NotContains(t, created[4]["body"], "Elternportal", "the letter is read inside the portal")
+	assert.Equal(t, "Weihnachtsbasteln: Wer hilft mit?", created[6]["title"])
 }
 
 func TestSeedParentLetterSharesTheCalendarDates(t *testing.T) {

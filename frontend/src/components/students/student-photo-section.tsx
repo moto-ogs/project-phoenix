@@ -176,7 +176,7 @@ export function StudentPhotoSection({
           <Avatar imageUrl={displayUrl} name={fullName} size="lg" />
           <div className="min-w-0 flex-1 text-xs text-gray-600">
             {pendingPhotoBlob ? (
-              <p className="text-moto-blue font-medium">
+              <p className="text-moto-blue-strong font-medium">
                 Foto ausgewählt — wird beim Speichern hochgeladen.
               </p>
             ) : pendingPhotoRemoved ? (

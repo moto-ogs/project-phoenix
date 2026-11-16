@@ -7,7 +7,9 @@ import { StatusDot } from "../status-dot";
  * compact wrapping legend. Category entries render a vertical edge-bar swatch that mirrors
  * the 3px PlanBlock edge; state entries render a 12px glyph that echoes a
  * PlanBlock status. An entry may carry a `value` (Zähler) and a round `dot`
- * swatch; `size="md"` is the legend under a chart or a list, outside a plan.
+ * swatch, or a `square` one where a second mark must differ from the dot by
+ * its shape, not only its colour (WCAG 1.4.1, #7114); `size="md"` is the
+ * legend under a chart or a list, outside a plan.
  *
  * The hatched glyph is drawn with SVG lines, NOT a CSS repeating gradient:
  * the sanctioned hatch stays encapsulated in plan-block.tsx (Abschnitt 5,
@@ -16,7 +18,8 @@ import { StatusDot } from "../status-dot";
  */
 
 /** Mirrors the PlanBlock statuses that need a distinct legend glyph. */
-type PlanLegendEntryVariant = "bar" | "dot" | "hatched" | "cancelled";
+type PlanLegendEntryVariant =
+  "bar" | "dot" | "square" | "hatched" | "cancelled";
 
 export interface PlanLegendEntry {
   readonly key: string;
@@ -109,6 +112,32 @@ function LegendGlyph({
     entry.color != null && HEX6_RE.test(entry.color)
       ? entry.color
       : COLOR_BAR_FALLBACK;
+
+  if (variant === "square") {
+    // Umrandetes Quadrat in der Größe des Punkts daneben (`StatusDot` md
+    // 8 px, lg 10 px), wie die umrandeten Tage, die es erklärt.
+    const side = size === "md" ? 10 : 8;
+    return (
+      <svg
+        width={side}
+        height={side}
+        viewBox={`0 0 ${side} ${side}`}
+        aria-hidden="true"
+        className="shrink-0"
+      >
+        <rect
+          x="0.75"
+          y="0.75"
+          width={side - 1.5}
+          height={side - 1.5}
+          rx="1.5"
+          fill={`${color}33`}
+          stroke={color}
+          strokeWidth="1.5"
+        />
+      </svg>
+    );
+  }
 
   if (variant === "dot") {
     return (

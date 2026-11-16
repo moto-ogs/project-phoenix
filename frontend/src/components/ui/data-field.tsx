@@ -78,7 +78,7 @@ export function DataField({
     >
       <dt className="flex items-center gap-1.5 text-xs text-gray-500">
         {icon ? (
-          <span aria-hidden="true" className="shrink-0 text-gray-400">
+          <span aria-hidden="true" className="shrink-0 text-gray-500">
             {icon}
           </span>
         ) : null}

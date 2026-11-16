@@ -408,7 +408,7 @@ export function TransitionEditor({
           )}
 
           {validationError && rows !== null && rows.length > 0 && (
-            <p className="text-moto-orange text-sm">{validationError}</p>
+            <p className="text-moto-orange-strong text-sm">{validationError}</p>
           )}
           <FormErrorAlert message={saveError} />
         </div>

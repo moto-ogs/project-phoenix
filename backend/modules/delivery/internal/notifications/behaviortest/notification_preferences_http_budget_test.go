@@ -401,6 +401,14 @@ var notificationBudgetCatalogues = map[string]string{
     "available": false
   },
   {
+    "key": "instance_cancelled",
+    "label": "Absage eines Termins",
+    "description": "Wenn ein Termin oder Angebot abgesagt wird, für den Sie eingeplant sind. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Absagen in den nächsten 14 Tagen.",
+    "group": "termine",
+    "enabled": true,
+    "available": true
+  },
+  {
     "key": "school_parent_conference_booking",
     "label": "Buchungen am Elternsprechtag",
     "description": "Wenn Eltern einen Termin an Ihrem Elternsprechtag buchen, verschieben oder absagen.",

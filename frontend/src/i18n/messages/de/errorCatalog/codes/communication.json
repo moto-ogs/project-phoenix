@@ -26,5 +26,8 @@
   "staff_group_members_required": "Bitte wählen Sie mindestens eine Person aus, die noch nicht in der Gruppe ist.",
   "staff_group_too_large": "Ein Gruppenchat hat höchstens {max_members} Mitglieder.",
   "parent_messaging_disabled": "Die Schule hat Eltern-Nachrichten ausgeschaltet. Das geht gerade nicht.",
-  "message_send_conflict": "Die Nachricht wurde bereits anders gesendet. Bitte laden Sie den Chat neu."
+  "message_send_conflict": "Die Nachricht wurde bereits anders gesendet. Bitte laden Sie den Chat neu.",
+  "letter_placeholder_letter_only": "Platzhalter gehen nur im Text eines Elternbriefs. Bitte nehmen Sie sie aus dem Betreff oder wählen Sie „Elternbrief“.",
+  "letter_placeholder_unknown": "Diese Platzhalter kennt moto nicht: {placeholders}. Bitte nehmen Sie nur Platzhalter aus der Liste.",
+  "letter_print_not_letter": "Nur ein veröffentlichter Elternbrief lässt sich drucken."
 }

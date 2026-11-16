@@ -65,7 +65,7 @@ const ACTIVE_PILL: Record<
     className: "shadow-sm",
     style: {
       backgroundColor: MOTO_COLOR_PALETTE.blue.soft,
-      color: MOTO_COLOR_PALETTE.blue.base,
+      color: MOTO_COLOR_PALETTE.blue.strong,
     },
   },
   red: {

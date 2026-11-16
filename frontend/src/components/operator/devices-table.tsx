@@ -118,7 +118,7 @@ export function DevicesTable({
               {getRelativeTime(row.lastSeen)}
             </span>
           ) : (
-            <span className="text-gray-400">Nie</span>
+            <span className="text-gray-500">Nie</span>
           ),
         sortValue: (row) => row.lastSeen ?? "",
         className: "text-gray-600",
@@ -132,7 +132,7 @@ export function DevicesTable({
               {row.maskedApiKey}
             </span>
           ) : (
-            <span className="text-gray-400">–</span>
+            <span className="text-gray-500">–</span>
           ),
         sortValue: (row) => row.maskedApiKey.toLowerCase(),
       },

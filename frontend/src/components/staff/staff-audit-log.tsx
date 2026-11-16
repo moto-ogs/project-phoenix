@@ -222,10 +222,10 @@ function actorLabel(event: AuditLogEvent): string {
 
 function staffLabel(event: AuditLogEvent) {
   if (event.staffId === null) {
-    return <span className="text-gray-400">Alle Mitarbeitenden</span>;
+    return <span className="text-gray-500">Alle Mitarbeitenden</span>;
   }
   if (event.staffName) return event.staffName;
-  return <span className="text-gray-400">Unbekannte/ehemalige Person</span>;
+  return <span className="text-gray-500">Unbekannte/ehemalige Person</span>;
 }
 
 const sourceOptions = [
@@ -381,7 +381,7 @@ export function StaffAuditLog({ staffOptions }: StaffAuditLogProps) {
           row.reason ? (
             <span className="text-gray-600 italic">{row.reason}</span>
           ) : (
-            <span className="text-gray-300">–</span>
+            <span className="text-gray-500">–</span>
           ),
       },
     ],

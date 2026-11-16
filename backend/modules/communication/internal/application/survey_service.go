@@ -54,6 +54,7 @@ type announcementsWithSurveys struct {
 	communication.ParentAnnouncementCapability
 	communication.ParentAnnouncementRetention
 	communication.SurveyCapability
+	communication.ParentLetterCapability
 }
 
 // WithSurveys adds the surveys (#4781) to the parent announcements. A parent
@@ -77,7 +78,7 @@ func WithSurveys(announcements communication.ParentAnnouncementCapability, sourc
 		return nil, fmt.Errorf("surveys: announcement source %T keeps no surveys", source)
 	}
 	return announcementsWithSurveys{
-		ParentAnnouncementCapability: announcements, ParentAnnouncementRetention: facade,
+		ParentAnnouncementCapability: announcements, ParentAnnouncementRetention: facade, ParentLetterCapability: facade,
 		SurveyCapability: newSurveyService(inner, records.SurveyRecords(), staff),
 	}, nil
 }

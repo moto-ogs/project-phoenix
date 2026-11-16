@@ -193,6 +193,10 @@ func (s *staffDeviations) executeDeviationPlan(ctx context.Context, instanceID i
 		return nil, timetable.DeviationInternal("deviation time-conflict detection failed", err)
 	}
 
+	if err := s.noticeStaffingChanges(ctx, staffingOperation{changes: deviationPlanChanges(plan), actor: in.ActorAccountID}); err != nil {
+		return nil, timetable.DeviationInternal("staffing notice failed", err)
+	}
+
 	return &timetable.ApplyDeviationsResult{
 		InstanceID:               instanceID,
 		Cancelled:                false,

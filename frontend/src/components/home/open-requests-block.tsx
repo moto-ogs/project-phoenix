@@ -1,8 +1,11 @@
 "use client";
 
 import { ListRow } from "~/components/ui/list-row";
-import { EmptyState } from "~/components/ui/empty-state";
-import { HomeCard, HomeCardIcon } from "~/components/home/home-card";
+import {
+  HomeCard,
+  HomeCardEmpty,
+  HomeCardIcon,
+} from "~/components/home/home-card";
 import { HomeCardLink } from "~/components/home/home-card-rows";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useCareWithdrawalsPending } from "~/lib/hooks/use-care-withdrawals-pending";
@@ -87,8 +90,7 @@ export function OpenRequestsBlock() {
       }
     >
       {rows.length === 0 ? (
-        <EmptyState
-          className="py-4"
+        <HomeCardEmpty
           title="Nichts wartet auf eine Entscheidung"
           description="Neue Anfragen von Eltern und aus dem Team erscheinen hier."
         />

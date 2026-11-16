@@ -58,5 +58,7 @@
   "newsPollSaveTooltip": "Yanıtınızı hemen okula gönderir.",
   "newsPollSaveDisabledReason": "Önce bir yanıt seçin veya seçiminizi değiştirin.",
   "newsReadAndConfirmTooltip": "Mektubu okuduğunuzu hemen okula bildirir.",
-  "newsCloseUnsavedTooltip": "Anketi kapatır; yeni seçiminiz kaybolur."
+  "newsCloseUnsavedTooltip": "Anketi kapatır; yeni seçiminiz kaybolur.",
+  "newsLetterChildChoice": "Hangi çocuk için mektup?",
+  "newsLetterPerChild": "Her çocuğunuzun kendine ait bir mektubu var."
 }

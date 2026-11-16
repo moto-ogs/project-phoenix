@@ -129,6 +129,7 @@ function leadTopics(
     articles.emailDeliveryTopic(),
     articles.parentAnnouncementTopic(),
     articles.parentLetterTopic(),
+    articles.parentLetterPerChildTopic(),
     articles.schoolTraegerDocumentsTopic(),
     articles.parentSurveyTopic(),
     articles.leadSurveysTopic(),
@@ -297,6 +298,7 @@ const TEACHER_DRAFT_TOPICS: readonly HelpTopic[] = [
   articles.teacherAccessTopic(),
   articles.teacherLoginTopic(),
   articles.teacherSettingsTopic(),
+  articles.teacherNotificationFeedTopic(),
 
   // --- Meine Klasse ---
   articles.teacherClassDayTopic(),

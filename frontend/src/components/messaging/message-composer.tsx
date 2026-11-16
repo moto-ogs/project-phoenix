@@ -341,7 +341,7 @@ export function MessageComposer({
         <div
           {...(attachments ? dropProps : {})}
           className={cn(
-            "relative flex min-w-0 flex-1 flex-col rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 transition-shadow duration-200 ring-inset focus-within:ring-2 focus-within:ring-gray-400",
+            "relative flex min-w-0 flex-1 flex-col rounded-2xl bg-white shadow-sm ring-1 ring-gray-500/80 transition-shadow duration-200 ring-inset focus-within:ring-2 focus-within:ring-gray-900",
             inputLocked && "bg-gray-50",
           )}
         >
@@ -501,7 +501,7 @@ export function MessageComposer({
       />
       {value.length >= COUNTER_VISIBLE_FROM ? (
         <span
-          className={`self-end ${parent ? "text-[15px]" : "text-xs"} ${value.length >= MAX_MESSAGE_LEN ? "text-moto-red" : "text-gray-400"}`}
+          className={`self-end ${parent ? "text-[15px]" : "text-xs"} ${value.length >= MAX_MESSAGE_LEN ? "text-moto-red" : "text-gray-500"}`}
         >
           {value.length}/{MAX_MESSAGE_LEN}
         </span>

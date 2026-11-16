@@ -2,7 +2,8 @@
 
 import { Megaphone, Pencil, Trash2, Users } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useLayoutEffect, useRef, useState } from "react";
 
 import {
   OverflowMenu,
@@ -21,6 +22,7 @@ import { Loading } from "~/components/ui/loading";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { hasEffectiveAdminScope } from "~/lib/auth-utils";
+import { ApiError } from "~/lib/api-error";
 import { formatDate } from "~/lib/date-helpers";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
@@ -29,6 +31,7 @@ import {
   deleteStaffNotice,
   describeAudience,
   describeRecurrence,
+  fetchStaffNotice,
   fetchStaffNotices,
   fetchTodaysNotices,
   staffNoticesTodayKey,
@@ -36,6 +39,7 @@ import {
 } from "~/lib/staff-notices-api";
 import type { StaffNotice, StaffNoticeInput } from "~/lib/staff-notices-api";
 import { useSWRAuth } from "~/lib/swr";
+import { staffNoticeKeys } from "~/lib/swr/staff-keys";
 
 const logger = createLogger({ component: "TagesinformationenPage" });
 
@@ -49,7 +53,7 @@ const logger = createLogger({ component: "TagesinformationenPage" });
  * Terminliste. Die Route /api/staff-notices (Liste, Anlegen) ist im Backend
  * adminexklusiv; hier wird nur gespiegelt, was dort gilt.
  */
-export default function TagesinformationenPage() {
+function TagesinformationenContent() {
   const { data: session } = useSession();
   const isAdmin = hasEffectiveAdminScope(session);
   // Kontogebundene Cache-Keys: acknowledged_at ist kontospezifisch, ein
@@ -80,6 +84,27 @@ export default function TagesinformationenPage() {
     { revalidateOnFocus: false },
   );
 
+  // Ein Eintrag in der Glocke verlinkt seinen Hinweis (#7143). Gilt er
+  // heute nicht, steht er nicht unter „Heute“: die Seite lädt ihn einzeln.
+  const linkedId = useSearchParams().get("hinweis");
+  const {
+    data: linkedNotice,
+    error: linkedError,
+    mutate: mutateLinked,
+  } = useSWRAuth<StaffNotice>(
+    linkedId ? staffNoticeKeys.linked(accountId, linkedId) : null,
+    () => fetchStaffNotice(linkedId ?? ""),
+    { revalidateOnFocus: false },
+  );
+  // Gelöscht oder ausgeschaltet ist kein Ladefehler, sondern ein Zustand.
+  const linkedGone =
+    linkedError instanceof ApiError && linkedError.status === 404;
+  const linkedLoadError = useSwrLoadError(
+    linkedGone ? undefined : linkedError,
+    "den Hinweis aus Ihren Benachrichtigungen",
+    () => mutateLinked(),
+  );
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<StaffNotice | null>(null);
   const [deleting, setDeleting] = useState<StaffNotice | null>(null);
@@ -104,6 +129,8 @@ export default function TagesinformationenPage() {
 
   const todayNotices = todayData ?? [];
   const notices = data ?? [];
+  const linkedInToday =
+    linkedId !== null && todayNotices.some((notice) => notice.id === linkedId);
 
   const buildNoticeMenu = (notice: StaffNotice): OverflowMenuEntry[] => {
     const acknowledged = notice.acknowledged_count ?? 0;
@@ -254,6 +281,46 @@ export default function TagesinformationenPage() {
         </>
       }
     >
+      {/* Der Hinweis aus der Glocke (#7143), wenn er nicht unter „Heute“
+          steht: etwa weil er erst nächste Woche gilt. */}
+      {linkedId && !linkedInToday && (
+        <SectionCard title="Aus Ihren Benachrichtigungen">
+          {linkedLoadError ? (
+            <LoadErrorAlert error={linkedLoadError} />
+          ) : linkedGone ? (
+            <p className="text-sm leading-6 text-gray-600">
+              Diesen Hinweis gibt es nicht mehr. Die Leitung hat ihn gelöscht
+              oder abgeschaltet.
+            </p>
+          ) : linkedNotice ? (
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-[15px] font-semibold text-gray-900">
+                  {linkedNotice.title}
+                </h3>
+                {linkedNotice.priority === "important" && (
+                  <StatusBadge label="Wichtig" tone="warning" />
+                )}
+              </div>
+              {linkedNotice.body && (
+                <p className="mt-1 max-w-3xl text-sm leading-6 whitespace-pre-line text-gray-600">
+                  {linkedNotice.body}
+                </p>
+              )}
+              <p className="mt-2 text-sm text-gray-500">
+                {describeRecurrence(linkedNotice)} · ab{" "}
+                {formatDate(linkedNotice.valid_from)}
+                {linkedNotice.valid_until
+                  ? ` bis ${formatDate(linkedNotice.valid_until)}`
+                  : ""}
+              </p>
+            </div>
+          ) : (
+            <Loading />
+          )}
+        </SectionCard>
+      )}
+
       {/* Heute: das, was jede Mitarbeiterin braucht. Steht deshalb vor der
           Verwaltung und ist die ganze Seite für Nicht-Admins. */}
       <SectionCard title="Heute">
@@ -345,5 +412,19 @@ export default function TagesinformationenPage() {
         </SectionCard>
       )}
     </TenantPage>
+  );
+}
+
+// useSearchParams braucht eine Suspense-Grenze: der Link aus der Glocke
+// trägt den Hinweis in `?hinweis=` (#7143).
+export default function TagesinformationenPage() {
+  return (
+    <Suspense
+      fallback={
+        <TenantPage title="Hinweise der Leitung" statsLoading loading />
+      }
+    >
+      <TagesinformationenContent />
+    </Suspense>
   );
 }

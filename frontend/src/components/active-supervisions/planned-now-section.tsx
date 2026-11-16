@@ -201,7 +201,7 @@ export function PlannedNowSection({
               </span>
             </span>
             <ChevronDown
-              className={`h-4 w-4 shrink-0 text-gray-400 transition-transform group-hover:text-gray-600 ${isSectionExpanded ? "rotate-180" : ""}`}
+              className={`h-4 w-4 shrink-0 text-gray-500 transition-transform group-hover:text-gray-600 ${isSectionExpanded ? "rotate-180" : ""}`}
               aria-hidden="true"
             />
           </button>
@@ -347,7 +347,7 @@ export function PlannedNowSection({
                       <button
                         type="button"
                         onClick={() => toggleExpanded(instance.id)}
-                        className="flex w-full items-center justify-between gap-3 text-left text-sm font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none"
+                        className="flex w-full items-center justify-between gap-3 text-left text-sm font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none"
                         aria-expanded={isExpanded}
                       >
                         <span className="inline-flex items-center gap-2">
@@ -366,7 +366,7 @@ export function PlannedNowSection({
                           </span>
                         </span>
                         <ChevronDown
-                          className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                          className={`h-4 w-4 text-gray-500 transition-transform ${isExpanded ? "rotate-180" : ""}`}
                           aria-hidden="true"
                         />
                       </button>

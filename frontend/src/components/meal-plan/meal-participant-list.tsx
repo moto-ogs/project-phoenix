@@ -299,7 +299,7 @@ export function MealParticipantList({
             </>
           ) : (
             <>
-              <span aria-hidden="true" className="text-gray-400">
+              <span aria-hidden="true" className="text-gray-500">
                 –
               </span>
               <span className="sr-only">{t("weekNotRegistered")}</span>

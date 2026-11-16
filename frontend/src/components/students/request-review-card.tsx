@@ -390,7 +390,7 @@ export function RequestReviewCard({
           {badge}
           <span className="truncate text-sm text-gray-500">{summary}</span>
         </span>
-        <span className="hidden text-xs text-gray-400 sm:block">
+        <span className="hidden text-xs text-gray-500 sm:block">
           {waitingDisplay ?? ""}
         </span>
       </RowButton>
@@ -494,11 +494,11 @@ function RowButton({
       onClick={onToggle}
       aria-expanded={open}
       aria-label={ariaLabel}
-      className={`flex w-full flex-wrap items-center justify-start gap-1.5 px-4 py-3 text-left text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50/60 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:outline-none sm:px-5 ${grid}`}
+      className={`flex w-full flex-wrap items-center justify-start gap-1.5 px-4 py-3 text-left text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50/60 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none sm:px-5 ${grid}`}
     >
       {children}
       <ChevronDown
-        className={`ml-auto h-4 w-4 shrink-0 text-gray-400 transition-transform sm:ml-0 ${open ? "rotate-180" : ""}`}
+        className={`ml-auto h-4 w-4 shrink-0 text-gray-500 transition-transform sm:ml-0 ${open ? "rotate-180" : ""}`}
         aria-hidden="true"
       />
     </button>

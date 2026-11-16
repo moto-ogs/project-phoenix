@@ -19,7 +19,8 @@ import {
 } from "react";
 import { useLocale } from "next-intl";
 import { Check, Lock, Plus } from "lucide-react";
-import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+import type { TurnstileInstance } from "@marsidev/react-turnstile";
+import { SecurityCheck } from "~/components/captcha/security-check";
 import { DateOfBirthPicker } from "~/components/enrollment/date-of-birth-picker";
 import { Button } from "~/components/ui/button";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
@@ -1914,13 +1915,16 @@ export function EnrollmentForm({
             <h2 id="captcha-heading" className="sr-only">
               Sicherheitsprüfung
             </h2>
-            <Turnstile
-              ref={captchaRef}
+            <SecurityCheck
+              instanceRef={captchaRef}
               siteKey={captchaConfig.site_key}
-              options={{ theme: "light" }}
-              onSuccess={(token: string) => setCaptchaToken(token)}
-              onExpire={() => setCaptchaToken("")}
-              onError={() => setCaptchaToken("")}
+              token={captchaToken}
+              onToken={setCaptchaToken}
+              copy={{
+                hint: tr("captchaHelp.hint"),
+                restart: tr("captchaHelp.restart"),
+                restartTooltip: tr("captchaHelp.restartTooltip"),
+              }}
             />
             <input type="hidden" name="captcha_token" value={captchaToken} />
           </section>
@@ -2066,7 +2070,7 @@ function BlockedOfferingCard({
       <div className="flex items-start gap-3">
         <span
           aria-hidden
-          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-gray-300 bg-gray-100 text-gray-400"
+          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-gray-300 bg-gray-100 text-gray-500"
         >
           <Lock className="h-3 w-3" />
         </span>

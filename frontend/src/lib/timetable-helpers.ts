@@ -710,6 +710,7 @@ const DEVIATION_EVENT_LABELS: Record<string, string> = {
   substitution: "Vertretung zugewiesen",
   substitute_removed: "Vertretung entfernt",
   cancellation: "Block abgesagt",
+  reinstatement: "Absage zurückgenommen",
   understaffed_ack: "Lücke bewusst offen gelassen",
   understaffed_unack: "Lücke wieder als offen markiert",
   deviation_dropped_by_replan: "Abweichung durch Neuplanung entfernt",

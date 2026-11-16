@@ -16,6 +16,7 @@ import (
 // composition bind.
 type InstanceLifecycle interface {
 	timetable.InstanceLifecycleCapability
+	timetable.InstanceReinstatement
 	AnnounceStaffingChanged(tenantID int64, source string) error
 	CompleteInstanceRow(ctx context.Context, instanceID int64) (*scheduleModels.ActivityInstance, error)
 	DeviationLifecycle() DeviationLifecycle

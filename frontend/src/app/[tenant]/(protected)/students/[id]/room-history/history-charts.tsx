@@ -228,7 +228,7 @@ function ActivityChart({
   if (data.length === 0) {
     return (
       <div className="flex h-[180px] items-center justify-center sm:h-[200px]">
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-gray-500">
           Keine Raumdetails verfügbar (Aufbewahrungsfrist überschritten).
         </p>
       </div>

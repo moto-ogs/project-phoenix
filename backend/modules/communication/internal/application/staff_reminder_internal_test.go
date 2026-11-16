@@ -617,3 +617,40 @@ func TestReminderIdempotencyKeysChangeWithPublicationCycle(t *testing.T) {
 	assert.NotEqual(t, pushKey, reminderPushShape(&republished).idempotencyKey)
 	assert.NotEqual(t, mailKey, reminderIdempotencyKey(&republished, "mama@example.test"))
 }
+
+// A scheduled reminder without its own wording repeats the letter. For a
+// letter that names each child (#4813) it carries each family's frozen
+// letters, never the template.
+func TestSendDueReminders_PersonalLetterRepeatsEachFamilysOwnLetter(t *testing.T) {
+	t.Parallel()
+
+	a := publishedWithReminder(true)
+	a.ReminderText = nil
+	a.Body = "Liebe Eltern von {{vorname}}, bis Freitag."
+	a.DeliveryMode = StaffParentAnnouncementDeliveryLetter
+	a.RequiresAcknowledgement = true
+	portalAccount := int64(101)
+	repo := &reminderRepo{
+		fakeAnnouncementRepo: fakeAnnouncementRepo{announcement: a},
+		due:                  []*StaffParentAnnouncement{a},
+		claim:                map[int64]bool{a.ID: true},
+		deliveryRecipients: []*StaffAnnouncementDeliveryRecipient{
+			{GuardianProfileID: 1, AccountID: &portalAccount, Email: "anna@example.test", HasPortalAccess: true, StudentIDs: []int64{7}},
+		},
+	}
+	h := newReminderHarness(repo)
+	copies := &memoryLetterCopies{copies: map[int64][]communication.ParentLetterCopy{
+		a.ID: {{AnnouncementID: a.ID, StudentID: 7, FirstName: "Lina", Body: "Liebe Eltern von Lina, bis Freitag."}},
+	}}
+	h.svc = NewService(ServiceConfig{
+		Now: staffTestClock, Repo: repo, Settings: h.settings, Notifier: h.notifier,
+		Series: communication.NotificationSeries{NotifyDurably: h.notifier.NotifyEachDurably},
+		Outbox: h.outbox, ParentsURL: "https://parents.example.test", Logger: slog.Default(), Attachments: &stubPurger{},
+		Letters: ParentLetters{Copies: copies},
+	}, testpkg.TenantTransactionRuntime{}, devices.NewParentDeliveryPolicy())
+
+	_, _, err := h.svc.SendDueReminders(context.Background(), staffTestNow.Add(-time.Hour), staffTestNow)
+	require.NoError(t, err)
+	require.Len(t, h.outbox.requests, 1)
+	assert.Equal(t, "Liebe Eltern von Lina, bis Freitag.", h.outbox.requests[0].Payload[emailPayloadBody])
+}

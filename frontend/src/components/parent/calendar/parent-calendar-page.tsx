@@ -372,7 +372,12 @@ export function ParentCalendarPage() {
               onRespond={respond}
             />
           ) : (
-            <SectionCard className="h-full">
+            // Neben dem Monat ist die Karte so hoch wie dieser: der Leertext
+            // steht in ihrer Mitte, nicht am oberen Rand über einer Lücke.
+            <SectionCard
+              className="flex h-full flex-col"
+              bodyClassName="flex flex-1 flex-col justify-center"
+            >
               <EmptyState
                 icon={<CalendarDotsIcon className="size-8" />}
                 title={t("empty")}
@@ -771,7 +776,7 @@ function CalendarMonthPanel({
                     dateISO === today
                       ? "bg-gray-900 text-white"
                       : outsideMonth || !inLoadedRange
-                        ? "text-gray-400"
+                        ? "text-gray-500"
                         : "text-gray-700"
                   }`}
                 >

@@ -10,8 +10,9 @@ import {
   NOTIFICATION_FEED_REFRESH_EVENT,
 } from "~/lib/notification-feed-api";
 import type { NotificationFeedEntry } from "~/lib/notification-feed-helpers";
+import { useNotificationFeedPortal } from "~/lib/notification-feed-portal";
 import { onSWRScopeReset, useLiveRefreshInterval, useSWRAuth } from "~/lib/swr";
-import { notificationFeedKeys } from "~/lib/swr/portal-keys";
+import { notificationFeedKeys, schoolPortalKeys } from "~/lib/swr/portal-keys";
 
 // Ohne verbundenen Live-Kanal holt die Glocke den Stand jede Minute; mit
 // Kanal reicht der Abgleich alle fünf Minuten (useLiveRefreshInterval).
@@ -49,10 +50,17 @@ export function useNotificationFeedUnread(
   /** Nur im Staff-Portal; die untere Leiste dient auch anderen Portalen. */
   enabled = true,
 ) {
+  const portal = useNotificationFeedPortal();
+  const { apiBase } = portal;
   const refreshInterval = useLiveRefreshInterval(FEED_FALLBACK_INTERVAL_MS);
   const { data, mutate } = useSWRAuth<number>(
-    enabled ? notificationFeedKeys.unreadCount() : null,
-    fetchNotificationFeedUnreadCount,
+    // Eigene Schlüssel je Portal (#7139).
+    !enabled
+      ? null
+      : portal.keyScope === "school"
+        ? schoolPortalKeys.notificationFeedUnread()
+        : notificationFeedKeys.unreadCount(),
+    () => fetchNotificationFeedUnreadCount(apiBase),
     {
       refreshInterval,
       // Ein verborgener Tab pollt nicht. Kommt er zurück, stimmt die Zahl
@@ -90,6 +98,8 @@ export interface NotificationFeedItem {
  * schickt danach das Live-Ereignis, und die Liste lädt den bestätigten Stand.
  */
 export function useNotificationFeed(onUnreadCount: (count: number) => void) {
+  const portal = useNotificationFeedPortal();
+  const { apiBase } = portal;
   const [extra, setExtra] = useState<readonly NotificationFeedEntry[]>([]);
   // undefined: der nächste Cursor ist der der ersten Seite.
   const [extraCursor, setExtraCursor] = useState<string | null | undefined>(
@@ -129,8 +139,10 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
 
   const refreshInterval = useLiveRefreshInterval(FEED_FALLBACK_INTERVAL_MS);
   const first = useSWRAuth(
-    notificationFeedKeys.firstPage(),
-    () => fetchNotificationFeed(),
+    portal.keyScope === "school"
+      ? schoolPortalKeys.notificationFeedFirstPage()
+      : notificationFeedKeys.firstPage(),
+    () => fetchNotificationFeed(apiBase),
     {
       refreshInterval,
       // Auch bei verlorenen Live-Ereignissen stimmen Seiten und Cursor
@@ -164,7 +176,7 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
     setLoadingMore(true);
     setLoadMoreError(null);
     try {
-      const page = await fetchNotificationFeed(nextCursor);
+      const page = await fetchNotificationFeed(apiBase, nextCursor);
       if (generation.current !== started) return;
       setExtra((current) => [...current, ...page.entries]);
       setExtraCursor(page.nextCursor);
@@ -173,7 +185,7 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
     } finally {
       if (generation.current === started) setLoadingMore(false);
     }
-  }, [nextCursor, loadingMore]);
+  }, [nextCursor, loadingMore, apiBase]);
 
   const items = useMemo((): readonly NotificationFeedItem[] => {
     const seen = new Set<string>();
@@ -199,7 +211,7 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
       const { id, updatedAt } = item.entry;
       setLocallyRead((current) => new Map(current).set(id, updatedAt));
       try {
-        const count = await markNotificationFeedEntryRead(id);
+        const count = await markNotificationFeedEntryRead(apiBase, id);
         if (sessionGeneration.current === started) onUnreadCount(count);
       } catch {
         if (sessionGeneration.current !== started) return;
@@ -213,18 +225,18 @@ export function useNotificationFeed(onUnreadCount: (count: number) => void) {
         });
       }
     },
-    [onUnreadCount],
+    [onUnreadCount, apiBase],
   );
 
   /** Wirft bei einem Fehler; der Aufrufer zeigt ihn als Meldung. */
   const markAllRead = useCallback(async () => {
     const started = sessionGeneration.current;
     const upTo = latestUpdate(items);
-    const count = await markAllNotificationFeedRead();
+    const count = await markAllNotificationFeedRead(apiBase);
     if (sessionGeneration.current !== started) return;
     setAllReadUpTo(upTo);
     onUnreadCount(count);
-  }, [items, onUnreadCount]);
+  }, [items, onUnreadCount, apiBase]);
 
   const retry = useCallback(() => {
     if (first.error) {

@@ -409,7 +409,7 @@ function DatabaseContent() {
                     {section.description}
                   </p>
 
-                  <div className="flex items-center text-gray-400 transition-colors group-hover:text-gray-700">
+                  <div className="flex items-center text-gray-500 transition-colors group-hover:text-gray-700">
                     <span className="text-sm font-medium">
                       {locked ? "Mehr erfahren" : (section.cta ?? "Verwalten")}
                     </span>

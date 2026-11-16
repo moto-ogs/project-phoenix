@@ -38,6 +38,7 @@ export function parentLetterTopic(): HelpTopic {
       "Reicht eine Nachricht ohne E-Mail und ohne Bestätigung? Nehmen Sie stattdessen eine Mitteilung. Dort sind beides Schalter.",
     ],
     related: [
+      HELP_TOPICS.leadParentLetterPerChild,
       HELP_TOPICS.leadParentAnnouncement,
       HELP_TOPICS.leadParentSurvey,
       HELP_TOPICS.leadInviteGuardians,

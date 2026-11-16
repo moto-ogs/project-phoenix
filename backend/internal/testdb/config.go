@@ -3,6 +3,8 @@ package testdb
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -67,6 +69,38 @@ func NewConfig(dsn string) (*Config, error) {
 	query.Set("timezone", testConnectionTimezone)
 	parsed.RawQuery = query.Encode()
 	return &Config{templateURL: parsed}, nil
+}
+
+// newEphemeralLocalConfig creates the configuration after Docker assigned a
+// loopback port to the disposable server. Docker owns port allocation, so no
+// listener is released between selecting and binding a port.
+func newEphemeralLocalConfig(port, password string) (*Config, error) {
+	dsn := (&url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword("postgres", password),
+		Host:     net.JoinHostPort("127.0.0.1", port),
+		Path:     "/phoenix_test",
+		RawQuery: "sslmode=disable",
+	}).String()
+	return NewConfig(dsn)
+}
+
+// ephemeralDatabasePassword uses the operating system's private temporary-file
+// name generation so a detached test run never needs a configured credential.
+func ephemeralDatabasePassword() (string, error) {
+	file, err := os.CreateTemp("", "phoenix-testdb-password-")
+	if err != nil {
+		return "", fmt.Errorf("create test database password: %w", err)
+	}
+	name := filepath.Base(file.Name())
+	if err := file.Close(); err != nil {
+		_ = os.Remove(file.Name())
+		return "", fmt.Errorf("close test database password file: %w", err)
+	}
+	if err := os.Remove(file.Name()); err != nil {
+		return "", fmt.Errorf("remove test database password file: %w", err)
+	}
+	return name, nil
 }
 
 // BaseTemplateName returns the database name from TEST_DB_DSN (e.g.

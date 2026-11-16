@@ -406,7 +406,7 @@ function StudentFeedbackHistoryPageContent() {
                                 <span className="text-sm text-gray-900">
                                   {feedbackTypeLabels[feedback.feedback_type]}
                                 </span>
-                                <span className="text-xs text-gray-400">
+                                <span className="text-xs text-gray-500">
                                   {formatTime(feedback.timestamp)}
                                 </span>
                                 {feedback.is_mensa_feedback && (

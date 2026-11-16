@@ -6,12 +6,13 @@ import (
 	"fmt"
 
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
+	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 )
 
-// StaffPush is one device notification to named staff accounts of the
-// request's school. Its type must be a staff type of Delivery's catalogue
-// that is on by default (DefaultOn): recipients who switched it off are
-// dropped here, everyone else keeps it.
+// StaffPush is one notice to named staff accounts of the request's school.
+// Its type must be a staff feed type of Delivery's catalogue that is on by
+// default (DefaultOn): every account gets a feed entry, and a push follows
+// for those who did not switch the type off (#7137).
 type StaffPush struct {
 	TenantID       int64
 	Type           string
@@ -25,11 +26,12 @@ type StaffPush struct {
 }
 
 // StaffPushNotifier sends a StaffPush through the existing Delivery router
-// in the caller's transaction (#6854): the push outbox entry commits or rolls
-// back with the caller's write, and the worker delivers it with the outbox's
-// retry and dead-letter rules. A school without notifications, or a time
-// outside its notification window, is no error: the producer's in-app record
-// is what carries the information, the push only points to it.
+// in the caller's transaction (#6854): the feed entries and the push outbox
+// entry commit or roll back with the caller's write, and the worker delivers
+// the push with the outbox's retry and dead-letter rules. A school without
+// notifications is no error: the producer's in-app record is what carries
+// the information. Outside the school's notification window the feed entry
+// is written without a push (#7137).
 //
 // It is the shared building block for staff notices produced in a request,
 // such as a shared child note (#6854) or a changed pickup time (#6855).
@@ -60,7 +62,8 @@ func NewStaffPushNotifier(notifications DeliveryNotifications) StaffPushNotifier
 	return notifier
 }
 
-// Notify filters out explicit declines and enqueues the push.
+// Notify writes the feed entries and enqueues the push for everyone who did
+// not decline it.
 func (n StaffPushNotifier) Notify(ctx context.Context, push StaffPush) error {
 	if n.router == nil || n.preferences == nil {
 		return errors.New("staff push: notifications are not configured")
@@ -72,15 +75,13 @@ func (n StaffPushNotifier) Notify(ctx context.Context, push StaffPush) error {
 	if err != nil {
 		return fmt.Errorf("staff push: filter recipients: %w", err)
 	}
-	if len(recipients) == 0 {
-		return nil
-	}
 	err = n.router.Notify(ctx, deliveryCompose.NotificationEvent{
 		Type: push.Type, IdempotencyKey: push.IdempotencyKey, RelatedType: push.RelatedType, RelatedID: push.RelatedID,
 		Title: push.Title, Body: push.Body, DeepLink: push.DeepLink,
 		Audience: deliveryCompose.NotificationAudience{
-			TenantID: push.TenantID, Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: recipients,
+			TenantID: push.TenantID, Scope: deliveryCompose.NotificationAudienceScope("staff"), StaffAccountIDs: push.AccountIDs,
 		},
+		Feed: &deliveryContract.NotificationFeedDelivery{PushAccountIDs: recipients},
 	})
 	if errors.Is(err, deliveryCompose.ErrNotificationsDisabled) || errors.Is(err, deliveryCompose.ErrOutsideNotificationWindow) {
 		return nil

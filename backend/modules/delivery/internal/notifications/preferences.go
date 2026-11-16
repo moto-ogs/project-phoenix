@@ -262,7 +262,7 @@ func (s *preferenceService) SetForPortalAccount(ctx context.Context, accountID i
 	if !known || !OfferedInPortal(def, portal) {
 		return fmt.Errorf("%w: %s", ErrUnknownNotificationType, notificationType)
 	}
-	offered, err := s.offeredToAccount(ctx, accountID, def)
+	offered, err := s.offeredToAccount(ctx, accountID, portal, def)
 	if err != nil {
 		return err
 	}

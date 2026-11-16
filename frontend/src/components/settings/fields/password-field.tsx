@@ -130,7 +130,7 @@ export function PasswordField({
       <div className="flex flex-wrap items-center gap-1.5">
         {/* Pill with value + eye toggle inside */}
         <span
-          className={`inline-flex items-center gap-1 rounded-lg bg-gray-100 pr-1 pl-3 text-sm tabular-nums ${showValue && revealedValue ? "font-mono tracking-widest text-gray-900" : "text-gray-500"}`}
+          className={`inline-flex items-center gap-1 rounded-lg bg-gray-100 pr-1 pl-3 text-sm tabular-nums ${showValue && revealedValue ? "font-mono tracking-widest text-gray-900" : "text-gray-600"}`}
         >
           {isRevealing ? (
             <SpinnerIcon className="my-2 h-3.5 w-3.5" />

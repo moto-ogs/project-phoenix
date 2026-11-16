@@ -19,7 +19,7 @@ function TabsList({
     <TabsPrimitive.List
       data-variant={variant}
       className={cn(
-        "group/tabs-list inline-flex items-center justify-center text-gray-500",
+        "group/tabs-list inline-flex items-center justify-center text-gray-600",
         variant === "default" && "h-9 rounded-lg bg-gray-100 p-1",
         variant === "line" &&
           "h-auto gap-6 rounded-none border-b border-gray-200 bg-transparent p-0",

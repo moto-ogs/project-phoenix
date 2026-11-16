@@ -223,7 +223,7 @@ export function ResourceGrid<TRow>({
             <tr className="bg-gray-50 text-left">
               <th
                 scope="col"
-                className={`sticky left-0 ${Z_LAYER.raised} bg-gray-50 px-2 py-1.5 text-xs font-medium text-gray-500`}
+                className={`sticky left-0 ${Z_LAYER.raised} bg-gray-50 px-2 py-1.5 text-xs font-medium text-gray-600`}
               >
                 {cornerHeader}
               </th>
@@ -231,7 +231,7 @@ export function ResourceGrid<TRow>({
                 <th
                   key={column.key}
                   scope="col"
-                  className={`${columnMinWidth} px-2 py-1.5 text-xs font-medium text-gray-500 ${getColumnBackgroundClass(
+                  className={`${columnMinWidth} px-2 py-1.5 text-xs font-medium text-gray-600 ${getColumnBackgroundClass(
                     column,
                     "bg-gray-200/70",
                     "bg-gray-100",
@@ -239,7 +239,7 @@ export function ResourceGrid<TRow>({
                 >
                   <span className="block">{column.label}</span>
                   {column.sublabel && (
-                    <span className="block font-normal text-gray-400">
+                    <span className="block font-normal text-gray-600">
                       {column.sublabel}
                     </span>
                   )}

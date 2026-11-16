@@ -20,7 +20,7 @@ type CheckboxProps = Omit<React.ComponentProps<"input">, "type">;
 
 const BOX_CLASS =
   "pointer-events-none flex h-5 w-5 shrink-0 items-center justify-center rounded-md border shadow-sm transition-all";
-const BOX_UNCHECKED_CLASS = "border-gray-300 bg-white";
+const BOX_UNCHECKED_CLASS = "border-gray-500/80 bg-white";
 const BOX_CHECKED_CLASS = "border-gray-900 bg-gray-900";
 
 export function Checkbox({ className, ...props }: CheckboxProps) {
