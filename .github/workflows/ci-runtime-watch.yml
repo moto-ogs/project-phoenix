@@ -1,9 +1,10 @@
 name: CI runtime watch
 
 # Weekly check of the pull request runtime target (.claude/rules/ci-test-performance.md):
-# median of the green first attempts of CI with backend tests over the last
-# seven days, first job start to the end of ci-gate. Over 300 s it opens one
-# issue or comments on the open one (scripts/ci-runtime-watch.mjs). Its own
+# median of the green first attempts of CI with backend tests, first job start
+# to the end of ci-gate, per day of the last seven. When the last three days
+# are over 300 s it opens one issue or comments on the open one
+# (scripts/ci-runtime-watch.mjs). Its own
 # file, not a job in nightly.yml: the nightly run starts the paid full suites
 # on weekdays, and a manual run of this check must not start them too.
 
