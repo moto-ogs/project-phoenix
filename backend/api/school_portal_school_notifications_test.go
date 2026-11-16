@@ -71,7 +71,7 @@ func TestSchoolNotificationPreferences(t *testing.T) {
 	for _, entry := range overview.Types {
 		keys = append(keys, entry.Key)
 	}
-	assert.Equal(t, []string{"school_class_absence_reported", "staff_message", "instance_cancelled", "school_parent_conference_booking"}, keys)
+	assert.Equal(t, []string{"school_class_absence_reported", "staff_message", "instance_cancelled", "school_parent_conference_booking", "instance_room_changed", "instance_room_changed_later"}, keys)
 	assert.True(t, schoolPreference(t, overview, "staff_message").Available, "the school switched the chat on")
 	assert.False(t, schoolPreference(t, overview, "staff_message").Enabled, "opt-in: nothing is on until the person decides")
 	// The class sick-note notice (#4792) is offered and starts off as well.
